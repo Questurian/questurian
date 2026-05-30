@@ -14,7 +14,7 @@ export function useAuth() {
   useEffect(() => {
     if (user) {
       console.log(
-        `User logged in - Role: ${user.role}, Email: ${user.email}, Membership: ${user.membershipStatusSummary}, Subscription: ${user.subscriptionStatus}`
+        `Current principal authenticated - Kind: ${user.kind}, Email: ${user.email}, Membership: ${user.membershipStatusSummary}`
       );
     } else if (!isLoading && !user) {
       console.log('No user authenticated');
@@ -29,4 +29,3 @@ export function useAuth() {
     error,
   };
 }
-

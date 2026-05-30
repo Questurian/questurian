@@ -1,5 +1,3 @@
-import { getPayload } from 'payload'
-import config from '@/payload.config'
 import { stripe } from './stripe'
 import type { StripePriceWithProduct } from '../types'
 
@@ -60,33 +58,5 @@ export async function getSubscriptionProductName(subscriptionId: string): Promis
   } catch (error) {
     console.error('Error fetching subscription product name:', error)
     return 'Premium Membership'
-  }
-}
-
-/**
- * Finds a user by their Stripe customer ID
- * Returns null if no user is found
- */
-export async function getUserByStripeCustomerId(customerId: string) {
-  try {
-    const payload = await getPayload({ config })
-
-    const userResults = await payload.find({
-      collection: 'users',
-      where: {
-        stripeCustomerId: { equals: customerId }
-      },
-      limit: 1
-    })
-
-    if (userResults.docs.length === 0) {
-      console.error('No user found with Stripe customer ID:', customerId)
-      return null
-    }
-
-    return userResults.docs[0]
-  } catch (error) {
-    console.error('Error finding user by Stripe customer ID:', error)
-    return null
   }
 }

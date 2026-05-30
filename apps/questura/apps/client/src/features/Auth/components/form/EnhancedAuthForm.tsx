@@ -2,7 +2,6 @@
 
 import { validateEmail, getFormTitle, getFormSubtitle } from '../../lib/auth-utils';
 import { useAuthForm } from '../../hooks/useAuthForm';
-import { useAccountCheck } from '../../hooks/useAccountCheck';
 import { useAuthSubmit } from '../../hooks/useAuthSubmit';
 import { isServiceUnavailableError } from '@/lib/api';
 import AuthFormLayout from './AuthFormLayout';
@@ -21,7 +20,6 @@ export default function EnhancedAuthForm({
 }: EnhancedAuthFormProps = {}) {
   // Initialize hooks
   const authForm = useAuthForm({ prefillEmail, onModeChange });
-  const accountCheck = useAccountCheck(prefillEmail);
   const authSubmit = useAuthSubmit({ inModal, onSuccess });
 
   // Handle email step submission
@@ -38,14 +36,8 @@ export default function EnhancedAuthForm({
       return;
     }
 
-    authForm.setErrors([]); // Clear any previous errors before checking
-    const result = await accountCheck.checkUserAccount(authForm.formData.email);
-    if (result?.status) {
-      authForm.proceedToPasswordStep(result.status);
-    } else if (result?.error) {
-      // Show service error if account check failed
-      authForm.setErrors([{ message: result.error }]);
-    }
+    authForm.setErrors([]);
+    authForm.proceedToPasswordStep();
   };
 
   // Handle password step submission
@@ -102,11 +94,12 @@ export default function EnhancedAuthForm({
       {!authForm.showPasswordStep ? (
         <EmailStep
           email={authForm.formData.email}
+          isSignUp={authForm.isSignUp}
           onChange={authForm.handleInputChange}
+          onModeChange={authForm.setIsSignUp}
           onSubmit={handleEmailContinue}
           fieldError={authForm.getFieldError('email')}
           loading={authForm.loading}
-          checkingAccount={accountCheck.checkingAccount}
           canContinue={authForm.canContinueFromEmail()}
           inModal={inModal}
           errorMessage={errorMessage}
@@ -119,14 +112,12 @@ export default function EnhancedAuthForm({
           onSubmit={handlePasswordSubmit}
           onBackToEmail={() => {
             authForm.handleBackToEmail();
-            accountCheck.setUserAccountStatus(null);
           }}
           fieldError={authForm.getFieldError('password')}
           loading={authForm.loading}
           isSignUp={authForm.isSignUp}
           showPassword={authForm.showPassword}
           onTogglePassword={() => authForm.setShowPassword(!authForm.showPassword)}
-          userAccountStatus={accountCheck.userAccountStatus}
           inModal={inModal}
           errorMessage={errorMessage}
         />

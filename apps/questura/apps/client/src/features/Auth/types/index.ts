@@ -9,16 +9,6 @@ import type { JSX } from 'react';
 export type { AuthFormData, AuthError } from '../lib/auth-utils';
 
 /**
- * User account status returned from the account check API
- */
-export interface UserAccountStatus {
-  userExists: boolean;
-  hasPassword: boolean;
-  hasGoogleAuth: boolean;
-  email: string;
-}
-
-/**
  * Props for the main EnhancedAuthForm component
  */
 export interface EnhancedAuthFormProps {
@@ -48,11 +38,12 @@ export interface AuthFormLayoutProps {
  */
 export interface EmailStepProps {
   email: string;
+  isSignUp: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onModeChange: (isSignUp: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   fieldError?: string;
   loading: boolean;
-  checkingAccount: boolean;
   canContinue: boolean;
   inModal?: boolean;
   errorMessage?: string;
@@ -72,7 +63,6 @@ export interface PasswordStepProps {
   isSignUp: boolean;
   showPassword: boolean;
   onTogglePassword: () => void;
-  userAccountStatus: UserAccountStatus | null;
   inModal?: boolean;
   errorMessage?: string;
 }
@@ -106,70 +96,4 @@ export interface SignUpResult {
  */
 export interface PasswordResetRequest {
   email: string;
-}
-
-/**
- * Password reset verification payload
- */
-export interface PasswordResetVerify {
-  email: string;
-  code: string;
-  newPassword: string;
-  confirmPassword: string;
-}
-
-/**
- * Password reset form state
- */
-export interface ResetPasswordFormState {
-  email: string;
-  code: string;
-  newPassword: string;
-  confirmPassword: string;
-  errors: import('../lib/auth-utils').AuthError[];
-  currentStep: 1 | 2;
-}
-
-/**
- * Props for ResetPasswordEmailStep component
- */
-export interface ResetPasswordEmailStepProps {
-  email: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  fieldError?: string;
-  loading: boolean;
-  inModal?: boolean;
-  generalError?: string;
-}
-
-/**
- * Props for ResetPasswordVerifyStep component
- */
-export interface ResetPasswordVerifyStepProps {
-  email: string;
-  code: string;
-  newPassword: string;
-  confirmPassword: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onBackToEmail: () => void;
-  fieldError?: string;
-  loading: boolean;
-  showPassword: boolean;
-  onTogglePassword: () => void;
-  inModal?: boolean;
-  generalError?: string;
-  currentStep?: 1 | 2;
-  onRequestNewCode?: () => void;
-}
-
-/**
- * Props for EnhancedResetPasswordForm component
- */
-export interface EnhancedResetPasswordFormProps {
-  onSuccess?: () => void;
-  inModal?: boolean;
-  initialStep?: 1 | 2;
-  prefillEmail?: string;
 }

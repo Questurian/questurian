@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, getCorsHeaders, handleCorsOptions } from '@/auth/lib/auth-middleware'
 import { getStripeSubscriptionDetails } from '@/payments/lib/payment-service'
+import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
+import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
 
 export async function GET(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
 
   try {
-    // 1. Authenticate the user
-    const authResult = await authenticateRequest(req)
+    const authResult = await requireVisitorPrincipal(req.headers)
 
     if (authResult.error) {
       return NextResponse.json(
@@ -16,10 +17,10 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const user = authResult.user!
+    const visitor = authResult.principal!
+    const profile = await findVisitorProfileByAuthUserId(String(visitor.id))
 
-    // 2. Check if user has a subscription
-    if (!user.stripeSubscriptionId) {
+    if (!profile?.stripeSubscriptionId) {
       return NextResponse.json(
         { error: 'No subscription found' },
         { status: 404, headers: corsHeaders }
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Get subscription details from Stripe
-    const subscriptionDetails = await getStripeSubscriptionDetails(user.stripeSubscriptionId)
+    const subscriptionDetails = await getStripeSubscriptionDetails(profile.stripeSubscriptionId)
 
     if (!subscriptionDetails) {
       return NextResponse.json(
@@ -39,15 +40,15 @@ export async function GET(req: NextRequest) {
     // 4. Return subscription information
     return NextResponse.json(
       {
-        subscriptionId: user.stripeSubscriptionId,
+        subscriptionId: profile.stripeSubscriptionId,
         status: subscriptionDetails.status,
         currentPeriodEnd: subscriptionDetails.currentPeriodEnd,
         currentPeriodStart: subscriptionDetails.currentPeriodStart,
         cancelAtPeriodEnd: subscriptionDetails.cancelAtPeriodEnd,
         // Include user's internal subscription status
-        internalStatus: user.subscriptionStatus,
-        renewsAt: user.subscriptionRenewsAt,
-        membershipExpiration: user.membershipExpiration
+        internalStatus: profile.subscriptionStatus,
+        renewsAt: profile.subscriptionRenewsAt,
+        membershipExpiration: profile.membershipExpiration
       },
       { headers: corsHeaders }
     )

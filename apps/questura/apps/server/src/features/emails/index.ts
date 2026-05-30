@@ -8,6 +8,8 @@ export { sendPasswordChangeConfirmationEmail } from './lib/password-change-confi
 export { sendPasswordChangedSuccessEmail } from './lib/password-changed-success'
 export { sendPasswordBackupAddedEmail } from './lib/password-backup-added'
 export { sendPasswordResetEmail } from './lib/password-reset-verification'
+export { sendPasswordResetLinkEmail } from './lib/password-reset-link'
+export { sendVisitorEmailVerificationLinkEmail } from './lib/visitor-email-verification-link'
 export { sendPasswordResetSuccessEmail } from './lib/password-reset-success'
 export { sendSubscriptionCancelledEmail } from './lib/subscription-cancelled'
 export { sendSubscriptionReactivatedEmail } from './lib/subscription-reactivated'

@@ -2,45 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/payments/lib/stripe'
 import { updateUserSubscription, mapStripeStatusToInternal, getStripeSubscriptionDetails } from '@/payments/lib/payment-service'
-import { convertStripeTimestamp, getSubscriptionProductName, getUserByStripeCustomerId } from '@/payments/lib/payment-helpers'
+import { convertStripeTimestamp, getSubscriptionProductName } from '@/payments/lib/payment-helpers'
 import { sendMembershipConfirmationEmail, sendSubscriptionCancelledEmail } from '@/emails'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import Stripe from 'stripe'
 import type { StripeSubscriptionExpanded } from '@/payments/types'
 import { APP_CONFIG } from '@/shared/config'
-
-/**
- * Guard to prevent Stripe webhook processing for admin/editor users
- * Returns true if the user should be skipped (is staff member)
- */
-async function shouldSkipWebhookForUser(stripeCustomerId: string): Promise<boolean> {
-  try {
-    const payload = await getPayload({ config })
-
-    const userResults = await payload.find({
-      collection: 'users',
-      where: { stripeCustomerId: { equals: stripeCustomerId } }
-    })
-
-    if (userResults.docs.length === 0) return false
-
-    const user = userResults.docs[0]
-    if (user.role === 'admin' || user.role === 'editor') {
-      console.log('Skipping webhook for staff member:', {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        eventType: 'subscription_update'
-      })
-      return true
-    }
-    return false
-  } catch (error) {
-    console.error('Error checking if webhook should be skipped:', error)
-    return false
-  }
-}
+import { findVisitorProfileByStripeCustomerId } from '@/features/visitor-auth/lib/visitor-profile'
 
 export async function POST(req: NextRequest) {
   console.log('🔔 Stripe webhook received!')
@@ -129,12 +98,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     return
   }
 
-  // GUARD: Skip webhook for staff members
-  if (await shouldSkipWebhookForUser(customerId)) {
-    console.log('Webhook skipped for staff member')
-    return
-  }
-
   // Get subscription details to capture renewal date
   const subscriptionDetails = await getStripeSubscriptionDetails(subscriptionId)
   const subscriptionRenewsAt = subscriptionDetails?.currentPeriodEnd?.toISOString() || null
@@ -166,12 +129,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const success = await updateUserSubscription(customerId, updateData)
 
   if (success) {
-    console.log('✅ User subscription activated via checkout completion')
+    console.log('✅ Visitor subscription activated via checkout completion')
 
     // Send membership confirmation email for new subscription
     await sendMembershipConfirmationAfterPayment(customerId, subscriptionId, true)
   } else {
-    console.error('❌ Failed to update user subscription from checkout')
+    console.error('❌ Failed to update visitor subscription from checkout')
   }
 }
 
@@ -188,12 +151,6 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   })
 
   const customerId = subscription.customer as string
-
-  // GUARD: Skip webhook for staff members
-  if (await shouldSkipWebhookForUser(customerId)) {
-    console.log('Webhook skipped for staff member')
-    return
-  }
 
   const status = mapStripeStatusToInternal(subscription.status)
   const expandedSubscription = subscription as StripeSubscriptionExpanded
@@ -257,11 +214,6 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string
 
   // GUARD: Skip webhook for staff members
-  if (await shouldSkipWebhookForUser(customerId)) {
-    console.log('Webhook skipped for staff member')
-    return
-  }
-
   const status = mapStripeStatusToInternal(subscription.status)
   const cancelAtPeriodEnd = expandedSubscription.cancel_at_period_end || false
 
@@ -350,12 +302,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   const customerId = subscription.customer as string
 
-  // GUARD: Skip webhook for staff members
-  if (await shouldSkipWebhookForUser(customerId)) {
-    console.log('Webhook skipped for staff member')
-    return
-  }
-
   const expandedSubscription = subscription as StripeSubscriptionExpanded
 
   // Calculate when the paid period actually ends
@@ -399,12 +345,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log('Invoice billing_reason:', (invoice as any).billing_reason)
 
   const customerId = invoice.customer as string
-
-  // GUARD: Skip webhook for staff members
-  if (customerId && await shouldSkipWebhookForUser(customerId)) {
-    console.log('✅ Webhook skipped for staff member')
-    return
-  }
 
   // Check if this invoice is related to a subscription
   let subscriptionId: string | null = null
@@ -486,12 +426,6 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   const customerId = invoice.customer as string
 
-  // GUARD: Skip webhook for staff members
-  if (await shouldSkipWebhookForUser(customerId)) {
-    console.log('Webhook skipped for staff member')
-    return
-  }
-
   // Mark as past due, but don't immediately revoke membership
   // Stripe will handle the subscription status updates
   await updateUserSubscription(customerId, {
@@ -512,10 +446,9 @@ async function sendMembershipConfirmationAfterPayment(
   try {
     const payload = await getPayload({ config })
 
-    // Find user by Stripe customer ID
-    const user = await getUserByStripeCustomerId(customerId)
-    if (!user) {
-      console.error('❌ No user found for membership confirmation email:', customerId)
+    const profile = await findVisitorProfileByStripeCustomerId(customerId)
+    if (!profile) {
+      console.error('❌ No VisitorProfile found for membership confirmation email:', customerId)
       return
     }
 
@@ -531,15 +464,15 @@ async function sendMembershipConfirmationAfterPayment(
 
     // Send the membership confirmation email
     await sendMembershipConfirmationEmail(payload, {
-      email: user.email,
-      firstName: user.firstName ?? undefined,
-      lastName: user.lastName ?? undefined,
+      email: profile.email,
+      firstName: profile.firstName ?? undefined,
+      lastName: profile.lastName ?? undefined,
       subscriptionType,
       membershipExpiresAt: subscriptionDetails.currentPeriodEnd || undefined,
       isRecurring
     })
 
-    console.log('✅ Membership confirmation email sent to:', user.email)
+    console.log('✅ Membership confirmation email sent to:', profile.email)
   } catch (error) {
     console.error('❌ Failed to send membership confirmation email:', error)
   }
@@ -557,10 +490,9 @@ async function sendSubscriptionCancellationEmail(
   try {
     const payload = await getPayload({ config })
 
-    // Find user by Stripe customer ID
-    const user = await getUserByStripeCustomerId(customerId)
-    if (!user) {
-      console.error('❌ No user found for cancellation email:', customerId)
+    const profile = await findVisitorProfileByStripeCustomerId(customerId)
+    if (!profile) {
+      console.error('❌ No VisitorProfile found for cancellation email:', customerId)
       return
     }
 
@@ -569,15 +501,15 @@ async function sendSubscriptionCancellationEmail(
 
     // Send the cancellation email
     await sendSubscriptionCancelledEmail(payload, {
-      email: user.email,
-      firstName: user.firstName ?? undefined,
-      lastName: user.lastName ?? undefined,
+      email: profile.email,
+      firstName: profile.firstName ?? undefined,
+      lastName: profile.lastName ?? undefined,
       subscriptionType,
       membershipExpiresAt: membershipExpiresAt || undefined,
       wasImmediate
     })
 
-    console.log('✅ Subscription cancellation email sent to:', user.email)
+    console.log('✅ Subscription cancellation email sent to:', profile.email)
   } catch (error) {
     console.error('❌ Failed to send subscription cancellation email:', error)
   }

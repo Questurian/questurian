@@ -4,10 +4,13 @@ import { stripe } from './stripe'
 import { sendSubscriptionCancelledEmail, sendSubscriptionReactivatedEmail } from '@/emails'
 import { convertStripeTimestamp, getSubscriptionProductName } from './payment-helpers'
 import type { StripeSubscriptionExpanded, UserSubscriptionUpdate } from '../types'
+import {
+  findVisitorProfileByAuthUserId,
+  findVisitorProfileByStripeCustomerId,
+} from '@/features/visitor-auth/lib/visitor-profile'
 
 /**
- * Updates a user's subscription information based on their Stripe customer ID
- * This function is used by webhook handlers to sync Stripe events with user records
+ * Updates a VisitorProfile subscription based on Stripe customer ID.
  */
 export async function updateUserSubscription(
   stripeCustomerId: string,
@@ -16,47 +19,27 @@ export async function updateUserSubscription(
   try {
     const payload = await getPayload({ config })
 
-    // Find user by Stripe customer ID
-    const userResults = await payload.find({
-      collection: 'users',
-      where: {
-        stripeCustomerId: { equals: stripeCustomerId }
-      }
-    })
+    const profile = await findVisitorProfileByStripeCustomerId(stripeCustomerId)
 
-    if (userResults.docs.length === 0) {
-      console.error('No user found with Stripe customer ID:', stripeCustomerId)
+    if (!profile) {
+      console.error('No VisitorProfile found with Stripe customer ID:', stripeCustomerId)
       return false
     }
 
-    const user = userResults.docs[0]
-
-    // GUARD: Skip subscription updates for staff members
-    if (user.role === 'admin' || user.role === 'editor') {
-      console.log('Skipping subscription update for staff member:', {
-        userId: user.id,
-        email: user.email,
-        role: user.role,
-        reason: 'Staff members have permanent access'
-      })
-      return true // Return success but don't update
-    }
-
-    console.log('Found user for subscription update:', {
-      userId: user.id,
-      email: user.email,
-      currentStatus: user.subscriptionStatus
+    console.log('Found VisitorProfile for subscription update:', {
+      profileId: profile.id,
+      email: profile.email,
+      currentStatus: profile.subscriptionStatus
     })
 
-    // Update user record
     await payload.update({
-      collection: 'users',
-      id: user.id,
+      collection: 'visitor-profiles',
+      id: profile.id,
       data: updates
     })
 
-    console.log('Successfully updated user subscription:', {
-      userId: user.id,
+    console.log('Successfully updated VisitorProfile subscription:', {
+      profileId: profile.id,
       updates
     })
 
@@ -115,10 +98,10 @@ export async function getStripeSubscriptionDetails(subscriptionId: string) {
 }
 
 /**
- * Cancels a user's subscription by their user ID
+ * Cancels a Visitor account subscription by BetterAuth user ID.
  * This cancels at period end to honor the paid time
  */
-export async function cancelUserSubscription(userId: string): Promise<{
+export async function cancelUserSubscription(authUserId: string): Promise<{
   success: boolean
   message: string
   membershipExpiresAt?: string
@@ -126,32 +109,17 @@ export async function cancelUserSubscription(userId: string): Promise<{
   try {
     const payload = await getPayload({ config })
 
-    // Find user by ID
-    const user = await payload.findByID({
-      collection: 'users',
-      id: userId
-    })
+    const profile = await findVisitorProfileByAuthUserId(authUserId)
 
-    if (!user) {
-      return { success: false, message: 'User not found' }
+    if (!profile) {
+      return { success: false, message: 'Visitor profile not found' }
     }
 
-    // GUARD: Staff members cannot have subscriptions cancelled
-    if (user.role === 'admin' || user.role === 'editor') {
-      console.log('Preventing subscription cancellation for staff member:', {
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      })
-      return { success: false, message: 'Staff members do not have subscriptions to cancel' }
-    }
-
-    if (!user.stripeSubscriptionId || user.subscriptionStatus !== 'active') {
+    if (!profile.stripeSubscriptionId || profile.subscriptionStatus !== 'active') {
       return { success: false, message: 'No active subscription found' }
     }
 
-    // Cancel the subscription at period end to honor paid time
-    const cancelledSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+    const cancelledSubscription = await stripe.subscriptions.update(profile.stripeSubscriptionId, {
       cancel_at_period_end: true
     }) as unknown as StripeSubscriptionExpanded
 
@@ -163,11 +131,9 @@ export async function cancelUserSubscription(userId: string): Promise<{
       membershipExpiresAt = convertStripeTimestamp(currentPeriodEnd)
     }
 
-    // Update user record immediately to reflect cancellation in the database
-    // This ensures /api/user/me returns fresh data without waiting for webhooks
     await payload.update({
-      collection: 'users',
-      id: userId,
+      collection: 'visitor-profiles',
+      id: profile.id,
       data: {
         cancelAtPeriodEnd: true,
         membershipExpiration: membershipExpiresAt ? membershipExpiresAt.toISOString() : null
@@ -175,20 +141,19 @@ export async function cancelUserSubscription(userId: string): Promise<{
     })
 
     console.log('Successfully cancelled subscription:', {
-      userId,
-      subscriptionId: user.stripeSubscriptionId,
+      authUserId,
+      subscriptionId: profile.stripeSubscriptionId,
       expiresAt: membershipExpiresAt
     })
 
-    // Get subscription product information for the email
-    const subscriptionType = await getSubscriptionProductName(user.stripeSubscriptionId)
+    const subscriptionType = await getSubscriptionProductName(profile.stripeSubscriptionId)
 
     // Send cancellation email
     try {
       await sendSubscriptionCancelledEmail(payload, {
-        email: user.email,
-        firstName: user.firstName ?? undefined,
-        lastName: user.lastName ?? undefined,
+        email: profile.email,
+        firstName: profile.firstName ?? undefined,
+        lastName: profile.lastName ?? undefined,
         subscriptionType,
         membershipExpiresAt: membershipExpiresAt || undefined,
         wasImmediate: false // User-initiated cancellations honor paid period
@@ -211,10 +176,10 @@ export async function cancelUserSubscription(userId: string): Promise<{
 }
 
 /**
- * Reactivates a user's cancelled subscription
+ * Reactivates a Visitor account subscription.
  * This removes the cancellation flag so the subscription will auto-renew
  */
-export async function reactivateUserSubscription(userId: string): Promise<{
+export async function reactivateUserSubscription(authUserId: string): Promise<{
   success: boolean
   message: string
   renewsAt?: string
@@ -222,28 +187,13 @@ export async function reactivateUserSubscription(userId: string): Promise<{
   try {
     const payload = await getPayload({ config })
 
-    // Find user by ID
-    const user = await payload.findByID({
-      collection: 'users',
-      id: userId
-    })
+    const profile = await findVisitorProfileByAuthUserId(authUserId)
 
-    if (!user) {
-      return { success: false, message: 'User not found' }
+    if (!profile) {
+      return { success: false, message: 'Visitor profile not found' }
     }
 
-    // GUARD: Staff members cannot have subscriptions reactivated
-    if (user.role === 'admin' || user.role === 'editor') {
-      console.log('Preventing subscription reactivation for staff member:', {
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      })
-      return { success: false, message: 'Staff members do not have subscriptions' }
-    }
-
-    // Check if subscription still exists in Stripe
-    if (!user.stripeSubscriptionId) {
+    if (!profile.stripeSubscriptionId) {
       return {
         success: false,
         message: 'Subscription has expired and cannot be reactivated. Please create a new subscription.'
@@ -251,9 +201,9 @@ export async function reactivateUserSubscription(userId: string): Promise<{
     }
 
     // Check if subscription is actually cancelled
-    if (!user.cancelAtPeriodEnd) {
+    if (!profile.cancelAtPeriodEnd) {
       // If subscription is active and not cancelled, no need to reactivate
-      if (user.subscriptionStatus === 'active') {
+      if (profile.subscriptionStatus === 'active') {
         return { success: false, message: 'Subscription is already active' }
       }
       // If subscription is in another state (cancelled, past_due), it can't be reactivated
@@ -264,7 +214,7 @@ export async function reactivateUserSubscription(userId: string): Promise<{
     }
 
     // Remove the cancellation flag in Stripe
-    const updatedSubscription = await stripe.subscriptions.update(user.stripeSubscriptionId, {
+    const updatedSubscription = await stripe.subscriptions.update(profile.stripeSubscriptionId, {
       cancel_at_period_end: false
     }) as unknown as StripeSubscriptionExpanded
 
@@ -285,8 +235,8 @@ export async function reactivateUserSubscription(userId: string): Promise<{
 
     // Update user record to reflect reactivation
     await payload.update({
-      collection: 'users',
-      id: userId,
+      collection: 'visitor-profiles',
+      id: profile.id,
       data: {
         cancelAtPeriodEnd: false,
         membershipExpiration: null, // Clear expiration since subscription will renew
@@ -295,20 +245,19 @@ export async function reactivateUserSubscription(userId: string): Promise<{
     })
 
     console.log('Successfully reactivated subscription:', {
-      userId,
-      subscriptionId: user.stripeSubscriptionId,
+      authUserId,
+      subscriptionId: profile.stripeSubscriptionId,
       renewsAt: renewsAt.toISOString()
     })
 
-    // Get subscription product information for the email
-    const subscriptionType = await getSubscriptionProductName(user.stripeSubscriptionId)
+    const subscriptionType = await getSubscriptionProductName(profile.stripeSubscriptionId)
 
     // Send reactivation confirmation email
     try {
       await sendSubscriptionReactivatedEmail(payload, {
-        email: user.email,
-        firstName: user.firstName ?? undefined,
-        lastName: user.lastName ?? undefined,
+        email: profile.email,
+        firstName: profile.firstName ?? undefined,
+        lastName: profile.lastName ?? undefined,
         subscriptionType,
         renewsAt
       })

@@ -1,6 +1,6 @@
 # Questura Server
 
-Payload CMS + Next.js backend with authentication (JWT + Google OAuth), Stripe subscription management, Resend transactional emails, and Bunny.net CDN integration.
+Payload CMS + Next.js backend with split Better Auth Visitor and Payload Staff authentication, Stripe subscription management, Resend transactional emails, and Bunny.net CDN integration.
 
 ## Quick Start
 
@@ -60,7 +60,7 @@ Test location pattern: `src/**/__tests__/*.test.ts` (currently runs tests in `sr
 ### Stack
 - **Framework**: Next.js 15 + Payload CMS 3.64
 - **Database**: PostgreSQL with connection pooling (min=2, max=20)
-- **Authentication**: JWT tokens (7-day expiration) in HTTP-only cookies + Google OAuth
+- **Authentication**: Better Auth Visitor sessions + Payload Staff sessions + Google OAuth
 - **Payments**: Stripe subscriptions with webhooks
 - **Email**: Resend transactional emails
 - **File Storage**: Bunny.net CDN with `@seshuk/payload-storage-bunny` plugin
@@ -73,11 +73,10 @@ src/
 │   └── api/                 # API routes (auth, payments, webhooks)
 ├── features/                # Feature-based modules
 │   ├── articles/            # Articles collection
-│   ├── auth/                # Authentication & OAuth
+│   ├── auth/                # Payload Staff authentication and authorization
 │   │   ├── collections/     # Users collection definition
 │   │   ├── lib/             # Auth utilities
-│   │   ├── routes/          # Signup, login, password reset handlers
-│   │   └── types/           # JWT payload types
+│   ├── visitor-auth/        # Better Auth Visitor sessions, OAuth, and profiles
 │   ├── payments/            # Stripe integration
 │   │   ├── lib/             # Stripe API helpers
 │   │   ├── routes/          # Checkout, portal, subscription routes
@@ -118,13 +117,13 @@ src/
 ## Key Patterns
 
 ### Authentication Flow
-1. User signup/login at `/api/auth/signup` or Google OAuth
-2. Backend creates JWT with `userId`, `email`, `role`, `tokenVersion`
-3. JWT stored in HTTP-only cookie `payload-token`
-4. Token validated on every request via middleware
-5. Password change increments `tokenVersion` → invalidates old tokens
+1. Visitor signup/login uses Better Auth under `/api/visitor-auth/*`
+2. Visitor sessions use the `questura_visitor` cookie namespace
+3. `GET /api/me` returns a normalized Visitor or Staff Current principal
+4. Payload Staff auth remains separate and uses the `payload-token` cookie
+5. Stripe checkout requires a verified Visitor principal
 
-See `/src/features/auth/` for implementation details.
+See `/src/features/visitor-auth/` for Visitor auth and `/src/features/auth/` for Staff auth implementation details.
 
 ### Stripe Payments
 1. User initiates subscription → POST `/api/payments/create-checkout-session`
@@ -170,13 +169,14 @@ Create `.env.local` in the server root:
 DATABASE_URI=postgresql://user:pass@localhost:5432/questura
 
 # Authentication
-JWT_SECRET=<random_32+_char_string>
 PAYLOAD_SECRET=<random_32+_char_string>
+BETTER_AUTH_SECRET=<random_32+_char_string>
 
 # Google OAuth
 GOOGLE_CLIENT_ID=<from_console.cloud.google.com>
 GOOGLE_CLIENT_SECRET=<from_console.cloud.google.com>
-OAUTH_REDIRECT_URL=http://localhost:4000/api/auth/google/callback
+# Add this exact URI to Google Console authorized redirect URIs:
+# http://localhost:4000/api/visitor-auth/callback/google
 
 # Stripe
 STRIPE_SECRET_KEY=sk_test_...
@@ -279,10 +279,10 @@ pnpm generate:types  # Regenerate from collections
 - If you are using a fresh local server, create the role/database from the URI or update the URI to match an existing role/database
 
 **Authentication Issues**
-- Check `.env.local` has `JWT_SECRET` or `PAYLOAD_SECRET`
-- Verify token is in cookie: `payload-token`
-- Check middleware is not blocking the route
-- Verify `tokenVersion` in database matches token payload
+- Check the server has `BETTER_AUTH_SECRET` and `PAYLOAD_SECRET`
+- Verify Visitor requests include a `questura_visitor` session cookie
+- Verify Staff requests include the Payload `payload-token` cookie
+- Check direct browser-to-server requests receive CORS headers
 
 **Stripe Webhook Not Triggering (Local Development)**
 ```bash
@@ -292,9 +292,9 @@ stripe listen --forward-to localhost:4000/api/payments/webhooks/stripe
 - Ensure `STRIPE_WEBHOOK_SECRET` matches Stripe dashboard signing secret
 
 **Google OAuth Issues**
-- Ensure `OAUTH_REDIRECT_URL` matches Authorized redirect URI in Google Console
+- Ensure `${BACKEND_URL_LOCAL}/api/visitor-auth/callback/google` is an Authorized redirect URI in Google Console
 - Verify `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are correct
-- For local dev with ngrok: Update `OAUTH_REDIRECT_URL` to ngrok URL
+- For local dev with ngrok: Set `BACKEND_URL_LOCAL` to the ngrok URL
 
 ## Additional Documentation
 

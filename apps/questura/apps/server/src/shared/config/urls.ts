@@ -22,7 +22,7 @@ export const APP_URLS = {
 
   /**
    * Constructs a backend URL with the given path
-   * @param path - The path to append (e.g., '/api/users', '/api/auth/google/callback')
+   * @param path - The path to append (e.g., '/api/users', '/api/visitor-auth/callback/google')
    * @returns Full backend URL
    */
   backendUrl(path: string): string {

@@ -17,8 +17,6 @@ export const APP_CONFIG = {
   CORS_ORIGINS: corsOrigins,
 
   // Security & Authentication
-  JWT_SECRET: process.env.JWT_SECRET || process.env.PAYLOAD_SECRET || '',
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   payloadSecret: process.env.PAYLOAD_SECRET || '',
 
   // Google OAuth Configuration (redirectUri set below after backendUrl is computed)
@@ -42,9 +40,20 @@ export const APP_CONFIG = {
     uri: process.env.DATABASE_URI || '',
   },
 
+  // Redis Configuration
+  redis: {
+    url: process.env.REDIS_URL || '',
+  },
+
   // Email Configuration
   email: {
     apiKey: process.env.RESEND_API_KEY || '',
+  },
+
+  // Bot Protection
+  turnstile: {
+    enabled: process.env.TURNSTILE_AUTH_ENABLED === 'true',
+    secretKey: process.env.TURNSTILE_SECRET_KEY || '',
   },
 
   // Feature Flags
@@ -69,7 +78,7 @@ export const APP_CONFIG_WITH_GOOGLE = {
   ...APP_CONFIG,
   google: {
     ...APP_CONFIG.google,
-    redirectUri: `${APP_CONFIG.backendUrl}/api/auth/google/callback`,
+    redirectUri: `${APP_CONFIG.backendUrl}/api/visitor-auth/callback/google`,
   },
 }
 

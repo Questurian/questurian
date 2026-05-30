@@ -28,6 +28,7 @@ import { SingleTypeListicles } from './features/articles/single-type-listicles/c
 import { ListicleItineraries } from './features/articles/listicle-itineraries/collections'
 import { ArticleRedirects } from './features/articles/redirects/collections'
 import { LocationHomepages } from './features/homepage-featured-content'
+import { VisitorProfiles } from './features/visitor-auth'
 import { APP_CONFIG, APP_URLS } from './shared/config'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -45,7 +46,7 @@ export default buildConfig({
   serverURL: APP_URLS.backendLocal,
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
-  collections: [Users, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages],
+  collections: [Users, VisitorProfiles, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,
   typescript: {

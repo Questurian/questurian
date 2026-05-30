@@ -16,7 +16,8 @@ interface AddPasswordVariables {
 }
 
 interface AddPasswordResponse {
-  success: boolean;
+  success?: boolean;
+  status?: boolean;
   message?: string;
 }
 
@@ -26,11 +27,13 @@ export function useAddPasswordMutation() {
   return useMutation({
     mutationFn: async (variables: AddPasswordVariables): Promise<AddPasswordResponse> => {
       try {
-        const response = post<AddPasswordResponse>('/api/account/add-password', {
-          password: variables.password,
-          confirmPassword: variables.confirmPassword,
+        const response = await post<AddPasswordResponse>('/api/account/set-password', {
+          newPassword: variables.password,
         });
-        return response;
+        return {
+          ...response,
+          success: response.success ?? response.status ?? true,
+        };
       } catch (error) {
         // Check if it's a service unavailability error and throw clean message
         if (isServiceUnavailableError(error)) {
@@ -58,6 +61,8 @@ export function useAddPasswordMutation() {
  */
 interface LinkGoogleResponse {
   authUrl?: string;
+  url?: string;
+  redirect?: boolean;
   success?: boolean;
 }
 
@@ -65,7 +70,18 @@ export function useLinkGoogleMutation() {
   return useMutation({
     mutationFn: async (): Promise<LinkGoogleResponse> => {
       try {
-        return post<LinkGoogleResponse>('/api/account/link-google', {});
+        const callbackURL = new URL('/auth-callback-close?linked=google', window.location.origin).toString();
+        const errorCallbackURL = new URL('/auth-callback-close', window.location.origin).toString();
+        const response = await post<LinkGoogleResponse>('/api/visitor-auth/link-social', {
+          provider: 'google',
+          callbackURL,
+          errorCallbackURL,
+        });
+        return {
+          ...response,
+          authUrl: response.authUrl ?? response.url,
+          success: response.success ?? Boolean(response.url),
+        };
       } catch (error) {
         // Check if it's a service unavailability error
         if (isServiceUnavailableError(error)) {
@@ -85,7 +101,8 @@ export function useLinkGoogleMutation() {
  * Unlink Google account mutation
  */
 interface UnlinkGoogleResponse {
-  success: boolean;
+  success?: boolean;
+  status?: boolean;
   message?: string;
 }
 
@@ -95,9 +112,13 @@ export function useUnlinkGoogleMutation() {
   return useMutation({
     mutationFn: async (): Promise<UnlinkGoogleResponse> => {
       try {
-        return post<UnlinkGoogleResponse>('/api/account/unlink-google', {
-          confirmation: 'UNLINK_GOOGLE',
+        const response = await post<UnlinkGoogleResponse>('/api/visitor-auth/unlink-account', {
+          providerId: 'google',
         });
+        return {
+          ...response,
+          success: response.success ?? response.status ?? true,
+        };
       } catch (error) {
         // Check if it's a service unavailability error
         if (isServiceUnavailableError(error)) {

@@ -4,14 +4,15 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 function AuthCallbackCloseContent() {
-  const searchParams = useSearchParams() ?? new URLSearchParams();
+  const searchParams = useSearchParams();
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
     const handleCallback = () => {
-      const userParam = searchParams.get('user');
-      const error = searchParams.get('error');
-      const linked = searchParams.get('linked');
+      const params = searchParams ?? new URLSearchParams();
+      const userParam = params.get('user');
+      const error = params.get('error');
+      const linked = params.get('linked');
 
       console.log('Auth callback close page:', {
         user: userParam ? 'present' : 'missing',

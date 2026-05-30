@@ -65,12 +65,12 @@ export const useAuthSubmit = ({ inModal = false, onSuccess }: UseAuthSubmitOptio
         },
         {
           onSuccess: async (data) => {
-            // Check if email verification is required
-            if (data.requiresVerification) {
+            // BetterAuth creates a browsing session, but verification is still required before gated actions.
+            if (!data.user) {
               resolve({
                 success: false,
                 errors: [{
-                  message: data.message || 'Account created! Please check your email for verification code.',
+                  message: data.message || 'Account created. Please check your email for a verification link.',
                 }]
               });
               return;

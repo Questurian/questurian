@@ -22,6 +22,7 @@ export interface MembershipStatus {
  * Generic user object with membership fields
  */
 export interface UserWithMembership {
+  kind?: 'visitor' | 'staff';
   role?: string;
   subscriptionStatus?: string | null;
   membershipExpiration?: string | Date | null;

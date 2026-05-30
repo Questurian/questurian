@@ -1,6 +1,5 @@
 // Auth feature exports
 export * from './collections/Users'
-export * from './lib/google-handler'
 export * from './lib/auth-errors'
 export * from './lib/role-utils'
 export * from './types'

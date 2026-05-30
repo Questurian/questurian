@@ -8,6 +8,7 @@ interface EmailSectionProps {
 export function EmailSection({ user }: EmailSectionProps) {
   const router = useRouter();
   const hasPassword = user?.hasLocalPassword || user?.authProvider === 'local' || user?.authProvider === 'dual';
+  const canChangeEmail = hasPassword && !user?.hasGoogleOAuth;
 
   return (
     <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
@@ -27,8 +28,13 @@ export function EmailSection({ user }: EmailSectionProps) {
               You must add a password to your account before changing your email.
             </p>
           )}
+          {hasPassword && user?.hasGoogleOAuth && (
+            <p className="text-[0.75rem] 480:text-[0.78rem] text-[#C65D3B]">
+              Disconnect Google before changing your email.
+            </p>
+          )}
         </div>
-        {hasPassword ? (
+        {canChangeEmail ? (
           <button
             onClick={() => router.push('/account/change-email')}
             className="

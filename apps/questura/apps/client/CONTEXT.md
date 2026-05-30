@@ -60,9 +60,15 @@ Tag used for filter and browse UI. Scoped to a `LocationCategory` via `applicabl
 
 Display + conversion. The user's currency selection affects price formatting throughout.
 
-### User
+### Visitor account
 
-Authenticated visitor (Account page, saved guides, profile).
+Authenticated public-site identity for end visitors using login, signup, profile, saved content, and checkout flows.
+_Avoid_: User, staff user, Payload user
+
+### Current principal
+
+Public API view of the authenticated Visitor account or Staff identity making a request.
+_Avoid_: raw user, raw session
 
 ### Payment
 
@@ -93,6 +99,10 @@ Stripe checkout flow for paid content.
 - A listing card uses a **MediaSet** payload via the server-side media resolver — the client does not pick variants.
 - A **Tour** card renders price in the selected **Currency**.
 - A `PerfectForTag` filter narrows listings by `applicableTypes`.
+- A **Visitor account** is the public identity behind account, saved-guide, profile, and checkout flows.
+- A **Current principal** may represent a Visitor account or a Staff identity.
+- `GET /api/me` is the canonical current-principal read for client auth state.
+- Client flows that require a Visitor account reject a Staff current principal.
 
 ## Domain Rules
 
@@ -127,3 +137,7 @@ Stripe checkout flow for paid content.
 - `staging` exists in some sibling repos as a holding area — does the Questura client need an equivalent for in-progress features?
 - The folder naming inconsistency (`CityDashboard` vs `articles`) — should we converge?
 - The boundary between `CityDashboard` and `CityDiscovery` isn't obvious from names; worth documenting.
+
+## Flagged Ambiguities
+
+- "User" previously meant an authenticated public visitor in the client context, but Questura now distinguishes **Visitor account** from Staff identity. Resolution: use **Visitor account** for public auth and **Current principal** for API responses that may represent either Visitor or Staff identity.

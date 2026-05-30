@@ -17,9 +17,7 @@ interface ChangePasswordVariables {
 }
 
 interface ChangePasswordResponse {
-  success: boolean;
-  message: string;
-  token: string;
+  token: string | null;
 }
 
 export function useChangePasswordMutation() {
@@ -28,66 +26,11 @@ export function useChangePasswordMutation() {
   return useMutation({
     mutationFn: async (variables: ChangePasswordVariables): Promise<ChangePasswordResponse> => {
       try {
-        const response = await post<ChangePasswordResponse>('/api/auth/change-password', {
+        const response = await post<ChangePasswordResponse>('/api/visitor-auth/change-password', {
           currentPassword: variables.currentPassword,
           newPassword: variables.newPassword,
-          confirmNewPassword: variables.confirmNewPassword,
+          revokeOtherSessions: true,
         });
-
-        if (!response.success) {
-          throw new Error(response.message || 'Failed to change password');
-        }
-
-        return response;
-      } catch (error) {
-        // Check if it's a service unavailability error
-        if (isServiceUnavailableError(error)) {
-          throw new Error('Service is unavailable. Please try again later.');
-        }
-
-        // Re-throw other errors
-        throw error;
-      }
-    },
-    onSuccess: () => {
-      // Cookie is automatically updated by backend
-      // Invalidate user query to refetch with new session
-      queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
-    },
-  });
-}
-
-/**
- * Confirm password change mutation (with verification code)
- */
-interface ConfirmPasswordChangeVariables {
-  code: string;
-  currentPassword: string;
-  newPassword: string;
-  confirmNewPassword: string;
-}
-
-interface ConfirmPasswordChangeResponse {
-  success: boolean;
-  message: string;
-}
-
-export function useConfirmPasswordChangeMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (variables: ConfirmPasswordChangeVariables): Promise<ConfirmPasswordChangeResponse> => {
-      try {
-        const response = await post<ConfirmPasswordChangeResponse>('/api/auth/confirm-password-change', {
-          code: variables.code,
-          currentPassword: variables.currentPassword,
-          newPassword: variables.newPassword,
-          confirmNewPassword: variables.confirmNewPassword,
-        });
-
-        if (!response.success) {
-          throw new Error(response.message || 'Failed to confirm password change');
-        }
 
         return response;
       } catch (error) {

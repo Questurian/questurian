@@ -30,16 +30,20 @@ export const usePasswordResetRequest = () => {
   return useMutation<PasswordResetRequestResponse, PasswordResetRequestError, PasswordResetRequest>({
     mutationFn: async (data) => {
       try {
+        const redirectTo = new URL('/auth/reset-password', window.location.origin).toString();
         const response = await apiRequest<PasswordResetRequestResponse>(
-          '/api/auth/forgot-password/request',
+          '/api/visitor-auth/request-password-reset',
           {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify({
+              email: data.email,
+              redirectTo,
+            }),
             credentials: 'include',
           }
         );
 
-        if (!response.success) {
+        if (response.success === false) {
           throw new PasswordResetRequestError(
             response.message || 'Failed to request password reset',
             response.code,

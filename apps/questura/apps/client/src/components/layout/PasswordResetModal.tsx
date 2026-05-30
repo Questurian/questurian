@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from 'react';
-import EnhancedResetPasswordForm from '@/features/Auth/components/form/EnhancedResetPasswordForm';
+import { useEffect, useState, type FormEvent } from 'react';
+import { usePasswordResetRequest } from '@/features/Auth/hooks/usePasswordResetRequest';
 
 interface PasswordResetModalProps {
   isOpen: boolean;
@@ -14,21 +14,21 @@ export default function PasswordResetModal({
   onClose,
   email
 }: PasswordResetModalProps) {
-  const [modalTitle, setModalTitle] = useState("Verify and Reset Password");
-  const [modalSubtitle, setModalSubtitle] = useState("Enter the code we sent to your email");
+  const [sent, setSent] = useState(false);
+  const resetRequest = usePasswordResetRequest();
+  const { reset } = resetRequest;
 
-  const handleSuccess = () => {
-    onClose();
-  };
-
-  const handleStepChange = (currentStep: number) => {
-    if (currentStep === 1) {
-      setModalTitle("Verify and Reset Password");
-      setModalSubtitle("Enter the code we sent to your email");
-    } else if (currentStep === 2) {
-      setModalTitle("Create New Password");
-      setModalSubtitle("Enter your new password below");
+  useEffect(() => {
+    if (!isOpen) {
+      setSent(false);
+      reset();
     }
+  }, [isOpen, reset]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await resetRequest.mutateAsync({ email });
+    setSent(true);
   };
 
   if (!isOpen) return null;
@@ -64,20 +64,44 @@ export default function PasswordResetModal({
           <div className="640:flex 640:items-start">
             <div className="w-full mt-3 text-center 640:mt-0 640:text-left">
               <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-2">
-                {modalTitle}
+                Reset Password
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                {modalSubtitle}
+                {sent
+                  ? "Check your email for a password reset link."
+                  : "We'll email you a secure link to choose a new password."}
               </p>
 
-              <EnhancedResetPasswordForm
-                key={isOpen ? 'open' : 'closed'}
-                inModal={true}
-                onSuccess={handleSuccess}
-                prefillEmail={email}
-                skipEmailStep={true}
-                onStepChange={handleStepChange}
-              />
+              {sent ? (
+                <button
+                  type="button"
+                  className="w-full rounded-lg bg-[#468BE6] px-4 py-3 text-sm font-medium text-white hover:bg-[#1A5799]"
+                  onClick={onClose}
+                >
+                  Done
+                </button>
+              ) : (
+                <form className="space-y-4" onSubmit={handleSubmit}>
+                  <input
+                    type="email"
+                    value={email}
+                    readOnly
+                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-3 text-sm text-black"
+                  />
+                  {resetRequest.error && (
+                    <p className="text-sm text-red-600">
+                      {resetRequest.error.message}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={resetRequest.isPending}
+                    className="w-full rounded-lg bg-[#468BE6] px-4 py-3 text-sm font-medium text-white hover:bg-[#1A5799] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {resetRequest.isPending ? 'Sending...' : 'Send reset link'}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>

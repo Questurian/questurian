@@ -1,14 +1,14 @@
 import type { MembershipStatus, UserWithMembership } from '../types';
 import { useDevStore } from '@/lib/stores/devStore';
 
-const PRIVILEGED_ROLES = ['admin', 'editor', 'writer'];
+const STAFF_GRANT_ROLES = ['admin', 'editor'];
 
 export function isActiveMember(user: UserWithMembership): boolean {
   if (process.env.NODE_ENV === 'development' && useDevStore.getState().membershipOverride) {
     return true;
   }
 
-  if (user.role && PRIVILEGED_ROLES.includes(user.role)) {
+  if (user.kind === 'staff' && user.role && STAFF_GRANT_ROLES.includes(user.role)) {
     return true;
   }
 

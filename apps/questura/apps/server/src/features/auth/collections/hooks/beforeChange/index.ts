@@ -1,6 +1,5 @@
 import type { CollectionBeforeChangeHook } from 'payload'
 import { firstUserPromotionHook } from './firstUserPromotion'
-import { membershipStatusSummaryHook } from './membershipStatusSummary'
 
 /**
  * All beforeChange hooks for Users collection
@@ -9,5 +8,4 @@ import { membershipStatusSummaryHook } from './membershipStatusSummary'
  */
 export const beforeChangeHooks: CollectionBeforeChangeHook[] = [
   firstUserPromotionHook,
-  membershipStatusSummaryHook
 ]

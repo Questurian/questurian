@@ -1,2 +1,2 @@
-export { isAdminFieldLevel, membershipExpirationFieldAccess } from './fieldLevel'
+export { isAdminFieldLevel } from './fieldLevel'
 export { collectionAccess } from './collectionLevel'

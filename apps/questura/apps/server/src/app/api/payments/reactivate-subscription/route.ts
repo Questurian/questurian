@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, getCorsHeaders, handleCorsOptions } from '@/auth/lib/auth-middleware'
+import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { reactivateUserSubscription } from '@/payments/lib/payment-service'
+import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
 
   try {
-    // 1. Authenticate the user
-    const authResult = await authenticateRequest(req)
+    const authResult = await requireVisitorPrincipal(req.headers)
 
     if (authResult.error) {
       return NextResponse.json(
@@ -16,23 +16,8 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const user = authResult.user!
-
-    // GUARD: Staff members cannot reactivate subscriptions
-    if (user.role === 'admin' || user.role === 'editor') {
-      console.log('Preventing subscription reactivation for staff member:', {
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      })
-      return NextResponse.json(
-        { error: 'Staff members do not have subscriptions to reactivate' },
-        { status: 403, headers: corsHeaders }
-      )
-    }
-
-    // 2. Reactivate the user's subscription
-    const result = await reactivateUserSubscription(String(user.id))
+    const visitor = authResult.principal!
+    const result = await reactivateUserSubscription(String(visitor.id))
 
     if (!result.success) {
       return NextResponse.json(

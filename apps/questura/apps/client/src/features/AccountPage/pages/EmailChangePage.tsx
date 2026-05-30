@@ -44,11 +44,6 @@ export default function EmailChangePage() {
       {flow.step === 'verifyNewEmail' ? (
         <VerifyNewEmailForm
           newEmail={flow.newEmail}
-          verificationCode={flow.verificationCode}
-          willUnlinkGoogle={flow.willUnlinkGoogle}
-          isPending={flow.confirmEmailChangePending}
-          onVerificationCodeChange={flow.setVerificationCode}
-          onSubmit={flow.handleConfirmChange}
           onBack={flow.handleBack}
         />
       ) : null}

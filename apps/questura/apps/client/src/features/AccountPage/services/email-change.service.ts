@@ -12,10 +12,3 @@ export function mapEmailChangeError(
 
   return fallbackMessage;
 }
-
-export function buildEmailChangeSuccessUrl(newEmail: string, wasGoogleUnlinked: boolean): string {
-  const params = new URLSearchParams();
-  params.append('newEmail', newEmail);
-  params.append('googleUnlinked', String(wasGoogleUnlinked));
-  return `/account/email-changed-success?${params.toString()}`;
-}

@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/lib/user/hooks';
 import { EnhancedAuthForm } from '@/features/Auth';
-import { isServiceUnavailableError } from '@/lib/api';
+import { isServiceUnavailableError, post } from '@/lib/api';
 import MembershipGuard from '../components/MembershipGuard';
 import { useMembership } from '../hooks/useMembership';
 import { useCreateCheckoutSessionMutation } from '../hooks/useSubscriptionMutations';
@@ -26,6 +26,8 @@ export default function PurchasePage({
   const { hasValidMembership } = useMembership(user);
 
   const checkoutMutation = useCreateCheckoutSessionMutation();
+  const [verificationEmailStatus, setVerificationEmailStatus] = useState<string | null>(null);
+  const [sendingVerificationEmail, setSendingVerificationEmail] = useState(false);
   const [authFormState, setAuthFormState] = useState<{ isSignUp: boolean; showPasswordStep: boolean }>({
     isSignUp: false,
     showPasswordStep: false
@@ -44,6 +46,9 @@ export default function PurchasePage({
   }
 
   const handleSubscribe = () => {
+    if (user?.kind !== 'visitor' || !user.emailVerified) {
+      return;
+    }
     checkoutMutation.mutate({});
   };
 
@@ -52,6 +57,26 @@ export default function PurchasePage({
     queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
     // Note: We don't auto-trigger handleSubscribe here
     // The page will re-render with isAuthenticated=true and show the payment button
+  };
+
+  const handleResendVerificationEmail = async () => {
+    if (user?.kind !== 'visitor') return;
+
+    setSendingVerificationEmail(true);
+    setVerificationEmailStatus(null);
+    try {
+      await post('/api/visitor-auth/send-verification-email', {
+        email: user.email,
+        callbackURL: new URL('/', window.location.origin).toString(),
+      });
+      setVerificationEmailStatus('Verification email sent.');
+    } catch (error) {
+      setVerificationEmailStatus(
+        error instanceof Error ? error.message : 'Failed to send verification email.'
+      );
+    } finally {
+      setSendingVerificationEmail(false);
+    }
   };
 
   if (hasValidMembership) {
@@ -110,7 +135,7 @@ export default function PurchasePage({
                 <p className="text-gray-700 dark:text-gray-300">
                   <span className="font-medium">Email:</span> {user?.email}
                 </p>
-                {user?.firstName && user?.lastName && (
+                {user?.kind === 'visitor' && user.firstName && user.lastName && (
                   <p className="text-gray-700 dark:text-gray-300">
                     <span className="font-medium">Name:</span> {user.firstName} {user.lastName}
                   </p>
@@ -129,13 +154,38 @@ export default function PurchasePage({
                 </div>
               ) : null}
 
-              <button
-                onClick={handleSubscribe}
-                disabled={checkoutMutation.isPending}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                {checkoutMutation.isPending ? 'Creating session...' : `Subscribe Now - $${amount}/month`}
-              </button>
+              {user?.kind === 'staff' ? (
+                <p className="text-center text-sm text-gray-600 dark:text-gray-300">
+                  Stripe checkout requires a visitor account.
+                </p>
+              ) : !user?.emailVerified ? (
+                <div className="space-y-3 text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Verify your email before starting checkout.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendVerificationEmail}
+                    disabled={sendingVerificationEmail}
+                    className="text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {sendingVerificationEmail ? 'Sending...' : 'Resend verification email'}
+                  </button>
+                  {verificationEmailStatus && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {verificationEmailStatus}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={handleSubscribe}
+                  disabled={checkoutMutation.isPending}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                >
+                  {checkoutMutation.isPending ? 'Creating session...' : `Subscribe Now - $${amount}/month`}
+                </button>
+              )}
             </div>
           )}
 

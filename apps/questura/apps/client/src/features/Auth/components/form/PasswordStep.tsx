@@ -20,11 +20,9 @@ export default function PasswordStep({
   isSignUp,
   showPassword,
   onTogglePassword,
-  userAccountStatus,
   inModal = false,
   errorMessage
 }: PasswordStepProps) {
-  const isPasswordOptional = userAccountStatus?.hasGoogleAuth && !userAccountStatus?.hasPassword && !password;
   const openResetPasswordModal = useResetPasswordModalStore(state => state.openModal);
 
   const handleForgotPassword = () => {
@@ -73,7 +71,7 @@ export default function PasswordStep({
               name="password"
               type={showPassword ? "text" : "password"}
               autoComplete={isSignUp ? "new-password" : "current-password"}
-              required={!userAccountStatus?.hasGoogleAuth || userAccountStatus?.hasPassword}
+              required
               className={`appearance-none rounded-lg relative block w-full px-3 py-3 pr-16 border ${
                 fieldError
                   ? 'border-red-300'
@@ -119,7 +117,7 @@ export default function PasswordStep({
       <div>
         <button
           type="submit"
-          disabled={loading || isPasswordOptional}
+          disabled={loading}
           className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-[#468BE6] hover:bg-[#1A5799] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#468BE6] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           {loading ? (

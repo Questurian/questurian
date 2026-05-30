@@ -1,20 +1,17 @@
 import { CollectionConfig } from 'payload'
 import { collectionAccess } from './access/collectionLevel'
 import { userCollectionHooks } from './hooks'
-import { basicFields, authenticationFields, membershipFields, profileFields } from './fields'
+import { basicFields, profileFields } from './fields'
 
 /**
  * Users Collection - Main entry point assembling all modular components
  *
  * Structure:
  * - Role (sidebar) - Critical field for access control
- * - Membership Status Summary (sidebar) - Quick overview of membership state
- * - Tabs: Basic Info, Authentication, Membership, Activity, Public Profile
+ * - Tabs: Basic Info, Activity, Public Profile
  *
  * Field organization by concern:
  * - basicFields: Email, firstName, lastName
- * - authenticationFields: All auth provider fields and password management
- * - membershipFields: Subscription, Stripe, and membership-related fields
  * - profileFields: Public profile visible to website visitors (editor-only)
  *
  * Access control:
@@ -123,7 +120,6 @@ export const Users: CollectionConfig = {
         { label: 'Admin', value: 'admin' },
         { label: 'Editor', value: 'editor' },
         { label: 'Writer', value: 'writer' },
-        { label: 'User', value: 'user' },
       ],
       admin: {
         position: 'sidebar',
@@ -138,30 +134,6 @@ export const Users: CollectionConfig = {
         {
           label: 'Basic Info',
           fields: basicFields,
-        },
-        {
-          label: 'Authentication',
-          fields: authenticationFields,
-          admin: {
-            condition: (data) => {
-              // Show for users (users are being managed by admins)
-              if (data?.role === 'user') return true
-              // Hide for admins (admin-to-admin views and admin viewing self are hidden)
-              return false
-            },
-          },
-        },
-        {
-          label: 'Membership',
-          fields: membershipFields,
-          admin: {
-            condition: (data) => {
-              // Show for regular users and editors
-              // For users: full membership/subscription details
-              // For editors: only subscriptionStatus field visible (shows 'active' for permanent staff)
-              return data?.role === 'user' || data?.role === 'editor'
-            },
-          },
         },
         {
           label: 'Activity',

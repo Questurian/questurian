@@ -108,6 +108,66 @@ Per-location homepage configuration (block layouts, featured slots).
 
 Auth + role system. Operator vs end-user vs admin.
 
+### Staff identity
+
+Authenticated Questura operator identity for Payload/admin/editorial access (`admin`, `editor`, `writer`).
+_Avoid_: account, customer, member
+
+### Staff grant
+
+Role-derived Membership entitlement for a Staff identity.
+_Avoid_: Stripe subscription, manual subscription status
+
+### Visitor account
+
+Authenticated public-site identity for end visitors using login, signup, profile, saved content, and checkout flows.
+_Avoid_: staff user, member
+
+### Visitor profile
+
+Questura-owned public-site profile and commerce record for one Visitor account.
+_Avoid_: credential, session, staff user
+
+### Membership entitlement
+
+Authorization state that determines paid-content access for a Visitor account or Staff identity.
+_Avoid_: identity, account
+
+### Membership entitlement source
+
+Reason a Membership entitlement exists, either `stripe` or `staff_grant`.
+_Avoid_: subscription status, role
+
+### Staff entry point
+
+Login path intended for Staff identities before they reach Payload/admin/editorial surfaces.
+_Avoid_: public signup, public OAuth flow
+
+### Visitor entry point
+
+Login and signup path intended for Visitor accounts on the public site.
+_Avoid_: admin login, staff SSO
+
+### Visitor auth
+
+Authentication system for Visitor accounts on the public site.
+_Avoid_: staff auth, Payload admin auth
+
+### Visitor session
+
+Database-backed login session for a Visitor account.
+_Avoid_: custom JWT, frontend token
+
+### Current principal
+
+Public API view of the authenticated Visitor account or Staff identity making a request.
+_Avoid_: raw user, raw session
+
+### Staff auth
+
+Authentication system for Staff identities entering Payload/admin/editorial surfaces.
+_Avoid_: public auth, visitor auth
+
 ## Relationships
 
 - A **MediaSet** has one or more **MediaAsset** variants.
@@ -117,6 +177,57 @@ Auth + role system. Operator vs end-user vs admin.
 - A **LocationGuideRecord** for a child Location can inherit fields from its parent via `resolveLocationGuideForHierarchy`.
 - A **Tour** belongs to one Location.
 - **`PerfectForTag.applicableTypes`** scopes a tag to one or more of dining/attractions/nightlife/accommodations.
+- A **Visitor account** or **Staff identity** may have an active **Membership entitlement**.
+- A **Visitor account** has exactly one **Visitor profile**.
+- A **Staff identity** is separate from a **Visitor account**.
+- A **Staff identity** enters through a **Staff entry point**, not a **Visitor entry point**.
+- **Visitor auth** and **Staff auth** are separate auth surfaces.
+- **Visitor auth** uses **Visitor sessions**, not frontend-held custom JWTs.
+- Visitor auth cookies use the BetterAuth `questura_visitor` namespace.
+- `payload-token` is reserved for Staff auth through Payload.
+- `Users` is the Staff identity collection.
+- Payload `Users` roles are `admin`, `editor`, and `writer` only.
+- Payload `Users.role = "user"` is legacy and removed before launch.
+- `VisitorProfiles` is the Visitor profile collection.
+- Staff email addresses cannot become Visitor accounts.
+- Staff email blocking uses both known staff-domain checks and Payload `Users` lookup.
+- Visitor auth flows avoid account-discovery responses except where a user has explicitly submitted a create/update action.
+- Visitor signup/login does not use a preflight account-check step.
+- Visitor auth UI presents explicit sign-in and sign-up paths rather than probing whether an email exists.
+- Visitor auth endpoints are abuse-sensitive surfaces and require rate limiting, bot protection, and audit logging.
+- Production Visitor auth rate limiting is Redis-backed; database-backed limits are local/spike-only.
+- Unverified email/password Visitor accounts may sign in and browse free public content.
+- Checkout, paid content, and sensitive account changes require a verified Visitor account.
+- Google OAuth Visitor accounts satisfy verification when Google reports a verified email.
+- OAuth accounts without provider-verified email must complete Questura verification before gated access.
+- Visitor account linking requires matching provider and email/password email addresses.
+- Visitor account linking does not merge different email addresses into one Visitor account.
+- Questura Server owns Visitor auth runtime.
+- Visitor auth records live in Questura Server's Postgres database separately from Payload staff collections.
+- BetterAuth table schema is managed by committed Questura Server migrations, not Payload `push`.
+- VisitorProfiles owns Visitor account membership and Stripe linkage.
+- VisitorProfiles starts narrow: identity mirror, profile names, membership, Stripe linkage, and affiliate referral data.
+- BetterAuth owns Visitor account credentials, provider accounts, sessions, and verification state.
+- Questura-owned Visitor account product data lives in VisitorProfiles or related Questura collections.
+- VisitorProfiles is a Payload collection so Staff identities can support Visitor account membership and Stripe state through the admin surface.
+- BetterAuth tables are auth infrastructure and are not treated as Staff-facing support records.
+- A **Membership entitlement** has a **Membership entitlement source**.
+- A **Staff grant** is derived from role, not Stripe state.
+- `admin` and `editor` Staff identities receive a **Staff grant**; `writer` does not.
+- `writer` Staff identities may access Payload/editorial surfaces according to collection permissions, but do not receive paid public-content access through a Staff grant.
+- Public account APIs return a **Current principal**, not raw auth-provider records.
+- `GET /api/me` is the canonical public current-principal endpoint.
+- `GET /api/me` returns Staff identities as authenticated Current principals when Staff auth is present.
+- Client flows that require a Visitor account reject a Staff current principal.
+- Legacy visitor-facing auth and user endpoints are not compatibility aliases; they are removed before launch.
+- New Visitor auth is not complete until legacy visitor auth routes, custom JWT helpers, visitor `payload-token` usage, client calls to old auth routes, and `Users.role = "user"` are removed.
+- Stripe customer and subscription records belong only to Visitor accounts.
+- Staff identities never create Stripe checkout or customer records.
+- Payment APIs authenticate through the Current principal and require a Visitor principal for Stripe checkout/customer operations.
+- BetterAuth endpoints own Visitor credential, session, verification, and provider-linking operations.
+- Questura account APIs exist only for Visitor profile, preference, saved-content, affiliate/referral, and membership-view operations.
+- BetterAuth owns Visitor auth email token and flow state.
+- Questura's Resend email feature renders and sends Visitor auth emails through BetterAuth mail hooks.
 
 ## Domain Rules
 

@@ -27,6 +27,10 @@ export interface EmailVerificationParams {
   code: string
 }
 
+export interface EmailVerificationLinkParams extends BaseEmailData {
+  url: string
+}
+
 export interface GoogleAccountLinkedParams {
   email: string
   firstName: string
@@ -52,6 +56,10 @@ export type PasswordResetSuccessEmailData = BaseEmailData
 
 export interface PasswordResetEmailData extends BaseEmailData {
   code: string
+}
+
+export interface PasswordResetLinkEmailData extends BaseEmailData {
+  url: string
 }
 
 export interface SubscriptionCancelledEmailData extends BaseEmailData {

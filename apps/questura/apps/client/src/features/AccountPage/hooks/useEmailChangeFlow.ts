@@ -1,12 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/user/hooks';
-import {
-  useConfirmEmailChangeMutation,
-  useRequestEmailChangeMutation,
-  useVerifyPasswordMutation,
-} from './useEmailChangeMutations';
-import { buildEmailChangeSuccessUrl, mapEmailChangeError } from '../services/email-change.service';
+import { useRequestEmailChangeMutation, useVerifyPasswordMutation } from './useEmailChangeMutations';
+import { mapEmailChangeError } from '../services/email-change.service';
 import type { EmailChangeStep } from '../types/email-change.types';
 
 export function useEmailChangeFlow() {
@@ -16,13 +12,10 @@ export function useEmailChangeFlow() {
   const [step, setStep] = useState<EmailChangeStep>('verifyPassword');
   const [password, setPassword] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [willUnlinkGoogle, setWillUnlinkGoogle] = useState(false);
 
   const verifyPasswordMutation = useVerifyPasswordMutation();
   const requestEmailChangeMutation = useRequestEmailChangeMutation();
-  const confirmEmailChangeMutation = useConfirmEmailChangeMutation();
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -33,7 +26,7 @@ export function useEmailChangeFlow() {
   useEffect(() => {
     if (user && !loading) {
       const hasPassword = user.hasLocalPassword || user.authProvider === 'local' || user.authProvider === 'dual';
-      if (!hasPassword) {
+      if (!hasPassword || user.hasGoogleOAuth) {
         router.push('/account');
       }
     }
@@ -72,10 +65,7 @@ export function useEmailChangeFlow() {
     requestEmailChangeMutation.mutate(
       { newEmail },
       {
-        onSuccess: (data) => {
-          if (data.willUnlinkGoogle) {
-            setWillUnlinkGoogle(true);
-          }
+        onSuccess: () => {
           setStep('verifyNewEmail');
         },
         onError: (mutationError) => {
@@ -85,27 +75,9 @@ export function useEmailChangeFlow() {
     );
   };
 
-  const handleConfirmChange = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
-
-    confirmEmailChangeMutation.mutate(
-      { code: verificationCode },
-      {
-        onSuccess: (data) => {
-          window.location.href = buildEmailChangeSuccessUrl(data.newEmail, data.wasGoogleUnlinked);
-        },
-        onError: (mutationError) => {
-          setError(mapEmailChangeError(mutationError, 'Failed to confirm email change. Please try again.'));
-        },
-      }
-    );
-  };
-
   const handleBack = () => {
     if (step === 'verifyNewEmail') {
       setStep('enterNewEmail');
-      setVerificationCode('');
       setError(null);
       return;
     }
@@ -127,18 +99,13 @@ export function useEmailChangeFlow() {
     step,
     password,
     newEmail,
-    verificationCode,
     error,
-    willUnlinkGoogle,
     verifyPasswordPending: verifyPasswordMutation.isPending,
     requestEmailChangePending: requestEmailChangeMutation.isPending,
-    confirmEmailChangePending: confirmEmailChangeMutation.isPending,
     setPassword,
     setNewEmail,
-    setVerificationCode,
     handleVerifyPassword,
     handleRequestChange,
-    handleConfirmChange,
     handleBack,
     goToAccount: () => router.push('/account'),
   };

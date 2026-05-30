@@ -48,7 +48,7 @@ export default function EnterNewEmailForm({
 
         <div className="bg-white border border-[#e5e2dc] rounded-sm p-3.5">
           <p className="text-[0.78rem] text-[#9a9894] leading-[1.65]">
-            We&apos;ll send a verification code to your new email address. The code will expire in 15 minutes.
+            We&apos;ll send a verification link to your new email address. Open it to finish the change.
           </p>
         </div>
       </div>
@@ -64,7 +64,7 @@ export default function EnterNewEmailForm({
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          {isPending ? 'Sending...' : 'Send Verification Code'}
+          {isPending ? 'Sending...' : 'Send verification link'}
         </button>
         <button
           type="button"

@@ -11,7 +11,7 @@ const mockUser = (overrides = {}) => ({
   cancelAtPeriodEnd: false,
   membershipExpiration: null,
   subscriptionRenewsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-  role: 'user',
+  role: 'writer',
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   ...overrides,

@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, getCorsHeaders, handleCorsOptions } from '@/auth/lib/auth-middleware'
 import { stripe } from '@/payments/lib/stripe'
-import { getPayload } from 'payload'
-import config from '@/payload.config'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
+import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
+import {
+  findVisitorProfileByAuthUserId,
+  updateVisitorProfileByAuthUserId,
+} from '@/features/visitor-auth/lib/visitor-profile'
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
 
   try {
-    // 1. Authenticate the user and require email verification
-    const authResult = await authenticateRequest(req, { requireEmailVerification: true })
+    const authResult = await requireVisitorPrincipal(req.headers, { requireVerified: true })
 
     if (authResult.error) {
       return NextResponse.json(
@@ -19,23 +21,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const user = authResult.user!
-
-    // GUARD: Staff members cannot create checkout sessions (they have free access)
-    if (user.role === 'admin' || user.role === 'editor') {
-      console.log('Preventing checkout session for staff member:', {
-        userId: user.id,
-        email: user.email,
-        role: user.role
-      })
-      return NextResponse.json(
-        { error: 'Staff members do not require subscriptions' },
-        { status: 403, headers: corsHeaders }
-      )
-    }
+    const visitor = authResult.principal!
+    const visitorAuthUserId = String(visitor.id)
+    const profile = await findVisitorProfileByAuthUserId(visitorAuthUserId)
 
     // 2. Validate required user data
-    if (!user.email) {
+    if (!visitor.email) {
       return NextResponse.json(
         { error: 'Email required for subscription' },
         { status: 400, headers: corsHeaders }
@@ -54,53 +45,47 @@ export async function POST(req: NextRequest) {
 
       // Log affiliate conversion for debugging
       if (referralId) {
-        console.log(`[Affiliate] User ${user.email} referred by ${referralId}`)
+        console.log(`[Affiliate] Visitor ${visitor.email} referred by ${referralId}`)
       }
     }
 
     // 4. Get or create Stripe customer
-    let stripeCustomerId = user.stripeCustomerId
+    let stripeCustomerId = profile?.stripeCustomerId ?? null
 
     if (!stripeCustomerId) {
-      console.log('Creating new Stripe customer for user:', user.id)
+      console.log('Creating new Stripe customer for visitor:', visitorAuthUserId)
 
       const customer = await stripe.customers.create({
-        email: user.email,
-        name: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email,
+        email: visitor.email,
+        name: visitor.firstName && visitor.lastName ? `${visitor.firstName} ${visitor.lastName}` : visitor.email,
         metadata: {
-          userId: user.id,
-          payloadUserId: user.id // Additional field for clarity
+          visitorAuthUserId,
+          visitorProfileId: String(visitor.profileId ?? ''),
         }
       })
 
       stripeCustomerId = customer.id
       console.log('Created Stripe customer:', stripeCustomerId)
 
-      // Update user record with Stripe customer ID
-      const payload = await getPayload({ config })
-      await payload.update({
-        collection: 'users',
-        id: user.id,
-        data: { stripeCustomerId }
-      })
+      await updateVisitorProfileByAuthUserId(visitorAuthUserId, { stripeCustomerId })
 
-      console.log('Updated user record with stripeCustomerId')
+      console.log('Updated VisitorProfile with stripeCustomerId')
     } else {
       console.log('Using existing Stripe customer:', stripeCustomerId)
     }
 
     // 5. Check if user already has an active subscription
-    if (user.subscriptionStatus === 'active' && user.stripeSubscriptionId) {
+    if (profile?.subscriptionStatus === 'active' && profile?.stripeSubscriptionId) {
       return NextResponse.json(
-        { error: 'User already has an active subscription' },
+        { error: 'Visitor already has an active subscription' },
         { status: 400, headers: corsHeaders }
       )
     }
 
     // 6. Build metadata including optional affiliate referral
     const metadata: Record<string, string> = {
-      userId: String(user.id),
-      userEmail: user.email
+      visitorAuthUserId,
+      visitorEmail: visitor.email,
     }
 
     if (referralId) {

@@ -4,7 +4,7 @@
 
 import { useState, useEffect } from 'react';
 import { validateEmail, validateAuthForm } from '../lib/auth-utils';
-import type { AuthFormData, AuthError, UserAccountStatus, UseAuthFormOptions } from '../types';
+import type { AuthFormData, AuthError, UseAuthFormOptions } from '../types';
 
 export const useAuthForm = ({ prefillEmail, onModeChange }: UseAuthFormOptions = {}) => {
   const [formData, setFormData] = useState<AuthFormData>({
@@ -51,17 +51,7 @@ export const useAuthForm = ({ prefillEmail, onModeChange }: UseAuthFormOptions =
     return errors.filter(error => !error.field).map(error => error.message);
   };
 
-  const proceedToPasswordStep = (accountStatus: UserAccountStatus) => {
-    // Automatically set form mode based on user existence
-    if (accountStatus.userExists) {
-      console.log('👤 User exists - showing login form');
-      setIsSignUp(false); // Show login form
-    } else {
-      console.log('🆕 User does not exist - showing signup form');
-      setIsSignUp(true);  // Show signup form
-    }
-
-    // Show the password step after account check
+  const proceedToPasswordStep = () => {
     setShowPasswordStep(true);
   };
 

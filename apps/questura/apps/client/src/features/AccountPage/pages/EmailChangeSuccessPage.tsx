@@ -1,23 +1,10 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
 export default function EmailChangeSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams() ?? new URLSearchParams();
-  const [newEmail, setNewEmail] = useState<string | null>(null);
-  const [googleWasUnlinked, setGoogleWasUnlinked] = useState(false);
-
-  useEffect(() => {
-    const email = searchParams.get('newEmail');
-    const unlinked = searchParams.get('googleUnlinked') === 'true';
-    setNewEmail(email);
-    setGoogleWasUnlinked(unlinked);
-  }, [searchParams]);
-
-  const handleGoToLogin = () => {
-    router.push('/auth');
-  };
+  const newEmail = searchParams.get('newEmail');
 
   return (
     <div className="min-h-screen">
@@ -64,37 +51,27 @@ export default function EmailChangeSuccessPage() {
               </div>
             )}
 
-            {/* Google Unlink Warning */}
-            {googleWasUnlinked && (
-              <div className="bg-[#fff3e0] border border-[#ffe0b2] rounded-sm p-4 mb-5">
-                <p className="text-[0.84rem] text-[#e65100] leading-[1.55]">
-                  <strong>Note:</strong> Your Google account has been unlinked due to the email change. You can re-link it after logging in if you&apos;d like.
-                </p>
-              </div>
-            )}
-
-            {/* Re-login Instructions */}
+            {/* Next Steps */}
             <div className="bg-white border border-[#e5e2dc] rounded-sm p-4 mb-6">
               <p className="text-[0.84rem] font-medium text-[#1A1A1A] mb-2">
                 Next steps:
               </p>
               <ul className="text-[0.82rem] text-[#6b6a68] space-y-1 list-disc list-inside leading-[1.65]">
-                <li>Click the button below to proceed to login</li>
-                <li>Sign in with your new email address</li>
-                <li>You&apos;ll be fully logged back into your account</li>
+                <li>Return to your account settings</li>
+                <li>Use your updated email address for future password sign-ins</li>
               </ul>
             </div>
 
             {/* CTA Button */}
             <button
-              onClick={handleGoToLogin}
+              onClick={() => router.push('/account')}
               className="
                 block w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
                 text-white text-center py-3.5 rounded
                 text-[0.88rem] font-medium transition-colors
               "
             >
-              Go to Login
+              Return to Account
             </button>
           </div>
         </div>

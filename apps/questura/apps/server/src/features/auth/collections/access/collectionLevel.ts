@@ -14,14 +14,25 @@ export const collectionAccess = {
     Boolean(user && (user.role === 'admin' || user.role === 'editor' || user.role === 'writer')),
 
   /**
-   * Smart user creation: public signup with restrictions
-   * - Allow unauthenticated requests (public signup)
-   * - Only admins can create users when logged in
-   * - Editors and Writers cannot create users
+   * Staff creation only.
+   *
+   * The only unauthenticated create path is first-user bootstrap for fresh
+   * environments. Public Visitor signup is owned by BetterAuth, not Payload
+   * Users.
    */
-  create: ({ req }: AccessArgs) => {
-    if (!req.user) return true // Public signup allowed
-    return req.user.role === 'admin' // Only admins can create users when logged in
+  create: async ({ req }: AccessArgs) => {
+    if (req.user) return req.user.role === 'admin'
+
+    try {
+      const existingUsersCount = await req.payload.count({
+        collection: 'users',
+      })
+
+      return existingUsersCount.totalDocs === 0
+    } catch (error) {
+      console.error('Error checking first-user bootstrap access:', error)
+      return false
+    }
   },
 
   /**

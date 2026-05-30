@@ -15,16 +15,33 @@ export default function GoogleSignInButton({
   returnTo
 }: GoogleSignInButtonProps) {
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     // Use the actual backend URL for OAuth (can't be proxied through Next.js)
     const backendUrl = config.backendUrl;
     // Use provided returnTo path, or current page path
     // Send pathname only (e.g., "/", "/account", "/join") not full URL
     const redirectPath = returnTo || window.location.pathname;
+    const callbackURL = new URL(redirectPath, window.location.origin).toString();
+    const errorCallbackURL = new URL('/auth-error', window.location.origin).toString();
 
-    // Full page redirect to Google OAuth
-    // Backend will handle the returnTo parameter and redirect properly after auth
-    window.location.href = `${backendUrl}/api/auth/google/authorize?returnTo=${redirectPath}`;
+    const response = await fetch(`${backendUrl}/api/visitor-auth/sign-in/social`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        provider: 'google',
+        callbackURL,
+        errorCallbackURL,
+      }),
+    });
+
+    if (!response.ok) {
+      window.location.href = `/auth-error?error=oauth_failed`;
+      return;
+    }
+
+    const data = await response.json() as { url?: string };
+    window.location.href = data.url || '/auth-error?error=oauth_failed';
   };
 
   return (

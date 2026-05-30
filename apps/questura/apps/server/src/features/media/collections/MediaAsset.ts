@@ -36,8 +36,7 @@ export const MediaAsset: CollectionConfig = {
     ],
     group: 'Media',
     hidden: ({ user }) => {
-      // Hide from regular users - only show to editors and admins
-      return user?.role === 'user' || !user
+      return !user
     },
   },
 

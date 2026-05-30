@@ -1,43 +1,58 @@
-/**
- * User type definitions
- */
+export type MembershipSource = 'stripe' | 'staff_grant' | null;
 
-export type User = {
-  id: number;
-  role: string;
-  membershipStatusSummary: string;
+export type VisitorPrincipal = {
+  kind: 'visitor';
+  id: string;
   email: string;
-  firstName: string;
-  lastName: string;
-  authProvider: "google" | "local" | string;
+  emailVerified: boolean;
+  authProvider: 'local' | 'google' | 'dual' | 'unknown';
   hasLocalPassword: boolean;
   hasGoogleOAuth: boolean;
-  oauthId: string | null;
-  passwordSetAt: string | null;
-  googleLinkedAt: string | null;
-  membershipStatusOverview: string;
-  subscriptionStatus: "active" | "inactive" | "canceled" | string;
-  subscriptionRenewsAt: string | null;
-  membershipExpiration: string | null;
-  cancelAtPeriodEnd: boolean;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
-  lastLogin: string | null;
-  lastLoginMethod: "google" | "local" | string;
-
-  publicProfile: {
-    avatar: string | null;
-    isPublic: boolean;
-    displayName: string | null;
-    bio: string | null;
-    expertise: string[];
-    socialLinks: {
-      instagram: string | null;
-      twitter: string | null;
-      website: string | null;
-    };
+  profileId: string | number | null;
+  firstName: string;
+  lastName: string;
+  membership: {
+    active: boolean;
+    source: MembershipSource;
+    status: string;
+    expiresAt: string | null;
+    cancelAtPeriodEnd: boolean;
   };
-
-  updatedAt: string;
-  createdAt: string;
 };
+
+export type StaffPrincipal = {
+  kind: 'staff';
+  id: string | number;
+  email: string;
+  role: 'admin' | 'editor' | 'writer';
+  membership: {
+    active: boolean;
+    source: MembershipSource;
+  };
+};
+
+export type CurrentPrincipal = VisitorPrincipal | StaffPrincipal;
+
+export type CurrentPrincipalResponse = {
+  authenticated: boolean;
+  principal: CurrentPrincipal | null;
+};
+
+/**
+ * Compatibility alias while client screens move from legacy User to CurrentPrincipal.
+ */
+type LegacyUserFields = {
+  role?: 'admin' | 'editor' | 'writer';
+  membershipStatusSummary?: string;
+  authProvider?: string;
+  hasLocalPassword?: boolean;
+  hasGoogleOAuth?: boolean;
+  subscriptionStatus?: string;
+  subscriptionRenewsAt?: string | null;
+  membershipExpiration?: string | null;
+  cancelAtPeriodEnd?: boolean;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+};
+
+export type User = (VisitorPrincipal | StaffPrincipal) & LegacyUserFields;

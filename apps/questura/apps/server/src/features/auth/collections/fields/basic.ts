@@ -28,8 +28,7 @@ export const basicFields: Field[] = [
         (data as any).email = email
       }
 
-      // STAFF EMAIL DOMAIN VALIDATION
-      // Staff accounts (editor/admin) must use company email (@questurian.com)
+      // Staff accounts must use company email (@questurian.com)
       // Exception: allow first-user bootstrap (auto-promoted to admin) to use any email.
       const userRole = (data as any)?.role
       let isFirstUserBootstrap = false
@@ -44,37 +43,9 @@ export const basicFields: Field[] = [
         }
       }
 
-      if (userRole === 'editor' || userRole === 'admin') {
+      if (userRole === 'editor' || userRole === 'admin' || userRole === 'writer') {
         if (!isFirstUserBootstrap && !email.endsWith('@questurian.com')) {
           return 'Staff accounts must use company email (@questurian.com). Please use your Questurian staff email address.'
-        }
-      }
-
-      // Only check for OAuth conflicts during local account creation
-      if (operation === 'create' && req?.payload) {
-        try {
-          const existingUsers = await req.payload.find({
-            collection: 'users',
-            where: {
-              email: { equals: email }
-            }
-          })
-
-          if (existingUsers.docs.length > 0) {
-            const existingUser = existingUsers.docs[0]
-
-            // SECURITY: Block admin/editor accounts from frontend signup
-            if (existingUser.role === 'admin' || existingUser.role === 'editor') {
-              return 'This email is associated with an admin account. Admin accounts cannot be created through public signup.'
-            }
-
-            if (existingUser.authProvider === 'google') {
-              return 'This email is associated with a Google account. Please sign in with Google instead.'
-            }
-          }
-        } catch (error) {
-          // If validation check fails, allow creation to proceed
-          console.error('Error checking for existing OAuth account:', error)
         }
       }
 

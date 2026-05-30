@@ -54,7 +54,7 @@ export const MediaSet: CollectionConfig = {
     group: 'Media',
     description: 'Group related media variants into a single API object',
     hidden: ({ user }) => {
-      return user?.role === 'user' || !user
+      return !user
     },
   },
   access: {

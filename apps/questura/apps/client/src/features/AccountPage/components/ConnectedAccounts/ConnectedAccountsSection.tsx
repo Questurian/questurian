@@ -11,6 +11,7 @@ interface ConnectedAccountsSectionProps {
 
 export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, success, error, onClearMessages }: ConnectedAccountsSectionProps) {
   const hasGoogleAuth = user?.authProvider === 'google' || user?.authProvider === 'dual';
+  const canUnlinkGoogle = Boolean(user?.hasLocalPassword);
 
   return (
     <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
@@ -41,16 +42,23 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
               </div>
               <button
                 onClick={onUnlinkGoogle}
+                disabled={!canUnlinkGoogle}
                 className="
                   text-[0.82rem] text-[#c62828] hover:text-[#b71c1c]
                   underline underline-offset-2 cursor-pointer
                   transition-colors 480:ml-4 flex-shrink-0
                   mt-2 480:mt-0 self-start 480:self-auto
+                  disabled:text-[#c4c2be] disabled:cursor-not-allowed
                 "
               >
                 Disconnect
               </button>
             </div>
+            {!canUnlinkGoogle && (
+              <p className="mb-4 text-[0.78rem] text-[#C65D3B]">
+                Add a password before disconnecting Google.
+              </p>
+            )}
 
             {success && (
               <div className="bg-[#e8f5e9] border border-[#c8e6c9] text-[#2e7d32] px-3 480:px-4 py-2.5 480:py-3 rounded-sm relative flex items-start justify-between">
