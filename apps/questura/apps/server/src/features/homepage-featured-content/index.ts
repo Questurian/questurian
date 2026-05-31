@@ -1,4 +1,15 @@
 export { LocationHomepages } from './collection'
+export { MainHomepage } from './main-homepage/global'
+export {
+  MAIN_HOMEPAGE_LOCATION_GRID_SCOPE,
+  addMainHomepageBlock,
+  convertMainHomepageBlock,
+  deleteMainHomepageBlock,
+  getMainHomepage,
+  publishMainHomepage,
+  reorderMainHomepageBlocks,
+  updateMainHomepageBlockContent,
+} from './main-homepage/service'
 
 export { ArticleGridBlock } from './article-grid/block'
 export { ArticleListBlock } from './article-list/block'

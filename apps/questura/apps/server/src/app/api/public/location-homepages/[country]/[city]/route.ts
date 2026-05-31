@@ -3,6 +3,7 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import {
+  getPublishedPageBlocks,
   type LocationHomepageDoc,
   formatPublicLocationHomepageDoc,
   resolveLocationGridScope,
@@ -62,7 +63,11 @@ export async function GET(
 
     const doc = homepageResult.docs[0] as LocationHomepageDoc
     const locationGridScope = await resolveLocationGridScope(payload, doc.location)
-    const resolvedBlocks = await resolvePageBlocks(payload, doc.pageBlocks ?? [], locationGridScope)
+    const resolvedBlocks = await resolvePageBlocks(
+      payload,
+      getPublishedPageBlocks(doc),
+      locationGridScope,
+    )
 
     return NextResponse.json(formatPublicLocationHomepageDoc(resolvedBlocks, { country, city }))
   } catch (error) {

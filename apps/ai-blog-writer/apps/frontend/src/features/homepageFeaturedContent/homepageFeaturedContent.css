@@ -1482,6 +1482,22 @@
   box-shadow: 0 4px 16px var(--shadow-soft);
 }
 
+.hf-detail-meta {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.hf-error {
+  margin: 0 0 var(--space-4);
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  background: rgba(220, 38, 38, 0.08);
+  color: #b91c1c;
+  border-radius: var(--radius-md);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9rem;
+}
+
 .hf-detail-header-left {
   display: flex;
   align-items: center;

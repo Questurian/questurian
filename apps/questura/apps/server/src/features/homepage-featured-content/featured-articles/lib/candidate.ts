@@ -96,6 +96,7 @@ function getFeaturedHeaderSection(doc: PayloadDocLike): Record<string, unknown> 
 function resolveFeaturedPlacement(
   doc: PayloadDocLike,
   placement: MediaPlacement,
+  allowMigrationFallback = true,
 ): PublicImage | null {
   const section = getFeaturedHeaderSection(doc)
   if (!section) return null
@@ -103,7 +104,7 @@ function resolveFeaturedPlacement(
   const directMediaSet = isRecord(section.featuredMediaSet) ? section.featuredMediaSet : null
   if (directMediaSet) {
     const resolved = resolveMediaSetForPlacement(directMediaSet, placement, {
-      allowMigrationFallback: true,
+      allowMigrationFallback,
     })
     if (resolved.url) return resolved
   }
@@ -114,10 +115,12 @@ function resolveFeaturedPlacement(
   const assetMediaSet = isRecord(featuredImage.mediaSet) ? featuredImage.mediaSet : null
   if (assetMediaSet) {
     const resolved = resolveMediaSetForPlacement(assetMediaSet, placement, {
-      allowMigrationFallback: true,
+      allowMigrationFallback,
     })
     if (resolved.url) return resolved
   }
+
+  if (!allowMigrationFallback) return null
 
   const legacy = resolveLegacyAssetForPlacement(featuredImage, placement)
   return legacy.url ? legacy : null
@@ -131,6 +134,8 @@ export function normalizeHomepageFeaturedCandidate(
   const author = extractAuthorPreview(doc)
   const image = resolveFeaturedPlacement(doc, 'card')
   const imageSquare = resolveFeaturedPlacement(doc, 'square-card')
+  const imageWide = resolveFeaturedPlacement(doc, 'wide-card', false)
+  const imageHero = resolveFeaturedPlacement(doc, 'hero', false)
 
   return {
     relationTo,
@@ -147,6 +152,8 @@ export function normalizeHomepageFeaturedCandidate(
     imageUrlSquare: imageSquare?.url ?? null,
     image,
     imageSquare,
+    imageWide,
+    imageHero,
     metaDescription,
     excerpt: metaDescription,
     author,

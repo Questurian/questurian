@@ -111,6 +111,9 @@ export function formatPublicArticleItem(value: unknown, location?: LocationConte
   const category = formatPublicCategory(item.category)
   const image = formatPublicImage(item.image)
   const imageSquare = formatPublicImage(item.imageSquare)
+  const imageWide = formatPublicImage(item.imageWide)
+  const imageHero = formatPublicImage(item.imageHero)
+  const articlePath = buildArticlePath(item, location)
 
   return {
     title: stringOrNull(item.title) ?? 'Untitled',
@@ -122,6 +125,8 @@ export function formatPublicArticleItem(value: unknown, location?: LocationConte
     imageUrlSquare: stringOrNull(item.imageUrlSquare) ?? imageSquare?.url ?? null,
     image,
     imageSquare,
-    articlePath: buildArticlePath(item, location),
+    ...(imageWide ? { imageWide } : {}),
+    ...(imageHero ? { imageHero } : {}),
+    ...(articlePath ? { articlePath } : {}),
   }
 }

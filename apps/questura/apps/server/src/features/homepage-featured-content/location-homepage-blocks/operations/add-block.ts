@@ -5,6 +5,7 @@ import {
 } from '../../resolve-page-blocks/service'
 import {
   getLocationHomepagePayload,
+  getDraftPageBlocks,
   loadLocationHomepage,
   updateAndFormatLocationHomepageBlocks,
 } from '../../location-homepages/lib/persistence'
@@ -37,7 +38,7 @@ export async function addLocationHomepageBlock(
     }
   }
 
-  const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
+  const existingBlocks: RawBlock[] = getDraftPageBlocks(doc)
   const formatted = await updateAndFormatLocationHomepageBlocks(
     payload,
     id,

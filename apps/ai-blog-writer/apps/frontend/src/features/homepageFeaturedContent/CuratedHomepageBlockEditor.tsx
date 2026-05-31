@@ -9,7 +9,6 @@ import {
   ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES,
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
   HOMEPAGE_PAGE_BLOCK_CONFIG,
-  isValidHomepageBlockSlotCount,
   type ArticleCuratedHomepageBlockResponse,
   type ArticleGridBlockResponse,
   type ArticleGridFourLayout,
@@ -138,12 +137,6 @@ export default function CuratedHomepageBlockEditor({
     () => articleGridFourLayoutForBlock(block),
   )
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const reducedSlotCount =
-    block.selection.invalidItems.length > 0 ? block.selection.items.length : null
-  const repairSlotCount =
-    reducedSlotCount !== null && isValidHomepageBlockSlotCount(block.blockType, reducedSlotCount)
-      ? reducedSlotCount
-      : undefined
 
   const convertTargets = useMemo(() => {
     const list =
@@ -216,7 +209,6 @@ export default function CuratedHomepageBlockEditor({
     saveSelection,
     fetchCandidates,
     selectionQueryKey,
-    repairSlotCount,
     lockedCollectionFilter:
       block.blockType === 'questurian-maps' ? 'single-type-listicles' : undefined,
   })
@@ -263,9 +255,7 @@ export default function CuratedHomepageBlockEditor({
   const staleSlotNotice =
     savedInvalidItems.length === 0
       ? null
-      : typeof repairSlotCount === 'number'
-        ? `${savedInvalidItems.length} saved slot${savedInvalidItems.length === 1 ? '' : 's'} no longer eligible. Saving will reduce this block to ${repairSlotCount} slot${repairSlotCount === 1 ? '' : 's'}.`
-        : `${savedInvalidItems.length} saved slot${savedInvalidItems.length === 1 ? '' : 's'} no longer eligible. ${slotsFilled} remaining item${slotsFilled === 1 ? '' : 's'} do not match a supported ${blockConfig.label} layout, so this block stays incomplete until you refill or delete it.`
+      : `${savedInvalidItems.length} slot${savedInvalidItems.length === 1 ? '' : 's'} ${savedInvalidItems.length === 1 ? 'has a broken item' : 'have broken items'}. This block stays at ${totalSlots} slot${totalSlots === 1 ? '' : 's'} and is blocked — hidden from the published homepage — until you replace ${savedInvalidItems.length === 1 ? 'it' : 'them'}.`
 
   const canConvertEmptyFeaturedArticles =
     ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES.includes(block.blockType)
@@ -300,7 +290,7 @@ export default function CuratedHomepageBlockEditor({
       </div>
 
       {staleSlotNotice ? (
-        <div className={`hf-banner ${repairSlotCount ? 'warning' : 'error'}`}>
+        <div className="hf-banner error">
           {staleSlotNotice}
         </div>
       ) : null}

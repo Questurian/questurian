@@ -100,9 +100,58 @@ Editorial content collections.
 
 Curated external content.
 
+### Curated Homepage
+
+Operator-managed homepage made from ordered blocks and curated slots. Includes the main homepage and per-location `LocationHomepages`.
+
 ### LocationHomepages
 
-Per-location homepage configuration (block layouts, featured slots).
+Per-location Curated Homepage configuration (block layouts, featured slots).
+
+### Homepage Page Draft
+
+Private working copy of a Curated Homepage owned by Questura. Do not confuse with AI Blog Writer `Draft`, which is a local generated-content working copy before Sync.
+_Avoid_: ABW draft, local draft
+
+### Published Homepage
+
+Public-ready Curated Homepage snapshot. Public rendering should read this snapshot, not the Homepage Page Draft.
+_Avoid_: live draft, working homepage
+
+### Homepage availability
+
+Public serving state for a Curated Homepage. A disabled homepage can still have an editable Homepage Page Draft, but public rendering falls back instead of serving its Published Homepage.
+_Avoid_: draft disabled, editor lock
+
+### Homepage publish metadata
+
+Audit fields on a Curated Homepage describing the current Published Homepage snapshot: when it was published, who published it, and its revision number.
+_Avoid_: version history, rollback log
+
+### Whole-page publish
+
+Promotion of one Homepage Page Draft into one Published Homepage snapshot. The publish unit is the entire homepage, not an individual block.
+_Avoid_: block publish, slot publish
+
+### Homepage publish blocker
+
+Any invalid reference, unpublished curated item, missing required image placement, or incomplete required slot that prevents Whole-page publish. Existing Published Homepage stays live until blockers are resolved.
+_Avoid_: warning-only publish issue, soft publish error
+
+### Homepage candidate
+
+Published item eligible for selection into a Curated Homepage draft slot. Draft items are excluded by default; any future draft-inclusion mode must still fail closed at Whole-page publish.
+_Avoid_: draft candidate, planning item
+
+### Homepage reference lock
+
+Deletion guard that prevents removing editorial content while it appears in either a Homepage Page Draft or a Published Homepage. Applies to `articles`, `single-type-listicles`, and `listicle-itineraries`; the referenced item must be removed from every homepage before deletion is allowed.
+_Avoid_: undelatable article, protected content
+
+### Homepage publication lock
+
+Status guard that prevents unpublishing editorial content while it appears in a Published Homepage. Applies to `articles`, `single-type-listicles`, and `listicle-itineraries`; Homepage Page Draft references do not block unpublish, they become Homepage publish blockers.
+_Avoid_: draft reference lock, soft delete guard
 
 ### Users / Access
 

@@ -27,6 +27,11 @@ export type LocationHomepageDoc = {
   updatedAt?: string
   location?: LocationDoc | number | null
   pageBlocks?: RawBlock[]
+  draftPageBlocks?: RawBlock[]
+  publishedPageBlocks?: RawBlock[]
+  lastPublishedAt?: string | null
+  lastPublishedBy?: unknown
+  publishedRevision?: number | null
 }
 
 export type CuratedBlockType =

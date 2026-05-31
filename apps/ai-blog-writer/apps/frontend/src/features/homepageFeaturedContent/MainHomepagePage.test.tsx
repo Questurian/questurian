@@ -46,6 +46,7 @@ function renderPage() {
 }
 
 const homepage: MainHomepageResponse = {
+  publishedPageBlocks: [],
   pageBlocks: [
     {
       id: 'featured-a',

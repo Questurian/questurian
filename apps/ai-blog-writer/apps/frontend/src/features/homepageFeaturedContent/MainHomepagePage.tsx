@@ -16,6 +16,7 @@ import {
   fetchWhereToEatDrinkCandidates,
   convertMainHomepageFeaturedArticlesBlock,
   fetchMainHomepage,
+  publishMainHomepage,
   reorderMainHomepageBlocks,
   updateMainHomepageBlock,
   updateMainHomepageFeaturedSectionHeading,
@@ -34,6 +35,8 @@ import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
 import HotelGridBlockEditor from './HotelGridBlockEditor'
 import LocationGridBlockEditor from './LocationGridBlockEditor'
 import NewsletterSignupBlockEditor from './NewsletterSignupBlockEditor'
+import PublishedHomepagePreview from './PublishedHomepagePreview'
+import HomepageDraftPublishSummary from './HomepageDraftPublishSummary'
 import {
   buildOptimisticConvertedHomepageBlock,
   deleteHomepageBlockFromCache,
@@ -68,6 +71,7 @@ export default function MainHomepagePage() {
   })
 
   const [showAddBlock, setShowAddBlock] = useState(false)
+  const [viewMode, setViewMode] = useState<'draft' | 'published'>('draft')
   const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
   const [pageBlockSlotKeys, setPageBlockSlotKeys] = useState<Map<string, Set<string>>>(() => new Map())
 
@@ -146,6 +150,14 @@ export default function MainHomepagePage() {
       if (context?.previousHomepage) {
         queryClient.setQueryData(mainHomepageQueryKey, context.previousHomepage)
       }
+    },
+  })
+
+  const publishMutation = useMutation({
+    mutationFn: () => publishMainHomepage(token!),
+    onSuccess: (result) => {
+      queryClient.setQueryData<MainHomepageResponse>(mainHomepageQueryKey, result)
+      queryClient.invalidateQueries({ queryKey: mainHomepageQueryKey })
     },
   })
 
@@ -253,10 +265,66 @@ export default function MainHomepagePage() {
           </div>
           <span className="hf-level-tag">global</span>
         </div>
-        <span className="hf-enabled-tag on">Always active</span>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <span className="hf-enabled-tag on">Always active</span>
+          <div
+            role="group"
+            aria-label="View mode"
+            style={{ display: 'inline-flex', border: '1px solid var(--border, #e2e8f0)', borderRadius: '8px', overflow: 'hidden' }}
+          >
+            <button
+              type="button"
+              onClick={() => setViewMode('draft')}
+              className={viewMode === 'draft' ? 'hf-btn-primary' : 'hf-btn-ghost'}
+              style={{ borderRadius: 0 }}
+            >
+              Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('published')}
+              disabled={!homepage.publishedPageBlocks || homepage.publishedPageBlocks.length === 0}
+              title={
+                homepage.publishedPageBlocks && homepage.publishedPageBlocks.length > 0
+                  ? 'View the published page (read-only)'
+                  : 'Nothing published yet'
+              }
+              className={viewMode === 'published' ? 'hf-btn-primary' : 'hf-btn-ghost'}
+              style={{ borderRadius: 0 }}
+            >
+              Published
+            </button>
+          </div>
+          <button
+            type="button"
+            className="hf-btn-primary"
+            onClick={() => publishMutation.mutate()}
+            disabled={publishMutation.isPending}
+            title="Publish the full main homepage draft after validation."
+          >
+            {publishMutation.isPending ? 'Publishing...' : 'Publish'}
+          </button>
+        </div>
       </div>
+      {homepage.lastPublishedAt && (
+        <div className="hf-detail-meta">
+          Published revision {homepage.publishedRevision ?? 0} · {new Date(homepage.lastPublishedAt).toLocaleString()}
+        </div>
+      )}
+      {publishMutation.isError && (
+        <div className="hf-error">
+          {publishMutation.error instanceof Error
+            ? publishMutation.error.message
+            : 'Failed to publish main homepage.'}
+        </div>
+      )}
 
       {/* ── Blocks ─────────────────────────────────────────── */}
+      {viewMode === 'published' ? (
+        <PublishedHomepagePreview blocks={homepage.publishedPageBlocks} />
+      ) : (
+      <>
+      <HomepageDraftPublishSummary blocks={homepage.pageBlocks} />
       {homepage.pageBlocks.length === 0 ? (
         <div className="hf-state-screen">
           <h2>No blocks yet</h2>
@@ -520,8 +588,11 @@ export default function MainHomepagePage() {
           }}
         </HomepageBlocksSortableList>
       )}
+      </>
+      )}
 
       {/* ── Add block ──────────────────────────────────────── */}
+      {viewMode === 'draft' && (
       <div className="hf-add-block-row">
         {!showAddBlock ? (
           <button
@@ -539,6 +610,7 @@ export default function MainHomepagePage() {
           />
         )}
       </div>
+      )}
     </div>
   )
 }

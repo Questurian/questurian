@@ -11,6 +11,10 @@ import {
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
+import {
+  assertCanDeleteHomepageFeaturedContent,
+  assertCanUnpublishHomepageFeaturedContent,
+} from '@/features/homepage-featured-content/location-homepages/lib/reference-locks'
 import { handleCanonicalPathChange } from '../lib/handleCanonicalPathChange'
 import {
   step1Complete,
@@ -136,6 +140,18 @@ export const Articles: CollectionConfig = {
   ],
   hooks: {
     beforeChange: [
+      async ({ data, req, originalDoc }) => {
+        if (
+          originalDoc?.status === 'published' &&
+          data?.status &&
+          data.status !== 'published' &&
+          originalDoc?.id
+        ) {
+          await assertCanUnpublishHomepageFeaturedContent(req.payload, 'articles', originalDoc.id)
+        }
+
+        return data
+      },
       async ({ data, req, operation, originalDoc }) => {
         // Set author on creation
         if (operation === 'create' && req.user?.id) {
@@ -224,6 +240,11 @@ export const Articles: CollectionConfig = {
         }
 
         return data
+      },
+    ],
+    beforeDelete: [
+      async ({ req, id }) => {
+        await assertCanDeleteHomepageFeaturedContent(req.payload, 'articles', id)
       },
     ],
     afterChange: [articleRevalidation.afterChange],

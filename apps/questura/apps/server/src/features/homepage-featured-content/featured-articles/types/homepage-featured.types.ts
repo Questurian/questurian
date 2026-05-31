@@ -47,6 +47,10 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   image: PublicImage | null
   /** Resolved square-card placement image. Null when no square variant exists. */
   imageSquare: PublicImage | null
+  /** Resolved wide-card placement image. Used by publish validation for wide editorial slots. */
+  imageWide: PublicImage | null
+  /** Resolved hero placement image. Used by publish validation for hero editorial slots. */
+  imageHero: PublicImage | null
   /** SEO meta description when present (articles, listicles, itineraries). */
   metaDescription: string | null
   /** Backward-compatible alias for `metaDescription`. */

@@ -4,6 +4,7 @@ import type { RawBlock } from '../../resolve-page-blocks/service'
 
 import {
   getLocationHomepagePayload,
+  getDraftPageBlocks,
   loadLocationHomepage,
   updateLocationHomepage,
   updateAndFormatLocationHomepageBlocks,
@@ -23,7 +24,7 @@ export async function reorderLocationHomepageBlocks(
   const depth = 0
   const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, depth)
-  const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
+  const existingBlocks: RawBlock[] = getDraftPageBlocks(doc)
   const orderedBlockIds = (body as { orderedBlockIds?: unknown } | null)?.orderedBlockIds
   const reorderResult = reorderBlocksByIds(existingBlocks, orderedBlockIds)
 

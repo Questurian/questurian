@@ -203,28 +203,28 @@ export default function HomepageFeaturedSlotEditor({
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}
         />
-      ) : totalSlots === 9 ? (
+      ) : variant === 'featured-articles' && totalSlots === 9 ? (
         <FeaturedArticlesLayout9
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}
         />
-      ) : totalSlots === 7 ? (
+      ) : variant === 'featured-articles' && totalSlots === 7 ? (
         <FeaturedArticlesLayout7
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}
         />
-      ) : totalSlots === 8 ? (
+      ) : variant === 'featured-articles' && totalSlots === 8 ? (
         <FeaturedArticlesLayout8
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}
         />
-      ) : totalSlots === 5 ? (
+      ) : variant === 'featured-articles' && totalSlots === 5 ? (
         <FeaturedArticlesLayout5
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
@@ -232,7 +232,7 @@ export default function HomepageFeaturedSlotEditor({
           onReorder={handleReorderAll}
           layout={featuredArticlesSlot5Layout}
         />
-      ) : totalSlots === 4 ? (
+      ) : variant === 'featured-articles' && totalSlots === 4 ? (
         <FeaturedArticlesLayout4
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
@@ -240,7 +240,7 @@ export default function HomepageFeaturedSlotEditor({
           onReorder={handleReorderAll}
           layout={featuredArticlesSlot4Layout}
         />
-      ) : totalSlots === 3 ? (
+      ) : variant === 'featured-articles' && totalSlots === 3 ? (
         <FeaturedArticlesLayout3
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}

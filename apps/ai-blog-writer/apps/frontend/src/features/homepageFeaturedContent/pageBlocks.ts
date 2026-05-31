@@ -58,8 +58,9 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
   },
   'featured-articles': {
     label: 'Featured Articles',
+    // No 6-slot layout exists, so 6 is intentionally omitted (see isValidHomepageBlockSlotCount).
     description: 'A curated list of articles in fixed slots',
-    quickSlotCounts: [3, 4, 5, 6, 7, 8, 9],
+    quickSlotCounts: [3, 4, 5, 7, 8, 9],
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 9,
@@ -154,6 +155,10 @@ export function isValidHomepageBlockSlotCount(
   if (!Number.isInteger(slotCount)) return false
   if (blockType === 'article-grid') {
     return slotCount === 4 || slotCount === 8
+  }
+  // Featured Articles has no 6-slot layout, so 6 is not a valid count.
+  if (blockType === 'featured-articles' && slotCount === 6) {
+    return false
   }
   const c = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
   return slotCount >= c.minSlotCount && slotCount <= c.maxSlotCount
@@ -359,7 +364,18 @@ export type UnknownBlockResponse = {
   blockType: string
 }
 
-export type PageBlockResponse = CuratedHomepageBlockResponse | UnknownBlockResponse
+export type BlockPublishStatus = 'live' | 'modified' | 'unpublished'
+export type BlockValidationStatus = 'publishable' | 'blocked'
+
+/** Per-block draft-vs-published metadata attached by the server formatter. */
+export type BlockPublishMeta = {
+  publishStatus?: BlockPublishStatus
+  validationStatus?: BlockValidationStatus
+  publishBlockers?: string[]
+}
+
+export type PageBlockResponse = (CuratedHomepageBlockResponse | UnknownBlockResponse) &
+  BlockPublishMeta
 
 /** Stable identity for editor instances; layout-only setting changes should not remount a block. */
 export function homepageBlockEditorIdentity(block: {

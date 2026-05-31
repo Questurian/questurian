@@ -5,6 +5,7 @@ import { resolvePageBlocks } from './resolve-blocks'
 export function formatHomepageDoc(
   doc: LocationHomepageDoc,
   resolvedBlocks: Awaited<ReturnType<typeof resolvePageBlocks>>,
+  extra?: { publishedPageBlocks?: Awaited<ReturnType<typeof resolvePageBlocks>> },
 ) {
   const location =
     typeof doc.location === 'object' && doc.location !== null ? doc.location : null
@@ -23,5 +24,9 @@ export function formatHomepageDoc(
         }
       : null,
     pageBlocks: resolvedBlocks,
+    publishedPageBlocks: extra?.publishedPageBlocks ?? [],
+    lastPublishedAt: doc.lastPublishedAt ?? null,
+    lastPublishedBy: doc.lastPublishedBy ?? null,
+    publishedRevision: doc.publishedRevision ?? 0,
   }
 }

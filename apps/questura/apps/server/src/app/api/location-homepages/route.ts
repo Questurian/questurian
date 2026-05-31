@@ -102,7 +102,9 @@ export async function POST(req: NextRequest) {
       data: {
         location: locationId,
         isEnabled: false,
-        pageBlocks: [],
+        draftPageBlocks: [],
+        publishedPageBlocks: [],
+        publishedRevision: 0,
       },
       overrideAccess: true,
     }) as LocationHomepageDoc

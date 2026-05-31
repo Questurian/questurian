@@ -13,6 +13,7 @@ import {
   curatedBlockApiPayload,
   getHomepageFeaturedSelectionFromItems,
   getNewsletterSignupPlaceholderSelection,
+  getDraftPageBlocks,
   getHotelGridSelectionFromItems,
   getTourGridSelectionFromItems,
   getLocationGridSelectionFromItems,
@@ -228,7 +229,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       overrideAccess: true,
     })) as LocationHomepageDoc
 
-    const rawBlocks: RawBlock[] = doc.pageBlocks ?? []
+    const rawBlocks: RawBlock[] = getDraftPageBlocks(doc)
     const blockIndex = rawBlocks.findIndex((b) => b.id === blockId)
 
     if (blockIndex === -1) {
@@ -266,14 +267,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const updated = (await payload.update({
       collection: 'location-homepages',
       id,
-      data: { pageBlocks: updatedBlocks } as any,
+      data: { draftPageBlocks: updatedBlocks } as any,
       depth: leanResponse ? 0 : 1,
       overrideAccess: true,
     })) as LocationHomepageDoc
 
     if (leanResponse) {
       const updatedBlock =
-        (updated.pageBlocks ?? []).find((candidate) => candidate.id === blockId)
+        getDraftPageBlocks(updated).find((candidate) => candidate.id === blockId)
         ?? (replacement as RawBlock)
       const [resolvedBlock] = await resolvePageBlocks(payload, [updatedBlock], locationGridScope)
 
@@ -281,7 +282,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const updatedScope = await resolveLocationGridScope(payload, updated.location)
-    const resolvedBlocks = await resolvePageBlocks(payload, updated.pageBlocks ?? [], updatedScope)
+    const resolvedBlocks = await resolvePageBlocks(payload, getDraftPageBlocks(updated), updatedScope)
 
     const location =
       typeof updated.location === 'object' && updated.location !== null

@@ -64,6 +64,7 @@ function isCuratedHomepageBlockType(
   | 'where-to-eat-drink'
   | 'things-to-do-listicles'
   | 'things-to-do-attractions'
+  | 'article-list'
   | 'newsletter-signup' {
   return value === 'featured-article'
     || value === 'featured-article-carousel'
@@ -76,6 +77,7 @@ function isCuratedHomepageBlockType(
     || value === 'where-to-eat-drink'
     || value === 'things-to-do-listicles'
     || value === 'things-to-do-attractions'
+    || value === 'article-list'
     || value === 'newsletter-signup'
 }
 

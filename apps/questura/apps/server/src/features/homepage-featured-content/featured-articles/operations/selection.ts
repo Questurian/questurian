@@ -22,7 +22,10 @@ export async function getHomepageFeaturedSelectionFromItems(
 ): Promise<HomepageFeaturedSelection> {
   const allowDrafts = options.allowDrafts ?? APP_CONFIG.features.homepageFeaturedAllowDrafts
   const totalSlots = options.totalSlots ?? HOMEPAGE_FEATURED_CONTENT_SLOTS
-  const parsedSlots = parseHomepageFeaturedSlots(rawItems)
+  // Never resolve more slots than the (possibly snapped) total. A legacy block stored with more
+  // items than its current slot count — e.g. a 6-item block snapped to 5 because 6 has no layout —
+  // drops its trailing items here instead of reading as permanently incomplete/blocked.
+  const parsedSlots = parseHomepageFeaturedSlots(rawItems).slice(0, totalSlots)
   const items: HomepageFeaturedCandidate[] = []
   const invalidItems: HomepageFeaturedInvalidItem[] = []
 

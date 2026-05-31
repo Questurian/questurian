@@ -26,6 +26,10 @@ const HOMEPAGE_FEATURED_REQUEST_TIMEOUT_MS = 12000
 
 export type MainHomepageResponse = {
   pageBlocks: PageBlockResponse[]
+  publishedPageBlocks: PageBlockResponse[]
+  lastPublishedAt?: string | null
+  lastPublishedBy?: unknown
+  publishedRevision?: number | null
 }
 
 export type DeleteHomepageBlockResponse = {
@@ -255,6 +259,12 @@ export async function reorderMainHomepageBlocks(
   return homepageFeaturedRequest('/api/homepage-featured-content/blocks?response=lean', token, {
     method: 'PATCH',
     body: JSON.stringify({ orderedBlockIds }),
+  })
+}
+
+export async function publishMainHomepage(token: string): Promise<MainHomepageResponse> {
+  return homepageFeaturedRequest('/api/homepage-featured-content/publish', token, {
+    method: 'POST',
   })
 }
 

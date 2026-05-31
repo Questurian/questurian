@@ -21,6 +21,7 @@ import {
   resolveLocationGridScopeFromLocation,
 } from './location-grid/service'
 import { normalizePageBlocksArrayInPlace } from './resolve-page-blocks/operations/normalize-page-blocks'
+import { withSourceBlockKey } from './resolve-page-blocks/lib/source-block-key-field'
 
 const HOMEPAGE_BLOCK_TYPES = [
   FeaturedArticleBlock,
@@ -83,10 +84,57 @@ export const LocationHomepages: CollectionConfig = {
     {
       name: 'pageBlocks',
       type: 'blocks',
-      blocks: [...HOMEPAGE_BLOCK_TYPES],
+      blocks: withSourceBlockKey([...HOMEPAGE_BLOCK_TYPES]),
       label: 'Page blocks',
       admin: {
-        description: 'Curated sections for this location homepage.',
+        description: 'Legacy live blocks. Migrated into draft/published page blocks.',
+        hidden: true,
+      },
+    },
+    {
+      name: 'draftPageBlocks',
+      type: 'blocks',
+      blocks: withSourceBlockKey([...HOMEPAGE_BLOCK_TYPES]),
+      label: 'Draft page blocks',
+      admin: {
+        description: 'Private working copy for editors.',
+      },
+    },
+    {
+      name: 'publishedPageBlocks',
+      type: 'blocks',
+      blocks: withSourceBlockKey([...HOMEPAGE_BLOCK_TYPES]),
+      label: 'Published page blocks',
+      admin: {
+        description: 'Public snapshot served when this homepage is enabled.',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'lastPublishedAt',
+      type: 'date',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'lastPublishedBy',
+      type: 'relationship',
+      relationTo: 'users',
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+      },
+    },
+    {
+      name: 'publishedRevision',
+      type: 'number',
+      defaultValue: 0,
+      min: 0,
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
       },
     },
   ],
@@ -173,13 +221,18 @@ export const LocationHomepages: CollectionConfig = {
 
         // 3. Validate supported page blocks
         if (data) {
-          const arr = (data as Record<string, unknown>).pageBlocks
-          if (Array.isArray(arr)) {
-            await normalizePageBlocksArrayInPlace(req, arr as unknown[], locationGridScope, {
-              originalPageBlocks: Array.isArray(originalDoc?.pageBlocks)
-                ? originalDoc.pageBlocks as unknown[]
-                : undefined,
-            })
+          const record = data as Record<string, unknown>
+          const originalRecord = (originalDoc ?? {}) as Record<string, unknown>
+          for (const fieldName of ['pageBlocks', 'draftPageBlocks', 'publishedPageBlocks']) {
+            const arr = record[fieldName]
+            if (Array.isArray(arr)) {
+              const originalPageBlocks = originalRecord[fieldName]
+              await normalizePageBlocksArrayInPlace(req, arr as unknown[], locationGridScope, {
+                originalPageBlocks: Array.isArray(originalPageBlocks)
+                  ? originalPageBlocks as unknown[]
+                  : undefined,
+              })
+            }
           }
         }
 

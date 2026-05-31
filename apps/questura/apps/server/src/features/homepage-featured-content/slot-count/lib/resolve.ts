@@ -40,7 +40,14 @@ export function resolveStoredSlotCountForBlockType(
     return raw === 8 ? 8 : 4
   }
 
-  return Math.min(Math.max(raw, min), max)
+  const clamped = Math.min(Math.max(raw, min), max)
+
+  // Featured Articles has no 6-slot layout; snap a stored 6 down to 5.
+  if (blockType === 'featured-articles' && clamped === 6) {
+    return 5
+  }
+
+  return clamped
 }
 
 /** Slot count accepted by POST /blocks when adding a block (strict for article-grid: 4 or 8 only). */
@@ -50,6 +57,11 @@ export function isValidRequestedSlotCount(blockType: string, n: number): boolean
 
   if (blockType === 'article-grid') {
     return n === 4 || n === 8
+  }
+
+  // Featured Articles has no 6-slot layout, so 6 is not an accepted count.
+  if (blockType === 'featured-articles' && n === 6) {
+    return false
   }
 
   if (limits.min === limits.max) {

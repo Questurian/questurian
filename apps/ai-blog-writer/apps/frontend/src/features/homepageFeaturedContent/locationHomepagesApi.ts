@@ -49,6 +49,10 @@ export type LocationHomepageResponse = {
   isEnabled: boolean
   location: LocationRef | null
   pageBlocks: PageBlockResponse[]
+  publishedPageBlocks: PageBlockResponse[]
+  lastPublishedAt?: string | null
+  lastPublishedBy?: unknown
+  publishedRevision?: number | null
 }
 
 export type DeleteLocationHomepageBlockResponse = {
@@ -329,6 +333,15 @@ export async function toggleLocationHomepage(
 ): Promise<{ id: number; isEnabled: boolean }> {
   return locationHomepageRequest(`/api/location-homepages/${id}/toggle`, token, {
     method: 'PATCH',
+  })
+}
+
+export async function publishLocationHomepage(
+  token: string,
+  id: number,
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(`/api/location-homepages/${id}/publish`, token, {
+    method: 'POST',
   })
 }
 

@@ -27,7 +27,7 @@ import { Categories, Tags } from './features/shared/taxonomy/collections'
 import { SingleTypeListicles } from './features/articles/single-type-listicles/collections'
 import { ListicleItineraries } from './features/articles/listicle-itineraries/collections'
 import { ArticleRedirects } from './features/articles/redirects/collections'
-import { LocationHomepages } from './features/homepage-featured-content'
+import { LocationHomepages, MainHomepage } from './features/homepage-featured-content'
 import { VisitorProfiles } from './features/visitor-auth'
 import { APP_CONFIG, APP_URLS } from './shared/config'
 const filename = fileURLToPath(import.meta.url)
@@ -47,6 +47,7 @@ export default buildConfig({
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
   collections: [Users, VisitorProfiles, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages],
+  globals: [MainHomepage],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,
   typescript: {

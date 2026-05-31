@@ -11,6 +11,7 @@ import {
   type LocationHomepageDoc,
   type RawBlock,
 } from '../../resolve-page-blocks/service'
+import { augmentBlocksWithPublishStatus } from './publish-status'
 import type { FormattedLocationHomepage } from '../types'
 
 export async function getLocationHomepagePayload(): Promise<PayloadInstance> {
@@ -39,7 +40,7 @@ export async function updateLocationHomepage(
   return (await payload.update({
     collection: 'location-homepages',
     id,
-    data: { pageBlocks } as any,
+    data: { draftPageBlocks: pageBlocks } as any,
     depth,
     overrideAccess: true,
   })) as unknown as LocationHomepageDoc
@@ -62,13 +63,19 @@ export async function formatLocationHomepageWithResolvedBlocks(
 ): Promise<FormattedLocationHomepage> {
   const locationGridScope = await resolveLocationGridScope(payload, doc.location)
   const location = await resolveLocationForFormat(payload, doc.location)
-  const resolvedBlocks = await resolvePageBlocks(
-    payload,
-    (doc.pageBlocks ?? []) as RawBlock[],
-    locationGridScope,
+  const draftBlocks = getDraftPageBlocks(doc)
+  const publishedBlocks = getPublishedPageBlocks(doc)
+  const resolvedDraft = await resolvePageBlocks(payload, draftBlocks, locationGridScope)
+  const resolvedPublished = await resolvePageBlocks(payload, publishedBlocks, locationGridScope)
+  const augmentedDraft = augmentBlocksWithPublishStatus(
+    resolvedDraft,
+    draftBlocks,
+    publishedBlocks,
   )
 
-  return formatHomepageDoc({ ...doc, location }, resolvedBlocks)
+  return formatHomepageDoc({ ...doc, location }, augmentedDraft, {
+    publishedPageBlocks: resolvedPublished,
+  })
 }
 
 async function resolveLocationForFormat(
@@ -107,4 +114,12 @@ export async function updateAndFormatLocationHomepageBlocks(
 ): Promise<FormattedLocationHomepage> {
   const updated = await updateLocationHomepage(payload, id, pageBlocks, depth)
   return formatLocationHomepageWithResolvedBlocks(payload, updated)
+}
+
+export function getDraftPageBlocks(doc: LocationHomepageDoc): RawBlock[] {
+  return (doc.draftPageBlocks ?? doc.pageBlocks ?? []) as RawBlock[]
+}
+
+export function getPublishedPageBlocks(doc: LocationHomepageDoc): RawBlock[] {
+  return (doc.publishedPageBlocks ?? doc.pageBlocks ?? []) as RawBlock[]
 }

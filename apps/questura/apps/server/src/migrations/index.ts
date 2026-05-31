@@ -1,0 +1,51 @@
+import * as migration_20260514000000_promote_location_cover_image from './20260514000000_promote_location_cover_image';
+import * as migration_20260514001000_drop_location_guide_storage from './20260514001000_drop_location_guide_storage';
+import * as migration_20260515000000_media_set_source_focal_point from './20260515000000_media_set_source_focal_point';
+import * as migration_20260528000000_itinerary_angle_and_list_tone from './20260528000000_itinerary_angle_and_list_tone';
+import * as migration_20260529000000_better_auth_visitor_tables from './20260529000000_better_auth_visitor_tables';
+import * as migration_20260531_003454_curated_homepage_draft_published_snapshots from './20260531_003454_curated_homepage_draft_published_snapshots';
+import * as migration_20260531_005708_main_homepage_global from './20260531_005708_main_homepage_global';
+import * as migration_20260531_220632_add_source_block_key from './20260531_220632_add_source_block_key';
+
+export const migrations = [
+  {
+    up: migration_20260514000000_promote_location_cover_image.up,
+    down: migration_20260514000000_promote_location_cover_image.down,
+    name: '20260514000000_promote_location_cover_image',
+  },
+  {
+    up: migration_20260514001000_drop_location_guide_storage.up,
+    down: migration_20260514001000_drop_location_guide_storage.down,
+    name: '20260514001000_drop_location_guide_storage',
+  },
+  {
+    up: migration_20260515000000_media_set_source_focal_point.up,
+    down: migration_20260515000000_media_set_source_focal_point.down,
+    name: '20260515000000_media_set_source_focal_point',
+  },
+  {
+    up: migration_20260528000000_itinerary_angle_and_list_tone.up,
+    down: migration_20260528000000_itinerary_angle_and_list_tone.down,
+    name: '20260528000000_itinerary_angle_and_list_tone',
+  },
+  {
+    up: migration_20260529000000_better_auth_visitor_tables.up,
+    down: migration_20260529000000_better_auth_visitor_tables.down,
+    name: '20260529000000_better_auth_visitor_tables',
+  },
+  {
+    up: migration_20260531_003454_curated_homepage_draft_published_snapshots.up,
+    down: migration_20260531_003454_curated_homepage_draft_published_snapshots.down,
+    name: '20260531_003454_curated_homepage_draft_published_snapshots',
+  },
+  {
+    up: migration_20260531_005708_main_homepage_global.up,
+    down: migration_20260531_005708_main_homepage_global.down,
+    name: '20260531_005708_main_homepage_global',
+  },
+  {
+    up: migration_20260531_220632_add_source_block_key.up,
+    down: migration_20260531_220632_add_source_block_key.down,
+    name: '20260531_220632_add_source_block_key'
+  },
+];

@@ -11,6 +11,8 @@ import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
 import HotelGridBlockEditor from './HotelGridBlockEditor'
 import LocationGridBlockEditor from './LocationGridBlockEditor'
 import NewsletterSignupBlockEditor from './NewsletterSignupBlockEditor'
+import PublishedHomepagePreview from './PublishedHomepagePreview'
+import HomepageDraftPublishSummary from './HomepageDraftPublishSummary'
 import {
   addLocationHomepageBlock,
   deleteLocationHomepageBlock,
@@ -22,6 +24,7 @@ import {
   fetchLocationHomepageThingsToDoAttractionCandidates,
   fetchLocationHomepageThingsToDoListicleCandidates,
   fetchLocationHomepageWhereToEatDrinkCandidates,
+  publishLocationHomepage,
   reorderLocationHomepageBlocks,
   convertLocationHomepageFeaturedArticlesBlock,
   toggleLocationHomepage,
@@ -100,7 +103,16 @@ export default function LocationHomepagePage() {
     },
   })
 
+  const publishMutation = useMutation({
+    mutationFn: () => publishLocationHomepage(token!, numericId),
+    onSuccess: (result) => {
+      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, result)
+      queryClient.invalidateQueries({ queryKey: homepageQueryKey })
+    },
+  })
+
   const [showAddBlock, setShowAddBlock] = useState(false)
+  const [viewMode, setViewMode] = useState<'draft' | 'published'>('draft')
   const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
   const [pageBlockSlotKeys, setPageBlockSlotKeys] = useState<Map<string, Set<string>>>(() => new Map())
 
@@ -312,9 +324,63 @@ export default function LocationHomepagePage() {
               ? '● Enabled'
               : '○ Disabled'}
         </button>
+        <div
+          role="group"
+          aria-label="View mode"
+          style={{ display: 'inline-flex', border: '1px solid var(--border, #e2e8f0)', borderRadius: '8px', overflow: 'hidden' }}
+        >
+          <button
+            type="button"
+            onClick={() => setViewMode('draft')}
+            className={viewMode === 'draft' ? 'hf-btn-primary' : 'hf-btn-ghost'}
+            style={{ borderRadius: 0 }}
+          >
+            Draft
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('published')}
+            disabled={!homepage.publishedPageBlocks || homepage.publishedPageBlocks.length === 0}
+            title={
+              homepage.publishedPageBlocks && homepage.publishedPageBlocks.length > 0
+                ? 'View the published page (read-only)'
+                : 'Nothing published yet'
+            }
+            className={viewMode === 'published' ? 'hf-btn-primary' : 'hf-btn-ghost'}
+            style={{ borderRadius: 0 }}
+          >
+            Published
+          </button>
+        </div>
+        <button
+          type="button"
+          className="hf-btn-primary"
+          onClick={() => publishMutation.mutate()}
+          disabled={publishMutation.isPending}
+          title="Publish the full homepage draft after validation."
+        >
+          {publishMutation.isPending ? 'Publishing...' : 'Publish'}
+        </button>
       </div>
+      {homepage.lastPublishedAt && (
+        <div className="hf-detail-meta">
+          Published revision {homepage.publishedRevision ?? 0} · {new Date(homepage.lastPublishedAt).toLocaleString()}
+        </div>
+      )}
+      {publishMutation.isError && (
+        <div className="hf-error">
+          {publishMutation.error instanceof Error
+            ? publishMutation.error.message
+            : 'Failed to publish homepage.'}
+        </div>
+      )}
 
       {/* ── Blocks ─────────────────────────────────────────── */}
+      {viewMode === 'published' ? (
+        <PublishedHomepagePreview blocks={homepage.publishedPageBlocks} />
+      ) : (
+      <>
+      <HomepageDraftPublishSummary blocks={homepage.pageBlocks} />
       {homepage.pageBlocks.length === 0 ? (
         <div className="hf-state-screen">
           <h2>No blocks yet</h2>
@@ -587,8 +653,11 @@ export default function LocationHomepagePage() {
           }}
         </HomepageBlocksSortableList>
       )}
+      </>
+      )}
 
       {/* ── Add block ──────────────────────────────────────── */}
+      {viewMode === 'draft' && (
       <div className="hf-add-block-row">
         {!showAddBlock ? (
           <button
@@ -607,6 +676,7 @@ export default function LocationHomepagePage() {
           />
         )}
       </div>
+      )}
     </div>
   )
 }

@@ -19,6 +19,10 @@ import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
 import {
+  assertCanDeleteHomepageFeaturedContent,
+  assertCanUnpublishHomepageFeaturedContent,
+} from '@/features/homepage-featured-content/location-homepages/lib/reference-locks'
+import {
   getArticleLocationScope,
   isLocationWithinArticleScope,
   syncSharedNeighborhoodsField,
@@ -315,6 +319,22 @@ export const SingleTypeListicles: CollectionConfig = {
   ],
   hooks: {
     beforeChange: [
+      async ({ data, req, originalDoc }) => {
+        if (
+          originalDoc?.status === 'published' &&
+          data?.status &&
+          data.status !== 'published' &&
+          originalDoc?.id
+        ) {
+          await assertCanUnpublishHomepageFeaturedContent(
+            req.payload,
+            'single-type-listicles',
+            originalDoc.id,
+          )
+        }
+
+        return data
+      },
       clearStaleSocialImagesOnFeaturedImageChange,
       async ({ data, req, operation }) => {
         if (operation === 'create' && req.user?.id) {
@@ -509,6 +529,11 @@ export const SingleTypeListicles: CollectionConfig = {
         }
 
         return data
+      },
+    ],
+    beforeDelete: [
+      async ({ req, id }) => {
+        await assertCanDeleteHomepageFeaturedContent(req.payload, 'single-type-listicles', id)
       },
     ],
     afterChange: [articleRevalidation.afterChange],

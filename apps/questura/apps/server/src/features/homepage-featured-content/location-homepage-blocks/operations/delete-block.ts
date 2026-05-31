@@ -2,6 +2,7 @@ import type { RawBlock } from '../../resolve-page-blocks/service'
 
 import {
   getLocationHomepagePayload,
+  getDraftPageBlocks,
   loadLocationHomepage,
   updateLocationHomepage,
   updateAndFormatLocationHomepageBlocks,
@@ -27,7 +28,7 @@ export async function deleteLocationHomepageBlock(
   const depth = 0
   const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, depth)
-  const existingBlocks: RawBlock[] = doc.pageBlocks ?? []
+  const existingBlocks: RawBlock[] = getDraftPageBlocks(doc)
   const updatedBlocks = existingBlocks.filter((block) => block.id !== blockId)
 
   if (updatedBlocks.length === existingBlocks.length) {

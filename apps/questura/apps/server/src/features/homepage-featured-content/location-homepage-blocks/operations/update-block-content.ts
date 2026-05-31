@@ -1,5 +1,6 @@
 import {
   formatLocationHomepageWithResolvedBlocks,
+  getDraftPageBlocks,
   getLocationHomepagePayload,
   loadLocationHomepage,
   updateLocationHomepage,
@@ -39,7 +40,7 @@ export async function updateLocationHomepageBlockContent(
 
   const payload = await getLocationHomepagePayload()
   const doc = await loadLocationHomepage(payload, id, 0)
-  const rawBlocks: RawBlock[] = doc.pageBlocks ?? []
+  const rawBlocks: RawBlock[] = getDraftPageBlocks(doc)
   const blockIndex = rawBlocks.findIndex((block) => block.id === parsed.input.blockId)
 
   if (blockIndex === -1) {

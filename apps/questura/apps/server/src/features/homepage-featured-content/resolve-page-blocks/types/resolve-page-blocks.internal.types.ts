@@ -42,5 +42,7 @@ export type PublicArticleItem = {
   imageUrlSquare: string | null
   image: PublicImage | null
   imageSquare: PublicImage | null
-  articlePath: string | null
+  imageWide?: PublicImage | null
+  imageHero?: PublicImage | null
+  articlePath?: string | null
 }

@@ -27,21 +27,21 @@ function block(id: string, totalSlots = 1): PageBlockResponse {
 
 describe('homepage block optimistic cache helpers', () => {
   it('reorders cached page blocks by id', () => {
-    const homepage: MainHomepageResponse = { pageBlocks: [block('a'), block('b'), block('c')] }
+    const homepage: MainHomepageResponse = { pageBlocks: [block('a'), block('b'), block('c')], publishedPageBlocks: [] }
 
     expect(reorderHomepageBlocksInCache(homepage, ['c', 'a', 'b'])?.pageBlocks.map((b) => b.id))
       .toEqual(['c', 'a', 'b'])
   })
 
   it('leaves cached order unchanged for an invalid reorder payload', () => {
-    const homepage: MainHomepageResponse = { pageBlocks: [block('a'), block('b')] }
+    const homepage: MainHomepageResponse = { pageBlocks: [block('a'), block('b')], publishedPageBlocks: [] }
 
     expect(reorderHomepageBlocksInCache(homepage, ['b'])?.pageBlocks.map((b) => b.id))
       .toEqual(['a', 'b'])
   })
 
   it('removes and replaces a cached block', () => {
-    const homepage: MainHomepageResponse = { pageBlocks: [block('a'), block('b')] }
+    const homepage: MainHomepageResponse = { pageBlocks: [block('a'), block('b')], publishedPageBlocks: [] }
     const converted = buildOptimisticConvertedHomepageBlock(block('b'), 'newsletter-signup', 0)
 
     expect(deleteHomepageBlockFromCache(homepage, 'a')?.pageBlocks.map((b) => b.id))
