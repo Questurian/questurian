@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { LocationResponse } from "@client/shared/services/api/types";
 import { Button } from "@client/components/ui";
 import { Check, ChevronDown, ChevronUp, Loader2, RefreshCw, X } from "lucide-react";
-import { CompletenessFieldEditModal } from "./CompletenessFieldEditModal";
+import { CompletenessFieldEditModal } from "./completeness-field-edit/CompletenessFieldEditModal";
 import { useToast } from "@client/shared/hooks/useToast";
 import {
   useFetchTripAdvisorPlace,
