@@ -1,0 +1,267 @@
+import type { StatusResponse } from '@shared/types'
+
+export type ExtractResponse = {
+  message: string
+  source_url: string
+  raw_text_length: number
+  raw_response: string
+  parsed: { title: string; content: string; language: string } | null
+  parse_error: string | null
+  translated: { title: string; content: string } | null
+  translation_skipped: boolean
+  translation_error: string | null
+}
+
+export type Stage2ClassifyResponse = {
+  message: string
+  classification: {
+    id: number
+    name: string
+    definition: string
+    confidence: number
+    reasoning: string
+  }
+  article_types_considered: number
+  raw_response: string
+}
+
+export type Url2BlogInputMode = 'url' | 'text'
+
+export type Url2BlogModel =
+  | 'gemini-3.1-pro-preview'
+  | 'gemini-3.1-flash-lite-preview'
+  | 'gemini-3.1-flash-image-preview'
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.0-flash'
+
+export type Url2BlogExecutionProfile = 'standard' | 'lean'
+
+export type Url2BlogPipelineV2Request = {
+  run_id?: string
+  url?: string
+  pasted_text?: string
+  include_debug?: boolean
+  narrative_focus?: string
+  enable_web_enrichment?: boolean
+  enable_editorial_augmentation?: boolean
+  execution_profile?: Url2BlogExecutionProfile
+  max_external_context_items?: number
+  model_name?: Url2BlogModel
+}
+
+export type Url2BlogStageTrace = {
+  stage: string
+  model_name?: string
+  max_tokens?: number
+  temperature?: number
+  input?: unknown
+  prompt?: string | null
+  raw_response?: string | null
+  parsed?: unknown
+  output?: unknown
+  grounded_urls?: string[]
+  error?: string
+}
+
+type EditorialComponent =
+  | 'pull_quote'
+  | 'in_the_know_box'
+  | 'key_takeaways_box'
+  | 'highlight_callout'
+  | 'faq_block'
+
+type EditorialDiagnostic = {
+  cognitive_load: 'strong' | 'weak'
+  narrative_density: 'strong' | 'weak'
+  emphasis_clarity: 'strong' | 'weak'
+  reading_behavior_risk: 'strong' | 'weak'
+}
+
+export type Url2BlogPipelineV2Response = {
+  message: string
+  run_id?: string
+  langsmith_trace_url?: string
+  langsmith_trace_run_id?: string
+  pipeline_status: 'ready_for_drafting' | 'needs_revision'
+  article: {
+    source_url: string
+    original_title: string
+    original_excerpt: string
+    language: string
+    original_language: string
+    translated: boolean
+    translation_error?: string
+  }
+  selected_article_type: {
+    id: number | null
+    name: string
+    confidence: number | null
+    reasoning: string
+  }
+  guideline_meta: {
+    id: number
+    name: string
+  }
+  improved_article: {
+    title: string
+    content: string
+  }
+  final_markdown: string
+  guideline_review: {
+    alignment_summary: string
+    improvements_applied: string[]
+    remaining_gaps: string[]
+    narrative_focus_applied?: string
+    model_used?: Url2BlogModel
+    execution_profile?: Url2BlogExecutionProfile
+    source_word_count?: number
+    final_word_count?: number
+    min_expanded_word_target?: number
+    length_requirement_met?: boolean
+    length_requirement_blocking_reason?: string
+    length_expansion_applied?: boolean
+    length_expansion_passes?: number
+    length_expansion_summary?: string
+    short_article_enrichment_applied?: boolean
+    external_context_points_used?: number
+    external_context_usage_note?: string
+    source_facts_extracted_count?: number
+    factual_coverage_summary?: string
+    factual_coverage_score?: number
+    missing_source_facts_count?: number
+    missing_high_priority_facts_count?: number
+    fact_repair_applied?: boolean
+    quality_summary?: string
+    editorial_augmentation_applied?: boolean
+    editorial_components_added?: EditorialComponent[]
+    editorial_augmentation_summary?: string
+    editorial_diagnostic?: EditorialDiagnostic
+    quality_scores?: {
+      overall: number
+      guideline_coverage: number
+      informativeness: number
+      originality: number
+    }
+    second_pass_applied?: boolean
+    editorial_blueprint_applied?: boolean
+    editorial_blueprint_components_planned?: EditorialComponent[]
+    editorial_insert_only_post_applied?: boolean
+    editorial_post_recheck_decision?: 'pass' | 'rollback' | 'skipped'
+    editorial_post_recheck_pass_mode?:
+      | 'strict'
+      | 'near_pass'
+      | 'rollback_after_failed_recheck'
+      | 'skipped'
+    editorial_post_recheck_quality_score?: number
+    editorial_post_recheck_fact_coverage_score?: number
+    similarity_ngram_overlap?: number
+    json_parse_failures_total?: number
+    json_parse_recovered_calls?: number
+    json_parse_recovered_failures?: number
+    json_parse_failures_by_stage?: Record<string, number>
+  }
+  debug?: {
+    pipeline_input?: {
+      url: string
+      include_debug: boolean
+      narrative_focus: string
+      execution_profile: Url2BlogExecutionProfile
+      enable_web_enrichment: boolean
+      enable_editorial_augmentation: boolean
+      max_external_context_items: number
+      model_name: Url2BlogModel
+      use_editorial_blueprint?: boolean
+      use_editorial_insert_only_post?: boolean
+      use_editorial_post_recheck?: boolean
+    }
+    guideline: {
+      id: number
+      name: string
+      guideline: string
+      title_guideline: string
+    }
+    article_original_content: string
+    stage1: ExtractResponse
+    stage2: Stage2ClassifyResponse
+    pipeline_trace?: Url2BlogStageTrace[]
+    rewrite_raw_response: string
+    repair_raw_response?: string
+    quality_raw_response?: string
+    quality_required_revisions?: string[]
+    narrative_focus?: string
+    model_name?: Url2BlogModel
+    external_context_points?: Array<{
+      insight: string
+      why_it_matters: string
+      source_url: string
+      confidence: 'high' | 'medium'
+    }>
+    external_context_usage_note?: string
+    external_context_raw_response?: string
+    external_context_grounded_urls?: string[]
+    source_fact_anchors?: Array<{
+      fact_id: string
+      fact: string
+      priority: 'high' | 'medium'
+      category: 'numbers' | 'names' | 'amenities' | 'policies' | 'pricing' | 'logistics' | 'other'
+    }>
+    source_facts_raw_response?: string
+    fact_coverage_raw_response?: string
+    fact_coverage_missing_facts?: Array<{
+      fact_id: string
+      fact: string
+      priority: 'high' | 'medium'
+      reason: string
+    }>
+    fact_repair_raw_response?: string
+    length_expansion_raw_response?: string
+    editorial_blueprint_raw_response?: string
+    editorial_blueprint?: {
+      apply_plan: boolean
+      summary: string
+      components: Array<{
+        component: EditorialComponent
+        placement: string
+        objective: string
+        priority: 'high' | 'medium'
+      }>
+      drafting_directives: string[]
+      guardrails: string[]
+    }
+    editorial_augmentation_raw_response?: string
+    editorial_components_added?: Array<{
+      component: EditorialComponent
+      justification: string
+      placement: string
+    }>
+    editorial_diagnostic?: EditorialDiagnostic
+    editorial_post_quality_raw_response?: string
+    editorial_post_fact_coverage_raw_response?: string
+    editorial_post_recheck?: {
+      decision: 'pass' | 'rollback' | 'skipped'
+      pass_mode: 'strict' | 'near_pass' | 'rollback_after_failed_recheck' | 'skipped'
+      quality_score?: number
+      fact_coverage_score?: number
+      missing_high_count?: number
+      too_close_to_source?: boolean
+      ngram_overlap?: number
+    }
+    json_parse_metrics?: {
+      total_parse_failures: number
+      recovered_calls: number
+      recovered_parse_failures: number
+      failures_by_stage: Record<string, number>
+    }
+  }
+}
+
+export type Url2BlogResultResponse = {
+  run_id: string
+  markdown: string
+  artifact: Record<string, unknown>
+  langsmith_trace_url?: string
+  langsmith_trace_run_id?: string
+}
+
+export type Url2BlogStatusResponse = StatusResponse
