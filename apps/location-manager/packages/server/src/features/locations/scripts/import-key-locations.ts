@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { getDb, initDb } from "@server/shared/db/client";
 import { saveLocation } from "../repositories/core/location.repository";
 import type { Location } from "../models/location";
-import { slugifyLocationPart } from "../services/geocoding/location-geocoding.helper";
+import { slugifyLocationPart } from "../services/geocoding/location-key.utils";
 
 type RawKeyLocation = {
   id?: number;

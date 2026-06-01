@@ -7,7 +7,7 @@ import {
   updateLocationById
 } from "../../repositories/core";
 import type { ImageStorageService } from "../storage/image-storage.service";
-import { getPlaceDetails } from "../geocoding/location-geocoding.helper";
+import { getPlaceDetails } from "../geocoding/google/place-details.client";
 import { EnvConfig } from "@server/shared/config/env.config";
 
 export class LocationMutationService {
@@ -103,4 +103,3 @@ export class LocationMutationService {
     }
   }
 }
-

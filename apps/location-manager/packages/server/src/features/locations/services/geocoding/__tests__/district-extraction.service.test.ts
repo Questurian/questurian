@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test";
-import { DistrictExtractionService } from "../district-extraction.service";
+import { DistrictExtractionService } from "../reverse/district-extraction.service";
 import type { AdministrativeLevel, InformativeLevel } from "../../integrations/clients/bigdatacloud-api.client";
 
 describe("DistrictExtractionService", () => {

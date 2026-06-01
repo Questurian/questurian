@@ -1,4 +1,4 @@
-import type { AdministrativeLevel, InformativeLevel } from "../integrations/clients/bigdatacloud-api.client";
+import type { AdministrativeLevel, InformativeLevel } from "../../integrations/clients/bigdatacloud-api.client";
 
 type CountryCode = string;
 type AdminLevel = number;

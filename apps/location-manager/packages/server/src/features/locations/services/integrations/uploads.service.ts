@@ -16,7 +16,7 @@ import { ImageStorageService } from "../storage/image-storage.service";
 import { AltTextApiClient } from "./clients/alt-text-api.client";
 import { getLocationById, updateLocationById } from "../../repositories/core";
 import { saveUpload, getUploadById, deleteUploadById } from "../../repositories/content";
-import { createFromUpload, createFromImageSetUpload } from "../geocoding/location-geocoding.helper";
+import { createFromUpload, createFromImageSetUpload } from "./factories/upload.factory";
 import { extractImageMetadata } from "../../utils/image-metadata-extractor";
 import { sanitizeUploadedImageBuffer, UPLOAD_WEBP_QUALITY } from "../../utils/image-upload-sanitizer";
 import { sanitizeLocationName, getFileExtension } from "../../utils/location-utils";

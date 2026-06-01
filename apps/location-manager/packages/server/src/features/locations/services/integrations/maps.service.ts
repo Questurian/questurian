@@ -4,8 +4,8 @@ import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { EnvConfig } from "@server/shared/config/env.config";
 import {
   createFromMaps,
-  generateGoogleMapsUrl,
-} from "../geocoding/location-geocoding.helper";
+} from "../geocoding/maps-location.factory";
+import { generateGoogleMapsUrl } from "../geocoding/google/maps-url.utils";
 import {
   type AccommodationsApiHints,
   FoursquareApiClient,

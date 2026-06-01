@@ -8,7 +8,6 @@ const createFromMapsMock = mock(async (): Promise<any> => ({
   category: "nightlife" as const,
   type: null,
 }));
-const generateGoogleMapsUrlMock = mock(() => "https://www.google.com/maps");
 const findPotentialDuplicateLocationsMock = mock<() => any[]>(() => []);
 const getLocationByIdForUpdateMock = mock<(id?: number) => any>(() => null as any);
 const saveLocationOrThrowMock = mock(() => 101);
@@ -19,9 +18,8 @@ const getInstagramEmbedsByLocationIdMock = mock<(id?: number) => any[]>(() => []
 const getUploadsByLocationIdMock = mock<(id?: number) => any[]>(() => []);
 const transformLocationToResponseMock = mock((location) => location as any);
 
-mock.module("../geocoding/location-geocoding.helper", () => ({
+mock.module("../geocoding/maps-location.factory", () => ({
   createFromMaps: createFromMapsMock,
-  generateGoogleMapsUrl: generateGoogleMapsUrlMock,
 }));
 
 mock.module("../../repositories/core", () => ({
@@ -47,7 +45,6 @@ const { MapsService } = await import("./maps.service");
 describe("MapsService nightlife TripAdvisor auto-fetch", () => {
   beforeEach(() => {
     createFromMapsMock.mockReset();
-    generateGoogleMapsUrlMock.mockReset();
     findPotentialDuplicateLocationsMock.mockReset();
     getLocationByIdForUpdateMock.mockReset();
     saveLocationOrThrowMock.mockReset();
@@ -66,7 +63,6 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
       category: "nightlife",
       type: null,
     });
-    generateGoogleMapsUrlMock.mockReturnValue("https://www.google.com/maps");
     findPotentialDuplicateLocationsMock.mockReturnValue([]);
     getLocationByIdForUpdateMock.mockReturnValue(null);
     saveLocationOrThrowMock.mockReturnValue(101);
