@@ -1,11 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as prompt2blogApi from './api'
-import { DEFAULT_PROMPT2BLOG_MODEL } from './constants/prompt2blog.constants'
+import * as prompt2blogApi from '../api'
+import { DEFAULT_PROMPT2BLOG_MODEL } from '../constants/prompt2blog.constants'
 import Prompt2BlogPage from './Prompt2BlogPage'
 
-vi.mock('./api', () => ({
+vi.mock('../api', () => ({
   getPrompt2BlogDebug: vi.fn(),
   getPrompt2BlogGuidelinePreview: vi.fn(),
   getPrompt2BlogInputOptions: vi.fn(),
@@ -294,15 +294,16 @@ describe('Prompt2BlogPage', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'View clean source material details' }))
 
-    expect(await screen.findByRole('dialog', { name: 'Clean source material details' })).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog', { name: 'Clean source material details' })
+    expect(dialog).toBeInTheDocument()
     expect(getPrompt2BlogDebugMock).toHaveBeenCalledWith('run-123')
-    expect(screen.getByText('ai_always_aggressive_v1')).toBeInTheDocument()
-    expect(screen.getByText('gemini-2.5-flash-lite')).toBeInTheDocument()
-    expect(screen.getByText('Is It Safe to Travel to Peru (2026 Update)')).toBeInTheDocument()
-    expect(screen.getByText('Travel insurance CTA')).toBeInTheDocument()
-    expect(screen.getByText('Fallback used')).toBeInTheDocument()
-    expect(screen.getByText('Cleaned source one.')).toBeInTheDocument()
-    expect(screen.getByText('Input: 120')).toBeInTheDocument()
-    expect(screen.getByText('No removed-block breakdown is available for fallback cleanup.')).toBeInTheDocument()
+    expect(within(dialog).getByText('ai_always_aggressive_v1')).toBeInTheDocument()
+    expect(within(dialog).getByText('gemini-2.5-flash-lite')).toBeInTheDocument()
+    expect(within(dialog).getByText('Is It Safe to Travel to Peru (2026 Update)')).toBeInTheDocument()
+    expect(within(dialog).getByText('Travel insurance CTA')).toBeInTheDocument()
+    expect(within(dialog).getByText('Fallback used')).toBeInTheDocument()
+    expect(within(dialog).getByText('Cleaned source one.')).toBeInTheDocument()
+    expect(within(dialog).getByText('Input: 120')).toBeInTheDocument()
+    expect(within(dialog).getByText('No removed-block breakdown is available for fallback cleanup.')).toBeInTheDocument()
   })
 })

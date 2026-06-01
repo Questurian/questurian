@@ -1,0 +1,203 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  getPrompt2BlogGuidelinePreview,
+  getPrompt2BlogInputOptions,
+  type Prompt2BlogGuidelinePreviewResponse,
+  type Prompt2BlogInputOptionsResponse,
+} from '../../api'
+import { buildGroupedArticleTypes, findDefaultOption, getArticleTypeQuickPicks } from '../article-type-options'
+import {
+  COMPOSER_STORAGE_KEY,
+  DEFAULT_COMPOSER_STATE,
+  loadSavedComposerState,
+} from '../composer.storage'
+import type { P2BFormState } from '../composer.types'
+import { buildPrompt2BlogPayload } from '../prompt-payload'
+
+function createDefaultComposerState(): P2BFormState {
+  return {
+    ...DEFAULT_COMPOSER_STATE,
+    blobs: DEFAULT_COMPOSER_STATE.blobs.map(blob => ({ ...blob })),
+  }
+}
+
+export function usePrompt2BlogComposer() {
+  const saved = useRef(loadSavedComposerState())
+  const [state, setState] = useState<P2BFormState>(saved.current)
+  const [inputOptions, setInputOptions] = useState<Prompt2BlogInputOptionsResponse | null>(null)
+  const [guidelinePreview, setGuidelinePreview] =
+    useState<Prompt2BlogGuidelinePreviewResponse | null>(null)
+  const [guidelineLoading, setGuidelineLoading] = useState(false)
+
+  const updateField = useCallback(<K extends keyof P2BFormState>(
+    field: K,
+    value: P2BFormState[K],
+  ) => {
+    setState(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem(COMPOSER_STORAGE_KEY, JSON.stringify(state))
+  }, [state])
+
+  useEffect(() => {
+    let cancelled = false
+    getPrompt2BlogInputOptions()
+      .then((options) => {
+        if (cancelled) return
+        setInputOptions(options)
+        setState(prev => ({
+          ...prev,
+          toneId: prev.toneId || options.defaults.tone_id || findDefaultOption(options.tones),
+          lengthId: prev.lengthId || options.defaults.length_id || findDefaultOption(options.lengths),
+          brandVoiceId:
+            prev.brandVoiceId
+            || options.defaults.brand_voice_id
+            || findDefaultOption(options.brand_voices),
+        }))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setInputOptions({
+          article_types: [],
+          tones: [],
+          lengths: [],
+          brand_voices: [],
+          defaults: {
+            tone_id: '',
+            length_id: '',
+            brand_voice_id: '',
+          },
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!state.articleTypeId) {
+      setGuidelinePreview(null)
+      return
+    }
+
+    let cancelled = false
+    setGuidelineLoading(true)
+    getPrompt2BlogGuidelinePreview(state.articleTypeId)
+      .then((payload) => {
+        if (!cancelled) setGuidelinePreview(payload)
+      })
+      .catch(() => {
+        if (!cancelled) setGuidelinePreview(null)
+      })
+      .finally(() => {
+        if (!cancelled) setGuidelineLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [state.articleTypeId])
+
+  const articleTypeOptions = useMemo(() => inputOptions?.article_types ?? [], [inputOptions])
+  const groupedArticleTypeOptions = useMemo(
+    () => buildGroupedArticleTypes(articleTypeOptions),
+    [articleTypeOptions],
+  )
+  const articleTypeQuickPicks = useMemo(
+    () => getArticleTypeQuickPicks(articleTypeOptions),
+    [articleTypeOptions],
+  )
+  const selectedArticleType = useMemo(
+    () => articleTypeOptions.find(option => option.id === state.articleTypeId) || null,
+    [articleTypeOptions, state.articleTypeId],
+  )
+  const payload = useMemo(() => buildPrompt2BlogPayload(state), [state])
+
+  const addBlob = useCallback(() => {
+    setState(prev => ({ ...prev, blobs: [...prev.blobs, { id: Date.now(), content: '' }] }))
+  }, [])
+
+  const removeBlob = useCallback((id: number) => {
+    setState(prev => (
+      prev.blobs.length <= 1
+        ? prev
+        : { ...prev, blobs: prev.blobs.filter(blob => blob.id !== id) }
+    ))
+  }, [])
+
+  const updateBlob = useCallback((id: number, content: string) => {
+    setState(prev => ({
+      ...prev,
+      blobs: prev.blobs.map(blob => blob.id === id ? { ...blob, content } : blob),
+    }))
+  }, [])
+
+  const clearCoreInputs = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      articleTypeId: DEFAULT_COMPOSER_STATE.articleTypeId,
+      articleGoal: DEFAULT_COMPOSER_STATE.articleGoal,
+      targetReader: DEFAULT_COMPOSER_STATE.targetReader,
+      destinationContext: DEFAULT_COMPOSER_STATE.destinationContext,
+    }))
+  }, [])
+
+  const clearPromptProfiles = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      modelName: DEFAULT_COMPOSER_STATE.modelName,
+      toneId: inputOptions ? findDefaultOption(inputOptions.tones) : DEFAULT_COMPOSER_STATE.toneId,
+      lengthId: inputOptions
+        ? findDefaultOption(inputOptions.lengths)
+        : DEFAULT_COMPOSER_STATE.lengthId,
+      brandVoiceId: inputOptions
+        ? findDefaultOption(inputOptions.brand_voices)
+        : DEFAULT_COMPOSER_STATE.brandVoiceId,
+      creativityLevel: DEFAULT_COMPOSER_STATE.creativityLevel,
+      audienceProfile: DEFAULT_COMPOSER_STATE.audienceProfile,
+      negativeInstructions: DEFAULT_COMPOSER_STATE.negativeInstructions,
+      promptEnhance: DEFAULT_COMPOSER_STATE.promptEnhance,
+      enableEditorialAugmentation: DEFAULT_COMPOSER_STATE.enableEditorialAugmentation,
+    }))
+  }, [inputOptions])
+
+  const clearSeoConstraints = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      primaryKeyword: DEFAULT_COMPOSER_STATE.primaryKeyword,
+      secondaryKeywords: DEFAULT_COMPOSER_STATE.secondaryKeywords,
+      mustInclude: DEFAULT_COMPOSER_STATE.mustInclude,
+    }))
+  }, [])
+
+  const clearSourceMaterial = useCallback(() => {
+    setState(prev => ({ ...prev, blobs: createDefaultComposerState().blobs }))
+  }, [])
+
+  const clearAll = useCallback(() => {
+    localStorage.removeItem(COMPOSER_STORAGE_KEY)
+    setState(createDefaultComposerState())
+  }, [])
+
+  return {
+    state,
+    updateField,
+    inputOptions,
+    guidelinePreview,
+    guidelineLoading,
+    groupedArticleTypeOptions,
+    articleTypeQuickPicks,
+    selectedArticleType,
+    payload,
+    addBlob,
+    removeBlob,
+    updateBlob,
+    clearCoreInputs,
+    clearPromptProfiles,
+    clearSeoConstraints,
+    clearSourceMaterial,
+    clearAll,
+  }
+}
