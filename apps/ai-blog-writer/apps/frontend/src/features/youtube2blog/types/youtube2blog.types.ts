@@ -1,4 +1,4 @@
-import type { DebugResponse } from '../api'
+import type { DebugResponse } from './pipeline.types'
 
 export type ResultTab = 'final' | 'transcript' | 'classification' | 'article' | 'title'
 
