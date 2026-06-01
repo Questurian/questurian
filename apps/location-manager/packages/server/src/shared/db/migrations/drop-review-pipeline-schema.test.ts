@@ -59,6 +59,13 @@ function createTestDb(): Database {
     CREATE INDEX idx_entities_location_key ON entities(locationKey);
     CREATE INDEX idx_entities_updated_at ON entities(updated_at);
 
+    CREATE TRIGGER touch_entities_from_uploads_insert
+    AFTER INSERT ON uploads
+    FOR EACH ROW
+    BEGIN
+      UPDATE entities SET updated_at = datetime('now') WHERE id = NEW.entity_id;
+    END;
+
     INSERT INTO entities (
       id, category, name, address, url, reviews_fetched_at, reviews_count,
       reviews_google_count, reviews_tripadvisor_count, reviews_enabled,
@@ -130,5 +137,15 @@ describe("dropReviewPipelineSchema", () => {
 
     const foreignKeyViolations = db.query("PRAGMA foreign_key_check").all();
     expect(foreignKeyViolations).toEqual([]);
+
+    expect(
+      db
+        .query(
+          `SELECT name FROM sqlite_master
+           WHERE type = 'trigger' AND name = 'touch_entities_from_uploads_insert'`
+        )
+        .get()
+    ).toEqual({ name: "touch_entities_from_uploads_insert" });
+    expect(() => db.run("INSERT INTO uploads (entity_id) VALUES (1)")).not.toThrow();
   });
 });

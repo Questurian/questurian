@@ -39,6 +39,16 @@ export function dropReviewPipelineSchema(db: Database): void {
   db.run("PRAGMA foreign_keys = OFF");
   db.run("BEGIN TRANSACTION");
   try {
+    const dependentTriggers = db
+      .query(
+        `SELECT name, sql FROM sqlite_master
+         WHERE type = 'trigger' AND sql LIKE '%entities%'`
+      )
+      .all() as Array<{ name: string; sql: string }>;
+    for (const { name } of dependentTriggers) {
+      db.run(`DROP TRIGGER "${name.replaceAll('"', '""')}"`);
+    }
+
     db.run("DROP TABLE IF EXISTS entities_without_review_pipeline");
     db.run(`
       CREATE TABLE entities_without_review_pipeline (
@@ -95,6 +105,9 @@ export function dropReviewPipelineSchema(db: Database): void {
     db.run("CREATE INDEX IF NOT EXISTS idx_entities_category ON entities(category)");
     db.run("CREATE INDEX IF NOT EXISTS idx_entities_location_key ON entities(locationKey)");
     db.run("CREATE INDEX IF NOT EXISTS idx_entities_updated_at ON entities(updated_at)");
+    for (const { sql } of dependentTriggers) {
+      db.run(sql);
+    }
     db.run(
       `INSERT OR REPLACE INTO sqlite_sequence(name, seq)
        VALUES ('entities', COALESCE((SELECT MAX(id) FROM entities), 0))`

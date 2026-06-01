@@ -9,6 +9,7 @@ import {
   createLocationHomepage,
   deleteLocationHomepage,
   fetchLocationHomepagesList,
+  resetAllHomepageContent,
   toggleLocationHomepage,
   type LocationHomepageListItem,
   type LocationRef,
@@ -306,6 +307,67 @@ function DeleteConfirmModal({
   )
 }
 
+function ResetAllConfirmModal({
+  onConfirm,
+  onCancel,
+  isResetting,
+  error,
+}: {
+  onConfirm: () => void
+  onCancel: () => void
+  isResetting: boolean
+  error: string | null
+}) {
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape' && !isResetting) onCancel()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onCancel, isResetting])
+
+  return (
+    <div className="hf-modal-backdrop" onClick={!isResetting ? onCancel : undefined}>
+      <div
+        className="hf-modal hf-delete-modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="hf-reset-all-title"
+      >
+        <div className="hf-delete-modal-body">
+          <div className="hf-delete-modal-icon">!</div>
+          <h3 id="hf-reset-all-title">Clear all homepage content?</h3>
+          <p>
+            This permanently removes every draft and published block from the main homepage and
+            all location homepages. Location homepage records will remain, but they will be
+            disabled. This cannot be undone.
+          </p>
+          {error && <p className="hf-modal-error">{error}</p>}
+        </div>
+        <div className="hf-delete-modal-actions">
+          <button
+            type="button"
+            className="hf-btn-ghost"
+            onClick={onCancel}
+            disabled={isResetting}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="hf-btn-primary hf-btn-danger"
+            onClick={onConfirm}
+            disabled={isResetting}
+          >
+            {isResetting ? 'Clearing...' : 'Clear all content'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function HomepageFeaturedContentPage() {
   const { token, user } = useAuth()
   const navigate = useNavigate()
@@ -313,6 +375,7 @@ export default function HomepageFeaturedContentPage() {
   const canManage = user?.role === 'admin' || user?.role === 'editor'
 
   const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const [isResetAllOpen, setIsResetAllOpen] = useState(false)
   const [editingCountryKey, setEditingCountryKey] = useState<string | null>(null)
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
   const [searchValue, setSearchValue] = useState('')
@@ -339,6 +402,16 @@ export default function HomepageFeaturedContentPage() {
     },
   })
 
+  const resetAllMutation = useMutation({
+    mutationFn: () => resetAllHomepageContent(token!),
+    onSuccess: () => {
+      setIsResetAllOpen(false)
+      queryClient.invalidateQueries({ queryKey: listQueryKey })
+      queryClient.invalidateQueries({ queryKey: ['main-homepage'] })
+      queryClient.invalidateQueries({ queryKey: ['location-homepage'] })
+    },
+  })
+
   async function handlePickLocation(locationId: number) {
     const result = await createLocationHomepage(token!, locationId)
     queryClient.invalidateQueries({ queryKey: listQueryKey })
@@ -352,6 +425,11 @@ export default function HomepageFeaturedContentPage() {
     : null
   const deleteError = deleteMutation.isError
     ? (deleteMutation.error instanceof Error ? deleteMutation.error.message : 'Failed to delete.')
+    : null
+  const resetAllError = resetAllMutation.isError
+    ? (resetAllMutation.error instanceof Error
+      ? resetAllMutation.error.message
+      : 'Failed to clear homepage content.')
     : null
 
   const existingLocationIds = locationHomepages
@@ -437,6 +515,13 @@ export default function HomepageFeaturedContentPage() {
           <span className={`hf-badge ${enabledCount > 0 ? 'success' : 'muted'}`}>
             {enabledCount} enabled
           </span>
+          <button
+            type="button"
+            className="hf-btn-primary hf-btn-danger"
+            onClick={() => setIsResetAllOpen(true)}
+          >
+            Clear all page data
+          </button>
         </div>
       </header>
 
@@ -617,6 +702,20 @@ export default function HomepageFeaturedContentPage() {
           }}
           isDeleting={deleteMutation.isPending}
           error={deleteError}
+        />
+      )}
+
+      {isResetAllOpen && (
+        <ResetAllConfirmModal
+          onConfirm={() => resetAllMutation.mutate()}
+          onCancel={() => {
+            if (!resetAllMutation.isPending) {
+              setIsResetAllOpen(false)
+              resetAllMutation.reset()
+            }
+          }}
+          isResetting={resetAllMutation.isPending}
+          error={resetAllError}
         />
       )}
     </div>

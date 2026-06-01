@@ -16,6 +16,7 @@ vi.mock('@/features/auth/lib/auth-middleware', () => ({
 }))
 
 import { GET as getPublicCountryCities } from '@/app/api/public/countries/[country]/cities/route'
+import { POST as resetAllHomepageContent } from '@/app/api/homepage-featured-content/reset/route'
 import { PATCH as reorderLocationHomepageBlocks } from '@/app/api/location-homepages/[id]/blocks/route'
 import { GET as getPublicLocationHomepage } from '@/app/api/public/location-homepages/[country]/[city]/route'
 import { authenticateRequest } from '@/features/auth/lib/auth-middleware'
@@ -218,5 +219,54 @@ describe('location homepage routes', () => {
     expect(data).toEqual({ orderedBlockIds: ['b', 'a'] })
     expect(payload.findByID).toHaveBeenCalledWith(expect.objectContaining({ depth: 0 }))
     expect(payload.update).toHaveBeenCalledWith(expect.objectContaining({ depth: 0 }))
+  })
+
+  it('clears legacy, draft, and published blocks for every homepage', async () => {
+    vi.mocked(authenticateRequest).mockResolvedValue({
+      user: { role: 'editor' },
+      error: null,
+      status: 200,
+    } as never)
+    const payload = {
+      find: vi.fn().mockResolvedValue({
+        docs: [{ id: 10 }, { id: 20 }],
+      }),
+      update: vi.fn().mockResolvedValue({}),
+      updateGlobal: vi.fn().mockResolvedValue({}),
+    }
+    vi.mocked(getPayload).mockResolvedValue(payload as never)
+
+    const response = await resetAllHomepageContent(new Request(
+      'http://localhost:4000/api/homepage-featured-content/reset',
+      { method: 'POST' },
+    ) as never)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data).toEqual({ locationHomepagesCleared: 2 })
+    expect(payload.update).toHaveBeenCalledTimes(2)
+    expect(payload.update).toHaveBeenCalledWith(expect.objectContaining({
+      collection: 'location-homepages',
+      id: 10,
+      data: {
+        isEnabled: false,
+        pageBlocks: [],
+        draftPageBlocks: [],
+        publishedPageBlocks: [],
+        lastPublishedAt: null,
+        lastPublishedBy: null,
+        publishedRevision: 0,
+      },
+    }))
+    expect(payload.updateGlobal).toHaveBeenCalledWith(expect.objectContaining({
+      slug: 'main-homepage',
+      data: {
+        draftPageBlocks: [],
+        publishedPageBlocks: [],
+        lastPublishedAt: null,
+        lastPublishedBy: null,
+        publishedRevision: 0,
+      },
+    }))
   })
 })

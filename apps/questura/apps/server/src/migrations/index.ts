@@ -6,6 +6,7 @@ import * as migration_20260529000000_better_auth_visitor_tables from './20260529
 import * as migration_20260531_003454_curated_homepage_draft_published_snapshots from './20260531_003454_curated_homepage_draft_published_snapshots';
 import * as migration_20260531_005708_main_homepage_global from './20260531_005708_main_homepage_global';
 import * as migration_20260531_220632_add_source_block_key from './20260531_220632_add_source_block_key';
+import * as migration_20260601_103652_visitor_profiles_payload_schema from './20260601_103652_visitor_profiles_payload_schema';
 
 export const migrations = [
   {
@@ -46,6 +47,11 @@ export const migrations = [
   {
     up: migration_20260531_220632_add_source_block_key.up,
     down: migration_20260531_220632_add_source_block_key.down,
-    name: '20260531_220632_add_source_block_key'
+    name: '20260531_220632_add_source_block_key',
+  },
+  {
+    up: migration_20260601_103652_visitor_profiles_payload_schema.up,
+    down: migration_20260601_103652_visitor_profiles_payload_schema.down,
+    name: '20260601_103652_visitor_profiles_payload_schema',
   },
 ];

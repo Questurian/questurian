@@ -16,6 +16,21 @@ function getTableColumns(db: Database, tableName: string): Set<string> {
   return new Set(rows.map((row) => row.name));
 }
 
+function dropLegacyLocationUpdatedAtTriggers(db: Database): void {
+  const triggers = db
+    .query(
+      `SELECT name FROM sqlite_master
+       WHERE type = 'trigger'
+         AND (name = 'update_location_updated_at'
+           OR name LIKE 'update_location_updated_at_from_%')`
+    )
+    .all() as Array<{ name: string }>;
+
+  for (const { name } of triggers) {
+    db.run(`DROP TRIGGER "${name.replaceAll('"', '""')}"`);
+  }
+}
+
 function ensureEntitiesTableAcceptsKeyLocations(db: Database): void {
   if (!tableExists(db, "entities")) return;
 
@@ -166,6 +181,11 @@ function ensureEntitySchema(db: Database): void {
       tripadvisor_url TEXT,
       tripadvisor_location_id TEXT,
       payload_location_ref TEXT,
+      reviews_fetched_at TEXT,
+      reviews_count INTEGER,
+      reviews_google_count INTEGER,
+      reviews_tripadvisor_count INTEGER,
+      reviews_enabled INTEGER NOT NULL DEFAULT 1,
       selected_payload_media_set_ids_json TEXT,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -667,6 +687,7 @@ function validateRowCounts(db: Database, legacyLocationsTable: string | null): v
 export function splitLocationsToEntities(db: Database): void {
   const alreadyMigrated = tableExists(db, "entities");
   if (alreadyMigrated) {
+    dropLegacyLocationUpdatedAtTriggers(db);
     ensureEntitySchema(db);
     ensureEntityIndexesAndTriggers(db);
     return;
@@ -682,6 +703,7 @@ export function splitLocationsToEntities(db: Database): void {
     const legacyPayloadSyncTable = renameLegacyTable(db, "payload_sync_state");
     const legacyTripadvisorPlacesTable = renameLegacyTable(db, "tripadvisor_places");
 
+    dropLegacyLocationUpdatedAtTriggers(db);
     ensureEntitySchema(db);
 
     if (legacyLocationsTable) {

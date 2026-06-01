@@ -72,6 +72,31 @@ describe('HomepageFeaturedContentPage', () => {
     expect(screen.getByRole('button', { name: '+ Add location' })).toBeInTheDocument()
   })
 
+  it('confirms before clearing all homepage content', async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      const body = url.endsWith('/api/homepage-featured-content/reset')
+        ? { locationHomepagesCleared: 0 }
+        : []
+      return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+
+    renderPage('editor')
+
+    await user.click(screen.getByRole('button', { name: 'Clear all page data' }))
+    expect(screen.getByRole('dialog', { name: 'Clear all homepage content?' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Clear all content' }))
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        'http://localhost:4000/api/homepage-featured-content/reset',
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+  })
+
   it('groups neighborhoods inside their city clusters', async () => {
     const fetchMock = vi.fn()
     fetchMock.mockResolvedValue(new Response(JSON.stringify([

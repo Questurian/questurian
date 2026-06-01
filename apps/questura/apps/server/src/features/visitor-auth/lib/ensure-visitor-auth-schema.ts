@@ -4,12 +4,12 @@ import { APP_CONFIG } from '@/shared/config'
 
 /**
  * Better Auth owns the `visitor_auth_*` tables; Payload does not.
- * Because the server runs the Postgres adapter in `push` mode, Payload drops
- * any table it does not recognise on boot — which silently wipes Better Auth's
- * tables and makes every sign-in/sign-up fail with a 500.
+ * Keep this idempotent guard for fresh or partially migrated databases. It also
+ * repairs databases previously booted with Payload's `push` mode, which can
+ * drop tables that Payload does not recognise.
  *
- * This guard re-creates the tables after Payload has finished its schema push
- * (called from `onInit`). The DDL is idempotent (`CREATE TABLE IF NOT EXISTS`)
+ * This guard re-creates the tables after Payload has initialized (called from
+ * `onInit`). The DDL is idempotent (`CREATE TABLE IF NOT EXISTS`)
  * and mirrors the committed migration
  * `src/migrations/20260529000000_better_auth_visitor_tables.ts`.
  *
@@ -111,8 +111,8 @@ export async function ensureVisitorAuthSchema(): Promise<void> {
     `)
 
     // Sweep orphaned visitor profiles. `visitor_profiles` is Payload-owned and
-    // survives across boots, whereas the Better Auth `visitor_auth_*` tables can
-    // be dropped/recreated empty by Payload's push mode (see comment above). A
+    // survives across boots, whereas the Better Auth `visitor_auth_*` tables may
+    // be dropped/recreated empty after a Payload push (see comment above). A
     // profile is only ever created *after* its auth user exists, so any profile
     // whose `auth_user_id` no longer maps to a `visitor_auth_users` row is a
     // dangling record that breaks the sign-in account check. Remove them so the

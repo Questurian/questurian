@@ -67,6 +67,10 @@ export type ConvertLocationHomepageBlockResponse = {
   block: PageBlockResponse
 }
 
+export type ResetAllHomepageContentResponse = {
+  locationHomepagesCleared: number
+}
+
 type HomepageBlockSaveItem =
   | HomepageFeaturedItemRef
   | HomepageLocationGridItemRef
@@ -140,6 +144,14 @@ export async function fetchLocationHomepagesList(
   token: string,
 ): Promise<LocationHomepageListItem[]> {
   return locationHomepageRequest('/api/location-homepages', token)
+}
+
+export async function resetAllHomepageContent(
+  token: string,
+): Promise<ResetAllHomepageContentResponse> {
+  return locationHomepageRequest('/api/homepage-featured-content/reset', token, {
+    method: 'POST',
+  })
 }
 
 export async function createLocationHomepage(
