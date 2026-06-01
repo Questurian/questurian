@@ -38,7 +38,7 @@ import {
   updateLocationHomepageArticleGridFourLayout,
   type LocationHomepageResponse,
   type LocationRef,
-} from './locationHomepagesApi'
+} from './locationHomepages'
 import {
   buildOptimisticConvertedHomepageBlock,
   deleteHomepageBlockFromCache,

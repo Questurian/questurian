@@ -13,7 +13,7 @@ import {
   toggleLocationHomepage,
   type LocationHomepageListItem,
   type LocationRef,
-} from './locationHomepagesApi'
+} from './locationHomepages'
 import { LocationPickerModal } from './LocationPickerModal'
 
 const LOCATION_COLLATOR = new Intl.Collator('en', {

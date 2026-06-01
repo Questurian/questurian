@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchMainHomepage } from './api'
-import { fetchLocationHomepage } from './locationHomepagesApi'
+import { fetchLocationHomepage } from './locationHomepages'
 
 vi.mock('../../shared/api/client/config', () => ({
   PAYLOAD_API_URL: 'http://payload.test',
