@@ -303,70 +303,58 @@ export default function LocationHomepagePage() {
           </Link>
           <div className="hf-detail-title-block">
             <h1>{locationLabel}</h1>
-            {homepage.location?.locationKey && (
-              <span style={{ fontSize: '0.78rem', color: 'var(--muted)', fontFamily: 'monospace' }}>
-                {homepage.location.locationKey}
-              </span>
-            )}
           </div>
-          <span className={`hf-level-tag`}>{homepage.location?.level ?? 'location'}</span>
         </div>
 
-        <button
-          type="button"
-          className={`hf-toggle-btn ${enabledState ? 'on' : 'off'}`}
-          onClick={() => toggleMutation.mutate()}
-          disabled={toggleMutation.isPending}
-        >
-          {toggleMutation.isPending
-            ? 'Updating…'
-            : enabledState
-              ? '● Enabled'
-              : '○ Disabled'}
-        </button>
-        <div
-          role="group"
-          aria-label="View mode"
-          style={{ display: 'inline-flex', border: '1px solid var(--border, #e2e8f0)', borderRadius: '8px', overflow: 'hidden' }}
-        >
+        <div className="hf-detail-header-center">
           <button
             type="button"
-            onClick={() => setViewMode('draft')}
-            className={viewMode === 'draft' ? 'hf-btn-primary' : 'hf-btn-ghost'}
-            style={{ borderRadius: 0 }}
+            className={`hf-toggle-btn ${enabledState ? 'on' : 'off'}`}
+            onClick={() => toggleMutation.mutate()}
+            disabled={toggleMutation.isPending}
           >
-            Draft
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('published')}
-            disabled={!homepage.publishedPageBlocks || homepage.publishedPageBlocks.length === 0}
-            title={
-              homepage.publishedPageBlocks && homepage.publishedPageBlocks.length > 0
-                ? 'View the published page (read-only)'
-                : 'Nothing published yet'
-            }
-            className={viewMode === 'published' ? 'hf-btn-primary' : 'hf-btn-ghost'}
-            style={{ borderRadius: 0 }}
-          >
-            Published
+            {toggleMutation.isPending
+              ? 'Updating…'
+              : enabledState
+                ? '● Enabled'
+                : '○ Disabled'}
           </button>
         </div>
-        <button
-          type="button"
-          className="hf-btn-primary"
-          onClick={() => publishMutation.mutate()}
-          disabled={publishMutation.isPending}
-          title="Publish the full homepage draft after validation."
-        >
-          {publishMutation.isPending ? 'Publishing...' : 'Publish'}
-        </button>
+
+        <div className="hf-detail-header-actions">
+          <div className="hf-view-mode-group" role="group" aria-label="View mode">
+            <button
+              type="button"
+              onClick={() => setViewMode('draft')}
+              className={viewMode === 'draft' ? 'active' : undefined}
+            >
+              Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('published')}
+              disabled={!homepage.publishedPageBlocks || homepage.publishedPageBlocks.length === 0}
+              title={
+                homepage.publishedPageBlocks && homepage.publishedPageBlocks.length > 0
+                  ? 'View the published page (read-only)'
+                  : 'Nothing published yet'
+              }
+              className={viewMode === 'published' ? 'active' : undefined}
+            >
+              Published
+            </button>
+          </div>
+          <button
+            type="button"
+            className="hf-btn-primary"
+            onClick={() => publishMutation.mutate()}
+            disabled={publishMutation.isPending}
+            title="Publish the full homepage draft after validation."
+          >
+            {publishMutation.isPending ? 'Publishing...' : 'Publish'}
+          </button>
+        </div>
       </div>
-      {homepage.lastPublishedAt && (
-        <div className="hf-detail-meta">
-          Published revision {homepage.publishedRevision ?? 0} · {new Date(homepage.lastPublishedAt).toLocaleString()}
-        </div>
-      )}
       {publishMutation.isError && (
         <div className="hf-error">
           {publishMutation.error instanceof Error

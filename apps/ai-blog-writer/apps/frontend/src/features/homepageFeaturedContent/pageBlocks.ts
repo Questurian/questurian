@@ -478,3 +478,15 @@ export function isNewsletterSignupBlock(
 }
 
 export type HotelOrAttractionGridBlockResponse = HotelGridBlockResponse | TourGridBlockResponse | ThingsToDoAttractionsBlockResponse
+
+/** Human-readable block type tag matching block editor headers (e.g. "Featured Articles · 7 slots"). */
+export function formatHomepageBlockTypeTagLabel(block: PageBlockResponse): string {
+  if (!isCuratedHomepageBlock(block)) {
+    return block.blockType
+  }
+  const config = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
+  if (block.blockType === 'newsletter-signup') {
+    return config.label
+  }
+  return `${config.label} · ${block.selection.totalSlots} slots`
+}

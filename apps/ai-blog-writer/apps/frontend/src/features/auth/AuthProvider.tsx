@@ -9,14 +9,11 @@ const SESSION_DURATION_FALLBACK_MS = 7 * 24 * 60 * 60 * 1000;
 
 const SESSION_RESTORE_REQUESTS = [
   { endpoint: '/api/users/refresh-token', method: 'POST' },
-  { endpoint: '/api/auth/refresh-token', method: 'POST' },
   { endpoint: '/api/users/me', method: 'GET' },
-  { endpoint: '/api/auth/me', method: 'GET' },
 ] as const;
 
 const LOGOUT_ENDPOINTS = [
   { endpoint: '/api/users/logout', method: 'POST' },
-  { endpoint: '/api/auth/logout', method: 'POST' },
 ] as const;
 
 function hasActiveSession(token: string | null | undefined, expiresAt: number | null | undefined): boolean {
@@ -320,7 +317,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
-      const response = await fetch(`${PAYLOAD_API_URL}/api/auth/login`, {
+      const response = await fetch(`${PAYLOAD_API_URL}/api/users/login`, {
         method: 'POST',
         mode: 'cors',
         credentials: 'include',

@@ -265,18 +265,15 @@ export default function MainHomepagePage() {
           </div>
           <span className="hf-level-tag">global</span>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="hf-detail-header-center">
           <span className="hf-enabled-tag on">Always active</span>
-          <div
-            role="group"
-            aria-label="View mode"
-            style={{ display: 'inline-flex', border: '1px solid var(--border, #e2e8f0)', borderRadius: '8px', overflow: 'hidden' }}
-          >
+        </div>
+        <div className="hf-detail-header-actions">
+          <div className="hf-view-mode-group" role="group" aria-label="View mode">
             <button
               type="button"
               onClick={() => setViewMode('draft')}
-              className={viewMode === 'draft' ? 'hf-btn-primary' : 'hf-btn-ghost'}
-              style={{ borderRadius: 0 }}
+              className={viewMode === 'draft' ? 'active' : undefined}
             >
               Draft
             </button>
@@ -289,8 +286,7 @@ export default function MainHomepagePage() {
                   ? 'View the published page (read-only)'
                   : 'Nothing published yet'
               }
-              className={viewMode === 'published' ? 'hf-btn-primary' : 'hf-btn-ghost'}
-              style={{ borderRadius: 0 }}
+              className={viewMode === 'published' ? 'active' : undefined}
             >
               Published
             </button>

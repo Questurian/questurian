@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import RequireAuth from './RequireAuth';
 import { AuthProvider } from './AuthProvider';
+import { useAuth } from './useAuth';
 
 function toBase64Url(value: string): string {
   return btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -42,6 +44,22 @@ function renderProtectedApp() {
         </Routes>
       </MemoryRouter>
     </AuthProvider>,
+  );
+}
+
+function AuthHarness() {
+  const { login, logout, isRestoringSession } = useAuth();
+
+  return (
+    <div>
+      <span>{isRestoringSession ? 'restoring' : 'ready'}</span>
+      <button type="button" onClick={() => void login('writer@example.com', 'secret')}>
+        login
+      </button>
+      <button type="button" onClick={logout}>
+        logout
+      </button>
+    </div>
   );
 }
 
@@ -96,5 +114,63 @@ describe('AuthProvider', () => {
 
     expect(screen.queryByText('login page')).not.toBeInTheDocument();
     expect(localStorage.getItem('payload_auth')).toContain('writer@example.com');
+  });
+
+  it('uses Payload users endpoints for staff restore, login, and logout', async () => {
+    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+
+      if (url.includes('/api/auth/')) {
+        return Promise.reject(new Error(`legacy auth endpoint called: ${url}`));
+      }
+
+      if (url.endsWith('/api/users/login')) {
+        return Promise.resolve(jsonResponse({
+          token,
+          user: {
+            id: 17,
+            email: 'writer@example.com',
+            role: 'writer',
+          },
+        }));
+      }
+
+      if (url.endsWith('/api/users/logout') || url.endsWith('/api/health')) {
+        return Promise.resolve(jsonResponse({ ok: true }));
+      }
+
+      return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('ready');
+
+    await userEvent.click(screen.getByRole('button', { name: 'login' }));
+
+    await waitFor(() => {
+      expect(localStorage.getItem('payload_auth')).toContain('writer@example.com');
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'logout' }));
+
+    await waitFor(() => {
+      expect(localStorage.getItem('payload_auth')).toBeNull();
+    });
+
+    const calledUrls = fetchMock.mock.calls.map(([input]) => String(input));
+
+    expect(calledUrls).toContain('http://localhost:4000/api/users/refresh-token');
+    expect(calledUrls).toContain('http://localhost:4000/api/users/me');
+    expect(calledUrls).toContain('http://localhost:4000/api/users/login');
+    expect(calledUrls).toContain('http://localhost:4000/api/users/logout');
+    expect(calledUrls.some((url) => url.includes('/api/auth/'))).toBe(false);
   });
 });

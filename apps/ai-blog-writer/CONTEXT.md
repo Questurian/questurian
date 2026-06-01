@@ -12,6 +12,7 @@ Owns the **run lifecycle** (`run_id`, stages, artifacts) and **all LLM orchestra
 - The canonical Location store (lives in Location Manager; AI Blog Writer only fills `aiFieldPaths` defined by `/location-guide-contract.json`).
 - Public rendering / SEO / SSR — Questura.
 - Operator UI for Locations themselves — Location Manager. AI Blog Writer's frontend is only for run management.
+- Public Visitor accounts or Visitor auth. AI Blog Writer is an Operator tool for Staff identities.
 
 ## Purpose
 

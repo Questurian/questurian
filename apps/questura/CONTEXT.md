@@ -192,6 +192,11 @@ _Avoid_: subscription status, role
 Login path intended for Staff identities before they reach Payload/admin/editorial surfaces.
 _Avoid_: public signup, public OAuth flow
 
+### Operator tool
+
+Internal tool used by Staff identities to manage or produce Questura content outside the public site, including AI Blog Writer and Location Manager.
+_Avoid_: visitor app, customer portal
+
 ### Visitor entry point
 
 Login and signup path intended for Visitor accounts on the public site.
@@ -230,6 +235,7 @@ _Avoid_: public auth, visitor auth
 - A **Visitor account** has exactly one **Visitor profile**.
 - A **Staff identity** is separate from a **Visitor account**.
 - A **Staff identity** enters through a **Staff entry point**, not a **Visitor entry point**.
+- An **Operator tool** authenticates Staff identities through a **Staff entry point**.
 - **Visitor auth** and **Staff auth** are separate auth surfaces.
 - **Visitor auth** uses **Visitor sessions**, not frontend-held custom JWTs.
 - Visitor auth cookies use the BetterAuth `questura_visitor` namespace.

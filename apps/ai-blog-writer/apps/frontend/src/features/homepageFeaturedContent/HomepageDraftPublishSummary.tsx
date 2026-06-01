@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 
 import HomepageBlockPublishStatusBadge from './HomepageBlockPublishStatusBadge'
-import type { PageBlockResponse } from './pageBlocks'
+import { formatHomepageBlockTypeTagLabel, type PageBlockResponse } from './pageBlocks'
 
 const rowStyle: CSSProperties = {
   display: 'flex',
@@ -23,10 +23,10 @@ export default function HomepageDraftPublishSummary({ blocks }: { blocks: PageBl
   const unpublished = blocks.filter((block) => block.publishStatus === 'unpublished').length
 
   const summaryBits: string[] = []
-  if (blocked > 0) summaryBits.push(`${blocked} can’t publish`)
-  if (modified > 0) summaryBits.push(`${modified} modified`)
-  if (unpublished > 0) summaryBits.push(`${unpublished} not published yet`)
-  const summaryLabel = summaryBits.length > 0 ? summaryBits.join(' · ') : 'all live'
+  if (blocked > 0) summaryBits.push(`${blocked} Can't Publish`)
+  if (modified > 0) summaryBits.push(`${modified} Modified`)
+  if (unpublished > 0) summaryBits.push(`${unpublished} Not Published Yet`)
+  const summaryLabel = summaryBits.length > 0 ? summaryBits.join(' · ') : 'All Live'
 
   return (
     <details
@@ -35,13 +35,13 @@ export default function HomepageDraftPublishSummary({ blocks }: { blocks: PageBl
       style={{ marginBottom: '0.85rem', padding: '0.5rem 0.75rem', borderRadius: '8px' }}
     >
       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>
-        Publish status — {summaryLabel}
+        Publish Status — {summaryLabel}
       </summary>
       <div style={{ marginTop: '0.5rem' }}>
         {blocks.map((block, index) => (
           <div key={block.id ?? index} style={rowStyle}>
             <span style={{ minWidth: '2.5rem' }}>#{index + 1}</span>
-            <span className="hf-block-type-tag">{block.blockType}</span>
+            <span className="hf-block-type-tag">{formatHomepageBlockTypeTagLabel(block)}</span>
             <HomepageBlockPublishStatusBadge
               publishStatus={block.publishStatus}
               validationStatus={block.validationStatus}
