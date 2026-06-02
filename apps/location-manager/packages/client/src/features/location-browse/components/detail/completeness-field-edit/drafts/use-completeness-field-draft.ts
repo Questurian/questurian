@@ -14,7 +14,7 @@ import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
 import type { FieldDef } from "../completeness-field-edit.types";
 import { getDetailFieldConfig } from "../completeness-detail-fields";
-import { getInitialValue } from "../field-value-utils";
+import { getCoreFieldConfig } from "../core-completeness-fields";
 import { getCenterToastPosition } from "../toast-position";
 import {
   createClosedDayEntries,
@@ -63,7 +63,7 @@ export function useCompletenessFieldDraft({
 
   useEffect(() => {
     if (!open) return;
-    setValue(getInitialValue(field, locationDetail));
+    setValue(getCoreFieldConfig(field.key)?.draftInit?.(locationDetail) ?? "");
     setCoordinateDraft({
       lat: locationDetail.coordinates?.lat != null ? String(locationDetail.coordinates.lat) : "",
       lng: locationDetail.coordinates?.lng != null ? String(locationDetail.coordinates.lng) : "",
@@ -102,7 +102,9 @@ export function useCompletenessFieldDraft({
       );
     }
     if (field.key === "operationHours") {
-      setDayEntries(parseOperationHoursJson(getInitialValue(field, locationDetail)));
+      setDayEntries(
+        parseOperationHoursJson(getCoreFieldConfig(field.key)?.draftInit?.(locationDetail) ?? "")
+      );
     }
     if (field.key === "locationKey" || field.key === "district") {
       setTaxonomyLocationKey(locationDetail.locationKey?.trim() ?? "");
