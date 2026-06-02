@@ -11,6 +11,7 @@ export type UseTerminalPipelineRunOptions<TStatus extends PipelineRunStatus> = {
   runId: string | null
   status: TStatus | null
   enabled?: boolean
+  resetKey?: unknown
   terminalStates?: readonly string[]
   onTerminal: TerminalRunHandler<TStatus>
   onError?: (error: unknown) => void
@@ -26,11 +27,19 @@ export function useTerminalPipelineRun<TStatus extends PipelineRunStatus>({
   runId,
   status,
   enabled = true,
+  resetKey,
   terminalStates = ['completed', 'failed'],
   onTerminal,
   onError,
 }: UseTerminalPipelineRunOptions<TStatus>) {
   const handledRef = useRef<string | null>(null)
+  const previousResetKeyRef = useRef(resetKey)
+
+  useEffect(() => {
+    if (previousResetKeyRef.current === resetKey) return
+    previousResetKeyRef.current = resetKey
+    handledRef.current = null
+  }, [resetKey])
 
   useEffect(() => {
     if (!enabled || !status || !runId) return

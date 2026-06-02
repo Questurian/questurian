@@ -3,7 +3,7 @@ import { API_BASE_URL, FEATURE_PREFIX } from '../constants/api.constants'
 import { STAGE_ORDER } from '../constants/pipeline.constants'
 import type { DebugResponse } from '../types/pipeline.types'
 import { resolveErrorMessage } from './request-error'
-import { normalizePipelineStatus } from '../../pipelineRuns/progress'
+import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns/progress'
 
 function normalizeYouTube2BlogStatusResponse(value: unknown, fallbackRunId: string): StatusResponse {
   const normalized = normalizePipelineStatus({
@@ -18,12 +18,7 @@ function normalizeYouTube2BlogStatusResponse(value: unknown, fallbackRunId: stri
     } satisfies StatusResponse,
   })
 
-  return {
-    ...normalized,
-    run_id: typeof normalized.run_id === 'string' ? normalized.run_id : fallbackRunId,
-    updated_at: typeof normalized.updated_at === 'string' ? normalized.updated_at : '',
-    error: typeof normalized.error === 'string' ? normalized.error : null,
-  }
+  return finalizeStatusResponse(normalized, { fallbackRunId })
 }
 
 export async function startFromYoutubeUrl(

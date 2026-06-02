@@ -36,7 +36,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   const [showPipelineDebug, setShowPipelineDebug] = useState(false)
   const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const resetTerminalHandledRef = useRef<() => void>(() => undefined)
+  const [terminalResetKey, setTerminalResetKey] = useState(0)
   const lastStatusStageRef = useRef<string | null>(null)
   const lastStatusErrorRef = useRef<string | null>(null)
 
@@ -85,7 +85,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     if (savedRun.current.sourceStep !== 'pipeline_running' || !savedRun.current.pipelineRunId) return
     setLoadingLabel('Running final article pipeline...')
     appendPipelineLog(`Resumed run: ${savedRun.current.pipelineRunId}`)
-  }, [appendPipelineLog])
+  }, [appendPipelineLog, savedRun])
 
   useEffect(() => {
     if (isStartingPipeline) setLoadingLabel('Starting final article pipeline...')
@@ -102,6 +102,10 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
 
   const resetStatusError = useCallback(() => {
     lastStatusErrorRef.current = null
+  }, [])
+
+  const resetTerminalHandled = useCallback(() => {
+    setTerminalResetKey(prev => prev + 1)
   }, [])
 
   const handleStatusUpdate = useCallback((status: Prompt2BlogStatusResponse) => {
@@ -135,7 +139,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   }, [appendPipelineLog, handleStatusUpdate, statusQuery.data, statusQuery.error])
 
   const run = useCallback(() => {
-    resetTerminalHandledRef.current()
+    resetTerminalHandled()
     resetStatusError()
     setLoadingLabel('Starting final article pipeline...')
     setError(null)
@@ -162,10 +166,19 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
         setLoadingLabel('')
       },
     })
-  }, [appendPipelineLog, resetStartPipeline, resetStatusError, startPipeline])
+  }, [
+    appendPipelineLog,
+    resetStartPipeline,
+    resetStatusError,
+    resetTerminalHandled,
+    setPipelineResult,
+    setPipelineRunId,
+    setSourceStep,
+    startPipeline,
+  ])
 
   const reset = useCallback(() => {
-    resetTerminalHandledRef.current()
+    resetTerminalHandled()
     resetStartPipeline()
     setSourceStep('edit')
     setPipelineRunId(null)
@@ -179,7 +192,15 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setError(null)
     resetStatusError()
     clearPersistedRunState()
-  }, [clearPersistedRunState, resetStartPipeline, resetStatusError])
+  }, [
+    clearPersistedRunState,
+    resetStartPipeline,
+    resetStatusError,
+    resetTerminalHandled,
+    setPipelineResult,
+    setPipelineRunId,
+    setSourceStep,
+  ])
 
   const handleTerminalStatus = useCallback<
     (args: { status: Prompt2BlogStatusResponse; isCancelled: () => boolean }) => Promise<void>
@@ -218,7 +239,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
     setSourceStep('edit')
     setLoadingLabel('')
-  }, [appendPipelineLog, pipelineRunId])
+  }, [appendPipelineLog, pipelineRunId, setPipelineResult, setSourceStep])
 
   const handleTerminalError = useCallback((err: unknown) => {
     const message = err instanceof Error ? err.message : 'Failed to handle pipeline result'
@@ -227,14 +248,14 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setLoadingLabel('')
   }, [appendPipelineLog])
 
-  const { resetHandled } = useTerminalPipelineRun({
+  useTerminalPipelineRun({
     runId: pipelineRunId,
     status: statusQuery.data ?? null,
     enabled: sourceStep === 'pipeline_running',
+    resetKey: terminalResetKey,
     onTerminal: handleTerminalStatus,
     onError: handleTerminalError,
   })
-  resetTerminalHandledRef.current = resetHandled
 
   const isLoading = isStartingPipeline || sourceStep === 'pipeline_running'
 

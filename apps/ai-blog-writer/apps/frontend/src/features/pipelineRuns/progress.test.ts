@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getStepStatus, normalizePipelineStatus } from './progress'
+import { finalizeStatusResponse, getStepStatus, normalizePipelineStatus } from './progress'
 
 const stageOrder = ['queued', 'draft', 'review', 'publish'] as const
 
@@ -43,6 +43,33 @@ describe('pipeline run progress', () => {
     expect(getStatus({ state: 'running', stage: 'missing' }, 'queued')).toBe('pending')
   })
 
+  it('keeps optional steps pending except while active', () => {
+    expect(
+      getStepStatus({
+        step: 'review_repair',
+        status: { state: 'running', stage: 'review' },
+        stageOrder: ['review', 'review_repair', 'publish'],
+        optional: true,
+      }),
+    ).toBe('pending')
+    expect(
+      getStepStatus({
+        step: 'review_repair',
+        status: { state: 'running', stage: 'review_repair' },
+        stageOrder: ['review', 'review_repair', 'publish'],
+        optional: true,
+      }),
+    ).toBe('running')
+    expect(
+      getStepStatus({
+        step: 'review_repair',
+        status: { state: 'failed', stage: 'review_repair' },
+        stageOrder: ['review', 'review_repair', 'publish'],
+        optional: true,
+      }),
+    ).toBe('failed')
+  })
+
   it('normalizes unknown stage and state to defaults', () => {
     expect(
       normalizePipelineStatus({
@@ -58,6 +85,49 @@ describe('pipeline run progress', () => {
       run_id: 123,
       state: 'pending',
       stage: 'queued',
+    })
+  })
+
+  it('can preserve raw unknown stage as explicit unknown', () => {
+    expect(
+      normalizePipelineStatus({
+        value: { run_id: 'run-1', state: 'running', stage: 'stage_added_later' },
+        stages: stageOrder,
+        unknownStage: 'unknown',
+        rawStageField: 'raw_stage',
+        defaults: {
+          run_id: 'run-1',
+          state: 'pending',
+          stage: 'queued' as 'queued' | 'draft' | 'review' | 'publish' | 'unknown',
+          raw_stage: null as string | null,
+        },
+      }),
+    ).toEqual({
+      run_id: 'run-1',
+      state: 'running',
+      stage: 'unknown',
+      raw_stage: 'stage_added_later',
+    })
+  })
+
+  it('finalizes common status fields', () => {
+    expect(
+      finalizeStatusResponse(
+        {
+          run_id: 123 as unknown as string,
+          state: 'running',
+          stage: 'draft',
+          updated_at: null as unknown as string,
+          error: 404 as unknown as string,
+        },
+        { fallbackRunId: 'run-1' },
+      ),
+    ).toEqual({
+      run_id: 'run-1',
+      state: 'running',
+      stage: 'draft',
+      updated_at: '',
+      error: null,
     })
   })
 })

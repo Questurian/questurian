@@ -66,17 +66,12 @@ export function getStageLabel(status: StatusResponse): string {
 }
 
 export function getStagePhase(status: StatusResponse, step: TimelineStep): string {
-  if (step.optional) {
-    if (status.stage === step.key && status.state === 'running') {
-      return getRunningPhaseLabel(step.key)
-    }
-    if (status.stage === step.key && status.state === 'failed') {
-      return 'Failed'
-    }
-    return 'Conditional'
-  }
-
-  const stepStatus = getStepStatus({ step: step.key, status, stageOrder: STAGE_ORDER })
+  const stepStatus = getStepStatus({
+    step: step.key,
+    status,
+    stageOrder: STAGE_ORDER,
+    optional: step.optional,
+  })
 
   if (stepStatus === 'failed') {
     return 'Failed'
@@ -87,6 +82,9 @@ export function getStagePhase(status: StatusResponse, step: TimelineStep): strin
   if (stepStatus === 'running' && status.state === 'running') {
     return getRunningPhaseLabel(step.key)
   }
+  if (step.optional) {
+    return 'Conditional'
+  }
   return 'Pending'
 }
 
@@ -94,16 +92,11 @@ export function getStageItemState(
   status: StatusResponse,
   step: TimelineStep
 ): 'done' | 'running' | 'pending' {
-  if (step.optional) {
-    if (status.stage === step.key && status.state === 'running') {
-      return 'running'
-    }
-    if (status.stage === step.key && status.state === 'failed') {
-      return 'running'
-    }
-    return 'pending'
-  }
-
-  const stepStatus = getStepStatus({ step: step.key, status, stageOrder: STAGE_ORDER })
+  const stepStatus = getStepStatus({
+    step: step.key,
+    status,
+    stageOrder: STAGE_ORDER,
+    optional: step.optional,
+  })
   return stepStatus === 'failed' ? 'running' : stepStatus
 }

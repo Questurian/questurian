@@ -4,7 +4,6 @@ import type {
   Prompt2BlogDebugResponse,
   Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOptionsResponse,
-  KnownPrompt2BlogPipelineStage,
   Prompt2BlogPipelineStage,
   Prompt2BlogResultResponse,
   Prompt2BlogRunRequest,
@@ -12,31 +11,17 @@ import type {
   Prompt2BlogStatusResponse,
 } from '../types/pipeline.types'
 import { PROMPT2BLOG_PIPELINE_STAGES } from '../types/pipeline.types'
-import { normalizePipelineStatus } from '../../pipelineRuns/progress'
-
-export function resolvePrompt2BlogPipelineStage(value: unknown): Prompt2BlogPipelineStage {
-  return PROMPT2BLOG_PIPELINE_STAGES.includes(value as KnownPrompt2BlogPipelineStage)
-    ? value as KnownPrompt2BlogPipelineStage
-    : 'unknown'
-}
-
-function readStatusRecord(value: unknown): Record<string, unknown> {
-  return typeof value === 'object' && value !== null ? value as Record<string, unknown> : {}
-}
-
-function resolveRawPrompt2BlogPipelineStage(value: unknown): string | null {
-  return typeof value === 'string' && value.length > 0 ? value : null
-}
+import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns/progress'
 
 export function normalizePrompt2BlogStatusResponse(
   value: unknown,
   fallbackRunId: string,
 ): Prompt2BlogStatusResponse {
-  const record = readStatusRecord(value)
-  const rawStage = resolveRawPrompt2BlogPipelineStage(record.stage)
   const normalized = normalizePipelineStatus({
     value,
     stages: PROMPT2BLOG_PIPELINE_STAGES,
+    unknownStage: 'unknown' satisfies Prompt2BlogPipelineStage,
+    rawStageField: 'raw_stage',
     defaults: {
       run_id: fallbackRunId,
       feature: 'prompt2blog',
@@ -46,17 +31,8 @@ export function normalizePrompt2BlogStatusResponse(
       updated_at: '',
     } satisfies Prompt2BlogStatusResponse,
   })
-  const stage = rawStage ? resolvePrompt2BlogPipelineStage(rawStage) : normalized.stage
 
-  return {
-    ...normalized,
-    run_id: typeof normalized.run_id === 'string' ? normalized.run_id : fallbackRunId,
-    feature: typeof normalized.feature === 'string' ? normalized.feature : 'prompt2blog',
-    stage,
-    ...(stage === 'unknown' ? { raw_stage: rawStage } : {}),
-    error: typeof normalized.error === 'string' ? normalized.error : null,
-    updated_at: typeof normalized.updated_at === 'string' ? normalized.updated_at : '',
-  }
+  return finalizeStatusResponse(normalized, { fallbackRunId, feature: 'prompt2blog' })
 }
 
 export async function startPrompt2BlogRun(

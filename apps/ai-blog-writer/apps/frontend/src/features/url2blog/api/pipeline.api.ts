@@ -7,7 +7,7 @@ import type {
 } from '../types/pipeline.types'
 import { resolveErrorMessage } from './request-error'
 import { URL2BLOG_PROGRESS_STEPS } from '../constants/pipeline-ui.constants'
-import { normalizePipelineStatus } from '../../pipelineRuns/progress'
+import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns/progress'
 
 const URL2BLOG_PIPELINE_STAGES = URL2BLOG_PROGRESS_STEPS
   .map((step) => step.stage)
@@ -29,12 +29,7 @@ function normalizeUrl2BlogStatusResponse(
     } satisfies Url2BlogStatusResponse,
   })
 
-  return {
-    ...normalized,
-    run_id: typeof normalized.run_id === 'string' ? normalized.run_id : fallbackRunId,
-    updated_at: typeof normalized.updated_at === 'string' ? normalized.updated_at : '',
-    error: typeof normalized.error === 'string' ? normalized.error : null,
-  }
+  return finalizeStatusResponse(normalized, { fallbackRunId })
 }
 
 export async function runUrl2BlogPipelineV2(
