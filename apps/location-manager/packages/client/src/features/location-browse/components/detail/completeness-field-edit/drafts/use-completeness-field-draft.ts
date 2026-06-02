@@ -170,3 +170,5 @@ export function useCompletenessFieldDraft({
       .filter((group) => group.options.length > 0),
   };
 }
+
+export type CompletenessFieldDraft = ReturnType<typeof useCompletenessFieldDraft>;

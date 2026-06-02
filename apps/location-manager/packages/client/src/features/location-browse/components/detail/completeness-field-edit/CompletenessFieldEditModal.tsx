@@ -39,34 +39,8 @@ export function CompletenessFieldEditModal({
     <CompletenessFieldInput
       field={field}
       category={locationDetail.category}
-      value={draft.value}
-      onValueChange={draft.setValue}
-      nightlifeMultiDraft={draft.nightlifeMultiDraft}
-      setNightlifeMultiDraft={draft.setNightlifeMultiDraft}
-      locationTypes={draft.locationTypes}
-      isLoadingTypes={draft.isLoadingTypes}
-      taxonomyLocationKey={draft.taxonomyLocationKey}
-      taxonomyDistrict={draft.taxonomyDistrict}
-      onTaxonomyLocationKeyChange={draft.setTaxonomyLocationKey}
-      onTaxonomyDistrictChange={draft.setTaxonomyDistrict}
-      coordinateDraft={draft.coordinateDraft}
-      onCoordinateDraftChange={draft.setCoordinateDraft}
-      onCopyText={draft.copyText}
-      canGenerateNeighborhoodDescription={draft.canGenerateNeighborhoodDescription}
-      locationHierarchyLabel={draft.locationHierarchyLabel}
+      draft={draft}
       isPending={isPending}
-      isGeneratingNeighborhoodDescription={draft.isGeneratingNeighborhoodDescription}
-      onGenerateNeighborhoodDescription={() => draft.generateNeighborhoodDescription()}
-      idealForDraft={draft.idealForDraft}
-      availableIdealForGroups={draft.availableIdealForGroups}
-      onAddIdealForTag={draft.addIdealForTag}
-      onRemoveIdealForTag={draft.removeIdealForTag}
-      cuisinesDraft={draft.cuisinesDraft}
-      availableCuisineOptions={draft.availableCuisineOptions}
-      availableCuisineGroups={draft.availableCuisineGroups}
-      onCuisinesDraftChange={draft.setCuisinesDraft}
-      dayEntries={draft.dayEntries}
-      onDayEntriesChange={draft.setDayEntries}
     />
   );
 
