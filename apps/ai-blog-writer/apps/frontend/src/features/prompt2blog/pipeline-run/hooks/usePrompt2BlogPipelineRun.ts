@@ -22,7 +22,7 @@ import type {
 } from '../pipeline-run.types'
 import { usePrompt2BlogMutation } from './usePrompt2BlogMutation'
 
-export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
+export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null) {
   const savedRun = useRef(loadSavedRunState())
   const [sourceStep, setSourceStep] = useState<SourceStep>(savedRun.current.sourceStep)
   const [pipelineRunId, setPipelineRunId] = useState<string | null>(savedRun.current.pipelineRunId)
@@ -63,11 +63,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
 
   const canOpenCleanupModal = useMemo(() => {
     const cleanupStageIndex = PIPELINE_STAGE_ORDER.indexOf(CLEANUP_STAGE_KEY)
-    const currentStageIndex = pipelineStatus
-      ? PIPELINE_STAGE_ORDER.indexOf(
-        (pipelineStatus.stage || 'queued') as (typeof PIPELINE_STAGE_ORDER)[number],
-      )
-      : -1
+    const currentStageIndex = pipelineStatus ? PIPELINE_STAGE_ORDER.indexOf(pipelineStatus.stage) : -1
     return Boolean(
       pipelineRunId
       && (sourceStep === 'pipeline_complete' || currentStageIndex >= cleanupStageIndex),

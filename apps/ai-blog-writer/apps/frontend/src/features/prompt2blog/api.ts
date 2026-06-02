@@ -15,6 +15,7 @@ export type {
   Prompt2BlogInputOptionsResponse,
   Prompt2BlogModelName,
   Prompt2BlogPipelinePayload,
+  Prompt2BlogPipelineStage,
   Prompt2BlogResultResponse,
   Prompt2BlogRunRequest,
   Prompt2BlogRunResponse,

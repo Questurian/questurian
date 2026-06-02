@@ -29,11 +29,12 @@ describe('validatePipelinePayload', () => {
   })
 
   it.each([
+    [null, 'Article type is required.'],
     [{ article_type_id: 0 }, 'Article type is required.'],
     [{ source_material: [] }, 'At least one source material entry is required.'],
     [{ article_goal: ' ' }, 'Article goal, target reader, and destination context are required.'],
     [{ tone_id: '' }, 'Tone and length are required.'],
   ])('returns the first actionable validation error', (overrides, expected) => {
-    expect(validatePipelinePayload(createPayload(overrides))).toBe(expected)
+    expect(validatePipelinePayload(overrides === null ? null : createPayload(overrides))).toBe(expected)
   })
 })

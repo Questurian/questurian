@@ -1,4 +1,5 @@
 import type { P2BFormState } from './composer.types'
+import type { Prompt2BlogRunRequest } from '../api'
 
 function splitCommaSeparated(value: string): string[] {
   return value.split(',').map(item => item.trim()).filter(Boolean)
@@ -8,9 +9,11 @@ function splitLineSeparated(value: string): string[] {
   return value.split('\n').map(item => item.trim()).filter(Boolean)
 }
 
-export function buildPrompt2BlogPayload(state: P2BFormState) {
+export function buildPrompt2BlogPayload(state: P2BFormState): Prompt2BlogRunRequest | null {
+  if (!state.articleTypeId) return null
+
   return {
-    article_type_id: state.articleTypeId || 0,
+    article_type_id: state.articleTypeId,
     source_material: state.blobs.map(blob => blob.content.trim()).filter(Boolean),
     article_goal: state.articleGoal,
     target_reader: state.targetReader,

@@ -71,11 +71,27 @@ export type Prompt2BlogRunResponse = {
   run_id: string
 }
 
+export type Prompt2BlogPipelineStage =
+  | 'queued'
+  | 'stage_input_validate'
+  | 'stage_input_cleanup'
+  | 'stage_synthesize_sources'
+  | 'stage_guideline_fetch'
+  | 'stage_coverage_check'
+  | 'stage_supplement'
+  | 'stage_compose'
+  | 'stage_quality_audit'
+  | 'stage_repair'
+  | 'stage_editorial_augmentation'
+  | 'stage_title'
+  | 'stage_finalize'
+  | 'complete'
+
 export type Prompt2BlogStatusResponse = {
   run_id: string
   feature: string
   state: 'pending' | 'running' | 'completed' | 'failed'
-  stage: string
+  stage: Prompt2BlogPipelineStage
   error: string | null
   updated_at: string
 }

@@ -1,15 +1,15 @@
 import { CLEANUP_STAGE_KEY } from '../cleanup-details/cleanup-stage.parser'
-import type { Prompt2BlogStatusResponse } from '../api'
+import type { Prompt2BlogPipelineStage, Prompt2BlogStatusResponse } from '../api'
 import type { PipelineStepStatus } from './pipeline-run.types'
 
-export const PIPELINE_STAGE_ORDER = [
+export const PIPELINE_STAGE_ORDER: readonly Prompt2BlogPipelineStage[] = [
   'queued', 'stage_input_validate', 'stage_input_cleanup', 'stage_synthesize_sources',
   'stage_guideline_fetch', 'stage_coverage_check', 'stage_supplement', 'stage_compose',
   'stage_quality_audit', 'stage_repair', 'stage_editorial_augmentation', 'stage_title',
   'stage_finalize', 'complete',
 ] as const
 
-export const PIPELINE_STAGE_LABELS: Record<string, string> = {
+export const PIPELINE_STAGE_LABELS: Record<Prompt2BlogPipelineStage, string> = {
   queued: 'Queued',
   stage_input_validate: 'Validate inputs',
   stage_input_cleanup: 'Clean source material',
@@ -32,7 +32,7 @@ interface PipelineStageMetadataOptions {
 }
 
 export interface PipelineStageMetadata {
-  key: string
+  key: Prompt2BlogPipelineStage
   label: string
   status: PipelineStepStatus
   interactive: boolean
@@ -61,14 +61,12 @@ export function getPipelineStageMetadata(
 }
 
 export function getPipelineStepStatus(
-  step: string,
+  step: Prompt2BlogPipelineStage,
   status: Prompt2BlogStatusResponse | null,
 ): PipelineStepStatus {
   if (!status) return step === 'queued' ? 'running' : 'pending'
-  const activeIndex = PIPELINE_STAGE_ORDER.indexOf(
-    (status.stage || 'queued') as (typeof PIPELINE_STAGE_ORDER)[number],
-  )
-  const stepIndex = PIPELINE_STAGE_ORDER.indexOf(step as (typeof PIPELINE_STAGE_ORDER)[number])
+  const activeIndex = PIPELINE_STAGE_ORDER.indexOf(status.stage)
+  const stepIndex = PIPELINE_STAGE_ORDER.indexOf(step)
   if (status.state === 'failed') {
     if (step === status.stage) return 'error'
     return stepIndex < activeIndex ? 'done' : 'pending'
