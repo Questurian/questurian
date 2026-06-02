@@ -1,6 +1,5 @@
-import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
 import type { usePrompt2BlogPipelineRun } from '../hooks/usePrompt2BlogPipelineRun'
-import { PIPELINE_STAGE_LABELS, PIPELINE_STAGE_ORDER, getPipelineStepStatus } from '../pipeline-status'
+import { getPipelineStageMetadata } from '../pipeline-status'
 import { PipelineResult } from './PipelineResult'
 
 interface PipelinePanelProps {
@@ -27,6 +26,10 @@ export function PipelinePanel({ run, onOpenCleanupModal, onReset }: PipelinePane
     onRun: () => void run.run(),
     onToggleDebug: run.togglePipelineDebug,
   }
+  const stages = getPipelineStageMetadata(props.status, {
+    canOpenCleanupModal: props.canOpenCleanupModal,
+    onOpenCleanupModal: props.onOpenCleanupModal,
+  })
 
   return (
     <section className="p2b-panel">
@@ -45,29 +48,35 @@ export function PipelinePanel({ run, onOpenCleanupModal, onReset }: PipelinePane
         </div>
 
         <div className="p2b-progress-grid">
-          {PIPELINE_STAGE_ORDER.map(step => {
-            const status = getPipelineStepStatus(step, props.status)
+          {stages.map(stage => {
+            const className = `p2b-progress-item p2b-progress-item--${stage.status}${
+              stage.interactive ? ' p2b-progress-item--interactive' : ''
+            }`
+            const content = (
+              <>
+                <strong>{stage.label}</strong>
+                <span>{stage.status}</span>
+                {stage.detailLabel && <small>{stage.detailLabel}</small>}
+              </>
+            )
 
-            if (step === CLEANUP_STAGE_KEY && props.canOpenCleanupModal) {
+            if (stage.interactive) {
               return (
                 <button
-                  key={step}
+                  key={stage.key}
                   type="button"
-                  className={`p2b-progress-item p2b-progress-item--${status} p2b-progress-item--interactive`}
-                  onClick={props.onOpenCleanupModal}
-                  aria-label="View clean source material details"
+                  className={className}
+                  onClick={stage.onClick}
+                  aria-label={stage.ariaLabel}
                 >
-                  <strong>{PIPELINE_STAGE_LABELS[step] || step}</strong>
-                  <span>{status}</span>
-                  <small>View details</small>
+                  {content}
                 </button>
               )
             }
 
             return (
-              <div key={step} className={`p2b-progress-item p2b-progress-item--${status}`}>
-                <strong>{PIPELINE_STAGE_LABELS[step] || step}</strong>
-                <span>{status}</span>
+              <div key={stage.key} className={className}>
+                {content}
               </div>
             )
           })}

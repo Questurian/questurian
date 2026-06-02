@@ -1,3 +1,4 @@
+import { CLEANUP_STAGE_KEY } from '../cleanup-details/cleanup-stage.parser'
 import type { Prompt2BlogStatusResponse } from '../api'
 import type { PipelineStepStatus } from './pipeline-run.types'
 
@@ -23,6 +24,40 @@ export const PIPELINE_STAGE_LABELS: Record<string, string> = {
   stage_title: 'Generate final title',
   stage_finalize: 'Finalize markdown output',
   complete: 'Complete',
+}
+
+interface PipelineStageMetadataOptions {
+  canOpenCleanupModal: boolean
+  onOpenCleanupModal: () => void
+}
+
+export interface PipelineStageMetadata {
+  key: string
+  label: string
+  status: PipelineStepStatus
+  interactive: boolean
+  onClick?: () => void
+  ariaLabel?: string
+  detailLabel?: string
+}
+
+export function getPipelineStageMetadata(
+  status: Prompt2BlogStatusResponse | null,
+  options: PipelineStageMetadataOptions,
+): PipelineStageMetadata[] {
+  return PIPELINE_STAGE_ORDER.map(step => {
+    const isCleanupDetailStep = step === CLEANUP_STAGE_KEY && options.canOpenCleanupModal
+
+    return {
+      key: step,
+      label: PIPELINE_STAGE_LABELS[step] || step,
+      status: getPipelineStepStatus(step, status),
+      interactive: isCleanupDetailStep,
+      onClick: isCleanupDetailStep ? options.onOpenCleanupModal : undefined,
+      ariaLabel: isCleanupDetailStep ? 'View clean source material details' : undefined,
+      detailLabel: isCleanupDetailStep ? 'View details' : undefined,
+    }
+  })
 }
 
 export function getPipelineStepStatus(
