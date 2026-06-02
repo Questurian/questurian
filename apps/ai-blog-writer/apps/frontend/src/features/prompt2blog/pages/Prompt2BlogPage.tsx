@@ -112,21 +112,9 @@ export default function Prompt2BlogPage() {
             preview={composer.guidelinePreview}
           />
           <PipelinePanel
-            canOpenCleanupModal={pipeline.canOpenCleanupModal}
-            debugData={pipeline.pipelineDebugData}
-            error={pipeline.error}
-            isLoading={pipeline.isLoading}
-            loadingLabel={pipeline.loadingLabel}
-            logs={pipeline.pipelineLogs}
-            result={pipeline.pipelineResult}
-            showDebug={pipeline.showPipelineDebug}
-            sourceStep={pipeline.sourceStep}
-            stageArticleUrl={pipeline.stageArticleUrl}
-            status={pipeline.pipelineStatus}
+            run={pipeline}
             onOpenCleanupModal={() => void cleanupModal.open()}
             onReset={handleResetRun}
-            onRun={() => void pipeline.run()}
-            onToggleDebug={pipeline.togglePipelineDebug}
           />
 
           <div className="p2b-submit-row">

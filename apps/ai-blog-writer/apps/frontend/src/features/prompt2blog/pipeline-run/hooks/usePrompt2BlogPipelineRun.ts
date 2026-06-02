@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePipelineRunPoll } from '../../../pipelineRuns/hooks/usePipelineRunPoll'
+import { useTerminalPipelineRun } from '../../../pipelineRuns/hooks/useTerminalPipelineRun'
 import {
   getPrompt2BlogDebug,
   getPrompt2BlogResult,
@@ -36,7 +37,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
   const [error, setError] = useState<string | null>(null)
   const lastObservedStageRef = useRef<string | null>(null)
   const resumedRunLoggedRef = useRef(false)
-  const handledTerminalRunRef = useRef<string | null>(null)
   const lastStatusErrorRef = useRef<string | null>(null)
 
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
@@ -93,7 +93,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     setShowPipelineDebug(false)
     lastObservedStageRef.current = null
     resumedRunLoggedRef.current = false
-    handledTerminalRunRef.current = null
     lastStatusErrorRef.current = null
 
     try {
@@ -122,7 +121,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     setLoadingLabel('')
     setError(null)
     resumedRunLoggedRef.current = false
-    handledTerminalRunRef.current = null
     lastStatusErrorRef.current = null
     localStorage.removeItem(RUN_STORAGE_KEY)
   }, [])
@@ -163,64 +161,61 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     appendPipelineLog(`Status polling error: ${message}`, 'error')
   }, [appendPipelineLog, statusQuery.error])
 
-  useEffect(() => {
-    const status = statusQuery.data
-    if (!status || !pipelineRunId || sourceStep !== 'pipeline_running') return
-    if (status.state !== 'completed' && status.state !== 'failed') return
-    if (handledTerminalRunRef.current === `${pipelineRunId}:${status.state}`) return
-    handledTerminalRunRef.current = `${pipelineRunId}:${status.state}`
+  const handleTerminalStatus = useCallback<
+    (args: { status: Prompt2BlogStatusResponse; isCancelled: () => boolean }) => Promise<void>
+  >(async ({ status, isCancelled }) => {
+    if (!pipelineRunId) return
 
-    let cancelled = false
-
-    const handleTerminalStatus = async () => {
-      if (status.state === 'completed') {
-        const result = await getPrompt2BlogResult(pipelineRunId)
-        if (cancelled) return
-        if (result.artifact?.pipeline_v2) {
-          setPipelineResult(result.artifact.pipeline_v2)
-          const traceUrl = result.artifact.pipeline_v2.langsmith_trace_url || result.langsmith_trace_url
-          if (traceUrl) appendPipelineLog(`LangSmith trace available: ${traceUrl}`)
-        } else {
-          setError('Pipeline finished but no final payload was returned.')
-        }
-
-        const debugPayload = await getPrompt2BlogDebug(pipelineRunId).catch(() => null)
-        if (cancelled) return
-        if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
-        appendPipelineLog('Pipeline completed successfully.')
-        setSourceStep('pipeline_complete')
-        setIsLoading(false)
-        setLoadingLabel('')
-        return
+    if (status.state === 'completed') {
+      const result = await getPrompt2BlogResult(pipelineRunId)
+      if (isCancelled()) return
+      if (result.artifact?.pipeline_v2) {
+        setPipelineResult(result.artifact.pipeline_v2)
+        const traceUrl = result.artifact.pipeline_v2.langsmith_trace_url || result.langsmith_trace_url
+        if (traceUrl) appendPipelineLog(`LangSmith trace available: ${traceUrl}`)
+      } else {
+        setError('Pipeline finished but no final payload was returned.')
       }
 
-      const failureMessage = status.error || 'Pipeline failed.'
-      appendPipelineLog(
-        `Pipeline failed at ${PIPELINE_STAGE_LABELS[status.stage] || status.stage}: ${failureMessage}`,
-        'error',
-      )
-      setError(failureMessage)
       const debugPayload = await getPrompt2BlogDebug(pipelineRunId).catch(() => null)
-      if (cancelled) return
+      if (isCancelled()) return
       if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
-      setSourceStep('edit')
+      appendPipelineLog('Pipeline completed successfully.')
+      setSourceStep('pipeline_complete')
       setIsLoading(false)
       setLoadingLabel('')
+      return
     }
 
-    handleTerminalStatus().catch((err) => {
-      if (cancelled) return
-      const message = err instanceof Error ? err.message : 'Failed to handle pipeline result'
-      appendPipelineLog(`Pipeline result handling failed: ${message}`, 'error')
-      setError(message)
-      setIsLoading(false)
-      setLoadingLabel('')
-    })
+    const failureMessage = status.error || 'Pipeline failed.'
+    appendPipelineLog(
+      `Pipeline failed at ${PIPELINE_STAGE_LABELS[status.stage] || status.stage}: ${failureMessage}`,
+      'error',
+    )
+    setError(failureMessage)
+    const debugPayload = await getPrompt2BlogDebug(pipelineRunId).catch(() => null)
+    if (isCancelled()) return
+    if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
+    setSourceStep('edit')
+    setIsLoading(false)
+    setLoadingLabel('')
+  }, [appendPipelineLog, pipelineRunId])
 
-    return () => {
-      cancelled = true
-    }
-  }, [appendPipelineLog, pipelineRunId, sourceStep, statusQuery.data])
+  const handleTerminalError = useCallback((err: unknown) => {
+    const message = err instanceof Error ? err.message : 'Failed to handle pipeline result'
+    appendPipelineLog(`Pipeline result handling failed: ${message}`, 'error')
+    setError(message)
+    setIsLoading(false)
+    setLoadingLabel('')
+  }, [appendPipelineLog])
+
+  useTerminalPipelineRun({
+    runId: pipelineRunId,
+    status: statusQuery.data ?? null,
+    enabled: sourceStep === 'pipeline_running',
+    onTerminal: handleTerminalStatus,
+    onError: handleTerminalError,
+  })
 
   useEffect(() => {
     if (sourceStep === 'pipeline_running' && !pipelineRunId) setSourceStep('edit')

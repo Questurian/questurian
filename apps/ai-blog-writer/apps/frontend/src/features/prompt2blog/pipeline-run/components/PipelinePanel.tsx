@@ -1,28 +1,33 @@
-import type { Prompt2BlogPipelinePayload, Prompt2BlogStatusResponse } from '../../api'
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
+import type { usePrompt2BlogPipelineRun } from '../hooks/usePrompt2BlogPipelineRun'
 import { PIPELINE_STAGE_LABELS, PIPELINE_STAGE_ORDER, getPipelineStepStatus } from '../pipeline-status'
-import type { PipelineLogEntry, SourceStep } from '../pipeline-run.types'
 import { PipelineResult } from './PipelineResult'
 
 interface PipelinePanelProps {
-  canOpenCleanupModal: boolean
-  debugData: Record<string, unknown> | null
-  error: string | null
-  isLoading: boolean
-  loadingLabel: string
-  logs: PipelineLogEntry[]
-  result: Prompt2BlogPipelinePayload | null
-  showDebug: boolean
-  sourceStep: SourceStep
-  stageArticleUrl: string | null
-  status: Prompt2BlogStatusResponse | null
+  run: ReturnType<typeof usePrompt2BlogPipelineRun>
   onOpenCleanupModal: () => void
   onReset: () => void
-  onRun: () => void
-  onToggleDebug: () => void
 }
 
-export function PipelinePanel(props: PipelinePanelProps) {
+export function PipelinePanel({ run, onOpenCleanupModal, onReset }: PipelinePanelProps) {
+  const props = {
+    canOpenCleanupModal: run.canOpenCleanupModal,
+    debugData: run.pipelineDebugData,
+    error: run.error,
+    isLoading: run.isLoading,
+    loadingLabel: run.loadingLabel,
+    logs: run.pipelineLogs,
+    result: run.pipelineResult,
+    showDebug: run.showPipelineDebug,
+    sourceStep: run.sourceStep,
+    stageArticleUrl: run.stageArticleUrl,
+    status: run.pipelineStatus,
+    onOpenCleanupModal,
+    onReset,
+    onRun: () => void run.run(),
+    onToggleDebug: run.togglePipelineDebug,
+  }
+
   return (
     <section className="p2b-panel">
       <div className="p2b-panel-header">
