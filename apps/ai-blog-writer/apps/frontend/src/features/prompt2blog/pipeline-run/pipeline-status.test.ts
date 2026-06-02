@@ -37,7 +37,7 @@ describe('getPipelineStepStatus', () => {
   })
 
   it('marks all stages done when run completed', () => {
-    const status = createStatus({ state: 'completed', stage: 'stage_finalize' })
+    const status = createStatus({ state: 'completed', stage: 'stage_compose' })
 
     expect(getPipelineStepStatus('stage_compose', status)).toBe('done')
     expect(getPipelineStepStatus('stage_finalize', status)).toBe('done')

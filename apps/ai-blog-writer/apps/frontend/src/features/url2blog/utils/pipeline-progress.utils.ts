@@ -3,6 +3,7 @@ import {
   URL2BLOG_PROGRESS_STEPS,
   type Url2BlogProgressStep,
 } from '../constants/pipeline-ui.constants'
+import { getPipelineProgressState } from '../../../shared/pipelineProgress'
 
 export type ProgressItemState = 'pending' | 'running' | 'done' | 'failed'
 
@@ -28,17 +29,13 @@ export function getProgressItemState(
 ): ProgressItemState {
   if (step.stage === null) return 'done'
 
-  const activeStage = typeof status?.stage === 'string' ? status.stage : null
-  const activeIndex = activeStage ? PROGRESS_STAGE_ORDER.indexOf(activeStage) : -1
-  const itemIndex = PROGRESS_STAGE_ORDER.indexOf(step.stage)
-
-  if (status?.state === 'completed') return 'done'
-  if (status?.state === 'failed') {
-    if (activeStage === step.stage) return 'failed'
-    return activeIndex > itemIndex ? 'done' : 'pending'
-  }
-  if (activeIndex === -1) return 'pending'
-  if (activeIndex > itemIndex) return 'done'
-  if (activeIndex === itemIndex) return 'running'
-  return 'pending'
+  return getPipelineProgressState({
+    step: step.stage,
+    status,
+    stageOrder: PROGRESS_STAGE_ORDER,
+    doneState: 'done',
+    runningState: 'running',
+    pendingState: 'pending',
+    failedState: 'failed',
+  })
 }
