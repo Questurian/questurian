@@ -144,33 +144,6 @@
   object-fit: contain;
 }
 
-/* Classify button (green accent) */
-.p2b-classify-btn {
-  font-family: var(--font-body);
-  border: none;
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-md);
-  background: #10b981;
-  color: white;
-  font-weight: 600;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all var(--transition-base);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
-}
-
-.p2b-classify-btn:hover:not(:disabled) {
-  background: #059669;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
-}
-
-.p2b-classify-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
 /* Classification result card */
 .p2b-classify-result {
   border: 1px solid rgba(16, 185, 129, 0.3);
@@ -405,4 +378,3 @@
   margin: 0;
   color: var(--ink);
 }
-

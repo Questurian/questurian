@@ -1,8 +1,6 @@
 export type {
   ArticleTypeGuidelines,
-  ArticleTypeOption,
-  ClassificationResult,
-  ClassifyResponse
+  ArticleTypeOption
 } from './types/article-types.types'
 export type {
   Prompt2BlogSavedArticle,
@@ -16,18 +14,14 @@ export type {
   Prompt2BlogInputOptionsResponse,
   Prompt2BlogModelName,
   Prompt2BlogPipelinePayload,
-  Prompt2BlogPipelineStartRequest,
-  Prompt2BlogPipelineStartResponse,
   Prompt2BlogResultResponse,
   Prompt2BlogRunRequest,
   Prompt2BlogRunResponse,
   Prompt2BlogStageTrace,
   Prompt2BlogStatusResponse,
-  SynthesizeResponse
 } from './types/pipeline.types'
 
 export {
-  classifyArticleType,
   fetchArticleTypeGuidelinesById,
   fetchArticleTypes
 } from './api/article-types.api'
@@ -39,9 +33,7 @@ export {
   getPrompt2BlogInputOptions,
   getPrompt2BlogResult,
   getPrompt2BlogStatus,
-  startPrompt2BlogPipelineV2,
   startPrompt2BlogRun,
-  synthesizeSources
 } from './api/pipeline.api'
 export { getArticleSyncStatus, markArticleSynced } from './api/sync.api'
 export type { CreateArticlePayload, Location, MediaAsset } from '../staging/api'

@@ -1,7 +1,3 @@
-export type SynthesizeResponse = {
-  synthesized: string
-}
-
 export type Prompt2BlogModelName =
   | 'gemini-3.1-pro-preview'
   | 'gemini-3.1-flash-lite-preview'
@@ -47,32 +43,6 @@ export type Prompt2BlogGuidelinePreviewResponse = {
   title_guideline: string
   guideline_file?: string | null
   title_guideline_file?: string | null
-}
-
-export type Prompt2BlogPipelineStartRequest = {
-  article_type_id: number
-  source_material: string[]
-  article_goal: string
-  target_reader: string
-  destination_context: string
-  tone_id: string
-  length_id: string
-  brand_voice_id?: string
-  primary_keyword?: string
-  secondary_keywords?: string[]
-  must_include?: string[]
-  audience_profile?: string
-  prompt_enhance?: boolean
-  creativity_level?: 'low' | 'medium' | 'high'
-  negative_instructions?: string[]
-  include_debug?: boolean
-  enable_editorial_augmentation?: boolean
-  model_name?: Prompt2BlogModelName
-}
-
-export type Prompt2BlogPipelineStartResponse = {
-  message: string
-  run_id: string
 }
 
 export type Prompt2BlogRunRequest = {

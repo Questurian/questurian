@@ -4,44 +4,11 @@ import type {
   Prompt2BlogDebugResponse,
   Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOptionsResponse,
-  Prompt2BlogPipelineStartRequest,
-  Prompt2BlogPipelineStartResponse,
   Prompt2BlogResultResponse,
   Prompt2BlogRunRequest,
   Prompt2BlogRunResponse,
   Prompt2BlogStatusResponse,
-  SynthesizeResponse,
 } from '../types/pipeline.types'
-
-export async function synthesizeSources(blobs: string[]): Promise<SynthesizeResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/synthesize`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ blobs }),
-  })
-
-  if (!response.ok) {
-    throw await parseError(response, 'Synthesis request failed')
-  }
-
-  return response.json()
-}
-
-export async function startPrompt2BlogPipelineV2(
-  payload: Prompt2BlogPipelineStartRequest,
-): Promise<Prompt2BlogPipelineStartResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/pipeline-v2`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    throw await parseError(response, 'Prompt2Blog pipeline v2 failed to start')
-  }
-
-  return response.json()
-}
 
 export async function startPrompt2BlogRun(
   payload: Prompt2BlogRunRequest,
