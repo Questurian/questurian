@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePipelineRunPoll } from '../../../pipelineRuns/hooks/usePipelineRunPoll'
 import { useTerminalPipelineRun } from '../../../pipelineRuns/hooks/useTerminalPipelineRun'
+import { buildStageArticleUrl } from '../../../blogArticles'
 import {
   getPrompt2BlogDebug,
   getPrompt2BlogResult,
@@ -56,11 +57,11 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     const runId = pipelineResult.run_id || pipelineRunId
     if (!runId) return null
 
-    return `/prompt2blog/stage-article?${new URLSearchParams({
-      runId,
-      title: pipelineResult.improved_article.title || 'Untitled',
-      type: pipelineResult.article_type.name || '',
-    }).toString()}`
+    return buildStageArticleUrl('prompt2blog', {
+      run_id: runId,
+      title: pipelineResult.improved_article.title,
+      article_type: pipelineResult.article_type.name,
+    })
   }, [pipelineResult, pipelineRunId])
 
   const canOpenCleanupModal = useMemo(() => {

@@ -33,7 +33,7 @@ export type SavedArticlesPageConfig<TArticle extends SavedBlogArticle> = {
 
 export function buildStageArticleUrl(
   prefix: string,
-  article: SavedBlogArticle
+  article: Pick<SavedBlogArticle, 'run_id' | 'title' | 'article_type'>
 ): string {
   return `/${prefix}/stage-article?${new URLSearchParams({
     runId: article.run_id,
