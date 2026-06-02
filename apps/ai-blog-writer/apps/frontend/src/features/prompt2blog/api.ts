@@ -2,9 +2,12 @@ export type {
   ArticleTypeGuidelines,
   ArticleTypeOption,
   ClassificationResult,
-  ClassifyResponse,
+  ClassifyResponse
 } from './types/article-types.types'
-export type { Prompt2BlogSavedArticle, Prompt2BlogSyncStatusResponse } from './types/articles.types'
+export type {
+  Prompt2BlogSavedArticle,
+  Prompt2BlogSyncStatusResponse
+} from './types/articles.types'
 export type {
   Prompt2BlogArticleTypeOption,
   Prompt2BlogDebugResponse,
@@ -20,13 +23,13 @@ export type {
   Prompt2BlogRunResponse,
   Prompt2BlogStageTrace,
   Prompt2BlogStatusResponse,
-  SynthesizeResponse,
+  SynthesizeResponse
 } from './types/pipeline.types'
 
 export {
   classifyArticleType,
   fetchArticleTypeGuidelinesById,
-  fetchArticleTypes,
+  fetchArticleTypes
 } from './api/article-types.api'
 export { deleteArticle, fetchArticles } from './api/articles.api'
 export {
@@ -38,10 +41,10 @@ export {
   getPrompt2BlogStatus,
   startPrompt2BlogPipelineV2,
   startPrompt2BlogRun,
-  synthesizeSources,
+  synthesizeSources
 } from './api/pipeline.api'
 export { getArticleSyncStatus, markArticleSynced } from './api/sync.api'
-export type { CreateArticlePayload, Location, MediaAsset } from './api/staging-bridge'
+export type { CreateArticlePayload, Location, MediaAsset } from '../staging/api'
 export {
   convertMarkdownToLexical,
   createArticle,
@@ -52,5 +55,5 @@ export {
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
-  updateArticle,
-} from './api/staging-bridge'
+  updateArticle
+} from '../staging/api'

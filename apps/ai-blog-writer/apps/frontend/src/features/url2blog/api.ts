@@ -1,4 +1,7 @@
-export type { Url2BlogSavedArticle, Url2BlogSyncStatusResponse } from './types/articles.types'
+export type {
+  Url2BlogSavedArticle,
+  Url2BlogSyncStatusResponse
+} from './types/articles.types'
 export type {
   ExtractResponse,
   Stage2ClassifyResponse,
@@ -9,7 +12,7 @@ export type {
   Url2BlogPipelineV2Response,
   Url2BlogResultResponse,
   Url2BlogStageTrace,
-  Url2BlogStatusResponse,
+  Url2BlogStatusResponse
 } from './types/pipeline.types'
 
 export { deleteArticle, fetchArticles } from './api/articles.api'
@@ -17,10 +20,10 @@ export {
   fetchLatestStatus,
   fetchResult,
   fetchStatus,
-  runUrl2BlogPipelineV2,
+  runUrl2BlogPipelineV2
 } from './api/pipeline.api'
 export { getArticleSyncStatus, markArticleSynced } from './api/sync.api'
-export type { CreateArticlePayload, Location, MediaAsset } from './api/staging-bridge'
+export type { CreateArticlePayload, Location, MediaAsset } from '../staging/api'
 export {
   convertMarkdownToLexical,
   createArticle,
@@ -31,5 +34,5 @@ export {
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
-  updateArticle,
-} from './api/staging-bridge'
+  updateArticle
+} from '../staging/api'

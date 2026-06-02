@@ -3,7 +3,7 @@ export type {
   ExpandGap,
   ExpandResultResponse,
   ExpandStatusResponse,
-  ListicleDetectionResponse,
+  ListicleDetectionResponse
 } from './types/expansion.types'
 export type { DebugResponse } from './types/pipeline.types'
 
@@ -11,14 +11,14 @@ export {
   createArticleType,
   deleteArticleType,
   fetchArticleTypes,
-  updateArticleType,
+  updateArticleType
 } from './api/article-types.api'
 export { deleteArticle, fetchArticles } from './api/articles.api'
 export {
   detectArticleListicle,
   fetchExpandResult,
   fetchExpandStatus,
-  startArticleExpansion,
+  startArticleExpansion
 } from './api/expansion.api'
 export {
   clearDatabase,
@@ -26,7 +26,7 @@ export {
   fetchResult,
   fetchStatus,
   resultDownloadUrl,
-  startFromYoutubeUrl,
+  startFromYoutubeUrl
 } from './api/pipeline.api'
 export type {
   ArticleCategory,
@@ -39,8 +39,8 @@ export type {
   PexelsSearchResponse,
   RewriteBlockWithAiResponse,
   UnsplashPhoto,
-  UnsplashSearchResponse,
-} from './api/staging-bridge'
+  UnsplashSearchResponse
+} from '../staging/api'
 export {
   convertMarkdownToLexical,
   createArticle,
@@ -53,5 +53,6 @@ export {
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
-} from './api/staging-bridge'
+  updateArticle
+} from '../staging/api'
 export { getArticleSyncStatus, markArticleSynced } from './api/sync.api'

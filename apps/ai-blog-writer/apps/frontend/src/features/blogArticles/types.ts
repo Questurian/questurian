@@ -30,3 +30,14 @@ export type SavedArticlesPageConfig<TArticle extends SavedBlogArticle> = {
   buildStageUrl: (article: TArticle) => string
   buildDraftUrl: (stagedId: string) => string
 }
+
+export function buildStageArticleUrl(
+  prefix: string,
+  article: SavedBlogArticle
+): string {
+  return `/${prefix}/stage-article?${new URLSearchParams({
+    runId: article.run_id,
+    title: article.title || 'Untitled',
+    type: article.article_type || ''
+  }).toString()}`
+}
