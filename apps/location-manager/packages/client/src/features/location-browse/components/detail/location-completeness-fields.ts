@@ -2,6 +2,7 @@ import type { LocationResponse } from "@client/shared/services/api/types";
 import { parseAccommodationsDetails } from "@client/shared/lib/accommodations-details";
 import { parseAttractionsDetails } from "@client/shared/lib/attractions-details";
 import { parseNightlifeDetails } from "../../utils/nightlife-details";
+import { isDetailFieldKey } from "./completeness-field-edit/completeness-detail-fields";
 
 export interface CompletenessField {
   key: string;
@@ -392,6 +393,11 @@ export function getImportantOptionalCompletenessFields(
 
 export function getCompletenessEditField(field: CompletenessField): CompletenessField {
   const present = Boolean(field.present);
+  // Fields with a granular detail-field config are edited in a targeted editor,
+  // so they keep their original key instead of remapping to a raw JSON blob.
+  if (isDetailFieldKey(field.key)) {
+    return { ...field, present };
+  }
   if (field.key.startsWith("accommodations.")) {
     return {
       key: "accommodationsDetails",

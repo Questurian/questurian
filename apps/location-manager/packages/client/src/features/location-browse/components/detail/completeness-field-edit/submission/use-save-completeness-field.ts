@@ -7,6 +7,10 @@ import {
   isNightlifeFieldKey,
   isNightlifeMultiFieldKey,
 } from "@client/shared/lib/nightlife-details";
+import {
+  buildDetailFieldUpdatePayload,
+  getDetailFieldConfig,
+} from "../completeness-detail-fields";
 import type { FieldDef } from "../completeness-field-edit.types";
 import type { useCompletenessFieldDraft } from "../drafts/use-completeness-field-draft";
 import { parseCoordinateInput } from "../field-value-utils";
@@ -144,8 +148,37 @@ export function useSaveCompletenessField({
 
 function getSaveStrategy(fieldKey: string): SaveStrategy {
   if (isNightlifeFieldKey(fieldKey)) return nightlifeStrategy;
+  if (getDetailFieldConfig(fieldKey)) return detailFieldStrategy;
   return saveStrategies[fieldKey] ?? defaultFieldStrategy;
 }
+
+const detailFieldStrategy: SaveStrategy = {
+  canSave: ({ field, draft }) => {
+    const config = getDetailFieldConfig(field.key);
+    if (!config) return false;
+    return config.kind === "multi"
+      ? draft.detailMultiDraft.length > 0
+      : draft.value.trim().length > 0;
+  },
+  save: ({ field, locationDetail, draft, save, showValidationError }) => {
+    const config = getDetailFieldConfig(field.key);
+    if (!config) return;
+    const value = config.kind === "multi" ? draft.detailMultiDraft : draft.value;
+    if (Array.isArray(value) ? !value.length : !value.trim()) {
+      showValidationError(
+        config.kind === "multi"
+          ? `Select at least one ${config.label.toLowerCase()} option`
+          : `Select a value for ${config.label.toLowerCase()}`
+      );
+      return;
+    }
+    save(
+      buildDetailFieldUpdatePayload(config, locationDetail, value),
+      `${config.label} saved`,
+      `Failed to save ${config.label}`
+    );
+  },
+};
 
 function createTaxonomyStrategy(): SaveStrategy {
   return {

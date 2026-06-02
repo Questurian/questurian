@@ -6,6 +6,7 @@ import { isNightlifeFieldKey, isNightlifeMultiFieldKey } from "@client/shared/li
 import { toggleNightlifeMusicSelection } from "@client/shared/lib/nightlife-music";
 import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy";
 import type { FieldDef } from "../completeness-field-edit.types";
+import { getDetailFieldConfig } from "../completeness-detail-fields";
 import type { CompletenessFieldDraft } from "../drafts/use-completeness-field-draft";
 import { CATEGORIES, NIGHTLIFE_MULTI_FIELD_OPTIONS, NIGHTLIFE_SINGLE_FIELD_OPTIONS, PRICE_LEVELS, TIMEZONE_OPTIONS } from "../field-options";
 import { OperationHoursFieldEditor } from "../operation-hours/OperationHoursFieldEditor";
@@ -33,6 +34,8 @@ export function CompletenessFieldInput({
     setValue,
     nightlifeMultiDraft,
     setNightlifeMultiDraft,
+    detailMultiDraft,
+    setDetailMultiDraft,
     locationTypes,
     isLoadingTypes,
     taxonomyLocationKey,
@@ -85,6 +88,44 @@ export function CompletenessFieldInput({
         value={value}
         onChange={setValue}
         placeholder={`Select ${field.label.toLowerCase()}`}
+      />
+    );
+  }
+
+  const detailConfig = getDetailFieldConfig(field.key);
+  if (detailConfig) {
+    if (detailConfig.kind === "multi") {
+      return (
+        <NightlifeMultiOptionTable
+          label={detailConfig.label}
+          options={detailConfig.options ?? []}
+          values={detailMultiDraft}
+          onToggle={(selectedValue) =>
+            setDetailMultiDraft((prev) =>
+              prev.includes(selectedValue)
+                ? prev.filter((item) => item !== selectedValue)
+                : [...prev, selectedValue]
+            )
+          }
+        />
+      );
+    }
+    if (detailConfig.kind === "text") {
+      return (
+        <Input
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder={`Enter ${detailConfig.label.toLowerCase()}`}
+        />
+      );
+    }
+    return (
+      <NightlifeSingleOptionTable
+        label={detailConfig.label}
+        options={detailConfig.options ?? []}
+        value={value}
+        onChange={setValue}
+        placeholder={`Select ${detailConfig.label.toLowerCase()}`}
       />
     );
   }

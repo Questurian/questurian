@@ -9,6 +9,7 @@ import {
 } from "@client/components/ui/dialog";
 import { Button, Label } from "@client/components/ui";
 import { isNightlifeFieldKey } from "@client/shared/lib/nightlife-details";
+import { getDetailFieldConfig, isDetailFieldKey } from "./completeness-detail-fields";
 import type { FieldDef } from "./completeness-field-edit.types";
 import { useCompletenessFieldDraft } from "./drafts/use-completeness-field-draft";
 import { CompletenessFieldInput } from "./fields/CompletenessFieldInput";
@@ -83,8 +84,12 @@ export function CompletenessFieldEditModal({
   );
 }
 
+function isDetailOptionTableField(fieldKey: string) {
+  return isDetailFieldKey(fieldKey) && getDetailFieldConfig(fieldKey)?.kind !== "text";
+}
+
 function getDialogWidth(fieldKey: string) {
-  if (fieldKey === "operationHours" || isNightlifeFieldKey(fieldKey)) {
+  if (fieldKey === "operationHours" || isNightlifeFieldKey(fieldKey) || isDetailOptionTableField(fieldKey)) {
     return "max-w-2xl max-h-[90vh] overflow-y-auto";
   }
   return fieldKey === "neighborhoodDescription" ? "sm:max-w-lg" : "sm:max-w-md";
@@ -96,6 +101,7 @@ function isWideField(fieldKey: string) {
     fieldKey === "locationKey" ||
     fieldKey === "district" ||
     fieldKey === "coordinates" ||
-    isNightlifeFieldKey(fieldKey)
+    isNightlifeFieldKey(fieldKey) ||
+    isDetailOptionTableField(fieldKey)
   );
 }

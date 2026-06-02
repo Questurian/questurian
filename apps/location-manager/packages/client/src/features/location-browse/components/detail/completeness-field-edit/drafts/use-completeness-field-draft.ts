@@ -13,6 +13,7 @@ import {
 import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
 import type { FieldDef } from "../completeness-field-edit.types";
+import { getDetailFieldConfig } from "../completeness-detail-fields";
 import { getInitialValue } from "../field-value-utils";
 import { getCenterToastPosition } from "../toast-position";
 import {
@@ -40,6 +41,7 @@ export function useCompletenessFieldDraft({
   const [idealForDraft, setIdealForDraft] = useState<string[]>([]);
   const [cuisinesDraft, setCuisinesDraft] = useState<string[]>([]);
   const [nightlifeMultiDraft, setNightlifeMultiDraft] = useState<string[]>([]);
+  const [detailMultiDraft, setDetailMultiDraft] = useState<string[]>([]);
   const [taxonomyLocationKey, setTaxonomyLocationKey] = useState("");
   const [taxonomyDistrict, setTaxonomyDistrict] = useState("");
   const [coordinateDraft, setCoordinateDraft] = useState({ lat: "", lng: "" });
@@ -80,6 +82,15 @@ export function useCompletenessFieldDraft({
 
   useEffect(() => {
     if (!open) return;
+    const detailConfig = getDetailFieldConfig(field.key);
+    if (detailConfig) {
+      const initial = detailConfig.read(locationDetail);
+      if (detailConfig.kind === "multi") {
+        setDetailMultiDraft(Array.isArray(initial) ? initial : []);
+      } else {
+        setValue(typeof initial === "string" ? initial : "");
+      }
+    }
     if (field.key === "idealFor") {
       setIdealForDraft(Array.isArray(locationDetail.idealFor) ? locationDetail.idealFor : []);
     }
@@ -147,6 +158,7 @@ export function useCompletenessFieldDraft({
     idealForDraft, addIdealForTag, removeIdealForTag,
     cuisinesDraft, setCuisinesDraft,
     nightlifeMultiDraft, setNightlifeMultiDraft,
+    detailMultiDraft, setDetailMultiDraft,
     taxonomyLocationKey, setTaxonomyLocationKey,
     taxonomyDistrict, setTaxonomyDistrict,
     coordinateDraft, setCoordinateDraft,
