@@ -16,7 +16,7 @@ import { isValidLocationKey } from "@client/shared/lib/taxonomy-location";
 import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy";
 import type { FieldDef } from "./completeness-field-edit.types";
 import type { CompletenessFieldDraft } from "./drafts/use-completeness-field-draft";
-import { CATEGORIES, PRICE_LEVELS, TIMEZONE_OPTIONS } from "./field-options";
+import { PRICE_LEVELS, TIMEZONE_OPTIONS } from "./field-options";
 import { parseCoordinateInput } from "./field-value-utils";
 import { buildOperationHoursJson } from "./operation-hours/operation-hours-utils";
 import { OperationHoursFieldEditor } from "./operation-hours/OperationHoursFieldEditor";
@@ -200,11 +200,6 @@ const CORE_FIELD_REGISTRY = {
     editor: textEditor(),
     saveStrategy: simpleValueStrategy((t) => ({ address: t || undefined })),
   },
-  category: {
-    draftInit: (l) => l.category ?? "",
-    editor: selectEditor(CATEGORIES, "Select category"),
-    saveStrategy: simpleValueStrategy(() => null),
-  },
   type: {
     draftInit: (l) => l.type?.trim() ?? "",
     editor: ({ category, draft }) => (
@@ -254,10 +249,6 @@ const CORE_FIELD_REGISTRY = {
     draftInit: (l) => l.district?.trim() ?? "",
     editor: taxonomyEditor,
     saveStrategy: taxonomyStrategy,
-  },
-  slug: {
-    editor: textEditor(),
-    saveStrategy: simpleValueStrategy(() => null),
   },
   coordinates: {
     editor: ({ draft }) => (

@@ -11,6 +11,7 @@ import {
   getCompletenessEditField,
   getImportantOptionalCompletenessFields,
   getLocationCompletenessFields,
+  isReadOnlyCompletenessField,
   type CompletenessField,
 } from "./location-completeness-fields";
 
@@ -65,6 +66,7 @@ export function LocationCompleteness({ locationDetail }: LocationCompletenessPro
   });
 
   const handleEditField = (field: CompletenessField) => {
+    if (isReadOnlyCompletenessField(field.key)) return;
     setEditField(getCompletenessEditField(field));
   };
 

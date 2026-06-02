@@ -1,6 +1,6 @@
 import { Button } from "@client/components/ui";
 import { Check, ChevronDown, ChevronUp, Loader2, RefreshCw, X } from "lucide-react";
-import type { CompletenessField } from "./location-completeness-fields";
+import { isReadOnlyCompletenessField, type CompletenessField } from "./location-completeness-fields";
 
 interface LocationCompletenessSummaryProps {
   requiredFields: CompletenessField[];
@@ -152,6 +152,10 @@ function MissingFieldPill({
   field: CompletenessField;
   onEditField: (field: CompletenessField) => void;
 }) {
+  if (isReadOnlyCompletenessField(field.key)) {
+    return <ReadOnlyFieldPill field={field} missing />;
+  }
+
   return (
     <button
       type="button"
@@ -171,6 +175,10 @@ function MissingOptionalFieldPill({
   field: CompletenessField;
   onEditField: (field: CompletenessField) => void;
 }) {
+  if (isReadOnlyCompletenessField(field.key)) {
+    return <ReadOnlyFieldPill field={field} missing optional />;
+  }
+
   return (
     <button
       type="button"
@@ -192,6 +200,10 @@ function CompletenessFieldButton({
   missingClassName: string;
   onEditField: (field: CompletenessField) => void;
 }) {
+  if (isReadOnlyCompletenessField(field.key)) {
+    return <ReadOnlyCompletenessFieldButton field={field} />;
+  }
+
   return (
     <button
       type="button"
@@ -206,5 +218,50 @@ function CompletenessFieldButton({
       {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
       <span>{field.label}</span>
     </button>
+  );
+}
+
+function ReadOnlyFieldPill({
+  field,
+  missing,
+  optional,
+}: {
+  field: CompletenessField;
+  missing?: boolean;
+  optional?: boolean;
+}) {
+  return (
+    <span
+      className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${
+        missing
+          ? "border-muted-foreground/20 bg-muted/30 text-muted-foreground"
+          : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+      }`}
+      title={`${field.label} is system-managed`}
+    >
+      {optional ? "Missing " : ""}
+      {field.label}
+    </span>
+  );
+}
+
+function ReadOnlyCompletenessFieldButton({
+  field,
+}: {
+  field: CompletenessField;
+}) {
+  return (
+    <div
+      title={`${field.label} is system-managed`}
+      className={`flex items-center gap-2 rounded border px-2 py-1 text-xs text-left w-full ${
+        field.present
+          ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+          : "border-muted-foreground/20 bg-muted/30 text-muted-foreground"
+      }`}
+    >
+      {field.present ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+      <span>{field.label}</span>
+      <span className="ml-auto text-[10px] uppercase tracking-wider opacity-70">System</span>
+    </div>
   );
 }

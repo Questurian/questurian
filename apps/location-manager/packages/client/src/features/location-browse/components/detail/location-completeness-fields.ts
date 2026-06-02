@@ -10,6 +10,12 @@ export interface CompletenessField {
   present: boolean;
 }
 
+const READ_ONLY_COMPLETENESS_FIELD_KEYS = new Set(["category", "slug"]);
+
+export function isReadOnlyCompletenessField(fieldKey: string): boolean {
+  return READ_ONLY_COMPLETENESS_FIELD_KEYS.has(fieldKey);
+}
+
 export function getLocationCompletenessFields(locationDetail: LocationResponse): CompletenessField[] {
   const contact = locationDetail.contact || {};
   const source = locationDetail.source || {};
