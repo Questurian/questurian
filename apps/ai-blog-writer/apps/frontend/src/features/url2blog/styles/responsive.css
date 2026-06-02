@@ -1,0 +1,43 @@
+/* Responsive */
+@media (max-width: 768px) {
+  .url2blog-page {
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+
+  .url2blog-panel {
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+  }
+
+  .url2blog-panel-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .u2b-pipeline-progress-centered {
+    padding: var(--space-5);
+  }
+
+  .u2b-stage-item {
+    font-size: 0.875rem;
+  }
+
+  .u2b-article-text {
+    max-height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .url2blog-panel {
+    padding: var(--space-4);
+  }
+
+  .url2blog-panel-header h2 {
+    font-size: 1.125rem;
+  }
+
+  .u2b-article-text {
+    font-size: 0.875rem;
+    padding: var(--space-4);
+  }
+}
+

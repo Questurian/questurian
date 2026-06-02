@@ -1,0 +1,122 @@
+.p2b-final-debug {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.p2b-raw-json {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: var(--radius-sm);
+  border: 1px solid #1e293b;
+  padding: var(--space-3);
+  max-height: 360px;
+  overflow: auto;
+}
+
+.p2b-raw-json pre {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.p2b-result-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.p2b-rerun-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  border: none;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--p2b-accent);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.p2b-rerun-btn:hover:not(:disabled) {
+  background: var(--p2b-accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.p2b-rerun-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.p2b-edit-sources-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  border: 1px solid var(--border-strong);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background: white;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.p2b-edit-sources-btn:hover:not(:disabled) {
+  border-color: var(--p2b-accent);
+  color: var(--p2b-accent);
+  background: var(--p2b-accent-softer);
+  transform: translateY(-1px);
+}
+
+.p2b-edit-sources-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error */
+.p2b-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  color: #dc2626;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Loading */
+.p2b-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  color: var(--p2b-accent);
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.p2b-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid var(--p2b-accent-soft);
+  border-top-color: var(--p2b-accent);
+  border-radius: 50%;
+  animation: p2bSpin 0.7s linear infinite;
+}
+
+@keyframes p2bSpin {
+  to { transform: rotate(360deg); }
+}
+

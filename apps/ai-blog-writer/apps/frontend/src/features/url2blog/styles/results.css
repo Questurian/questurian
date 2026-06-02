@@ -1,0 +1,103 @@
+/* Extracted Content Display */
+.u2b-extracted-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.u2b-content-section h3 {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--u2b-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-3) 0;
+}
+
+.u2b-title-display {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.u2b-article-text {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--ink);
+  white-space: pre-wrap;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.u2b-selection-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.u2b-selection-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.u2b-selection-meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.u2b-selection-reasoning {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.u2b-guideline-text {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--ink);
+  white-space: pre-wrap;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* Original Content (collapsed section for translated articles) */
+.u2b-original-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  animation: u2bSlideUp 0.25s ease-out;
+}
+
+.u2b-original-content .u2b-article-text {
+  background: var(--cream-dark);
+}
+
+/* Raw JSON Display */

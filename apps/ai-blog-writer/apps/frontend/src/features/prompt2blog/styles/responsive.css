@@ -1,0 +1,55 @@
+/* Responsive */
+@media (max-width: 768px) {
+  .p2b-page {
+    padding: var(--space-5) var(--space-4) var(--space-6);
+  }
+
+  .p2b-panel {
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+  }
+
+  .p2b-panel-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .p2b-field-row--2,
+  .p2b-field-row--3 {
+    grid-template-columns: 1fr;
+  }
+
+  .p2b-input,
+  .p2b-textarea,
+  .p2b-select {
+    font-size: 0.875rem;
+  }
+
+  .p2b-modal-overlay {
+    padding: var(--space-3);
+  }
+
+  .p2b-modal__header,
+  .p2b-modal__body,
+  .p2b-cleanup-source-card__header,
+  .p2b-cleanup-source-card__body {
+    padding: var(--space-4);
+  }
+
+  .p2b-cleanup-source-card__header {
+    flex-direction: column;
+  }
+
+  .p2b-cleanup-stats {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .p2b-panel {
+    padding: var(--space-4);
+  }
+
+  .p2b-panel-header h2 {
+    font-size: 1.125rem;
+  }
+}

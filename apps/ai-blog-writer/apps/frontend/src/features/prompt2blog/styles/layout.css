@@ -1,0 +1,116 @@
+/* Prompt2Blog Feature Styles - Editorial Warmth Theme with Blue Accent */
+
+.p2b-page {
+  padding: var(--space-6) 5vw var(--space-8);
+  max-width: 1600px;
+  margin: 0 auto;
+  animation: p2bFadeIn 0.4s ease-out;
+
+  /* Blue theme variables */
+  --p2b-accent: #3b82f6;
+  --p2b-accent-hover: #2563eb;
+  --p2b-accent-soft: rgba(59, 130, 246, 0.12);
+  --p2b-accent-softer: rgba(59, 130, 246, 0.06);
+}
+
+@keyframes p2bFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Hero */
+.p2b-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-bottom: var(--space-8);
+  text-align: center;
+}
+
+.p2b-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  font-weight: 700;
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.p2b-underline-text {
+  text-decoration: underline;
+  text-decoration-color: var(--p2b-accent);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+
+.p2b-dot {
+  color: var(--p2b-accent);
+  font-weight: 700;
+}
+
+.p2b-lede {
+  max-width: 600px;
+  font-size: 1.1rem;
+  line-height: 1.7;
+  margin: 0 auto;
+  color: var(--muted);
+}
+
+.p2b-eyebrow {
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.6875rem;
+  color: var(--p2b-accent);
+  font-weight: 600;
+  margin-bottom: var(--space-4);
+  padding: var(--space-1) var(--space-3);
+  background: var(--p2b-accent-softer);
+  border-radius: var(--radius-full);
+}
+
+.p2b-badge-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.p2b-nav-link {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-full);
+  background: white;
+  color: var(--p2b-accent);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  transition: all var(--transition-base);
+  text-align: center;
+  display: inline-block;
+}
+
+.p2b-nav-link:hover {
+  background: var(--p2b-accent);
+  color: white;
+  border-color: var(--p2b-accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+/* Form Container */
+.p2b-form-container {
+  display: flex;
+  justify-content: center;
+}
+
+.p2b-form {
+  width: 100%;
+  max-width: 780px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
