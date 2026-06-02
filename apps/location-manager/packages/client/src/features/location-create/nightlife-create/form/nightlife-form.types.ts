@@ -3,7 +3,7 @@ import type { UseFormReturn } from "react-hook-form";
 import type { AddNightlifeFormData } from "../../validation/add-nightlife.schema";
 import type { NightlifeFormSection, NightlifeMultiField } from "../nightlife-create.types";
 
-export interface NightlifeFormProps {
+export interface NightlifeFormState {
   activeSection: NightlifeFormSection;
   bookingUrlAcked: boolean;
   contactComplete: boolean;

@@ -7,7 +7,6 @@ import { GuidelinePreviewPanel } from '../composer/components/GuidelinePreviewPa
 import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
 import { SeoConstraintsPanel } from '../composer/components/SeoConstraintsPanel'
 import { SourceMaterialPanel } from '../composer/components/SourceMaterialPanel'
-import type { P2BFormState } from '../composer/composer.types'
 import { usePrompt2BlogComposer } from '../composer/hooks/usePrompt2BlogComposer'
 import { PipelinePanel } from '../pipeline-run/components/PipelinePanel'
 import { usePrompt2BlogPipelineRun } from '../pipeline-run/hooks/usePrompt2BlogPipelineRun'
@@ -42,22 +41,6 @@ export default function Prompt2BlogPage() {
     composer.clearAll()
     handleResetRun()
   }, [composer, handleResetRun])
-
-  const handlePromptProfileChange = useCallback((field: string, value: string | boolean) => {
-    if (field === 'toneId') composer.updateField('toneId', value as string)
-    if (field === 'lengthId') composer.updateField('lengthId', value as string)
-    if (field === 'brandVoiceId') composer.updateField('brandVoiceId', value as string)
-    if (field === 'modelName') composer.updateField('modelName', value as P2BFormState['modelName'])
-    if (field === 'creativityLevel') {
-      composer.updateField('creativityLevel', value as P2BFormState['creativityLevel'])
-    }
-    if (field === 'audienceProfile') composer.updateField('audienceProfile', value as string)
-    if (field === 'negativeInstructions') composer.updateField('negativeInstructions', value as string)
-    if (field === 'promptEnhance') composer.updateField('promptEnhance', value as boolean)
-    if (field === 'enableEditorialAugmentation') {
-      composer.updateField('enableEditorialAugmentation', value as boolean)
-    }
-  }, [composer])
 
   return (
     <div className="p2b-page">
@@ -105,7 +88,7 @@ export default function Prompt2BlogPage() {
             negativeInstructions={state.negativeInstructions}
             promptEnhance={state.promptEnhance}
             toneId={state.toneId}
-            onChange={handlePromptProfileChange}
+            onChange={composer.updateField}
             onClear={composer.clearPromptProfiles}
           />
           <SeoConstraintsPanel

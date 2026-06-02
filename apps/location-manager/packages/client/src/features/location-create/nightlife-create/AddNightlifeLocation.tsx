@@ -16,7 +16,9 @@ import {
 import { clearNightlifeDraftFromStorage } from "./draft/nightlife-draft-storage";
 import { useNightlifeDraft } from "./draft/useNightlifeDraft";
 import { useNightlifePrefill } from "./enrichment/useNightlifePrefill";
+import { NightlifeFormProvider } from "./form/NightlifeFormContext";
 import { NightlifeFormSections } from "./form/NightlifeForm";
+import type { NightlifeFormState } from "./form/nightlife-form.types";
 import { findFirstNightlifeErrorSection, getNightlifeFormProgress, getNightlifeSectionFields } from "./form/nightlife-form-progress";
 import { useCreateNightlife } from "./submission/useCreateNightlife";
 
@@ -134,6 +136,31 @@ export function AddNightlifeLocation() {
       setActiveSection(firstErrorSection);
     }
   };
+  const nightlifeForm = {
+    activeSection,
+    bookingUrlAcked,
+    contactComplete,
+    coreComplete,
+    entitiesComplete,
+    error,
+    form,
+    goToNextSection,
+    goToPreviousSection,
+    handleGooglePrefill,
+    isPending,
+    isPrefillReady,
+    isPrefillingGoogle,
+    onInvalidSubmit,
+    onSubmit,
+    prefillError,
+    prefillIsStale,
+    prefillMessage,
+    sceneComplete,
+    setBookingUrlAcked,
+    spaceComplete,
+    stepOneComplete,
+    toggleMultiOption,
+  } satisfies NightlifeFormState;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
@@ -198,7 +225,9 @@ export function AddNightlifeLocation() {
             </div>
           )}
 
-          <NightlifeFormSections {...{ activeSection, bookingUrlAcked, contactComplete, coreComplete, entitiesComplete, error, form, goToNextSection, goToPreviousSection, handleGooglePrefill, isPending, isPrefillReady, isPrefillingGoogle, onInvalidSubmit, onSubmit, prefillError, prefillIsStale, prefillMessage, sceneComplete, setBookingUrlAcked, spaceComplete, stepOneComplete, toggleMultiOption }} />
+          <NightlifeFormProvider state={nightlifeForm}>
+            <NightlifeFormSections />
+          </NightlifeFormProvider>
         </div>
       </div>
     </div>

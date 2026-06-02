@@ -6,19 +6,20 @@ import { Button } from "@client/components/ui/button";
 import { BookingUrlSuggestRow } from "../../../components/BookingUrlSuggestRow";
 import { OperationHoursModal } from "../../../components/OperationHoursModal";
 import { DAYTIME_RESTAURANT_OPTIONS } from "../../../constants/nightlife-options";
+import { useNightlifeForm } from "../NightlifeFormContext";
 import { NightlifeSectionHeader } from "../NightlifeFieldControls";
-import type { NightlifeFormProps } from "../nightlife-form.types";
 
-export function NightlifeContactStep({
-  activeSection,
-  bookingUrlAcked,
-  contactComplete,
-  form,
-  goToPreviousSection,
-  isPending,
-  isPrefillReady,
-  setBookingUrlAcked,
-}: NightlifeFormProps) {
+export function NightlifeContactStep() {
+  const {
+    activeSection,
+    bookingUrlAcked,
+    contactComplete,
+    form,
+    goToPreviousSection,
+    isPending,
+    isPrefillReady,
+    setBookingUrlAcked,
+  } = useNightlifeForm();
   const [operationHoursModalOpen, setOperationHoursModalOpen] = useState(false);
   if (!isPrefillReady || activeSection !== "contact") return null;
 

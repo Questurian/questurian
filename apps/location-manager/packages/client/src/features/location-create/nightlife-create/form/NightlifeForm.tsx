@@ -1,15 +1,16 @@
 import { NightlifeContactStep } from "./sections/NightlifeContactStep";
 import { NightlifeDetailsSteps } from "./sections/NightlifeDetailsSteps";
 import { NightlifeLookupSteps } from "./sections/NightlifeLookupSteps";
-import type { NightlifeFormProps } from "./nightlife-form.types";
+import { useNightlifeForm } from "./NightlifeFormContext";
 
-export function NightlifeFormSections(props: NightlifeFormProps) {
+export function NightlifeFormSections() {
+  const { error, form, onInvalidSubmit, onSubmit } = useNightlifeForm();
   return (
-    <form onSubmit={props.form.handleSubmit(props.onSubmit, props.onInvalidSubmit)} className="space-y-5">
-      <NightlifeLookupSteps {...props} />
-      <NightlifeDetailsSteps {...props} />
-      <NightlifeContactStep {...props} />
-      {props.error && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">Error: {props.error.message}</div>}
+    <form onSubmit={form.handleSubmit(onSubmit, onInvalidSubmit)} className="space-y-5">
+      <NightlifeLookupSteps />
+      <NightlifeDetailsSteps />
+      <NightlifeContactStep />
+      {error && <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">Error: {error.message}</div>}
     </form>
   );
 }

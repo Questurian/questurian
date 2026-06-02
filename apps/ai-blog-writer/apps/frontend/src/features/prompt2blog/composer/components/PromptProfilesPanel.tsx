@@ -1,5 +1,14 @@
 import type { Prompt2BlogInputOptionsResponse, Prompt2BlogModelName } from '../../api'
 import { PROMPT2BLOG_MODEL_OPTIONS, resolvePrompt2BlogModelName } from '../../constants/prompt2blog.constants'
+import type { P2BFormState } from '../composer.types'
+
+const CREATIVITY_LEVELS = ['low', 'medium', 'high'] as const
+
+function resolveCreativityLevel(value: string): P2BFormState['creativityLevel'] {
+  return CREATIVITY_LEVELS.includes(value as P2BFormState['creativityLevel'])
+    ? value as P2BFormState['creativityLevel']
+    : 'medium'
+}
 
 interface PromptProfilesPanelProps {
   audienceProfile: string
@@ -12,7 +21,7 @@ interface PromptProfilesPanelProps {
   negativeInstructions: string
   promptEnhance: boolean
   toneId: string
-  onChange: (field: string, value: string | boolean) => void
+  onChange: <K extends keyof P2BFormState>(field: K, value: P2BFormState[K]) => void
   onClear: () => void
 }
 
@@ -27,7 +36,7 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
       </div>
       <div className="p2b-field-row p2b-field-row--3">
         <div className="p2b-field"><label htmlFor="p2b-model">Writing Model</label><select id="p2b-model" className="p2b-select" value={props.modelName} onChange={event => props.onChange('modelName', resolvePrompt2BlogModelName(event.target.value))}>{PROMPT2BLOG_MODEL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
-        <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', event.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+        <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', resolveCreativityLevel(event.target.value))}>{CREATIVITY_LEVELS.map(level => <option key={level} value={level}>{level[0].toUpperCase()}{level.slice(1)}</option>)}</select></div>
         <div className="p2b-field"><label htmlFor="p2b-audience-profile">Audience Profile (Optional)</label><input id="p2b-audience-profile" type="text" className="p2b-input" value={props.audienceProfile} onChange={event => props.onChange('audienceProfile', event.target.value)} placeholder="Extra reader detail" /></div>
       </div>
       <div className="p2b-field"><label htmlFor="p2b-negative">Negative Instructions (one per line)</label><textarea id="p2b-negative" className="p2b-textarea" rows={3} value={props.negativeInstructions} onChange={event => props.onChange('negativeInstructions', event.target.value)} placeholder="What to avoid" /></div>

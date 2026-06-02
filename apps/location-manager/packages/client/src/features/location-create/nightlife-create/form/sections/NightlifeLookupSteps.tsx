@@ -1,24 +1,26 @@
 import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
+import { useNightlifeForm } from "../NightlifeFormContext";
 import { NightlifeSectionHeader } from "../NightlifeFieldControls";
-import type { NightlifeFormProps } from "../nightlife-form.types";
+import type { NightlifeFormState } from "../nightlife-form.types";
 
-export function NightlifeLookupSteps({
-  activeSection,
-  entitiesComplete,
-  form,
-  goToNextSection,
-  goToPreviousSection,
-  handleGooglePrefill,
-  isPending,
-  isPrefillReady,
-  isPrefillingGoogle,
-  prefillError,
-  prefillIsStale,
-  prefillMessage,
-  stepOneComplete,
-}: NightlifeFormProps) {
+export function NightlifeLookupSteps() {
+  const {
+    activeSection,
+    entitiesComplete,
+    form,
+    goToNextSection,
+    goToPreviousSection,
+    handleGooglePrefill,
+    isPending,
+    isPrefillReady,
+    isPrefillingGoogle,
+    prefillError,
+    prefillIsStale,
+    prefillMessage,
+    stepOneComplete,
+  } = useNightlifeForm();
   return <>
     {activeSection === "step1" && <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
       <NightlifeSectionHeader title="Step 1" isComplete={stepOneComplete} />
@@ -47,7 +49,7 @@ export function NightlifeLookupSteps({
   </>;
 }
 
-function TextField({ label, placeholder, field, form, className = "" }: { label: string; placeholder: string; field: "googleUrl" | "placeId" | "latitude" | "longitude" | "ianaTimeId" | "district" | "locationKey"; form: NightlifeFormProps["form"]; className?: string }) {
+function TextField({ label, placeholder, field, form, className = "" }: { label: string; placeholder: string; field: "googleUrl" | "placeId" | "latitude" | "longitude" | "ianaTimeId" | "district" | "locationKey"; form: NightlifeFormState["form"]; className?: string }) {
   const error = form.formState.errors[field];
   return <div className={`space-y-2 ${className}`}><Label>{label}</Label><Input placeholder={placeholder} {...form.register(field)} />{error && <p className="text-xs text-destructive">{error.message}</p>}</div>;
 }

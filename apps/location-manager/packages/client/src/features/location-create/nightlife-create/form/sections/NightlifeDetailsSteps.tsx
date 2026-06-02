@@ -17,11 +17,11 @@ import {
   VIP_BOTTLE_SERVICE_OPTIONS,
   VIBE_OPTIONS,
 } from "../../../constants/nightlife-options";
+import { useNightlifeForm } from "../NightlifeFormContext";
 import { MultiOptionTable, NightlifeSectionHeader, OptionSelect } from "../NightlifeFieldControls";
-import type { NightlifeFormProps } from "../nightlife-form.types";
 
-export function NightlifeDetailsSteps(props: NightlifeFormProps) {
-  const { activeSection, coreComplete, form, isPrefillReady, sceneComplete, spaceComplete, toggleMultiOption } = props;
+export function NightlifeDetailsSteps() {
+  const { activeSection, coreComplete, form, isPrefillReady, sceneComplete, spaceComplete, toggleMultiOption } = useNightlifeForm();
   const select = <Field extends "clubType" | "priceTier" | "venueType" | "venueSize" | "peakHours" | "touristPresence" | "energyLevel" | "vipAndBottleService" | "crowdProfile">(field: Field, value: string) =>
     form.setValue(field, value as Parameters<typeof form.setValue<Field>>[1], { shouldValidate: true });
   return <>
@@ -30,7 +30,7 @@ export function NightlifeDetailsSteps(props: NightlifeFormProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><OptionSelect label="Venue Category" options={CLUB_TYPE_OPTIONS} value={form.watch("clubType")} onChange={(value) => select("clubType", value)} error={form.formState.errors.clubType?.message} /></div>
       <MultiOptionTable label="Primary Music Genres" options={MUSIC_OPTIONS} values={form.watch("music")} onToggle={(value) => toggleMultiOption("music", value)} error={form.formState.errors.music?.message as string | undefined} />
       <FormTagMultiSelect name="idealFor" label="Ideal For" control={form.control} optionGroups={getIdealForOptionGroups("nightlife")} maxSelections={4} description="Choose 1 to 4 tags" allowDirectTagArrayInput />
-      <StepButtons {...props} />
+      <StepButtons />
     </section>}
     {isPrefillReady && activeSection === "space" && <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
       <NightlifeSectionHeader title="The Space" isComplete={spaceComplete} />
@@ -42,7 +42,7 @@ export function NightlifeDetailsSteps(props: NightlifeFormProps) {
       <MultiOptionTable label="Layout & Zones" options={SPACE_LAYOUT_OPTIONS} values={form.watch("spaceLayout")} onToggle={(value) => toggleMultiOption("spaceLayout", value)} error={form.formState.errors.spaceLayout?.message as string | undefined} />
       <MultiOptionTable label="Atmosphere / Vibe" options={VIBE_OPTIONS} values={form.watch("vibe")} onToggle={(value) => toggleMultiOption("vibe", value)} error={form.formState.errors.vibe?.message as string | undefined} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><OptionSelect label="Peak Hours (Busiest Window)" options={PEAK_HOURS_OPTIONS} value={form.watch("peakHours")} onChange={(value) => select("peakHours", value)} error={form.formState.errors.peakHours?.message} /></div>
-      <StepButtons {...props} />
+      <StepButtons />
     </section>}
     {isPrefillReady && activeSection === "scene" && <section className="space-y-4 rounded-xl border border-border/70 bg-background/20 p-4 sm:p-5">
       <NightlifeSectionHeader title="The Scene" isComplete={sceneComplete} />
@@ -54,11 +54,12 @@ export function NightlifeDetailsSteps(props: NightlifeFormProps) {
         <OptionSelect label="Crowd Profile (Age Range)" options={CROWD_PROFILE_OPTIONS} value={form.watch("crowdProfile")} onChange={(value) => select("crowdProfile", value)} error={form.formState.errors.crowdProfile?.message} />
       </div>
       <MultiOptionTable label="Expected Dress Code" options={DRESS_CODE_OPTIONS} values={form.watch("dressCode")} onToggle={(value) => toggleMultiOption("dressCode", value)} error={form.formState.errors.dressCode?.message as string | undefined} />
-      <StepButtons {...props} />
+      <StepButtons />
     </section>}
   </>;
 }
 
-function StepButtons({ goToNextSection, goToPreviousSection }: NightlifeFormProps) {
+function StepButtons() {
+  const { goToNextSection, goToPreviousSection } = useNightlifeForm();
   return <div className="flex justify-between border-t border-border/70 pt-4"><Button type="button" variant="outline" onClick={goToPreviousSection}>Previous</Button><Button type="button" onClick={() => void goToNextSection()}>Next</Button></div>;
 }
