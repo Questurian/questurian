@@ -9,9 +9,6 @@ export function createCompletenessFieldContext(
 ): CompletenessFieldContext {
   const contact = locationDetail.contact || {};
   const source = locationDetail.source || {};
-  const nightlifeDetails = parseNightlifeDetails(locationDetail.nightlifeDetails);
-  const accommodationsDetails = parseAccommodationsDetails(locationDetail.accommodationsDetails);
-  const attractionsDetails = parseAttractionsDetails(locationDetail.attractionsDetails);
   const keyLocationsDetails = asRecord(locationDetail.keyLocationsDetails);
   const hasOperationHours = Boolean(
     locationDetail.operationHours &&
@@ -30,13 +27,10 @@ export function createCompletenessFieldContext(
   const hasKeyLocationsHours = getHasKeyLocationsHours(hasOperationHours, keyLocationsDetails);
   const hasKeyLocationImages = Array.isArray(keyLocationsDetails?.images) && keyLocationsDetails.images.length > 0;
 
-  return {
+  const context = {
     locationDetail,
     contact,
     source,
-    nightlifeDetails,
-    accommodationsDetails,
-    attractionsDetails,
     keyLocationsDetails,
     hasOperationHours,
     hasMedia,
@@ -44,7 +38,30 @@ export function createCompletenessFieldContext(
     hasCuisines,
     hasKeyLocationsHours,
     hasKeyLocationImages,
-  };
+  } as CompletenessFieldContext;
+
+  defineLazyDetail(context, "nightlifeDetails", () => parseNightlifeDetails(locationDetail.nightlifeDetails));
+  defineLazyDetail(context, "accommodationsDetails", () =>
+    parseAccommodationsDetails(locationDetail.accommodationsDetails)
+  );
+  defineLazyDetail(context, "attractionsDetails", () => parseAttractionsDetails(locationDetail.attractionsDetails));
+
+  return context;
+}
+
+function defineLazyDetail<TKey extends keyof CompletenessFieldContext>(
+  context: CompletenessFieldContext,
+  key: TKey,
+  factory: () => CompletenessFieldContext[TKey]
+): void {
+  let value: CompletenessFieldContext[TKey] | undefined;
+  Object.defineProperty(context, key, {
+    enumerable: true,
+    get() {
+      value ??= factory();
+      return value;
+    },
+  });
 }
 
 export function asRecord(value: unknown): Record<string, unknown> | null {

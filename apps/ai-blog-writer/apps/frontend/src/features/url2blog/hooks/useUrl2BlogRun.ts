@@ -84,7 +84,13 @@ export function useUrl2BlogRun() {
       const allowNotFoundBootstrap =
         pipelineMutation.isPending && runSubmittedAt !== null && now - runSubmittedAt < 12_000
       try {
-        return await fetchStatus(runId, { allowNotFound: allowNotFoundBootstrap })
+        return await fetchStatus(runId, { allowNotFound: allowNotFoundBootstrap }) ?? {
+          run_id: runId,
+          state: 'pending',
+          stage: 'stage_1',
+          updated_at: '',
+          error: null,
+        }
       } catch (error) {
         const message = error instanceof Error ? error.message : ''
         const shouldTryLatest =

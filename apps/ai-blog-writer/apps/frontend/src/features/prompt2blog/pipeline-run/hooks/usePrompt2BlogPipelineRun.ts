@@ -3,39 +3,40 @@ import { usePipelineRunPoll } from '../../../pipelineRuns/hooks/usePipelineRunPo
 import { useTerminalPipelineRun } from '../../../pipelineRuns/hooks/useTerminalPipelineRun'
 import { buildStageArticleUrl } from '../../../blogArticles'
 import {
-  getPrompt2BlogDebug,
-  getPrompt2BlogResult,
   getPrompt2BlogStatus,
   type Prompt2BlogDebugStages,
-  type Prompt2BlogPipelinePayload,
   type Prompt2BlogRunRequest,
   type Prompt2BlogStatusResponse,
 } from '../../api'
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
-import { loadSavedRunState, RUN_STORAGE_KEY } from '../pipeline-run.storage'
-import { PIPELINE_STAGE_LABELS, PIPELINE_STAGE_ORDER } from '../pipeline-status'
+import { PROMPT2BLOG_PIPELINE_STAGES } from '../../types/pipeline.types'
+import { PIPELINE_STAGE_LABELS } from '../pipeline-status'
 import type {
-  PersistedRunState,
   PipelineLogEntry,
   PipelineLogLevel,
-  SourceStep,
 } from '../pipeline-run.types'
+import { loadPrompt2BlogTerminalArtifacts } from './loadPrompt2BlogTerminalArtifacts'
+import { usePersistedPipelineRunState } from './usePersistedPipelineRunState'
+import { usePipelineStatusSideEffects } from './usePipelineStatusSideEffects'
 import { usePrompt2BlogMutation } from './usePrompt2BlogMutation'
 
 export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null) {
-  const savedRun = useRef(loadSavedRunState())
-  const [sourceStep, setSourceStep] = useState<SourceStep>(savedRun.current.sourceStep)
-  const [pipelineRunId, setPipelineRunId] = useState<string | null>(savedRun.current.pipelineRunId)
+  const {
+    savedRun,
+    sourceStep,
+    setSourceStep,
+    pipelineRunId,
+    setPipelineRunId,
+    pipelineResult,
+    setPipelineResult,
+    clearPersistedRunState,
+  } = usePersistedPipelineRunState()
   const [pipelineStatus, setPipelineStatus] = useState<Prompt2BlogStatusResponse | null>(null)
-  const [pipelineResult, setPipelineResult] = useState<Prompt2BlogPipelinePayload | null>(
-    savedRun.current.pipelineResult,
-  )
   const [pipelineDebugData, setPipelineDebugData] = useState<Prompt2BlogDebugStages | null>(null)
   const [pipelineLogs, setPipelineLogs] = useState<PipelineLogEntry[]>([])
   const [showPipelineDebug, setShowPipelineDebug] = useState(false)
   const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const lastStatusErrorRef = useRef<string | null>(null)
   const resetTerminalHandledRef = useRef<() => void>(() => undefined)
 
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
@@ -63,8 +64,8 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   }, [pipelineResult, pipelineRunId])
 
   const canOpenCleanupModal = useMemo(() => {
-    const cleanupStageIndex = PIPELINE_STAGE_ORDER.indexOf(CLEANUP_STAGE_KEY)
-    const currentStageIndex = pipelineStatus ? PIPELINE_STAGE_ORDER.indexOf(pipelineStatus.stage) : -1
+    const cleanupStageIndex = PROMPT2BLOG_PIPELINE_STAGES.indexOf(CLEANUP_STAGE_KEY)
+    const currentStageIndex = pipelineStatus ? PROMPT2BLOG_PIPELINE_STAGES.indexOf(pipelineStatus.stage) : -1
     return Boolean(
       pipelineRunId
       && (sourceStep === 'pipeline_complete' || currentStageIndex >= cleanupStageIndex),
@@ -77,8 +78,42 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     reset: resetStartPipeline,
   } = usePrompt2BlogMutation(payload)
 
+  useEffect(() => {
+    if (savedRun.current.sourceStep !== 'pipeline_running' || !savedRun.current.pipelineRunId) return
+    setLoadingLabel('Running final article pipeline...')
+    appendPipelineLog(`Resumed run: ${savedRun.current.pipelineRunId}`)
+  }, [appendPipelineLog])
+
+  useEffect(() => {
+    if (isStartingPipeline) setLoadingLabel('Starting final article pipeline...')
+  }, [isStartingPipeline])
+
+  const statusQuery = usePipelineRunPoll({
+    queryKey: ['prompt2blog-status', pipelineRunId],
+    runId: pipelineRunId,
+    fetchStatus: getPrompt2BlogStatus,
+    enabled: sourceStep === 'pipeline_running',
+    pollIntervalMs: 1200,
+    errorPollIntervalMs: 2000,
+  })
+
+  useEffect(() => {
+    const status = statusQuery.data
+    if (!status) return
+    setPipelineStatus(status)
+  }, [statusQuery.data])
+
+  const { resetStatusError } = usePipelineStatusSideEffects({
+    status: statusQuery.data,
+    error: statusQuery.error,
+    labels: PIPELINE_STAGE_LABELS,
+    appendLog: appendPipelineLog,
+    setLoadingLabel,
+  })
+
   const run = useCallback(() => {
     resetTerminalHandledRef.current()
+    resetStatusError()
     setLoadingLabel('Starting final article pipeline...')
     setError(null)
     setPipelineResult(null)
@@ -86,7 +121,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setPipelineDebugData(null)
     setPipelineLogs([])
     setShowPipelineDebug(false)
-    lastStatusErrorRef.current = null
 
     startPipeline(undefined, {
       onSuccess: (startResponse) => {
@@ -104,17 +138,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
         setLoadingLabel('')
       },
     })
-  }, [appendPipelineLog, resetStartPipeline, startPipeline])
-
-  useEffect(() => {
-    if (savedRun.current.sourceStep !== 'pipeline_running' || !savedRun.current.pipelineRunId) return
-    setLoadingLabel('Running final article pipeline...')
-    appendPipelineLog(`Resumed run: ${savedRun.current.pipelineRunId}`)
-  }, [appendPipelineLog])
-
-  useEffect(() => {
-    if (isStartingPipeline) setLoadingLabel('Starting final article pipeline...')
-  }, [isStartingPipeline])
+  }, [appendPipelineLog, resetStartPipeline, resetStatusError, startPipeline])
 
   const reset = useCallback(() => {
     resetTerminalHandledRef.current()
@@ -128,46 +152,9 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setShowPipelineDebug(false)
     setLoadingLabel('')
     setError(null)
-    lastStatusErrorRef.current = null
-    localStorage.removeItem(RUN_STORAGE_KEY)
-  }, [resetStartPipeline])
-
-  useEffect(() => {
-    const persistedState: PersistedRunState = { sourceStep, pipelineRunId, pipelineResult }
-    localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(persistedState))
-  }, [sourceStep, pipelineRunId, pipelineResult])
-
-  const statusQuery = usePipelineRunPoll({
-    queryKey: ['prompt2blog-status', pipelineRunId],
-    runId: pipelineRunId,
-    fetchStatus: getPrompt2BlogStatus,
-    enabled: sourceStep === 'pipeline_running',
-    pollIntervalMs: 1200,
-    errorPollIntervalMs: 2000,
-  })
-
-  useEffect(() => {
-    const status = statusQuery.data
-    if (!status) return
-    setPipelineStatus(status)
-    lastStatusErrorRef.current = null
-  }, [statusQuery.data])
-
-  useEffect(() => {
-    const stage = statusQuery.data?.stage
-    if (!stage) return
-    const stageLabel = PIPELINE_STAGE_LABELS[stage] || stage
-    appendPipelineLog(`Stage: ${stageLabel}`)
-    setLoadingLabel(`Running: ${stageLabel}`)
-  }, [appendPipelineLog, statusQuery.data?.stage])
-
-  useEffect(() => {
-    if (!statusQuery.error) return
-    const message = statusQuery.error instanceof Error ? statusQuery.error.message : 'Failed to poll pipeline status'
-    if (lastStatusErrorRef.current === message) return
-    lastStatusErrorRef.current = message
-    appendPipelineLog(`Status polling error: ${message}`, 'error')
-  }, [appendPipelineLog, statusQuery.error])
+    resetStatusError()
+    clearPersistedRunState()
+  }, [clearPersistedRunState, resetStartPipeline, resetStatusError])
 
   const handleTerminalStatus = useCallback<
     (args: { status: Prompt2BlogStatusResponse; isCancelled: () => boolean }) => Promise<void>
@@ -175,7 +162,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     if (!pipelineRunId) return
 
     if (status.state === 'completed') {
-      const result = await getPrompt2BlogResult(pipelineRunId)
+      const { result, debugPayload } = await loadPrompt2BlogTerminalArtifacts(pipelineRunId)
       if (isCancelled()) return
       if (result.artifact?.pipeline_v2) {
         setPipelineResult(result.artifact.pipeline_v2)
@@ -185,8 +172,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
         setError('Pipeline finished but no final payload was returned.')
       }
 
-      const debugPayload = await getPrompt2BlogDebug(pipelineRunId).catch(() => null)
-      if (isCancelled()) return
       if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
       appendPipelineLog('Pipeline completed successfully.')
       setSourceStep('pipeline_complete')
@@ -200,7 +185,10 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
       'error',
     )
     setError(failureMessage)
-    const debugPayload = await getPrompt2BlogDebug(pipelineRunId).catch(() => null)
+    const { debugPayload } = await loadPrompt2BlogTerminalArtifacts(pipelineRunId, { includeResult: false }).catch(() => ({
+      result: null,
+      debugPayload: null,
+    }))
     if (isCancelled()) return
     if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
     setSourceStep('edit')

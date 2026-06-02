@@ -6,7 +6,7 @@ import { getProgressItemState, getStageLabel } from './pipeline-progress.utils'
 const rewriteStep = URL2BLOG_PROGRESS_STEPS.find((step) => step.stage === 'rewrite_quality')!
 
 function status(overrides: Partial<Url2BlogStatusResponse>): Url2BlogStatusResponse {
-  return { run_id: 'run-1', state: 'running', stage: 'rewrite_quality', ...overrides }
+  return { run_id: 'run-1', state: 'running', stage: 'rewrite_quality', updated_at: '', ...overrides }
 }
 
 describe('pipeline progress utils', () => {

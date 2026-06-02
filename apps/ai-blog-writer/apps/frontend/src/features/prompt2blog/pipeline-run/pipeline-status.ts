@@ -3,10 +3,8 @@ import {
   type Prompt2BlogPipelineStage,
   type Prompt2BlogStatusResponse,
 } from '../types/pipeline.types'
-import { getPipelineProgressState } from '../../../shared/pipelineProgress'
+import { getStepStatus } from '../../pipelineRuns/progress'
 import type { PipelineStepStatus } from './pipeline-run.types'
-
-export const PIPELINE_STAGE_ORDER = PROMPT2BLOG_PIPELINE_STAGES satisfies readonly Prompt2BlogPipelineStage[]
 
 export const PIPELINE_STAGE_LABELS: Record<Prompt2BlogPipelineStage, string> = {
   queued: 'Queued',
@@ -30,13 +28,10 @@ export function getPipelineStepStatus(
   status: Prompt2BlogStatusResponse | null,
 ): PipelineStepStatus {
   if (!status) return step === 'queued' ? 'running' : 'pending'
-  return getPipelineProgressState({
+  const stepStatus = getStepStatus({
     step,
     status,
-    stageOrder: PIPELINE_STAGE_ORDER,
-    doneState: 'done',
-    runningState: 'running',
-    pendingState: 'pending',
-    failedState: 'error',
+    stageOrder: PROMPT2BLOG_PIPELINE_STAGES,
   })
+  return stepStatus === 'failed' ? 'error' : stepStatus
 }

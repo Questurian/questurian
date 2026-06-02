@@ -11,14 +11,7 @@ import type {
   Prompt2BlogStatusResponse,
 } from '../types/pipeline.types'
 import { PROMPT2BLOG_PIPELINE_STAGES } from '../types/pipeline.types'
-
-const PROMPT2BLOG_STATUS_STATES = ['pending', 'running', 'completed', 'failed'] as const
-
-type Prompt2BlogStatusState = Prompt2BlogStatusResponse['state']
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
+import { normalizePipelineStatus } from '../../pipelineRuns/progress'
 
 export function resolvePrompt2BlogPipelineStage(value: unknown): Prompt2BlogPipelineStage {
   return PROMPT2BLOG_PIPELINE_STAGES.includes(value as Prompt2BlogPipelineStage)
@@ -26,25 +19,29 @@ export function resolvePrompt2BlogPipelineStage(value: unknown): Prompt2BlogPipe
     : 'queued'
 }
 
-function resolvePrompt2BlogStatusState(value: unknown): Prompt2BlogStatusState {
-  return PROMPT2BLOG_STATUS_STATES.includes(value as Prompt2BlogStatusState)
-    ? value as Prompt2BlogStatusState
-    : 'pending'
-}
-
 export function normalizePrompt2BlogStatusResponse(
   value: unknown,
   fallbackRunId: string,
 ): Prompt2BlogStatusResponse {
-  const record = isRecord(value) ? value : {}
+  const normalized = normalizePipelineStatus({
+    value,
+    stages: PROMPT2BLOG_PIPELINE_STAGES,
+    defaults: {
+      run_id: fallbackRunId,
+      feature: 'prompt2blog',
+      state: 'pending',
+      stage: 'queued',
+      error: null,
+      updated_at: '',
+    } satisfies Prompt2BlogStatusResponse,
+  })
 
   return {
-    run_id: typeof record.run_id === 'string' ? record.run_id : fallbackRunId,
-    feature: typeof record.feature === 'string' ? record.feature : 'prompt2blog',
-    state: resolvePrompt2BlogStatusState(record.state),
-    stage: resolvePrompt2BlogPipelineStage(record.stage),
-    error: typeof record.error === 'string' ? record.error : null,
-    updated_at: typeof record.updated_at === 'string' ? record.updated_at : '',
+    ...normalized,
+    run_id: typeof normalized.run_id === 'string' ? normalized.run_id : fallbackRunId,
+    feature: typeof normalized.feature === 'string' ? normalized.feature : 'prompt2blog',
+    error: typeof normalized.error === 'string' ? normalized.error : null,
+    updated_at: typeof normalized.updated_at === 'string' ? normalized.updated_at : '',
   }
 }
 

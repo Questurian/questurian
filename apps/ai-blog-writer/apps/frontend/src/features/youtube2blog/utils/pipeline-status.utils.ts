@@ -1,12 +1,9 @@
 import type { StatusResponse } from '@shared/types'
 
 import { PIPELINE_TIMELINE, STAGE_LABELS, STAGE_ORDER } from '../constants/pipeline.constants'
+import { getStepStatus } from '../../pipelineRuns/progress'
 
 export type TimelineStep = (typeof PIPELINE_TIMELINE)[number]
-
-function getStageIndex(stage: string): number {
-  return STAGE_ORDER.indexOf(stage as (typeof STAGE_ORDER)[number])
-}
 
 function getRunningPhaseLabel(stage: string): string {
   switch (stage) {
@@ -79,26 +76,16 @@ export function getStagePhase(status: StatusResponse, step: TimelineStep): strin
     return 'Conditional'
   }
 
-  const activeIndex = getStageIndex(status.stage)
-  const checklistIndex = getStageIndex(step.key)
+  const stepStatus = getStepStatus({ step: step.key, status, stageOrder: STAGE_ORDER })
 
-  if (activeIndex === -1 || checklistIndex === -1) {
-    return 'Pending'
-  }
-  if (status.state === 'completed') {
-    return 'Completed'
-  }
-  if (status.state === 'failed' && status.stage === step.key) {
+  if (stepStatus === 'failed') {
     return 'Failed'
   }
-  if (activeIndex > checklistIndex) {
+  if (stepStatus === 'done') {
     return 'Completed'
   }
-  if (activeIndex === checklistIndex && status.state === 'running') {
+  if (stepStatus === 'running' && status.state === 'running') {
     return getRunningPhaseLabel(step.key)
-  }
-  if (activeIndex === checklistIndex) {
-    return 'Completed'
   }
   return 'Pending'
 }
@@ -117,21 +104,6 @@ export function getStageItemState(
     return 'pending'
   }
 
-  const activeIndex = getStageIndex(status.stage)
-  const checklistIndex = getStageIndex(step.key)
-
-  if (activeIndex === -1 || checklistIndex === -1) {
-    return 'pending'
-  }
-
-  if (status.state === 'completed') {
-    return 'done'
-  }
-  if (status.stage === step.key && status.state === 'running') {
-    return 'running'
-  }
-  if (status.state === 'failed' && status.stage === step.key) {
-    return 'running'
-  }
-  return activeIndex > checklistIndex ? 'done' : 'pending'
+  const stepStatus = getStepStatus({ step: step.key, status, stageOrder: STAGE_ORDER })
+  return stepStatus === 'failed' ? 'running' : stepStatus
 }

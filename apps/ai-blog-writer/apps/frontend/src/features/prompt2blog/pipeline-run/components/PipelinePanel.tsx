@@ -1,7 +1,8 @@
 import type { usePrompt2BlogPipelineRun } from '../hooks/usePrompt2BlogPipelineRun'
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
 import type { PipelineStepStatus } from '../pipeline-run.types'
-import { getPipelineStepStatus, PIPELINE_STAGE_LABELS, PIPELINE_STAGE_ORDER } from '../pipeline-status'
+import { PROMPT2BLOG_PIPELINE_STAGES } from '../../types/pipeline.types'
+import { getPipelineStepStatus, PIPELINE_STAGE_LABELS } from '../pipeline-status'
 import { PipelineResult } from './PipelineResult'
 
 interface PipelinePanelProps {
@@ -43,7 +44,7 @@ export function PipelinePanel({ run, onOpenCleanupModal, onReset }: PipelinePane
         </div>
 
         <div className="p2b-progress-grid">
-          {PIPELINE_STAGE_ORDER.map(step => (
+          {PROMPT2BLOG_PIPELINE_STAGES.map(step => (
             <PipelineStageItem
               key={step}
               action={step === CLEANUP_STAGE_KEY && canOpenCleanupModal ? onOpenCleanupModal : undefined}

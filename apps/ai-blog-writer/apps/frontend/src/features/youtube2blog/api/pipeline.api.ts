@@ -1,7 +1,30 @@
 import type { ResultResponse, StatusResponse, UploadResponse } from '@shared/types'
 import { API_BASE_URL, FEATURE_PREFIX } from '../constants/api.constants'
+import { STAGE_ORDER } from '../constants/pipeline.constants'
 import type { DebugResponse } from '../types/pipeline.types'
 import { resolveErrorMessage } from './request-error'
+import { normalizePipelineStatus } from '../../pipelineRuns/progress'
+
+function normalizeYouTube2BlogStatusResponse(value: unknown, fallbackRunId: string): StatusResponse {
+  const normalized = normalizePipelineStatus({
+    value,
+    stages: STAGE_ORDER,
+    defaults: {
+      run_id: fallbackRunId,
+      state: 'pending',
+      stage: 'stage_0',
+      updated_at: '',
+      error: null,
+    } satisfies StatusResponse,
+  })
+
+  return {
+    ...normalized,
+    run_id: typeof normalized.run_id === 'string' ? normalized.run_id : fallbackRunId,
+    updated_at: typeof normalized.updated_at === 'string' ? normalized.updated_at : '',
+    error: typeof normalized.error === 'string' ? normalized.error : null,
+  }
+}
 
 export async function startFromYoutubeUrl(
   url: string,
@@ -34,7 +57,7 @@ export async function fetchStatus(runId: string): Promise<StatusResponse> {
     throw new Error('Status fetch failed')
   }
 
-  return response.json()
+  return normalizeYouTube2BlogStatusResponse(await response.json(), runId)
 }
 
 export async function fetchResult(runId: string): Promise<ResultResponse> {
