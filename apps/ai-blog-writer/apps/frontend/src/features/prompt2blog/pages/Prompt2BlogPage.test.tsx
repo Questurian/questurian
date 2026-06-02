@@ -1,6 +1,9 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+/* @vitest-environment jsdom */
+import '@testing-library/jest-dom/vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as prompt2blogApi from '../api'
 import { DEFAULT_PROMPT2BLOG_MODEL } from '../constants/prompt2blog.constants'
 import Prompt2BlogPage from './Prompt2BlogPage'
@@ -22,9 +25,19 @@ const getPrompt2BlogStatusMock = vi.mocked(prompt2blogApi.getPrompt2BlogStatus)
 const startPrompt2BlogRunMock = vi.mocked(prompt2blogApi.startPrompt2BlogRun)
 
 function renderPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+
   return render(
     <MemoryRouter>
-      <Prompt2BlogPage />
+      <QueryClientProvider client={queryClient}>
+        <Prompt2BlogPage />
+      </QueryClientProvider>
     </MemoryRouter>,
   )
 }
@@ -92,6 +105,10 @@ function createStoredPipelineResult() {
 }
 
 describe('Prompt2BlogPage', () => {
+  afterEach(() => {
+    cleanup()
+  })
+
   beforeEach(() => {
     localStorage.clear()
 

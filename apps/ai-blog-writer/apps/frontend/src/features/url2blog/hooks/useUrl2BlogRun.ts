@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import {
   fetchLatestStatus,
   fetchStatus,
   runUrl2BlogPipelineV2,
 } from '../api'
+import { usePipelineRunPoll } from '../../pipelineRuns/hooks/usePipelineRunPoll'
 import {
   NARRATIVE_FOCUS_PRESETS,
   URL2BLOG_PROGRESS_STEPS,
@@ -75,14 +76,15 @@ export function useUrl2BlogRun() {
     },
   })
 
-  const statusQuery = useQuery({
+  const statusQuery = usePipelineRunPoll<Url2BlogStatusResponse>({
     queryKey: ['url2blog-status', activeRunId],
-    queryFn: async () => {
+    runId: activeRunId,
+    fetchStatus: async (runId) => {
       const now = Date.now()
       const allowNotFoundBootstrap =
         pipelineMutation.isPending && runSubmittedAt !== null && now - runSubmittedAt < 12_000
       try {
-        return await fetchStatus(activeRunId as string, { allowNotFound: allowNotFoundBootstrap })
+        return await fetchStatus(runId, { allowNotFound: allowNotFoundBootstrap })
       } catch (error) {
         const message = error instanceof Error ? error.message : ''
         const shouldTryLatest =
@@ -97,12 +99,8 @@ export function useUrl2BlogRun() {
       }
     },
     enabled: Boolean(activeRunId),
-    refetchInterval: (query) => {
-      const current = query.state.data as Url2BlogStatusResponse | null | undefined
-      if (!pipelineMutation.isPending) return false
-      if (current && (current.state === 'completed' || current.state === 'failed')) return false
-      return 1000
-    },
+    pollIntervalMs: 1000,
+    shouldContinuePolling: () => pipelineMutation.isPending,
   })
 
   const activeStatus = statusQuery.data ?? null

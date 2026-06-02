@@ -10,7 +10,7 @@ export {
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
-} from '../../staging/api'
+} from '../../blogArticles/api/staging-bridge'
 
 export type {
   ArticleCategory,
@@ -24,4 +24,4 @@ export type {
   RewriteBlockWithAiResponse,
   UnsplashPhoto,
   UnsplashSearchResponse,
-} from '../../staging/api'
+} from '../../blogArticles/api/staging-bridge'

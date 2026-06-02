@@ -1,4 +1,4 @@
-export type { CreateArticlePayload, Location, MediaAsset } from '../../staging/api'
+export type { CreateArticlePayload, Location, MediaAsset } from '../../blogArticles/api/staging-bridge'
 export {
   convertMarkdownToLexical,
   createArticle,
@@ -10,4 +10,4 @@ export {
   searchPexelsImages,
   searchUnsplashImages,
   updateArticle,
-} from '../../staging/api'
+} from '../../blogArticles/api/staging-bridge'

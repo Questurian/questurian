@@ -35,6 +35,12 @@ Operators need a tactile UI: pick inputs, watch progress, hand-edit before pushi
 Definition: one top-level UI per pipeline. Lives in `src/features/<featureCamelCase>/`.
 Examples: `Prompt2BlogPage`, `YouTube2BlogPage`, `Url2BlogPage`, `LocationDocumentsPage`, `KeywordIntelPage`, `ItinerariesPipelinePage`, `ListicleItinerariesPage`, `SingleTypeListiclesPage`, `BatchUploadPage`, `BatchImageRecreationPage`, `HomepageFeaturedContentPage`, `StagingPage`.
 
+### Saved Articles Page
+
+Definition: the operator page for reviewing generated article runs, opening or creating local Drafts, and viewing Payload Sync state for article-producing pipeline features. Prompt2Blog, Url2Blog, and YouTube2Blog share the same end goal and user flow here, even when feature-specific logic differs.
+Related terms: Feature Page, Draft, Sync, Payload entity.
+Do not confuse with: Payload's long-term Articles collection in Questura.
+
 ### Draft
 
 Definition: a local working copy of generated content, not yet pushed to Payload. Drafts can be created from a finished run or edited from a previously synced Payload entity.
@@ -135,6 +141,7 @@ Do not confuse with: Slot swap, which exchanges two existing slot contents.
 - A **Feature Page** owns at most one active **Run** at a time (current poll).
 - A **Run** result produces one or more **Draft**s.
 - A **Draft** points to zero or one **Payload entity**; Sync writes through.
+- A **Saved Articles Page** can share workflow UI across article-producing pipeline features while delegating feature-specific fetch, delete, map, route, and Draft creation logic.
 - A `PipelineStatusResponse.state = "completed"` is the trigger for hydrating a Draft from the run output.
 - **Featured Articles** has 3–9 **Curated slots**; a **Slot swap** preserves the number of slots and exchanges exactly two slot contents.
 - **Slot replacement** preserves the slot position and changes only the item assigned to that **Curated slot**.
@@ -143,7 +150,12 @@ Do not confuse with: Slot swap, which exchanges two existing slot contents.
 ## Domain Rules
 
 - Polls run with TanStack Query `refetchInterval` while `state ∈ {pending, running}`; stop when terminal.
+- Article-producing pipeline pages use `usePipelineRunPoll` for TanStack Query status polling. Feature hooks may still own feature-specific terminal handling such as result hydration, debug fetches, or latest-run fallback.
 - Drafts are not auto-synced. A user action triggers Sync.
+- Shared Saved Articles Page code must preserve feature-specific behavior through adapters rather than forcing identical logic across Prompt2Blog, Url2Blog, and YouTube2Blog.
+- In the Saved Articles Workflow, shared code owns layout, page states, delete confirmation, Payload Sync status display, local Draft storage helpers, and the React Query orchestration shape. Feature adapters own API calls, route builders, run/article-to-Draft mapping, title/type extraction, feature labels/classes, query key prefix, and storage key.
+- Saved Articles Workflow deduplication should be behavior-preserving and separate from pipeline polling normalization. Polling changes belong in a later task because they affect active Run lifecycle behavior.
+- Saved Articles Workflow refactors are complete only when Prompt2Blog, Url2Blog, and YouTube2Blog article routes preserve generated article loading, local Draft storage keys, generated and local delete behavior, stage-article links, Payload Sync labels, and existing tests. The refactor must not require storage key migration, backend changes, new UI, or polling changes.
 - `hasUnsyncedPayloadChanges` is computed from a signature, not by deep equality, to keep CPU bounded on large documents.
 - Frontend types **mirror** backend Pydantic shapes; do not import Python.
 - Homepage curated blocks preserve their configured slot count; empty curated slots are draft-only and are not persisted.

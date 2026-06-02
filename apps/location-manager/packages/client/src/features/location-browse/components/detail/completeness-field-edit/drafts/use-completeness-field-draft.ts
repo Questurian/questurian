@@ -14,6 +14,7 @@ import { getIdealForGroups } from "@shared/types/location-ideal-for";
 import { CUISINE_OPTION_GROUPS, CUISINE_OPTIONS } from "@client/shared/constants/cuisine-options";
 import type { FieldDef } from "../completeness-field-edit.types";
 import { getInitialValue } from "../field-value-utils";
+import { getCenterToastPosition } from "../toast-position";
 import {
   createClosedDayEntries,
   parseOperationHoursJson,
@@ -110,25 +111,25 @@ export function useCompletenessFieldDraft({
         data.source === "fallback"
           ? "AI was slow, so a contextual draft was generated. Review it and save when you're done."
           : "AI draft ready. Review it and save when you're done.",
-        getCenterPosition()
+        getCenterToastPosition()
       );
     },
     onError: (error) => {
-      showToast(error.message || "Failed to generate neighborhood description", getCenterPosition());
+      showToast(error.message || "Failed to generate neighborhood description", getCenterToastPosition());
     },
   });
 
   const copyText = async (text: string, label: string) => {
     const trimmed = text.trim();
     if (!trimmed) {
-      showToast(`${label} is empty`, getCenterPosition());
+      showToast(`${label} is empty`, getCenterToastPosition());
       return;
     }
     try {
       await navigator.clipboard.writeText(trimmed);
-      showToast(`${label} copied`, getCenterPosition());
+      showToast(`${label} copied`, getCenterToastPosition());
     } catch {
-      showToast("Failed to copy value", getCenterPosition());
+      showToast("Failed to copy value", getCenterToastPosition());
     }
   };
 
@@ -168,8 +169,4 @@ export function useCompletenessFieldDraft({
       .map((group) => ({ ...group, options: group.options.filter((option) => !cuisinesDraft.includes(option)) }))
       .filter((group) => group.options.length > 0),
   };
-}
-
-function getCenterPosition() {
-  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }

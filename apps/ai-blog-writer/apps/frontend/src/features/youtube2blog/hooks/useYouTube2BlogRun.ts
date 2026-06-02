@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { usePipelineRunPoll } from '../../pipelineRuns/hooks/usePipelineRunPoll'
 
 import {
   clearDatabase,
@@ -78,17 +79,12 @@ export function useYouTube2BlogRun() {
     },
   })
 
-  const statusQuery = useQuery({
+  const statusQuery = usePipelineRunPoll<StatusResponse>({
     queryKey: ['status', activeRunId],
-    queryFn: () => fetchStatus(activeRunId as string),
+    runId: activeRunId,
+    fetchStatus,
     enabled: Boolean(activeRunId),
-    refetchInterval: (query) => {
-      const current = query.state.data as StatusResponse | undefined
-      if (!current) {
-        return 1000
-      }
-      return current.state === 'completed' || current.state === 'failed' ? false : 1000
-    },
+    pollIntervalMs: 1000,
   })
 
   const debugQuery = useQuery({
