@@ -36,6 +36,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const lastStatusErrorRef = useRef<string | null>(null)
+  const resetTerminalHandledRef = useRef<() => void>(() => undefined)
 
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
     setPipelineLogs(prev => [
@@ -77,6 +78,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   } = usePrompt2BlogMutation(payload)
 
   const run = useCallback(() => {
+    resetTerminalHandledRef.current()
     setLoadingLabel('Starting final article pipeline...')
     setError(null)
     setPipelineResult(null)
@@ -115,6 +117,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   }, [isStartingPipeline])
 
   const reset = useCallback(() => {
+    resetTerminalHandledRef.current()
     resetStartPipeline()
     setSourceStep('edit')
     setPipelineRunId(null)
@@ -211,13 +214,14 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setLoadingLabel('')
   }, [appendPipelineLog])
 
-  useTerminalPipelineRun({
+  const { resetHandled } = useTerminalPipelineRun({
     runId: pipelineRunId,
     status: statusQuery.data ?? null,
     enabled: sourceStep === 'pipeline_running',
     onTerminal: handleTerminalStatus,
     onError: handleTerminalError,
   })
+  resetTerminalHandledRef.current = resetHandled
 
   const isLoading = isStartingPipeline || sourceStep === 'pipeline_running'
 
