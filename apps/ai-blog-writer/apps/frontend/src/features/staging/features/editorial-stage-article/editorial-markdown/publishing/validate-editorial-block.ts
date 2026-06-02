@@ -15,7 +15,29 @@ import {
   parseKeyTakeawayEditorialBlock,
   parsePullQuoteEditorialBlock,
 } from '../parsing/standard-block-parsers'
-import type { EditorialPublishValidation } from './editorial-publish.types'
+import type {
+  EditorialPublishValidation,
+  PayloadContentBlock,
+  SupportedPayloadBlockType,
+} from './editorial-publish.types'
+
+type ParsedEditorialFrame = {
+  hasStartMarker: boolean
+  hasLabelMarker: boolean
+  hasBoxMarker: boolean
+  hasComponentLine: boolean
+  hasEndMarker: boolean
+  correctedMarkdown: string
+}
+
+type EditorialBlockValidationStrategy = (
+  block: EditorialBlock
+) => EditorialPublishValidation
+
+type SupportedValidationParts = {
+  payloadBlock: PayloadContentBlock
+  mappedPayloadBlockType: SupportedPayloadBlockType
+}
 
 function getMissingFrameParts(parsed: {
   hasStartMarker: boolean
@@ -44,112 +66,99 @@ function buildInvalidValidation(
   }
 }
 
+function validateParsedEditorialBlock<TParsed extends ParsedEditorialFrame>(
+  parsed: TParsed,
+  getMissingContentParts: (parsed: TParsed) => string[],
+  buildSupportedParts: (parsed: TParsed) => SupportedValidationParts
+): EditorialPublishValidation {
+  const missingParts = [
+    ...getMissingFrameParts(parsed),
+    ...getMissingContentParts(parsed),
+  ]
+
+  if (missingParts.length > 0) {
+    return buildInvalidValidation(missingParts, parsed.correctedMarkdown)
+  }
+
+  return {
+    status: 'supported',
+    correctedMarkdown: parsed.correctedMarkdown,
+    ...buildSupportedParts(parsed),
+  }
+}
+
+const editorialBlockValidationStrategies: Record<string, EditorialBlockValidationStrategy> = {
+  [KEY_TAKEAWAYS_COMPONENT]: (block) =>
+    validateParsedEditorialBlock(
+      parseKeyTakeawayEditorialBlock(block),
+      (parsed) => (parsed.items.length === 0 ? ['takeaway bullets'] : []),
+      (parsed) => ({
+        payloadBlock: {
+          blockType: 'key-takeaway',
+          label: parsed.label,
+          items: parsed.items.slice(0, 5).map((text) => ({ text })),
+        },
+        mappedPayloadBlockType: 'key-takeaway',
+      })
+    ),
+  [PULL_QUOTE_COMPONENT]: (block) =>
+    validateParsedEditorialBlock(
+      parsePullQuoteEditorialBlock(block),
+      (parsed) => (!parsed.quoteText ? ['quote text'] : []),
+      (parsed) => ({
+        payloadBlock: {
+          blockType: 'pull-quote',
+          quote: parsed.quoteText,
+        },
+        mappedPayloadBlockType: 'pull-quote',
+      })
+    ),
+  [IN_THE_KNOW_COMPONENT]: (block) =>
+    validateParsedEditorialBlock(
+      parseInTheKnowEditorialBlock(block),
+      (parsed) => (!parsed.text ? ['text'] : []),
+      (parsed) => ({
+        payloadBlock: {
+          blockType: 'in-the-know',
+          label: parsed.label,
+          text: parsed.text,
+        },
+        mappedPayloadBlockType: 'in-the-know',
+      })
+    ),
+  [HIGHLIGHT_CALLOUT_COMPONENT]: (block) =>
+    validateParsedEditorialBlock(
+      parseHighlightCalloutEditorialBlock(block),
+      (parsed) => (!parsed.text ? ['text'] : []),
+      (parsed) => ({
+        payloadBlock: {
+          blockType: 'highlight-callout',
+          label: parsed.label,
+          text: parsed.text,
+        },
+        mappedPayloadBlockType: 'highlight-callout',
+      })
+    ),
+  [FAQ_COMPONENT]: (block) =>
+    validateParsedEditorialBlock(
+      parseFAQEditorialBlock(block),
+      (parsed) => (parsed.items.length < 2 ? ['at least two FAQ items'] : []),
+      (parsed) => ({
+        payloadBlock: {
+          blockType: 'faq',
+          label: parsed.label,
+          items: parsed.items.slice(0, EDITORIAL_MAX_FAQ_ITEMS),
+        },
+        mappedPayloadBlockType: 'faq',
+      })
+    ),
+}
+
 export function validateEditorialBlockForPublish(block: EditorialBlock): EditorialPublishValidation {
   const component = normalizeEditorialComponentKey(block.component)
+  const strategy = editorialBlockValidationStrategies[component]
 
-  if (component === KEY_TAKEAWAYS_COMPONENT) {
-    const parsed = parseKeyTakeawayEditorialBlock(block)
-    const missingParts = getMissingFrameParts(parsed)
-    if (parsed.items.length === 0) missingParts.push('takeaway bullets')
-
-    if (missingParts.length > 0) {
-      return buildInvalidValidation(missingParts, parsed.correctedMarkdown)
-    }
-
-    return {
-      status: 'supported',
-      payloadBlock: {
-        blockType: 'key-takeaway',
-        label: parsed.label,
-        items: parsed.items.slice(0, 5).map((text) => ({ text })),
-      },
-      correctedMarkdown: parsed.correctedMarkdown,
-      mappedPayloadBlockType: 'key-takeaway',
-    }
-  }
-
-  if (component === PULL_QUOTE_COMPONENT) {
-    const parsed = parsePullQuoteEditorialBlock(block)
-    const missingParts = getMissingFrameParts(parsed)
-    if (!parsed.quoteText) missingParts.push('quote text')
-
-    if (missingParts.length > 0) {
-      return buildInvalidValidation(missingParts, parsed.correctedMarkdown)
-    }
-
-    return {
-      status: 'supported',
-      payloadBlock: {
-        blockType: 'pull-quote',
-        quote: parsed.quoteText,
-      },
-      correctedMarkdown: parsed.correctedMarkdown,
-      mappedPayloadBlockType: 'pull-quote',
-    }
-  }
-
-  if (component === IN_THE_KNOW_COMPONENT) {
-    const parsed = parseInTheKnowEditorialBlock(block)
-    const missingParts = getMissingFrameParts(parsed)
-    if (!parsed.text) missingParts.push('text')
-
-    if (missingParts.length > 0) {
-      return buildInvalidValidation(missingParts, parsed.correctedMarkdown)
-    }
-
-    return {
-      status: 'supported',
-      payloadBlock: {
-        blockType: 'in-the-know',
-        label: parsed.label,
-        text: parsed.text,
-      },
-      correctedMarkdown: parsed.correctedMarkdown,
-      mappedPayloadBlockType: 'in-the-know',
-    }
-  }
-
-  if (component === HIGHLIGHT_CALLOUT_COMPONENT) {
-    const parsed = parseHighlightCalloutEditorialBlock(block)
-    const missingParts = getMissingFrameParts(parsed)
-    if (!parsed.text) missingParts.push('text')
-
-    if (missingParts.length > 0) {
-      return buildInvalidValidation(missingParts, parsed.correctedMarkdown)
-    }
-
-    return {
-      status: 'supported',
-      payloadBlock: {
-        blockType: 'highlight-callout',
-        label: parsed.label,
-        text: parsed.text,
-      },
-      correctedMarkdown: parsed.correctedMarkdown,
-      mappedPayloadBlockType: 'highlight-callout',
-    }
-  }
-
-  if (component === FAQ_COMPONENT) {
-    const parsed = parseFAQEditorialBlock(block)
-    const missingParts = getMissingFrameParts(parsed)
-    if (parsed.items.length < 2) missingParts.push('at least two FAQ items')
-
-    if (missingParts.length > 0) {
-      return buildInvalidValidation(missingParts, parsed.correctedMarkdown)
-    }
-
-    return {
-      status: 'supported',
-      payloadBlock: {
-        blockType: 'faq',
-        label: parsed.label,
-        items: parsed.items.slice(0, EDITORIAL_MAX_FAQ_ITEMS),
-      },
-      correctedMarkdown: parsed.correctedMarkdown,
-      mappedPayloadBlockType: 'faq',
-    }
-  }
+  if (strategy) return strategy(block)
 
   return {
     status: 'unsupported',
