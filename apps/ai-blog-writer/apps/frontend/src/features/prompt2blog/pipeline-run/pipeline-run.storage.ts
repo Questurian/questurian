@@ -13,17 +13,23 @@ export function loadSavedRunState(): PersistedRunState {
     const raw = localStorage.getItem(RUN_STORAGE_KEY)
     if (!raw) return fallback
     const parsed = JSON.parse(raw) as Partial<PersistedRunState>
+    const pipelineRunId = typeof parsed.pipelineRunId === 'string' ? parsed.pipelineRunId : null
+    const pipelineResult =
+      parsed.pipelineResult && typeof parsed.pipelineResult === 'object'
+      && (parsed.pipelineResult as { quality_review?: unknown }).quality_review
+        ? parsed.pipelineResult as Prompt2BlogPipelinePayload
+        : null
+    const sourceStep =
+      parsed.sourceStep === 'pipeline_running' && pipelineRunId
+        ? 'pipeline_running'
+        : parsed.sourceStep === 'pipeline_complete' && pipelineRunId && pipelineResult
+          ? 'pipeline_complete'
+          : 'edit'
+
     return {
-      sourceStep:
-        parsed.sourceStep === 'pipeline_running' || parsed.sourceStep === 'pipeline_complete'
-          ? parsed.sourceStep
-          : 'edit',
-      pipelineRunId: typeof parsed.pipelineRunId === 'string' ? parsed.pipelineRunId : null,
-      pipelineResult:
-        parsed.pipelineResult && typeof parsed.pipelineResult === 'object'
-        && (parsed.pipelineResult as { quality_review?: unknown }).quality_review
-          ? parsed.pipelineResult as Prompt2BlogPipelinePayload
-          : null,
+      sourceStep,
+      pipelineRunId: sourceStep === 'edit' ? null : pipelineRunId,
+      pipelineResult: sourceStep === 'pipeline_complete' ? pipelineResult : null,
     }
   } catch {
     return fallback

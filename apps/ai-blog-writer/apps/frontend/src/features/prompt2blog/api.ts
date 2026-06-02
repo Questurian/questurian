@@ -9,6 +9,7 @@ export type {
 export type {
   Prompt2BlogArticleTypeOption,
   Prompt2BlogDebugResponse,
+  Prompt2BlogDebugStages,
   Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOption,
   Prompt2BlogInputOptionsResponse,

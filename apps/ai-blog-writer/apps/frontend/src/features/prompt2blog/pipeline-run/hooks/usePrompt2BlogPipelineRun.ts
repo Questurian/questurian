@@ -6,7 +6,7 @@ import {
   getPrompt2BlogDebug,
   getPrompt2BlogResult,
   getPrompt2BlogStatus,
-  startPrompt2BlogRun,
+  type Prompt2BlogDebugStages,
   type Prompt2BlogPipelinePayload,
   type Prompt2BlogRunRequest,
   type Prompt2BlogStatusResponse,
@@ -20,7 +20,7 @@ import type {
   PipelineLogLevel,
   SourceStep,
 } from '../pipeline-run.types'
-import { validatePipelinePayload } from '../validate-pipeline-payload'
+import { usePrompt2BlogMutation } from './usePrompt2BlogMutation'
 
 export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
   const savedRun = useRef(loadSavedRunState())
@@ -30,14 +30,11 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
   const [pipelineResult, setPipelineResult] = useState<Prompt2BlogPipelinePayload | null>(
     savedRun.current.pipelineResult,
   )
-  const [pipelineDebugData, setPipelineDebugData] = useState<Record<string, unknown> | null>(null)
+  const [pipelineDebugData, setPipelineDebugData] = useState<Prompt2BlogDebugStages | null>(null)
   const [pipelineLogs, setPipelineLogs] = useState<PipelineLogEntry[]>([])
   const [showPipelineDebug, setShowPipelineDebug] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const lastObservedStageRef = useRef<string | null>(null)
-  const resumedRunLoggedRef = useRef(false)
   const lastStatusErrorRef = useRef<string | null>(null)
 
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
@@ -77,14 +74,13 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     )
   }, [pipelineRunId, pipelineStatus, sourceStep])
 
-  const run = useCallback(async () => {
-    const validationError = validatePipelinePayload(payload)
-    if (validationError) {
-      setError(validationError)
-      return
-    }
+  const {
+    isPending: isStartingPipeline,
+    mutate: startPipeline,
+    reset: resetStartPipeline,
+  } = usePrompt2BlogMutation(payload)
 
-    setIsLoading(true)
+  const run = useCallback(() => {
     setLoadingLabel('Starting final article pipeline...')
     setError(null)
     setPipelineResult(null)
@@ -92,25 +88,38 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     setPipelineDebugData(null)
     setPipelineLogs([])
     setShowPipelineDebug(false)
-    lastObservedStageRef.current = null
-    resumedRunLoggedRef.current = false
     lastStatusErrorRef.current = null
 
-    try {
-      const startResponse = await startPrompt2BlogRun(payload)
-      appendPipelineLog(`Pipeline started. Run ID: ${startResponse.run_id}`)
-      setLoadingLabel('Running final article pipeline...')
-      setPipelineRunId(startResponse.run_id)
-      setSourceStep('pipeline_running')
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to start final pipeline'
-      setError(message)
-      appendPipelineLog(`Pipeline start failed: ${message}`, 'error')
-      setIsLoading(false)
-    }
-  }, [appendPipelineLog, payload])
+    startPipeline(undefined, {
+      onSuccess: (startResponse) => {
+        resetStartPipeline()
+        appendPipelineLog(`Pipeline started. Run ID: ${startResponse.run_id}`)
+        setLoadingLabel('Running final article pipeline...')
+        setPipelineRunId(startResponse.run_id)
+        setSourceStep('pipeline_running')
+      },
+      onError: (err) => {
+        const message = err instanceof Error ? err.message : 'Failed to start final pipeline'
+        resetStartPipeline()
+        setError(message)
+        appendPipelineLog(`Pipeline start failed: ${message}`, 'error')
+        setLoadingLabel('')
+      },
+    })
+  }, [appendPipelineLog, resetStartPipeline, startPipeline])
+
+  useEffect(() => {
+    if (savedRun.current.sourceStep !== 'pipeline_running' || !savedRun.current.pipelineRunId) return
+    setLoadingLabel('Running final article pipeline...')
+    appendPipelineLog(`Resumed run: ${savedRun.current.pipelineRunId}`)
+  }, [appendPipelineLog])
+
+  useEffect(() => {
+    if (isStartingPipeline) setLoadingLabel('Starting final article pipeline...')
+  }, [isStartingPipeline])
 
   const reset = useCallback(() => {
+    resetStartPipeline()
     setSourceStep('edit')
     setPipelineRunId(null)
     setPipelineStatus(null)
@@ -118,13 +127,11 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     setPipelineDebugData(null)
     setPipelineLogs([])
     setShowPipelineDebug(false)
-    setIsLoading(false)
     setLoadingLabel('')
     setError(null)
-    resumedRunLoggedRef.current = false
     lastStatusErrorRef.current = null
     localStorage.removeItem(RUN_STORAGE_KEY)
-  }, [])
+  }, [resetStartPipeline])
 
   useEffect(() => {
     const persistedState: PersistedRunState = { sourceStep, pipelineRunId, pipelineResult }
@@ -145,14 +152,15 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     if (!status) return
     setPipelineStatus(status)
     lastStatusErrorRef.current = null
+  }, [statusQuery.data])
 
-    if (status.stage && lastObservedStageRef.current !== status.stage) {
-      lastObservedStageRef.current = status.stage
-      const stageLabel = PIPELINE_STAGE_LABELS[status.stage] || status.stage
-      appendPipelineLog(`Stage: ${stageLabel}`)
-      setLoadingLabel(`Running: ${stageLabel}`)
-    }
-  }, [appendPipelineLog, statusQuery.data])
+  useEffect(() => {
+    const stage = statusQuery.data?.stage
+    if (!stage) return
+    const stageLabel = PIPELINE_STAGE_LABELS[stage] || stage
+    appendPipelineLog(`Stage: ${stageLabel}`)
+    setLoadingLabel(`Running: ${stageLabel}`)
+  }, [appendPipelineLog, statusQuery.data?.stage])
 
   useEffect(() => {
     if (!statusQuery.error) return
@@ -183,7 +191,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
       if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
       appendPipelineLog('Pipeline completed successfully.')
       setSourceStep('pipeline_complete')
-      setIsLoading(false)
       setLoadingLabel('')
       return
     }
@@ -198,7 +205,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     if (isCancelled()) return
     if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
     setSourceStep('edit')
-    setIsLoading(false)
     setLoadingLabel('')
   }, [appendPipelineLog, pipelineRunId])
 
@@ -206,7 +212,6 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     const message = err instanceof Error ? err.message : 'Failed to handle pipeline result'
     appendPipelineLog(`Pipeline result handling failed: ${message}`, 'error')
     setError(message)
-    setIsLoading(false)
     setLoadingLabel('')
   }, [appendPipelineLog])
 
@@ -218,20 +223,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest) {
     onError: handleTerminalError,
   })
 
-  useEffect(() => {
-    if (sourceStep === 'pipeline_running' && !pipelineRunId) setSourceStep('edit')
-    if (sourceStep === 'pipeline_complete' && !pipelineResult) setSourceStep('edit')
-  }, [pipelineResult, pipelineRunId, sourceStep])
-
-  useEffect(() => {
-    if (sourceStep !== 'pipeline_running' || !pipelineRunId) return
-    setIsLoading(true)
-    if (!loadingLabel) setLoadingLabel('Running final article pipeline...')
-    if (!resumedRunLoggedRef.current) {
-      appendPipelineLog(`Resumed run: ${pipelineRunId}`)
-      resumedRunLoggedRef.current = true
-    }
-  }, [appendPipelineLog, loadingLabel, pipelineRunId, sourceStep])
+  const isLoading = isStartingPipeline || sourceStep === 'pipeline_running'
 
   return {
     sourceStep,

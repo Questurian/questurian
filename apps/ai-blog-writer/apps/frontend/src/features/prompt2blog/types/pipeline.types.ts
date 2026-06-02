@@ -202,3 +202,5 @@ export type Prompt2BlogDebugResponse = {
       }
     | null
 }
+
+export type Prompt2BlogDebugStages = Prompt2BlogDebugResponse['stages']

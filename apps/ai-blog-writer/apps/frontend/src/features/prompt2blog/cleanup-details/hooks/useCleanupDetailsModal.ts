@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { getPrompt2BlogDebug } from '../../api'
+import { getPrompt2BlogDebug, type Prompt2BlogDebugStages } from '../../api'
 import { readCleanupStageData } from '../cleanup-stage.parser'
 
 interface UseCleanupDetailsModalParams {
   pipelineRunId: string | null
-  pipelineDebugData: Record<string, unknown> | null
-  onDebugData: (data: Record<string, unknown>) => void
+  pipelineDebugData: Prompt2BlogDebugStages | null
+  onDebugData: (data: Prompt2BlogDebugStages) => void
 }
 
 export function useCleanupDetailsModal({
