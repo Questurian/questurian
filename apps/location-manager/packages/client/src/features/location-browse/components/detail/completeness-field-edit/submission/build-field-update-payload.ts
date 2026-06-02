@@ -50,14 +50,6 @@ export function buildFieldUpdatePayload(
       return { tripadvisorCuisines: trimmed || null };
     case "priceLevel":
       return { priceLevel: trimmed || null };
-    case "nightlifeDetails":
-      return { nightlifeDetails: trimmed || null };
-    case "accommodationsDetails":
-      return { accommodationsDetails: trimmed || null };
-    case "attractionsDetails":
-      return { attractionsDetails: trimmed || null };
-    case "keyLocationsDetails":
-      return { keyLocationsDetails: trimmed || null };
     case "operationHours":
       return { operationHours: trimmed || undefined };
     case "media":

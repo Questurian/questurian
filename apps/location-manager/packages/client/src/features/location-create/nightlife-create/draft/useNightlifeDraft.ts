@@ -1,4 +1,4 @@
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AddNightlifeFormData } from "../../validation/add-nightlife.schema";
 import { NIGHTLIFE_FORM_DEFAULT_VALUES } from "../nightlife-create.types";
@@ -23,6 +23,20 @@ export function useNightlifeDraft({
   setPrefillError,
 }: UseNightlifeDraftOptions) {
   const hasHydratedDraftRef = useRef(false);
+  const prefillSignatureRef = useRef(prefillSignature);
+  const lastPersistedDraftRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    prefillSignatureRef.current = prefillSignature;
+  }, [prefillSignature]);
+
+  const persistDraft = useCallback((formValues: AddNightlifeFormData, signature: string | null) => {
+    const draft = { formValues, prefillSignature: signature };
+    const snapshot = JSON.stringify(draft);
+    if (snapshot === lastPersistedDraftRef.current) return;
+    lastPersistedDraftRef.current = snapshot;
+    writeNightlifeDraftToStorage(draft);
+  }, []);
 
   useEffect(() => {
     const draft = readNightlifeDraftFromStorage();
@@ -33,6 +47,8 @@ export function useNightlifeDraft({
 
     form.reset(draft.formValues);
     setPrefillSignature(draft.prefillSignature);
+    prefillSignatureRef.current = draft.prefillSignature;
+    lastPersistedDraftRef.current = JSON.stringify(draft);
     setPrefillMessage("Restored unsaved draft from your previous session.");
     setPrefillError(null);
     hasHydratedDraftRef.current = true;
@@ -41,20 +57,20 @@ export function useNightlifeDraft({
   useEffect(() => {
     const subscription = form.watch((value) => {
       if (!hasHydratedDraftRef.current) return;
-      writeNightlifeDraftToStorage({
-        formValues: {
+      persistDraft(
+        {
           ...NIGHTLIFE_FORM_DEFAULT_VALUES,
           ...(value as Partial<AddNightlifeFormData>),
         },
-        prefillSignature,
-      });
+        prefillSignatureRef.current
+      );
     });
 
     return () => subscription.unsubscribe();
-  }, [form, prefillSignature]);
+  }, [form, persistDraft]);
 
   useEffect(() => {
     if (!hasHydratedDraftRef.current) return;
-    writeNightlifeDraftToStorage({ formValues: form.getValues(), prefillSignature });
-  }, [form, prefillSignature]);
+    persistDraft(form.getValues(), prefillSignature);
+  }, [form, persistDraft, prefillSignature]);
 }

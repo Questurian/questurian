@@ -1,4 +1,4 @@
-import { Input, Textarea } from "@client/components/ui";
+import { Input } from "@client/components/ui";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@client/components/ui/select";
 import { NightlifeMultiOptionTable, NightlifeSingleOptionTable, TaxonomyLocationEditor } from "@client/shared/components/forms";
 import { isValidLocationKey } from "@client/shared/lib/taxonomy-location";
@@ -13,6 +13,7 @@ import { CoordinatesFieldEditor } from "./CoordinatesFieldEditor";
 import { CuisinesFieldEditor } from "./CuisinesFieldEditor";
 import { IdealForFieldEditor } from "./IdealForFieldEditor";
 import { NeighborhoodDescriptionFieldEditor } from "./NeighborhoodDescriptionFieldEditor";
+import { isRawJsonFieldKey, RawJsonFieldInput } from "./RawJsonFieldInput";
 
 interface CompletenessFieldInputProps {
   field: FieldDef;
@@ -132,14 +133,6 @@ export function CompletenessFieldInput({
           disabled={isPending}
         />
       );
-    case "nightlifeDetails":
-      return <Textarea value={value} onChange={(event) => setValue(event.target.value)} rows={12} placeholder='{"name":"Venue Name","price_tier":"$$$"}' className="font-mono text-xs" />;
-    case "accommodationsDetails":
-      return <Textarea value={value} onChange={(event) => setValue(event.target.value)} rows={12} placeholder='{"core":{"name":"The Meridian Grand","price":"$$$$"}}' className="font-mono text-xs" />;
-    case "attractionsDetails":
-      return <Textarea value={value} onChange={(event) => setValue(event.target.value)} rows={12} placeholder='{"core":{"attraction_type":"museum","pricing":"$$"}}' className="font-mono text-xs" />;
-    case "keyLocationsDetails":
-      return <Textarea value={value} onChange={(event) => setValue(event.target.value)} rows={12} placeholder='{"location_type":"airport","status":"active"}' className="font-mono text-xs" />;
     case "coordinates":
       return <CoordinatesFieldEditor value={coordinateDraft} onChange={setCoordinateDraft} onCopy={copyText} />;
     case "ianaTimeId":
@@ -158,6 +151,9 @@ export function CompletenessFieldInput({
     case "operationHours":
       return <OperationHoursFieldEditor dayEntries={dayEntries} onChange={setDayEntries} />;
     default:
+      if (isRawJsonFieldKey(field.key)) {
+        return <RawJsonFieldInput fieldKey={field.key} value={value} onChange={setValue} />;
+      }
       return <Input value={value} onChange={(event) => setValue(event.target.value)} placeholder={`Enter ${field.label.toLowerCase()}`} type={field.key === "website" || field.key === "bookingUrl" ? "url" : "text"} />;
   }
 }

@@ -12,10 +12,10 @@ export default function Url2BlogPage() {
     <div className="url2blog-page">
       <HeroHeader />
       <main className="url2blog-wizard">
-        {run.currentStep === 'input' && <RunFormPanel run={run} />}
-        {run.currentStep === 'processing' && <ProcessingPanel run={run} />}
-        {run.currentStep === 'complete' && run.result && (
-          <ResultsPanel result={run.result} onStartOver={run.handleStartOver} />
+        {run.pipeline.currentStep === 'input' && <RunFormPanel run={run} />}
+        {run.pipeline.currentStep === 'processing' && <ProcessingPanel run={run} />}
+        {run.pipeline.currentStep === 'complete' && run.pipeline.result && (
+          <ResultsPanel result={run.pipeline.result} onStartOver={run.pipeline.handleStartOver} />
         )}
       </main>
     </div>

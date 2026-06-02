@@ -91,6 +91,10 @@ const saveStrategies: Record<string, SaveStrategy> = {
         "Failed to save cuisines"
       ),
   },
+  nightlifeDetails: createRawJsonStrategy("nightlifeDetails"),
+  accommodationsDetails: createRawJsonStrategy("accommodationsDetails"),
+  attractionsDetails: createRawJsonStrategy("attractionsDetails"),
+  keyLocationsDetails: createRawJsonStrategy("keyLocationsDetails"),
 };
 
 export function useSaveCompletenessField({
@@ -163,6 +167,41 @@ function createTaxonomyStrategy(): SaveStrategy {
       );
     },
   };
+}
+
+function createRawJsonStrategy(
+  fieldKey: "nightlifeDetails" | "accommodationsDetails" | "attractionsDetails" | "keyLocationsDetails"
+): SaveStrategy {
+  return {
+    canSave: ({ draft }) => parseRawJsonDraft(draft.value).valid,
+    save: ({ field, draft, save, showValidationError }) => {
+      const parsed = parseRawJsonDraft(draft.value);
+      if (!parsed.valid) {
+        showValidationError(parsed.message);
+        return;
+      }
+      save({ [fieldKey]: parsed.value }, `${field.label} saved`, `Failed to save ${field.label}`);
+    },
+  };
+}
+
+function parseRawJsonDraft(
+  value: string
+): { valid: true; value: Record<string, unknown> | null } | { valid: false; message: string } {
+  const trimmed = value.trim();
+  if (!trimmed) return { valid: true, value: null };
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed === null) return { valid: true, value: null };
+    if (!isPlainRecord(parsed)) return { valid: false, message: "JSON must be an object" };
+    return { valid: true, value: parsed };
+  } catch {
+    return { valid: false, message: "Enter valid JSON before saving" };
+  }
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 const nightlifeStrategy: SaveStrategy = {

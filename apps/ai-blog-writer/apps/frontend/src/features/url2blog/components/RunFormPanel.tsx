@@ -7,11 +7,14 @@ type RunFormPanelProps = { run: ReturnType<typeof useUrl2BlogRun> }
 export function RunFormPanel({ run }: RunFormPanelProps) {
   const {
     inputMode, setInputMode, url, setUrl, pastedText, setPastedText, inputError, setInputError,
+    handleSubmit,
+  } = run.input
+  const {
     selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId,
     customNarrativeFocus, setCustomNarrativeFocus, narrativeFocus,
     includeDebug, setIncludeDebug, modelName, setModelName, executionProfile, setExecutionProfile,
-    pipelineMutation, statusErrorMessage, mutationErrorMessage, handleSubmit,
-  } = run
+  } = run.config
+  const { pipelineMutation, statusErrorMessage, mutationErrorMessage } = run.pipeline
 
   return (
     <section className="url2blog-panel u2b-wizard-panel">

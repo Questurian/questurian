@@ -169,12 +169,33 @@ export function useUrl2BlogRun() {
   }
 
   return {
-    inputMode, setInputMode, url, setUrl, pastedText, setPastedText, inputError, setInputError,
-    selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId,
-    customNarrativeFocus, setCustomNarrativeFocus, narrativeFocus,
-    includeDebug, setIncludeDebug, modelName, setModelName, executionProfile, setExecutionProfile,
-    activeRunId, activeStatus, liveStageLabel: getStageLabel(activeStage), processingSteps,
-    statusQuery, statusErrorMessage, mutationErrorMessage, pipelineMutation, currentStep, result,
-    handleSubmit, handleStartOver,
+    input: {
+      inputMode, setInputMode,
+      url, setUrl,
+      pastedText, setPastedText,
+      inputError, setInputError,
+      handleSubmit,
+    },
+    config: {
+      selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId,
+      customNarrativeFocus, setCustomNarrativeFocus,
+      narrativeFocus,
+      includeDebug, setIncludeDebug,
+      modelName, setModelName,
+      executionProfile, setExecutionProfile,
+    },
+    pipeline: {
+      activeRunId,
+      activeStatus,
+      liveStageLabel: getStageLabel(activeStage),
+      processingSteps,
+      statusQuery,
+      statusErrorMessage,
+      mutationErrorMessage,
+      pipelineMutation,
+      currentStep,
+      result,
+      handleStartOver,
+    },
   }
 }
