@@ -1,10 +1,11 @@
-import { NightlifeMultiOptionTable, NightlifeSingleOptionTable } from "@client/shared/components/forms";
-import { isNightlifeFieldKey, isNightlifeMultiFieldKey } from "@client/shared/lib/nightlife-details";
+import type { Dispatch, SetStateAction } from "react";
+import { OptionTableFieldEditor, type OptionTableFieldOption } from "@client/shared/components/forms";
+import { getNightlifeFieldConfig, isNightlifeFieldKey } from "@client/shared/lib/nightlife-details";
 import { toggleNightlifeMusicSelection } from "@client/shared/lib/nightlife-music";
 import { Input } from "@client/components/ui";
 import type { FieldDef } from "../completeness-field-edit.types";
-import { getDetailFieldConfig } from "../completeness-detail-fields";
-import { getCoreFieldConfig } from "../core-completeness-fields";
+import { getDetailFieldConfig, type DetailFieldConfig } from "../completeness-detail-fields";
+import { defaultFieldEditor, getCoreFieldConfig } from "../core-completeness-fields";
 import type { CompletenessFieldDraft } from "../drafts/use-completeness-field-draft";
 import { NIGHTLIFE_MULTI_FIELD_OPTIONS, NIGHTLIFE_SINGLE_FIELD_OPTIONS } from "../field-options";
 
@@ -15,91 +16,121 @@ interface CompletenessFieldInputProps {
   isPending: boolean;
 }
 
+interface OptionTableEditorConfig {
+  label: string;
+  kind: "single" | "multi" | "boolean";
+  options: OptionTableFieldOption[];
+  value: string | string[];
+  onChange: (value: string | string[]) => void;
+  placeholder?: string;
+}
+
 export function CompletenessFieldInput({
   field,
   category,
   draft,
   isPending,
 }: CompletenessFieldInputProps) {
-  if (isNightlifeFieldKey(field.key)) {
-    if (isNightlifeMultiFieldKey(field.key)) {
-      return (
-        <NightlifeMultiOptionTable
-          label={field.label}
-          options={NIGHTLIFE_MULTI_FIELD_OPTIONS[field.key] ?? []}
-          values={draft.nightlifeMultiDraft}
-          onToggle={(selectedValue) =>
-            draft.setNightlifeMultiDraft((prev) =>
-              field.key === "nightlife.music"
-                ? toggleNightlifeMusicSelection(prev, selectedValue)
-                : prev.includes(selectedValue)
-                  ? prev.filter((item) => item !== selectedValue)
-                  : [...prev, selectedValue]
-            )
-          }
-        />
-      );
-    }
-
-    return (
-      <NightlifeSingleOptionTable
-        label={field.label}
-        options={NIGHTLIFE_SINGLE_FIELD_OPTIONS[field.key] ?? []}
-        value={draft.value}
-        onChange={draft.setValue}
-        placeholder={`Select ${field.label.toLowerCase()}`}
-      />
-    );
-  }
-
-  const detailConfig = getDetailFieldConfig(field.key);
-  if (detailConfig) {
-    if (detailConfig.kind === "multi") {
-      return (
-        <NightlifeMultiOptionTable
-          label={detailConfig.label}
-          options={detailConfig.options ?? []}
-          values={draft.detailMultiDraft}
-          onToggle={(selectedValue) =>
-            draft.setDetailMultiDraft((prev) =>
-              prev.includes(selectedValue)
-                ? prev.filter((item) => item !== selectedValue)
-                : [...prev, selectedValue]
-            )
-          }
-        />
-      );
-    }
-    if (detailConfig.kind === "text") {
-      return (
-        <Input
-          value={draft.value}
-          onChange={(event) => draft.setValue(event.target.value)}
-          placeholder={`Enter ${detailConfig.label.toLowerCase()}`}
-        />
-      );
-    }
-    return (
-      <NightlifeSingleOptionTable
-        label={detailConfig.label}
-        options={detailConfig.options ?? []}
-        value={draft.value}
-        onChange={draft.setValue}
-        placeholder={`Select ${detailConfig.label.toLowerCase()}`}
-      />
-    );
-  }
-
   const coreConfig = getCoreFieldConfig(field.key);
   if (coreConfig?.editor) {
     return <>{coreConfig.editor({ field, category, draft, isPending })}</>;
   }
 
-  return (
-    <Input
-      value={draft.value}
-      onChange={(event) => draft.setValue(event.target.value)}
-      placeholder={`Enter ${field.label.toLowerCase()}`}
-    />
-  );
+  const optionTableConfig = getOptionTableEditorConfig(field, draft);
+  if (optionTableConfig) {
+    return <OptionTableFieldEditor {...optionTableConfig} />;
+  }
+
+  const detailConfig = getDetailFieldConfig(field.key);
+  if (detailConfig?.kind === "text") {
+    return (
+      <Input
+        value={draft.value}
+        onChange={(event) => draft.setValue(event.target.value)}
+        placeholder={`Enter ${detailConfig.label.toLowerCase()}`}
+      />
+    );
+  }
+
+  return <>{defaultFieldEditor({ field, category, draft, isPending })}</>;
+}
+
+function getOptionTableEditorConfig(
+  field: FieldDef,
+  draft: CompletenessFieldDraft
+): OptionTableEditorConfig | null {
+  if (isNightlifeFieldKey(field.key)) {
+    const config = getNightlifeFieldConfig(field.key);
+    if (!config) return null;
+
+    if (config.kind === "multi") {
+      return {
+        label: field.label,
+        kind: config.kind,
+        options: NIGHTLIFE_MULTI_FIELD_OPTIONS[field.key] ?? [],
+        value: draft.nightlifeMultiDraft,
+        onChange: (nextValue) =>
+          updateMultiDraft(draft.setNightlifeMultiDraft, nextValue, {
+            musicMode: field.key === "nightlife.music",
+          }),
+      };
+    }
+
+    return {
+      label: field.label,
+      kind: config.kind,
+      options: NIGHTLIFE_SINGLE_FIELD_OPTIONS[field.key] ?? [],
+      value: draft.value,
+      onChange: (nextValue) => draft.setValue(typeof nextValue === "string" ? nextValue : ""),
+      placeholder: `Select ${field.label.toLowerCase()}`,
+    };
+  }
+
+  const detailConfig = getDetailFieldConfig(field.key);
+  if (detailConfig && detailConfig.kind !== "text") {
+    return toDetailOptionTableConfig(detailConfig, draft);
+  }
+
+  return null;
+}
+
+function toDetailOptionTableConfig(
+  config: DetailFieldConfig,
+  draft: CompletenessFieldDraft
+): OptionTableEditorConfig {
+  if (config.kind === "multi") {
+    return {
+      label: config.label,
+      kind: config.kind,
+      options: config.options ?? [],
+      value: draft.detailMultiDraft,
+      onChange: (nextValue) => updateMultiDraft(draft.setDetailMultiDraft, nextValue),
+    };
+  }
+
+  return {
+    label: config.label,
+    kind: config.kind === "boolean" ? "boolean" : "single",
+    options: config.options ?? [],
+    value: draft.value,
+    onChange: (nextValue) => draft.setValue(typeof nextValue === "string" ? nextValue : ""),
+    placeholder: `Select ${config.label.toLowerCase()}`,
+  };
+}
+
+function updateMultiDraft(
+  setDraft: Dispatch<SetStateAction<string[]>>,
+  nextValue: string | string[],
+  options: { musicMode?: boolean } = {}
+) {
+  const nextValues = Array.isArray(nextValue) ? nextValue : [];
+  setDraft((previous) => {
+    if (!options.musicMode) return nextValues;
+
+    const changedValue =
+      nextValues.find((item) => !previous.includes(item)) ??
+      previous.find((item) => !nextValues.includes(item));
+
+    return changedValue ? toggleNightlifeMusicSelection(previous, changedValue) : previous;
+  });
 }

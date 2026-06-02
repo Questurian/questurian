@@ -140,6 +140,7 @@ const NIGHTLIFE_FIELD_CONFIG = {
 } as const;
 
 export type NightlifeFieldKey = keyof typeof NIGHTLIFE_FIELD_CONFIG;
+export type NightlifeFieldConfig = (typeof NIGHTLIFE_FIELD_CONFIG)[NightlifeFieldKey];
 
 export interface NightlifeFieldUpdatePayload {
   nightlifeDetails: Record<string, unknown>;
@@ -264,6 +265,10 @@ function setNightlifeFieldValue(
 
 export function isNightlifeFieldKey(value: string): value is NightlifeFieldKey {
   return value in NIGHTLIFE_FIELD_CONFIG;
+}
+
+export function getNightlifeFieldConfig(fieldKey: string): NightlifeFieldConfig | undefined {
+  return isNightlifeFieldKey(fieldKey) ? NIGHTLIFE_FIELD_CONFIG[fieldKey] : undefined;
 }
 
 export function isNightlifeMultiFieldKey(

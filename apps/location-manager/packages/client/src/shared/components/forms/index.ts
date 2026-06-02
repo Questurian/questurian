@@ -8,4 +8,6 @@ export {
   NightlifeMultiOptionTable,
   NightlifeSingleOptionTable,
 } from "./nightlife-option-table";
+export { OptionTableFieldEditor } from "./option-table-field-editor";
+export type { OptionTableFieldOption } from "./option-table-field-editor";
 export { TaxonomyLocationEditor } from "./taxonomy-location-editor";
