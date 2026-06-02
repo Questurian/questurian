@@ -22,6 +22,9 @@ export type {
   Prompt2BlogStageTrace,
   Prompt2BlogStatusResponse,
 } from './types/pipeline.types'
+export {
+  PROMPT2BLOG_PIPELINE_STAGES,
+} from './types/pipeline.types'
 
 export {
   fetchArticleTypeGuidelinesById,

@@ -4,11 +4,49 @@ import type {
   Prompt2BlogDebugResponse,
   Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOptionsResponse,
+  Prompt2BlogPipelineStage,
   Prompt2BlogResultResponse,
   Prompt2BlogRunRequest,
   Prompt2BlogRunResponse,
   Prompt2BlogStatusResponse,
 } from '../types/pipeline.types'
+import { PROMPT2BLOG_PIPELINE_STAGES } from '../types/pipeline.types'
+
+const PROMPT2BLOG_STATUS_STATES = ['pending', 'running', 'completed', 'failed'] as const
+
+type Prompt2BlogStatusState = Prompt2BlogStatusResponse['state']
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+export function resolvePrompt2BlogPipelineStage(value: unknown): Prompt2BlogPipelineStage {
+  return PROMPT2BLOG_PIPELINE_STAGES.includes(value as Prompt2BlogPipelineStage)
+    ? value as Prompt2BlogPipelineStage
+    : 'queued'
+}
+
+function resolvePrompt2BlogStatusState(value: unknown): Prompt2BlogStatusState {
+  return PROMPT2BLOG_STATUS_STATES.includes(value as Prompt2BlogStatusState)
+    ? value as Prompt2BlogStatusState
+    : 'pending'
+}
+
+export function normalizePrompt2BlogStatusResponse(
+  value: unknown,
+  fallbackRunId: string,
+): Prompt2BlogStatusResponse {
+  const record = isRecord(value) ? value : {}
+
+  return {
+    run_id: typeof record.run_id === 'string' ? record.run_id : fallbackRunId,
+    feature: typeof record.feature === 'string' ? record.feature : 'prompt2blog',
+    state: resolvePrompt2BlogStatusState(record.state),
+    stage: resolvePrompt2BlogPipelineStage(record.stage),
+    error: typeof record.error === 'string' ? record.error : null,
+    updated_at: typeof record.updated_at === 'string' ? record.updated_at : '',
+  }
+}
 
 export async function startPrompt2BlogRun(
   payload: Prompt2BlogRunRequest,
@@ -57,7 +95,7 @@ export async function getPrompt2BlogStatus(runId: string): Promise<Prompt2BlogSt
     throw await parseError(response, 'Failed to fetch Prompt2Blog run status')
   }
 
-  return response.json()
+  return normalizePrompt2BlogStatusResponse(await response.json(), runId)
 }
 
 export async function getPrompt2BlogResult(runId: string): Promise<Prompt2BlogResultResponse> {

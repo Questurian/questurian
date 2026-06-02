@@ -82,7 +82,7 @@ Definition: payload sent to backend to start a run.
 
 ### `PipelineStatusResponse`
 
-Definition: backend → client poll response. Field `state` is `pending` / `running` / `completed` / `failed`.
+Definition: backend → client poll response. Field `state` is `pending` / `running` / `completed` / `failed`; field `stage` names the current pipeline phase.
 
 ### `LocationFieldDefinition`
 
