@@ -3,9 +3,9 @@ import {
   URL2BLOG_PROGRESS_STEPS,
   type Url2BlogProgressStep,
 } from '../constants/pipeline-ui.constants'
-import { getStepStatus } from '../../pipelineRuns/progress'
+import { getStepStatus, type PipelineStepState } from '../../pipelineRuns/progress'
 
-export type ProgressItemState = 'pending' | 'running' | 'done' | 'failed'
+export type ProgressItemState = PipelineStepState
 
 const PROGRESS_STAGE_ORDER = URL2BLOG_PROGRESS_STEPS
   .map((step) => step.stage)

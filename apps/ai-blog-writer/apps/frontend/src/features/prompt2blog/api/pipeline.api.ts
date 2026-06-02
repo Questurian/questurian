@@ -95,6 +95,13 @@ export async function getPrompt2BlogResult(runId: string): Promise<Prompt2BlogRe
   return response.json()
 }
 
+/**
+ * Staging-facing stable alias for {@link getPrompt2BlogResult}. The shared
+ * editorial-staging layer (`EditorialStageArticleApi.fetchResult`) consumes a
+ * `fetchResult` method, and url2blog/youtube2blog expose theirs under that same
+ * name. Keep this alias so `StageArticlePage` can wire prompt2blog into the
+ * shared contract without leaking the feature-specific name.
+ */
 export async function fetchResult(runId: string): Promise<Prompt2BlogResultResponse> {
   return getPrompt2BlogResult(runId)
 }

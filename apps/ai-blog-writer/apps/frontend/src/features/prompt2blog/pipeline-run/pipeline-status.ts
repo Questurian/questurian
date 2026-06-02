@@ -30,10 +30,9 @@ export function getPipelineStepStatus(
   status: Prompt2BlogStatusResponse | null,
 ): PipelineStepStatus {
   if (!status) return step === 'queued' ? 'running' : 'pending'
-  const stepStatus = getStepStatus({
+  return getStepStatus({
     step,
     status,
     stageOrder: PROMPT2BLOG_PIPELINE_STAGES,
   })
-  return stepStatus === 'failed' ? 'error' : stepStatus
 }

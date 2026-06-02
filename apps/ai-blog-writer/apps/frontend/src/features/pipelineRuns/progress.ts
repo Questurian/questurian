@@ -3,6 +3,13 @@ export type PipelineRunProgressStatus = {
   stage?: string | null
 }
 
+/**
+ * Canonical UI-facing status union for a single pipeline step, shared across
+ * every pipeline feature (prompt2blog, url2blog, youtube2blog). Use this rather
+ * than re-declaring per-feature unions so `getStepStatus` consumers stay
+ * consistent. Note the failure state is `'failed'` — do not rename it to
+ * `'error'` at feature boundaries.
+ */
 export type PipelineStepState = 'pending' | 'running' | 'done' | 'failed'
 
 const DEFAULT_PIPELINE_STATES = ['pending', 'running', 'completed', 'failed'] as const

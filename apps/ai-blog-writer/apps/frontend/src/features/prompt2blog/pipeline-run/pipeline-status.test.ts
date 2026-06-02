@@ -28,11 +28,11 @@ describe('getPipelineStepStatus', () => {
     expect(getPipelineStepStatus('stage_quality_audit', status)).toBe('pending')
   })
 
-  it('marks failed stage as error and previous stages as done', () => {
+  it('marks failed stage as failed and previous stages as done', () => {
     const status = createStatus({ state: 'failed', stage: 'stage_compose', error: 'bad draft' })
 
     expect(getPipelineStepStatus('stage_coverage_check', status)).toBe('done')
-    expect(getPipelineStepStatus('stage_compose', status)).toBe('error')
+    expect(getPipelineStepStatus('stage_compose', status)).toBe('failed')
     expect(getPipelineStepStatus('stage_quality_audit', status)).toBe('pending')
   })
 

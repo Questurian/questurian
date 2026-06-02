@@ -82,6 +82,54 @@ export function OptionTableFieldEditor({
 
   const selectedValue = typeof value === "string" ? value : "";
 
+  if (kind === "boolean") {
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <div className="rounded-md border border-border overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/40">
+              <tr>
+                <th className="text-left px-2 py-1.5 font-medium w-24">Select</th>
+                <th className="text-left px-2 py-1.5 font-medium w-44">Option</th>
+                <th className="text-left px-2 py-1.5 font-medium">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {options.map((option) => {
+                const isChecked = selectedValue === option.value;
+
+                return (
+                  <tr
+                    key={option.value}
+                    className={
+                      isChecked ? "bg-primary/10 border-t border-border" : "border-t border-border"
+                    }
+                  >
+                    <td className="px-2 py-1.5">
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name={label}
+                          checked={isChecked}
+                          onChange={() => onChange(option.value)}
+                        />
+                        <span className="text-[11px]">{isChecked ? "Selected" : "Select"}</span>
+                      </label>
+                    </td>
+                    <td className="px-2 py-1.5 font-medium">{option.label}</td>
+                    <td className="px-2 py-1.5 text-muted-foreground">{option.description}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <Label>{label}</Label>

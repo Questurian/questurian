@@ -53,12 +53,12 @@
   color: #166534;
 }
 
-.p2b-progress-item--error {
+.p2b-progress-item--failed {
   border-color: #fca5a5;
   background: #fef2f2;
 }
 
-.p2b-progress-item--error span {
+.p2b-progress-item--failed span {
   color: #b91c1c;
 }
 

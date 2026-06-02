@@ -1,7 +1,8 @@
 import type { Prompt2BlogPipelinePayload } from '../api'
+import type { PipelineStepState } from '../../pipelineRuns/progress'
 
 export type SourceStep = 'edit' | 'pipeline_running' | 'pipeline_complete'
-export type PipelineStepStatus = 'pending' | 'running' | 'done' | 'error'
+export type PipelineStepStatus = PipelineStepState
 export type PipelineLogLevel = 'info' | 'error'
 
 export interface PersistedRunState {
