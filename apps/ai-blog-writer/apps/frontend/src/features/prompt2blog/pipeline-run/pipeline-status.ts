@@ -1,5 +1,6 @@
 import {
   PROMPT2BLOG_PIPELINE_STAGES,
+  type KnownPrompt2BlogPipelineStage,
   type Prompt2BlogPipelineStage,
   type Prompt2BlogStatusResponse,
 } from '../types/pipeline.types'
@@ -21,10 +22,11 @@ export const PIPELINE_STAGE_LABELS: Record<Prompt2BlogPipelineStage, string> = {
   stage_title: 'Generate final title',
   stage_finalize: 'Finalize markdown output',
   complete: 'Complete',
+  unknown: 'Unknown pipeline stage',
 }
 
 export function getPipelineStepStatus(
-  step: Prompt2BlogPipelineStage,
+  step: KnownPrompt2BlogPipelineStage,
   status: Prompt2BlogStatusResponse | null,
 ): PipelineStepStatus {
   if (!status) return step === 'queued' ? 'running' : 'pending'

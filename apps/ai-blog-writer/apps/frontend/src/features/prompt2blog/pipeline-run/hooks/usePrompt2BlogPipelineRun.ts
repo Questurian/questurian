@@ -9,7 +9,7 @@ import {
   type Prompt2BlogStatusResponse,
 } from '../../api'
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
-import { PROMPT2BLOG_PIPELINE_STAGES } from '../../types/pipeline.types'
+import { PROMPT2BLOG_PIPELINE_STAGES, type KnownPrompt2BlogPipelineStage } from '../../types/pipeline.types'
 import { PIPELINE_STAGE_LABELS } from '../pipeline-status'
 import type {
   PipelineLogEntry,
@@ -17,7 +17,6 @@ import type {
 } from '../pipeline-run.types'
 import { loadPrompt2BlogTerminalArtifacts } from './loadPrompt2BlogTerminalArtifacts'
 import { usePersistedPipelineRunState } from './usePersistedPipelineRunState'
-import { usePipelineStatusSideEffects } from './usePipelineStatusSideEffects'
 import { usePrompt2BlogMutation } from './usePrompt2BlogMutation'
 
 export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null) {
@@ -38,6 +37,8 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const resetTerminalHandledRef = useRef<() => void>(() => undefined)
+  const lastStatusStageRef = useRef<string | null>(null)
+  const lastStatusErrorRef = useRef<string | null>(null)
 
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
     setPipelineLogs(prev => [
@@ -65,7 +66,9 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
 
   const canOpenCleanupModal = useMemo(() => {
     const cleanupStageIndex = PROMPT2BLOG_PIPELINE_STAGES.indexOf(CLEANUP_STAGE_KEY)
-    const currentStageIndex = pipelineStatus ? PROMPT2BLOG_PIPELINE_STAGES.indexOf(pipelineStatus.stage) : -1
+    const currentStageIndex = pipelineStatus && pipelineStatus.stage !== 'unknown'
+      ? PROMPT2BLOG_PIPELINE_STAGES.indexOf(pipelineStatus.stage as KnownPrompt2BlogPipelineStage)
+      : -1
     return Boolean(
       pipelineRunId
       && (sourceStep === 'pipeline_complete' || currentStageIndex >= cleanupStageIndex),
@@ -97,19 +100,39 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     errorPollIntervalMs: 2000,
   })
 
-  useEffect(() => {
-    const status = statusQuery.data
-    if (!status) return
-    setPipelineStatus(status)
-  }, [statusQuery.data])
+  const resetStatusError = useCallback(() => {
+    lastStatusErrorRef.current = null
+  }, [])
 
-  const { resetStatusError } = usePipelineStatusSideEffects({
-    status: statusQuery.data,
-    error: statusQuery.error,
-    labels: PIPELINE_STAGE_LABELS,
-    appendLog: appendPipelineLog,
-    setLoadingLabel,
-  })
+  const handleStatusUpdate = useCallback((status: Prompt2BlogStatusResponse) => {
+    setPipelineStatus(status)
+    lastStatusErrorRef.current = null
+
+    const stageKey = status.raw_stage || status.stage
+    if (lastStatusStageRef.current === stageKey) return
+    lastStatusStageRef.current = stageKey
+
+    const stageLabel = status.stage === 'unknown' && status.raw_stage
+      ? `Unknown pipeline stage: ${status.raw_stage}`
+      : PIPELINE_STAGE_LABELS[status.stage] || status.stage
+    appendPipelineLog(`Stage: ${stageLabel}`)
+    setLoadingLabel(`Running: ${stageLabel}`)
+  }, [appendPipelineLog])
+
+  useEffect(() => {
+    if (statusQuery.data) {
+      handleStatusUpdate(statusQuery.data)
+      return
+    }
+
+    if (!statusQuery.error) return
+    const message = statusQuery.error instanceof Error
+      ? statusQuery.error.message
+      : 'Failed to poll pipeline status'
+    if (lastStatusErrorRef.current === message) return
+    lastStatusErrorRef.current = message
+    appendPipelineLog(`Status polling error: ${message}`, 'error')
+  }, [appendPipelineLog, handleStatusUpdate, statusQuery.data, statusQuery.error])
 
   const run = useCallback(() => {
     resetTerminalHandledRef.current()
@@ -120,6 +143,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setPipelineStatus(null)
     setPipelineDebugData(null)
     setPipelineLogs([])
+    lastStatusStageRef.current = null
     setShowPipelineDebug(false)
 
     startPipeline(undefined, {
@@ -149,6 +173,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setPipelineResult(null)
     setPipelineDebugData(null)
     setPipelineLogs([])
+    lastStatusStageRef.current = null
     setShowPipelineDebug(false)
     setLoadingLabel('')
     setError(null)

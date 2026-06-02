@@ -88,13 +88,15 @@ export const PROMPT2BLOG_PIPELINE_STAGES = [
   'complete',
 ] as const
 
-export type Prompt2BlogPipelineStage = typeof PROMPT2BLOG_PIPELINE_STAGES[number]
+export type KnownPrompt2BlogPipelineStage = typeof PROMPT2BLOG_PIPELINE_STAGES[number]
+export type Prompt2BlogPipelineStage = KnownPrompt2BlogPipelineStage | 'unknown'
 
 export type Prompt2BlogStatusResponse = {
   run_id: string
   feature: string
   state: 'pending' | 'running' | 'completed' | 'failed'
   stage: Prompt2BlogPipelineStage
+  raw_stage?: string | null
   error: string | null
   updated_at: string
 }

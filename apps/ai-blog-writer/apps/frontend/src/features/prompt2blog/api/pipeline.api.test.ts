@@ -25,7 +25,7 @@ describe('normalizePrompt2BlogStatusResponse', () => {
     })
   })
 
-  it('defaults missing or unknown stage to queued', () => {
+  it('defaults missing stage to queued', () => {
     expect(
       normalizePrompt2BlogStatusResponse(
         {
@@ -38,7 +38,9 @@ describe('normalizePrompt2BlogStatusResponse', () => {
         'fallback-run',
       ).stage,
     ).toBe('queued')
+  })
 
+  it('normalizes unknown stage to a visible unknown state', () => {
     expect(
       normalizePrompt2BlogStatusResponse(
         {
@@ -50,8 +52,16 @@ describe('normalizePrompt2BlogStatusResponse', () => {
           updated_at: '2026-01-01T00:00:00Z',
         },
         'fallback-run',
-      ).stage,
-    ).toBe('queued')
+      ),
+    ).toEqual({
+      run_id: 'run-123',
+      feature: 'prompt2blog',
+      state: 'running',
+      stage: 'unknown',
+      raw_stage: 'stage_unknown',
+      error: null,
+      updated_at: '2026-01-01T00:00:00Z',
+    })
   })
 
   it('defaults missing or unknown state to pending', () => {

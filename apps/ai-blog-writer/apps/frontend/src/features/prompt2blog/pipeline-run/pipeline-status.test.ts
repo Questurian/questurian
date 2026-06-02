@@ -44,10 +44,17 @@ describe('getPipelineStepStatus', () => {
     expect(getPipelineStepStatus('complete', status)).toBe('done')
   })
 
-  it('treats normalized missing or unknown stage as queued', () => {
+  it('treats normalized missing stage as queued', () => {
     const status = createStatus({ stage: 'queued' as Prompt2BlogPipelineStage })
 
     expect(getPipelineStepStatus('queued', status)).toBe('running')
+    expect(getPipelineStepStatus('stage_input_validate', status)).toBe('pending')
+  })
+
+  it('does not make an unknown stage look like a restart', () => {
+    const status = createStatus({ stage: 'unknown', raw_stage: 'stage_unknown' })
+
+    expect(getPipelineStepStatus('queued', status)).toBe('pending')
     expect(getPipelineStepStatus('stage_input_validate', status)).toBe('pending')
   })
 })

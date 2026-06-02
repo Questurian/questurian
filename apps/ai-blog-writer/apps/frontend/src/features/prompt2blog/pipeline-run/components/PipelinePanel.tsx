@@ -52,6 +52,12 @@ export function PipelinePanel({ run, onOpenCleanupModal, onReset }: PipelinePane
               status={getPipelineStepStatus(step, pipelineStatus)}
             />
           ))}
+          {pipelineStatus?.stage === 'unknown' && (
+            <PipelineStageItem
+              label={pipelineStatus.raw_stage ? `Unknown: ${pipelineStatus.raw_stage}` : 'Unknown stage'}
+              status={pipelineStatus.state === 'failed' ? 'error' : 'running'}
+            />
+          )}
         </div>
 
         {pipelineLogs.length > 0 && (
