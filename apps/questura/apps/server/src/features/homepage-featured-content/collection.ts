@@ -4,40 +4,12 @@ import {
   revalidateLocationHomepageAfterChange,
   revalidateLocationHomepageAfterDelete,
 } from '@/features/public-revalidation/revalidate-client'
-import { ArticleGridBlock } from './article-grid/block'
-import { ArticleListBlock } from './article-list/block'
-import { FeaturedArticleBlock } from './featured-article/block'
-import { FeaturedArticleCarouselBlock } from './featured-article-carousel/block'
-import { FeaturedArticlesBlock } from './featured-articles/block'
-import { HotelGridBlock } from './hotel-grid/block'
-import { TourGridBlock } from './tour-grid/block'
-import { LocationGridBlock } from './location-grid/block'
-import { QuesturianMapsBlock } from './questurian-maps/block'
-import { WhereToEatDrinkBlock } from './where-to-eat-drink/block'
-import { ThingsToDoAttractionsBlock } from './things-to-do-attractions/block'
-import { ThingsToDoListiclesBlock } from './things-to-do-listicles/block'
-import { NewsletterSignupBlock } from './newsletter-signup/block'
+import { curatedBlockRegistry } from './block-registry'
 import {
   resolveLocationGridScopeFromLocation,
 } from './location-grid/service'
 import { normalizePageBlocksArrayInPlace } from './resolve-page-blocks/operations/normalize-page-blocks'
 import { withSourceBlockKey } from './resolve-page-blocks/lib/source-block-key-field'
-
-const HOMEPAGE_BLOCK_TYPES = [
-  FeaturedArticleBlock,
-  FeaturedArticleCarouselBlock,
-  FeaturedArticlesBlock,
-  ArticleGridBlock,
-  LocationGridBlock,
-  QuesturianMapsBlock,
-  HotelGridBlock,
-  TourGridBlock,
-  WhereToEatDrinkBlock,
-  ThingsToDoListiclesBlock,
-  ThingsToDoAttractionsBlock,
-  NewsletterSignupBlock,
-  ArticleListBlock,
-] as const
 
 export const LocationHomepages: CollectionConfig = {
   slug: 'location-homepages',
@@ -84,7 +56,7 @@ export const LocationHomepages: CollectionConfig = {
     {
       name: 'pageBlocks',
       type: 'blocks',
-      blocks: withSourceBlockKey([...HOMEPAGE_BLOCK_TYPES]),
+      blocks: withSourceBlockKey(curatedBlockRegistry.blocks),
       label: 'Page blocks',
       admin: {
         description: 'Legacy live blocks. Migrated into draft/published page blocks.',
@@ -94,7 +66,7 @@ export const LocationHomepages: CollectionConfig = {
     {
       name: 'draftPageBlocks',
       type: 'blocks',
-      blocks: withSourceBlockKey([...HOMEPAGE_BLOCK_TYPES]),
+      blocks: withSourceBlockKey(curatedBlockRegistry.blocks),
       label: 'Draft page blocks',
       admin: {
         description: 'Private working copy for editors.',
@@ -103,7 +75,7 @@ export const LocationHomepages: CollectionConfig = {
     {
       name: 'publishedPageBlocks',
       type: 'blocks',
-      blocks: withSourceBlockKey([...HOMEPAGE_BLOCK_TYPES]),
+      blocks: withSourceBlockKey(curatedBlockRegistry.blocks),
       label: 'Published page blocks',
       admin: {
         description: 'Public snapshot served when this homepage is enabled.',

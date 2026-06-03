@@ -48,7 +48,8 @@ Slices present today: `featured-article`, `featured-article-carousel`, `featured
 
 Cross-cutting slices (operate across all block types):
 
-- `resolve-page-blocks/` — turns stored blocks into editor / public payloads. `operations/normalize-page-blocks.ts` is the **write-path dispatcher** (`isCuratedHomepageBlockType` → per-type normalize/validate/build). `operations/resolve-blocks.ts` is the **read-path** resolver.
+- `block-registry/` — the **single source of truth for which block types exist**. `curatedBlockRegistry` holds an ordered `CuratedBlockDefinition[]` (for now just `{ blockType, block }`) and exposes `keys`, `blocks` (feeds the collection's three block arrays), `has` (the write-path guard), and `get`. The seam ADR 0005 names; per-type behavior is folded in here in later phases.
+- `resolve-page-blocks/` — turns stored blocks into editor / public payloads. `operations/normalize-page-blocks.ts` is the **write-path dispatcher** (`curatedBlockRegistry.has` → per-type normalize/validate/build). `operations/resolve-blocks.ts` is the **read-path** resolver.
 - `location-homepages/` — homepage lifecycle (get / publish / delete) and `lib/publish-status.ts` (publishability rules + draft-vs-published status).
 - `location-homepage-blocks/` — add / delete / reorder / update a single block in a draft.
 - `slot-count/` — resolve stored slot count per block type.
@@ -65,7 +66,7 @@ One entry in a homepage's block array. `{ id, blockType, slotCount, sectionHeadi
 
 ### `blockType`
 
-The discriminant. The authoritative server-side list is `HOMEPAGE_BLOCK_TYPES` in `collection.ts` (the Payload `Block[]`) and the `isCuratedHomepageBlockType` guard in `normalize-page-blocks.ts`. The frontend mirror is `HOMEPAGE_PAGE_BLOCK_TYPES` in `pageBlocks.ts`.
+The discriminant. The authoritative server-side list is `curatedBlockRegistry` in `block-registry/` — `collection.ts` derives its three block arrays from `curatedBlockRegistry.blocks`, and `normalize-page-blocks.ts` gates on `curatedBlockRegistry.has`. The frontend mirror is `HOMEPAGE_PAGE_BLOCK_TYPES` in `pageBlocks.ts`.
 
 ### Slot / `slotCount`
 
@@ -112,8 +113,8 @@ Child-location constraint for location homepages. `location-grid` and `questuria
 Adding a block type is a fan-out across fixed sites in **both repos**. Miss one and the block half-works (saves but won't validate, or validates but won't render). Server first:
 
 1. **Slice** — new `<block-type>/` folder: `block.ts` (Payload `Block`), `constants.ts` (slot limits), `lib/refs.ts`, `lib/candidate.ts` + `lib/repository.ts`, `operations/{search,selection,validate}.ts`, `types/`, `service.ts` barrel. Prefer **extending** an existing slice (e.g. clone `hotel-grid`) over a parallel implementation when behavior matches.
-2. **`collection.ts`** — import the block and add it to `HOMEPAGE_BLOCK_TYPES`. (The global picks up the same array.)
-3. **`resolve-page-blocks/operations/normalize-page-blocks.ts`** — add the literal to the `isCuratedHomepageBlockType` guard **(both the type union and the body)**, and add the normalize → validate → build branch.
+2. **`block-registry/registry.ts`** — import the block and add it to `CURATED_BLOCK_DEFINITIONS` (in editor order). This registers the type for the collection's block arrays **and** the write-path guard at once; `collection.ts` needs no edit.
+3. **`resolve-page-blocks/operations/normalize-page-blocks.ts`** — add the normalize → validate → build branch. (Membership is already handled by `curatedBlockRegistry.has` — no per-type guard to update.)
 4. **`resolve-page-blocks/operations/resolve-blocks.ts`** — add the read-path resolution branch.
 5. **`location-homepages/lib/publish-status.ts`** — add to `ARTICLE_BLOCK_TYPES` and/or `requiredImageField` if it has per-slot image readiness rules.
 6. **`slot-count/lib/resolve.ts`** — add slot-count resolution if non-default.
@@ -127,6 +128,6 @@ See `.cursor/rules/questurian-payload-studio.mdc` for the dual-repo working rule
 
 ## Open Questions
 
-- **Block-type list duplication.** The set of curated block types is restated in ~10 places (server `HOMEPAGE_BLOCK_TYPES`, `isCuratedHomepageBlockType`, `ARTICLE_BLOCK_TYPES`, convert lists, slot-count, frontend `HOMEPAGE_PAGE_BLOCK_CONFIG` + guards). There is no single registry. A `CuratedBlockDefinition` registry (ADR 0005) would collapse the checklist above; deliberately **not** done in Phase 0.
-- **`isCuratedHomepageBlockType` drift.** Its type-signature union omits `tour-grid`, but the runtime body checks for it — a latent inconsistency to reconcile when the registry lands. Documented here, not fixed (Phase 0 is docs-only).
+- **Block-type list duplication (partially resolved).** `block-registry/` (ADR 0005) is now the single source of truth: the collection's block arrays and the write-path guard both derive from it, replacing the former `HOMEPAGE_BLOCK_TYPES` array and `isCuratedHomepageBlockType` guard. Still restated independently and **not yet folded into the registry**: `ARTICLE_BLOCK_TYPES` / `PUBLIC_ARTICLE_BLOCK_TYPES` (publish + public formatting), the convert source/target lists, slot-count resolution, section-heading list, and the frontend `HOMEPAGE_PAGE_BLOCK_CONFIG` + `isX` guards. These collapse into registry metadata in later phases.
+- **`isCuratedHomepageBlockType` drift (resolved).** The guard is gone; membership is `curatedBlockRegistry.has`, derived from the one definition list, so the former type-union-vs-runtime-body drift (`tour-grid` omitted from the union) can no longer occur.
 - Closes the root `CONTEXT.md` open question (§ Open Questions) that flagged `homepage-featured-content` as large enough to warrant its own `CONTEXT.md`.

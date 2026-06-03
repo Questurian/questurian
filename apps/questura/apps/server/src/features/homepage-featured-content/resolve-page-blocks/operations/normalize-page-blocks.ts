@@ -2,6 +2,7 @@ import type { PayloadRequest } from 'payload'
 
 import { APP_CONFIG } from '@/shared/config'
 
+import { curatedBlockRegistry } from '../../block-registry'
 import { normalizeArticleGridFourLayout } from '../../article-grid/service'
 import {
   buildHotelGridGlobalData,
@@ -51,36 +52,6 @@ type NormalizePageBlocksOptions = {
   originalPageBlocks?: unknown[]
 }
 
-function isCuratedHomepageBlockType(
-  value: unknown,
-): value is
-  | 'featured-article'
-  | 'featured-article-carousel'
-  | 'featured-articles'
-  | 'article-grid'
-  | 'location-grid'
-  | 'questurian-maps'
-  | 'hotel-grid'
-  | 'where-to-eat-drink'
-  | 'things-to-do-listicles'
-  | 'things-to-do-attractions'
-  | 'article-list'
-  | 'newsletter-signup' {
-  return value === 'featured-article'
-    || value === 'featured-article-carousel'
-    || value === 'featured-articles'
-    || value === 'article-grid'
-    || value === 'location-grid'
-    || value === 'questurian-maps'
-    || value === 'hotel-grid'
-    || value === 'tour-grid'
-    || value === 'where-to-eat-drink'
-    || value === 'things-to-do-listicles'
-    || value === 'things-to-do-attractions'
-    || value === 'article-list'
-    || value === 'newsletter-signup'
-}
-
 /**
  * Mutates block `items` in place for curated blocks (same as Payload beforeValidate).
  * @param locationGridScope — child-location scope for location homepages
@@ -104,7 +75,7 @@ export async function normalizePageBlocksArrayInPlace(
     if (
       typeof block !== 'object'
       || block === null
-      || !isCuratedHomepageBlockType((block as Record<string, unknown>).blockType)
+      || !curatedBlockRegistry.has((block as Record<string, unknown>).blockType)
     ) {
       continue
     }
