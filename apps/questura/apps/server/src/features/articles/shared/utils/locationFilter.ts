@@ -1,6 +1,15 @@
 import type { FilterOptionsProps, Where } from 'payload'
 import { getArticleLocationScope } from '@/shared/location/server/articleLocationScope'
 
+/**
+ * Single source of truth for the relationship picker filter shared by every
+ * article collection (single-type listicles and listicle itineraries).
+ *
+ * Restricts the picker to published items within the parent article's location
+ * scope. The collection slug argument is accepted for call-site readability but
+ * is not used — the scope is derived entirely from the parent `location` and
+ * `sharedNeighborhoods` on the form.
+ */
 export const createLocationFilter = (_: string) => {
   return async ({ data, req }: FilterOptionsProps): Promise<Where> => {
     const parentLocation = data?.location as string | undefined

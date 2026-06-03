@@ -11,7 +11,7 @@ import { revalidateArticleCollection } from '@/features/public-revalidation/reva
 import {
   assertCanDeleteHomepageFeaturedContent,
   assertCanUnpublishHomepageFeaturedContent,
-} from '@/features/homepage-featured-content/location-homepages/lib/reference-locks'
+} from '../../shared/lib/referenceLocks'
 import {
   step1Complete,
   inUpdateMode,

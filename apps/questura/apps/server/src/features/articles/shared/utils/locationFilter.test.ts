@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createLocationFilter as createItineraryLocationFilter } from '@/features/articles/listicle-itineraries/blocks/utils/locationFilter'
-import { createLocationFilter as createSingleTypeLocationFilter } from '@/features/articles/single-type-listicles/blocks/utils/locationFilter'
+import { createLocationFilter } from './locationFilter'
 
 const createPayloadStub = (docs: Array<Record<string, unknown>>) => ({
   find: async ({ collection, where }: { collection: string; where?: Record<string, unknown> }) => {
@@ -37,7 +36,7 @@ const exactNeighborhoodFilter = {
   ],
 }
 
-describe('article location filters', () => {
+describe('article location filter', () => {
   const req = {
     payload: createPayloadStub([
       {
@@ -55,22 +54,8 @@ describe('article location filters', () => {
     ]),
   } as never
 
-  it('limits single-type listicle pickers to exact selected neighborhoods', async () => {
-    const filter = createSingleTypeLocationFilter('dining')
-
-    await expect(
-      filter({
-        data: {
-          location: 'peru|lima',
-          sharedNeighborhoods: [101, 102],
-        },
-        req,
-      } as never),
-    ).resolves.toEqual(exactNeighborhoodFilter)
-  })
-
-  it('limits itinerary pickers to exact selected neighborhoods', async () => {
-    const filter = createItineraryLocationFilter('dining')
+  it('limits article pickers to exact selected neighborhoods', async () => {
+    const filter = createLocationFilter('dining')
 
     await expect(
       filter({

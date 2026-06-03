@@ -1,5 +1,5 @@
 import { Block } from 'payload'
-import { createLocationFilter } from './utils/locationFilter'
+import { createLocationFilter } from '../../shared/utils/locationFilter'
 import { createItineraryItemMediaFields } from './utils/itemMedia'
 
 export const ItineraryKeyLocationsBlock: Block = {
