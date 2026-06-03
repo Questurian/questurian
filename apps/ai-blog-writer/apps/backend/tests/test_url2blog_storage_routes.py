@@ -71,7 +71,9 @@ def test_url2blog_persists_result_articles_and_sync_endpoints(monkeypatch):
         max_tokens: int = 4096,
         temperature: float = 0.05,
         model_name: str | None = None,
+        allow_truncated_repair: bool = True,
     ):
+        del allow_truncated_repair
         if "extracting factual anchors from a source article" in prompt:
             return ({"facts": []}, '{"facts": []}')
 
