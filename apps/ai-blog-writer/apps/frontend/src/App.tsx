@@ -41,7 +41,6 @@ import {
   MainHomepagePage,
   LocationHomepagePage,
 } from './features/homepageFeaturedContent'
-import { KeywordIntelPage } from './features/keywordIntel'
 import { ImageRecreationPromptsPage } from './features/imageRecreationPrompts'
 import { MediaLibraryPage } from './features/mediaLibrary'
 import BatchImageRecreationPage from './features/batchImageRecreation/BatchImageRecreationPage'
@@ -107,9 +106,6 @@ export default function App() {
               <Route path="homepage-featured-content" element={<HomepageFeaturedContentPage />} />
               <Route path="homepage-featured-content/main" element={<MainHomepagePage />} />
               <Route path="homepage-featured-content/:id" element={<LocationHomepagePage />} />
-
-              {/* Keyword Intel */}
-              <Route path="keyword-intel" element={<KeywordIntelPage />} />
 
               {/* Image Recreation Prompts */}
               <Route path="image-recreation-prompts" element={<ImageRecreationPromptsPage />} />

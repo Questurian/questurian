@@ -93,4 +93,4 @@ Full run. Fields: `meta` (`PipelineMeta`), `stages` (dict), `markdown_path`, `cr
 
 - The Python ↔ TS mirror is hand-maintained. Should we generate the TS types from the Pydantic JSON schema?
 - Should we version each `Stage[N]Output` individually, or only `PipelineMeta.version`?
-- Non-article features (`location_documents`, `keyword_intel`) don't fit the Stage[0..4] model — should the contract acknowledge them explicitly?
+- Non-article features (`location_documents`) don't fit the Stage[0..4] model — should the contract acknowledge them explicitly?

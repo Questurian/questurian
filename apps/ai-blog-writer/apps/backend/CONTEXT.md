@@ -4,7 +4,7 @@
 
 FastAPI service that orchestrates every pipeline in AI Blog Writer. Owns:
 
-- REST endpoints per feature (`/youtube2blog`, `/url2blog`, `/prompt2blog`, `/keyword-intel`, `/itineraries-pipeline`, `/editor-assist`, `/images`, `/article-types`).
+- REST endpoints per feature (`/youtube2blog`, `/url2blog`, `/prompt2blog`, `/itineraries-pipeline`, `/editor-assist`, `/images`, `/article-types`).
 - Run storage in SQLite.
 - All Vertex AI Gemini calls and prompt assembly.
 - Quality gates, coverage analysis, editorial augmentation.
@@ -24,7 +24,7 @@ Pipelines need a single home: shared run lifecycle, shared LLM client, shared st
 
 - Python 3.11, FastAPI, Pydantic
 - SQLite (run + feature storage)
-- LangGraph via the shared `ai_graph` runtime (used by `prompt2blog`, `youtube2blog`, `url2blog`, `keyword_intel`, `editor_assist`)
+- LangGraph via the shared `ai_graph` runtime (used by `prompt2blog`, `youtube2blog`, `url2blog`, `editor_assist`)
 - Vertex AI Gemini (`packages/utils.get_vertex_llm`)
 - Nx for build/serve via the parent ABW monorepo
 
@@ -92,7 +92,7 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 ## Naming Conventions
 
 - Module layout per feature: `routes.py`, `service.py`, `prompts.py`, `models.py`, `storage.py`, `graph.py` (when LangGraph is used).
-- REST paths: kebab-case feature name (`/keyword-intel`, `/itineraries-pipeline`).
+- REST paths: kebab-case feature name (`/url2blog`, `/itineraries-pipeline`).
 - Pydantic models: `Stage[N]Output`, `*Request`, `*Response`, `*Option`.
 
 ## Decisions
@@ -113,5 +113,5 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 
 ## Open Questions
 
-- Should non-article features (`keyword_intel`, `images`, `editor_assist`) live in a separate sub-context with their own non-stage vocabulary?
+- Should non-article features (`images`, `editor_assist`) live in a separate sub-context with their own non-stage vocabulary?
 - Where does the contract for pushing into Payload live? Today the frontend assembles writes; the backend does not own the schema there.

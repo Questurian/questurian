@@ -62,7 +62,7 @@ CSV → `list[dict]`.
 
 ## Relationships
 
-- Consumed by feature modules in `apps/backend` (`prompt2blog`, `youtube2blog`, `keyword_intel`, `location_documents`, `editor_assist`).
+- Consumed by feature modules in `apps/backend` (`prompt2blog`, `youtube2blog`, `location_documents`, `editor_assist`).
 - No reverse dependency: utils does not know about features.
 
 ## Domain Rules

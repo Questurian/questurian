@@ -16,7 +16,6 @@ const PRIMARY_CARD_TITLES = [
 ]
 
 const OCCASIONAL_CARD_TITLES = [
-  'Keyword Intel',
   'Image Recreation Prompts',
   'Batch Image Recreation',
   'Media Library',
@@ -80,7 +79,6 @@ describe('DashboardPage', () => {
       screen.getByRole('button', { name: /hide occasional tools/i }),
     ).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('heading', { level: 3, name: 'Editorial Utilities' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 3, name: 'Research & SEO' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 3, name: 'Media Tools' })).toBeInTheDocument()
 
     ;[...PRIMARY_CARD_TITLES, ...OCCASIONAL_CARD_TITLES].forEach((title) => {
@@ -98,7 +96,7 @@ describe('DashboardPage', () => {
     expect(
       screen.getByRole('button', { name: /show occasional tools/i }),
     ).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('heading', { level: 3, name: 'Keyword Intel' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 3, name: 'Media Library' })).not.toBeInTheDocument()
   })
 
   it('hides homepage featured content for writer accounts', () => {

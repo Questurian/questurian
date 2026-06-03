@@ -21,7 +21,6 @@ The result is professional-quality articles ready for publication, with full pro
 
 - **URL-First YouTube Flow** - Start runs directly from a YouTube video URL
 - **AI-Powered Pipeline** - 4-stage intelligent processing with Google Vertex AI (Gemini)
-- **Keyword Intel Pipeline** - Market-resolved search phrase collection with raw phrase records, semantic filtering/grouping, and scored keyword clusters
 - **Web Interface** - Clean, modern React frontend for monitoring and managing processing
 - **REST API** - Full FastAPI backend for programmatic access
 - **Provenance Tracking** - Complete audit trail of AI decisions and transformations
@@ -134,8 +133,6 @@ Ensure your `apps/backend/.env` file contains:
 GOOGLE_CLOUD_PROJECT=your-actual-gcp-project-id
 GOOGLE_CLOUD_LOCATION=us-central1
 PAYLOAD_API_URL=http://localhost:4000
-DATAFORSEO_LOGIN=your-dataforseo-login
-DATAFORSEO_PASSWORD=your-dataforseo-password
 ```
 
 If the backend runs inside Docker while Payload runs on your host machine, set:
@@ -147,7 +144,6 @@ PAYLOAD_API_URL=http://host.docker.internal:4000
 - [Vertex AI Documentation](https://cloud.google.com/vertex-ai/docs)
 - [Enable Vertex AI API](https://console.cloud.google.com/apis/library/aiplatform.googleapis.com)
 - [Google Cloud Console](https://console.cloud.google.com/)
-- [DataForSEO API Docs](https://docs.dataforseo.com/)
 - Internal guide: `docs/google-vertex-auth-guide.md`
 - API changelog: `docs/api-changelog.md`
 
@@ -211,25 +207,6 @@ curl http://localhost:4003/youtube2blog/result/<run_id>
 # Get just the markdown article
 curl http://localhost:4003/youtube2blog/result/<run_id>?format=md
 ```
-
-#### Run Keyword Intel
-```bash
-curl -X POST http://localhost:4003/keyword-intel/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "seed":"restaurants near larcomar",
-    "market_profile":"tourists_in_peru_en",
-    "device":"desktop",
-    "search_domain":"google.com",
-    "city":"lima"
-  }'
-```
-
-Keyword-intel results now preserve both compatibility arrays and richer debug data:
-- `raw_phrases`, `clean_phrases`, `filtered_out_phrases`
-- `market_context`
-- `raw_phrase_records`, `normalized_phrase_records`, `retained_phrase_records`, `filtered_out_phrase_records`
-- scored `groups` with stable `group_id` and `phrase_ids`
 
 ## Pipeline Stages
 

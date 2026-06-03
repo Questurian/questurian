@@ -7,7 +7,6 @@ type LandingSectionId =
   | 'article-generation'
   | 'structured-publishing'
   | 'editorial-tools'
-  | 'research-seo'
   | 'media-tools'
 
 type LandingCardConfig = {
@@ -43,10 +42,6 @@ const OCCASIONAL_SUBSECTIONS: LandingSectionConfig[] = [
   {
     id: 'editorial-tools',
     title: 'Editorial Utilities',
-  },
-  {
-    id: 'research-seo',
-    title: 'Research & SEO',
   },
   {
     id: 'media-tools',
@@ -289,34 +284,6 @@ const LANDING_CARDS: LandingCardConfig[] = [
         />
         <path
           d="M7 9h10M7 13h10M7 17h6"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </>
-    ),
-  },
-  {
-    id: 'keyword-intel',
-    title: 'Keyword Intel',
-    description: 'Collect autocomplete and related-search phrasing, cluster the intent, and surface ranked opportunities without drafting articles.',
-    to: '/keyword-intel',
-    section: 'research-seo',
-    priority: 1,
-    accentClass: 'landing-card--keyword-intel',
-    actionLabel: 'Open Intel',
-    icon: (
-      <>
-        <path
-          d="M4 6h16M4 12h10M4 18h7"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M18 12l2 2 4-4"
           stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"

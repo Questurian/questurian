@@ -16,7 +16,7 @@ Owns the **run lifecycle** (`run_id`, stages, artifacts) and **all LLM orchestra
 
 ## Purpose
 
-Editorial content scales poorly when humans write it from scratch. This context exists to **automate the path** from raw input to publishable article while keeping a full audit trail (stage outputs, prompts used, model decisions). It also doubles as the LLM hub for non-article tasks (location prose, keyword research, image-recreation prompts) so prompt strategies live in one place.
+Editorial content scales poorly when humans write it from scratch. This context exists to **automate the path** from raw input to publishable article while keeping a full audit trail (stage outputs, prompts used, model decisions). It also doubles as the LLM hub for non-article tasks (location prose, image-recreation prompts) so prompt strategies live in one place.
 
 ## Tech Stack
 
@@ -44,7 +44,7 @@ Code references: `packages/shared/src/shared/Stage[0..4]Output.py`.
 
 ### Feature
 
-Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `keyword_intel`, `itineraries_pipeline`, `images`, `editor_assist`, `article_types`.
+Definition: a pipeline module under `apps/backend/app/features/`. Each feature owns its own routes, prompts, and storage layout. Current features: `youtube2blog`, `url2blog`, `prompt2blog`, `itineraries_pipeline`, `images`, `editor_assist`, `article_types`.
 Related terms: Pipeline Route.
 Do not confuse with: frontend "Feature Page" — that's the UI per feature.
 Code references: `apps/backend/app/features/`.
@@ -234,7 +234,6 @@ Related terms: Selection Reason, Itinerary Autobuild.
 - A **Feature** defines its own route, prompts, and may produce a Markdown article, a structured JSON output, or both.
 - A **Draft** points to at most one Payload entity; an unbound Draft has no Sync state.
 - A **Pipeline Artifact** may be converted to **LexicalJSON** before being synced to Payload.
-- `keyword_intel` is a feature that does **not** produce articles — it emits structured data only.
 - `LocationDocumentsPage` is a frontend-only operator tool that writes directly to Payload (Questura) over the Payload REST API; it has no AI Blog Writer backend pipeline.
 
 ## Domain Rules
@@ -258,7 +257,7 @@ Related terms: Selection Reason, Itinerary Autobuild.
 - Feature folders: snake_case (`youtube2blog`, `prompt2blog`, `url2blog`).
 - Stage classes: `Stage[N]Output`, `StageEditorialAugmentationOutput`.
 - Frontend feature pages: camelCase folder, `*Page` component (`Prompt2BlogPage`, `LocationDocumentsPage`).
-- REST routes: kebab-case feature path (`/youtube2blog`, `/keyword-intel`).
+- REST routes: kebab-case feature path (`/youtube2blog`, `/url2blog`).
 - LLM presets: `LLMPresets.<intent>` (e.g. `compose`, `classify`).
 
 ## Decisions
@@ -283,7 +282,6 @@ When working in this context:
 ## Open Questions
 
 - Where does the contract for **inbound** content into Payload live? Today it's implicit ("Payload-accepts-this").
-- Should `keyword_intel` (non-article feature) be split into its own context? It shares the run lifecycle but not the article shape.
 - Is the converter genuinely stateless across content edge cases (tables, embedded HTML)? No regression tests exist at the converter boundary.
 - The `images` and `editor_assist` features are not represented in the Stage[N] vocabulary — they're orthogonal services. Should the glossary distinguish "article features" vs "assist features"?
 - Should the itinerary manual `tour-agency` stop be retired in favor of attraction-linked tours? The Payload `attractions.tours` relationship already exists (ordered, from LM); an attraction stop card could recommend its linked tours instead of a standalone manual tour stop. Tracked as proposed ADR 0013; deferred from the AI auto-write hookup (tours are structured data, not AI prose).

@@ -57,15 +57,6 @@ Structured Prompt2Blog run input now uses:
 - `brand_voice_id`, `primary_keyword`, `secondary_keywords`, `must_include`, `audience_profile`, `negative_instructions` (optional)
 - `prompt_enhance`, `creativity_level`, `include_debug`, `enable_editorial_augmentation`, `model_name` (optional controls)
 
-### Keyword Intel (`/keyword-intel`)
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/keyword-intel/run` | Queue the keyword-intel pipeline using `{ seed, market_profile?, geo?, language?, device?, search_domain?, region?, city? }`. Named `market_profile` values are `us_planners_en`, `tourists_in_peru_en`, `locals_peru_es`, and `custom`. |
-| GET | `/keyword-intel/status/{run_id}` | Get run status |
-| GET | `/keyword-intel/result/{run_id}` | Get the final keyword-intel artifact with `market_context`, compatibility string arrays (`raw_phrases`, `clean_phrases`, `filtered_out_phrases`), phrase-record arrays (`raw`, `normalized`, `retained`, `filtered_out`), structured `pattern_summary`, scored groups with stable `group_id` + `phrase_ids`, and collection debug artifacts |
-| GET | `/keyword-intel/jobs` | List recent keyword-intel runs for the history panel, including `market_profile`, resolved `geo` / `language`, and raw / clean / filtered / group counts |
-
 ### Editor Assist (`/editor-assist`)
 
 | Method | Path | Description |
@@ -122,6 +113,5 @@ Structured Prompt2Blog run input now uses:
 | `/prompt2blog/articles` | Auth required | Prompt2Blog saved articles page |
 | `/prompt2blog/stage` | Auth required | Prompt2Blog stage workflow page |
 | `/prompt2blog/stage-article` | Auth required | Prompt2Blog stage article editor page |
-| `/keyword-intel` | Auth required | Keyword-intel page |
 | `/url2blog` | Auth required | URL2Blog page |
 | `/image-recreation-prompts` | Auth required | Image recreation prompts page |

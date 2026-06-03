@@ -4,7 +4,7 @@
 
 React SPA for operators. Lets a human:
 
-- start a pipeline run for one of the features (Prompt2Blog, YouTube2Blog, Url2Blog, LocationDocuments, KeywordIntel, ListicleItineraries, SingleTypeListicles, BatchUpload, BatchImageRecreation, …).
+- start a pipeline run for one of the features (Prompt2Blog, YouTube2Blog, Url2Blog, LocationDocuments, ListicleItineraries, SingleTypeListicles, BatchUpload, BatchImageRecreation, …).
 - watch a Running Pipeline by polling status.
 - edit the resulting Draft locally.
 - Sync the Draft to a Payload entity (Questura).
@@ -33,7 +33,7 @@ Operators need a tactile UI: pick inputs, watch progress, hand-edit before pushi
 ### Feature Page
 
 Definition: one top-level UI per pipeline. Lives in `src/features/<featureCamelCase>/`.
-Examples: `Prompt2BlogPage`, `YouTube2BlogPage`, `Url2BlogPage`, `LocationDocumentsPage`, `KeywordIntelPage`, `ItinerariesPipelinePage`, `ListicleItinerariesPage`, `SingleTypeListiclesPage`, `BatchUploadPage`, `BatchImageRecreationPage`, `HomepageFeaturedContentPage`, `StagingPage`.
+Examples: `Prompt2BlogPage`, `YouTube2BlogPage`, `Url2BlogPage`, `LocationDocumentsPage`, `ItinerariesPipelinePage`, `ListicleItinerariesPage`, `SingleTypeListiclesPage`, `BatchUploadPage`, `BatchImageRecreationPage`, `HomepageFeaturedContentPage`, `StagingPage`.
 
 ### Saved Articles Page
 
