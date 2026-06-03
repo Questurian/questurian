@@ -1,0 +1,19 @@
+# Curated homepage block definition shape
+
+Curated homepages (the main homepage and per-location homepages) are built from **page blocks**. Each block type — `featured-article`, `featured-articles`, `article-grid`, `location-grid`, `questurian-maps`, `hotel-grid`, `tour-grid`, `where-to-eat-drink`, `things-to-do-listicles`, `things-to-do-attractions`, `article-list`, `newsletter-signup` — is implemented today as a **vertical slice** under `apps/questura/apps/server/src/features/homepage-featured-content/<block-type>/`, with a near-uniform internal shape. This ADR names that shape and records it as the intended seam, so a future consolidation has an explicit target instead of being reverse-engineered.
+
+A block type is, conceptually, one **`CuratedBlockDefinition`** with these responsibilities:
+
+- **type** — the `blockType` discriminant string and its Payload `Block` definition (slug, fields, slot limits). Lives in `<slice>/block.ts` + `constants.ts`.
+- **normalize** — turn loose stored/input `items` into canonical refs and back into stored "global data". Lives in `<slice>/lib/refs.ts` (`normalizeXInput`, `buildXGlobalData`).
+- **validate** — assert count, existence, scope, and draft rules for a block's items; throws editor-facing messages. Lives in `<slice>/operations/validate.ts`.
+- **search** — return pickable candidates for the editor's item picker, querying the backing collection. Lives in `<slice>/operations/search.ts` + `lib/candidate.ts` + `lib/repository.ts`, exposed through the `*-candidates` routes.
+- **selection** — resolve stored items into the editor-facing `Selection` view (`totalSlots`, `items`, `isComplete`). Lives in `<slice>/operations/selection.ts`.
+- **publishRules** — per-block publishability (required published items, required ready image fields per slot). Today these are **centralized**, not per-slice: `location-homepages/lib/publish-status.ts` (`ARTICLE_BLOCK_TYPES`, `requiredImageField`, `getBlockPublishBlockers`).
+- **studioMeta** — frontend-only presentation: label, description, slot-count config, response type, type guard. Lives in the **ai-blog-writer** repo (`pageBlocks.ts`: `HOMEPAGE_PAGE_BLOCK_CONFIG`, response types, `isX` guards).
+
+The dispatch from block array to per-type logic is centralized in two cross-cutting operations: `resolve-page-blocks/operations/normalize-page-blocks.ts` (write path — `isCuratedHomepageBlockType` then a per-type normalize → validate → build branch) and `resolve-page-blocks/operations/resolve-blocks.ts` (read path). Adding a block type therefore fans out across many fixed edit sites in both repos; the authoritative list is the choke-point checklist in `homepage-featured-content/CONTEXT.md`.
+
+The block-type set is currently **restated** in ~10 places rather than derived from one registry: `HOMEPAGE_BLOCK_TYPES` (collection), `isCuratedHomepageBlockType`, `ARTICLE_BLOCK_TYPES`, the convert source/target lists, slot-count resolution, and on the frontend `HOMEPAGE_PAGE_BLOCK_CONFIG` plus the `isX` guards. This duplication is the cost the `CuratedBlockDefinition` shape exists to eventually remove: a single registry keyed by `blockType`, holding `{ type, normalize, validate, search, selection, publishRules, studioMeta }`, would turn "add a block type" into "add one registry entry" and let the dispatchers iterate instead of switch. The known drift it would also fix: `isCuratedHomepageBlockType`'s type-signature union omits `tour-grid` while its runtime body includes it.
+
+This ADR does **not** introduce the registry. It records the slice shape and the seven responsibilities as the agreed vocabulary so the consolidation, when undertaken, is a refactor toward a documented target with no behavior change. Until then, the vertical-slice-per-block-type layout with centralized dispatch stands, and the checklist in `homepage-featured-content/CONTEXT.md` is the safety net.

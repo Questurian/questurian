@@ -146,5 +146,5 @@ When working in this repo:
 - Should Location Manager add an ADR mirroring `0001-mediaset-as-public-image-source.md` to document the LM-side responsibilities (variant file generation, pre-sync validation)?
 - AI Blog Writer's `Article` vs Questura's `Articles` — should we rename one to remove the overlap?
 - Inbound LexicalJSON from AI Blog Writer → Questura has no formal contract. Should we publish one?
-- Several Questura server features (`homepage-featured-content`, `media`, `location`, `articles`) are large enough that they may warrant their own `CONTEXT.md`. Worth revisiting once the language stabilises.
+- Several Questura server features (`media`, `location`, `articles`) are large enough that they may warrant their own `CONTEXT.md`. `homepage-featured-content` now has one ([apps/questura/apps/server/src/features/homepage-featured-content/CONTEXT.md](./apps/questura/apps/server/src/features/homepage-featured-content/CONTEXT.md)); revisit the rest once the language stabilises.
 - The Dashboard duplicates port/path knowledge from the actual workspace. Could it derive `PROJECTS` from a single source instead?
