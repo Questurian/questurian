@@ -1,6 +1,6 @@
 import type { CuratedBlockType } from '../types'
 
-import { CURATED_BLOCK_TYPES } from '../constants'
+import { curatedBlockRegistry } from '../../block-registry'
 import { isCuratedBlockType } from '../lib/guards'
 import { HOMEPAGE_BLOCK_SLOT_LIMITS } from '../../slot-count/constants'
 import { isValidRequestedSlotCount } from '../../slot-count/lib/resolve'
@@ -27,7 +27,7 @@ export function parseNewBlockInput(body: unknown): ParseNewBlockResult {
     return {
       ok: false,
       status: 400,
-      message: `Unsupported blockType. Supported types: ${CURATED_BLOCK_TYPES.join(', ')}.`,
+      message: `Unsupported blockType. Supported types: ${curatedBlockRegistry.keys.join(', ')}.`,
     }
   }
 

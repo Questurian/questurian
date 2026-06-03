@@ -1,11 +1,14 @@
 import type { CuratedBlockType } from '../types'
 
-import { CURATED_BLOCK_TYPES } from '../constants'
+import { curatedBlockRegistry } from '../../block-registry'
 
-const CURATED_BLOCK_TYPE_SET: ReadonlySet<string> = new Set(CURATED_BLOCK_TYPES)
-
+/**
+ * Whether `value` is a registered curated block type. Membership is answered by the
+ * registry (the single source of truth); the `CuratedBlockType` union is the compile-time
+ * mirror used to narrow downstream.
+ */
 export function isCuratedBlockType(value: unknown): value is CuratedBlockType {
-  return typeof value === 'string' && CURATED_BLOCK_TYPE_SET.has(value)
+  return curatedBlockRegistry.has(value)
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

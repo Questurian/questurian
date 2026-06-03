@@ -1,5 +1,6 @@
 import type { Block } from 'payload'
 
+import { CURATED_BLOCK_BEHAVIORS, type CuratedBlockBehavior } from './behaviors'
 import { ArticleGridBlock } from '../article-grid/block'
 import { ArticleListBlock } from '../article-list/block'
 import { FeaturedArticleBlock } from '../featured-article/block'
@@ -15,17 +16,19 @@ import { TourGridBlock } from '../tour-grid/block'
 import { WhereToEatDrinkBlock } from '../where-to-eat-drink/block'
 
 /**
- * One curated homepage block type. For now a definition only carries its
- * identity (`blockType`) and Payload `Block` definition — the seam ADR 0005
- * names. Per-type behavior (normalize / validate / search / selection /
- * publishRules / studioMeta) still lives in each slice and is folded in here
- * incrementally in later phases.
+ * One curated homepage block type. A definition pairs its identity (`blockType`)
+ * and Payload `Block` definition (the seam ADR 0005 names) with the per-type
+ * `behavior` — normalize / validate / build / selection / publish rules — that the
+ * write-path normalizer, read-path resolver, and publish-status rules fold in so
+ * they iterate the registry instead of restating a parallel `blockType` switch.
  */
 export type CuratedBlockDefinition = {
   /** The `blockType` discriminant string. Equals the Payload Block slug. */
   blockType: string
   /** The Payload Block definition (slug, fields, slot limits). */
   block: Block
+  /** Per-type write / read / publish behavior, keyed off the block slug. */
+  behavior: CuratedBlockBehavior
 }
 
 /**
@@ -50,7 +53,13 @@ const CURATED_BLOCK_DEFINITIONS: readonly CuratedBlockDefinition[] = [
   ThingsToDoAttractionsBlock,
   NewsletterSignupBlock,
   ArticleListBlock,
-].map((block) => ({ blockType: block.slug, block }))
+].map((block) => {
+  const behavior = CURATED_BLOCK_BEHAVIORS[block.slug]
+  if (!behavior) {
+    throw new Error(`Curated block "${block.slug}" is registered without a behavior.`)
+  }
+  return { blockType: block.slug, block, behavior }
+})
 
 const DEFINITION_BY_TYPE = new Map(
   CURATED_BLOCK_DEFINITIONS.map((definition) => [definition.blockType, definition]),

@@ -1,3 +1,4 @@
+import { curatedBlockRegistry } from '../../block-registry'
 import { resolvePageBlocks } from '../../resolve-page-blocks/service'
 import type { RawBlock } from '../../resolve-page-blocks/service'
 
@@ -6,21 +7,16 @@ type ResolvedPageBlock = Awaited<ReturnType<typeof resolvePageBlocks>>[number]
 /**
  * Publishability rules and per-block draft-vs-published status.
  *
- * This module is intentionally low-dependency (it only imports types from
- * `resolve-page-blocks`) so it can be shared by the publish guard, the location
- * homepage formatter, and the main homepage Global without creating import cycles.
+ * Which block types carry article-style publish rules — and which image field a slot must
+ * have ready — are read from each type's registry `behavior` (`isArticleBlock` /
+ * `requiredImageField`), so the rules live with the block definition rather than a parallel
+ * set restated here. Shared by the publish guard, the location homepage formatter, and the
+ * main homepage Global.
  */
 
-const ARTICLE_BLOCK_TYPES = new Set([
-  'featured-article',
-  'featured-article-carousel',
-  'featured-articles',
-  'article-grid',
-  'questurian-maps',
-  'where-to-eat-drink',
-  'things-to-do-listicles',
-  'article-list',
-])
+function isArticleBlockType(blockType: unknown): boolean {
+  return curatedBlockRegistry.get(text(blockType))?.behavior.isArticleBlock === true
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -35,19 +31,8 @@ function isReadyImage(value: unknown): boolean {
 }
 
 function requiredImageField(block: Record<string, unknown>, slotIndex: number): string {
-  if (block.blockType === 'featured-article') return 'imageHero'
-
-  if (block.blockType === 'featured-articles') {
-    return slotIndex === 0 ? 'imageHero' : 'image'
-  }
-
-  if (block.blockType === 'article-grid') {
-    const totalSlots = Number(isRecord(block.selection) ? block.selection.totalSlots : 0)
-    const layout = text(block.articleGridFourLayout)
-    return totalSlots === 8 || layout === 'two-by-two' ? 'imageSquare' : 'image'
-  }
-
-  return 'image'
+  const behavior = curatedBlockRegistry.get(text(block.blockType))?.behavior
+  return behavior?.requiredImageField?.(block, slotIndex) ?? 'image'
 }
 
 /**
@@ -67,7 +52,7 @@ export function getBlockPublishBlockers(block: unknown, blockIndex: number): str
     return blockers
   }
 
-  if (!ARTICLE_BLOCK_TYPES.has(text(block.blockType))) return blockers
+  if (!isArticleBlockType(block.blockType)) return blockers
 
   const items = Array.isArray(selection.items) ? selection.items : []
   for (const [slotIndex, item] of items.entries()) {

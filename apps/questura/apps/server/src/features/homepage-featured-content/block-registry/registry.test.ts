@@ -66,4 +66,51 @@ describe('curatedBlockRegistry', () => {
       expect(curatedBlockRegistry.get('not-a-block')).toBeUndefined()
     })
   })
+
+  describe('behavior', () => {
+    it('every registered type carries a behavior with a read-path resolver', () => {
+      for (const key of EXPECTED_KEYS) {
+        const behavior = curatedBlockRegistry.get(key)?.behavior
+        expect(behavior, key).toBeDefined()
+        expect(typeof behavior?.resolveSelection, key).toBe('function')
+      }
+    })
+
+    it('marks exactly the article-style block types for publish rules', () => {
+      const articleTypes = EXPECTED_KEYS.filter(
+        (key) => curatedBlockRegistry.get(key)?.behavior.isArticleBlock === true,
+      )
+      expect(articleTypes).toEqual([
+        'featured-article',
+        'featured-article-carousel',
+        'featured-articles',
+        'article-grid',
+        'questurian-maps',
+        'where-to-eat-drink',
+        'things-to-do-listicles',
+        'article-list',
+      ])
+    })
+
+    it('reference blocks build stored items; newsletter-signup clears them instead', () => {
+      expect(curatedBlockRegistry.get('newsletter-signup')?.behavior.clearsItems).toBe(true)
+      expect(curatedBlockRegistry.get('newsletter-signup')?.behavior.buildStoredItems).toBeUndefined()
+      expect(typeof curatedBlockRegistry.get('hotel-grid')?.behavior.buildStoredItems).toBe('function')
+    })
+
+    it('resolves the required image field per article block, defaulting to image', () => {
+      const requiredImageField = (blockType: string, block: Record<string, unknown>, slot: number) =>
+        curatedBlockRegistry.get(blockType)?.behavior.requiredImageField?.(block, slot) ?? 'image'
+
+      expect(requiredImageField('featured-article', {}, 0)).toBe('imageHero')
+      expect(requiredImageField('featured-articles', {}, 0)).toBe('imageHero')
+      expect(requiredImageField('featured-articles', {}, 1)).toBe('image')
+      expect(requiredImageField('article-grid', { selection: { totalSlots: 8 } }, 0)).toBe('imageSquare')
+      expect(requiredImageField('article-grid', { articleGridFourLayout: 'two-by-two' }, 0)).toBe(
+        'imageSquare',
+      )
+      expect(requiredImageField('article-grid', { selection: { totalSlots: 4 } }, 0)).toBe('image')
+      expect(requiredImageField('hotel-grid', {}, 0)).toBe('image')
+    })
+  })
 })

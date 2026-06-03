@@ -1,78 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getPayload } from 'payload'
-
-import config from '@/payload.config'
 import {
-  authenticateRequest,
-  getCorsHeaders,
-  handleCorsOptions,
-} from '@/features/auth/lib/auth-middleware'
-import {
-  type LocationHomepageDoc,
-  searchHotelGridCandidates,
-} from '@/features/homepage-featured-content'
-import { getErrorMessage } from '@/shared/utils/api-response'
+  createLocationCandidateHandler,
+  withLocationKey,
+} from '@/features/homepage-featured-content/candidate-route'
+import { searchHotelGridCandidates } from '@/features/homepage-featured-content'
 
-function parsePositiveInt(value: string | null): number | undefined {
-  if (!value) return undefined
-  const parsed = Number(value)
-  if (!Number.isFinite(parsed) || parsed <= 0) return undefined
-  return Math.trunc(parsed)
-}
+const handler = createLocationCandidateHandler({
+  search: searchHotelGridCandidates,
+  fallbackMessage: 'Failed to load hotel candidates.',
+  resolveContext: withLocationKey,
+})
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const headers = getCorsHeaders(req)
-
-  try {
-    const authResult = await authenticateRequest(req, {
-      requireAuth: true,
-      allowedRoles: ['admin', 'editor'],
-    })
-
-    if (authResult.error) {
-      return NextResponse.json({ message: authResult.error }, { status: authResult.status, headers })
-    }
-
-    const { id } = await params
-    const payload = await getPayload({ config })
-    const doc = (await payload.findByID({
-      collection: 'location-homepages',
-      id,
-      depth: 1,
-      overrideAccess: true,
-    })) as LocationHomepageDoc
-
-    const rawLocation =
-      typeof doc.location === 'object' && doc.location !== null ? doc.location : null
-    const locationKey =
-      rawLocation && typeof rawLocation.locationKey === 'string' && rawLocation.locationKey.trim()
-        ? rawLocation.locationKey.trim()
-        : null
-
-    if (!locationKey) {
-      return NextResponse.json(
-        { message: 'Location homepage is missing a location with a valid location key.' },
-        { status: 400, headers },
-      )
-    }
-
-    const { searchParams } = new URL(req.url)
-    const response = await searchHotelGridCandidates(payload, {
-      query: searchParams.get('q') || undefined,
-      page: parsePositiveInt(searchParams.get('page')),
-      limit: parsePositiveInt(searchParams.get('limit')),
-      locationKey,
-    })
-
-    return NextResponse.json(response, { headers })
-  } catch (error) {
-    return NextResponse.json(
-      { message: getErrorMessage(error, 'Failed to load hotel candidates.') },
-      { status: 500, headers },
-    )
-  }
-}
-
-export async function OPTIONS(req: NextRequest) {
-  return handleCorsOptions(req)
-}
+export const GET = handler.GET
+export const OPTIONS = handler.OPTIONS
