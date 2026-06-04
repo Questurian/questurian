@@ -3,13 +3,37 @@ import * as mapsUrl from "../geocoding/google/maps-url.utils";
 import * as coreRepository from "../../repositories/core";
 import * as contentRepository from "../../repositories/content";
 
-export const createFromMaps = mapsFactory.createFromMaps;
-export const generateGoogleMapsUrl = mapsUrl.generateGoogleMapsUrl;
-export const findPotentialDuplicateLocations = coreRepository.findPotentialDuplicateLocations;
-export const getAttractionTours = coreRepository.getAttractionTours;
-export const getLocationByIdForUpdate = coreRepository.getLocationByIdForUpdate;
-export const saveLocationOrThrow = coreRepository.saveLocationOrThrow;
-export const setAttractionTours = coreRepository.setAttractionTours;
-export const updateLocationById = coreRepository.updateLocationById;
-export const getInstagramEmbedsByLocationId = contentRepository.getInstagramEmbedsByLocationId;
-export const getUploadsByLocationId = contentRepository.getUploadsByLocationId;
+export const createFromMaps = (...args: Parameters<typeof mapsFactory.createFromMaps>) =>
+  mapsFactory.createFromMaps(...args);
+
+export const generateGoogleMapsUrl = (...args: Parameters<typeof mapsUrl.generateGoogleMapsUrl>) =>
+  mapsUrl.generateGoogleMapsUrl(...args);
+
+export const findPotentialDuplicateLocations = (
+  ...args: Parameters<typeof coreRepository.findPotentialDuplicateLocations>
+) => coreRepository.findPotentialDuplicateLocations(...args);
+
+export const getAttractionTours = (...args: Parameters<typeof coreRepository.getAttractionTours>) =>
+  coreRepository.getAttractionTours(...args);
+
+export const getLocationByIdForUpdate = (
+  ...args: Parameters<typeof coreRepository.getLocationByIdForUpdate>
+) => coreRepository.getLocationByIdForUpdate(...args);
+
+export const saveLocationOrThrow = (
+  ...args: Parameters<typeof coreRepository.saveLocationOrThrow>
+) => coreRepository.saveLocationOrThrow(...args);
+
+export const setAttractionTours = (...args: Parameters<typeof coreRepository.setAttractionTours>) =>
+  coreRepository.setAttractionTours(...args);
+
+export const updateLocationById = (...args: Parameters<typeof coreRepository.updateLocationById>) =>
+  coreRepository.updateLocationById(...args);
+
+export const getInstagramEmbedsByLocationId = (
+  ...args: Parameters<typeof contentRepository.getInstagramEmbedsByLocationId>
+) => contentRepository.getInstagramEmbedsByLocationId(...args);
+
+export const getUploadsByLocationId = (
+  ...args: Parameters<typeof contentRepository.getUploadsByLocationId>
+) => contentRepository.getUploadsByLocationId(...args);
