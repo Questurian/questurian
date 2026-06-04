@@ -1,0 +1,118 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "00 Core / Dashboard / dev",
+      "type": "shell",
+      "command": "pnpm run dashboard",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "core",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "01 Product / Questura / dev",
+      "type": "shell",
+      "command": "pnpm run questura",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "product",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "01 Product / Questura Client / dev",
+      "type": "shell",
+      "command": "pnpm run questura:client",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "product",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "01 Product / Questura Server / dev",
+      "type": "shell",
+      "command": "pnpm run questura:server",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "product",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "02 Location Ops / Location Manager / dev",
+      "type": "shell",
+      "command": "pnpm run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/apps/location-manager"
+      },
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "location-ops",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "02 Location Ops / LM Client / dev",
+      "type": "shell",
+      "command": "pnpm --filter @questurian/lm-client dev",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "location-ops",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "02 Location Ops / LM Server / dev",
+      "type": "shell",
+      "command": "pnpm --filter @questurian/lm-server dev",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "location-ops",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "02 Location Ops / LM Python Alt-Text / dev",
+      "type": "shell",
+      "command": "pnpm --filter @questurian/lm-python-alt-text dev",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "location-ops",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "03 Content / AI Blog Writer / dev",
+      "type": "shell",
+      "command": "pnpm --filter @questurian/ai-blog-writer dev",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "content",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "09 Meta / All Apps / dev",
+      "type": "shell",
+      "command": "pnpm run dev",
+      "group": "build",
+      "problemMatcher": [],
+      "presentation": {
+        "group": "meta",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

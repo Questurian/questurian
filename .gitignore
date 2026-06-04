@@ -25,6 +25,10 @@ package-lock.json
 
 # IDE - VSCode
 **/.vscode/
+!/.vscode/
+/.vscode/*
+!/.vscode/settings.json
+!/.vscode/tasks.json
 
 # Cursor local state
 .cursor/
