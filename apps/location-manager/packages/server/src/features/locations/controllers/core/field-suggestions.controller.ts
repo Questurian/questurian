@@ -1,13 +1,13 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { errorResponse, successResponse } from "@shared/types/api-response";
 import type { FieldSuggestionDto } from "../../validation/schemas/maps.schemas";
 import type {
   AccommodationsFieldSuggestionRequest,
 } from "../../services/integrations/accommodations-field-suggestion.service";
 import type { DiningSuggestionFieldKey } from "../../services/integrations/dining-field-suggestion.service";
+import { getFieldSuggestionsControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { accommodationsField, diningField } = getFieldSuggestionsControllerDeps();
 const AI_TIMEOUT_MS = 60000;
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -35,7 +35,7 @@ export async function postFieldSuggestion(c: Context) {
   try {
     if (dto.category === "dining") {
       const suggestion = await withTimeout(
-        container.diningFieldSuggestionService.suggestField({
+        diningField.suggestField({
           fieldKey: dto.fieldKey as DiningSuggestionFieldKey,
           formValues: dto.formValues,
           apiContext: dto.apiContext as Record<string, unknown> | undefined,
@@ -50,7 +50,7 @@ export async function postFieldSuggestion(c: Context) {
     // correct grounded-search context.
     if (dto.category === "attractions" || dto.category === "nightlife") {
       const suggestion = await withTimeout(
-        container.diningFieldSuggestionService.suggestField({
+        diningField.suggestField({
           fieldKey: "bookingUrl",
           category: dto.category,
           formValues: dto.formValues,
@@ -62,7 +62,7 @@ export async function postFieldSuggestion(c: Context) {
     }
 
     const suggestion = await withTimeout(
-      container.accommodationsFieldSuggestionService.suggestField(
+      accommodationsField.suggestField(
         dto as AccommodationsFieldSuggestionRequest
       ),
       AI_TIMEOUT_MS

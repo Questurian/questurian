@@ -1,11 +1,11 @@
 import type { Context } from "hono";
 import { formatLocationName } from "@questurian/lm-shared";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { errorResponse, successResponse } from "@shared/types/api-response";
 import type { LocationCategory } from "../../models/location";
 import { parseLocationValue } from "../../utils/location-utils";
+import { getNeighborhoodDescriptionControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { locationQuery, altTextApi } = getNeighborhoodDescriptionControllerDeps();
 const AI_TIMEOUT_MS = 8000;
 
 function normalizeText(value: string | null | undefined): string | null {
@@ -62,7 +62,7 @@ export async function postGenerateNeighborhoodDescription(c: Context) {
     return c.json(errorResponse("Invalid location ID"), 400);
   }
 
-  const location = container.locationQueryService.getLocationById(locationId);
+  const location = locationQuery.getLocationById(locationId);
 
   if (!location || (routeCategory && location.category !== routeCategory)) {
     return c.json(errorResponse("Location not found"), 404);
@@ -103,7 +103,7 @@ export async function postGenerateNeighborhoodDescription(c: Context) {
 
     try {
       const description = await withTimeout(
-        container.altTextApiClient.generateNeighborhoodDescription(input),
+        altTextApi.generateNeighborhoodDescription(input),
         AI_TIMEOUT_MS
       );
       const trimmedDescription = description.trim();

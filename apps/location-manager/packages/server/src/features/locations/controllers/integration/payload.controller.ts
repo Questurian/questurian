@@ -1,5 +1,4 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import type {
   SyncLocationIdDto,
@@ -10,8 +9,9 @@ import type { LocationsByPayloadRefsDto } from "../../validation/schemas/payload
 import type { TourIdParamsDto } from "../../validation/schemas/tours.schemas";
 import * as PayloadSyncRepo from "../../repositories/integration/payload-sync.repository";
 import { getEditorialLocationsByPayloadRefs } from "../../services/integrations/payload-refs.service";
+import { getPayloadControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { payloadApi, payloadSync } = getPayloadControllerDeps();
 
 /**
  * POST /api/payload/locations/by-refs
@@ -30,7 +30,7 @@ export async function postLocationsByPayloadRefs(c: Context) {
  */
 export async function postSyncLocation(c: Context) {
   const { id } = c.get("validatedParams") as SyncLocationIdDto;
-  const result = await container.payloadSyncService.syncLocation(id);
+  const result = await payloadSync.syncLocation(id);
   return c.json(successResponse({ result }));
 }
 
@@ -40,7 +40,7 @@ export async function postSyncLocation(c: Context) {
  */
 export async function postSyncAll(c: Context) {
   const dto = c.get("validatedBody") as SyncAllDto;
-  const results = await container.payloadSyncService.syncAllLocations(dto.category);
+  const results = await payloadSync.syncAllLocations(dto.category);
   return c.json(successResponse({ results }));
 }
 
@@ -50,7 +50,7 @@ export async function postSyncAll(c: Context) {
  */
 export async function postSyncTour(c: Context) {
   const { id } = c.get("validatedParams") as TourIdParamsDto;
-  const result = await container.payloadSyncService.syncTourToPayload(id);
+  const result = await payloadSync.syncTourToPayload(id);
   return c.json(successResponse({ result }));
 }
 
@@ -62,7 +62,7 @@ export async function getSyncStatus(c: Context) {
   const idParam = c.req.param("id");
   const locationId = idParam ? parseInt(idParam) : undefined;
 
-  const status = container.payloadSyncService.getSyncStatus(locationId);
+  const status = payloadSync.getSyncStatus(locationId);
   return c.json(successResponse({ status }));
 }
 
@@ -86,7 +86,7 @@ export async function deletePayloadSyncState(c: Context) {
  */
 export async function getPayloadMediaSets(c: Context) {
   const query = c.get("validatedQuery") as PayloadMediaSetsQueryDto;
-  const result = await container.payloadApi.searchMediaSets(query);
+  const result = await payloadApi.searchMediaSets(query);
 
   return c.json(
     successResponse({
@@ -109,14 +109,14 @@ export async function getPayloadMediaSets(c: Context) {
  */
 export async function getTestConnection(c: Context) {
   try {
-    if (!container.payloadApi.isConfigured()) {
+    if (!payloadApi.isConfigured()) {
       return c.json({
         connected: false,
         error: "Payload CMS not configured. Check environment variables."
       });
     }
 
-    await container.payloadApi.authenticate();
+    await payloadApi.authenticate();
 
     return c.json({
       connected: true,

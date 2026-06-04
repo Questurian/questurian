@@ -1,11 +1,11 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { getLocationById } from "../../repositories/core/location-read.repository";
 import type { LocationCategory } from "../../models/location";
+import { getPendingSuggestionsControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { accommodationsField, diningField, pending } = getPendingSuggestionsControllerDeps();
 
 const SUPPORTED_PROPOSE_CATEGORIES: ReadonlySet<LocationCategory> = new Set([
   "dining",
@@ -52,6 +52,7 @@ export async function postPendingSuggestionPropose(c: Context) {
       `Location category ${category ?? "(none)"} does not support bookingUrl suggestions`,
     );
   }
+  const supportedCategory = category as "dining" | "accommodations" | "attractions" | "nightlife";
 
   const formValues = {
     name: location.name,
@@ -67,16 +68,16 @@ export async function postPendingSuggestionPropose(c: Context) {
   };
 
   const suggestion =
-    category === "accommodations"
-      ? await container.accommodationsFieldSuggestionService.suggestField({
+    supportedCategory === "accommodations"
+      ? await accommodationsField.suggestField({
           category: "accommodations",
           fieldKey: "bookingUrl",
           formValues,
           apiContext,
         })
-      : await container.diningFieldSuggestionService.suggestField({
+      : await diningField.suggestField({
           fieldKey: "bookingUrl",
-          category,
+          category: supportedCategory,
           formValues,
           apiContext,
         });
@@ -88,7 +89,7 @@ export async function postPendingSuggestionPropose(c: Context) {
     );
   }
 
-  const result = container.pendingSuggestionsService.proposePending(
+  const result = pending.proposePending(
     id,
     "bookingUrl",
     suggestion.suggestion,
@@ -116,6 +117,6 @@ async function resolve(c: Context, action: "accept" | "dismiss") {
   if (typeof body.field !== "string" || body.field.length === 0) {
     throw new BadRequestError("Body must include a `field` string");
   }
-  const result = container.pendingSuggestionsService.acceptOrDismiss(id, body.field, action);
+  const result = pending.acceptOrDismiss(id, body.field, action);
   return c.json(successResponse(result));
 }

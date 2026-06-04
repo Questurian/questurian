@@ -39,7 +39,7 @@ async function debugBrazilAddress() {
   try {
     // Fetch BigDataCloud data
     console.log(`\n⏳ Fetching BigDataCloud data...`);
-    const data = await container.bigDataCloudClient.reverseGeocode(
+    const data = await container.clients.bigDataCloud.reverseGeocode(
       coordinates.lat,
       coordinates.lng
     );
@@ -75,7 +75,7 @@ async function debugBrazilAddress() {
 
     // Test district extraction
     console.log(`\n🔬 Testing District Extraction:`);
-    const district = container.districtExtractionService.extractDistrict(
+    const district = container.admin.districtExtraction.extractDistrict(
       data.countryCode,
       administrative,
       informative

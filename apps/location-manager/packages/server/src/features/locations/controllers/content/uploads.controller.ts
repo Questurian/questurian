@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import type { ImageVariantType, VariantCropRegion } from "@questurian/lm-shared";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import { BadRequestError } from "@shared/errors/http-error";
 import {
@@ -11,8 +10,9 @@ import {
   type UploadIdParamsDto,
   type UpdateUploadPhotographerCreditBodyDto,
 } from "../../validation/schemas/uploads.schemas";
+import { getUploadsControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { uploads } = getUploadsControllerDeps();
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
@@ -101,7 +101,7 @@ export async function deleteUpload(c: Context) {
   }
 
   // Call service to delete upload (includes file cleanup)
-  await container.uploadsService.deleteUpload(uploadId);
+  await uploads.deleteUpload(uploadId);
 
   return c.json(successResponse({ message: "Upload deleted successfully" }));
 }
@@ -119,7 +119,7 @@ export async function patchUploadPhotographerCredit(c: Context) {
     throw new BadRequestError("Upload ID must be a number");
   }
 
-  const entry = await container.uploadsService.updateUploadPhotographerCredit(
+  const entry = await uploads.updateUploadPhotographerCredit(
     uploadId,
     body.photographerCredit
   );
@@ -208,7 +208,7 @@ export async function postAddUploadImageSet(c: Context) {
   }
 
   // Call service to process the upload
-  const entry = await container.uploadsService.addImageSetUpload(
+  const entry = await uploads.addImageSetUpload(
     locationId,
     sourceFile,
     variantFiles,
@@ -232,7 +232,7 @@ export async function postReprocessUploadVariants(c: Context) {
     throw new BadRequestError("Upload ID must be a number");
   }
 
-  const entry = await container.uploadsService.reprocessUploadVariants(uploadId);
+  const entry = await uploads.reprocessUploadVariants(uploadId);
 
   return c.json(successResponse({ entry }));
 }
@@ -307,7 +307,7 @@ export async function postReplaceUploadVariants(c: Context) {
     throw new BadRequestError(`Total upload size exceeds ${MAX_TOTAL_SIZE / 1024 / 1024}MB limit`);
   }
 
-  const entry = await container.uploadsService.replaceUploadVariants(
+  const entry = await uploads.replaceUploadVariants(
     uploadId,
     sourceFile,
     variantFiles,
@@ -346,7 +346,7 @@ export async function postGenerateAltText(c: Context) {
     const imageBuffer = await imageFile.arrayBuffer();
     const fileExtension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
 
-    const altText = await container.uploadsService.generateAltText(
+    const altText = await uploads.generateAltText(
       Buffer.from(imageBuffer),
       imageFile.name,
       fileExtension

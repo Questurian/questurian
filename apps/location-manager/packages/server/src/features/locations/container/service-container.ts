@@ -23,75 +23,114 @@ import { AccommodationsFieldSuggestionService } from "../services/integrations/a
 import { DiningFieldSuggestionService } from "../services/integrations/dining-field-suggestion.service";
 import { PendingSuggestionsService } from "../services/integrations/pending-suggestions.service";
 
+export interface LocationClients {
+  readonly instagramApi: InstagramApiClient;
+  readonly payloadApi: PayloadApiClient;
+  readonly bigDataCloud: BigDataCloudClient;
+  readonly geoapify: GeoapifyClient;
+  readonly altTextApi: AltTextApiClient;
+  readonly googlePhotos: GooglePlacesPhotosClient;
+}
+
+export interface LocationCoreServices {
+  readonly maps: MapsService;
+  readonly query: LocationQueryService;
+  readonly mutation: LocationMutationService;
+}
+
+export interface LocationContentServices {
+  readonly instagram: InstagramService;
+  readonly uploads: UploadsService;
+  readonly photoImport: PhotoImportService;
+  readonly tripAdvisorPlace: TripAdvisorPlaceService;
+}
+
+export interface LocationAdminServices {
+  readonly taxonomy: TaxonomyService;
+  readonly taxonomyCorrection: TaxonomyCorrectionService;
+  readonly imageStorage: ImageStorageService;
+  readonly districtExtraction: DistrictExtractionService;
+}
+
+export interface LocationSuggestionServices {
+  readonly accommodationsField: AccommodationsFieldSuggestionService;
+  readonly diningField: DiningFieldSuggestionService;
+  readonly pending: PendingSuggestionsService;
+}
+
+export interface LocationIntegrationServices {
+  readonly payloadSync: PayloadSyncService;
+}
+
 export class ServiceContainer {
   private static instance: ServiceContainer;
 
   readonly config: EnvConfig;
-  readonly imageStorage: ImageStorageService;
-  readonly instagramApi: InstagramApiClient;
-  readonly payloadApi: PayloadApiClient;
-  readonly bigDataCloudClient: BigDataCloudClient;
-  readonly geoapifyClient: GeoapifyClient;
-  readonly altTextApiClient: AltTextApiClient;
-  readonly districtExtractionService: DistrictExtractionService;
-  readonly taxonomyService: TaxonomyService;
-  readonly taxonomyCorrectionService: TaxonomyCorrectionService;
-  readonly mapsService: MapsService;
-  readonly instagramService: InstagramService;
-  readonly uploadsService: UploadsService;
-  readonly googlePhotosClient: GooglePlacesPhotosClient;
-  readonly photoImportService: PhotoImportService;
-  readonly locationQueryService: LocationQueryService;
-  readonly locationMutationService: LocationMutationService;
-  readonly payloadSyncService: PayloadSyncService;
-  readonly tripAdvisorPlaceService: TripAdvisorPlaceService;
-  readonly accommodationsFieldSuggestionService: AccommodationsFieldSuggestionService;
-  readonly diningFieldSuggestionService: DiningFieldSuggestionService;
-  readonly pendingSuggestionsService: PendingSuggestionsService;
+  readonly clients: LocationClients;
+  readonly core: LocationCoreServices;
+  readonly content: LocationContentServices;
+  readonly admin: LocationAdminServices;
+  readonly suggestions: LocationSuggestionServices;
+  readonly integration: LocationIntegrationServices;
 
   private constructor() {
-    // Singletons
-    this.config = EnvConfig.getInstance();
-    this.imageStorage = new ImageStorageService();
-    this.instagramApi = new InstagramApiClient(this.config);
-    this.payloadApi = new PayloadApiClient(this.config);
-    this.bigDataCloudClient = new BigDataCloudClient(this.config.BIGDATACLOUD_API_KEY);
-    this.geoapifyClient = new GeoapifyClient(this.config.GEOAPIFY_API_KEY || "");
-    this.altTextApiClient = new AltTextApiClient(this.config.altTextApiUrl);
-    this.districtExtractionService = new DistrictExtractionService();
-    this.taxonomyService = new TaxonomyService();
-    this.taxonomyCorrectionService = new TaxonomyCorrectionService();
-    this.tripAdvisorPlaceService = new TripAdvisorPlaceService(this.config);
+    const config = EnvConfig.getInstance();
+    const imageStorage = new ImageStorageService();
+    const instagramApi = new InstagramApiClient(config);
+    const payloadApi = new PayloadApiClient(config);
+    const bigDataCloud = new BigDataCloudClient(config.BIGDATACLOUD_API_KEY);
+    const geoapify = new GeoapifyClient(config.GEOAPIFY_API_KEY || "");
+    const altTextApi = new AltTextApiClient(config.altTextApiUrl);
+    const googlePhotos = new GooglePlacesPhotosClient(config);
+    const districtExtraction = new DistrictExtractionService();
+    const taxonomy = new TaxonomyService();
+    const taxonomyCorrection = new TaxonomyCorrectionService();
+    const tripAdvisorPlace = new TripAdvisorPlaceService(config);
 
-    // Services with dependencies
-    this.mapsService = new MapsService(
-      this.config,
-      this.taxonomyService,
-      this.taxonomyCorrectionService,
-      this.payloadApi,
-      this.tripAdvisorPlaceService
+    const maps = new MapsService(
+      config,
+      taxonomy,
+      taxonomyCorrection,
+      payloadApi,
+      tripAdvisorPlace
     );
-    this.instagramService = new InstagramService(
-      this.instagramApi,
-      this.imageStorage
+    const instagram = new InstagramService(instagramApi, imageStorage);
+    const uploads = new UploadsService(imageStorage, altTextApi);
+    const photoImport = new PhotoImportService(
+      googlePhotos,
+      imageStorage,
+      altTextApi
     );
-    this.uploadsService = new UploadsService(this.imageStorage, this.altTextApiClient);
-    this.googlePhotosClient = new GooglePlacesPhotosClient(this.config);
-    this.photoImportService = new PhotoImportService(
-      this.googlePhotosClient,
-      this.imageStorage,
-      this.altTextApiClient
+    const accommodationsField = new AccommodationsFieldSuggestionService(altTextApi);
+    const diningField = new DiningFieldSuggestionService(altTextApi);
+    const pending = new PendingSuggestionsService();
+    const query = new LocationQueryService();
+    const mutation = new LocationMutationService(imageStorage);
+    const payloadSync = new PayloadSyncService(
+      payloadApi,
+      imageStorage,
+      query
     );
-    this.accommodationsFieldSuggestionService = new AccommodationsFieldSuggestionService(this.altTextApiClient);
-    this.diningFieldSuggestionService = new DiningFieldSuggestionService(this.altTextApiClient);
-    this.pendingSuggestionsService = new PendingSuggestionsService();
-    this.locationQueryService = new LocationQueryService();
-    this.locationMutationService = new LocationMutationService(this.imageStorage);
-    this.payloadSyncService = new PayloadSyncService(
-      this.payloadApi,
-      this.imageStorage,
-      this.locationQueryService
-    );
+
+    this.config = config;
+    this.clients = {
+      instagramApi,
+      payloadApi,
+      bigDataCloud,
+      geoapify,
+      altTextApi,
+      googlePhotos,
+    };
+    this.core = { maps, query, mutation };
+    this.content = { instagram, uploads, photoImport, tripAdvisorPlace };
+    this.admin = {
+      taxonomy,
+      taxonomyCorrection,
+      imageStorage,
+      districtExtraction,
+    };
+    this.suggestions = { accommodationsField, diningField, pending };
+    this.integration = { payloadSync };
   }
 
   static getInstance(): ServiceContainer {

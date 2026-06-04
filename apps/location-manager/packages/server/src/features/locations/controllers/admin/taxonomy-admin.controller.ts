@@ -1,15 +1,15 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
+import { getTaxonomyControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { taxonomy } = getTaxonomyControllerDeps();
 
 /**
  * GET /api/admin/taxonomy/pending
  * Get all pending taxonomy entries awaiting approval
  */
 export function getPendingTaxonomy(c: Context) {
-  const entries = container.taxonomyService.getPendingEntries();
+  const entries = taxonomy.getPendingEntries();
   return c.json(successResponse({ entries }));
 }
 
@@ -19,7 +19,7 @@ export function getPendingTaxonomy(c: Context) {
  */
 export function approveTaxonomy(c: Context) {
   const locationKey = c.req.param("locationKey");
-  const entry = container.taxonomyService.approve(locationKey);
+  const entry = taxonomy.approve(locationKey);
   return c.json(successResponse({ entry }));
 }
 
@@ -29,6 +29,6 @@ export function approveTaxonomy(c: Context) {
  */
 export function rejectTaxonomy(c: Context) {
   const locationKey = c.req.param("locationKey");
-  container.taxonomyService.reject(locationKey);
+  taxonomy.reject(locationKey);
   return c.json(successResponse({ message: "Taxonomy entry rejected" }));
 }

@@ -1,10 +1,10 @@
 import type { Context} from "hono";
 import { getDb } from "@server/shared/db/client";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import { BadRequestError } from "@shared/errors/http-error";
+import { getAdminControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { imageStorage } = getAdminControllerDeps();
 
 export async function clearDatabase(c: Context) {
   const db = getDb();
@@ -63,7 +63,7 @@ export async function clearDatabase(c: Context) {
 }
 
 export async function scanOrphanedFiles(c: Context) {
-  const result = await container.imageStorage.scanOrphanedFiles();
+  const result = await imageStorage.scanOrphanedFiles();
 
   return c.json(successResponse({
     totalOrphanedFiles: result.totalOrphanedFiles,
@@ -79,11 +79,11 @@ export async function cleanupOrphanedFiles(c: Context) {
     throw new BadRequestError("Must set confirm=true to proceed with cleanup");
   }
 
-  const scanResult = await container.imageStorage.scanOrphanedFiles();
+  const scanResult = await imageStorage.scanOrphanedFiles();
   const allOrphanedPaths = Array.from(scanResult.orphanedByLocation.values())
     .flatMap(loc => loc.paths);
 
-  const deletionResult = await container.imageStorage.deleteOrphanedFiles(allOrphanedPaths);
+  const deletionResult = await imageStorage.deleteOrphanedFiles(allOrphanedPaths);
 
   return c.json(successResponse({
     deletedCount: deletionResult.deletedCount,

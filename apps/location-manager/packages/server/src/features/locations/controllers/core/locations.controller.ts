@@ -1,11 +1,11 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse, errorResponse } from "@shared/types/api-response";
 import type { ListLocationsQueryDto, DeleteLocationSlugDto, DeleteLocationIdDto } from "../../validation/schemas/locations.schemas";
 import type { LocationCategory } from "../../models/location";
 import { getLocationByIdForUpdate } from "../../repositories/core";
+import { getLocationsControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { locationQuery, locationMutation } = getLocationsControllerDeps();
 
 function resolveCategoryFromRoute(c: Context): LocationCategory | undefined {
   return c.get("routeCategory") as LocationCategory | undefined;
@@ -14,7 +14,7 @@ function resolveCategoryFromRoute(c: Context): LocationCategory | undefined {
 export function getLocations(c: Context) {
   const query = c.get("validatedQuery") as ListLocationsQueryDto | undefined;
   const routeCategory = resolveCategoryFromRoute(c);
-  const locations = container.locationQueryService.listLocations(
+  const locations = locationQuery.listLocations(
     routeCategory || query?.category,
     query?.locationKey
   );
@@ -24,7 +24,7 @@ export function getLocations(c: Context) {
 export function getLocationsBasic(c: Context) {
   const query = c.get("validatedQuery") as ListLocationsQueryDto | undefined;
   const routeCategory = resolveCategoryFromRoute(c);
-  const locations = container.locationQueryService.listLocationsBasic(
+  const locations = locationQuery.listLocationsBasic(
     routeCategory || query?.category,
     query?.locationKey
   );
@@ -34,7 +34,7 @@ export function getLocationsBasic(c: Context) {
 export async function deleteLocationBySlug(c: Context) {
   const dto = c.get("validatedParams") as DeleteLocationSlugDto;
 
-  const deleted = await container.locationMutationService.deleteLocationBySlug(dto.slug);
+  const deleted = await locationMutation.deleteLocationBySlug(dto.slug);
 
   if (!deleted) {
     return c.json(errorResponse("Location not found"), 404);
@@ -54,7 +54,7 @@ export async function deleteLocationById(c: Context) {
     }
   }
 
-  const deleted = await container.locationMutationService.deleteLocationById(dto.id);
+  const deleted = await locationMutation.deleteLocationById(dto.id);
 
   if (!deleted) {
     return c.json(errorResponse("Location not found"), 404);
@@ -67,7 +67,7 @@ export function getLocationById(c: Context) {
   const dto = c.get("validatedParams") as DeleteLocationIdDto;
   const routeCategory = resolveCategoryFromRoute(c);
 
-  const location = container.locationQueryService.getLocationById(dto.id);
+  const location = locationQuery.getLocationById(dto.id);
 
   if (!location) {
     return c.json(errorResponse("Location not found"), 404);
@@ -90,7 +90,7 @@ export async function refetchPlaceId(c: Context) {
     }
   }
 
-  const result = await container.locationMutationService.refetchPlaceId(dto.id);
+  const result = await locationMutation.refetchPlaceId(dto.id);
 
   if (!result.success) {
     return c.json(errorResponse(result.error || "Failed to refetch Place ID"), 400);

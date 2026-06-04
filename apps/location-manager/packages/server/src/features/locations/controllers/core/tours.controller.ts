@@ -2,7 +2,6 @@ import type { Context } from "hono";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import type { ImageVariantType } from "@questurian/lm-shared";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import {
   createTour,
@@ -25,8 +24,9 @@ import { getFileExtension, sanitizeLocationName } from "../../utils/location-uti
 import { normalizeTourImportUrl } from "../../services/tour-import/provider-detection";
 import { suggestTourDisplayTitle } from "../../services/tour-import/title-suggestion";
 import { TourImportService } from "../../services/tour-import/tour-import.service";
+import { getToursControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { payloadApi } = getToursControllerDeps();
 const tourImportService = new TourImportService();
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const REQUIRED_VARIANT_TYPES: ImageVariantType[] = [
@@ -166,7 +166,7 @@ export async function getTourSourceImage(c: Context) {
 }
 
 export async function postTourMediaSet(c: Context) {
-  if (!container.payloadApi.isConfigured()) {
+  if (!payloadApi.isConfigured()) {
     throw new BadRequestError("Payload CMS is not configured");
   }
 
@@ -196,7 +196,7 @@ export async function postTourMediaSet(c: Context) {
   }
 
   const externalRef = `tour-image-${Date.now()}-${randomUUID()}`;
-  const mediaSetId = await container.payloadApi.createMediaSet({
+  const mediaSetId = await payloadApi.createMediaSet({
     title,
     alt_text: altText,
     photographer_credit: photographerCredit,
@@ -209,7 +209,7 @@ export async function postTourMediaSet(c: Context) {
     const imageBuffer = await fileToBuffer(file);
     const extension = getFileExtension(file.name);
     const filename = `${safeTitle}_${type}.${extension}`;
-    await container.payloadApi.uploadImage(imageBuffer, filename, altText, {
+    await payloadApi.uploadImage(imageBuffer, filename, altText, {
       photographerCredit,
       mediaSet: mediaSetId,
       variant: type,

@@ -41,7 +41,7 @@ async function main() {
   }
 
   for (const r of rows) {
-    const ok = await container.locationMutationService.deleteLocationById(r.id);
+    const ok = await container.core.mutation.deleteLocationById(r.id);
     console.log(ok ? `  Deleted entity ${r.id}` : `  FAILED entity ${r.id}`);
   }
 

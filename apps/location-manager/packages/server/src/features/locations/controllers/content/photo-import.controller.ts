@@ -1,5 +1,4 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import { BadRequestError } from "@shared/errors/http-error";
 import {
@@ -7,8 +6,9 @@ import {
 } from "@server/features/locations/repositories/content";
 import type { ImageSetUpload } from "@server/features/locations/models/location";
 import type { PhotoImportStartRequest, PhotoImportRejectRequest } from "@questurian/lm-shared";
+import { getPhotoImportControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { photoImport } = getPhotoImportControllerDeps();
 
 function parseId(c: Context, key: string = "id"): number {
   const raw = c.req.param(key);
@@ -20,7 +20,7 @@ function parseId(c: Context, key: string = "id"): number {
 /** GET /api/locations/:id/photo-import/preview */
 export async function getPhotoImportPreview(c: Context) {
   const locationId = parseId(c);
-  const preview = await container.photoImportService.preview(locationId);
+  const preview = await photoImport.preview(locationId);
   return c.json(successResponse({ preview }));
 }
 
@@ -31,7 +31,7 @@ export async function getPhotoImportPreview(c: Context) {
 export async function getPhotoImportPreviewByPlace(c: Context) {
   const placeId = c.req.query("placeId");
   if (!placeId) throw new BadRequestError("placeId required");
-  const preview = await container.photoImportService.previewByPlaceId(placeId);
+  const preview = await photoImport.previewByPlaceId(placeId);
   return c.json(successResponse({ preview }));
 }
 
@@ -55,7 +55,7 @@ export async function getPhotoImportProxy(c: Context) {
     throw new BadRequestError("maxWidth must be a positive number <= 4800");
   }
 
-  const bytes = await container.photoImportService.proxyPhotoBytes(photoName, maxWidth);
+  const bytes = await photoImport.proxyPhotoBytes(photoName, maxWidth);
   return new Response(new Uint8Array(bytes), {
     status: 200,
     headers: {
@@ -78,7 +78,7 @@ export async function postPhotoImportStart(c: Context) {
       throw new BadRequestError("each photo requires a photoName");
     }
   }
-  const result = await container.photoImportService.start(locationId, body.photos);
+  const result = await photoImport.start(locationId, body.photos);
   return c.json(successResponse({ result }));
 }
 
@@ -113,7 +113,7 @@ export async function postPhotoImportReject(c: Context) {
   if (!body || typeof body.photoName !== "string" || !body.photoName) {
     throw new BadRequestError("photoName required");
   }
-  container.photoImportService.rejectPhoto(locationId, body.photoName);
+  photoImport.rejectPhoto(locationId, body.photoName);
   return c.json(successResponse({ ok: true }));
 }
 
@@ -124,14 +124,14 @@ export async function postPhotoImportUnreject(c: Context) {
   if (!body || typeof body.photoName !== "string" || !body.photoName) {
     throw new BadRequestError("photoName required");
   }
-  container.photoImportService.unrejectPhoto(locationId, body.photoName);
+  photoImport.unrejectPhoto(locationId, body.photoName);
   return c.json(successResponse({ ok: true }));
 }
 
 /** POST /api/uploads/:id/photo-import/retry */
 export async function postPhotoImportRetry(c: Context) {
   const uploadId = parseId(c);
-  const upload = await container.photoImportService.retry(uploadId);
+  const upload = await photoImport.retry(uploadId);
   return c.json(successResponse({ upload }));
 }
 
@@ -141,6 +141,6 @@ export async function postPhotoImportRetry(c: Context) {
  */
 export async function deleteStagedSource(c: Context) {
   const uploadId = parseId(c);
-  await container.photoImportService.deleteStagedSource(uploadId);
+  await photoImport.deleteStagedSource(uploadId);
   return c.json(successResponse({ ok: true }));
 }

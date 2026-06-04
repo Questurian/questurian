@@ -17,8 +17,8 @@ export async function reverseGeocodeWithBigDataCloud(
   try {
     const { ServiceContainer } = await import("@server/features/locations/container/service-container");
     const container = ServiceContainer.getInstance();
-    const data = await container.bigDataCloudClient.reverseGeocode(latitude, longitude);
-    const district = container.districtExtractionService.extractDistrict(
+    const data = await container.clients.bigDataCloud.reverseGeocode(latitude, longitude);
+    const district = container.admin.districtExtraction.extractDistrict(
       countryCode || data.countryCode,
       data.localityInfo?.administrative || [],
       data.localityInfo?.informative
@@ -51,9 +51,9 @@ async function reverseGeocodeWithGeoapify(
   try {
     const { ServiceContainer } = await import("@server/features/locations/container/service-container");
     const container = ServiceContainer.getInstance();
-    if (!container.geoapifyClient.isConfigured()) return null;
+    if (!container.clients.geoapify.isConfigured()) return null;
 
-    const data = await container.geoapifyClient.reverseGeocode(latitude, longitude);
+    const data = await container.clients.geoapify.reverseGeocode(latitude, longitude);
     const city = data.city || data.state || "";
     const resolvedCode = (countryCode || data.country_code || "").toUpperCase();
     const district = resolvedCode === "MX"
@@ -98,7 +98,7 @@ export async function fetchTimezoneIanaTimeId(
   try {
     const { ServiceContainer } = await import("@server/features/locations/container/service-container");
     const container = ServiceContainer.getInstance();
-    const timezone = await container.bigDataCloudClient.getTimezone(latitude, longitude);
+    const timezone = await container.clients.bigDataCloud.getTimezone(latitude, longitude);
     return timezone.ianaTimeId || null;
   } catch (error) {
     console.error("Error fetching BigDataCloud timezone:", error);

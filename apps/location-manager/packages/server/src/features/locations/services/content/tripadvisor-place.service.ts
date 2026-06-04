@@ -28,10 +28,10 @@ interface StoredPlaceLookup {
 
 const config = EnvConfig.getInstance();
 const serpApiClient = new SerpApiTripAdvisorClient(config);
-const container = ServiceContainer.getInstance();
+const { core, content } = ServiceContainer.getInstance();
 
 function getLocationOrThrow(locationId: number): LocationResponse {
-  const location = container.locationQueryService.getLocationById(locationId);
+  const location = core.query.getLocationById(locationId);
   if (!location) {
     throw new TripAdvisorPlaceError(TRIPADVISOR_PLACE_MESSAGES.locationNotFound, 404);
   }
@@ -103,7 +103,7 @@ export async function fetchTripAdvisorPlaceData(
     console.error("Failed to save TripAdvisor place data to database");
   }
 
-  container.tripAdvisorPlaceService.mergePlaceDataIntoLocation(
+  content.tripAdvisorPlace.mergePlaceDataIntoLocation(
     locationId,
     storedData.placeResult
   );
@@ -122,7 +122,7 @@ export async function fetchTripAdvisorPlaceData(
 export async function getTripAdvisorPlaceDownloadPayload(
   locationId: number
 ): Promise<JsonDownloadPayload> {
-  const location = container.locationQueryService.getLocationById(locationId);
+  const location = core.query.getLocationById(locationId);
   const locationName = location?.source?.name || `location-${locationId}`;
   const sanitizedName = sanitizeFilename(locationName);
   const filename = `${sanitizedName}-${TRIPADVISOR_PLACE_DOWNLOAD_SUFFIXES.place}`;

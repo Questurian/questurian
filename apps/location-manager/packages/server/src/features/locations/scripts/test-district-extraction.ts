@@ -81,7 +81,7 @@ async function testDistrictExtraction() {
 
     try {
       // Fetch BigDataCloud data
-      const data = await container.bigDataCloudClient.reverseGeocode(test.lat, test.lng);
+      const data = await container.clients.bigDataCloud.reverseGeocode(test.lat, test.lng);
 
       console.log(`\n   📥 API Response:`);
       console.log(`      Country: ${data.countryCode} - ${data.countryName}`);
@@ -89,7 +89,7 @@ async function testDistrictExtraction() {
       console.log(`      Locality: ${data.locality}`);
 
       // Extract district using service
-      const district = container.districtExtractionService.extractDistrict(
+      const district = container.admin.districtExtraction.extractDistrict(
         data.countryCode,
         data.localityInfo?.administrative || [],
         data.localityInfo?.informative
@@ -148,7 +148,7 @@ async function testDistrictExtraction() {
 
   // Display country mappings
   console.log(`\n📋 Current Country Mappings:`);
-  const mappings = container.districtExtractionService.getAllMappings();
+  const mappings = container.admin.districtExtraction.getAllMappings();
   Object.entries(mappings).forEach(([code, levels]) => {
     console.log(`   ${code}: adminLevel ${levels.join(', ')}`);
   });

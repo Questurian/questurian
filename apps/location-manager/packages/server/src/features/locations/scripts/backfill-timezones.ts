@@ -64,7 +64,7 @@ async function backfillTimezones() {
 
   for (const row of targetRows) {
     try {
-      const timezone = await container.bigDataCloudClient.getTimezone(row.lat, row.lng);
+      const timezone = await container.clients.bigDataCloud.getTimezone(row.lat, row.lng);
       const ianaTimeId = timezone.ianaTimeId || null;
       if (!ianaTimeId) {
         skipped += 1;

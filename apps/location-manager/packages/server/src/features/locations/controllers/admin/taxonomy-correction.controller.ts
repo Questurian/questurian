@@ -1,16 +1,16 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import type { CreateCorrectionDto } from "../../validation/schemas/taxonomy-correction.schemas";
+import { getTaxonomyCorrectionControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { taxonomyCorrection } = getTaxonomyCorrectionControllerDeps();
 
 /**
  * GET /api/admin/taxonomy/corrections
  * Get all correction rules
  */
 export function getAllCorrections(c: Context) {
-  const corrections = container.taxonomyCorrectionService.getAllRules();
+  const corrections = taxonomyCorrection.getAllRules();
   return c.json(successResponse({ corrections }));
 }
 
@@ -20,7 +20,7 @@ export function getAllCorrections(c: Context) {
  */
 export function previewCorrection(c: Context) {
   const dto = c.get("validatedBody") as CreateCorrectionDto;
-  const preview = container.taxonomyCorrectionService.previewCorrection(
+  const preview = taxonomyCorrection.previewCorrection(
     dto.incorrect_value,
     dto.correct_value,
     dto.part_type
@@ -34,7 +34,7 @@ export function previewCorrection(c: Context) {
  */
 export function createCorrection(c: Context) {
   const dto = c.get("validatedBody") as CreateCorrectionDto;
-  const result = container.taxonomyCorrectionService.addRule(
+  const result = taxonomyCorrection.addRule(
     dto.incorrect_value,
     dto.correct_value,
     dto.part_type
@@ -54,6 +54,6 @@ export function createCorrection(c: Context) {
  */
 export function deleteCorrection(c: Context) {
   const id = Number(c.req.param("id"));
-  container.taxonomyCorrectionService.removeRule(id);
+  taxonomyCorrection.removeRule(id);
   return c.json(successResponse({ message: "Correction rule deleted" }));
 }

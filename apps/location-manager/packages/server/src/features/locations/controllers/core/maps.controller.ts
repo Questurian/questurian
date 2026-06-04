@@ -1,12 +1,12 @@
 import type { Context } from "hono";
-import { ServiceContainer } from "@server/features/locations/container/service-container";
 import { successResponse } from "@shared/types/api-response";
 import { BadRequestError } from "@shared/errors/http-error";
 import { createMapsSchema, type CreateMapsDto, type GooglePrefillDto, type PatchMapsDto } from "../../validation/schemas/maps.schemas";
 import type { LocationCategory } from "../../models/location";
 import type { ImageVariantType } from "@questurian/lm-shared";
+import { getMapsControllerDeps } from "../dependencies";
 
-const container = ServiceContainer.getInstance();
+const { maps, uploads, locationMutation } = getMapsControllerDeps();
 
 const PHOTO_IMPORT_VARIANT_TYPES: ImageVariantType[] = [
   "thumbnail",
@@ -22,7 +22,7 @@ export async function postAddMaps(c: Context) {
   const dto = c.get("validatedBody") as CreateMapsDto;
   const routeCategory = c.get("routeCategory") as LocationCategory | undefined;
   const payload = routeCategory ? { ...dto, category: routeCategory } : dto;
-  const entry = await container.mapsService.addMapsLocation(payload, routeCategory);
+  const entry = await maps.addMapsLocation(payload, routeCategory);
   return c.json(successResponse({ entry }));
 }
 
@@ -115,7 +115,7 @@ export async function postAddMapsWithPhotos(c: Context) {
   });
 
   // 1. Create the Location row.
-  const entry = await container.mapsService.addMapsLocation(payload, routeCategory);
+  const entry = await maps.addMapsLocation(payload, routeCategory);
   if (!entry?.id) {
     throw new Error("addMapsLocation did not return an entry with an id");
   }
@@ -124,7 +124,7 @@ export async function postAddMapsWithPhotos(c: Context) {
   // 2. Write each source's image-set. Best-effort rollback on any failure.
   try {
     for (const src of sources) {
-      await container.uploadsService.addImageSetUpload(
+      await uploads.addImageSetUpload(
         locationId,
         src.sourceFile,
         src.variants,
@@ -134,7 +134,7 @@ export async function postAddMapsWithPhotos(c: Context) {
     }
   } catch (err) {
     try {
-      await container.locationMutationService.deleteLocationById(locationId);
+      await locationMutation.deleteLocationById(locationId);
     } catch (cleanupErr) {
       console.error(
         `[postAddMapsWithPhotos] Rollback delete failed for location ${locationId}:`,
@@ -150,7 +150,7 @@ export async function postAddMapsWithPhotos(c: Context) {
 export async function postGooglePrefill(c: Context) {
   const dto = c.get("validatedBody") as GooglePrefillDto;
   const routeCategory = c.get("routeCategory") as LocationCategory | undefined;
-  const result = await container.mapsService.resolveGooglePrefill(
+  const result = await maps.resolveGooglePrefill(
     dto.name,
     dto.address,
     routeCategory,
@@ -166,6 +166,6 @@ export async function patchMapsById(c: Context) {
   const id = parseInt(c.req.param("id"));
   const dto = c.get("validatedBody") as PatchMapsDto;
   const routeCategory = c.get("routeCategory") as LocationCategory | undefined;
-  const entry = await container.mapsService.updateMapsLocationById(id, dto, routeCategory);
+  const entry = await maps.updateMapsLocationById(id, dto, routeCategory);
   return c.json(successResponse(entry));
 }
