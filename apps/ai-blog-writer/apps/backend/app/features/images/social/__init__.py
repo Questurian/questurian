@@ -1,0 +1,1 @@
+"""Social image route domain."""

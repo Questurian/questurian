@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter
 
-from .api.ai_text import router as ai_text_router
-from .api.flux import router as flux_router
-from .api.processing import router as processing_router
-from .api.providers import router as providers_router
-from .api.social import router as social_router
-from .api.uploads import router as uploads_router
+from .ai_text.routes import router as ai_text_router
+from .flux.routes import router as flux_router
+from .processing.routes import router as processing_router
+from .providers.routes import router as providers_router
+from .social.routes import router as social_router
+from .uploads.routes import router as uploads_router
 
 router = APIRouter(prefix="/images", tags=["images"])
 router.include_router(providers_router)

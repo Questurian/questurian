@@ -71,7 +71,7 @@ def test_upload_variants_rejects_duplicate_variant_types():
     assert detail["missing_types"] == ["square"]
 
 
-def test_upload_variants_rejects_non_positive_location_ref():
+def test_upload_variants_rejects_negative_location_ref():
     client = TestClient(app)
 
     response = client.post(
@@ -89,7 +89,7 @@ def test_upload_variants_rejects_non_positive_location_ref():
             ],
             external_ref="article-location",
             alt_text="Alt text",
-            location_ref=0,
+            location_ref=-1,
         ),
         headers=_auth_headers(),
     )
@@ -97,7 +97,7 @@ def test_upload_variants_rejects_non_positive_location_ref():
     assert response.status_code == 400
     detail = response.json()["detail"]
     assert detail["step"] == "validate_location_ref"
-    assert detail["location_ref"] == 0
+    assert detail["location_ref"] == -1
 
 
 def test_upload_variants_rejects_blank_photographer_credit():
@@ -236,7 +236,7 @@ def test_upload_social_image_success(monkeypatch):
         return "https://cdn.example.com/custom-social.webp"
 
     monkeypatch.setattr(
-        "app.features.images.routes.process_single_variant",
+        "app.features.images.social.routes.process_single_variant",
         fake_process_single_variant,
     )
     monkeypatch.setattr(
@@ -250,7 +250,7 @@ def test_upload_social_image_success(monkeypatch):
         fake_upload_image,
     )
     monkeypatch.setattr(
-        "app.features.images.routes._wait_for_bunny_original_url",
+        "app.features.images.social.routes._wait_for_bunny_original_url",
         fake_wait_for_bunny_original_url,
     )
 
@@ -384,15 +384,15 @@ def test_import_external_uploads_variants(monkeypatch):
         }
 
     monkeypatch.setattr(
-        "app.features.images.routes._download_external_image",
+        "app.features.images.uploads.routes._download_external_image",
         fake_download,
     )
     monkeypatch.setattr(
-        "app.features.images.routes.process_image_variants",
+        "app.features.images.uploads.routes.process_image_variants",
         fake_process,
     )
     monkeypatch.setattr(
-        "app.features.images.routes.upload_image_set",
+        "app.features.images.uploads.routes.upload_image_set",
         fake_upload,
     )
 
@@ -451,7 +451,7 @@ def test_external_source_returns_image_bytes(monkeypatch):
         }
 
     monkeypatch.setattr(
-        "app.features.images.routes._download_external_image",
+        "app.features.images.uploads.routes._download_external_image",
         fake_download,
     )
 
@@ -483,8 +483,10 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
         alt_text: str,
         external_ref: str,
         location_ref: int | None = None,
+        tags: list | None = None,
     ):
         assert location_ref == 321
+        assert tags is None
         return "23"
 
     async def fake_upload_image(
@@ -494,8 +496,10 @@ def test_upload_variants_returns_structured_payload_error(monkeypatch):
         photographer_credit: str = "",
         media_set_id: str | None = None,
         location_ref: int | None = None,
+        tags: list | None = None,
     ):
         assert location_ref == 321
+        assert tags is None
         assert photographer_credit == "Photo by Test Photographer"
         if variant.variant_type.value == "thumbnail":
             return "101"
@@ -662,11 +666,11 @@ def test_generate_social_image_success(monkeypatch):
         fake_upload_image,
     )
     monkeypatch.setattr(
-        "app.features.images.routes._download_media_asset_file",
+        "app.features.images.social.routes._download_media_asset_file",
         fake_download_media_asset_file,
     )
     monkeypatch.setattr(
-        "app.features.images.routes.process_single_variant",
+        "app.features.images.social.routes.process_single_variant",
         fake_process_single_variant,
     )
 
@@ -812,11 +816,11 @@ def test_generate_social_image_supports_featured_asset_without_media_set(
         fake_upload_image,
     )
     monkeypatch.setattr(
-        "app.features.images.routes._download_media_asset_file",
+        "app.features.images.social.routes._download_media_asset_file",
         fake_download_media_asset_file,
     )
     monkeypatch.setattr(
-        "app.features.images.routes.process_single_variant",
+        "app.features.images.social.routes.process_single_variant",
         fake_process_single_variant,
     )
 
@@ -927,11 +931,11 @@ def test_generate_social_image_requires_generated_bunny_url(monkeypatch):
         fake_upload_image,
     )
     monkeypatch.setattr(
-        "app.features.images.routes._download_media_asset_file",
+        "app.features.images.social.routes._download_media_asset_file",
         fake_download_media_asset_file,
     )
     monkeypatch.setattr(
-        "app.features.images.routes.process_single_variant",
+        "app.features.images.social.routes.process_single_variant",
         fake_process_single_variant,
     )
 
@@ -1565,7 +1569,7 @@ def test_pexels_search_returns_mapped_results(monkeypatch):
             return FakePexelsResponse()
 
     monkeypatch.setattr(
-        "app.features.images.routes.httpx.AsyncClient",
+        "app.features.images.providers.routes.httpx.AsyncClient",
         FakeAsyncClient,
     )
 
@@ -1669,7 +1673,7 @@ def test_unsplash_search_returns_mapped_results(monkeypatch):
             return FakeUnsplashResponse()
 
     monkeypatch.setattr(
-        "app.features.images.routes.httpx.AsyncClient",
+        "app.features.images.providers.routes.httpx.AsyncClient",
         FakeAsyncClient,
     )
 

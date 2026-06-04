@@ -1,0 +1,1 @@
+"""FLUX image route domain."""
