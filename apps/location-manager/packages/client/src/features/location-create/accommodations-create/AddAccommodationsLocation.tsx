@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { BedDouble, CheckCircle2, ChevronLeft } from "lucide-react";
 import { Button } from "@client/components/ui/button";
 import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationTypes";
+import { useGooglePhotoImportEnabled } from "@client/shared/services/api/hooks";
 import type { GooglePrefillResponse } from "@client/shared/services/api/types";
 import type { PhotoImportSessionState } from "../components/PhotoImportPhase";
 import {
@@ -106,12 +107,20 @@ export function AddAccommodationsLocation() {
       Boolean(form.watch("bookingUrl")) &&
       !verifiedAiUrls.bookingUrl
   );
-  const canOpenSection = (section: AccommodationsFormSection) => section === "step1" || isPrefillReady;
+  const { enabled: photoImportEnabled } = useGooglePhotoImportEnabled();
+  const sectionOrder = photoImportEnabled
+    ? ACCOMMODATIONS_SECTION_ORDER
+    : ACCOMMODATIONS_SECTION_ORDER.filter((section) => section !== "photos");
+  const visibleSections = progress.flowSections.filter(
+    (section) => photoImportEnabled || section.key !== "photos"
+  );
+  const canOpenSection = (section: AccommodationsFormSection) =>
+    (section === "step1" || isPrefillReady) && (section !== "photos" || photoImportEnabled);
   const goToSection = (section: AccommodationsFormSection) => {
     if (canOpenSection(section)) setActiveSection(section);
   };
   const moveSection = (offset: number) => {
-    const section = ACCOMMODATIONS_SECTION_ORDER[ACCOMMODATIONS_SECTION_ORDER.indexOf(activeSection) + offset];
+    const section = sectionOrder[sectionOrder.indexOf(activeSection) + offset];
     if (section) goToSection(section);
   };
   const handleClearExceptStep1 = () => {
@@ -124,6 +133,10 @@ export function AddAccommodationsLocation() {
   useEffect(() => {
     if (!isPrefillReady && activeSection !== "step1") setActiveSection("step1");
   }, [activeSection, isPrefillReady]);
+
+  useEffect(() => {
+    if (!photoImportEnabled && activeSection === "photos") setActiveSection("details");
+  }, [activeSection, photoImportEnabled]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
@@ -142,7 +155,7 @@ export function AddAccommodationsLocation() {
               </Button>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-              {progress.flowSections.map((section, index) => {
+              {visibleSections.map((section, index) => {
                 const isActive = activeSection === section.key;
                 const isDisabled = !canOpenSection(section.key);
                 return (

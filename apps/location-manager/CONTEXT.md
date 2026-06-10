@@ -174,6 +174,11 @@ _Avoid_: deleted photo, hidden photo, failed photo.
 
 Photos sourced via the **Photo Import flow** carry their Google contributor name in `Upload.imageSet.photographerCredit` (mapped from `authorAttributions[0].displayName`). Operator may edit this string before finalizing the image-set. Provenance otherwise tracked via the existing **FieldProvenance** mechanism is not extended for image-sets today.
 
+### Integration Toggle
+
+An operator-controlled, persistent on/off switch for a paid third-party integration, flipped at runtime from the admin settings surface — its purpose is cost control, not experimentation. Distinct from key-presence configuration: a missing API key hard-disables an integration regardless of its toggle. Today one exists: the **Google Photo Import toggle**, gating both **Photo Import flow** surfaces.
+_Avoid_: feature flag (connotes rollout/experimentation), env flag, kill switch.
+
 ## Relationships
 
 - A **Location** has one **LocationHierarchy** and zero or more **IdealForTag**s (scoped by category).
@@ -218,6 +223,8 @@ Photos sourced via the **Photo Import flow** carry their Google contributor name
 - In the **Add Dining autofill flow**, the AI batch fires automatically inline after API prefill and blocks Step 1 with a single processing card until done. AI fills `idealFor` (always), `type` (only when Google deterministic mapping yielded null/`other`), `menuUrl`, and `bookingUrl`. Provenance for AI-supplied values is `ai`.
 - In the **Add Dining autofill flow**, AI-supplied URL fields (`menuUrl`, `bookingUrl`) require the operator to explicitly acknowledge each URL — by checking a verify control or by clearing/replacing the URL — before Create is enabled. AI-supplied option-list values (`idealFor`, `type`) do not require this acknowledgment because their domain is bounded.
 - In the **Add Dining autofill flow**, the prior post-create AI re-suggest (Stage 2) phase, the post-create Confirm Title phase, the SerpAPI TripAdvisor-URL search by name+coordinates, and the Google-website link scraper for menu/reservation are removed. Title is operator-polished inline in the Review section.
+- When the **Google Photo Import toggle** is off, the **Add-time photo import** phase is skipped entirely (no disabled placeholder), and the edit surface hides "Pull from Google" and Retry. Existing **StagedSource**s remain visible and croppable — their bytes are already paid for and local — but Retry is refused because it re-spends against Google.
+- An off **Integration Toggle** must be refused server-side on every path that spends against the integration; hiding the client UI is presentation, not enforcement.
 
 ## Naming Conventions
 

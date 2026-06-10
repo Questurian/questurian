@@ -1,5 +1,7 @@
 import { join } from "node:path";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
+import { GOOGLE_PHOTO_IMPORT_TOGGLE_KEY } from "@questurian/lm-shared";
+import { isIntegrationEnabled } from "@server/shared/settings/integration-toggles";
 import type {
   PhotoImportPhoto,
   PhotoImportPreview,
@@ -34,7 +36,7 @@ export class PhotoImportService {
   ) {}
 
   isConfigured(): boolean {
-    return this.googlePhotos.isConfigured();
+    return isIntegrationEnabled(GOOGLE_PHOTO_IMPORT_TOGGLE_KEY) && this.googlePhotos.isConfigured();
   }
 
   /**
@@ -45,7 +47,7 @@ export class PhotoImportService {
    */
   async proxyPhotoBytes(photoName: string, maxWidth?: number): Promise<Buffer> {
     if (!this.isConfigured()) {
-      throw new BadRequestError("Google Places API key not configured");
+      throw new BadRequestError("Google Photo Import is disabled");
     }
     return this.googlePhotos.fetchPhotoBytes(photoName, maxWidth ?? PHOTO_MAX_WIDTH);
   }
@@ -168,7 +170,7 @@ export class PhotoImportService {
     const location = getLocationById(locationId);
     if (!location) throw new NotFoundError("Location", locationId);
     if (!this.isConfigured()) {
-      throw new BadRequestError("Google Places API key not configured");
+      throw new BadRequestError("Google Photo Import is disabled");
     }
     if (!photos || photos.length === 0) {
       return { startedUploadIds: [], skipped: [] };
@@ -214,8 +216,11 @@ export class PhotoImportService {
     return { startedUploadIds, skipped };
   }
 
-  /** Retry a failed StagedSource. */
+  /** Retry a failed StagedSource. Spends against Google, so the toggle gates it. */
   async retry(uploadId: number): Promise<Upload> {
+    if (!this.isConfigured()) {
+      throw new BadRequestError("Google Photo Import is disabled");
+    }
     const upload = getUploadById(uploadId);
     if (!upload) throw new NotFoundError("Upload", uploadId);
     const u = upload as ImageSetUpload;

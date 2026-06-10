@@ -17,10 +17,9 @@ import type {
 } from "../hooks/useAddDiningFlow";
 import { ProcessingCard } from "./ProcessingCard";
 import { PhotoImportPhase, type PhotoImportSessionState } from "./PhotoImportPhase";
+import { useGooglePhotoImportEnabled } from "@client/shared/services/api/hooks";
 
 type DiningFormSection = "step1" | "review" | "photos";
-
-const DINING_SECTION_ORDER: DiningFormSection[] = ["step1", "review", "photos"];
 
 interface AddDiningStagedFormProps {
   form: UseFormReturn<AddDiningFormData>;
@@ -69,6 +68,10 @@ export function AddDiningStagedForm({
   onRetryAiField,
 }: AddDiningStagedFormProps) {
   const idealForOptionGroups = getIdealForOptionGroups("dining");
+  const { enabled: photoImportEnabled } = useGooglePhotoImportEnabled();
+  const sectionOrder: DiningFormSection[] = photoImportEnabled
+    ? ["step1", "review", "photos"]
+    : ["step1", "review"];
   const [activeSection, setActiveSection] = useState<DiningFormSection>("step1");
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [photoSession, setPhotoSession] = useState<PhotoImportSessionState | null>(null);
@@ -98,7 +101,9 @@ export function AddDiningStagedForm({
   }> = [
     { key: "step1", label: "Basics", complete: stepOneComplete },
     { key: "review", label: "Review", complete: reviewComplete },
-    { key: "photos", label: "Photos", complete: photoReady || selectedCount === 0 },
+    ...(photoImportEnabled
+      ? [{ key: "photos" as const, label: "Photos", complete: photoReady || selectedCount === 0 }]
+      : []),
   ];
 
   const canOpenSection = (section: DiningFormSection) => {
@@ -112,16 +117,16 @@ export function AddDiningStagedForm({
   };
 
   const goToPreviousSection = () => {
-    const currentIndex = DINING_SECTION_ORDER.indexOf(activeSection);
-    const previousSection = DINING_SECTION_ORDER[currentIndex - 1];
+    const currentIndex = sectionOrder.indexOf(activeSection);
+    const previousSection = sectionOrder[currentIndex - 1];
     if (previousSection) {
       goToSection(previousSection);
     }
   };
 
   const goToNextSection = async () => {
-    const currentIndex = DINING_SECTION_ORDER.indexOf(activeSection);
-    const nextSection = DINING_SECTION_ORDER[currentIndex + 1];
+    const currentIndex = sectionOrder.indexOf(activeSection);
+    const nextSection = sectionOrder[currentIndex + 1];
     if (!nextSection) return;
 
     if (activeSection === "review") {
@@ -150,6 +155,12 @@ export function AddDiningStagedForm({
     }
   }, [isPrefillReady, activeSection]);
 
+  useEffect(() => {
+    if (!photoImportEnabled && activeSection === "photos") {
+      setActiveSection("review");
+    }
+  }, [photoImportEnabled, activeSection]);
+
   const handleContinue = async () => {
     setIsAdvancing(true);
     const success = await onRunGooglePrefill();
@@ -160,6 +171,40 @@ export function AddDiningStagedForm({
   };
 
   const isPrefillRunning = isPrefillingGoogle || isAdvancing;
+
+  const createButton = (
+    <Button
+      type="submit"
+      disabled={
+        !isPrefillReady ||
+        !form.formState.isValid ||
+        isCreating ||
+        (selectedCount > 0 && !photoReady) ||
+        !allAiUrlsVerified
+      }
+      className="gap-2"
+      title={
+        !allAiUrlsVerified
+          ? "Verify each AI-suggested link before Create"
+          : selectedCount > 0 && !photoReady
+          ? `${photoCount} of ${selectedCount} photos cropped — finish each crop before Create`
+          : undefined
+      }
+    >
+      {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
+      {isCreating
+        ? "Creating..."
+        : !allAiUrlsVerified
+          ? "Verify AI links to enable Create"
+          : !photoImportEnabled
+            ? "Create"
+            : selectedCount === 0
+              ? "Create without photos"
+              : photoReady
+                ? `Create with ${photoCount} photo${photoCount === 1 ? "" : "s"}`
+                : `Crop ${selectedCount - photoCount} more to enable Create`}
+    </Button>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
@@ -602,14 +647,18 @@ export function AddDiningStagedForm({
                 <Button type="button" variant="outline" onClick={goToPreviousSection}>
                   Previous
                 </Button>
-                <Button type="button" onClick={() => void goToNextSection()}>
-                  Next
-                </Button>
+                {photoImportEnabled ? (
+                  <Button type="button" onClick={() => void goToNextSection()}>
+                    Next
+                  </Button>
+                ) : (
+                  createButton
+                )}
               </div>
             </section>
           )}
 
-          {isPrefillReady && activeSection === "photos" && (
+          {isPrefillReady && photoImportEnabled && activeSection === "photos" && (
             <section className="space-y-5">
               <PhotoImportPhase
                 placeId={watchedPlaceId || null}
@@ -620,35 +669,7 @@ export function AddDiningStagedForm({
                 <Button type="button" variant="outline" onClick={goToPreviousSection}>
                   Previous
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={
-                    !isPrefillReady ||
-                    !form.formState.isValid ||
-                    isCreating ||
-                    (selectedCount > 0 && !photoReady) ||
-                    !allAiUrlsVerified
-                  }
-                  className="gap-2"
-                  title={
-                    !allAiUrlsVerified
-                      ? "Verify each AI-suggested link before Create"
-                      : selectedCount > 0 && !photoReady
-                      ? `${photoCount} of ${selectedCount} photos cropped — finish each crop before Create`
-                      : undefined
-                  }
-                >
-                  {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isCreating
-                    ? "Creating..."
-                    : !allAiUrlsVerified
-                      ? "Verify AI links to enable Create"
-                      : selectedCount === 0
-                        ? "Create without photos"
-                        : photoReady
-                          ? `Create with ${photoCount} photo${photoCount === 1 ? "" : "s"}`
-                          : `Crop ${selectedCount - photoCount} more to enable Create`}
-                </Button>
+                {createButton}
               </div>
             </section>
           )}

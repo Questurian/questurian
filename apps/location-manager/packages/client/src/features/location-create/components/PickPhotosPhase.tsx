@@ -163,7 +163,7 @@ export function PickPhotosPhase({
       <div className="flex flex-col items-center justify-center gap-3 py-12 text-center">
         <Camera className="h-8 w-8 text-muted-foreground" />
         <p className="text-sm text-muted-foreground">
-          Google Places API key is not configured on the server. Photo Import is disabled.
+          Google Photo Import is disabled on the server.
         </p>
         {onSkip && (
           <button type="button" onClick={onSkip} className="text-sm text-foreground underline">

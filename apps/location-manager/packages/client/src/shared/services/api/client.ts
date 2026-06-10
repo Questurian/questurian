@@ -124,6 +124,21 @@ export async function apiPatch<T>(
   return handleResponse<T>(response);
 }
 
+export async function apiPut<T>(
+  path: string,
+  body: unknown
+): Promise<T> {
+  const url = API_BASE_URL ? new URL(path, API_BASE_URL).toString() : path;
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  return handleResponse<T>(response);
+}
+
 export async function apiPostFormData<T>(
   path: string,
   formData: FormData

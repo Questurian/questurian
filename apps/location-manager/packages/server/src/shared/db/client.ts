@@ -10,6 +10,7 @@ import { collapseAiProvenance } from "./migrations/collapse-ai-provenance";
 import { dropReviewPipelineSchema } from "./migrations/drop-review-pipeline-schema";
 import { addPhotoImportFields } from "./migrations/add-photo-import-fields";
 import { renameReservationUrlToBookingUrl } from "./migrations/rename-reservation-url-to-booking-url";
+import { addAppSettings } from "./migrations/add-app-settings";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -79,6 +80,8 @@ export function initDb() {
   addPhotoImportFields(database);
 
   renameReservationUrlToBookingUrl(database);
+
+  addAppSettings(database);
 
   const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
   if (nightlifeIdealForCleanup.cleared > 0) {

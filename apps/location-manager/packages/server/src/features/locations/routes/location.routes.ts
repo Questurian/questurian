@@ -54,6 +54,7 @@ import {
 
   // Admin
   clearDatabase, scanOrphanedFiles, cleanupOrphanedFiles,
+  getAppSettings, putAppSetting,
   getPendingTaxonomy, approveTaxonomy, rejectTaxonomy,
   getAllCorrections, previewCorrection, createCorrection, deleteCorrection,
   getPayloadLocationRefs,
@@ -229,6 +230,10 @@ app.patch(
 // Admin orphan cleanup routes
 app.get("/api/admin/orphaned-files", scanOrphanedFiles);
 app.post("/api/admin/orphaned-files/cleanup", cleanupOrphanedFiles);
+
+// App settings (Integration Toggles)
+app.get("/api/admin/settings", getAppSettings);
+app.put("/api/admin/settings/:key", putAppSetting);
 
 // Admin payload location refs route
 app.get("/api/admin/payload-location-refs", getPayloadLocationRefs);

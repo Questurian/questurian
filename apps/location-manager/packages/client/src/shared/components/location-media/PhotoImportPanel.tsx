@@ -22,6 +22,7 @@ import type {
 } from "@questurian/lm-shared";
 import { VARIANT_SPECS } from "@questurian/lm-shared";
 import { useToast } from "@client/shared/hooks/useToast";
+import { useGooglePhotoImportEnabled } from "@client/shared/services/api/hooks";
 import { useReplaceUploadVariants } from "@client/shared/services/api/hooks/useReplaceUploadVariants";
 import { PickPhotosPhase } from "@client/features/location-create/components/PickPhotosPhase";
 import { MultiVariantCropperModal } from "./modals/MultiVariantCropperModal";
@@ -115,6 +116,7 @@ const STATUS_STYLES: Record<NonNullable<StagedSourceSnapshot["stagedSourceStatus
 
 export function PhotoImportPanel({ locationId, category, placeId }: PhotoImportPanelProps) {
   const { showToast } = useToast();
+  const { enabled: photoImportEnabled } = useGooglePhotoImportEnabled();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [cropState, setCropState] = useState<{
     isOpen: boolean;
@@ -254,9 +256,11 @@ export function PhotoImportPanel({ locationId, category, placeId }: PhotoImportP
     retryStaged.mutate({ uploadId: source.uploadId, locationId });
   }
 
-  // Hide the panel completely when there's no placeId and no pending sources;
-  // there's nothing useful to show in that case.
-  if (!placeId && pendingSources.length === 0) {
+  // Hide the panel completely when pulling isn't possible (no placeId, or the
+  // Google Photo Import toggle is off) and there are no pending sources. Pending
+  // sources stay visible even when the toggle is off — their bytes are already
+  // on disk, so cropping them costs nothing.
+  if ((!placeId || !photoImportEnabled) && pendingSources.length === 0) {
     return null;
   }
 
@@ -267,7 +271,7 @@ export function PhotoImportPanel({ locationId, category, placeId }: PhotoImportP
           <Camera className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">Pull from Google</h3>
         </div>
-        {placeId && (
+        {placeId && photoImportEnabled && (
           <Button
             type="button"
             size="sm"
@@ -279,7 +283,7 @@ export function PhotoImportPanel({ locationId, category, placeId }: PhotoImportP
         )}
       </div>
 
-      {!placeId && (
+      {!placeId && photoImportEnabled && (
         <p className="text-xs text-muted-foreground">
           Set a Google Place ID on this Location to enable photo import.
         </p>
@@ -371,17 +375,19 @@ export function PhotoImportPanel({ locationId, category, placeId }: PhotoImportP
                           {source.errorMessage}
                         </span>
                       )}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleRetry(source)}
-                        disabled={retryStaged.isPending}
-                        className="h-7 gap-1.5 text-xs"
-                      >
-                        <RotateCw className="h-3 w-3" />
-                        Retry
-                      </Button>
+                      {photoImportEnabled && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleRetry(source)}
+                          disabled={retryStaged.isPending}
+                          className="h-7 gap-1.5 text-xs"
+                        >
+                          <RotateCw className="h-3 w-3" />
+                          Retry
+                        </Button>
+                      )}
                     </>
                   )}
                 </div>

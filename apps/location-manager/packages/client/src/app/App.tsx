@@ -12,6 +12,7 @@ import {
 import { Tours } from "@client/features/tours";
 import { TaxonomyReview } from "@client/features/admin/pages/TaxonomyReview";
 import { PayloadSync } from "@client/features/admin/pages/PayloadSync";
+import { AppSettings } from "@client/features/admin/pages/AppSettings";
 import { Health } from "@client/features/health/Health";
 import { EditLocationRoute } from "./EditLocationRoute";
 
@@ -34,6 +35,7 @@ function App() {
 
             <Route path="/admin/taxonomy" element={<TaxonomyReview />} />
             <Route path="/admin/payload-sync" element={<PayloadSync />} />
+            <Route path="/admin/settings" element={<AppSettings />} />
             <Route path="/health" element={<Health />} />
           </Routes>
         </main>

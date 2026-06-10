@@ -7,6 +7,7 @@ import type { AddAccommodationsFormData } from "../../../validation/add-accommod
 import { DETAILS_SUGGESTION_FIELDS } from "../../suggestions/accommodations-suggestion-utils";
 import { AiSuggestedBadge, FieldLabel, OptionSelect, SectionHeader } from "../AccommodationsFieldControls";
 import type { AccommodationsFormSectionsProps } from "../AccommodationsForm";
+import { useGooglePhotoImportEnabled } from "@client/shared/services/api/hooks";
 
 export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsProps) {
   const {
@@ -17,6 +18,44 @@ export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsP
     setAiSuggestedFields, setPhotoSession, setSingleOptionField, setVerifiedAiUrls,
     suggestAllFields, verifiedAiUrls, isManuallySelected,
   } = props;
+  const { enabled: photoImportEnabled } = useGooglePhotoImportEnabled();
+
+  const createControls = (
+    <div className="flex flex-col items-end gap-2">
+      {createDisabledReason && (
+        <p className="max-w-md text-right text-xs text-muted-foreground">
+          {createDisabledReason}
+        </p>
+      )}
+      {photoSubmitError && (
+        <p className="max-w-md text-right text-xs text-destructive">
+          {photoSubmitError.message}
+        </p>
+      )}
+      <Button
+        type="submit"
+        disabled={
+          Boolean(createDisabledReason) ||
+          isPending ||
+          isCreatingWithPhotos ||
+          (selectedCount > 0 && !photoReady)
+        }
+        title={
+          selectedCount > 0 && !photoReady
+            ? `${photoCount} of ${selectedCount} photos cropped — finish each crop before Create`
+            : undefined
+        }
+      >
+        {isPending || isCreatingWithPhotos
+          ? "Creating..."
+          : selectedCount === 0
+            ? "Create Accommodations Document"
+            : photoReady
+              ? `Create with ${photoCount} photo${photoCount === 1 ? "" : "s"}`
+              : `Crop ${selectedCount - photoCount} more to enable Create`}
+      </Button>
+    </div>
+  );
 
   return <>
       {isPrefillReady && activeSection === "details" && (
@@ -154,14 +193,18 @@ export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsP
             <Button type="button" variant="outline" onClick={goToPreviousSection}>
               Previous
             </Button>
-            <Button type="button" onClick={goToNextSection}>
-              Next
-            </Button>
+            {photoImportEnabled ? (
+              <Button type="button" onClick={goToNextSection}>
+                Next
+              </Button>
+            ) : (
+              createControls
+            )}
           </div>
         </section>
       )}
 
-      {isPrefillReady && activeSection === "photos" && (
+      {isPrefillReady && photoImportEnabled && activeSection === "photos" && (
         <section className="space-y-5">
           <PhotoImportPhase
             placeId={form.watch("placeId") || null}
@@ -172,40 +215,7 @@ export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsP
             <Button type="button" variant="outline" onClick={goToPreviousSection}>
               Previous
             </Button>
-            <div className="flex flex-col items-end gap-2">
-              {createDisabledReason && (
-                <p className="max-w-md text-right text-xs text-muted-foreground">
-                  {createDisabledReason}
-                </p>
-              )}
-              {photoSubmitError && (
-                <p className="max-w-md text-right text-xs text-destructive">
-                  {photoSubmitError.message}
-                </p>
-              )}
-              <Button
-                type="submit"
-                disabled={
-                  Boolean(createDisabledReason) ||
-                  isPending ||
-                  isCreatingWithPhotos ||
-                  (selectedCount > 0 && !photoReady)
-                }
-                title={
-                  selectedCount > 0 && !photoReady
-                    ? `${photoCount} of ${selectedCount} photos cropped — finish each crop before Create`
-                    : undefined
-                }
-              >
-                {isPending || isCreatingWithPhotos
-                  ? "Creating..."
-                  : selectedCount === 0
-                    ? "Create Accommodations Document"
-                    : photoReady
-                      ? `Create with ${photoCount} photo${photoCount === 1 ? "" : "s"}`
-                      : `Crop ${selectedCount - photoCount} more to enable Create`}
-              </Button>
-            </div>
+            {createControls}
           </div>
         </section>
       )}

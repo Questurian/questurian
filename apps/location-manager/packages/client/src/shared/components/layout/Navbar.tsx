@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { MapPin, Plus, Settings, ArrowUpDown, Ticket } from "lucide-react";
+import { MapPin, Plus, Settings, ArrowUpDown, Ticket, SlidersHorizontal } from "lucide-react";
 import { usePendingTaxonomy } from "@client/shared/services/api/hooks";
 
 export function Navbar() {
@@ -18,6 +18,7 @@ export function Navbar() {
       badge: pendingCount,
     },
     { to: "/admin/payload-sync", label: "Payload Sync", shortLabel: "Sync", icon: ArrowUpDown },
+    { to: "/admin/settings", label: "Settings", shortLabel: "Settings", icon: SlidersHorizontal },
   ];
 
   const isActive = (path: string) => {
@@ -39,7 +40,7 @@ export function Navbar() {
             <span className="truncate text-sm font-semibold leading-tight">Location Manager</span>
           </Link>
 
-          <div className="grid w-full grid-cols-4 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-1">
+          <div className="grid w-full grid-cols-5 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.to);
