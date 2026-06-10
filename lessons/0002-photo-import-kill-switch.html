@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 0002 — Auditing a Kill Switch: the Photo Import Flag</title>
+<style>
+  :root {
+    --ink: #1a1f2e; --muted: #5a6275; --line: #d9dce3; --bg: #fbfbfd;
+    --ok: #1a7f4b; --gap: #b3261e; --accent: #2b4a8b; --chip: #eef1f7;
+    --warn-bg: #fdf3f2; --ok-bg: #f0f9f4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--bg); margin: 0; padding: 2.5rem 1.5rem;
+    line-height: 1.6; font-size: 15.5px;
+  }
+  main { max-width: 760px; margin: 0 auto; }
+  .kicker { color: var(--accent); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 600; }
+  h1 { font-size: 1.9rem; margin: .2rem 0 .4rem; letter-spacing: -0.02em; line-height: 1.2; }
+  .meta { color: var(--muted); font-size: .85rem; margin-bottom: 2rem; }
+  h2 { font-size: 1.25rem; margin: 2.4rem 0 .7rem; letter-spacing: -0.01em; }
+  h2 .n { color: var(--accent); margin-right: .4rem; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85em; background: var(--chip); padding: .1em .35em; border-radius: 4px; }
+  pre { background: #14181f; color: #e6e9f0; padding: 1rem 1.2rem; border-radius: 8px; overflow-x: auto; font-size: .82rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: inherit; }
+  .verdict { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 1.1rem 1.3rem; margin: 1.5rem 0; }
+  .verdict h3 { margin: 0 0 .5rem; font-size: 1rem; }
+  .pill { display: inline-block; font-size: .72rem; font-weight: 700; padding: .15em .65em; border-radius: 999px; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.gap { background: var(--warn-bg); color: var(--gap); }
+  ul, ol { padding-left: 1.3rem; }
+  li { margin: .35rem 0; }
+  .gapbox { background: var(--warn-bg); border-left: 4px solid var(--gap); padding: .8rem 1rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+  .okbox { background: var(--ok-bg); border-left: 4px solid var(--ok); padding: .8rem 1rem; margin: 1rem 0; border-radius: 0 8px 8px 0; }
+  .principle { background: #fff; border: 1px solid var(--accent); border-radius: 10px; padding: 1rem 1.3rem; margin: 1.5rem 0; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); font-size: .9rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--chip); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+  details { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: .7rem 1rem; margin: .6rem 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  a { color: var(--accent); }
+  .src { font-size: .8rem; color: var(--muted); }
+  .footer-note { margin-top: 3rem; padding: 1rem 1.3rem; background: var(--chip); border-radius: 10px; font-size: .9rem; }
+  @media print { body { background: #fff; padding: 0; } pre { white-space: pre-wrap; } }
+</style>
+</head>
+<body>
+<main>
+  <p class="kicker">Lesson 0002 · Questurian Architecture</p>
+  <h1>Auditing a Kill Switch: the Photo Import Flag</h1>
+  <p class="meta">~20 minutes · builds on the <a href="file:///Users/alanmalpartida/Desktop/codebase-overview/index.html">codebase overview</a> · companion: <a href="../reference/photo-import-gate-map.html">Photo Import Gate Map</a> · all claims code-verified 2026-06-10 unless tagged otherwise</p>
+
+  <div class="verdict">
+    <h3>The question you asked: "Have we set a robust feature flag?"</h3>
+    <p style="margin:.3rem 0"><span class="pill ok">PARTLY</span> A flag exists (uncommitted in your working tree): <code>ENABLE_GOOGLE_PHOTO_IMPORT</code>, default <strong>off</strong>. It gates 4 of the 5 money-spending paths and 2 of the 3 UI surfaces.</p>
+    <p style="margin:.3rem 0"><span class="pill gap">GAP 1</span> <code>retry()</code> can still spend Google money with the flag off.</p>
+    <p style="margin:.3rem 0"><span class="pill gap">GAP 2</span> The "Pull photos from Google" button still renders on <em>every</em> existing location's media tab.</p>
+    <p style="margin:.3rem 0"><span class="pill gap">GAP 3</span> It's an env var — toggling it means editing <code>.env</code> and restarting the server. The UI on/off button you want doesn't exist yet.</p>
+  </div>
+
+  <h2><span class="n">1</span>Why this feature costs money</h2>
+  <p>Every "Pull from Google" interaction fans out to Google's <a href="https://developers.google.com/maps/documentation/places/web-service/place-photos">Places API (New) photo endpoints</a>, and each call is billable (<a href="https://developers.google.com/maps/billing-and-pricing/pricing">pricing table</a>):</p>
+  <ul>
+    <li><strong>Opening the picker</strong> (preview) = 1 Place Details call + up to <em>N</em> photo-media calls, one per thumbnail. The code admits this fan-out: <span class="src">"Fan out and grab thumbnail URLs… latency is acceptable" — <code>photo-import.service.ts:117</code></span></li>
+    <li><strong>Importing</strong> = 1 photo-media bytes download per selected photo.</li>
+    <li><strong>Cropping in the add-flow</strong> = 1 more bytes download via the proxy endpoint.</li>
+  </ul>
+  <p>So a single browse-and-import session on a location with 10 photos can be ~12–15 billable calls. That's the bill you're switching off.</p>
+
+  <h2><span class="n">2</span>The skill: how to audit any kill switch</h2>
+  <p>This is the repeatable method — it works for any "expensive integration" flag, in any codebase:</p>
+  <ol>
+    <li><strong>Find the waist.</strong> What is the <em>narrowest</em> piece of code that talks to the paid service? Here: <code>GooglePlacesPhotosClient</code> — the only class that holds the API key and calls <code>places.googleapis.com</code>.</li>
+    <li><strong>Enumerate every path to the waist.</strong> Grep for the client's methods (<code>getPhotosForPlace</code>, <code>getPhotoUri</code>, <code>fetchPhotoBytes</code>) and walk callers upward. You get 5 paths: <code>preview</code>, <code>previewByPlaceId</code>, <code>start</code>, <code>proxyPhotoBytes</code>, <code>retry</code>.</li>
+    <li><strong>Check the gate on each path.</strong> 4 of 5 call <code>isConfigured()</code> first. One doesn't.</li>
+    <li><strong>Check the UI's source of truth.</strong> Does the UI <em>derive</em> its disabled state from the server, or does it guess? Here the add-flow phases read <code>preview.configured</code> from the server response — good. The media-tab panel reads nothing — gap.</li>
+  </ol>
+  <p>Full path-by-path table with file:line evidence: <a href="../reference/photo-import-gate-map.html">Photo Import Gate Map</a>.</p>
+
+  <h2><span class="n">3</span>The gaps, and the principle behind them</h2>
+
+  <div class="gapbox">
+    <strong>Gap 1 — <code>retry()</code> bypasses the flag.</strong>
+    <code>PhotoImportService.retry()</code> (<code>photo-import.service.ts:219</code>) goes straight to
+    <code>processDownload()</code> → <code>fetchPhotoBytes()</code>. The only check on that route is the
+    <em>key</em> check inside the Google client — not the flag. With the flag off and your key still set,
+    clicking "Retry" on a failed staged photo spends real money.
+  </div>
+
+  <div class="gapbox">
+    <strong>Gap 2 — <code>PhotoImportPanel</code> ignores the flag.</strong>
+    The panel renders its "Pull photos from Google" button whenever the location has a <code>placeId</code>
+    (<code>PhotoImportPanel.tsx:270</code>). It's mounted on every location's media gallery
+    (<code>LocationMediaGallery.tsx:44</code>) and the accommodations edit form. Clicking it with the flag off
+    doesn't spend money (the preview short-circuits server-side), but the button you wanted gone is still everywhere.
+  </div>
+
+  <div class="principle">
+    <strong>Principle: gate at the narrowest waist.</strong><br>
+    The current design checks the flag per-method at the service layer — five doors, four locks. That is exactly
+    how <code>retry()</code> got missed, and how the <em>next</em> method someone adds will get missed too.
+    If instead the flag check lives inside <code>GooglePlacesPhotosClient.requireConfigured()</code> — the one
+    chokepoint every Google call already passes through — every present and future caller is covered automatically.
+    Defense in depth means keeping the service-layer checks too (they give friendly early errors), but the waist
+    is the lock that can't be forgotten. This maps directly to your mission's "blast radius" idea: a gate's blast
+    radius should equal the cost surface, and the waist is the only place where it provably does.
+  </div>
+
+  <h2><span class="n">4</span>What you actually asked for: a runtime toggle</h2>
+  <p>An env flag answers "is this deployment allowed to spend money?" — it changes on restart. You asked for an
+  <strong>ops toggle</strong>: a button in the UI that flips the feature live. In
+  <a href="https://martinfowler.com/articles/feature-toggles.html">Hodgson's taxonomy</a> that's a
+  <em>longer-lived, runtime-dynamic</em> toggle, and it needs three pieces the codebase doesn't have yet:</p>
+  <table>
+    <tr><th>Piece</th><th>Design</th><th>Entry point</th></tr>
+    <tr>
+      <td>Persisted setting</td>
+      <td>A one-row settings store in the LM SQLite DB (e.g. <code>app_settings</code> key/value), read at request time — not cached at boot</td>
+      <td><code>packages/server/src/shared/db/</code> (follow the migration pattern in <code>migrations/add-photo-import-fields.ts</code>)</td>
+    </tr>
+    <tr>
+      <td>Status + toggle API</td>
+      <td><code>GET /api/settings/photo-import</code> and <code>PUT /api/settings/photo-import</code>, behind the same operator auth as the other routes. The effective state = env flag <em>AND</em> runtime setting <em>AND</em> key present — env stays as the master kill switch</td>
+      <td><code>features/locations/routes/location.routes.ts</code></td>
+    </tr>
+    <tr>
+      <td>UI toggle + consumers</td>
+      <td>One shared React Query hook (<code>usePhotoImportEnabled</code>) consumed by all three surfaces; the toggle button lives in the existing admin area</td>
+      <td><code>packages/client/src/features/admin/pages/</code> (alongside <code>PayloadSync.tsx</code>)</td>
+    </tr>
+  </table>
+  <p>The key architectural move: once a status endpoint exists, <em>all three</em> UI surfaces stop guessing and
+  derive from one source of truth — which also fixes Gap 2 properly instead of patching the panel.</p>
+
+  <h2><span class="n">5</span>Exercise — close Gap 1 yourself (the tangible win)</h2>
+  <p>One edit, then verify with a tight feedback loop. Move the flag check into the waist:</p>
+  <ol>
+    <li>In <code>google-places-photos.client.ts</code>, make <code>isConfigured()</code> also require
+    <code>EnvConfig.getInstance().ENABLE_GOOGLE_PHOTO_IMPORT</code>. Because <code>requireConfigured()</code>
+    runs before every Google call, this closes <code>retry()</code> and any future caller in one move.
+    (The service's own <code>isConfigured()</code> can then go back to just delegating — one source of truth.)</li>
+    <li>Set <code>ENABLE_GOOGLE_PHOTO_IMPORT=false</code> in <code>apps/location-manager/.env</code>, start the app
+    (<code>pnpm dev</code> from <code>apps/location-manager</code> — server is on port 4317), then run:</li>
+  </ol>
+<pre><code># 1. Preview must short-circuit: expect "configured": false, empty photos
+curl -s "http://localhost:4317/api/photo-import/preview-by-place?placeId=ChIJtest" | head -c 300
+
+# 2. The proxy (a direct waist path) must refuse BEFORE any network call:
+#    expect a 400 error, and no outbound Google request in server logs
+curl -s "http://localhost:4317/api/photo-import/proxy?name=places/x/photos/y"
+
+# 3. Flip the flag to true, restart, re-run #2: expect a Google error instead
+#    (bad photo name) — proving the gate, not the name, was the blocker</code></pre>
+  <p>The loop: each curl gives you immediate pass/fail. If step 2 returns image bytes or a Google-shaped error
+  while the flag is off, your gate isn't at the waist yet.</p>
+
+  <h2><span class="n">6</span>Check yourself</h2>
+
+  <details><summary>Q1. Flag off, API key still set in <code>.env</code>. Which action spends Google money today (before your fix)?</summary>
+  <p><strong>Retrying a failed staged photo.</strong> <code>retry()</code> never consults <code>isConfigured()</code>;
+  it goes straight to <code>processDownload</code> → <code>fetchPhotoBytes</code>, and the client's own check only
+  verifies the key exists.</p></details>
+
+  <details><summary>Q2. Why is <code>GooglePlacesPhotosClient</code> the right place for the flag check, rather than adding the missing check to <code>retry()</code>?</summary>
+  <p>It's the chokepoint: every Google call, from every current and <em>future</em> caller, already passes through it.
+  Patching <code>retry()</code> fixes one door; locking the waist fixes the building. Per-call-site gating is what
+  produced the gap in the first place.</p></details>
+
+  <details><summary>Q3. How does the add-flow UI know the feature is disabled?</summary>
+  <p>It doesn't have its own config — it reads the <code>configured: boolean</code> field that the server returns in
+  the preview response. Server is the source of truth; the client just renders it. <code>PhotoImportPanel</code> is
+  the surface that lacks this wiring.</p></details>
+
+  <details><summary>Q4. After the env flag ships, what still stands between you and "click a button to turn it off"?</summary>
+  <p>Env vars are read at process start — flipping one means editing <code>.env</code> and restarting the server.
+  A live UI toggle needs a persisted runtime setting, an authed status/toggle endpoint, and the UI surfaces reading
+  that endpoint. The env flag should remain as the outer kill switch.</p></details>
+
+  <h2><span class="n">7</span>Go deeper</h2>
+  <p><strong>Primary source:</strong> Pete Hodgson,
+  <a href="https://martinfowler.com/articles/feature-toggles.html">"Feature Toggles (aka Feature Flags)"</a>
+  on martinfowler.com — the canonical taxonomy (release / experiment / <em>ops</em> / permission toggles), and
+  specifically the sections on toggle <em>longevity</em> and <em>dynamism</em>, which is exactly the env-vs-runtime
+  decision in section 4.</p>
+
+  <div class="footer-note">
+    <strong>Questions?</strong> Ask your teacher (the agent) anything that's unclear — e.g. "show me exactly where
+    the auth middleware would wrap the settings route" or "walk me through the migration pattern". The audit method
+    in section 2 is the reusable skill; try it next on the Instagram RapidAPI integration, which has the same shape.
+  </div>
+</main>
+</body>
+</html>

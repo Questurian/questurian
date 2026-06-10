@@ -87,3 +87,6 @@ apps/location-manager/packages/server/data/tripadvisor-reviews/
 apps/location-manager/packages/server/data/*.bak-*
 apps/location-manager/packages/server/data/images.bak-*/
 apps/questurian-leads/apps/client/vite.config.js.timestamp-*.mjs
+
+# Local teach-skill learning records (never sync)
+learning-records/

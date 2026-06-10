@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reference: Photo Import Gate Map — Location Manager</title>
+<style>
+  :root {
+    --ink: #1a1f2e; --muted: #5a6275; --line: #d9dce3; --bg: #fbfbfd;
+    --ok: #1a7f4b; --gap: #b3261e; --accent: #2b4a8b; --chip: #eef1f7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--bg); margin: 0; padding: 2.5rem 1.5rem;
+    line-height: 1.55; font-size: 15px;
+  }
+  main { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); margin-bottom: 2rem; }
+  h2 { font-size: 1.05rem; margin: 2.2rem 0 .6rem; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); }
+  th, td { text-align: left; padding: .55rem .7rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--chip); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85em; background: var(--chip); padding: .1em .35em; border-radius: 4px; }
+  .ok { color: var(--ok); font-weight: 600; }
+  .gap { color: var(--gap); font-weight: 600; }
+  .tag { display: inline-block; font-size: .68rem; padding: .1em .5em; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: .4em; vertical-align: middle; }
+  .note { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: .8rem 1rem; margin: 1rem 0; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .8rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+  @media print { body { background: #fff; padding: 0; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Photo Import Gate Map</h1>
+  <p class="sub">Every code path in Location Manager that can spend Google Places API money, and what gates it.
+  Audited 2026-06-10 against the working tree (flag change uncommitted). All rows <strong>code-verified</strong>.</p>
+
+  <h2>The kill switch</h2>
+  <table>
+    <tr><th>Layer</th><th>What</th><th>Where</th></tr>
+    <tr><td>Env var</td><td><code>ENABLE_GOOGLE_PHOTO_IMPORT</code> — must be the literal string <code>"true"</code>; anything else (including unset) = off</td><td><code>packages/server/src/shared/config/env.config.ts</code></td></tr>
+    <tr><td>Service gate</td><td><code>PhotoImportService.isConfigured()</code> = flag <em>AND</em> API key present</td><td><code>services/integrations/photo-import.service.ts:37</code></td></tr>
+    <tr><td>Key-only check</td><td><code>GooglePlacesPhotosClient.isConfigured()</code> — checks the API key only, <strong>not</strong> the flag</td><td><code>services/integrations/clients/google-places-photos.client.ts:45</code></td></tr>
+  </table>
+
+  <h2>Server paths that can spend money</h2>
+  <table>
+    <tr><th>Path</th><th>Google calls</th><th>Gated by flag?</th></tr>
+    <tr>
+      <td><code>preview(locationId)</code><br><code>photo-import.service.ts:94</code></td>
+      <td>1 × Place Details + up to N × photo-media URI (fan-out, see comment at <code>:117</code>)</td>
+      <td class="ok">YES — short-circuits at <code>:103</code>, returns <code>configured:false</code></td>
+    </tr>
+    <tr>
+      <td><code>previewByPlaceId(placeId)</code><br><code>photo-import.service.ts:58</code></td>
+      <td>1 × Place Details + N × photo-media URI</td>
+      <td class="ok">YES — <code>:60</code></td>
+    </tr>
+    <tr>
+      <td><code>start(locationId, photos)</code><br><code>photo-import.service.ts:165</code></td>
+      <td>N × photo-media bytes (via <code>processDownload</code>)</td>
+      <td class="ok">YES — <code>:171</code></td>
+    </tr>
+    <tr>
+      <td><code>proxyPhotoBytes(name)</code><br><code>photo-import.service.ts:47</code></td>
+      <td>1 × photo-media bytes</td>
+      <td class="ok">YES — <code>:48</code></td>
+    </tr>
+    <tr>
+      <td><code>retry(uploadId)</code><br><code>photo-import.service.ts:219</code></td>
+      <td>1 × photo-media bytes (via <code>processDownload</code>)</td>
+      <td class="gap">NO — never calls <code>isConfigured()</code>; only the client's key-check applies. Flag off + key set = real spend.</td>
+    </tr>
+  </table>
+
+  <h2>UI surfaces ("Pull from Google")</h2>
+  <table>
+    <tr><th>Surface</th><th>Mounted from</th><th>Respects flag?</th></tr>
+    <tr>
+      <td>Add-flow <code>PhotoImportPhase.tsx</code></td>
+      <td>Location create flow</td>
+      <td class="ok">YES — checks <code>preview.configured</code> at <code>:487</code>, shows disabled message</td>
+    </tr>
+    <tr>
+      <td>Add-flow <code>PickPhotosPhase.tsx</code></td>
+      <td>Pre-create pick phase</td>
+      <td class="ok">YES — <code>:161</code></td>
+    </tr>
+    <tr>
+      <td><code>PhotoImportPanel.tsx</code></td>
+      <td><code>LocationMediaGallery.tsx:44</code> (every location's media tab) and <code>AccommodationsEditForm.tsx:67</code></td>
+      <td class="gap">NO — button renders whenever <code>placeId</code> is set (<code>:270</code>); never consults <code>configured</code></td>
+    </tr>
+  </table>
+
+  <div class="note">
+    <strong>How the client learns the flag state:</strong> only indirectly — the preview endpoints return
+    <code>configured: boolean</code> in their payload. There is no dedicated "feature status" endpoint.
+    This is why <code>PhotoImportPanel</code> can't easily hide its button today: it doesn't fetch a preview until you click.
+  </div>
+
+  <h2>Kill-switch design rule</h2>
+  <div class="note">
+    <strong>Gate at the narrowest waist.</strong> <code>GooglePlacesPhotosClient</code> is the <em>only</em> class that
+    talks to Google. A flag check inside its <code>requireConfigured()</code> covers every present and future caller
+    automatically — including <code>retry()</code> and <code>processDownload()</code>. Per-method gating at the service
+    layer (the current design) is exactly how <code>retry()</code> got missed.
+  </div>
+
+  <h2>Out of scope of this flag</h2>
+  <p><code>GOOGLE_MAPS_API_KEY</code> also powers geocoding (<code>maps.controller.ts</code>). That is a separate,
+  much cheaper cost surface and is <em>not</em> covered by <code>ENABLE_GOOGLE_PHOTO_IMPORT</code>.</p>
+
+  <footer>
+    Paths relative to <code>apps/location-manager/packages/server/src/features/locations/</code> unless noted.
+    Companion lesson: <a href="../lessons/0002-photo-import-kill-switch.html">0002 — Auditing a Kill Switch</a>.
+  </footer>
+</main>
+</body>
+</html>
