@@ -4,6 +4,7 @@ import type {
   GenerateListicleContentResponse,
   GenerateListicleContentTarget,
   ListicleWriterCategory,
+  PayloadCollectionSlug,
 } from '../../../staging/api'
 import type {
   ItineraryBlockType,
@@ -69,6 +70,26 @@ function mapBlockTypeToCategory(blockType: ItineraryBlockType): ListicleWriterCa
     case 'itinerary-dining':
     default:
       return 'dining'
+  }
+}
+
+function mapBlockTypeToPayloadCollection(
+  blockType: ItineraryBlockType,
+): PayloadCollectionSlug | undefined {
+  switch (blockType) {
+    case 'itinerary-accommodations':
+    case 'itinerary-where-staying':
+      return 'accommodations'
+    case 'itinerary-attractions':
+      return 'attractions'
+    case 'itinerary-nightlife':
+      return 'nightlife'
+    case 'itinerary-key-location':
+      return 'key-locations'
+    case 'itinerary-dining':
+      return 'dining'
+    case 'itinerary-tour-agency':
+      return undefined
   }
 }
 
@@ -267,6 +288,8 @@ export function buildItineraryGenerateListicleContentRequest(params: {
         displayName: relatedItem.title,
         researchSubject: relatedItem.title,
         locationLabel: relatedItem.location?.trim() || articleLocationLabel,
+        payloadDocId: String(relatedItem.id),
+        payloadCollection: mapBlockTypeToPayloadCollection(item.blockType),
         supportingContext: [
           `Article title: ${draft.title.trim()}`,
           `Block category: ${mapBlockTypeToCategory(item.blockType)}`,

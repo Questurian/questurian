@@ -187,6 +187,8 @@ describe('listicleItineraries ai autowrite service', () => {
         displayName: 'Puente de los Suspiros',
         researchSubject: 'Puente de los Suspiros',
         locationLabel: 'Barranco, Lima',
+        payloadDocId: '201',
+        payloadCollection: 'key-locations',
       }),
     ])
   })
@@ -301,6 +303,8 @@ describe('listicleItineraries ai autowrite service', () => {
     expect(request.targets[0]).toEqual(expect.objectContaining({
       targetId: 'stop-2_blurb',
       category: 'dining',
+      payloadDocId: '202',
+      payloadCollection: 'dining',
       angle: 'signature-dish',
     }))
   })
