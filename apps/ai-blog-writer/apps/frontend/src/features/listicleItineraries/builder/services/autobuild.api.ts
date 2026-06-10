@@ -1,9 +1,12 @@
 import { API_BASE_URL } from '../../../../shared/api/client/config'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
-import type { ItineraryBlockType } from '../../types'
+import type { DayShellTemplate, ItineraryBlockType, ShellSlotDaypart } from '../../types'
 
 /** One filled slot returned by Itinerary Autobuild (backend `PlanStop`). */
 export type AutobuildPlanStop = {
+  slot_id: string
+  slot_label: string
+  daypart: ShellSlotDaypart
   block_type: ItineraryBlockType
   collection: 'dining' | 'accommodations' | 'attractions' | 'nightlife'
   item: number
@@ -20,8 +23,19 @@ export type AutobuildPlanLodging = {
 }
 
 export type AutobuildPlanDay = {
+  shell_id?: string | null
+  shell_name?: string | null
   where_staying: AutobuildPlanLodging[]
   items: AutobuildPlanStop[]
+}
+
+export type AutobuildSlotIssue = {
+  day_index: number
+  shell_id: string
+  slot_id: string
+  slot_label: string
+  daypart: ShellSlotDaypart
+  issue: string
 }
 
 export type AutobuildResponse = {
@@ -29,6 +43,7 @@ export type AutobuildResponse = {
   plan_overview: string
   model_used: string
   notes: string[]
+  slot_issues: AutobuildSlotIssue[]
 }
 
 export type GenerateItineraryParams = {
@@ -39,6 +54,7 @@ export type GenerateItineraryParams = {
   /** Operator JWT — the backend reads Payload with it (never writes). */
   payloadToken: string
   sharedNeighborhoods?: number[]
+  dayShells: Array<{ dayIndex: number; shell: DayShellTemplate }>
   modelName?: string | null
 }
 
@@ -54,6 +70,20 @@ export async function generateItinerary(params: GenerateItineraryParams): Promis
       day_count: params.dayCount,
       payload_jwt: params.payloadToken,
       shared_neighborhoods: params.sharedNeighborhoods ?? [],
+      day_shells: params.dayShells.map(({ dayIndex, shell }) => ({
+        day_index: dayIndex,
+        shell_id: shell.id,
+        slots: shell.slots.map((slot) => ({
+          id: slot.id,
+          label: slot.label,
+          daypart: slot.daypart,
+          acceptable_collections: slot.acceptableCollections,
+          preferred_collections: slot.preferredCollections,
+          intent_tags: slot.intentTags,
+          avoid_tags: slot.avoidTags ?? [],
+          required: slot.required ?? true,
+        })),
+      })),
       model_name: params.modelName ?? undefined,
     }),
   })

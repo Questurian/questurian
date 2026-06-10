@@ -39,14 +39,15 @@ const plan: AutobuildResponse = {
         { block_type: 'itinerary-where-staying', collection: 'accommodations', item: 10, title: 'Grand Hotel', selection_reason: 'most comfortable, central' },
       ],
       items: [
-        { block_type: 'itinerary-dining', collection: 'dining', item: 1, title: 'Carmen', selection_reason: 'tasting-menu fine dining' },
-        { block_type: 'itinerary-nightlife', collection: 'nightlife', item: 2, title: 'La Octava', selection_reason: 'upscale rooftop cocktails' },
+        { slot_id: 'dinner', slot_label: 'Dinner', daypart: 'dinner', block_type: 'itinerary-dining', collection: 'dining', item: 1, title: 'Carmen', selection_reason: 'tasting-menu fine dining' },
+        { slot_id: 'nightlife', slot_label: 'Nightlife', daypart: 'nightlife', block_type: 'itinerary-nightlife', collection: 'nightlife', item: 2, title: 'La Octava', selection_reason: 'upscale rooftop cocktails' },
       ],
     },
   ],
   plan_overview: 'A single luxurious foodie day anchored at the Grand Hotel.',
   model_used: 'gemini-2.5-flash-lite',
   notes: [],
+  slot_issues: [],
 }
 
 describe('applyAutobuildPlanToDraft', () => {
@@ -77,7 +78,7 @@ describe('applyAutobuildPlanToDraft', () => {
       days: [
         {
           where_staying: [{ block_type: 'itinerary-where-staying', collection: 'accommodations', item: null, title: null, selection_reason: '' }],
-          items: [{ block_type: 'itinerary-dining', collection: 'dining', item: 1, title: 'Carmen', selection_reason: 'x' }],
+          items: [{ slot_id: 'lunch', slot_label: 'Lunch', daypart: 'lunch', block_type: 'itinerary-dining', collection: 'dining', item: 1, title: 'Carmen', selection_reason: 'x' }],
         },
       ],
     }
@@ -92,5 +93,11 @@ describe('applyAutobuildPlanToDraft', () => {
     expect(stop.blurbMarkdown).toBe('')
     expect(stop.selectedPhotos).toEqual([])
     expect(stop.image).toBeNull()
+  })
+
+  it('stores ABW-only shell slot metadata on generated stops', () => {
+    const next = applyAutobuildPlanToDraft(baseDraft(), plan, ids)
+    expect(next.days[0].items[0].shellSlotLabel).toBe('Dinner')
+    expect(next.days[0].items[0].shellSlotDaypart).toBe('dinner')
   })
 })

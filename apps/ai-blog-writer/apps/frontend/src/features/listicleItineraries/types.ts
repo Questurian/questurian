@@ -245,6 +245,47 @@ export type RelatedItemCollection =
   | 'nightlife'
   | 'key-locations'
 
+export type DayShellId =
+  | 'full_day_balanced'
+  | 'light_full_day'
+  | 'food_focused_full_day'
+  | 'adventure_full_day'
+  | 'nightlife_full_day'
+
+export type ShellSlotDaypart =
+  | 'morning'
+  | 'late_morning'
+  | 'lunch'
+  | 'afternoon'
+  | 'dinner'
+  | 'evening'
+  | 'nightlife'
+
+export type ShellSlotCollection = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
+
+export type DayShellSlot = {
+  id: string
+  label: string
+  daypart: ShellSlotDaypart
+  acceptableCollections: ShellSlotCollection[]
+  preferredCollections: ShellSlotCollection[]
+  intentTags: string[]
+  avoidTags?: string[]
+  required?: boolean
+}
+
+export type DayShellTemplate = {
+  id: DayShellId
+  name: string
+  description: string
+  slots: DayShellSlot[]
+}
+
+export type DayShellSelection = {
+  dayId: string
+  shellId: DayShellId
+}
+
 export type TourAgencyKeyLocationSource = 'existing' | 'manual'
 
 export const TOUR_AGENCY_PRICE_TIERS = ['$', '$$', '$$$', '$$$$'] as const
@@ -328,6 +369,10 @@ export type ItineraryItemBlock = {
    * Itinerary Autobuild. Operator-editable, not public; seeds the blurb writer.
    */
   selectionReason?: string
+  /** ABW-only Day Shell slot metadata; not synced to Payload CMS. */
+  shellSlotId?: string
+  shellSlotLabel?: string
+  shellSlotDaypart?: ShellSlotDaypart
 }
 
 export type ListicleItineraryDraft = {
@@ -347,6 +392,8 @@ export type ListicleItineraryDraft = {
   generationBrief?: string
   /** Itinerary Autobuild: trip-level rationale for the plan (internal, persisted). */
   planOverview?: string
+  /** Itinerary Autobuild: selected Day Shell per local day; ABW-only planning state. */
+  dayShellSelections?: DayShellSelection[]
   title: string
   location: string
   locationRef: number | null

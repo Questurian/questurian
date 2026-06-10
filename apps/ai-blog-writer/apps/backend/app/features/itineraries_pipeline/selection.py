@@ -1,9 +1,9 @@
-"""Day shaping, selection and multi-day clustering (deterministic, ADR 0014).
+"""Legacy deterministic selection utilities retained for pure planning tests.
 
-Selection picks the Lodging Anchor and the day's stops from the LLM-scored
-pools, balancing categories so a day isn't all one type. Distribution clusters
-the chosen stops by neighborhood so each day stays geographically tight; per-day
-travel ordering then happens in `ordering.order_day`.
+Active Itinerary Autobuild now fills operator-selected Day Shell slots in
+`graph.py` (ADR 0016). `pick_lodging_anchor` remains in use; `select_stops` and
+`distribute_across_days` describe the pre-shell strategy and are kept until old
+tests/callers are retired.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ def select_stops(
     preserved; when a category runs dry the remaining slots fall through to
     whatever else has the highest fit. Deduplicated by record id.
     """
-    categories: list[Category] = [c for c in intent.categories if c != "accommodations"]
+    categories: list[Category] = [c for c in getattr(intent, "categories", []) if c != "accommodations"]
     if not categories:
         categories = [c for c in scored_by_category if c != "accommodations"]
 

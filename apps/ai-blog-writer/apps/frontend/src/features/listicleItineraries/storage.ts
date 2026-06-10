@@ -1,6 +1,7 @@
 import { DEFAULT_EDITOR_ASSIST_MODEL, resolveEditorAssistModelName } from '../../shared/api/ai/models'
 import { createDraftStorage } from '../../shared/builder/storage/createDraftStorage'
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
+import { DEFAULT_DAY_SHELL_ID, BUILT_IN_DAY_SHELLS } from './builder/constants/day-shells.constants'
 import {
   createEmptyDaySlice,
   DEFAULT_LIST_TONE,
@@ -11,6 +12,7 @@ import {
   type ItineraryBlockType,
   type ItineraryItemBlock,
   type ItineraryDaySlice,
+  type DayShellId,
   type ListicleItineraryDraft,
   type TourAgencyKeyLocationRow,
   type TourAgencyStartingPoint,
@@ -18,6 +20,7 @@ import {
 import { normalizeLocationIds } from '../../shared/locationScope/scope'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
+const DAY_SHELL_IDS = new Set<string>(BUILT_IN_DAY_SHELLS.map((shell) => shell.id))
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -31,6 +34,21 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
   const header = isRecord(value.header) ? value.header : {}
   const normalizedDraftId =
     typeof value.draftId === 'string' && value.draftId.trim() ? value.draftId : fallbackDraftId
+
+  const normalizeDayShellSelections = (days: ItineraryDaySlice[]) => {
+    const rawSelections = Array.isArray(value.dayShellSelections) ? value.dayShellSelections : []
+    return days.map((day) => {
+      const raw = rawSelections.find((entry) => (
+        isRecord(entry)
+        && typeof entry.dayId === 'string'
+        && entry.dayId === day.id
+      ))
+      const shellId = isRecord(raw) && typeof raw.shellId === 'string' && DAY_SHELL_IDS.has(raw.shellId)
+        ? raw.shellId as DayShellId
+        : DEFAULT_DAY_SHELL_ID
+      return { dayId: day.id, shellId }
+    })
+  }
 
   const normalizeStoredKeyLocation = (
     rowValue: unknown,
@@ -156,6 +174,19 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       blurbMarkdown: typeof itemValue.blurbMarkdown === 'string' ? itemValue.blurbMarkdown : '',
       blurbLexical: isRecord(itemValue.blurbLexical) ? itemValue.blurbLexical : undefined,
       blurbJsonText: typeof itemValue.blurbJsonText === 'string' ? itemValue.blurbJsonText : '',
+      selectionReason: typeof itemValue.selectionReason === 'string' ? itemValue.selectionReason : '',
+      shellSlotId: typeof itemValue.shellSlotId === 'string' ? itemValue.shellSlotId : undefined,
+      shellSlotLabel: typeof itemValue.shellSlotLabel === 'string' ? itemValue.shellSlotLabel : undefined,
+      shellSlotDaypart:
+        itemValue.shellSlotDaypart === 'morning'
+        || itemValue.shellSlotDaypart === 'late_morning'
+        || itemValue.shellSlotDaypart === 'lunch'
+        || itemValue.shellSlotDaypart === 'afternoon'
+        || itemValue.shellSlotDaypart === 'dinner'
+        || itemValue.shellSlotDaypart === 'evening'
+        || itemValue.shellSlotDaypart === 'nightlife'
+          ? itemValue.shellSlotDaypart
+          : undefined,
     }
   }
 
@@ -219,9 +250,11 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
         const dc = typeof value.dayCount === 'number'
           ? Math.min(7, Math.max(1, value.dayCount))
           : Math.min(7, Math.max(1, days.length))
+        const slicedDays = days.slice(0, dc)
         return {
           dayCount: dc,
-          days: days.slice(0, dc),
+          days: slicedDays,
+          dayShellSelections: normalizeDayShellSelections(slicedDays),
         }
       }
       const rawWhere = Array.isArray(value.whereStaying) ? value.whereStaying : []
@@ -243,6 +276,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
             items: stops,
           },
         ],
+        dayShellSelections: [{ dayId: `day_${normalizedDraftId}_0`, shellId: DEFAULT_DAY_SHELL_ID }],
       }
     })(),
     seoSection: normalizeSeoSection(value.seoSection ?? createEmptySeoSection()),
@@ -269,6 +303,7 @@ export function saveDraft(draft: ListicleItineraryDraft): void {
 }
 
 export function createEmptyDraft(): ListicleItineraryDraft {
+  const day = createEmptyDaySlice()
   return {
     draftId: `lit_${Date.now()}`,
     payloadStatus: undefined,
@@ -295,7 +330,8 @@ export function createEmptyDraft(): ListicleItineraryDraft {
       featuredImage: null,
     },
     dayCount: 1,
-    days: [createEmptyDaySlice()],
+    days: [day],
+    dayShellSelections: [{ dayId: day.id, shellId: DEFAULT_DAY_SHELL_ID }],
     seoSection: createEmptySeoSection(),
     status: 'draft',
     articleType: 'listicle-itinerary',

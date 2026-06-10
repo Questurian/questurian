@@ -628,7 +628,14 @@ export function BuilderStopsPanel({
                 ) : null}
                 <article className="stl-item-card">
                 <header className="stl-item-header">
-                  <h3>{section === 'whereStaying' ? `Lodging ${localIndex + 1}` : `Stop ${localIndex + 1}`}</h3>
+                  <div>
+                    <h3>{section === 'whereStaying' ? `Lodging ${localIndex + 1}` : `Stop ${localIndex + 1}`}</h3>
+                    {section !== 'whereStaying' && item.shellSlotLabel ? (
+                      <p className="stl-shell-slot-badge">
+                        {item.shellSlotDaypart?.replace('_', ' ') || 'shell slot'} · {item.shellSlotLabel}
+                      </p>
+                    ) : null}
+                  </div>
                   <div className="stl-inline-actions">
                     <button type="button" className="stl-btn stl-btn-secondary" onClick={() => onMoveItem(item.id, 'up')}>
                       Up

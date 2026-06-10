@@ -190,15 +190,36 @@ Do not confuse with: Listicle Angle, which is operator-selected per item and gov
 
 ### Itinerary Autobuild
 
-Definition: a pipeline that takes an operator's setup (location, title, day count) plus a free-text **Generation Brief** and fills a listicle-itinerary's day slots with selected Payload records, ordered per day, each carrying a **Selection Reason**. It fills *slots only* — it does not write blurbs, choose images, or publish. The operator reviews and edits the result in the builder before any blurb/image/publish step.
-Decision scope: the AI owns intent extraction and fit-scoring; deterministic code owns retrieval, day shaping/selection, and ordering. Querying Payload is function-calling over the REST API from inside the backend — not MCP, not a live CMS connection.
-Related terms: Generation Brief, Fit Score, Daypart, Lodging Anchor, Selection Reason, Plan Overview, List Tone.
+Definition: a pipeline that takes an operator's setup (location, title, day count), selected **Day Shells**, plus a free-text **Generation Brief** and fills a listicle-itinerary's shell slots with selected Payload records, ordered per day, each carrying a **Selection Reason**. It fills *slots only* — it does not write blurbs, choose images, or publish. The operator reviews and edits the result in the builder before any blurb/image/publish step.
+Decision scope: the operator-selected Day Shell is the source of truth for stop count, slot order, meal/activity/nightlife requirements, and rough daypart. The AI owns intent extraction and fit-scoring; deterministic code owns retrieval, shell-slot filling, and ordering within the selected shell. Querying Payload is function-calling over the REST API from inside the backend — not MCP, not a live CMS connection.
+Related terms: Day Shell, Shell Slot, Slot Fill, Generation Brief, Fit Score, Daypart, Lodging Anchor, Selection Reason, Plan Overview, List Tone.
 Do not confuse with: the blurb writer (separate, downstream; consumes Selection Reason as input).
+
+### Day Shell
+
+Definition: an operator-selected template defining the ordered shape of one itinerary day: stop count, required slot categories, rough time-of-day buckets, and meal/activity/nightlife requirements. Multi-day itineraries choose a Day Shell per day, with the UI allowed to apply one default shell across all days.
+Related terms: Shell Slot, Slot Fill, Itinerary Autobuild.
+Do not confuse with: the Generation Brief, which describes creative intent but does not define the itinerary structure.
+Rule: built-in Day Shells should feel like distinct full-day editorial structures with shifted goals, not small variants that add or remove one stop.
+Built-in examples: Full Day Balanced, Light Full Day, Food-Focused Full Day, Adventure Full Day, and Nightlife Full Day.
+Persistence boundary: Day Shells are an AI Blog Writer planning contract, not a Questura Payload CMS schema concept.
+
+### Shell Slot
+
+Definition: one ordered requirement inside a Day Shell, such as a lunch restaurant, morning activity, dinner restaurant, or nightlife stop.
+Related terms: Day Shell, Slot Fill, Selection Reason.
+Do not confuse with: a Payload block row; a Shell Slot is the planning requirement, while the block row is the persisted editor representation after filling.
+
+### Slot Fill
+
+Definition: the selected Payload record assigned to one Shell Slot, or a surfaced issue explaining why the slot could not be filled.
+Related terms: Shell Slot, Fit Score, Selection Reason.
+Do not confuse with: a blurb or public article copy.
 
 ### Generation Brief
 
 Definition: the operator's free-text creative brief — the core AI input describing the intended experience ("luxury foodie day, fine dining, rooftop drinks, easy access"). Persisted as an internal (non-public) field so the itinerary can be re-generated and audited; it is not itinerary content shown to the public.
-Related terms: Itinerary Autobuild.
+Related terms: Itinerary Autobuild, Day Shell.
 Do not confuse with: the itinerary intro / header prose (public editorial content).
 
 ### Fit Score
@@ -208,9 +229,9 @@ Related terms: Itinerary Autobuild, Selection Reason.
 
 ### Daypart
 
-Definition: an internal planning concept (lunch / afternoon / dinner / drinks) the pipeline uses to shape and order a day. It is scaffolding only — never persisted as a field; it collapses into the existing ordered `items[]` and surfaces, if at all, inside the Selection Reason text. Itineraries carry no clock times.
-Related terms: Itinerary Autobuild, Lodging Anchor.
-Do not confuse with: a time slot (none exist) or any Payload field.
+Definition: the rough time-of-day bucket attached to a Shell Slot, such as morning, late morning, lunch, afternoon, dinner, evening, or nightlife. It is planning metadata, not a clock time.
+Related terms: Day Shell, Shell Slot, Itinerary Autobuild, Lodging Anchor.
+Do not confuse with: an exact time field; itineraries carry no clock times.
 
 ### Lodging Anchor
 

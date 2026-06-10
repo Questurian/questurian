@@ -13,8 +13,11 @@ utils_stub.parse_json_response = lambda *args, **kwargs: {}
 sys.modules.setdefault("utils", utils_stub)
 
 from app.features.itineraries_pipeline.ordering import haversine_km, order_day  # noqa: E402
+from app.features.itineraries_pipeline.graph import _categories_for_shells, _pool_for_slot, _resolve_day_shells  # noqa: E402
 from app.features.itineraries_pipeline.schemas import (  # noqa: E402
     Candidate,
+    DayShellSelection,
+    GenerateItineraryRequest,
     IntentSpec,
     ScoredCandidate,
 )
@@ -150,3 +153,63 @@ def test_distribute_clusters_by_neighborhood():
 
 def test_distribute_empty():
     assert distribute_across_days([], day_count=3) == [[], [], []]
+
+
+# --- Day Shells ---------------------------------------------------------------
+
+def test_resolve_day_shells_uses_one_shell_per_day():
+    req = GenerateItineraryRequest(
+        location="peru|lima",
+        title="Lima nightlife",
+        brief="late start and clubs",
+        day_count=2,
+        payload_jwt="token",
+        day_shells=[
+            DayShellSelection(day_index=0, shell_id="nightlife_full_day"),
+            DayShellSelection(day_index=1, shell_id="food_focused_full_day"),
+        ],
+    )
+    shells = _resolve_day_shells(req)
+    assert [shell.id for shell in shells] == ["nightlife_full_day", "food_focused_full_day"]
+    assert [slot.id for slot in shells[0].slots] == [
+        "late_start_lunch",
+        "recovery_friendly_activity",
+        "dinner",
+        "evening_social_stop",
+        "nightlife_stop",
+        "late_night_nightlife",
+    ]
+
+
+def test_categories_derive_from_shell_slots_not_intent():
+    req = GenerateItineraryRequest(
+        location="peru|lima",
+        title="Lima nightlife",
+        brief="late start and clubs",
+        day_count=1,
+        payload_jwt="token",
+        day_shells=[DayShellSelection(day_index=0, shell_id="nightlife_full_day")],
+    )
+    shells = _resolve_day_shells(req)
+    assert _categories_for_shells(shells) == ["dining", "attractions", "nightlife"]
+
+
+def test_pool_for_slot_excludes_already_filled_places():
+    req = GenerateItineraryRequest(
+        location="peru|lima",
+        title="Lima food",
+        brief="dessert",
+        day_count=1,
+        payload_jwt="token",
+        day_shells=[DayShellSelection(day_index=0, shell_id="food_focused_full_day")],
+    )
+    dessert_slot = _resolve_day_shells(req)[0].slots[-1]
+    pool = _pool_for_slot(
+        dessert_slot,
+        {
+            "dining": [_cand(1, "dining"), _cand(2, "dining")],
+            "nightlife": [_cand(3, "nightlife")],
+        },
+        {("dining", 1)},
+    )
+    assert [(candidate.category, candidate.id) for candidate in pool] == [("dining", 2), ("nightlife", 3)]

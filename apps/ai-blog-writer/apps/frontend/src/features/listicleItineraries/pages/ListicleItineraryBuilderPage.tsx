@@ -45,6 +45,7 @@ import { fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi,
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
 import { generateItinerary } from '../builder/services/autobuild.api'
 import { applyAutobuildPlanToDraft } from '../builder/mappers/autobuild-plan.mapper'
+import { DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../builder/constants/day-shells.constants'
 import { findItineraryItemById, type ListicleItineraryDraft } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
@@ -386,12 +387,20 @@ export default function ListicleItineraryBuilderPage() {
         dayCount: draft.dayCount,
         payloadToken: token,
         sharedNeighborhoods: draft.sharedNeighborhoods,
+        dayShells: draft.days.map((day, dayIndex) => ({
+          dayIndex,
+          shell: getDayShellTemplate(
+            draft.dayShellSelections?.find((entry) => entry.dayId === day.id)?.shellId ?? DEFAULT_DAY_SHELL_ID,
+          ),
+        })),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
       })
       setDraft((current) => (current ? applyAutobuildPlanToDraft(current, plan) : current))
       const filled = plan.days.reduce((sum, day) => sum + day.items.length, 0)
+      const issueCount = plan.slot_issues?.length ?? 0
       setResult(
         `Generated ${filled} stop${filled === 1 ? '' : 's'} across ${plan.days.length} day${plan.days.length === 1 ? '' : 's'}.`
+        + (issueCount ? ` ${issueCount} shell slot${issueCount === 1 ? '' : 's'} need manual picks.` : '')
         + (plan.notes.length ? ` Notes: ${plan.notes.join(' ')}` : ''),
       )
     } catch (err) {

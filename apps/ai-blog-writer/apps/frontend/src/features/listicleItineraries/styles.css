@@ -1970,7 +1970,54 @@
   }
 }
 
-/* Itinerary Autobuild — Description brief, plan overview, per-stop reason */
+/* Itinerary Autobuild — day shells, brief, plan overview, per-stop reason */
+.stl-day-shells {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--stl-border, #e2e2e2);
+}
+.stl-day-shell-apply {
+  margin-top: 10px;
+  max-width: 420px;
+}
+.stl-day-shell-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.stl-day-shell-card {
+  border: 1px solid var(--stl-border, #e2e2e2);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+.stl-day-shell-card__description {
+  margin: 8px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--stl-muted, #5f6672);
+}
+.stl-day-shell-slots {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+.stl-day-shell-slots li {
+  margin: 4px 0;
+}
+.stl-day-shell-slots__daypart {
+  display: inline-block;
+  min-width: 82px;
+  color: var(--stl-muted, #5f6672);
+  text-transform: capitalize;
+}
+.stl-shell-slot-badge {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--stl-muted, #5f6672);
+  text-transform: capitalize;
+}
 .stl-autobuild {
   margin-top: 16px;
   padding-top: 16px;

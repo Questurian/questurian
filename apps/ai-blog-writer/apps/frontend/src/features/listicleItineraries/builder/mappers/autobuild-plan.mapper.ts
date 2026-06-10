@@ -1,9 +1,11 @@
 import {
+  type DayShellId,
   WHERE_STAYING_BLOCK_TYPE,
   type ItineraryDaySlice,
   type ItineraryItemBlock,
   type ListicleItineraryDraft,
 } from '../../types'
+import { BUILT_IN_DAY_SHELLS, DEFAULT_DAY_SHELL_ID } from '../constants/day-shells.constants'
 import type { AutobuildPlanStop, AutobuildPlanLodging, AutobuildResponse } from '../services/autobuild.api'
 
 type IdFactory = (kind: 'day' | 'item', dayIndex: number, slotIndex: number) => string
@@ -43,6 +45,9 @@ function blockFromStop(stop: AutobuildPlanStop, id: string): ItineraryItemBlock 
     item: stop.item,
     title: stop.title || '',
     selectionReason: stop.selection_reason || '',
+    shellSlotId: stop.slot_id,
+    shellSlotLabel: stop.slot_label,
+    shellSlotDaypart: stop.daypart,
   }
 }
 
@@ -57,6 +62,11 @@ function blockFromLodging(lodging: AutobuildPlanLodging, id: string): ItineraryI
 }
 
 const clampDays = (n: number) => Math.max(1, Math.min(7, n))
+const DAY_SHELL_IDS = new Set<string>(BUILT_IN_DAY_SHELLS.map((shell) => shell.id))
+
+function normalizeShellId(value: string | null | undefined): DayShellId {
+  return typeof value === 'string' && DAY_SHELL_IDS.has(value) ? value as DayShellId : DEFAULT_DAY_SHELL_ID
+}
 
 /**
  * Replace the draft's days with the Autobuild plan (slots + reasons only) and
@@ -85,6 +95,10 @@ export function applyAutobuildPlanToDraft(
     ...draft,
     dayCount: clampDays(days.length),
     days,
+    dayShellSelections: days.map((day, dayIndex) => ({
+      dayId: day.id,
+      shellId: normalizeShellId(planDays[dayIndex]?.shell_id),
+    })),
     planOverview: plan.plan_overview || '',
     hasLocalChanges: true,
     updatedAt: new Date().toISOString(),

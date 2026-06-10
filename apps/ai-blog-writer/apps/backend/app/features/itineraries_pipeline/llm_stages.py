@@ -20,12 +20,10 @@ from .schemas import (
     IntentSpec,
     PlanStop,
     ScoredCandidate,
+    ShellSlot,
 )
 
 logger = logging.getLogger(__name__)
-
-VALID_CATEGORIES: tuple[Category, ...] = ("dining", "accommodations", "attractions", "nightlife")
-
 
 def _complete(*, prompt: str, model_name: str, temperature: float, max_tokens: int) -> str:
     """Run one completion, routing ``claude*`` models to Anthropic and the rest to Vertex."""
@@ -39,20 +37,19 @@ def _complete(*, prompt: str, model_name: str, temperature: float, max_tokens: i
 
 # --- Intent -------------------------------------------------------------------
 
-INTENT_PROMPT = """You are planning a travel itinerary. Read the title and brief and extract a \
-structured query intent as JSON. Do not invent venues — only describe what to look for.
+INTENT_PROMPT = """You are planning a travel itinerary. Read the title and brief and extract \
+creative search intent as JSON. Do not decide stop count, categories, dayparts, meal placement, \
+or day structure — those come from the selected Day Shell.
 
 Title: {title}
 Location: {location}
 Brief: {brief}
 
 Return ONLY a JSON object with these keys:
-- "categories": array, any of ["dining","accommodations","attractions","nightlife"] that the trip needs
 - "price_min": integer 1-4 or null (1=$, 4=$$$$). Use higher floors for "luxury/upscale/fine".
 - "price_max": integer 1-4 or null
 - "keywords": array of short lowercase descriptors to match against venue tags (e.g. ["fine dining","rooftop","tasting menu"])
 - "wants_lodging": boolean (does the trip need a hotel anchor?)
-- "stops_per_day": integer 1-8 (fewer for a relaxed pace, more for a packed day)
 - "lodging_keywords": array of short descriptors for the hotel (e.g. ["luxury","comfortable","central"])
 """
 
@@ -64,12 +61,7 @@ def extract_intent(*, title: str, brief: str, location: str, model_name: str) ->
     raw = _complete(prompt=prompt, model_name=model_name, temperature=0.2, max_tokens=8192)
     parsed = parse_json_response(raw, raise_on_error=False, default={}) or {}
     if not parsed:
-        logger.warning("Intent extraction returned unparseable JSON; using category defaults.")
-
-    raw_categories = parsed.get("categories")
-    categories: list[Category] = [c for c in VALID_CATEGORIES if isinstance(raw_categories, list) and c in raw_categories]
-    if not categories:
-        categories = ["dining", "attractions"]
+        logger.warning("Intent extraction returned unparseable JSON; using creative intent defaults.")
 
     def _price(value: Any) -> int | None:
         try:
@@ -81,51 +73,51 @@ def extract_intent(*, title: str, brief: str, location: str, model_name: str) ->
     def _str_list(value: Any) -> list[str]:
         return [s.strip() for s in value if isinstance(s, str) and s.strip()] if isinstance(value, list) else []
 
-    stops = parsed.get("stops_per_day")
-    try:
-        stops_per_day = max(1, min(8, int(stops)))
-    except (TypeError, ValueError):
-        stops_per_day = 4
-
     return IntentSpec(
-        categories=categories,
         price_min=_price(parsed.get("price_min")),
         price_max=_price(parsed.get("price_max")),
         keywords=_str_list(parsed.get("keywords")),
         wants_lodging=bool(parsed.get("wants_lodging", True)),
-        stops_per_day=stops_per_day,
         lodging_keywords=_str_list(parsed.get("lodging_keywords")),
     )
 
 
 # --- Fit scoring --------------------------------------------------------------
 
-SCORING_PROMPT = """Score how well each venue matches the traveler's intent, 0-100. \
+SCORING_PROMPT = """Score how well each venue fills this exact Shell Slot, 0-100. \
 The same idea may be tagged differently across venues ("Fine Dining" ~ "Luxury" ~ "Upscale") — \
 judge by meaning, not exact tag text. Price levels: 1=$ … 4=$$$$.
+
+Shell Slot:
+- label: {slot_label}
+- daypart: {daypart}
+- acceptable collections: {acceptable_collections}
+- preferred collections: {preferred_collections}
+- intent tags: {slot_intent_tags}
+- avoid tags: {slot_avoid_tags}
 
 Intent:
 - keywords: {keywords}
 - price band: {price_min} to {price_max}
 - brief: {brief}
 
-Candidates ({category}):
+Candidates:
 {candidates}
 
 Return ONLY a JSON object: {{"scores": [{{"id": <int>, "fit_score": <0-100>, "fit_note": "<one short phrase: the venue's draw and why it fits>"}}]}}
-Include every candidate id exactly once."""
+Include every candidate id exactly once. Penalize candidates that do not fit the Shell Slot even if they match the broader brief."""
 
 
 def _candidate_line(c: Candidate) -> str:
     price = f"${'$' * (c.price_level - 1)}" if c.price_level else "?"
     tags = ", ".join(c.tags[:12]) if c.tags else "—"
-    return f'- id={c.id} | {c.title} | price={price} | type={c.type or "—"} | tags: {tags}'
+    return f'- id={c.id} | {c.title} | collection={c.category} | price={price} | type={c.type or "—"} | tags: {tags}'
 
 
 def score_candidates(
     *,
     intent: IntentSpec,
-    category: Category,
+    slot: ShellSlot,
     candidates: list[Candidate],
     brief: str,
     model_name: str,
@@ -133,11 +125,16 @@ def score_candidates(
     if not candidates:
         return []
     prompt = SCORING_PROMPT.format(
+        slot_label=slot.label,
+        daypart=slot.daypart,
+        acceptable_collections=", ".join(slot.acceptable_collections),
+        preferred_collections=", ".join(slot.preferred_collections) or "—",
+        slot_intent_tags=", ".join(slot.intent_tags) or "—",
+        slot_avoid_tags=", ".join(slot.avoid_tags) or "—",
         keywords=", ".join(intent.keywords) or "—",
         price_min=intent.price_min or "any",
         price_max=intent.price_max or "any",
         brief=brief,
-        category=category,
         candidates="\n".join(_candidate_line(c) for c in candidates),
     )
     # One JSON object per candidate (~40-50 tokens each), scored over the WHOLE
@@ -146,7 +143,7 @@ def score_candidates(
     raw = _complete(prompt=prompt, model_name=model_name, temperature=0.1, max_tokens=32768)
     parsed = parse_json_response(raw, raise_on_error=False, default={}) or {}
     if not parsed:
-        logger.warning("Scoring for %s returned unparseable JSON; defaulting batch to fit=0.", category)
+        logger.warning("Scoring for slot %s returned unparseable JSON; defaulting batch to fit=0.", slot.id)
     scores = parsed.get("scores") if isinstance(parsed, dict) else None
 
     by_id: dict[int, dict[str, Any]] = {}
@@ -172,6 +169,7 @@ def score_candidates(
 REASONS_PROMPT = """You are documenting why each venue was chosen for a travel itinerary, \
 so a later writer can build a blurb from it. Write concrete, specific reasons about the venue's \
 draw and how it fits the brief — NOT scoring jargon. Do not write the blurb itself.
+Each stop belongs to a Shell Slot. Preserve that slot context in the reason.
 
 Title: {title}
 Brief: {brief}
@@ -181,8 +179,8 @@ Itinerary (in order):
 
 Return ONLY a JSON object:
 {{"overview": "<2-4 sentences on the overall shape and logic of the trip>",
-  "reasons": [{{"id": <stop id int>, "reason": "<1-2 sentences: this venue's draw + why it fits here>"}}]}}
-Include every stop id (and the lodging id if present) exactly once."""
+  "reasons": [{{"key": "<collection>:<id>", "reason": "<1-2 sentences: this venue's draw + why it fits here>"}}]}}
+Include every key exactly once."""
 
 
 def write_reasons(
@@ -192,14 +190,16 @@ def write_reasons(
     lodging: ScoredCandidate | None,
     days: list[list[PlanStop]],
     model_name: str,
-) -> tuple[dict[int, str], str]:
-    """Returns ({item_id: reason}, plan_overview). Falls back to fit notes."""
+) -> tuple[dict[str, str], str]:
+    """Returns ({collection:item_id: reason}, plan_overview). Falls back to fit notes."""
     lines: list[str] = []
     if lodging is not None:
-        lines.append(f'Lodging anchor: id={lodging.candidate.id} | {lodging.candidate.title}')
+        lines.append(f'Lodging anchor: key=accommodations:{lodging.candidate.id} | {lodging.candidate.title}')
     for day_index, stops in enumerate(days, start=1):
         for stop in stops:
-            lines.append(f'Day {day_index}: id={stop.item} | {stop.title} ({stop.collection})')
+            lines.append(
+                f'Day {day_index}: slot={stop.slot_label} ({stop.daypart}) | key={stop.collection}:{stop.item} | {stop.title}'
+            )
 
     if not lines:
         return {}, ""
@@ -213,14 +213,22 @@ def write_reasons(
     if not parsed:
         logger.warning("Reasons writing returned unparseable JSON; falling back to fit notes.")
 
-    reasons: dict[int, str] = {}
+    reasons: dict[str, str] = {}
     raw_reasons = parsed.get("reasons") if isinstance(parsed, dict) else None
     if isinstance(raw_reasons, list):
         for entry in raw_reasons:
-            if isinstance(entry, dict) and isinstance(entry.get("id"), int):
+            if isinstance(entry, dict):
+                raw_key = entry.get("key")
+                if isinstance(raw_key, str) and raw_key.strip():
+                    key = raw_key.strip()
+                elif isinstance(entry.get("id"), int):
+                    # Backward-compatible fallback for older model output.
+                    key = str(entry["id"])
+                else:
+                    continue
                 text = entry.get("reason")
                 if isinstance(text, str) and text.strip():
-                    reasons[entry["id"]] = text.strip()
+                    reasons[key] = text.strip()
 
     overview = parsed.get("overview") if isinstance(parsed, dict) else ""
     return reasons, overview.strip() if isinstance(overview, str) else ""

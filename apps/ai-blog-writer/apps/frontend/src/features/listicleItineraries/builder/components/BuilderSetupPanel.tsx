@@ -1,5 +1,6 @@
-import { LIST_TONE_OPTIONS, resizeItineraryDays, type ListicleItineraryDraft, type ListTone, type LocationOption } from '../../types'
+import { LIST_TONE_OPTIONS, resizeItineraryDays, type DayShellId, type DayShellSelection, type ListicleItineraryDraft, type ListTone, type LocationOption } from '../../types'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
+import { BUILT_IN_DAY_SHELLS, DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../constants/day-shells.constants'
 import { AiTitleInput } from '../../../../shared/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
 import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
@@ -35,6 +36,26 @@ function getAiTitleDisabledReason(draft: ListicleItineraryDraft, isSynced: boole
   return undefined
 }
 
+function getShellIdForDay(draft: ListicleItineraryDraft, dayId: string): DayShellId {
+  return draft.dayShellSelections?.find((entry) => entry.dayId === dayId)?.shellId ?? DEFAULT_DAY_SHELL_ID
+}
+
+function buildDayShellSelections(draft: ListicleItineraryDraft, fallbackShellId = DEFAULT_DAY_SHELL_ID): DayShellSelection[] {
+  return draft.days.map((day) => ({
+    dayId: day.id,
+    shellId: getShellIdForDay(draft, day.id) || fallbackShellId,
+  }))
+}
+
+function setShellForDay(draft: ListicleItineraryDraft, dayId: string, shellId: DayShellId): DayShellSelection[] {
+  const current = buildDayShellSelections(draft)
+  return current.map((entry) => entry.dayId === dayId ? { ...entry, shellId } : entry)
+}
+
+function setShellForAllDays(draft: ListicleItineraryDraft, shellId: DayShellId): DayShellSelection[] {
+  return draft.days.map((day) => ({ dayId: day.id, shellId }))
+}
+
 export function BuilderSetupPanel({
   draft,
   locations,
@@ -56,6 +77,7 @@ export function BuilderSetupPanel({
   const selectedPrimaryLocation = findLocationByKey(locations, draft.location)
   const neighborhoodOptions = getNeighborhoodOptionsForLocation(locations, draft.location)
   const showNeighborhoodPicker = isCityLocation(selectedPrimaryLocation)
+  const firstShellId = draft.days[0] ? getShellIdForDay(draft, draft.days[0].id) : DEFAULT_DAY_SHELL_ID
 
   return (
     <section className="stl-panel">
@@ -130,7 +152,11 @@ export function BuilderSetupPanel({
                 )
                 if (!ok) return
               }
-              updateDraft(resizeItineraryDays(draft, next))
+              const resized = resizeItineraryDays(draft, next)
+              updateDraft({
+                ...resized,
+                dayShellSelections: buildDayShellSelections(resized, firstShellId),
+              })
             }}
           >
             {ITINERARY_DAY_COUNT_OPTIONS.map((n) => (
@@ -216,6 +242,72 @@ export function BuilderSetupPanel({
             </small>
           </label>
         ) : null}
+      </div>
+
+      <div className="stl-field stl-day-shells">
+        <label className="stl-field-label-row">
+          <span>Day shell *</span>
+        </label>
+        <small className="stl-summary-note">
+          Choose the shape of the day before AI generation. The shell controls stop count, order, meal slots, activity slots, and nightlife slots.
+        </small>
+
+        <div className="stl-day-shell-apply">
+          <label className="stl-field stl-day-shell-apply__select">
+            <span>Apply shell to all days</span>
+            <select
+              className="stl-field-input"
+              value={firstShellId}
+              disabled={isSetupLocked}
+              onChange={(event) => updateDraft({
+                dayShellSelections: setShellForAllDays(draft, event.target.value as DayShellId),
+              })}
+            >
+              {BUILT_IN_DAY_SHELLS.map((shell) => (
+                <option key={shell.id} value={shell.id}>
+                  {shell.name} — {shell.slots.length} stops
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="stl-day-shell-grid">
+          {draft.days.map((day, dayIndex) => {
+            const shellId = getShellIdForDay(draft, day.id)
+            const shell = getDayShellTemplate(shellId)
+            return (
+              <div className="stl-day-shell-card" key={day.id}>
+                <label className="stl-field">
+                  <span>Day {dayIndex + 1} template</span>
+                  <select
+                    className="stl-field-input"
+                    value={shellId}
+                    disabled={isSetupLocked}
+                    onChange={(event) => updateDraft({
+                      dayShellSelections: setShellForDay(draft, day.id, event.target.value as DayShellId),
+                    })}
+                  >
+                    {BUILT_IN_DAY_SHELLS.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name} — {option.slots.length} stops
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className="stl-day-shell-card__description">{shell.description}</p>
+                <ol className="stl-day-shell-slots">
+                  {shell.slots.map((slot) => (
+                    <li key={slot.id}>
+                      <span className="stl-day-shell-slots__daypart">{slot.daypart.replace('_', ' ')}</span>
+                      <span>{slot.label}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {onGenerateItinerary ? (

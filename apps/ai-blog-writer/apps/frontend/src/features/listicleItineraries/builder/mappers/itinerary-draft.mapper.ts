@@ -18,6 +18,7 @@ import { getRelationshipId } from '../utils/field-normalizers.utils'
 import { getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
 import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
 import { buildItineraryDraftSyncSignature } from '../utils/itinerary-draft-sync-signature'
+import { DEFAULT_DAY_SHELL_ID } from '../constants/day-shells.constants'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
@@ -203,6 +204,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     },
     dayCount,
     days,
+    dayShellSelections: days.map((day) => ({ dayId: day.id, shellId: DEFAULT_DAY_SHELL_ID })),
     seoSection: normalizedSeoSection,
     status: doc.status || 'draft',
     articleType: 'listicle-itinerary',
