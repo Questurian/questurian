@@ -11,12 +11,14 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # The four data collections this pipeline can pull from, plus the Payload
 # `relationTo` slug each maps to and the itinerary block type the builder uses.
 Category = Literal["dining", "accommodations", "attractions", "nightlife"]
-Daypart = Literal["morning", "late_morning", "lunch", "afternoon", "dinner", "evening", "nightlife"]
+Daypart = Literal[
+    "morning", "late_morning", "lunch", "afternoon", "dinner", "evening", "nightlife"
+]
 
 CATEGORY_TO_BLOCK_TYPE: dict[str, str] = {
     "dining": "itinerary-dining",
@@ -44,7 +46,6 @@ class ShellSlot(BaseModel):
     preferred_collections: list[Category] = Field(default_factory=list)
     intent_tags: list[str] = Field(default_factory=list)
     avoid_tags: list[str] = Field(default_factory=list)
-    required: bool = True
 
 
 class DayShell(BaseModel):
@@ -57,12 +58,15 @@ class DayShell(BaseModel):
 
 
 class DayShellSelection(BaseModel):
-    """Shell selected for a specific day. `slots` lets future custom shells use
-    the same pipeline without adding backend hardcoding."""
+    """Shell selected for a specific day. The frontend is the canonical home of
+    shell definitions (built-in or custom), so every selection must carry its
+    explicit slots — the backend never resolves a shell by id."""
 
     day_index: int = Field(..., ge=0, le=MAX_DAYS - 1)
     shell_id: str = Field(..., min_length=1, max_length=80)
-    slots: list[ShellSlot] | None = None
+    shell_name: str | None = Field(default=None, min_length=1, max_length=120)
+    shell_description: str | None = Field(default=None, max_length=300)
+    slots: list[ShellSlot] = Field(..., min_length=1)
 
 
 class GenerateItineraryRequest(BaseModel):
@@ -72,14 +76,33 @@ class GenerateItineraryRequest(BaseModel):
     backend never writes. `brief` is the Generation Brief (core creative input).
     """
 
-    location: str = Field(..., min_length=1, max_length=300, description="locationKey: country|city|neighborhood")
+    location: str = Field(
+        ...,
+        min_length=1,
+        max_length=300,
+        description="locationKey: country|city|neighborhood",
+    )
     title: str = Field(..., min_length=1, max_length=300)
-    brief: str = Field(..., min_length=1, max_length=MAX_BRIEF_CHARS, description="Generation Brief")
+    brief: str = Field(
+        ..., min_length=1, max_length=MAX_BRIEF_CHARS, description="Generation Brief"
+    )
     day_count: int = Field(..., ge=MIN_DAYS, le=MAX_DAYS)
     payload_jwt: str = Field(..., min_length=1)
     shared_neighborhoods: list[int] = Field(default_factory=list)
-    day_shells: list[DayShellSelection] = Field(default_factory=list)
+    day_shells: list[DayShellSelection] = Field(..., min_length=1)
     model_name: str | None = Field(default=None, max_length=120)
+
+    @model_validator(mode="after")
+    def _one_shell_per_day(self) -> "GenerateItineraryRequest":
+        indexes = [selection.day_index for selection in self.day_shells]
+        if len(indexes) != len(set(indexes)):
+            raise ValueError("day_shells contains duplicate day_index entries")
+        missing = sorted(set(range(self.day_count)) - set(indexes))
+        if missing:
+            raise ValueError(
+                f"day_shells must cover every day; missing day_index: {missing}"
+            )
+        return self
 
 
 class Candidate(BaseModel):

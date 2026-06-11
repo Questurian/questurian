@@ -73,6 +73,8 @@ export async function generateItinerary(params: GenerateItineraryParams): Promis
       day_shells: params.dayShells.map(({ dayIndex, shell }) => ({
         day_index: dayIndex,
         shell_id: shell.id,
+        shell_name: shell.name,
+        shell_description: shell.description,
         slots: shell.slots.map((slot) => ({
           id: slot.id,
           label: slot.label,
@@ -81,7 +83,6 @@ export async function generateItinerary(params: GenerateItineraryParams): Promis
           preferred_collections: slot.preferredCollections,
           intent_tags: slot.intentTags,
           avoid_tags: slot.avoidTags ?? [],
-          required: slot.required ?? true,
         })),
       })),
       model_name: params.modelName ?? undefined,

@@ -44,9 +44,16 @@ import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-dra
 import { fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
 import { generateItinerary } from '../builder/services/autobuild.api'
+import {
+  createLibraryDayShell,
+  deleteLibraryDayShell,
+  listLibraryDayShells,
+  updateLibraryDayShell,
+} from '../builder/services/day-shell-library.api'
 import { applyAutobuildPlanToDraft } from '../builder/mappers/autobuild-plan.mapper'
+import { DayShellLibraryModal } from '../builder/components/DayShellLibraryModal'
 import { DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../builder/constants/day-shells.constants'
-import { findItineraryItemById, type ListicleItineraryDraft } from '../types'
+import { findItineraryItemById, type DayShellTemplate, type ListicleItineraryDraft } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
 
@@ -76,6 +83,37 @@ export default function ListicleItineraryBuilderPage() {
   const [isRevertingToPayload, setIsRevertingToPayload] = useState(false)
   const [activeDayIndex, setActiveDayIndex] = useState(0)
   const [hasLocalChanges, setHasLocalChanges] = useState(false)
+  const [libraryShells, setLibraryShells] = useState<DayShellTemplate[]>([])
+  const [isLayoutManagerOpen, setIsLayoutManagerOpen] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    listLibraryDayShells()
+      .then((shells) => {
+        if (!cancelled) setLibraryShells(shells)
+      })
+      .catch(() => {
+        // Library unavailable — built-ins and draft snapshots still work.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleCreateLibraryShell = useCallback(async (shell: DayShellTemplate) => {
+    const created = await createLibraryDayShell(shell)
+    setLibraryShells((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name)))
+  }, [])
+
+  const handleUpdateLibraryShell = useCallback(async (shell: DayShellTemplate) => {
+    const updated = await updateLibraryDayShell(shell)
+    setLibraryShells((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)))
+  }, [])
+
+  const handleDeleteLibraryShell = useCallback(async (shellId: string) => {
+    await deleteLibraryDayShell(shellId)
+    setLibraryShells((current) => current.filter((entry) => entry.id !== shellId))
+  }, [])
   const syncedBaselineRef = useRef<string | null>(null)
   const bootstrappedDraftKeyRef = useRef<string | null>(null)
   const ignoreDirtyUntilRef = useRef(0)
@@ -391,6 +429,7 @@ export default function ListicleItineraryBuilderPage() {
           dayIndex,
           shell: getDayShellTemplate(
             draft.dayShellSelections?.find((entry) => entry.dayId === day.id)?.shellId ?? DEFAULT_DAY_SHELL_ID,
+            draft.customDayShells,
           ),
         })),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
@@ -824,6 +863,17 @@ export default function ListicleItineraryBuilderPage() {
             isGeneratingSlug={isGeneratingSlug}
             onGenerateItinerary={handleGenerateItinerary}
             isGeneratingItinerary={isGeneratingItinerary}
+            libraryShells={libraryShells}
+            onOpenLayoutManager={() => setIsLayoutManagerOpen(true)}
+          />
+
+          <DayShellLibraryModal
+            isOpen={isLayoutManagerOpen}
+            libraryShells={libraryShells}
+            onCreate={handleCreateLibraryShell}
+            onUpdate={handleUpdateLibraryShell}
+            onDelete={handleDeleteLibraryShell}
+            onClose={() => setIsLayoutManagerOpen(false)}
           />
 
           {(isStep1LockedView || isSynced) ? (

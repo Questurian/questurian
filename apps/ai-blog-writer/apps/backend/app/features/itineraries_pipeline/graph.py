@@ -12,7 +12,6 @@ import asyncio
 import logging
 from typing import Any, TypedDict
 
-from .day_shells import BUILT_IN_DAY_SHELLS, DEFAULT_DAY_SHELL_ID
 from .llm_stages import extract_intent, score_candidates, write_reasons
 from .retrieval import fetch_candidates
 from .schemas import (
@@ -20,7 +19,6 @@ from .schemas import (
     Candidate,
     Category,
     DayShell,
-    DayShellSelection,
     GenerateItineraryRequest,
     GenerateItineraryResponse,
     IntentSpec,
@@ -131,8 +129,14 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
         for slot in shell.slots:
             pool = _pool_for_slot(slot, candidates_by_cat, seen)
             if not pool:
-                if slot.required:
-                    slot_issues.append(_slot_issue(day_index, shell, slot, "No candidates available for this slot."))
+                slot_issues.append(
+                    _slot_issue(
+                        day_index,
+                        shell,
+                        slot,
+                        "No candidates available for this slot.",
+                    )
+                )
                 continue
 
             scored = score_candidates(
@@ -144,15 +148,14 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
             )
             best = max(scored, key=lambda s: s.fit_score, default=None)
             if best is None or best.fit_score < MIN_SLOT_FIT_SCORE:
-                if slot.required:
-                    slot_issues.append(
-                        _slot_issue(
-                            day_index,
-                            shell,
-                            slot,
-                            f"No candidate met the minimum fit score ({MIN_SLOT_FIT_SCORE}) for this slot.",
-                        )
+                slot_issues.append(
+                    _slot_issue(
+                        day_index,
+                        shell,
+                        slot,
+                        f"No candidate met the minimum fit score ({MIN_SLOT_FIT_SCORE}) for this slot.",
                     )
+                )
                 continue
 
             c = best.candidate
@@ -194,7 +197,10 @@ async def _node_reasons(state: ItineraryState) -> ItineraryState:
     plan_days: list[PlanDay] = []
     for day_index, stops in enumerate(days_stops):
         for stop in stops:
-            stop.selection_reason = reasons.get(f"{stop.collection}:{stop.item}", reasons.get(str(stop.item), stop.selection_reason))
+            stop.selection_reason = reasons.get(
+                f"{stop.collection}:{stop.item}",
+                reasons.get(str(stop.item), stop.selection_reason),
+            )
         lodging_rows: list[PlanLodging] = []
         if day_index == 0:  # single anchor for the whole trip (v1)
             if anchor is not None:
@@ -203,13 +209,25 @@ async def _node_reasons(state: ItineraryState) -> ItineraryState:
                     PlanLodging(
                         item=ac.id,
                         title=ac.title,
-                        selection_reason=reasons.get(f"accommodations:{ac.id}", reasons.get(str(ac.id), anchor.fit_note)),
+                        selection_reason=reasons.get(
+                            f"accommodations:{ac.id}",
+                            reasons.get(str(ac.id), anchor.fit_note),
+                        ),
                     )
                 )
             elif state["intent"].wants_lodging:
-                notes.append("No suitable accommodation found for this location; day starts from the first stop.")
+                notes.append(
+                    "No suitable accommodation found for this location; day starts from the first stop."
+                )
         shell = state["day_shells"][day_index]
-        plan_days.append(PlanDay(shell_id=shell.id, shell_name=shell.name, where_staying=lodging_rows, items=stops))
+        plan_days.append(
+            PlanDay(
+                shell_id=shell.id,
+                shell_name=shell.name,
+                where_staying=lodging_rows,
+                items=stops,
+            )
+        )
 
     state["response"] = GenerateItineraryResponse(
         days=plan_days,
@@ -222,22 +240,18 @@ async def _node_reasons(state: ItineraryState) -> ItineraryState:
 
 
 def _resolve_day_shells(req: GenerateItineraryRequest) -> list[DayShell]:
-    by_day: dict[int, DayShellSelection] = {entry.day_index: entry for entry in req.day_shells}
-    shells: list[DayShell] = []
-    for day_index in range(req.day_count):
-        selection = by_day.get(day_index)
-        if selection is not None and selection.slots:
-            shells.append(
-                DayShell(
-                    id=selection.shell_id,
-                    name=BUILT_IN_DAY_SHELLS.get(selection.shell_id, BUILT_IN_DAY_SHELLS[DEFAULT_DAY_SHELL_ID]).name,
-                    slots=selection.slots,
-                )
-            )
-            continue
-        shell_id = selection.shell_id if selection is not None else DEFAULT_DAY_SHELL_ID
-        shells.append(BUILT_IN_DAY_SHELLS.get(shell_id, BUILT_IN_DAY_SHELLS[DEFAULT_DAY_SHELL_ID]))
-    return shells
+    # The request validator guarantees one selection (with slots) per day; the
+    # frontend owns shell definitions, so the slots are used verbatim.
+    by_day = {entry.day_index: entry for entry in req.day_shells}
+    return [
+        DayShell(
+            id=selection.shell_id,
+            name=selection.shell_name or selection.shell_id,
+            description=selection.shell_description or "",
+            slots=selection.slots,
+        )
+        for selection in (by_day[day_index] for day_index in range(req.day_count))
+    ]
 
 
 def _categories_for_shells(day_shells: list[DayShell]) -> list[Category]:
@@ -263,7 +277,9 @@ def _pool_for_slot(
     return pool
 
 
-def _slot_issue(day_index: int, shell: DayShell, slot: ShellSlot, issue: str) -> SlotIssue:
+def _slot_issue(
+    day_index: int, shell: DayShell, slot: ShellSlot, issue: str
+) -> SlotIssue:
     return SlotIssue(
         day_index=day_index,
         shell_id=shell.id,
@@ -292,8 +308,12 @@ def _build_graph():
     return builder.compile()
 
 
-async def run_itinerary_pipeline(request: GenerateItineraryRequest) -> GenerateItineraryResponse:
+async def run_itinerary_pipeline(
+    request: GenerateItineraryRequest,
+) -> GenerateItineraryResponse:
     model_name = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
     graph = _build_graph()
-    final_state: dict[str, Any] = await graph.ainvoke({"request": request, "model_name": model_name})
+    final_state: dict[str, Any] = await graph.ainvoke(
+        {"request": request, "model_name": model_name}
+    )
     return final_state["response"]

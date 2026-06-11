@@ -64,8 +64,11 @@ function blockFromLodging(lodging: AutobuildPlanLodging, id: string): ItineraryI
 const clampDays = (n: number) => Math.max(1, Math.min(7, n))
 const DAY_SHELL_IDS = new Set<string>(BUILT_IN_DAY_SHELLS.map((shell) => shell.id))
 
-function normalizeShellId(value: string | null | undefined): DayShellId {
-  return typeof value === 'string' && DAY_SHELL_IDS.has(value) ? value as DayShellId : DEFAULT_DAY_SHELL_ID
+function normalizeShellId(draft: ListicleItineraryDraft, value: string | null | undefined): DayShellId {
+  const customShellIds = new Set((draft.customDayShells ?? []).map((shell) => shell.id))
+  return typeof value === 'string' && (DAY_SHELL_IDS.has(value) || customShellIds.has(value))
+    ? value
+    : DEFAULT_DAY_SHELL_ID
 }
 
 /**
@@ -97,7 +100,7 @@ export function applyAutobuildPlanToDraft(
     days,
     dayShellSelections: days.map((day, dayIndex) => ({
       dayId: day.id,
-      shellId: normalizeShellId(planDays[dayIndex]?.shell_id),
+      shellId: normalizeShellId(draft, planDays[dayIndex]?.shell_id),
     })),
     planOverview: plan.plan_overview || '',
     hasLocalChanges: true,

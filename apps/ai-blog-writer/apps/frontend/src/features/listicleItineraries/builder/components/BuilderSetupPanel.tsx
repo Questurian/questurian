@@ -1,6 +1,7 @@
-import { LIST_TONE_OPTIONS, resizeItineraryDays, type DayShellId, type DayShellSelection, type ListicleItineraryDraft, type ListTone, type LocationOption } from '../../types'
+import { useMemo } from 'react'
+import { LIST_TONE_OPTIONS, resizeItineraryDays, type DayShellId, type DayShellSelection, type DayShellTemplate, type ListicleItineraryDraft, type ListTone, type LocationOption } from '../../types'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
-import { BUILT_IN_DAY_SHELLS, DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../constants/day-shells.constants'
+import { DEFAULT_DAY_SHELL_ID, getAvailableDayShells, getDayShellTemplate } from '../constants/day-shells.constants'
 import { AiTitleInput } from '../../../../shared/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
 import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
@@ -27,6 +28,9 @@ type BuilderSetupPanelProps = {
   /** Itinerary Autobuild: fill the day slots from the Description brief. */
   onGenerateItinerary?: () => void
   isGeneratingItinerary?: boolean
+  /** Day Shell Library shells loaded from the backend (Custom Day Shells). */
+  libraryShells?: DayShellTemplate[]
+  onOpenLayoutManager?: () => void
 }
 
 function getAiTitleDisabledReason(draft: ListicleItineraryDraft, isSynced: boolean): string | undefined {
@@ -71,6 +75,8 @@ export function BuilderSetupPanel({
   isGeneratingSlug,
   onGenerateItinerary,
   isGeneratingItinerary,
+  libraryShells = [],
+  onOpenLayoutManager,
 }: BuilderSetupPanelProps) {
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft, isSynced)
   const isSetupLocked = !isSynced && draft.step1_complete && !draft.in_update_mode
@@ -78,6 +84,30 @@ export function BuilderSetupPanel({
   const neighborhoodOptions = getNeighborhoodOptionsForLocation(locations, draft.location)
   const showNeighborhoodPicker = isCityLocation(selectedPrimaryLocation)
   const firstShellId = draft.days[0] ? getShellIdForDay(draft, draft.days[0].id) : DEFAULT_DAY_SHELL_ID
+
+  // Dropdown options: built-ins + this draft's snapshots + library shells not yet
+  // snapshotted. The draft's copy wins on id collision (snapshot semantics — a
+  // later library edit must not change what this itinerary generates).
+  const shellOptions = useMemo(() => {
+    const draftShells = getAvailableDayShells(draft.customDayShells)
+    const knownIds = new Set(draftShells.map((shell) => shell.id))
+    const libraryOnly = libraryShells.filter((shell) => !knownIds.has(shell.id) && shell.slots.length > 0)
+    return [...draftShells, ...libraryOnly]
+  }, [draft.customDayShells, libraryShells])
+
+  /** Selecting a library shell copies its slots into the draft (snapshot-on-select). */
+  const snapshotForSelection = (shellId: DayShellId): Pick<ListicleItineraryDraft, 'customDayShells'> | undefined => {
+    const draftHasShell = getAvailableDayShells(draft.customDayShells).some((shell) => shell.id === shellId)
+    if (draftHasShell) return undefined
+    const libraryShell = libraryShells.find((shell) => shell.id === shellId)
+    if (!libraryShell) return undefined
+    return {
+      customDayShells: [
+        ...(draft.customDayShells ?? []),
+        { ...libraryShell, slots: libraryShell.slots.map((slot) => ({ ...slot })) },
+      ],
+    }
+  }
 
   return (
     <section className="stl-panel">
@@ -245,12 +275,25 @@ export function BuilderSetupPanel({
       </div>
 
       <div className="stl-field stl-day-shells">
-        <label className="stl-field-label-row">
-          <span>Day shell *</span>
-        </label>
-        <small className="stl-summary-note">
-          Choose the shape of the day before AI generation. The shell controls stop count, order, meal slots, activity slots, and nightlife slots.
-        </small>
+        <div className="stl-day-shells__header">
+          <div>
+            <label className="stl-field-label-row">
+              <span>Day shell *</span>
+            </label>
+            <small className="stl-summary-note">
+              Choose the shape of the day before AI generation. The shell controls stop count, order, meal slots, activity slots, and nightlife slots.
+            </small>
+          </div>
+          {onOpenLayoutManager ? (
+            <button
+              type="button"
+              className="stl-btn stl-btn-secondary"
+              onClick={onOpenLayoutManager}
+            >
+              Manage layouts
+            </button>
+          ) : null}
+        </div>
 
         <div className="stl-day-shell-apply">
           <label className="stl-field stl-day-shell-apply__select">
@@ -259,11 +302,15 @@ export function BuilderSetupPanel({
               className="stl-field-input"
               value={firstShellId}
               disabled={isSetupLocked}
-              onChange={(event) => updateDraft({
-                dayShellSelections: setShellForAllDays(draft, event.target.value as DayShellId),
-              })}
+              onChange={(event) => {
+                const shellId = event.target.value as DayShellId
+                updateDraft({
+                  ...snapshotForSelection(shellId),
+                  dayShellSelections: setShellForAllDays(draft, shellId),
+                })
+              }}
             >
-              {BUILT_IN_DAY_SHELLS.map((shell) => (
+              {shellOptions.map((shell) => (
                 <option key={shell.id} value={shell.id}>
                   {shell.name} — {shell.slots.length} stops
                 </option>
@@ -275,7 +322,7 @@ export function BuilderSetupPanel({
         <div className="stl-day-shell-grid">
           {draft.days.map((day, dayIndex) => {
             const shellId = getShellIdForDay(draft, day.id)
-            const shell = getDayShellTemplate(shellId)
+            const shell = getDayShellTemplate(shellId, draft.customDayShells)
             return (
               <div className="stl-day-shell-card" key={day.id}>
                 <label className="stl-field">
@@ -284,11 +331,15 @@ export function BuilderSetupPanel({
                     className="stl-field-input"
                     value={shellId}
                     disabled={isSetupLocked}
-                    onChange={(event) => updateDraft({
-                      dayShellSelections: setShellForDay(draft, day.id, event.target.value as DayShellId),
-                    })}
+                    onChange={(event) => {
+                      const nextShellId = event.target.value as DayShellId
+                      updateDraft({
+                        ...snapshotForSelection(nextShellId),
+                        dayShellSelections: setShellForDay(draft, day.id, nextShellId),
+                      })
+                    }}
                   >
-                    {BUILT_IN_DAY_SHELLS.map((option) => (
+                    {shellOptions.map((option) => (
                       <option key={option.id} value={option.id}>
                         {option.name} — {option.slots.length} stops
                       </option>
@@ -296,14 +347,9 @@ export function BuilderSetupPanel({
                   </select>
                 </label>
                 <p className="stl-day-shell-card__description">{shell.description}</p>
-                <ol className="stl-day-shell-slots">
-                  {shell.slots.map((slot) => (
-                    <li key={slot.id}>
-                      <span className="stl-day-shell-slots__daypart">{slot.daypart.replace('_', ' ')}</span>
-                      <span>{slot.label}</span>
-                    </li>
-                  ))}
-                </ol>
+                <p className="stl-day-shell-card__slot-summary">
+                  {shell.slots.map((slot) => slot.label).join(' → ')}
+                </p>
               </div>
             )
           })}

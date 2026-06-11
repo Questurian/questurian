@@ -192,21 +192,39 @@ Do not confuse with: Listicle Angle, which is operator-selected per item and gov
 
 Definition: a pipeline that takes an operator's setup (location, title, day count), selected **Day Shells**, plus a free-text **Generation Brief** and fills a listicle-itinerary's shell slots with selected Payload records, ordered per day, each carrying a **Selection Reason**. It fills *slots only* — it does not write blurbs, choose images, or publish. The operator reviews and edits the result in the builder before any blurb/image/publish step.
 Decision scope: the operator-selected Day Shell is the source of truth for stop count, slot order, meal/activity/nightlife requirements, and rough daypart. The AI owns intent extraction and fit-scoring; deterministic code owns retrieval, shell-slot filling, and ordering within the selected shell. Querying Payload is function-calling over the REST API from inside the backend — not MCP, not a live CMS connection.
+Rule: a venue is never repeated across the whole itinerary; when the candidate pool runs dry on later days, the slot surfaces a Slot Fill issue for a manual pick rather than reusing a venue.
 Related terms: Day Shell, Shell Slot, Slot Fill, Generation Brief, Fit Score, Daypart, Lodging Anchor, Selection Reason, Plan Overview, List Tone.
 Do not confuse with: the blurb writer (separate, downstream; consumes Selection Reason as input).
 
 ### Day Shell
 
 Definition: an operator-selected template defining the ordered shape of one itinerary day: stop count, required slot categories, rough time-of-day buckets, and meal/activity/nightlife requirements. Multi-day itineraries choose a Day Shell per day, with the UI allowed to apply one default shell across all days.
-Related terms: Shell Slot, Slot Fill, Itinerary Autobuild.
+Related terms: Custom Day Shell, Shell Slot, Slot Fill, Itinerary Autobuild.
 Do not confuse with: the Generation Brief, which describes creative intent but does not define the itinerary structure.
 Rule: built-in Day Shells should feel like distinct full-day editorial structures with shifted goals, not small variants that add or remove one stop.
+Rule: built-in Day Shells are immutable; "editing" one forks it into a Custom Day Shell in the Day Shell Library, leaving the built-in untouched.
+Rule: the ABW frontend is the canonical home of built-in Day Shells; the autobuild request always carries the selected shell's explicit slots, so the backend never resolves a shell by id.
 Built-in examples: Full Day Balanced, Light Full Day, Food-Focused Full Day, Adventure Full Day, and Nightlife Full Day.
 Persistence boundary: Day Shells are an AI Blog Writer planning contract, not a Questura Payload CMS schema concept.
+
+### Custom Day Shell
+
+Definition: an operator-created Day Shell saved in the Day Shell Library, built either from scratch out of approved Shell Slot presets or by forking a built-in Day Shell. Editing is limited to the slot list — add from presets, remove, duplicate, and freely reorder; a slot's internals (label, daypart, intent tags, collections) stay as its preset defines them.
+Related terms: Day Shell, Day Shell Library, Shell Slot, Itinerary Autobuild.
+Do not confuse with: a new public itinerary layout type in Questura Payload; Custom Day Shells remain ABW planning state.
+Persistence boundary: Custom Day Shells live in the backend Day Shell Library (ADR 0017). Selecting one for an itinerary snapshots its slots into the Draft, and the autobuild request still carries explicit shell slots — later library edits or deletes never change an existing itinerary's setup.
+History: previously draft-local metadata stored only inside the owning ABW Draft; moved to the library so forks of built-ins are reusable across itineraries.
+
+### Day Shell Library
+
+Definition: the backend-persisted collection of Custom Day Shells, available across all itinerary Drafts in an ABW deployment. The library is a palette, not a dependency: itineraries snapshot slots out of it at selection time and never reference library shells live, so deleting or editing a library shell cannot strand or silently mutate an existing itinerary.
+Related terms: Custom Day Shell, Day Shell, Itinerary Autobuild.
+Do not confuse with: the built-in Day Shells (immutable code constants, listed alongside library shells but not stored in it); a multi-tenant shared store (ABW's backend storage is per-deployment, single-operator).
 
 ### Shell Slot
 
 Definition: one ordered requirement inside a Day Shell, such as a lunch restaurant, morning activity, dinner restaurant, or nightlife stop.
+Decision scope: a slot's acceptable collections are a hard filter owned by deterministic code; its preferred collections, intent tags, and avoid tags are soft scoring guidance owned by the AI, with no guaranteed deterministic effect.
 Related terms: Day Shell, Slot Fill, Selection Reason.
 Do not confuse with: a Payload block row; a Shell Slot is the planning requirement, while the block row is the persisted editor representation after filling.
 

@@ -12,8 +12,10 @@ import {
   type ItineraryBlockType,
   type ItineraryItemBlock,
   type ItineraryDaySlice,
-  type DayShellId,
+  type DayShellTemplate,
+  type DayShellSlot,
   type ListicleItineraryDraft,
+  type ShellSlotDaypart,
   type TourAgencyKeyLocationRow,
   type TourAgencyStartingPoint,
 } from './types'
@@ -21,6 +23,8 @@ import { normalizeLocationIds } from '../../shared/locationScope/scope'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
 const DAY_SHELL_IDS = new Set<string>(BUILT_IN_DAY_SHELLS.map((shell) => shell.id))
+const DAYPARTS = new Set<ShellSlotDaypart>(['morning', 'late_morning', 'lunch', 'afternoon', 'dinner', 'evening', 'nightlife'])
+const SHELL_COLLECTIONS = new Set(['dining', 'accommodations', 'attractions', 'nightlife'])
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -37,17 +41,73 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
 
   const normalizeDayShellSelections = (days: ItineraryDaySlice[]) => {
     const rawSelections = Array.isArray(value.dayShellSelections) ? value.dayShellSelections : []
+    const customShellIds = new Set(normalizeCustomDayShells(value.customDayShells).map((shell) => shell.id))
     return days.map((day) => {
       const raw = rawSelections.find((entry) => (
         isRecord(entry)
         && typeof entry.dayId === 'string'
         && entry.dayId === day.id
       ))
-      const shellId = isRecord(raw) && typeof raw.shellId === 'string' && DAY_SHELL_IDS.has(raw.shellId)
-        ? raw.shellId as DayShellId
+      const shellId = isRecord(raw)
+        && typeof raw.shellId === 'string'
+        && (DAY_SHELL_IDS.has(raw.shellId) || customShellIds.has(raw.shellId))
+        ? raw.shellId
         : DEFAULT_DAY_SHELL_ID
       return { dayId: day.id, shellId }
     })
+  }
+
+  const normalizeCustomSlot = (slotValue: unknown, slotIndex: number): DayShellSlot | null => {
+    if (!isRecord(slotValue)) return null
+    if (!DAYPARTS.has(slotValue.daypart as ShellSlotDaypart)) return null
+    const acceptableCollections = Array.isArray(slotValue.acceptableCollections)
+      ? slotValue.acceptableCollections.filter((entry): entry is DayShellSlot['acceptableCollections'][number] => (
+          typeof entry === 'string' && SHELL_COLLECTIONS.has(entry)
+        ))
+      : []
+    const preferredCollections = Array.isArray(slotValue.preferredCollections)
+      ? slotValue.preferredCollections.filter((entry): entry is DayShellSlot['preferredCollections'][number] => (
+          typeof entry === 'string' && SHELL_COLLECTIONS.has(entry)
+        ))
+      : acceptableCollections
+    if (acceptableCollections.length < 1 || preferredCollections.length < 1) return null
+    return {
+      id: typeof slotValue.id === 'string' && slotValue.id.trim() ? slotValue.id : `custom_slot_${slotIndex}`,
+      label: typeof slotValue.label === 'string' && slotValue.label.trim() ? slotValue.label : `Custom slot ${slotIndex + 1}`,
+      daypart: slotValue.daypart as ShellSlotDaypart,
+      acceptableCollections,
+      preferredCollections,
+      intentTags: Array.isArray(slotValue.intentTags)
+        ? slotValue.intentTags.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+        : [],
+      avoidTags: Array.isArray(slotValue.avoidTags)
+        ? slotValue.avoidTags.filter((entry): entry is string => typeof entry === 'string' && Boolean(entry.trim()))
+        : undefined,
+    }
+  }
+
+  function normalizeCustomDayShells(shellsValue: unknown): DayShellTemplate[] {
+    if (!Array.isArray(shellsValue)) return []
+    return shellsValue
+      .map((shellValue, shellIndex): DayShellTemplate | null => {
+        if (!isRecord(shellValue)) return null
+        const rawId = typeof shellValue.id === 'string' ? shellValue.id.trim() : ''
+        const slots = Array.isArray(shellValue.slots)
+          ? shellValue.slots
+              .map((slotValue, slotIndex) => normalizeCustomSlot(slotValue, slotIndex))
+              .filter((slot): slot is DayShellSlot => Boolean(slot))
+          : []
+        if (!rawId || DAY_SHELL_IDS.has(rawId) || slots.length < 1) return null
+        return {
+          id: rawId,
+          name: typeof shellValue.name === 'string' && shellValue.name.trim()
+            ? shellValue.name.trim()
+            : `Custom Shell ${shellIndex + 1}`,
+          description: typeof shellValue.description === 'string' ? shellValue.description.trim() : '',
+          slots,
+        }
+      })
+      .filter((shell): shell is DayShellTemplate => Boolean(shell))
   }
 
   const normalizeStoredKeyLocation = (
@@ -203,6 +263,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined,
     ),
     listTone: resolveListTone(value.listTone),
+    customDayShells: normalizeCustomDayShells(value.customDayShells),
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',
     locationRef: typeof value.locationRef === 'number' ? value.locationRef : null,
@@ -314,6 +375,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     hasLocalChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     listTone: DEFAULT_LIST_TONE,
+    customDayShells: [],
     title: '',
     location: '',
     locationRef: null,

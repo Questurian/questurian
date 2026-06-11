@@ -245,12 +245,7 @@ export type RelatedItemCollection =
   | 'nightlife'
   | 'key-locations'
 
-export type DayShellId =
-  | 'full_day_balanced'
-  | 'light_full_day'
-  | 'food_focused_full_day'
-  | 'adventure_full_day'
-  | 'nightlife_full_day'
+export type DayShellId = string
 
 export type ShellSlotDaypart =
   | 'morning'
@@ -271,7 +266,6 @@ export type DayShellSlot = {
   preferredCollections: ShellSlotCollection[]
   intentTags: string[]
   avoidTags?: string[]
-  required?: boolean
 }
 
 export type DayShellTemplate = {
@@ -394,6 +388,8 @@ export type ListicleItineraryDraft = {
   planOverview?: string
   /** Itinerary Autobuild: selected Day Shell per local day; ABW-only planning state. */
   dayShellSelections?: DayShellSelection[]
+  /** Operator-created Day Shell layouts; ABW-only local planning state. */
+  customDayShells?: DayShellTemplate[]
   title: string
   location: string
   locationRef: number | null
