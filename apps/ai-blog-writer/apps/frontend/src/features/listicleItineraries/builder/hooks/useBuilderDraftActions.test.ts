@@ -40,6 +40,7 @@ function buildDraft(): ListicleItineraryDraft {
         id: 'stop-1',
         blockType: 'itinerary-dining',
         item: 101,
+        tours: [],
         mediaMode: 'photos',
         selectedPhotos: [9001],
         selectedInstagramPost: null,

@@ -97,6 +97,21 @@ const attractionItems: RelatedItemOption[] = [
   },
 ]
 
+const attractionItemsWithTours: RelatedItemOption[] = [
+  {
+    id: 301,
+    title: 'Sacsayhuaman',
+    location: 'Peru > Cusco',
+    latitude: -13.509,
+    longitude: -71.982,
+    tours: [
+      { id: 901, title: 'Sunrise Walking Tour', price: '$45' },
+      { id: 902, title: 'Horseback Ride', price: '$60' },
+      { id: 903, title: 'Night Stargazing' },
+    ],
+  },
+]
+
 const keyLocationItems: RelatedItemOption[] = [
   {
     id: 101,
@@ -112,6 +127,7 @@ function buildManualTourAgencyItem(): ItineraryItemBlock {
     id: 'tour-stop-1',
     blockType: 'itinerary-tour-agency',
     item: null,
+    tours: [],
     mediaMode: 'photos',
     selectedPhotos: [],
     selectedInstagramPost: null,
@@ -129,6 +145,33 @@ function buildManualTourAgencyItem(): ItineraryItemBlock {
     image: null,
     instagramPost: null,
     blurbMarkdown: 'Manual stop blurb',
+    blurbJsonText: '',
+  }
+}
+
+function buildAttractionItem(): ItineraryItemBlock {
+  return {
+    id: 'attraction-stop-1',
+    blockType: 'itinerary-attractions',
+    item: 301,
+    tours: [],
+    mediaMode: 'photos',
+    selectedPhotos: [],
+    selectedInstagramPost: null,
+    title: '',
+    operator: '',
+    price: '',
+    url: '',
+    tourDuration: 1,
+    startingPoint: {
+      label: '',
+      latitude: '',
+      longitude: '',
+    },
+    keyLocations: [],
+    image: null,
+    instagramPost: null,
+    blurbMarkdown: '',
     blurbJsonText: '',
   }
 }
@@ -323,5 +366,40 @@ describe('BuilderStopsPanel', () => {
     expect(screen.getByText('Hotel Sol')).toBeInTheDocument()
     expect(screen.getByText('Sacsayhuaman')).toBeInTheDocument()
     expect(screen.getByDisplayValue('Manual overlook')).toBeInTheDocument()
+  })
+
+  it('selects and reorders attraction tour picks through the modal', async () => {
+    const user = userEvent.setup()
+    const relatedItems = buildRelatedByBlockType({
+      'itinerary-attractions': attractionItemsWithTours,
+    })
+    const draft = buildDraft()
+    draft.days = [{ ...draft.days[0], whereStaying: [], items: [buildAttractionItem()] }]
+
+    render(<Harness initialDraft={draft} relatedItems={relatedItems} />)
+
+    await user.click(screen.getByRole('button', { name: /select tours/i }))
+
+    const modal = screen.getByRole('dialog', { name: 'Select Tour Picks' })
+    expect(modal).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: 'Night Stargazing' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Horseback Ride' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Sunrise Walking Tour' }))
+    await user.click(screen.getByRole('button', { name: 'Save Picks' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Select Tour Picks' })).not.toBeInTheDocument()
+    expect(screen.getByText('2 tours selected')).toBeInTheDocument()
+    expect(screen.getByText('#1').parentElement).toHaveTextContent('Horseback Ride')
+    expect(screen.getByText('#2').parentElement).toHaveTextContent('Sunrise Walking Tour')
+
+    await user.click(screen.getByRole('button', { name: /2 tours selected/i }))
+    expect(screen.getByRole('checkbox', { name: 'Horseback Ride' })).toBeChecked()
+
+    await user.click(screen.getByRole('checkbox', { name: 'Horseback Ride' }))
+    await user.click(screen.getByRole('button', { name: 'Save Picks' }))
+
+    expect(screen.getByText('1 tour selected')).toBeInTheDocument()
+    expect(screen.getByText('#1').parentElement).toHaveTextContent('Sunrise Walking Tour')
   })
 })

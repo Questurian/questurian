@@ -20,13 +20,20 @@ function coerceStoredItems(items: unknown[]): ListicleItemBlock[] {
   return items.map((entry) => {
     if (!isRecord(entry)) return entry as ListicleItemBlock
     const blockType = entry.blockType as ListicleItemBlock['blockType'] | undefined
+    const tours = Array.isArray(entry.tours)
+      ? entry.tours.filter((tourId): tourId is number => typeof tourId === 'number')
+      : []
     if (blockType === 'data-nightlife') {
       return {
         ...(entry as ListicleItemBlock),
+        tours,
         angle: resolveListicleAngleForBlockType(blockType, entry.angle),
       }
     }
-    return entry as ListicleItemBlock
+    return {
+      ...(entry as ListicleItemBlock),
+      tours,
+    }
   })
 }
 

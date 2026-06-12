@@ -5,6 +5,7 @@ import type {
 import type {
   ListicleInstagramPost,
   ListicleSelectedPhoto,
+  ListicleTourPick,
   ListicleVenue,
   MapsListicleHeader,
 } from './mapsListicle'
@@ -31,6 +32,8 @@ export type ItineraryVenueBlock = {
   mediaMode?: 'photos' | 'instagram' | 'both'
   selectedPhotos?: ListicleSelectedPhoto[] | null
   selectedInstagramPost?: ListicleInstagramPost | number | string | null
+  /** Operator-curated Tour Picks on attraction stops (ordered, max 4). */
+  tours?: ListicleTourPick[] | null
 }
 
 export type ItineraryTourAgencyKeyLocation = {

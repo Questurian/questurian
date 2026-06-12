@@ -254,7 +254,9 @@ Do not confuse with: an exact time field; itineraries carry no clock times.
 ### Lodging Anchor
 
 Definition: the single accommodation each day begins from; the fixed origin for that day's travel ordering. v1 uses one anchor for the whole trip (per-day lodging is an additive extension the schema already allows via per-day `whereStaying`). Ordering minimizes straight-line (Haversine) travel from the anchor through the day's selected stops.
-Related terms: Itinerary Autobuild, Daypart.
+Rule: whether an itinerary includes a Lodging Anchor is an explicit operator decision in the builder setup (default: included) — never inferred by the AI from the Generation Brief. The AI's lodging role is limited to style keywords and fit-scoring.
+Rule: when lodging is included, Autobuild always delivers the best-fit accommodation available rather than leaving lodging empty; a winner below the slot fit threshold is delivered flagged as low-fit in the Autobuild Report for manual replacement. An empty accommodation pool is a reported failure, never a silent skip.
+Related terms: Itinerary Autobuild, Daypart, Autobuild Report.
 
 ### Selection Reason
 
@@ -266,6 +268,21 @@ Do not confuse with: a blurb (public editorial copy generated later).
 
 Definition: a single trip-level rationale for the whole itinerary's shape (the day-by-day logic). Internal, persisted, operator-editable; companion to per-stop Selection Reasons.
 Related terms: Selection Reason, Itinerary Autobuild.
+
+### Autobuild Report
+
+Definition: the run-level diagnostic timeline of one Itinerary Autobuild run — one entry per pipeline decision (intent, candidate retrieval, Lodging Anchor, each Shell Slot fill, reasons), each carrying its outcome, the decisive evidence (pool sizes, top-scored candidates, winner, threshold misses), and the raw model exchange for AI steps. Transient: it accompanies the run that produced it and is not persisted with the Draft.
+Related terms: Itinerary Autobuild, Slot Fill, Lodging Anchor, Fit Score.
+Do not confuse with: the per-stop autowrite inspect run (a per-target blurb-writing trace); the Autobuild Report covers one whole planning run.
+
+### Tour Picks
+
+Definition: the curated, ordered subset of an attraction's linked Tours that the operator selects for one attraction entry in a listicle — an attraction stop in a listicle itinerary or an item row in a single-type attractions listicle. The attraction may carry a deep tour list (managed in Location Manager); the Tour Picks are the few the published article actually features, chosen for editorial curation.
+Rule: Tour Picks are stored as live references (tour IDs, operator order) on the itinerary's attraction stop — never as copied snapshots. Tour content (title, price, booking link, image) stays canonical in Location Manager → Payload; published listicles always render the current values.
+Rule: Tour Picks must come from the attraction's LM-linked tour list — the listicle cannot attach a tour Location Manager never linked to that attraction. An attraction with no linked tours simply has no tour section on its stop.
+Rule: a stop carries at most 4 Tour Picks (hard cap, enforced at the schema) and may carry none — curation is the point; a stop must never read as a tour dump. Swapping a stop's attraction clears its Tour Picks (they belonged to the old attraction's list).
+Related terms: Itinerary Autobuild (does not pick tours; tours are structured data, not AI prose — ADR 0013).
+Do not confuse with: the `tour-agency` stop (a manual, free-typed itinerary block); Tour Picks ride on an attraction stop and reference Tour records.
 
 ## Relationships
 
@@ -323,7 +340,6 @@ When working in this context:
 - Where does the contract for **inbound** content into Payload live? Today it's implicit ("Payload-accepts-this").
 - Is the converter genuinely stateless across content edge cases (tables, embedded HTML)? No regression tests exist at the converter boundary.
 - The `images` and `editor_assist` features are not represented in the Stage[N] vocabulary — they're orthogonal services. Should the glossary distinguish "article features" vs "assist features"?
-- Should the itinerary manual `tour-agency` stop be retired in favor of attraction-linked tours? The Payload `attractions.tours` relationship already exists (ordered, from LM); an attraction stop card could recommend its linked tours instead of a standalone manual tour stop. Tracked as proposed ADR 0013; deferred from the AI auto-write hookup (tours are structured data, not AI prose).
 
 ## Child Contexts
 

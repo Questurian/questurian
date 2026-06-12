@@ -27,6 +27,7 @@ function createNewItem(): ItineraryItemBlock {
     id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     blockType: 'itinerary-dining',
     item: null,
+    tours: [],
     mediaMode: 'photos',
     selectedPhotos: [],
     selectedInstagramPost: null,

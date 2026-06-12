@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { ListicleItineraries } from './ListicleItineraries'
 
-const beforeValidateHook = ListicleItineraries.hooks?.beforeValidate?.[2]
+const beforeValidateHook = ListicleItineraries.hooks?.beforeValidate?.at(-1)
 
 function buildReq() {
   return {
@@ -23,7 +23,13 @@ function buildReq() {
         }
 
         if (collection === 'attractions' && String(id) === '202') {
-          return { id: 202, title: 'Moray', location: 'peru|cusco' }
+          return {
+            id: 202,
+            title: 'Moray',
+            location: 'peru|cusco',
+            tours: [301, 302, 303, 304, 305],
+            gallery: [{ image: 700 }],
+          }
         }
 
         throw new Error(`Not found: ${collection}:${id}`)
@@ -194,6 +200,55 @@ describe('ListicleItineraries manual tour-agency validation', () => {
 
     await expect(runBeforeValidate(data)).rejects.toThrow(
       'Publishing requires at least one itinerary stop on day 1.',
+    )
+  })
+})
+
+function buildAttractionStop(overrides: Record<string, unknown> = {}) {
+  return {
+    blockType: 'itinerary-attractions',
+    item: 202,
+    mediaMode: 'photos',
+    selectedPhotos: [700],
+    blurb: {
+      root: {
+        type: 'root',
+      },
+    },
+    ...overrides,
+  }
+}
+
+describe('ListicleItineraries attraction tour-picks validation', () => {
+  it('accepts tour picks linked to the selected attraction', async () => {
+    const data = buildData()
+    data.items = [buildAttractionStop({ tours: [302, 301] })]
+
+    await expect(runBeforeValidate(data)).resolves.toEqual(data)
+  })
+
+  it('accepts attraction stops with no tour picks', async () => {
+    const data = buildData()
+    data.items = [buildAttractionStop()]
+
+    await expect(runBeforeValidate(data)).resolves.toEqual(data)
+  })
+
+  it('rejects more than 4 tour picks', async () => {
+    const data = buildData()
+    data.items = [buildAttractionStop({ tours: [301, 302, 303, 304, 305] })]
+
+    await expect(runBeforeValidate(data)).rejects.toThrow(
+      'Day 1 — Stop 1 can feature at most 4 tour picks.',
+    )
+  })
+
+  it('rejects tour picks not linked to the selected attraction', async () => {
+    const data = buildData()
+    data.items = [buildAttractionStop({ tours: [301, 999] })]
+
+    await expect(runBeforeValidate(data)).rejects.toThrow(
+      'Day 1 — Stop 1 tour pick 999 is not linked to the selected attraction.',
     )
   })
 })

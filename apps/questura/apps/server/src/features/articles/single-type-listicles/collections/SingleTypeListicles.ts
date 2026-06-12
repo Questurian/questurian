@@ -15,6 +15,7 @@ import {
   fetchListicleSourceItem,
   getSourceCollectionForBlockType,
 } from '../../shared/utils/itemMedia/sourceItems'
+import { validateTourPicks } from '../../shared/utils/tourPicks'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
@@ -464,6 +465,14 @@ export const SingleTypeListicles: CollectionConfig = {
               throw new Error(
                 `Item ${i + 1} references a ${sourceCollection} entry that could not be loaded.`,
               )
+            }
+
+            if (item.blockType === 'data-attractions') {
+              validateTourPicks({
+                blockTours: item.tours,
+                sourceItem,
+                itemLabel: `Item ${i + 1}`,
+              })
             }
 
             const mediaMode = getMediaMode(item.mediaMode)

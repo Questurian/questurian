@@ -62,6 +62,7 @@ function venueRowFromBlock(
     mediaMode: block.mediaMode,
     selectedPhotos: block.selectedPhotos ?? undefined,
     selectedInstagramPost: block.selectedInstagramPost,
+    tours: block.tours,
   }
 }
 

@@ -45,6 +45,7 @@ describe('generateItinerary', () => {
 
     const requestBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as Record<string, unknown>
     expect(requestBody).toMatchObject({
+      include_lodging: true,
       day_shells: [
         {
           day_index: 0,
@@ -65,5 +66,52 @@ describe('generateItinerary', () => {
         },
       ],
     })
+  })
+
+  it('sends include_lodging false when the operator opts out and defaults missing steps', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        days: [],
+        plan_overview: '',
+        model_used: 'gemini-2.5-flash',
+        notes: [],
+        slot_issues: [],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const plan = await generateItinerary({
+      location: 'peru|lima',
+      title: 'One Perfect Day in Lima',
+      brief: 'coffee, culture, tasting night',
+      dayCount: 1,
+      payloadToken: 'token',
+      includeLodging: false,
+      dayShells: [
+        {
+          dayIndex: 0,
+          shell: {
+            id: 'custom_day_shell_1',
+            name: 'Coffee culture night',
+            description: 'Operator-built layout',
+            slots: [
+              {
+                id: 'morning_coffee_1',
+                label: 'Morning coffee',
+                daypart: 'morning',
+                acceptableCollections: ['dining'],
+                preferredCollections: ['dining'],
+                intentTags: ['coffee', 'cafe'],
+              },
+            ],
+          },
+        },
+      ],
+    })
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as Record<string, unknown>
+    expect(requestBody.include_lodging).toBe(false)
+    expect(plan.steps).toEqual([])
   })
 })

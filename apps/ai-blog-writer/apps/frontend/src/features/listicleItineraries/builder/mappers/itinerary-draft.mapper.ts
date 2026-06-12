@@ -81,6 +81,7 @@ function mapPayloadBlockRowToItem(item: PayloadBlockRow, index: number): Itinera
     id: itemId,
     blockType,
     item: getRelationshipId(item.item),
+    tours: getRelationshipIds(item.tours),
     mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
     selectedPhotos: getRelationshipIds(item.selectedPhotos),
     selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),

@@ -65,6 +65,8 @@ function itemSyncShape(item: ItineraryItemBlock): Record<string, unknown> {
   return {
     blockType: item.blockType,
     item: item.item ?? null,
+    // Tour Picks are ordered, so no set-normalization here.
+    tours: item.tours,
     mediaMode: item.mediaMode,
     selectedPhotos: item.selectedPhotos,
     selectedInstagramPost: item.selectedInstagramPost ?? null,

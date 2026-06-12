@@ -915,6 +915,73 @@
   color: var(--stl-muted);
 }
 
+.stl-tour-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d8e0ee;
+  background: #f3f7ff;
+  color: #30486f;
+  border-radius: 999px;
+  padding: 0.18rem 0.58rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.stl-tour-picks {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.stl-tour-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #dde5f0;
+  border-radius: 10px;
+  background: #f8fbff;
+  cursor: pointer;
+}
+
+.stl-tour-pick-row--picked {
+  border-color: #9db8e8;
+  background: #eef4ff;
+}
+
+.stl-tour-pick-row--disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.stl-tour-pick-row__order {
+  min-width: 1.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #30486f;
+}
+
+.stl-tour-pick-row__title {
+  flex: 1;
+  font-size: 0.85rem;
+}
+
+.stl-tour-pick-row__price {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #30486f;
+}
+
+.stl-tour-picks__stale-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.82rem;
+  color: #8a5a00;
+}
+
 .stl-btn {
   display: inline-flex;
   align-items: center;

@@ -3,6 +3,7 @@ import type { LocationLevel } from '../../shared/locationScope/types'
 import type {
   GalleryImageObject,
   InstagramPostOption,
+  LinkedTourOption,
   MediaMode,
 } from '../../shared/builder/types'
 
@@ -11,9 +12,11 @@ export type {
   GalleryMediaAsset,
   InstagramPostOption,
   InstagramPreviewAsset,
+  LinkedTourOption,
   MediaAssetOption,
   MediaMode,
 } from '../../shared/builder/types'
+export { TOUR_PICKS_MAX } from '../../shared/builder/types'
 
 export type ItineraryBlockType =
   | 'itinerary-dining'
@@ -337,6 +340,12 @@ export type ItineraryItemBlock = {
   id: string
   blockType: ItineraryBlockType
   item: number | null
+  /**
+   * Tour Picks (ADR 0013): operator-curated, ordered subset (max 4) of the
+   * selected attraction's LM-linked tours. Only meaningful for
+   * `itinerary-attractions`; cleared when the attraction changes.
+   */
+  tours: number[]
   mediaMode: MediaMode
   selectedPhotos: number[]
   selectedInstagramPost: number | null
@@ -384,6 +393,9 @@ export type ListicleItineraryDraft = {
   listTone: ListTone
   /** Itinerary Autobuild: the operator's creative brief (internal, persisted). */
   generationBrief?: string
+  /** Itinerary Autobuild: whole-trip Lodging Anchor on day 1. Operator decision;
+   * missing means true (default on) so older drafts keep lodging. ABW-local. */
+  includeLodging?: boolean
   /** Itinerary Autobuild: trip-level rationale for the plan (internal, persisted). */
   planOverview?: string
   /** Itinerary Autobuild: selected Day Shell per local day; ABW-only planning state. */
@@ -450,6 +462,7 @@ export type PayloadItineraryDoc = {
       id?: string
       blockType?: ItineraryBlockType
       item?: number | { id?: number }
+      tours?: Array<number | { id?: number }> | null
       mediaMode?: MediaMode
       selectedPhotos?: Array<number | { id?: number }>
       selectedInstagramPost?: number | { id?: number } | null
@@ -480,6 +493,7 @@ export type PayloadItineraryDoc = {
       id?: string
       blockType?: ItineraryBlockType
       item?: number | { id?: number }
+      tours?: Array<number | { id?: number }> | null
       mediaMode?: MediaMode
       selectedPhotos?: Array<number | { id?: number }>
       selectedInstagramPost?: number | { id?: number } | null
@@ -512,6 +526,7 @@ export type PayloadItineraryDoc = {
     id?: string
     blockType?: ItineraryBlockType
     item?: number | { id?: number }
+    tours?: Array<number | { id?: number }> | null
     mediaMode?: MediaMode
     selectedPhotos?: Array<number | { id?: number }>
     selectedInstagramPost?: number | { id?: number } | null
@@ -542,6 +557,7 @@ export type PayloadItineraryDoc = {
     id?: string
     blockType?: ItineraryBlockType
     item?: number | { id?: number }
+    tours?: Array<number | { id?: number }> | null
     mediaMode?: MediaMode
     selectedPhotos?: Array<number | { id?: number }>
     selectedInstagramPost?: number | { id?: number } | null
@@ -628,6 +644,8 @@ export type RelatedItemOption = {
   instagramGallery?: Array<{
     post?: number | InstagramPostOption
   }>
+  /** LM-linked tours; populated tour docs at fetch depth, the pickable pool for Tour Picks. */
+  tours?: Array<number | LinkedTourOption>
 }
 
 export function isRelatedItemCollection(value: unknown): value is RelatedItemCollection {

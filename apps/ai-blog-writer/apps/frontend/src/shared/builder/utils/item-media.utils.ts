@@ -2,6 +2,7 @@ import type {
   GalleryImageObject,
   GalleryMediaAsset,
   InstagramPostOption,
+  LinkedTourOption,
   MediaAssetOption,
   MediaMode,
   RelatedItemMediaSource,
@@ -33,6 +34,16 @@ export function resolveImageUrl(asset: GalleryImageObject | MediaAssetOption): s
   if (direct.url) return direct.url
   if (direct.filename) return `${PAYLOAD_API_URL}/api/media-assets/file/${direct.filename}`
   return undefined
+}
+
+/** Populated tour docs on an attraction's LM-linked `tours` — the pickable pool for Tour Picks. */
+export function getLinkedTourObjects(item: RelatedItemMediaSource | null | undefined): LinkedTourOption[] {
+  if (!item?.tours) return []
+
+  return item.tours.filter(
+    (tour): tour is LinkedTourOption =>
+      typeof tour === 'object' && tour !== null && typeof tour.id === 'number',
+  )
 }
 
 export function getRelatedPhotoObjects(item: RelatedItemMediaSource | null | undefined): GalleryImageObject[] {

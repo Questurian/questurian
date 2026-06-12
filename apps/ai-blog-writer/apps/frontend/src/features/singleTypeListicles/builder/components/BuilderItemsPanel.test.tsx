@@ -66,6 +66,7 @@ function buildDraft(listicleType: SingleTypeListicleDraft['listicleType']): Sing
         id: 'item-1',
         blockType: blockTypeByListicleType[listicleType],
         item: 101,
+        tours: [],
         mediaMode: 'photos',
         selectedPhotos: [],
         selectedInstagramPost: null,

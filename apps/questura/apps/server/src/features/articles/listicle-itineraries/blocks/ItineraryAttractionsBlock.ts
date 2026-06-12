@@ -2,6 +2,7 @@ import { Block } from 'payload'
 import { angleField } from './utils/angleField'
 import { selectionReasonField } from './utils/selectionReasonField'
 import { createLocationFilter } from '../../shared/utils/locationFilter'
+import { createTourPicksField } from '../../shared/utils/tourPicks'
 import { createItineraryItemMediaFields } from './utils/itemMedia'
 
 export const ItineraryAttractionsBlock: Block = {
@@ -21,6 +22,7 @@ export const ItineraryAttractionsBlock: Block = {
         description: 'Select an attraction listing for this itinerary timeslot',
       },
     },
+    createTourPicksField(),
     ...createItineraryItemMediaFields('attractions'),
     angleField,
     {

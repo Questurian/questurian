@@ -19,6 +19,7 @@ function emptyBlock(id: string): ItineraryItemBlock {
     id,
     blockType: 'itinerary-dining',
     item: null,
+    tours: [],
     mediaMode: 'photos',
     selectedPhotos: [],
     selectedInstagramPost: null,

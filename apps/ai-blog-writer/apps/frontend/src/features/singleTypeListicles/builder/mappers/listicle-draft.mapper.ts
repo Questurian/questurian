@@ -17,6 +17,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
       id: item.id || `item_${Date.now()}_${index}`,
       blockType,
       item: getRelationshipId(item.item),
+      tours: getRelationshipIds(item.tours),
       mediaMode: isMediaMode(item.mediaMode) ? item.mediaMode : 'photos',
       selectedPhotos: getRelationshipIds(item.selectedPhotos),
       selectedInstagramPost: getRelationshipId(item.selectedInstagramPost),

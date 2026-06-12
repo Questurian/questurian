@@ -43,7 +43,8 @@ import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-co
 import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
 import { fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
-import { generateItinerary } from '../builder/services/autobuild.api'
+import { generateItinerary, type AutobuildResponse } from '../builder/services/autobuild.api'
+import { InspectAutobuildRunModal } from '../builder/components/InspectAutobuildRunModal'
 import {
   createLibraryDayShell,
   deleteLibraryDayShell,
@@ -85,6 +86,9 @@ export default function ListicleItineraryBuilderPage() {
   const [hasLocalChanges, setHasLocalChanges] = useState(false)
   const [libraryShells, setLibraryShells] = useState<DayShellTemplate[]>([])
   const [isLayoutManagerOpen, setIsLayoutManagerOpen] = useState(false)
+  // Autobuild Report: in-memory only, last run — replaced on re-run, gone on refresh.
+  const [autobuildReport, setAutobuildReport] = useState<AutobuildResponse | null>(null)
+  const [isAutobuildReportOpen, setIsAutobuildReportOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -417,6 +421,8 @@ export default function ListicleItineraryBuilderPage() {
     setIsGeneratingItinerary(true)
     setError(null)
     setResult(null)
+    setAutobuildReport(null)
+    setIsAutobuildReportOpen(false)
     try {
       const plan = await generateItinerary({
         location: draft.location,
@@ -433,6 +439,7 @@ export default function ListicleItineraryBuilderPage() {
           ),
         })),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
+        includeLodging: draft.includeLodging !== false,
       })
       setDraft((current) => (current ? applyAutobuildPlanToDraft(current, plan) : current))
       const filled = plan.days.reduce((sum, day) => sum + day.items.length, 0)
@@ -442,6 +449,13 @@ export default function ListicleItineraryBuilderPage() {
         + (issueCount ? ` ${issueCount} shell slot${issueCount === 1 ? '' : 's'} need manual picks.` : '')
         + (plan.notes.length ? ` Notes: ${plan.notes.join(' ')}` : ''),
       )
+      setAutobuildReport(plan)
+      // Quiet on success, loud on problems: any failed/warning step or empty
+      // slot opens the report unprompted.
+      const hasIssues = issueCount > 0 || plan.steps.some((step) => step.status !== 'ok')
+      if (hasIssues) {
+        setIsAutobuildReportOpen(true)
+      }
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to generate itinerary.')
     } finally {
@@ -863,8 +877,16 @@ export default function ListicleItineraryBuilderPage() {
             isGeneratingSlug={isGeneratingSlug}
             onGenerateItinerary={handleGenerateItinerary}
             isGeneratingItinerary={isGeneratingItinerary}
+            onViewAutobuildReport={() => setIsAutobuildReportOpen(true)}
+            hasAutobuildReport={Boolean(autobuildReport)}
             libraryShells={libraryShells}
             onOpenLayoutManager={() => setIsLayoutManagerOpen(true)}
+          />
+
+          <InspectAutobuildRunModal
+            isOpen={isAutobuildReportOpen}
+            onClose={() => setIsAutobuildReportOpen(false)}
+            report={autobuildReport}
           />
 
           <DayShellLibraryModal

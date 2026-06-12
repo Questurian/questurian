@@ -3,8 +3,9 @@ import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/nor
 import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { getBlockTypeForListicleType } from '../../api'
 import type { ListicleAngle, ListicleItemBlock, MediaMode, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
-import { getListicleAngleOptions, resolveListicleAngleForBlockType } from '../../types'
+import { getListicleAngleOptions, resolveListicleAngleForBlockType, TOUR_PICKS_MAX } from '../../types'
 import {
+  getLinkedTourObjects,
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
   requiresInstagram,
@@ -320,6 +321,12 @@ export function BuilderItemsPanel({
           const idealForValues = draft.listicleType === 'dining'
             ? getRelatedItemIdealFor(selectedRelatedItem)
             : []
+          const linkedTours = item.blockType === 'data-attractions'
+            ? getLinkedTourObjects(selectedRelatedItem)
+            : []
+          const staleTourPickIds = item.blockType === 'data-attractions' && selectedRelatedItem
+            ? item.tours.filter((tourId) => !linkedTours.some((tour) => tour.id === tourId))
+            : []
           const selectedRelatedItemLabel = getRelatedItemDisplayLabel(selectedRelatedItem)
           const isFirstItem = index === 0
           const isLastItem = index === draft.items.length - 1
@@ -499,6 +506,84 @@ export function BuilderItemsPanel({
                   <p className="stl-legacy-note">Select a related item to unlock media options and blurb.</p>
                 )}
               </div>
+
+              {item.blockType === 'data-attractions' && selectedRelatedItem && linkedTours.length > 0 ? (
+                <div className="stl-field">
+                  <div className="stl-field-label-row">
+                    <span>Tour Picks</span>
+                    <span className="stl-tour-duration-badge">
+                      {item.tours.length}/{TOUR_PICKS_MAX}
+                    </span>
+                  </div>
+                  <p className="stl-legacy-note">
+                    Feature up to {TOUR_PICKS_MAX} of this attraction's linked tours, in the order you pick them.
+                    Tour titles, prices, and booking links stay live from Location Manager.
+                  </p>
+                  <div className="stl-tour-picks">
+                    {linkedTours.map((tour) => {
+                      const pickIndex = item.tours.indexOf(tour.id)
+                      const isPicked = pickIndex !== -1
+                      const atCap = !isPicked && item.tours.length >= TOUR_PICKS_MAX
+
+                      return (
+                        <label
+                          key={tour.id}
+                          className={`stl-tour-pick-row${isPicked ? ' stl-tour-pick-row--picked' : ''}${atCap ? ' stl-tour-pick-row--disabled' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isPicked}
+                            disabled={atCap}
+                            onChange={() =>
+                              updateItem(item.id, (current) => {
+                                if (current.tours.includes(tour.id)) {
+                                  return {
+                                    ...current,
+                                    tours: current.tours.filter((tourId) => tourId !== tour.id),
+                                  }
+                                }
+                                if (current.tours.length >= TOUR_PICKS_MAX) {
+                                  return current
+                                }
+                                return { ...current, tours: [...current.tours, tour.id] }
+                              })
+                            }
+                          />
+                          <span className="stl-tour-pick-row__order">
+                            {isPicked ? `#${pickIndex + 1}` : ''}
+                          </span>
+                          <span className="stl-tour-pick-row__title">
+                            {tour.title?.trim() || `Tour #${tour.id}`}
+                          </span>
+                          {tour.price?.trim() ? (
+                            <span className="stl-tour-pick-row__price">{tour.price}</span>
+                          ) : null}
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {staleTourPickIds.length > 0 ? (
+                    <p className="stl-tour-picks__stale-warning">
+                      {staleTourPickIds.length} saved tour pick{staleTourPickIds.length === 1 ? ' is' : 's are'} no
+                      longer linked to this attraction in Location Manager and will block syncing.{' '}
+                      <button
+                        type="button"
+                        className="stl-btn stl-btn-secondary stl-btn-xs"
+                        onClick={() =>
+                          updateItem(item.id, (current) => ({
+                            ...current,
+                            tours: current.tours.filter(
+                              (tourId) => !staleTourPickIds.includes(tourId),
+                            ),
+                          }))
+                        }
+                      >
+                        Remove stale picks
+                      </button>
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
 
               {modeNeedsPhotos ? (
                 <div className="stl-field">
@@ -744,6 +829,8 @@ export function BuilderItemsPanel({
                     return {
                       ...current,
                       item: nextId,
+                      // Tour Picks belong to the previous attraction's linked list.
+                      tours: nextId === current.item ? current.tours : [],
                       mediaMode: nextMediaMode,
                       selectedPhotos: [],
                       selectedInstagramPost: null,

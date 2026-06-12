@@ -43,6 +43,7 @@ function createBlankListicleItem(blockType: ListicleItemBlock['blockType'], sequ
     id: `item_${now}_${sequence}`,
     blockType,
     item: null,
+    tours: [],
     mediaMode: 'photos',
     selectedPhotos: [],
     selectedInstagramPost: null,

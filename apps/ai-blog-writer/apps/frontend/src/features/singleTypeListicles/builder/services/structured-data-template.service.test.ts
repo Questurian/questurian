@@ -36,6 +36,7 @@ function buildDraft(): SingleTypeListicleDraft {
         id: 'item-1',
         blockType: 'data-dining',
         item: 101,
+        tours: [],
         mediaMode: 'photos',
         selectedPhotos: [],
         selectedInstagramPost: null,

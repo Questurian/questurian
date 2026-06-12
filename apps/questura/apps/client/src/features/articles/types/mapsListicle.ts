@@ -35,6 +35,14 @@ export type ListicleInstagramPost = {
   embedCode?: string
 }
 
+/** Tour Pick as shaped by the public API serializer (published tours only). */
+export type ListicleTourPick = {
+  id?: number
+  title?: string | null
+  price?: string | null
+  bookingLink?: string | null
+}
+
 export type ListicleItemRow = {
   id: string
   blurb?: string
@@ -44,6 +52,8 @@ export type ListicleItemRow = {
   selectedPhotos?: ListicleSelectedPhoto[]
   /** Populated instagram-post when API `depth` includes relationship (e.g. 2). */
   selectedInstagramPost?: ListicleInstagramPost | number | string | null
+  /** Operator-curated Tour Picks on attraction rows (ordered, max 4). */
+  tours?: ListicleTourPick[] | null
 }
 
 export type MapsListicleHeader = {

@@ -48,6 +48,7 @@ const plan: AutobuildResponse = {
   model_used: 'gemini-2.5-flash-lite',
   notes: [],
   slot_issues: [],
+  steps: [],
 }
 
 describe('applyAutobuildPlanToDraft', () => {

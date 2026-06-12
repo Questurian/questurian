@@ -70,6 +70,7 @@ describe('listicleItineraries storage', () => {
       id: 'tour-stop-1',
       blockType: 'itinerary-tour-agency',
       item: null,
+      tours: [],
       mediaMode: 'photos',
       selectedPhotos: [],
       selectedInstagramPost: null,

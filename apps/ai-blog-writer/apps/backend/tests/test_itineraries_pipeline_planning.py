@@ -298,6 +298,127 @@ def test_categories_derive_from_shell_slots_not_intent():
     assert _categories_for_shells(shells) == ["dining", "attractions", "nightlife"]
 
 
+# --- Lodging gate + Autobuild Report steps -------------------------------------
+# Lodging inclusion is the request's explicit `include_lodging` (operator
+# decision, default on) — never an AI inference. Every lodging outcome must be
+# a visible step in the report; a silent skip is a bug.
+
+
+def _select_state(req: GenerateItineraryRequest, accommodations: list[Candidate]):
+    shells = _resolve_day_shells(req)
+    return {
+        "request": req,
+        "intent": IntentSpec(),
+        "candidates_by_cat": {"dining": [_cand(1)], "accommodations": accommodations},
+        "day_shells": shells,
+    }
+
+
+def _run_select(state, monkeypatch, scored_by_pool):
+    import asyncio
+
+    from app.features.itineraries_pipeline import graph as graph_module
+
+    def fake_score(*, intent, slot, candidates, brief, model_name, trace=None):
+        if trace is not None:
+            trace["prompt"] = "p"
+            trace["output"] = "o"
+        return scored_by_pool(slot, candidates)
+
+    monkeypatch.setattr(graph_module, "score_candidates", fake_score)
+    return asyncio.run(graph_module._node_select(state))
+
+
+def test_include_lodging_defaults_on():
+    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    assert req.include_lodging is True
+
+
+def test_select_skips_lodging_with_visible_step_when_excluded(monkeypatch):
+    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    req = req.model_copy(update={"include_lodging": False})
+    state = _select_state(req, accommodations=[_cand(9, cat="accommodations")])
+
+    out = _run_select(
+        state,
+        monkeypatch,
+        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=90) for c in candidates],
+    )
+
+    assert out["anchor"] is None
+    lodging_steps = [s for s in out["steps"] if s.name == "lodging"]
+    assert len(lodging_steps) == 1
+    assert lodging_steps[0].details["skipped"] is True
+
+
+def test_select_delivers_low_fit_lodging_flagged_as_warning(monkeypatch):
+    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    state = _select_state(req, accommodations=[_cand(9, cat="accommodations")])
+
+    out = _run_select(
+        state,
+        monkeypatch,
+        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=10) for c in candidates],
+    )
+
+    # Operator opted in, so the best available ships even below the threshold —
+    # flagged, never dropped, never silent.
+    lodging_step = next(s for s in out["steps"] if s.name == "lodging")
+    assert out["anchor"] is not None
+    assert out["anchor"].candidate.id == 9
+    assert lodging_step.status == "warning"
+    assert lodging_step.details["low_fit"] is True
+
+
+def test_select_reports_failed_lodging_step_on_empty_pool(monkeypatch):
+    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    state = _select_state(req, accommodations=[])
+
+    out = _run_select(
+        state,
+        monkeypatch,
+        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=90) for c in candidates],
+    )
+
+    lodging_step = next(s for s in out["steps"] if s.name == "lodging")
+    assert out["anchor"] is None
+    assert lodging_step.status == "failed"
+    assert "No accommodations" in lodging_step.details["issue"]
+
+
+def test_select_emits_one_step_per_shell_slot(monkeypatch):
+    req = _request(
+        1,
+        [
+            _selection(
+                0,
+                "shell",
+                [
+                    _slot("lunch", "lunch", ["dining"], []),
+                    _slot("walk", "afternoon", ["attractions"], []),
+                ],
+            )
+        ],
+    )
+    state = _select_state(req, accommodations=[_cand(9, cat="accommodations")])
+    state["candidates_by_cat"]["attractions"] = []
+
+    out = _run_select(
+        state,
+        monkeypatch,
+        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=90) for c in candidates],
+    )
+
+    slot_steps = [s for s in out["steps"] if s.name == "slot"]
+    assert [s.slot_id for s in slot_steps] == ["lunch", "walk"]
+    assert slot_steps[0].status == "ok"
+    assert slot_steps[0].details["winner"]["id"] == 1
+    assert slot_steps[0].prompt == "p"
+    # Empty pool: slot fails with a step AND a slot issue (manual pick).
+    assert slot_steps[1].status == "failed"
+    assert out["slot_issues"][0].slot_id == "walk"
+
+
 def test_pool_for_slot_excludes_already_filled_places():
     req = _request(
         1,

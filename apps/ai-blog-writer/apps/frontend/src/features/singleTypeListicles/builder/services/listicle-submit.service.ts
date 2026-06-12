@@ -57,6 +57,8 @@ export async function submitListicle({
     payloadItems.push({
       blockType: item.blockType,
       item: item.item,
+      // Tour Picks ride only on attraction items (ADR 0013).
+      ...(item.blockType === 'data-attractions' ? { tours: item.tours } : {}),
       mediaMode: item.mediaMode,
       selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
       selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,

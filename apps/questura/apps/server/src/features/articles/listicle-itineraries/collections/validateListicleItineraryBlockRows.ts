@@ -14,6 +14,7 @@ import {
   fetchListicleSourceItem,
   getSourceCollectionForBlockType,
 } from '../../shared/utils/itemMedia/sourceItems'
+import { validateTourPicks } from '../../shared/utils/tourPicks'
 
 const tourAgencyPriceTiers = ['$', '$$', '$$$', '$$$$'] as const
 
@@ -271,6 +272,10 @@ export async function validateListicleItineraryBlockRows(params: {
       throw new Error(
         `${itemLabel} references a ${sourceCollection} entry that could not be loaded.`,
       )
+    }
+
+    if (blockType === 'itinerary-attractions') {
+      validateTourPicks({ blockTours: block.tours, sourceItem, itemLabel })
     }
 
     const mediaMode = getMediaMode(block.mediaMode)

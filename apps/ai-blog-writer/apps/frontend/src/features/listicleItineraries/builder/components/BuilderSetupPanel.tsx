@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { LIST_TONE_OPTIONS, resizeItineraryDays, type DayShellId, type DayShellSelection, type DayShellTemplate, type ListicleItineraryDraft, type ListTone, type LocationOption } from '../../types'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
 import { DEFAULT_DAY_SHELL_ID, getAvailableDayShells, getDayShellTemplate } from '../constants/day-shells.constants'
 import { AiTitleInput } from '../../../../shared/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
 import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
+import { SharedNeighborhoodsModal } from './SharedNeighborhoodsModal'
 import {
   findLocationByKey,
   formatLocationLabel,
@@ -28,6 +29,9 @@ type BuilderSetupPanelProps = {
   /** Itinerary Autobuild: fill the day slots from the Description brief. */
   onGenerateItinerary?: () => void
   isGeneratingItinerary?: boolean
+  /** Autobuild Report: open the last run's diagnostic timeline. */
+  onViewAutobuildReport?: () => void
+  hasAutobuildReport?: boolean
   /** Day Shell Library shells loaded from the backend (Custom Day Shells). */
   libraryShells?: DayShellTemplate[]
   onOpenLayoutManager?: () => void
@@ -60,6 +64,32 @@ function setShellForAllDays(draft: ListicleItineraryDraft, shellId: DayShellId):
   return draft.days.map((day) => ({ dayId: day.id, shellId }))
 }
 
+function getSharedNeighborhoodsTriggerLabel(
+  selectedIds: number[],
+  neighborhoodOptions: LocationOption[],
+): string {
+  if (selectedIds.length === 0) return 'City-wide (no filter)'
+  if (selectedIds.length === 1) {
+    const match = neighborhoodOptions.find((location) => location.id === selectedIds[0])
+    return match ? formatNeighborhoodChipLabel(match) : '1 neighborhood selected'
+  }
+  return `${selectedIds.length} neighborhoods selected`
+}
+
+function formatNeighborhoodChipLabel(location: LocationOption): string {
+  const neighborhood = location.neighborhood?.trim()
+  if (neighborhood) {
+    return neighborhood
+      .split(/[\s_-]+/g)
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ')
+  }
+
+  const parts = formatLocationLabel(location).split(' > ')
+  return parts[parts.length - 1] ?? formatLocationLabel(location)
+}
+
 export function BuilderSetupPanel({
   draft,
   locations,
@@ -75,9 +105,12 @@ export function BuilderSetupPanel({
   isGeneratingSlug,
   onGenerateItinerary,
   isGeneratingItinerary,
+  onViewAutobuildReport,
+  hasAutobuildReport = false,
   libraryShells = [],
   onOpenLayoutManager,
 }: BuilderSetupPanelProps) {
+  const [isSharedNeighborhoodsModalOpen, setIsSharedNeighborhoodsModalOpen] = useState(false)
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft, isSynced)
   const isSetupLocked = !isSynced && draft.step1_complete && !draft.in_update_mode
   const selectedPrimaryLocation = findLocationByKey(locations, draft.location)
@@ -245,32 +278,46 @@ export function BuilderSetupPanel({
         </div>
 
         {showNeighborhoodPicker ? (
-          <label className="stl-field">
-            <span>Shared Neighborhoods</span>
-            <select
-              className="stl-multi-select"
-              multiple
-              size={Math.min(Math.max(neighborhoodOptions.length, 3), 8)}
-              value={draft.sharedNeighborhoods.map(String)}
+          <div className="stl-field stl-shared-neighborhoods-field">
+            <label className="stl-field-label-row">
+              <span>Shared Neighborhoods</span>
+            </label>
+            <button
+              type="button"
+              className="stl-picker-trigger"
               disabled={isSetupLocked || neighborhoodOptions.length < 1}
-              onChange={(event) => updateDraft({
-                sharedNeighborhoods: Array.from(event.target.selectedOptions)
-                  .map((option) => Number(option.value))
-                  .filter((value) => Number.isFinite(value)),
-              })}
+              onClick={() => setIsSharedNeighborhoodsModalOpen(true)}
             >
-              {neighborhoodOptions.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {formatLocationLabel(location)}
-                </option>
-              ))}
-            </select>
+              <span className="stl-picker-trigger__preview">
+                <span
+                  className={`stl-picker-trigger__label${draft.sharedNeighborhoods.length === 0 ? ' stl-picker-trigger__label--placeholder' : ''}`}
+                >
+                  {neighborhoodOptions.length > 0
+                    ? getSharedNeighborhoodsTriggerLabel(draft.sharedNeighborhoods, neighborhoodOptions)
+                    : 'No neighborhoods available'}
+                </span>
+              </span>
+              <span className="stl-picker-trigger__caret">▼</span>
+            </button>
+            {draft.sharedNeighborhoods.length > 1 ? (
+              <div className="stl-shared-neighborhoods-summary">
+                {draft.sharedNeighborhoods.map((neighborhoodId) => {
+                  const location = neighborhoodOptions.find((entry) => entry.id === neighborhoodId)
+                  if (!location) return null
+                  return (
+                    <span key={neighborhoodId} className="stl-shared-neighborhoods-chip">
+                      {formatNeighborhoodChipLabel(location)}
+                    </span>
+                  )
+                })}
+              </div>
+            ) : null}
             <small className="stl-summary-note">
               {neighborhoodOptions.length > 0
                 ? 'Optional. When selected, stop pickers match only these exact neighborhoods.'
                 : 'No neighborhoods are available under this city.'}
             </small>
-          </label>
+          </div>
         ) : null}
       </div>
 
@@ -295,29 +342,31 @@ export function BuilderSetupPanel({
           ) : null}
         </div>
 
-        <div className="stl-day-shell-apply">
-          <label className="stl-field stl-day-shell-apply__select">
-            <span>Apply shell to all days</span>
-            <select
-              className="stl-field-input"
-              value={firstShellId}
-              disabled={isSetupLocked}
-              onChange={(event) => {
-                const shellId = event.target.value as DayShellId
-                updateDraft({
-                  ...snapshotForSelection(shellId),
-                  dayShellSelections: setShellForAllDays(draft, shellId),
-                })
-              }}
-            >
-              {shellOptions.map((shell) => (
-                <option key={shell.id} value={shell.id}>
-                  {shell.name} — {shell.slots.length} stops
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+        {draft.dayCount > 1 ? (
+          <div className="stl-day-shell-apply">
+            <label className="stl-field stl-day-shell-apply__select">
+              <span>Apply shell to all days</span>
+              <select
+                className="stl-field-input"
+                value={firstShellId}
+                disabled={isSetupLocked}
+                onChange={(event) => {
+                  const shellId = event.target.value as DayShellId
+                  updateDraft({
+                    ...snapshotForSelection(shellId),
+                    dayShellSelections: setShellForAllDays(draft, shellId),
+                  })
+                }}
+              >
+                {shellOptions.map((shell) => (
+                  <option key={shell.id} value={shell.id}>
+                    {shell.name} — {shell.slots.length} stops
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        ) : null}
 
         <div className="stl-day-shell-grid">
           {draft.days.map((day, dayIndex) => {
@@ -373,6 +422,15 @@ export function BuilderSetupPanel({
             The AI reads the title + this brief, queries published listings, and fills the day slots
             (with a reason for each pick). Blurbs and images are not generated. Re-running replaces the current stops.
           </small>
+          <label className="stl-autobuild-lodging-toggle">
+            <input
+              type="checkbox"
+              checked={draft.includeLodging !== false}
+              disabled={isSetupLocked || isGeneratingItinerary}
+              onChange={(event) => updateDraft({ includeLodging: event.target.checked })}
+            />
+            <span>Include lodging (Where You&apos;re Staying anchor on Day 1)</span>
+          </label>
           <div className="stl-autobuild-actions">
             <button
               type="button"
@@ -387,8 +445,27 @@ export function BuilderSetupPanel({
             >
               {isGeneratingItinerary ? 'Generating itinerary…' : 'Generate itinerary with AI'}
             </button>
+            {hasAutobuildReport && onViewAutobuildReport ? (
+              <button
+                type="button"
+                className="stl-btn stl-btn-secondary"
+                onClick={() => onViewAutobuildReport()}
+              >
+                View report
+              </button>
+            ) : null}
           </div>
         </div>
+      ) : null}
+
+      {showNeighborhoodPicker ? (
+        <SharedNeighborhoodsModal
+          isOpen={isSharedNeighborhoodsModalOpen}
+          neighborhoods={neighborhoodOptions}
+          selectedNeighborhoodIds={draft.sharedNeighborhoods}
+          onConfirm={(sharedNeighborhoods) => updateDraft({ sharedNeighborhoods })}
+          onClose={() => setIsSharedNeighborhoodsModalOpen(false)}
+        />
       ) : null}
 
     </section>

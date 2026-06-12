@@ -38,12 +38,30 @@ export type AutobuildSlotIssue = {
   issue: string
 }
 
+export type AutobuildStepName = 'intent' | 'retrieve' | 'lodging' | 'slot' | 'reasons'
+export type AutobuildStepStatus = 'ok' | 'warning' | 'failed'
+
+/** One Autobuild Report entry: a pipeline decision with evidence + raw LLM I/O. */
+export type AutobuildStepEvent = {
+  name: AutobuildStepName
+  label: string
+  status: AutobuildStepStatus
+  duration_ms: number
+  day_index?: number | null
+  slot_id?: string | null
+  model?: string | null
+  prompt?: string | null
+  output?: string | null
+  details: Record<string, unknown>
+}
+
 export type AutobuildResponse = {
   days: AutobuildPlanDay[]
   plan_overview: string
   model_used: string
   notes: string[]
   slot_issues: AutobuildSlotIssue[]
+  steps: AutobuildStepEvent[]
 }
 
 export type GenerateItineraryParams = {
@@ -56,6 +74,8 @@ export type GenerateItineraryParams = {
   sharedNeighborhoods?: number[]
   dayShells: Array<{ dayIndex: number; shell: DayShellTemplate }>
   modelName?: string | null
+  /** Whole-trip Lodging Anchor on day 1; operator decision, default on. */
+  includeLodging?: boolean
 }
 
 /** Call the ABW backend's Itinerary Autobuild pipeline (slots only). */
@@ -86,6 +106,7 @@ export async function generateItinerary(params: GenerateItineraryParams): Promis
         })),
       })),
       model_name: params.modelName ?? undefined,
+      include_lodging: params.includeLodging !== false,
     }),
   })
 
@@ -96,5 +117,6 @@ export async function generateItinerary(params: GenerateItineraryParams): Promis
     throw new Error(message)
   }
 
-  return response.json()
+  const plan: AutobuildResponse = await response.json()
+  return { ...plan, steps: plan.steps ?? [] }
 }

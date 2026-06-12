@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from typing import Any, TypedDict
 
 from .llm_stages import extract_intent, score_candidates, write_reasons
 from .retrieval import fetch_candidates
 from .schemas import (
     CATEGORY_TO_BLOCK_TYPE,
+    AutobuildStepEvent,
     Candidate,
     Category,
     DayShell,
@@ -54,25 +56,72 @@ class ItineraryState(TypedDict, total=False):
     day_shells: list[DayShell]
     plan_days_stops: list[list[PlanStop]]
     slot_issues: list[SlotIssue]
+    steps: list[AutobuildStepEvent]
     response: GenerateItineraryResponse
+
+
+def _elapsed_ms(started: float) -> int:
+    return int((time.perf_counter() - started) * 1000)
+
+
+def _top_scored(scored: list[ScoredCandidate], limit: int = 5) -> list[dict[str, Any]]:
+    ranked = sorted(scored, key=lambda s: s.fit_score, reverse=True)[:limit]
+    return [
+        {
+            "id": s.candidate.id,
+            "title": s.candidate.title,
+            "collection": s.candidate.category,
+            "fit_score": s.fit_score,
+            "fit_note": s.fit_note,
+        }
+        for s in ranked
+    ]
 
 
 async def _node_intent(state: ItineraryState) -> ItineraryState:
     req = state["request"]
-    state["intent"] = extract_intent(
-        title=req.title, brief=req.brief, location=req.location, model_name=INTENT_MODEL
+    started = time.perf_counter()
+    trace: dict[str, str] = {}
+    intent = extract_intent(
+        title=req.title,
+        brief=req.brief,
+        location=req.location,
+        model_name=INTENT_MODEL,
+        trace=trace,
+    )
+    state["intent"] = intent
+    extracted_anything = bool(
+        intent.keywords or intent.lodging_keywords or intent.price_min or intent.price_max
+    )
+    state.setdefault("steps", []).append(
+        AutobuildStepEvent(
+            name="intent",
+            label="Intent extracted",
+            status="ok" if extracted_anything else "warning",
+            duration_ms=_elapsed_ms(started),
+            model=INTENT_MODEL,
+            prompt=trace.get("prompt"),
+            output=trace.get("output"),
+            details={
+                "keywords": intent.keywords,
+                "lodging_keywords": intent.lodging_keywords,
+                "price_min": intent.price_min,
+                "price_max": intent.price_max,
+                **({} if extracted_anything else {"note": "No intent extracted; creative defaults in effect."}),
+            },
+        )
     )
     return state
 
 
 async def _node_retrieve(state: ItineraryState) -> ItineraryState:
     req = state["request"]
-    intent = state["intent"]
+    started = time.perf_counter()
     day_shells = _resolve_day_shells(req)
     state["day_shells"] = day_shells
 
     categories = _categories_for_shells(day_shells)
-    if intent.wants_lodging and "accommodations" not in categories:
+    if req.include_lodging and "accommodations" not in categories:
         categories.append("accommodations")
 
     results = await asyncio.gather(
@@ -87,6 +136,21 @@ async def _node_retrieve(state: ItineraryState) -> ItineraryState:
         )
     )
     state["candidates_by_cat"] = {cat: pool for cat, pool in zip(categories, results)}
+
+    counts = {cat: len(pool) for cat, pool in state["candidates_by_cat"].items()}
+    empty = sorted(cat for cat, n in counts.items() if n == 0)
+    state.setdefault("steps", []).append(
+        AutobuildStepEvent(
+            name="retrieve",
+            label="Candidates retrieved",
+            status="warning" if empty else "ok",
+            duration_ms=_elapsed_ms(started),
+            details={
+                "counts_by_collection": counts,
+                **({"empty_collections": empty} if empty else {}),
+            },
+        )
+    )
     return state
 
 
@@ -100,9 +164,12 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
     req = state["request"]
     intent = state["intent"]
     candidates_by_cat = state["candidates_by_cat"]
+    steps = state.setdefault("steps", [])
 
     anchor = None
-    if intent.wants_lodging:
+    if req.include_lodging:
+        started = time.perf_counter()
+        trace: dict[str, str] = {}
         lodging_pool = candidates_by_cat.get("accommodations", [])
         lodging_slot = ShellSlot(
             id="lodging_anchor",
@@ -118,8 +185,51 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
             candidates=lodging_pool,
             brief=req.brief,
             model_name=SCORING_MODEL,
+            trace=trace,
         )
+        # Operator opted in, so the best available always ships — a winner below
+        # the slot threshold is delivered flagged low-fit, never dropped.
         anchor = pick_lodging_anchor(scored_lodging)
+        low_fit = anchor is not None and anchor.fit_score < MIN_SLOT_FIT_SCORE
+        details: dict[str, Any] = {"pool_size": len(lodging_pool)}
+        if anchor is not None:
+            details["winner"] = {
+                "id": anchor.candidate.id,
+                "title": anchor.candidate.title,
+                "fit_score": anchor.fit_score,
+                "fit_note": anchor.fit_note,
+            }
+            details["top_candidates"] = _top_scored(scored_lodging)
+            if low_fit:
+                details["low_fit"] = True
+                details["min_slot_fit_score"] = MIN_SLOT_FIT_SCORE
+        else:
+            details["issue"] = (
+                "No accommodations available for this location."
+                if not lodging_pool
+                else "Scoring produced no usable accommodation."
+            )
+        steps.append(
+            AutobuildStepEvent(
+                name="lodging",
+                label="Lodging anchor",
+                status="failed" if anchor is None else ("warning" if low_fit else "ok"),
+                duration_ms=_elapsed_ms(started),
+                model=SCORING_MODEL if lodging_pool else None,
+                prompt=trace.get("prompt"),
+                output=trace.get("output"),
+                details=details,
+            )
+        )
+    else:
+        steps.append(
+            AutobuildStepEvent(
+                name="lodging",
+                label="Lodging anchor",
+                status="ok",
+                details={"skipped": True, "reason": "Lodging excluded by operator setting."},
+            )
+        )
 
     seen: set[tuple[Category, int]] = set()
     plan_days_stops: list[list[PlanStop]] = []
@@ -127,6 +237,8 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
     for day_index, shell in enumerate(state["day_shells"]):
         day_stops: list[PlanStop] = []
         for slot in shell.slots:
+            started = time.perf_counter()
+            slot_label = f"Day {day_index + 1} · {slot.label}"
             pool = _pool_for_slot(slot, candidates_by_cat, seen)
             if not pool:
                 slot_issues.append(
@@ -137,14 +249,31 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
                         "No candidates available for this slot.",
                     )
                 )
+                steps.append(
+                    AutobuildStepEvent(
+                        name="slot",
+                        label=slot_label,
+                        status="failed",
+                        duration_ms=_elapsed_ms(started),
+                        day_index=day_index,
+                        slot_id=slot.id,
+                        details={
+                            "pool_size": 0,
+                            "issue": "No candidates available for this slot.",
+                            "acceptable_collections": list(slot.acceptable_collections),
+                        },
+                    )
+                )
                 continue
 
+            trace = {}
             scored = score_candidates(
                 intent=intent,
                 slot=slot,
                 candidates=pool,
                 brief=req.brief,
                 model_name=SCORING_MODEL,
+                trace=trace,
             )
             best = max(scored, key=lambda s: s.fit_score, default=None)
             if best is None or best.fit_score < MIN_SLOT_FIT_SCORE:
@@ -154,6 +283,25 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
                         shell,
                         slot,
                         f"No candidate met the minimum fit score ({MIN_SLOT_FIT_SCORE}) for this slot.",
+                    )
+                )
+                steps.append(
+                    AutobuildStepEvent(
+                        name="slot",
+                        label=slot_label,
+                        status="failed",
+                        duration_ms=_elapsed_ms(started),
+                        day_index=day_index,
+                        slot_id=slot.id,
+                        model=SCORING_MODEL,
+                        prompt=trace.get("prompt"),
+                        output=trace.get("output"),
+                        details={
+                            "pool_size": len(pool),
+                            "issue": f"No candidate met the minimum fit score ({MIN_SLOT_FIT_SCORE}).",
+                            "min_slot_fit_score": MIN_SLOT_FIT_SCORE,
+                            "top_candidates": _top_scored(scored),
+                        },
                     )
                 )
                 continue
@@ -172,6 +320,30 @@ async def _node_select(state: ItineraryState) -> ItineraryState:
                     selection_reason=f"{slot.label}: {best.fit_note}".strip(),
                 )
             )
+            steps.append(
+                AutobuildStepEvent(
+                    name="slot",
+                    label=slot_label,
+                    status="ok",
+                    duration_ms=_elapsed_ms(started),
+                    day_index=day_index,
+                    slot_id=slot.id,
+                    model=SCORING_MODEL,
+                    prompt=trace.get("prompt"),
+                    output=trace.get("output"),
+                    details={
+                        "pool_size": len(pool),
+                        "winner": {
+                            "id": c.id,
+                            "title": c.title,
+                            "collection": c.category,
+                            "fit_score": best.fit_score,
+                            "fit_note": best.fit_note,
+                        },
+                        "top_candidates": _top_scored(scored),
+                    },
+                )
+            )
         plan_days_stops.append(day_stops)
 
     state["anchor"] = anchor
@@ -184,13 +356,39 @@ async def _node_reasons(state: ItineraryState) -> ItineraryState:
     req = state["request"]
     anchor = state.get("anchor")
     days_stops = state["plan_days_stops"]
+    steps = state.setdefault("steps", [])
 
+    started = time.perf_counter()
+    trace: dict[str, str] = {}
     reasons, overview = write_reasons(
         title=req.title,
         brief=req.brief,
         lodging=anchor,
         days=days_stops,
         model_name=state["model_name"],
+        trace=trace,
+    )
+    stop_count = sum(len(stops) for stops in days_stops) + (1 if anchor is not None else 0)
+    steps.append(
+        AutobuildStepEvent(
+            name="reasons",
+            label="Selection reasons written",
+            status="ok" if reasons or stop_count == 0 else "warning",
+            duration_ms=_elapsed_ms(started),
+            model=state["model_name"],
+            prompt=trace.get("prompt"),
+            output=trace.get("output"),
+            details={
+                "stops_to_explain": stop_count,
+                "reasons_written": len(reasons),
+                "overview_written": bool(overview),
+                **(
+                    {}
+                    if reasons or stop_count == 0
+                    else {"note": "Reason writing failed; fit notes used as fallback."}
+                ),
+            },
+        )
     )
 
     notes: list[str] = []
@@ -215,7 +413,12 @@ async def _node_reasons(state: ItineraryState) -> ItineraryState:
                         ),
                     )
                 )
-            elif state["intent"].wants_lodging:
+                if anchor.fit_score < MIN_SLOT_FIT_SCORE:
+                    notes.append(
+                        f"Lodging anchor '{ac.title}' scored below the fit threshold "
+                        f"({anchor.fit_score} < {MIN_SLOT_FIT_SCORE}); review the pick."
+                    )
+            elif req.include_lodging:
                 notes.append(
                     "No suitable accommodation found for this location; day starts from the first stop."
                 )
@@ -235,6 +438,7 @@ async def _node_reasons(state: ItineraryState) -> ItineraryState:
         model_used=state["model_name"],
         notes=notes,
         slot_issues=state.get("slot_issues", []),
+        steps=steps,
     )
     return state
 

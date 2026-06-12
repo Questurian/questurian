@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { SingleTypeListicles } from './SingleTypeListicles'
 
-const beforeChangeHook = SingleTypeListicles.hooks?.beforeChange?.[0]
+// clearStaleSocialImagesOnFeaturedImageChange sits after the unpublish guard.
+const beforeChangeHook = SingleTypeListicles.hooks?.beforeChange?.[1]
 
 async function runBeforeChange(
   data: Record<string, unknown>,

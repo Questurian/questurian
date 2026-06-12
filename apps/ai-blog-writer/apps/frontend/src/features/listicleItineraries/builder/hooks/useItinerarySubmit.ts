@@ -118,6 +118,8 @@ async function itineraryItemToPayloadBlock(params: {
   return {
     blockType: item.blockType,
     item: item.item,
+    // Tour Picks ride only on attraction stops (ADR 0013).
+    ...(item.blockType === 'itinerary-attractions' ? { tours: item.tours } : {}),
     mediaMode: item.mediaMode,
     selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
     selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,

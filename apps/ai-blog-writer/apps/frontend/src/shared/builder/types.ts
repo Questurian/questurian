@@ -1,5 +1,16 @@
 export type MediaMode = 'photos' | 'instagram' | 'both'
 
+/** Hard cap on Tour Picks per attraction entry (ADR 0013): curation, never a tour dump. */
+export const TOUR_PICKS_MAX = 4
+
+/** A tour doc as populated on an attraction's `tours` relationship (LM-linked). */
+export type LinkedTourOption = {
+  id: number
+  title?: string | null
+  price?: string | null
+  bookingLink?: string | null
+}
+
 export type MediaAssetOption = {
   id: number
   filename: string
@@ -75,4 +86,6 @@ export type RelatedItemMediaSource = {
   instagramGallery?: Array<{
     post?: number | InstagramPostOption
   }>
+  /** LM-linked tours on attractions; the pickable pool for Tour Picks. */
+  tours?: Array<number | LinkedTourOption>
 }

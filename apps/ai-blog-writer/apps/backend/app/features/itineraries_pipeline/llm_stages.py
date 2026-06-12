@@ -39,7 +39,8 @@ def _complete(*, prompt: str, model_name: str, temperature: float, max_tokens: i
 
 INTENT_PROMPT = """You are planning a travel itinerary. Read the title and brief and extract \
 creative search intent as JSON. Do not decide stop count, categories, dayparts, meal placement, \
-or day structure — those come from the selected Day Shell.
+or day structure — those come from the selected Day Shell. Whether the trip includes lodging is \
+decided by the operator, not by you.
 
 Title: {title}
 Location: {location}
@@ -49,16 +50,25 @@ Return ONLY a JSON object with these keys:
 - "price_min": integer 1-4 or null (1=$, 4=$$$$). Use higher floors for "luxury/upscale/fine".
 - "price_max": integer 1-4 or null
 - "keywords": array of short lowercase descriptors to match against venue tags (e.g. ["fine dining","rooftop","tasting menu"])
-- "wants_lodging": boolean (does the trip need a hotel anchor?)
 - "lodging_keywords": array of short descriptors for the hotel (e.g. ["luxury","comfortable","central"])
 """
 
 
-def extract_intent(*, title: str, brief: str, location: str, model_name: str) -> IntentSpec:
+def extract_intent(
+    *,
+    title: str,
+    brief: str,
+    location: str,
+    model_name: str,
+    trace: dict[str, str] | None = None,
+) -> IntentSpec:
     prompt = INTENT_PROMPT.format(title=title, location=location, brief=brief)
     # Tiny structured output (a few small arrays), but give it real headroom so a
     # verbose keyword list never truncates. Flash-Lite tops out at 65,536.
     raw = _complete(prompt=prompt, model_name=model_name, temperature=0.2, max_tokens=8192)
+    if trace is not None:
+        trace["prompt"] = prompt
+        trace["output"] = raw
     parsed = parse_json_response(raw, raise_on_error=False, default={}) or {}
     if not parsed:
         logger.warning("Intent extraction returned unparseable JSON; using creative intent defaults.")
@@ -77,7 +87,6 @@ def extract_intent(*, title: str, brief: str, location: str, model_name: str) ->
         price_min=_price(parsed.get("price_min")),
         price_max=_price(parsed.get("price_max")),
         keywords=_str_list(parsed.get("keywords")),
-        wants_lodging=bool(parsed.get("wants_lodging", True)),
         lodging_keywords=_str_list(parsed.get("lodging_keywords")),
     )
 
@@ -121,6 +130,7 @@ def score_candidates(
     candidates: list[Candidate],
     brief: str,
     model_name: str,
+    trace: dict[str, str] | None = None,
 ) -> list[ScoredCandidate]:
     if not candidates:
         return []
@@ -141,6 +151,9 @@ def score_candidates(
     # category pool — a dense city can be hundreds of venues. 32,768 covers ~600+
     # candidates and still sits well under Gemini Flash's 65,536 output ceiling.
     raw = _complete(prompt=prompt, model_name=model_name, temperature=0.1, max_tokens=32768)
+    if trace is not None:
+        trace["prompt"] = prompt
+        trace["output"] = raw
     parsed = parse_json_response(raw, raise_on_error=False, default={}) or {}
     if not parsed:
         logger.warning("Scoring for slot %s returned unparseable JSON; defaulting batch to fit=0.", slot.id)
@@ -190,6 +203,7 @@ def write_reasons(
     lodging: ScoredCandidate | None,
     days: list[list[PlanStop]],
     model_name: str,
+    trace: dict[str, str] | None = None,
 ) -> tuple[dict[str, str], str]:
     """Returns ({collection:item_id: reason}, plan_overview). Falls back to fit notes."""
     lines: list[str] = []
@@ -209,6 +223,9 @@ def write_reasons(
     # a packed multi-day plan is well under this; 32,000 leaves Opus all the room
     # it needs without a 400 on the output cap.
     raw = _complete(prompt=prompt, model_name=model_name, temperature=0.4, max_tokens=32000)
+    if trace is not None:
+        trace["prompt"] = prompt
+        trace["output"] = raw
     parsed = parse_json_response(raw, raise_on_error=False, default={}) or {}
     if not parsed:
         logger.warning("Reasons writing returned unparseable JSON; falling back to fit notes.")

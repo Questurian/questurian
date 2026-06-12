@@ -9,7 +9,7 @@ returns a plan; the frontend owns all writes.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -91,6 +91,9 @@ class GenerateItineraryRequest(BaseModel):
     shared_neighborhoods: list[int] = Field(default_factory=list)
     day_shells: list[DayShellSelection] = Field(..., min_length=1)
     model_name: str | None = Field(default=None, max_length=120)
+    # Lodging inclusion is an explicit operator decision (default on) — the AI
+    # never infers it from the brief.
+    include_lodging: bool = True
 
     @model_validator(mode="after")
     def _one_shell_per_day(self) -> "GenerateItineraryRequest":
@@ -139,7 +142,8 @@ class IntentSpec(BaseModel):
     price_max: int | None = Field(default=None, ge=1, le=4)
     # Free-text keywords per category for the scorer to match against tags.
     keywords: list[str] = Field(default_factory=list)
-    wants_lodging: bool = True
+    # Style descriptors only — whether lodging is included at all is the
+    # request's `include_lodging`, not an AI inference.
     lodging_keywords: list[str] = Field(default_factory=list)
 
 
@@ -182,6 +186,27 @@ class SlotIssue(BaseModel):
     issue: str
 
 
+AutobuildStepName = Literal["intent", "retrieve", "lodging", "slot", "reasons"]
+AutobuildStepStatus = Literal["ok", "warning", "failed"]
+
+
+class AutobuildStepEvent(BaseModel):
+    """One entry in the Autobuild Report: a pipeline decision with its outcome,
+    decisive evidence (`details`), and the raw model exchange for LLM steps.
+    Transient — returned with the run, never persisted."""
+
+    name: AutobuildStepName
+    label: str
+    status: AutobuildStepStatus = "ok"
+    duration_ms: int = 0
+    day_index: int | None = None
+    slot_id: str | None = None
+    model: str | None = None
+    prompt: str | None = None
+    output: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
 class GenerateItineraryResponse(BaseModel):
     """Plan JSON returned to the frontend. Slots only — no blurbs/images."""
 
@@ -191,3 +216,5 @@ class GenerateItineraryResponse(BaseModel):
     # Surfaced so the operator understands gaps (e.g. no hotel in this city).
     notes: list[str] = Field(default_factory=list)
     slot_issues: list[SlotIssue] = Field(default_factory=list)
+    # Autobuild Report: run-level diagnostic timeline (one entry per decision).
+    steps: list[AutobuildStepEvent] = Field(default_factory=list)

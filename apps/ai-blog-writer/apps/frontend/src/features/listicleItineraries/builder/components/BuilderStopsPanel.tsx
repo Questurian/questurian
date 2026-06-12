@@ -23,10 +23,12 @@ import {
   isManualItineraryBlockType as isManualBlockType,
   relatedCollectionToBlockType,
   TOUR_AGENCY_PRICE_TIERS,
+  TOUR_PICKS_MAX,
   WHERE_STAYING_BLOCK_TYPE,
 } from '../../types'
 import { getItineraryStopAngleDisabledReason } from '../services/ai-autowrite.service'
 import {
+  getLinkedTourObjects,
   getRelatedInstagramPostObjects,
   getRelatedPhotoObjects,
   requiresInstagram,
@@ -36,6 +38,7 @@ import {
   resolveImageUrl,
 } from '../../../../shared/builder/utils/item-media.utils'
 import { ExistingStopPickerModal, type ExistingStopPickerOption } from './ExistingStopPickerModal'
+import { TourPicksModal } from './TourPicksModal'
 import { InstagramPickerModal } from '../../../../shared/builder/components/InstagramPickerModal'
 import { PhotoPickerModal } from '../../../../shared/builder/components/PhotoPickerModal'
 import { RelatedItemPickerModal } from '../../../../shared/builder/components/RelatedItemPickerModal'
@@ -93,6 +96,7 @@ type ActivePicker =
   | { type: 'manual-instagram'; itemId: string }
   | { type: 'starting-point-existing-stop'; itemId: string }
   | { type: 'route-existing-stops'; itemId: string }
+  | { type: 'tour-picks'; itemId: string }
   | null
 
 const TOUR_AGENCY_EXISTING_STOP_COLLECTION_OPTIONS: Array<{
@@ -280,6 +284,7 @@ function resetItemForBlockType(item: ItineraryItemBlock, blockType: ItineraryBlo
     ...item,
     blockType,
     item: null,
+    tours: [],
     mediaMode: 'photos',
     selectedPhotos: [],
     selectedInstagramPost: null,
@@ -358,6 +363,7 @@ export function BuilderStopsPanel({
   const activeManualInstagramPicker = activePicker?.type === 'manual-instagram' ? activePicker : null
   const activeStartingPointExistingStopPicker = activePicker?.type === 'starting-point-existing-stop' ? activePicker : null
   const activeRouteExistingStopsPicker = activePicker?.type === 'route-existing-stops' ? activePicker : null
+  const activeTourPicksPicker = activePicker?.type === 'tour-picks' ? activePicker : null
   const missingManualImageIds = useMemo(() => {
     if (!resolvedToken) return []
 
@@ -590,6 +596,12 @@ export function BuilderStopsPanel({
             const selectedRelatedItemLabel = getRelatedItemDisplayLabel(selectedRelatedItem)
             const angleOptions = getItineraryAngleOptions(item.blockType)
             const angleDisabledReason = getItineraryStopAngleDisabledReason(item)
+            const linkedTours = item.blockType === 'itinerary-attractions'
+              ? getLinkedTourObjects(selectedRelatedItem)
+              : []
+            const staleTourPickIds = item.blockType === 'itinerary-attractions' && selectedRelatedItem
+              ? item.tours.filter((tourId) => !linkedTours.some((tour) => tour.id === tourId))
+              : []
             const existingStopOptions = buildExistingStopOptions(relatedByBlockType)
             const selectedStartingPointExistingStopKey = getSelectedStartingPointExistingStopKey(
               item.startingPoint,
@@ -1187,6 +1199,79 @@ export function BuilderStopsPanel({
                   <p className="stl-legacy-note">Select a related item to unlock media options and blurb.</p>
                 )}
 
+                {item.blockType === 'itinerary-attractions' && selectedRelatedItem && linkedTours.length > 0 ? (
+                  <div className="stl-field">
+                    <div className="stl-field-label-row">
+                      <span>Tour Picks</span>
+                      <span className="stl-tour-duration-badge">
+                        {item.tours.length}/{TOUR_PICKS_MAX}
+                      </span>
+                    </div>
+                    <p className="stl-legacy-note">
+                      Feature up to {TOUR_PICKS_MAX} of this attraction's linked tours, in the order you pick them.
+                      Tour titles, prices, and booking links stay live from Location Manager.
+                    </p>
+                    <button
+                      type="button"
+                      className="stl-picker-trigger"
+                      onClick={() => setActivePicker({ type: 'tour-picks', itemId: item.id })}
+                    >
+                      <span className="stl-picker-trigger__preview">
+                        {item.tours.length > 0 ? (
+                          <span className="stl-picker-trigger__label">
+                            {item.tours.length} tour{item.tours.length === 1 ? '' : 's'} selected
+                          </span>
+                        ) : (
+                          <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                            Select tours...
+                          </span>
+                        )}
+                      </span>
+                      <span className="stl-picker-trigger__caret">▼</span>
+                    </button>
+                    {item.tours.length > 0 ? (
+                      <div className="stl-tour-picks">
+                        {item.tours.map((tourId, pickIndex) => {
+                          const tour = linkedTours.find((entry) => entry.id === tourId)
+                          if (!tour) return null
+
+                          return (
+                            <div key={tourId} className="stl-tour-pick-row stl-tour-pick-row--picked">
+                              <span className="stl-tour-pick-row__order">#{pickIndex + 1}</span>
+                              <span className="stl-tour-pick-row__title">
+                                {tour.title?.trim() || `Tour #${tour.id}`}
+                              </span>
+                              {tour.price?.trim() ? (
+                                <span className="stl-tour-pick-row__price">{tour.price}</span>
+                              ) : null}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                    {staleTourPickIds.length > 0 ? (
+                      <p className="stl-tour-picks__stale-warning">
+                        {staleTourPickIds.length} saved tour pick{staleTourPickIds.length === 1 ? ' is' : 's are'} no
+                        longer linked to this attraction in Location Manager and will block syncing.{' '}
+                        <button
+                          type="button"
+                          className="stl-btn stl-btn-secondary stl-btn-xs"
+                          onClick={() =>
+                            onUpdateItem(item.id, (current) => ({
+                              ...current,
+                              tours: current.tours.filter(
+                                (tourId) => !staleTourPickIds.includes(tourId),
+                              ),
+                            }))
+                          }
+                        >
+                          Remove stale picks
+                        </button>
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {!isManualStop && modeNeedsPhotos ? (
                   <div className="stl-field">
                     <span>Selected Photos * (1-6)</span>
@@ -1425,6 +1510,8 @@ export function BuilderStopsPanel({
                       return {
                         ...current,
                         item: nextId,
+                        // Tour Picks belong to the previous attraction's linked list.
+                        tours: nextId === current.item ? current.tours : [],
                         mediaMode: nextMediaMode,
                         selectedPhotos: [],
                         selectedInstagramPost: null,
@@ -1470,6 +1557,19 @@ export function BuilderStopsPanel({
                     onUpdateItem(item.id, (current) => ({
                       ...current,
                       keyLocations: buildRoutePointRowsFromSelection(current, keys, existingStopOptions),
+                    }))
+                  }
+                  onClose={() => setActivePicker(null)}
+                />
+
+                <TourPicksModal
+                  isOpen={activeTourPicksPicker?.itemId === item.id}
+                  tours={linkedTours}
+                  selectedTourIds={item.tours}
+                  onConfirm={(tourIds) =>
+                    onUpdateItem(item.id, (current) => ({
+                      ...current,
+                      tours: tourIds,
                     }))
                   }
                   onClose={() => setActivePicker(null)}

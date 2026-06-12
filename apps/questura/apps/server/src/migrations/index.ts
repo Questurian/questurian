@@ -7,6 +7,7 @@ import * as migration_20260531_003454_curated_homepage_draft_published_snapshots
 import * as migration_20260531_005708_main_homepage_global from './20260531_005708_main_homepage_global';
 import * as migration_20260531_220632_add_source_block_key from './20260531_220632_add_source_block_key';
 import * as migration_20260601_103652_visitor_profiles_payload_schema from './20260601_103652_visitor_profiles_payload_schema';
+import * as migration_20260612_023018_add_tour_picks_to_listicle_blocks from './20260612_023018_add_tour_picks_to_listicle_blocks';
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20260601_103652_visitor_profiles_payload_schema.up,
     down: migration_20260601_103652_visitor_profiles_payload_schema.down,
     name: '20260601_103652_visitor_profiles_payload_schema',
+  },
+  {
+    up: migration_20260612_023018_add_tour_picks_to_listicle_blocks.up,
+    down: migration_20260612_023018_add_tour_picks_to_listicle_blocks.down,
+    name: '20260612_023018_add_tour_picks_to_listicle_blocks'
   },
 ];

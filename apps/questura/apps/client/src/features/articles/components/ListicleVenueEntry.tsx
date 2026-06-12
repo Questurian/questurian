@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { MapPin } from 'lucide-react'
 import { PublicImage } from '@/components/media/PublicImage'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
+import { ListicleTourPicks } from '@/features/articles/components/ListicleTourPicks'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
 import {
   listicleItemHeroFromRow,
@@ -131,6 +132,8 @@ export function ListicleVenueEntry({
             dangerouslySetInnerHTML={{ __html: blurb }}
           />
         ) : null}
+
+        <ListicleTourPicks tours={row.tours} />
 
         <ListicleVenueInfoGrid item={row.item} />
 

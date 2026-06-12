@@ -1,6 +1,7 @@
 import { Block } from 'payload'
 import type { ItemMediaSourceCollection } from '../../shared/types'
 import { createLocationFilter } from '../../shared/utils/locationFilter'
+import { createTourPicksField } from '../../shared/utils/tourPicks'
 import { createItemMediaFields } from './utils/itemMedia'
 import { angleField } from './utils/angleField'
 
@@ -47,6 +48,8 @@ export const createDataListicleBlock = ({
         description: itemDescription,
       },
     },
+    // Tour Picks exist only where the source records carry LM-linked tours.
+    ...(relationTo === 'attractions' ? [createTourPicksField()] : []),
     ...createItemMediaFields(relationTo),
     angleField,
     {

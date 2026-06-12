@@ -200,6 +200,9 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       id: itemId,
       blockType,
       item: typeof itemValue.item === 'number' ? itemValue.item : null,
+      tours: Array.isArray(itemValue.tours)
+        ? itemValue.tours.filter((entry): entry is number => typeof entry === 'number')
+        : [],
       mediaMode:
         itemValue.mediaMode === 'instagram'
         || itemValue.mediaMode === 'both'
@@ -375,6 +378,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     hasLocalChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     listTone: DEFAULT_LIST_TONE,
+    includeLodging: true,
     customDayShells: [],
     title: '',
     location: '',

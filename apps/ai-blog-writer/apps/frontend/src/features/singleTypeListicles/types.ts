@@ -4,6 +4,7 @@ import type { LocationLevel } from '../../shared/locationScope/types'
 import type {
   GalleryImageObject,
   InstagramPostOption,
+  LinkedTourOption,
   MediaMode,
 } from '../../shared/builder/types'
 
@@ -147,9 +148,11 @@ export type {
   GalleryMediaAsset,
   InstagramPostOption,
   InstagramPreviewAsset,
+  LinkedTourOption,
   MediaAssetOption,
   MediaMode,
 } from '../../shared/builder/types'
+export { TOUR_PICKS_MAX } from '../../shared/builder/types'
 
 export type { SeoSection, SeoTwitterCardType } from '../../shared/seo/types'
 
@@ -157,6 +160,12 @@ export type ListicleItemBlock = {
   id: string
   blockType: ListicleBlockType
   item: number | null
+  /**
+   * Tour Picks (ADR 0013): operator-curated, ordered subset (max 4) of the
+   * selected attraction's LM-linked tours. Only meaningful for
+   * `data-attractions`; cleared when the attraction changes.
+   */
+  tours: number[]
   mediaMode: MediaMode
   selectedPhotos: number[]
   selectedInstagramPost: number | null
@@ -234,6 +243,7 @@ export type PayloadListicleDoc = {
     id?: string
     blockType?: ListicleBlockType
     item?: number | { id?: number }
+    tours?: Array<number | { id?: number }> | null
     mediaMode?: MediaMode
     selectedPhotos?: Array<number | { id?: number }>
     selectedInstagramPost?: number | { id?: number } | null
@@ -298,4 +308,6 @@ export type RelatedItemOption = {
   instagramGallery?: Array<{
     post?: number | InstagramPostOption
   }>
+  /** LM-linked tours; populated tour docs at fetch depth, the pickable pool for Tour Picks. */
+  tours?: Array<number | LinkedTourOption>
 }

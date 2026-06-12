@@ -7,7 +7,35 @@ async function toLexicalHTML(data: unknown): Promise<string> {
   })
 }
 
+/**
+ * Tour Picks (ADR 0013): reduce populated tour docs to the public shape and
+ * drop unpublished tours — the route fetches with overrideAccess, so draft
+ * tours would otherwise leak into the public payload.
+ */
+function sanitizeTourPicks(blocks: Array<Record<string, unknown>>) {
+  for (const block of blocks) {
+    if (!('tours' in block)) continue
+
+    const tours = block.tours
+    if (!Array.isArray(tours)) {
+      delete block.tours
+      continue
+    }
+
+    block.tours = tours
+      .filter((tour): tour is Record<string, unknown> => Boolean(tour) && typeof tour === 'object')
+      .filter((tour) => tour.status === 'published')
+      .map((tour) => ({
+        id: tour.id,
+        title: tour.title,
+        price: tour.price,
+        bookingLink: tour.bookingLink,
+      }))
+  }
+}
+
 async function serializeBlurbArray(blocks: Array<Record<string, unknown>>) {
+  sanitizeTourPicks(blocks)
   await Promise.all(
     blocks.map(async (block) => {
       if (block.blurb) block.blurb = await toLexicalHTML(block.blurb)
