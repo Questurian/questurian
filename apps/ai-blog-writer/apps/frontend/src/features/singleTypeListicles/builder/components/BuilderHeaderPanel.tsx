@@ -2,13 +2,6 @@ import { BuilderHeaderPanel as SharedBuilderHeaderPanel } from '../../../../shar
 import type { MediaAssetOption, SingleTypeListicleDraft } from '../../types'
 import { AiJobButtonContent } from './AiJobButtonContent'
 
-type AiRewriteInput = {
-  blockId: string
-  currentContent: string
-  prompt: string
-  includeWholeArticleContext: boolean
-}
-
 type BuilderHeaderPanelProps = {
   draft: SingleTypeListicleDraft
   token: string | null
@@ -16,7 +9,6 @@ type BuilderHeaderPanelProps = {
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
   onIntroAiAutoWrite: () => Promise<void>
-  onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
   onIntroInspect: () => void
   introHasInspectableSteps: boolean
   isIntroAiGenerating: boolean
@@ -38,7 +30,6 @@ export function BuilderHeaderPanel({
   mediaAssets,
   updateHeader,
   onIntroAiAutoWrite,
-  onIntroAiRewrite,
   onIntroInspect,
   introHasInspectableSteps,
   isIntroAiGenerating,
@@ -69,7 +60,6 @@ export function BuilderHeaderPanel({
       locationRef={locationRef}
       mediaAssets={mediaAssets}
       updateHeader={updateHeader}
-      onIntroAiRewrite={onIntroAiRewrite}
       isLocked={isLocked}
       isSynced={isSynced}
       onContinueStep2={onContinueStep2}

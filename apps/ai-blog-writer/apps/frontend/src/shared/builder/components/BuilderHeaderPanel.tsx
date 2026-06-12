@@ -7,13 +7,6 @@ import type { MediaAssetOption } from '../types'
 import { resolveImageUrl } from '../utils/item-media.utils'
 import { BuilderStepHeader } from './BuilderStepHeader'
 
-type AiRewriteInput = {
-  blockId: string
-  currentContent: string
-  prompt: string
-  includeWholeArticleContext: boolean
-}
-
 type HeaderShape = {
   featuredImage: number | null
   introMarkdown: string
@@ -34,7 +27,6 @@ export type BuilderHeaderPanelProps<TDraft extends DraftLike> = {
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<HeaderShape>) => void
-  onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
   isLocked: boolean
   isSynced?: boolean
   onContinueStep2: () => void
@@ -61,7 +53,6 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
   locationRef,
   mediaAssets,
   updateHeader,
-  onIntroAiRewrite,
   isLocked,
   isSynced = false,
   onContinueStep2,
@@ -162,9 +153,6 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
       }
       showToolbar
       enforceHeadingStructure={false}
-      onAiRewrite={onIntroAiRewrite}
-      aiToolbarLabel="AI Tweak"
-      aiToolbarTitle="Rewrite with an instruction — runs the full intro pipeline (tone, venue facts). For a clean regenerate, use Auto Write instead."
       placeholder={introPlaceholder}
       className="stl-markdown-textarea"
       rows={6}

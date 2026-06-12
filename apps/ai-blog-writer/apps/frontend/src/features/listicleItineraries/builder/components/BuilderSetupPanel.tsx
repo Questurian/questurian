@@ -5,6 +5,7 @@ import { DEFAULT_DAY_SHELL_ID, getAvailableDayShells, getDayShellTemplate } from
 import { AiTitleInput } from '../../../../shared/markdown-editor'
 import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
 import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
+import { FieldInfoHint } from '../../../../shared/builder/components/FieldInfoHint'
 import { SharedNeighborhoodsModal } from './SharedNeighborhoodsModal'
 import {
   findLocationByKey,
@@ -202,7 +203,7 @@ export function BuilderSetupPanel({
         </label>
 
         <label className="stl-field">
-          <span>Itinerary length (days) *</span>
+          <span>Itinerary Length *</span>
           <select
             value={draft.dayCount}
             disabled={isSetupLocked}
@@ -257,7 +258,10 @@ export function BuilderSetupPanel({
 
         <div className="stl-field">
           <label className="stl-field-label-row">
-            <span>List Tone *</span>
+            <span className="stl-field-label-with-hint">
+              List Tone *
+              <FieldInfoHint text="Sets the editorial register for every blurb and the intro in this itinerary. You can change it any time and re-generate." />
+            </span>
           </label>
           <select
             className="stl-field-input"
@@ -272,15 +276,21 @@ export function BuilderSetupPanel({
               </option>
             ))}
           </select>
-          <small className="stl-summary-note">
-            Sets the editorial register for every blurb and the intro in this itinerary. You can change it any time and re-generate.
-          </small>
         </div>
 
         {showNeighborhoodPicker ? (
           <div className="stl-field stl-shared-neighborhoods-field">
             <label className="stl-field-label-row">
-              <span>Shared Neighborhoods</span>
+              <span className="stl-field-label-with-hint">
+                Shared Neighborhoods
+                <FieldInfoHint
+                  text={
+                    neighborhoodOptions.length > 0
+                      ? 'Optional. When selected, stop pickers match only these exact neighborhoods.'
+                      : 'No neighborhoods are available under this city.'
+                  }
+                />
+              </span>
             </label>
             <button
               type="button"
@@ -312,11 +322,6 @@ export function BuilderSetupPanel({
                 })}
               </div>
             ) : null}
-            <small className="stl-summary-note">
-              {neighborhoodOptions.length > 0
-                ? 'Optional. When selected, stop pickers match only these exact neighborhoods.'
-                : 'No neighborhoods are available under this city.'}
-            </small>
           </div>
         ) : null}
       </div>
@@ -324,12 +329,12 @@ export function BuilderSetupPanel({
       <div className="stl-field stl-day-shells">
         <div className="stl-day-shells__header">
           <div>
-            <label className="stl-field-label-row">
-              <span>Day shell *</span>
-            </label>
-            <small className="stl-summary-note">
-              Choose the shape of the day before AI generation. The shell controls stop count, order, meal slots, activity slots, and nightlife slots.
-            </small>
+            <h3 className="stl-section-heading">
+              <span className="stl-field-label-with-hint">
+                Day shell
+                <FieldInfoHint text="Choose the shape of the day before AI generation. The shell controls stop count, order, meal slots, activity slots, and nightlife slots." />
+              </span>
+            </h3>
           </div>
           {onOpenLayoutManager ? (
             <button
@@ -395,7 +400,6 @@ export function BuilderSetupPanel({
                     ))}
                   </select>
                 </label>
-                <p className="stl-day-shell-card__description">{shell.description}</p>
                 <p className="stl-day-shell-card__slot-summary">
                   {shell.slots.map((slot) => slot.label).join(' → ')}
                 </p>
@@ -408,7 +412,10 @@ export function BuilderSetupPanel({
       {onGenerateItinerary ? (
         <div className="stl-field stl-autobuild">
           <label className="stl-field-label-row">
-            <span>Description (AI Autobuild brief)</span>
+            <span className="stl-field-label-with-hint">
+              Description (AI Autobuild brief)
+              <FieldInfoHint text="The AI reads the title + this brief, queries published listings, and fills the day slots (with a reason for each pick). Blurbs and images are not generated. Re-running replaces the current stops." />
+            </span>
           </label>
           <textarea
             className="stl-field-input stl-autobuild-brief"
@@ -418,42 +425,40 @@ export function BuilderSetupPanel({
             placeholder="Describe the experience — e.g. eat at the most luxurious fine-dining spots, premium afternoon, rooftop cocktails, comfortable central hotel, easy access between stops."
             onChange={(event) => updateDraft({ generationBrief: event.target.value })}
           />
-          <small className="stl-summary-note">
-            The AI reads the title + this brief, queries published listings, and fills the day slots
-            (with a reason for each pick). Blurbs and images are not generated. Re-running replaces the current stops.
-          </small>
-          <label className="stl-autobuild-lodging-toggle">
-            <input
-              type="checkbox"
-              checked={draft.includeLodging !== false}
-              disabled={isSetupLocked || isGeneratingItinerary}
-              onChange={(event) => updateDraft({ includeLodging: event.target.checked })}
-            />
-            <span>Include lodging (Where You&apos;re Staying anchor on Day 1)</span>
-          </label>
-          <div className="stl-autobuild-actions">
-            <button
-              type="button"
-              className="stl-btn stl-btn-primary"
-              onClick={() => onGenerateItinerary()}
-              disabled={
-                isGeneratingItinerary
-                || !draft.location
-                || !draft.title.trim()
-                || !(draft.generationBrief || '').trim()
-              }
-            >
-              {isGeneratingItinerary ? 'Generating itinerary…' : 'Generate itinerary with AI'}
-            </button>
-            {hasAutobuildReport && onViewAutobuildReport ? (
+          <div className="stl-autobuild-controls">
+            <div className="stl-autobuild-actions">
               <button
                 type="button"
-                className="stl-btn stl-btn-secondary"
-                onClick={() => onViewAutobuildReport()}
+                className="stl-btn stl-btn-primary"
+                onClick={() => onGenerateItinerary()}
+                disabled={
+                  isGeneratingItinerary
+                  || !draft.location
+                  || !draft.title.trim()
+                  || !(draft.generationBrief || '').trim()
+                }
               >
-                View report
+                {isGeneratingItinerary ? 'Generating itinerary…' : 'Generate itinerary with AI'}
               </button>
-            ) : null}
+              {hasAutobuildReport && onViewAutobuildReport ? (
+                <button
+                  type="button"
+                  className="stl-btn stl-btn-secondary"
+                  onClick={() => onViewAutobuildReport()}
+                >
+                  View report
+                </button>
+              ) : null}
+            </div>
+            <label className="stl-autobuild-lodging-toggle">
+              <input
+                type="checkbox"
+                checked={draft.includeLodging !== false}
+                disabled={isSetupLocked || isGeneratingItinerary}
+                onChange={(event) => updateDraft({ includeLodging: event.target.checked })}
+              />
+              <span>Include lodging</span>
+            </label>
           </div>
         </div>
       ) : null}

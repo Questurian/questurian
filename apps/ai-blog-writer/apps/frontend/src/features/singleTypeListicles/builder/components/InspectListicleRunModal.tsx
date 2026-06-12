@@ -135,7 +135,7 @@ export function InspectListicleRunModal({
             <p className="stl-inspect-empty">
               {isRunning
                 ? 'Waiting for the first step to complete...'
-                : 'No run captured for this target yet. Trigger Auto Write or AI Tweak first.'}
+                : 'No run captured for this target yet. Trigger Auto Write first.'}
             </p>
           ) : (
             <ol className="stl-inspect-steps">

@@ -131,7 +131,6 @@ function renderPanel(
       removeItem={vi.fn()}
       updateItem={vi.fn()}
       onItemBlurbAiAutoWrite={options?.onItemBlurbAiAutoWrite ?? vi.fn(async () => {})}
-      onItemBlurbAiRewrite={vi.fn(async (_itemId: string, input: { currentContent: string }) => input.currentContent)}
       onItemBlurbInspect={vi.fn()}
       hasInspectableStepsByItemId={{}}
       activeAiItemId={options?.activeAiItemId ?? null}

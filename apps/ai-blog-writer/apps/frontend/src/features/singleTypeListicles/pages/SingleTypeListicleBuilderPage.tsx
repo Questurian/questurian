@@ -55,13 +55,6 @@ import { saveDraft } from '../storage'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
 
-type AiRewriteInput = {
-  blockId: string
-  currentContent: string
-  prompt: string
-  includeWholeArticleContext: boolean
-}
-
 const AUTO_WRITE_EMPTY_FIELDS_JOB_ID = '__auto_write_empty_fields__'
 type AiJobVisualState = 'queued' | 'running'
 
@@ -436,15 +429,6 @@ export default function SingleTypeListicleBuilderPage() {
       || 'AI generation failed for this field.',
     )
   }, [buildGenerationRequest, recordResponseSteps])
-
-  const rewriteDraftBlockWithAi = useCallback(async (input: AiRewriteInput): Promise<string> => {
-    return runSingleTargetGeneration({
-      targetId: input.blockId,
-      currentContent: input.currentContent,
-      customInstruction: input.prompt.trim(),
-      includeArticleContext: input.includeWholeArticleContext,
-    })
-  }, [runSingleTargetGeneration])
 
   const autoWriteIntro = useCallback(async (): Promise<void> => {
     const currentDraft = draftRef.current
@@ -927,7 +911,6 @@ export default function SingleTypeListicleBuilderPage() {
               mediaAssets={mediaAssets}
               updateHeader={actions.updateHeader}
               onIntroAiAutoWrite={autoWriteIntro}
-              onIntroAiRewrite={rewriteDraftBlockWithAi}
               isIntroAiGenerating={activeAiWriteJobId === introTargetId}
               introAiQueueCount={queuedIntroAiCount}
               introAiStatus={introAiStatus}
@@ -952,7 +935,6 @@ export default function SingleTypeListicleBuilderPage() {
               removeItem={actions.removeItem}
               updateItem={actions.updateItem}
               onItemBlurbAiAutoWrite={autoWriteItemBlurb}
-              onItemBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
               onItemBlurbInspect={(itemId, index) =>
                 openInspect(`${itemId}_blurb`, `Item ${index + 1} blurb`)
               }

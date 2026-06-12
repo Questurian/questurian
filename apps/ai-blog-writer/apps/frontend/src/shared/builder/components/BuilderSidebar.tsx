@@ -102,14 +102,6 @@ export function BuilderSidebar({
                   {isPublishedPayload ? 'Published' : 'Draft'}
                 </span>
               </div>
-              {isPublishedPayload ? (
-                <div className="stl-published-banner" role="status">
-                  <span className="stl-status stl-status-published">Published</span>
-                  <span>
-                    This Payload document is published. Future syncs from this builder will update the live published itinerary.
-                  </span>
-                </div>
-              ) : null}
             </>
           ) : (
             <h3>Article Status</h3>

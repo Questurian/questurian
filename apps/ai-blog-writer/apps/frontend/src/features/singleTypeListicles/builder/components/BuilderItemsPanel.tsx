@@ -22,13 +22,6 @@ import { AngleGuidelinePreviewModal } from './AngleGuidelinePreviewModal'
 import { fetchListicleGuidelines } from '../../../staging/api'
 import type { ListicleGuidelinesResponse } from '../../../staging/api'
 
-type AiRewriteInput = {
-  blockId: string
-  currentContent: string
-  prompt: string
-  includeWholeArticleContext: boolean
-}
-
 type BuilderItemsPanelProps = {
   draft: SingleTypeListicleDraft
   relatedItems: RelatedItemOption[]
@@ -37,7 +30,6 @@ type BuilderItemsPanelProps = {
   removeItem: (itemId: string) => void
   updateItem: (itemId: string, updater: (item: ListicleItemBlock) => ListicleItemBlock) => void
   onItemBlurbAiAutoWrite: (itemId: string) => Promise<void>
-  onItemBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
   onItemBlurbInspect: (itemId: string, index: number) => void
   hasInspectableStepsByItemId: Record<string, boolean>
   activeAiItemId: string | null
@@ -92,7 +84,6 @@ export function BuilderItemsPanel({
   removeItem,
   updateItem,
   onItemBlurbAiAutoWrite,
-  onItemBlurbAiRewrite,
   onItemBlurbInspect,
   hasInspectableStepsByItemId,
   activeAiItemId,
@@ -792,9 +783,6 @@ export function BuilderItemsPanel({
                         }
                         showToolbar
                         enforceHeadingStructure={false}
-                        onAiRewrite={(input) => onItemBlurbAiRewrite(item.id, input)}
-                        aiToolbarLabel="AI Tweak"
-                        aiToolbarTitle="Rewrite with an instruction — runs the full blurb pipeline (tone, angle, venue facts). For a clean regenerate, use Auto Write instead."
                         placeholder="Write why this item made the list..."
                         className="stl-markdown-textarea"
                         rows={5}

@@ -1,13 +1,6 @@
 import { BuilderHeaderPanel as SharedBuilderHeaderPanel } from '../../../../shared/builder/components/BuilderHeaderPanel'
 import type { ListicleItineraryDraft, MediaAssetOption } from '../../types'
 
-type AiRewriteInput = {
-  blockId: string
-  currentContent: string
-  prompt: string
-  includeWholeArticleContext: boolean
-}
-
 type BuilderHeaderPanelProps = {
   draft: ListicleItineraryDraft
   token: string | null
@@ -15,7 +8,6 @@ type BuilderHeaderPanelProps = {
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
   onIntroAiAutoWrite: () => Promise<void>
-  onIntroAiRewrite: (input: AiRewriteInput) => Promise<string>
   isIntroAiGenerating: boolean
   isLocked: boolean
   isSynced?: boolean
@@ -32,7 +24,6 @@ export function BuilderHeaderPanel({
   mediaAssets,
   updateHeader,
   onIntroAiAutoWrite,
-  onIntroAiRewrite,
   isIntroAiGenerating,
   isLocked,
   isSynced = false,
@@ -48,7 +39,6 @@ export function BuilderHeaderPanel({
       locationRef={locationRef}
       mediaAssets={mediaAssets}
       updateHeader={updateHeader}
-      onIntroAiRewrite={onIntroAiRewrite}
       isLocked={isLocked}
       isSynced={isSynced}
       onContinueStep2={onContinueStep2}

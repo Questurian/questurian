@@ -276,7 +276,6 @@ function Harness({
         })
       }}
       onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite}
-      onStopBlurbAiRewrite={async () => ''}
       activeAiItemId={null}
       isLocked={false}
       onContinueStep3={() => {}}

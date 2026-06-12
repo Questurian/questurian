@@ -58,13 +58,6 @@ import { findItineraryItemById, type DayShellTemplate, type ListicleItineraryDra
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
 
-type AiRewriteInput = {
-  blockId: string
-  currentContent: string
-  prompt: string
-  includeWholeArticleContext: boolean
-}
-
 const schemaPublisherConfig = getItinerarySchemaPublisherConfig()
 
 export default function ListicleItineraryBuilderPage() {
@@ -556,15 +549,6 @@ export default function ListicleItineraryBuilderPage() {
     )
   }, [buildGenerationRequest])
 
-  const rewriteDraftBlockWithAi = useCallback(async (input: AiRewriteInput): Promise<string> => {
-    return runSingleTargetGeneration({
-      targetId: input.blockId,
-      currentContent: input.currentContent,
-      customInstruction: input.prompt.trim(),
-      includeArticleContext: input.includeWholeArticleContext,
-    })
-  }, [runSingleTargetGeneration])
-
   const autoWriteIntro = useCallback(async (): Promise<void> => {
     if (!draft) return
 
@@ -906,7 +890,6 @@ export default function ListicleItineraryBuilderPage() {
               mediaAssets={mediaAssets}
               updateHeader={actions.updateHeader}
               onIntroAiAutoWrite={autoWriteIntro}
-              onIntroAiRewrite={rewriteDraftBlockWithAi}
               isIntroAiGenerating={activeAiTargetId === getItineraryIntroTargetId(draft)}
               isLocked={isStep2LockedView}
               isSynced={isSynced}
@@ -950,7 +933,6 @@ export default function ListicleItineraryBuilderPage() {
                 onRemoveItem={actions.removeItem}
                 onUpdateItem={actions.updateItem}
                 onStopBlurbAiAutoWrite={autoWriteStopBlurb}
-                onStopBlurbAiRewrite={async (_itemId, input) => rewriteDraftBlockWithAi(input)}
                 activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
                 isLocked={isStep3LockedView}
                 isSynced={isSynced}

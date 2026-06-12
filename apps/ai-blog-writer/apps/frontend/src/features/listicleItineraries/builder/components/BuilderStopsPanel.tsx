@@ -43,13 +43,6 @@ import { InstagramPickerModal } from '../../../../shared/builder/components/Inst
 import { PhotoPickerModal } from '../../../../shared/builder/components/PhotoPickerModal'
 import { RelatedItemPickerModal } from '../../../../shared/builder/components/RelatedItemPickerModal'
 
-type AiRewriteInput = {
-  blockId: string
-  currentContent: string
-  prompt: string
-  includeWholeArticleContext: boolean
-}
-
 type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
   /** Index of the day tab being edited (0-based). */
@@ -66,7 +59,6 @@ type BuilderStopsPanelProps = {
   onRemoveItem: (itemId: string) => void
   onUpdateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
   onStopBlurbAiAutoWrite: (itemId: string) => Promise<void>
-  onStopBlurbAiRewrite: (itemId: string, input: AiRewriteInput) => Promise<string>
   activeAiItemId: string | null
   isLocked: boolean
   isSynced?: boolean
@@ -319,7 +311,6 @@ export function BuilderStopsPanel({
   onRemoveItem,
   onUpdateItem,
   onStopBlurbAiAutoWrite,
-  onStopBlurbAiRewrite,
   activeAiItemId,
   isLocked,
   isSynced = false,
@@ -334,8 +325,6 @@ export function BuilderStopsPanel({
     return day ?? { id: '', whereStaying: [] as ItineraryItemBlock[], items: [] as ItineraryItemBlock[] }
   }, [draft.days, activeDayIndex])
   const [activePicker, setActivePicker] = useState<ActivePicker>(null)
-  const [copiedItemId, setCopiedItemId] = useState<string | null>(null)
-  const [copyErrorItemId, setCopyErrorItemId] = useState<string | null>(null)
   const [photoPreviewIndexByItem, setPhotoPreviewIndexByItem] = useState<Record<string, number>>({})
   const [activeInstagramEmbedPreviewItemId, setActiveInstagramEmbedPreviewItemId] = useState<string | null>(null)
   const [imagePickerItemId, setImagePickerItemId] = useState<string | null>(null)
@@ -381,12 +370,6 @@ export function BuilderStopsPanel({
         .filter((imageId): imageId is number => typeof imageId === 'number' && !loadedIds.has(imageId)),
     ))
   }, [dayDraft.whereStaying, dayDraft.items, fetchedManualImageAssets, mediaAssets, resolvedToken])
-
-  useEffect(() => {
-    if (!copiedItemId) return
-    const timer = window.setTimeout(() => setCopiedItemId(null), 1800)
-    return () => window.clearTimeout(timer)
-  }, [copiedItemId])
 
   useEffect(() => {
     if (!resolvedToken || missingManualImageIds.length === 0) return
@@ -487,21 +470,6 @@ export function BuilderStopsPanel({
       }))
     })
   }, [dayDraft.whereStaying, dayDraft.items, onUpdateItem, relatedByBlockType])
-
-  const handleCopyRelatedItemTitle = async (itemId: string, title: string) => {
-    if (!title.trim()) return
-    try {
-      if (!navigator.clipboard?.writeText) {
-        throw new Error('Clipboard API unavailable')
-      }
-      await navigator.clipboard.writeText(title)
-      setCopiedItemId(itemId)
-      setCopyErrorItemId(null)
-    } catch {
-      setCopiedItemId(null)
-      setCopyErrorItemId(itemId)
-    }
-  }
 
   return (
     <section className="stl-panel">
@@ -728,31 +696,6 @@ export function BuilderStopsPanel({
                         </span>
                         <span className="stl-picker-trigger__caret">▼</span>
                       </button>
-                      {selectedRelatedItem ? (
-                        <>
-                          <div className="stl-copyable-item-row">
-                            <input
-                              type="text"
-                              className="stl-copyable-item-input"
-                              value={selectedRelatedItemLabel}
-                              readOnly
-                              onFocus={(event) => event.currentTarget.select()}
-                              onClick={(event) => event.currentTarget.select()}
-                              aria-label="Selected related item title"
-                            />
-                            <button
-                              type="button"
-                              className={`stl-btn ${copiedItemId === item.id ? 'stl-btn-success' : 'stl-btn-secondary'} stl-copyable-item-btn`}
-                              onClick={() => void handleCopyRelatedItemTitle(item.id, selectedRelatedItemLabel)}
-                            >
-                              {copiedItemId === item.id ? 'Copied' : 'Copy'}
-                            </button>
-                          </div>
-                          {copyErrorItemId === item.id ? (
-                            <p className="stl-legacy-note">Clipboard blocked. Select the text field and press Cmd/Ctrl+C.</p>
-                          ) : null}
-                        </>
-                      ) : null}
                     </div>
                   )}
                 </div>
@@ -1400,9 +1343,9 @@ export function BuilderStopsPanel({
                 ) : null}
 
                 <div className="stl-field">
-                  <div className="stl-field-label-row">
+                  <div className="stl-field-label-row stl-blurb-label-row">
                     <span>Blurb *</span>
-                    <div className="stl-inline-actions">
+                    <div className="stl-inline-actions stl-blurb-actions">
                       {angleOptions.length > 0 ? (
                         <select
                           className="stl-field-input stl-angle-select"
@@ -1458,7 +1401,6 @@ export function BuilderStopsPanel({
                     }
                     showToolbar
                     enforceHeadingStructure={false}
-                    onAiRewrite={(input) => onStopBlurbAiRewrite(item.id, input)}
                     placeholder="Write editorial context for this stop..."
                     className="stl-markdown-textarea"
                     rows={5}
