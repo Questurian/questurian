@@ -10,12 +10,12 @@ const PRIMARY_CARD_TITLES = [
   'Prompt → Articles',
   'Single Type Listicles',
   'Listicle Itineraries',
-  'Itineraries Pipeline',
   'Location Images',
   'Homepage Featured Content',
 ]
 
 const OCCASIONAL_CARD_TITLES = [
+  'Itineraries Pipeline',
   'Image Recreation Prompts',
   'Batch Image Recreation',
   'Media Library',

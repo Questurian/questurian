@@ -201,8 +201,8 @@ const LANDING_CARDS: LandingCardConfig[] = [
     title: 'Itineraries Pipeline',
     description: 'Run and manage the itineraries pipeline workflow from a single place.',
     to: '/itineraries-pipeline',
-    section: 'structured-publishing',
-    priority: 3,
+    section: 'editorial-tools',
+    priority: 1,
     accentClass: 'landing-card--itineraries-pipeline',
     actionLabel: 'Open Pipeline',
     icon: (
