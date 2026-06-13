@@ -21,8 +21,13 @@ import {
   applyItineraryGeneratedContent,
   buildItineraryGenerateListicleContentRequest,
   getItineraryAutoWriteTargetIds,
-  getItineraryIntroTargetId,
 } from '../builder/services/ai-autowrite.service'
+import {
+  applyItineraryComposedIntro,
+  buildItineraryComposeIntroRequest,
+  getItineraryIntroComposeDisabledReason,
+  getItineraryIntroTargetId,
+} from '../builder/services/intro-composer.service'
 import {
   buildItineraryAiArticleContext,
   getItineraryAiArticleTitle,
@@ -41,10 +46,12 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
 import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
-import { composeItineraryBriefWithAi, fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { composeItineraryBriefWithAi, composeItineraryIntroWithAi, fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
 import { generateItinerary, type AutobuildResponse } from '../builder/services/autobuild.api'
 import { InspectAutobuildRunModal } from '../builder/components/InspectAutobuildRunModal'
+import { InspectIntroComposeRunModal } from '../builder/components/InspectIntroComposeRunModal'
+import type { ComposeItineraryIntroResponse } from '../../staging/api'
 import {
   createLibraryDayShell,
   deleteLibraryDayShell,
@@ -83,6 +90,9 @@ export default function ListicleItineraryBuilderPage() {
   // Autobuild Report: in-memory only, last run — replaced on re-run, gone on refresh.
   const [autobuildReport, setAutobuildReport] = useState<AutobuildResponse | null>(null)
   const [isAutobuildReportOpen, setIsAutobuildReportOpen] = useState(false)
+  // Compose-from-plan Report: same lifetime — the last Intro composer run only.
+  const [introComposeReport, setIntroComposeReport] = useState<ComposeItineraryIntroResponse | null>(null)
+  const [isIntroComposeReportOpen, setIsIntroComposeReportOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -426,8 +436,12 @@ export default function ListicleItineraryBuilderPage() {
 
   const handleGenerateItinerary = useCallback(async () => {
     if (!draft) return
+    if (!draft.title.trim() || !draft.location) {
+      onError('Add a title and location before using the AI Autobuild brief.')
+      return
+    }
     const brief = (draft.generationBrief || '').trim()
-    if (!draft.location || !draft.title.trim() || !brief) return
+    if (!brief) return
     if (!token) {
       onError('You must be signed in to generate an itinerary.')
       return
@@ -578,36 +592,39 @@ export default function ListicleItineraryBuilderPage() {
   const autoWriteIntro = useCallback(async (): Promise<void> => {
     if (!draft) return
 
-    const targetId = getItineraryIntroTargetId(draft)
+    const disabledReason = getItineraryIntroComposeDisabledReason(draft, relatedByBlockType)
+    if (disabledReason) {
+      onError(disabledReason)
+      return
+    }
+
+    const hadIntro = draft.header.introMarkdown.trim()
     onError('')
     setResult(null)
-    setActiveAiTargetId(targetId)
+    setActiveAiTargetId(getItineraryIntroTargetId(draft))
 
     try {
-      const markdown = await runSingleTargetGeneration({
-        targetId,
-        currentContent: draft.header.introMarkdown,
-        includeArticleContext: true,
+      const request = buildItineraryComposeIntroRequest({
+        draft,
+        relatedByBlockType,
+        locations,
+        modelName: resolveEditorAssistModelName(draft.editorModelName),
       })
+      const response = await composeItineraryIntroWithAi(request)
+      setIntroComposeReport(response)
+      const intro = response.intro.trim()
+      if (!intro) {
+        throw new Error('AI intro composition returned empty output.')
+      }
 
-      setDraft((current) => {
-        if (!current) return current
-        return {
-          ...current,
-          header: {
-            ...current.header,
-            introMarkdown: markdown,
-            introJsonText: '',
-          },
-        }
-      })
-      setResult(draft.header.introMarkdown.trim() ? 'Intro regenerated with AI.' : 'Intro written with AI.')
+      setDraft((current) => (current ? applyItineraryComposedIntro(current, intro) : current))
+      setResult(hadIntro ? 'Intro regenerated with AI.' : 'Intro written with AI.')
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to write intro with AI.')
     } finally {
       setActiveAiTargetId(null)
     }
-  }, [draft, onError, runSingleTargetGeneration, setDraft])
+  }, [draft, locations, onError, relatedByBlockType, setDraft])
 
   const autoWriteStopBlurb = useCallback(async (itemId: string): Promise<void> => {
     if (!draft) return
@@ -647,8 +664,12 @@ export default function ListicleItineraryBuilderPage() {
   const autoWriteEmptyFields = useCallback(async (): Promise<void> => {
     if (!draft) return
 
-    const targetIds = getItineraryAutoWriteTargetIds(draft, relatedByBlockType)
-    if (targetIds.length < 1) {
+    // Intro composes on its own path (ADR 0018); blurbs still ride the batch.
+    const blurbTargetIds = getItineraryAutoWriteTargetIds(draft, relatedByBlockType)
+    const shouldComposeIntro = !draft.header.introMarkdown.trim()
+      && !getItineraryIntroComposeDisabledReason(draft, relatedByBlockType)
+
+    if (blurbTargetIds.length < 1 && !shouldComposeIntro) {
       onError('')
       setResult('No empty intro or blurbs to auto write.')
       return
@@ -658,39 +679,69 @@ export default function ListicleItineraryBuilderPage() {
     setResult(null)
     setIsAutoWritingEmptyFields(true)
 
-    try {
-      const request = buildGenerationRequest({
-        targetIds,
-        skipExisting: true,
-        includeArticleContext: true,
-      })
-      const response = await generateListicleContentWithAi(request)
-      applyGeneratedListicleContent(response)
+    let generatedCount = 0
+    const errors: string[] = []
 
-      const generatedCount = Object.values(response.results)
-        .filter((entry) => entry.status === 'generated' && entry.markdown?.trim())
-        .length
-      const failedResult = Object.values(response.results).find((entry) => entry.status === 'error')
+    try {
+      if (shouldComposeIntro) {
+        try {
+          const introRequest = buildItineraryComposeIntroRequest({
+            draft,
+            relatedByBlockType,
+            locations,
+            modelName: resolveEditorAssistModelName(draft.editorModelName),
+          })
+          const introResponse = await composeItineraryIntroWithAi(introRequest)
+          setIntroComposeReport(introResponse)
+          const intro = introResponse.intro.trim()
+          if (intro) {
+            setDraft((current) => (current ? applyItineraryComposedIntro(current, intro) : current))
+            generatedCount += 1
+          }
+        } catch (err) {
+          errors.push(err instanceof Error ? err.message : 'Intro composition failed.')
+        }
+      }
+
+      if (blurbTargetIds.length > 0) {
+        try {
+          const request = buildGenerationRequest({
+            targetIds: blurbTargetIds,
+            skipExisting: true,
+            includeArticleContext: true,
+          })
+          const response = await generateListicleContentWithAi(request)
+          applyGeneratedListicleContent(response)
+
+          generatedCount += Object.values(response.results)
+            .filter((entry) => entry.status === 'generated' && entry.markdown?.trim())
+            .length
+          const failedResult = Object.values(response.results).find((entry) => entry.status === 'error')
+          if (failedResult) {
+            errors.push(
+              failedResult.error_message
+              || failedResult.validation_errors[0]
+              || 'One or more fields failed AI generation.',
+            )
+          }
+        } catch (err) {
+          errors.push(err instanceof Error ? err.message : 'Failed to auto write blurbs.')
+        }
+      }
 
       if (generatedCount > 0) {
         setResult(`Auto-wrote ${generatedCount} empty field${generatedCount === 1 ? '' : 's'}.`)
-      } else {
+      } else if (errors.length < 1) {
         setResult('No empty intro or blurbs needed new AI copy.')
       }
 
-      if (failedResult) {
-        onError(
-          failedResult.error_message
-          || failedResult.validation_errors[0]
-          || 'One or more fields failed AI generation.',
-        )
+      if (errors.length > 0) {
+        onError(errors.join(' '))
       }
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to auto write empty fields.')
     } finally {
       setIsAutoWritingEmptyFields(false)
     }
-  }, [applyGeneratedListicleContent, buildGenerationRequest, draft, onError, relatedByBlockType])
+  }, [applyGeneratedListicleContent, buildGenerationRequest, draft, locations, onError, relatedByBlockType, setDraft])
 
   const generateSeoWithAi = useCallback(async (target: SeoAiTarget = 'all'): Promise<void> => {
     if (!draft) return
@@ -918,6 +969,9 @@ export default function ListicleItineraryBuilderPage() {
               updateHeader={actions.updateHeader}
               onIntroAiAutoWrite={autoWriteIntro}
               isIntroAiGenerating={activeAiTargetId === getItineraryIntroTargetId(draft)}
+              introComposeDisabledReason={getItineraryIntroComposeDisabledReason(draft, relatedByBlockType)}
+              hasIntroComposeReport={Boolean(introComposeReport)}
+              onViewIntroComposeReport={() => setIsIntroComposeReportOpen(true)}
               isLocked={isStep2LockedView}
               isSynced={isSynced}
               onContinueStep2={actions.handleContinueStep2}
@@ -926,6 +980,12 @@ export default function ListicleItineraryBuilderPage() {
               onCancelStep2Update={actions.cancelUpdateStep2}
             />
           ) : null}
+
+          <InspectIntroComposeRunModal
+            isOpen={isIntroComposeReportOpen}
+            onClose={() => setIsIntroComposeReportOpen(false)}
+            report={introComposeReport}
+          />
 
           {(isStep1LockedView && isStep2LockedView) || isSynced ? (
             <>
@@ -1004,7 +1064,7 @@ export default function ListicleItineraryBuilderPage() {
           isSaving={isSaving}
           isRevertingToPayload={isRevertingToPayload}
           isAutoWritingEmptyFields={isAutoWritingEmptyFields}
-          canAutoWriteEmptyFields={Boolean((isSynced || (isStep1LockedView && isStep2LockedView)) && getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0)}
+          canAutoWriteEmptyFields={Boolean((isSynced || (isStep1LockedView && isStep2LockedView)) && (getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0 || (!draft.header.introMarkdown.trim() && !getItineraryIntroComposeDisabledReason(draft, relatedByBlockType))))}
           stepIssues={progress.stepIssues}
           onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}

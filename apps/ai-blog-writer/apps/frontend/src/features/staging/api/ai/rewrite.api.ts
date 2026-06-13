@@ -3,6 +3,8 @@ import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type {
   ComposeItineraryBriefRequest,
   ComposeItineraryBriefResponse,
+  ComposeItineraryIntroRequest,
+  ComposeItineraryIntroResponse,
   GenerateTitleWithAiRequest,
   GenerateTitleWithAiResponse,
   GenerateListicleContentRequest,
@@ -95,6 +97,38 @@ export async function composeItineraryBriefWithAi(
 
   if (!response.ok) {
     const message = await parseErrorResponse(response, 'AI brief composition failed', { detail: 'AI brief composition failed' })
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+export async function composeItineraryIntroWithAi(
+  input: ComposeItineraryIntroRequest,
+): Promise<ComposeItineraryIntroResponse> {
+  const response = await fetch(`${API_BASE_URL}/editor-assist/compose-itinerary-intro`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      article_title: input.articleTitle,
+      location_label: input.locationLabel,
+      list_tone: input.listTone,
+      plan_overview: input.planOverview,
+      day_count: input.dayCount,
+      model_name: input.modelName,
+      stops: input.stops.map((stop) => ({
+        title: stop.title,
+        category: stop.category,
+        day_label: stop.dayLabel,
+        selection_reason: stop.selectionReason,
+      })),
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, 'AI intro composition failed', { detail: 'AI intro composition failed' })
     throw new Error(message)
   }
 

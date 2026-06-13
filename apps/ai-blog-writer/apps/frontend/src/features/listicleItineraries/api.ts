@@ -1,4 +1,4 @@
-import { composeItineraryBriefWithAi, convertMarkdownToLexical, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
+import { composeItineraryBriefWithAi, composeItineraryIntroWithAi, convertMarkdownToLexical, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
 import { appendScopedLocationWhere, getArticleLocationScope } from '../../shared/locationScope/scope'
 import { normalizeRelatedItems } from '../../shared/related-items/normalizeRelatedItems'
 import type { LocationScope } from '../../shared/locationScope/types'
@@ -225,4 +225,4 @@ export async function markdownToLexical(markdown: string): Promise<Record<string
   return result.data as Record<string, unknown>
 }
 
-export { composeItineraryBriefWithAi, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi }
+export { composeItineraryBriefWithAi, composeItineraryIntroWithAi, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi }

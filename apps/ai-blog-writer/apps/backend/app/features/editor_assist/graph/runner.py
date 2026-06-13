@@ -100,6 +100,16 @@ def run_editor_assist_compose_brief_graph(
     )
 
 
+def run_editor_assist_compose_intro_graph(
+    *,
+    step_runner: Callable[[], T],
+) -> T:
+    return _run_editor_assist_graph(
+        node_name="editor_assist_compose_itinerary_intro",
+        step_runner=step_runner,
+    )
+
+
 def run_editor_assist_rewrite_graph(
     *,
     step_runner: Callable[[], T],

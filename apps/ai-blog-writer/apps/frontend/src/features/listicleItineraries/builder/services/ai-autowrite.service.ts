@@ -22,8 +22,6 @@ import {
 } from '../../types'
 import { buildItineraryAiArticleContext, getItineraryAiArticleTitle } from './ai-rewrite.service'
 
-const INTRO_TARGET_ID_SUFFIX = '_header_intro'
-
 function formatPromptLocationLabel(location?: Pick<LocationOption, 'country' | 'city' | 'neighborhood' | 'locationKey'> | null): string {
   if (!location) return ''
   const parts = [location.neighborhood, location.city, location.country]
@@ -35,7 +33,7 @@ function formatPromptLocationLabel(location?: Pick<LocationOption, 'country' | '
   return (location.locationKey || '').replace(/\|/g, ', ')
 }
 
-function buildArticleLocationLabel(
+export function buildArticleLocationLabel(
   draft: ListicleItineraryDraft,
   locations: LocationOption[],
 ): string {
@@ -121,38 +119,6 @@ function buildManualKeyLocationContext(
   return labels.join(', ')
 }
 
-export function getItineraryIntroTargetId(draft: ListicleItineraryDraft): string {
-  return `${draft.draftId}${INTRO_TARGET_ID_SUFFIX}`
-}
-
-function buildIntroTarget(
-  draft: ListicleItineraryDraft,
-  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
-  articleLocationLabel: string,
-): GenerateListicleContentTarget {
-  const selectedTitles = getItineraryBlocksInArticleOrder(draft)
-    .map((item) => {
-      if (isManualItineraryBlockType(item.blockType)) {
-        return item.title.trim() || item.operator.trim() || ''
-      }
-      const relatedOptions = relatedByBlockType[item.blockType] || []
-      return relatedOptions.find((entry) => entry.id === item.item)?.title?.trim() || ''
-    })
-    .filter(Boolean)
-
-  const supportingContext = [
-    selectedTitles.length > 0 ? `Selected stops: ${selectedTitles.join(', ')}` : '',
-  ].filter(Boolean).join('\n')
-
-  return {
-    targetId: getItineraryIntroTargetId(draft),
-    fieldType: 'intro',
-    currentContent: draft.header.introMarkdown,
-    locationLabel: articleLocationLabel,
-    supportingContext,
-  }
-}
-
 function buildStopTarget(
   draft: ListicleItineraryDraft,
   item: ItineraryItemBlock,
@@ -221,9 +187,6 @@ export function getItineraryAutoWriteTargetIds(
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
 ): string[] {
   const targetIds: string[] = []
-  if (!draft.header.introMarkdown.trim()) {
-    targetIds.push(getItineraryIntroTargetId(draft))
-  }
 
   getItineraryBlocksInArticleOrder(draft).forEach((item) => {
     if (item.blurbMarkdown.trim()) return
@@ -267,11 +230,6 @@ export function buildItineraryGenerateListicleContentRequest(params: {
   const targetIdSet = new Set(targetIds)
   const articleLocationLabel = buildArticleLocationLabel(draft, locations)
   const targets: GenerateListicleContentTarget[] = []
-
-  const introTarget = buildIntroTarget(draft, relatedByBlockType, articleLocationLabel)
-  if (targetIdSet.has(introTarget.targetId)) {
-    targets.push(introTarget)
-  }
 
   getItineraryBlocksInArticleOrder(draft).forEach((item) => {
     let target: GenerateListicleContentTarget | null = null
@@ -322,16 +280,9 @@ export function applyItineraryGeneratedContent(
   draft: ListicleItineraryDraft,
   response: GenerateListicleContentResponse,
 ): ListicleItineraryDraft {
-  const introTargetId = getItineraryIntroTargetId(draft)
+  // Intro is composed on its own path (ADR 0018); only stop blurbs flow here.
   return {
     ...draft,
-    header: response.results[introTargetId]?.status === 'generated' && response.results[introTargetId]?.markdown
-      ? {
-          ...draft.header,
-          introMarkdown: response.results[introTargetId]?.markdown || draft.header.introMarkdown,
-          introJsonText: '',
-        }
-      : draft.header,
     days: draft.days.map((day) => ({
       ...day,
       whereStaying: day.whereStaying.map((item) => {

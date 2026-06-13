@@ -123,6 +123,12 @@ export function BuilderSetupPanel({
   const neighborhoodOptions = getNeighborhoodOptionsForLocation(locations, draft.location)
   const showNeighborhoodPicker = isCityLocation(selectedPrimaryLocation)
   const firstShellId = draft.days[0] ? getShellIdForDay(draft, draft.days[0].id) : DEFAULT_DAY_SHELL_ID
+  const canUseAutobuildBrief = Boolean(draft.title.trim() && draft.location)
+  const autobuildBriefDisabledReason = !draft.title.trim()
+    ? 'Add a title before writing or using the AI Autobuild brief.'
+    : !draft.location
+    ? 'Select a location before writing or using the AI Autobuild brief.'
+    : undefined
 
   // Dropdown options: built-ins + this draft's snapshots + library shells not yet
   // snapshotted. The draft's copy wins on id collision (snapshot semantics — a
@@ -425,7 +431,7 @@ export function BuilderSetupPanel({
               <button
                 type="button"
                 className="stl-btn stl-btn-secondary"
-                disabled={isSetupLocked || isGeneratingItinerary}
+                disabled={isSetupLocked || isGeneratingItinerary || !canUseAutobuildBrief}
                 onClick={() => setIsTravelerProfileModalOpen(true)}
               >
                 Traveler Profile…
@@ -436,10 +442,13 @@ export function BuilderSetupPanel({
             className="stl-field-input stl-autobuild-brief"
             rows={5}
             value={draft.generationBrief || ''}
-            disabled={isSetupLocked || isGeneratingItinerary}
+            disabled={isSetupLocked || isGeneratingItinerary || !canUseAutobuildBrief}
             placeholder="Describe the experience — e.g. eat at the most luxurious fine-dining spots, premium afternoon, rooftop cocktails, comfortable central hotel, easy access between stops."
             onChange={(event) => updateDraft({ generationBrief: event.target.value })}
           />
+          {autobuildBriefDisabledReason ? (
+            <p className="stl-helper-text">{autobuildBriefDisabledReason}</p>
+          ) : null}
           <div className="stl-autobuild-controls">
             <div className="stl-autobuild-actions">
               <button
@@ -448,8 +457,7 @@ export function BuilderSetupPanel({
                 onClick={() => onGenerateItinerary()}
                 disabled={
                   isGeneratingItinerary
-                  || !draft.location
-                  || !draft.title.trim()
+                  || !canUseAutobuildBrief
                   || !(draft.generationBrief || '').trim()
                 }
               >
@@ -469,7 +477,7 @@ export function BuilderSetupPanel({
               <input
                 type="checkbox"
                 checked={draft.includeLodging !== false}
-                disabled={isSetupLocked || isGeneratingItinerary}
+                disabled={isSetupLocked || isGeneratingItinerary || !canUseAutobuildBrief}
                 onChange={(event) => updateDraft({ includeLodging: event.target.checked })}
               />
               <span>Include lodging</span>

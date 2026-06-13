@@ -608,6 +608,12 @@
   color: var(--stl-muted);
 }
 
+.stl-helper-text {
+  margin: 0.2rem 0 0;
+  color: var(--stl-muted);
+  font-size: 0.84rem;
+}
+
 .stl-btn {
   display: inline-flex;
   align-items: center;

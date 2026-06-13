@@ -3,7 +3,6 @@ import {
   applyItineraryGeneratedContent,
   buildItineraryGenerateListicleContentRequest,
   getItineraryAutoWriteTargetIds,
-  getItineraryIntroTargetId,
   getItineraryStopAngleDisabledReason,
 } from './ai-autowrite.service'
 import type {
@@ -163,25 +162,22 @@ function buildRelatedByBlockType(): Record<string, RelatedItemOption[]> {
 }
 
 describe('listicleItineraries ai autowrite service', () => {
-  it('builds itinerary requests with intro and stop research context', () => {
+  it('builds itinerary requests with stop research context (intro excluded)', () => {
     const draft = buildDraft()
-    const introTargetId = getItineraryIntroTargetId(draft)
     const request = buildItineraryGenerateListicleContentRequest({
       draft,
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
-      targetIds: [introTargetId, 'stop-1_blurb'],
+      targetIds: ['stop-1_blurb'],
       modelName: 'gemini-2.5-flash',
     })
 
     expect(request.articleType).toBe('listicle-itinerary')
     expect(request.locationLabel).toBe('Lima, Peru (focus neighborhoods: Barranco)')
     expect(request.articleContext).toContain('### Stop 2: Dining (#202)')
+    // Intro is composed on its own path (ADR 0018) — never a blurb-batch target.
+    expect(request.targets.some((target) => target.fieldType === 'intro')).toBe(false)
     expect(request.targets).toEqual([
-      expect.objectContaining({
-        targetId: introTargetId,
-        fieldType: 'intro',
-      }),
       expect.objectContaining({
         targetId: 'stop-1_blurb',
         fieldType: 'blurb',
@@ -195,30 +191,21 @@ describe('listicleItineraries ai autowrite service', () => {
     ])
   })
 
-  it('returns only empty intro and stop blurbs for bulk auto-write', () => {
+  it('returns only empty stop blurbs for bulk auto-write (intro excluded)', () => {
     const draft = buildDraft()
 
     expect(getItineraryAutoWriteTargetIds(draft, buildRelatedByBlockType() as Record<
       ItineraryItemBlock['blockType'],
       RelatedItemOption[]
     >)).toEqual([
-      getItineraryIntroTargetId(draft),
       'stop-1_blurb',
     ])
   })
 
-  it('applies only generated itinerary fields back onto the draft', () => {
+  it('applies only generated stop blurbs back onto the draft, never the intro', () => {
     const draft = buildDraft()
     const nextDraft = applyItineraryGeneratedContent(draft, {
       results: {
-        [getItineraryIntroTargetId(draft)]: {
-          target_id: getItineraryIntroTargetId(draft),
-          status: 'generated',
-          markdown: 'Weekend intro',
-          model_used: 'gemini-2.5-flash',
-          source_urls: ['https://example.com'],
-          validation_errors: [],
-        },
         'stop-1_blurb': {
           target_id: 'stop-1_blurb',
           status: 'generated',
@@ -238,7 +225,8 @@ describe('listicleItineraries ai autowrite service', () => {
       },
     })
 
-    expect(nextDraft.header.introMarkdown).toBe('Weekend intro')
+    // Intro is untouched by this path even if a stale intro result appears.
+    expect(nextDraft.header.introMarkdown).toBe('')
     expect(nextDraft.days[0]?.items[0]?.blurbMarkdown).toBe('Bridge blurb')
     expect(nextDraft.days[0]?.items[1]?.blurbMarkdown).toBe('Existing lunch copy')
   })
@@ -383,7 +371,6 @@ describe('listicleItineraries ai autowrite service', () => {
       )
       // key-location stop (pool-less) stays eligible; the dining stop is skipped.
       expect(getItineraryAutoWriteTargetIds(draft, relatedCast())).toEqual([
-        getItineraryIntroTargetId(draft),
         'stop-1_blurb',
       ])
     })

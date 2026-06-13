@@ -42,6 +42,40 @@ export type ComposeItineraryBriefResponse = {
   model_used: string
 }
 
+export type ComposeItineraryIntroStop = {
+  title: string
+  category?: string
+  dayLabel?: string
+  selectionReason?: string
+}
+
+export type ComposeItineraryIntroRequest = {
+  articleTitle: string
+  locationLabel: string
+  listTone?: ListicleWriterListTone
+  planOverview?: string
+  dayCount?: number
+  stops: ComposeItineraryIntroStop[]
+  modelName?: EditorAssistModelName
+}
+
+export type ComposeIntroStepEvent = {
+  name: string
+  label: string
+  status: 'ok' | 'warning' | 'failed'
+  duration_ms: number
+  model?: string | null
+  prompt?: string | null
+  output?: string | null
+  details: Record<string, unknown>
+}
+
+export type ComposeItineraryIntroResponse = {
+  intro: string
+  model_used: string
+  steps: ComposeIntroStepEvent[]
+}
+
 export type ListicleGuidelinesResponse = {
   angles: Record<string, string>
   tones: Record<string, string>

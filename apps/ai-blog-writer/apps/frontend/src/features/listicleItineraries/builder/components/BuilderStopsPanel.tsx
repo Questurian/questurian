@@ -293,6 +293,9 @@ function resetItemForBlockType(item: ItineraryItemBlock, blockType: ItineraryBlo
     keyLocations: [],
     image: null,
     instagramPost: null,
+    // The autobuild "Why this pick" rationale described the previous pick; a new
+    // block type means a new slot, so drop it (ADR 0018).
+    selectionReason: '',
   }
 }
 
@@ -1449,14 +1452,19 @@ export function BuilderStopsPanel({
                         ?? nextAvailableModes[0]?.value
                         ?? current.mediaMode
 
+                      const pickChanged = nextId !== current.item
                       return {
                         ...current,
                         item: nextId,
                         // Tour Picks belong to the previous attraction's linked list.
-                        tours: nextId === current.item ? current.tours : [],
+                        tours: pickChanged ? [] : current.tours,
                         mediaMode: nextMediaMode,
                         selectedPhotos: [],
                         selectedInstagramPost: null,
+                        // A swapped pick orphans the autobuild "Why this pick"
+                        // rationale; drop it so a present reason always describes
+                        // the current pick (ADR 0018).
+                        selectionReason: pickChanged ? '' : current.selectionReason,
                       }
                     })
                   }

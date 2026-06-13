@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from .graph import (
     run_editor_assist_compose_brief_graph,
+    run_editor_assist_compose_intro_graph,
     run_editor_assist_generate_title_graph,
     run_editor_assist_listicle_generation_graph,
     run_editor_assist_rewrite_graph,
@@ -472,6 +473,216 @@ async def compose_itinerary_brief(
         raise HTTPException(
             status_code=502,
             detail="AI brief composition graph failed",
+        ) from exc
+
+
+COMPOSE_INTRO_PROMPT = """You are an expert travel-editorial writer composing the \
+opening of a published listicle itinerary.
+
+You will receive: the article title, the destination, the desired tone, an optional \
+internal plan overview (the trip's thesis), and the ordered list of stops — each \
+with its category, day placement, and an optional internal "why this pick" note.
+
+Write the reader-facing INTRO — the prose that opens the article and sets up the \
+days that follow.
+
+Spine and texture:
+- The plan overview is the spine: let the trip's thesis drive the intro's arc.
+- The per-stop "why this pick" notes are texture: read them to understand what \
+KIND of trip this is, and let that shape the characterization. Do NOT walk through \
+the stops one by one or name every venue.
+- The title and destination are framing constraints: stay consistent with the \
+headline and ground the reader in the place.
+
+Hard rules:
+- The plan overview and "why this pick" notes are INTERNAL planning notes, not \
+reader copy. Transform them into natural reader-facing prose — never quote or \
+echo them verbatim.
+- Write 1 to 3 short paragraphs. No headings, no bullet points, no lists, no \
+quotes, no commentary.
+- You may gesture at the shape of the trip (e.g. how the days build) but do not \
+produce a day-by-day or stop-by-stop rundown — the body of the article does that.
+- Return only the intro prose."""
+
+MAX_INTRO_STOPS = 60
+MAX_INTRO_OVERVIEW_CHARS = 4000
+
+
+class ComposeItineraryIntroStop(BaseModel):
+    title: str = Field(min_length=1, max_length=240)
+    category: str | None = Field(default=None, max_length=80)
+    day_label: str | None = Field(default=None, max_length=80)
+    selection_reason: str | None = Field(default=None, max_length=2000)
+
+
+class ComposeItineraryIntroRequest(BaseModel):
+    article_title: str = Field(min_length=1, max_length=MAX_ARTICLE_TITLE_CHARS)
+    location_label: str = Field(min_length=1, max_length=300)
+    list_tone: ListTone | None = None
+    plan_overview: str | None = Field(default=None, max_length=MAX_INTRO_OVERVIEW_CHARS)
+    day_count: int | None = Field(default=None, ge=1, le=7)
+    stops: list[ComposeItineraryIntroStop] = Field(
+        default_factory=list, max_length=MAX_INTRO_STOPS
+    )
+    model_name: str | None = Field(default=None, max_length=120)
+
+
+ComposeIntroStepStatus = Literal["ok", "warning", "failed"]
+
+
+class ComposeIntroStepEvent(BaseModel):
+    """One diagnostic step in a Compose-from-plan run, mirroring the Autobuild
+    Report timeline so the operator can inspect what signal went in and out."""
+
+    name: str
+    label: str
+    status: ComposeIntroStepStatus
+    duration_ms: int = 0
+    model: str | None = None
+    prompt: str | None = None
+    output: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class ComposeItineraryIntroResponse(BaseModel):
+    intro: str
+    model_used: str
+    steps: list[ComposeIntroStepEvent] = Field(default_factory=list)
+
+
+def _format_intro_stop_line(stop: ComposeItineraryIntroStop) -> str:
+    tags = [tag for tag in (stop.day_label, stop.category) if tag and tag.strip()]
+    prefix = f"[{' · '.join(tag.strip() for tag in tags)}] " if tags else ""
+    reason = (stop.selection_reason or "").strip()
+    suffix = f" — chosen for: {reason}" if reason else ""
+    return f"- {prefix}{stop.title.strip()}{suffix}"
+
+
+def _compose_itinerary_intro_impl(
+    request: ComposeItineraryIntroRequest,
+) -> ComposeItineraryIntroResponse:
+    article_title = request.article_title.strip()
+    location_label = request.location_label.strip()
+
+    if not article_title:
+        raise HTTPException(status_code=400, detail="article_title is required")
+    if not location_label:
+        raise HTTPException(status_code=400, detail="location_label is required")
+
+    stop_lines = [
+        _format_intro_stop_line(stop)
+        for stop in request.stops
+        if stop.title.strip()
+    ]
+    if not stop_lines:
+        raise HTTPException(
+            status_code=400,
+            detail="Add at least one stop before composing the intro.",
+        )
+
+    inputs_started = time.monotonic()
+    context_lines = [
+        f"Article title: {article_title}",
+        f"Destination: {location_label}",
+    ]
+    if request.day_count:
+        context_lines.append(f"Trip length: {request.day_count} day(s)")
+    tone_guidance = LIST_TONE_GUIDANCE.get(request.list_tone) if request.list_tone else None
+    if tone_guidance:
+        context_lines.append(f"Tone — {request.list_tone}: {tone_guidance}")
+    plan_overview = (request.plan_overview or "").strip()
+    if plan_overview:
+        context_lines.append(f"Internal plan overview (the spine): {plan_overview}")
+
+    llm_prompt = (
+        f"{COMPOSE_INTRO_PROMPT}\n\n"
+        + "Trip context:\n" + "\n".join(context_lines)
+        + "\n\nItinerary stops (in order):\n" + "\n".join(stop_lines)
+    )
+
+    stops_with_reason = sum(
+        1 for stop in request.stops if (stop.selection_reason or "").strip()
+    )
+    steps: list[ComposeIntroStepEvent] = [
+        ComposeIntroStepEvent(
+            name="inputs",
+            label="Collected plan signal",
+            status="ok" if plan_overview else "warning",
+            duration_ms=int((time.monotonic() - inputs_started) * 1000),
+            details={
+                "list_tone": request.list_tone,
+                "day_count": request.day_count,
+                "plan_overview_present": bool(plan_overview),
+                "stop_count": len(stop_lines),
+                "stops_with_reason": stops_with_reason,
+            },
+        )
+    ]
+
+    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    writer_started = time.monotonic()
+    try:
+        writer_result = invoke_writer_model(
+            prompt=llm_prompt,
+            model_name=model_used,
+            max_tokens=2048,
+            temperature=0.6,
+        )
+    except WriterModelError as exc:
+        logger.exception("Editor assist compose-itinerary-intro failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI intro composition request failed",
+        ) from exc
+
+    raw_text = (writer_result.text or "").strip()
+    steps.append(
+        ComposeIntroStepEvent(
+            name="writer",
+            label="Composer model call",
+            status="ok" if raw_text else "failed",
+            duration_ms=int((time.monotonic() - writer_started) * 1000),
+            model=model_used,
+            prompt=llm_prompt,
+            output=raw_text,
+            details={"raw_chars": len(raw_text)},
+        )
+    )
+
+    intro = normalize_dashes(strip_generation_fence(raw_text))
+    if not intro:
+        raise HTTPException(
+            status_code=502, detail="AI intro composition returned empty output"
+        )
+
+    steps.append(
+        ComposeIntroStepEvent(
+            name="finalize",
+            label="Finalized intro",
+            status="ok",
+            output=intro,
+            details={"chars": len(intro), "normalized_and_unfenced": True},
+        )
+    )
+
+    return ComposeItineraryIntroResponse(intro=intro, model_used=model_used, steps=steps)
+
+
+@router.post("/compose-itinerary-intro", response_model=ComposeItineraryIntroResponse)
+async def compose_itinerary_intro(
+    request: ComposeItineraryIntroRequest,
+) -> ComposeItineraryIntroResponse:
+    try:
+        return run_editor_assist_compose_intro_graph(
+            step_runner=lambda: _compose_itinerary_intro_impl(request),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Editor Assist graph compose-itinerary-intro failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI intro composition graph failed",
         ) from exc
 
 

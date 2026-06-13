@@ -99,6 +99,40 @@ Related terms: Flux Model, Prompt Preset, Scene Category.
 Do not confuse with: `BatchImageRecreationPage` (bulk variant that processes many images against saved settings) or any `*Page` listed under Feature Page (those run pipelines; this is a direct LLM tool).
 Code references: `src/features/imageRecreationPrompts/`, `promptBuilder.ts`, `shared/images.generateFluxEditedImage`.
 
+### Itinerary Header
+
+Definition: the top section of a listicle-itinerary draft — headline + **Intro** prose + hero media. A layout region, not a single field.
+Related terms: Intro, Title writer, Intro auto-writer.
+Do not confuse with: the **Intro**, which is only the prose field inside the Header.
+Code references: `src/features/listicleItineraries/builder/components/BuilderHeaderPanel.tsx`, `draft.header`.
+
+### Intro
+
+Definition: the reader-facing opening prose of a listicle itinerary. Stored as `draft.header.introMarkdown`; backend `field_type: 'intro'`.
+Related terms: Itinerary Header, Intro auto-writer, Plan overview.
+Do not confuse with: the headline/title (produced by the **Title writer**), or the autobuild **Plan overview** (internal rationale, not reader-facing).
+Code references: `header.introMarkdown`, `getItineraryIntroTargetId`.
+
+### Title writer
+
+Definition: the Step-1 editor-assist tool that generates the itinerary headline/title (backend `generate_title`). Distinct from any Intro generation; its output is an **input** to the Intro, not part of it.
+Related terms: Intro, Itinerary Header.
+Code references: `compose-itinerary` setup panel AI-title action; backend `editor_assist/generate_title`.
+
+### Plan overview
+
+Definition: trip-level rationale for an autobuilt itinerary — *why this plan*. Internal/persisted, produced by Itinerary Autobuild's reasons-and-overview stage. Reader sees it only as an **ⓘ AI plan overview** note in the builder, never on the published page.
+Related terms: Selection reason, Intro, Itinerary Autobuild.
+Do not confuse with: the **Intro** (reader-facing). Plan overview is *input* the Intro can be written from, not the Intro itself.
+Code references: `draft.planOverview`; `itineraries_pipeline/llm_stages.py` reasons/overview stage.
+
+### Selection reason
+
+Definition: per-stop rationale for *why this pick* filled a slot, produced by Itinerary Autobuild. Internal/persisted, shown as **ⓘ Why this pick** in the builder.
+Related terms: Plan overview, Stop, Itinerary Autobuild.
+Do not confuse with: the stop's **blurb** (reader-facing prose).
+Code references: `item.selectionReason`; `BuilderStopsPanel.tsx` "Why this pick".
+
 ### Page-level article exclusion
 
 Definition: the rule that any item (article, listicle, or itinerary — all `HomepageFeaturedCollection` types) already present in any block's draft slots on a page is blocked from being picked into any other block on the same page. Enforced in the picker UI (greyed out, "In use") and at save time (`saveDisabled`). Applies to both `MainHomepagePage` and `LocationHomepagePage`.
