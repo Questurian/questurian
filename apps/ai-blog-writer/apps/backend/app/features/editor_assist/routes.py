@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from .graph import (
+    run_editor_assist_compose_brief_graph,
     run_editor_assist_generate_title_graph,
     run_editor_assist_listicle_generation_graph,
     run_editor_assist_rewrite_graph,
@@ -331,6 +332,146 @@ async def generate_title(request: GenerateTitleRequest) -> GenerateTitleResponse
         raise HTTPException(
             status_code=502,
             detail="AI title generation graph failed",
+        ) from exc
+
+
+COMPOSE_BRIEF_PROMPT = """You are an expert travel-editorial planner writing an itinerary generation brief.
+
+You will receive a structured Traveler Profile: traveler types, trip motivations, \
+interests, budget, accommodation preferences, comfort and practical needs, and \
+optional notes in the operator's own words. You may also receive the destination, \
+trip length in days, and a working article title for grounding.
+
+Compose ONE paragraph of 3 to 5 sentences describing the intended travel \
+experience, written as a planning brief for an AI that will pick venues and \
+order the days.
+
+Hard rules:
+- Experience-focused prose: who the trip is for, why they are traveling, what \
+they want to eat, see, and do, how they want to stay and get around.
+- NEVER name specific venues, restaurants, hotels, bars, or attractions — venue \
+selection happens downstream.
+- Weave the selections into natural sentences; do not enumerate them as a list \
+or repeat section labels.
+- If notes in the operator's own words are provided, honor them; they win over \
+the structured selections on any conflict.
+- No headings, no bullet points, no quotes, no commentary — return only the \
+paragraph."""
+
+MAX_PROFILE_OPTION_CHARS = 120
+MAX_PROFILE_OPTIONS_PER_SECTION = 60
+MAX_PROFILE_NOTES_CHARS = 2000
+
+
+class ComposeItineraryBriefRequest(BaseModel):
+    traveler_types: list[str] = Field(default_factory=list, max_length=MAX_PROFILE_OPTIONS_PER_SECTION)
+    motivations: list[str] = Field(default_factory=list, max_length=MAX_PROFILE_OPTIONS_PER_SECTION)
+    interests: list[str] = Field(default_factory=list, max_length=MAX_PROFILE_OPTIONS_PER_SECTION)
+    budget: str | None = Field(default=None, max_length=8)
+    accommodations: list[str] = Field(default_factory=list, max_length=MAX_PROFILE_OPTIONS_PER_SECTION)
+    practical_needs: list[str] = Field(default_factory=list, max_length=MAX_PROFILE_OPTIONS_PER_SECTION)
+    notes: str | None = Field(default=None, max_length=MAX_PROFILE_NOTES_CHARS)
+    location_label: str | None = Field(default=None, max_length=300)
+    day_count: int | None = Field(default=None, ge=1, le=7)
+    article_title: str | None = Field(default=None, max_length=MAX_ARTICLE_TITLE_CHARS)
+    model_name: str | None = Field(default=None, max_length=120)
+
+
+class ComposeItineraryBriefResponse(BaseModel):
+    brief: str
+    model_used: str
+
+
+def _clean_profile_options(values: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    for value in values:
+        text = value.strip()[:MAX_PROFILE_OPTION_CHARS]
+        if text and text not in cleaned:
+            cleaned.append(text)
+    return cleaned
+
+
+def _compose_itinerary_brief_impl(
+    request: ComposeItineraryBriefRequest,
+) -> ComposeItineraryBriefResponse:
+    sections = {
+        "Traveler types": _clean_profile_options(request.traveler_types),
+        "Trip motivations": _clean_profile_options(request.motivations),
+        "Interests": _clean_profile_options(request.interests),
+        "Accommodation preferences": _clean_profile_options(request.accommodations),
+        "Comfort and practical needs": _clean_profile_options(request.practical_needs),
+    }
+    budget = (request.budget or "").strip()
+    notes = (request.notes or "").strip()
+
+    if not budget and not notes and not any(sections.values()):
+        raise HTTPException(
+            status_code=400,
+            detail="Traveler Profile is empty — select options or add notes first.",
+        )
+
+    profile_lines: list[str] = []
+    for label, values in sections.items():
+        if values:
+            profile_lines.append(f"{label}: {', '.join(values)}")
+    if budget:
+        profile_lines.append(f"Budget level: {budget} (on a $ to $$$$ scale)")
+    if notes:
+        profile_lines.append(f"In the operator's own words: {notes}")
+
+    context_lines: list[str] = []
+    location_label = (request.location_label or "").strip()
+    if location_label:
+        context_lines.append(f"Destination: {location_label}")
+    if request.day_count:
+        context_lines.append(f"Trip length: {request.day_count} day(s)")
+    article_title = (request.article_title or "").strip()
+    if article_title:
+        context_lines.append(f"Working article title: {article_title}")
+
+    llm_prompt = f"{COMPOSE_BRIEF_PROMPT}\n\nTraveler Profile:\n" + "\n".join(profile_lines)
+    if context_lines:
+        llm_prompt += "\n\nTrip context:\n" + "\n".join(context_lines)
+
+    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    try:
+        writer_result = invoke_writer_model(
+            prompt=llm_prompt,
+            model_name=model_used,
+            max_tokens=2048,
+            temperature=0.5,
+        )
+    except WriterModelError as exc:
+        logger.exception("Editor assist compose-itinerary-brief failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI brief composition request failed",
+        ) from exc
+
+    brief = normalize_dashes((writer_result.text or "").strip())
+    if not brief:
+        raise HTTPException(
+            status_code=502, detail="AI brief composition returned empty output"
+        )
+
+    return ComposeItineraryBriefResponse(brief=brief, model_used=model_used)
+
+
+@router.post("/compose-itinerary-brief", response_model=ComposeItineraryBriefResponse)
+async def compose_itinerary_brief(
+    request: ComposeItineraryBriefRequest,
+) -> ComposeItineraryBriefResponse:
+    try:
+        return run_editor_assist_compose_brief_graph(
+            step_runner=lambda: _compose_itinerary_brief_impl(request),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("Editor Assist graph compose-itinerary-brief failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI brief composition graph failed",
         ) from exc
 
 

@@ -1,6 +1,8 @@
 import { API_BASE_URL } from '../../../../shared/api/client/config'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type {
+  ComposeItineraryBriefRequest,
+  ComposeItineraryBriefResponse,
   GenerateTitleWithAiRequest,
   GenerateTitleWithAiResponse,
   GenerateListicleContentRequest,
@@ -62,6 +64,37 @@ export async function rewriteBlockWithAi(
 
   if (!response.ok) {
     const message = await parseErrorResponse(response, 'AI rewrite failed', { detail: 'AI rewrite failed' })
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+export async function composeItineraryBriefWithAi(
+  input: ComposeItineraryBriefRequest,
+): Promise<ComposeItineraryBriefResponse> {
+  const response = await fetch(`${API_BASE_URL}/editor-assist/compose-itinerary-brief`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      traveler_types: input.travelerTypes,
+      motivations: input.motivations,
+      interests: input.interests,
+      budget: input.budget,
+      accommodations: input.accommodations,
+      practical_needs: input.practicalNeeds,
+      notes: input.notes,
+      location_label: input.locationLabel,
+      day_count: input.dayCount,
+      article_title: input.articleTitle,
+      model_name: input.modelName,
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, 'AI brief composition failed', { detail: 'AI brief composition failed' })
     throw new Error(message)
   }
 

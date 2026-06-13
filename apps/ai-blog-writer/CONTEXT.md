@@ -237,8 +237,17 @@ Do not confuse with: a blurb or public article copy.
 ### Generation Brief
 
 Definition: the operator's free-text creative brief — the core AI input describing the intended experience ("luxury foodie day, fine dining, rooftop drinks, easy access"). Persisted as an internal (non-public) field so the itinerary can be re-generated and audited; it is not itinerary content shown to the public.
-Related terms: Itinerary Autobuild, Day Shell.
+Related terms: Itinerary Autobuild, Day Shell, Traveler Profile.
 Do not confuse with: the itinerary intro / header prose (public editorial content).
+Authoring: may be hand-typed or AI-composed from a [[Traveler Profile]]; either way the free text remains the canonical Autobuild input and stays operator-editable.
+
+### Traveler Profile
+
+Definition: a structured, Draft-persisted description of the intended traveler an itinerary is written for — operator-selected options across six sections (Traveler Type, Trip Motivations, Interests, Budget, Accommodation Preference, Comfort & Practical Needs) plus a free-text "in your own words" notes field, chosen in a builder modal. Used to AI-compose a Generation Brief paragraph; reopening the modal restores the selections for tweak-and-recompose.
+Related terms: Generation Brief, Itinerary Autobuild.
+Do not confuse with: the Generation Brief itself (free-text, the only brief input Autobuild reads — the Traveler Profile is upstream authoring state, not a pipeline input); a public reader persona in Questura.
+Selection rules: every section is optional with no minimum — hand-writing the Generation Brief without touching the profile remains first-class. All sections are multi-select except Budget, which is a single pick from $ to $$$$ (or none).
+Compose rules: composition is previewed inside the modal (regenerate freely), and Apply replaces the Generation Brief with a confirm step when the current brief was hand-typed or edited since the last compose. The composer receives the selections + notes plus draft location, day count, and title (not List Tone), and emits one 3–5 sentence experience-focused paragraph that never names specific venues — venue choice belongs to Itinerary Autobuild.
 
 ### Fit Score
 

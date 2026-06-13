@@ -18,6 +18,8 @@ import {
   type ShellSlotDaypart,
   type TourAgencyKeyLocationRow,
   type TourAgencyStartingPoint,
+  type TravelerProfile,
+  type TravelerProfileBudget,
 } from './types'
 import { normalizeLocationIds } from '../../shared/locationScope/scope'
 
@@ -29,6 +31,27 @@ const SHELL_COLLECTIONS = new Set(['dining', 'accommodations', 'attractions', 'n
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 )
+
+const TRAVELER_PROFILE_BUDGETS = new Set<TravelerProfileBudget>(['$', '$$', '$$$', '$$$$'])
+
+function normalizeTravelerProfile(value: unknown): TravelerProfile | undefined {
+  if (!isRecord(value)) return undefined
+  const stringList = (raw: unknown): string[] => (
+    Array.isArray(raw) ? raw.filter((entry): entry is string => typeof entry === 'string') : []
+  )
+  return {
+    travelerTypes: stringList(value.travelerTypes),
+    motivations: stringList(value.motivations),
+    interests: stringList(value.interests),
+    budget: typeof value.budget === 'string' && TRAVELER_PROFILE_BUDGETS.has(value.budget as TravelerProfileBudget)
+      ? value.budget as TravelerProfileBudget
+      : '',
+    accommodations: stringList(value.accommodations),
+    practicalNeeds: stringList(value.practicalNeeds),
+    notes: typeof value.notes === 'string' ? value.notes : '',
+    composedBrief: typeof value.composedBrief === 'string' ? value.composedBrief : '',
+  }
+}
 
 function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryDraft | null {
   if (!isRecord(value)) return null
@@ -266,6 +289,10 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined,
     ),
     listTone: resolveListTone(value.listTone),
+    generationBrief: typeof value.generationBrief === 'string' ? value.generationBrief : undefined,
+    travelerProfile: normalizeTravelerProfile(value.travelerProfile),
+    includeLodging: value.includeLodging !== false,
+    planOverview: typeof value.planOverview === 'string' ? value.planOverview : undefined,
     customDayShells: normalizeCustomDayShells(value.customDayShells),
     title: typeof value.title === 'string' ? value.title : '',
     location: typeof value.location === 'string' ? value.location : '',

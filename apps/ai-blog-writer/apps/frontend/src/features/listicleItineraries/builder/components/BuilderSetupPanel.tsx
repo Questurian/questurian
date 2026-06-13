@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { LIST_TONE_OPTIONS, resizeItineraryDays, type DayShellId, type DayShellSelection, type DayShellTemplate, type ListicleItineraryDraft, type ListTone, type LocationOption } from '../../types'
+import { LIST_TONE_OPTIONS, resizeItineraryDays, type DayShellId, type DayShellSelection, type DayShellTemplate, type ListicleItineraryDraft, type ListTone, type LocationOption, type TravelerProfile } from '../../types'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
 import { DEFAULT_DAY_SHELL_ID, getAvailableDayShells, getDayShellTemplate } from '../constants/day-shells.constants'
 import { AiTitleInput } from '../../../../shared/markdown-editor'
@@ -7,6 +7,7 @@ import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
 import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
 import { FieldInfoHint } from '../../../../shared/builder/components/FieldInfoHint'
 import { SharedNeighborhoodsModal } from './SharedNeighborhoodsModal'
+import { TravelerProfileModal } from './TravelerProfileModal'
 import {
   findLocationByKey,
   formatLocationLabel,
@@ -30,6 +31,8 @@ type BuilderSetupPanelProps = {
   /** Itinerary Autobuild: fill the day slots from the Description brief. */
   onGenerateItinerary?: () => void
   isGeneratingItinerary?: boolean
+  /** Traveler Profile: compose a Generation Brief paragraph from the profile. */
+  onComposeTravelerBrief?: (profile: TravelerProfile) => Promise<string>
   /** Autobuild Report: open the last run's diagnostic timeline. */
   onViewAutobuildReport?: () => void
   hasAutobuildReport?: boolean
@@ -106,12 +109,14 @@ export function BuilderSetupPanel({
   isGeneratingSlug,
   onGenerateItinerary,
   isGeneratingItinerary,
+  onComposeTravelerBrief,
   onViewAutobuildReport,
   hasAutobuildReport = false,
   libraryShells = [],
   onOpenLayoutManager,
 }: BuilderSetupPanelProps) {
   const [isSharedNeighborhoodsModalOpen, setIsSharedNeighborhoodsModalOpen] = useState(false)
+  const [isTravelerProfileModalOpen, setIsTravelerProfileModalOpen] = useState(false)
   const aiTitleDisabledReason = getAiTitleDisabledReason(draft, isSynced)
   const isSetupLocked = !isSynced && draft.step1_complete && !draft.in_update_mode
   const selectedPrimaryLocation = findLocationByKey(locations, draft.location)
@@ -411,12 +416,22 @@ export function BuilderSetupPanel({
 
       {onGenerateItinerary ? (
         <div className="stl-field stl-autobuild">
-          <label className="stl-field-label-row">
+          <div className="stl-field-label-row stl-autobuild-brief-header">
             <span className="stl-field-label-with-hint">
               Description (AI Autobuild brief)
               <FieldInfoHint text="The AI reads the title + this brief, queries published listings, and fills the day slots (with a reason for each pick). Blurbs and images are not generated. Re-running replaces the current stops." />
             </span>
-          </label>
+            {onComposeTravelerBrief ? (
+              <button
+                type="button"
+                className="stl-btn stl-btn-secondary"
+                disabled={isSetupLocked || isGeneratingItinerary}
+                onClick={() => setIsTravelerProfileModalOpen(true)}
+              >
+                Traveler Profile…
+              </button>
+            ) : null}
+          </div>
           <textarea
             className="stl-field-input stl-autobuild-brief"
             rows={5}
@@ -461,6 +476,27 @@ export function BuilderSetupPanel({
             </label>
           </div>
         </div>
+      ) : null}
+
+      {onComposeTravelerBrief ? (
+        <TravelerProfileModal
+          isOpen={isTravelerProfileModalOpen}
+          profile={draft.travelerProfile}
+          onCompose={onComposeTravelerBrief}
+          onApply={(profile, brief) => {
+            const currentBrief = (draft.generationBrief || '').trim()
+            const lastComposed = (draft.travelerProfile?.composedBrief || '').trim()
+            if (currentBrief && currentBrief !== lastComposed) {
+              const ok = window.confirm(
+                'The current brief was written or edited by hand. Replace it with the composed paragraph?',
+              )
+              if (!ok) return false
+            }
+            updateDraft({ travelerProfile: profile, generationBrief: brief })
+            return true
+          }}
+          onClose={() => setIsTravelerProfileModalOpen(false)}
+        />
       ) : null}
 
       {showNeighborhoodPicker ? (

@@ -52,6 +52,51 @@ describe('listicleItineraries storage', () => {
     expect(listDrafts()[0]?.sharedNeighborhoods).toEqual([7, 6])
   })
 
+  it('round-trips the Traveler Profile and Generation Brief', () => {
+    const draft = createEmptyDraft()
+    draft.generationBrief = 'A romantic luxury weekend.'
+    draft.travelerProfile = {
+      travelerTypes: ['Couple on a romantic getaway'],
+      motivations: ['Find romance'],
+      interests: ['Fine dining', 'Rooftop bars'],
+      budget: '$$$$',
+      accommodations: ['Luxury hotel'],
+      practicalNeeds: ['Walkability'],
+      notes: 'Anniversary trip.',
+      composedBrief: 'A romantic luxury weekend.',
+    }
+
+    saveDraft(draft)
+
+    const restored = listDrafts()[0]
+    expect(restored?.generationBrief).toBe('A romantic luxury weekend.')
+    expect(restored?.travelerProfile).toEqual(draft.travelerProfile)
+  })
+
+  it('drops malformed Traveler Profile values instead of crashing', () => {
+    const draft = createEmptyDraft()
+    saveDraft({
+      ...draft,
+      travelerProfile: {
+        travelerTypes: ['ok', 42],
+        budget: '$$$$$',
+        notes: null,
+      } as unknown as NonNullable<typeof draft.travelerProfile>,
+    })
+
+    const restored = listDrafts()[0]
+    expect(restored?.travelerProfile).toEqual({
+      travelerTypes: ['ok'],
+      motivations: [],
+      interests: [],
+      budget: '',
+      accommodations: [],
+      practicalNeeds: [],
+      notes: '',
+      composedBrief: '',
+    })
+  })
+
   it('round-trips the local changes marker for Payload-linked drafts', () => {
     const draft = createEmptyDraft()
     draft.payloadId = 123

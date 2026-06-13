@@ -41,7 +41,7 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
 import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
-import { fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { composeItineraryBriefWithAi, fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
 import { generateItinerary, type AutobuildResponse } from '../builder/services/autobuild.api'
 import { InspectAutobuildRunModal } from '../builder/components/InspectAutobuildRunModal'
@@ -54,8 +54,9 @@ import {
 import { applyAutobuildPlanToDraft } from '../builder/mappers/autobuild-plan.mapper'
 import { DayShellLibraryModal } from '../builder/components/DayShellLibraryModal'
 import { DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../builder/constants/day-shells.constants'
-import { findItineraryItemById, type DayShellTemplate, type ListicleItineraryDraft } from '../types'
+import { findItineraryItemById, type DayShellTemplate, type ListicleItineraryDraft, type TravelerProfile } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
+import { formatLocationLabel } from '../../../shared/locationScope/scope'
 import '../styles.css'
 
 const schemaPublisherConfig = getItinerarySchemaPublisherConfig()
@@ -357,6 +358,31 @@ export default function ListicleItineraryBuilderPage() {
 
   const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
   const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false)
+
+  const composeTravelerBrief = useCallback(async (profile: TravelerProfile): Promise<string> => {
+    if (!draft) {
+      throw new Error('Draft is not loaded yet.')
+    }
+    const location = locations.find((entry) => entry.locationKey === draft.location)
+    const response = await composeItineraryBriefWithAi({
+      travelerTypes: profile.travelerTypes,
+      motivations: profile.motivations,
+      interests: profile.interests,
+      budget: profile.budget || undefined,
+      accommodations: profile.accommodations,
+      practicalNeeds: profile.practicalNeeds,
+      notes: profile.notes.trim() || undefined,
+      locationLabel: location ? formatLocationLabel(location) : undefined,
+      dayCount: draft.dayCount,
+      articleTitle: draft.title.trim() || undefined,
+      modelName: resolveEditorAssistModelName(draft.editorModelName),
+    })
+    const brief = response.brief?.trim()
+    if (!brief) {
+      throw new Error('AI returned an empty brief.')
+    }
+    return brief
+  }, [draft, locations])
 
   const applySlugAndOgUrl = useCallback((slug: string) => {
     const location = locations.find((l) => l.locationKey === draft?.location)
@@ -861,6 +887,7 @@ export default function ListicleItineraryBuilderPage() {
             isGeneratingSlug={isGeneratingSlug}
             onGenerateItinerary={handleGenerateItinerary}
             isGeneratingItinerary={isGeneratingItinerary}
+            onComposeTravelerBrief={composeTravelerBrief}
             onViewAutobuildReport={() => setIsAutobuildReportOpen(true)}
             hasAutobuildReport={Boolean(autobuildReport)}
             libraryShells={libraryShells}

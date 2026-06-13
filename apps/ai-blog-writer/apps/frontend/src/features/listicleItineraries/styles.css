@@ -2745,3 +2745,95 @@
   font-size: 12px;
   color: #777;
 }
+
+/* Traveler Profile modal (Generation Brief composer) */
+
+.stl-traveler-profile-modal {
+  width: min(760px, 100%);
+}
+
+.stl-traveler-profile-modal__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.stl-tp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stl-tp-section__title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  color: #2f3847;
+}
+
+.stl-tp-interest-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.stl-tp-interest-group__title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+}
+
+.stl-tp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.stl-tp-chip {
+  border: 1px solid var(--stl-border);
+  border-radius: 999px;
+  background: #fff;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
+  color: var(--stl-ink);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.stl-tp-chip:hover {
+  border-color: #94a3b8;
+}
+
+.stl-tp-chip.is-selected {
+  background: #1f2937;
+  border-color: #1f2937;
+  color: #fff;
+}
+
+.stl-tp-notes,
+.stl-tp-preview {
+  resize: vertical;
+}
+
+.stl-tp-compose-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stl-tp-compose-error {
+  font-size: 0.8rem;
+  color: #b91c1c;
+}
+
+.stl-autobuild-brief-header {
+  gap: 0.75rem;
+}

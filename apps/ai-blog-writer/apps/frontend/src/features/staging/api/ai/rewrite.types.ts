@@ -23,6 +23,25 @@ export type GenerateTitleWithAiResponse = {
   title: string
 }
 
+export type ComposeItineraryBriefRequest = {
+  travelerTypes: string[]
+  motivations: string[]
+  interests: string[]
+  budget?: string
+  accommodations: string[]
+  practicalNeeds: string[]
+  notes?: string
+  locationLabel?: string
+  dayCount?: number
+  articleTitle?: string
+  modelName?: EditorAssistModelName
+}
+
+export type ComposeItineraryBriefResponse = {
+  brief: string
+  model_used: string
+}
+
 export type ListicleGuidelinesResponse = {
   angles: Record<string, string>
   tones: Record<string, string>
