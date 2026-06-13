@@ -277,6 +277,12 @@ function Harness({
       }}
       onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite}
       activeAiItemId={null}
+      onComposeActiveDayBlurbs={() => {}}
+      onComposeAllDayBlurbs={() => {}}
+      composableDayCount={0}
+      isComposingDayBlurbs={false}
+      hasDayBlurbReport={false}
+      onViewDayBlurbReport={() => {}}
       isLocked={false}
       onContinueStep3={() => {}}
       onUpdateStep3={() => {}}

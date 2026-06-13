@@ -1,6 +1,8 @@
 import { API_BASE_URL } from '../../../../shared/api/client/config'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type {
+  ComposeDayBlurbsRequest,
+  ComposeDayBlurbsResponse,
   ComposeItineraryBriefRequest,
   ComposeItineraryBriefResponse,
   ComposeItineraryIntroRequest,
@@ -129,6 +131,48 @@ export async function composeItineraryIntroWithAi(
 
   if (!response.ok) {
     const message = await parseErrorResponse(response, 'AI intro composition failed', { detail: 'AI intro composition failed' })
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+export async function composeItineraryDayBlurbsWithAi(
+  input: ComposeDayBlurbsRequest,
+): Promise<ComposeDayBlurbsResponse> {
+  const response = await fetch(`${API_BASE_URL}/editor-assist/compose-itinerary-day-blurbs`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      article_title: input.articleTitle,
+      location_label: input.locationLabel,
+      list_tone: input.listTone,
+      plan_overview: input.planOverview,
+      intro: input.intro,
+      day_label: input.dayLabel,
+      day_count: input.dayCount,
+      prev_day_last_stop: input.prevDayLastStop
+        ? { title: input.prevDayLastStop.title, category: input.prevDayLastStop.category }
+        : undefined,
+      next_day_first_stop: input.nextDayFirstStop
+        ? { title: input.nextDayFirstStop.title, category: input.nextDayFirstStop.category }
+        : undefined,
+      model_name: input.modelName,
+      stops: input.stops.map((stop) => ({
+        target_id: stop.targetId,
+        title: stop.title,
+        category: stop.category,
+        daypart: stop.daypart,
+        angle: stop.angle,
+        selection_reason: stop.selectionReason,
+      })),
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, 'AI day-blurb composition failed', { detail: 'AI day-blurb composition failed' })
     throw new Error(message)
   }
 

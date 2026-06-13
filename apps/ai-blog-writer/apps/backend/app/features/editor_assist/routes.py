@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from .graph import (
     run_editor_assist_compose_brief_graph,
+    run_editor_assist_compose_day_blurbs_graph,
     run_editor_assist_compose_intro_graph,
     run_editor_assist_generate_title_graph,
     run_editor_assist_listicle_generation_graph,
@@ -33,6 +34,8 @@ from .research_profile import (
     run_research_profiles_concurrently,
 )
 from .listicle_writer import (
+    BLURB_MAX_WORDS,
+    BLURB_MIN_WORDS,
     LIST_TONE_GUIDANCE,
     LISTICLE_ANGLE_GUIDANCE,
     ListicleArticleType,
@@ -683,6 +686,322 @@ async def compose_itinerary_intro(
         raise HTTPException(
             status_code=502,
             detail="AI intro composition graph failed",
+        ) from exc
+
+
+# --- Itinerary day-blurb composer (ADR 0019) --------------------------------
+#
+# Unlike the per-target listicle writer, this authors a single day's stop blurbs
+# in ONE call so they read as a connected journey (handoffs between stops, time
+# of day, sequence). It is gated behind the finished Intro on the frontend and
+# consumes that Intro as a framing input. Output per stop still obeys the blurb
+# half of `validate_generated_text` — narrative lives in cross-stop handoffs, not
+# in structurally fancier paragraphs.
+
+MAX_DAY_BLURB_STOPS = 20
+
+COMPOSE_DAY_BLURBS_PROMPT = """You are an expert travel-editorial writer composing \
+the per-stop copy for ONE day of a published listicle itinerary.
+
+You will receive: the article title, the destination, the desired tone, the \
+reader-facing intro that already opens the article, an optional internal plan \
+overview, and this day's stops in order — each with its category, rough time of \
+day, an optional editorial angle, and an optional internal "why this pick" note. \
+You may also receive the adjacent day's edge stop for context only.
+
+Write ONE paragraph of reader-facing copy for EACH stop, in the given order.
+
+Narrative and texture:
+- These blurbs are a sequence, not isolated reviews. Let each paragraph be aware \
+of where it sits in the day: the morning stop opens the day, later stops can hand \
+off from what came before ("after the cathedral, wander down to ...") using the \
+time of day and order you are given.
+- Stay consistent with the intro's framing and the plan overview's thesis, but do \
+NOT repeat the intro or restate the trip premise in every blurb.
+- Weave each stop's KEY HIGHLIGHTS into the prose (the standout dish, the view, \
+the signature feature). Highlights are woven into the paragraph, never bulleted.
+- Honor the stop's editorial angle when one is given.
+- The "why this pick" notes and plan overview are INTERNAL planning notes, not \
+reader copy. Transform them into natural prose, never quote or echo them.
+- Adjacent-day edge stops are context only. Do NOT write copy for them.
+
+Hard rules per blurb:
+- One paragraph of about {min_words} to {max_words} words. No heading, no \
+subheading, no bullet points, no lists, no quotes. The stop's title is rendered \
+elsewhere, so do not restate it as a label.
+- No em dashes. Never mention reviews, reviewers, ratings, stars, or the research \
+process. Do not invent details. Do not sound like a brochure or an AI summary.
+- Do not print literal day/stop labels ("Day 2, Stop 1:") in the prose.
+
+Output envelope — emit EXACTLY one block per stop, copying each stop's id tag \
+verbatim, and nothing else outside the blocks:
+<<<BLURB:the_stop_id>>>
+[the single paragraph for that stop]
+<<<END>>>"""
+
+BLURB_ENVELOPE_PATTERN = re.compile(
+    r"<<<BLURB:(?P<tid>[^>]+)>>>(?P<body>.*?)<<<END>>>", flags=re.S
+)
+
+
+class ComposeDayBlurbStop(BaseModel):
+    target_id: str = Field(min_length=1, max_length=200)
+    title: str = Field(min_length=1, max_length=240)
+    category: str | None = Field(default=None, max_length=80)
+    daypart: str | None = Field(default=None, max_length=80)
+    angle: str | None = Field(default=None, max_length=80)
+    selection_reason: str | None = Field(default=None, max_length=2000)
+
+
+class ComposeDayBlurbsNeighborStop(BaseModel):
+    title: str = Field(min_length=1, max_length=240)
+    category: str | None = Field(default=None, max_length=80)
+
+
+class ComposeDayBlurbsRequest(BaseModel):
+    article_title: str = Field(min_length=1, max_length=MAX_ARTICLE_TITLE_CHARS)
+    location_label: str = Field(min_length=1, max_length=300)
+    list_tone: ListTone | None = None
+    plan_overview: str | None = Field(default=None, max_length=MAX_INTRO_OVERVIEW_CHARS)
+    intro: str | None = Field(default=None, max_length=MAX_INTRO_OVERVIEW_CHARS)
+    day_label: str | None = Field(default=None, max_length=80)
+    day_count: int | None = Field(default=None, ge=1, le=7)
+    prev_day_last_stop: ComposeDayBlurbsNeighborStop | None = None
+    next_day_first_stop: ComposeDayBlurbsNeighborStop | None = None
+    stops: list[ComposeDayBlurbStop] = Field(
+        default_factory=list, max_length=MAX_DAY_BLURB_STOPS
+    )
+    model_name: str | None = Field(default=None, max_length=120)
+
+
+class ComposeDayBlurbResult(BaseModel):
+    target_id: str
+    status: Literal["generated", "error"]
+    markdown: str | None = None
+    validation_errors: list[str] = Field(default_factory=list)
+
+
+class ComposeDayBlurbsResponse(BaseModel):
+    model_used: str
+    results: dict[str, ComposeDayBlurbResult] = Field(default_factory=dict)
+    steps: list[ComposeIntroStepEvent] = Field(default_factory=list)
+
+
+def _format_day_blurb_stop_line(index: int, stop: ComposeDayBlurbStop) -> str:
+    tags = [tag for tag in (stop.daypart, stop.category) if tag and tag.strip()]
+    prefix = f"[{' · '.join(tag.strip() for tag in tags)}] " if tags else ""
+    angle = (stop.angle or "").strip()
+    angle_guidance = LISTICLE_ANGLE_GUIDANCE.get(angle) if angle else None
+    angle_suffix = f"\n    Angle — {angle}: {angle_guidance}" if angle_guidance else (
+        f"\n    Angle: {angle}" if angle else ""
+    )
+    reason = (stop.selection_reason or "").strip()
+    reason_suffix = f"\n    Why this pick: {reason}" if reason else ""
+    return (
+        f"{index}. id={stop.target_id} {prefix}{stop.title.strip()}"
+        f"{angle_suffix}{reason_suffix}"
+    )
+
+
+def _compose_day_blurbs_impl(
+    request: ComposeDayBlurbsRequest,
+) -> ComposeDayBlurbsResponse:
+    article_title = request.article_title.strip()
+    location_label = request.location_label.strip()
+
+    if not article_title:
+        raise HTTPException(status_code=400, detail="article_title is required")
+    if not location_label:
+        raise HTTPException(status_code=400, detail="location_label is required")
+
+    stops = [stop for stop in request.stops if stop.title.strip()]
+    if not stops:
+        raise HTTPException(
+            status_code=400,
+            detail="Add at least one resolved stop before composing day blurbs.",
+        )
+
+    inputs_started = time.monotonic()
+    context_lines = [
+        f"Article title: {article_title}",
+        f"Destination: {location_label}",
+    ]
+    if request.day_label and request.day_label.strip():
+        context_lines.append(f"This day: {request.day_label.strip()}")
+    if request.day_count:
+        context_lines.append(f"Trip length: {request.day_count} day(s)")
+    tone_guidance = LIST_TONE_GUIDANCE.get(request.list_tone) if request.list_tone else None
+    if tone_guidance:
+        context_lines.append(f"Tone — {request.list_tone}: {tone_guidance}")
+    intro_text = (request.intro or "").strip()
+    if intro_text:
+        context_lines.append(f"Article intro (already written, for framing): {intro_text}")
+    plan_overview = (request.plan_overview or "").strip()
+    if plan_overview:
+        context_lines.append(f"Internal plan overview (the spine): {plan_overview}")
+    if request.prev_day_last_stop:
+        prev = request.prev_day_last_stop
+        cat = f" ({prev.category.strip()})" if prev.category and prev.category.strip() else ""
+        context_lines.append(
+            f"Previous day ended at (context only, do not write): {prev.title.strip()}{cat}"
+        )
+    if request.next_day_first_stop:
+        nxt = request.next_day_first_stop
+        cat = f" ({nxt.category.strip()})" if nxt.category and nxt.category.strip() else ""
+        context_lines.append(
+            f"Next day opens at (context only, do not write): {nxt.title.strip()}{cat}"
+        )
+
+    stop_lines = [
+        _format_day_blurb_stop_line(index + 1, stop) for index, stop in enumerate(stops)
+    ]
+
+    llm_prompt = (
+        COMPOSE_DAY_BLURBS_PROMPT.format(
+            min_words=BLURB_MIN_WORDS, max_words=BLURB_MAX_WORDS
+        )
+        + "\n\nTrip context:\n"
+        + "\n".join(context_lines)
+        + "\n\nStops to write (in order):\n"
+        + "\n".join(stop_lines)
+    )
+
+    steps: list[ComposeIntroStepEvent] = [
+        ComposeIntroStepEvent(
+            name="inputs",
+            label="Collected day plan signal",
+            status="ok" if intro_text else "warning",
+            duration_ms=int((time.monotonic() - inputs_started) * 1000),
+            details={
+                "day_label": request.day_label,
+                "list_tone": request.list_tone,
+                "stop_count": len(stops),
+                "intro_present": bool(intro_text),
+                "plan_overview_present": bool(plan_overview),
+                "has_prev_neighbor": request.prev_day_last_stop is not None,
+                "has_next_neighbor": request.next_day_first_stop is not None,
+                "stops_with_reason": sum(
+                    1 for s in stops if (s.selection_reason or "").strip()
+                ),
+            },
+        )
+    ]
+
+    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    writer_started = time.monotonic()
+    try:
+        writer_result = invoke_writer_model(
+            prompt=llm_prompt,
+            model_name=model_used,
+            max_tokens=8192,
+            temperature=0.55,
+        )
+    except WriterModelError as exc:
+        logger.exception("Editor assist compose-itinerary-day-blurbs failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI day-blurb composition request failed",
+        ) from exc
+
+    raw_text = (writer_result.text or "").strip()
+    parsed: dict[str, str] = {
+        match.group("tid").strip(): match.group("body").strip()
+        for match in BLURB_ENVELOPE_PATTERN.finditer(raw_text)
+    }
+    steps.append(
+        ComposeIntroStepEvent(
+            name="writer",
+            label="Day composer model call",
+            status="ok" if parsed else "failed",
+            duration_ms=int((time.monotonic() - writer_started) * 1000),
+            model=model_used,
+            prompt=llm_prompt,
+            output=raw_text,
+            details={"raw_chars": len(raw_text), "blocks_parsed": len(parsed)},
+        )
+    )
+
+    if not parsed:
+        raise HTTPException(
+            status_code=502,
+            detail="AI day-blurb composition returned no parseable blurbs",
+        )
+
+    results: dict[str, ComposeDayBlurbResult] = {}
+    for stop in stops:
+        body = parsed.get(stop.target_id, "").strip()
+        if not body:
+            results[stop.target_id] = ComposeDayBlurbResult(
+                target_id=stop.target_id,
+                status="error",
+                validation_errors=["Composer returned no paragraph for this stop."],
+            )
+            steps.append(
+                ComposeIntroStepEvent(
+                    name=f"stop:{stop.target_id}",
+                    label=f"{stop.title.strip()} — missing",
+                    status="failed",
+                    details={"reason": "no_block_for_target"},
+                )
+            )
+            continue
+
+        blurb = normalize_dashes(strip_generation_fence(body))
+        validation_errors = validate_generated_text(field_type="blurb", text=blurb)
+        results[stop.target_id] = ComposeDayBlurbResult(
+            target_id=stop.target_id,
+            status="generated",
+            markdown=blurb,
+            validation_errors=validation_errors,
+        )
+        steps.append(
+            ComposeIntroStepEvent(
+                name=f"stop:{stop.target_id}",
+                label=f"{stop.title.strip()} — blurb",
+                status="warning" if validation_errors else "ok",
+                model=model_used,
+                output=blurb,
+                details={
+                    "chars": len(blurb),
+                    "validation_errors": validation_errors,
+                },
+            )
+        )
+
+    generated = sum(1 for r in results.values() if r.status == "generated")
+    steps.append(
+        ComposeIntroStepEvent(
+            name="finalize",
+            label="Finalized day blurbs",
+            status="ok" if generated else "failed",
+            details={"generated": generated, "total": len(stops)},
+        )
+    )
+
+    return ComposeDayBlurbsResponse(
+        model_used=model_used, results=results, steps=steps
+    )
+
+
+@router.post(
+    "/compose-itinerary-day-blurbs", response_model=ComposeDayBlurbsResponse
+)
+async def compose_itinerary_day_blurbs(
+    request: ComposeDayBlurbsRequest,
+) -> ComposeDayBlurbsResponse:
+    try:
+        return run_editor_assist_compose_day_blurbs_graph(
+            step_runner=lambda: _compose_day_blurbs_impl(request),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "Editor Assist graph compose-itinerary-day-blurbs failed: %s", exc
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="AI day-blurb composition graph failed",
         ) from exc
 
 

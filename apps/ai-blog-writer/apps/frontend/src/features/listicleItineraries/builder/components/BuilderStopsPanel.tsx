@@ -60,6 +60,17 @@ type BuilderStopsPanelProps = {
   onUpdateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
   onStopBlurbAiAutoWrite: (itemId: string) => Promise<void>
   activeAiItemId: string | null
+  /** Compose the active day's stop blurbs as one narrative set (ADR 0019). */
+  onComposeActiveDayBlurbs: () => void
+  /** Walk every composable day in order, skipping composed-clean days. */
+  onComposeAllDayBlurbs: () => void
+  /** Why the active day cannot be composed, or undefined when ready. */
+  activeDayBlurbDisabledReason?: string
+  /** How many days the "all days" pass would compose. */
+  composableDayCount: number
+  isComposingDayBlurbs: boolean
+  hasDayBlurbReport: boolean
+  onViewDayBlurbReport: () => void
   isLocked: boolean
   isSynced?: boolean
   onContinueStep3: () => void
@@ -315,6 +326,13 @@ export function BuilderStopsPanel({
   onUpdateItem,
   onStopBlurbAiAutoWrite,
   activeAiItemId,
+  onComposeActiveDayBlurbs,
+  onComposeAllDayBlurbs,
+  activeDayBlurbDisabledReason,
+  composableDayCount,
+  isComposingDayBlurbs,
+  hasDayBlurbReport,
+  onViewDayBlurbReport,
   isLocked,
   isSynced = false,
   onContinueStep3,
@@ -525,6 +543,48 @@ export function BuilderStopsPanel({
           <p className="stl-plan-overview-text">{draft.planOverview}</p>
         </div>
       ) : null}
+
+      <div className="stl-blurb-compose-bar" role="group" aria-label="AI stop blurbs">
+        <div className="stl-blurb-compose-bar__copy">
+          <span className="stl-blurb-compose-bar__title">AI stop blurbs</span>
+          <span className="stl-blurb-compose-bar__hint">
+            {activeDayBlurbDisabledReason
+              ? activeDayBlurbDisabledReason
+              : `Writes Day ${activeDayIndex + 1}'s blurbs as one connected narrative.`}
+          </span>
+        </div>
+        <div className="stl-inline-actions">
+          <button
+            type="button"
+            className="stl-btn"
+            onClick={onComposeActiveDayBlurbs}
+            disabled={isComposingDayBlurbs || Boolean(activeDayBlurbDisabledReason)}
+            title={activeDayBlurbDisabledReason}
+          >
+            {isComposingDayBlurbs ? 'Composing…' : `Write Day ${activeDayIndex + 1} blurbs`}
+          </button>
+          {draft.dayCount > 1 ? (
+            <button
+              type="button"
+              className="stl-btn stl-btn-secondary"
+              onClick={onComposeAllDayBlurbs}
+              disabled={isComposingDayBlurbs || composableDayCount < 1}
+              title={composableDayCount < 1 ? 'No days are ready to compose' : undefined}
+            >
+              {`Write all days (${composableDayCount})`}
+            </button>
+          ) : null}
+          {hasDayBlurbReport ? (
+            <button
+              type="button"
+              className="stl-btn stl-btn-secondary"
+              onClick={onViewDayBlurbReport}
+            >
+              View report
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}

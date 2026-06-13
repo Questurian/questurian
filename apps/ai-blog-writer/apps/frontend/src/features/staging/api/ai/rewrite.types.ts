@@ -76,6 +76,51 @@ export type ComposeItineraryIntroResponse = {
   steps: ComposeIntroStepEvent[]
 }
 
+export type ComposeDayBlurbStop = {
+  /** `${itemId}_blurb` — the same id the listicle writer uses for the stop. */
+  targetId: string
+  title: string
+  category?: string
+  daypart?: string
+  angle?: ListicleWriterAngle | null
+  selectionReason?: string
+}
+
+export type ComposeDayBlurbsNeighborStop = {
+  title: string
+  category?: string
+}
+
+export type ComposeDayBlurbsRequest = {
+  articleTitle: string
+  locationLabel: string
+  listTone?: ListicleWriterListTone
+  planOverview?: string
+  /** The finished, reader-facing intro — framing input (ADR 0019). */
+  intro?: string
+  dayLabel?: string
+  dayCount?: number
+  /** Read-only edge stops for cross-day handoffs; never written. */
+  prevDayLastStop?: ComposeDayBlurbsNeighborStop
+  nextDayFirstStop?: ComposeDayBlurbsNeighborStop
+  stops: ComposeDayBlurbStop[]
+  modelName?: EditorAssistModelName
+}
+
+export type ComposeDayBlurbResult = {
+  target_id: string
+  status: 'generated' | 'error'
+  markdown?: string | null
+  validation_errors: string[]
+}
+
+export type ComposeDayBlurbsResponse = {
+  model_used: string
+  results: Record<string, ComposeDayBlurbResult>
+  /** Step timeline, same shape as the Intro composer's report. */
+  steps: ComposeIntroStepEvent[]
+}
+
 export type ListicleGuidelinesResponse = {
   angles: Record<string, string>
   tones: Record<string, string>

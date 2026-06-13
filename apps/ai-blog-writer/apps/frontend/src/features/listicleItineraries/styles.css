@@ -2572,6 +2572,33 @@
 .stl-stop-reason {
   margin-top: 10px;
 }
+.stl-blurb-compose-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--stl-border, #e2e2e2);
+  border-left: 3px solid var(--stl-accent, #2f6f4f);
+  border-radius: 6px;
+  background: var(--stl-subtle-bg, #f6f8f7);
+}
+.stl-blurb-compose-bar__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.stl-blurb-compose-bar__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.stl-blurb-compose-bar__hint {
+  font-size: 12px;
+  opacity: 0.7;
+}
 
 @media (max-width: 720px) {
   .stl-day-shells__header,
