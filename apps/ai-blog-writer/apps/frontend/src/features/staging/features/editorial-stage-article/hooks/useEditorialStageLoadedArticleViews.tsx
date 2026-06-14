@@ -134,15 +134,6 @@ type UseEditorialStageLoadedArticleViewsParams = {
   pexelsFeaturedPerPage: number
   setPexelsFeaturedPerPage: Dispatch<SetStateAction<number>>
   isImportingFeaturedExternalImage: boolean
-  hasMoreFeaturedPayloadAssets: boolean
-  isLoadingFeaturedPayloadAssets: boolean
-  featuredPayloadAssetsError: string | null
-  loadMoreFeaturedPayloadAssets: () => Promise<void>
-  handleImportFeaturedExternalImage: (
-    photo: UnsplashPhoto | PexelsPhoto,
-    provider: 'unsplash' | 'pexels'
-  ) => Promise<void>
-  handleUploadComplete: (result: UploadImageResponse) => void
   runFeaturedUnsplashSearch: () => Promise<void>
   runFeaturedPexelsSearch: () => Promise<void>
   blockImageModal: BlockImageModalState | null
@@ -186,16 +177,8 @@ type UseEditorialStageLoadedArticleViewsParams = {
   ) => void
   closeBlockImageModalTracked: () => void
   isImportingBlockExternalImage: boolean
-  handleImportBlockExternalImage: (
-    photo: UnsplashPhoto | PexelsPhoto,
-    provider: 'unsplash' | 'pexels'
-  ) => Promise<void>
-  handleBlockImageUploadComplete: (result: UploadImageResponse) => void
   runBlockUnsplashSearch: () => Promise<void>
   runBlockPexelsSearch: () => Promise<void>
-  externalImageCropDraft: ExternalImageCropDraft | null
-  renderExternalCropEditor: (context: 'featured' | 'block') => React.ReactNode
-  isUploadingExternalImageVariants: boolean
   mergeMediaAssetsIntoState: (newAssets: MediaAsset[]) => void
   findPreferredVariantAsset: (assetId: number, preferredVariant: MediaVariant) => MediaAsset | null
   handlePublish: (targetStatus: 'draft' | 'published') => void
@@ -267,9 +250,7 @@ export function useEditorialStageLoadedArticleViews(
 
   const handleAddSelectedImgBlock = useEditorialStageImageBlockAction({
     blockImageModal: params.blockImageModal,
-    selectedImgBlockAssets,
     requiredImageCount,
-    findPreferredVariantAsset: params.findPreferredVariantAsset,
     imgTrioFormat: params.imgTrioFormat,
     imgBlockCaption: params.imgBlockCaption,
     addImgPairAfterBlock: params.addImgPairAfterBlock,
@@ -351,48 +332,9 @@ export function useEditorialStageLoadedArticleViews(
     showImageModal: params.showImageModal,
     stagedArticle: params.stagedArticle,
     featuredImageRequirementLabel,
-    featuredImageSource: params.featuredImageSource,
-    setFeaturedImageSource: params.setFeaturedImageSource,
-    imageSearch: params.imageSearch,
-    setImageSearch: params.setImageSearch,
-    filteredFeaturedImageAssets,
-    selectedFeaturedImage,
     selectedLocation,
-    featuredImageExternalRef: params.featuredImageUploadExternalRef,
-    featuredImageFileNamePrefix: params.featuredImageFileNamePrefix,
     token: params.token || undefined,
-    handleUploadComplete: params.handleUploadComplete,
-    externalImageCropDraft: params.externalImageCropDraft,
-    renderExternalCropEditor: params.renderExternalCropEditor,
-    unsplashFeaturedQuery: params.unsplashFeaturedQuery,
-    setUnsplashFeaturedQuery: params.setUnsplashFeaturedQuery,
-    unsplashFeaturedOrientation: params.unsplashFeaturedOrientation,
-    setUnsplashFeaturedOrientation: params.setUnsplashFeaturedOrientation,
-    unsplashFeaturedPerPage: params.unsplashFeaturedPerPage,
-    setUnsplashFeaturedPerPage: params.setUnsplashFeaturedPerPage,
-    runFeaturedUnsplashSearch: params.runFeaturedUnsplashSearch,
-    isSearchingUnsplashFeatured: params.isSearchingUnsplashFeatured,
-    unsplashFeaturedError: params.unsplashFeaturedError,
-    unsplashFeaturedResults: params.unsplashFeaturedResults,
-    isImportingFeaturedExternalImage: params.isImportingFeaturedExternalImage,
-    hasMoreFeaturedPayloadAssets: params.hasMoreFeaturedPayloadAssets,
-    isLoadingFeaturedPayloadAssets: params.isLoadingFeaturedPayloadAssets,
-    featuredPayloadAssetsError: params.featuredPayloadAssetsError,
-    loadMoreFeaturedPayloadAssets: params.loadMoreFeaturedPayloadAssets,
-    handleImportFeaturedExternalImage: params.handleImportFeaturedExternalImage,
-    pexelsFeaturedQuery: params.pexelsFeaturedQuery,
-    setPexelsFeaturedQuery: params.setPexelsFeaturedQuery,
-    pexelsFeaturedOrientation: params.pexelsFeaturedOrientation,
-    setPexelsFeaturedOrientation: params.setPexelsFeaturedOrientation,
-    pexelsFeaturedPerPage: params.pexelsFeaturedPerPage,
-    setPexelsFeaturedPerPage: params.setPexelsFeaturedPerPage,
-    runFeaturedPexelsSearch: params.runFeaturedPexelsSearch,
-    isSearchingPexelsFeatured: params.isSearchingPexelsFeatured,
-    pexelsFeaturedError: params.pexelsFeaturedError,
-    pexelsFeaturedResults: params.pexelsFeaturedResults,
-    findPreferredVariantAsset: params.findPreferredVariantAsset,
     updateStagedArticle: params.updateStagedArticle,
-    getImageUrl,
     setShowImageModal: params.setShowImageModalTracked,
   })
 
@@ -400,69 +342,21 @@ export function useEditorialStageLoadedArticleViews(
     stagedArticle: params.stagedArticle,
     blockImageModal: params.blockImageModal,
     closeBlockImageModal: params.closeBlockImageModalTracked,
-    blockImageSource: params.blockImageSource,
-    setBlockImageSource: params.setBlockImageSource,
-    isImgBlockModal,
-    isImgTrioModal,
-    isMultiImageModal,
+    token: params.token || undefined,
+    selectedLocation,
     singleImageRequirementLabel,
     imgPairRequirementLabel,
     imgTrioRequirementLabel,
-    activeBlockImageRequirementLabel,
     imgTrioFormat: params.imgTrioFormat,
     setImgTrioFormat: params.setImgTrioFormat,
     imgBlockCaption: params.imgBlockCaption,
     setImgBlockCaption: params.setImgBlockCaption,
-    blockImageSearch: params.blockImageSearch,
-    setBlockImageSearch: params.setBlockImageSearch,
-    isLoadingImgBlockAssets: params.isLoadingImgBlockAssets,
-    imgBlockAssetsError: params.imgBlockAssetsError,
-    hasMoreImgBlockAssets: params.hasMoreImgBlockAssets,
-    loadMoreImgBlockAssets: params.loadMoreImgBlockAssets,
-    filteredBlockImageAssets,
-    selectedImgBlockAssetIds: params.selectedImgBlockAssetIds,
-    toggleImgBlockAssetSelection: params.toggleImgBlockAssetSelection,
-    requiredImageCount,
-    selectedImgBlockAssetsCount,
-    handleAddSelectedImgBlock,
-    imgTrioDimensions,
-    selectedLocation,
-    blockImageExternalRef,
-    blockImageFileNamePrefix,
-    token: params.token || undefined,
-    handleBlockImageUploadComplete: params.handleBlockImageUploadComplete,
-    externalImageCropDraft: params.externalImageCropDraft,
-    renderExternalCropEditor: params.renderExternalCropEditor,
-    unsplashBlockQuery: params.unsplashBlockQuery,
-    setUnsplashBlockQuery: params.setUnsplashBlockQuery,
-    unsplashBlockOrientation: params.unsplashBlockOrientation,
-    setUnsplashBlockOrientation: params.setUnsplashBlockOrientation,
-    unsplashBlockPerPage: params.unsplashBlockPerPage,
-    setUnsplashBlockPerPage: params.setUnsplashBlockPerPage,
-    runBlockUnsplashSearch: params.runBlockUnsplashSearch,
-    isSearchingUnsplashBlock: params.isSearchingUnsplashBlock,
-    unsplashBlockError: params.unsplashBlockError,
-    unsplashBlockResults: params.unsplashBlockResults,
-    isImportingBlockExternalImage: params.isImportingBlockExternalImage,
-    handleImportBlockExternalImage: params.handleImportBlockExternalImage,
-    pexelsBlockQuery: params.pexelsBlockQuery,
-    setPexelsBlockQuery: params.setPexelsBlockQuery,
-    pexelsBlockOrientation: params.pexelsBlockOrientation,
-    setPexelsBlockOrientation: params.setPexelsBlockOrientation,
-    pexelsBlockPerPage: params.pexelsBlockPerPage,
-    setPexelsBlockPerPage: params.setPexelsBlockPerPage,
-    runBlockPexelsSearch: params.runBlockPexelsSearch,
-    isSearchingPexelsBlock: params.isSearchingPexelsBlock,
-    pexelsBlockError: params.pexelsBlockError,
-    pexelsBlockResults: params.pexelsBlockResults,
-    isUploadingExternalImageVariants: params.isUploadingExternalImageVariants,
-    findPreferredVariantAsset: params.findPreferredVariantAsset,
     addImageAfterBlock: params.addImageAfterBlock,
-    setPublishResult: params.setPublishResult,
     setActiveEditingTimelineItemId: params.setActiveEditingTimelineItemId,
     getImageTimelineItemId,
     mergeMediaAssetsIntoState: params.mergeMediaAssetsIntoState,
-    getImageUrl,
+    setPublishResult: params.setPublishResult,
+    handleAddSelectedImgBlock,
   })
 
   const layout: EditorialStageLayoutView = {

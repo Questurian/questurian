@@ -6,7 +6,6 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react'
-import { ExternalImageCropEditor } from '../../../components/editorial-stage/ExternalImageCropEditor'
 import type { StagedArticle } from '../../../types'
 import { createEmptySeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import {
@@ -14,7 +13,6 @@ import {
   editorialStageUiReducer,
 } from '../state/editorialStageUiMachine'
 import type {
-  ExternalImageCropContext,
   EditorialStageArticlePageProps,
   SupportedEditorialComponent,
 } from '../types'
@@ -218,12 +216,6 @@ export function useEditorialStageArticleScreenViewModel({
       pexelsFeaturedPerPage,
       setPexelsFeaturedPerPage,
       isImportingFeaturedExternalImage,
-      hasMoreFeaturedPayloadAssets,
-      isLoadingFeaturedPayloadAssets,
-      featuredPayloadAssetsError,
-      loadMoreFeaturedPayloadAssets,
-      handleImportFeaturedExternalImage,
-      handleUploadComplete,
       runFeaturedUnsplashSearch,
       runFeaturedPexelsSearch,
     },
@@ -265,21 +257,8 @@ export function useEditorialStageArticleScreenViewModel({
       openBlockImageModal,
       closeBlockImageModal,
       isImportingBlockExternalImage,
-      handleImportBlockExternalImage,
-      handleBlockImageUploadComplete,
       runBlockUnsplashSearch,
       runBlockPexelsSearch,
-    },
-    externalImport: {
-      externalImageCropDraft,
-      setExternalImageCropDraft,
-      externalImageCropError,
-      setExternalImageCropError,
-      externalImageUploadProgress,
-      setExternalImageUploadProgress,
-      isUploadingExternalImageVariants,
-      setIsUploadingExternalImageVariants,
-      handleUploadExternalCroppedVariants,
     },
     shared: {
       findPreferredVariantAsset,
@@ -307,9 +286,9 @@ export function useEditorialStageArticleScreenViewModel({
       type: 'SYNC_MODAL_FLAGS',
       featuredOpen: showImageModal,
       blockOpen: Boolean(blockImageModal?.show),
-      cropOpen: Boolean(externalImageCropDraft),
+      cropOpen: false,
     })
-  }, [showImageModal, blockImageModal?.show, externalImageCropDraft, dispatchUi])
+  }, [showImageModal, blockImageModal?.show, dispatchUi])
 
   const setShowImageModalTracked: Dispatch<SetStateAction<boolean>> = useCallback((next) => {
     const resolved = typeof next === 'function'
@@ -329,31 +308,6 @@ export function useEditorialStageArticleScreenViewModel({
   const closeBlockImageModalTracked = useCallback(() => {
     closeBlockImageModal()
   }, [closeBlockImageModal])
-
-  const renderExternalCropEditor = useCallback((context: ExternalImageCropContext) => (
-    <ExternalImageCropEditor
-      context={context}
-      externalImageCropDraft={externalImageCropDraft}
-      setExternalImageCropDraft={setExternalImageCropDraft}
-      externalImageCropError={externalImageCropError}
-      setExternalImageCropError={setExternalImageCropError}
-      externalImageUploadProgress={externalImageUploadProgress}
-      setExternalImageUploadProgress={setExternalImageUploadProgress}
-      isUploadingExternalImageVariants={isUploadingExternalImageVariants}
-      setIsUploadingExternalImageVariants={setIsUploadingExternalImageVariants}
-      handleUploadExternalCroppedVariants={handleUploadExternalCroppedVariants}
-    />
-  ), [
-    externalImageCropDraft,
-    setExternalImageCropDraft,
-    externalImageCropError,
-    setExternalImageCropError,
-    externalImageUploadProgress,
-    setExternalImageUploadProgress,
-    isUploadingExternalImageVariants,
-    setIsUploadingExternalImageVariants,
-    handleUploadExternalCroppedVariants,
-  ])
 
   const {
     handlePublish,
@@ -462,12 +416,6 @@ export function useEditorialStageArticleScreenViewModel({
     pexelsFeaturedPerPage,
     setPexelsFeaturedPerPage,
     isImportingFeaturedExternalImage,
-    hasMoreFeaturedPayloadAssets,
-    isLoadingFeaturedPayloadAssets,
-    featuredPayloadAssetsError,
-    loadMoreFeaturedPayloadAssets,
-    handleImportFeaturedExternalImage,
-    handleUploadComplete,
     runFeaturedUnsplashSearch,
     runFeaturedPexelsSearch,
     blockImageModal,
@@ -507,13 +455,8 @@ export function useEditorialStageArticleScreenViewModel({
     openBlockImageModalTracked,
     closeBlockImageModalTracked,
     isImportingBlockExternalImage,
-    handleImportBlockExternalImage,
-    handleBlockImageUploadComplete,
     runBlockUnsplashSearch,
     runBlockPexelsSearch,
-    externalImageCropDraft,
-    renderExternalCropEditor,
-    isUploadingExternalImageVariants,
     mergeMediaAssetsIntoState,
     findPreferredVariantAsset,
     handlePublish,
