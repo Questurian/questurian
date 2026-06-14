@@ -1,0 +1,352 @@
+/* Image Picker — the single ip-* namespace replacing fip-* and stage-article-modal-* (ADR 0020). */
+
+.ip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 18, 22, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.ip-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  max-height: min(86vh, 900px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.ip-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #ececec;
+}
+
+.ip-modal__header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.ip-modal__close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #6b6b6b;
+}
+
+.ip-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 1.25rem 0;
+  border-bottom: 1px solid #ececec;
+}
+
+.ip-tab {
+  border: none;
+  background: transparent;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  color: #5a5a5a;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.ip-tab--active {
+  color: #111;
+  font-weight: 600;
+  border-bottom-color: #111;
+}
+
+.ip-tab:disabled {
+  color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.ip-context-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.25rem;
+  background: #f7f7f8;
+  border-bottom: 1px solid #ececec;
+}
+
+.ip-context-chip {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ip-context-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.ip-context-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a8a8a;
+}
+
+.ip-context-value {
+  font-size: 0.84rem;
+}
+
+.ip-body {
+  padding: 1rem 1.25rem 1.25rem;
+  overflow-y: auto;
+}
+
+.ip-above-grid {
+  margin-bottom: 0.75rem;
+}
+
+.ip-search-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.ip-search-input {
+  flex: 1;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+
+.ip-search-select {
+  padding: 0.55rem 0.6rem;
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.ip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.75rem;
+  max-height: 56vh;
+  overflow-y: auto;
+}
+
+.ip-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e4e4e4;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-align: left;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.ip-card:hover {
+  border-color: #b9b9b9;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.ip-card--selected {
+  border-color: #111;
+  box-shadow: 0 0 0 2px #111;
+}
+
+.ip-card--importing {
+  opacity: 0.7;
+}
+
+.ip-card__thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #f1f1f1;
+  display: block;
+}
+
+.ip-card__thumb--natural {
+  aspect-ratio: auto;
+  height: auto;
+}
+
+.ip-card__thumb--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9a9a9a;
+  font-size: 0.78rem;
+}
+
+.ip-card__info {
+  padding: 0.45rem 0.55rem;
+}
+
+.ip-card__name {
+  font-size: 0.74rem;
+  color: #4a4a4a;
+  word-break: break-word;
+}
+
+.ip-card__badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ip-card__spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.ip-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #cfcfcf;
+  border-top-color: #111;
+  border-radius: 50%;
+  animation: ip-spin 0.7s linear infinite;
+}
+
+@keyframes ip-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ip-masonry {
+  column-count: 3;
+  column-gap: 0.75rem;
+}
+
+.ip-masonry-item {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  break-inside: avoid;
+}
+
+.ip-masonry-header {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  color: #6b6b6b;
+}
+
+.ip-upload-pane {
+  min-height: 200px;
+}
+
+.ip-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #ececec;
+}
+
+.ip-footer__count {
+  font-size: 0.82rem;
+  color: #6b6b6b;
+}
+
+.ip-btn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.ip-btn:hover:not(:disabled) {
+  border-color: #111;
+}
+
+.ip-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ip-btn--primary {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.ip-empty,
+.ip-notice {
+  padding: 1rem 0;
+  color: #8a8a8a;
+  font-size: 0.85rem;
+}
+
+.ip-notice {
+  color: #9a6b00;
+}
+
+.ip-error {
+  color: #c0392b;
+  font-size: 0.83rem;
+  margin: 0.4rem 0;
+}
+
+.ip-external-crop__label {
+  display: block;
+  margin: 0.6rem 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.ip-external-crop__input {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #d8d8d8;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.ip-external-crop__progress {
+  margin: 0.5rem 0;
+  font-size: 0.82rem;
+  color: #6b6b6b;
+}
+
+.ip-external-crop__actions {
+  margin: 0.6rem 0;
+}
+
+.ip-required {
+  color: #c0392b;
+}

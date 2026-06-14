@@ -76,6 +76,14 @@ Definition: the shared file-selection primitive. Handles drag-and-drop and click
 
 Definition: a shared UI atom used by every upload surface — `DropZone`, `AltTextField`, `PhotographerCreditField`, `UploadProgressBar`. All use the `iu-*` CSS namespace. No upload surface re-implements these; visual consistency is structural.
 
+### Image Picker
+
+Definition: the single shared component for choosing an existing image (from Payload), uploading a new one, or importing from Unsplash/Pexels, across every ABW surface that needs an image. Owns its own data fetching, search, infinite-scroll, and external-import flow (uncontrolled); emits the selected entity and lets the caller persist whatever id it stores.
+Related terms: Upload Flow (its Upload tab), MediaAsset, MediaSet, browse unit.
+_Avoid_: "image selector", "image modal", "picker field" as names for the feature — "modal" refers only to its presentation, not the feature.
+Do not confuse with: **Media Library** (the standalone management UI for editing Payload media), which the Image Picker does not replace.
+Code references: `src/shared/images/picker/`.
+
 ### `PipelineStartRequest`
 
 Definition: payload sent to backend to start a run.
@@ -208,6 +216,7 @@ Do not confuse with: Slot swap, which exchanges two existing slot contents.
 - **Lexical editor on the frontend** matches Payload's editor so the synced content round-trips faithfully.
 - **TanStack Query owns server-state shape**; component state stays local.
 - **Unified Upload Flow** — all image upload surfaces share `useImageUploadFlow` (uncontrolled) and Upload Primitives. See `docs/adr/0002-unified-image-upload-flow.md`.
+- **Unified Image Picker** — all image-selection surfaces share one uncontrolled engine that emits the selected entity; callers map it to the id they persist. See `docs/adr/0020-unified-image-picker.md`.
 - → **Suggest ADR**: the Sync signature scheme isn't documented. If we add multi-user editing, this becomes contentious.
 
 ## AI Guidance

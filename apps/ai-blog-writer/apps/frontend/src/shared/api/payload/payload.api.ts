@@ -80,6 +80,7 @@ export async function fetchMediaAssets(
     width?: number
     height?: number
     id?: number
+    search?: string
   },
 ): Promise<{ docs: MediaAsset[]; totalDocs: number; totalPages: number }> {
   const buildQuery = (page: number) => {
@@ -95,6 +96,13 @@ export async function fetchMediaAssets(
     if (params?.width) queryParams.append('where[width][equals]', String(params.width))
     if (params?.height) queryParams.append('where[height][equals]', String(params.height))
     if (params?.id) queryParams.append('where[id][equals]', String(params.id))
+    if (params?.search?.trim()) {
+      // Whole-library text search: filename OR alt_text. Mirrors fetchMediaSets'
+      // `where[title][like]`; ANDs with any variant/dimension filters above.
+      const term = params.search.trim()
+      queryParams.append('where[or][0][filename][like]', term)
+      queryParams.append('where[or][1][alt_text][like]', term)
+    }
     return queryParams.toString()
   }
   return payloadRequest(`/api/media-assets?${buildQuery(params?.page || 1)}`, token)
