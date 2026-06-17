@@ -1,20 +1,20 @@
-# Luxury itinerary
+# Luxury itinerary titles
 
-For travelers expecting **high-touch service**, **premium inventory**, and **time saved**—written with confidence, never snobbish.
+Title guidance for itineraries promising **high-touch, premium, time-saving** experiences—confident, never snobbish.
 
-## Voice & pacing
+## What the title should foreground
 
-- Prioritize **access, ease, and discretion**: private transfers, curated slots, after-hours options when relevant.
-- Name **tier and standard** plainly (suite vs. room, guided private vs. small group).
-- Use **specific amenities** (butler, thermal spa circuit, tasting paired with cellar tour).
+- The **luxury tier**, plainly: "luxury," "high-end," "five-star," "in style," "splurge."
+- A **concrete signal of access or ease** when it sharpens the promise: private, curated, after-hours, suite-level.
+- The **destination** (and neighborhood when relevant) so the premium angle is tied to a searchable place.
 
-## What to emphasize
+## Good title moves
 
-- **Seamless flow**: who greets you, how bags move, how downtime is protected.
-- **Worth-it splurges** vs. **nice-to-haves**—luxury readers hate vague upsells.
-- **Dress, tipping, and etiquette** where it prevents embarrassment.
+- Tier + place + scope: *"A Luxury 4-Day Itinerary in Marrakech"*.
+- Lead with the access angle: *"Private Tours and Five-Star Stays: Dubai in Style"*.
+- Frame the splurge honestly: *"The Splurge-Worthy Way to Spend 3 Days in Tokyo"*.
 
-## What to avoid
+## Avoid
 
-- Brand-name dropping without **experience detail**.
-- “Exclusive” without explaining **what’s actually different**.
+- "Exclusive" or "VIP" with nothing concrete behind it.
+- Brand-name dropping in place of an actual experience angle.

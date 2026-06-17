@@ -6,9 +6,17 @@ export type BuildItinerariesPipelineChatPromptParams = {
   locationLabel: string
   dayCount: number
   guidelineMarkdown: string
+  /** Optional comma/space separated keywords the editor wants woven into titles where natural. */
+  keywords?: string
+  /** Optional free-text direction from the editor (tone, angle, things to avoid, etc.). */
+  additionalContext?: string
 }
 
 export function buildItinerariesPipelineChatPrompt(params: BuildItinerariesPipelineChatPromptParams): string {
+  const keywords = params.keywords?.trim()
+  const additionalContext = params.additionalContext?.trim()
+  const hasEditorDirection = Boolean(keywords || additionalContext)
+
   return [
     'You are helping brainstorm **article titles only** for Questurian travel itinerary listicles. Use the trip parameters and reflect the editorial guideline in tone and positioning—do not write the article body or any day-by-day itinerary.',
     '',
@@ -23,6 +31,15 @@ export function buildItinerariesPipelineChatPrompt(params: BuildItinerariesPipel
     params.guidelineMarkdown.trim(),
     MD_FILE_END,
     '',
+    ...(hasEditorDirection
+      ? [
+          '## Editor direction (priority)',
+          'The editor added the following guidance for this run. Honor it on top of the guideline above—without breaking the SEO rules below.',
+          ...(keywords ? [`- **Keywords to weave in where natural:** ${keywords}`] : []),
+          ...(additionalContext ? [`- **Additional context / desired direction:** ${additionalContext}`] : []),
+          '',
+        ]
+      : []),
     '## SEO & indexing (required)',
     'These titles will live on a **new domain** with little historical authority. Optimize for **clear indexing and search intent**, not just social curiosity.',
     '',

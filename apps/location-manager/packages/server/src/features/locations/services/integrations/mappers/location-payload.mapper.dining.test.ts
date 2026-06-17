@@ -47,7 +47,7 @@ describe("mapLocationToPayloadFormat dining", () => {
 
     const payload = mapLocationToPayloadFormat(
       location,
-      { galleryImageIds: [], instagramPostIds: [] },
+      { galleryImageIds: [], instagramPostIds: [], galleryUploadFailures: 0 },
       "123"
     );
 
@@ -111,7 +111,7 @@ describe("mapLocationToPayloadFormat dining", () => {
 
     const payload = mapLocationToPayloadFormat(
       location,
-      { galleryImageIds: [], instagramPostIds: [] },
+      { galleryImageIds: [], instagramPostIds: [], galleryUploadFailures: 0 },
       "123"
     );
 

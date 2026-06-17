@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from utils import get_vertex_llm
+from app.features.editor_assist.writer_models import invoke_writer_model
 
 from .day_shells import BUILT_IN_DAY_SHELL_IDS
 from .graph import run_itinerary_pipeline
@@ -23,7 +23,7 @@ from .shell_library import (
 router = APIRouter(prefix="/itineraries-pipeline", tags=["itineraries-pipeline"])
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_MODEL = "claude-opus-4-7"
 MAX_PROMPT_CHARS = 120_000
 
 
@@ -48,20 +48,24 @@ def _safe_text(value: Any) -> str:
 
 @router.post("/generate-titles", response_model=GenerateItineraryTitlesResponse)
 async def generate_itinerary_titles(request: GenerateItineraryTitlesRequest) -> GenerateItineraryTitlesResponse:
-    """Run the full itineraries title prompt through Vertex AI (Gemini)."""
+    """Run the full itineraries title prompt through the writer-model router.
+
+    Defaults to Claude; ``claude*`` model names route to Anthropic and any Gemini
+    name falls back to Vertex (see ``invoke_writer_model``).
+    """
     prompt = request.prompt.strip()
     if len(prompt) < 20:
         raise HTTPException(status_code=400, detail="prompt is too short")
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    model_name = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
 
     try:
-        llm = get_vertex_llm(
+        result = invoke_writer_model(
+            prompt=prompt,
+            model_name=model_name,
             temperature=0.35,
             max_tokens=16384,
-            model_name=model_used,
         )
-        raw_result = llm.invoke(prompt)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Itineraries pipeline generate-titles failed: %s", exc)
         raise HTTPException(
@@ -69,11 +73,11 @@ async def generate_itinerary_titles(request: GenerateItineraryTitlesRequest) -> 
             detail="AI title pipeline request failed",
         ) from exc
 
-    raw_text = _safe_text(raw_result)
+    raw_text = _safe_text(result.text)
     if not raw_text:
         raise HTTPException(status_code=502, detail="AI returned empty output")
 
-    return GenerateItineraryTitlesResponse(text=raw_text, model_used=model_used)
+    return GenerateItineraryTitlesResponse(text=raw_text, model_used=result.model_name)
 
 
 class DayShellLibraryResponse(BaseModel):

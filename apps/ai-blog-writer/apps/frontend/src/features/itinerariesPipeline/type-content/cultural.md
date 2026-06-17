@@ -1,20 +1,20 @@
-# Cultural itinerary
+# Cultural itinerary titles
 
-For travelers who want **context, craft, and continuity**—museums, neighborhoods, living traditions, and respectful engagement with locals.
+Title guidance for itineraries built around **context, craft, and living tradition**—museums, neighborhoods, history, local culture.
 
-## Voice & pacing
+## What the title should foreground
 
-- Anchor stops in **story**: history, migration, craft process, why this place matters now.
-- Prefer **guided nuance** over checklist tourism; explain **how long** and **why** each block deserves time.
-- Surface **etiquette** and **sustainability** cues (photos, sacred spaces, tipping, bargaining).
+- The **cultural angle**, plainly: "cultural," "history," "art," "museums," "local," "traditions."
+- A **concrete draw** when it sharpens the promise: a neighborhood, an era, a craft, a festival.
+- The **destination** (and neighborhood when it's the real story) so it maps to a clear topic.
 
-## What to emphasize
+## Good title moves
 
-- **Neighborhood texture**: architecture layers, soundscapes, market rhythms.
-- **Living culture**: workshops, music, festivals—what’s seasonal vs. evergreen.
-- **Practical respect**: clothing, language basics, crowds, rest breaks.
+- Intent + place + scope: *"A Cultural 3-Day Itinerary in Mexico City"*.
+- Lead with the specific draw: *"Markets, Murals, and Museums: 2 Days in Oaxaca"*.
+- Frame for the curious traveler: *"The History-Lover's Guide to 4 Days in Rome"*.
 
-## What to avoid
+## Avoid
 
-- Museums as a dry list; tie pieces and periods to **human stakes**.
-- Exoticizing locals; write with **dignity** and **accuracy**.
+- "Rich culture" / "hidden gems" filler with no place or angle.
+- Exoticizing phrasing; keep it dignified and accurate.

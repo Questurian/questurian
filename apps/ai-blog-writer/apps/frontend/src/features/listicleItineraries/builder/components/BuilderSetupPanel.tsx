@@ -2,8 +2,7 @@ import { useMemo, useState } from 'react'
 import { LIST_TONE_OPTIONS, resizeItineraryDays, type DayShellId, type DayShellSelection, type DayShellTemplate, type ListicleItineraryDraft, type ListTone, type LocationOption, type TravelerProfile } from '../../types'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
 import { DEFAULT_DAY_SHELL_ID, getAvailableDayShells, getDayShellTemplate } from '../constants/day-shells.constants'
-import { AiTitleInput } from '../../../../shared/markdown-editor'
-import type { AiTitleGenerateInput } from '../../../../shared/markdown-editor'
+import { ItineraryTitlePipelineButton } from './ItineraryTitlePipelineButton'
 import { BuilderStepHeader } from '../../../../shared/builder/components/BuilderStepHeader'
 import { FieldInfoHint } from '../../../../shared/builder/components/FieldInfoHint'
 import { SharedNeighborhoodsModal } from './SharedNeighborhoodsModal'
@@ -24,7 +23,6 @@ type BuilderSetupPanelProps = {
   onSaveSetup: () => void
   onCancelUpdateSetup: () => void
   updateDraft: (next: Partial<ListicleItineraryDraft>) => void
-  onTitleAiGenerate?: (input: AiTitleGenerateInput) => Promise<string>
   onSlugChange?: (slug: string) => void
   onGenerateSlugWithAi?: () => Promise<void>
   isGeneratingSlug?: boolean
@@ -44,7 +42,6 @@ type BuilderSetupPanelProps = {
 function getAiTitleDisabledReason(draft: ListicleItineraryDraft, isSynced: boolean): string | undefined {
   if (!isSynced && draft.step1_complete && !draft.in_update_mode) return 'Setup is locked'
   if (!draft.location) return 'Set a location first'
-  if (!draft.title.trim()) return 'Write a title first, then AI can improve it'
   return undefined
 }
 
@@ -103,7 +100,6 @@ export function BuilderSetupPanel({
   onSaveSetup,
   onCancelUpdateSetup,
   updateDraft,
-  onTitleAiGenerate,
   onSlugChange,
   onGenerateSlugWithAi,
   isGeneratingSlug,
@@ -180,16 +176,14 @@ export function BuilderSetupPanel({
               disabled={isSetupLocked}
               onChange={(event) => updateDraft({ title: event.target.value })}
             />
-            {onTitleAiGenerate ? (
-              <span className="stl-title-ai-trigger-wrap">
-                <AiTitleInput
-                  currentTitle={draft.title}
-                  onGenerate={onTitleAiGenerate}
-                  onApply={(title) => updateDraft({ title })}
-                  disabledReason={aiTitleDisabledReason}
-                />
-              </span>
-            ) : null}
+            <span className="stl-title-ai-trigger-wrap">
+              <ItineraryTitlePipelineButton
+                locationLabel={selectedPrimaryLocation ? formatLocationLabel(selectedPrimaryLocation) : null}
+                defaultDayCount={draft.dayCount}
+                onApply={(title) => updateDraft({ title })}
+                disabledReason={aiTitleDisabledReason}
+              />
+            </span>
           </div>
         </label>
 

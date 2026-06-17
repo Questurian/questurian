@@ -53,7 +53,7 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
 import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
-import { composeItineraryBriefWithAi, composeItineraryDayBlurbsWithAi, composeItineraryIntroWithAi, fetchItineraryById, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { composeItineraryBriefWithAi, composeItineraryDayBlurbsWithAi, composeItineraryIntroWithAi, fetchItineraryById, generateListicleContentWithAi, rewriteBlockWithAi } from '../api'
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
 import { generateItinerary, type AutobuildResponse } from '../builder/services/autobuild.api'
 import { InspectAutobuildRunModal } from '../builder/components/InspectAutobuildRunModal'
@@ -358,25 +358,6 @@ export default function ListicleItineraryBuilderPage() {
       setIsRevertingToPayload(false)
     }
   }, [draft, onError, setDraft, token])
-
-  const generateDraftTitleWithAi = useCallback(async ({ prompt }: { prompt: string }): Promise<string> => {
-    if (!draft) {
-      throw new Error('Draft is not loaded yet.')
-    }
-
-    const response = await generateTitleWithAi({
-      currentTitle: draft.title.trim(),
-      prompt: prompt.trim(),
-      modelName: resolveEditorAssistModelName(draft.editorModelName),
-    })
-
-    const title = response.title?.trim()
-    if (!title) {
-      throw new Error('AI returned an empty title.')
-    }
-
-    return title
-  }, [draft])
 
   const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
   const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false)
@@ -1058,7 +1039,6 @@ export default function ListicleItineraryBuilderPage() {
             onSaveSetup={actions.handleSaveSetup}
             onCancelUpdateSetup={actions.cancelUpdateSetup}
             updateDraft={actions.updateDraft}
-            onTitleAiGenerate={generateDraftTitleWithAi}
             onSlugChange={applySlugAndOgUrl}
             onGenerateSlugWithAi={handleGenerateSlugWithAi}
             isGeneratingSlug={isGeneratingSlug}

@@ -148,6 +148,27 @@ export class PayloadSyncService {
       // Log and save the Payload document ID
       console.log(`📄 Payload document ID: ${response.doc.id} (location ${locationId})`);
 
+      // If any image-set upload silently failed, the Payload gallery is incomplete.
+      // Record a FAILED state (preserving the real doc id) instead of a false "success",
+      // so the location surfaces as not-synced and gets retried — see media-upload.handler.
+      if (uploadedImages.galleryUploadFailures > 0) {
+        const failedCount = uploadedImages.galleryUploadFailures;
+        const message =
+          `Gallery upload incomplete: ${failedCount} image set(s) failed to upload to Payload. ` +
+          `Document ${response.doc.id} was saved with a partial gallery — re-run sync to retry.`;
+        console.error(`❌ [SYNC] Location ${locationId}: ${message}`);
+        // saveSyncState keeps the existing payload_doc_id for non-success statuses.
+        PayloadSyncRepo.saveSyncState(locationId, collection, response.doc.id, "failed", message);
+        // Intentionally do NOT touch updated_at — leaving it ahead of last_synced_at
+        // keeps the location flagged rather than equalizing it into a false green.
+        return {
+          locationId,
+          payloadDocId: response.doc.id,
+          status: "failed",
+          error: message,
+        };
+      }
+
       // Generate a single timestamp for both sync state and location update
       // Use SQLite's datetime format (YYYY-MM-DD HH:MM:SS) without timezone
       // This matches how SQLite stores DATETIME columns and prevents timezone parsing issues

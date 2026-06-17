@@ -54,7 +54,7 @@ describe("mapLocationToPayloadFormat key_locations", () => {
 
     const payload = mapLocationToPayloadFormat(
       location,
-      { galleryImageIds: [], instagramPostIds: [] },
+      { galleryImageIds: [], instagramPostIds: [], galleryUploadFailures: 0 },
       "999"
     );
 

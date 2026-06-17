@@ -3,7 +3,7 @@ import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { ImageStorageService } from "../storage/image-storage.service";
 import { InstagramApiClient } from "./clients/instagram-api.client";
 import { createFromInstagram, extractInstagramData } from "./factories/instagram-embed.factory";
-import { getLocationById } from "../../repositories/core";
+import { getLocationById, updateLocationById } from "../../repositories/core";
 import {
   saveInstagramEmbed,
   getInstagramEmbedById,
@@ -84,6 +84,10 @@ export class InstagramService {
       }
     }
 
+    // Instagram embeds are part of the Payload sync payload, so adding one
+    // must flag the location as out-of-sync (mirrors UploadsService).
+    this.touchLocationUpdatedAt(payload.locationId);
+
     // Return saved entry
     if (typeof savedId === "number") {
       const saved = getInstagramEmbedById(savedId);
@@ -106,6 +110,10 @@ export class InstagramService {
       throw new Error("Failed to delete Instagram embed");
     }
 
+    // Removing an embed changes the Payload sync payload — flag for re-sync
+    // before any early returns in the file-cleanup steps below.
+    this.touchLocationUpdatedAt(embed.location_id);
+
     // 3. Extract path metadata from first image (if images exist)
     if (!embed.images || embed.images.length === 0) {
       return; // No files to clean up
@@ -127,6 +135,17 @@ export class InstagramService {
       await this.imageStorage["cleanupEmptyFolders"](metadata.timestampDir);
     } catch (error) {
       console.error("File deletion failed for Instagram embed", { id, error });
+    }
+  }
+
+  private touchLocationUpdatedAt(locationId: number): void {
+    const updated = updateLocationById(locationId, {
+      // Keep this format aligned with sync-state timestamps for stable comparison.
+      updated_at: new Date().toISOString().replace("T", " ").replace(/\.\d{3}Z$/, ""),
+    });
+
+    if (!updated) {
+      console.warn(`Failed to update location.updated_at after Instagram embed mutation (location: ${locationId})`);
     }
   }
 }

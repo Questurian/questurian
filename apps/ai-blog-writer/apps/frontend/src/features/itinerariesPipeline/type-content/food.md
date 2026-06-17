@@ -1,20 +1,20 @@
-# Food-forward itinerary
+# Food-forward titles
 
-Use this profile when the trip is **centered on eating well**: markets, tasting menus, street food, and reservations that anchor each day.
+Title guidance for itineraries **centered on eating well**: markets, tasting menus, street food, signature meals.
 
-## Voice & pacing
+## What the title should foreground
 
-- Lead with **specific dishes, ingredients, and neighborhoods**—not generic “great food scene” filler.
-- Mention **meal timing** (lunch vs. dinner culture, late-night snacks) so days feel realistic.
-- Call out **dietary friction** honestly (limited vegetarian options, spice levels, cash-only stalls).
+- **The eating angle**, plainly: "where to eat," "food tour," "best meals," "eat your way through."
+- A **concrete hook** when it sharpens the promise: a dish, ingredient, market, or meal occasion (breakfast, late-night, street food).
+- The **destination** (and neighborhood when it's the real draw) so the food is tied to a place readers search for.
 
-## What to emphasize
+## Good title moves
 
-- One **signature meal** per day worth splurging time or budget on.
-- **Local staples** readers can actually order (Spanish/English names when helpful).
-- Practical cues: **queues**, **reservations**, **dress code**, **payment**.
+- Lead with intent + place: *"Where to Eat in Oaxaca: A 3-Day Food Itinerary"*.
+- Name a specific draw: *"Tacos, Mezcal, and Markets: 2 Days Eating in Oaxaca"*.
+- Use occasion or pace when useful: *"A Long Weekend of Eating in Lisbon"*.
 
-## What to avoid
+## Avoid
 
-- Restaurant lists with no **why** or **when** to go.
-- Copy-paste menu jargon; prefer concrete sensory detail (texture, heat, acidity).
+- Generic "great food scene" / "foodie paradise" filler with no place or angle.
+- Menu jargon and empty superlatives ("best food ever") without a concrete reason.

@@ -2,16 +2,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.features.itineraries_pipeline.routes as itineraries_pipeline_routes
-
-
-class _StubLLM:
-    def __init__(self, response_text: str) -> None:
-        self._response_text = response_text
-        self.last_prompt: str | None = None
-
-    def invoke(self, prompt: str) -> str:
-        self.last_prompt = prompt
-        return self._response_text
+from app.features.editor_assist.writer_models import WriterResult
 
 
 def _build_client() -> TestClient:
@@ -23,8 +14,11 @@ def _build_client() -> TestClient:
 def test_generate_titles_returns_model_output(monkeypatch):
     monkeypatch.setattr(
         itineraries_pipeline_routes,
-        "get_vertex_llm",
-        lambda **_kwargs: _StubLLM("1. First title\n2. Second title\n"),
+        "invoke_writer_model",
+        lambda **_kwargs: WriterResult(
+            text="1. First title\n2. Second title\n",
+            model_name=itineraries_pipeline_routes.DEFAULT_MODEL,
+        ),
     )
 
     client = _build_client()

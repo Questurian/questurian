@@ -1,20 +1,20 @@
-# Day & night social itinerary
+# Day & night social itinerary titles
 
-For travelers who want **energy on a dial**: strong daytime sightseeing **and** a real nightlife thread—bars, live music, late food, social scenes.
+Title guidance for itineraries with **energy on a dial**: strong daytime sightseeing **and** a real nightlife thread—bars, live music, late food.
 
-## Voice & pacing
+## What the title should foreground
 
-- Plan an **energy arc**: morning focus, afternoon recharge, evening lift, late-night optional fork.
-- Be explicit about **noise, crowds, cover charges, dress codes**, and **safe transit after midnight**.
-- Separate **“scene”** venues from **conversation** venues when both matter.
+- The **day-into-night arc**: "day and night," "from sightseeing to nightlife," "where to go after dark."
+- A **social/nightlife hook** when it sharpens the promise: bars, live music, late eats, the scene.
+- The **destination** (and neighborhood when it's the draw) so it ties to a searchable place.
 
-## What to emphasize
+## Good title moves
 
-- **Night anchors**: one headline evening experience per trip leg, plus backups.
-- **Food bridges**: late snacks, post-show bites, neighborhood classics open late.
-- **Solo vs. group** dynamics: meet-people spots vs. date-night corners.
+- Arc + place + scope: *"Day to Night: A 2-Day Social Itinerary in Berlin"*.
+- Lead with the nightlife angle: *"Sights by Day, Bars by Night: 3 Days in Mexico City"*.
+- Frame the energy: *"Where to Go After Dark: A Weekend in Lisbon"*.
 
-## What to avoid
+## Avoid
 
-- Vague “explore the nightlife”—name **when**, **where**, and **what kind of night** it is.
-- Assuming unlimited stamina; offer **lighter day** options before big nights.
+- Vague "explore the nightlife" with no place or kind of night.
+- "Party hard" clichés that ignore the daytime half of the trip.

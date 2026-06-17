@@ -1,20 +1,20 @@
-# Couple’s itinerary
+# Couple’s itinerary titles
 
-Optimized for **two travelers** who want connection, comfort, and low-friction romance—without cliché “honeymoon” fluff.
+Title guidance for itineraries built for **two travelers** wanting connection and low-friction romance—without "honeymoon" cliché.
 
-## Voice & pacing
+## What the title should foreground
 
-- Favor **human-scale moments**: sunset walks, slow mornings, one thoughtful surprise per day.
-- Balance **together time** with optional **solo-friendly** breaks (spa, café solo hour).
-- Keep logistics calm: **minimal day packing**, clear transitions, realistic walking distances.
+- That it's **for two**: "for couples," "romantic," "couple's guide," "two days for two."
+- A **mood** when it sharpens the promise: slow, cozy, scenic, unhurried—not loud or party-driven.
+- The **destination** (and neighborhood when it's the draw) so it reads as a real place to plan around.
 
-## What to emphasize
+## Good title moves
 
-- **Seating and ambiance** (quiet corners, views, not loud party venues unless requested).
-- **Privacy vs. energy**: when a place is cozy vs. when it’s a scene.
-- Photo-worthy beats that still feel **authentic**, not staged.
+- Intent + place: *"A Romantic 3-Day Paris Itinerary for Couples"*.
+- Lead with mood: *"Slow Mornings and Sunset Walks: 2 Days in Kyoto for Two"*.
+- Anchor on an occasion: *"A Long Weekend for Couples in Porto"*.
 
-## What to avoid
+## Avoid
 
-- Generic “romantic dinner” with no place, time, or reason.
-- Overstuffing days; couples’ trips need **breathing room**.
+- Generic "romantic getaway" with no place, length, or angle.
+- Honeymoon-fluff superlatives ("most romantic ever") with nothing concrete behind them.

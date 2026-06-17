@@ -48,7 +48,7 @@ describe("mapLocationToPayloadFormat attractions", () => {
 
     const payload = mapLocationToPayloadFormat(
       location,
-      { galleryImageIds: [], instagramPostIds: [] },
+      { galleryImageIds: [], instagramPostIds: [], galleryUploadFailures: 0 },
       "789",
       { tourPayloadIds: ["101", "tour-abc"] }
     );
@@ -115,7 +115,7 @@ describe("mapLocationToPayloadFormat attractions", () => {
 
     const payload = mapLocationToPayloadFormat(
       location,
-      { galleryImageIds: [], instagramPostIds: [] },
+      { galleryImageIds: [], instagramPostIds: [], galleryUploadFailures: 0 },
       "790"
     );
 
@@ -167,6 +167,7 @@ describe("mapLocationToPayloadFormat attractions", () => {
       {
         galleryImageIds: ["media-set-1", "media-set-2"],
         instagramPostIds: [],
+        galleryUploadFailures: 0,
       },
       "791"
     );
@@ -223,6 +224,7 @@ describe("mapLocationToPayloadFormat attractions", () => {
       {
         galleryImageIds: ["11"],
         instagramPostIds: [],
+        galleryUploadFailures: 0,
       },
       "793"
     );
@@ -282,6 +284,7 @@ describe("mapLocationToPayloadFormat attractions", () => {
             (_, index) => `uploaded-media-${index + 1}`
           ),
           instagramPostIds: [],
+          galleryUploadFailures: 0,
         },
         "792"
       )

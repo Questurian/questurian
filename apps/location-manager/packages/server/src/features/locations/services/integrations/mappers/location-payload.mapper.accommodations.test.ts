@@ -50,7 +50,7 @@ describe("mapLocationToPayloadFormat accommodations", () => {
 
     const payload = mapLocationToPayloadFormat(
       location,
-      { galleryImageIds: [], instagramPostIds: [] },
+      { galleryImageIds: [], instagramPostIds: [], galleryUploadFailures: 0 },
       "456"
     );
 
@@ -136,7 +136,7 @@ describe("mapLocationToPayloadFormat accommodations", () => {
 
     const payload = mapLocationToPayloadFormat(
       location,
-      { galleryImageIds: [], instagramPostIds: [] },
+      { galleryImageIds: [], instagramPostIds: [], galleryUploadFailures: 0 },
       "999"
     );
 

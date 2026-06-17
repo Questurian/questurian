@@ -14,11 +14,11 @@ import '../itineraries-pipeline.css'
 import '../../listicleItineraries/styles.css'
 import '../../prompt2blog/styles.css'
 import {
-  DEFAULT_PROMPT2BLOG_MODEL,
-  PROMPT2BLOG_MODEL_OPTIONS,
-  resolvePrompt2BlogModelName,
-} from '../../prompt2blog/constants/prompt2blog.constants'
-import type { Prompt2BlogModelName } from '../../prompt2blog/types/pipeline.types'
+  DEFAULT_ITINERARY_TITLE_MODEL,
+  ITINERARY_TITLE_MODEL_OPTIONS,
+  resolveItineraryTitleModelName,
+  type ItineraryTitleModelName,
+} from '../constants/titleModel.constants'
 import { generateItineraryTitles } from '../api'
 import { buildItinerariesPipelineChatPrompt } from '../buildChatPrompt'
 import {
@@ -144,7 +144,7 @@ export default function ItinerariesPipelinePage() {
   const [pipelineError, setPipelineError] = useState<string | null>(null)
   const [pipelineResult, setPipelineResult] = useState<string | null>(null)
   const [pipelineModelUsed, setPipelineModelUsed] = useState<string | null>(null)
-  const [pipelineModel, setPipelineModel] = useState<Prompt2BlogModelName>(DEFAULT_PROMPT2BLOG_MODEL)
+  const [pipelineModel, setPipelineModel] = useState<ItineraryTitleModelName>(DEFAULT_ITINERARY_TITLE_MODEL)
 
   const locationGroups = useMemo(() => buildLocationSelectGroups(locations), [locations])
   const selectedLocation = useMemo(() => {
@@ -298,7 +298,7 @@ export default function ItinerariesPipelinePage() {
               }
               onClick={() => void handleRunTitlePipeline()}
             >
-              {pipelineLoading ? 'Running pipeline…' : 'Run title pipeline (Gemini)'}
+              {pipelineLoading ? 'Running pipeline…' : 'Run title pipeline (Claude)'}
             </button>
             <button
               type="button"
@@ -389,23 +389,23 @@ export default function ItinerariesPipelinePage() {
 
         <div className="ip-pipeline-model">
           <div className="p2b-field ip-pipeline-model-field">
-            <label htmlFor="itineraries-pipeline-model">Gemini model (title pipeline)</label>
+            <label htmlFor="itineraries-pipeline-model">Model (title pipeline)</label>
             <select
               id="itineraries-pipeline-model"
               className="p2b-select"
               value={pipelineModel}
               disabled={pipelineLoading}
-              onChange={(event) => setPipelineModel(resolvePrompt2BlogModelName(event.target.value))}
+              onChange={(event) => setPipelineModel(resolveItineraryTitleModelName(event.target.value))}
             >
-              {PROMPT2BLOG_MODEL_OPTIONS.map((option) => (
+              {ITINERARY_TITLE_MODEL_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
             <p className="p2b-guideline-hint">
-              Same presets as Prompt2Blog’s writing model. Only affects <strong>Run title pipeline</strong>, not the
-              copied ChatGPT prompt.
+              Titles run on Claude (Anthropic). Only affects <strong>Run title pipeline</strong>, not the copied
+              ChatGPT prompt.
             </p>
           </div>
         </div>

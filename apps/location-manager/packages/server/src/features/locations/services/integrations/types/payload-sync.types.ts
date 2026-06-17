@@ -28,6 +28,7 @@ export interface SyncStatusResponse {
 export interface UploadedImagesResult {
   galleryImageIds: string[];      // Payload media-set IDs for uploaded image sets
   instagramPostIds: string[];     // Instagram post IDs for embeds
+  galleryUploadFailures: number;  // image-set uploads that did NOT produce a gallery media-set
 }
 
 

@@ -60,6 +60,7 @@ export async function uploadLocationImages(
 ): Promise<UploadedImagesResult> {
   const galleryImageIds: string[] = [];
   const instagramPostIds: string[] = [];
+  let galleryUploadFailures = 0;
   const mediaLocationRef = resolvedLocationRef ?? location.payload_location_ref ?? null;
 
   try {
@@ -289,6 +290,7 @@ export async function uploadLocationImages(
           // ⭐ STEP 3: Add media-set ID to gallery
           if (shouldUploadVariants && uploadedVariantsCount === 0) {
             console.warn(`⚠️  No variants were uploaded for ImageSet ${imageSet.id}, skipping media-set`);
+            galleryUploadFailures++;
           } else {
             galleryImageIds.push(mediaSetId);
             if (existingMediaSetId) {
@@ -307,7 +309,9 @@ export async function uploadLocationImages(
           }
         } catch (error) {
           console.error(`❌ [MEDIA-SET] Failed to process ImageSet ${imageSet.id}:`, error);
-          // Continue with next upload
+          galleryUploadFailures++;
+          // Continue with next upload (graceful degradation), but the count above
+          // ensures the overall sync is NOT reported as a clean success.
         }
       }
     }
@@ -389,7 +393,7 @@ export async function uploadLocationImages(
     throw error;
   }
 
-  return { galleryImageIds, instagramPostIds };
+  return { galleryImageIds, instagramPostIds, galleryUploadFailures };
 }
 
 function normalizePhotographerCredit(value: string | null | undefined): string {

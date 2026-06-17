@@ -4,8 +4,8 @@ import { createEmptyDraft } from '../../storage'
 import type { ListicleItineraryDraft, LocationOption } from '../../types'
 import { BuilderSetupPanel } from './BuilderSetupPanel'
 
-vi.mock('../../../../shared/markdown-editor', () => ({
-  AiTitleInput: () => null,
+vi.mock('./ItineraryTitlePipelineButton', () => ({
+  ItineraryTitlePipelineButton: () => null,
 }))
 
 vi.mock('./TravelerProfileModal', () => ({

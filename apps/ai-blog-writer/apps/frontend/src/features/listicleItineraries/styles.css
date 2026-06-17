@@ -568,6 +568,96 @@
   margin-top: 1.1rem;
 }
 
+.stl-title-pipeline-modal {
+  width: min(620px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.stl-title-pipeline-guideline {
+  margin-top: 0.75rem;
+  background: #f6f8fb;
+  border: 1px solid var(--stl-border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.stl-title-pipeline-guideline > summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.stl-title-pipeline-guideline > summary::-webkit-details-marker {
+  display: none;
+}
+
+.stl-title-pipeline-guideline-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--stl-ink);
+}
+
+.stl-title-pipeline-guideline-file {
+  font-size: 0.72rem;
+  color: #6b7280;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.stl-title-pipeline-guideline-body {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-top: 1px solid var(--stl-border);
+  max-height: 240px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--stl-ink);
+  background: #fff;
+}
+
+.stl-title-pipeline-results {
+  margin-top: 1rem;
+}
+
+.stl-title-pipeline-options {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.stl-title-pipeline-option {
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 0.85rem;
+  background: #f6f8fb;
+  border: 1px solid var(--stl-border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  color: var(--stl-ink);
+  line-height: 1.35;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.stl-title-pipeline-option:hover {
+  background: #eef2f8;
+  border-color: var(--stl-accent, #6366f1);
+}
+
 .stl-field input:not([type='checkbox']):not([type='radio']),
 .stl-field select,
 .stl-field textarea {
