@@ -162,6 +162,14 @@ describe('day-blurb composer service', () => {
     )
   })
 
+  it('gates on a missing Selection reason for a resolved stop (ADR 0020)', () => {
+    const draft = buildDraft()
+    draft.days[0].items[0].selectionReason = ''
+    expect(getItineraryDayBlurbComposeDisabledReason(draft, 0, buildRelatedByBlockType())).toBe(
+      'Day 1: add a "Why this pick" for "Mérito"',
+    )
+  })
+
   it('gates on having at least one resolved stop', () => {
     const draft = buildDraft({
       days: [

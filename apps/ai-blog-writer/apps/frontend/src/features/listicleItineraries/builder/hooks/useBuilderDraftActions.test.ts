@@ -26,6 +26,7 @@ const locations: LocationOption[] = [
 function buildDraft(): ListicleItineraryDraft {
   const draft = createEmptyDraft()
   draft.title = 'A day in Lima'
+  draft.payloadSlug = 'a-day-in-lima'
   draft.location = 'peru|lima'
   draft.locationRef = 2
   draft.step1_complete = true
@@ -59,6 +60,7 @@ function buildDraft(): ListicleItineraryDraft {
         instagramPost: null,
         blurbMarkdown: 'Existing stop copy',
         blurbJsonText: '',
+        selectionReason: 'original autobuild reason',
       },
     ],
   }]
@@ -116,5 +118,31 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     expect(result.current.draft?.header.introMarkdown).toBe('Keep this itinerary intro')
     expect(result.current.draft?.seoSection.metaDescription).toBe('Keep this itinerary SEO description')
     expect(result.current.draft?.days[0]?.items).toEqual([])
+  })
+
+  it('clears the Selection reason and blurb when a stop identity is swapped (ADR 0020)', () => {
+    const { result } = renderHook(() => useHarness(buildDraft()))
+
+    act(() => {
+      result.current.updateItem('stop-1', (current) => ({ ...current, item: 202 }))
+    })
+
+    const item = result.current.draft?.days[0]?.items[0]
+    expect(item?.item).toBe(202)
+    expect(item?.selectionReason).toBe('')
+    expect(item?.blurbMarkdown).toBe('')
+  })
+
+  it('keeps the Selection reason and blurb when a non-identity field changes', () => {
+    const { result } = renderHook(() => useHarness(buildDraft()))
+
+    act(() => {
+      result.current.updateItem('stop-1', (current) => ({ ...current, price: '$$$' }))
+    })
+
+    const item = result.current.draft?.days[0]?.items[0]
+    expect(item?.price).toBe('$$$')
+    expect(item?.selectionReason).toBe('original autobuild reason')
+    expect(item?.blurbMarkdown).toBe('Existing stop copy')
   })
 })

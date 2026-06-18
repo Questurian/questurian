@@ -40,6 +40,10 @@ import {
   getItineraryDayBlurbComposeDisabledReason,
 } from '../builder/services/compose-day-blurbs.service'
 import {
+  composeItineraryStopReason,
+  type ComposeStopReasonResult,
+} from '../builder/services/compose-stop-reason.service'
+import {
   applySeoAiPatch,
   buildSeoAiPrompt,
   buildSeoAiSeed,
@@ -654,6 +658,24 @@ export default function ListicleItineraryBuilderPage() {
     }
   }, [actions, draft, onError, runSingleTargetGeneration])
 
+  const refineStopReason = useCallback(
+    async (itemId: string, roughReason: string): Promise<ComposeStopReasonResult> => {
+      const fallback: ComposeStopReasonResult = { reason: roughReason.trim(), fallback: true }
+      if (!draft) return fallback
+      const item = findItineraryItemById(draft, itemId)?.item
+      if (!item) return fallback
+      return composeItineraryStopReason({
+        draft,
+        item,
+        roughReason,
+        relatedByBlockType,
+        locations,
+        modelName: resolveEditorAssistModelName(draft.editorModelName),
+      })
+    },
+    [draft, locations, relatedByBlockType],
+  )
+
   const autoWriteEmptyFields = useCallback(async (): Promise<void> => {
     if (!draft) return
 
@@ -750,7 +772,11 @@ export default function ListicleItineraryBuilderPage() {
     }
     if (
       dayHasExistingBlurbs(draft, dayIndex, relatedByBlockType)
-      && !window.confirm(`Day ${dayIndex + 1} already has blurbs. Recompose and overwrite them?`)
+      && !window.confirm(
+        `Day ${dayIndex + 1}'s blurbs are written as one set, so adding or changing a stop `
+        + `recomposes the whole day. Every blurb in Day ${dayIndex + 1} will be rewritten, `
+        + `including any you've hand-edited. Continue?`,
+      )
     ) {
       return
     }
@@ -796,7 +822,10 @@ export default function ListicleItineraryBuilderPage() {
     }
     if (
       dayIndexes.some((dayIndex) => dayHasExistingBlurbs(draft, dayIndex, relatedByBlockType))
-      && !window.confirm('Some days already have blurbs. Recompose and overwrite them?')
+      && !window.confirm(
+        'Each day is composed as one set, so days with existing blurbs will be rewritten '
+        + 'in full, including any you\'ve hand-edited. Continue?',
+      )
     ) {
       return
     }
@@ -1126,6 +1155,7 @@ export default function ListicleItineraryBuilderPage() {
                 onRemoveItem={actions.removeItem}
                 onUpdateItem={actions.updateItem}
                 onStopBlurbAiAutoWrite={autoWriteStopBlurb}
+                onRefineStopReason={refineStopReason}
                 activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
                 onComposeActiveDayBlurbs={() => composeDayBlurbs(activeDayIndex)}
                 onComposeAllDayBlurbs={composeAllDayBlurbs}

@@ -16,6 +16,7 @@ from .graph import (
     run_editor_assist_compose_brief_graph,
     run_editor_assist_compose_day_blurbs_graph,
     run_editor_assist_compose_intro_graph,
+    run_editor_assist_compose_stop_reason_graph,
     run_editor_assist_generate_title_graph,
     run_editor_assist_listicle_generation_graph,
     run_editor_assist_rewrite_graph,
@@ -54,6 +55,7 @@ from .writer_brief import (
     run_writer_brief,
 )
 from .writer_models import WriterModelError, invoke_writer_model
+from app.shared.prompts import ANTI_AI_TELLS_BLURB, ANTI_AI_TELLS_FULL
 from app.shared.text import normalize_dashes
 
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
@@ -601,6 +603,7 @@ def _compose_itinerary_intro_impl(
         f"{COMPOSE_INTRO_PROMPT}\n\n"
         + "Trip context:\n" + "\n".join(context_lines)
         + "\n\nItinerary stops (in order):\n" + "\n".join(stop_lines)
+        + f"\n\n{ANTI_AI_TELLS_FULL}"
     )
 
     stops_with_reason = sum(
@@ -729,8 +732,8 @@ Hard rules per blurb:
 - One paragraph of about {min_words} to {max_words} words. No heading, no \
 subheading, no bullet points, no lists, no quotes. The stop's title is rendered \
 elsewhere, so do not restate it as a label.
-- No em dashes. Never mention reviews, reviewers, ratings, stars, or the research \
-process. Do not invent details. Do not sound like a brochure or an AI summary.
+- Never mention reviews, reviewers, ratings, stars, or the research process. Do \
+not invent details.
 - Do not print literal day/stop labels ("Day 2, Stop 1:") in the prose.
 
 Output envelope — emit EXACTLY one block per stop, copying each stop's id tag \
@@ -864,6 +867,7 @@ def _compose_day_blurbs_impl(
         + "\n".join(context_lines)
         + "\n\nStops to write (in order):\n"
         + "\n".join(stop_lines)
+        + f"\n\n{ANTI_AI_TELLS_BLURB}"
     )
 
     steps: list[ComposeIntroStepEvent] = [
@@ -1002,6 +1006,134 @@ async def compose_itinerary_day_blurbs(
         raise HTTPException(
             status_code=502,
             detail="AI day-blurb composition graph failed",
+        ) from exc
+
+
+# --- Stop selection reason (operator-authored, ADR 0020) ---------------------
+#
+# Refines an operator's rough "why did you pick this?" note into the same
+# internal register Autobuild's reasons stage produces (itineraries_pipeline
+# REASONS_PROMPT): venue draw + why it fits here, NOT scoring jargon, NOT the
+# blurb. Output is an internal planning note seeding the day-blurb and intro
+# composers — it is deliberately OFF the anti-AI reader-voice path.
+
+COMPOSE_STOP_REASON_PROMPT = """You are refining an operator's rough note on why \
+they chose a specific venue for a stop in a travel itinerary, so a later writer \
+can build a blurb from it. The operator picked this stop by hand: their note is \
+the substance. Keep their intent, sharpen the wording, and expand only enough to \
+make it concrete and specific.
+
+Write 1 to 2 sentences on this venue's draw and why it fits here. Match the \
+register of an internal planning note: concrete about the venue, NOT scoring \
+jargon, NOT reader-facing marketing prose. Do NOT write the blurb itself. Do NOT \
+invent facts the operator did not give and that are not obvious from the venue's \
+identity.
+
+Return ONLY the refined reason text — no labels, quotes, or commentary."""
+
+
+class ComposeStopReasonRequest(BaseModel):
+    rough_reason: str = Field(min_length=1, max_length=2000)
+    title: str = Field(min_length=1, max_length=240)
+    category: str | None = Field(default=None, max_length=80)
+    daypart: str | None = Field(default=None, max_length=80)
+    angle: str | None = Field(default=None, max_length=80)
+    article_title: str | None = Field(default=None, max_length=MAX_ARTICLE_TITLE_CHARS)
+    location_label: str | None = Field(default=None, max_length=300)
+    plan_overview: str | None = Field(default=None, max_length=MAX_INTRO_OVERVIEW_CHARS)
+    model_name: str | None = Field(default=None, max_length=120)
+
+
+class ComposeStopReasonResponse(BaseModel):
+    reason: str
+    model_used: str
+
+
+def _compose_stop_reason_impl(
+    request: ComposeStopReasonRequest,
+) -> ComposeStopReasonResponse:
+    rough_reason = request.rough_reason.strip()
+    title = request.title.strip()
+    if not rough_reason:
+        raise HTTPException(status_code=400, detail="rough_reason is required")
+    if not title:
+        raise HTTPException(status_code=400, detail="title is required")
+
+    stop_tags = [
+        tag.strip()
+        for tag in (request.daypart, request.category)
+        if tag and tag.strip()
+    ]
+    stop_descriptor = f"{title} [{' · '.join(stop_tags)}]" if stop_tags else title
+
+    context_lines = [f"Stop: {stop_descriptor}"]
+    angle = (request.angle or "").strip()
+    if angle:
+        angle_guidance = LISTICLE_ANGLE_GUIDANCE.get(angle)
+        context_lines.append(
+            f"Editorial angle — {angle}: {angle_guidance}" if angle_guidance
+            else f"Editorial angle: {angle}"
+        )
+    article_title = (request.article_title or "").strip()
+    if article_title:
+        context_lines.append(f"Article title: {article_title}")
+    location_label = (request.location_label or "").strip()
+    if location_label:
+        context_lines.append(f"Destination: {location_label}")
+    plan_overview = (request.plan_overview or "").strip()
+    if plan_overview:
+        context_lines.append(f"Internal plan overview (the spine): {plan_overview}")
+
+    llm_prompt = (
+        f"{COMPOSE_STOP_REASON_PROMPT}\n\n"
+        + "Context:\n" + "\n".join(context_lines)
+        + f"\n\nOperator's rough note:\n{rough_reason}"
+    )
+
+    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    try:
+        writer_result = invoke_writer_model(
+            prompt=llm_prompt,
+            model_name=model_used,
+            max_tokens=1024,
+            temperature=0.3,
+        )
+    except WriterModelError as exc:
+        logger.exception("Editor assist compose-itinerary-stop-reason failed: %s", exc)
+        raise HTTPException(
+            status_code=502,
+            detail="AI stop-reason composition request failed",
+        ) from exc
+
+    reason = strip_generation_fence(writer_result.text or "").strip()
+    if not reason:
+        raise HTTPException(
+            status_code=502,
+            detail="AI stop-reason composition returned empty output",
+        )
+
+    return ComposeStopReasonResponse(reason=reason, model_used=model_used)
+
+
+@router.post(
+    "/compose-itinerary-stop-reason", response_model=ComposeStopReasonResponse
+)
+async def compose_itinerary_stop_reason(
+    request: ComposeStopReasonRequest,
+) -> ComposeStopReasonResponse:
+    try:
+        return run_editor_assist_compose_stop_reason_graph(
+            step_runner=lambda: _compose_stop_reason_impl(request),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            "Editor Assist graph compose-itinerary-stop-reason failed: %s", exc
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="AI stop-reason composition graph failed",
         ) from exc
 
 

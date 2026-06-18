@@ -121,6 +121,28 @@ export type ComposeDayBlurbsResponse = {
   steps: ComposeIntroStepEvent[]
 }
 
+/**
+ * Refine an operator's rough "why did you pick this?" note into an internal
+ * Selection reason (ADR 0020). Internal planning register, not reader prose.
+ */
+export type ComposeStopReasonRequest = {
+  /** The operator's rough, hand-written rationale — the substance. */
+  roughReason: string
+  title: string
+  category?: string
+  daypart?: string
+  angle?: ListicleWriterAngle | null
+  articleTitle?: string
+  locationLabel?: string
+  planOverview?: string
+  modelName?: EditorAssistModelName
+}
+
+export type ComposeStopReasonResponse = {
+  reason: string
+  model_used: string
+}
+
 export type ListicleGuidelinesResponse = {
   angles: Record<string, string>
   tones: Record<string, string>

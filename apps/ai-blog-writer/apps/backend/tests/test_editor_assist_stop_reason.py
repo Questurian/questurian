@@ -1,0 +1,135 @@
+"""Route tests for the itinerary stop selection-reason composer (ADR 0020)."""
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+import app.features.editor_assist.routes as editor_assist_routes
+
+
+def _build_client() -> TestClient:
+    app = FastAPI()
+    app.include_router(editor_assist_routes.router)
+    return TestClient(app)
+
+
+def _writer_returning(text: str):
+    class _WriterResult:
+        def __init__(self) -> None:
+            self.text = text
+            self.model_name = editor_assist_routes.DEFAULT_MODEL
+
+    return lambda **_kwargs: _WriterResult()
+
+
+def _capturing_writer(text: str, sink: dict):
+    def _call(**kwargs):
+        sink["prompt"] = kwargs.get("prompt", "")
+
+        class _WriterResult:
+            def __init__(self) -> None:
+                self.text = text
+                self.model_name = editor_assist_routes.DEFAULT_MODEL
+
+        return _WriterResult()
+
+    return _call
+
+
+def _request_body(**overrides):
+    body = {
+        "rough_reason": "great rooftop, perfect for the sunset slot",
+        "title": "Mérito",
+        "category": "Dining",
+        "daypart": "evening",
+        "angle": "signature-dish",
+        "article_title": "Two Days in Lima",
+        "location_label": "Lima, Peru",
+        "plan_overview": "A Barranco-anchored foodie trip.",
+    }
+    body.update(overrides)
+    return body
+
+
+def test_stop_reason_refines_rough_note(monkeypatch):
+    refined = "A buzzy Barranco rooftop whose sunset views and ceviche make it the natural evening anchor."
+    monkeypatch.setattr(
+        editor_assist_routes, "invoke_writer_model", _writer_returning(refined)
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/compose-itinerary-stop-reason", json=_request_body()
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["reason"] == refined
+    assert payload["model_used"] == editor_assist_routes.DEFAULT_MODEL
+
+
+def test_stop_reason_passes_rough_note_and_context_to_writer(monkeypatch):
+    sink: dict = {}
+    monkeypatch.setattr(
+        editor_assist_routes,
+        "invoke_writer_model",
+        _capturing_writer("refined reason", sink),
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/compose-itinerary-stop-reason", json=_request_body()
+    )
+
+    assert response.status_code == 200
+    prompt = sink["prompt"]
+    # The operator's rough note is the substance, carried verbatim into the prompt.
+    assert "great rooftop, perfect for the sunset slot" in prompt
+    # Stop identity + trip framing are present as context.
+    assert "Mérito" in prompt
+    assert "Lima, Peru" in prompt
+    assert "Barranco-anchored" in prompt
+
+
+def test_stop_reason_strips_generation_fence(monkeypatch):
+    monkeypatch.setattr(
+        editor_assist_routes,
+        "invoke_writer_model",
+        _writer_returning("```\nA clean refined reason.\n```"),
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/compose-itinerary-stop-reason", json=_request_body()
+    )
+
+    assert response.status_code == 200
+    assert response.json()["reason"] == "A clean refined reason."
+
+
+def test_stop_reason_empty_output_is_502(monkeypatch):
+    monkeypatch.setattr(
+        editor_assist_routes, "invoke_writer_model", _writer_returning("   ")
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/compose-itinerary-stop-reason", json=_request_body()
+    )
+
+    assert response.status_code == 502
+
+
+def test_stop_reason_requires_rough_reason():
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/compose-itinerary-stop-reason",
+        json=_request_body(rough_reason=""),
+    )
+    # min_length=1 -> 422 from validation; whitespace-only -> 400 from impl.
+    assert response.status_code == 422
+
+    response = client.post(
+        "/editor-assist/compose-itinerary-stop-reason",
+        json=_request_body(rough_reason="   "),
+    )
+    assert response.status_code == 400

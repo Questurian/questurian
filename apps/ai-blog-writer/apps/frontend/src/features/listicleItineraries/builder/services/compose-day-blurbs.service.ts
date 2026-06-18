@@ -20,7 +20,7 @@ import { getItineraryStopAngleDisabledReason } from './ai-autowrite.service'
 import { buildArticleLocationLabel } from './ai-autowrite.service'
 import { getItineraryAiArticleTitle } from './ai-rewrite.service'
 
-const ITINERARY_BLOCK_CATEGORY_LABELS: Record<ItineraryBlockType, string> = {
+export const ITINERARY_BLOCK_CATEGORY_LABELS: Record<ItineraryBlockType, string> = {
   'itinerary-dining': 'Dining',
   'itinerary-accommodations': 'Accommodations',
   'itinerary-where-staying': "Where You're Staying",
@@ -39,7 +39,7 @@ function isIntroFinalized(draft: ListicleItineraryDraft): boolean {
   )
 }
 
-function resolveStopTitle(
+export function resolveStopTitle(
   item: ItineraryItemBlock,
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
 ): string {
@@ -96,8 +96,9 @@ function toNeighborStop(
 
 /**
  * Why day `dayIndex`'s blurbs cannot be composed, or undefined if it is ready.
- * Gated (ADR 0019) on: a finalized Intro (Step 2 locked), ≥1 resolved stop, and
- * every pooled-category stop having an Angle (ADR 0010 preserved).
+ * Gated on: a finalized Intro (Step 2 locked, ADR 0019), ≥1 resolved stop, every
+ * pooled-category stop having an Angle (ADR 0010 preserved), and every resolved
+ * stop having a Selection reason to seed its blurb (ADR 0020).
  */
 export function getItineraryDayBlurbComposeDisabledReason(
   draft: ListicleItineraryDraft,
@@ -117,6 +118,12 @@ export function getItineraryDayBlurbComposeDisabledReason(
   for (const item of resolved) {
     if (getItineraryStopAngleDisabledReason(item)) {
       return `Day ${dayIndex + 1}: select a blurb angle for "${resolveStopTitle(item, relatedByBlockType)}"`
+    }
+    // Hard gate (ADR 0020): every resolved stop needs a Selection reason to seed
+    // its blurb. Autobuild fills this for stops it picks; an empty reason means
+    // an operator-added or swapped stop still needs a "Why this pick".
+    if (!item.selectionReason?.trim()) {
+      return `Day ${dayIndex + 1}: add a "Why this pick" for "${resolveStopTitle(item, relatedByBlockType)}"`
     }
   }
   return undefined

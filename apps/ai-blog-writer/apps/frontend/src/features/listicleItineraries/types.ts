@@ -40,6 +40,20 @@ export function isWhereStayingBlockType(blockType: ItineraryBlockType): boolean 
 }
 
 /**
+ * A stable key for a stop's *resolved identity* — the venue it points at.
+ * Pooled stops are keyed by their Payload record; the lone manual block type
+ * (tour-agency) by its operator-entered title/operator. When this key changes
+ * (a swap), the stop's Selection reason and blurb describe the previous venue
+ * and must be invalidated (ADR 0020).
+ */
+export function resolveItineraryStopIdentityKey(item: ItineraryItemBlock): string {
+  if (isManualItineraryBlockType(item.blockType)) {
+    return `${item.blockType}|manual|${item.title.trim()}|${item.operator.trim()}`
+  }
+  return `${item.blockType}|${item.item ?? ''}`
+}
+
+/**
  * Per-item editorial angle + list tone for itinerary stops.
  *
  * These mirror the single-type listicle pools: each itinerary stop reuses the

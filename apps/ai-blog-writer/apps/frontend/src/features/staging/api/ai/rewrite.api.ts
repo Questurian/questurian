@@ -7,6 +7,8 @@ import type {
   ComposeItineraryBriefResponse,
   ComposeItineraryIntroRequest,
   ComposeItineraryIntroResponse,
+  ComposeStopReasonRequest,
+  ComposeStopReasonResponse,
   GenerateTitleWithAiRequest,
   GenerateTitleWithAiResponse,
   GenerateListicleContentRequest,
@@ -173,6 +175,35 @@ export async function composeItineraryDayBlurbsWithAi(
 
   if (!response.ok) {
     const message = await parseErrorResponse(response, 'AI day-blurb composition failed', { detail: 'AI day-blurb composition failed' })
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+export async function composeItineraryStopReasonWithAi(
+  input: ComposeStopReasonRequest,
+): Promise<ComposeStopReasonResponse> {
+  const response = await fetch(`${API_BASE_URL}/editor-assist/compose-itinerary-stop-reason`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      rough_reason: input.roughReason,
+      title: input.title,
+      category: input.category,
+      daypart: input.daypart,
+      angle: input.angle,
+      article_title: input.articleTitle,
+      location_label: input.locationLabel,
+      plan_overview: input.planOverview,
+      model_name: input.modelName,
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, 'AI stop-reason composition failed', { detail: 'AI stop-reason composition failed' })
     throw new Error(message)
   }
 

@@ -42,6 +42,8 @@ import { TourPicksModal } from './TourPicksModal'
 import { InstagramPickerModal } from '../../../../shared/builder/components/InstagramPickerModal'
 import { PhotoPickerModal } from '../../../../shared/builder/components/PhotoPickerModal'
 import { RelatedItemPickerModal } from '../../../../shared/builder/components/RelatedItemPickerModal'
+import { StopReasonField } from './StopReasonField'
+import type { ComposeStopReasonResult } from '../services/compose-stop-reason.service'
 
 type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
@@ -59,6 +61,8 @@ type BuilderStopsPanelProps = {
   onRemoveItem: (itemId: string) => void
   onUpdateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
   onStopBlurbAiAutoWrite: (itemId: string) => Promise<void>
+  /** Refine an operator's rough "why this pick" note into a Selection reason (ADR 0020). */
+  onRefineStopReason: (itemId: string, roughReason: string) => Promise<ComposeStopReasonResult>
   activeAiItemId: string | null
   /** Compose the active day's stop blurbs as one narrative set (ADR 0019). */
   onComposeActiveDayBlurbs: () => void
@@ -325,6 +329,7 @@ export function BuilderStopsPanel({
   onRemoveItem,
   onUpdateItem,
   onStopBlurbAiAutoWrite,
+  onRefineStopReason,
   activeAiItemId,
   onComposeActiveDayBlurbs,
   onComposeAllDayBlurbs,
@@ -1478,24 +1483,12 @@ export function BuilderStopsPanel({
                   <p className="stl-legacy-note">This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.</p>
                 ) : null}
 
-                {typeof item.selectionReason === 'string' ? (
-                  <div className="stl-stop-reason">
-                    <label className="stl-field-label-row">
-                      <span title="Why the AI chose this venue for this slot. Internal — not public. Seeds the blurb; edit freely.">
-                        ⓘ Why this pick
-                      </span>
-                    </label>
-                    <textarea
-                      className="stl-field-input stl-stop-reason-input"
-                      rows={2}
-                      value={item.selectionReason || ''}
-                      placeholder="AI rationale for this pick (internal — seeds the blurb)"
-                      onChange={(event) =>
-                        onUpdateItem(item.id, (current) => ({ ...current, selectionReason: event.target.value }))
-                      }
-                    />
-                  </div>
-                ) : null}
+                <StopReasonField
+                  item={item}
+                  disabled={isLocked}
+                  onUpdateItem={onUpdateItem}
+                  onRefineStopReason={onRefineStopReason}
+                />
 
                 <RelatedItemPickerModal
                   isOpen={activeItemPicker?.itemId === item.id}
@@ -1513,6 +1506,9 @@ export function BuilderStopsPanel({
                         ?? current.mediaMode
 
                       const pickChanged = nextId !== current.item
+                      // The Selection reason and blurb are invalidated centrally
+                      // on identity change (applyItemUpdate, ADR 0020) — no need
+                      // to clear them here.
                       return {
                         ...current,
                         item: nextId,
@@ -1521,10 +1517,6 @@ export function BuilderStopsPanel({
                         mediaMode: nextMediaMode,
                         selectedPhotos: [],
                         selectedInstagramPost: null,
-                        // A swapped pick orphans the autobuild "Why this pick"
-                        // rationale; drop it so a present reason always describes
-                        // the current pick (ADR 0018).
-                        selectionReason: pickChanged ? '' : current.selectionReason,
                       }
                     })
                   }

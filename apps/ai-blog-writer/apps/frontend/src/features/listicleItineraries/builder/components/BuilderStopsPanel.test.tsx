@@ -276,6 +276,7 @@ function Harness({
         })
       }}
       onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite}
+      onRefineStopReason={async (_itemId, roughReason) => ({ reason: roughReason, fallback: false })}
       activeAiItemId={null}
       onComposeActiveDayBlurbs={() => {}}
       onComposeAllDayBlurbs={() => {}}

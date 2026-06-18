@@ -136,10 +136,11 @@ Code references: `draft.planOverview`; `itineraries_pipeline/llm_stages.py` reas
 
 ### Selection reason
 
-Definition: per-stop rationale for *why this pick* filled a slot, produced by Itinerary Autobuild. Internal/persisted, shown as **ⓘ Why this pick** in the builder.
+Definition: per-stop rationale for *why this pick* filled a slot. Internal/persisted, shown as **ⓘ Why this pick** in the builder, and consumed as a seed by the day-blurb composer. Has two provenances: **Autobuild** (produced by Itinerary Autobuild's reasons stage for stops it selected) and **operator** (authored by the operator for a stop they added or swapped post-pipeline, via a rough "why did you pick this?" answer the system cleans/expands into tooltip-quality prose).
+Provenance rule: a Selection reason is bound to a stop's *resolved identity*. Changing a stop's identity (a swap) invalidates the existing reason regardless of provenance — the old reason describes the wrong venue.
 Related terms: Plan overview, Stop, Itinerary Autobuild.
 Do not confuse with: the stop's **blurb** (reader-facing prose).
-Code references: `item.selectionReason`; `BuilderStopsPanel.tsx` "Why this pick".
+Code references: `item.selectionReason`; `StopReasonField.tsx` ("Why this pick" + Refine); backend `editor_assist/compose-itinerary-stop-reason`.
 
 ### Page-level article exclusion
 

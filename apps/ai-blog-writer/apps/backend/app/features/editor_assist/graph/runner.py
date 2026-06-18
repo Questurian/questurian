@@ -120,6 +120,16 @@ def run_editor_assist_compose_day_blurbs_graph(
     )
 
 
+def run_editor_assist_compose_stop_reason_graph(
+    *,
+    step_runner: Callable[[], T],
+) -> T:
+    return _run_editor_assist_graph(
+        node_name="editor_assist_compose_itinerary_stop_reason",
+        step_runner=step_runner,
+    )
+
+
 def run_editor_assist_rewrite_graph(
     *,
     step_runner: Callable[[], T],

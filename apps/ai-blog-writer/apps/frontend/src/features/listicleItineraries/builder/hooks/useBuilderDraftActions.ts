@@ -20,7 +20,33 @@ import type {
 } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateStep3 } from '../validators/step.validators'
-import { createEmptyDaySlice, WHERE_STAYING_BLOCK_TYPE } from '../../types'
+import {
+  createEmptyDaySlice,
+  resolveItineraryStopIdentityKey,
+  WHERE_STAYING_BLOCK_TYPE,
+} from '../../types'
+
+/**
+ * Run an item updater, then invalidate the Selection reason and blurb if the
+ * stop's resolved identity changed (a swap). Both describe the previous venue,
+ * so clearing them re-arms the why-gate and forces a day recompose (ADR 0020).
+ */
+function applyItemUpdate(
+  item: ItineraryItemBlock,
+  updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
+): ItineraryItemBlock {
+  const next = updater(item)
+  if (resolveItineraryStopIdentityKey(next) === resolveItineraryStopIdentityKey(item)) {
+    return next
+  }
+  return {
+    ...next,
+    selectionReason: '',
+    blurbMarkdown: '',
+    blurbJsonText: '',
+    blurbLexical: undefined,
+  }
+}
 
 function createNewItem(): ItineraryItemBlock {
   return {
@@ -47,6 +73,10 @@ function createNewItem(): ItineraryItemBlock {
     blurbMarkdown: '',
     blurbLexical: undefined,
     blurbJsonText: '',
+    // Operator-added stop: no Autobuild rationale. Empty string (not undefined)
+    // so the "Why this pick" field renders and the day-compose gate sees it as
+    // an unfilled reason to prompt for (ADR 0020).
+    selectionReason: '',
   }
 }
 
@@ -159,13 +189,17 @@ export function useBuilderDraftActions({
         if (day.whereStaying.some((item) => item.id === itemId)) {
           return {
             ...day,
-            whereStaying: day.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
+            whereStaying: day.whereStaying.map((item) =>
+              item.id === itemId ? applyItemUpdate(item, updater) : item,
+            ),
           }
         }
         if (day.items.some((item) => item.id === itemId)) {
           return {
             ...day,
-            items: day.items.map((item) => (item.id === itemId ? updater(item) : item)),
+            items: day.items.map((item) =>
+              item.id === itemId ? applyItemUpdate(item, updater) : item,
+            ),
           }
         }
         return day

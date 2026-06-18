@@ -2,16 +2,20 @@
 
 Two variants are defined; current usage:
 
-- ANTI_AI_TELLS_BLURB: appended in `editor_assist/listicle_writer.py` for
-  listicle blurbs. Gated per-category via `_voice_rules_block`; today the gate
-  is open for dining (pilot from ADR 0003) and is being extended to
-  accommodations, attractions, and nightlife per ADR 0004. Intros, key_location
-  blurbs, and other listicle field types remain on the legacy path.
+- ANTI_AI_TELLS_BLURB: appended for single-paragraph blurbs. In
+  `editor_assist/listicle_writer.py` for listicle blurbs, gated per-category via
+  `_voice_rules_block` (dining pilot from ADR 0003, extended to accommodations,
+  attractions, and nightlife per ADR 0004). Also appended unconditionally to the
+  itinerary stop-blurb day composer (`compose_itinerary_day_blurbs`) per ADR
+  0021. Single-type listicle intros, key_location blurbs, and other listicle
+  field types remain on the legacy path.
 
-- ANTI_AI_TELLS_FULL: defined but NOT YET imported anywhere. Intended for
-  article-body composers (youtube2blog, prompt2blog, url2blog,
-  editor_assist block-rewrite, deep-expand, editorial augmentation). Wiring
-  these is out of scope for the current listicle work and will be its own ADR.
+- ANTI_AI_TELLS_FULL: wired into the itinerary intro composer
+  (`compose_itinerary_intro`) per ADR 0021 — its first production use, chosen
+  over the BLURB variant because an intro is 1-3 paragraphs. Still intended for
+  the other article-body composers (youtube2blog, prompt2blog, url2blog,
+  editor_assist block-rewrite, deep-expand, editorial augmentation), which can
+  follow this wiring.
 
 The blurb variant drops rhythm / summary / paragraph-structure rules that do
 not apply to a single 90-140 word paragraph.
