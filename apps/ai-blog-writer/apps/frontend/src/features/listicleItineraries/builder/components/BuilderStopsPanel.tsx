@@ -56,7 +56,7 @@ type BuilderStopsPanelProps = {
   isLoadingRelated: boolean
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
   onAddWhereStaying: () => void
-  onAddItem: () => void
+  onAddItem: (insertIndex?: number) => void
   onMoveItem: (itemId: string, direction: 'up' | 'down') => void
   onRemoveItem: (itemId: string) => void
   onUpdateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
@@ -314,6 +314,25 @@ function resetItemForBlockType(item: ItineraryItemBlock, blockType: ItineraryBlo
   }
 }
 
+/**
+ * Always-visible divider that inserts a blank stop at a precise position, so
+ * operators no longer append-then-move. Inherits the panel fieldset's disabled
+ * state when stops are locked.
+ */
+function StopInsertZone({ onInsert, label }: { onInsert: () => void; label: string }) {
+  return (
+    <div className="stl-stop-insert-zone">
+      <button type="button" className="stl-stop-insert-btn" onClick={onInsert} title={label}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        Stop
+      </button>
+    </div>
+  )
+}
+
 export function BuilderStopsPanel({
   draft,
   activeDayIndex,
@@ -512,7 +531,7 @@ export function BuilderStopsPanel({
           <button type="button" className="stl-btn" onClick={onAddWhereStaying}>
             Add lodging
           </button>
-          <button type="button" className="stl-btn" onClick={onAddItem}>
+          <button type="button" className="stl-btn" onClick={() => onAddItem()}>
             Add stop
           </button>
           {!isSynced ? (
@@ -673,6 +692,9 @@ export function BuilderStopsPanel({
                   <h3 className="stl-step3-section-heading">
                     {section === 'whereStaying' ? "Where you're staying" : 'Stops'}
                   </h3>
+                ) : null}
+                {section === 'stops' && localIndex === 0 ? (
+                  <StopInsertZone label="Insert stop here" onInsert={() => onAddItem(0)} />
                 ) : null}
                 <article className="stl-item-card">
                 <header className="stl-item-header">
@@ -1708,6 +1730,12 @@ export function BuilderStopsPanel({
                   </div>
                 ) : null}
               </article>
+                {section === 'stops' ? (
+                  <StopInsertZone
+                    label="Insert stop here"
+                    onInsert={() => onAddItem(localIndex + 1)}
+                  />
+                ) : null}
               </Fragment>
             )
           })}

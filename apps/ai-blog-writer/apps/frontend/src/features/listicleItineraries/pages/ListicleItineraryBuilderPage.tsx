@@ -1150,7 +1150,7 @@ export default function ListicleItineraryBuilderPage() {
                 isLoadingRelated={isLoadingRelated}
                 relatedByBlockType={relatedByBlockType}
                 onAddWhereStaying={() => actions.addWhereStayingItem(activeDayIndex)}
-                onAddItem={() => actions.addItem(activeDayIndex)}
+                onAddItem={(insertIndex) => actions.addItem(activeDayIndex, insertIndex)}
                 onMoveItem={actions.moveItem}
                 onRemoveItem={actions.removeItem}
                 onUpdateItem={actions.updateItem}

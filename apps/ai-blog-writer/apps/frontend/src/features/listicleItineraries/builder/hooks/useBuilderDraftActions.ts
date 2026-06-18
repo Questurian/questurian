@@ -105,7 +105,7 @@ type UseBuilderDraftActionsResult = {
   updateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
   removeItem: (itemId: string) => void
   moveItem: (itemId: string, direction: 'up' | 'down') => void
-  addItem: (dayIndex: number) => void
+  addItem: (dayIndex: number, insertIndex?: number) => void
   addWhereStayingItem: (dayIndex: number) => void
   handleContinue: () => void
   handleUpdateSetup: () => void
@@ -256,16 +256,19 @@ export function useBuilderDraftActions({
     })
   }
 
-  function addItem(dayIndex: number) {
+  function addItem(dayIndex: number, insertIndex?: number) {
     setDraft((current) => {
       if (!current) return current
       const day = current.days[dayIndex]
       if (!day) return current
+      const items = [...day.items]
+      // Clamp so an out-of-range index can't drop the stop or throw; undefined = append.
+      const at = insertIndex === undefined
+        ? items.length
+        : Math.max(0, Math.min(insertIndex, items.length))
+      items.splice(at, 0, createNewItem())
       const nextDays = [...current.days]
-      nextDays[dayIndex] = {
-        ...day,
-        items: [...day.items, createNewItem()],
-      }
+      nextDays[dayIndex] = { ...day, items }
       return { ...current, days: nextDays }
     })
   }

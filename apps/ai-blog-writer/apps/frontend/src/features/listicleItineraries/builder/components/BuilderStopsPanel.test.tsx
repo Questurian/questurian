@@ -231,12 +231,14 @@ type HarnessProps = {
   initialDraft?: ListicleItineraryDraft
   relatedItems?: Record<ItineraryBlockType, RelatedItemOption[]>
   onStopBlurbAiAutoWrite?: (itemId: string) => Promise<void>
+  onAddItem?: (insertIndex?: number) => void
 }
 
 function Harness({
   initialDraft = buildDraft(),
   relatedItems = relatedByBlockType,
   onStopBlurbAiAutoWrite = async () => {},
+  onAddItem = () => {},
 }: HarnessProps = {}) {
   const [draft, setDraft] = useState<ListicleItineraryDraft>(initialDraft)
 
@@ -251,7 +253,7 @@ function Harness({
       isLoadingRelated={false}
       relatedByBlockType={relatedItems}
       onAddWhereStaying={() => {}}
-      onAddItem={() => {}}
+      onAddItem={onAddItem}
       onMoveItem={() => {}}
       onRemoveItem={() => {}}
       onUpdateItem={(itemId, updater) => {
@@ -294,6 +296,45 @@ function Harness({
 }
 
 describe('BuilderStopsPanel', () => {
+  it('inserts a stop at the clicked position via inline zones', async () => {
+    const user = userEvent.setup()
+    const onAddItem = vi.fn()
+
+    // buildDraft() has one stop and no lodging: a top zone (index 0) plus an
+    // after-card zone (index 1).
+    render(<Harness onAddItem={onAddItem} />)
+
+    const insertButtons = screen.getAllByRole('button', { name: /^stop$/i })
+    expect(insertButtons).toHaveLength(2)
+
+    await user.click(insertButtons[0])
+    expect(onAddItem).toHaveBeenLastCalledWith(0)
+
+    await user.click(insertButtons[1])
+    expect(onAddItem).toHaveBeenLastCalledWith(1)
+  })
+
+  it('renders no inline insert zones in the lodging section', () => {
+    const draftWithLodgingOnly: ListicleItineraryDraft = {
+      ...buildDraft(),
+      days: [
+        {
+          ...buildDraft().days[0],
+          whereStaying: [
+            { ...buildManualTourAgencyItem(), id: 'lodging-1', blockType: 'itinerary-where-staying' },
+          ],
+          items: [],
+        },
+      ],
+    }
+
+    render(<Harness initialDraft={draftWithLodgingOnly} />)
+
+    // The header "Add stop" button is named "Add stop", so an exact "Stop"
+    // match isolates the inline insert zones — there should be none.
+    expect(screen.queryAllByRole('button', { name: /^stop$/i })).toHaveLength(0)
+  })
+
   it('does not auto-write when the stop blurb editor is clicked', () => {
     const onStopBlurbAiAutoWrite = vi.fn(async () => {})
 

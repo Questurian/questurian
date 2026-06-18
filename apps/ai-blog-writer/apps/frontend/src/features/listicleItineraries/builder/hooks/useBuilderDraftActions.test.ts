@@ -145,4 +145,44 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     expect(item?.selectionReason).toBe('original autobuild reason')
     expect(item?.blurbMarkdown).toBe('Existing stop copy')
   })
+
+  it('appends a new stop when addItem is called without an index', () => {
+    const { result } = renderHook(() => useHarness(buildDraft()))
+
+    act(() => {
+      result.current.addItem(0)
+    })
+
+    const items = result.current.draft?.days[0]?.items ?? []
+    expect(items).toHaveLength(2)
+    expect(items[0]?.id).toBe('stop-1')
+    expect(items[1]?.item).toBeNull()
+  })
+
+  it('inserts a new stop at the given index', () => {
+    const { result } = renderHook(() => useHarness(buildDraft()))
+
+    act(() => {
+      result.current.addItem(0, 0)
+    })
+
+    const items = result.current.draft?.days[0]?.items ?? []
+    expect(items).toHaveLength(2)
+    // The blank stop lands first; the original stop shifts down.
+    expect(items[0]?.item).toBeNull()
+    expect(items[1]?.id).toBe('stop-1')
+  })
+
+  it('clamps an out-of-range insert index instead of dropping the stop', () => {
+    const { result } = renderHook(() => useHarness(buildDraft()))
+
+    act(() => {
+      result.current.addItem(0, 99)
+    })
+
+    const items = result.current.draft?.days[0]?.items ?? []
+    expect(items).toHaveLength(2)
+    expect(items[0]?.id).toBe('stop-1')
+    expect(items[1]?.item).toBeNull()
+  })
 })
