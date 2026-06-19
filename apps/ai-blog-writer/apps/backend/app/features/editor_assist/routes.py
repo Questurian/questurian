@@ -710,15 +710,23 @@ You will receive: the article title, the destination, the desired tone, the \
 reader-facing intro that already opens the article, an optional internal plan \
 overview, and this day's stops in order — each with its category, rough time of \
 day, an optional editorial angle, and an optional internal "why this pick" note. \
-You may also receive the adjacent day's edge stop for context only.
+Each stop is marked either [TO WRITE] or [ALREADY WRITTEN]. Stops marked \
+[ALREADY WRITTEN] are shown with their existing copy and are context ONLY — you \
+must not rewrite or re-emit them. You may also receive the adjacent day's edge \
+stop for context only.
 
-Write ONE paragraph of reader-facing copy for EACH stop, in the given order.
+Write ONE paragraph of reader-facing copy for ONLY the [TO WRITE] stops, in the \
+given order. Emit nothing for [ALREADY WRITTEN] stops or adjacent-day edge stops.
 
 Narrative and texture:
 - These blurbs are a sequence, not isolated reviews. Let each paragraph be aware \
 of where it sits in the day: the morning stop opens the day, later stops can hand \
 off from what came before ("after the cathedral, wander down to ...") using the \
 time of day and order you are given.
+- Thread every [TO WRITE] stop into the [ALREADY WRITTEN] copy around it: pick up \
+the handoff the preceding stop offers and lead naturally toward the stop that \
+follows, matching their voice. Reference them lightly — never restate, quote, or \
+rewrite their copy.
 - Stay consistent with the intro's framing and the plan overview's thesis, but do \
 NOT repeat the intro or restate the trip premise in every blurb.
 - Weave each stop's KEY HIGHLIGHTS into the prose (the standout dish, the view, \
@@ -726,7 +734,8 @@ the signature feature). Highlights are woven into the paragraph, never bulleted.
 - Honor the stop's editorial angle when one is given.
 - The "why this pick" notes and plan overview are INTERNAL planning notes, not \
 reader copy. Transform them into natural prose, never quote or echo them.
-- Adjacent-day edge stops are context only. Do NOT write copy for them.
+- Adjacent-day edge stops and [ALREADY WRITTEN] stops are context only. Do NOT \
+write copy for them.
 
 Hard rules per blurb:
 - One paragraph of about {min_words} to {max_words} words. No heading, no \
@@ -736,8 +745,8 @@ elsewhere, so do not restate it as a label.
 not invent details.
 - Do not print literal day/stop labels ("Day 2, Stop 1:") in the prose.
 
-Output envelope — emit EXACTLY one block per stop, copying each stop's id tag \
-verbatim, and nothing else outside the blocks:
+Output envelope — emit EXACTLY one block per [TO WRITE] stop, copying each stop's \
+id tag verbatim, and nothing else outside the blocks:
 <<<BLURB:the_stop_id>>>
 [the single paragraph for that stop]
 <<<END>>>"""
@@ -754,6 +763,10 @@ class ComposeDayBlurbStop(BaseModel):
     daypart: str | None = Field(default=None, max_length=80)
     angle: str | None = Field(default=None, max_length=80)
     selection_reason: str | None = Field(default=None, max_length=2000)
+    # The stop's already-written blurb. Used only when the stop is context-only
+    # (not in write_target_ids), so a written sibling can be threaded off without
+    # being rewritten (ADR 0022).
+    existing_blurb: str | None = Field(default=None, max_length=4000)
 
 
 class ComposeDayBlurbsNeighborStop(BaseModel):
@@ -774,6 +787,12 @@ class ComposeDayBlurbsRequest(BaseModel):
     stops: list[ComposeDayBlurbStop] = Field(
         default_factory=list, max_length=MAX_DAY_BLURB_STOPS
     )
+    # When present, author ONLY these stops; the rest of `stops` are context-only
+    # (their existing copy threads the written ones, ADR 0022). When omitted, the
+    # whole day is authored — the original ADR 0019 behavior, unchanged.
+    write_target_ids: list[str] | None = Field(
+        default=None, max_length=MAX_DAY_BLURB_STOPS
+    )
     model_name: str | None = Field(default=None, max_length=120)
 
 
@@ -790,9 +809,22 @@ class ComposeDayBlurbsResponse(BaseModel):
     steps: list[ComposeIntroStepEvent] = Field(default_factory=list)
 
 
-def _format_day_blurb_stop_line(index: int, stop: ComposeDayBlurbStop) -> str:
+def _format_day_blurb_stop_line(
+    index: int, stop: ComposeDayBlurbStop, is_write: bool
+) -> str:
     tags = [tag for tag in (stop.daypart, stop.category) if tag and tag.strip()]
     prefix = f"[{' · '.join(tag.strip() for tag in tags)}] " if tags else ""
+    title = stop.title.strip()
+
+    if not is_write:
+        existing = (stop.existing_blurb or "").strip()
+        body = (
+            f"\n    Existing copy (context only, do NOT rewrite): {existing}"
+            if existing
+            else "\n    (Planned, not yet written — context only.)"
+        )
+        return f"{index}. id={stop.target_id} [ALREADY WRITTEN] {prefix}{title}{body}"
+
     angle = (stop.angle or "").strip()
     angle_guidance = LISTICLE_ANGLE_GUIDANCE.get(angle) if angle else None
     angle_suffix = f"\n    Angle — {angle}: {angle_guidance}" if angle_guidance else (
@@ -801,7 +833,7 @@ def _format_day_blurb_stop_line(index: int, stop: ComposeDayBlurbStop) -> str:
     reason = (stop.selection_reason or "").strip()
     reason_suffix = f"\n    Why this pick: {reason}" if reason else ""
     return (
-        f"{index}. id={stop.target_id} {prefix}{stop.title.strip()}"
+        f"{index}. id={stop.target_id} [TO WRITE] {prefix}{title}"
         f"{angle_suffix}{reason_suffix}"
     )
 
@@ -823,6 +855,21 @@ def _compose_day_blurbs_impl(
             status_code=400,
             detail="Add at least one resolved stop before composing day blurbs.",
         )
+
+    # Resolve which stops to author. Omitted write_target_ids = author the whole
+    # day (ADR 0019). Otherwise author only the named subset; the rest are
+    # context-only so a written sibling threads the new stop (ADR 0022).
+    if request.write_target_ids is None:
+        write_ids = {stop.target_id for stop in stops}
+    else:
+        requested = {tid.strip() for tid in request.write_target_ids if tid.strip()}
+        write_ids = {stop.target_id for stop in stops if stop.target_id in requested}
+        if not write_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="None of the requested stops to write are in this day.",
+            )
+    write_stops = [stop for stop in stops if stop.target_id in write_ids]
 
     inputs_started = time.monotonic()
     context_lines = [
@@ -856,7 +903,10 @@ def _compose_day_blurbs_impl(
         )
 
     stop_lines = [
-        _format_day_blurb_stop_line(index + 1, stop) for index, stop in enumerate(stops)
+        _format_day_blurb_stop_line(
+            index + 1, stop, stop.target_id in write_ids
+        )
+        for index, stop in enumerate(stops)
     ]
 
     llm_prompt = (
@@ -865,7 +915,7 @@ def _compose_day_blurbs_impl(
         )
         + "\n\nTrip context:\n"
         + "\n".join(context_lines)
-        + "\n\nStops to write (in order):\n"
+        + "\n\nDay stops in order (write only [TO WRITE]):\n"
         + "\n".join(stop_lines)
         + f"\n\n{ANTI_AI_TELLS_BLURB}"
     )
@@ -880,12 +930,14 @@ def _compose_day_blurbs_impl(
                 "day_label": request.day_label,
                 "list_tone": request.list_tone,
                 "stop_count": len(stops),
+                "write_count": len(write_stops),
+                "context_only_count": len(stops) - len(write_stops),
                 "intro_present": bool(intro_text),
                 "plan_overview_present": bool(plan_overview),
                 "has_prev_neighbor": request.prev_day_last_stop is not None,
                 "has_next_neighbor": request.next_day_first_stop is not None,
                 "stops_with_reason": sum(
-                    1 for s in stops if (s.selection_reason or "").strip()
+                    1 for s in write_stops if (s.selection_reason or "").strip()
                 ),
             },
         )
@@ -932,7 +984,7 @@ def _compose_day_blurbs_impl(
         )
 
     results: dict[str, ComposeDayBlurbResult] = {}
-    for stop in stops:
+    for stop in write_stops:
         body = parsed.get(stop.target_id, "").strip()
         if not body:
             results[stop.target_id] = ComposeDayBlurbResult(
@@ -978,7 +1030,7 @@ def _compose_day_blurbs_impl(
             name="finalize",
             label="Finalized day blurbs",
             status="ok" if generated else "failed",
-            details={"generated": generated, "total": len(stops)},
+            details={"generated": generated, "total": len(write_stops)},
         )
     )
 

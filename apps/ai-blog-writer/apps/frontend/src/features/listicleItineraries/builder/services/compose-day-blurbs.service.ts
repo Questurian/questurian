@@ -81,6 +81,9 @@ function toComposeStop(
     daypart: item.shellSlotDaypart,
     angle: resolveItineraryAngleForBlockType(item.blockType, item.angle),
     selectionReason: item.selectionReason?.trim() || undefined,
+    // Carried so a context-only stop (one not in writeTargetIds) can be threaded
+    // off its existing copy without being rewritten (ADR 0022).
+    existingBlurb: item.blurbMarkdown.trim() || undefined,
   }
 }
 
@@ -178,8 +181,13 @@ export function buildItineraryComposeDayBlurbsRequest(params: {
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>
   locations: LocationOption[]
   modelName: ComposeDayBlurbsRequest['modelName']
+  /**
+   * Author only these stops; the day's other resolved stops ride along as
+   * context-only seeds (ADR 0022). Omit to author the whole day (ADR 0019).
+   */
+  writeTargetIds?: string[]
 }): ComposeDayBlurbsRequest {
-  const { draft, dayIndex, relatedByBlockType, locations, modelName } = params
+  const { draft, dayIndex, relatedByBlockType, locations, modelName, writeTargetIds } = params
   const day = draft.days[dayIndex]
 
   const prevDay = draft.days[dayIndex - 1]
@@ -197,11 +205,65 @@ export function buildItineraryComposeDayBlurbsRequest(params: {
     dayCount: draft.days.length || undefined,
     prevDayLastStop: toNeighborStop(prevResolved[prevResolved.length - 1], relatedByBlockType),
     nextDayFirstStop: toNeighborStop(nextResolved[0], relatedByBlockType),
+    writeTargetIds,
     modelName,
     stops: getResolvedDayStops(day, relatedByBlockType).map((item) =>
       toComposeStop(item, relatedByBlockType),
     ),
   }
+}
+
+/**
+ * Why a single stop's blurb cannot be composed on its own (ADR 0022), or
+ * undefined when it is ready. Stop-scoped sibling of
+ * `getItineraryDayBlurbComposeDisabledReason`: the day-wide gate fails if any
+ * sibling lacks an angle/reason, but a single-stop aware compose only needs THIS
+ * stop ready — siblings ride along as read-only context. Still gated on the
+ * finalized Intro (ADR 0019) and this stop's own angle + "Why this pick" (ADR 0020).
+ */
+export function getItineraryStopBlurbComposeDisabledReason(
+  draft: ListicleItineraryDraft,
+  item: ItineraryItemBlock,
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): string | undefined {
+  if (!isIntroFinalized(draft)) {
+    return 'Lock the intro in Step 2 before composing blurbs'
+  }
+  const title = resolveStopTitle(item, relatedByBlockType)
+  if (!title) {
+    return 'Resolve this stop (pick or name it) before composing its blurb'
+  }
+  if (getItineraryStopAngleDisabledReason(item)) {
+    return `Select a blurb angle for "${title}"`
+  }
+  if (!item.selectionReason?.trim()) {
+    return `Add a "Why this pick" for "${title}"`
+  }
+  return undefined
+}
+
+/**
+ * True when authoring only `itemId` would leave a sibling's already-written
+ * handoff stale (ADR 0022). A stop appended at the day's end strands nothing —
+ * no existing copy pointed past the old last stop. A stop anywhere earlier, in a
+ * day that already has other blurbs, can leave the prose around it referencing
+ * the wrong next move. Drives the warning in the "just this stop" choice.
+ */
+export function itineraryStopBlurbWriteStrandsNeighbor(
+  draft: ListicleItineraryDraft,
+  dayIndex: number,
+  itemId: string,
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): boolean {
+  const day = draft.days[dayIndex]
+  if (!day) return false
+  const resolved = getResolvedDayStops(day, relatedByBlockType)
+  const position = resolved.findIndex((stop) => stop.id === itemId)
+  if (position < 0) return false
+  if (position === resolved.length - 1) return false // append-at-end: nothing stranded
+  return resolved.some(
+    (stop) => stop.id !== itemId && stop.blurbMarkdown.trim().length > 0,
+  )
 }
 
 /** Apply composed blurbs for one day; only `generated` results land. */

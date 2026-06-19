@@ -38,6 +38,9 @@ import {
   dayHasExistingBlurbs,
   getComposableDayIndexes,
   getItineraryDayBlurbComposeDisabledReason,
+  getItineraryStopBlurbComposeDisabledReason,
+  itineraryStopBlurbWriteStrandsNeighbor,
+  resolveStopTitle,
 } from '../builder/services/compose-day-blurbs.service'
 import {
   composeItineraryStopReason,
@@ -72,6 +75,7 @@ import {
 } from '../builder/services/day-shell-library.api'
 import { applyAutobuildPlanToDraft } from '../builder/mappers/autobuild-plan.mapper'
 import { DayShellLibraryModal } from '../builder/components/DayShellLibraryModal'
+import { StopBlurbComposeChoiceModal } from '../builder/components/StopBlurbComposeChoiceModal'
 import { DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../builder/constants/day-shells.constants'
 import { findItineraryItemById, type DayShellTemplate, type ListicleItineraryDraft, type TravelerProfile } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
@@ -109,6 +113,13 @@ export default function ListicleItineraryBuilderPage() {
   const [dayBlurbReport, setDayBlurbReport] = useState<ComposeDayBlurbsResponse | null>(null)
   const [isDayBlurbReportOpen, setIsDayBlurbReportOpen] = useState(false)
   const [isComposingDayBlurbs, setIsComposingDayBlurbs] = useState(false)
+  const [stopComposeChoice, setStopComposeChoice] = useState<{
+    itemId: string
+    dayIndex: number
+    targetId: string
+    stopTitle: string
+    strandsNeighbor: boolean
+  } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -549,42 +560,54 @@ export default function ListicleItineraryBuilderPage() {
     return request
   }, [draft, locations, relatedByBlockType])
 
-  const runSingleTargetGeneration = useCallback(async (params: {
-    targetId: string
-    currentContent?: string
-    customInstruction?: string
-    includeArticleContext?: boolean
-  }): Promise<string> => {
-    const request = buildGenerationRequest({
-      targetIds: [params.targetId],
-      customInstruction: params.customInstruction,
-      includeArticleContext: params.includeArticleContext,
-      currentContentByTargetId: params.currentContent
-        ? { [params.targetId]: params.currentContent }
-        : undefined,
-    })
+  const countGeneratedBlurbs = useCallback((results: Record<string, ComposeDayBlurbResult>): number => {
+    return Object.values(results).filter((entry) => entry.status === 'generated' && entry.markdown?.trim()).length
+  }, [])
 
-    const response = await generateListicleContentWithAi(request)
-    const targetResult = response.results[params.targetId]
+  /**
+   * Run the day-blurb composer for one day and land its results (ADR 0019/0022).
+   * `writeTargetIds` authors only those stops (siblings ride along as context);
+   * omitting it composes the whole day. Confirms/choices are the caller's job —
+   * this is the shared, prompt-free execution core.
+   */
+  const executeDayBlurbCompose = useCallback(async (
+    dayIndex: number,
+    writeTargetIds?: string[],
+  ): Promise<void> => {
+    if (!draft) return
 
-    if (!targetResult) {
-      throw new Error('AI generation returned no result for the requested field.')
+    onError('')
+    setResult(null)
+    setIsComposingDayBlurbs(true)
+
+    const singleStop = writeTargetIds?.length === 1
+    try {
+      const request = buildItineraryComposeDayBlurbsRequest({
+        draft,
+        dayIndex,
+        relatedByBlockType,
+        locations,
+        modelName: resolveEditorAssistModelName(draft.editorModelName),
+        writeTargetIds,
+      })
+      const response = await composeItineraryDayBlurbsWithAi(request)
+      setDayBlurbReport(response)
+      setDraft((current) => (current ? applyItineraryComposedDayBlurbs(current, dayIndex, response) : current))
+
+      const generated = countGeneratedBlurbs(response.results)
+      const hasWarnings = Object.values(response.results).some((entry) => entry.validation_errors.length > 0)
+      const scope = singleStop ? 'this stop' : `Day ${dayIndex + 1}`
+      setResult(
+        generated > 0
+          ? `Wrote ${generated} blurb${generated === 1 ? '' : 's'} for ${scope}.${hasWarnings ? ' Some need review — see report.' : ''}`
+          : `No blurbs were composed for ${scope} — see report.`,
+      )
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Failed to compose day blurbs with AI.')
+    } finally {
+      setIsComposingDayBlurbs(false)
     }
-
-    if (targetResult.status === 'generated' && targetResult.markdown?.trim()) {
-      return targetResult.markdown.trim()
-    }
-
-    if (targetResult.status === 'skipped' && targetResult.markdown?.trim()) {
-      return targetResult.markdown.trim()
-    }
-
-    throw new Error(
-      targetResult.error_message
-      || targetResult.validation_errors[0]
-      || 'AI generation failed for this field.',
-    )
-  }, [buildGenerationRequest])
+  }, [countGeneratedBlurbs, draft, locations, onError, relatedByBlockType, setDraft])
 
   const autoWriteIntro = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -623,40 +646,58 @@ export default function ListicleItineraryBuilderPage() {
     }
   }, [draft, locations, onError, relatedByBlockType, setDraft])
 
+  const composeSingleStopAware = useCallback(async (dayIndex: number, targetId: string): Promise<void> => {
+    setActiveAiTargetId(targetId)
+    try {
+      await executeDayBlurbCompose(dayIndex, [targetId])
+    } finally {
+      setActiveAiTargetId(null)
+    }
+  }, [executeDayBlurbCompose])
+
+  /**
+   * Per-stop "AI" button. Routes through the sequence-aware day composer, not the
+   * retired isolated writer, so a stop's blurb always reads against its day
+   * (ADR 0022). When the day already has other blurbs, the operator is always
+   * asked: write just this stop (siblings kept) or recompose the whole day.
+   */
   const autoWriteStopBlurb = useCallback(async (itemId: string): Promise<void> => {
     if (!draft) return
 
     const found = findItineraryItemById(draft, itemId)
-    const item = found?.item
-    if (!item) {
+    if (!found) {
       onError('Selected stop was not found.')
+      return
+    }
+    const { dayIndex, item } = found
+
+    const disabledReason = getItineraryStopBlurbComposeDisabledReason(draft, item, relatedByBlockType)
+    if (disabledReason) {
+      onError(disabledReason)
       return
     }
 
     const targetId = `${itemId}_blurb`
-    onError('')
-    setResult(null)
-    setActiveAiTargetId(targetId)
+    const day = draft.days[dayIndex]
+    const hasOtherBlurb = [...day.whereStaying, ...day.items].some(
+      (stop) => stop.id !== itemId && stop.blurbMarkdown.trim().length > 0,
+    )
 
-    try {
-      const markdown = await runSingleTargetGeneration({
-        targetId,
-        currentContent: item.blurbMarkdown,
-        includeArticleContext: true,
-      })
-
-      actions.updateItem(itemId, (current) => ({
-        ...current,
-        blurbMarkdown: markdown,
-        blurbJsonText: '',
-      }))
-      setResult(item.blurbMarkdown.trim() ? 'Stop blurb regenerated with AI.' : 'Stop blurb written with AI.')
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to write stop blurb with AI.')
-    } finally {
-      setActiveAiTargetId(null)
+    // Nothing else written in the day → no choice to make; just compose it aware.
+    if (!hasOtherBlurb) {
+      await composeSingleStopAware(dayIndex, targetId)
+      return
     }
-  }, [actions, draft, onError, runSingleTargetGeneration])
+
+    // Always ask (ADR 0022): just this stop vs recompose the whole day.
+    setStopComposeChoice({
+      itemId,
+      dayIndex,
+      targetId,
+      stopTitle: resolveStopTitle(item, relatedByBlockType) || 'this stop',
+      strandsNeighbor: itineraryStopBlurbWriteStrandsNeighbor(draft, dayIndex, itemId, relatedByBlockType),
+    })
+  }, [composeSingleStopAware, draft, onError, relatedByBlockType])
 
   const refineStopReason = useCallback(
     async (itemId: string, roughReason: string): Promise<ComposeStopReasonResult> => {
@@ -758,10 +799,6 @@ export default function ListicleItineraryBuilderPage() {
     }
   }, [applyGeneratedListicleContent, buildGenerationRequest, draft, locations, onError, relatedByBlockType, setDraft])
 
-  const countGeneratedBlurbs = useCallback((results: Record<string, ComposeDayBlurbResult>): number => {
-    return Object.values(results).filter((entry) => entry.status === 'generated' && entry.markdown?.trim()).length
-  }, [])
-
   const composeDayBlurbs = useCallback(async (dayIndex: number): Promise<void> => {
     if (!draft) return
 
@@ -781,35 +818,8 @@ export default function ListicleItineraryBuilderPage() {
       return
     }
 
-    onError('')
-    setResult(null)
-    setIsComposingDayBlurbs(true)
-
-    try {
-      const request = buildItineraryComposeDayBlurbsRequest({
-        draft,
-        dayIndex,
-        relatedByBlockType,
-        locations,
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
-      })
-      const response = await composeItineraryDayBlurbsWithAi(request)
-      setDayBlurbReport(response)
-      setDraft((current) => (current ? applyItineraryComposedDayBlurbs(current, dayIndex, response) : current))
-
-      const generated = countGeneratedBlurbs(response.results)
-      const hasWarnings = Object.values(response.results).some((entry) => entry.validation_errors.length > 0)
-      setResult(
-        generated > 0
-          ? `Wrote ${generated} blurb${generated === 1 ? '' : 's'} for Day ${dayIndex + 1}.${hasWarnings ? ' Some need review — see report.' : ''}`
-          : 'No blurbs were composed for this day — see report.',
-      )
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to compose day blurbs with AI.')
-    } finally {
-      setIsComposingDayBlurbs(false)
-    }
-  }, [countGeneratedBlurbs, draft, locations, onError, relatedByBlockType, setDraft])
+    await executeDayBlurbCompose(dayIndex)
+  }, [draft, executeDayBlurbCompose, onError, relatedByBlockType])
 
   const composeAllDayBlurbs = useCallback(async (): Promise<void> => {
     if (!draft) return
@@ -1176,6 +1186,27 @@ export default function ListicleItineraryBuilderPage() {
                 isOpen={isDayBlurbReportOpen}
                 onClose={() => setIsDayBlurbReportOpen(false)}
                 report={dayBlurbReport}
+              />
+
+              <StopBlurbComposeChoiceModal
+                isOpen={stopComposeChoice !== null}
+                stopTitle={stopComposeChoice?.stopTitle ?? ''}
+                dayNumber={(stopComposeChoice?.dayIndex ?? 0) + 1}
+                strandsNeighbor={stopComposeChoice?.strandsNeighbor ?? false}
+                disabled={isComposingDayBlurbs}
+                onJustThisStop={() => {
+                  if (!stopComposeChoice) return
+                  const { dayIndex, targetId } = stopComposeChoice
+                  setStopComposeChoice(null)
+                  void composeSingleStopAware(dayIndex, targetId)
+                }}
+                onWholeDay={() => {
+                  if (!stopComposeChoice) return
+                  const { dayIndex } = stopComposeChoice
+                  setStopComposeChoice(null)
+                  void executeDayBlurbCompose(dayIndex)
+                }}
+                onClose={() => setStopComposeChoice(null)}
               />
             </>
           ) : null}

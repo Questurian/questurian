@@ -2763,6 +2763,51 @@
   opacity: 0.75;
 }
 
+/* "Write just this stop vs whole day" choice modal (ADR 0022) */
+.stl-blurb-choice-modal {
+  width: min(540px, 95vw);
+}
+
+.stl-blurb-choice-modal__body {
+  padding: 18px 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.stl-blurb-choice-modal__lead {
+  margin: 0;
+  font-size: 14px;
+  color: #2e3543;
+}
+
+.stl-blurb-choice-modal__option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.stl-blurb-choice-modal__option .stl-btn {
+  min-width: 220px;
+}
+
+.stl-blurb-choice-modal__hint {
+  font-size: 12px;
+  color: #5a6675;
+  line-height: 1.45;
+}
+
+.stl-blurb-choice-modal__warning {
+  font-size: 12px;
+  color: #9a5b00;
+  background: #fff6e6;
+  border: 1px solid #f0d9a8;
+  border-radius: 8px;
+  padding: 6px 9px;
+  line-height: 1.45;
+}
+
 /* Autobuild Report modal (run-level inspect timeline) */
 .stl-inspect-modal {
   width: min(900px, 95vw);

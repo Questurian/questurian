@@ -84,6 +84,12 @@ export type ComposeDayBlurbStop = {
   daypart?: string
   angle?: ListicleWriterAngle | null
   selectionReason?: string
+  /**
+   * The stop's already-written blurb. Sent for context-only stops (those not in
+   * `writeTargetIds`) so a written sibling can be threaded without rewriting it
+   * (ADR 0022).
+   */
+  existingBlurb?: string
 }
 
 export type ComposeDayBlurbsNeighborStop = {
@@ -104,6 +110,11 @@ export type ComposeDayBlurbsRequest = {
   prevDayLastStop?: ComposeDayBlurbsNeighborStop
   nextDayFirstStop?: ComposeDayBlurbsNeighborStop
   stops: ComposeDayBlurbStop[]
+  /**
+   * Author only these stops; the rest of `stops` are context-only (ADR 0022).
+   * Omit to author the whole day (the original ADR 0019 behavior).
+   */
+  writeTargetIds?: string[]
   modelName?: EditorAssistModelName
 }
 

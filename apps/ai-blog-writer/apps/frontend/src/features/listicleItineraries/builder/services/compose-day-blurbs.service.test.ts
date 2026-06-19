@@ -5,7 +5,9 @@ import {
   dayHasExistingBlurbs,
   getComposableDayIndexes,
   getItineraryDayBlurbComposeDisabledReason,
+  getItineraryStopBlurbComposeDisabledReason,
   isDayBlurbsFullyComposed,
+  itineraryStopBlurbWriteStrandsNeighbor,
 } from './compose-day-blurbs.service'
 import type {
   ItineraryBlockType,
@@ -229,6 +231,99 @@ describe('day-blurb composer service', () => {
     expect(next.days[0].items[0].blurbJsonText).toBe('')
     expect(next.days[0].whereStaying[0].blurbMarkdown).toBe('') // error result left untouched
     expect(next.days[1].items[0].blurbMarkdown).toBe('') // other day untouched
+  })
+
+  it('carries each stop\'s existing blurb and threads writeTargetIds through (ADR 0022)', () => {
+    const draft = buildDraft()
+    draft.days[0].items[0].blurbMarkdown = 'Existing dining prose.'
+
+    const request = buildItineraryComposeDayBlurbsRequest({
+      draft,
+      dayIndex: 0,
+      relatedByBlockType: buildRelatedByBlockType(),
+      locations: buildLocations(),
+      modelName: 'claude-opus-4-7',
+      writeTargetIds: ['ws-1_blurb'],
+    })
+
+    expect(request.writeTargetIds).toEqual(['ws-1_blurb'])
+    const dining = request.stops.find((s) => s.targetId === 'stop-1_blurb')
+    expect(dining?.existingBlurb).toBe('Existing dining prose.')
+    // An unwritten stop sends no existing copy.
+    const lodging = request.stops.find((s) => s.targetId === 'ws-1_blurb')
+    expect(lodging?.existingBlurb).toBeUndefined()
+  })
+
+  describe('single-stop compose gate (ADR 0022)', () => {
+    it('is ready for a resolved stop with an angle and a reason under a locked intro', () => {
+      const draft = buildDraft()
+      expect(
+        getItineraryStopBlurbComposeDisabledReason(draft, draft.days[0].items[0], buildRelatedByBlockType()),
+      ).toBeUndefined()
+    })
+
+    it('gates on the finalized intro, this stop\'s angle, and its reason — not on siblings', () => {
+      const related = buildRelatedByBlockType()
+
+      const noIntro = buildDraft({ step2_in_update_mode: true })
+      expect(
+        getItineraryStopBlurbComposeDisabledReason(noIntro, noIntro.days[0].items[0], related),
+      ).toBe('Lock the intro in Step 2 before composing blurbs')
+
+      const noAngle = buildDraft()
+      noAngle.days[0].items[0].angle = null
+      expect(
+        getItineraryStopBlurbComposeDisabledReason(noAngle, noAngle.days[0].items[0], related),
+      ).toBe('Select a blurb angle for "Mérito"')
+
+      const noReason = buildDraft()
+      noReason.days[0].items[0].selectionReason = ''
+      expect(
+        getItineraryStopBlurbComposeDisabledReason(noReason, noReason.days[0].items[0], related),
+      ).toBe('Add a "Why this pick" for "Mérito"')
+
+      // A sibling missing its angle/reason does NOT block this stop (it rides as context).
+      const siblingBroken = buildDraft()
+      siblingBroken.days[0].whereStaying[0].selectionReason = ''
+      expect(
+        getItineraryStopBlurbComposeDisabledReason(siblingBroken, siblingBroken.days[0].items[0], related),
+      ).toBeUndefined()
+    })
+
+    it('gates on resolving this stop', () => {
+      const draft = buildDraft()
+      const unresolved = buildItem({ id: 'fresh', blockType: 'itinerary-attractions', item: null })
+      expect(
+        getItineraryStopBlurbComposeDisabledReason(draft, unresolved, buildRelatedByBlockType()),
+      ).toBe('Resolve this stop (pick or name it) before composing its blurb')
+    })
+  })
+
+  describe('stale-neighbor detection (ADR 0022)', () => {
+    it('does not flag a stop appended at the day\'s end', () => {
+      const draft = buildDraft()
+      draft.days[0].whereStaying[0].blurbMarkdown = 'lodging copy'
+      // stop-1 is the last resolved stop in day 1's article order.
+      expect(
+        itineraryStopBlurbWriteStrandsNeighbor(draft, 0, 'stop-1', buildRelatedByBlockType()),
+      ).toBe(false)
+    })
+
+    it('flags a non-last stop when another stop in the day is already written', () => {
+      const draft = buildDraft()
+      draft.days[0].items[0].blurbMarkdown = 'dining copy already written'
+      // ws-1 sits before the written dining stop → its handoff can go stale.
+      expect(
+        itineraryStopBlurbWriteStrandsNeighbor(draft, 0, 'ws-1', buildRelatedByBlockType()),
+      ).toBe(true)
+    })
+
+    it('does not flag a non-last stop when no sibling has a blurb yet', () => {
+      const draft = buildDraft()
+      expect(
+        itineraryStopBlurbWriteStrandsNeighbor(draft, 0, 'ws-1', buildRelatedByBlockType()),
+      ).toBe(false)
+    })
   })
 
   it('detects existing/fully-composed days and lists composable indexes', () => {

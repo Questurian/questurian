@@ -162,6 +162,7 @@ export async function composeItineraryDayBlurbsWithAi(
         ? { title: input.nextDayFirstStop.title, category: input.nextDayFirstStop.category }
         : undefined,
       model_name: input.modelName,
+      write_target_ids: input.writeTargetIds,
       stops: input.stops.map((stop) => ({
         target_id: stop.targetId,
         title: stop.title,
@@ -169,6 +170,7 @@ export async function composeItineraryDayBlurbsWithAi(
         daypart: stop.daypart,
         angle: stop.angle,
         selection_reason: stop.selectionReason,
+        existing_blurb: stop.existingBlurb,
       })),
     }),
   })

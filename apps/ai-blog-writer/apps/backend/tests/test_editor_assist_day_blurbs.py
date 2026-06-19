@@ -25,6 +25,19 @@ def _writer_returning(text: str):
     return lambda **_kwargs: _WriterResult()
 
 
+def _writer_capturing(text: str, sink: dict):
+    class _WriterResult:
+        def __init__(self) -> None:
+            self.text = text
+            self.model_name = editor_assist_routes.DEFAULT_MODEL
+
+    def _invoke(**kwargs):
+        sink["prompt"] = kwargs.get("prompt", "")
+        return _WriterResult()
+
+    return _invoke
+
+
 def _request_body(**overrides):
     body = {
         "article_title": "Two Days in Lima",
@@ -121,5 +134,64 @@ def test_day_blurbs_requires_a_stop():
     response = client.post(
         "/editor-assist/compose-itinerary-day-blurbs",
         json=_request_body(stops=[]),
+    )
+    assert response.status_code == 400
+
+
+def test_day_blurbs_write_subset_authors_only_named_stops(monkeypatch):
+    # ADR 0022: write only stop-1; ws-1 is context-only with its existing copy.
+    captured: dict = {}
+    text = f"<<<BLURB:stop-1_blurb>>>\n{_paragraph(110)}\n<<<END>>>"
+    monkeypatch.setattr(
+        editor_assist_routes, "invoke_writer_model", _writer_capturing(text, captured)
+    )
+
+    client = _build_client()
+    body = _request_body(
+        write_target_ids=["stop-1_blurb"],
+        stops=[
+            {
+                "target_id": "ws-1_blurb",
+                "title": "Grand Hotel",
+                "category": "Accommodations",
+                "angle": "location-and-setting",
+                "existing_blurb": "The lodging copy already written.",
+            },
+            {
+                "target_id": "stop-1_blurb",
+                "title": "Mérito",
+                "category": "Dining",
+                "angle": "signature-dish",
+                "selection_reason": "tasting-menu fine dining",
+            },
+        ],
+    )
+    response = client.post("/editor-assist/compose-itinerary-day-blurbs", json=body)
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    # Only the written stop appears; the context-only sibling is not touched.
+    assert set(results.keys()) == {"stop-1_blurb"}
+    assert results["stop-1_blurb"]["status"] == "generated"
+
+    # The sibling is presented as context with its prose; the target as TO WRITE.
+    prompt = captured["prompt"]
+    assert "id=ws-1_blurb [ALREADY WRITTEN]" in prompt
+    assert "The lodging copy already written." in prompt
+    assert "id=stop-1_blurb [TO WRITE]" in prompt
+
+    inputs = response.json()["steps"][0]["details"]
+    assert inputs["write_count"] == 1
+    assert inputs["context_only_count"] == 1
+
+
+def test_day_blurbs_invalid_write_targets_is_400(monkeypatch):
+    monkeypatch.setattr(
+        editor_assist_routes, "invoke_writer_model", _writer_returning("unused")
+    )
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/compose-itinerary-day-blurbs",
+        json=_request_body(write_target_ids=["does-not-exist_blurb"]),
     )
     assert response.status_code == 400
