@@ -6,7 +6,9 @@ from fastapi.responses import JSONResponse
 
 from ..alt_text_generator import generate_alt_text
 from ..edit_prompt_builder import build_edit_prompt
+from ..insert_prompt_builder import build_insert_prompt
 from ..scene_describer import generate_scene_description
+from ..subject_describer import generate_subject_description
 from ..shared import _raise_http_error, _read_upload_file, logger
 
 router = APIRouter()
@@ -134,6 +136,118 @@ async def build_edit_prompt_endpoint(
             status_code=500,
             message="Failed to build edit prompt",
             step="build_edit_prompt",
+            detail=str(exc),
+        )
+
+    return JSONResponse({"success": True, "edit_prompt": edit_prompt})
+
+
+@router.post("/describe-subject")
+async def describe_subject_endpoint(
+    file: UploadFile = File(...),
+) -> JSONResponse:
+    """Describe the subject(s) of an image to be inserted into another scene."""
+    content = await _read_upload_file(file, step="validate_file")
+    content_type = file.content_type or "image/jpeg"
+
+    try:
+        description = await generate_subject_description(
+            image_bytes=content,
+            content_type=content_type,
+        )
+    except TimeoutError:
+        _raise_http_error(
+            status_code=504,
+            message="Subject description generation timed out",
+            step="describe_subject",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to generate subject description")
+        _raise_http_error(
+            status_code=500,
+            message="Failed to generate subject description",
+            step="describe_subject",
+            detail=str(exc),
+        )
+
+    return JSONResponse({"success": True, "description": description})
+
+
+@router.post("/build-insert-prompt")
+async def build_insert_prompt_endpoint(
+    file: UploadFile = File(..., description="The main scene image"),
+    scene_description: str = Form(
+        ..., description="Mise-en-scène description of the main image"
+    ),
+    change_request: str = Form(
+        default="", description="Where/how the subjects should be inserted"
+    ),
+    insert_files: list[UploadFile] = File(
+        ..., description="Images whose subjects are inserted into the main scene"
+    ),
+    insert_descriptions: list[str] = Form(
+        default=[], description="Subject description for each insert image, in order"
+    ),
+) -> JSONResponse:
+    """Build a model-agnostic edit prompt that inserts subjects into the main scene."""
+    content = await _read_upload_file(file, step="validate_file")
+    content_type = file.content_type or "image/jpeg"
+
+    normalized_scene = scene_description.strip()
+    if not normalized_scene:
+        _raise_http_error(
+            status_code=400,
+            message="scene_description is required",
+            step="validate_scene_description",
+        )
+
+    if not insert_files:
+        _raise_http_error(
+            status_code=400,
+            message="At least one insert image is required",
+            step="validate_insert_files",
+        )
+
+    inserts: list[dict] = []
+    for index, insert_file in enumerate(insert_files):
+        insert_bytes = await _read_upload_file(insert_file, step="validate_insert_file")
+        description = (
+            insert_descriptions[index].strip()
+            if index < len(insert_descriptions)
+            else ""
+        )
+        inserts.append(
+            {
+                "image_bytes": insert_bytes,
+                "content_type": insert_file.content_type or "image/jpeg",
+                "description": description,
+            }
+        )
+
+    try:
+        edit_prompt = await build_insert_prompt(
+            main_image_bytes=content,
+            main_content_type=content_type,
+            scene_description=normalized_scene,
+            inserts=inserts,
+            change_request=change_request.strip(),
+        )
+    except TimeoutError:
+        _raise_http_error(
+            status_code=504,
+            message="Insert prompt build timed out",
+            step="build_insert_prompt",
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Failed to build insert prompt")
+        _raise_http_error(
+            status_code=500,
+            message="Failed to build insert prompt",
+            step="build_insert_prompt",
             detail=str(exc),
         )
 

@@ -6,7 +6,9 @@ import type { ImageVariantType } from '../utils/imageProcessing';
 import { fluxEditApi } from './flux-edit.api';
 import { generateAltTextApi } from './alt-text/generate-alt-text.api';
 import { describeSceneApi } from './describe-scene.api';
+import { describeSubjectApi } from './describe-subject.api';
 import { buildEditPromptApi } from './build-edit-prompt.api';
+import { buildInsertPromptApi, type InsertImage } from './build-insert-prompt.api';
 import { postJson } from './client/imageApiClient';
 import { parseErrorMessage } from './errors/image-api-error.utils';
 import type {
@@ -107,6 +109,28 @@ export async function buildImageEditPrompt(
 ): Promise<string> {
   return buildEditPromptApi({ file, sceneDescription, changeRequest });
 }
+
+/**
+ * Describe the subject(s) of an image that will be inserted into another scene.
+ */
+export async function describeImageSubject(file: File): Promise<string> {
+  return describeSubjectApi(file);
+}
+
+/**
+ * Build an edit prompt that inserts the subjects from one or more images into a
+ * main scene image, given the main scene's description and a placement instruction.
+ */
+export async function buildImageInsertPrompt(
+  file: File,
+  sceneDescription: string,
+  inserts: InsertImage[],
+  changeRequest: string,
+): Promise<string> {
+  return buildInsertPromptApi({ file, sceneDescription, inserts, changeRequest });
+}
+
+export type { InsertImage };
 
 /**
  * Process an image without uploading to Payload (for testing)
