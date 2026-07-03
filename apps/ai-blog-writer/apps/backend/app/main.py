@@ -1,3 +1,4 @@
+import hmac
 import os
 import sys
 import logging
@@ -41,6 +42,10 @@ from app.api import router  # noqa: E402
 app = FastAPI(title="AI Blog Writer")
 logger = logging.getLogger(__name__)
 
+# Paths reachable without an API key when ABW_API_KEY is set.
+AUTH_EXEMPT_PATHS = {"/health"}
+API_KEY_HEADER = "X-API-Key"
+
 
 def _read_bool_env(key: str, default: bool = False) -> bool:
     raw = os.getenv(key)
@@ -48,10 +53,52 @@ def _read_bool_env(key: str, default: bool = False) -> bool:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
+
+def _allowed_origins() -> list[str]:
+    """Comma-separated ABW_ALLOWED_ORIGINS, or wildcard when unset."""
+    raw = os.getenv("ABW_ALLOWED_ORIGINS", "").strip()
+    if not raw:
+        return ["*"]
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Reject requests without the configured API key.
+
+    Disabled unless ABW_API_KEY is set, so local development keeps
+    working with no configuration. Preflight requests and /health stay
+    open: browsers send OPTIONS without custom headers, and health
+    checks must not need credentials.
+    """
+    expected_key = os.getenv("ABW_API_KEY", "").strip()
+    if (
+        not expected_key
+        or request.method == "OPTIONS"
+        or request.url.path in AUTH_EXEMPT_PATHS
+    ):
+        return await call_next(request)
+
+    provided_key = request.headers.get(API_KEY_HEADER, "")
+    if not hmac.compare_digest(provided_key, expected_key):
+        return JSONResponse(
+            status_code=401,
+            content={"detail": f"Missing or invalid {API_KEY_HEADER} header"},
+        )
+
+    return await call_next(request)
+
+
+_cors_origins = _allowed_origins()
+_cors_wildcard = "*" in _cors_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    # Credentialed CORS with a wildcard origin is rejected by browsers and
+    # would require reflecting arbitrary origins, which defeats the origin
+    # check. Only allow credentials when origins are pinned.
+    allow_credentials=not _cors_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -72,13 +119,19 @@ async def handle_unexpected_exception(
 
     expose_details = _read_bool_env("API_EXPOSE_ERROR_DETAILS", default=False)
     detail = str(exc) if expose_details else "Internal server error"
+    # This handler runs outside CORSMiddleware, so browser clients only see
+    # the error payload if we add CORS headers here — following the same
+    # origin policy as the middleware, never reflecting arbitrary origins
+    # with credentials.
     response_headers: dict[str, str] = {}
     origin = request.headers.get("origin")
     if origin:
-        # Ensure browser clients can read error payloads for unhandled exceptions.
-        response_headers["Access-Control-Allow-Origin"] = origin
-        response_headers["Access-Control-Allow-Credentials"] = "true"
-        response_headers["Vary"] = "Origin"
+        if _cors_wildcard:
+            response_headers["Access-Control-Allow-Origin"] = "*"
+        elif origin in _cors_origins:
+            response_headers["Access-Control-Allow-Origin"] = origin
+            response_headers["Access-Control-Allow-Credentials"] = "true"
+            response_headers["Vary"] = "Origin"
     return JSONResponse(
         status_code=500,
         headers=response_headers,
