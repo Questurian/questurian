@@ -69,3 +69,23 @@ describe('applySeoAiPatch og:url protection', () => {
     expect(next.openGraph.url).toBe(buildSeoSection().openGraph.url)
   })
 })
+
+describe('parseSeoAiPatch seoTitle clipping', () => {
+  it('keeps titles within the limit untouched', () => {
+    const patch = parseSeoAiPatch(JSON.stringify({ seoTitle: 'Two Days in Lima: Food, Art & Coastline' }))
+    expect(patch.seoTitle).toBe('Two Days in Lima: Food, Art & Coastline')
+  })
+
+  it('clips overlong titles at a word boundary instead of mid-word', () => {
+    const original = 'The Ultimate Two Day Lima Itinerary for Foodies and Architecture Lovers'
+    const patch = parseSeoAiPatch(JSON.stringify({ seoTitle: original }))
+
+    expect(patch.seoTitle).toBeDefined()
+    expect(patch.seoTitle!.length).toBeLessThanOrEqual(60)
+    // No mid-word cut: the clipped title must be a prefix of the original
+    // ending exactly at a word boundary.
+    const nextChar = original.charAt(patch.seoTitle!.length)
+    expect(original.startsWith(patch.seoTitle!)).toBe(true)
+    expect(nextChar === ' ' || nextChar === '').toBe(true)
+  })
+})
