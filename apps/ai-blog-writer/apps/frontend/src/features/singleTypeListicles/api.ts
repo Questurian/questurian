@@ -1,4 +1,4 @@
-import { convertMarkdownToLexical, generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
+import { convertMarkdownToLexical, generateListicleContentWithAi, generateSeoMetadataWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
 import { appendScopedLocationWhere, getArticleLocationScope } from '../../shared/locationScope/scope'
 import { normalizeRelatedItems } from '../../shared/related-items/normalizeRelatedItems'
 import type { LocationScope } from '../../shared/locationScope/types'
@@ -144,4 +144,4 @@ export async function markdownToLexical(markdown: string): Promise<Record<string
   return result.data as Record<string, unknown>
 }
 
-export { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi }
+export { generateListicleContentWithAi, generateSeoMetadataWithAi, generateTitleWithAi, rewriteBlockWithAi }

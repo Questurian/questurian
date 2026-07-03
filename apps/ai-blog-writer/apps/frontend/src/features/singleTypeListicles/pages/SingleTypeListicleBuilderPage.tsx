@@ -50,7 +50,7 @@ import {
   buildSingleTypeListicleStructuredDataTemplate,
   serializeStructuredDataTemplate,
 } from '../builder/services/structured-data-template.service'
-import { generateListicleContentWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
+import { generateListicleContentWithAi, generateSeoMetadataWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { saveDraft } from '../storage'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
 import '../styles.css'
@@ -649,7 +649,7 @@ export default function SingleTypeListicleBuilderPage() {
     setIsGeneratingSeoTarget(target)
 
     try {
-      const response = await rewriteBlockWithAi({
+      const response = await generateSeoMetadataWithAi({
         prompt: buildSeoAiPrompt({
           articleType: draft.listicleType
             ? `single-type-listicle (${draft.listicleType})`
@@ -660,18 +660,19 @@ export default function SingleTypeListicleBuilderPage() {
             ? structuredDataTemplate
             : undefined,
         }),
-        blockContent: buildSeoAiSeed(draft.seoSection),
+        seed: buildSeoAiSeed(draft.seoSection),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
         articleTitle,
         articleContext: articleContext || undefined,
       })
 
-      const aiText = response.rewritten_content?.trim()
-      if (!aiText) {
-        throw new Error('AI returned empty SEO content.')
+      if (!response.seo_patch || Object.keys(response.seo_patch).length === 0) {
+        throw new Error('AI returned an empty SEO patch.')
       }
 
-      const seoPatch = parseSeoAiPatch(aiText)
+      // The patch arrives schema-validated from the forced tool call; parse
+      // still applies length clipping and URL validation.
+      const seoPatch = parseSeoAiPatch(JSON.stringify(response.seo_patch))
       setDraft((current) => {
         if (!current) return current
         return {
