@@ -117,6 +117,34 @@ def read_output(run_id: str) -> Optional[Dict[str, Any]]:
         }
 
 
+def fail_stale_runs(
+    reason: str = "Server restarted while run was in progress",
+) -> int:
+    """
+    Mark all non-terminal runs as failed.
+
+    Pipelines execute as in-process background tasks, so any run still
+    marked in-flight when the server boots was orphaned by a restart or
+    crash and will never progress. Without this sweep the frontend polls
+    those runs forever.
+
+    Returns:
+        Count of runs marked as failed.
+    """
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE runs
+            SET status = 'failed',
+                error = ?,
+                updated_at = datetime('now')
+            WHERE status NOT IN ('completed', 'failed')
+            """,
+            (reason,),
+        )
+        return cursor.rowcount
+
+
 def cleanup_run(run_id: str) -> None:
     """Delete all data for a specific run."""
     with get_db_connection() as conn:
