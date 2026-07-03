@@ -43,7 +43,7 @@ function buildItem(overrides: Partial<ItineraryItemBlock> & { id: string }): Iti
 function buildDraft(overrides: Partial<ListicleItineraryDraft> = {}): ListicleItineraryDraft {
   return {
     draftId: 'draft-1',
-    editorModelName: 'claude-opus-4-7',
+    editorModelName: 'claude-opus-4-8',
     listTone: 'elevated',
     title: 'Two Days in Lima',
     location: 'peru|lima',
@@ -190,7 +190,7 @@ describe('day-blurb composer service', () => {
       dayIndex: 0,
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
-      modelName: 'claude-opus-4-7',
+      modelName: 'claude-opus-4-8',
     })
 
     expect(request.articleTitle).toBe('Two Days in Lima')
@@ -210,7 +210,7 @@ describe('day-blurb composer service', () => {
       dayIndex: 1,
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
-      modelName: 'claude-opus-4-7',
+      modelName: 'claude-opus-4-8',
     })
     expect(request.prevDayLastStop).toEqual({ title: 'Mérito', category: 'Dining' })
     expect(request.nextDayFirstStop).toBeUndefined()
@@ -218,7 +218,7 @@ describe('day-blurb composer service', () => {
 
   it('applies only generated blurbs, only to the target day', () => {
     const response: ComposeDayBlurbsResponse = {
-      model_used: 'claude-opus-4-7',
+      model_used: 'claude-opus-4-8',
       results: {
         'stop-1_blurb': { target_id: 'stop-1_blurb', status: 'generated', markdown: 'Fresh dining prose.', validation_errors: [] },
         'ws-1_blurb': { target_id: 'ws-1_blurb', status: 'error', validation_errors: ['missing'] },
@@ -242,7 +242,7 @@ describe('day-blurb composer service', () => {
       dayIndex: 0,
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
-      modelName: 'claude-opus-4-7',
+      modelName: 'claude-opus-4-8',
       writeTargetIds: ['ws-1_blurb'],
     })
 

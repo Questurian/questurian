@@ -1,11 +1,11 @@
-export type EditorAssistModelName = 'claude-opus-4-7'
+export type EditorAssistModelName = 'claude-opus-4-8'
 
-export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'claude-opus-4-7'
+export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'claude-opus-4-8'
 
 export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; label: string }> = [
   {
-    value: 'claude-opus-4-7',
-    label: 'Claude Opus 4.7 (writer; Evidence Profile runs on Gemini)',
+    value: 'claude-opus-4-8',
+    label: 'Claude Opus 4.8 (writer; Evidence Profile runs on Gemini)',
   },
 ]
 
