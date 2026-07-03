@@ -1,89 +1,44 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { resolveEditorAssistModelName } from '../../staging/api'
 import { useAuth } from '../../auth'
-import { generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured } from '../../../shared/images'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
+import { BuilderDayTabs } from '../builder/components/BuilderDayTabs'
 import { BuilderHero } from '../../../shared/builder/components/BuilderHero'
 import { BuilderPublishPanel } from '../builder/components/BuilderPublishPanel'
 import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
 import { BuilderStopsPanel } from '../builder/components/BuilderStopsPanel'
-import { useBuilderAutosave } from '../../../shared/builder/hooks/useBuilderAutosave'
+import { OutOfSyncBanner } from '../builder/components/OutOfSyncBanner'
 import { useBuilderBootstrap } from '../builder/hooks/useBuilderBootstrap'
 import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
+import { useDayShellLibrary } from '../builder/hooks/useDayShellLibrary'
+import { useItineraryBuilderAiActions } from '../builder/hooks/useItineraryBuilderAiActions'
+import { useItineraryDraftSyncState } from '../builder/hooks/useItineraryDraftSyncState'
 import { useItinerarySubmit } from '../builder/hooks/useItinerarySubmit'
 import { useRelatedItems } from '../builder/hooks/useRelatedItems'
-import { saveDraft } from '../storage'
+import { getItineraryAutoWriteTargetIds } from '../builder/services/ai-autowrite.service'
 import {
-  applyItineraryGeneratedContent,
-  buildItineraryGenerateListicleContentRequest,
-  getItineraryAutoWriteTargetIds,
-} from '../builder/services/ai-autowrite.service'
-import {
-  applyItineraryComposedIntro,
-  buildItineraryComposeIntroRequest,
   getItineraryIntroComposeDisabledReason,
   getItineraryIntroTargetId,
 } from '../builder/services/intro-composer.service'
 import {
-  buildItineraryAiArticleContext,
-  getItineraryAiArticleTitle,
-} from '../builder/services/ai-rewrite.service'
-import {
-  applyItineraryComposedDayBlurbs,
-  buildItineraryComposeDayBlurbsRequest,
-  dayHasExistingBlurbs,
   getComposableDayIndexes,
   getItineraryDayBlurbComposeDisabledReason,
-  getItineraryStopBlurbComposeDisabledReason,
-  itineraryStopBlurbWriteStrandsNeighbor,
-  resolveStopTitle,
 } from '../builder/services/compose-day-blurbs.service'
-import {
-  composeItineraryStopReason,
-  type ComposeStopReasonResult,
-} from '../builder/services/compose-stop-reason.service'
-import {
-  applySeoAiPatch,
-  buildSeoAiPrompt,
-  buildSeoAiSeed,
-  getSeoAiTargetLabel,
-  parseSeoAiPatch,
-} from '../builder/services/seo-ai.service'
-import type { SeoAiTarget } from '../builder/services/seo-ai.service'
 import {
   buildListicleItineraryStructuredDataTemplate,
   serializeStructuredDataTemplate,
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
-import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
-import { composeItineraryBriefWithAi, composeItineraryDayBlurbsWithAi, composeItineraryIntroWithAi, fetchItineraryById, generateListicleContentWithAi, generateSeoMetadataWithAi, rewriteBlockWithAi } from '../api'
-import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
-import { generateItinerary, type AutobuildResponse } from '../builder/services/autobuild.api'
 import { InspectAutobuildRunModal } from '../builder/components/InspectAutobuildRunModal'
 import { InspectIntroComposeRunModal } from '../builder/components/InspectIntroComposeRunModal'
 import { InspectDayBlurbComposeRunModal } from '../builder/components/InspectDayBlurbComposeRunModal'
-import type { ComposeDayBlurbResult, ComposeDayBlurbsResponse, ComposeIntroStepEvent, ComposeItineraryIntroResponse } from '../../staging/api'
-import {
-  createLibraryDayShell,
-  deleteLibraryDayShell,
-  listLibraryDayShells,
-  updateLibraryDayShell,
-} from '../builder/services/day-shell-library.api'
-import { applyAutobuildPlanToDraft } from '../builder/mappers/autobuild-plan.mapper'
 import { DayShellLibraryModal } from '../builder/components/DayShellLibraryModal'
 import { StopBlurbComposeChoiceModal } from '../builder/components/StopBlurbComposeChoiceModal'
-import { DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../builder/constants/day-shells.constants'
-import { findItineraryItemById, type DayShellTemplate, type ListicleItineraryDraft, type TravelerProfile } from '../types'
-import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
-import { formatLocationLabel } from '../../../shared/locationScope/labels'
 import '../styles.css'
-
 const schemaPublisherConfig = getItinerarySchemaPublisherConfig()
-
 export default function ListicleItineraryBuilderPage() {
   const { token } = useAuth()
   const navigate = useNavigate()
@@ -91,67 +46,16 @@ export default function ListicleItineraryBuilderPage() {
 
   const payloadIdParam = searchParams.get('id')
   const draftIdParam = searchParams.get('draftId')
-
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
-  const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
-  const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
-  const [activeAiTargetId, setActiveAiTargetId] = useState<string | null>(null)
-  const [isAutoWritingEmptyFields, setIsAutoWritingEmptyFields] = useState(false)
-  const [isRevertingToPayload, setIsRevertingToPayload] = useState(false)
   const [activeDayIndex, setActiveDayIndex] = useState(0)
-  const [hasLocalChanges, setHasLocalChanges] = useState(false)
-  const [libraryShells, setLibraryShells] = useState<DayShellTemplate[]>([])
   const [isLayoutManagerOpen, setIsLayoutManagerOpen] = useState(false)
-  // Autobuild Report: in-memory only, last run — replaced on re-run, gone on refresh.
-  const [autobuildReport, setAutobuildReport] = useState<AutobuildResponse | null>(null)
-  const [isAutobuildReportOpen, setIsAutobuildReportOpen] = useState(false)
-  // Compose-from-plan Report: same lifetime — the last Intro composer run only.
-  const [introComposeReport, setIntroComposeReport] = useState<ComposeItineraryIntroResponse | null>(null)
-  const [isIntroComposeReportOpen, setIsIntroComposeReportOpen] = useState(false)
-  // Day-blurb composer Report: same lifetime — the last "Write stop blurbs" run (ADR 0019).
-  const [dayBlurbReport, setDayBlurbReport] = useState<ComposeDayBlurbsResponse | null>(null)
-  const [isDayBlurbReportOpen, setIsDayBlurbReportOpen] = useState(false)
-  const [isComposingDayBlurbs, setIsComposingDayBlurbs] = useState(false)
-  const [stopComposeChoice, setStopComposeChoice] = useState<{
-    itemId: string
-    dayIndex: number
-    targetId: string
-    stopTitle: string
-    strandsNeighbor: boolean
-  } | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    listLibraryDayShells()
-      .then((shells) => {
-        if (!cancelled) setLibraryShells(shells)
-      })
-      .catch(() => {
-        // Library unavailable — built-ins and draft snapshots still work.
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const handleCreateLibraryShell = useCallback(async (shell: DayShellTemplate) => {
-    const created = await createLibraryDayShell(shell)
-    setLibraryShells((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name)))
-  }, [])
-
-  const handleUpdateLibraryShell = useCallback(async (shell: DayShellTemplate) => {
-    const updated = await updateLibraryDayShell(shell)
-    setLibraryShells((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)))
-  }, [])
-
-  const handleDeleteLibraryShell = useCallback(async (shellId: string) => {
-    await deleteLibraryDayShell(shellId)
-    setLibraryShells((current) => current.filter((entry) => entry.id !== shellId))
-  }, [])
-  const syncedBaselineRef = useRef<string | null>(null)
-  const bootstrappedDraftKeyRef = useRef<string | null>(null)
-  const ignoreDirtyUntilRef = useRef(0)
+  const {
+    libraryShells,
+    createLibraryShell,
+    updateLibraryShell,
+    deleteLibraryShell,
+  } = useDayShellLibrary()
 
   const onError = useCallback((message: string) => {
     setError(message || null)
@@ -172,78 +76,30 @@ export default function ListicleItineraryBuilderPage() {
     onError,
   })
 
+  const {
+    hasLocalChanges,
+    isRevertingToPayload,
+    isSynced,
+    onSyncResult,
+    saveLocalDraft,
+    revertToPayloadVersion,
+  } = useItineraryDraftSyncState({
+    token,
+    draft,
+    setDraft,
+    isLoading,
+    payloadIdParam,
+    draftIdParam,
+    onError,
+    setResult,
+  })
+
   useEffect(() => {
     if (!draft) return
     if (activeDayIndex >= draft.dayCount) {
       setActiveDayIndex(Math.max(0, draft.dayCount - 1))
     }
   }, [draft, activeDayIndex])
-
-  const saveAutosaveDraft = useCallback((nextDraft: ListicleItineraryDraft) => {
-    saveDraft({
-      ...nextDraft,
-      hasLocalChanges,
-    })
-  }, [hasLocalChanges])
-
-  useBuilderAutosave(draft, saveAutosaveDraft)
-
-  const isSynced = Boolean(draft?.payloadId)
-  const draftSyncSignature = useMemo(
-    () => (draft ? buildItineraryDraftSyncSignature(draft) : null),
-    [draft],
-  )
-  const routeKey = `${payloadIdParam ?? ''}:${draftIdParam ?? ''}`
-
-  useEffect(() => {
-    syncedBaselineRef.current = null
-    bootstrappedDraftKeyRef.current = null
-    ignoreDirtyUntilRef.current = 0
-    setHasLocalChanges(false)
-  }, [routeKey])
-
-  useEffect(() => {
-    if (isLoading || !draft || !draftSyncSignature) return
-
-    if (!draft.payloadId) {
-      syncedBaselineRef.current = draftSyncSignature
-      bootstrappedDraftKeyRef.current = `local:${draft.draftId}`
-      setHasLocalChanges(false)
-      return
-    }
-
-    const draftKey = `${routeKey}:${draft.draftId}:${draft.payloadId}`
-    if (bootstrappedDraftKeyRef.current !== draftKey) {
-      bootstrappedDraftKeyRef.current = draftKey
-      syncedBaselineRef.current = draft.payloadSyncBaseline || draftSyncSignature
-    }
-
-    if (Date.now() < ignoreDirtyUntilRef.current) {
-      syncedBaselineRef.current = draftSyncSignature
-      setHasLocalChanges(false)
-      if (draft.hasLocalChanges) {
-        setDraft((current) => (
-          current && current.draftId === draft.draftId
-            ? { ...current, hasLocalChanges: false, payloadSyncBaseline: draftSyncSignature }
-            : current
-        ))
-      }
-      return
-    }
-
-    const baseline = syncedBaselineRef.current || draftSyncSignature
-    const nextHasLocalChanges = baseline !== draftSyncSignature
-      || (!draft.payloadSyncBaseline && Boolean(draft.hasLocalChanges))
-    setHasLocalChanges(nextHasLocalChanges)
-
-    if (nextHasLocalChanges !== Boolean(draft.hasLocalChanges)) {
-      setDraft((current) => (
-        current && current.draftId === draft.draftId
-          ? { ...current, hasLocalChanges: nextHasLocalChanges }
-          : current
-      ))
-    }
-  }, [draft, draftSyncSignature, isLoading, routeKey, setDraft])
 
   const { isLoadingRelated, relatedByBlockType } = useRelatedItems({
     token,
@@ -263,14 +119,6 @@ export default function ListicleItineraryBuilderPage() {
     onError,
     setResult,
   })
-
-  const onSyncResult = useCallback((message: string | null) => {
-    setResult(message)
-    if (message) {
-      ignoreDirtyUntilRef.current = Date.now() + 1500
-      setHasLocalChanges(false)
-    }
-  }, [])
 
   const { isSaving, submit } = useItinerarySubmit({
     token,
@@ -324,712 +172,24 @@ export default function ListicleItineraryBuilderPage() {
     })
   }, [canonicalStructuredData, draft, hasLocalChanges, isStep4Ready, isSynced, setDraft])
 
-  const saveLocalDraft = useCallback(async (): Promise<void> => {
-    if (!draft) return
-    saveDraft({
-      ...draft,
-      hasLocalChanges: Boolean(draft.payloadId) || draft.hasLocalChanges,
-    })
-    if (draft.payloadId) {
-      setHasLocalChanges(true)
-    }
-    setError(null)
-    setResult('Saved local draft in this browser only (not synced to Payload).')
-  }, [draft])
+  const aiActions = useItineraryBuilderAiActions({
+    token,
+    draft,
+    setDraft,
+    locations,
+    relatedByBlockType,
+    canonicalStructuredData,
+    onError,
+    setResult,
+  })
 
-  const revertToPayloadVersion = useCallback(async (): Promise<void> => {
-    if (!draft?.payloadId) return
-    if (!token) {
-      onError('You must be logged in to reload from Payload.')
-      return
-    }
-
-    const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
-    const confirmed = window.confirm(
-      isPublishedPayload
-        ? 'Discard local staged changes and reload the current published Payload version? Payload will not be changed.'
-        : 'Discard local staged changes and reload the current Payload draft? Payload will not be changed.',
-    )
-    if (!confirmed) return
-
-    onError('')
-    setResult(null)
-    setIsRevertingToPayload(true)
-
-    try {
-      const doc = await fetchItineraryById(draft.payloadId, token)
-      const nextDraft = payloadDocToDraft(doc, draft.draftId)
-      nextDraft.editorModelName = draft.editorModelName
-      nextDraft.hasLocalChanges = false
-
-      ignoreDirtyUntilRef.current = Date.now() + 1500
-      setHasLocalChanges(false)
-      setDraft(nextDraft)
-      saveDraft(nextDraft)
-      setResult(isPublishedPayload ? 'Reverted to last published Payload version.' : 'Reverted to current Payload draft.')
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to reload from Payload.')
-    } finally {
-      setIsRevertingToPayload(false)
-    }
-  }, [draft, onError, setDraft, token])
-
-  const [isGeneratingSlug, setIsGeneratingSlug] = useState(false)
-  const [isGeneratingItinerary, setIsGeneratingItinerary] = useState(false)
-
-  const composeTravelerBrief = useCallback(async (profile: TravelerProfile): Promise<string> => {
-    if (!draft) {
-      throw new Error('Draft is not loaded yet.')
-    }
-    const location = locations.find((entry) => entry.locationKey === draft.location)
-    const response = await composeItineraryBriefWithAi({
-      travelerTypes: profile.travelerTypes,
-      motivations: profile.motivations,
-      interests: profile.interests,
-      budget: profile.budget || undefined,
-      accommodations: profile.accommodations,
-      practicalNeeds: profile.practicalNeeds,
-      notes: profile.notes.trim() || undefined,
-      locationLabel: location ? formatLocationLabel(location) : undefined,
-      dayCount: draft.dayCount,
-      articleTitle: draft.title.trim() || undefined,
-      modelName: resolveEditorAssistModelName(draft.editorModelName),
-    })
-    const brief = response.brief?.trim()
-    if (!brief) {
-      throw new Error('AI returned an empty brief.')
-    }
-    return brief
-  }, [draft, locations])
-
-  const applySlugAndOgUrl = useCallback((slug: string) => {
-    const location = locations.find((l) => l.locationKey === draft?.location)
-    const newUrl = slug.trim() && location?.country
-      ? buildArticleOgUrl(location.country, location.city, 'itinerary', slug.trim())
-      : undefined
-    setDraft((current) => {
-      if (!current) return current
-      return {
-        ...current,
-        payloadSlug: slug,
-        updatedAt: new Date().toISOString(),
-        ...(newUrl ? {
-          seoSection: {
-            ...current.seoSection,
-            openGraph: { ...current.seoSection.openGraph, url: newUrl },
-          },
-        } : {}),
-      }
-    })
-  }, [draft?.location, locations, setDraft])
-
-  const handleGenerateSlugWithAi = useCallback(async () => {
-    if (!draft?.title.trim()) return
-    setIsGeneratingSlug(true)
-    try {
-      const response = await rewriteBlockWithAi({
-        prompt: `Generate a clean SEO-friendly URL slug for this article title:\n\nTitle: ${draft.title.trim()}\n\nRules:\n- Think like a real user searching Google.\n- Keep the most important search keywords.\n- Remove filler words like "the," "a," "an," "in," "of," "to," and "for" unless they are needed.\n- Keep it short, readable, and specific.\n- Use lowercase only.\n- Use hyphens between words.\n- Do not keyword-stuff.\n- Do not add words that are not strongly related to the title.\n- Prefer search-intent wording over matching the title exactly.\n- Return only the slug, no explanation.\n\nExample:\nTitle: The Best Steakhouses in Las Vegas\nSlug: best-steakhouses-las-vegas`,
-        blockContent: draft.title.trim(),
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
-        articleTitle: draft.title.trim(),
-      })
-      const slug = response.rewritten_content?.trim()
-      if (slug) applySlugAndOgUrl(slug)
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to generate slug with AI.')
-    } finally {
-      setIsGeneratingSlug(false)
-    }
-  }, [draft, onError, applySlugAndOgUrl])
-
-  const handleGenerateItinerary = useCallback(async () => {
-    if (!draft) return
-    if (!draft.title.trim() || !draft.location) {
-      onError('Add a title and location before using the AI Autobuild brief.')
-      return
-    }
-    const brief = (draft.generationBrief || '').trim()
-    if (!brief) return
-    if (!token) {
-      onError('You must be signed in to generate an itinerary.')
-      return
-    }
-    const hasExistingStops = draft.days.some((day) => day.items.length > 0 || day.whereStaying.length > 0)
-    if (hasExistingStops && !window.confirm('This will replace the current stops with a freshly generated plan. Continue?')) {
-      return
-    }
-
-    setIsGeneratingItinerary(true)
-    setError(null)
-    setResult(null)
-    setAutobuildReport(null)
-    setIsAutobuildReportOpen(false)
-    try {
-      const plan = await generateItinerary({
-        location: draft.location,
-        title: draft.title.trim(),
-        brief,
-        dayCount: draft.dayCount,
-        payloadToken: token,
-        sharedNeighborhoods: draft.sharedNeighborhoods,
-        dayShells: draft.days.map((day, dayIndex) => ({
-          dayIndex,
-          shell: getDayShellTemplate(
-            draft.dayShellSelections?.find((entry) => entry.dayId === day.id)?.shellId ?? DEFAULT_DAY_SHELL_ID,
-            draft.customDayShells,
-          ),
-        })),
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
-        includeLodging: draft.includeLodging !== false,
-      })
-      setDraft((current) => (current ? applyAutobuildPlanToDraft(current, plan) : current))
-      const filled = plan.days.reduce((sum, day) => sum + day.items.length, 0)
-      const issueCount = plan.slot_issues?.length ?? 0
-      setResult(
-        `Generated ${filled} stop${filled === 1 ? '' : 's'} across ${plan.days.length} day${plan.days.length === 1 ? '' : 's'}.`
-        + (issueCount ? ` ${issueCount} shell slot${issueCount === 1 ? '' : 's'} need manual picks.` : '')
-        + (plan.notes.length ? ` Notes: ${plan.notes.join(' ')}` : ''),
-      )
-      setAutobuildReport(plan)
-      // Quiet on success, loud on problems: any failed/warning step or empty
-      // slot opens the report unprompted.
-      const hasIssues = issueCount > 0 || plan.steps.some((step) => step.status !== 'ok')
-      if (hasIssues) {
-        setIsAutobuildReportOpen(true)
-      }
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to generate itinerary.')
-    } finally {
-      setIsGeneratingItinerary(false)
-    }
-  }, [draft, token, onError, setDraft])
-
-  const handleAutoFillOgUrl = useCallback(() => {
-    if (!draft) return
-    const slug = draft.payloadSlug?.trim()
-    const location = locations.find((l) => l.locationKey === draft.location)
-    if (!slug || !location?.country) return
-    const url = buildArticleOgUrl(location.country, location.city, 'itinerary', slug)
-    if (!url) return
-    setDraft((current) => {
-      if (!current) return current
-      return { ...current, seoSection: { ...current.seoSection, openGraph: { ...current.seoSection.openGraph, url } } }
-    })
-  }, [draft, locations, setDraft])
-
-  const applyGeneratedListicleContent = useCallback((response: Awaited<ReturnType<typeof generateListicleContentWithAi>>) => {
-    setDraft((current) => {
-      if (!current) return current
-      return applyItineraryGeneratedContent(current, response)
-    })
-  }, [setDraft])
-
-  const buildGenerationRequest = useCallback((params: {
-    targetIds: string[]
-    customInstruction?: string
-    skipExisting?: boolean
-    includeArticleContext?: boolean
-    currentContentByTargetId?: Record<string, string>
-  }) => {
-    if (!draft) {
-      throw new Error('Draft is not loaded yet.')
-    }
-
-    const request = buildItineraryGenerateListicleContentRequest({
-      draft,
-      relatedByBlockType,
-      locations,
-      targetIds: params.targetIds,
-      modelName: resolveEditorAssistModelName(draft.editorModelName),
-      customInstruction: params.customInstruction,
-      skipExisting: params.skipExisting,
-      includeArticleContext: params.includeArticleContext,
-    })
-
-    if (request.targets.length < 1) {
-      throw new Error('Add stop details before using AI generation.')
-    }
-
-    if (params.currentContentByTargetId) {
-      request.targets = request.targets.map((target) => ({
-        ...target,
-        currentContent: params.currentContentByTargetId?.[target.targetId] ?? target.currentContent,
-      }))
-    }
-
-    return request
-  }, [draft, locations, relatedByBlockType])
-
-  const countGeneratedBlurbs = useCallback((results: Record<string, ComposeDayBlurbResult>): number => {
-    return Object.values(results).filter((entry) => entry.status === 'generated' && entry.markdown?.trim()).length
-  }, [])
-
-  /**
-   * Run the day-blurb composer for one day and land its results (ADR 0019/0022).
-   * `writeTargetIds` authors only those stops (siblings ride along as context);
-   * omitting it composes the whole day. Confirms/choices are the caller's job —
-   * this is the shared, prompt-free execution core.
-   */
-  const executeDayBlurbCompose = useCallback(async (
-    dayIndex: number,
-    writeTargetIds?: string[],
-  ): Promise<void> => {
-    if (!draft) return
-
-    onError('')
-    setResult(null)
-    setIsComposingDayBlurbs(true)
-
-    const singleStop = writeTargetIds?.length === 1
-    try {
-      const request = buildItineraryComposeDayBlurbsRequest({
-        draft,
-        dayIndex,
-        relatedByBlockType,
-        locations,
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
-        writeTargetIds,
-      })
-      const response = await composeItineraryDayBlurbsWithAi(request)
-      setDayBlurbReport(response)
-      setDraft((current) => (current ? applyItineraryComposedDayBlurbs(current, dayIndex, response) : current))
-
-      const generated = countGeneratedBlurbs(response.results)
-      const hasWarnings = Object.values(response.results).some((entry) => entry.validation_errors.length > 0)
-      const scope = singleStop ? 'this stop' : `Day ${dayIndex + 1}`
-      setResult(
-        generated > 0
-          ? `Wrote ${generated} blurb${generated === 1 ? '' : 's'} for ${scope}.${hasWarnings ? ' Some need review — see report.' : ''}`
-          : `No blurbs were composed for ${scope} — see report.`,
-      )
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to compose day blurbs with AI.')
-    } finally {
-      setIsComposingDayBlurbs(false)
-    }
-  }, [countGeneratedBlurbs, draft, locations, onError, relatedByBlockType, setDraft])
-
-  const autoWriteIntro = useCallback(async (): Promise<void> => {
-    if (!draft) return
-
-    const disabledReason = getItineraryIntroComposeDisabledReason(draft, relatedByBlockType)
-    if (disabledReason) {
-      onError(disabledReason)
-      return
-    }
-
-    const hadIntro = draft.header.introMarkdown.trim()
-    onError('')
-    setResult(null)
-    setActiveAiTargetId(getItineraryIntroTargetId(draft))
-
-    try {
-      const request = buildItineraryComposeIntroRequest({
-        draft,
-        relatedByBlockType,
-        locations,
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
-      })
-      const response = await composeItineraryIntroWithAi(request)
-      setIntroComposeReport(response)
-      const intro = response.intro.trim()
-      if (!intro) {
-        throw new Error('AI intro composition returned empty output.')
-      }
-
-      setDraft((current) => (current ? applyItineraryComposedIntro(current, intro) : current))
-      setResult(hadIntro ? 'Intro regenerated with AI.' : 'Intro written with AI.')
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to write intro with AI.')
-    } finally {
-      setActiveAiTargetId(null)
-    }
-  }, [draft, locations, onError, relatedByBlockType, setDraft])
-
-  const composeSingleStopAware = useCallback(async (dayIndex: number, targetId: string): Promise<void> => {
-    setActiveAiTargetId(targetId)
-    try {
-      await executeDayBlurbCompose(dayIndex, [targetId])
-    } finally {
-      setActiveAiTargetId(null)
-    }
-  }, [executeDayBlurbCompose])
-
-  /**
-   * Per-stop "AI" button. Routes through the sequence-aware day composer, not the
-   * retired isolated writer, so a stop's blurb always reads against its day
-   * (ADR 0022). When the day already has other blurbs, the operator is always
-   * asked: write just this stop (siblings kept) or recompose the whole day.
-   */
-  const autoWriteStopBlurb = useCallback(async (itemId: string): Promise<void> => {
-    if (!draft) return
-
-    const found = findItineraryItemById(draft, itemId)
-    if (!found) {
-      onError('Selected stop was not found.')
-      return
-    }
-    const { dayIndex, item } = found
-
-    const disabledReason = getItineraryStopBlurbComposeDisabledReason(draft, item, relatedByBlockType)
-    if (disabledReason) {
-      onError(disabledReason)
-      return
-    }
-
-    const targetId = `${itemId}_blurb`
-    const day = draft.days[dayIndex]
-    const hasOtherBlurb = [...day.whereStaying, ...day.items].some(
-      (stop) => stop.id !== itemId && stop.blurbMarkdown.trim().length > 0,
-    )
-
-    // Nothing else written in the day → no choice to make; just compose it aware.
-    if (!hasOtherBlurb) {
-      await composeSingleStopAware(dayIndex, targetId)
-      return
-    }
-
-    // Always ask (ADR 0022): just this stop vs recompose the whole day.
-    setStopComposeChoice({
-      itemId,
-      dayIndex,
-      targetId,
-      stopTitle: resolveStopTitle(item, relatedByBlockType) || 'this stop',
-      strandsNeighbor: itineraryStopBlurbWriteStrandsNeighbor(draft, dayIndex, itemId, relatedByBlockType),
-    })
-  }, [composeSingleStopAware, draft, onError, relatedByBlockType])
-
-  const refineStopReason = useCallback(
-    async (itemId: string, roughReason: string): Promise<ComposeStopReasonResult> => {
-      const fallback: ComposeStopReasonResult = { reason: roughReason.trim(), fallback: true }
-      if (!draft) return fallback
-      const item = findItineraryItemById(draft, itemId)?.item
-      if (!item) return fallback
-      return composeItineraryStopReason({
-        draft,
-        item,
-        roughReason,
-        relatedByBlockType,
-        locations,
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
-      })
-    },
-    [draft, locations, relatedByBlockType],
+  if (isLoading || !draft) return (
+    <div className="stl-page">
+      {!isLoading && error
+        ? <p className="stl-error">{error}</p>
+        : <p className="stl-placeholder">Loading builder...</p>}
+    </div>
   )
-
-  const autoWriteEmptyFields = useCallback(async (): Promise<void> => {
-    if (!draft) return
-
-    // Intro composes on its own path (ADR 0018); blurbs still ride the batch.
-    const blurbTargetIds = getItineraryAutoWriteTargetIds(draft, relatedByBlockType)
-    const shouldComposeIntro = !draft.header.introMarkdown.trim()
-      && !getItineraryIntroComposeDisabledReason(draft, relatedByBlockType)
-
-    if (blurbTargetIds.length < 1 && !shouldComposeIntro) {
-      onError('')
-      setResult('No empty intro or blurbs to auto write.')
-      return
-    }
-
-    onError('')
-    setResult(null)
-    setIsAutoWritingEmptyFields(true)
-
-    let generatedCount = 0
-    const errors: string[] = []
-
-    try {
-      if (shouldComposeIntro) {
-        try {
-          const introRequest = buildItineraryComposeIntroRequest({
-            draft,
-            relatedByBlockType,
-            locations,
-            modelName: resolveEditorAssistModelName(draft.editorModelName),
-          })
-          const introResponse = await composeItineraryIntroWithAi(introRequest)
-          setIntroComposeReport(introResponse)
-          const intro = introResponse.intro.trim()
-          if (intro) {
-            setDraft((current) => (current ? applyItineraryComposedIntro(current, intro) : current))
-            generatedCount += 1
-          }
-        } catch (err) {
-          errors.push(err instanceof Error ? err.message : 'Intro composition failed.')
-        }
-      }
-
-      if (blurbTargetIds.length > 0) {
-        try {
-          const request = buildGenerationRequest({
-            targetIds: blurbTargetIds,
-            skipExisting: true,
-            includeArticleContext: true,
-          })
-          const response = await generateListicleContentWithAi(request)
-          applyGeneratedListicleContent(response)
-
-          generatedCount += Object.values(response.results)
-            .filter((entry) => entry.status === 'generated' && entry.markdown?.trim())
-            .length
-          const failedResult = Object.values(response.results).find((entry) => entry.status === 'error')
-          if (failedResult) {
-            errors.push(
-              failedResult.error_message
-              || failedResult.validation_errors[0]
-              || 'One or more fields failed AI generation.',
-            )
-          }
-        } catch (err) {
-          errors.push(err instanceof Error ? err.message : 'Failed to auto write blurbs.')
-        }
-      }
-
-      if (generatedCount > 0) {
-        setResult(`Auto-wrote ${generatedCount} empty field${generatedCount === 1 ? '' : 's'}.`)
-      } else if (errors.length < 1) {
-        setResult('No empty intro or blurbs needed new AI copy.')
-      }
-
-      if (errors.length > 0) {
-        onError(errors.join(' '))
-      }
-    } finally {
-      setIsAutoWritingEmptyFields(false)
-    }
-  }, [applyGeneratedListicleContent, buildGenerationRequest, draft, locations, onError, relatedByBlockType, setDraft])
-
-  const composeDayBlurbs = useCallback(async (dayIndex: number): Promise<void> => {
-    if (!draft) return
-
-    const disabledReason = getItineraryDayBlurbComposeDisabledReason(draft, dayIndex, relatedByBlockType)
-    if (disabledReason) {
-      onError(disabledReason)
-      return
-    }
-    if (
-      dayHasExistingBlurbs(draft, dayIndex, relatedByBlockType)
-      && !window.confirm(
-        `Day ${dayIndex + 1}'s blurbs are written as one set, so adding or changing a stop `
-        + `recomposes the whole day. Every blurb in Day ${dayIndex + 1} will be rewritten, `
-        + `including any you've hand-edited. Continue?`,
-      )
-    ) {
-      return
-    }
-
-    await executeDayBlurbCompose(dayIndex)
-  }, [draft, executeDayBlurbCompose, onError, relatedByBlockType])
-
-  const composeAllDayBlurbs = useCallback(async (): Promise<void> => {
-    if (!draft) return
-
-    const dayIndexes = getComposableDayIndexes(draft, relatedByBlockType)
-    if (dayIndexes.length < 1) {
-      onError('')
-      setResult('No days are ready to compose.')
-      return
-    }
-    if (
-      dayIndexes.some((dayIndex) => dayHasExistingBlurbs(draft, dayIndex, relatedByBlockType))
-      && !window.confirm(
-        'Each day is composed as one set, so days with existing blurbs will be rewritten '
-        + 'in full, including any you\'ve hand-edited. Continue?',
-      )
-    ) {
-      return
-    }
-
-    onError('')
-    setResult(null)
-    setIsComposingDayBlurbs(true)
-
-    const mergedSteps: ComposeIntroStepEvent[] = []
-    const mergedResults: Record<string, ComposeDayBlurbResult> = {}
-    const errors: string[] = []
-    let modelUsed = ''
-    let totalGenerated = 0
-
-    try {
-      // Requests are built from the pre-run draft: blurbs never change neighbor
-      // titles or identities, so each day's signal is stable across the loop.
-      for (const dayIndex of dayIndexes) {
-        try {
-          const request = buildItineraryComposeDayBlurbsRequest({
-            draft,
-            dayIndex,
-            relatedByBlockType,
-            locations,
-            modelName: resolveEditorAssistModelName(draft.editorModelName),
-          })
-          const response = await composeItineraryDayBlurbsWithAi(request)
-          setDraft((current) => (current ? applyItineraryComposedDayBlurbs(current, dayIndex, response) : current))
-          modelUsed = response.model_used
-          Object.assign(mergedResults, response.results)
-          mergedSteps.push(
-            ...response.steps.map((step) => ({ ...step, label: `Day ${dayIndex + 1} — ${step.label}` })),
-          )
-          totalGenerated += countGeneratedBlurbs(response.results)
-        } catch (err) {
-          errors.push(`Day ${dayIndex + 1}: ${err instanceof Error ? err.message : 'composition failed'}`)
-        }
-      }
-
-      if (mergedSteps.length > 0) {
-        setDayBlurbReport({ model_used: modelUsed, results: mergedResults, steps: mergedSteps })
-      }
-      if (totalGenerated > 0) {
-        setResult(`Wrote ${totalGenerated} blurb${totalGenerated === 1 ? '' : 's'} across ${dayIndexes.length} day${dayIndexes.length === 1 ? '' : 's'}.`)
-      }
-      if (errors.length > 0) {
-        onError(errors.join(' '))
-      }
-    } finally {
-      setIsComposingDayBlurbs(false)
-    }
-  }, [countGeneratedBlurbs, draft, locations, onError, relatedByBlockType, setDraft])
-
-  const generateSeoWithAi = useCallback(async (target: SeoAiTarget = 'all'): Promise<void> => {
-    if (!draft) return
-
-    const articleContext = buildItineraryAiArticleContext(draft).trim()
-    const articleTitle = getItineraryAiArticleTitle(draft).trim()
-    const structuredDataTemplate = canonicalStructuredData
-    const hasSourceContent = Boolean(draft.title.trim() || articleContext)
-    if (!hasSourceContent) {
-      onError('Add article content before generating SEO with AI.')
-      return
-    }
-
-    onError('')
-    setResult(null)
-    setIsGeneratingSeoTarget(target)
-
-    try {
-      const response = await generateSeoMetadataWithAi({
-        prompt: buildSeoAiPrompt({
-          articleType: 'listicle-itinerary',
-          location: draft.location,
-          target,
-          structuredDataTemplate: target === 'structuredData'
-            ? structuredDataTemplate
-            : undefined,
-        }),
-        seed: buildSeoAiSeed(draft.seoSection),
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
-        articleTitle,
-        articleContext: articleContext || undefined,
-      })
-
-      if (!response.seo_patch || Object.keys(response.seo_patch).length === 0) {
-        throw new Error('AI returned an empty SEO patch.')
-      }
-
-      // The patch arrives schema-validated from the forced tool call; parse
-      // still applies length clipping and URL validation.
-      const seoPatch = parseSeoAiPatch(JSON.stringify(response.seo_patch))
-      setDraft((current) => {
-        if (!current) return current
-        const patchedSeo = applySeoAiPatch(current.seoSection, seoPatch, target)
-        return {
-          ...current,
-          seoSection: target === 'all'
-            ? {
-                ...patchedSeo,
-                structuredData: current.seoSection.structuredData,
-              }
-            : patchedSeo,
-        }
-      })
-
-      if (target === 'all') {
-        setResult('SEO fields generated with AI (images and structured data unchanged).')
-      } else {
-        setResult(`${getSeoAiTargetLabel(target)} generated with AI (images unchanged).`)
-      }
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to generate SEO with AI.')
-    } finally {
-      setIsGeneratingSeoTarget(null)
-    }
-  }, [canonicalStructuredData, draft, onError, setDraft])
-
-  const regenerateStructuredDataFromTemplate = useCallback(() => {
-    if (!canonicalStructuredData) return
-    setDraft((current) => {
-      if (!current) return current
-      return {
-        ...current,
-        seoSection: {
-          ...current.seoSection,
-          structuredData: canonicalStructuredData,
-        },
-      }
-    })
-    setResult('Structured data regenerated from the itinerary template.')
-    onError('')
-  }, [canonicalStructuredData, onError, setDraft])
-
-  const generateSeoImageFromFeatured = useCallback(async (): Promise<void> => {
-    if (!draft) return
-
-    const featuredAssetId = draft.header.featuredImage
-    if (!featuredAssetId) {
-      onError('Select a featured image in Step 2 before generating social image URLs.')
-      return
-    }
-
-    if (!token) {
-      onError('You must be logged in to generate social image URLs.')
-      return
-    }
-
-    onError('')
-    setResult(null)
-    setIsGeneratingSeoImage(true)
-
-    try {
-      const response = await requestGenerateSocialImageFromFeatured(featuredAssetId, token)
-      const bunnyUrl = response.generatedImageUrl.trim()
-      if (!bunnyUrl) {
-        throw new Error('Generated social image is missing Bunny URL.')
-      }
-
-      setDraft((current) => {
-        if (!current) return current
-        return {
-          ...current,
-          seoSection: {
-            ...current.seoSection,
-            openGraph: {
-              ...current.seoSection.openGraph,
-              imageUrl: bunnyUrl,
-            },
-            twitterCard: {
-              ...current.seoSection.twitterCard,
-              imageUrl: bunnyUrl,
-            },
-          },
-        }
-      })
-
-      setResult('Social image generated from featured image. Bunny URL applied to OG and Twitter.')
-    } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to generate social image from featured image.')
-    } finally {
-      setIsGeneratingSeoImage(false)
-    }
-  }, [draft, onError, setDraft, token])
-
-  if (isLoading || !draft) {
-    return (
-      <div className="stl-page">
-        {!isLoading && error
-          ? <p className="stl-error">{error}</p>
-          : <p className="stl-placeholder">Loading builder...</p>}
-      </div>
-    )
-  }
 
   const isStep1LockedView = draft.step1_complete && !draft.in_update_mode
   const isStep2LockedView = draft.step2_complete && !draft.step2_in_update_mode
@@ -1054,20 +214,11 @@ export default function ListicleItineraryBuilderPage() {
           {result ? <p className="stl-success">{result}</p> : null}
 
           {isSynced && hasLocalChanges ? (
-            <div className="stl-out-of-sync-banner" role="status">
-              <span className="stl-out-of-sync-banner__dot" aria-hidden="true" />
-              <span className="stl-out-of-sync-banner__text">
-                Out of sync — you have local changes. Sync to Payload to apply them to the {isPublishedPayload ? 'live published' : 'Payload'} itinerary.
-              </span>
-              <button
-                type="button"
-                className="stl-btn stl-out-of-sync-banner__btn"
-                onClick={() => void submit(syncTargetStatus)}
-                disabled={isSaving}
-              >
-                {isSaving ? 'Syncing...' : isPublishedPayload ? 'Update Published' : 'Save & Sync'}
-              </button>
-            </div>
+            <OutOfSyncBanner
+              isPublishedPayload={isPublishedPayload}
+              isSaving={isSaving}
+              onSync={() => void submit(syncTargetStatus)}
+            />
           ) : null}
 
           <BuilderSetupPanel
@@ -1079,30 +230,30 @@ export default function ListicleItineraryBuilderPage() {
             onSaveSetup={actions.handleSaveSetup}
             onCancelUpdateSetup={actions.cancelUpdateSetup}
             updateDraft={actions.updateDraft}
-            onSlugChange={applySlugAndOgUrl}
-            onGenerateSlugWithAi={handleGenerateSlugWithAi}
-            isGeneratingSlug={isGeneratingSlug}
-            onGenerateItinerary={handleGenerateItinerary}
-            isGeneratingItinerary={isGeneratingItinerary}
-            onComposeTravelerBrief={composeTravelerBrief}
-            onViewAutobuildReport={() => setIsAutobuildReportOpen(true)}
-            hasAutobuildReport={Boolean(autobuildReport)}
+            onSlugChange={aiActions.applySlugAndOgUrl}
+            onGenerateSlugWithAi={aiActions.handleGenerateSlugWithAi}
+            isGeneratingSlug={aiActions.isGeneratingSlug}
+            onGenerateItinerary={aiActions.handleGenerateItinerary}
+            isGeneratingItinerary={aiActions.isGeneratingItinerary}
+            onComposeTravelerBrief={aiActions.composeTravelerBrief}
+            onViewAutobuildReport={() => aiActions.setIsAutobuildReportOpen(true)}
+            hasAutobuildReport={Boolean(aiActions.autobuildReport)}
             libraryShells={libraryShells}
             onOpenLayoutManager={() => setIsLayoutManagerOpen(true)}
           />
 
           <InspectAutobuildRunModal
-            isOpen={isAutobuildReportOpen}
-            onClose={() => setIsAutobuildReportOpen(false)}
-            report={autobuildReport}
+            isOpen={aiActions.isAutobuildReportOpen}
+            onClose={() => aiActions.setIsAutobuildReportOpen(false)}
+            report={aiActions.autobuildReport}
           />
 
           <DayShellLibraryModal
             isOpen={isLayoutManagerOpen}
             libraryShells={libraryShells}
-            onCreate={handleCreateLibraryShell}
-            onUpdate={handleUpdateLibraryShell}
-            onDelete={handleDeleteLibraryShell}
+            onCreate={createLibraryShell}
+            onUpdate={updateLibraryShell}
+            onDelete={deleteLibraryShell}
             onClose={() => setIsLayoutManagerOpen(false)}
           />
 
@@ -1113,11 +264,11 @@ export default function ListicleItineraryBuilderPage() {
               locationRef={actions.selectedLocationRefId}
               mediaAssets={mediaAssets}
               updateHeader={actions.updateHeader}
-              onIntroAiAutoWrite={autoWriteIntro}
-              isIntroAiGenerating={activeAiTargetId === getItineraryIntroTargetId(draft)}
+              onIntroAiAutoWrite={aiActions.autoWriteIntro}
+              isIntroAiGenerating={aiActions.activeAiTargetId === getItineraryIntroTargetId(draft)}
               introComposeDisabledReason={getItineraryIntroComposeDisabledReason(draft, relatedByBlockType)}
-              hasIntroComposeReport={Boolean(introComposeReport)}
-              onViewIntroComposeReport={() => setIsIntroComposeReportOpen(true)}
+              hasIntroComposeReport={Boolean(aiActions.introComposeReport)}
+              onViewIntroComposeReport={() => aiActions.setIsIntroComposeReportOpen(true)}
               isLocked={isStep2LockedView}
               isSynced={isSynced}
               onContinueStep2={actions.handleContinueStep2}
@@ -1128,29 +279,19 @@ export default function ListicleItineraryBuilderPage() {
           ) : null}
 
           <InspectIntroComposeRunModal
-            isOpen={isIntroComposeReportOpen}
-            onClose={() => setIsIntroComposeReportOpen(false)}
-            report={introComposeReport}
+            isOpen={aiActions.isIntroComposeReportOpen}
+            onClose={() => aiActions.setIsIntroComposeReportOpen(false)}
+            report={aiActions.introComposeReport}
           />
 
           {(isStep1LockedView && isStep2LockedView) || isSynced ? (
             <>
-              {draft.dayCount > 1 ? (
-                <div className="stl-day-tabs" role="tablist" aria-label="Itinerary days">
-                  {Array.from({ length: draft.dayCount }, (_, dayTabIndex) => (
-                    <button
-                      key={draft.days[dayTabIndex]?.id ?? `day_tab_${dayTabIndex}`}
-                      type="button"
-                      className={activeDayIndex === dayTabIndex ? 'stl-day-tab stl-day-tab--active' : 'stl-day-tab'}
-                      role="tab"
-                      aria-selected={activeDayIndex === dayTabIndex}
-                      onClick={() => setActiveDayIndex(dayTabIndex)}
-                    >
-                      Day {dayTabIndex + 1}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
+              <BuilderDayTabs
+                dayCount={draft.dayCount}
+                activeDayIndex={activeDayIndex}
+                dayIds={draft.days.map((day) => day.id)}
+                onActiveDayChange={setActiveDayIndex}
+              />
               <BuilderStopsPanel
                 draft={draft}
                 activeDayIndex={activeDayIndex}
@@ -1165,16 +306,16 @@ export default function ListicleItineraryBuilderPage() {
                 onMoveItem={actions.moveItem}
                 onRemoveItem={actions.removeItem}
                 onUpdateItem={actions.updateItem}
-                onStopBlurbAiAutoWrite={autoWriteStopBlurb}
-                onRefineStopReason={refineStopReason}
-                activeAiItemId={activeAiTargetId?.endsWith('_blurb') ? activeAiTargetId.replace(/_blurb$/, '') : null}
-                onComposeActiveDayBlurbs={() => composeDayBlurbs(activeDayIndex)}
-                onComposeAllDayBlurbs={composeAllDayBlurbs}
+                onStopBlurbAiAutoWrite={aiActions.autoWriteStopBlurb}
+                onRefineStopReason={aiActions.refineStopReason}
+                activeAiItemId={aiActions.activeAiTargetId?.endsWith('_blurb') ? aiActions.activeAiTargetId.replace(/_blurb$/, '') : null}
+                onComposeActiveDayBlurbs={() => aiActions.composeDayBlurbs(activeDayIndex)}
+                onComposeAllDayBlurbs={aiActions.composeAllDayBlurbs}
                 activeDayBlurbDisabledReason={getItineraryDayBlurbComposeDisabledReason(draft, activeDayIndex, relatedByBlockType)}
                 composableDayCount={getComposableDayIndexes(draft, relatedByBlockType).length}
-                isComposingDayBlurbs={isComposingDayBlurbs}
-                hasDayBlurbReport={Boolean(dayBlurbReport)}
-                onViewDayBlurbReport={() => setIsDayBlurbReportOpen(true)}
+                isComposingDayBlurbs={aiActions.isComposingDayBlurbs}
+                hasDayBlurbReport={Boolean(aiActions.dayBlurbReport)}
+                onViewDayBlurbReport={() => aiActions.setIsDayBlurbReportOpen(true)}
                 isLocked={isStep3LockedView}
                 isSynced={isSynced}
                 onContinueStep3={actions.handleContinueStep3}
@@ -1184,30 +325,30 @@ export default function ListicleItineraryBuilderPage() {
               />
 
               <InspectDayBlurbComposeRunModal
-                isOpen={isDayBlurbReportOpen}
-                onClose={() => setIsDayBlurbReportOpen(false)}
-                report={dayBlurbReport}
+                isOpen={aiActions.isDayBlurbReportOpen}
+                onClose={() => aiActions.setIsDayBlurbReportOpen(false)}
+                report={aiActions.dayBlurbReport}
               />
 
               <StopBlurbComposeChoiceModal
-                isOpen={stopComposeChoice !== null}
-                stopTitle={stopComposeChoice?.stopTitle ?? ''}
-                dayNumber={(stopComposeChoice?.dayIndex ?? 0) + 1}
-                strandsNeighbor={stopComposeChoice?.strandsNeighbor ?? false}
-                disabled={isComposingDayBlurbs}
+                isOpen={aiActions.stopComposeChoice !== null}
+                stopTitle={aiActions.stopComposeChoice?.stopTitle ?? ''}
+                dayNumber={(aiActions.stopComposeChoice?.dayIndex ?? 0) + 1}
+                strandsNeighbor={aiActions.stopComposeChoice?.strandsNeighbor ?? false}
+                disabled={aiActions.isComposingDayBlurbs}
                 onJustThisStop={() => {
-                  if (!stopComposeChoice) return
-                  const { dayIndex, targetId } = stopComposeChoice
-                  setStopComposeChoice(null)
-                  void composeSingleStopAware(dayIndex, targetId)
+                  if (!aiActions.stopComposeChoice) return
+                  const { dayIndex, targetId } = aiActions.stopComposeChoice
+                  aiActions.setStopComposeChoice(null)
+                  void aiActions.composeSingleStopAware(dayIndex, targetId)
                 }}
                 onWholeDay={() => {
-                  if (!stopComposeChoice) return
-                  const { dayIndex } = stopComposeChoice
-                  setStopComposeChoice(null)
-                  void executeDayBlurbCompose(dayIndex)
+                  if (!aiActions.stopComposeChoice) return
+                  const { dayIndex } = aiActions.stopComposeChoice
+                  aiActions.setStopComposeChoice(null)
+                  void aiActions.executeDayBlurbCompose(dayIndex)
                 }}
-                onClose={() => setStopComposeChoice(null)}
+                onClose={() => aiActions.setStopComposeChoice(null)}
               />
             </>
           ) : null}
@@ -1216,13 +357,13 @@ export default function ListicleItineraryBuilderPage() {
             <BuilderSeoPanel
               draft={draft}
               setDraft={setDraft}
-              onGenerateSeoWithAi={generateSeoWithAi}
-              isGeneratingSeoTarget={isGeneratingSeoTarget}
-              onGenerateSeoImageFromFeatured={generateSeoImageFromFeatured}
-              isGeneratingSeoImage={isGeneratingSeoImage}
-              onRegenerateStructuredData={regenerateStructuredDataFromTemplate}
+              onGenerateSeoWithAi={aiActions.generateSeoWithAi}
+              isGeneratingSeoTarget={aiActions.isGeneratingSeoTarget}
+              onGenerateSeoImageFromFeatured={aiActions.generateSeoImageFromFeatured}
+              isGeneratingSeoImage={aiActions.isGeneratingSeoImage}
+              onRegenerateStructuredData={aiActions.regenerateStructuredDataFromTemplate}
               canRegenerateStructuredData={Boolean(canonicalStructuredData)}
-              onAutoFillOgUrl={handleAutoFillOgUrl}
+              onAutoFillOgUrl={aiActions.handleAutoFillOgUrl}
             />
           ) : null}
 
@@ -1244,10 +385,10 @@ export default function ListicleItineraryBuilderPage() {
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
           isRevertingToPayload={isRevertingToPayload}
-          isAutoWritingEmptyFields={isAutoWritingEmptyFields}
+          isAutoWritingEmptyFields={aiActions.isAutoWritingEmptyFields}
           canAutoWriteEmptyFields={Boolean((isSynced || (isStep1LockedView && isStep2LockedView)) && (getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0 || (!draft.header.introMarkdown.trim() && !getItineraryIntroComposeDisabledReason(draft, relatedByBlockType))))}
           stepIssues={progress.stepIssues}
-          onAutoWriteEmptyFields={autoWriteEmptyFields}
+          onAutoWriteEmptyFields={aiActions.autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}
           onRevertToPayload={revertToPayloadVersion}
           onSyncToPayload={() => submit(syncTargetStatus)}
