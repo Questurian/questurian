@@ -90,6 +90,8 @@ function buildRankedItemEntity(input: {
   const itemInstagram = relatedItem ? resolveSelectedInstagramPermalink(listicleItem, relatedItem) : undefined
   const cuisines = source ? pickStringArray(source, [['cuisines']]) : []
   const idealFor = source ? pickStringArray(source, [['idealFor'], ['nightlifeDetails', 'core', 'idealFor']]) : []
+  // schema.org has no `category` on Place subtypes, so the venue type label rides in `keywords`.
+  const keywordParts = [...idealFor, ...(itemTypeLabel ? [itemTypeLabel] : [])]
 
   const entity: Record<string, unknown> = {
     '@type': schemaType,
@@ -104,8 +106,7 @@ function buildRankedItemEntity(input: {
     geo: itemGeo,
     priceRange: itemPriceRange,
     servesCuisine: cuisines.length > 0 ? cuisines : undefined,
-    keywords: idealFor.length > 0 ? idealFor.join(', ') : undefined,
-    category: itemTypeLabel,
+    keywords: keywordParts.length > 0 ? keywordParts.join(', ') : undefined,
   }
 
   if (includeUrlFields && !entity.url && itemInstagram && isValidAbsoluteHttpUrl(itemInstagram)) {
@@ -185,6 +186,7 @@ export function buildSingleTypeListicleStructuredDataTemplate(input: {
     name: articleTitle,
     description: intro || 'AI_FILL_ARTICLE_DESCRIPTION',
     articleSection: listicleLabel,
+    inLanguage: 'en',
     contentLocation: draft.location.trim()
       ? {
           '@type': 'Place',
