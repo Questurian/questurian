@@ -23,7 +23,7 @@ from .shell_library import (
 router = APIRouter(prefix="/itineraries-pipeline", tags=["itineraries-pipeline"])
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-opus-4-7"
+DEFAULT_MODEL = "claude-opus-4-8"
 MAX_PROMPT_CHARS = 120_000
 
 

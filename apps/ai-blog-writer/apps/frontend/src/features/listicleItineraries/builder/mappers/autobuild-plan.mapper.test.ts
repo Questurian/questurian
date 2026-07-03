@@ -9,7 +9,7 @@ const ids = (kind: string, day: number, slot: number) => `${kind}-${day}-${slot}
 function baseDraft(): ListicleItineraryDraft {
   return {
     draftId: 'd1',
-    editorModelName: 'claude-opus-4-7',
+    editorModelName: 'claude-opus-4-8',
     listTone: 'elevated',
     generationBrief: 'luxury foodie day',
     title: 'Luxury Foodie Day',
