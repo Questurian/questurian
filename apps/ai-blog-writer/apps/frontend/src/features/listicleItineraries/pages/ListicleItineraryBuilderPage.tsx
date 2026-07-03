@@ -60,7 +60,7 @@ import {
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
 import { buildItineraryDraftSyncSignature } from '../builder/utils/itinerary-draft-sync-signature'
-import { composeItineraryBriefWithAi, composeItineraryDayBlurbsWithAi, composeItineraryIntroWithAi, fetchItineraryById, generateListicleContentWithAi, rewriteBlockWithAi } from '../api'
+import { composeItineraryBriefWithAi, composeItineraryDayBlurbsWithAi, composeItineraryIntroWithAi, fetchItineraryById, generateListicleContentWithAi, generateSeoMetadataWithAi, rewriteBlockWithAi } from '../api'
 import { payloadDocToDraft } from '../builder/mappers/itinerary-draft.mapper'
 import { generateItinerary, type AutobuildResponse } from '../builder/services/autobuild.api'
 import { InspectAutobuildRunModal } from '../builder/components/InspectAutobuildRunModal'
@@ -906,7 +906,7 @@ export default function ListicleItineraryBuilderPage() {
     setIsGeneratingSeoTarget(target)
 
     try {
-      const response = await rewriteBlockWithAi({
+      const response = await generateSeoMetadataWithAi({
         prompt: buildSeoAiPrompt({
           articleType: 'listicle-itinerary',
           location: draft.location,
@@ -915,18 +915,19 @@ export default function ListicleItineraryBuilderPage() {
             ? structuredDataTemplate
             : undefined,
         }),
-        blockContent: buildSeoAiSeed(draft.seoSection),
+        seed: buildSeoAiSeed(draft.seoSection),
         modelName: resolveEditorAssistModelName(draft.editorModelName),
         articleTitle,
         articleContext: articleContext || undefined,
       })
 
-      const aiText = response.rewritten_content?.trim()
-      if (!aiText) {
-        throw new Error('AI returned empty SEO content.')
+      if (!response.seo_patch || Object.keys(response.seo_patch).length === 0) {
+        throw new Error('AI returned an empty SEO patch.')
       }
 
-      const seoPatch = parseSeoAiPatch(aiText)
+      // The patch arrives schema-validated from the forced tool call; parse
+      // still applies length clipping and URL validation.
+      const seoPatch = parseSeoAiPatch(JSON.stringify(response.seo_patch))
       setDraft((current) => {
         if (!current) return current
         const patchedSeo = applySeoAiPatch(current.seoSection, seoPatch, target)

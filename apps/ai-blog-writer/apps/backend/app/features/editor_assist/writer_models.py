@@ -25,6 +25,12 @@ class WriterResult:
     model_name: str
 
 
+@dataclass(frozen=True)
+class StructuredWriterResult:
+    payload: dict
+    model_name: str
+
+
 class WriterModelError(RuntimeError):
     pass
 
@@ -114,6 +120,68 @@ def _invoke_vertex_writer(
     if not text:
         raise WriterModelError("Vertex writer returned empty content")
     return WriterResult(text=text, model_name=model_name)
+
+
+def invoke_anthropic_structured(
+    *,
+    prompt: str,
+    model_name: str,
+    tool_name: str,
+    tool_description: str,
+    input_schema: dict,
+    max_tokens: int = 4096,
+) -> StructuredWriterResult:
+    """Call Anthropic with a forced tool so the response is schema-shaped JSON.
+
+    Unlike the free-text writer path, the model cannot return prose, fences, or
+    a malformed payload — the API validates the tool input against the schema,
+    so no downstream JSON repair is needed.
+    """
+    if not _is_anthropic_model(model_name):
+        raise WriterModelError(
+            f"Structured writer calls require an Anthropic model, got '{model_name}'."
+        )
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+    if not api_key:
+        raise WriterModelError(
+            "ANTHROPIC_API_KEY is not set; cannot route writer to Anthropic. "
+            "Set the env var, then retry."
+        )
+
+    try:
+        import anthropic  # type: ignore
+    except ImportError as exc:
+        raise WriterModelError(
+            "anthropic SDK is not installed. Run `pip install -r requirements.txt`."
+        ) from exc
+
+    client = anthropic.Anthropic(api_key=api_key)
+    try:
+        message = client.messages.create(
+            model=model_name,
+            max_tokens=max_tokens,
+            messages=[{"role": "user", "content": prompt}],
+            tools=[
+                {
+                    "name": tool_name,
+                    "description": tool_description,
+                    "input_schema": input_schema,
+                }
+            ],
+            tool_choice={"type": "tool", "name": tool_name},
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise WriterModelError(f"Anthropic structured writer call failed: {exc}") from exc
+
+    for block in getattr(message, "content", []) or []:
+        if getattr(block, "type", None) == "tool_use" and getattr(block, "name", None) == tool_name:
+            payload = getattr(block, "input", None)
+            if isinstance(payload, dict):
+                resolved_model = getattr(message, "model", None) or model_name
+                return StructuredWriterResult(payload=payload, model_name=resolved_model)
+
+    raise WriterModelError("Anthropic structured writer returned no tool output")
 
 
 def invoke_writer_model(
