@@ -104,7 +104,16 @@ function relatedCollectionForBlockType(
 }
 
 export async function fetchItineraries(token: string): Promise<PayloadListResponse<PayloadItineraryDoc>> {
-  return payloadRequest(`/api/listicle-itineraries?limit=100&sort=-updatedAt`, token)
+  const params = new URLSearchParams()
+  params.set('depth', '0')
+  params.set('limit', '100')
+  params.set('sort', '-updatedAt')
+
+  for (const field of ['id', 'title', 'location', 'status', 'updatedAt']) {
+    params.set(`select[${field}]`, 'true')
+  }
+
+  return payloadRequest(`/api/listicle-itineraries?${params.toString()}`, token)
 }
 
 export async function fetchItineraryById(id: number, token: string): Promise<PayloadItineraryDoc> {

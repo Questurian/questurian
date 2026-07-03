@@ -1,7 +1,33 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchLocations, generateListicleContentWithAi } from './api'
+import { fetchItineraries, fetchLocations, generateListicleContentWithAi } from './api'
 
 describe('listicleItineraries api', () => {
+  it('fetches itinerary index rows without block fields', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        docs: [{ id: 7, title: 'One Day in Lima', location: 'peru|lima', status: 'draft' }],
+      }),
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(fetchItineraries('token-123')).resolves.toEqual({
+      docs: [{ id: 7, title: 'One Day in Lima', location: 'peru|lima', status: 'draft' }],
+    })
+
+    const url = new URL(fetchMock.mock.calls[0]?.[0] as string)
+    expect(url.pathname).toBe('/api/listicle-itineraries')
+    expect(url.searchParams.get('depth')).toBe('0')
+    expect(url.searchParams.get('limit')).toBe('100')
+    expect(url.searchParams.get('sort')).toBe('-updatedAt')
+    expect(url.searchParams.get('select[id]')).toBe('true')
+    expect(url.searchParams.get('select[title]')).toBe('true')
+    expect(url.searchParams.get('select[location]')).toBe('true')
+    expect(url.searchParams.get('select[status]')).toBe('true')
+    expect(url.searchParams.get('select[updatedAt]')).toBe('true')
+  })
+
   it('paginates all location pages', async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
