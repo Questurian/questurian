@@ -63,7 +63,7 @@ function buildTargetShape(target: SeoAiTarget): string {
     case 'metaDescription':
       return '{"metaDescription":"string"}'
     case 'openGraph':
-      return '{"openGraph":{"title":"string","description":"string","url":"https://example.com/path"}}'
+      return '{"openGraph":{"title":"string","description":"string"}}'
     case 'openGraphTitle':
       return '{"openGraph":{"title":"string"}}'
     case 'openGraphDescription':
@@ -94,8 +94,7 @@ function buildTargetShape(target: SeoAiTarget): string {
         '  "metaDescription": "string",',
         '  "openGraph": {',
         '    "title": "string",',
-        '    "description": "string",',
-        '    "url": "https://example.com/path"',
+        '    "description": "string"',
         '  },',
         '  "twitterCard": {',
         '    "card": "summary or summary_large_image",',
