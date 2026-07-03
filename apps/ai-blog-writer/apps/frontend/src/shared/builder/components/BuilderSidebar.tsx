@@ -143,13 +143,21 @@ export function BuilderSidebar({
         <h3>Quick Actions</h3>
         <label className="stl-field">
           <span>AI Model</span>
-          <select value={editorModelName} onChange={(event) => onEditorModelChange(event.target.value)}>
-            {EDITOR_ASSIST_MODEL_OPTIONS.map((modelOption) => (
-              <option key={modelOption.value} value={modelOption.value}>
-                {modelOption.label}
-              </option>
-            ))}
-          </select>
+          {EDITOR_ASSIST_MODEL_OPTIONS.length > 1 ? (
+            <select value={editorModelName} onChange={(event) => onEditorModelChange(event.target.value)}>
+              {EDITOR_ASSIST_MODEL_OPTIONS.map((modelOption) => (
+                <option key={modelOption.value} value={modelOption.value}>
+                  {modelOption.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              value={EDITOR_ASSIST_MODEL_OPTIONS.find((modelOption) => modelOption.value === editorModelName)?.label ?? editorModelName}
+              disabled
+              readOnly
+            />
+          )}
         </label>
         <div className="stl-summary-actions">
           {renderAutoWriteButton()}
