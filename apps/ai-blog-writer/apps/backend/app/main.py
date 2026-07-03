@@ -1,7 +1,9 @@
 import os
 import sys
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncIterator
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -37,9 +39,24 @@ for rel_path in ("packages/shared/src", "packages/utils/src"):
         sys.path.append(path)
 
 from app.api import router  # noqa: E402
+from app.core import fail_stale_runs  # noqa: E402
 
-app = FastAPI(title="AI Blog Writer")
 logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    # Pipelines run as in-process background tasks; runs left in-flight by
+    # a previous process can never progress, so fail them at boot.
+    stale_count = fail_stale_runs()
+    if stale_count:
+        logger.warning(
+            "Marked %d stale run(s) as failed after restart", stale_count
+        )
+    yield
+
+
+app = FastAPI(title="AI Blog Writer", lifespan=lifespan)
 
 
 def _read_bool_env(key: str, default: bool = False) -> bool:
