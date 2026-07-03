@@ -153,6 +153,8 @@ describe('singleTypeListicles structured data template', () => {
     expect((blogPosting?.mainEntityOfPage as Record<string, unknown> | undefined)?.['@id']).toBe(
       'https://example.com/best-gelato-lima',
     )
+    expect(blogPosting?.inLanguage).toBe('en')
+    expect(firstEntity?.category).toBeUndefined()
 
     const validationIssues = validateSingleTypeListicleStructuredDataShape({
       structuredData: template,
