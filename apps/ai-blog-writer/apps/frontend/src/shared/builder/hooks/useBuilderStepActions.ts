@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { findLocationByKey } from '../../locationScope/scope'
+import { findLocationByKey } from '../../locationScope/lookup'
 import { resolveEditorAssistModelName } from '../../api/ai/models'
 
 type StepFlags = {

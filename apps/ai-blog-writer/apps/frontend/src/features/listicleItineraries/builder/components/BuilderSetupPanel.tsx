@@ -9,10 +9,10 @@ import { SharedNeighborhoodsModal } from './SharedNeighborhoodsModal'
 import { TravelerProfileModal } from './TravelerProfileModal'
 import {
   findLocationByKey,
-  formatLocationLabel,
   getNeighborhoodOptionsForLocation,
-  isCityLocation,
-} from '../../../../shared/locationScope/scope'
+} from '../../../../shared/locationScope/lookup'
+import { formatLocationLabel } from '../../../../shared/locationScope/labels'
+import { isCityLocation } from '../../../../shared/locationScope/levels'
 
 type BuilderSetupPanelProps = {
   draft: ListicleItineraryDraft

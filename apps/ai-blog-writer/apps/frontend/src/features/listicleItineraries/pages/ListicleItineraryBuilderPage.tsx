@@ -79,7 +79,7 @@ import { StopBlurbComposeChoiceModal } from '../builder/components/StopBlurbComp
 import { DEFAULT_DAY_SHELL_ID, getDayShellTemplate } from '../builder/constants/day-shells.constants'
 import { findItineraryItemById, type DayShellTemplate, type ListicleItineraryDraft, type TravelerProfile } from '../types'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
-import { formatLocationLabel } from '../../../shared/locationScope/scope'
+import { formatLocationLabel } from '../../../shared/locationScope/labels'
 import '../styles.css'
 
 const schemaPublisherConfig = getItinerarySchemaPublisherConfig()

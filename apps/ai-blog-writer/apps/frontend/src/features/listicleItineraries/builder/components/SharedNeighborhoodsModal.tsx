@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { LocationOption } from '../../types'
-import { formatLocationLabel } from '../../../../shared/locationScope/scope'
+import { formatLocationLabel } from '../../../../shared/locationScope/labels'
 
 type Props = {
   isOpen: boolean

@@ -3,7 +3,7 @@ import { createDraftStorage } from '../../shared/builder/storage/createDraftStor
 import { createEmptySeoSection, normalizeSeoSection } from './builder/services/seo-section.service'
 import type { ListicleItemBlock, SingleTypeListicleDraft } from './types'
 import { DEFAULT_LIST_TONE, resolveListTone, resolveListicleAngleForBlockType } from './types'
-import { normalizeLocationIds } from '../../shared/locationScope/scope'
+import { normalizeLocationIds } from '../../shared/locationScope/ids'
 
 const STORAGE_KEY = 'single_type_listicles_staged_v4_exact_neighborhoods'
 

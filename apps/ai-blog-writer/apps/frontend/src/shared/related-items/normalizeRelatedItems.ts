@@ -1,4 +1,4 @@
-import { formatLocationLabel } from '../locationScope/scope'
+import { formatLocationLabel } from '../locationScope/labels'
 
 type RelatedItemLike = {
   id: number

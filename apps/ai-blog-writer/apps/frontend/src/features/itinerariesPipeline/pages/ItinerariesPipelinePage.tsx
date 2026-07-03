@@ -5,11 +5,11 @@ import { fetchLocations } from '../../listicleItineraries/api'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../../listicleItineraries/builder/constants/builder-options.constants'
 import type { LocationOption } from '../../listicleItineraries/types'
 import {
-  formatLocationLabel,
-  getLocationLevel,
   normalizeLocationKey,
   parseLocationKey,
-} from '../../../shared/locationScope/scope'
+} from '../../../shared/locationScope/keys'
+import { formatLocationLabel } from '../../../shared/locationScope/labels'
+import { getLocationLevel } from '../../../shared/locationScope/levels'
 import '../itineraries-pipeline.css'
 import '../../listicleItineraries/styles.css'
 import '../../prompt2blog/styles.css'

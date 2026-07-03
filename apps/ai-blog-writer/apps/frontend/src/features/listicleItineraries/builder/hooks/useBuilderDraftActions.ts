@@ -4,8 +4,8 @@ import type { SetURLSearchParams } from 'react-router-dom'
 import {
   areLocationIdSelectionsEqual,
   normalizeLocationIds,
-  normalizeLocationKey,
-} from '../../../../shared/locationScope/scope'
+} from '../../../../shared/locationScope/ids'
+import { normalizeLocationKey } from '../../../../shared/locationScope/keys'
 import {
   useBuilderStepActions,
   useSelectedLocationRefId,

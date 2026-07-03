@@ -6,10 +6,10 @@ import { BuilderStepHeader } from '../../../../shared/builder/components/Builder
 import { LISTICLE_TYPE_OPTIONS } from '../constants/builder-options.constants'
 import {
   findLocationByKey,
-  formatLocationLabel,
   getNeighborhoodOptionsForLocation,
-  isCityLocation,
-} from '../../../../shared/locationScope/scope'
+} from '../../../../shared/locationScope/lookup'
+import { formatLocationLabel } from '../../../../shared/locationScope/labels'
+import { isCityLocation } from '../../../../shared/locationScope/levels'
 import { hasAnyWrittenItemData } from '../utils/item-target-count.utils'
 import { validateStep1 } from '../validators/setup.validators'
 

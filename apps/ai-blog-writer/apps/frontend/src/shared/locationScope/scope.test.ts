@@ -1,10 +1,9 @@
 import {
-  areLocationIdSelectionsEqual,
-  buildExactNeighborhoodScope,
-  formatLocationLabel,
-  getNeighborhoodOptionsForLocation,
   isLocationWithinArticleScope,
 } from './scope'
+import { areLocationIdSelectionsEqual } from './ids'
+import { formatLocationLabel } from './labels'
+import { getNeighborhoodOptionsForLocation } from './lookup'
 import type { LocationDoc } from './types'
 
 const locations: LocationDoc[] = [
@@ -51,13 +50,6 @@ const locations: LocationDoc[] = [
 ]
 
 describe('locationScope helpers', () => {
-  it('builds exact neighborhood scope from selected ids', () => {
-    expect(buildExactNeighborhoodScope([4, 3, 4], locations)).toEqual({
-      keys: ['peru|lima|miraflores', 'peru|lima|barranco'],
-      refs: [4, 3],
-    })
-  })
-
   it('matches only exact neighborhoods when shared neighborhoods are selected', () => {
     expect(isLocationWithinArticleScope({
       itemLocationKey: 'peru|lima|miraflores',
@@ -68,6 +60,22 @@ describe('locationScope helpers', () => {
 
     expect(isLocationWithinArticleScope({
       itemLocationKey: 'peru|lima|san-isidro',
+      locationKey: 'peru|lima',
+      sharedNeighborhoods: [3, 4],
+      locations,
+    })).toBe(false)
+  })
+
+  it('matches exact neighborhood references when shared neighborhoods are selected', () => {
+    expect(isLocationWithinArticleScope({
+      itemLocationRef: { id: 4 },
+      locationKey: 'peru|lima',
+      sharedNeighborhoods: [3, 4],
+      locations,
+    })).toBe(true)
+
+    expect(isLocationWithinArticleScope({
+      itemLocationRef: { id: 5 },
       locationKey: 'peru|lima',
       sharedNeighborhoods: [3, 4],
       locations,

@@ -21,7 +21,7 @@ import {
   type TravelerProfile,
   type TravelerProfileBudget,
 } from './types'
-import { normalizeLocationIds } from '../../shared/locationScope/scope'
+import { normalizeLocationIds } from '../../shared/locationScope/ids'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
 const DAY_SHELL_IDS = new Set<string>(BUILT_IN_DAY_SHELLS.map((shell) => shell.id))
