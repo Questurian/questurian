@@ -7,6 +7,13 @@ RUN pip install --no-cache-dir -r /app/apps/backend/requirements.txt
 COPY . /app
 
 ENV PYTHONPATH=/app/apps/backend:/app/packages/shared/src:/app/packages/utils/src
+
+# All run history, stage results, and generated articles live in a single
+# SQLite file under DATA_DIR. Keep it on a named volume so a redeploy or
+# container rebuild doesn't wipe it.
+ENV DATA_DIR=/data
+VOLUME ["/data"]
+
 EXPOSE 4003
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "4003"]

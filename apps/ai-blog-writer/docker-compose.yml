@@ -7,8 +7,13 @@ services:
       - apps/backend/.env
     environment:
       - PAYLOAD_API_URL=http://host.docker.internal:4000
+      # Pin the SQLite data dir to the named volume below so run history
+      # and generated articles survive container rebuilds (overrides any
+      # DATA_DIR in apps/backend/.env).
+      - DATA_DIR=/data
     volumes:
       - ./:/app
+      - backend_data:/data
       - ~/.config/gcloud:/root/.config/gcloud:ro  # Mount GCloud credentials
     ports:
       - '4003:4003'
@@ -42,3 +47,4 @@ services:
 volumes:
   frontend_node_modules:
   converter_node_modules:
+  backend_data:
