@@ -148,7 +148,7 @@ describe('listicleItineraries structured data template', () => {
       node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'BlogPosting'
     )) as Record<string, unknown> | undefined
     const tripNode = graph.find((node) => (
-      node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'Trip'
+      node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'TouristTrip'
     )) as Record<string, unknown> | undefined
     const itemListNode = graph.find((node) => (
       node && typeof node === 'object' && (node as Record<string, unknown>)['@type'] === 'ItemList'
@@ -195,6 +195,9 @@ describe('listicleItineraries structured data template', () => {
 
     expect(firstEntity?.['@type']).toBe('Restaurant')
     expect(secondEntity?.['@type']).toBe('TouristAttraction')
+    expect(firstEntity?.category).toBeUndefined()
+    expect(typeof firstEntity?.keywords === 'string' ? firstEntity.keywords : '').toContain('Dining')
+    expect(blogPostingNode?.inLanguage).toBe('en')
 
     const shapeIssues = validateListicleItineraryStructuredDataShape({
       structuredData,

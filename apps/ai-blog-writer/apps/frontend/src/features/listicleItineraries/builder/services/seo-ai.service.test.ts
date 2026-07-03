@@ -10,7 +10,7 @@ describe('listicleItineraries seo ai service', () => {
         '@context': 'https://schema.org',
         '@graph': [
           { '@type': 'BlogPosting' },
-          { '@type': 'Trip' },
+          { '@type': 'TouristTrip' },
           {
             '@type': 'ItemList',
             itemListElement: [{ '@type': 'ListItem', position: 1 }],
@@ -19,7 +19,7 @@ describe('listicleItineraries seo ai service', () => {
       }),
     })
 
-    expect(prompt).toContain('keep @graph nodes for BlogPosting + Trip + ItemList')
+    expect(prompt).toContain('keep @graph nodes for BlogPosting + TouristTrip + ItemList')
     expect(prompt).toContain('preserve BlogPosting author, publisher, image, datePublished, dateModified, url, and mainEntityOfPage when present')
     expect(prompt).toContain('Structured data stop count to preserve: 1')
   })
@@ -33,7 +33,7 @@ describe('listicleItineraries seo ai service', () => {
             '@type': 'BlogPosting',
             description: 'Discover this full-day itinerary with endless amazing highlights and top-rated experiences that make it one of the best possible days in the city for absolutely everyone looking for unforgettable moments all day long.',
           },
-          { '@type': 'Trip' },
+          { '@type': 'TouristTrip' },
           {
             '@type': 'ItemList',
             itemListElement: [
@@ -84,7 +84,7 @@ describe('listicleItineraries seo ai service', () => {
             "headline": "One Day in Lima"
           }
           {
-            "@type": "Trip"
+            "@type": "TouristTrip"
           }
           {
             "@type": "ItemList",
