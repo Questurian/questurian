@@ -1,7 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/normalizeRelatedItems'
-import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../../../shared/api/payload/payload.api'
 import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { BLOCK_TYPE_OPTIONS, BLOCK_TYPE_OPTIONS_STOPS } from '../constants/builder-options.constants'
 import type {
@@ -12,16 +11,12 @@ import type {
   ListicleItineraryDraft,
   MediaAssetOption,
   MediaMode,
-  RelatedItemCollection,
   RelatedItemOption,
-  TourAgencyKeyLocationRow,
   TourAgencyPriceTier,
-  TourAgencyStartingPoint,
 } from '../../types'
 import {
   getItineraryAngleOptions,
   isManualItineraryBlockType as isManualBlockType,
-  relatedCollectionToBlockType,
   TOUR_AGENCY_PRICE_TIERS,
   TOUR_PICKS_MAX,
   WHERE_STAYING_BLOCK_TYPE,
@@ -37,13 +32,29 @@ import {
   resolveInstagramPreviewUrl,
   resolveImageUrl,
 } from '../../../../shared/builder/utils/item-media.utils'
-import { ExistingStopPickerModal, type ExistingStopPickerOption } from './ExistingStopPickerModal'
+import { ExistingStopPickerModal } from './ExistingStopPickerModal'
 import { TourPicksModal } from './TourPicksModal'
 import { InstagramPickerModal } from '../../../../shared/builder/components/InstagramPickerModal'
 import { PhotoPickerModal } from '../../../../shared/builder/components/PhotoPickerModal'
 import { RelatedItemPickerModal } from '../../../../shared/builder/components/RelatedItemPickerModal'
 import { StopReasonField } from './StopReasonField'
 import type { ComposeStopReasonResult } from '../services/compose-stop-reason.service'
+import { useManualStopImageAssets } from '../hooks/useManualStopImageAssets'
+import { getAvailableMediaModeOptions } from '../utils/stopMediaMode.utils'
+import {
+  buildExistingStopOptions,
+  buildRoutePointRowsFromSelection,
+  buildStartingPointFromExistingStop,
+  findExistingStopOptionForRow,
+  getSelectedExistingRouteKeys,
+  getSelectedStartingPointExistingStopKey,
+} from '../utils/existingStopSelection.utils'
+import {
+  createKeyLocationRow,
+  formatTourDurationLabel,
+  resetItemForBlockType,
+} from '../utils/itineraryStopBlock.utils'
+import { StopInsertZone } from './stops/StopInsertZone'
 
 type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
@@ -83,19 +94,6 @@ type BuilderStopsPanelProps = {
   onCancelStep3Update: () => void
 }
 
-const MEDIA_MODE_OPTIONS: Array<{ value: MediaMode; label: string }> = [
-  { value: 'photos', label: 'Photos' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'both', label: 'Photos + Instagram' },
-]
-
-function getAvailableMediaModeOptions(hasPhotos: boolean, hasInstagram: boolean): Array<{ value: MediaMode; label: string }> {
-  if (hasPhotos && hasInstagram) return MEDIA_MODE_OPTIONS
-  if (hasPhotos) return MEDIA_MODE_OPTIONS.filter((option) => option.value === 'photos')
-  if (hasInstagram) return MEDIA_MODE_OPTIONS.filter((option) => option.value === 'instagram')
-  return []
-}
-
 type ActivePicker =
   | { type: 'item'; itemId: string }
   | { type: 'photos'; itemId: string }
@@ -105,233 +103,6 @@ type ActivePicker =
   | { type: 'route-existing-stops'; itemId: string }
   | { type: 'tour-picks'; itemId: string }
   | null
-
-const TOUR_AGENCY_EXISTING_STOP_COLLECTION_OPTIONS: Array<{
-  value: RelatedItemCollection
-  label: string
-}> = [
-  { value: 'dining', label: 'Dining' },
-  { value: 'accommodations', label: 'Hotels' },
-  { value: 'attractions', label: 'Attractions' },
-  { value: 'nightlife', label: 'Nightlife' },
-  { value: 'key-locations', label: 'Key Locations' },
-]
-
-function createKeyLocationRow(
-  itemId: string,
-  source: TourAgencyKeyLocationRow['source'],
-): TourAgencyKeyLocationRow {
-  return {
-    id: `${itemId}_key_location_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    source,
-    relatedCollection: source === 'existing' ? 'key-locations' : null,
-    relatedItem: null,
-    title: '',
-    latitude: '',
-    longitude: '',
-  }
-}
-
-function getRelatedItemsForCollection(
-  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
-  collection: RelatedItemCollection | null,
-): RelatedItemOption[] {
-  if (!collection) return []
-  return relatedByBlockType[relatedCollectionToBlockType(collection)] || []
-}
-
-function buildExistingStopSelectionKey(collection: RelatedItemCollection, itemId: number): string {
-  return `${collection}:${itemId}`
-}
-
-function canUseExistingItemAsStartingPoint(item: RelatedItemOption): boolean {
-  const latitude = toCoordinateText(item.latitude).trim()
-  const longitude = toCoordinateText(item.longitude).trim()
-  return Boolean(
-    latitude
-    && longitude
-    && Number.isFinite(Number(latitude))
-    && Number.isFinite(Number(longitude))
-  )
-}
-
-function buildExistingStopOptions(
-  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
-): ExistingStopPickerOption[] {
-  return TOUR_AGENCY_EXISTING_STOP_COLLECTION_OPTIONS.flatMap(({ value, label }) => (
-    getRelatedItemsForCollection(relatedByBlockType, value).map((item) => ({
-      selectionKey: buildExistingStopSelectionKey(value, item.id),
-      collection: value,
-      collectionLabel: label,
-      item,
-      canUseAsStartingPoint: canUseExistingItemAsStartingPoint(item),
-    }))
-  ))
-}
-
-function toCoordinateText(value: number | string | null | undefined): string {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? String(value) : ''
-  }
-
-  return typeof value === 'string' ? value : ''
-}
-
-function buildStartingPointFromExistingStop(item: RelatedItemOption): TourAgencyStartingPoint {
-  return {
-    label: getRelatedItemDisplayLabel(item),
-    latitude: toCoordinateText(item.latitude),
-    longitude: toCoordinateText(item.longitude),
-  }
-}
-
-function normalizeTextForCompare(value: string): string {
-  return value.trim().toLowerCase()
-}
-
-function getSelectedStartingPointExistingStopKey(
-  startingPoint: TourAgencyStartingPoint,
-  existingStopOptions: ExistingStopPickerOption[],
-): string | null {
-  const label = normalizeTextForCompare(startingPoint.label)
-  if (!label) return null
-
-  const latitude = startingPoint.latitude.trim()
-  const longitude = startingPoint.longitude.trim()
-  const match = existingStopOptions.find((option) => {
-    if (!option.canUseAsStartingPoint) return false
-    const optionStartingPoint = buildStartingPointFromExistingStop(option.item)
-    const optionLabel = normalizeTextForCompare(optionStartingPoint.label)
-    if (optionLabel !== label) return false
-
-    const optionLatitude = optionStartingPoint.latitude.trim()
-    const optionLongitude = optionStartingPoint.longitude.trim()
-    if (!latitude && !longitude) return true
-    return optionLatitude === latitude && optionLongitude === longitude
-  })
-
-  return match?.selectionKey ?? null
-}
-
-function getExistingRouteSelectionKey(location: TourAgencyKeyLocationRow): string | null {
-  if (
-    location.source !== 'existing'
-    || !location.relatedCollection
-    || typeof location.relatedItem !== 'number'
-  ) {
-    return null
-  }
-
-  return buildExistingStopSelectionKey(location.relatedCollection, location.relatedItem)
-}
-
-function getSelectedExistingRouteKeys(item: ItineraryItemBlock): string[] {
-  return item.keyLocations
-    .map((location) => getExistingRouteSelectionKey(location))
-    .filter((selectionKey): selectionKey is string => Boolean(selectionKey))
-}
-
-function findExistingStopOptionForRow(
-  existingStopOptions: ExistingStopPickerOption[],
-  location: TourAgencyKeyLocationRow,
-): ExistingStopPickerOption | null {
-  const selectionKey = getExistingRouteSelectionKey(location)
-  if (!selectionKey) return null
-  return existingStopOptions.find((option) => option.selectionKey === selectionKey) || null
-}
-
-function buildRoutePointRowsFromSelection(
-  item: ItineraryItemBlock,
-  selectedKeys: string[],
-  existingStopOptions: ExistingStopPickerOption[],
-): TourAgencyKeyLocationRow[] {
-  const availableKeys = new Set(existingStopOptions.map((option) => option.selectionKey))
-  const selectedKeySet = new Set(selectedKeys)
-  const nextRows: TourAgencyKeyLocationRow[] = []
-
-  item.keyLocations.forEach((location) => {
-    const selectionKey = getExistingRouteSelectionKey(location)
-    if (!selectionKey) {
-      nextRows.push(location)
-      return
-    }
-
-    if (!availableKeys.has(selectionKey)) {
-      nextRows.push(location)
-      return
-    }
-
-    if (selectedKeySet.has(selectionKey)) {
-      nextRows.push(location)
-      selectedKeySet.delete(selectionKey)
-    }
-  })
-
-  selectedKeys.forEach((selectionKey) => {
-    if (!selectedKeySet.has(selectionKey)) return
-    const selectedOption = existingStopOptions.find((option) => option.selectionKey === selectionKey)
-    if (!selectedOption) return
-
-    nextRows.push({
-      ...createKeyLocationRow(item.id, 'existing'),
-      relatedCollection: selectedOption.collection,
-      relatedItem: selectedOption.item.id,
-    })
-  })
-
-  return nextRows
-}
-
-function formatTourDurationLabel(hours: number): string {
-  return `${hours} hour${hours === 1 ? '' : 's'}`
-}
-
-function resetItemForBlockType(item: ItineraryItemBlock, blockType: ItineraryBlockType): ItineraryItemBlock {
-  return {
-    ...item,
-    blockType,
-    item: null,
-    tours: [],
-    mediaMode: 'photos',
-    selectedPhotos: [],
-    selectedInstagramPost: null,
-    title: '',
-    operator: '',
-    price: '',
-    url: '',
-    tourDuration: 1,
-    startingPoint: {
-      label: '',
-      latitude: '',
-      longitude: '',
-    },
-    keyLocations: [],
-    image: null,
-    instagramPost: null,
-    // The autobuild "Why this pick" rationale described the previous pick; a new
-    // block type means a new slot, so drop it (ADR 0018).
-    selectionReason: '',
-  }
-}
-
-/**
- * Always-visible divider that inserts a blank stop at a precise position, so
- * operators no longer append-then-move. Inherits the panel fieldset's disabled
- * state when stops are locked.
- */
-function StopInsertZone({ onInsert, label }: { onInsert: () => void; label: string }) {
-  return (
-    <div className="stl-stop-insert-zone">
-      <button type="button" className="stl-stop-insert-btn" onClick={onInsert} title={label}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-        Stop
-      </button>
-    </div>
-  )
-}
 
 export function BuilderStopsPanel({
   draft,
@@ -373,7 +144,6 @@ export function BuilderStopsPanel({
   const [photoPreviewIndexByItem, setPhotoPreviewIndexByItem] = useState<Record<string, number>>({})
   const [activeInstagramEmbedPreviewItemId, setActiveInstagramEmbedPreviewItemId] = useState<string | null>(null)
   const [imagePickerItemId, setImagePickerItemId] = useState<string | null>(null)
-  const [fetchedManualImageAssets, setFetchedManualImageAssets] = useState<Record<number, MediaAssetOption>>({})
 
   const step3Rows = useMemo(
     () => [
@@ -398,75 +168,15 @@ export function BuilderStopsPanel({
   const activeStartingPointExistingStopPicker = activePicker?.type === 'starting-point-existing-stop' ? activePicker : null
   const activeRouteExistingStopsPicker = activePicker?.type === 'route-existing-stops' ? activePicker : null
   const activeTourPicksPicker = activePicker?.type === 'tour-picks' ? activePicker : null
-  const missingManualImageIds = useMemo(() => {
-    if (!resolvedToken) return []
-
-    const loadedIds = new Set<number>([
-      ...mediaAssets.map((asset) => asset.id),
-      ...Object.keys(fetchedManualImageAssets).map((id) => Number(id)),
-    ])
-
-    const allStep3Items = [...dayDraft.whereStaying, ...dayDraft.items]
-
-    return Array.from(new Set(
-      allStep3Items
-        .filter((item) => isManualBlockType(item.blockType) && typeof item.image === 'number')
-        .map((item) => item.image)
-        .filter((imageId): imageId is number => typeof imageId === 'number' && !loadedIds.has(imageId)),
-    ))
-  }, [dayDraft.whereStaying, dayDraft.items, fetchedManualImageAssets, mediaAssets, resolvedToken])
-
-  useEffect(() => {
-    if (!resolvedToken || missingManualImageIds.length === 0) return
-
-    let cancelled = false
-
-    const hydrateManualImages = async () => {
-      const responses = await Promise.all(
-        missingManualImageIds.map(async (imageId) => {
-          try {
-            const response = await fetchPayloadMediaAssets(resolvedToken, {
-              id: imageId,
-              limit: 1,
-            })
-            return response.docs[0] || null
-          } catch {
-            return null
-          }
-        }),
-      )
-
-      if (cancelled) return
-
-      const hydratedAssets = responses
-        .filter((asset): asset is NonNullable<(typeof responses)[number]> => Boolean(asset))
-        .map((asset) => ({
-          id: asset.id,
-          filename: asset.filename,
-          alt: asset.alt ?? undefined,
-          alt_text: asset.alt_text ?? undefined,
-          altText: asset.altText ?? undefined,
-          mediaSet: asset.mediaSet,
-          url: asset.url ?? undefined,
-          variant: asset.variant ?? undefined,
-        } satisfies MediaAssetOption))
-      if (hydratedAssets.length < 1) return
-
-      setFetchedManualImageAssets((current) => {
-        const next = { ...current }
-        hydratedAssets.forEach((asset) => {
-          next[asset.id] = asset
-        })
-        return next
-      })
-    }
-
-    void hydrateManualImages()
-
-    return () => {
-      cancelled = true
-    }
-  }, [missingManualImageIds, resolvedToken])
+  const allStep3Items = useMemo(
+    () => [...dayDraft.whereStaying, ...dayDraft.items],
+    [dayDraft.whereStaying, dayDraft.items],
+  )
+  const fetchedManualImageAssets = useManualStopImageAssets({
+    token: resolvedToken,
+    items: allStep3Items,
+    mediaAssets,
+  })
 
   useEffect(() => {
     if (!activeInstagramEmbedPreviewItemId) return

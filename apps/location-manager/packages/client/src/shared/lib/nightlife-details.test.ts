@@ -127,4 +127,31 @@ describe("nightlife details helpers", () => {
     expect(parseNightlifeDetails(built).daytimeRestaurant).toBe("1");
     expect(parseNightlifeDetails(updated.nightlifeDetails).daytimeRestaurant).toBe("0");
   });
+
+  test("treats invalid JSON and empty scalar values as empty details", () => {
+    const invalid = buildNightlifeFieldUpdatePayload("{bad json", "nightlife.clubType", "  ");
+    const parsed = parseNightlifeDetails({
+      name: "  ",
+      club_type: "",
+      music: ["House", "", "  "],
+    });
+
+    expect(invalid.nightlifeDetails).toEqual({ club_type: "" });
+    expect(parsed.hasDetails).toBe(true);
+    expect(parsed.name).toBe(null);
+    expect(parsed.clubType).toBe(null);
+    expect(parsed.music).toEqual(["House"]);
+  });
+
+  test("falls back to legacy tourist presence under theSpace", () => {
+    const parsed = parseNightlifeDetails({
+      details: {
+        theSpace: {
+          touristPresence: { label: "Tourist Presence", value: "Medium" },
+        },
+      },
+    });
+
+    expect(parsed.touristPresence).toBe("Medium");
+  });
 });

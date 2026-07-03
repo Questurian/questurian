@@ -1,144 +1,31 @@
-import {
-  useDeferredValue,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState
-} from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 
 import type {
-  HomepageLocationGridCandidate,
-  HomepageLocationGridCandidatesResponse,
   HomepageLocationGridInvalidItem,
-  HomepageLocationGridItemRef,
   HomepageLocationGridSelection
 } from './locationGridTypes'
+import type {
+  UseHomepageLocationGridSlotsOptions,
+  UseHomepageLocationGridSlotsResult
+} from './homepageLocationGridSlots.types'
+import {
+  areSlotListsEqual,
+  buildSaveItems,
+  hasDuplicateSlots,
+  invalidItemsBySlotMap
+} from './homepageLocationGridSlots.utils'
+import { useHomepageLocationGridActions } from './useHomepageLocationGridActions'
+import { useHomepageLocationGridCandidates } from './useHomepageLocationGridCandidates'
+import { useHomepageLocationGridDraftSlots } from './useHomepageLocationGridDraftSlots'
+import { useHomepageLocationGridSaveMutation } from './useHomepageLocationGridSaveMutation'
 
-const CANDIDATE_PAGE_SIZE = 24
-
-export type LocationGridSlotValue = HomepageLocationGridCandidate | null
-
-function createEmptySlots(count: number): LocationGridSlotValue[] {
-  return Array.from({ length: count }, () => null)
-}
-
-function mapSelectionToSlots(
-  selection: HomepageLocationGridSelection
-): LocationGridSlotValue[] {
-  const slots = createEmptySlots(selection.totalSlots)
-
-  for (const item of selection.items) {
-    if (!item.slot) continue
-    const slotIndex = item.slot - 1
-    if (slotIndex < 0 || slotIndex >= slots.length) continue
-    slots[slotIndex] = item
-  }
-
-  return slots
-}
-
-function areRefsEqual(
-  left: LocationGridSlotValue,
-  right: LocationGridSlotValue
-): boolean {
-  if (!left && !right) return true
-  if (!left || !right) return false
-
-  return left.id === right.id
-}
-
-function areSlotListsEqual(
-  left: LocationGridSlotValue[] | null,
-  right: LocationGridSlotValue[]
-): boolean {
-  if (!left) return false
-
-  return (
-    left.length === right.length &&
-    left.every((item, index) => areRefsEqual(item, right[index]))
-  )
-}
-
-export function hasDuplicateSlots(slots: LocationGridSlotValue[]): boolean {
-  const ids = new Set<number>()
-
-  for (const item of slots) {
-    if (!item) continue
-
-    if (ids.has(item.id)) return true
-    ids.add(item.id)
-  }
-
-  return false
-}
-
-export function buildSaveItems(
-  slots: LocationGridSlotValue[]
-): HomepageLocationGridItemRef[] {
-  return slots.flatMap((item) => {
-    if (!item) return []
-
-    return [{ id: item.id }]
-  })
-}
-
-export type LocationGridCandidateParams = {
-  query?: string
-  page?: number
-  limit?: number
-}
-
-export type UseHomepageLocationGridSlotsOptions = {
-  token: string | null
-  canManage: boolean
-  selection: HomepageLocationGridSelection
-  saveSelection: (
-    token: string,
-    items: HomepageLocationGridItemRef[]
-  ) => Promise<HomepageLocationGridSelection>
-  fetchCandidates: (
-    token: string,
-    params: LocationGridCandidateParams
-  ) => Promise<HomepageLocationGridCandidatesResponse>
-  selectionQueryKey: unknown[]
-}
-
-export type UseHomepageLocationGridSlotsResult = {
-  selectionQuery: ReturnType<typeof useQuery<HomepageLocationGridSelection>>
-  candidatesQuery: ReturnType<
-    typeof useQuery<HomepageLocationGridCandidatesResponse>
-  >
-  saveMutation: ReturnType<
-    typeof useMutation<
-      HomepageLocationGridSelection,
-      unknown,
-      HomepageLocationGridItemRef[]
-    >
-  >
-  slots: LocationGridSlotValue[]
-  savedSlots: LocationGridSlotValue[]
-  draftSlots: LocationGridSlotValue[] | null
-  savedInvalidItems: HomepageLocationGridInvalidItem[]
-  pickerSlotIndex: number | null
-  usedIds: Set<number>
-  hasAllSlotsFilled: boolean
-  hasUnsavedChanges: boolean
-  saveDisabled: boolean
-  invalidItemsBySlot: Map<number, HomepageLocationGridInvalidItem>
-  resultMessage: string | null
-  searchValue: string
-  candidatePage: number
-  handleCandidatePick: (candidate: HomepageLocationGridCandidate) => void
-  handleMove: (slotIndex: number, direction: -1 | 1) => void
-  handleReorderAll: (newSlots: LocationGridSlotValue[]) => void
-  handleRemove: (slotIndex: number) => void
-  handleReset: () => void
-  handleSave: () => void
-  setSearchValue: (v: string) => void
-  setCandidatePage: (v: number | ((prev: number) => number)) => void
-  setPickerSlotIndex: (v: number | null) => void
-}
+export type { LocationGridSlotValue } from './homepageLocationGridSlots.utils'
+export type {
+  LocationGridCandidateParams,
+  UseHomepageLocationGridSlotsOptions,
+  UseHomepageLocationGridSlotsResult
+} from './homepageLocationGridSlots.types'
+export { buildSaveItems, hasDuplicateSlots } from './homepageLocationGridSlots.utils'
 
 export function useHomepageLocationGridSlots(
   options: UseHomepageLocationGridSlotsOptions
@@ -152,38 +39,18 @@ export function useHomepageLocationGridSlots(
     selectionQueryKey
   } = options
 
-  const [searchValue, setSearchValue] = useState('')
-  const deferredSearchValue = useDeferredValue(searchValue.trim())
-  const [candidatePage, setCandidatePage] = useState(1)
-  const [draftSlots, setDraftSlots] = useState<LocationGridSlotValue[] | null>(
-    null
-  )
-  const [savedSlots, setSavedSlots] = useState<LocationGridSlotValue[]>([])
-  const [savedInvalidItems, setSavedInvalidItems] = useState<
-    HomepageLocationGridInvalidItem[]
-  >([])
-  const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null)
-  const [resultMessage, setResultMessage] = useState<string | null>(null)
-
-  const selectionKeyJson = JSON.stringify(selectionQueryKey)
-  const prevSelectionKeyJsonRef = useRef<string | null>(null)
-  const prevSelectionRef = useRef<HomepageLocationGridSelection | null>(null)
-
-  useLayoutEffect(() => {
-    if (
-      prevSelectionKeyJsonRef.current === selectionKeyJson &&
-      prevSelectionRef.current === selection
-    ) {
-      return
-    }
-    prevSelectionKeyJsonRef.current = selectionKeyJson
-    prevSelectionRef.current = selection
-    const nextSlots = mapSelectionToSlots(selection)
-    setDraftSlots(nextSlots)
-    setSavedSlots(nextSlots)
-    setSavedInvalidItems(selection.invalidItems)
-    setPickerSlotIndex(null)
-  }, [selection, selectionKeyJson])
+  const {
+    draftSlots,
+    savedSlots,
+    savedInvalidItems,
+    pickerSlotIndex,
+    resultMessage,
+    setPickerSlotIndex,
+    setResultMessage,
+    applySelection,
+    updateSlots,
+    resetToSavedSlots
+  } = useHomepageLocationGridDraftSlots(selection, selectionQueryKey)
 
   const selectionQuery = {
     data: selection,
@@ -193,36 +60,25 @@ export function useHomepageLocationGridSlots(
     isFetching: false
   } as ReturnType<typeof useQuery<HomepageLocationGridSelection>>
 
-  useEffect(() => {
-    setCandidatePage(1)
-  }, [deferredSearchValue])
-
-  const candidatesQuery = useQuery({
-    queryKey: [
-      ...selectionQueryKey,
-      'location-candidates',
-      deferredSearchValue,
-      candidatePage
-    ],
-    queryFn: () =>
-      fetchCandidates(token!, {
-        query: deferredSearchValue || undefined,
-        page: candidatePage,
-        limit: CANDIDATE_PAGE_SIZE
-      }),
-    enabled: Boolean(token && canManage && pickerSlotIndex !== null),
-    placeholderData: (previousData) => previousData
+  const {
+    searchValue,
+    candidatePage,
+    candidatesQuery,
+    setSearchValue,
+    setCandidatePage
+  } = useHomepageLocationGridCandidates({
+    token,
+    canManage,
+    fetchCandidates,
+    selectionQueryKey,
+    pickerSlotIndex
   })
 
-  const saveMutation = useMutation({
-    mutationFn: (items: HomepageLocationGridItemRef[]) =>
-      saveSelection(token!, items),
+  const saveMutation = useHomepageLocationGridSaveMutation({
+    token,
+    saveSelection,
     onSuccess: (selection) => {
-      const nextSlots = mapSelectionToSlots(selection)
-      setSavedSlots(nextSlots)
-      setDraftSlots(nextSlots)
-      setSavedInvalidItems(selection.invalidItems)
-      setPickerSlotIndex(null)
+      applySelection(selection)
       setResultMessage('Homepage location grid saved.')
     },
     onError: (error: unknown) => {
@@ -245,68 +101,13 @@ export function useHomepageLocationGridSlots(
     saveMutation.isPending ||
     !hasUnsavedChanges
 
-  const invalidItemsBySlot = new Map<number, HomepageLocationGridInvalidItem>()
-  for (const item of savedInvalidItems) {
-    invalidItemsBySlot.set(item.slot, item)
-  }
-
-  function updateSlots(
-    transform: (current: LocationGridSlotValue[]) => LocationGridSlotValue[]
-  ) {
-    setDraftSlots((current) => {
-      const base = current ?? savedSlots
-      return transform([...base])
-    })
-    setResultMessage(null)
-  }
-
-  function handleCandidatePick(candidate: HomepageLocationGridCandidate) {
-    if (pickerSlotIndex === null) return
-
-    updateSlots((current) => {
-      const next = [...current]
-      next[pickerSlotIndex] = candidate
-      return next
-    })
-
-    setPickerSlotIndex(null)
-  }
-
-  function handleMove(slotIndex: number, direction: -1 | 1) {
-    updateSlots((current) => {
-      const nextIndex = slotIndex + direction
-      if (nextIndex < 0 || nextIndex >= current.length) return current
-
-      const next = [...current]
-      const currentValue = next[slotIndex]
-      next[slotIndex] = next[nextIndex]
-      next[nextIndex] = currentValue
-      return next
-    })
-  }
-
-  function handleReorderAll(newSlots: LocationGridSlotValue[]) {
-    updateSlots((current) => {
-      if (newSlots.length !== current.length) return current
-      return [...newSlots]
-    })
-  }
-
-  function handleRemove(slotIndex: number) {
-    updateSlots((current) => {
-      const next = [...current]
-      next[slotIndex] = null
-      return next
-    })
-  }
-
-  function handleReset() {
-    setDraftSlots([...savedSlots])
-    setPickerSlotIndex(null)
-    setResultMessage(
-      'Local changes discarded. Restored saved homepage location grid.'
-    )
-  }
+  const invalidItemsBySlot = invalidItemsBySlotMap<HomepageLocationGridInvalidItem>(savedInvalidItems)
+  const actions = useHomepageLocationGridActions({
+    pickerSlotIndex,
+    setPickerSlotIndex,
+    updateSlots,
+    resetToSavedSlots
+  })
 
   function handleSave() {
     if (saveDisabled) return
@@ -330,11 +131,7 @@ export function useHomepageLocationGridSlots(
     resultMessage,
     searchValue,
     candidatePage,
-    handleCandidatePick,
-    handleMove,
-    handleReorderAll,
-    handleRemove,
-    handleReset,
+    ...actions,
     handleSave,
     setSearchValue,
     setCandidatePage,

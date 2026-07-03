@@ -9,127 +9,29 @@ import type {
   HomepageFeaturedItemRef,
   HomepageFeaturedSelection,
 } from './types'
+import type {
+  SaveNotification,
+  SlotValue,
+  UseHomepageFeaturedSlotsOptions,
+  UseHomepageFeaturedSlotsResult,
+} from './homepageFeaturedSlots.types'
+import {
+  areSlotListsEqual,
+  buildSaveItems,
+  hasDuplicateSlots,
+  mapSelectionToSlots,
+} from './homepageFeaturedSlots.utils'
+
+export type {
+  CandidateParams,
+  SaveNotification,
+  SlotValue,
+  UseHomepageFeaturedSlotsOptions,
+  UseHomepageFeaturedSlotsResult,
+} from './homepageFeaturedSlots.types'
+export { buildSaveItems, hasDuplicateSlots } from './homepageFeaturedSlots.utils'
 
 const CANDIDATE_PAGE_SIZE = 24
-
-export type SlotValue = HomepageFeaturedCandidate | null
-
-function createEmptySlots(count: number): SlotValue[] {
-  return Array.from({ length: count }, () => null)
-}
-
-function mapSelectionToSlots(selection: HomepageFeaturedSelection): SlotValue[] {
-  const slots = createEmptySlots(selection.totalSlots)
-
-  for (const item of selection.items) {
-    if (!item.slot) continue
-    const slotIndex = item.slot - 1
-    if (slotIndex < 0 || slotIndex >= slots.length) continue
-    slots[slotIndex] = item
-  }
-
-  return slots
-}
-
-function areRefsEqual(left: SlotValue, right: SlotValue): boolean {
-  if (!left && !right) return true
-  if (!left || !right) return false
-
-  return left.id === right.id && left.relationTo === right.relationTo
-}
-
-function areSlotListsEqual(left: SlotValue[] | null, right: SlotValue[]): boolean {
-  if (!left) return false
-
-  return left.length === right.length && left.every((item, index) => areRefsEqual(item, right[index]))
-}
-
-export function hasDuplicateSlots(slots: SlotValue[]): boolean {
-  const keys = new Set<string>()
-
-  for (const item of slots) {
-    if (!item) continue
-
-    const key = `${item.relationTo}:${item.id}`
-    if (keys.has(key)) return true
-    keys.add(key)
-  }
-
-  return false
-}
-
-export function buildSaveItems(slots: SlotValue[]): HomepageFeaturedItemRef[] {
-  return slots.flatMap((item) => {
-    if (!item) return []
-
-    return [{ relationTo: item.relationTo, id: item.id }]
-  })
-}
-
-export type CandidateParams = {
-  type?: HomepageFeaturedCollection | 'all'
-  query?: string
-  page?: number
-  limit?: number
-}
-
-export type UseHomepageFeaturedSlotsOptions = {
-  token: string | null
-  canManage: boolean
-  selection: HomepageFeaturedSelection
-  saveSelection: (
-    token: string,
-    items: HomepageFeaturedItemRef[],
-    slotCount?: number,
-  ) => Promise<HomepageFeaturedSelection>
-  fetchCandidates: (token: string, params: CandidateParams) => Promise<HomepageFeaturedCandidatesResponse>
-  selectionQueryKey: unknown[]
-  /** When set, candidate search stays on this collection (e.g. Questurian Maps → single-type listicles). */
-  lockedCollectionFilter?: HomepageFeaturedCollection
-  /** When stale saved items were removed, persist remaining items under this lower slot count. */
-  repairSlotCount?: number
-}
-
-export type SaveNotification = {
-  message: string
-  type: 'success' | 'error'
-  seq: number
-}
-
-export type UseHomepageFeaturedSlotsResult = {
-  selectionQuery: ReturnType<typeof useQuery<HomepageFeaturedSelection>>
-  candidatesQuery: ReturnType<typeof useQuery<HomepageFeaturedCandidatesResponse>>
-  saveMutation: ReturnType<typeof useMutation<HomepageFeaturedSelection, unknown, HomepageFeaturedItemRef[]>>
-  slots: SlotValue[]
-  savedSlots: SlotValue[]
-  draftSlots: SlotValue[] | null
-  savedInvalidItems: HomepageFeaturedInvalidItem[]
-  pickerSlotIndex: number | null
-  usedKeys: Set<string>
-  hasAllSlotsFilled: boolean
-  hasUnsavedChanges: boolean
-  saveDisabled: boolean
-  invalidItemsBySlot: Map<number, HomepageFeaturedInvalidItem>
-  resultMessage: string | null
-  saveNotification: SaveNotification | null
-  repairSlotCount?: number
-  searchValue: string
-  collectionFilter: HomepageFeaturedCollection | 'all'
-  /** Resolved filter sent to the candidates API (respects `lockedCollectionFilter`). */
-  effectiveCollectionFilter: HomepageFeaturedCollection | 'all'
-  lockedCollectionFilter?: HomepageFeaturedCollection
-  candidatePage: number
-  handleCandidatePick: (candidate: HomepageFeaturedCandidate) => void
-  handleMove: (slotIndex: number, direction: -1 | 1) => void
-  handleRemove: (slotIndex: number) => void
-  handleReorderAll: (newSlots: SlotValue[]) => void
-  handleReset: () => void
-  handleSave: () => void
-  setSearchValue: (v: string) => void
-  setCollectionFilter: (v: HomepageFeaturedCollection | 'all') => void
-  setCandidatePage: (v: number | ((prev: number) => number)) => void
-  setPickerSlotIndex: (v: number | null) => void
-}
 
 export function useHomepageFeaturedSlots(
   options: UseHomepageFeaturedSlotsOptions,
