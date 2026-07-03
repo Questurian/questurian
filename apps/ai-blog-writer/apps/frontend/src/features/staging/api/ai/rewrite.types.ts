@@ -13,6 +13,21 @@ export type RewriteBlockWithAiRequest = {
   articleContext?: string
 }
 
+export type GenerateSeoMetadataWithAiRequest = {
+  prompt: string
+  /** Current SEO section serialized as JSON (seed values for the model). */
+  seed: string
+  modelName?: EditorAssistModelName
+  articleTitle?: string
+  articleContext?: string
+}
+
+export type GenerateSeoMetadataWithAiResponse = {
+  /** Schema-validated SEO patch object emitted through Anthropic tool use. */
+  seo_patch: Record<string, unknown>
+  model_used: string
+}
+
 export type GenerateTitleWithAiRequest = {
   currentTitle: string
   prompt: string

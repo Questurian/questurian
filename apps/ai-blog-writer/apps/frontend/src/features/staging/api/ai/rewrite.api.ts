@@ -9,6 +9,8 @@ import type {
   ComposeItineraryIntroResponse,
   ComposeStopReasonRequest,
   ComposeStopReasonResponse,
+  GenerateSeoMetadataWithAiRequest,
+  GenerateSeoMetadataWithAiResponse,
   GenerateTitleWithAiRequest,
   GenerateTitleWithAiResponse,
   GenerateListicleContentRequest,
@@ -70,6 +72,31 @@ export async function rewriteBlockWithAi(
 
   if (!response.ok) {
     const message = await parseErrorResponse(response, 'AI rewrite failed', { detail: 'AI rewrite failed' })
+    throw new Error(message)
+  }
+
+  return response.json()
+}
+
+export async function generateSeoMetadataWithAi(
+  input: GenerateSeoMetadataWithAiRequest,
+): Promise<GenerateSeoMetadataWithAiResponse> {
+  const response = await fetch(`${API_BASE_URL}/editor-assist/generate-seo-metadata`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      prompt: input.prompt,
+      seed: input.seed,
+      model_name: input.modelName,
+      article_title: input.articleTitle,
+      article_context: input.articleContext,
+    }),
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, 'AI SEO generation failed', { detail: 'AI SEO generation failed' })
     throw new Error(message)
   }
 

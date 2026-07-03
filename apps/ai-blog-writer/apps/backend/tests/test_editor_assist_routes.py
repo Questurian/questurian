@@ -136,6 +136,73 @@ def test_rewrite_block_returns_envelope_content(monkeypatch):
     assert payload["model_used"] == editor_assist_routes.DEFAULT_MODEL
 
 
+# ---------- Structured SEO metadata generation ----------
+
+
+def test_generate_seo_metadata_returns_structured_patch(monkeypatch):
+    captured: dict = {}
+
+    class _StructuredResult:
+        payload = {
+            "seoTitle": "Two Days in Lima: Food, Art & Coastline",
+            "metaDescription": "A compact two-day Lima plan.",
+        }
+        model_name = editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
+
+    def _fake_structured(**kwargs):
+        captured.update(kwargs)
+        return _StructuredResult()
+
+    monkeypatch.setattr(
+        editor_assist_routes, "invoke_anthropic_structured", _fake_structured
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/generate-seo-metadata",
+        json={
+            "prompt": "Generate the SEO title and meta description.",
+            "seed": json.dumps({"seoTitle": "", "metaDescription": ""}),
+            "article_title": "Two Days in Lima",
+            "article_context": "Day 1: Barranco murals. Day 2: ceviche crawl.",
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["seo_patch"]["seoTitle"].startswith("Two Days in Lima")
+    assert payload["model_used"] == editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
+    # Endpoint defaults to the Anthropic model since forced-tool calls are
+    # Anthropic-only.
+    assert captured["model_name"] == editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
+    assert captured["tool_name"] == editor_assist_routes.SEO_PATCH_TOOL_NAME
+    assert "<<<CURRENT_SEO>>>" in captured["prompt"]
+    assert "<<<ARTICLE_CONTEXT>>>" in captured["prompt"]
+
+
+def test_generate_seo_metadata_empty_patch_is_502(monkeypatch):
+    class _EmptyResult:
+        payload: dict = {}
+        model_name = editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
+
+    monkeypatch.setattr(
+        editor_assist_routes,
+        "invoke_anthropic_structured",
+        lambda **_kwargs: _EmptyResult(),
+    )
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/generate-seo-metadata",
+        json={
+            "prompt": "Generate the SEO title.",
+            "seed": json.dumps({"seoTitle": ""}),
+        },
+    )
+
+    assert response.status_code == 502
+
+
 # ---------- Listicle pipeline: Critical Fields gate ----------
 
 
