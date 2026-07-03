@@ -458,53 +458,57 @@ export function SeoEditorPanel({
                 <h3>Robots</h3>
                 <p>Indexing controls for search crawlers.</p>
               </div>
-              {renderAiButton('robots', 'AI Fill Section')}
+              <button
+                type="button"
+                className="stl-btn stl-btn-secondary"
+                onClick={() =>
+                  updateSeo((current) => ({
+                    ...current,
+                    robots: { index: 'index', follow: 'follow' },
+                  }))
+                }
+                disabled={isSeoActionRunning}
+              >
+                Reset to index/follow
+              </button>
             </div>
 
             <label className="stl-field">
               <span>robots:index</span>
-              <div className="stl-seo-input-wrap">
-                <select
-                  className="stl-seo-input-with-ai"
-                  value={seoSection.robots.index}
-                  onChange={(event) =>
-                    updateSeo((current) => ({
-                      ...current,
-                      robots: {
-                        ...current.robots,
-                        index: event.target.value === 'noindex' ? 'noindex' : 'index',
-                      },
-                    }))
-                  }
-                >
-                  <option value="index">index</option>
-                  <option value="noindex">noindex</option>
-                </select>
-                <span className="stl-seo-ai-trigger-wrap">{renderAiButton('robotsIndex')}</span>
-              </div>
+              <select
+                value={seoSection.robots.index}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    robots: {
+                      ...current.robots,
+                      index: event.target.value === 'noindex' ? 'noindex' : 'index',
+                    },
+                  }))
+                }
+              >
+                <option value="index">index</option>
+                <option value="noindex">noindex</option>
+              </select>
             </label>
 
             <label className="stl-field">
               <span>robots:follow</span>
-              <div className="stl-seo-input-wrap">
-                <select
-                  className="stl-seo-input-with-ai"
-                  value={seoSection.robots.follow}
-                  onChange={(event) =>
-                    updateSeo((current) => ({
-                      ...current,
-                      robots: {
-                        ...current.robots,
-                        follow: event.target.value === 'nofollow' ? 'nofollow' : 'follow',
-                      },
-                    }))
-                  }
-                >
-                  <option value="follow">follow</option>
-                  <option value="nofollow">nofollow</option>
-                </select>
-                <span className="stl-seo-ai-trigger-wrap">{renderAiButton('robotsFollow')}</span>
-              </div>
+              <select
+                value={seoSection.robots.follow}
+                onChange={(event) =>
+                  updateSeo((current) => ({
+                    ...current,
+                    robots: {
+                      ...current.robots,
+                      follow: event.target.value === 'nofollow' ? 'nofollow' : 'follow',
+                    },
+                  }))
+                }
+              >
+                <option value="follow">follow</option>
+                <option value="nofollow">nofollow</option>
+              </select>
             </label>
           </section>
         </div>
