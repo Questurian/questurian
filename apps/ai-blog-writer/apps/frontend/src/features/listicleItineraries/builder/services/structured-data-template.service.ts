@@ -297,6 +297,12 @@ function buildStopEntity(input: {
   const keyLocationKeywords = keyLocationEntities
     .map((location) => normalizeText(location.name))
     .filter((location): location is string => Boolean(location))
+  // schema.org has no `category` on Place subtypes, so the stop type label rides in `keywords`.
+  const stopTypeKeyword = itemTypeLabel || getStopTypeLabel(itineraryItem.blockType)
+  const keywordParts = [
+    ...(isManualStop ? keyLocationKeywords : idealFor),
+    stopTypeKeyword,
+  ].filter(Boolean)
 
   const entity: Record<string, unknown> = {
     '@type': schemaType,
@@ -311,12 +317,7 @@ function buildStopEntity(input: {
     geo: itemGeo,
     priceRange: itemPriceRange,
     servesCuisine: cuisines.length > 0 ? cuisines : undefined,
-    keywords: isManualStop
-      ? keyLocationKeywords.join(', ') || undefined
-      : idealFor.length > 0
-        ? idealFor.join(', ')
-        : undefined,
-    category: itemTypeLabel || getStopTypeLabel(itineraryItem.blockType),
+    keywords: keywordParts.length > 0 ? keywordParts.join(', ') : undefined,
     provider: isManualStop && providerName
       ? {
           '@type': 'Organization',
@@ -411,7 +412,7 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
   }
 
   const tripNode: Record<string, unknown> = {
-    '@type': 'Trip',
+    '@type': 'TouristTrip',
     '@id': tripId,
     name: articleTitle,
     description: intro || 'AI_FILL_TRIP_DESCRIPTION',
@@ -428,6 +429,7 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
     name: articleTitle,
     description: intro || 'AI_FILL_ARTICLE_DESCRIPTION',
     articleSection: 'Itinerary',
+    inLanguage: 'en',
     contentLocation: contentLocationName
       ? {
           '@type': 'Place',
@@ -438,7 +440,7 @@ export function buildListicleItineraryStructuredDataTemplate(input: {
       '@id': tripId,
     },
     mainEntity: {
-      '@type': 'Trip',
+      '@type': 'TouristTrip',
       '@id': tripId,
     },
     url: canonicalUrl,
@@ -535,7 +537,10 @@ export function validateListicleItineraryStructuredDataShape(input: {
     .filter((node): node is Record<string, unknown> => Boolean(node))
 
   const blogPostingNode = graphNodes.find((node) => getNodeType(node['@type']) === 'BlogPosting')
-  const tripNode = graphNodes.find((node) => getNodeType(node['@type']) === 'Trip')
+  const tripNode = graphNodes.find((node) => {
+    const nodeType = getNodeType(node['@type'])
+    return nodeType === 'TouristTrip' || nodeType === 'Trip'
+  })
   const itemListNode = graphNodes.find((node) => getNodeType(node['@type']) === 'ItemList')
 
   if (!blogPostingNode) {
@@ -543,7 +548,7 @@ export function validateListicleItineraryStructuredDataShape(input: {
   }
 
   if (!tripNode) {
-    issues.push('Structured Data "@graph" must include a Trip node.')
+    issues.push('Structured Data "@graph" must include a TouristTrip node.')
   }
 
   if (!itemListNode) {
