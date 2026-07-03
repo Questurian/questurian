@@ -26,6 +26,11 @@ URL2BLOG_ALLOWED_EXECUTION_PROFILES = (
 URL2BLOG_DEFAULT_EXECUTION_PROFILE = "standard"
 URL2BLOG_DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GROUNDED_MODEL = "gemini-2.5-flash-lite"
+# Stage-specific overrides: the guideline rewrite (compose) and editorial
+# augmentation are the writing-quality stages, pinned to Claude regardless
+# of the run's base model. Routed via get_vertex_llm's claude-* dispatch.
+URL2BLOG_COMPOSE_MODEL = "claude-opus-4-8"
+URL2BLOG_EDITORIAL_AUGMENTATION_MODEL = "claude-opus-4-8"
 SHORT_ARTICLE_WORD_THRESHOLD = 450
 DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS = 3
 MIN_EXPANDED_WORD_DELTA = 80
@@ -67,6 +72,10 @@ def _resolve_url2blog_model(model_name: str | None) -> str:
     if not candidate:
         return URL2BLOG_DEFAULT_MODEL
     if candidate in URL2BLOG_ALLOWED_MODELS:
+        return candidate
+    # Internal stage overrides (compose / editorial augmentation) run on
+    # Anthropic models, which bypass the user-selectable allowlist.
+    if candidate.startswith("claude-"):
         return candidate
     raise HTTPException(
         status_code=400,
@@ -198,6 +207,8 @@ __all__ = [
     "URL2BLOG_ALLOWED_EXECUTION_PROFILES",
     "URL2BLOG_DEFAULT_EXECUTION_PROFILE",
     "URL2BLOG_DEFAULT_MODEL",
+    "URL2BLOG_COMPOSE_MODEL",
+    "URL2BLOG_EDITORIAL_AUGMENTATION_MODEL",
     "DEFAULT_GROUNDED_MODEL",
     "SHORT_ARTICLE_WORD_THRESHOLD",
     "DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS",

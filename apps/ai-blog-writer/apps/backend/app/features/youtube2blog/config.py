@@ -5,6 +5,12 @@ from __future__ import annotations
 # Always-strong model policy for YouTube2Blog.
 Y2B_PRIMARY_MODEL = "gemini-2.5-flash-lite"
 
+# Stage-specific overrides: article composition and editorial augmentation
+# are the writing-quality stages, pinned to Claude regardless of the run's
+# base model. Routed via get_vertex_llm's claude-* dispatch.
+Y2B_COMPOSE_MODEL = "claude-opus-4-8"
+Y2B_EDITORIAL_AUGMENTATION_MODEL = "claude-opus-4-8"
+
 # Retry limits per branch gate.
 Y2B_STAGE1_REPAIR_MAX_RETRIES = 2
 Y2B_STAGE2_CLASSIFICATION_MAX_RETRIES = 1

@@ -18,7 +18,7 @@ from langchain_core.prompts import PromptTemplate
 
 from app.core import get_article_type_by_name
 from app.config import ARTICLE_GUIDELINES_DIR
-from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
+from app.features.youtube2blog.config import Y2B_COMPOSE_MODEL, Y2B_PRIMARY_MODEL
 from shared import Stage1Output, Stage2Output, Stage3Output
 from utils import get_vertex_llm, parse_json_response
 
@@ -413,8 +413,12 @@ def stage_3_compose_from_parts(
     title: str,
     model_name: str = Y2B_PRIMARY_MODEL,
 ) -> dict[str, str]:
-    """Compose article from explicit inputs used by branch nodes."""
-    llm = _stage3_llm(model_name)
+    """Compose article from explicit inputs used by branch nodes.
+
+    Composition is pinned to Y2B_COMPOSE_MODEL regardless of the run's base
+    model; `model_name` still selects the model for the other stage-3 nodes.
+    """
+    llm = _stage3_llm(Y2B_COMPOSE_MODEL)
     final_article, composition_prompt, composition_response = _compose_article(
         transcript,
         supplemental,
@@ -493,7 +497,8 @@ def stage_3_compose_article(stage1: Stage1Output, stage2: Stage2Output) -> Stage
     else:
         logger.info("  Step 3: Skipping supplemental content (coverage sufficient)")
 
-    # Step 4: Compose final article
+    # Step 4: Compose final article (pinned to the Claude compose model;
+    # coverage/supplement above stay on the primary model)
     logger.info("  Step 4: Composing final article...")
     (
         final_article,
@@ -505,7 +510,7 @@ def stage_3_compose_article(stage1: Stage1Output, stage2: Stage2Output) -> Stage
         guideline,
         stage2.classification,
         stage1.title,
-        llm,
+        _stage3_llm(Y2B_COMPOSE_MODEL),
     )
     logger.info(f"  Final article length: {len(final_article)} chars")
 

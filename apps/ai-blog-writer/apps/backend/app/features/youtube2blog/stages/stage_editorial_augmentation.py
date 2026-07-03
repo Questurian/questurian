@@ -11,13 +11,15 @@ import logging
 import re
 from typing import Any
 
-from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
+from app.features.youtube2blog.config import Y2B_EDITORIAL_AUGMENTATION_MODEL
 from utils import get_vertex_llm, parse_json_response
 from shared import Stage3Output, StageEditorialAugmentationOutput
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = Y2B_PRIMARY_MODEL
+# Pinned to the Claude editorial model (routed via get_vertex_llm's
+# claude-* dispatch); callers may still pass an explicit model_name.
+DEFAULT_MODEL = Y2B_EDITORIAL_AUGMENTATION_MODEL
 
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
@@ -569,8 +571,13 @@ def stage_editorial_augmentation(
 
     fallback = _sanitize_editorial_augmentation({}, fallback_content=stage3.final_article)
 
+    # Pinned to the Claude editorial model regardless of the caller-supplied
+    # base model (the graph runner passes the run's Gemini model here).
+    _ = model_name
     try:
-        parsed, raw_response = _invoke_json_llm(prompt=prompt, model_name=model_name)
+        parsed, raw_response = _invoke_json_llm(
+            prompt=prompt, model_name=Y2B_EDITORIAL_AUGMENTATION_MODEL
+        )
         editorial = _sanitize_editorial_augmentation(
             parsed,
             fallback_content=stage3.final_article,

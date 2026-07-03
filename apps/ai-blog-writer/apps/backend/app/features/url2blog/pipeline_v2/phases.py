@@ -477,7 +477,7 @@ def _pipeline_v2_run_rewrite_quality_phase(
         rewrite_long_output = _invoke_markdown_long_output(
             prompt=rewrite_prompt_markdown,
             stage_name="guideline_rewrite_initial",
-            model_name=selected_model_name,
+            model_name=URL2BLOG_COMPOSE_MODEL,
             temperature=rewrite_temperature,
             max_tokens=6144,
             fallback_content=normalized_content,
@@ -531,7 +531,7 @@ def _pipeline_v2_run_rewrite_quality_phase(
             parse_metrics=json_parse_metrics,
             max_tokens=6144,
             temperature=rewrite_temperature,
-            model_name=selected_model_name,
+            model_name=URL2BLOG_COMPOSE_MODEL,
         )
         rewrite = _sanitize_v2_guideline_rewrite(
             rewrite_parsed,
@@ -543,7 +543,7 @@ def _pipeline_v2_run_rewrite_quality_phase(
         stage_trace=stage_trace,
         include_debug=include_debug,
         stage="guideline_rewrite_initial",
-        model_name=selected_model_name,
+        model_name=URL2BLOG_COMPOSE_MODEL,
         max_tokens=6144,
         temperature=rewrite_temperature,
         input_payload={
@@ -1944,7 +1944,7 @@ def _pipeline_v2_run_editorial_phase(
                         parse_metrics=json_parse_metrics,
                         max_tokens=6144,
                         temperature=0.05,
-                        model_name=selected_model_name,
+                        model_name=URL2BLOG_EDITORIAL_AUGMENTATION_MODEL,
                     )
                 )
                 editorial_augmentation = _sanitize_v2_editorial_augmentation(
@@ -1955,7 +1955,7 @@ def _pipeline_v2_run_editorial_phase(
                     stage_trace=stage_trace,
                     include_debug=include_debug,
                     stage="editorial_augmentation",
-                    model_name=selected_model_name,
+                    model_name=URL2BLOG_EDITORIAL_AUGMENTATION_MODEL,
                     max_tokens=6144,
                     temperature=0.05,
                     input_payload={
@@ -1982,7 +1982,7 @@ def _pipeline_v2_run_editorial_phase(
                     stage_trace=stage_trace,
                     include_debug=include_debug,
                     stage="editorial_augmentation",
-                    model_name=selected_model_name,
+                    model_name=URL2BLOG_EDITORIAL_AUGMENTATION_MODEL,
                     max_tokens=6144,
                     temperature=0.05,
                     input_payload={

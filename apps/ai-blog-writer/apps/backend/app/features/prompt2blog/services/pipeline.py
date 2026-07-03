@@ -40,6 +40,10 @@ from utils import get_vertex_llm, parse_json_response
 logger = logging.getLogger(__name__)
 FEATURE_NAME = "prompt2blog"
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
+# Stage-specific overrides: compose and editorial augmentation are the two
+# writing-quality stages, pinned to Claude regardless of the run's base model.
+P2B_COMPOSE_MODEL = "claude-opus-4-8"
+P2B_EDITORIAL_AUGMENTATION_MODEL = "claude-opus-4-8"
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
     "in_the_know_box": "In The Know",
@@ -1670,10 +1674,12 @@ def _invoke_text_llm(
     temperature: float,
     model_name: str | None,
 ) -> str:
+    resolved_model = model_name or DEFAULT_MODEL
+    # get_vertex_llm routes claude-* models to the Anthropic API.
     llm = get_vertex_llm(
         temperature=temperature,
         max_tokens=max_tokens,
-        model_name=model_name or DEFAULT_MODEL,
+        model_name=resolved_model,
     )
     result = llm.invoke(prompt)
     text = _safe_str(result)
@@ -2526,7 +2532,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
             prompt=compose_prompt,
             max_tokens=6144,
             temperature=0.1,
-            model_name=model_name,
+            model_name=P2B_COMPOSE_MODEL,
         )
         rewrite = _sanitize_rewrite(
             compose_parsed,
@@ -2548,7 +2554,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
             trace,
             include_debug,
             stage=current_stage,
-            model_name=model_name,
+            model_name=P2B_COMPOSE_MODEL,
             input_payload={
                 "article_type": guideline_payload,
                 "narrative_focus": narrative_focus,
@@ -2779,7 +2785,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                     prompt=augmentation_prompt,
                     max_tokens=6144,
                     temperature=0.05,
-                    model_name=model_name,
+                    model_name=P2B_EDITORIAL_AUGMENTATION_MODEL,
                 )
                 editorial_augmentation = _sanitize_editorial_augmentation(
                     augmentation_parsed,
@@ -2789,7 +2795,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                     trace,
                     include_debug,
                     stage=current_stage,
-                    model_name=model_name,
+                    model_name=P2B_EDITORIAL_AUGMENTATION_MODEL,
                     input_payload={
                         "article_title": rewrite["improved_title"],
                         "article_type": {
@@ -2809,7 +2815,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                     trace,
                     include_debug,
                     stage=current_stage,
-                    model_name=model_name,
+                    model_name=P2B_EDITORIAL_AUGMENTATION_MODEL,
                     input_payload={
                         "article_title": rewrite["improved_title"],
                         "article_type": {
@@ -2998,6 +3004,10 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                 "editorial_diagnostic": editorial_augmentation["diagnostic"],
                 "coverage": coverage,
                 "model_used": model_name,
+                "stage_model_overrides": {
+                    "stage_compose": P2B_COMPOSE_MODEL,
+                    "stage_editorial_augmentation": P2B_EDITORIAL_AUGMENTATION_MODEL,
+                },
             },
         }
 

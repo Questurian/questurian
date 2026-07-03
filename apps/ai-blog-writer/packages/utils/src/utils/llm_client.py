@@ -1,8 +1,10 @@
 """
-Shared LLM client utilities for Vertex AI / Google Gemini.
+Shared LLM client utilities for Vertex AI / Google Gemini and Anthropic Claude.
 
 Provides a factory function to create configured LLM instances
-that can be used across different pipelines.
+that can be used across different pipelines. Model names starting with
+"claude" are routed to the Anthropic Messages API; everything else goes
+to Vertex AI.
 """
 import logging
 import os
@@ -17,15 +19,57 @@ DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_LOCATION = "us-central1"
 
 
+class ClaudeTextLLM:
+    """Minimal Anthropic client exposing the same `.invoke(prompt) -> str`
+    surface as the LangChain VertexAI wrapper, so pipeline call sites can
+    swap models without code changes.
+
+    Claude Opus 4.x rejects the `temperature` parameter, so it is accepted
+    but not forwarded. Streaming keeps large max_tokens requests within the
+    API's non-streaming time limits.
+    """
+
+    def __init__(self, *, model_name: str, max_tokens: int) -> None:
+        self.model_name = model_name
+        self.max_tokens = max_tokens
+
+    def invoke(self, prompt: str) -> str:
+        api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+        if not api_key:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY is not set; cannot invoke Anthropic model "
+                f"'{self.model_name}'."
+            )
+
+        import anthropic
+
+        client = anthropic.Anthropic(api_key=api_key)
+        with client.messages.stream(
+            model=self.model_name,
+            max_tokens=self.max_tokens,
+            thinking={"type": "adaptive"},
+            messages=[{"role": "user", "content": prompt}],
+        ) as stream:
+            message = stream.get_final_message()
+
+        text_parts = [
+            block.text
+            for block in getattr(message, "content", []) or []
+            if getattr(block, "type", None) == "text"
+            and isinstance(getattr(block, "text", None), str)
+        ]
+        return "\n".join(text_parts).strip()
+
+
 def get_vertex_llm(
     temperature: float = 0.1,
     max_tokens: int = 2048,
     model_name: Optional[str] = None,
     project: Optional[str] = None,
     location: Optional[str] = None,
-) -> VertexAI:
+) -> "VertexAI | ClaudeTextLLM":
     """
-    Create a configured Vertex AI LLM instance.
+    Create a configured LLM instance (Vertex AI, or Anthropic for claude-* models).
 
     Args:
         temperature: Sampling temperature (0.0-1.0). Lower = more deterministic.
@@ -41,6 +85,13 @@ def get_vertex_llm(
     Raises:
         RuntimeError: If GOOGLE_CLOUD_PROJECT is not set and project not provided.
     """
+    # Anthropic routing: claude-* models bypass Vertex entirely.
+    if (model_name or "").lower().startswith("claude"):
+        logger.debug(
+            f"Routing LLM call to Anthropic: model={model_name}, max_tokens={max_tokens}"
+        )
+        return ClaudeTextLLM(model_name=model_name, max_tokens=max_tokens)
+
     # Resolve project
     resolved_project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
     if not resolved_project:
