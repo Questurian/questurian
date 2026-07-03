@@ -13,6 +13,7 @@ import {
   searchPexelsImages,
   searchUnsplashImages,
   rewriteBlockWithAi,
+  generateSeoMetadataWithAi,
 } from '../api'
 
 export type {
@@ -45,6 +46,7 @@ export default function StageArticlePage() {
         searchPexelsImages,
         searchUnsplashImages,
         rewriteBlockWithAi,
+        generateSeoMetadataWithAi,
       }}
       featureLabel="YouTube2Blog"
       heroDescription="Step through setup, featured image selection, article content blocks, and SEO before saving drafts or publishing to Payload."

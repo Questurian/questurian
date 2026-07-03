@@ -170,6 +170,7 @@ const api = {
   searchPexelsImages: vi.fn(async () => ({ photos: [] })),
   searchUnsplashImages: vi.fn(async () => ({ photos: [] })),
   rewriteBlockWithAi: vi.fn(async () => ({ rewritten_content: 'rewritten' })),
+  generateSeoMetadataWithAi: vi.fn(async () => ({ seo_patch: { metaTitle: 'AI title' }, model_used: 'claude-opus-4-8' })),
 }
 
 function renderBuilder() {

@@ -393,23 +393,24 @@ export function StandardArticleStageBuilder({
     setIsGeneratingSeoTarget(target)
 
     try {
-      const response = await api.rewriteBlockWithAi({
+      const response = await api.generateSeoMetadataWithAi({
         prompt: buildStandardArticleSeoAiPrompt({
           location: selectedLocationLabel || undefined,
           target,
         }),
-        blockContent: buildSeoAiSeed(seoSection),
+        seed: buildSeoAiSeed(seoSection),
         modelName: resolveEditorAssistModelName(stagedArticle.editorModelName),
         articleTitle,
         articleContext: articleContext || undefined,
       })
 
-      const aiText = response.rewritten_content?.trim()
-      if (!aiText) {
-        throw new Error('AI returned empty SEO content.')
+      if (!response.seo_patch || Object.keys(response.seo_patch).length === 0) {
+        throw new Error('AI returned an empty SEO patch.')
       }
 
-      const seoPatch = parseSeoAiPatch(aiText)
+      // The patch arrives schema-validated from the forced tool call; parse
+      // still applies length clipping and URL validation.
+      const seoPatch = parseSeoAiPatch(JSON.stringify(response.seo_patch))
       updateSeoSection((current) => applySeoAiPatch(current, seoPatch, target))
       setLocalResult(`Updated ${target === 'all' ? 'SEO metadata' : target} with AI.`)
     } catch (err) {

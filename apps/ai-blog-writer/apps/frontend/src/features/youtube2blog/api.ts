@@ -49,6 +49,7 @@ export {
   fetchExternalImageSource,
   fetchLocations,
   fetchMediaAssets,
+  generateSeoMetadataWithAi,
   importExternalImage,
   rewriteBlockWithAi,
   searchPexelsImages,
