@@ -118,11 +118,6 @@ const normalizeText = (value: unknown): string | undefined => {
   return normalized ? normalized : undefined
 }
 
-const withMaxLength = (value: string | undefined, maxLength: number): string | undefined => {
-  if (!value) return value
-  return value.length > maxLength ? value.slice(0, maxLength) : value
-}
-
 const withReadableMaxLength = (
   value: string | undefined,
   maxLength: number,
@@ -303,7 +298,7 @@ export function parseSeoAiPatch(response: string): SeoAiPatch {
   const normalizedOpenGraphUrl = openGraphUrl && isValidAbsoluteUrl(openGraphUrl) ? openGraphUrl : undefined
 
   return {
-    seoTitle: withMaxLength(normalizeText(parsed.seoTitle), 60),
+    seoTitle: withReadableMaxLength(normalizeText(parsed.seoTitle), 60),
     metaDescription: withReadableMaxLength(normalizeText(parsed.metaDescription), 160),
     openGraph: {
       title: normalizeText(openGraph.title),
