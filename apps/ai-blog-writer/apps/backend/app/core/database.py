@@ -11,21 +11,35 @@ from typing import Generator
 from app.config import DATA_DIR, DB_PATH
 
 
+# Wait up to 5s for a competing writer instead of failing immediately
+# with "database is locked". Pipelines write status from background
+# threads while API requests read/write concurrently.
+_BUSY_TIMEOUT_SECONDS = 5.0
+
+
 @contextmanager
 def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
     """
     Get a database connection with auto-commit.
+
+    Commits on clean exit, rolls back if the block raises. Connections
+    use WAL journal mode so readers don't block the single writer.
 
     Usage:
         with get_db_connection() as conn:
             conn.execute("SELECT * FROM runs")
     """
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=_BUSY_TIMEOUT_SECONDS)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
     try:
         yield conn
         conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
