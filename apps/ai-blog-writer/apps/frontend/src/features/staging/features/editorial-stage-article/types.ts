@@ -1,3 +1,4 @@
+import type { EditorAssistModelName } from '../../../../shared/api/ai/models'
 import type { UploadImageResponse } from '../../../../shared/images'
 import type { PayloadArticleDoc } from '../../../api/articles/articles.types'
 import type {
@@ -131,6 +132,15 @@ export type EditorialStageArticleApi = {
       articleContext?: string
     }
   ) => Promise<{ rewritten_content: string }>
+  generateSeoMetadataWithAi: (
+    input: {
+      prompt: string
+      seed: string
+      modelName?: EditorAssistModelName
+      articleTitle?: string
+      articleContext?: string
+    }
+  ) => Promise<{ seo_patch: Record<string, unknown>; model_used: string }>
 }
 
 export type EditorialStageRoutes = {

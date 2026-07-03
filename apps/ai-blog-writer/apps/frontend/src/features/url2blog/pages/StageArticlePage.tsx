@@ -7,6 +7,7 @@ import {
   fetchLocations,
   fetchMediaAssets,
   fetchResult,
+  generateSeoMetadataWithAi,
   getArticleSyncStatus,
   importExternalImage,
   markArticleSynced,
@@ -46,6 +47,7 @@ export default function StageArticlePage() {
         searchPexelsImages,
         searchUnsplashImages,
         rewriteBlockWithAi,
+        generateSeoMetadataWithAi,
       }}
       featureLabel="URL2Blog"
       heroDescription="Step through setup, featured image selection, article content blocks, and SEO before saving drafts or publishing to Payload."
