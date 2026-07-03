@@ -116,7 +116,8 @@ function runStructuredDataTemplateTest() {
   assert((blogPosting?.mainEntityOfPage as Record<string, unknown> | undefined)?.['@id'] === 'https://example.com/weekend-in-lima', 'Expected mainEntityOfPage to use canonical URL.')
   assert((blogPosting?.contentLocation as Record<string, unknown> | undefined)?.['@id'] === place?.['@id'], 'Expected contentLocation to reference the Place @id.')
   assert((blogPosting?.about as Record<string, unknown> | undefined)?.['@id'] === place?.['@id'], 'Expected about to reference the Place @id.')
-  assert((blogPosting?.mainEntity as Record<string, unknown> | undefined)?.['@id'] === place?.['@id'], 'Expected mainEntity to reference the Place @id.')
+  assert(blogPosting?.mainEntity === undefined, 'Expected mainEntity to be omitted; the article is the main entity of the page.')
+  assert(blogPosting?.inLanguage === 'en', 'Expected inLanguage on BlogPosting.')
 
   const author = blogPosting?.author as Record<string, unknown> | undefined
   const publisher = blogPosting?.publisher as Record<string, unknown> | undefined
@@ -211,7 +212,7 @@ function runPromptRulesTest() {
     'Expected prompt to preserve the BlogPosting graph node.',
   )
   assert(
-    prompt.includes('preserve the Place node plus BlogPosting contentLocation/about/mainEntity references to the Place @id'),
+    prompt.includes('preserve the Place node plus BlogPosting contentLocation/about references to the Place @id'),
     'Expected prompt to preserve linked Place references.',
   )
   assert(

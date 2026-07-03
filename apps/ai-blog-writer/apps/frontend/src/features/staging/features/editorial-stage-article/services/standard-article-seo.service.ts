@@ -244,7 +244,7 @@ export function buildStandardArticleStructuredDataTemplate(input: StandardArticl
     articleSection: normalizeText(stagedArticle.originalType),
     contentLocation: locationNode ? { '@id': placeId } : undefined,
     about: locationNode ? { '@id': placeId } : undefined,
-    mainEntity: locationNode ? { '@id': placeId } : undefined,
+    inLanguage: 'en',
     url: canonicalUrl,
     image: articleImageUrl,
     dateModified: schemaDateModified,
@@ -379,7 +379,8 @@ export function buildStandardArticleSeoAiPrompt(input: {
     '- structuredData must be a JSON object (JSON-LD style).',
     '- If structuredData is requested, preserve the existing structuredData shape from input block content.',
     '- If structuredData is requested, keep @graph with BlogPosting as the primary node.',
-    '- If structuredData is requested and location data exists, preserve the Place node plus BlogPosting contentLocation/about/mainEntity references to the Place @id.',
+    '- If structuredData is requested and location data exists, preserve the Place node plus BlogPosting contentLocation/about references to the Place @id.',
+    '- If structuredData is requested, do not add a mainEntity reference to the Place; the article itself is the main entity of the page.',
     '- If structuredData is requested, do not add articleBody or wordCount to BlogPosting.',
     '- If structuredData is requested, preserve author and publisher nodes when present.',
     `- If structuredData is requested, keep every "description" concise and factual (max ${STRUCTURED_DATA_DESCRIPTION_MAX_LENGTH} chars).`,
@@ -482,7 +483,6 @@ export function validateStandardArticleSeoSection(input: {
 
       const contentLocationId = getReferenceId(blogPostingNode?.contentLocation)
       const aboutId = getReferenceId(blogPostingNode?.about)
-      const mainEntityId = getReferenceId(blogPostingNode?.mainEntity)
 
       if (!contentLocationId) {
         issues.push('Structured Data BlogPosting.contentLocation must reference the Place @id.')
@@ -492,20 +492,12 @@ export function validateStandardArticleSeoSection(input: {
         issues.push('Structured Data BlogPosting.about must reference the Place @id.')
       }
 
-      if (!mainEntityId) {
-        issues.push('Structured Data BlogPosting.mainEntity must reference the Place @id.')
-      }
-
       if (placeId && contentLocationId && contentLocationId !== placeId) {
         issues.push('Structured Data BlogPosting.contentLocation must reference the Place @id.')
       }
 
       if (placeId && aboutId && aboutId !== placeId) {
         issues.push('Structured Data BlogPosting.about must reference the Place @id.')
-      }
-
-      if (placeId && mainEntityId && mainEntityId !== placeId) {
-        issues.push('Structured Data BlogPosting.mainEntity must reference the Place @id.')
       }
     }
   } catch {
