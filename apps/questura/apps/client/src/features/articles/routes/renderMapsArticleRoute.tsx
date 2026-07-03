@@ -1,4 +1,7 @@
 import { notFound } from 'next/navigation'
+import { JsonLd } from '@/components/seo/JsonLd'
+import { buildArticleBreadcrumbJsonLd } from '@/features/articles/lib/articleBreadcrumbJsonLd'
+import { articleHrefForScope } from '@/features/articles/lib/articleScope'
 import { fetchArticle } from '@/features/articles/lib/fetchArticle'
 import { fetchRelatedMapsArticles } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { MapsArticleLayout } from '@/features/articles/layouts/MapsArticleLayout'
@@ -25,12 +28,18 @@ export async function renderMapsArticleRoute({
     notFound()
   }
 
+  const path = articleHrefForScope(scope, 'maps', slug)
+
   return (
-    <MapsArticleLayout
-      article={article}
-      relatedArticles={relatedArticles}
-      country={scope.country}
-      city={scope.city}
-    />
+    <>
+      <JsonLd data={article.seoSection?.structuredData} />
+      <JsonLd data={buildArticleBreadcrumbJsonLd({ path, articleTitle: article.title })} />
+      <MapsArticleLayout
+        article={article}
+        relatedArticles={relatedArticles}
+        country={scope.country}
+        city={scope.city}
+      />
+    </>
   )
 }

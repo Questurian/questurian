@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation'
+import { JsonLd } from '@/components/seo/JsonLd'
 import { ItineraryListicleArticlePage } from '@/features/articles/ItineraryListicleArticlePage'
+import { buildArticleBreadcrumbJsonLd } from '@/features/articles/lib/articleBreadcrumbJsonLd'
+import { articleHrefForScope } from '@/features/articles/lib/articleScope'
 import { fetchArticle } from '@/features/articles/lib/fetchArticle'
 import { fetchRelatedMapsArticles } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { ListicleArticleLayout } from '@/features/articles/layouts/ListicleArticleLayout'
@@ -26,13 +29,19 @@ export async function renderItineraryArticleRoute({
     notFound()
   }
 
+  const path = articleHrefForScope(scope, 'itineraries', slug)
+
   return (
-    <ListicleArticleLayout
-      relatedArticles={relatedArticles}
-      country={scope.country}
-      city={scope.city}
-    >
-      <ItineraryListicleArticlePage article={article} />
-    </ListicleArticleLayout>
+    <>
+      <JsonLd data={article.seoSection?.structuredData} />
+      <JsonLd data={buildArticleBreadcrumbJsonLd({ path, articleTitle: article.title })} />
+      <ListicleArticleLayout
+        relatedArticles={relatedArticles}
+        country={scope.country}
+        city={scope.city}
+      >
+        <ItineraryListicleArticlePage article={article} />
+      </ListicleArticleLayout>
+    </>
   )
 }

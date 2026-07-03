@@ -1,5 +1,5 @@
 /** Public API payload for `single-type-listicles` (served under `/maps/[slug]`). */
-import type { ArticleAuthor } from '@/features/articles/types'
+import type { ArticleAuthor, SeoSection } from '@/features/articles/types'
 
 export type MediaVariant = {
   url?: string
@@ -74,10 +74,7 @@ export type MapsListicleArticle = {
   author?: ArticleAuthor | null
   header?: MapsListicleHeader | null
   items?: ListicleItemRow[]
-  seoSection?: {
-    metaDescription?: string
-    seoTitle?: string
-  }
+  seoSection?: SeoSection
 }
 
 export function isMapsListicleArticle(

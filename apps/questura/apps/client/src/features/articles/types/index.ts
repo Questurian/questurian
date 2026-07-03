@@ -59,6 +59,18 @@ export type SeoSection = {
     title?: string
     description?: string
     imageUrl?: string
+    url?: string
+  }
+  twitterCard?: {
+    card?: 'summary' | 'summary_large_image'
+    title?: string
+    description?: string
+    imageUrl?: string
+  }
+  structuredData?: unknown
+  robots?: {
+    index?: 'index' | 'noindex'
+    follow?: 'follow' | 'nofollow'
   }
 }
 
