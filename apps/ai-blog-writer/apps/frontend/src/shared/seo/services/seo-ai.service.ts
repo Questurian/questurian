@@ -51,12 +51,15 @@ type SeoAiPatch = {
   }
 }
 
+// og:url is deliberately excluded from the aggregate targets: the canonical URL
+// is derived deterministically (slug + location), and letting the model write it
+// during an "all"/section fill risks replacing a correct URL with an invented one.
+// It stays writable only through the explicit single-field `openGraphUrl` target.
 const ALL_FIELDS: SeoFieldKey[] = [
   'seoTitle',
   'metaDescription',
   'openGraphTitle',
   'openGraphDescription',
-  'openGraphUrl',
   'twitterCardCard',
   'twitterCardTitle',
   'twitterCardDescription',
@@ -69,7 +72,7 @@ const TARGET_FIELDS: Record<SeoAiTarget, SeoFieldKey[]> = {
   all: ALL_FIELDS,
   seoTitle: ['seoTitle'],
   metaDescription: ['metaDescription'],
-  openGraph: ['openGraphTitle', 'openGraphDescription', 'openGraphUrl'],
+  openGraph: ['openGraphTitle', 'openGraphDescription'],
   openGraphTitle: ['openGraphTitle'],
   openGraphDescription: ['openGraphDescription'],
   openGraphUrl: ['openGraphUrl'],
