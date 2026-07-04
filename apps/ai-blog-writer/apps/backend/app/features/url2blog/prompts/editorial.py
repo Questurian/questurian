@@ -1,7 +1,11 @@
 """Editorial component labels + blueprint/enrichment/augmentation prompts.
 
-Extracted verbatim from url2blog/routes.py — string constants only.
+Extracted verbatim from url2blog/routes.py. The augmentation writer prompt
+gets the shared anti-AI-tells voice rules appended at the bottom of this
+module.
 """
+
+from app.shared.prompts import ANTI_AI_TELLS_FULL
 
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
@@ -217,3 +221,8 @@ SELECTED ARTICLE TYPE:
 NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
 {narrative_focus}
 """
+
+
+_VOICE_RULES_SUFFIX = "\n\n" + ANTI_AI_TELLS_FULL
+
+V2_EDITORIAL_AUGMENTATION_PROMPT += _VOICE_RULES_SUFFIX

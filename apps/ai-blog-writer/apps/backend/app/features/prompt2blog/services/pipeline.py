@@ -31,6 +31,9 @@ from app.core import (
     write_stage_result,
     write_status,
 )
+from app.shared.prompts import ANTI_AI_TELLS_FULL
+from app.shared.text import enforce_anti_ai_tells_markdown, normalize_dashes
+from app.shared.writer_models import resolve_writer_model
 from ..graph import (
     run_prompt2blog_full_graph,
     run_prompt2blog_pipeline_v2_graph,
@@ -182,6 +185,8 @@ WRITING BRIEF (JSON):
 
 SEO_SAFE_CONTENT_GENERATION_GUIDELINES = """SEO-SAFE CONTENT GUIDELINES
 
+Write for readers first and SEO second. Use natural travel-news language, avoid keyword stuffing, avoid repetitive SEO headings, and make the article feel edited by a human. Include SEO elements only where they improve clarity: a strong headline, concise subhead, clean section structure, accurate metadata, and natural keywords. SEO structure and keywords never override anti-AI voice rules.
+
 1. Keep search intent explicit and section-specific.
 2. Prefer clear query-like H2/H3 headings when natural.
 3. Include one direct 40-60 word answer near the top.
@@ -246,8 +251,10 @@ Return Markdown only (no JSON).
 Rules:
 - Base claims on source material themes and facts.
 - Do not invent specific facts, numbers, quotes, prices, names, or policies.
+- Supplemental context may explain concepts mentioned in the source, but the final article cannot invent unsupported specifics.
 - If details are missing, use cautious phrasing and clearly mark uncertainty.
 - Respect writing brief tone, audience, and perspective.
+- Use clear logical transitions only where needed; avoid stock transition phrases.
 - Use `##` section headings.
 - Keep sections practical and actionable.
 
@@ -623,6 +630,7 @@ class PipelineV2RuntimeRequest(BaseModel):
     include_debug: bool = True
     enable_editorial_augmentation: bool = True
     model_name: str | None = None
+    writing_model: str | None = None
 
 
 class Prompt2BlogInputRequest(BaseModel):
@@ -644,6 +652,7 @@ class Prompt2BlogInputRequest(BaseModel):
     include_debug: bool = True
     enable_editorial_augmentation: bool = True
     model_name: str | None = None
+    writing_model: str | None = None
 
 
 def _now_iso() -> str:
@@ -1688,6 +1697,25 @@ def _invoke_text_llm(
     return text
 
 
+def _enforce_anti_ai_markdown_with_model(
+    text: str,
+    *,
+    model_name: str | None,
+    max_tokens: int,
+    context: str,
+) -> str:
+    return enforce_anti_ai_tells_markdown(
+        text,
+        repair=lambda repair_prompt: _invoke_text_llm(
+            prompt=repair_prompt,
+            max_tokens=max_tokens,
+            temperature=0.1,
+            model_name=model_name,
+        ),
+        context=context,
+    )
+
+
 def _invoke_json_llm(
     *,
     prompt: str,
@@ -2256,6 +2284,7 @@ def _prepare_full_pipeline_request(
         include_debug=include_debug,
         enable_editorial_augmentation=request.enable_editorial_augmentation,
         model_name=model_name,
+        writing_model=request.writing_model,
     )
 
 
@@ -2298,6 +2327,9 @@ def _run_full_pipeline_impl(run_id: str, request: Prompt2BlogInputRequest) -> No
 
 def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> None:
     model_name = request.model_name or DEFAULT_MODEL
+    writing_model = resolve_writer_model(
+        request.writing_model, default=P2B_COMPOSE_MODEL
+    )
     cleaned_data = _safe_str(request.cleaned_data)
     raw_sources = [_safe_str(source) for source in request.raw_sources if _safe_str(source)]
     include_debug = request.include_debug
@@ -2465,13 +2497,19 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                 writing_brief_json=_json(writing_brief),
                 narrative_focus=narrative_focus,
             )
+            supplement_prompt = f"{supplement_prompt}\n\n{ANTI_AI_TELLS_FULL}"
             supplement_raw = _invoke_text_llm(
                 prompt=supplement_prompt,
                 max_tokens=4096,
                 temperature=0.2,
                 model_name=model_name,
             )
-            supplemental_content = supplement_raw.strip()
+            supplemental_content = _enforce_anti_ai_markdown_with_model(
+                supplement_raw,
+                model_name=model_name,
+                max_tokens=4096,
+                context="prompt2blog supplement",
+            )
             _append_stage_trace(
                 trace,
                 include_debug,
@@ -2528,16 +2566,23 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
             seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
             narrative_focus=narrative_focus,
         )
+        compose_prompt = f"{compose_prompt}\n\n{ANTI_AI_TELLS_FULL}"
         compose_parsed, compose_raw = _invoke_json_llm(
             prompt=compose_prompt,
             max_tokens=6144,
             temperature=0.1,
-            model_name=P2B_COMPOSE_MODEL,
+            model_name=writing_model,
         )
         rewrite = _sanitize_rewrite(
             compose_parsed,
             fallback_title=guideline_payload["name"],
             fallback_content=cleaned_data,
+        )
+        rewrite["improved_content"] = _enforce_anti_ai_markdown_with_model(
+            rewrite["improved_content"],
+            model_name=writing_model,
+            max_tokens=6144,
+            context="prompt2blog compose",
         )
         write_stage_result(
             run_id,
@@ -2554,7 +2599,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
             trace,
             include_debug,
             stage=current_stage,
-            model_name=P2B_COMPOSE_MODEL,
+            model_name=writing_model,
             input_payload={
                 "article_type": guideline_payload,
                 "narrative_focus": narrative_focus,
@@ -2663,6 +2708,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                 seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
                 narrative_focus=narrative_focus,
             )
+            repair_prompt = f"{repair_prompt}\n\n{ANTI_AI_TELLS_FULL}"
             repair_parsed, repair_raw = _invoke_json_llm(
                 prompt=repair_prompt,
                 max_tokens=6144,
@@ -2673,6 +2719,12 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                 repair_parsed,
                 fallback_title=rewrite["improved_title"],
                 fallback_content=rewrite["improved_content"],
+            )
+            rewrite["improved_content"] = _enforce_anti_ai_markdown_with_model(
+                rewrite["improved_content"],
+                model_name=model_name,
+                max_tokens=6144,
+                context="prompt2blog repair",
             )
 
             quality_prompt_after_repair = P2B_QUALITY_AUDIT_PROMPT.format(
@@ -2780,13 +2832,21 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                 ),
                 narrative_focus=narrative_focus,
             )
+            augmentation_prompt = f"{augmentation_prompt}\n\n{ANTI_AI_TELLS_FULL}"
             try:
                 augmentation_parsed, editorial_augmentation_raw_response = _invoke_json_llm(
                     prompt=augmentation_prompt,
                     max_tokens=6144,
                     temperature=0.05,
-                    model_name=P2B_EDITORIAL_AUGMENTATION_MODEL,
+                    model_name=writing_model,
                 )
+                if isinstance(augmentation_parsed.get("augmented_content"), str):
+                    augmentation_parsed["augmented_content"] = _enforce_anti_ai_markdown_with_model(
+                        augmentation_parsed["augmented_content"],
+                        model_name=writing_model,
+                        max_tokens=6144,
+                        context="prompt2blog editorial augmentation",
+                    )
                 editorial_augmentation = _sanitize_editorial_augmentation(
                     augmentation_parsed,
                     fallback_content=rewrite["improved_content"],
@@ -2795,7 +2855,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                     trace,
                     include_debug,
                     stage=current_stage,
-                    model_name=P2B_EDITORIAL_AUGMENTATION_MODEL,
+                    model_name=writing_model,
                     input_payload={
                         "article_title": rewrite["improved_title"],
                         "article_type": {
@@ -2815,7 +2875,7 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                     trace,
                     include_debug,
                     stage=current_stage,
-                    model_name=P2B_EDITORIAL_AUGMENTATION_MODEL,
+                    model_name=writing_model,
                     input_payload={
                         "article_title": rewrite["improved_title"],
                         "article_type": {
@@ -2917,6 +2977,13 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
             feature=FEATURE_NAME,
         )
 
+        final_title = normalize_dashes(final_title)
+        rewrite["improved_content"] = _enforce_anti_ai_markdown_with_model(
+            rewrite["improved_content"],
+            model_name=writing_model,
+            max_tokens=6144,
+            context="prompt2blog finalize",
+        )
         final_markdown = _build_markdown(final_title, rewrite["improved_content"])
         final_checks = _build_constraint_checks(final_title, rewrite["improved_content"], writing_brief)
         pipeline_status = (
@@ -3005,8 +3072,8 @@ def _run_pipeline_v2_impl(run_id: str, request: PipelineV2RuntimeRequest) -> Non
                 "coverage": coverage,
                 "model_used": model_name,
                 "stage_model_overrides": {
-                    "stage_compose": P2B_COMPOSE_MODEL,
-                    "stage_editorial_augmentation": P2B_EDITORIAL_AUGMENTATION_MODEL,
+                    "stage_compose": writing_model,
+                    "stage_editorial_augmentation": writing_model,
                 },
             },
         }

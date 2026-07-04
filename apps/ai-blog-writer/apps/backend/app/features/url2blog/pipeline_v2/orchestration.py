@@ -5,6 +5,7 @@ facade for tests, graph runner, and monkeypatch hooks.
 """
 
 import json
+import logging
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
@@ -13,6 +14,8 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core import write_stage_result, write_status
+from app.shared.tone_profiles import build_tone_guidance, resolve_tone_profile
+from app.shared.writer_models import resolve_writer_model
 
 from ..config import *  # noqa: F401,F403
 from ..content.markdown import *  # noqa: F401,F403
@@ -20,7 +23,13 @@ from ..content.sanitizers import *  # noqa: F401,F403
 from ..llm.coerce import *  # noqa: F401,F403
 from ..llm.parsing import *  # noqa: F401,F403
 from ..models import ExtractRequest, PipelineV2Request, Stage2ClassifyRequest
+from ..prompts import (
+    NARRATIVE_FOCUS_PRESETS,
+    V2_NARRATIVE_FOCUS_SELECTION_PROMPT,
+)
 from .gating import *  # noqa: F401,F403
+
+logger = logging.getLogger(__name__)
 
 
 def _routes_module() -> Any:
@@ -170,6 +179,57 @@ async def _pipeline_v2_run_stage1(
     }
 
 
+def _pipeline_v2_select_narrative_focus(
+    *,
+    normalized_title: str,
+    normalized_content: str,
+    classification: dict[str, Any],
+    selected_model_name: str,
+    json_parse_metrics: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str, dict[str, Any]]:
+    """Auto-pick a narrative focus preset for the article via a small LLM call."""
+    routes = _routes_module()
+    preset_options = "\n".join(
+        f"- {preset['id']}: {preset['label']} — {preset['prompt']}"
+        for preset in NARRATIVE_FOCUS_PRESETS
+    )
+    prompt = (
+        V2_NARRATIVE_FOCUS_SELECTION_PROMPT.replace("{preset_options}", preset_options)
+        .replace("{title}", normalized_title)
+        .replace("{content}", _llm_context_text(normalized_content))
+        .replace(
+            "{article_type}",
+            json.dumps(classification, ensure_ascii=False),
+        )
+    )
+    parsed, raw_response = routes._invoke_json_llm_tracked(
+        prompt=prompt,
+        stage_name="narrative_focus_selection",
+        parse_metrics=json_parse_metrics,
+        max_tokens=512,
+        temperature=0.05,
+        model_name=selected_model_name,
+    )
+    focus_id = _safe_str(parsed.get("focus_id")).strip().lower()
+    preset = next(
+        (item for item in NARRATIVE_FOCUS_PRESETS if item["id"] == focus_id), None
+    )
+    if not preset:
+        logger.warning(
+            "URL2Blog narrative focus selection returned unknown focus_id: %r",
+            focus_id,
+        )
+        return None, raw_response, parsed
+    selection = {
+        "id": preset["id"],
+        "label": preset["label"],
+        "prompt": preset["prompt"],
+        "reasoning": _safe_str(parsed.get("reasoning")),
+        "source": "auto",
+    }
+    return selection, raw_response, parsed
+
+
 async def _pipeline_v2_run_stage2(
     *,
     request: PipelineV2Request,
@@ -208,6 +268,33 @@ async def _pipeline_v2_run_stage2(
             )
         )
     stage2_payload = json.loads(stage2_response.body.decode("utf-8"))
+
+    narrative_focus_selection: dict[str, Any] | None = None
+    selection_raw_response = ""
+    selection_parsed: dict[str, Any] = {}
+    selection_error: str | None = None
+    should_auto_select_focus = not _safe_str(request.narrative_focus)
+    if should_auto_select_focus:
+        try:
+            (
+                narrative_focus_selection,
+                selection_raw_response,
+                selection_parsed,
+            ) = _pipeline_v2_select_narrative_focus(
+                normalized_title=normalized_title,
+                normalized_content=normalized_content,
+                classification=_safe_dict(stage2_payload.get("classification")),
+                selected_model_name=selected_model_name,
+                json_parse_metrics=json_parse_metrics,
+            )
+        except Exception as exc:  # best-effort: never fail the run on focus selection
+            selection_error = str(exc)
+            logger.warning(
+                "URL2Blog narrative focus auto-selection failed: %s", selection_error
+            )
+        if narrative_focus_selection:
+            stage2_payload["narrative_focus_selection"] = narrative_focus_selection
+
     write_stage_result(
         run_id,
         "stage_2",
@@ -241,6 +328,24 @@ async def _pipeline_v2_run_stage2(
             for entry in stage2_trace:
                 if isinstance(entry, dict):
                     trace.append(entry)
+
+    if should_auto_select_focus:
+        trace = _pipeline_v2_append_stage_trace(
+            stage_trace=trace,
+            include_debug=include_debug,
+            stage="narrative_focus_selection",
+            model_name=selected_model_name,
+            max_tokens=512,
+            temperature=0.05,
+            input_payload={
+                "title": normalized_title,
+                "article_type": _safe_dict(stage2_payload.get("classification")),
+            },
+            raw_response=selection_raw_response,
+            parsed=selection_parsed,
+            output=narrative_focus_selection,
+            error=selection_error,
+        )
 
     return {
         "stage2_payload": stage2_payload,
@@ -311,6 +416,22 @@ def _pipeline_v2_prepare_context(
     include_debug = request.include_debug
     is_lean_profile = execution_profile == "lean"
     narrative_focus = _safe_str(request.narrative_focus)
+    narrative_focus_source = "user" if narrative_focus else "default"
+    narrative_focus_selection = _safe_dict(
+        _safe_dict(stage2_payload).get("narrative_focus_selection")
+    )
+    if not narrative_focus and narrative_focus_selection:
+        narrative_focus = _safe_str(narrative_focus_selection.get("prompt"))
+        if narrative_focus:
+            narrative_focus_source = "auto"
+    tone_profile = resolve_tone_profile(request.tone_id)
+    tone_guidance = build_tone_guidance(str(tone_profile.get("id") or ""))
+    if tone_guidance:
+        narrative_focus = (
+            f"{narrative_focus}\n\n{tone_guidance}".strip()
+            if narrative_focus
+            else tone_guidance
+        )
     use_markdown_long_stages = _use_markdown_long_stages()
     use_editorial_blueprint = _use_editorial_blueprint()
     use_editorial_insert_only_post = _use_editorial_insert_only_post()
@@ -403,14 +524,23 @@ def _pipeline_v2_prepare_context(
                 "title_guideline": article_type_row.get("title_guideline") or "",
             }
 
+    writing_model = resolve_writer_model(
+        request.writing_model, default=URL2BLOG_COMPOSE_MODEL
+    )
+
     return {
         "run_id": run_id,
         "url": url,
         "selected_model_name": selected_model_name,
+        "writing_model": writing_model,
         "execution_profile": execution_profile,
         "is_lean_profile": is_lean_profile,
         "include_debug": include_debug,
         "narrative_focus": narrative_focus,
+        "narrative_focus_source": narrative_focus_source,
+        "narrative_focus_selection": narrative_focus_selection,
+        "tone_profile": tone_profile,
+        "tone_guidance": tone_guidance,
         "use_markdown_long_stages": use_markdown_long_stages,
         "use_editorial_blueprint": use_editorial_blueprint,
         "use_editorial_insert_only_post": use_editorial_insert_only_post,

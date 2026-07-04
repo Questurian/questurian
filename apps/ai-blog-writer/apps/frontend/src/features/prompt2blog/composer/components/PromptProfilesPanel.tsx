@@ -1,5 +1,14 @@
-import type { Prompt2BlogInputOptionsResponse, Prompt2BlogModelName } from '../../api'
-import { PROMPT2BLOG_MODEL_OPTIONS, resolvePrompt2BlogModelName } from '../../constants/prompt2blog.constants'
+import type {
+  Prompt2BlogInputOptionsResponse,
+  Prompt2BlogModelName,
+  Prompt2BlogWriterModel,
+} from '../../api'
+import {
+  PROMPT2BLOG_MODEL_OPTIONS,
+  PROMPT2BLOG_WRITER_MODEL_OPTIONS,
+  resolvePrompt2BlogModelName,
+  resolvePrompt2BlogWriterModel,
+} from '../../constants/prompt2blog.constants'
 import type { P2BFormState } from '../composer.types'
 
 const CREATIVITY_LEVELS = ['low', 'medium', 'high'] as const
@@ -18,6 +27,7 @@ interface PromptProfilesPanelProps {
   inputOptions: Prompt2BlogInputOptionsResponse | null
   lengthId: string
   modelName: Prompt2BlogModelName
+  writingModel: Prompt2BlogWriterModel
   negativeInstructions: string
   promptEnhance: boolean
   toneId: string
@@ -35,7 +45,8 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
         <SelectField id="p2b-brand-voice" label="Brand Voice" value={props.brandVoiceId} options={props.inputOptions?.brand_voices || []} onChange={value => props.onChange('brandVoiceId', value)} />
       </div>
       <div className="p2b-field-row p2b-field-row--3">
-        <div className="p2b-field"><label htmlFor="p2b-model">Writing Model</label><select id="p2b-model" className="p2b-select" value={props.modelName} onChange={event => props.onChange('modelName', resolvePrompt2BlogModelName(event.target.value))}>{PROMPT2BLOG_MODEL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
+        <div className="p2b-field"><label htmlFor="p2b-model">Base Draft Model</label><select id="p2b-model" className="p2b-select" value={props.modelName} onChange={event => props.onChange('modelName', resolvePrompt2BlogModelName(event.target.value))}>{PROMPT2BLOG_MODEL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
+        <div className="p2b-field"><label htmlFor="p2b-writer-model">Writer Model</label><select id="p2b-writer-model" className="p2b-select" value={props.writingModel} onChange={event => props.onChange('writingModel', resolvePrompt2BlogWriterModel(event.target.value))}>{PROMPT2BLOG_WRITER_MODEL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
         <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', resolveCreativityLevel(event.target.value))}>{CREATIVITY_LEVELS.map(level => <option key={level} value={level}>{level[0].toUpperCase()}{level.slice(1)}</option>)}</select></div>
         <div className="p2b-field"><label htmlFor="p2b-audience-profile">Audience Profile (Optional)</label><input id="p2b-audience-profile" type="text" className="p2b-input" value={props.audienceProfile} onChange={event => props.onChange('audienceProfile', event.target.value)} placeholder="Extra reader detail" /></div>
       </div>

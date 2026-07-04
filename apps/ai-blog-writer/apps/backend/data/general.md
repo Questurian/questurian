@@ -10,3 +10,4 @@ General Notes
     
 
 These guidelines provide qualitative standards rather than rigid templates, enabling writers and AI systems to craft varied yet high‑quality articles across different formats. Use them to assess whether a transcript contains the necessary material or requires supplementation through research or additional context.
+- **Readers first, SEO second:** Write for readers first and SEO second. Use natural travel-news language, avoid keyword stuffing, avoid repetitive SEO headings, and make the article feel edited by a human. Include SEO elements only where they improve clarity: a strong headline, concise subhead, clean section structure, accurate metadata, and natural keywords.

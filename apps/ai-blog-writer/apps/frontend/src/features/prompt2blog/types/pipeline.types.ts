@@ -7,6 +7,15 @@ export type Prompt2BlogModelName =
   | 'gemini-2.5-pro'
   | 'gemini-2.0-flash'
 
+// Writing-quality model for the compose / editorial stages, independent of the
+// base drafting model. Backend allowlist: app/shared/writer_models.py.
+export type Prompt2BlogWriterModel =
+  | 'claude-opus-4-8'
+  | 'claude-opus-4-7'
+  | 'claude-sonnet-5'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.5-flash'
+
 export type Prompt2BlogInputOption = {
   id: string
   label: string
@@ -64,6 +73,7 @@ export type Prompt2BlogRunRequest = {
   include_debug?: boolean
   enable_editorial_augmentation?: boolean
   model_name?: Prompt2BlogModelName
+  writing_model?: Prompt2BlogWriterModel
 }
 
 export type Prompt2BlogRunResponse = {

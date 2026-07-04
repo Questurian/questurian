@@ -101,3 +101,23 @@
 }
 
 /* Raw JSON Display */
+
+.u2b-fact-warning {
+  border: 1px solid var(--warning);
+  border-radius: var(--radius-md, 8px);
+  background: var(--warning-soft);
+  padding: var(--space-4);
+}
+
+.u2b-fact-warning h3 {
+  color: var(--warning);
+}
+
+.u2b-fact-warning ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.25rem;
+}
+
+.u2b-fact-warning li {
+  margin-bottom: var(--space-2);
+}

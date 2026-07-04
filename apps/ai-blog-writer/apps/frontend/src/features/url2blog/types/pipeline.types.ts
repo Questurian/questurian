@@ -35,17 +35,41 @@ export type Url2BlogModel =
 
 export type Url2BlogExecutionProfile = 'standard' | 'lean'
 
+// Writing-quality model for the compose / editorial stages, independent of the
+// base extraction model. Backend allowlist: app/shared/writer_models.py.
+export type Url2BlogWriterModel =
+  | 'claude-opus-4-8'
+  | 'claude-opus-4-7'
+  | 'claude-sonnet-5'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.5-flash'
+
 export type Url2BlogPipelineV2Request = {
   run_id?: string
   url?: string
   pasted_text?: string
   include_debug?: boolean
   narrative_focus?: string
+  tone_id?: string
   enable_web_enrichment?: boolean
   enable_editorial_augmentation?: boolean
   execution_profile?: Url2BlogExecutionProfile
   max_external_context_items?: number
   model_name?: Url2BlogModel
+  writing_model?: Url2BlogWriterModel
+}
+
+export type Url2BlogFactCoverageWarning = {
+  message?: string
+  coverage_score?: number
+  coverage_threshold?: number
+  coverage_summary?: string
+  missing_facts?: Array<{
+    fact_id?: string
+    fact?: string
+    priority?: string
+    reason?: string
+  }>
 }
 
 export type Url2BlogStageTrace = {
@@ -111,6 +135,9 @@ export type Url2BlogPipelineV2Response = {
     improvements_applied: string[]
     remaining_gaps: string[]
     narrative_focus_applied?: string
+    narrative_focus_source?: 'user' | 'auto' | 'default'
+    narrative_focus_label?: string
+    tone_profile?: string
     model_used?: Url2BlogModel
     execution_profile?: Url2BlogExecutionProfile
     source_word_count?: number
@@ -129,6 +156,7 @@ export type Url2BlogPipelineV2Response = {
     factual_coverage_score?: number
     missing_source_facts_count?: number
     missing_high_priority_facts_count?: number
+    fact_coverage_warning?: Url2BlogFactCoverageWarning | null
     fact_repair_applied?: boolean
     quality_summary?: string
     editorial_augmentation_applied?: boolean
@@ -252,6 +280,25 @@ export type Url2BlogPipelineV2Response = {
       failures_by_stage: Record<string, number>
     }
   }
+}
+
+export type Url2BlogStageRecord = {
+  created_at?: string
+  data?: Record<string, unknown>
+}
+
+export type Url2BlogDebugRunResponse = {
+  run_id: string
+  status: {
+    run_id: string
+    feature: string
+    state: string
+    stage: string
+    error: string | null
+    updated_at: string
+  }
+  stages: Record<string, Url2BlogStageRecord>
+  output: { markdown: string; artifact: Record<string, unknown> } | null
 }
 
 export type Url2BlogResultResponse = {

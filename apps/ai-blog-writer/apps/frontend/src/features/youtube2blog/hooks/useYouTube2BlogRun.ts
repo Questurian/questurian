@@ -7,11 +7,19 @@ import {
   fetchArticleTypes,
   fetchDebug,
   fetchStatus,
+  fetchToneProfiles,
   startFromYoutubeUrl,
 } from '../api'
 import type { ResultTab } from '../types/youtube2blog.types'
 import type { StatusResponse, UploadResponse } from '@shared/types'
-import { DEFAULT_Y2B_MODEL, type Y2BModelName } from '../../../shared/api/ai/models'
+import {
+  DEFAULT_Y2B_MODEL,
+  DEFAULT_Y2B_WRITER_MODEL,
+  DEFAULT_ARTICLE_TONE_ID,
+  type ArticleToneId,
+  type Y2BModelName,
+  type Y2BWriterModel,
+} from '../../../shared/api/ai/models'
 
 type RunInputType = 'url' | null
 
@@ -26,6 +34,9 @@ export function useYouTube2BlogRun() {
   const queryClient = useQueryClient()
   const [youtubeUrl, setYoutubeUrl] = useState('')
   const [selectedModel, setSelectedModel] = useState<Y2BModelName>(DEFAULT_Y2B_MODEL)
+  const [selectedWritingModel, setSelectedWritingModel] =
+    useState<Y2BWriterModel>(DEFAULT_Y2B_WRITER_MODEL)
+  const [toneId, setToneId] = useState<ArticleToneId>(DEFAULT_ARTICLE_TONE_ID)
   const [forcedArticleType, setForcedArticleType] = useState('')
   const [runIds, setRunIds] = useState<string[]>([])
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
@@ -48,16 +59,26 @@ export function useYouTube2BlogRun() {
     staleTime: 5 * 60 * 1000,
   })
 
+  const toneProfilesQuery = useQuery({
+    queryKey: ['youtube2blog-tone-profiles'],
+    queryFn: fetchToneProfiles,
+    staleTime: 5 * 60 * 1000,
+  })
+
   const fromUrlMutation = useMutation({
     mutationFn: ({
       url,
       model,
       forcedArticleType: articleType,
+      writingModel,
+      toneId,
     }: {
       url: string
       model: string
       forcedArticleType?: string
-    }) => startFromYoutubeUrl(url, model, articleType),
+      writingModel?: string
+      toneId?: string
+    }) => startFromYoutubeUrl(url, model, articleType, writingModel, toneId),
     onMutate: () => {
       setStartError(null)
     },
@@ -112,7 +133,13 @@ export function useYouTube2BlogRun() {
       return
     }
 
-    fromUrlMutation.mutate({ url: normalizedUrl, model: selectedModel, forcedArticleType })
+    fromUrlMutation.mutate({
+      url: normalizedUrl,
+      model: selectedModel,
+      forcedArticleType,
+      writingModel: selectedWritingModel,
+      toneId,
+    })
   }
 
   const clear = () => {
@@ -141,9 +168,14 @@ export function useYouTube2BlogRun() {
     setYoutubeUrl,
     selectedModel,
     setSelectedModel,
+    selectedWritingModel,
+    setSelectedWritingModel,
+    toneId,
+    setToneId,
     forcedArticleType,
     setForcedArticleType,
     articleTypes: articleTypesQuery.data ?? [],
+    toneProfiles: toneProfilesQuery.data ?? [],
     runIds,
     activeRunId,
     setActiveRunId,

@@ -1,14 +1,13 @@
-"""Shared text normalizers for AI-generated output.
-
-Currently exposes dash normalization: replaces em dashes, double hyphens, and
-non-numeric en dashes with ", " so that prose output reads without the em-dash
-cadence that flags AI generation. Numeric en-dash ranges (e.g. "5–10") are
-preserved.
-"""
+"""Shared text normalizers and anti-AI-tell validation for generated output."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+import logging
 import re
+from collections.abc import Callable
+
+logger = logging.getLogger(__name__)
 
 _DASH_SUB_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\s*(?:—|--)\s*"), ", "),
@@ -25,3 +24,141 @@ def normalize_dashes(text: str) -> str:
     text = _DOUBLE_COMMA.sub(",", text)
     text = _SPACE_BEFORE_PUNCT.sub(r"\1", text)
     return text
+
+
+_HAS_WORD_CHAR = re.compile(r"[A-Za-z0-9]")
+_FENCE_LINE = re.compile(r"^\s*(```|~~~)")
+_TABLE_DELIMITER_ROW = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
+_HORIZONTAL_RULE = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$")
+_DOUBLE_HYPHEN_PROSE = re.compile(r"(?<=\w)\s*--\s*(?=\w)")
+_COMMA_AS_DASH_ASIDE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r",\s+(?:and\s+)?quietly\s+so\s*,", re.I),
+    re.compile(r",\s+convincingly\s*,", re.I),
+    re.compile(r",\s+barely\s+[^,\n]{2,80}\s*,", re.I),
+    re.compile(r",\s+(?:perhaps|arguably|somewhat|rather|quite|truly|really|simply|just)\s*,", re.I),
+)
+
+
+@dataclass(frozen=True)
+class AntiAiValidationResult:
+    valid: bool
+    errors: list[str]
+
+
+def normalize_dashes_markdown(text: str) -> str:
+    """Dash normalization for markdown documents.
+
+    Applies normalize_dashes line by line while leaving structural markdown
+    intact: fenced code blocks, and lines with no letters or digits
+    (horizontal rules, frontmatter delimiters, table separator rows), whose
+    hyphens are syntax rather than prose dashes.
+    """
+    lines = text.split("\n")
+    in_fence = False
+    result: list[str] = []
+    for line in lines:
+        if _FENCE_LINE.match(line):
+            in_fence = not in_fence
+            result.append(line)
+            continue
+        if in_fence or not _HAS_WORD_CHAR.search(line):
+            result.append(line)
+            continue
+        result.append(normalize_dashes(line))
+    return "\n".join(result)
+
+
+def _iter_markdown_prose_lines(text: str) -> list[tuple[int, str]]:
+    lines = text.split("\n")
+    in_fence = False
+    prose_lines: list[tuple[int, str]] = []
+    for index, line in enumerate(lines, start=1):
+        if _FENCE_LINE.match(line):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if not _HAS_WORD_CHAR.search(line):
+            continue
+        if _HORIZONTAL_RULE.match(line) or _TABLE_DELIMITER_ROW.match(line):
+            continue
+        prose_lines.append((index, line))
+    return prose_lines
+
+
+def _has_non_numeric_en_dash(line: str) -> bool:
+    for match in re.finditer("–", line):
+        before = line[: match.start()].rstrip()
+        after = line[match.end() :].lstrip()
+        if not before or not after:
+            return True
+        if not before[-1].isdigit() or not after[0].isdigit():
+            return True
+    return False
+
+
+def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
+    """Validate anti-AI output without rewriting cadence.
+
+    Ignores markdown structure where dashes are syntax: fenced code, horizontal
+    rules, table delimiter rows, and numeric en-dash ranges.
+    """
+    errors: list[str] = []
+    for line_number, line in _iter_markdown_prose_lines(text):
+        if "—" in line:
+            errors.append(f"Line {line_number}: em dash is not allowed.")
+        if _DOUBLE_HYPHEN_PROSE.search(line):
+            errors.append(f"Line {line_number}: prose double hyphen dash is not allowed.")
+        if _has_non_numeric_en_dash(line):
+            errors.append(f"Line {line_number}: non-numeric en dash is not allowed.")
+        for pattern in _COMMA_AS_DASH_ASIDE_PATTERNS:
+            match = pattern.search(line)
+            if match:
+                errors.append(
+                    f"Line {line_number}: comma-bracketed aside looks like dash cadence: "
+                    f"{match.group(0).strip()}"
+                )
+                break
+    return AntiAiValidationResult(valid=not errors, errors=errors)
+
+
+def build_anti_ai_repair_prompt(content: str, errors: list[str]) -> str:
+    error_lines = "\n".join(f"- {error}" for error in errors[:20])
+    return (
+        "Your previous output violated the anti-AI voice rules.\n"
+        "Repair only the listed issues. Preserve markdown, facts, headings, tables, "
+        "and source meaning. Do not replace dashes with comma-bracketed asides; "
+        "rewrite affected sentences into clean prose.\n\n"
+        f"Validation errors:\n{error_lines}\n\n"
+        "Previous output:\n"
+        "<<<CONTENT>>>\n"
+        f"{content}\n"
+        "<<<END_CONTENT>>>\n\n"
+        "Return only the repaired markdown. No JSON, no commentary."
+    )
+
+
+def enforce_anti_ai_tells_markdown(
+    text: str,
+    *,
+    repair: Callable[[str], str] | None = None,
+    context: str = "anti-ai output",
+) -> str:
+    """Validate generated markdown and optionally retry once with targeted repair."""
+    candidate = text.strip()
+    result = validate_anti_ai_tells_markdown(candidate)
+    if result.valid or repair is None:
+        if not result.valid:
+            logger.warning("%s failed anti-AI validation: %s", context, result.errors)
+        return candidate
+
+    repair_prompt = build_anti_ai_repair_prompt(candidate, result.errors)
+    repaired = str(repair(repair_prompt)).strip()
+    if not repaired:
+        logger.warning("%s anti-AI repair returned empty output; keeping original", context)
+        return candidate
+
+    repaired_result = validate_anti_ai_tells_markdown(repaired)
+    if not repaired_result.valid:
+        logger.warning("%s anti-AI repair still invalid: %s", context, repaired_result.errors)
+    return repaired

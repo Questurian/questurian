@@ -11,11 +11,14 @@ Two variants are defined; current usage:
   field types remain on the legacy path.
 
 - ANTI_AI_TELLS_FULL: wired into the itinerary intro composer
-  (`compose_itinerary_intro`) per ADR 0021 — its first production use, chosen
-  over the BLURB variant because an intro is 1-3 paragraphs. Still intended for
-  the other article-body composers (youtube2blog, prompt2blog, url2blog,
-  editor_assist block-rewrite, deep-expand, editorial augmentation), which can
-  follow this wiring.
+  (`compose_itinerary_intro`) per ADR 0021, and since extended to the other
+  article-body composers: youtube2blog (compose, supplement, quality improve,
+  SEO enrich, deep-expand, listicle rewrite, editorial augmentation), url2blog
+  (rewrite/repair, length expansion, fact repair, editorial augmentation),
+  prompt2blog (supplement, compose, repair, editorial augmentation), and the
+  editor_assist block-rewrite. Anti-AI outputs are validated with
+  `app.shared.text.validate_anti_ai_tells_markdown` and get one targeted repair
+  retry instead of automatic dash-to-comma normalization.
 
 The blurb variant drops rhythm / summary / paragraph-structure rules that do
 not apply to a single 90-140 word paragraph.

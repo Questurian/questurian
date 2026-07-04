@@ -26,6 +26,7 @@ from app.ai_graph.runtime import (
     langsmith_trace_payload,
 )
 from app.core import read_stage_result, write_artifact, write_stage_result, write_status
+from app.shared.tone_profiles import build_tone_guidance, resolve_tone_profile
 from app.features.youtube2blog.config import (
     Y2B_EDITORIAL_GATE_MIN_PARAGRAPHS,
     Y2B_EDITORIAL_GATE_MIN_WORDS,
@@ -234,12 +235,20 @@ def run_youtube2blog_graph(
     meta: PipelineMeta,
     model_name: str | None = None,
     forced_article_type: str | None = None,
+    tone_id: str | None = None,
+    writing_model: str | None = None,
 ) -> str:
     """Run YouTube2Blog as a gated multi-node LangGraph workflow."""
     from langgraph.graph import END, START, StateGraph
-    from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL as _DEFAULT_MODEL
+    from app.features.youtube2blog.config import (
+        Y2B_COMPOSE_MODEL as _DEFAULT_WRITING_MODEL,
+        Y2B_PRIMARY_MODEL as _DEFAULT_MODEL,
+    )
 
     _active_model = model_name or _DEFAULT_MODEL
+    _writing_model = writing_model or _DEFAULT_WRITING_MODEL
+    _tone_profile = resolve_tone_profile(tone_id)
+    _tone_guidance = build_tone_guidance(str(_tone_profile.get("id") or ""))
 
     run_id = meta.run_id
     current_stage = "stage_1"
@@ -533,6 +542,7 @@ def run_youtube2blog_graph(
             missing_sections=missing_sections,
             article_type=stage2.classification,
             model_name=_active_model,
+            tone_guidance=_tone_guidance,
         )
         stage_results = _record_stage_result(
             state,
@@ -568,6 +578,8 @@ def run_youtube2blog_graph(
             article_type=stage2.classification,
             title=stage1.title,
             model_name=_active_model,
+            writing_model=_writing_model,
+            tone_guidance=_tone_guidance,
         )
 
         stage3 = Stage3Output(
@@ -741,6 +753,7 @@ def run_youtube2blog_graph(
             mode=mode,
             focus_dimensions=list(targeted_feedback.get("focus_dimensions") or []),
             model_name=_active_model,
+            tone_guidance=_tone_guidance,
         )
 
         improve_prompt = str(improved.get("debug_improve_prompt") or "")
@@ -823,6 +836,7 @@ def run_youtube2blog_graph(
             seo_brief=seo_brief,
             mode="primary",
             model_name=_active_model,
+            tone_guidance=_tone_guidance,
         )
 
         seo_article = str(seo_output.get("seo_article") or stage3.final_article)
@@ -940,6 +954,7 @@ def run_youtube2blog_graph(
             mode="retry",
             feedback=feedback,
             model_name=_active_model,
+            tone_guidance=_tone_guidance,
         )
         seo_article = str(
             seo_output.get("seo_article") or stage3_for_editorial.final_article
@@ -1057,7 +1072,13 @@ def run_youtube2blog_graph(
     def stage_editorial_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_editorial_augmentation")
         stage3 = Stage3Output.model_validate(state["stage3_for_editorial"])
-        stage_editorial = stage_editorial_augmentation(stage3, fail_fast=True, model_name=_active_model)
+        stage_editorial = stage_editorial_augmentation(
+            stage3,
+            fail_fast=True,
+            model_name=_active_model,
+            writing_model=_writing_model,
+            tone_guidance=_tone_guidance,
+        )
         stage_results = _record_stage_result(
             state,
             stage_name="stage_editorial_augmentation",

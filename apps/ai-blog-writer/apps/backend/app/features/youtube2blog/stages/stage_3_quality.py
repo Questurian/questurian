@@ -10,6 +10,8 @@ from typing import Any
 from langchain_core.prompts import PromptTemplate
 
 from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
+from app.shared.prompts import ANTI_AI_TELLS_FULL
+from app.shared.text import enforce_anti_ai_tells_markdown
 from shared import Stage3Output
 from utils import get_vertex_llm, parse_json_response
 
@@ -315,6 +317,7 @@ def stage_3_improve_article(
     mode: str,
     focus_dimensions: list[str] | None = None,
     model_name: str = Y2B_PRIMARY_MODEL,
+    tone_guidance: str | None = None,
 ) -> dict[str, Any]:
     """Rewrite article draft to improve quality while preserving facts."""
     if mode not in {"light", "medium", "strong"}:
@@ -347,12 +350,19 @@ def stage_3_improve_article(
         or "- Improve clarity and usefulness while preserving facts.",
         article=stage3.final_article[:24000],
     )
+    if tone_guidance:
+        full_prompt = f"{full_prompt}\n\n{tone_guidance.strip()}"
+    full_prompt = f"{full_prompt}\n\n{ANTI_AI_TELLS_FULL}"
 
     raw_response = llm.invoke(full_prompt)
     if not raw_response or not str(raw_response).strip():
         raise RuntimeError("Stage 3 quality improvement returned empty response")
 
-    improved_article = str(raw_response).strip()
+    improved_article = enforce_anti_ai_tells_markdown(
+        str(raw_response),
+        repair=lambda repair_prompt: llm.invoke(repair_prompt),
+        context="youtube2blog quality improvement",
+    )
     first_response_text = str(raw_response)
 
     # If the rewrite is effectively unchanged, force a stronger second attempt.
@@ -366,7 +376,11 @@ def stage_3_improve_article(
         )
         second_raw = llm.invoke(fallback_prompt)
         if second_raw and str(second_raw).strip():
-            improved_article = str(second_raw).strip()
+            improved_article = enforce_anti_ai_tells_markdown(
+                str(second_raw),
+                repair=lambda repair_prompt: llm.invoke(repair_prompt),
+                context="youtube2blog quality fallback",
+            )
             raw_response = second_raw
             mode = stronger_mode
             full_prompt = fallback_prompt

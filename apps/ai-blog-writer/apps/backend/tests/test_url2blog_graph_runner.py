@@ -2,7 +2,6 @@ import json
 import sys
 import types
 
-import pytest
 from fastapi.responses import JSONResponse
 
 # Avoid importing heavyweight external LLM clients during route-module import.
@@ -52,23 +51,50 @@ def test_rewrite_gate_allows_fallback_pass_after_retries():
 
 
 def test_rewrite_gate_rejects_fallback_when_too_close_to_source():
-    with pytest.raises(RuntimeError, match="rewrite quality gate failed after retries"):
-        url2blog_graph_runner._evaluate_rewrite_gate(
-            context=_build_rewrite_context(
-                score=6.0,
-                required_revisions=3,
-                too_close_to_source=True,
-            ),
-            retry_count=url2blog_graph_runner.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
-        )
+    decision, gate_data = url2blog_graph_runner._evaluate_rewrite_gate(
+        context=_build_rewrite_context(
+            score=6.0,
+            required_revisions=3,
+            too_close_to_source=True,
+        ),
+        retry_count=url2blog_graph_runner.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
+    )
+
+    assert decision == "fail"
+    assert gate_data["pass_mode"] == "failed_after_retries"
+    assert "rewrite quality gate failed after retries" in gate_data["failure_reason"]
 
 
 def test_rewrite_gate_rejects_fallback_when_revisions_too_high():
-    with pytest.raises(RuntimeError, match="rewrite quality gate failed after retries"):
-        url2blog_graph_runner._evaluate_rewrite_gate(
-            context=_build_rewrite_context(score=6.0, required_revisions=6),
-            retry_count=url2blog_graph_runner.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
-        )
+    decision, gate_data = url2blog_graph_runner._evaluate_rewrite_gate(
+        context=_build_rewrite_context(score=6.0, required_revisions=6),
+        retry_count=url2blog_graph_runner.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
+    )
+
+    assert decision == "fail"
+    assert gate_data["pass_mode"] == "failed_after_retries"
+    assert "rewrite quality gate failed after retries" in gate_data["failure_reason"]
+
+
+def test_fact_gate_soft_fails_with_unverified_facts_warning():
+    decision, gate_data = url2blog_graph_runner._evaluate_fact_gate(
+        context={
+            "fact_coverage": {
+                "coverage_score": 7.0,
+                "missing_high_count": 1,
+                "missing_count": 1,
+                "missing_facts": [{"fact_id": "F2", "fact": "x", "priority": "high"}],
+                "coverage_summary": "one high fact missing",
+            },
+        },
+        retry_count=url2blog_graph_runner.URL2BLOG_FACT_GATE_MAX_RETRIES,
+    )
+
+    assert decision == "pass"
+    assert gate_data["pass_mode"] == "fallback_unverified_facts"
+    assert "could not be fully verified" in gate_data["fact_warning"]
+    assert gate_data["missing_facts"][0]["fact_id"] == "F2"
+    assert gate_data["coverage_summary"] == "one high fact missing"
 
 
 def test_attach_trace_payload_drops_stale_content_length_header():

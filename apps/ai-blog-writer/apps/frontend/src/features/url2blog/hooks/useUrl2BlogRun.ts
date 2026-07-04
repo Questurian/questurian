@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import {
+  fetchArticleTypes,
   fetchLatestStatus,
+  fetchRunDebug,
   fetchStatus,
+  fetchToneProfiles,
   runUrl2BlogPipelineV2,
 } from '../api'
 import { usePipelineRunPoll } from '../../pipelineRuns/hooks/usePipelineRunPoll'
 import {
+  DEFAULT_ARTICLE_TONE_ID,
+  type ArticleToneId,
+} from '../../../shared/api/ai/models'
+import {
   NARRATIVE_FOCUS_PRESETS,
+  URL2BLOG_DEFAULT_WRITER_MODEL,
   URL2BLOG_PROGRESS_STEPS,
   URL2BLOG_TEXT_PROGRESS_STEPS,
 } from '../constants/pipeline-ui.constants'
@@ -17,6 +25,7 @@ import type {
   Url2BlogModel,
   Url2BlogPipelineV2Response,
   Url2BlogStatusResponse,
+  Url2BlogWriterModel,
 } from '../types/pipeline.types'
 import { normalizeArticleUrlInput } from '../urlInput'
 import { getProgressItemState, getStageLabel } from '../utils/pipeline-progress.utils'
@@ -38,11 +47,27 @@ export function useUrl2BlogRun() {
   const [activeRunId, setActiveRunId] = useState<string | null>(null)
   const [selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId] = useState('')
   const [customNarrativeFocus, setCustomNarrativeFocus] = useState('')
+  const [toneId, setToneId] = useState<ArticleToneId>(DEFAULT_ARTICLE_TONE_ID)
   const [includeDebug, setIncludeDebug] = useState(true)
   const [modelName, setModelName] = useState<Url2BlogModel>('gemini-2.5-flash-lite')
+  const [writingModel, setWritingModel] = useState<Url2BlogWriterModel>(
+    URL2BLOG_DEFAULT_WRITER_MODEL
+  )
   const [executionProfile, setExecutionProfile] = useState<Url2BlogExecutionProfile>('standard')
   const [runSubmittedAt, setRunSubmittedAt] = useState<number | null>(null)
   const [result, setResult] = useState<Url2BlogPipelineV2Response | null>(null)
+
+  const articleTypesQuery = useQuery({
+    queryKey: ['url2blog-article-types'],
+    queryFn: fetchArticleTypes,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const toneProfilesQuery = useQuery({
+    queryKey: ['url2blog-tone-profiles'],
+    queryFn: fetchToneProfiles,
+    staleTime: 5 * 60 * 1000,
+  })
 
   const selectedNarrativeFocusPreset = useMemo(
     () => NARRATIVE_FOCUS_PRESETS.find((preset) => preset.id === selectedNarrativeFocusPresetId) ?? null,
@@ -67,7 +92,9 @@ export function useUrl2BlogRun() {
         ...(text ? { pasted_text: text } : {}),
         include_debug: includeDebug,
         narrative_focus: narrativeFocus.trim() || undefined,
+        tone_id: toneId,
         model_name: modelName,
+        writing_model: writingModel,
         execution_profile: executionProfile,
       }),
     onSuccess: (data) => {
@@ -125,6 +152,16 @@ export function useUrl2BlogRun() {
     activeStatus?.state === 'failed' && activeStatus.error ? activeStatus.error : null
   const mutationErrorMessage =
     pipelineMutation.error instanceof Error ? pipelineMutation.error.message : null
+
+  const runFailed = pipelineMutation.isError || activeStatus?.state === 'failed'
+  const failedRunDebugQuery = useQuery({
+    queryKey: ['url2blog-failed-run-debug', activeRunId],
+    queryFn: () => fetchRunDebug(activeRunId as string),
+    enabled: Boolean(activeRunId) && runFailed,
+    retry: 1,
+    staleTime: Infinity,
+  })
+  const failedRunDebug = runFailed ? failedRunDebugQuery.data ?? null : null
   const currentStep: WizardStep = pipelineMutation.isPending ? 'processing' : result ? 'complete' : 'input'
 
   const resetRunOutput = () => {
@@ -168,6 +205,7 @@ export function useUrl2BlogRun() {
     setRunSubmittedAt(null)
     setSelectedNarrativeFocusPresetId('')
     setCustomNarrativeFocus('')
+    setToneId(DEFAULT_ARTICLE_TONE_ID)
     setIncludeDebug(true)
     setModelName('gemini-2.5-flash-lite')
     setExecutionProfile('standard')
@@ -186,8 +224,12 @@ export function useUrl2BlogRun() {
       selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId,
       customNarrativeFocus, setCustomNarrativeFocus,
       narrativeFocus,
+      toneId, setToneId,
+      toneProfiles: toneProfilesQuery.data ?? [],
+      articleTypes: articleTypesQuery.data ?? [],
       includeDebug, setIncludeDebug,
       modelName, setModelName,
+      writingModel, setWritingModel,
       executionProfile, setExecutionProfile,
     },
     pipeline: {
@@ -198,6 +240,7 @@ export function useUrl2BlogRun() {
       statusQuery,
       statusErrorMessage,
       mutationErrorMessage,
+      failedRunDebug,
       pipelineMutation,
       currentStep,
       result,

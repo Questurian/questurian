@@ -21,6 +21,7 @@ export type {
   Prompt2BlogRunResponse,
   Prompt2BlogStageTrace,
   Prompt2BlogStatusResponse,
+  Prompt2BlogWriterModel,
 } from './types/pipeline.types'
 export {
   PROMPT2BLOG_PIPELINE_STAGES,

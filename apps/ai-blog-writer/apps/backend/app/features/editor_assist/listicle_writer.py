@@ -7,7 +7,6 @@ import re
 from typing import Literal
 
 from app.shared.prompts import ANTI_AI_TELLS_BLURB
-from app.shared.text import normalize_dashes
 
 from .angle_assignment import ANTI_AI_PROMPT_CATEGORIES, ListicleAngle
 from .writer_brief import WriterBrief, render_source_facts_block
@@ -328,7 +327,7 @@ def strip_generation_fence(text: str) -> str:
             if stripped.startswith(prefix):
                 stripped = stripped[len(prefix) :].strip()
                 break
-    return normalize_dashes(stripped)
+    return stripped
 
 
 def _normalize_block(text: str) -> str:

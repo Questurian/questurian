@@ -1,4 +1,5 @@
 import type { ResultResponse, StatusResponse, UploadResponse } from '@shared/types'
+import type { ToneProfile } from '../../../shared/api/ai/models'
 import { API_BASE_URL, FEATURE_PREFIX } from '../constants/api.constants'
 import { STAGE_ORDER } from '../constants/pipeline.constants'
 import type { DebugResponse } from '../types/pipeline.types'
@@ -25,6 +26,8 @@ export async function startFromYoutubeUrl(
   url: string,
   model?: string,
   forcedArticleType?: string,
+  writingModel?: string,
+  toneId?: string,
 ): Promise<UploadResponse> {
   const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/from-url`, {
     method: 'POST',
@@ -35,6 +38,8 @@ export async function startFromYoutubeUrl(
       url,
       ...(model ? { model } : {}),
       ...(forcedArticleType?.trim() ? { forced_article_type: forcedArticleType.trim() } : {}),
+      ...(writingModel ? { writing_model: writingModel } : {}),
+      ...(toneId ? { tone_id: toneId } : {}),
     }),
   })
 
@@ -53,6 +58,17 @@ export async function fetchStatus(runId: string): Promise<StatusResponse> {
   }
 
   return normalizeYouTube2BlogStatusResponse(await response.json(), runId)
+}
+
+export async function fetchToneProfiles(): Promise<ToneProfile[]> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/tones`)
+
+  if (!response.ok) {
+    throw new Error('Tone profile fetch failed')
+  }
+
+  const payload = await response.json()
+  return Array.isArray(payload?.tones) ? payload.tones : []
 }
 
 export async function fetchResult(runId: string): Promise<ResultResponse> {

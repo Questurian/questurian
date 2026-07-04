@@ -1,8 +1,23 @@
+import type { Url2BlogWriterModel } from '../types/pipeline.types'
+
 export type NarrativeFocusPreset = {
   id: string
   label: string
   prompt: string
 }
+
+export const URL2BLOG_DEFAULT_WRITER_MODEL: Url2BlogWriterModel = 'claude-opus-4-8'
+
+export const URL2BLOG_WRITER_MODEL_OPTIONS: Array<{
+  value: Url2BlogWriterModel
+  label: string
+}> = [
+  { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
+  { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
+  { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (cheaper, fast writer)' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+]
 
 export type Url2BlogProgressStep = {
   key: string
@@ -11,26 +26,23 @@ export type Url2BlogProgressStep = {
 }
 
 export const NARRATIVE_FOCUS_PRESETS: NarrativeFocusPreset[] = [
-  ['practical_trip_planner', 'Practical Trip Planner', 'Prioritize decision-ready guidance for planning: where to go, what to book, and how to avoid common mistakes.'],
-  ['beginner_friendly_explainer', 'Beginner-Friendly Explainer', 'Write for first-timers. Define jargon, explain why each point matters, and keep instructions clear and confidence-building.'],
-  ['expert_depth', 'Expert Depth', 'Assume informed readers. Emphasize nuance, tradeoffs, and advanced context instead of generic introductory advice.'],
+  ['news_story', 'News Story', 'Write this as a polished travel news article for a new travel/aviation news website. Prioritize a newsroom-style travel news tone over an SEO blog tone. Start with a clear lead that explains the main news: who is launching what, where, and when. Use short paragraphs, natural transitions, and factual language. The article may include helpful structure such as a headline, short subhead, and optional key takeaways, but avoid robotic SEO-style headings; use natural section headings only when they improve readability. Do not repeat the same facts across the article — mention route details clearly once, then use the rest of the article to explain market context, traveler impact, and competitive changes. Use aviation data as supporting context, not as the main focus; keep the route launch and traveler relevance at the center of the story. Keep the tone professional, neutral, and human-edited; avoid marketing language, filler, exaggerated claims, or phrases that make the article sound AI-generated. Separate any CMS instructions, editorial blocks, schema notes, or component metadata from the final article body — the final article body should read cleanly as publishable travel news.'],
+  ['news_brief', 'News Brief', 'Write a fast, factual update: what happened, when it happened, who is affected, and what changes now.'],
+  ['traveler_impact', 'Traveler Impact', 'Prioritize what readers need to do next, including bookings, routes, documents, timing, refunds, or practical precautions.'],
+  ['policy_visa_update', 'Policy / Visa Update', 'Explain the rule change, effective dates, eligibility, exceptions, official-source context, and next steps for affected travelers.'],
+  ['airline_airport_update', 'Airline / Airport Update', 'Focus on routes, schedules, baggage, loyalty, strikes, delays, airport operations, and passenger impact.'],
+  ['opening_new_place', 'Opening / New Place', 'Cover new restaurants, hotels, attractions, landmarks, museums, resorts, or routes with why it matters, opening timing, and how to visit.'],
+  ['safety_crime_advisory', 'Safety / Crime Advisory', 'Frame risk clearly without sensationalism: where, what happened, who is affected, and practical precautions readers can take.'],
+  ['destination_change', 'Destination Change', 'Explain shifts in a place, such as tourism rules, taxes, closures, weather impacts, protests, transport changes, or local conditions.'],
+  ['trend_watch', 'Trend Watch', 'Connect the story to a broader travel pattern, including pricing, demand, route shifts, traveler behavior, or regulatory movement.'],
+  ['explainer', 'Explainer', 'Make confusing travel changes clear with background, definitions, why the issue matters, and likely consequences.'],
+  ['service_alert', 'Service Alert', 'Keep the piece short and practical for disruptions such as strikes, closures, outages, storms, delays, or advisories.'],
+  ['local_lens', 'Local Lens', 'Use local context and place-aware detail for restaurant, landmark, culture, and destination news without turning it into a generic guide.'],
+  ['deal_value_angle', 'Deal / Value Angle', 'Focus on travel deals, fare sales, points promos, price drops, booking conditions, deadlines, and caveats.'],
   ['executive_summary', 'Executive Summary', 'Front-load key takeaways and high-impact recommendations for readers with limited time.'],
-  ['budget_maximizer', 'Budget Maximizer', 'Focus on affordability, value-for-money options, and practical cost-saving decisions without sacrificing quality.'],
-  ['luxury_premium', 'Luxury Premium', 'Target premium travelers seeking high-end comfort, service quality, and elevated experiences.'],
-  ['family_friendly', 'Family-Friendly', 'Optimize recommendations for families with children, including safety, convenience, and age-appropriate choices.'],
-  ['solo_traveler', 'Solo Traveler', 'Write for solo readers who need confidence, situational awareness, and independent planning guidance.'],
-  ['safety_first', 'Safety-First', 'Prioritize safety and risk-reduction details, including practical precautions and common pitfalls to avoid.'],
-  ['sustainable_responsible', 'Sustainable & Responsible', 'Emphasize environmentally responsible and culturally respectful choices with practical alternatives.'],
-  ['local_culture', 'Local Culture Lens', 'Highlight local context, cultural etiquette, and authentic experiences rather than surface-level tourist framing.'],
-  ['myth_busting', 'Myth-Busting Angle', 'Challenge common misconceptions and replace them with evidence-based guidance and balanced reasoning.'],
-  ['step_by_step', 'Step-by-Step Playbook', 'Structure advice into clear, actionable steps that readers can follow in sequence.'],
   ['comparison_framework', 'Comparison Framework', 'Present options with pros, cons, and decision criteria so readers can choose based on their priorities.'],
-  ['human_story', 'Human Story', 'Lean into narrative clarity and human moments while preserving factual usefulness and trust.'],
   ['data_evidence', 'Data & Evidence', 'Ground claims with verifiable facts, concrete examples, and explicit reasoning to reduce fluff.'],
-  ['problem_solution', 'Problem-Solution', 'Frame content around reader pain points and practical solutions with direct implementation advice.'],
-  ['checklist_ready', 'Checklist-Ready', 'Organize material into concise, scannable checklist logic without losing depth where needed.'],
   ['journalistic_neutral', 'Journalistic Neutral', 'Keep tone balanced and credible, separating claims from interpretation while maintaining readability.'],
-  ['conversion_oriented', 'Conversion-Oriented', 'Prioritize clarity that helps readers confidently take next actions such as booking, comparing, or planning.'],
 ].map(([id, label, prompt]) => ({ id, label, prompt }))
 
 export const URL2BLOG_PROGRESS_STEPS: Url2BlogProgressStep[] = [

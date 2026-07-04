@@ -16,9 +16,12 @@ from app.core import (
     get_article_type_by_id,
     read_output,
     read_stage_result,
+    read_all_stage_results,
     read_status,
 )
 from utils import get_vertex_llm
+from app.shared.tone_profiles import load_tone_profiles, resolve_tone_profile
+from app.shared.writer_models import resolve_writer_model
 from .graph import run_url2blog_pipeline_graph
 from .storage import (
     get_all_completed_articles,
@@ -161,11 +164,7 @@ async def debug_run(run_id: str) -> JSONResponse:
     if not status or status.get("feature") != FEATURE_NAME:
         raise HTTPException(status_code=404, detail="Run not found.")
 
-    stages = {}
-    for stage_name in ["stage_1", "stage_2", "pipeline_v2", "langgraph_trace"]:
-        stage_data = read_stage_result(run_id, stage_name)
-        if stage_data:
-            stages[stage_name] = stage_data
+    stages = read_all_stage_results(run_id)
 
     output = read_output(run_id)
 
@@ -406,6 +405,14 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
     Internals run through the LangGraph runner; request/response contract remains stable.
     """
     try:
+        resolve_writer_model(request.writing_model)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    try:
+        resolve_tone_profile(request.tone_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    try:
         return await run_url2blog_pipeline_graph(request=request)
     except HTTPException:
         raise
@@ -415,6 +422,13 @@ async def pipeline_v2(request: PipelineV2Request) -> JSONResponse:
             status_code=500,
             detail=f"URL2Blog pipeline failed: {exc}",
         )
+
+
+@router.get("/tones")
+async def get_tones() -> JSONResponse:
+    """Return read-only article tone profiles for UI reference."""
+    return JSONResponse({"tones": load_tone_profiles()})
+
 
 # ---------------------------------------------------------------------------
 # pipeline v2 orchestration/heavy phases live under pipeline_v2/. They are

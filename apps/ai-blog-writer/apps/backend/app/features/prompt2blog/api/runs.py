@@ -5,6 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core import read_output, read_stage_result, read_status, write_stage_result, write_status
+from app.shared.writer_models import resolve_writer_model
 
 from ..services.pipeline import (
     DEFAULT_MODEL,
@@ -40,6 +41,11 @@ def _validate_prompt2blog_input_request(request: Prompt2BlogInputRequest) -> Non
     for field_name, value in required_text_fields.items():
         if not _safe_str(value):
             raise HTTPException(status_code=400, detail=f"{field_name} is required")
+
+    try:
+        resolve_writer_model(request.writing_model)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/pipeline-v2")

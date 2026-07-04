@@ -19,6 +19,7 @@ export function buildPrompt2BlogPayload(state: P2BFormState): Prompt2BlogRunRequ
     target_reader: state.targetReader,
     destination_context: state.destinationContext,
     model_name: state.modelName,
+    writing_model: state.writingModel,
     tone_id: state.toneId,
     length_id: state.lengthId,
     brand_voice_id: state.brandVoiceId || undefined,

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -15,13 +16,16 @@ type FinalResultsTabProps = {
   debugData?: DebugResponse
   lexicalCopyStatus: LexicalCopyStatus
   onCopyLexical: (markdown: string) => void
+  runId?: string | null
 }
 
-export function FinalResultsTab({ debugData, lexicalCopyStatus, onCopyLexical }: FinalResultsTabProps) {
+export function FinalResultsTab({ debugData, lexicalCopyStatus, onCopyLexical, runId }: FinalResultsTabProps) {
   const stage3Data = getStage3Data(debugData)
   const stageEditorialData = getStageEditorialAugmentationData(debugData)
   const stage4Data = getStage4Data(debugData)
   const articleContent = stageEditorialData?.augmented_content ?? stage3Data?.final_article
+  const title = stage4Data?.title ?? 'Improved Article'
+  const articleType = stage4Data?.article_type ?? stage3Data?.article_type ?? ''
 
   return (
     <>
@@ -46,6 +50,24 @@ export function FinalResultsTab({ debugData, lexicalCopyStatus, onCopyLexical }:
                 ? 'Conversion Failed'
                 : 'Copy as Lexical JSON'}
         </button>
+        {runId && articleContent ? (
+          <Link
+            to={`/youtube2blog/stage-article?${new URLSearchParams({
+              runId,
+              title,
+              type: articleType,
+            }).toString()}`}
+            className="payload-action-btn"
+          >
+            <img
+              src={payloadLogoUrl}
+              alt=""
+              aria-hidden="true"
+              className="payload-action-btn-icon"
+            />
+            Stage for Payload
+          </Link>
+        ) : null}
       </div>
 
       <div className="final-results">

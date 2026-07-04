@@ -85,6 +85,7 @@ export default function Prompt2BlogPage() {
             inputOptions={composer.inputOptions}
             lengthId={state.lengthId}
             modelName={state.modelName}
+            writingModel={state.writingModel}
             negativeInstructions={state.negativeInstructions}
             promptEnhance={state.promptEnhance}
             toneId={state.toneId}

@@ -1,5 +1,8 @@
 import { API_BASE_URL, FEATURE_PREFIX } from '../constants/url2blog.constants'
+import type { ArticleType } from '@shared/types'
+import type { ToneProfile } from '../../../shared/api/ai/models'
 import type {
+  Url2BlogDebugRunResponse,
   Url2BlogPipelineV2Request,
   Url2BlogPipelineV2Response,
   Url2BlogResultResponse,
@@ -50,6 +53,23 @@ export async function runUrl2BlogPipelineV2(
   return response.json()
 }
 
+export async function fetchToneProfiles(): Promise<ToneProfile[]> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/tones`)
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'URL2Blog tone fetch failed'))
+  }
+  const payload = await response.json()
+  return Array.isArray(payload?.tones) ? payload.tones : []
+}
+
+export async function fetchArticleTypes(): Promise<ArticleType[]> {
+  const response = await fetch(`${API_BASE_URL}/article-types`)
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'Article type fetch failed'))
+  }
+  return response.json()
+}
+
 export async function fetchStatus(
   runId: string,
   options: { allowNotFound?: boolean } = {},
@@ -82,6 +102,14 @@ export async function fetchLatestStatus(): Promise<Url2BlogStatusResponse | null
     throw new Error(await resolveErrorMessage(response, 'URL2Blog latest status fetch failed'))
   }
   return normalizeUrl2BlogStatusResponse(await response.json(), '')
+}
+
+export async function fetchRunDebug(runId: string): Promise<Url2BlogDebugRunResponse> {
+  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/debug/${runId}`)
+  if (!response.ok) {
+    throw new Error(await resolveErrorMessage(response, 'URL2Blog run debug fetch failed'))
+  }
+  return response.json()
 }
 
 export async function fetchResult(runId: string): Promise<Url2BlogResultResponse> {

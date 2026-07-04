@@ -12,6 +12,7 @@ type ResultsPanelProps = {
 export function ResultsPanel({ result, onStartOver }: ResultsPanelProps) {
   const [showDetails, setShowDetails] = useState(false)
   const title = result.improved_article.title || result.article.original_title || 'Improved Article'
+  const factWarning = result.guideline_review.fact_coverage_warning ?? null
 
   return (
     <section className="url2blog-panel u2b-wizard-panel u2b-complete-panel">
@@ -29,7 +30,9 @@ export function ResultsPanel({ result, onStartOver }: ResultsPanelProps) {
             <div className="u2b-selected-type-badge">{result.selected_article_type.name || 'Unclassified'}</div>
             <div className="u2b-translated-badge">Ready for Drafting</div>
             {result.article.translated && <div className="u2b-translated-badge">Translated to English</div>}
+            {factWarning && <div className="u2b-fact-warning-badge">Facts not fully verified</div>}
           </div>
+          {factWarning && <FactCoverageWarning warning={factWarning} />}
           <div className="u2b-content-section">
             <h3>Final Markdown</h3>
             <div className="u2b-raw-json"><pre>{result.final_markdown}</pre></div>
@@ -88,6 +91,31 @@ function ResultDetails({ result }: { result: Url2BlogPipelineV2Response }) {
   )
 }
 
+function FactCoverageWarning({ warning }: { warning: NonNullable<Url2BlogPipelineV2Response['guideline_review']['fact_coverage_warning']> }) {
+  const missingFacts = warning.missing_facts ?? []
+  return (
+    <div className="u2b-content-section u2b-fact-warning">
+      <h3>⚠ Facts Not Fully Verified</h3>
+      <p className="u2b-guideline-text">
+        The fact-coverage check could not confirm every high-priority source fact after retries
+        {typeof warning.coverage_score === 'number' && <> (coverage {warning.coverage_score}/{warning.coverage_threshold ?? 10})</>}.
+        The draft is complete — review the points below before publishing.
+      </p>
+      {missingFacts.length > 0 && (
+        <ul className="u2b-guideline-text">
+          {missingFacts.map((fact, index) => (
+            <li key={fact.fact_id ?? index}>
+              <strong>{fact.fact_id}</strong>{fact.priority ? ` (${fact.priority})` : ''}: {fact.fact}
+              {fact.reason ? <em> — {fact.reason}</em> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+      {warning.coverage_summary && <p className="u2b-guideline-text">{warning.coverage_summary}</p>}
+    </div>
+  )
+}
+
 function ItemList({ items }: { items: string[] }) {
   return <div className="u2b-guideline-text">{items.map((item, index) => <span key={`${item}-${index}`}>- {item}<br /></span>)}</div>
 }
@@ -98,7 +126,7 @@ function QualityAudit({ result }: { result: Url2BlogPipelineV2Response }) {
     <div className="u2b-content-section">
       <h3>Quality Audit</h3>
       <div className="u2b-guideline-text">{review.quality_summary}</div>
-      {review.narrative_focus_applied && <div className="u2b-guideline-text">Narrative focus applied: {review.narrative_focus_applied}</div>}
+      {review.narrative_focus_applied && <div className="u2b-guideline-text">Narrative focus{review.narrative_focus_source === 'auto' ? ' (auto-selected)' : ''}{review.narrative_focus_label ? ` — ${review.narrative_focus_label}` : ''}: {review.narrative_focus_applied}</div>}
       {review.model_used && <div className="u2b-guideline-text">Model used: {review.model_used}</div>}
       {review.execution_profile && <div className="u2b-guideline-text">Execution profile: {review.execution_profile}</div>}
       {typeof review.source_word_count === 'number' && <div className="u2b-guideline-text">Source length: ~{review.source_word_count} words</div>}

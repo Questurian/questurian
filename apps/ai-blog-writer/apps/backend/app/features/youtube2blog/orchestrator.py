@@ -323,10 +323,17 @@ def process_run(
     *,
     model_name: str | None = None,
     forced_article_type: str | None = None,
+    tone_id: str | None = None,
+    writing_model: str | None = None,
 ) -> str:
     """
     Run YouTube2Blog through LangGraph orchestration.
     """
     return run_youtube2blog_graph(
-        record, meta, model_name=model_name, forced_article_type=forced_article_type
+        record,
+        meta,
+        model_name=model_name,
+        forced_article_type=forced_article_type,
+        tone_id=tone_id,
+        writing_model=writing_model,
     )

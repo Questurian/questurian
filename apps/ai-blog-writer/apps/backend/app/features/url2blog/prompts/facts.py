@@ -1,7 +1,10 @@
 """Prompts for source-fact extraction, coverage audit, and fact repair.
 
-Extracted verbatim from url2blog/routes.py — string constants only.
+Extracted verbatim from url2blog/routes.py. Fact-repair writer prompts get
+the shared anti-AI-tells voice rules appended at the bottom of this module.
 """
+
+from app.shared.prompts import ANTI_AI_TELLS_FULL
 
 V2_SOURCE_FACTS_EXTRACTION_PROMPT = """You are extracting factual anchors from a source article.
 
@@ -179,3 +182,9 @@ EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
 EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
 {editorial_blueprint_directives}
 """
+
+
+_VOICE_RULES_SUFFIX = "\n\n" + ANTI_AI_TELLS_FULL
+
+V2_FACT_REPAIR_PROMPT += _VOICE_RULES_SUFFIX
+V2_FACT_REPAIR_MARKDOWN_PROMPT += _VOICE_RULES_SUFFIX

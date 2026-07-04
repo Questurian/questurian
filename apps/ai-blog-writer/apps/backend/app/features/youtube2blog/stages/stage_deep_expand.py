@@ -19,6 +19,8 @@ from typing import Any
 
 from app.core import write_stage_result, write_status
 from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
+from app.shared.prompts import ANTI_AI_TELLS_FULL
+from app.shared.text import enforce_anti_ai_tells_markdown
 from utils import get_vertex_llm, parse_json_response
 
 logger = logging.getLogger(__name__)
@@ -64,7 +66,7 @@ EXPANSION_PROMPT = """You are expanding an existing article by adding new conten
 CRITICAL RULES — read carefully before writing:
 1. PRESERVE every word of the existing article content exactly as written — do not rephrase, reorder, or remove anything
 2. ADD new sections and subsections that integrate naturally with the existing structure
-3. Match the existing article's voice, tone, and heading style
+3. Preserve the source meaning, details, and heading style; do not copy filler, hedges, or rambling cadence
 4. New content must be accurate, substantive, and genuinely useful — not filler
 5. Insert new sections where they make logical sense in the flow (not always at the end)
 6. Do not add a new top-level H1 title — keep the existing title if present
@@ -105,7 +107,7 @@ Rules:
 LISTICLE_REWRITE_PROMPT = """You are rewriting a listicle article with a new, curated set of items chosen by the editor.
 
 This is a COMPLETE REWRITE. The editor has decided exactly which items to include and in what order.
-Use the original article only as a reference for voice, tone, intro/outro style, and formatting.
+Use the original article as a reference for factual scope, intro/outro purpose, and formatting. Do not copy filler, hedges, or rambling cadence.
 
 Article topic: {title}
 Article type: {article_type}
@@ -119,7 +121,7 @@ New item list — write about these items IN THIS EXACT ORDER, no more, no less:
 Instructions:
 1. Write a complete, polished article with a section for each item in the list above
 2. Each section should be thorough, useful, and match the depth of the original
-3. Match the original article's voice, writing style, intro, and conclusion structure
+3. Preserve the original article's factual scope, intro purpose, and conclusion purpose without copying filler, hedges, or rambling cadence
 4. Update the H1 title only if the item changes make it inaccurate — otherwise keep it
 5. Do NOT include any items that are not in the list above
 6. Do NOT change the order of items
@@ -260,7 +262,18 @@ def expand_article_with_gaps(
         .replace("{expansion_plan}", expansion_plan[:500])
         .replace("{article_content}", article[:20_000])
     )
-    return _invoke_text_llm(prompt, model_name=model_name)
+    prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
+    llm = get_vertex_llm(
+        temperature=0.2,
+        max_tokens=16384,
+        model_name=model_name,
+    )
+    raw = str(llm.invoke(prompt)).strip()
+    return enforce_anti_ai_tells_markdown(
+        raw,
+        repair=lambda repair_prompt: llm.invoke(repair_prompt),
+        context="youtube2blog deep expand",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +296,18 @@ def rewrite_listicle_article(
         .replace("{original_article}", original_article[:15_000])
         .replace("{items_list}", numbered)
     )
-    return _invoke_text_llm(prompt, model_name=model_name)
+    prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
+    llm = get_vertex_llm(
+        temperature=0.2,
+        max_tokens=16384,
+        model_name=model_name,
+    )
+    raw = str(llm.invoke(prompt)).strip()
+    return enforce_anti_ai_tells_markdown(
+        raw,
+        repair=lambda repair_prompt: llm.invoke(repair_prompt),
+        context="youtube2blog listicle rewrite",
+    )
 
 
 # ---------------------------------------------------------------------------

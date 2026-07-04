@@ -13,6 +13,8 @@ from uuid import uuid4
 
 from shared import RawVideoRecord
 from app.core import read_stage_result, read_status, read_output, cleanup_run, clear_all_runs
+from app.shared.tone_profiles import load_tone_profiles, resolve_tone_profile
+from app.shared.writer_models import resolve_writer_model
 
 from .orchestrator import initialize_run, process_run
 from .stages.stage_deep_expand import detect_listicle, run_deep_expand
@@ -93,14 +95,10 @@ And check out CloudProvider in the description below. See you next time!""",
 )
 
 
+# Single supported base model; composition and editorial augmentation are
+# pinned to Claude Opus 4.8 in config.py regardless of this value.
 VALID_Y2B_MODELS = {
     "gemini-2.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-2.5-pro",
-    "gemini-2.0-flash",
-    "gemini-3.1-pro-preview",
-    "gemini-3.1-flash-lite-preview",
-    "gemini-3.1-flash-image-preview",
 }
 
 
@@ -108,6 +106,8 @@ class YouTubeUrlRequest(BaseModel):
     url: str = Field(..., min_length=1)
     model: str | None = Field(default=None)
     forced_article_type: str | None = Field(default=None)
+    tone_id: str | None = Field(default=None)
+    writing_model: str | None = Field(default=None)
 
 
 def _read_langgraph_trace(run_id: str) -> dict[str, str]:
@@ -139,6 +139,15 @@ async def start_from_youtube_url(
             status_code=400,
             detail=f"Invalid model '{request.model}'. Valid options: {sorted(VALID_Y2B_MODELS)}",
         )
+
+    try:
+        resolve_writer_model(request.writing_model)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    try:
+        resolve_tone_profile(request.tone_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
     try:
         source = parse_youtube_video_url(request.url)
@@ -182,6 +191,8 @@ async def start_from_youtube_url(
         meta,
         model_name=request.model,
         forced_article_type=request.forced_article_type,
+        tone_id=request.tone_id,
+        writing_model=request.writing_model,
     )
 
     return JSONResponse({
@@ -198,6 +209,12 @@ async def get_status(run_id: str) -> JSONResponse:
     if not status:
         raise HTTPException(status_code=404, detail="Run not found.")
     return JSONResponse(status)
+
+
+@router.get("/tones")
+async def get_tones() -> JSONResponse:
+    """Return read-only article tone profiles for UI reference."""
+    return JSONResponse({"tones": load_tone_profiles()})
 
 
 @router.get("/result/{run_id}")

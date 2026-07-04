@@ -69,6 +69,7 @@ export function ResultsPanel({
             debugData={debugData}
             lexicalCopyStatus={lexicalCopyStatus}
             onCopyLexical={onCopyLexical}
+            runId={runId}
           />
         ) : null}
         {resultTab === 'transcript' ? <TranscriptTab debugData={debugData} /> : null}

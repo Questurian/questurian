@@ -19,6 +19,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core import write_artifact, write_stage_result, write_status
+from app.shared.text import enforce_anti_ai_tells_markdown, normalize_dashes
 
 from ..config import *  # noqa: F401,F403  (constants, FEATURE_NAME, _llm_context_text)
 from ..prompts import *  # noqa: F401,F403  (V2_* + SEO guidelines)
@@ -53,6 +54,7 @@ def _pipeline_v2_run_rewrite_quality_phase(
     run_id = _safe_str(context.get("run_id"))
     url = _safe_str(context.get("url"))
     selected_model_name = _safe_str(context.get("selected_model_name"))
+    writing_model = _safe_str(context.get("writing_model")) or URL2BLOG_COMPOSE_MODEL
     include_debug = _safe_bool(context.get("include_debug"), default=False)
     narrative_focus = _safe_str(context.get("narrative_focus"))
     enable_web_enrichment = _safe_bool(
@@ -477,7 +479,7 @@ def _pipeline_v2_run_rewrite_quality_phase(
         rewrite_long_output = _invoke_markdown_long_output(
             prompt=rewrite_prompt_markdown,
             stage_name="guideline_rewrite_initial",
-            model_name=URL2BLOG_COMPOSE_MODEL,
+            model_name=writing_model,
             temperature=rewrite_temperature,
             max_tokens=6144,
             fallback_content=normalized_content,
@@ -531,7 +533,7 @@ def _pipeline_v2_run_rewrite_quality_phase(
             parse_metrics=json_parse_metrics,
             max_tokens=6144,
             temperature=rewrite_temperature,
-            model_name=URL2BLOG_COMPOSE_MODEL,
+            model_name=writing_model,
         )
         rewrite = _sanitize_v2_guideline_rewrite(
             rewrite_parsed,
@@ -543,7 +545,7 @@ def _pipeline_v2_run_rewrite_quality_phase(
         stage_trace=stage_trace,
         include_debug=include_debug,
         stage="guideline_rewrite_initial",
-        model_name=URL2BLOG_COMPOSE_MODEL,
+        model_name=writing_model,
         max_tokens=6144,
         temperature=rewrite_temperature,
         input_payload={
@@ -920,6 +922,9 @@ def _pipeline_v2_run_rewrite_quality_phase(
                     "informativeness": quality["informativeness_score"],
                     "originality": quality["originality_score"],
                 },
+                "quality_summary": quality.get("quality_summary"),
+                "required_revisions": list(quality.get("required_revisions") or []),
+                "too_close_to_source": quality.get("too_close_to_source"),
                 "similarity_ngram_overlap": round(ngram_overlap, 3),
                 "short_article_enrichment_applied": short_article_enrichment_applied,
                 "external_context_points_used": len(external_context_points),
@@ -1797,10 +1802,14 @@ def _pipeline_v2_run_fact_length_phase(
             "created_at": _now_iso(),
             "data": {
                 "factual_coverage_score": fact_coverage["coverage_score"],
+                "coverage_summary": fact_coverage["coverage_summary"],
                 "missing_source_facts_count": fact_coverage["missing_count"],
                 "missing_high_priority_facts_count": fact_coverage[
                     "missing_high_count"
                 ],
+                "missing_facts": fact_coverage["missing_facts"],
+                "covered_fact_ids": fact_coverage["covered_fact_ids"],
+                "source_fact_anchors": source_fact_anchors,
                 "fact_repair_applied": fact_repair_applied,
                 "length_expansion_applied": length_expansion_applied,
                 "length_expansion_passes": length_expansion_passes,
@@ -1844,6 +1853,10 @@ def _pipeline_v2_run_editorial_phase(
 ) -> dict[str, Any]:
     run_id = _safe_str(context.get("run_id"))
     selected_model_name = _safe_str(context.get("selected_model_name"))
+    writing_model = (
+        _safe_str(context.get("writing_model"))
+        or URL2BLOG_EDITORIAL_AUGMENTATION_MODEL
+    )
     include_debug = _safe_bool(context.get("include_debug"), default=False)
     narrative_focus = _safe_str(context.get("narrative_focus"))
     enable_editorial_augmentation = _safe_bool(
@@ -1944,7 +1957,7 @@ def _pipeline_v2_run_editorial_phase(
                         parse_metrics=json_parse_metrics,
                         max_tokens=6144,
                         temperature=0.05,
-                        model_name=URL2BLOG_EDITORIAL_AUGMENTATION_MODEL,
+                        model_name=writing_model,
                     )
                 )
                 editorial_augmentation = _sanitize_v2_editorial_augmentation(
@@ -1955,7 +1968,7 @@ def _pipeline_v2_run_editorial_phase(
                     stage_trace=stage_trace,
                     include_debug=include_debug,
                     stage="editorial_augmentation",
-                    model_name=URL2BLOG_EDITORIAL_AUGMENTATION_MODEL,
+                    model_name=writing_model,
                     max_tokens=6144,
                     temperature=0.05,
                     input_payload={
@@ -1982,7 +1995,7 @@ def _pipeline_v2_run_editorial_phase(
                     stage_trace=stage_trace,
                     include_debug=include_debug,
                     stage="editorial_augmentation",
-                    model_name=URL2BLOG_EDITORIAL_AUGMENTATION_MODEL,
+                    model_name=writing_model,
                     max_tokens=6144,
                     temperature=0.05,
                     input_payload={
@@ -2404,10 +2417,24 @@ def _pipeline_v2_finalize_response(
             fallback_content=fallback_content,
         )
 
-    final_improved_content = _safe_str(
-        context.get("final_improved_content")
-        or editorial_augmentation.get("augmented_content")
+    final_improved_content = enforce_anti_ai_tells_markdown(
+        _safe_str(
+            context.get("final_improved_content")
+            or editorial_augmentation.get("augmented_content")
+        ),
+        repair=lambda repair_prompt: _safe_str(
+            routes.get_vertex_llm(
+                temperature=0.1,
+                max_tokens=URL2BLOG_MAX_TOKENS_FLOOR_DEFAULT,
+                model_name=selected_model_name or URL2BLOG_COMPOSE_MODEL,
+            ).invoke(repair_prompt)
+        ),
+        context="url2blog final content",
     )
+    if rewrite.get("improved_title"):
+        rewrite["improved_title"] = normalize_dashes(
+            _safe_str(rewrite["improved_title"])
+        )
 
     rewrite_raw_response = _safe_str(context.get("rewrite_raw_response"))
     repair_raw_response = _safe_str(context.get("repair_raw_response"))
@@ -2560,6 +2587,12 @@ def _pipeline_v2_finalize_response(
             "improvements_applied": list(rewrite.get("improvements_applied") or []),
             "remaining_gaps": list(rewrite.get("remaining_gaps") or []),
             "narrative_focus_applied": narrative_focus,
+            "narrative_focus_source": _safe_str(context.get("narrative_focus_source"))
+            or ("user" if narrative_focus else "default"),
+            "narrative_focus_label": _safe_str(
+                _safe_dict(context.get("narrative_focus_selection")).get("label")
+            ),
+            "tone_profile": _safe_str(_safe_dict(context.get("tone_profile")).get("label")),
             "model_used": selected_model_name,
             "execution_profile": execution_profile,
             "source_word_count": source_word_count,
@@ -2578,6 +2611,7 @@ def _pipeline_v2_finalize_response(
             "factual_coverage_score": fact_coverage.get("coverage_score"),
             "missing_source_facts_count": fact_coverage.get("missing_count"),
             "missing_high_priority_facts_count": fact_coverage.get("missing_high_count"),
+            "fact_coverage_warning": _safe_dict(context.get("fact_coverage_warning")) or None,
             "fact_repair_applied": fact_repair_applied,
             "quality_summary": _safe_str(quality.get("quality_summary")),
             "editorial_blueprint_applied": editorial_blueprint_applied,
@@ -2764,4 +2798,3 @@ def _pipeline_v2_finalize_response(
     )
 
     return JSONResponse(response_payload)
-

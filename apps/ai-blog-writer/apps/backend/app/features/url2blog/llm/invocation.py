@@ -5,6 +5,7 @@ import re
 from typing import Any
 
 from fastapi import HTTPException
+from app.shared.text import enforce_anti_ai_tells_markdown
 
 from ..config import *  # noqa: F401,F403
 from ..llm.coerce import *  # noqa: F401,F403
@@ -150,6 +151,11 @@ def _invoke_markdown_long_output(
             normalized = _remove_academic_conclusion_phrases(raw_response)
             normalized = _ensure_markdown_section_headers(normalized)
             if normalized.strip():
+                normalized = enforce_anti_ai_tells_markdown(
+                    normalized,
+                    repair=lambda repair_prompt: _safe_str(invoke(repair_prompt)),
+                    context=f"url2blog {stage_name}",
+                )
                 return {
                     "content": normalized,
                     "raw_response": raw_response,
@@ -200,6 +206,17 @@ def _invoke_markdown_long_output(
                 )
         fallback_value = _ensure_markdown_section_headers(
             _remove_academic_conclusion_phrases(fallback_value)
+        )
+        fallback_value = enforce_anti_ai_tells_markdown(
+            fallback_value,
+            repair=lambda repair_prompt: _safe_str(
+                routes.get_vertex_llm(
+                    temperature=0.1,
+                    max_tokens=effective_max_tokens,
+                    model_name=model_name,
+                ).invoke(repair_prompt)
+            ),
+            context=f"url2blog {stage_name} json fallback",
         )
         return {
             "content": fallback_value,

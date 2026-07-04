@@ -19,13 +19,15 @@ from langchain_core.prompts import PromptTemplate
 from app.core import get_article_type_by_name
 from app.config import ARTICLE_GUIDELINES_DIR
 from app.features.youtube2blog.config import Y2B_COMPOSE_MODEL, Y2B_PRIMARY_MODEL
+from app.shared.prompts import ANTI_AI_TELLS_FULL
+from app.shared.text import enforce_anti_ai_tells_markdown
 from shared import Stage1Output, Stage2Output, Stage3Output
 from utils import get_vertex_llm, parse_json_response
 
 logger = logging.getLogger(__name__)
 
 # Path to general guidelines file
-GENERAL_GUIDELINES_PATH = Path(__file__).parent.parent.parent.parent / "data" / "general.md"
+GENERAL_GUIDELINES_PATH = Path(__file__).resolve().parents[4] / "data" / "general.md"
 
 
 def _stage3_llm(model_name: str = Y2B_PRIMARY_MODEL):
@@ -179,7 +181,8 @@ def _gather_missing_info(
     transcript: str,
     missing_sections: list[str],
     article_type: str,
-    llm
+    llm,
+    tone_guidance: str | None = None,
 ) -> tuple[str, str, str]:
     """
     LLM call to generate supplemental content for missing sections.
@@ -216,9 +219,10 @@ GENERATION RULES:
 1. Base supplemental content on themes and topics from the transcript
 2. Do NOT invent specific facts, statistics, or claims not in the transcript
 3. Use general knowledge to expand on concepts mentioned
-4. Write in the same tone and style as the transcript
+4. Preserve the source meaning and details; do not copy transcript filler, hedges, or rambling cadence
 5. Keep each section concise (2-4 paragraphs)
-6. Include smooth transition phrases
+6. Use clear logical transitions only where needed; avoid stock transition phrases
+7. Supplemental context may explain concepts already mentioned in the transcript, but the final article cannot invent unsupported specifics
 
 ---
 
@@ -245,6 +249,9 @@ Example:
         article_type=article_type,
         general_guidelines=general_guidelines,
     )
+    if tone_guidance:
+        full_prompt = f"{full_prompt}\n\n{tone_guidance.strip()}"
+    full_prompt = f"{full_prompt}\n\n{ANTI_AI_TELLS_FULL}"
     logger.info(f"  Supplement generation prompt length: {len(full_prompt)} chars")
 
     result = llm.invoke(full_prompt)
@@ -253,7 +260,12 @@ Example:
     if not result or not result.strip():
         return "", full_prompt, result
 
-    return result.strip(), full_prompt, result
+    supplemental = enforce_anti_ai_tells_markdown(
+        str(result),
+        repair=lambda repair_prompt: llm.invoke(repair_prompt),
+        context="youtube2blog supplement",
+    )
+    return supplemental, full_prompt, result
 
 
 def _compose_article(
@@ -262,7 +274,8 @@ def _compose_article(
     guideline: str,
     article_type: str,
     title: str,
-    llm
+    llm,
+    tone_guidance: str | None = None,
 ) -> tuple[str, str, str]:
     """
     LLM call to compose the final article.
@@ -320,6 +333,7 @@ COMPOSITION RULES:
 6. Do NOT add new information not present in the source content
 7. Do NOT include meta-commentary about the article
 8. Start directly with the article content
+9. Write for readers first and SEO second. Use natural travel-news language, avoid keyword stuffing, avoid repetitive SEO headings, and make the article feel edited by a human. Include SEO elements only where they improve clarity: a strong headline, concise subhead, clean section structure, accurate metadata, and natural keywords. SEO structure and keywords never override the voice rules appended below.
 
 ---
 
@@ -339,6 +353,9 @@ Use proper markdown formatting throughout.
         content=content_section,
         general_guidelines=general_guidelines,
     )
+    if tone_guidance:
+        full_prompt = f"{full_prompt}\n\n{tone_guidance.strip()}"
+    full_prompt = f"{full_prompt}\n\n{ANTI_AI_TELLS_FULL}"
     logger.info(f"  Composition prompt length: {len(full_prompt)} chars")
 
     result = llm.invoke(full_prompt)
@@ -347,7 +364,12 @@ Use proper markdown formatting throughout.
     if not result or not result.strip():
         raise RuntimeError("Article composition failed: LLM returned empty response")
 
-    return result.strip(), full_prompt, result
+    final_article = enforce_anti_ai_tells_markdown(
+        str(result),
+        repair=lambda repair_prompt: llm.invoke(repair_prompt),
+        context="youtube2blog compose",
+    )
+    return final_article, full_prompt, result
 
 
 def stage_3_retrieve_guideline(article_type: str) -> str:
@@ -388,6 +410,7 @@ def stage_3_generate_supplement(
     missing_sections: list[str],
     article_type: str,
     model_name: str = Y2B_PRIMARY_MODEL,
+    tone_guidance: str | None = None,
 ) -> dict[str, str]:
     """Generate supplemental markdown for missing sections."""
     llm = _stage3_llm(model_name)
@@ -396,6 +419,7 @@ def stage_3_generate_supplement(
         missing_sections,
         article_type,
         llm,
+        tone_guidance,
     )
     return {
         "supplemental_content": supplemental_content or "",
@@ -412,13 +436,16 @@ def stage_3_compose_from_parts(
     article_type: str,
     title: str,
     model_name: str = Y2B_PRIMARY_MODEL,
+    writing_model: str | None = None,
+    tone_guidance: str | None = None,
 ) -> dict[str, str]:
     """Compose article from explicit inputs used by branch nodes.
 
-    Composition is pinned to Y2B_COMPOSE_MODEL regardless of the run's base
-    model; `model_name` still selects the model for the other stage-3 nodes.
+    Composition runs on the caller-selected ``writing_model`` (defaulting to
+    Y2B_COMPOSE_MODEL) regardless of the run's base model; ``model_name`` still
+    selects the model for the other stage-3 nodes.
     """
-    llm = _stage3_llm(Y2B_COMPOSE_MODEL)
+    llm = _stage3_llm(writing_model or Y2B_COMPOSE_MODEL)
     final_article, composition_prompt, composition_response = _compose_article(
         transcript,
         supplemental,
@@ -426,6 +453,7 @@ def stage_3_compose_from_parts(
         article_type,
         title,
         llm,
+        tone_guidance,
     )
     return {
         "final_article": final_article,
@@ -434,7 +462,12 @@ def stage_3_compose_from_parts(
     }
 
 
-def stage_3_compose_article(stage1: Stage1Output, stage2: Stage2Output) -> Stage3Output:
+def stage_3_compose_article(
+    stage1: Stage1Output,
+    stage2: Stage2Output,
+    *,
+    tone_guidance: str | None = None,
+) -> Stage3Output:
     """
     Stage 3: Compose the final article using guidelines and coverage analysis.
 
@@ -492,6 +525,7 @@ def stage_3_compose_article(stage1: Stage1Output, stage2: Stage2Output) -> Stage
             missing_sections,
             stage2.classification,
             llm,
+            tone_guidance,
         )
         logger.info(f"  Supplemental content length: {len(supplemental_content) if supplemental_content else 0} chars")
     else:
@@ -511,6 +545,7 @@ def stage_3_compose_article(stage1: Stage1Output, stage2: Stage2Output) -> Stage
         stage2.classification,
         stage1.title,
         _stage3_llm(Y2B_COMPOSE_MODEL),
+        tone_guidance,
     )
     logger.info(f"  Final article length: {len(final_article)} chars")
 

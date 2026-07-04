@@ -15,6 +15,8 @@ from app.features.youtube2blog.config import (
     Y2B_SEO_MAX_FOCUS_OCCURRENCE_INCREASE,
     Y2B_SEO_MAX_FOCUS_OCCURRENCES,
 )
+from app.shared.prompts import ANTI_AI_TELLS_FULL
+from app.shared.text import enforce_anti_ai_tells_markdown
 from shared import Stage3Output
 from utils import get_vertex_llm, parse_json_response
 
@@ -112,6 +114,8 @@ Heading hints: {heading_hints}
 
 Article type: {article_type}
 Guideline: {guideline}
+
+Write for readers first and SEO second. Use natural travel-news language, avoid keyword stuffing, avoid repetitive SEO headings, and make the article feel edited by a human. Include SEO elements only where they improve clarity: a strong headline, concise subhead, clean section structure, accurate metadata, and natural keywords. SEO structure and keywords never override the voice rules appended below.
 
 Rules:
 1. Preserve factual meaning from the source draft.
@@ -342,6 +346,7 @@ def stage_seo_enrich_article(
     mode: str,
     feedback: str | None = None,
     model_name: str = Y2B_PRIMARY_MODEL,
+    tone_guidance: str | None = None,
 ) -> dict[str, Any]:
     """Rewrite article to improve SEO quality while preserving factual integrity."""
     if mode not in {"primary", "retry"}:
@@ -397,12 +402,19 @@ def stage_seo_enrich_article(
         feedback=_safe_str(feedback) if mode == "retry" else "N/A",
         article=stage3.final_article[:24_000],
     )
+    if tone_guidance:
+        full_prompt = f"{full_prompt}\n\n{tone_guidance.strip()}"
+    full_prompt = f"{full_prompt}\n\n{ANTI_AI_TELLS_FULL}"
 
     raw_response = llm.invoke(full_prompt)
     if not raw_response or not str(raw_response).strip():
         raise RuntimeError("SEO enrich returned empty response")
 
-    seo_article = str(raw_response).strip()
+    seo_article = enforce_anti_ai_tells_markdown(
+        str(raw_response),
+        repair=lambda repair_prompt: llm.invoke(repair_prompt),
+        context="youtube2blog SEO enrich",
+    )
     first_response_text = str(raw_response)
 
     if _normalize_for_similarity(seo_article) == _normalize_for_similarity(stage3.final_article):
@@ -412,7 +424,11 @@ def stage_seo_enrich_article(
         )
         second_raw = llm.invoke(retry_prompt)
         if second_raw and str(second_raw).strip():
-            seo_article = str(second_raw).strip()
+            seo_article = enforce_anti_ai_tells_markdown(
+                str(second_raw),
+                repair=lambda repair_prompt: llm.invoke(repair_prompt),
+                context="youtube2blog SEO retry",
+            )
             raw_response = second_raw
             full_prompt = retry_prompt
 

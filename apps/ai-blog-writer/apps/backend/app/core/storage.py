@@ -82,6 +82,16 @@ def read_stage_result(run_id: str, stage: str) -> Optional[Dict[str, Any]]:
         return json.loads(row["data"])
 
 
+def read_all_stage_results(run_id: str) -> Dict[str, Any]:
+    """Read every stored stage result for a run, keyed by stage name."""
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            "SELECT stage, data FROM stages WHERE run_id = ? ORDER BY created_at",
+            (run_id,)
+        ).fetchall()
+        return {row["stage"]: json.loads(row["data"]) for row in rows}
+
+
 def write_artifact(run_id: str, payload: Dict[str, Any]) -> str:
     """Write final artifact with markdown."""
     markdown = payload.pop("markdown", "")

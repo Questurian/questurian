@@ -1,7 +1,10 @@
 """Prompts for length-expansion passes.
 
-Extracted verbatim from url2blog/routes.py — string constants only.
+Extracted verbatim from url2blog/routes.py. Writer prompts get the shared
+anti-AI-tells voice rules appended at the bottom of this module.
 """
+
+from app.shared.prompts import ANTI_AI_TELLS_FULL
 
 V2_LENGTH_EXPANSION_PROMPT = """You are running URL2Blog LENGTH EXPANSION.
 
@@ -127,3 +130,9 @@ SOURCE FACT ANCHORS (OPTIONAL):
 EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
 {editorial_blueprint_directives}
 """
+
+
+_VOICE_RULES_SUFFIX = "\n\n" + ANTI_AI_TELLS_FULL
+
+V2_LENGTH_EXPANSION_PROMPT += _VOICE_RULES_SUFFIX
+V2_LENGTH_EXPANSION_MARKDOWN_PROMPT += _VOICE_RULES_SUFFIX

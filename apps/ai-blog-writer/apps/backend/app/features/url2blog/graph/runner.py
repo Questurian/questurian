@@ -108,6 +108,22 @@ def _write_graph_stage_result(*, run_id: str, stage: str, data: dict[str, Any]) 
     )
 
 
+def _persist_pipeline_trace(
+    *, run_id: str, stage_trace: list[dict[str, Any]]
+) -> None:
+    """Persist the LLM input/output trace so failed runs keep a full autopsy."""
+    if not stage_trace:
+        return
+    try:
+        _write_graph_stage_result(
+            run_id=run_id,
+            stage="pipeline_trace",
+            data={"trace": stage_trace},
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("Failed persisting URL2Blog pipeline trace")
+
+
 def _resolve_run_id(request: Any) -> str:
     requested_run_id = getattr(request, "run_id", None)
     if not isinstance(requested_run_id, str):
@@ -206,14 +222,8 @@ def _evaluate_rewrite_gate(
         decision = "pass"
         pass_mode = "fallback_after_failed_gate"
     else:
-        raise RuntimeError(
-            "URL2Blog rewrite quality gate failed after retries; "
-            f"score={overall_score:.2f}, "
-            f"threshold={URL2BLOG_REWRITE_GATE_MIN_SCORE:.2f}, "
-            f"ngram_overlap={ngram_overlap:.3f}, "
-            f"required_revisions={required_revision_count}, "
-            f"too_close_to_source={too_close_to_source}"
-        )
+        decision = "fail"
+        pass_mode = "failed_after_retries"
 
     gate_data = {
         "decision": decision,
@@ -232,6 +242,15 @@ def _evaluate_rewrite_gate(
         "required_revision_count": required_revision_count,
         "too_close_to_source": too_close_to_source,
     }
+    if decision == "fail":
+        gate_data["failure_reason"] = (
+            "URL2Blog rewrite quality gate failed after retries; "
+            f"score={overall_score:.2f}, "
+            f"threshold={URL2BLOG_REWRITE_GATE_MIN_SCORE:.2f}, "
+            f"ngram_overlap={ngram_overlap:.3f}, "
+            f"required_revisions={required_revision_count}, "
+            f"too_close_to_source={too_close_to_source}"
+        )
     logger.debug(
         "URL2Blog rewrite gate decision=%s retry_count=%d score=%.2f ngram=%.3f",
         decision,
@@ -270,13 +289,10 @@ def _evaluate_fact_gate(
         decision = "pass"
         pass_mode = "near_pass"
     else:
-        raise RuntimeError(
-            "URL2Blog fact coverage gate failed after retries; "
-            f"coverage_score={coverage_score:.2f}, "
-            f"threshold={URL2BLOG_FACT_GATE_MIN_SCORE:.2f}, "
-            f"missing_high_count={missing_high_count}, "
-            f"missing_count={missing_count}"
-        )
+        # Soft-fail: retries are exhausted but the draft is complete. Ship it
+        # with an unverified-facts warning instead of discarding the run.
+        decision = "pass"
+        pass_mode = "fallback_unverified_facts"
 
     gate_data = {
         "decision": decision,
@@ -289,6 +305,16 @@ def _evaluate_fact_gate(
         "missing_high_count": missing_high_count,
         "missing_count": missing_count,
     }
+    if pass_mode == "fallback_unverified_facts":
+        gate_data["fact_warning"] = (
+            "Fact coverage could not be fully verified after retries; "
+            f"coverage_score={coverage_score:.2f}, "
+            f"threshold={URL2BLOG_FACT_GATE_MIN_SCORE:.2f}, "
+            f"missing_high_count={missing_high_count}, "
+            f"missing_count={missing_count}"
+        )
+        gate_data["missing_facts"] = list(fact_coverage.get("missing_facts") or [])
+        gate_data["coverage_summary"] = str(fact_coverage.get("coverage_summary") or "")
     logger.debug(
         "URL2Blog fact gate decision=%s retry_count=%d score=%.2f missing_high=%d",
         decision,
@@ -419,6 +445,10 @@ async def run_url2blog_pipeline_graph(
             include_debug=state["include_debug"],
             stage_trace=list(state.get("stage_trace") or []),
         )
+        _persist_pipeline_trace(
+            run_id=state["run_id"],
+            stage_trace=list(stage1_result.get("trace") or []),
+        )
         return {
             "stage1_payload": dict(stage1_result.get("stage1_payload") or {}),
             "stage_trace": list(stage1_result.get("trace") or []),
@@ -446,6 +476,10 @@ async def run_url2blog_pipeline_graph(
             normalized_content=str(state.get("normalized_content") or ""),
             normalized_language=str(state.get("normalized_language") or "English"),
         )
+        _persist_pipeline_trace(
+            run_id=state["run_id"],
+            stage_trace=list(stage2_result.get("trace") or []),
+        )
         return {
             "stage2_payload": dict(stage2_result.get("stage2_payload") or {}),
             "stage_trace": list(stage2_result.get("trace") or []),
@@ -468,6 +502,10 @@ async def run_url2blog_pipeline_graph(
         retry_count = int(state.get("rewrite_quality_retry_count") or 0)
         context["rewrite_quality_retry_count"] = retry_count
         context = url2blog_routes._pipeline_v2_run_rewrite_quality_phase(context)
+        _persist_pipeline_trace(
+            run_id=state["run_id"],
+            stage_trace=list(context.get("stage_trace") or []),
+        )
 
         while True:
             decision, gate_data = _evaluate_rewrite_gate(
@@ -486,7 +524,13 @@ async def run_url2blog_pipeline_graph(
                 stage="rewrite_quality_gate",
                 output=gate_data,
             )
+            _persist_pipeline_trace(
+                run_id=state["run_id"],
+                stage_trace=list(context.get("stage_trace") or []),
+            )
 
+            if decision == "fail":
+                raise RuntimeError(str(gate_data.get("failure_reason")))
             if decision == "pass":
                 break
 
@@ -511,6 +555,10 @@ async def run_url2blog_pipeline_graph(
                 },
             )
             context = url2blog_routes._pipeline_v2_run_rewrite_quality_phase(context)
+            _persist_pipeline_trace(
+                run_id=state["run_id"],
+                stage_trace=list(context.get("stage_trace") or []),
+            )
 
         logger.debug("URL2Blog rewrite quality node complete")
         return {
@@ -526,6 +574,10 @@ async def run_url2blog_pipeline_graph(
         retry_count = int(state.get("fact_retry_count") or 0)
 
         context = url2blog_routes._pipeline_v2_run_fact_length_phase(context)
+        _persist_pipeline_trace(
+            run_id=state["run_id"],
+            stage_trace=list(context.get("stage_trace") or []),
+        )
 
         while True:
             decision, gate_data = _evaluate_fact_gate(
@@ -544,8 +596,24 @@ async def run_url2blog_pipeline_graph(
                 stage="fact_gate",
                 output=gate_data,
             )
+            _persist_pipeline_trace(
+                run_id=state["run_id"],
+                stage_trace=list(context.get("stage_trace") or []),
+            )
 
             if decision == "pass":
+                if gate_data["pass_mode"] == "fallback_unverified_facts":
+                    context["fact_coverage_warning"] = {
+                        "message": gate_data.get("fact_warning"),
+                        "coverage_score": gate_data.get("coverage_score"),
+                        "coverage_threshold": gate_data.get("coverage_threshold"),
+                        "missing_facts": list(gate_data.get("missing_facts") or []),
+                        "coverage_summary": gate_data.get("coverage_summary"),
+                    }
+                    logger.warning(
+                        "URL2Blog fact gate passing with unverified facts: %s",
+                        gate_data.get("fact_warning"),
+                    )
                 break
 
             retry_count += 1
@@ -555,6 +623,10 @@ async def run_url2blog_pipeline_graph(
                 data={"retry_count": retry_count},
             )
             context = url2blog_routes._pipeline_v2_run_fact_length_phase(context)
+            _persist_pipeline_trace(
+                run_id=state["run_id"],
+                stage_trace=list(context.get("stage_trace") or []),
+            )
 
         logger.debug("URL2Blog fact/length node complete")
         return {
@@ -605,6 +677,10 @@ async def run_url2blog_pipeline_graph(
             )
 
         logger.debug("URL2Blog editorial node complete")
+        _persist_pipeline_trace(
+            run_id=state["run_id"],
+            stage_trace=list(context.get("stage_trace") or []),
+        )
         return {
             "pipeline_context": context,
             "stage_trace": list(context.get("stage_trace") or []),

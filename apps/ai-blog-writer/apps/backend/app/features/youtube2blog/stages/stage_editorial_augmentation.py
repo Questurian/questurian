@@ -12,6 +12,8 @@ import re
 from typing import Any
 
 from app.features.youtube2blog.config import Y2B_EDITORIAL_AUGMENTATION_MODEL
+from app.shared.prompts import ANTI_AI_TELLS_FULL
+from app.shared.text import enforce_anti_ai_tells_markdown
 from utils import get_vertex_llm, parse_json_response
 from shared import Stage3Output, StageEditorialAugmentationOutput
 
@@ -560,6 +562,8 @@ def stage_editorial_augmentation(
     *,
     fail_fast: bool = False,
     model_name: str = DEFAULT_MODEL,
+    writing_model: str | None = None,
+    tone_guidance: str | None = None,
 ) -> StageEditorialAugmentationOutput:
     """Apply optional editorial augmentation to stage 3 content."""
     prompt = (
@@ -568,16 +572,32 @@ def stage_editorial_augmentation(
         .replace("{article_content}", stage3.final_article[:20_000])
         .replace("{article_type}", stage3.article_type)
     )
+    if tone_guidance:
+        prompt = f"{prompt}\n\n{tone_guidance.strip()}"
+    prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
 
     fallback = _sanitize_editorial_augmentation({}, fallback_content=stage3.final_article)
 
     # Pinned to the Claude editorial model regardless of the caller-supplied
     # base model (the graph runner passes the run's Gemini model here).
     _ = model_name
+    editorial_model = writing_model or Y2B_EDITORIAL_AUGMENTATION_MODEL
     try:
         parsed, raw_response = _invoke_json_llm(
-            prompt=prompt, model_name=Y2B_EDITORIAL_AUGMENTATION_MODEL
+            prompt=prompt, model_name=editorial_model
         )
+        if isinstance(parsed.get("augmented_content"), str):
+            parsed["augmented_content"] = enforce_anti_ai_tells_markdown(
+                parsed["augmented_content"],
+                repair=lambda repair_prompt: _safe_str(
+                    get_vertex_llm(
+                        temperature=0.1,
+                        max_tokens=8192,
+                        model_name=editorial_model,
+                    ).invoke(repair_prompt)
+                ),
+                context="youtube2blog editorial augmentation",
+            )
         editorial = _sanitize_editorial_augmentation(
             parsed,
             fallback_content=stage3.final_article,

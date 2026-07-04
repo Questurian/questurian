@@ -61,7 +61,7 @@ from .writer_models import (
     invoke_writer_model,
 )
 from app.shared.prompts import ANTI_AI_TELLS_BLURB, ANTI_AI_TELLS_FULL
-from app.shared.text import normalize_dashes
+from app.shared.text import enforce_anti_ai_tells_markdown, normalize_dashes
 
 router = APIRouter(prefix="/editor-assist", tags=["editor-assist"])
 logger = logging.getLogger(__name__)
@@ -83,6 +83,12 @@ You will receive:
 4) One markdown article block that is the only section to rewrite.
 
 Rewrite ONLY that single block according to the instruction.
+
+Write for readers first and SEO second. Use natural travel-news language, avoid \
+keyword stuffing, avoid repetitive SEO headings, and make the article feel edited \
+by a human. Include SEO elements only where they improve clarity: a strong \
+headline, concise subhead, clean section structure, accurate metadata, and \
+natural keywords.
 
 Hard rules:
 - Return only rewritten block content (markdown), no commentary.
@@ -504,6 +510,12 @@ the stops one by one or name every venue.
 - The title and destination are framing constraints: stay consistent with the \
 headline and ground the reader in the place.
 
+Write for readers first and SEO second. Use natural travel-news language, avoid \
+keyword stuffing, avoid repetitive SEO headings, and make the article feel edited \
+by a human. Include SEO elements only where they improve clarity: a strong \
+headline, concise subhead, clean section structure, accurate metadata, and \
+natural keywords.
+
 Hard rules:
 - The plan overview and "why this pick" notes are INTERNAL planning notes, not \
 reader copy. Transform them into natural reader-facing prose — never quote or \
@@ -660,7 +672,16 @@ def _compose_itinerary_intro_impl(
         )
     )
 
-    intro = normalize_dashes(strip_generation_fence(raw_text))
+    intro = enforce_anti_ai_tells_markdown(
+        strip_generation_fence(raw_text),
+        repair=lambda repair_prompt: invoke_writer_model(
+            prompt=repair_prompt,
+            model_name=model_used,
+            max_tokens=2048,
+            temperature=0.2,
+        ).text,
+        context="editor_assist itinerary intro",
+    )
     if not intro:
         raise HTTPException(
             status_code=502, detail="AI intro composition returned empty output"
@@ -672,7 +693,7 @@ def _compose_itinerary_intro_impl(
             label="Finalized intro",
             status="ok",
             output=intro,
-            details={"chars": len(intro), "normalized_and_unfenced": True},
+            details={"chars": len(intro), "validated_and_unfenced": True},
         )
     )
 
@@ -741,6 +762,12 @@ the signature feature). Highlights are woven into the paragraph, never bulleted.
 reader copy. Transform them into natural prose, never quote or echo them.
 - Adjacent-day edge stops and [ALREADY WRITTEN] stops are context only. Do NOT \
 write copy for them.
+
+Write for readers first and SEO second. Use natural travel-news language, avoid \
+keyword stuffing, avoid repetitive SEO headings, and make the article feel edited \
+by a human. Include SEO elements only where they improve clarity: a strong \
+headline, concise subhead, clean section structure, accurate metadata, and \
+natural keywords.
 
 Hard rules per blurb:
 - One paragraph of about {min_words} to {max_words} words. No heading, no \
@@ -1007,7 +1034,16 @@ def _compose_day_blurbs_impl(
             )
             continue
 
-        blurb = normalize_dashes(strip_generation_fence(body))
+        blurb = enforce_anti_ai_tells_markdown(
+            strip_generation_fence(body),
+            repair=lambda repair_prompt: invoke_writer_model(
+                prompt=repair_prompt,
+                model_name=model_used,
+                max_tokens=2048,
+                temperature=0.2,
+            ).text,
+            context=f"editor_assist day blurb {stop.target_id}",
+        )
         validation_errors = validate_generated_text(field_type="blurb", text=blurb)
         results[stop.target_id] = ComposeDayBlurbResult(
             target_id=stop.target_id,
@@ -1905,6 +1941,7 @@ def _rewrite_block_impl(request: RewriteBlockRequest) -> RewriteBlockResponse:
         "<<<CURRENT_BLOCK>>>\n"
         f"{block_content}\n"
         "<<<END_CURRENT_BLOCK>>>"
+        f"\n\n{ANTI_AI_TELLS_FULL}"
     )
 
     try:
@@ -1931,7 +1968,16 @@ def _rewrite_block_impl(request: RewriteBlockRequest) -> RewriteBlockResponse:
             status_code=502, detail="AI rewrite returned empty block content"
         )
 
-    rewritten_content = normalize_dashes(rewritten_content)
+    rewritten_content = enforce_anti_ai_tells_markdown(
+        rewritten_content,
+        repair=lambda repair_prompt: invoke_writer_model(
+            prompt=repair_prompt,
+            model_name=model_used,
+            max_tokens=8192,
+            temperature=0.1,
+        ).text,
+        context="editor_assist block rewrite",
+    )
 
     return RewriteBlockResponse(
         rewritten_content=rewritten_content,

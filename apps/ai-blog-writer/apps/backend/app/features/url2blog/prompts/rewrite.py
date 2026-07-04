@@ -1,9 +1,14 @@
 """Prompts and guidelines for guideline-driven rewrite + hard-rewrite repair.
 
-Extracted verbatim from url2blog/routes.py — string constants only.
+Extracted verbatim from url2blog/routes.py. Writer prompts get the shared
+anti-AI-tells voice rules appended at the bottom of this module.
 """
 
+from app.shared.prompts import ANTI_AI_TELLS_FULL
+
 SEO_SAFE_CONTENT_GENERATION_GUIDELINES = """SEO-SAFE CONTENT GENERATION GUIDELINES (2026-READY)
+
+Write for readers first and SEO second. Use natural travel-news language, avoid keyword stuffing, avoid repetitive SEO headings, and make the article feel edited by a human. Include SEO elements only where they improve clarity: a strong headline, concise subhead, clean section structure, accurate metadata, and natural keywords. SEO structure and keywords never override anti-AI voice rules.
 
 1. Preserve Search Intent First
 - Retain primary and secondary search intents from the source topic.
@@ -316,3 +321,11 @@ EXTERNAL CONTEXT FOR DEPTH (OPTIONAL, USE SELECTIVELY):
 EDITORIAL BLUEPRINT DIRECTIVES (OPTIONAL):
 {editorial_blueprint_directives}
 """
+
+
+_VOICE_RULES_SUFFIX = "\n\n" + ANTI_AI_TELLS_FULL
+
+V2_GUIDELINE_REWRITE_PROMPT += _VOICE_RULES_SUFFIX
+V2_REWRITE_REPAIR_PROMPT += _VOICE_RULES_SUFFIX
+V2_GUIDELINE_REWRITE_MARKDOWN_PROMPT += _VOICE_RULES_SUFFIX
+V2_REWRITE_REPAIR_MARKDOWN_PROMPT += _VOICE_RULES_SUFFIX

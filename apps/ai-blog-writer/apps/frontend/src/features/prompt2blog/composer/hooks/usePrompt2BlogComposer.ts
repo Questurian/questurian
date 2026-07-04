@@ -148,6 +148,7 @@ export function usePrompt2BlogComposer() {
     setState(prev => ({
       ...prev,
       modelName: DEFAULT_COMPOSER_STATE.modelName,
+      writingModel: DEFAULT_COMPOSER_STATE.writingModel,
       toneId: inputOptions ? findDefaultOption(inputOptions.tones) : DEFAULT_COMPOSER_STATE.toneId,
       lengthId: inputOptions
         ? findDefaultOption(inputOptions.lengths)

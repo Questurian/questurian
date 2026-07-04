@@ -25,6 +25,7 @@ export {
   fetchDebug,
   fetchResult,
   fetchStatus,
+  fetchToneProfiles,
   resultDownloadUrl,
   startFromYoutubeUrl
 } from './api/pipeline.api'
