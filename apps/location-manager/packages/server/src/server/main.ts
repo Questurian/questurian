@@ -1,6 +1,7 @@
 import { initDb } from "../shared/db/client";
 import { app } from "../shared/http/server";
 import "../features/locations/routes/location.routes";
+import "../features/scrape/routes/scrape.routes";
 
 export function startServer(port = Number(process.env.PORT || 4317)) {
   initDb();
