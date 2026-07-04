@@ -1,8 +1,7 @@
-import type { FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ArticleType } from '@shared/types'
-import { MarkdownCatalogBox } from '../../../components/MarkdownCatalogBox'
 import {
   ARTICLE_TONE_OPTIONS,
   Y2B_MODEL_OPTIONS,
@@ -36,6 +35,14 @@ type UploadPanelProps = {
   onSelectRun: (runId: string) => void
 }
 
+type ReferenceOption = {
+  id: string
+  category: 'Tone' | 'Article type'
+  label: string
+  description?: string | null
+  markdown?: string | null
+}
+
 export function UploadPanel({
   youtubeUrl,
   selectedModel,
@@ -58,10 +65,49 @@ export function UploadPanel({
   onClear,
   onSelectRun,
 }: UploadPanelProps) {
+  const [isReferenceModalOpen, setIsReferenceModalOpen] = useState(false)
+  const [selectedReferenceId, setSelectedReferenceId] = useState('')
   const canSubmit = Boolean(youtubeUrl.trim())
   const submitLabel = startPending ? 'Starting...' : 'Start pipeline'
   const selectedTypeGuideline =
     articleTypes.find((t) => t.name === forcedArticleType)?.guideline ?? null
+  const toneReferenceOptions: ReferenceOption[] = toneProfiles.map((tone) => ({
+    id: `tone-${tone.id}`,
+    category: 'Tone',
+    label: tone.label,
+    description: tone.description,
+    markdown: tone.instructions,
+  }))
+  const articleTypeReferenceOptions: ReferenceOption[] = articleTypes.map((type) => ({
+    id: `article-type-${type.id}`,
+    category: 'Article type',
+    label: type.name,
+    description: type.definition,
+    markdown: type.guideline || type.definition,
+  }))
+  const referenceOptions = [...toneReferenceOptions, ...articleTypeReferenceOptions]
+  const selectedReference =
+    referenceOptions.find((option) => option.id === selectedReferenceId) ?? referenceOptions[0] ?? null
+  const selectedReferenceMarkdown =
+    selectedReference?.markdown?.trim() || selectedReference?.description?.trim() || 'No reference content loaded.'
+
+  const openReferenceModal = () => {
+    setSelectedReferenceId((current) =>
+      referenceOptions.some((option) => option.id === current) ? current : referenceOptions[0]?.id ?? '',
+    )
+    setIsReferenceModalOpen(true)
+  }
+
+  useEffect(() => {
+    if (!isReferenceModalOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsReferenceModalOpen(false)
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isReferenceModalOpen])
 
   return (
     <section className="panel upload">
@@ -154,29 +200,18 @@ export function UploadPanel({
           </div>
         ) : null}
 
-        <div className="reference-grid">
-          <MarkdownCatalogBox
-            title="Tone Reference"
-            intro="Read-only tone profiles. Pipeline uses the selected Tone field above."
-            items={toneProfiles.map((tone) => ({
-              id: tone.id,
-              label: tone.label,
-              description: tone.description,
-              markdown: tone.instructions,
-            }))}
-            emptyLabel="No tone profiles loaded."
-          />
-          <MarkdownCatalogBox
-            title="Article Type Reference"
-            intro="Read-only article-type guidelines. Auto-detect remains available."
-            items={articleTypes.map((type) => ({
-              id: type.id,
-              label: type.name,
-              description: type.definition,
-              markdown: type.guideline || type.definition,
-            }))}
-            emptyLabel="No article types loaded."
-          />
+        <div className="reference-launch">
+          <div>
+            <h3>Writing references</h3>
+            <p>Open tone profiles and article-type guidelines when you need the full notes.</p>
+          </div>
+          <button
+            type="button"
+            className="reference-launch__button"
+            onClick={openReferenceModal}
+          >
+            View references
+          </button>
         </div>
 
         <div className="button-row">
@@ -203,6 +238,82 @@ export function UploadPanel({
           </div>
         ) : null}
       </form>
+      {isReferenceModalOpen ? (
+        <div
+          className="reference-modal"
+          role="presentation"
+          onMouseDown={() => setIsReferenceModalOpen(false)}
+        >
+          <div
+            className="reference-modal__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="writing-references-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="reference-modal__header">
+              <div>
+                <p className="reference-modal__eyebrow">Reference library</p>
+                <h2 id="writing-references-title">Writing references</h2>
+                <p>Read-only tone profiles and article-type guidelines.</p>
+              </div>
+              <button
+                type="button"
+                className="reference-modal__close"
+                onClick={() => setIsReferenceModalOpen(false)}
+                aria-label="Close writing references"
+              >
+                Close
+              </button>
+            </div>
+            <div className="reference-modal__body">
+              <label className="reference-modal__picker" htmlFor="writing-reference-select">
+                <span>Choose a reference</span>
+                <select
+                  id="writing-reference-select"
+                  value={selectedReference?.id ?? ''}
+                  onChange={(event) => setSelectedReferenceId(event.target.value)}
+                  disabled={referenceOptions.length === 0}
+                >
+                  {toneReferenceOptions.length ? (
+                    <optgroup label="Tone profiles">
+                      {toneReferenceOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {articleTypeReferenceOptions.length ? (
+                    <optgroup label="Article types">
+                      {articleTypeReferenceOptions.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+              </label>
+
+              {selectedReference ? (
+                <article className="reference-modal__content">
+                  <p className="reference-modal__type">{selectedReference.category}</p>
+                  <h3>{selectedReference.label}</h3>
+                  {selectedReference.description ? (
+                    <p className="reference-modal__description">{selectedReference.description}</p>
+                  ) : null}
+                  <div className="reference-modal__markdown">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedReferenceMarkdown}</ReactMarkdown>
+                  </div>
+                </article>
+              ) : (
+                <p className="reference-modal__empty">No writing references loaded.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }
