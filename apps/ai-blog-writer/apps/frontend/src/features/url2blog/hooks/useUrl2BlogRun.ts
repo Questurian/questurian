@@ -39,7 +39,7 @@ export function useUrl2BlogRun() {
   const [selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId] = useState('')
   const [customNarrativeFocus, setCustomNarrativeFocus] = useState('')
   const [includeDebug, setIncludeDebug] = useState(true)
-  const [modelName, setModelName] = useState<Url2BlogModel>('gemini-2.5-flash')
+  const [modelName, setModelName] = useState<Url2BlogModel>('gemini-2.5-flash-lite')
   const [executionProfile, setExecutionProfile] = useState<Url2BlogExecutionProfile>('standard')
   const [runSubmittedAt, setRunSubmittedAt] = useState<number | null>(null)
   const [result, setResult] = useState<Url2BlogPipelineV2Response | null>(null)
@@ -169,7 +169,7 @@ export function useUrl2BlogRun() {
     setSelectedNarrativeFocusPresetId('')
     setCustomNarrativeFocus('')
     setIncludeDebug(true)
-    setModelName('gemini-2.5-flash')
+    setModelName('gemini-2.5-flash-lite')
     setExecutionProfile('standard')
     resetRunOutput()
   }

@@ -1,6 +1,6 @@
 import { NARRATIVE_FOCUS_PRESETS } from '../constants/pipeline-ui.constants'
 import type { useUrl2BlogRun } from '../hooks/useUrl2BlogRun'
-import type { Url2BlogExecutionProfile, Url2BlogModel } from '../types/pipeline.types'
+import type { Url2BlogExecutionProfile } from '../types/pipeline.types'
 
 type RunFormPanelProps = { run: ReturnType<typeof useUrl2BlogRun> }
 
@@ -12,7 +12,7 @@ export function RunFormPanel({ run }: RunFormPanelProps) {
   const {
     selectedNarrativeFocusPresetId, setSelectedNarrativeFocusPresetId,
     customNarrativeFocus, setCustomNarrativeFocus, narrativeFocus,
-    includeDebug, setIncludeDebug, modelName, setModelName, executionProfile, setExecutionProfile,
+    includeDebug, setIncludeDebug, modelName, executionProfile, setExecutionProfile,
   } = run.config
   const { pipelineMutation, statusErrorMessage, mutationErrorMessage } = run.pipeline
 
@@ -77,13 +77,8 @@ export function RunFormPanel({ run }: RunFormPanelProps) {
 
         <div className="url2blog-url-input">
           <label htmlFor="model-name">Writing Model</label>
-          <select id="model-name" value={modelName} onChange={(event) => setModelName(event.target.value as Url2BlogModel)} className="url2blog-url-field">
-            <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Preview — best quality)</option>
-            <option value="gemini-3.1-flash-lite-preview">Gemini 3.1 Flash Lite (Preview — fast &amp; cheap)</option>
-            <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Flash Image (Preview — multimodal)</option>
-            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast, less robotic)</option>
-            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Deeper, slower)</option>
-            <option value="gemini-2.0-flash">Gemini 2.0 Flash (Lightweight)</option>
+          <select id="model-name" value={modelName} className="url2blog-url-field" disabled>
+            <option value="gemini-2.5-flash-lite">Claude Opus 4.8 for writing stages</option>
           </select>
         </div>
         <div className="url2blog-url-input">
