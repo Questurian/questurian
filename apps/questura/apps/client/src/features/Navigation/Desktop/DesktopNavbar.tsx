@@ -17,9 +17,6 @@ export default function DesktopNavbar() {
     isAuthenticated,
     isActive,
     shouldShowSubscribe,
-    hasCityContext,
-    countrySlug,
-    citySlug,
   } = useDesktopNavbarState();
 
   return (
@@ -43,7 +40,7 @@ export default function DesktopNavbar() {
             <MenuIcon iconClassName="!text-black h-6 w-6" />
           </div>
           <Link
-            href={hasCityContext ? `/${countrySlug}/${citySlug}` : "/"}
+            href="/"
             className="cursor-pointer justify-self-center"
           >
             <Logo />
