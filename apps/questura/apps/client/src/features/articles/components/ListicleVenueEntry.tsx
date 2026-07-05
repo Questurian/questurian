@@ -2,6 +2,7 @@ import type { JSX } from 'react'
 import { MapPin } from 'lucide-react'
 import { PublicImage } from '@/components/media/PublicImage'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
+import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
 import { ListicleTourPicks } from '@/features/articles/components/ListicleTourPicks'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
 import {
@@ -28,6 +29,7 @@ export function ListicleVenueEntry({
   row: ListicleItemRow
   index: number
 }): JSX.Element {
+  const { registerEntry } = useListicleMapSync()
   const hero = listicleItemHeroFromRow(row)
   const price = priceLevelLabel(row.item.priceLevel)
   const cuisines = stringArray(row.item.cuisines)
@@ -45,7 +47,11 @@ export function ListicleVenueEntry({
   ].filter((p): p is string => typeof p === 'string' && p.length > 0)
 
   return (
-    <li className="scroll-mt-4 border-t-[3px] border-double border-foreground/55 first:border-t-0 first:pt-0 pt-7 pb-7 last:pb-1 max-[379px]:pt-6 max-[379px]:pb-6 480:pt-9 480:pb-9 550:pt-11 550:pb-11 sm:pt-12 sm:pb-12 768:pt-14 768:pb-14">
+    <li
+      ref={(el) => {
+        registerEntry(row.id, el)
+      }}
+      className="scroll-mt-4 border-t-[3px] border-double border-foreground/55 first:border-t-0 first:pt-0 pt-7 pb-7 last:pb-1 max-[379px]:pt-6 max-[379px]:pb-6 480:pt-9 480:pb-9 550:pt-11 550:pb-11 sm:pt-12 sm:pb-12 768:pt-14 768:pb-14">
       <div className="min-w-0 space-y-3 380:space-y-3.5 480:space-y-4 sm:space-y-5">
         {hero ? (
           <div className="overflow-hidden rounded-sm bg-foreground/[0.04]">
@@ -142,6 +148,7 @@ export function ListicleVenueEntry({
             <InstagramEmbedBlock
               embedCode={instagramCode}
               captionMode="hide"
+              eager
               className="w-full max-w-[540px]"
             />
           </div>

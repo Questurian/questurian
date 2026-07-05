@@ -20,6 +20,8 @@ export type ListicleVenue = {
   idealFor?: string[] | unknown
   gallery?: unknown[]
   address?: string | null
+  latitude?: number | null
+  longitude?: number | null
   countryCode?: string | null
   phoneNumber?: string | null
   website?: string | null

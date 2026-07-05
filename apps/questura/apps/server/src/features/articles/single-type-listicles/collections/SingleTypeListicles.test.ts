@@ -130,3 +130,57 @@ describe('SingleTypeListicles featured image SEO sync', () => {
     expect(result.seoSection).toBeUndefined()
   })
 })
+
+// Item validation hook sits after the two location sync hooks.
+const beforeValidateHook = SingleTypeListicles.hooks?.beforeValidate?.[2]
+
+async function runBeforeValidate(data: Record<string, unknown>) {
+  if (!beforeValidateHook) {
+    throw new Error('SingleTypeListicles beforeValidate hook is unavailable')
+  }
+
+  return beforeValidateHook({
+    data,
+    operation: 'update',
+    req: {
+      payload: {
+        findByID: async ({ id }: { id: string | number }) => ({
+          id,
+          gallery: [{ image: 1 }],
+        }),
+      },
+    },
+  } as never)
+}
+
+function buildVenueRow(rowId: string, venueId: number) {
+  return {
+    id: rowId,
+    blockType: 'data-dining',
+    item: venueId,
+    mediaMode: 'photos',
+    selectedPhotos: [1],
+  }
+}
+
+describe('SingleTypeListicles duplicate venue guard', () => {
+  it('rejects a list where two rows reference the same source venue', async () => {
+    await expect(
+      runBeforeValidate({
+        step1_complete: true,
+        targetItemCount: 10,
+        items: [buildVenueRow('row-a', 296), buildVenueRow('row-b', 296)],
+      }),
+    ).rejects.toThrow('Item 2 references the same dining entry as item 1')
+  })
+
+  it('accepts a list where every row references a distinct venue', async () => {
+    await expect(
+      runBeforeValidate({
+        step1_complete: true,
+        targetItemCount: 10,
+        items: [buildVenueRow('row-a', 296), buildVenueRow('row-b', 304)],
+      }),
+    ).resolves.toBeTruthy()
+  })
+})

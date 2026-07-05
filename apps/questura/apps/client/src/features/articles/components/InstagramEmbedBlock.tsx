@@ -2,6 +2,7 @@
 
 import type { JSX } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { preconnect } from 'react-dom'
 
 declare global {
   interface Window {
@@ -79,14 +80,23 @@ type InstagramEmbedBlockProps = {
    * - `clip` — optional **fixed** max-height + fade + “Show full post” (does not perfectly match every aspect ratio; use when you want a collapsed preview).
    */
   captionMode?: 'clip' | 'hide' | 'all'
+  /**
+   * Mount and process the embed on page load instead of waiting for scroll,
+   * and show Instagram's own blockquote card immediately (no skeleton overlay).
+   */
+  eager?: boolean
 }
 
 export function InstagramEmbedBlock({
   embedCode,
   className,
   captionMode = 'all',
+  eager = false,
 }: InstagramEmbedBlockProps): JSX.Element {
-  const [shouldMount, setShouldMount] = useState(false)
+  if (eager) {
+    preconnect('https://www.instagram.com')
+  }
+  const [shouldMount, setShouldMount] = useState(eager)
   const [ready, setReady] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
@@ -195,6 +205,9 @@ export function InstagramEmbedBlock({
   }
 
   const showClipChrome = captionMode === 'clip'
+  // Eager mode shows Instagram's own blockquote card immediately; no hidden
+  // opacity phase and no skeleton overlay while the iframe hydrates.
+  const revealNow = eager || ready
 
   return (
     <div ref={wrapperRef} className={className}>
@@ -208,14 +221,14 @@ export function InstagramEmbedBlock({
         <div
           ref={hostRef}
           className={`min-w-0 [&_blockquote.instagram-media]:mx-auto transition-opacity duration-200 ${
-            ready ? 'opacity-100' : 'opacity-0'
+            revealNow ? 'opacity-100' : 'opacity-0'
           }`}
           style={!ready ? { minHeight: SKELETON_MIN_HEIGHT } : undefined}
           dangerouslySetInnerHTML={
             shouldMount ? { __html: processedHtml } : undefined
           }
         />
-        {!ready ? (
+        {!revealNow ? (
           <div
             className="pointer-events-none absolute inset-0 animate-pulse rounded-sm bg-foreground/[0.06]"
             aria-hidden

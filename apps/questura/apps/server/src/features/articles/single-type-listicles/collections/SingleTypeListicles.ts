@@ -437,6 +437,7 @@ export const SingleTypeListicles: CollectionConfig = {
             sharedNeighborhoods: data?.sharedNeighborhoods,
           })
           const sourceItemCache = new Map<string, Record<string, unknown> | null>()
+          const seenSourceItems = new Map<string, number>()
 
           for (let i = 0; i < data.items.length; i++) {
             const item = data.items[i]
@@ -455,6 +456,15 @@ export const SingleTypeListicles: CollectionConfig = {
             }
 
             const cacheKey = `${sourceCollection}:${relationshipIdToKey(sourceItemId)}`
+
+            const firstUse = seenSourceItems.get(cacheKey)
+            if (firstUse !== undefined) {
+              throw new Error(
+                `Item ${i + 1} references the same ${sourceCollection} entry as item ${firstUse + 1}. Each venue can only appear once per list.`,
+              )
+            }
+            seenSourceItems.set(cacheKey, i)
+
             if (!sourceItemCache.has(cacheKey)) {
               const sourceItem = await fetchListicleSourceItem(req, sourceCollection, sourceItemId)
               sourceItemCache.set(cacheKey, sourceItem)

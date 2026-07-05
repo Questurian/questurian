@@ -25,7 +25,8 @@
     "types": [
       "node",
       "react",
-      "react-dom"
+      "react-dom",
+      "google.maps"
     ],
     "paths": {
       "@/*": [
