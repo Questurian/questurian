@@ -145,10 +145,13 @@ export function ListicleVenueEntry({
 
         {instagramCode ? (
           <div className="-mx-1 flex w-full min-w-0 justify-center pt-1 480:pt-2 sm:pt-3">
+            {/* First entries render eagerly; the rest pre-load in the
+                background a couple at a time (InstagramEmbedBlock warm-up
+                queue) so they're ready before the reader reaches them. */}
             <InstagramEmbedBlock
               embedCode={instagramCode}
               captionMode="hide"
-              eager
+              eager={index < 2}
               className="w-full max-w-[540px]"
             />
           </div>

@@ -37,6 +37,13 @@ export function ListicleArticleLayout({
         crossOrigin="anonymous"
       />
       <link rel="dns-prefetch" href="https://platform.instagram.com" />
+      {/* Warm the embed.js download in parallel with hydration; the runtime
+          loader in InstagramEmbedBlock then hits the HTTP cache. */}
+      <link
+        rel="preload"
+        href="https://www.instagram.com/embed.js"
+        as="script"
+      />
       <div
         data-article-layout="listicle"
         className="relative 1024:flex 1024:min-h-screen 1024:max-w-[1600px] 1024:mx-auto"

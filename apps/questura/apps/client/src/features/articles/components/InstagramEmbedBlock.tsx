@@ -1,7 +1,7 @@
 'use client'
 
 import type { JSX } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { preconnect } from 'react-dom'
 
 declare global {
@@ -15,6 +15,81 @@ const SCRIPT_SRC = 'https://www.instagram.com/embed.js'
 const REVEAL_FALLBACK_MS = 8000
 const LAZY_ROOT_MARGIN = '800px 0px'
 const SKELETON_MIN_HEIGHT = 600
+
+/**
+ * Background warm-up queue: non-eager embeds mount a couple at a time, in
+ * page order, once the initial page load settles — so they are usually done
+ * loading before the reader scrolls to them. Mounting them all at once
+ * starves every iframe on slow connections; mounting only on scroll
+ * proximity starts each ~3–8s Instagram load about one second before the
+ * reader arrives. The scroll IntersectionObserver still fast-tracks any
+ * embed the reader approaches ahead of the queue.
+ */
+const WARMUP_CONCURRENCY = 2
+const WARMUP_POST_LOAD_DELAY_MS = 500
+const WARMUP_MAX_WAIT_MS = 6000
+
+type WarmupEntry = { start: () => void }
+const warmupQueue: WarmupEntry[] = []
+let warmupSlotsInUse = 0
+let warmupUnlocked = false
+let warmupArmed = false
+
+function pumpWarmupQueue(): void {
+  while (
+    warmupUnlocked &&
+    warmupSlotsInUse < WARMUP_CONCURRENCY &&
+    warmupQueue.length > 0
+  ) {
+    const entry = warmupQueue.shift()
+    if (!entry) {
+      break
+    }
+    warmupSlotsInUse += 1
+    entry.start()
+  }
+}
+
+function unlockWarmupQueue(): void {
+  warmupUnlocked = true
+  pumpWarmupQueue()
+}
+
+function armWarmupUnlock(): void {
+  if (warmupArmed || typeof window === 'undefined') {
+    return
+  }
+  warmupArmed = true
+  const afterLoad = (): void => {
+    window.setTimeout(unlockWarmupQueue, WARMUP_POST_LOAD_DELAY_MS)
+  }
+  if (document.readyState === 'complete') {
+    afterLoad()
+  } else {
+    window.addEventListener('load', afterLoad, { once: true })
+    // Eager embeds keep the window `load` event pending while their iframes
+    // stream in, so don't wait on it forever.
+    window.setTimeout(unlockWarmupQueue, WARMUP_MAX_WAIT_MS)
+  }
+}
+
+function enqueueWarmup(start: () => void): () => void {
+  const entry: WarmupEntry = { start }
+  warmupQueue.push(entry)
+  armWarmupUnlock()
+  pumpWarmupQueue()
+  return () => {
+    const index = warmupQueue.indexOf(entry)
+    if (index !== -1) {
+      warmupQueue.splice(index, 1)
+    }
+  }
+}
+
+function releaseWarmupSlot(): void {
+  warmupSlotsInUse = Math.max(0, warmupSlotsInUse - 1)
+  pumpWarmupQueue()
+}
 
 function loadInstagramScript(): Promise<void> {
   if (typeof window === 'undefined') {
@@ -71,6 +146,27 @@ function stripInstagramCaptionAttribute(blockquoteHtml: string): string {
   return blockquoteHtml.replace(/\sdata-instgrm-captioned(?:="[^"]*")?/gi, '')
 }
 
+/**
+ * Isolated leaf for the raw blockquote HTML. embed.js swaps the blockquote
+ * for an iframe by mutating the DOM under React; if React ever re-commits
+ * dangerouslySetInnerHTML on this element (it re-applies it on every parent
+ * re-render, since the `{__html}` wrapper object is new each time), the
+ * loaded iframe is wiped back to a blockquote and Instagram re-downloads
+ * everything. The comparator pins this subtree so React never updates it.
+ */
+const InstagramHtml = memo(
+  function InstagramHtml({ html }: { html: string }): JSX.Element {
+    return (
+      <div
+        className="min-w-0 [&_blockquote.instagram-media]:mx-auto"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    )
+  },
+  (prev, next) => prev.html === next.html,
+  // Duplicated @types/react in the workspace rejects exotic components as JSX.
+) as unknown as (props: { html: string }) => JSX.Element
+
 type InstagramEmbedBlockProps = {
   embedCode: string
   className?: string
@@ -101,6 +197,7 @@ export function InstagramEmbedBlock({
   const [expanded, setExpanded] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   const hostRef = useRef<HTMLDivElement | null>(null)
+  const holdsWarmupSlotRef = useRef(false)
 
   const processedHtml = useMemo(() => {
     const bq = instagramBlockquoteFromPaste(embedCode)
@@ -139,6 +236,16 @@ export function InstagramEmbedBlock({
   }, [processedHtml, shouldMount])
 
   useEffect(() => {
+    if (!processedHtml || shouldMount) {
+      return
+    }
+    return enqueueWarmup(() => {
+      holdsWarmupSlotRef.current = true
+      setShouldMount(true)
+    })
+  }, [processedHtml, shouldMount])
+
+  useEffect(() => {
     if (!shouldMount || !processedHtml || typeof window === 'undefined') {
       return
     }
@@ -147,10 +254,18 @@ export function InstagramEmbedBlock({
       return
     }
 
+    const releaseHeldSlot = (): void => {
+      if (holdsWarmupSlotRef.current) {
+        holdsWarmupSlotRef.current = false
+        releaseWarmupSlot()
+      }
+    }
+
     let revealed = false
     const reveal = (): void => {
       if (revealed) return
       revealed = true
+      releaseHeldSlot()
       setReady(true)
     }
 
@@ -187,6 +302,7 @@ export function InstagramEmbedBlock({
       cancelled = true
       mo.disconnect()
       window.clearTimeout(fallbackTimer)
+      releaseHeldSlot()
     }
   }, [shouldMount, processedHtml])
 
@@ -220,14 +336,13 @@ export function InstagramEmbedBlock({
       >
         <div
           ref={hostRef}
-          className={`min-w-0 [&_blockquote.instagram-media]:mx-auto transition-opacity duration-200 ${
+          className={`min-w-0 transition-opacity duration-200 ${
             revealNow ? 'opacity-100' : 'opacity-0'
           }`}
           style={!ready ? { minHeight: SKELETON_MIN_HEIGHT } : undefined}
-          dangerouslySetInnerHTML={
-            shouldMount ? { __html: processedHtml } : undefined
-          }
-        />
+        >
+          {shouldMount ? <InstagramHtml html={processedHtml} /> : null}
+        </div>
         {!revealNow ? (
           <div
             className="pointer-events-none absolute inset-0 animate-pulse rounded-sm bg-foreground/[0.06]"

@@ -110,6 +110,7 @@ Stripe checkout flow for paid content.
 - Client code does not pick image variants — it consumes placement-ready payloads from the server.
 - Stripe checkout is initiated server-side; the client only renders Stripe's hosted UI or the Elements components.
 - i18n strings live under `messages/` and are loaded via `next-intl`. Inline strings are a regression.
+- Instagram embeds must keep their loaded third-party DOM stable after mount. `InstagramEmbedBlock` pins the raw blockquote HTML in a memoized leaf so React 19 re-renders cannot re-commit `dangerouslySetInnerHTML` and destroy loaded iframes. Listicle embeds warm in page order with bounded concurrency; do not switch to eager-all loading because slow connections starve concurrent Instagram iframes.
 
 ## Naming Conventions
 
