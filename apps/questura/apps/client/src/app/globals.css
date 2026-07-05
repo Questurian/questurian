@@ -76,7 +76,7 @@ input:-webkit-autofill:active {
 .article-prose p {
   font-family: var(--font-display);
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.72;
   color: #1A1A1A;
   margin-bottom: 1rem;
 }
@@ -116,13 +116,67 @@ input:-webkit-autofill:active {
 .article-prose li {
   font-family: var(--font-display);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.65;
   color: #1A1A1A;
   margin-bottom: 0.25rem;
 }
 
 .article-prose strong {
   font-weight: 600;
+}
+
+.article-prose p:last-child,
+.article-prose ul:last-child,
+.article-prose ol:last-child {
+  margin-bottom: 0;
+}
+
+.article-editorial-block {
+  box-shadow: 0 12px 30px rgb(26 26 26 / 0.06);
+}
+
+/* Larger reading sizes once the standard-article column has room */
+@media (min-width: 640px) {
+  .article-prose p {
+    font-size: 18px;
+    line-height: 1.78;
+  }
+
+  .article-prose h2 {
+    font-size: 30px;
+    line-height: 1.16;
+    margin-top: 2.4rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .article-prose h3 {
+    font-size: 23px;
+    line-height: 1.22;
+    margin-top: 1.9rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .article-prose li {
+    font-size: 18px;
+  }
+}
+
+/*
+  The shared article header carries listicle-column overrides (1024:p-0 /
+  1024:mx-10) that assume it renders inside the narrow maps column. On the
+  standard article page it sits in a full-width centered column, so restore
+  the 768-tier padding there.
+*/
+@media (min-width: 1024px) {
+  [data-article-layout='standard'] [data-article-header] {
+    margin-inline: 2.5rem;
+    padding: 4rem 4.25rem 3rem;
+  }
+
+  [data-article-layout='standard'] [data-article-header] h1 {
+    font-size: 54px;
+    line-height: 1.02;
+  }
 }
 
 .article-prose a {

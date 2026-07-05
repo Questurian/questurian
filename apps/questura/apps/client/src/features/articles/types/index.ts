@@ -27,6 +27,43 @@ export type ImgPairBlock = {
   caption?: string
 }
 
+export type ImgTrioBlock = {
+  id: string
+  blockType: 'img-trio'
+  format: 'square' | 'landscape'
+  imageOne: MediaAsset
+  imageTwo: MediaAsset
+  imageThree: MediaAsset
+  caption?: string
+}
+
+export type KeyTakeawayBlock = {
+  id: string
+  blockType: 'key-takeaway'
+  label?: string
+  items: Array<{ id?: string; text: string }>
+}
+
+export type PullQuoteBlock = {
+  id: string
+  blockType: 'pull-quote'
+  quote: string
+}
+
+export type InTheKnowBlock = {
+  id: string
+  blockType: 'in-the-know'
+  label?: string
+  text: string
+}
+
+export type HighlightCalloutBlock = {
+  id: string
+  blockType: 'highlight-callout'
+  label?: string
+  text: string
+}
+
 export type FaqItem = {
   id: string
   question: string
@@ -36,11 +73,21 @@ export type FaqItem = {
 export type FaqBlock = {
   id: string
   blockType: 'faq'
+  label?: string
   title?: string
   items: FaqItem[]
 }
 
-export type ContentBlock = TextBlock | ImageBlock | ImgPairBlock | FaqBlock
+export type ContentBlock =
+  | TextBlock
+  | ImageBlock
+  | ImgPairBlock
+  | ImgTrioBlock
+  | KeyTakeawayBlock
+  | PullQuoteBlock
+  | InTheKnowBlock
+  | HighlightCalloutBlock
+  | FaqBlock
 
 export type ArticleAuthor = {
   id: number

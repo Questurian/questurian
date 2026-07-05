@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, X } from "lucide-react";
 import { useAuth } from "@/lib/user/hooks";
 import { useLoginModalStore } from "@/lib/stores/loginModalStore";
 
@@ -13,6 +15,23 @@ interface MenuModalProps {
 export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
   const { isAuthenticated } = useAuth();
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+
+  // The modal stays mounted while closed, so reset the field whenever it
+  // closes — leftover text would otherwise reappear on the next open.
+  useEffect(() => {
+    if (!isOpen) setQuery("");
+  }, [isOpen]);
+
+  const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    onClose();
+    setQuery("");
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+  };
 
   if (!isOpen) return null;
 
@@ -84,6 +103,21 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
               <X className="h-5 w-5 text-white" />
             </button>
           </div>
+
+          <form onSubmit={submitSearch} className="mb-5">
+            <div className="flex items-center gap-2.5 rounded-xl border border-white/10 px-3.5 py-3 transition-colors focus-within:border-white/30">
+              <Search className="h-4 w-4 shrink-0 text-white/50" strokeWidth={1.5} aria-hidden />
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search a country, city, or neighborhood…"
+                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
+                autoComplete="off"
+                aria-label="Search destinations"
+              />
+            </div>
+          </form>
 
           <div className="space-y-2">
             <Link
