@@ -99,7 +99,9 @@ export function useEditorialStageArticleScreenViewModel({
     isLoading,
     error,
     stagedArticle,
+    saveConflict,
     updateStagedArticle,
+    flushStagedArticleSaves,
     handleDelete,
     mergeMediaAssetsIntoState,
   } = useEditorialStagePageData({
@@ -310,12 +312,15 @@ export function useEditorialStageArticleScreenViewModel({
   }, [closeBlockImageModal])
 
   const {
-    handlePublish,
+    handlePublish: handlePublishInner,
     isPublishing,
     isConverting,
     publishResult,
   } = useEditorialStagePublishWorkflow({
     token,
+    // Route prefixes double as feature keys ('/url2blog/stage-article' -> 'url2blog'),
+    // matching the backend API prefixes for each blog-writer pipeline.
+    sourceFeature: routes.stageArticlePath.split('/')[1] ?? '',
     stagedArticle,
     locations,
     mediaAssets,
@@ -332,12 +337,20 @@ export function useEditorialStageArticleScreenViewModel({
     publishResult: uiState.publishResult,
   })
 
+  // Ensure any pending debounced draft save lands before publishing so the
+  // published document reflects the latest local edits.
+  const handlePublish = useCallback(async (targetStatus: 'draft' | 'published') => {
+    await flushStagedArticleSaves()
+    await handlePublishInner(targetStatus)
+  }, [flushStagedArticleSaves, handlePublishInner])
+
   const status: EditorialStageStatusView = useMemo(() => ({
     isLoading,
     error,
     stagedArticle,
     articlesPath: routes.articlesPath,
-  }), [isLoading, error, stagedArticle, routes.articlesPath])
+    saveConflict,
+  }), [isLoading, error, stagedArticle, routes.articlesPath, saveConflict])
 
   const resolvedStagedArticle = stagedArticle ?? EMPTY_STAGED_ARTICLE
 

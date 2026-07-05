@@ -88,8 +88,19 @@ export function UploadPanel({
   const referenceOptions = [...toneReferenceOptions, ...articleTypeReferenceOptions]
   const selectedReference =
     referenceOptions.find((option) => option.id === selectedReferenceId) ?? referenceOptions[0] ?? null
-  const selectedReferenceMarkdown =
+  const selectedReferenceMarkdownRaw =
     selectedReference?.markdown?.trim() || selectedReference?.description?.trim() || 'No reference content loaded.'
+  const selectedReferenceMarkdown = selectedReference
+    ? selectedReferenceMarkdownRaw
+      .split('\n')
+      .filter((line, index) => {
+        if (index > 1) return true
+        const normalizedLine = line.replace(/^#{1,6}\s*/, '').trim().toLowerCase()
+        return normalizedLine !== selectedReference.label.trim().toLowerCase()
+      })
+      .join('\n')
+      .trim() || selectedReferenceMarkdownRaw
+    : selectedReferenceMarkdownRaw
 
   const openReferenceModal = () => {
     setSelectedReferenceId((current) =>
@@ -298,11 +309,13 @@ export function UploadPanel({
 
               {selectedReference ? (
                 <article className="reference-modal__content">
-                  <p className="reference-modal__type">{selectedReference.category}</p>
-                  <h3>{selectedReference.label}</h3>
-                  {selectedReference.description ? (
-                    <p className="reference-modal__description">{selectedReference.description}</p>
-                  ) : null}
+                  <header className="reference-modal__content-header">
+                    <p className="reference-modal__type">{selectedReference.category}</p>
+                    <h3>{selectedReference.label}</h3>
+                    {selectedReference.description ? (
+                      <p className="reference-modal__description">{selectedReference.description}</p>
+                    ) : null}
+                  </header>
                   <div className="reference-modal__markdown">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedReferenceMarkdown}</ReactMarkdown>
                   </div>

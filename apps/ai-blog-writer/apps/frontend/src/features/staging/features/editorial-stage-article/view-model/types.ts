@@ -21,6 +21,8 @@ export type EditorialStageStatusView = {
   error: string | null
   stagedArticle: StagedArticle | null
   articlesPath: string
+  /** Set when a save lost to a concurrent edit; `current` is the server-side draft (null if deleted). */
+  saveConflict: { current: StagedArticle | null } | null
 }
 
 export type EditorialStageArticleScreenViewModel = {

@@ -11,7 +11,10 @@ import logging
 import re
 from typing import Any
 
-from app.features.youtube2blog.config import Y2B_EDITORIAL_AUGMENTATION_MODEL
+from app.features.youtube2blog.config import (
+    Y2B_EDITORIAL_AUGMENTATION_MAX_OUTPUT_TOKENS,
+    Y2B_EDITORIAL_AUGMENTATION_MODEL,
+)
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 from app.shared.text import enforce_anti_ai_tells_markdown
 from utils import get_vertex_llm, parse_json_response
@@ -522,7 +525,7 @@ def _invoke_json_llm(*, prompt: str, model_name: str = DEFAULT_MODEL) -> tuple[d
 
     llm = get_vertex_llm(
         temperature=0.05,
-        max_tokens=6144,
+        max_tokens=Y2B_EDITORIAL_AUGMENTATION_MAX_OUTPUT_TOKENS,
         model_name=model_name,
     )
 
@@ -592,7 +595,7 @@ def stage_editorial_augmentation(
                 repair=lambda repair_prompt: _safe_str(
                     get_vertex_llm(
                         temperature=0.1,
-                        max_tokens=8192,
+                        max_tokens=Y2B_EDITORIAL_AUGMENTATION_MAX_OUTPUT_TOKENS,
                         model_name=editorial_model,
                     ).invoke(repair_prompt)
                 ),

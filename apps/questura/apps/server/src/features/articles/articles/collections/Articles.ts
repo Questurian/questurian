@@ -32,6 +32,8 @@ import {
   author,
   publishedAt,
   canonicalPath,
+  sourceFeature,
+  sourceRunId,
   category,
   tags,
 } from './fields'
@@ -135,6 +137,8 @@ export const Articles: CollectionConfig = {
     author,
     publishedAt,
     canonicalPath,
+    sourceFeature,
+    sourceRunId,
     category,
     tags,
   ],

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { useAuth } from '../auth'
+import { useAuth, usePermissions } from '../auth'
 import './homepageFeaturedContent.css'
 import {
   addMainHomepageBlock,
@@ -59,8 +59,8 @@ import {
   type PageBlockResponse,
 } from './pageBlocks'
 export default function MainHomepagePage() {
-  const { token, user } = useAuth()
-  const canManage = user?.role === 'admin' || user?.role === 'editor'
+  const { token } = useAuth()
+  const { canManagePublished: canManage } = usePermissions()
   const queryClient = useQueryClient()
   const mainHomepageQueryKey = ['main-homepage', token]
 

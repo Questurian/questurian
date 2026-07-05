@@ -1,7 +1,7 @@
 import type { Location, MediaAsset } from '../../api'
 import type { StagedArticle } from '../../types'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
-import { useAuth } from '../../../auth'
+import { usePermissions } from '../../../auth'
 import { EDITOR_MODEL_OPTIONS, resolveEditorModelName } from '../../features/editorial-stage-article/constants'
 import { getMediaAssetAltText } from '../../features/editorial-stage-article/media-utils'
 import {
@@ -51,10 +51,9 @@ export function EditorialSidebar({
   onPublish,
   onDeepExpand,
 }: EditorialSidebarProps) {
-  const { user } = useAuth()
+  const { canManagePublished, role } = usePermissions()
   const hasBlockingEditorial = editorialBlockingMessages.length > 0
   const isEditingLocked = isStagedArticleEditingLocked(stagedArticle)
-  const canManagePublished = user?.role === 'admin' || user?.role === 'editor'
   const isPublished = stagedArticle.payloadStatus === 'published'
   const isLinkedDraft = Boolean(stagedArticle.payloadArticleId) && !isPublished
   const selectedLocation = locations.find((location) => location.id === stagedArticle.locationId)
@@ -131,28 +130,30 @@ export function EditorialSidebar({
             </button>
           )}
 
-          {canManagePublished ? (
-            <button
-              onClick={() => onPublish('published')}
-              disabled={isPublishing || !canPublish}
-              className="stage-article-publish-btn payload-action-btn"
-            >
-              <img
-                src={payloadLogoUrl}
-                alt=""
-                aria-hidden="true"
-                className="payload-action-btn-icon"
-              />
-              {isPublishing ? 'Publishing...' :
-               !canSaveDraft ? 'Complete draft first' :
-               isPublished ? 'Update Published' :
-               'Publish'}
-            </button>
-          ) : !isPublished ? (
-            <p className="stage-article-publish-checklist-more">Writers can save drafts only.</p>
-          ) : (
-            <p className="stage-article-publish-checklist-more">Published articles can only be updated by editors or admins.</p>
-          )}
+          <button
+            onClick={() => onPublish('published')}
+            disabled={isPublishing || !canPublish || !canManagePublished}
+            className="stage-article-publish-btn payload-action-btn"
+          >
+            <img
+              src={payloadLogoUrl}
+              alt=""
+              aria-hidden="true"
+              className="payload-action-btn-icon"
+            />
+            {isPublishing ? 'Publishing...' :
+             !canManagePublished ? (isPublished ? 'Update Published' : 'Publish') :
+             !canSaveDraft ? 'Complete draft first' :
+             isPublished ? 'Update Published' :
+             'Publish'}
+          </button>
+          {!canManagePublished ? (
+            <p className="stage-article-publish-checklist-more">
+              {isPublished
+                ? `Updating a published article requires an editor or admin role (you are signed in as ${role ?? 'unknown'}).`
+                : `Publishing requires an editor or admin role (you are signed in as ${role ?? 'unknown'}).`}
+            </p>
+          ) : null}
 
           {!seoSection.openGraph.url.trim() ? (
             <p className="stage-article-publish-checklist-more">Set-up urls later</p>

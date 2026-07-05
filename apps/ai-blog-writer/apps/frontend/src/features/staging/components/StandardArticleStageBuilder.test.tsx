@@ -15,7 +15,14 @@ vi.mock('../../auth', () => ({
     token: 'test-token',
     user: { role: 'admin' },
   }),
+  usePermissions: () => mockedPermissions,
 }))
+
+let mockedPermissions = {
+  canManagePublished: true,
+  role: 'admin' as string | null,
+  isLoading: false,
+}
 
 vi.mock('../features/editorial-stage-article/hooks/useEditorialStageArticleScreenViewModel', () => ({
   useEditorialStageArticleScreenViewModel: () => mockedViewModel,
@@ -121,6 +128,7 @@ function buildViewModel(input?: {
       error: null,
       stagedArticle,
       articlesPath: '/youtube2blog/articles',
+      saveConflict: null as { current: StagedArticle | null } | null,
     },
     layout: {
       stagedArticle,
@@ -292,5 +300,51 @@ describe('StandardArticleStageBuilder', () => {
     expect(screen.getByRole('button', { name: 'Save Draft to Payload' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
     expect(screen.getByText('SEO core: Missing SEO title or meta description')).toBeInTheDocument()
+  })
+
+  it('shows the publish button disabled with a role reason for writers', () => {
+    mockedPermissions = { canManagePublished: false, role: 'writer', isLoading: false }
+    mockedViewModel = buildViewModel({
+      stagedArticle: buildStagedArticle({
+        step1_complete: true,
+        step2_complete: true,
+        step3_complete: true,
+        seoSection: buildSeoSection({
+          seoTitle: 'SEO title',
+          metaDescription: 'Meta description',
+        }),
+      }),
+    })
+
+    renderBuilder()
+
+    const publishButton = screen.getByRole('button', { name: 'Publish' })
+    expect(publishButton).toBeInTheDocument()
+    expect(publishButton).toBeDisabled()
+    expect(screen.getByText(/Publishing requires an editor or admin role \(you are signed in as writer\)/)).toBeInTheDocument()
+
+    mockedPermissions = { canManagePublished: true, role: 'admin', isLoading: false }
+  })
+
+  it('shows a conflict banner when a save lost to a concurrent edit', () => {
+    mockedViewModel = buildViewModel({
+      stagedArticle: buildStagedArticle({
+        step1_complete: true,
+        step2_complete: true,
+        step3_complete: true,
+      }),
+    })
+    mockedViewModel.status.saveConflict = {
+      current: {
+        ...buildStagedArticle(),
+        lastEditedBy: { id: '2', email: 'other@example.com' },
+      },
+    }
+
+    renderBuilder()
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Draft changed elsewhere.')
+    expect(screen.getByRole('alert')).toHaveTextContent('other@example.com')
+    expect(screen.getByRole('button', { name: 'Reload draft' })).toBeInTheDocument()
   })
 })

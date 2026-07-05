@@ -5,21 +5,11 @@ import { hasActiveSession } from './auth-state';
 import { clearStoredAuth, persistAuth, readStoredAuth } from './auth-storage';
 import {
   checkPayloadHealth,
+  hydratePayloadSession,
   loginPayloadUser,
   logoutPayloadUser,
-  restorePayloadSession,
+  renewPayloadSession,
 } from './payload-auth-client';
-
-function shouldRefreshSession(
-  token: string | null | undefined,
-  expiresAt: number | null | undefined,
-): boolean {
-  if (!token || !expiresAt) {
-    return true;
-  }
-
-  return Date.now() >= expiresAt - EXPIRY_BUFFER_MS;
-}
 
 export function useAuthSessionState(): AuthContextValue {
   const [authState, setAuthState] = useState<AuthState | null>(() => readStoredAuth());
@@ -42,11 +32,9 @@ export function useAuthSessionState(): AuthContextValue {
 
     const hydrateAuth = async () => {
       const storedAuth = readStoredAuth();
-      let nextState = storedAuth;
-
-      if (!storedAuth || shouldRefreshSession(storedAuth.token, storedAuth.expiresAt)) {
-        nextState = await restorePayloadSession(storedAuth);
-      }
+      // Always revalidate against the server so role changes made in Payload
+      // (e.g. writer -> editor promotion) take effect without a re-login.
+      const nextState = await hydratePayloadSession(storedAuth);
 
       if (isCancelled) {
         return;
@@ -109,7 +97,7 @@ export function useAuthSessionState(): AuthContextValue {
     const remainingMs = authState.expiresAt - EXPIRY_BUFFER_MS - Date.now();
     const refreshSession = async () => {
       setIsRestoringSession(true);
-      const restoredState = await restorePayloadSession(authState);
+      const restoredState = await renewPayloadSession(authState);
       if (restoredState) {
         applyAuthState(restoredState);
       } else if (!hasActiveSession(authState.token, authState.expiresAt)) {

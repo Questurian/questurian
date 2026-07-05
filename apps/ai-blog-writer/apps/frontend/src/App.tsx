@@ -33,6 +33,10 @@ import {
 } from './features/listicleItineraries'
 import { ItinerariesPipelinePage } from './features/itinerariesPipeline'
 import {
+  PayloadArticlesPage,
+  PayloadArticleStagePage,
+} from './features/payloadArticles'
+import {
   LocationDocumentsPage,
   LocationDocumentBuilderPage,
 } from './features/locationDocuments'
@@ -86,6 +90,10 @@ export default function App() {
               <Route path="url2blog/articles" element={<Url2BlogArticlesPage />} />
               <Route path="url2blog/stage" element={<Url2BlogStagePage />} />
               <Route path="url2blog/stage-article" element={<Url2BlogStageArticlePage />} />
+
+              {/* Payload Articles (cross-pipeline editor) */}
+              <Route path="payload-articles" element={<PayloadArticlesPage />} />
+              <Route path="payload-articles/stage-article" element={<PayloadArticleStagePage />} />
 
               {/* Single Type Listicles */}
               <Route path="single-type-listicles" element={<SingleTypeListiclesPage />} />

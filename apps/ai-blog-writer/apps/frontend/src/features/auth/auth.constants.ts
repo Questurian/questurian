@@ -7,7 +7,15 @@ export const REVALIDATION_TIMEOUT_MS = 5000;
 export const LOGIN_TIMEOUT_MS = 10000;
 export const SESSION_RESTORE_TIMEOUT_MS = 8000;
 
-export const SESSION_RESTORE_REQUESTS = [
+// Hydrate fetches the user fresh from the database first so role changes
+// (e.g. writer -> editor promotion) apply without a re-login.
+export const SESSION_HYDRATE_REQUESTS = [
+  { endpoint: '/api/users/me', method: 'GET' },
+  { endpoint: '/api/users/refresh-token', method: 'POST' },
+] as const;
+
+// Renewal prioritizes extending the session before falling back to /me.
+export const SESSION_RENEW_REQUESTS = [
   { endpoint: '/api/users/refresh-token', method: 'POST' },
   { endpoint: '/api/users/me', method: 'GET' },
 ] as const;

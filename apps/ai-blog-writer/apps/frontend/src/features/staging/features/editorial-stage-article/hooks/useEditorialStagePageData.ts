@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Location, MediaAsset } from '../../../api'
-import type { StagedArticle } from '../../../types'
+import type { DraftUserStamp, StagedArticle } from '../../../types'
+import { useAuth } from '../../../../auth'
 import { createEmptySeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import { getSchemaPublisherConfig } from '../../../../../shared/seo/services/schema-publisher-config.service'
 import type { EditorialStageArticleApi } from '../types'
@@ -18,10 +19,14 @@ import {
 } from '../workflow.service'
 import {
   getAllStagedArticles,
+  getStagedArticle,
   removeStagedArticle,
-  saveAllStagedArticles,
   upsertStagedArticle,
 } from '../services/editorial-stage-storage.service'
+import {
+  StagedDraftSaveQueue,
+  type StagedDraftConflict,
+} from '../services/staged-draft-save-queue'
 import { buildPayloadArticleMetadataPatch } from '../services/payload-article-metadata.service'
 import { mergeMediaAssetLists } from '../media-utils'
 
@@ -55,11 +60,41 @@ export function useEditorialStagePageData({
   const urlType = searchParams.get('type') || ''
   const stagedId = searchParams.get('stagedId') || ''
 
+  const { user } = useAuth()
+
   const [locations, setLocations] = useState<Location[]>([])
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [stagedArticle, setStagedArticle] = useState<StagedArticle | null>(null)
+  const [saveConflict, setSaveConflict] = useState<StagedDraftConflict | null>(null)
+
+  const saveQueueRef = useRef<StagedDraftSaveQueue | null>(null)
+  const userStampRef = useRef<DraftUserStamp | null>(null)
+  userStampRef.current = user?.id && user.email
+    ? {
+        id: user.id,
+        email: user.email,
+        name: [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined,
+      }
+    : null
+
+  const createSaveQueue = useCallback((initialServerUpdatedAt: string | null) => {
+    saveQueueRef.current = new StagedDraftSaveQueue({
+      storageKey,
+      initialServerUpdatedAt,
+      onConflict: (conflict) => setSaveConflict(conflict),
+      onError: (saveError) => {
+        console.warn('Staged draft save failed; will retry on next change', saveError)
+      },
+    })
+    return saveQueueRef.current
+  }, [storageKey])
+
+  useEffect(() => () => {
+    // Best-effort flush of a pending debounced save when leaving the page.
+    void saveQueueRef.current?.flush()
+  }, [])
 
   const normalizeLoadedArticle = useCallback(async (existing: StagedArticle): Promise<StagedArticle> => {
     const extractedFromContent = extractEditorialBlocks(existing.content)
@@ -135,51 +170,48 @@ export function useEditorialStagePageData({
 
     let isCancelled = false
 
+    const persistIfNormalizationChanged = async (
+      existing: StagedArticle,
+      normalizedExisting: StagedArticle,
+    ) => {
+      const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedExisting.blocks)
+      const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedExisting.editorialBlocks || [])
+      const contentChanged = existing.content !== normalizedExisting.content
+      const modelChanged = existing.editorModelName !== normalizedExisting.editorModelName
+      const syncBehaviorChanged = existing.syncBehavior !== normalizedExisting.syncBehavior
+      if (blocksChanged || editorialChanged || contentChanged || modelChanged || syncBehaviorChanged) {
+        await saveQueueRef.current?.saveNow(normalizedExisting)
+      }
+    }
+
     const loadStagedArticle = async () => {
       try {
-        const allStaged = getAllStagedArticles(storageKey)
-
         if (stagedId) {
-          const existingIndex = allStaged.findIndex((candidate) => candidate.id === stagedId)
-          const existing = existingIndex >= 0 ? allStaged[existingIndex] : null
+          const existing = await getStagedArticle(storageKey, stagedId)
           if (existing) {
+            createSaveQueue(existing.updatedAt)
             const normalizedExisting = await normalizeLoadedArticle(existing)
 
             if (!isCancelled) {
               setStagedArticle(normalizedExisting)
             }
 
-            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedExisting.blocks)
-            const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedExisting.editorialBlocks || [])
-            const contentChanged = existing.content !== normalizedExisting.content
-            const modelChanged = existing.editorModelName !== normalizedExisting.editorModelName
-            const syncBehaviorChanged = existing.syncBehavior !== normalizedExisting.syncBehavior
-            if (blocksChanged || editorialChanged || contentChanged || modelChanged || syncBehaviorChanged) {
-              allStaged[existingIndex] = normalizedExisting
-              saveAllStagedArticles(storageKey, allStaged)
-            }
+            await persistIfNormalizationChanged(existing, normalizedExisting)
           } else if (!isCancelled) {
             setError('Staged article not found')
           }
         } else if (urlRunId) {
-          const existingIndex = allStaged.findIndex((candidate) => candidate.runId === urlRunId)
-          const existing = existingIndex >= 0 ? allStaged[existingIndex] : null
+          const allStaged = await getAllStagedArticles(storageKey)
+          const existing = allStaged.find((candidate) => candidate.runId === urlRunId) ?? null
           if (existing) {
+            createSaveQueue(existing.updatedAt)
             const normalizedExisting = await normalizeLoadedArticle(existing)
 
             if (!isCancelled) {
               setStagedArticle(normalizedExisting)
             }
 
-            const blocksChanged = JSON.stringify(existing.blocks) !== JSON.stringify(normalizedExisting.blocks)
-            const editorialChanged = JSON.stringify(existing.editorialBlocks || []) !== JSON.stringify(normalizedExisting.editorialBlocks || [])
-            const contentChanged = existing.content !== normalizedExisting.content
-            const modelChanged = existing.editorModelName !== normalizedExisting.editorModelName
-            const syncBehaviorChanged = existing.syncBehavior !== normalizedExisting.syncBehavior
-            if (blocksChanged || editorialChanged || contentChanged || modelChanged || syncBehaviorChanged) {
-              allStaged[existingIndex] = normalizedExisting
-              saveAllStagedArticles(storageKey, allStaged)
-            }
+            await persistIfNormalizationChanged(existing, normalizedExisting)
 
             navigate(`${stageArticlePath}?stagedId=${existing.id}`, {
               replace: true,
@@ -233,11 +265,16 @@ export function useEditorialStagePageData({
               payloadPublishedAt: undefined,
               payloadUpdatedAt: undefined,
               payloadAuthorName: undefined,
+              createdBy: userStampRef.current ?? undefined,
+              lastEditedBy: userStampRef.current ?? undefined,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             }
 
-            saveAllStagedArticles(storageKey, [...allStaged, newStaged])
+            // Persist to the server before navigating so the ?stagedId link
+            // resolves on the next load (avoids the "Article not found" race).
+            const savedNewStaged = await upsertStagedArticle(storageKey, newStaged)
+            createSaveQueue(savedNewStaged.updatedAt)
 
             if (!isCancelled) {
               setStagedArticle(newStaged)
@@ -270,6 +307,7 @@ export function useEditorialStagePageData({
     fetchResult,
     normalizeLoadedArticle,
     syncBehavior,
+    createSaveQueue,
   ])
 
   useEffect(() => {
@@ -312,7 +350,7 @@ export function useEditorialStagePageData({
             updatedAt: previous.updatedAt,
           }
 
-          upsertStagedArticle(storageKey, updated)
+          void saveQueueRef.current?.saveNow(updated)
           return updated
         })
       } catch {
@@ -358,29 +396,41 @@ export function useEditorialStagePageData({
   const updateStagedArticle = useCallback((updates: Partial<StagedArticle>) => {
     setStagedArticle((previous) => {
       if (!previous) return null
-      const updated = { ...previous, ...updates, updatedAt: new Date().toISOString() }
+      const updated = {
+        ...previous,
+        ...updates,
+        lastEditedBy: userStampRef.current ?? previous.lastEditedBy,
+        updatedAt: new Date().toISOString(),
+      }
 
       updated.content = composeArticleMarkdown(
         updated.blocks || [],
         updated.editorialBlocks || []
       )
 
-      upsertStagedArticle(storageKey, updated)
+      // Debounced + serialized: one PUT per typing pause, carrying the last
+      // server timestamp so concurrent edits surface as a conflict, not a
+      // silent overwrite. Re-invocation (StrictMode) just replaces the snapshot.
+      saveQueueRef.current?.schedule(updated)
 
       return updated
     })
-  }, [storageKey])
+  }, [])
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (!stagedArticle) return
     if (!confirm('Delete this staged article?')) return
 
-    removeStagedArticle(storageKey, stagedArticle.id)
+    await removeStagedArticle(storageKey, stagedArticle.id)
     navigate(stagePath)
   }, [navigate, stagePath, stagedArticle, storageKey])
 
   const mergeMediaAssetsIntoState = useCallback((assets: MediaAsset[]) => {
     setMediaAssets((existingAssets) => mergeMediaAssetLists(existingAssets, assets))
+  }, [])
+
+  const flushStagedArticleSaves = useCallback(async () => {
+    await saveQueueRef.current?.flush()
   }, [])
 
   return {
@@ -389,7 +439,9 @@ export function useEditorialStagePageData({
     isLoading,
     error,
     stagedArticle,
+    saveConflict,
     updateStagedArticle,
+    flushStagedArticleSaves,
     handleDelete,
     mergeMediaAssetsIntoState,
   }

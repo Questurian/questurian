@@ -10,6 +10,8 @@ export type GeneratedArticlesTableProps<TArticle extends SavedBlogArticle> = {
   buildStageUrl: (article: TArticle) => string
   buildDraftUrl: (stagedId: string) => string
   onDelete: (article: TArticle) => void
+  onClearAll: () => void
+  isClearingAll: boolean
 }
 
 export function GeneratedArticlesTable<TArticle extends SavedBlogArticle>({
@@ -18,11 +20,23 @@ export function GeneratedArticlesTable<TArticle extends SavedBlogArticle>({
   buildStageUrl,
   buildDraftUrl,
   onDelete,
+  onClearAll,
+  isClearingAll,
 }: GeneratedArticlesTableProps<TArticle>) {
   return (
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>Generated ({rows.length})</h2>
+        {rows.length > 0 ? (
+          <button
+            type="button"
+            className="stl-btn stl-btn-danger stl-btn-xs"
+            onClick={onClearAll}
+            disabled={isClearingAll}
+          >
+            {isClearingAll ? 'Clearing...' : 'Clear All'}
+          </button>
+        ) : null}
       </div>
       <div className="panel-body">
         {rows.length === 0 ? (

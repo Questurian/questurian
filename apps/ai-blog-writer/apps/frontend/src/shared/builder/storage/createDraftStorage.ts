@@ -8,6 +8,7 @@ export type DraftStorage<TDraft extends BaseDraft> = {
   listDrafts: () => TDraft[]
   saveDraft: (draft: TDraft) => void
   removeDraft: (draftId: string) => void
+  clearDrafts: () => void
   findDraftByPayloadId: (payloadId: number) => TDraft | null
   findDraftByDraftId: (draftId: string) => TDraft | null
 }
@@ -58,6 +59,10 @@ export function createDraftStorage<TDraft extends BaseDraft>({
     localStorage.setItem(storageKey, JSON.stringify(next))
   }
 
+  function clearDrafts(): void {
+    localStorage.removeItem(storageKey)
+  }
+
   function findDraftByPayloadId(payloadId: number): TDraft | null {
     return listDrafts().find((item) => item.payloadId === payloadId) || null
   }
@@ -66,5 +71,5 @@ export function createDraftStorage<TDraft extends BaseDraft>({
     return listDrafts().find((item) => item.draftId === draftId) || null
   }
 
-  return { listDrafts, saveDraft, removeDraft, findDraftByPayloadId, findDraftByDraftId }
+  return { listDrafts, saveDraft, removeDraft, clearDrafts, findDraftByPayloadId, findDraftByDraftId }
 }

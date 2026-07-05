@@ -187,16 +187,17 @@
   inset: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-5);
+  align-items: stretch;
+  justify-content: stretch;
+  padding: var(--space-4);
   background: rgba(34, 28, 23, 0.48);
   backdrop-filter: blur(6px);
 }
 
 .reference-modal__dialog {
-  width: min(720px, 100%);
-  max-height: min(84vh, 760px);
+  width: 100%;
+  height: 100%;
+  max-height: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -249,6 +250,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  flex: 1;
   min-height: 0;
   padding: var(--space-5);
   overflow: hidden;
@@ -284,6 +286,7 @@
 }
 
 .reference-modal__content {
+  flex: 1;
   min-height: 0;
   overflow: auto;
   padding: var(--space-5);
@@ -292,10 +295,16 @@
   background: var(--cream);
 }
 
+.reference-modal__content-header,
 .reference-modal__type,
 .reference-modal__content h3,
 .reference-modal__description {
   margin: 0;
+}
+
+.reference-modal__content-header {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
 }
 
 .reference-modal__type {
@@ -309,7 +318,7 @@
 .reference-modal__content h3 {
   margin-top: var(--space-1);
   font-family: var(--font-display);
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-size: clamp(1.5rem, 3vw, 2rem);
   line-height: 1;
 }
 
@@ -321,7 +330,7 @@
 }
 
 .reference-modal__markdown {
-  margin-top: var(--space-5);
+  margin-top: var(--space-4);
   color: var(--ink);
   font-size: 0.9375rem;
   line-height: 1.65;
@@ -417,7 +426,7 @@
   }
 
   .reference-modal {
-    padding: var(--space-3);
+    padding: var(--space-2);
   }
 
   .reference-modal__body {

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import './homepageFeaturedContent.css'
 
-import { useAuth } from '../auth'
+import { useAuth, usePermissions } from '../auth'
 import {
   createLocationHomepage,
   deleteLocationHomepage,
@@ -22,10 +22,10 @@ import { buildHomepageGroups, filterHomepageGroups } from './locationHomepageLis
 const EMPTY_LOCATION_HOMEPAGES: LocationHomepageListItem[] = []
 
 export default function HomepageFeaturedContentPage() {
-  const { token, user } = useAuth()
+  const { token } = useAuth()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const canManage = user?.role === 'admin' || user?.role === 'editor'
+  const { canManagePublished: canManage } = usePermissions()
 
   const [isPickerOpen, setIsPickerOpen] = useState(false)
   const [isResetAllOpen, setIsResetAllOpen] = useState(false)

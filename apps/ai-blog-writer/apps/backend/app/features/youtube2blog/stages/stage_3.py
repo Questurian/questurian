@@ -18,7 +18,11 @@ from langchain_core.prompts import PromptTemplate
 
 from app.core import get_article_type_by_name
 from app.config import ARTICLE_GUIDELINES_DIR
-from app.features.youtube2blog.config import Y2B_COMPOSE_MODEL, Y2B_PRIMARY_MODEL
+from app.features.youtube2blog.config import (
+    Y2B_COMPOSE_MODEL,
+    Y2B_PRIMARY_MODEL,
+    Y2B_STAGE3_MAX_OUTPUT_TOKENS,
+)
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 from app.shared.text import enforce_anti_ai_tells_markdown
 from shared import Stage1Output, Stage2Output, Stage3Output
@@ -33,7 +37,7 @@ GENERAL_GUIDELINES_PATH = Path(__file__).resolve().parents[4] / "data" / "genera
 def _stage3_llm(model_name: str = Y2B_PRIMARY_MODEL):
     return get_vertex_llm(
         temperature=0.3,
-        max_tokens=8192,
+        max_tokens=Y2B_STAGE3_MAX_OUTPUT_TOKENS,
         model_name=model_name,
     )
 

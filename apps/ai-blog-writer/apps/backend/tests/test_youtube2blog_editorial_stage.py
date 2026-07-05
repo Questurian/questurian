@@ -1,5 +1,6 @@
 import importlib
 
+from app.features.youtube2blog.config import Y2B_EDITORIAL_AUGMENTATION_MAX_OUTPUT_TOKENS
 from shared import Stage3Output
 
 editorial_stage = importlib.import_module(
@@ -77,3 +78,26 @@ def test_editorial_augmentation_falls_back_on_error(monkeypatch):
     assert output.error == "editorial service unavailable"
     assert "Original article body." in output.augmented_content
     assert output.debug_prompt is not None
+
+
+def test_editorial_augmentation_json_llm_uses_longform_output_cap(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class StubLLM:
+        def invoke(self, _prompt: str) -> str:
+            return '{"augmented_content":"Body","components_added":[],"diagnostic":{},"augmentation_summary":""}'
+
+    def fake_get_vertex_llm(**kwargs):
+        captured.update(kwargs)
+        return StubLLM()
+
+    monkeypatch.setattr(editorial_stage, "get_vertex_llm", fake_get_vertex_llm)
+
+    parsed, _raw = editorial_stage._invoke_json_llm(
+        prompt="Return augmented article JSON.",
+        model_name="editorial-model",
+    )
+
+    assert parsed["augmented_content"] == "Body"
+    assert captured["model_name"] == "editorial-model"
+    assert captured["max_tokens"] == Y2B_EDITORIAL_AUGMENTATION_MAX_OUTPUT_TOKENS

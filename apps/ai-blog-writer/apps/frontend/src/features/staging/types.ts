@@ -30,6 +30,12 @@ export type EditorialBlock = {
   placeAfterImage?: boolean
 }
 
+export type DraftUserStamp = {
+  id: string
+  email: string
+  name?: string
+}
+
 export type StagedArticle = {
   id: string
   runId: string
@@ -61,6 +67,8 @@ export type StagedArticle = {
   payloadPublishedAt?: string
   payloadUpdatedAt?: string
   payloadAuthorName?: string
+  createdBy?: DraftUserStamp
+  lastEditedBy?: DraftUserStamp
   createdAt: string
   updatedAt: string
 }

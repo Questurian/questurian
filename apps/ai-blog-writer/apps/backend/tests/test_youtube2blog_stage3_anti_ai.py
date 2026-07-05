@@ -1,4 +1,5 @@
 from app.features.youtube2blog.stages import stage_3
+from app.features.youtube2blog.config import Y2B_STAGE3_MAX_OUTPUT_TOKENS
 
 
 class _FakeLlm:
@@ -50,3 +51,19 @@ def test_supplement_prompt_uses_non_conflicting_wording(monkeypatch):
     assert "avoid stock transition phrases" in prompt
     assert "cannot invent unsupported specifics" in prompt
 
+
+def test_stage3_llm_uses_longform_output_cap(monkeypatch):
+    captured: dict[str, object] = {}
+
+    class StubLLM:
+        pass
+
+    def fake_get_vertex_llm(**kwargs):
+        captured.update(kwargs)
+        return StubLLM()
+
+    monkeypatch.setattr(stage_3, "get_vertex_llm", fake_get_vertex_llm)
+
+    assert isinstance(stage_3._stage3_llm("writer-model"), StubLLM)
+    assert captured["model_name"] == "writer-model"
+    assert captured["max_tokens"] == Y2B_STAGE3_MAX_OUTPUT_TOKENS

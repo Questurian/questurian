@@ -27,6 +27,7 @@ type DispatchUiEvent = (event: EditorialStageUiEvent) => void
 
 type UseEditorialStagePublishWorkflowParams = {
   token: string | null | undefined
+  sourceFeature: string
   stagedArticle: StagedArticle | null
   locations: Location[]
   mediaAssets: MediaAsset[]
@@ -52,6 +53,7 @@ type UseEditorialStagePublishWorkflowParams = {
 
 export function useEditorialStagePublishWorkflow({
   token,
+  sourceFeature,
   stagedArticle,
   locations,
   mediaAssets,
@@ -249,6 +251,8 @@ export function useEditorialStagePublishWorkflow({
         sharedNeighborhoods,
         step1_complete: true,
         status: targetStatus,
+        ...(sourceFeature ? { sourceFeature } : {}),
+        ...(stagedArticle.runId ? { sourceRunId: stagedArticle.runId } : {}),
         headerSection: {
           featuredImage: featuredImageId,
         },
@@ -293,7 +297,18 @@ export function useEditorialStagePublishWorkflow({
         }
       }
 
-      await markArticleSynced(stagedArticle.runId, result.id)
+      // Local sync bookkeeping only — the Payload save above already succeeded,
+      // so a missing/deleted local run row must not surface as a publish failure.
+      let syncBookkeepingFailed = false
+      try {
+        await markArticleSynced(stagedArticle.runId, result.id)
+      } catch (syncError) {
+        syncBookkeepingFailed = true
+        console.warn(
+          `Article #${result.id} saved to Payload, but marking run ${stagedArticle.runId} as synced failed:`,
+          syncError,
+        )
+      }
 
       updateStagedArticle({
         ...buildPayloadArticleMetadataPatch({
@@ -304,13 +319,17 @@ export function useEditorialStagePublishWorkflow({
         lexicalConverted: true,
       })
 
+      const successMessage = targetStatus === 'published'
+        ? (stagedArticle.payloadStatus === 'published'
+          ? `Updated published article #${result.id}`
+          : `Published article #${result.id}`)
+        : `Saved draft article #${result.id}`
+
       dispatchUi({
         type: 'PUBLISH_SUCCESS',
-        message: targetStatus === 'published'
-          ? (stagedArticle.payloadStatus === 'published'
-            ? `Updated published article #${result.id}`
-            : `Published article #${result.id}`)
-          : `Saved draft article #${result.id}`,
+        message: syncBookkeepingFailed
+          ? `${successMessage} (local run record missing, sync status not recorded)`
+          : successMessage,
       })
     } catch (error) {
       dispatchUi({
@@ -320,6 +339,7 @@ export function useEditorialStagePublishWorkflow({
     }
   }, [
     token,
+    sourceFeature,
     stagedArticle,
     dispatchUi,
     locations,

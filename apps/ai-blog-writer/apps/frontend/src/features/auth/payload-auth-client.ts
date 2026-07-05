@@ -5,7 +5,8 @@ import {
   PAYLOAD_API_URL,
   REVALIDATION_TIMEOUT_MS,
   SESSION_DURATION_FALLBACK_MS,
-  SESSION_RESTORE_REQUESTS,
+  SESSION_HYDRATE_REQUESTS,
+  SESSION_RENEW_REQUESTS,
   SESSION_RESTORE_TIMEOUT_MS,
 } from './auth.constants';
 import { hasActiveSession, normalizeAuthState } from './auth-state';
@@ -15,10 +16,13 @@ export type PayloadHealthResult = {
   connectionError: string | null;
 };
 
-export async function restorePayloadSession(
+type SessionRequest = { endpoint: string; method: string };
+
+async function requestSession(
+  requests: readonly SessionRequest[],
   fallbackAuth?: AuthState | null,
 ): Promise<AuthState | null> {
-  for (const request of SESSION_RESTORE_REQUESTS) {
+  for (const request of requests) {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => controller.abort(), SESSION_RESTORE_TIMEOUT_MS);
 
@@ -58,6 +62,21 @@ export async function restorePayloadSession(
   }
 
   return null;
+}
+
+// Hydrates the session with a fresh user from the database (/me first), so
+// role changes made in Payload apply on the next app load.
+export function hydratePayloadSession(
+  fallbackAuth?: AuthState | null,
+): Promise<AuthState | null> {
+  return requestSession(SESSION_HYDRATE_REQUESTS, fallbackAuth);
+}
+
+// Renews a session nearing expiry (refresh-token first).
+export function renewPayloadSession(
+  fallbackAuth?: AuthState | null,
+): Promise<AuthState | null> {
+  return requestSession(SESSION_RENEW_REQUESTS, fallbackAuth);
 }
 
 export async function checkPayloadHealth(): Promise<PayloadHealthResult> {

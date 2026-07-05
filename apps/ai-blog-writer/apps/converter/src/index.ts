@@ -7,7 +7,7 @@
 
 import express from 'express'
 import { createHeadlessEditor } from '@lexical/headless'
-import { $convertFromMarkdownString, TRANSFORMERS } from '@lexical/markdown'
+import { $convertFromMarkdownString, $convertToMarkdownString, TRANSFORMERS } from '@lexical/markdown'
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from '@lexical/html'
 import { JSDOM } from 'jsdom'
 
@@ -158,6 +158,22 @@ export async function lexicalToHtml(lexicalState: object): Promise<string> {
   return html
 }
 
+/**
+ * Convert Lexical JSON to Markdown
+ */
+export async function lexicalToMarkdown(lexicalState: object): Promise<string> {
+  const editor = createEditor()
+  const state = editor.parseEditorState(JSON.stringify(lexicalState))
+  editor.setEditorState(state)
+
+  let markdown = ''
+  state.read(() => {
+    markdown = $convertToMarkdownString(TRANSFORMERS)
+  })
+
+  return markdown
+}
+
 // Health check
 app.get('/health', (_req, res) => {
   res.json({
@@ -206,6 +222,30 @@ app.post('/convert/markdown', async (req, res) => {
     })
   } catch (error) {
     console.error('Markdown conversion error:', error)
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Conversion failed',
+    })
+  }
+})
+
+// POST /convert/lexical - Convert Lexical JSON to markdown
+app.post('/convert/lexical', async (req, res) => {
+  const lexicalState = req.body?.lexical
+
+  if (!lexicalState || typeof lexicalState !== 'object') {
+    res.status(400).json({
+      success: false,
+      error: 'Request body must be JSON with { lexical: { root: ... } }',
+    })
+    return
+  }
+
+  try {
+    const markdown = await lexicalToMarkdown(lexicalState)
+    res.json({ success: true, markdown })
+  } catch (error) {
+    console.error('Lexical-to-markdown conversion error:', error)
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Conversion failed',

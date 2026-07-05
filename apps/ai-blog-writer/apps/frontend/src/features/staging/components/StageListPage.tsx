@@ -1,6 +1,7 @@
 import type { MouseEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useStageList } from '../hooks/useStageList'
+import { removeStagedArticle } from '../features/editorial-stage-article/services/editorial-stage-storage.service'
 import type { StagedArticle } from '../types'
 import {
   getStagedArticleMissingFields,
@@ -37,15 +38,14 @@ export default function StageListPage({
       && !(showEditorialBlocking && article.editorialBlocks?.length)
   ).length
 
-  const handleDelete = (id: string, event: MouseEvent) => {
+  const handleDelete = async (id: string, event: MouseEvent) => {
     event.preventDefault()
     event.stopPropagation()
 
     if (!confirm('Delete this staged article?')) return
 
-    const updated = stagedArticles.filter((article) => article.id !== id)
-    localStorage.setItem(storageKey, JSON.stringify(updated))
-    setStagedArticles(updated)
+    await removeStagedArticle(storageKey, id)
+    setStagedArticles((current) => current.filter((article) => article.id !== id))
   }
 
   if (isLoading) {

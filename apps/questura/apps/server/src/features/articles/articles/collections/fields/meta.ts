@@ -65,6 +65,35 @@ export const publishedAt: Field = {
   },
 }
 
+export const sourceFeature: Field = {
+  name: 'sourceFeature',
+  type: 'text',
+  index: true,
+  access: {
+    update: () => false,
+  },
+  admin: {
+    readOnly: true,
+    position: 'sidebar',
+    description:
+      'AI blog writer pipeline that generated this article (e.g. url2blog, youtube2blog, prompt2blog). Empty for manually created articles.',
+  },
+}
+
+export const sourceRunId: Field = {
+  name: 'sourceRunId',
+  type: 'text',
+  index: true,
+  access: {
+    update: () => false,
+  },
+  admin: {
+    readOnly: true,
+    position: 'sidebar',
+    description: 'Pipeline run id in the AI blog writer that produced this article.',
+  },
+}
+
 export const canonicalPath: Field = {
   name: 'canonicalPath',
   type: 'text',

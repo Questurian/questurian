@@ -385,6 +385,12 @@
   --card-accent-softer: rgba(107, 76, 122, 0.06);
 }
 
+.landing-card--payload-articles {
+  --card-accent: #1f6f5c;
+  --card-accent-soft: rgba(31, 111, 92, 0.14);
+  --card-accent-softer: rgba(31, 111, 92, 0.06);
+}
+
 .landing-card--locations {
   --card-accent: #264653;
   --card-accent-soft: rgba(38, 70, 83, 0.14);

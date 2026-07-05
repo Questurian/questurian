@@ -1,59 +1,86 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { StagedArticle } from '../../staging/types'
 import {
+  clearAllStagedArticles,
   getAllStagedArticles,
   removeStagedArticle,
 } from '../../staging/features/editorial-stage-article/services/editorial-stage-storage.service'
+import { migrateLocalDraftsToServer } from '../../staging/features/editorial-stage-article/services/migrate-local-drafts.service'
 
-function loadLocalDrafts(storageKey: string): StagedArticle[] {
-  return getAllStagedArticles(storageKey).sort(
+async function loadLocalDrafts(storageKey: string): Promise<StagedArticle[]> {
+  const drafts = await getAllStagedArticles(storageKey)
+  return drafts.sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
   )
 }
 
 export type UseLocalStagedDraftsResult = {
   localDrafts: StagedArticle[]
+  isLoading: boolean
+  error: string | null
   refresh: () => void
-  discardLocalDraft: (stagedId: string) => void
+  discardLocalDraft: (stagedId: string) => Promise<void>
+  clearAllLocalDrafts: () => Promise<void>
 }
 
 /**
- * Owns the locally-staged drafts list for a given storage key, keeping it in sync
- * with `localStorage` mutations from other tabs (`storage` event) and window focus.
+ * Owns the locally-staged drafts list for a given storage key. Drafts are now
+ * persisted server-side; on first mount any legacy localStorage drafts are
+ * migrated up, and the list is refreshed on window focus so edits made elsewhere
+ * (another tab/device) surface here.
  */
 export function useLocalStagedDrafts(storageKey: string): UseLocalStagedDraftsResult {
-  const [localDrafts, setLocalDrafts] = useState<StagedArticle[]>(() => loadLocalDrafts(storageKey))
+  const [localDrafts, setLocalDrafts] = useState<StagedArticle[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const refresh = useCallback(() => {
-    setLocalDrafts(loadLocalDrafts(storageKey))
+  const refresh = useCallback(async () => {
+    try {
+      setError(null)
+      const drafts = await loadLocalDrafts(storageKey)
+      setLocalDrafts(drafts)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load drafts')
+    } finally {
+      setIsLoading(false)
+    }
   }, [storageKey])
 
   useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (!event.key || event.key === storageKey) {
-        refresh()
-      }
+    let isCancelled = false
+
+    const bootstrap = async () => {
+      await migrateLocalDraftsToServer(storageKey)
+      if (!isCancelled) await refresh()
     }
 
-    refresh()
-    window.addEventListener('storage', handleStorage)
-    window.addEventListener('focus', refresh)
+    void bootstrap()
+
+    const handleFocus = () => {
+      void refresh()
+    }
+    window.addEventListener('focus', handleFocus)
 
     return () => {
-      window.removeEventListener('storage', handleStorage)
-      window.removeEventListener('focus', refresh)
+      isCancelled = true
+      window.removeEventListener('focus', handleFocus)
     }
   }, [storageKey, refresh])
 
   const discardLocalDraft = useCallback(
-    (stagedId: string) => {
+    async (stagedId: string) => {
       const confirmed = window.confirm('Discard this local draft? This cannot be undone.')
       if (!confirmed) return
-      removeStagedArticle(storageKey, stagedId)
-      setLocalDrafts(loadLocalDrafts(storageKey))
+      await removeStagedArticle(storageKey, stagedId)
+      await refresh()
     },
-    [storageKey],
+    [storageKey, refresh],
   )
 
-  return { localDrafts, refresh, discardLocalDraft }
+  const clearAllLocalDrafts = useCallback(async () => {
+    await clearAllStagedArticles(storageKey)
+    await refresh()
+  }, [storageKey, refresh])
+
+  return { localDrafts, isLoading, error, refresh: () => void refresh(), discardLocalDraft, clearAllLocalDrafts }
 }

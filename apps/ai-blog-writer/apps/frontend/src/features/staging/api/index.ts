@@ -13,3 +13,5 @@ export * from '../../../shared/api/payload/payload.types'
 
 export * from './articles/articles.api'
 export * from './articles/articles.types'
+
+export * from './staged-drafts/staged-drafts.api'

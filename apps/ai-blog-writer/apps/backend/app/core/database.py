@@ -85,6 +85,18 @@ def ensure_core_tables() -> None:
                 synced_at TEXT,
                 FOREIGN KEY (run_id) REFERENCES runs(run_id)
             );
+
+            CREATE TABLE IF NOT EXISTS staged_drafts (
+                storage_key TEXT NOT NULL,
+                draft_id TEXT NOT NULL,
+                data TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY (storage_key, draft_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_staged_drafts_key
+                ON staged_drafts(storage_key);
             """
         )
 

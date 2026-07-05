@@ -9,7 +9,10 @@ from typing import Any
 
 from langchain_core.prompts import PromptTemplate
 
-from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
+from app.features.youtube2blog.config import (
+    Y2B_PRIMARY_MODEL,
+    Y2B_STAGE3_QUALITY_IMPROVEMENT_MAX_OUTPUT_TOKENS,
+)
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 from app.shared.text import enforce_anti_ai_tells_markdown
 from shared import Stage3Output
@@ -325,7 +328,7 @@ def stage_3_improve_article(
 
     llm = get_vertex_llm(
         temperature=0.2,
-        max_tokens=8192,
+        max_tokens=Y2B_STAGE3_QUALITY_IMPROVEMENT_MAX_OUTPUT_TOKENS,
         model_name=model_name,
     )
     prompt = PromptTemplate(

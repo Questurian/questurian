@@ -1,4 +1,12 @@
-import type { StagedArticle } from '../../../types'
+import type { DraftUserStamp, StagedArticle } from '../../../types'
+import {
+  clearStagedDrafts,
+  deleteStagedDraft,
+  fetchStagedDraft,
+  fetchStagedDrafts,
+  putStagedDraft,
+  type PutStagedDraftOptions,
+} from '../../../api/staged-drafts/staged-drafts.api'
 import { resolveEditorModelName } from '../constants'
 import { createEmptySeoSection, normalizeSeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import { normalizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
@@ -10,6 +18,18 @@ const isRecord = (value: unknown): value is Record<string, unknown> => (
 const hasMeaningfulBlockContent = (article: Pick<StagedArticle, 'blocks' | 'content'>): boolean => (
   article.blocks.some((block) => block.content.trim().length > 0) || article.content.trim().length > 0
 )
+
+const normalizeUserStamp = (value: unknown): DraftUserStamp | undefined => {
+  if (!isRecord(value)) return undefined
+  const id = typeof value.id === 'string' && value.id.trim() ? value.id : undefined
+  const email = typeof value.email === 'string' && value.email.trim() ? value.email : undefined
+  if (!id || !email) return undefined
+  return {
+    id,
+    email,
+    name: typeof value.name === 'string' && value.name.trim() ? value.name : undefined,
+  }
+}
 
 export function normalizeStagedArticle(value: unknown): StagedArticle | null {
   if (!isRecord(value)) return null
@@ -72,54 +92,57 @@ export function normalizeStagedArticle(value: unknown): StagedArticle | null {
     payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim()
       ? value.payloadAuthorName
       : undefined,
+    createdBy: normalizeUserStamp(value.createdBy),
+    lastEditedBy: normalizeUserStamp(value.lastEditedBy),
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : nowIso,
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : nowIso,
   }
 }
 
-export function getAllStagedArticles(storageKey: string): StagedArticle[] {
-  const stored = localStorage.getItem(storageKey)
-  if (!stored) return []
+// Staged drafts are persisted server-side (keyed by `storageKey` + draft id) so
+// builder "Resume" links resolve across browsers/devices. These helpers stay thin
+// wrappers over the API client; `normalizeStagedArticle` still runs client-side so
+// the builder always receives a fully-shaped draft regardless of what was stored.
 
-  try {
-    const parsed = JSON.parse(stored)
-    if (!Array.isArray(parsed)) return []
-    return parsed
-      .map((entry) => normalizeStagedArticle(entry))
-      .filter((entry): entry is StagedArticle => Boolean(entry))
-  } catch {
-    return []
-  }
+export async function getAllStagedArticles(storageKey: string): Promise<StagedArticle[]> {
+  const drafts = await fetchStagedDrafts(storageKey)
+  return drafts
+    .map((entry) => normalizeStagedArticle(entry))
+    .filter((entry): entry is StagedArticle => Boolean(entry))
 }
 
-export function saveAllStagedArticles(
+export async function getStagedArticle(
+  storageKey: string,
+  stagedArticleId: string,
+): Promise<StagedArticle | null> {
+  const draft = await fetchStagedDraft(storageKey, stagedArticleId)
+  return draft ? normalizeStagedArticle(draft) : null
+}
+
+export async function saveAllStagedArticles(
   storageKey: string,
   stagedArticles: StagedArticle[]
-): void {
-  localStorage.setItem(storageKey, JSON.stringify(stagedArticles))
+): Promise<void> {
+  // Callers only ever add/update drafts through this path (never rely on it to
+  // delete), so an upsert-per-draft matches the previous "overwrite" semantics.
+  await Promise.all(stagedArticles.map((draft) => putStagedDraft(storageKey, draft)))
 }
 
-export function upsertStagedArticle(
+export async function upsertStagedArticle(
   storageKey: string,
-  stagedArticle: StagedArticle
-): void {
-  const allStaged = getAllStagedArticles(storageKey)
-  const index = allStaged.findIndex((candidate) => candidate.id === stagedArticle.id)
-  if (index >= 0) {
-    allStaged[index] = stagedArticle
-  } else {
-    allStaged.push(stagedArticle)
-  }
-  saveAllStagedArticles(storageKey, allStaged)
+  stagedArticle: StagedArticle,
+  options?: PutStagedDraftOptions,
+): Promise<StagedArticle> {
+  return putStagedDraft(storageKey, stagedArticle, options)
 }
 
-export function removeStagedArticle(
+export async function removeStagedArticle(
   storageKey: string,
   stagedArticleId: string
-): void {
-  const allStaged = getAllStagedArticles(storageKey)
-  saveAllStagedArticles(
-    storageKey,
-    allStaged.filter((article) => article.id !== stagedArticleId)
-  )
+): Promise<void> {
+  await deleteStagedDraft(storageKey, stagedArticleId)
+}
+
+export async function clearAllStagedArticles(storageKey: string): Promise<void> {
+  await clearStagedDrafts(storageKey)
 }

@@ -9,6 +9,7 @@ import SavedArticlesPage from './SavedArticlesPage'
 
 const mockUseAuth = vi.hoisted(() => vi.fn())
 const mockGetArticleById = vi.hoisted(() => vi.fn())
+const mockFetchPayloadArticles = vi.hoisted(() => vi.fn())
 const mockGetAllStagedArticles = vi.hoisted(() => vi.fn())
 const mockRemoveStagedArticle = vi.hoisted(() => vi.fn())
 
@@ -18,6 +19,9 @@ vi.mock('../../auth', () => ({
 
 vi.mock('../../staging/api', () => ({
   getArticleById: mockGetArticleById,
+  fetchPayloadArticles: mockFetchPayloadArticles,
+  buildPayloadAdminArticleUrl: (articleId: number) =>
+    `http://localhost:4000/admin/collections/articles/${articleId}`,
 }))
 
 vi.mock('../../staging/features/editorial-stage-article/services/editorial-stage-storage.service', () => ({
@@ -86,6 +90,7 @@ describe('SavedArticlesPage', () => {
   beforeEach(() => {
     mockUseAuth.mockReset()
     mockGetArticleById.mockReset()
+    mockFetchPayloadArticles.mockReset()
     mockGetAllStagedArticles.mockReset()
     mockRemoveStagedArticle.mockReset()
   })
@@ -122,7 +127,16 @@ describe('SavedArticlesPage', () => {
     mockGetAllStagedArticles.mockReturnValue([
       makeDraft({ id: 'draft-local' }),
     ])
-    mockGetArticleById.mockResolvedValue({ id: 44, status: 'draft' })
+    mockFetchPayloadArticles.mockResolvedValue([
+      {
+        id: 44,
+        title: 'Synced Article',
+        status: 'draft',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        sourceFeature: 'testblog',
+        sourceRunId: 'run-synced',
+      },
+    ])
 
     renderPage(config)
 
@@ -130,9 +144,20 @@ describe('SavedArticlesPage', () => {
 
     expect(fetchArticles).toHaveBeenCalledTimes(1)
     expect(mockGetAllStagedArticles).toHaveBeenCalledWith('test_staged_articles_v2')
+
+    // Payload Documents come straight from Payload, combined across features,
+    // and edit through the dedicated Payload article editor.
+    await waitFor(() => expect(screen.getByText('Payload Documents (1)')).toBeTruthy())
+    expect(mockFetchPayloadArticles).toHaveBeenCalledWith('token-1')
+    expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe(
+      '/payload-articles/stage-article?payloadId=44',
+    )
     expect(screen.getByRole('link', { name: 'Back to Pipeline' }).getAttribute('href')).toBe('/testblog')
     expect(screen.getByRole('link', { name: 'Article Types' }).getAttribute('href')).toBe('/testblog/article-types')
     expect(screen.getByRole('link', { name: 'Create Local Draft' }).getAttribute('href')).toBe('/testblog/stage-article?runId=run-generated')
-    expect(screen.getByRole('link', { name: 'Resume' }).getAttribute('href')).toBe('/testblog/stage-article?stagedId=draft-local')
+    // The local draft (and its Resume link) now hydrates asynchronously from the server.
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: 'Resume' }).getAttribute('href')).toBe('/testblog/stage-article?stagedId=draft-local'),
+    )
   })
 })

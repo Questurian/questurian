@@ -96,6 +96,7 @@ const storage = createDraftStorage<SingleTypeListicleDraft>({
 export const listDrafts = storage.listDrafts
 export const saveDraft = storage.saveDraft
 export const removeDraft = storage.removeDraft
+export const clearDrafts = storage.clearDrafts
 export const findDraftByPayloadId = storage.findDraftByPayloadId
 export const findDraftByDraftId = storage.findDraftByDraftId
 

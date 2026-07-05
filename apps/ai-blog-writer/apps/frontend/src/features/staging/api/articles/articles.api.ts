@@ -2,6 +2,13 @@ import { API_BASE_URL, PAYLOAD_API_URL } from '../../../../shared/api/client/con
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type { CreateArticlePayload, PayloadArticleDoc } from './articles.types'
 
+function unwrapPayloadDoc<T>(result: T | { doc?: T }): T {
+  if (result && typeof result === 'object' && 'doc' in result && (result as { doc?: T }).doc) {
+    return (result as { doc: T }).doc
+  }
+  return result as T
+}
+
 export async function createArticle(
   article: CreateArticlePayload,
   token: string,
@@ -24,7 +31,7 @@ export async function createArticle(
   }
 
   const result = await response.json()
-  return result.doc
+  return unwrapPayloadDoc<PayloadArticleDoc>(result)
 }
 
 export async function updateArticle(
@@ -50,7 +57,7 @@ export async function updateArticle(
   }
 
   const result = await response.json()
-  return result.doc
+  return unwrapPayloadDoc<PayloadArticleDoc>(result)
 }
 
 export async function getArticleById(
@@ -73,7 +80,36 @@ export async function getArticleById(
   }
 
   const result = await response.json()
-  return result.doc
+  return unwrapPayloadDoc<PayloadArticleDoc>(result)
+}
+
+export async function fetchPayloadArticles(token: string): Promise<PayloadArticleDoc[]> {
+  const query = new URLSearchParams({
+    limit: '200',
+    depth: '0',
+    sort: '-updatedAt',
+  })
+  const response = await fetch(`${PAYLOAD_API_URL}/api/articles?${query.toString()}`, {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+
+  if (!response.ok) {
+    const message = await parseErrorResponse(response, `Failed to fetch Payload articles: ${response.status}`, { message: 'Unknown error' })
+    throw new Error(message)
+  }
+
+  const result = await response.json()
+  return Array.isArray(result.docs) ? result.docs : []
+}
+
+export function buildPayloadAdminArticleUrl(articleId: number): string {
+  return `${PAYLOAD_API_URL}/admin/collections/articles/${articleId}`
 }
 
 export async function markArticleSynced(

@@ -11,6 +11,7 @@ const mockUseAuth = vi.hoisted(() => vi.fn())
 const mockFetchArticles = vi.hoisted(() => vi.fn())
 const mockDeleteArticle = vi.hoisted(() => vi.fn())
 const mockGetArticleById = vi.hoisted(() => vi.fn())
+const mockFetchPayloadArticles = vi.hoisted(() => vi.fn())
 const mockGetAllStagedArticles = vi.hoisted(() => vi.fn())
 const mockRemoveStagedArticle = vi.hoisted(() => vi.fn())
 
@@ -25,6 +26,9 @@ vi.mock('../api', () => ({
 
 vi.mock('../../staging/api', () => ({
   getArticleById: mockGetArticleById,
+  fetchPayloadArticles: mockFetchPayloadArticles,
+  buildPayloadAdminArticleUrl: (articleId: number) =>
+    `http://localhost:4000/admin/collections/articles/${articleId}`,
 }))
 
 vi.mock('../../staging/features/editorial-stage-article/services/editorial-stage-storage.service', () => ({
@@ -95,6 +99,7 @@ describe('YouTube2Blog ArticlesPage', () => {
     mockFetchArticles.mockReset()
     mockDeleteArticle.mockReset()
     mockGetArticleById.mockReset()
+    mockFetchPayloadArticles.mockReset()
     mockGetAllStagedArticles.mockReset()
     mockRemoveStagedArticle.mockReset()
   })
@@ -119,7 +124,16 @@ describe('YouTube2Blog ArticlesPage', () => {
         payload_article_id: null,
       }),
     ])
-    mockGetArticleById.mockResolvedValue({ id: 101, status: 'published' })
+    mockFetchPayloadArticles.mockResolvedValue([
+      {
+        id: 101,
+        title: 'Synced Article',
+        status: 'published',
+        updatedAt: '2026-01-02T00:00:00.000Z',
+        sourceFeature: 'youtube2blog',
+        sourceRunId: 'run-1',
+      },
+    ])
 
     renderPage()
 
@@ -129,11 +143,15 @@ describe('YouTube2Blog ArticlesPage', () => {
       expect(screen.getByText('Payload Documents (1)')).toBeTruthy()
     })
 
-    expect(screen.getByText('Only Local')).toBeTruthy()
-    expect(screen.getByText('Published')).toBeTruthy()
-    expect(screen.getByText('Local Edits')).toBeTruthy()
-    expect(screen.getByText('Unsynced Article')).toBeTruthy()
-    expect(screen.getAllByRole('link', { name: 'Resume' })).toHaveLength(2)
+    // Local drafts and payload statuses now hydrate asynchronously (drafts are
+    // fetched from the server), so wait for the derived badges/rows to settle.
+    await waitFor(() => {
+      expect(screen.getByText('Only Local')).toBeTruthy()
+      expect(screen.getByText('Published')).toBeTruthy()
+      expect(screen.getByText('Local Edits')).toBeTruthy()
+      expect(screen.getByText('Unsynced Article')).toBeTruthy()
+      expect(screen.getAllByRole('link', { name: 'Resume' })).toHaveLength(2)
+    })
     expect(screen.getByRole('link', { name: 'Create Local Draft' })).toBeTruthy()
     expect(screen.queryByRole('link', { name: /Staged/i })).toBeNull()
   })
@@ -142,6 +160,7 @@ describe('YouTube2Blog ArticlesPage', () => {
     mockUseAuth.mockReturnValue({ token: 'token-1' })
     mockGetAllStagedArticles.mockReturnValue([])
     mockFetchArticles.mockResolvedValue([])
+    mockFetchPayloadArticles.mockResolvedValue([])
 
     renderPage()
 
@@ -151,6 +170,6 @@ describe('YouTube2Blog ArticlesPage', () => {
     await waitFor(() => expect(screen.getByText('No generated-only runs.')).toBeTruthy())
 
     expect(screen.getByText('No local drafts saved.')).toBeTruthy()
-    expect(screen.getByText('No synced payload documents yet.')).toBeTruthy()
+    expect(screen.getByText('No articles in Payload yet.')).toBeTruthy()
   })
 })

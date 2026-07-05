@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth'
+import { fetchPayloadArticles } from '../../staging/api'
 import type { SavedArticlesPageConfig, SavedBlogArticle } from '../types'
 import { useLocalStagedDrafts } from '../hooks/useLocalStagedDrafts'
-import { usePayloadPublicationStatuses } from '../hooks/usePayloadPublicationStatuses'
 import { LocalDraftsTable } from './LocalDraftsTable'
 import { PayloadDocumentsTable } from './PayloadDocumentsTable'
 import { GeneratedArticlesTable } from './GeneratedArticlesTable'
@@ -19,7 +19,7 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
   const queryClient = useQueryClient()
   const { token } = useAuth()
 
-  const { localDrafts, discardLocalDraft } = useLocalStagedDrafts(config.storageKey)
+  const { localDrafts, discardLocalDraft, clearAllLocalDrafts } = useLocalStagedDrafts(config.storageKey)
   const [generatedDeleteTarget, setGeneratedDeleteTarget] = useState<TArticle | null>(null)
 
   const articlesQuery = useQuery({
@@ -28,46 +28,40 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
   })
 
   const articles = articlesQuery.data ?? EMPTY_ARTICLES
-  const generatedRows = useMemo(
-    () => articles.filter((article) => !(article.synced_to_payload && article.payload_article_id)),
-    [articles],
-  )
-  const payloadRows = useMemo(
-    () => articles.filter((article) => Boolean(article.synced_to_payload && article.payload_article_id)),
-    [articles],
-  )
-  const payloadArticleIds = useMemo(
-    () => (
-      [...new Set(
-        payloadRows
-          .map((article) => article.payload_article_id)
-          .filter((id): id is number => typeof id === 'number' && Number.isFinite(id)),
-      )].sort((a, b) => a - b)
-    ),
-    [payloadRows],
-  )
 
-  const { payloadStatusByArticleId, isFetching: isFetchingStatuses } = usePayloadPublicationStatuses({
-    featureKey: config.featureKey,
-    payloadArticleIds,
-    token,
+  // The Payload Documents table is driven by Payload itself (source of truth),
+  // not by the backend's local sync bookkeeping — one combined list across all
+  // blog-writer pipelines.
+  const payloadDocsQuery = useQuery({
+    queryKey: ['payload-articles', token || 'no-token'],
+    enabled: Boolean(token),
+    queryFn: () => fetchPayloadArticles(token as string),
   })
+  const payloadDocs = payloadDocsQuery.data ?? EMPTY_ARTICLES
 
-  const localPayloadIds = useMemo(
-    () => new Set(localDrafts.map((draft) => draft.payloadArticleId).filter((id): id is number => typeof id === 'number')),
-    [localDrafts],
+  const payloadDocIds = useMemo(
+    () => new Set(payloadDocs.map((doc) => doc.id)),
+    [payloadDocs],
+  )
+  const payloadDocRunIds = useMemo(
+    () => new Set(payloadDocs.map((doc) => doc.sourceRunId).filter(Boolean)),
+    [payloadDocs],
+  )
+
+  // Generated keeps only runs with no Payload counterpart — matched via local
+  // sync bookkeeping when present, or via the doc's stamped sourceRunId.
+  const generatedRows = useMemo(
+    () => articles.filter((article) => {
+      if (article.synced_to_payload && article.payload_article_id) return false
+      if (article.payload_article_id && payloadDocIds.has(article.payload_article_id)) return false
+      return !payloadDocRunIds.has(article.run_id)
+    }),
+    [articles, payloadDocIds, payloadDocRunIds],
   )
 
   const localDraftRows = useMemo(() => (
-    localDrafts.filter((draft) => !draft.payloadArticleId || !payloadArticleIds.includes(draft.payloadArticleId))
-  ), [localDrafts, payloadArticleIds])
-
-  const unresolvedSyncedStatusCount = useMemo(() => (
-    payloadRows.filter((article) => {
-      if (!article.synced_to_payload || !article.payload_article_id) return false
-      return !payloadStatusByArticleId[article.payload_article_id]
-    }).length
-  ), [payloadRows, payloadStatusByArticleId])
+    localDrafts.filter((draft) => !draft.payloadArticleId || !payloadDocIds.has(draft.payloadArticleId))
+  ), [localDrafts, payloadDocIds])
 
   const deleteGeneratedArticleMutation = useMutation({
     mutationFn: (runId: string) => config.deleteArticle(runId),
@@ -93,6 +87,33 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
     deleteGeneratedArticleMutation.mutate(generatedDeleteTarget.run_id)
   }
 
+  const clearAllGeneratedMutation = useMutation({
+    mutationFn: async (runIds: string[]) => {
+      await Promise.all(runIds.map((runId) => config.deleteArticle(runId)))
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: [config.featureKey, 'articles'] })
+    },
+  })
+
+  const handleClearAllLocalDrafts = () => {
+    if (localDraftRows.length === 0) return
+    const confirmed = window.confirm(
+      `Discard all ${localDraftRows.length} local draft${localDraftRows.length === 1 ? '' : 's'}? This cannot be undone.`,
+    )
+    if (!confirmed) return
+    clearAllLocalDrafts()
+  }
+
+  const handleClearAllGenerated = () => {
+    if (generatedRows.length === 0 || clearAllGeneratedMutation.isPending) return
+    const confirmed = window.confirm(
+      `Delete all ${generatedRows.length} generated article${generatedRows.length === 1 ? '' : 's'}? This cannot be undone.`,
+    )
+    if (!confirmed) return
+    clearAllGeneratedMutation.mutate(generatedRows.map((article) => article.run_id))
+  }
+
   const pageContent = articlesQuery.isLoading ? (
     <section className="stl-panel">
       <p className="stl-placeholder">Loading payload documents...</p>
@@ -107,20 +128,20 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
         rows={localDraftRows}
         buildDraftUrl={config.buildDraftUrl}
         onDiscard={discardLocalDraft}
+        onClearAll={handleClearAllLocalDrafts}
       />
 
       <PayloadDocumentsTable
-        rows={payloadRows}
+        docs={payloadDocs}
         localDrafts={localDrafts}
-        payloadStatusByArticleId={payloadStatusByArticleId}
-        buildStageUrl={config.buildStageUrl}
         buildDraftUrl={config.buildDraftUrl}
-        statusNoteClassName={config.classNames.statusNote}
-        isFetchingStatuses={isFetchingStatuses}
+        isLoading={payloadDocsQuery.isLoading}
+        loadErrorMessage={
+          payloadDocsQuery.isError
+            ? (payloadDocsQuery.error instanceof Error ? payloadDocsQuery.error.message : 'Unknown error')
+            : null
+        }
         hasToken={Boolean(token)}
-        payloadArticleIdCount={payloadArticleIds.length}
-        unresolvedSyncedStatusCount={unresolvedSyncedStatusCount}
-        localPayloadIdCount={localPayloadIds.size}
       />
 
       <GeneratedArticlesTable
@@ -129,6 +150,8 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
         buildStageUrl={config.buildStageUrl}
         buildDraftUrl={config.buildDraftUrl}
         onDelete={openGeneratedDeleteModal}
+        onClearAll={handleClearAllGenerated}
+        isClearingAll={clearAllGeneratedMutation.isPending}
       />
     </main>
   )

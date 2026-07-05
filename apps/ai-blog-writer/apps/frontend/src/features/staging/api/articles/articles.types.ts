@@ -14,6 +14,8 @@ export type PayloadArticleDoc = {
   publishedAt?: string | null
   updatedAt?: string
   createdAt?: string
+  sourceFeature?: string | null
+  sourceRunId?: string | null
 }
 
 export type CreateArticlePayload = {
@@ -24,6 +26,8 @@ export type CreateArticlePayload = {
   sharedNeighborhoods?: number[]
   step1_complete: boolean
   status?: 'draft' | 'published'
+  sourceFeature?: string
+  sourceRunId?: string
   category?: number
   tags?: number[]
   headerSection?: {

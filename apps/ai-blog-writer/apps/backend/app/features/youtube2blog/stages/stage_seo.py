@@ -11,6 +11,7 @@ from langchain_core.prompts import PromptTemplate
 
 from app.features.youtube2blog.config import (
     Y2B_PRIMARY_MODEL,
+    Y2B_STAGE3_QUALITY_IMPROVEMENT_MAX_OUTPUT_TOKENS,
     Y2B_SEO_MAX_FOCUS_DENSITY,
     Y2B_SEO_MAX_FOCUS_OCCURRENCE_INCREASE,
     Y2B_SEO_MAX_FOCUS_OCCURRENCES,
@@ -354,7 +355,7 @@ def stage_seo_enrich_article(
 
     llm = get_vertex_llm(
         temperature=0.2,
-        max_tokens=8192,
+        max_tokens=Y2B_STAGE3_QUALITY_IMPROVEMENT_MAX_OUTPUT_TOKENS,
         model_name=model_name,
     )
     prompt = PromptTemplate(

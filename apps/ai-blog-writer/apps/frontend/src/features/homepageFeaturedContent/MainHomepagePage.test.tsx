@@ -82,7 +82,11 @@ describe('MainHomepagePage performance behavior', () => {
     const user = userEvent.setup()
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
-      const payload = url.includes('/candidates') ? emptyCandidates : homepage
+      const payload = url.includes('/api/access')
+        ? { collections: { articles: { update: true } } }
+        : url.includes('/candidates')
+          ? emptyCandidates
+          : homepage
 
       return Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }))
     })

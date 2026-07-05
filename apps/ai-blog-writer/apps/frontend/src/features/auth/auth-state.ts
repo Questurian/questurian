@@ -126,9 +126,12 @@ export function normalizeAuthState(
     user: {
       id: String(userSource.id ?? fallbackAuth?.user.id ?? ''),
       email,
-      role: readString(userSource.role) || fallbackAuth?.user.role,
-      firstName: readString(userSource.firstName) || fallbackAuth?.user.firstName,
-      lastName: readString(userSource.lastName) || fallbackAuth?.user.lastName,
+      // The server response is authoritative for identity-derived fields.
+      // Falling back to the stored role would keep a stale role alive across
+      // sessions (e.g. after a writer -> editor promotion).
+      role: readString(userSource.role) ?? undefined,
+      firstName: readString(userSource.firstName) ?? undefined,
+      lastName: readString(userSource.lastName) ?? undefined,
     },
   };
 }

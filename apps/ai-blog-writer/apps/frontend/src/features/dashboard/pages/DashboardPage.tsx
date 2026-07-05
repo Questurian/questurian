@@ -1,6 +1,6 @@
-import { useContext, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AuthContext } from '../../auth'
+import { usePermissions } from '../../auth'
 import '../../../css/landing.css'
 
 type LandingSectionId =
@@ -189,6 +189,25 @@ const LANDING_CARDS: LandingCardConfig[] = [
     icon: (
       <path
         d="M4 4h6v6H4V4zM14 4h6v6h-6V4zM4 14h6v6H4v-6zM14 14h6v6h-6v-6z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+  {
+    id: 'payload-articles',
+    title: 'Payload Articles',
+    description: 'Browse every article in Payload CMS — from any pipeline or created by hand — and edit them with the shared builder.',
+    to: '/payload-articles',
+    section: 'editorial-tools',
+    priority: 0,
+    accentClass: 'landing-card--payload-articles',
+    actionLabel: 'Browse Articles',
+    icon: (
+      <path
+        d="M4 6h16M4 12h16M4 18h10"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
@@ -512,9 +531,8 @@ function LandingSection({
 }
 
 export default function DashboardPage() {
-  const auth = useContext(AuthContext)
+  const { role: currentRole } = usePermissions()
   const [isOccasionalOpen, setIsOccasionalOpen] = useState(false)
-  const currentRole = auth?.user?.role || null
   const occasionalToolCount = LANDING_CARDS.filter((card) => (
     OCCASIONAL_SUBSECTIONS.some((section) => section.id === card.section)
     && (!card.roles || (currentRole ? card.roles.includes(currentRole) : false))

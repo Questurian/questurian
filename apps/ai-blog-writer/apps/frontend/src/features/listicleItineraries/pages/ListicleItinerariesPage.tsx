@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth'
 import { fetchItineraries } from '../api'
-import { listDrafts, removeDraft } from '../storage'
+import { clearDrafts, listDrafts, removeDraft } from '../storage'
 import type { PayloadItineraryDoc } from '../types'
 import '../styles.css'
 
@@ -112,6 +112,16 @@ export default function ListicleItinerariesPage() {
     setLocalDrafts(listDrafts())
   }
 
+  const clearAllLocalDrafts = () => {
+    if (localRows.length === 0) return
+    const confirmed = window.confirm(
+      `Discard all ${localRows.length} local draft${localRows.length === 1 ? '' : 's'}? This cannot be undone.`,
+    )
+    if (!confirmed) return
+    clearDrafts()
+    setLocalDrafts(listDrafts())
+  }
+
   const pageContent = isLoading ? (
     <section className="stl-panel">
       <p className="stl-placeholder">Loading itineraries...</p>
@@ -125,6 +135,15 @@ export default function ListicleItinerariesPage() {
       <section className="stl-panel">
         <div className="stl-panel-header">
           <h2>Local Drafts ({localRows.length})</h2>
+          {localRows.length > 0 ? (
+            <button
+              type="button"
+              className="stl-btn stl-btn-danger stl-btn-xs"
+              onClick={clearAllLocalDrafts}
+            >
+              Clear All
+            </button>
+          ) : null}
         </div>
 
         {localRows.length === 0 ? (

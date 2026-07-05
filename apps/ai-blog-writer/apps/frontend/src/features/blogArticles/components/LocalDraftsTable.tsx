@@ -6,13 +6,23 @@ export type LocalDraftsTableProps = {
   rows: StagedArticle[]
   buildDraftUrl: (stagedId: string) => string
   onDiscard: (stagedId: string) => void
+  onClearAll: () => void
 }
 
-export function LocalDraftsTable({ rows, buildDraftUrl, onDiscard }: LocalDraftsTableProps) {
+export function LocalDraftsTable({ rows, buildDraftUrl, onDiscard, onClearAll }: LocalDraftsTableProps) {
   return (
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>Local Drafts ({rows.length})</h2>
+        {rows.length > 0 ? (
+          <button
+            type="button"
+            className="stl-btn stl-btn-danger stl-btn-xs"
+            onClick={onClearAll}
+          >
+            Clear All
+          </button>
+        ) : null}
       </div>
       <div className="panel-body">
         {rows.length === 0 ? (

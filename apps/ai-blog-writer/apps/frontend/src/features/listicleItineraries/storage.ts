@@ -384,6 +384,7 @@ const storage = createDraftStorage<ListicleItineraryDraft>({
 
 export const listDrafts = storage.listDrafts
 export const removeDraft = storage.removeDraft
+export const clearDrafts = storage.clearDrafts
 export const findDraftByPayloadId = storage.findDraftByPayloadId
 export const findDraftByDraftId = storage.findDraftByDraftId
 

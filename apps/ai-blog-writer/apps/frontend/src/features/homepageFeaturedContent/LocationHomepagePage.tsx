@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { useAuth } from '../auth'
+import { useAuth, usePermissions } from '../auth'
 import './homepageFeaturedContent.css'
 import HomepageBlocksSortableList from './HomepageBlocksSortableList'
 import AddHomepageBlockPicker from './AddHomepageBlockPicker'
@@ -76,8 +76,8 @@ function getLocationLabel(location: LocationRef | null): string {
 export default function LocationHomepagePage() {
   const { id } = useParams<{ id: string }>()
   const numericId = Number(id)
-  const { token, user } = useAuth()
-  const canManage = user?.role === 'admin' || user?.role === 'editor'
+  const { token } = useAuth()
+  const { canManagePublished: canManage } = usePermissions()
   const queryClient = useQueryClient()
   const homepageQueryKey = ['location-homepage', numericId, token]
 

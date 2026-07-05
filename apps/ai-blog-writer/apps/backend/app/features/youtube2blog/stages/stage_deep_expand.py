@@ -18,7 +18,10 @@ from datetime import datetime, timezone
 from typing import Any
 
 from app.core import write_stage_result, write_status
-from app.features.youtube2blog.config import Y2B_PRIMARY_MODEL
+from app.features.youtube2blog.config import (
+    Y2B_DEEP_EXPAND_MAX_OUTPUT_TOKENS,
+    Y2B_PRIMARY_MODEL,
+)
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 from app.shared.text import enforce_anti_ai_tells_markdown
 from utils import get_vertex_llm, parse_json_response
@@ -180,7 +183,7 @@ def _invoke_text_llm(prompt: str, model_name: str = Y2B_PRIMARY_MODEL) -> str:
     """Invoke LLM and return plain text response."""
     llm = get_vertex_llm(
         temperature=0.2,
-        max_tokens=16384,
+        max_tokens=Y2B_DEEP_EXPAND_MAX_OUTPUT_TOKENS,
         model_name=model_name,
     )
     return str(llm.invoke(prompt)).strip()
@@ -265,7 +268,7 @@ def expand_article_with_gaps(
     prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
     llm = get_vertex_llm(
         temperature=0.2,
-        max_tokens=16384,
+        max_tokens=Y2B_DEEP_EXPAND_MAX_OUTPUT_TOKENS,
         model_name=model_name,
     )
     raw = str(llm.invoke(prompt)).strip()
@@ -299,7 +302,7 @@ def rewrite_listicle_article(
     prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
     llm = get_vertex_llm(
         temperature=0.2,
-        max_tokens=16384,
+        max_tokens=Y2B_DEEP_EXPAND_MAX_OUTPUT_TOKENS,
         model_name=model_name,
     )
     raw = str(llm.invoke(prompt)).strip()

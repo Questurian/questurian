@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../auth'
+import { useAuth, usePermissions } from '../../auth'
 import {
   generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured,
   uploadSocialImage as requestUploadSocialImage,
@@ -92,7 +92,8 @@ export function StandardArticleStageBuilder({
   syncBehavior = 'draft-sync',
   backToStageLabel = 'Back to Stage List',
 }: StandardArticleStageBuilderProps) {
-  const { token, user } = useAuth()
+  const { token } = useAuth()
+  const { canManagePublished, role } = usePermissions()
   const [localError, setLocalError] = useState<string | null>(null)
   const [localResult, setLocalResult] = useState<string | null>(null)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
@@ -170,7 +171,6 @@ export function StandardArticleStageBuilder({
     : 'Select Featured Image...'
   const headerPreviewTitle = stagedArticle?.title.trim() || 'Your article headline will appear here'
   const isFeaturedImagePlaceholder = !featuredImageId
-  const canManagePublished = user?.role === 'admin' || user?.role === 'editor'
   const isPublished = stagedArticle?.payloadStatus === 'published'
   const isCityPrimaryLocation = selectedLocation?.level === 'city'
 
@@ -543,6 +543,23 @@ export function StandardArticleStageBuilder({
 
         <div className="stl-builder-layout">
           <main className="stl-builder-main">
+            {status.saveConflict ? (
+              <div className="stl-summary-warning" role="alert">
+                <strong>Draft changed elsewhere.</strong>
+                <p>
+                  This draft was modified
+                  {status.saveConflict.current?.lastEditedBy?.email
+                    ? ` by ${status.saveConflict.current.lastEditedBy.email}`
+                    : status.saveConflict.current === null
+                      ? ' (it was deleted)'
+                      : ' by another user'}
+                  {' '}since you opened it. Autosave is paused — reload to continue; unsynced local changes will be lost.
+                </p>
+                <button type="button" className="stl-btn stl-btn-secondary" onClick={() => window.location.reload()}>
+                  Reload draft
+                </button>
+              </div>
+            ) : null}
             {localError ? <p className="stl-error">{localError}</p> : null}
             {localResult ? <p className="stl-success">{localResult}</p> : null}
 
@@ -873,20 +890,18 @@ export function StandardArticleStageBuilder({
                   </button>
                 ) : null}
 
-                {canManagePublished ? (
-                  <button
-                    type="button"
-                    className="stl-btn"
-                    onClick={() => handlePayloadSubmit('published')}
-                    disabled={sidebarProps.isPublishing || syncIssues.length > 0}
-                  >
-                    {sidebarProps.isPublishing
-                      ? 'Publishing...'
-                      : isPublished
-                        ? 'Update Published'
-                        : 'Publish'}
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  className="stl-btn"
+                  onClick={() => handlePayloadSubmit('published')}
+                  disabled={sidebarProps.isPublishing || syncIssues.length > 0 || !canManagePublished}
+                >
+                  {sidebarProps.isPublishing
+                    ? 'Publishing...'
+                    : isPublished
+                      ? 'Update Published'
+                      : 'Publish'}
+                </button>
               </div>
 
               {stagedArticle.payloadArticleId ? (
@@ -899,8 +914,10 @@ export function StandardArticleStageBuilder({
                 <p className="stl-summary-note">First sync will create a draft article in Payload.</p>
               )}
 
-              {!canManagePublished && !isPublished ? (
-                <p className="stl-summary-note">Writers can only save drafts to Payload.</p>
+              {!canManagePublished ? (
+                <p className="stl-summary-note">
+                  Publishing requires an editor or admin role (you are signed in as {role ?? 'unknown'}).
+                </p>
               ) : null}
 
               {sidebarProps.publishResult ? (
@@ -922,6 +939,12 @@ export function StandardArticleStageBuilder({
               <div className="sab-stage-meta-list">
                 <p><strong>Run ID:</strong> {stagedArticle.runId || 'n/a'}</p>
                 <p><strong>Location:</strong> {selectedLocationLabel || 'Not set'}</p>
+                {stagedArticle.createdBy ? (
+                  <p><strong>Created by:</strong> {stagedArticle.createdBy.name || stagedArticle.createdBy.email}</p>
+                ) : null}
+                {stagedArticle.lastEditedBy ? (
+                  <p><strong>Last edited by:</strong> {stagedArticle.lastEditedBy.name || stagedArticle.lastEditedBy.email}</p>
+                ) : null}
                 <p><strong>Created:</strong> {stagedArticle.createdAt ? new Date(stagedArticle.createdAt).toLocaleDateString() : 'n/a'}</p>
                 <p><strong>Updated:</strong> {stagedArticle.updatedAt ? new Date(stagedArticle.updatedAt).toLocaleDateString() : 'n/a'}</p>
               </div>

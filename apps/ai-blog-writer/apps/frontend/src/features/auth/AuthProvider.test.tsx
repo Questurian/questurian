@@ -78,7 +78,7 @@ describe('AuthProvider', () => {
       vi.fn((input: RequestInfo | URL) => {
         const url = String(input);
 
-        if (url.endsWith('/api/users/refresh-token')) {
+        if (url.endsWith('/api/users/me')) {
           return new Promise<Response>((resolve) => {
             resolveRestore = resolve;
           });
@@ -172,5 +172,94 @@ describe('AuthProvider', () => {
     expect(calledUrls).toContain('http://localhost:4000/api/users/login');
     expect(calledUrls).toContain('http://localhost:4000/api/users/logout');
     expect(calledUrls.some((url) => url.includes('/api/auth/'))).toBe(false);
+  });
+
+  it('refreshes a stale stored role from /api/users/me on hydrate', async () => {
+    const token = createToken(Date.now() + 60 * 60 * 1000);
+    localStorage.setItem('payload_auth', JSON.stringify({
+      token,
+      expiresAt: Date.now() + 60 * 60 * 1000,
+      user: {
+        id: '17',
+        email: 'writer@example.com',
+        role: 'writer',
+      },
+    }));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+
+        if (url.endsWith('/api/users/me')) {
+          return Promise.resolve(jsonResponse({
+            token,
+            user: {
+              id: 17,
+              email: 'writer@example.com',
+              role: 'editor',
+            },
+          }));
+        }
+
+        if (url.endsWith('/api/health')) {
+          return Promise.resolve(jsonResponse({ ok: true }));
+        }
+
+        return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+      }),
+    );
+
+    renderProtectedApp();
+
+    await waitFor(() => {
+      expect(screen.getByText('protected page')).toBeInTheDocument();
+    });
+
+    const persisted = JSON.parse(localStorage.getItem('payload_auth') ?? '{}');
+    expect(persisted.user.role).toBe('editor');
+  });
+
+  it('logs out when the stored token is rejected by /me and refresh fails', async () => {
+    const token = createToken(Date.now() + 60 * 60 * 1000);
+    localStorage.setItem('payload_auth', JSON.stringify({
+      token,
+      expiresAt: Date.now() + 60 * 60 * 1000,
+      user: {
+        id: '17',
+        email: 'writer@example.com',
+        role: 'writer',
+      },
+    }));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+
+        if (url.endsWith('/api/users/me')) {
+          // Payload returns 200 with a null user for invalid sessions.
+          return Promise.resolve(jsonResponse({ user: null, message: 'Account' }));
+        }
+
+        if (url.endsWith('/api/users/refresh-token')) {
+          return Promise.resolve(jsonResponse({ message: 'Forbidden' }, 403));
+        }
+
+        if (url.endsWith('/api/health')) {
+          return Promise.resolve(jsonResponse({ ok: true }));
+        }
+
+        return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+      }),
+    );
+
+    renderProtectedApp();
+
+    await waitFor(() => {
+      expect(screen.getByText('login page')).toBeInTheDocument();
+    });
+
+    expect(localStorage.getItem('payload_auth')).toBeNull();
   });
 });
