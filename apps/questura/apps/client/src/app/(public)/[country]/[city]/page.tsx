@@ -6,8 +6,11 @@ import {
   CityHomepagePayloadDebugLogger,
   fetchCityHomepage,
 } from '@/features/CityDashboard';
+import { LocationContentList } from '@/features/search/components/LocationContentList';
+import { fetchLocationContent } from '@/features/search/lib/fetchSearch';
 
 type Props = { params: Promise<{ country: string; city: string }> };
+const CONTENT_PAGE_SIZE = 50;
 
 function formatRouteLabel(value: string): string {
   return value
@@ -20,18 +23,21 @@ function formatRouteLabel(value: string): string {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country, city } = await params;
 
-  const data = await fetchCityHomepage(country, city);
+  const [data, content] = await Promise.all([
+    fetchCityHomepage(country, city),
+    fetchLocationContent(`${country}|${city}`, 1, undefined, CONTENT_PAGE_SIZE),
+  ]);
 
-  if (!data) return {};
+  if (!data && !content) return {};
 
-  const cityLabel = formatRouteLabel(city);
-  const countryLabel = formatRouteLabel(country);
+  const fallbackLabel = `${formatRouteLabel(city)}, ${formatRouteLabel(country)}`;
+  const locationLabel = content?.location.label ?? fallbackLabel;
 
   return {
-    title: `${cityLabel}, ${countryLabel} — Questurian`,
-    description: `Your guide to living in ${cityLabel}. Neighborhoods, accommodations, tours, and more.`,
+    title: `${locationLabel} — Questurian`,
+    description: `Your guide to living in ${locationLabel}. Neighborhoods, accommodations, tours, and more.`,
     openGraph: {
-      title: `${cityLabel}, ${countryLabel} — Questurian`,
+      title: `${locationLabel} — Questurian`,
       url: `/${country}/${city}`,
     },
   };
@@ -40,7 +46,35 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CityPage({ params }: Props) {
   const { country, city } = await params;
 
-  const data = await fetchCityHomepage(country, city);
+  const [data, content] = await Promise.all([
+    fetchCityHomepage(country, city),
+    fetchLocationContent(`${country}|${city}`, 1, undefined, CONTENT_PAGE_SIZE),
+  ]);
+
+  if (!data && !content) {
+    notFound();
+  }
+
+  if (!data && content) {
+    return (
+      <section className="min-h-[70vh] bg-background px-5 py-16 text-foreground 768:px-10 1024:px-16">
+        <div className="mx-auto max-w-3xl">
+          <h1 className="mb-8 font-display text-[48px] font-medium leading-[0.95] text-foreground 480:text-[64px] 768:text-[84px]">
+            {content.location.label}
+          </h1>
+
+          {content.items.length > 0 ? (
+            <LocationContentList
+              content={content}
+              pageHref={(page) =>
+                `/search?location=${encodeURIComponent(content.location.locationKey)}&page=${page}`
+              }
+            />
+          ) : null}
+        </div>
+      </section>
+    );
+  }
 
   if (!data) {
     notFound();

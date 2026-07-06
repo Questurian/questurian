@@ -16,6 +16,10 @@ vi.mock('@/features/auth/lib/auth-middleware', () => ({
 }))
 
 import { GET as getPublicCountryCities } from '@/app/api/public/countries/[country]/cities/route'
+import {
+  GET as getPublicLocationMenu,
+  OPTIONS as optionsPublicLocationMenu,
+} from '@/app/api/public/locations/menu/route'
 import { POST as resetAllHomepageContent } from '@/app/api/homepage-featured-content/reset/route'
 import { PATCH as reorderLocationHomepageBlocks } from '@/app/api/location-homepages/[id]/blocks/route'
 import { GET as getPublicLocationHomepage } from '@/app/api/public/location-homepages/[country]/[city]/route'
@@ -65,7 +69,7 @@ describe('location homepage routes', () => {
     )
   })
 
-  it('returns enabled public city homepages for a country hub', async () => {
+  it('returns public city pages for a country hub', async () => {
     const payload = {
       find: vi.fn()
         .mockResolvedValueOnce({
@@ -92,10 +96,6 @@ describe('location homepage routes', () => {
               cityName: 'Cusco',
             },
           ],
-        })
-        .mockResolvedValueOnce({
-          totalDocs: 1,
-          docs: [{ id: 30, isEnabled: true, location: 10 }],
         }),
     }
     vi.mocked(getPayload).mockResolvedValue(payload as never)
@@ -109,20 +109,75 @@ describe('location homepage routes', () => {
     expect(response.status).toBe(200)
     expect(data).toEqual({
       country: { slug: 'peru', name: 'Peru' },
-      cities: [{ slug: 'lima', name: 'Lima', href: '/peru/lima' }],
+      cities: [
+        { slug: 'cusco', name: 'Cusco', href: '/peru/cusco' },
+        { slug: 'lima', name: 'Lima', href: '/peru/lima' },
+      ],
     })
     expect(payload.find).toHaveBeenNthCalledWith(
-      3,
+      2,
       expect.objectContaining({
-        collection: 'location-homepages',
+        collection: 'locations',
         where: {
           and: [
-            { isEnabled: { equals: true } },
-            { location: { in: [10, 11] } },
+            { level: { equals: 'city' } },
+            { parentKey: { equals: 'peru' } },
           ],
         },
       }),
     )
+  })
+
+  it('returns CORS headers for the public location menu', async () => {
+    const payload = {
+      find: vi.fn()
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [{ id: 1, locationKey: 'peru', level: 'country', countryName: 'Peru' }],
+        })
+        .mockResolvedValueOnce({
+          totalDocs: 1,
+          docs: [
+            {
+              id: 10,
+              locationKey: 'peru|lima',
+              level: 'city',
+              country: 'peru',
+              city: 'lima',
+              countryName: 'Peru',
+              cityName: 'Lima',
+            },
+          ],
+        }),
+    }
+    vi.mocked(getPayload).mockResolvedValue(payload as never)
+
+    const response = await getPublicLocationMenu(new Request(
+      'http://localhost:4000/api/public/locations/menu',
+      { headers: { origin: 'http://localhost:3000' } },
+    ) as never)
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3000')
+    expect(data.countries).toEqual([
+      {
+        locationKey: 'peru',
+        label: 'Peru',
+        href: '/peru',
+        cities: [{ locationKey: 'peru|lima', label: 'Lima', href: '/peru/lima' }],
+      },
+    ])
+  })
+
+  it('handles CORS preflight for the public location menu', () => {
+    const response = optionsPublicLocationMenu(new Request(
+      'http://localhost:4000/api/public/locations/menu',
+      { method: 'OPTIONS', headers: { origin: 'http://localhost:3000' } },
+    ) as never)
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('access-control-allow-origin')).toBe('http://localhost:3000')
   })
 
   it('404s country city listing for an unknown country', async () => {
@@ -145,25 +200,12 @@ describe('location homepage routes', () => {
     expect(payload.find).toHaveBeenCalledTimes(1)
   })
 
-  it('404s country city listing when no city homepage is enabled', async () => {
+  it('404s country city listing when no cities exist', async () => {
     const payload = {
       find: vi.fn()
         .mockResolvedValueOnce({
           totalDocs: 1,
           docs: [{ id: 1, locationKey: 'peru', level: 'country', countryName: 'Peru' }],
-        })
-        .mockResolvedValueOnce({
-          totalDocs: 1,
-          docs: [
-            {
-              id: 10,
-              locationKey: 'peru|lima',
-              level: 'city',
-              parentKey: 'peru',
-              city: 'lima',
-              cityName: 'Lima',
-            },
-          ],
         })
         .mockResolvedValueOnce({
           totalDocs: 0,
@@ -179,7 +221,7 @@ describe('location homepage routes', () => {
     const data = await response.json()
 
     expect(response.status).toBe(404)
-    expect(data.message).toBe('No enabled city homepages found.')
+    expect(data.message).toBe('No cities found.')
   })
 
   it('returns lean data for location homepage block reorder', async () => {

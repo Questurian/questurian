@@ -2,7 +2,6 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { ArrowUpRight, Search } from 'lucide-react'
 
-import { fetchCityHomepage } from '@/features/CityDashboard'
 import { LocationContentList } from '@/features/search/components/LocationContentList'
 import {
   fetchLocationContent,
@@ -39,13 +38,12 @@ function searchHref(q: string, page: number): string {
   return `/search?${params.toString()}`
 }
 
-// Href of the location's own page, when one exists: countries always have
-// one, cities (and their neighborhoods) only when the homepage is turned on.
-async function resolveLocationPageHref(locationKey: string): Promise<string | null> {
+// Href of the location page: countries and cities have pages; neighborhoods
+// roll up to their parent city page until a neighborhood route exists.
+function resolveLocationPageHref(locationKey: string): string | null {
   const [country, city] = locationKey.split('|')
   if (!city) return `/${country}`
-  const homepage = await fetchCityHomepage(country, city)
-  return homepage ? `/${country}/${city}` : null
+  return `/${country}/${city}`
 }
 
 export default async function SearchPage({ searchParams }: Props) {
@@ -65,7 +63,7 @@ export default async function SearchPage({ searchParams }: Props) {
   }
 
   const locationPageHref = content
-    ? await resolveLocationPageHref(content.location.locationKey)
+    ? resolveLocationPageHref(content.location.locationKey)
     : null
 
   return (

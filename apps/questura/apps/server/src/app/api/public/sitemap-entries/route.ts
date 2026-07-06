@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 
     const payload = await getPayload({ config })
 
-    const [countries, cities, enabledHomepages, articles, maps, itineraries] = await Promise.all([
+    const [countries, cities, articles, maps, itineraries] = await Promise.all([
       payload.find({
         collection: 'locations',
         where: { level: { equals: 'country' } },
@@ -50,13 +50,6 @@ export async function GET(req: Request) {
       payload.find({
         collection: 'locations',
         where: { level: { equals: 'city' } },
-        limit: 2000,
-        depth: 0,
-        overrideAccess: true,
-      }),
-      payload.find({
-        collection: 'location-homepages',
-        where: { isEnabled: { equals: true } },
         limit: 2000,
         depth: 0,
         overrideAccess: true,
@@ -99,20 +92,6 @@ export async function GET(req: Request) {
       }),
     ])
 
-    const enabledLocationIds = new Set(
-      enabledHomepages.docs
-        .map((doc) => {
-          const record = doc as unknown as Record<string, unknown>
-          const location = record.location
-          if (typeof location === 'string' || typeof location === 'number') return String(location)
-          if (location && typeof location === 'object' && 'id' in location) {
-            return String((location as { id: unknown }).id)
-          }
-          return null
-        })
-        .filter((id): id is string => Boolean(id)),
-    )
-
     const hubEntries: SitemapEntry[] = []
 
     for (const rawCountry of countries.docs) {
@@ -127,7 +106,6 @@ export async function GET(req: Request) {
 
     for (const rawCity of cities.docs) {
       const city = rawCity as unknown as Record<string, unknown>
-      if (!enabledLocationIds.has(String(city.id))) continue
       const countrySlug = typeof city.country === 'string' ? city.country : null
       const citySlug = typeof city.city === 'string' ? city.city : null
       if (!countrySlug || !citySlug) continue
