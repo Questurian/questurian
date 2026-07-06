@@ -10,7 +10,7 @@ This spike proved the architecture from `apps/questura/docs/adr/0004-split-visit
 - `VisitorProfiles` is a Payload collection for public profile, membership, Stripe linkage, and affiliate referral data.
 - Visitor email/password signup and Google callback hooks create a `VisitorProfiles` record.
 - Staff emails are blocked from Visitor auth through `@questurian.com` domain checks and Payload `Users` lookup.
-- `GET /api/me` returns a normalized Current principal from either BetterAuth Visitor auth or Payload Staff auth.
+- `GET /api/me` returns a normalized Current principal from BetterAuth Visitor auth only; Payload Staff auth is ignored on the public endpoint.
 
 ## Remaining launch work
 

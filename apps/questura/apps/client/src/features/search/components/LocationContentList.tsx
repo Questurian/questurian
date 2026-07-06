@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { PublicImage } from '@/components/media/PublicImage'
 import type {
+  ArticleSearchResponse,
   LocationContentItem,
   LocationContentResponse,
 } from '@/features/search/lib/fetchSearch'
@@ -20,16 +21,21 @@ function formatDate(value: string | null): string {
 }
 
 type Props = {
-  content: LocationContentResponse
+  content: LocationContentResponse | ArticleSearchResponse
   /** Builds the href for a pagination link. Omit to hide pagination. */
   pageHref?: (page: number) => string
+  emptyMessage?: string
 }
 
-export function LocationContentList({ content, pageHref }: Props) {
+export function LocationContentList({ content, pageHref, emptyMessage }: Props) {
   if (content.items.length === 0) {
     return (
       <p className="text-[15px] leading-7 text-foreground/60">
-        No published content for {content.location.label} yet.
+        {emptyMessage ?? (
+          'location' in content
+            ? `No published content for ${content.location.label} yet.`
+            : 'No results yet.'
+        )}
       </p>
     )
   }

@@ -46,7 +46,7 @@ export default function PurchasePage({
   }
 
   const handleSubscribe = () => {
-    if (user?.kind !== 'visitor' || !user.emailVerified) {
+    if (!user?.emailVerified) {
       return;
     }
     checkoutMutation.mutate({});
@@ -60,7 +60,7 @@ export default function PurchasePage({
   };
 
   const handleResendVerificationEmail = async () => {
-    if (user?.kind !== 'visitor') return;
+    if (!user) return;
 
     setSendingVerificationEmail(true);
     setVerificationEmailStatus(null);
@@ -154,11 +154,7 @@ export default function PurchasePage({
                 </div>
               ) : null}
 
-              {user?.kind === 'staff' ? (
-                <p className="text-center text-sm text-gray-600 dark:text-gray-300">
-                  Stripe checkout requires a visitor account.
-                </p>
-              ) : !user?.emailVerified ? (
+              {!user?.emailVerified ? (
                 <div className="space-y-3 text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     Verify your email before starting checkout.

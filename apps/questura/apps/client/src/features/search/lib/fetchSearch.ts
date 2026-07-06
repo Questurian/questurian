@@ -36,6 +36,17 @@ export type LocationContentResponse = {
   items: LocationContentItem[]
 }
 
+export type ArticleSearchResponse = {
+  q: string
+  page: number
+  pageSize: number
+  totalDocs: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
+  items: LocationContentItem[]
+}
+
 export async function searchLocations(q: string): Promise<LocationSearchItem[]> {
   const trimmed = q.trim()
   if (trimmed.length < 2) return []
@@ -47,6 +58,29 @@ export async function searchLocations(q: string): Promise<LocationSearchItem[]> 
 
   const data = (await res.json()) as { items: LocationSearchItem[] }
   return data.items
+}
+
+export async function searchArticles(
+  q: string,
+  page = 1,
+  lang = DEFAULT_LOCALE,
+  pageSize?: number,
+): Promise<ArticleSearchResponse | null> {
+  const trimmed = q.trim()
+  if (trimmed.length < 2) return null
+
+  const params = new URLSearchParams()
+  params.set('q', trimmed)
+  params.set('page', String(page))
+  params.set('lang', lang)
+  if (pageSize) params.set('pageSize', String(pageSize))
+
+  const url = `${config.backendUrl}/api/public/articles/search?${params.toString()}`
+  const res = await fetch(url, { next: { revalidate: 300 } })
+
+  if (!res.ok) return null
+
+  return res.json() as Promise<ArticleSearchResponse>
 }
 
 export async function fetchLocationContent(

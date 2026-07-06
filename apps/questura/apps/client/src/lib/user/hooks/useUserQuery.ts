@@ -10,12 +10,7 @@ function principalToUser(response: CurrentPrincipalResponse): User | null {
 
   const principal = response.principal;
   if (principal.kind === 'staff') {
-    return {
-      ...principal,
-      role: principal.role,
-      membershipStatusSummary: principal.membership.active ? 'active' : 'none',
-      subscriptionStatus: principal.membership.active ? 'active' : 'none',
-    };
+    return null;
   }
 
   return {

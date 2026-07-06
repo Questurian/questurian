@@ -24,7 +24,7 @@ Legacy visitor-facing custom auth implementation is deleted rather than kept as 
 
 Visitor auth keeps one email-first entry flow. Account-state decisions are backed by BetterAuth Visitor records and may be exposed through compatibility adapters only where needed for that flow; the UI does not ask visitors to choose separate sign-in and sign-up paths.
 
-`GET /api/me` is the canonical current-principal endpoint for the public app. It returns a normalized current-principal view for either Visitor auth or Staff auth, including authenticated Staff identities when Staff auth is present. Client flows that require a Visitor account reject Staff current principals. `/api/user/me` is removed rather than kept as a compatibility alias.
+`GET /api/me` is the canonical current-principal endpoint for the public app. It returns a normalized current-principal view for Visitor auth only. Payload Staff auth is ignored on this public endpoint so a browser logged into Payload admin does not become logged into the public client. `/api/user/me` is removed rather than kept as a compatibility alias.
 
 BetterAuth launch parity includes public email/password signup and login, Google OAuth, password reset, email change, account linking, and email verification. Google OAuth accounts may be treated as verified when the provider reports a verified email. Staff emails remain blocked from Visitor auth regardless of verification state.
 
@@ -36,9 +36,9 @@ A Visitor must explicitly unlink Google before changing their email address. Ema
 
 Email/password Visitor accounts must verify their email before checkout or paid-content access. Unverified Visitor accounts may browse public content and manage verification, but payment and membership-gated surfaces require a verified Visitor account; Google OAuth accounts may satisfy this requirement through provider-verified email.
 
-Stripe customer and subscription records belong only to Visitor accounts. Staff identities never create Stripe checkout or customer records; `admin` and `editor` receive paid-content access through a role-derived Staff grant, while `writer` does not. Writers may access Payload/editorial surfaces according to collection permissions, but writer access does not imply paid public-content access.
+Stripe customer and subscription records belong only to Visitor accounts. Staff identities never create Stripe checkout or customer records. Staff grants, if exposed, must use explicit staff-only surfaces rather than the public client session.
 
-Payment APIs authenticate through the Current principal. Stripe checkout and customer operations require a Visitor principal; Staff principals may receive paid-content access through Staff grants, but cannot enter Stripe flows.
+Payment APIs authenticate through the Current principal. Stripe checkout and customer operations require a Visitor principal. Staff principals cannot enter Stripe flows.
 
 BetterAuth endpoints own Visitor credential, session, verification, password reset, email change, and provider-linking operations. Questura `/api/account/*` endpoints exist only for product-level Visitor profile, preferences, saved content, affiliate/referral, and membership-view operations.
 

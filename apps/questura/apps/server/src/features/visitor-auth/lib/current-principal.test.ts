@@ -34,6 +34,7 @@ vi.mock('./visitor-profile', () => ({
 
 import {
   getCurrentPrincipal,
+  getStaffPrincipal,
   requireStaffPrincipal,
   requireVisitorPrincipal,
 } from './current-principal'
@@ -126,7 +127,7 @@ describe('Current principal', () => {
     })
   })
 
-  it('returns Staff identity and staff grant from Payload auth when no Visitor session exists', async () => {
+  it('ignores Payload Staff auth for the public current principal', async () => {
     mocks.payloadAuth.mockResolvedValue({
       user: {
         id: 7,
@@ -136,6 +137,55 @@ describe('Current principal', () => {
     })
 
     const result = await getCurrentPrincipal(new Headers())
+
+    expect(result).toEqual({
+      authenticated: false,
+      principal: null,
+    })
+    expect(mocks.payloadAuth).not.toHaveBeenCalled()
+  })
+
+  it('returns the Visitor principal when Visitor and Staff auth are both present', async () => {
+    mocks.getSession.mockResolvedValue({
+      user: {
+        id: 'visitor_123',
+        email: 'visitor@example.com',
+        emailVerified: true,
+        name: 'Ada Lovelace',
+      },
+    })
+    mocks.ensureVisitorProfileForAuthUser.mockResolvedValue({
+      id: 11,
+      subscriptionStatus: 'none',
+    })
+    mocks.payloadAuth.mockResolvedValue({
+      user: {
+        id: 7,
+        email: 'editor@questurian.com',
+        role: 'editor',
+      },
+    })
+
+    const result = await getCurrentPrincipal(new Headers())
+
+    expect(result.principal).toMatchObject({
+      kind: 'visitor',
+      id: 'visitor_123',
+      email: 'visitor@example.com',
+    })
+    expect(mocks.payloadAuth).not.toHaveBeenCalled()
+  })
+
+  it('resolves Staff identity only through the Staff principal helper', async () => {
+    mocks.payloadAuth.mockResolvedValue({
+      user: {
+        id: 7,
+        email: 'editor@questurian.com',
+        role: 'editor',
+      },
+    })
+
+    const result = await getStaffPrincipal(new Headers())
 
     expect(result).toEqual({
       authenticated: true,
@@ -152,7 +202,7 @@ describe('Current principal', () => {
     })
   })
 
-  it('rejects Staff identity for Visitor-only flows', async () => {
+  it('treats Staff-only auth as logged out for Visitor-only flows', async () => {
     mocks.payloadAuth.mockResolvedValue({
       user: {
         id: 7,
@@ -165,9 +215,10 @@ describe('Current principal', () => {
 
     expect(result).toMatchObject({
       principal: null,
-      error: 'Visitor account required',
-      status: 403,
+      error: 'Authentication required',
+      status: 401,
     })
+    expect(mocks.payloadAuth).not.toHaveBeenCalled()
   })
 
   it('rejects unverified Visitor accounts when verification is required', async () => {
@@ -193,7 +244,7 @@ describe('Current principal', () => {
     })
   })
 
-  it('rejects Visitor principals for Staff-only flows', async () => {
+  it('ignores Visitor principals for Staff-only flows', async () => {
     mocks.getSession.mockResolvedValue({
       user: {
         id: 'visitor_123',
@@ -211,8 +262,9 @@ describe('Current principal', () => {
 
     expect(result).toMatchObject({
       principal: null,
-      error: 'Access denied. Required roles: admin',
-      status: 403,
+      error: 'Authentication required',
+      status: 401,
     })
+    expect(mocks.getSession).not.toHaveBeenCalled()
   })
 })

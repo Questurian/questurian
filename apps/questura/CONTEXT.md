@@ -179,12 +179,12 @@ _Avoid_: credential, session, staff user
 
 ### Membership entitlement
 
-Authorization state that determines paid-content access for a Visitor account or Staff identity.
+Authorization state that determines paid-content access for a Visitor account, or for a Staff identity only through explicit staff-only surfaces.
 _Avoid_: identity, account
 
 ### Membership entitlement source
 
-Reason a Membership entitlement exists, either `stripe` or `staff_grant`.
+Reason a Membership entitlement exists, either `stripe` or `staff_grant`; public account APIs expose only Visitor `stripe` entitlements.
 _Avoid_: subscription status, role
 
 ### Staff entry point
@@ -214,8 +214,8 @@ _Avoid_: custom JWT, frontend token
 
 ### Current principal
 
-Public API view of the authenticated Visitor account or Staff identity making a request.
-_Avoid_: raw user, raw session
+Public API view of the authenticated Visitor account making a public-site request.
+_Avoid_: raw user, raw session, staff identity
 
 ### Staff auth
 
@@ -231,7 +231,8 @@ _Avoid_: public auth, visitor auth
 - A **LocationGuideRecord** for a child Location can inherit fields from its parent via `resolveLocationGuideForHierarchy`.
 - A **Tour** belongs to one Location.
 - **`PerfectForTag.applicableTypes`** scopes a tag to one or more of dining/attractions/nightlife/accommodations.
-- A **Visitor account** or **Staff identity** may have an active **Membership entitlement**.
+- A **Visitor account** may have an active **Membership entitlement**.
+- A **Staff identity** may have a **Staff grant**, but it is not exposed through public account APIs.
 - A **Visitor account** has exactly one **Visitor profile**.
 - A **Staff identity** is separate from a **Visitor account**.
 - A **Staff identity** enters through a **Staff entry point**, not a **Visitor entry point**.
@@ -269,11 +270,11 @@ _Avoid_: public auth, visitor auth
 - A **Membership entitlement** has a **Membership entitlement source**.
 - A **Staff grant** is derived from role, not Stripe state.
 - `admin` and `editor` Staff identities receive a **Staff grant**; `writer` does not.
-- `writer` Staff identities may access Payload/editorial surfaces according to collection permissions, but do not receive paid public-content access through a Staff grant.
+- `writer` Staff identities may access Payload/editorial surfaces according to collection permissions, but do not receive paid public-content access through the public client.
 - Public account APIs return a **Current principal**, not raw auth-provider records.
 - `GET /api/me` is the canonical public current-principal endpoint.
-- `GET /api/me` returns Staff identities as authenticated Current principals when Staff auth is present.
-- Client flows that require a Visitor account reject a Staff current principal.
+- `GET /api/me` ignores Payload Staff auth and returns only Visitor principals.
+- Public client flows treat Payload Staff-only auth as logged out.
 - Legacy visitor-facing route names may exist only as compatibility adapters over Visitor auth; they must not read or write Payload `Users` as public accounts.
 - New Visitor auth is not complete until custom JWT helpers, visitor `payload-token` usage, and `Users.role = "user"` are removed.
 - Stripe customer and subscription records belong only to Visitor accounts.

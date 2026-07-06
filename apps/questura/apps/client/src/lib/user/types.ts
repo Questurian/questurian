@@ -42,7 +42,6 @@ export type CurrentPrincipalResponse = {
  * Compatibility alias while client screens move from legacy User to CurrentPrincipal.
  */
 type LegacyUserFields = {
-  role?: 'admin' | 'editor' | 'writer';
   membershipStatusSummary?: string;
   authProvider?: string;
   hasLocalPassword?: boolean;
@@ -55,4 +54,4 @@ type LegacyUserFields = {
   stripeSubscriptionId?: string | null;
 };
 
-export type User = (VisitorPrincipal | StaffPrincipal) & LegacyUserFields;
+export type User = VisitorPrincipal & LegacyUserFields;

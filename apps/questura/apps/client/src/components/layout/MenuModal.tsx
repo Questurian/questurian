@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { useAuth } from "@/lib/user/hooks";
 import { useLoginModalStore } from "@/lib/stores/loginModalStore";
+import { useMembership } from "@/features/Payments/hooks/useMembership";
 
 interface MenuModalProps {
   isOpen: boolean;
@@ -13,10 +14,12 @@ interface MenuModalProps {
 }
 
 export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const { isActive } = useMembership(user);
   const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const shouldShowMembership = !isAuthenticated || !isActive;
 
   // The modal stays mounted while closed, so reset the field whenever it
   // closes — leftover text would otherwise reappear on the next open.
@@ -111,32 +114,26 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search a country, city, or neighborhood…"
+                placeholder="Search articles, guides, maps, and itineraries…"
                 className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
                 autoComplete="off"
-                aria-label="Search destinations"
+                aria-label="Search articles"
               />
             </div>
           </form>
 
           <div className="space-y-2">
-            <Link
-              href="/join"
-              onClick={onClose}
-              className="block rounded-xl border border-white/10 px-3.5 py-3 text-sm font-semibold transition-colors hover:bg-white/10"
-            >
-              Join Membership
-            </Link>
-
-            {isAuthenticated ? (
+            {shouldShowMembership ? (
               <Link
-                href="/account"
+                href="/join"
                 onClick={onClose}
                 className="block rounded-xl border border-white/10 px-3.5 py-3 text-sm font-semibold transition-colors hover:bg-white/10"
               >
-                Account
+                Join Membership
               </Link>
-            ) : (
+            ) : null}
+
+            {!isAuthenticated ? (
               <button
                 type="button"
                 onClick={() => {
@@ -147,7 +144,7 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
               >
                 Sign In
               </button>
-            )}
+            ) : null}
           </div>
         </aside>
       </div>

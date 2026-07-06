@@ -4,7 +4,6 @@ import { useAuth } from "@/lib/user/hooks";
 import { useAccount } from "../hooks/useAccount";
 import  LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
 
-import { AdminRedirectView } from "../components/shared/AdminRedirectView";
 import { EmailSection } from "../components/Email/EmailSection";
 import { PasswordSection } from "../components/Password/PasswordSection";
 import { ConnectedAccountsSection } from "../components/ConnectedAccounts/ConnectedAccountsSection";
@@ -55,10 +54,6 @@ function AccountContent() {
 
   if (!isAuthenticated) {
     return null; // Will redirect via useEffect
-  }
-
-  if (user?.role === "admin" || user?.role === "editor") {
-    return <AdminRedirectView />;
   }
 
   return (
