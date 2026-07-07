@@ -4,6 +4,8 @@ import logging
 import re
 from typing import Any
 
+import trafilatura
+
 from ..config import (
     URL2BLOG_TEXT_CLEANUP_CHUNKING_CHAR_THRESHOLD,
     URL2BLOG_TEXT_CLEANUP_CHUNK_TARGET_CHARS,
@@ -43,6 +45,34 @@ def _strip_html(html: str) -> str:
     # Restore some paragraph breaks at block boundaries
     text = re.sub(r"\s{2,}", "\n\n", text)
     return text.strip()
+
+
+def extract_article_text(html: str) -> str:
+    """Extract the main article text from a full HTML document.
+
+    Uses trafilatura (boilerplate removal: nav, footers, cookie banners,
+    related-article rails) and falls back to the regex tag-stripper when
+    trafilatura finds no main content — e.g. non-article pages or HTML
+    fragments where the readability heuristics don't apply.
+    """
+    if not html:
+        return ""
+    try:
+        extracted = trafilatura.extract(
+            html,
+            include_comments=False,
+            include_tables=True,
+            favor_precision=True,
+        )
+    except Exception as exc:  # noqa: BLE001 — never let extraction crash the fetch
+        logger.warning("trafilatura extraction raised; using regex fallback: %s", exc)
+        extracted = None
+
+    if extracted and len(extracted.strip()) >= 50:
+        return extracted.strip()
+
+    logger.info("trafilatura returned no usable content; using regex fallback")
+    return _strip_html(html)
 
 
 def _preclean_pasted_text(raw_text: str) -> str:

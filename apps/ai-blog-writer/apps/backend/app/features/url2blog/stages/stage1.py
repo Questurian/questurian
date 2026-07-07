@@ -3,11 +3,8 @@
 import logging
 from typing import Any
 
-import httpx
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
-
-from app.core import resolve_httpx_verify
 
 from ..config import (
     URL2BLOG_INPUT_CHAR_LIMIT_DEFAULT,
@@ -15,7 +12,7 @@ from ..config import (
     _read_int_env,
     _resolve_url2blog_model,
 )
-from ..content.text_cleanup import _strip_html
+from ..content.fetching import ArticleFetchError, fetch_article_html
 from ..models import ExtractRequest
 from ..prompts import EXTRACT_PROMPT, TRANSLATE_PROMPT
 
@@ -37,39 +34,15 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
             status_code=400, detail="URL must start with http:// or https://"
         )
 
-    # Fetch the page
+    # Fetch the page through the tier ladder: direct -> residential proxy
+    # -> rendered browser (see content/fetching.py).
     logger.info("URL2Blog: fetching %s", url)
     try:
-        async with httpx.AsyncClient(
-            follow_redirects=True,
-            timeout=30.0,
-            verify=resolve_httpx_verify(),
-            headers={
-                "User-Agent": "Mozilla/5.0 (compatible; Questurian/1.0)",
-                "Accept": "text/html,application/xhtml+xml",
-            },
-        ) as client:
-            resp = await client.get(url)
-            resp.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to fetch URL (HTTP {exc.response.status_code})",
-        ) from exc
-    except httpx.RequestError as exc:
-        raise HTTPException(
-            status_code=502,
-            detail=f"Failed to fetch URL: {exc}",
-        ) from exc
+        fetched = await fetch_article_html(url)
+    except ArticleFetchError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
-    raw_html = resp.text
-    raw_text = _strip_html(raw_html)
-
-    if not raw_text or len(raw_text) < 50:
-        raise HTTPException(
-            status_code=422,
-            detail="Page returned too little text content to extract an article.",
-        )
+    raw_text = fetched.text
 
     max_chars = _read_int_env(
         URL2BLOG_INPUT_CHAR_LIMIT_ENV,
@@ -108,6 +81,8 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
                     "url": url,
                     "raw_text": raw_text,
                     "raw_text_length": len(raw_text),
+                    "fetch_tier": fetched.tier,
+                    "fetch_attempts": fetched.attempts,
                 },
                 "prompt": prompt,
                 "raw_response": raw_response,
@@ -193,6 +168,7 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
     payload: dict[str, Any] = {
         "message": "URL2Blog stage 1 completed",
         "source_url": url,
+        "fetch_tier": fetched.tier,
         "raw_text_length": len(raw_text),
         "raw_response": raw_response,
         "parsed": parsed,
