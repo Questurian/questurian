@@ -27,6 +27,11 @@
       "nx",
       "sharp",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "shell-quote@<1.8.4": "1.8.4",
+      "handlebars@<4.7.9": "4.7.9",
+      "fast-xml-parser@>=5.0.0 <5.3.5": "5.3.5"
+    }
   }
 }
