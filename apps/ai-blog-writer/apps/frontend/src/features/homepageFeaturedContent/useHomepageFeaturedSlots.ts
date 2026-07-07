@@ -1,4 +1,4 @@
-import { useDeferredValue, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useDeferredValue, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 
 import type {
@@ -139,8 +139,12 @@ export function useHomepageFeaturedSlots(
   })
 
   const saveItems = buildSaveItems(slots)
-  const usedKeys = new Set(
-    slots.flatMap((item) => (item ? [`${item.relationTo}:${item.id}`] : [])),
+  // Consumers place usedKeys in effect deps (e.g. CuratedHomepageBlockEditor
+  // reports it to the page); an unstable identity there re-fires those effects
+  // on every render and can feed back into an infinite render loop.
+  const usedKeys = useMemo(
+    () => new Set(slots.flatMap((item) => (item ? [`${item.relationTo}:${item.id}`] : []))),
+    [slots],
   )
   const hasAllSlotsFilled = slots.every((item) => item !== null)
   const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false

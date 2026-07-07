@@ -118,6 +118,14 @@ export default function LocationHomepagePage() {
 
   const handleSlotsChange = useCallback((blockId: string, keys: Set<string>) => {
     setPageBlockSlotKeys((prev) => {
+      // Bail out without a state change when the keys are unchanged; block
+      // editors report on every keys-identity change, and an unconditional new
+      // Map here would re-render them and loop.
+      const existing = prev.get(blockId)
+      if (keys.size === 0 && !existing) return prev
+      if (existing && existing.size === keys.size && [...keys].every((key) => existing.has(key))) {
+        return prev
+      }
       const next = new Map(prev)
       if (keys.size === 0) {
         next.delete(blockId)
