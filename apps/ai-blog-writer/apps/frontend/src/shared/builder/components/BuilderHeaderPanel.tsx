@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { FeaturedImagePicker } from '../../../components/FeaturedImagePicker'
 import { MarkdownBlockEditor } from '../../markdown-editor'
-import { fetchMediaAssets as fetchPayloadMediaAssets } from '../../api/payload/payload.api'
-import type { MediaAsset } from '../../api/payload/payload.types'
+import { fetchMediaAssets as fetchPayloadMediaAssets, fetchMediaSets } from '../../api/payload/payload.api'
+import type { MediaAsset, MediaSet } from '../../api/payload/payload.types'
 import type { MediaAssetOption } from '../types'
 import { resolveImageUrl } from '../utils/item-media.utils'
+import { formatMediaSetLabel, resolveMediaSetPreviewUrl } from '../../images/picker/mediaSet.utils'
 import { BuilderStepHeader } from './BuilderStepHeader'
 
 type HeaderShape = {
   featuredImage: number | null
+  featuredMediaSet?: number | null
   introMarkdown: string
   introJsonText?: string
 }
@@ -39,6 +41,8 @@ export type BuilderHeaderPanelProps<TDraft extends DraftLike> = {
   uploadFileNameTitle?: string
   /** Caller renders the AI button(s) shown in the intro label row. */
   renderIntroAiActions: () => ReactNode
+  /** Optional action(s) shown beside the featured image label. */
+  renderFeaturedImageActions?: () => ReactNode
   /** Optional. Wrap the intro editor (e.g. with an AI-active indicator shell). */
   renderIntroEditorWrapper?: (editor: ReactNode) => ReactNode
   /** Optional. Extra class appended to the intro field's label row (e.g. listicle uses `stl-ai-field-label-row`). */
@@ -64,6 +68,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
   uploadExternalRefBase,
   uploadFileNameTitle,
   renderIntroAiActions,
+  renderFeaturedImageActions,
   renderIntroEditorWrapper,
   introLabelRowExtraClassName,
   introActionsExtraClassName,
@@ -71,8 +76,10 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
   const resolvedToken = token ?? ''
   const [pickerOpen, setPickerOpen] = useState(false)
   const [fetchedFeaturedAsset, setFetchedFeaturedAsset] = useState<MediaAssetOption | null>(null)
+  const [fetchedFeaturedMediaSet, setFetchedFeaturedMediaSet] = useState<MediaSet | null>(null)
 
   const featuredImageId = draft.header.featuredImage
+  const featuredMediaSetId = draft.header.featuredMediaSet ?? null
   const selectedFeaturedAsset = useMemo(
     () => mediaAssets.find((asset) => asset.id === featuredImageId) || null,
     [featuredImageId, mediaAssets],
@@ -133,13 +140,45 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
     }
   }, [featuredImageId, selectedFeaturedAsset, resolvedToken])
 
+  useEffect(() => {
+    if (!featuredMediaSetId || !resolvedToken) {
+      setFetchedFeaturedMediaSet(null)
+      return
+    }
+
+    let cancelled = false
+
+    const loadSelectedMediaSet = async () => {
+      try {
+        const response = await fetchMediaSets(resolvedToken, {
+          id: featuredMediaSetId,
+          limit: 1,
+        })
+        if (cancelled) return
+        setFetchedFeaturedMediaSet(response.docs?.[0] ?? null)
+      } catch {
+        if (!cancelled) setFetchedFeaturedMediaSet(null)
+      }
+    }
+
+    void loadSelectedMediaSet()
+
+    return () => {
+      cancelled = true
+    }
+  }, [featuredMediaSetId, resolvedToken])
+
   const featuredAsset = selectedFeaturedAsset || fetchedFeaturedAsset
-  const featuredImagePreviewUrl = featuredAsset ? resolveImageUrl(featuredAsset) : undefined
-  const triggerLabel = featuredImageId
-    ? featuredAsset?.filename || `Image #${featuredImageId} selected`
+  const featuredMediaSetPreviewUrl = fetchedFeaturedMediaSet ? resolveMediaSetPreviewUrl(fetchedFeaturedMediaSet) : undefined
+  const featuredImagePreviewUrl = featuredMediaSetPreviewUrl || (featuredAsset ? resolveImageUrl(featuredAsset) : undefined)
+  const selectedFeaturedId = featuredMediaSetId || featuredImageId
+  const triggerLabel = selectedFeaturedId
+    ? featuredMediaSetId
+      ? (fetchedFeaturedMediaSet ? formatMediaSetLabel(fetchedFeaturedMediaSet) : `MediaSet #${featuredMediaSetId} selected`)
+      : featuredAsset?.filename || `Image #${featuredImageId} selected`
     : 'Select Featured Image...'
   const headerPreviewTitle = draft.title.trim() || headerPreviewTitleFallback
-  const isPlaceholder = !featuredImageId
+  const isPlaceholder = !selectedFeaturedId
 
   const introEditor = (
     <MarkdownBlockEditor
@@ -178,8 +217,13 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
 
       <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
         <div className="stl-field">
-          <span>Featured Image</span>
-          {!featuredImageId ? (
+          <div className="stl-field-label-row">
+            <span>Featured Image</span>
+            {renderFeaturedImageActions ? (
+              <div className="stl-inline-actions">{renderFeaturedImageActions()}</div>
+            ) : null}
+          </div>
+          {!selectedFeaturedId ? (
             <button
               type="button"
               className="stl-picker-trigger"
@@ -230,14 +274,16 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
 
       <FeaturedImagePicker
         isOpen={pickerOpen}
-        selectedId={featuredImageId}
+        selectedId={featuredMediaSetId}
         token={resolvedToken}
         locationRef={locationRef}
+        payloadSourceMode="mediaSets"
         payloadVariant="wide"
         uploadExternalRefBase={uploadExternalRefBase}
         uploadFileNameTitle={uploadFileNameTitle}
         prefetchedPayloadAssets={prefetchedPayloadAssets}
-        onSelect={(id) => updateHeader({ featuredImage: id })}
+        onSelect={(id) => updateHeader({ featuredImage: id, featuredMediaSet: null })}
+        onSelectMediaSet={(id) => updateHeader({ featuredMediaSet: id, featuredImage: null })}
         onClose={() => setPickerOpen(false)}
       />
     </section>

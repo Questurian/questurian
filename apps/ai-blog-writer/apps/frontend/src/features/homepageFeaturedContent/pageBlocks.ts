@@ -41,8 +41,8 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
   CuratedHomepageBlockConfig
 > = {
   'featured-article': {
-    label: 'Featured Article',
-    description: 'Full-width dark hero highlighting one article or listicle',
+    label: 'Hero Article',
+    description: 'One full-width dark hero for a single article or listicle',
     quickSlotCounts: [1],
     defaultSlotCount: 1,
     minSlotCount: 1,
@@ -57,9 +57,9 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     maxSlotCount: 10,
   },
   'featured-articles': {
-    label: 'Featured Articles',
+    label: 'Multi-Article Feature',
     // No 6-slot layout exists, so 6 is intentionally omitted (see isValidHomepageBlockSlotCount).
-    description: 'A curated list of articles in fixed slots',
+    description: 'A curated multi-slot editorial layout for several articles',
     quickSlotCounts: [3, 4, 5, 7, 8, 9],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -165,19 +165,19 @@ export function isValidHomepageBlockSlotCount(
 }
 
 export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
-  'featured-article',
-  'featured-article-carousel',
   'featured-articles',
-  'article-grid',
-  'location-grid',
-  'questurian-maps',
   'hotel-grid',
   'tour-grid',
-  'where-to-eat-drink',
-  'things-to-do-listicles',
-  'things-to-do-attractions',
-  'newsletter-signup',
+  'article-grid',
   'article-list',
+  'featured-article',
+  'featured-article-carousel',
+  'location-grid',
+  'where-to-eat-drink',
+  'things-to-do-attractions',
+  'things-to-do-listicles',
+  'questurian-maps',
+  'newsletter-signup',
 ]
 
 /**

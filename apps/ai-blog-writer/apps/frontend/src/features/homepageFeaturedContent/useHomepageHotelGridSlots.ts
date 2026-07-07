@@ -59,7 +59,8 @@ export function useHomepageHotelGridSlots(options: {
   selection: HomepageHotelGridSelection
   saveSelection: (
     token: string,
-    items: HomepageHotelGridItemRef[]
+    items: HomepageHotelGridItemRef[],
+    slotCount?: number
   ) => Promise<HomepageHotelGridSelection>
   fetchCandidates: (
     token: string,
@@ -137,9 +138,16 @@ export function useHomepageHotelGridSlots(options: {
     placeholderData: (previousData) => previousData
   })
 
+  const slots = draftSlots ?? savedSlots
+  const currentSaveSlotCountRef = useRef(selection.totalSlots)
+
+  useEffect(() => {
+    currentSaveSlotCountRef.current = slots.length
+  }, [slots.length])
+
   const saveMutation = useMutation({
     mutationFn: (items: HomepageHotelGridItemRef[]) =>
-      saveSelection(token!, items),
+      saveSelection(token!, items, currentSaveSlotCountRef.current),
     onSuccess: (selection) => {
       const nextSlots = mapSelectionToSlots(selection)
       setSavedSlots(nextSlots)
@@ -157,7 +165,6 @@ export function useHomepageHotelGridSlots(options: {
     }
   })
 
-  const slots = draftSlots ?? savedSlots
   const usedIds = new Set(slots.flatMap((item) => (item ? [item.id] : [])))
   const hasAllSlotsFilled = slots.every((item) => item !== null)
   const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false
@@ -205,6 +212,22 @@ export function useHomepageHotelGridSlots(options: {
     })
   }
 
+  function handleResizeSlotCount(slotCount: number) {
+    if (slotCount < 0) return
+    if (pickerSlotIndex !== null && pickerSlotIndex >= slotCount) {
+      setPickerSlotIndex(null)
+    }
+    updateSlots((current) => {
+      if (slotCount === current.length) return current
+      if (slotCount < current.length) return current.slice(0, slotCount)
+
+      return [
+        ...current,
+        ...Array.from({ length: slotCount - current.length }, () => null)
+      ]
+    })
+  }
+
   function handleRemove(slotIndex: number) {
     updateSlots((current) => {
       const next = [...current]
@@ -243,6 +266,7 @@ export function useHomepageHotelGridSlots(options: {
     handleCandidatePick,
     handleMove,
     handleReorderAll,
+    handleResizeSlotCount,
     handleRemove,
     handleReset,
     handleSave,

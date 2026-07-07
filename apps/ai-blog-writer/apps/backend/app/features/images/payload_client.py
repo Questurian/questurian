@@ -417,6 +417,7 @@ class PayloadClient:
         title: str,
         alt_text: str,
         external_ref: str,
+        photographer_credit: str = "",
         location_ref: Optional[int] = None,
         tags: Optional[list] = None,
     ) -> str:
@@ -430,6 +431,8 @@ class PayloadClient:
             'alt_text': alt_text,
             'externalRef': external_ref,
         }
+        if photographer_credit.strip():
+            payload['photographer_credit'] = photographer_credit.strip()
         if location_ref is not None:
             payload['locationRef'] = location_ref
         if tags:
@@ -488,6 +491,68 @@ class PayloadClient:
 
         logger.info("%s ✓ mediaSetId=%s", step, media_set_id)
         return str(media_set_id)
+
+    async def get_media_set_by_id(
+        self,
+        media_set_id: str | int,
+        depth: int = 2,
+    ) -> Optional[dict]:
+        """Fetch one media-set by ID."""
+        url = f"{self.api_url}/api/media-sets/{media_set_id}"
+        headers = self._get_headers()
+        step = "get_media_set_by_id"
+        params = {"depth": depth}
+
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(url, headers=headers, params=params)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Cannot connect to Payload CMS",
+                request_url=url,
+                detail=f"Is Payload running at {self.api_url}? ({e})",
+            )
+        except httpx.TimeoutException as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Payload CMS request timed out (15s)",
+                request_url=url,
+                detail=str(e),
+            )
+
+        if response.status_code == 404:
+            return None
+
+        if response.status_code >= 400:
+            body = response.text
+            parsed = _parse_payload_error(body)
+            raise PayloadUploadError(
+                step=step,
+                message="Failed to fetch media-set by id",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+                detail=parsed,
+            )
+
+        try:
+            result = response.json()
+        except json.JSONDecodeError:
+            body = response.text
+            raise PayloadUploadError(
+                step=step,
+                message="Payload returned invalid JSON while fetching media-set",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+            )
+
+        if isinstance(result, dict) and isinstance(result.get("doc"), dict):
+            return result["doc"]
+        if isinstance(result, dict) and result.get("id") is not None:
+            return result
+        return None
 
     async def find_media_set_by_external_ref(self, external_ref: str) -> Optional[dict]:
         """Find a MediaSet by its external reference."""
@@ -920,6 +985,7 @@ async def upload_image_set(
             title=external_ref,
             alt_text=alt_text,
             external_ref=external_ref,
+            photographer_credit=photographer_credit,
             location_ref=location_ref,
         )
 

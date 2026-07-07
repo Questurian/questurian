@@ -68,6 +68,7 @@ export type UseHomepageFeaturedSlotsResult = {
   handleMove: (slotIndex: number, direction: -1 | 1) => void
   handleRemove: (slotIndex: number) => void
   handleReorderAll: (newSlots: SlotValue[]) => void
+  handleResizeSlotCount: (slotCount: number) => void
   handleReset: () => void
   handleSave: () => void
   setSearchValue: (v: string) => void

@@ -478,6 +478,7 @@ export type ListicleItineraryDraft = {
     introMarkdown: string
     introLexical?: PayloadRichText
     introJsonText?: string
+    featuredMediaSet?: number | null
     featuredImage: number | null
   }
   /** 1–7; always equals `days.length`. */
@@ -515,6 +516,7 @@ export type PayloadItineraryDoc = {
   step3_in_update_mode?: boolean
   header?: {
     intro?: PayloadRichText
+    featuredMediaSet?: number | { id?: number }
     featuredImage?: number | { id?: number }
   }
   dayCount?: number

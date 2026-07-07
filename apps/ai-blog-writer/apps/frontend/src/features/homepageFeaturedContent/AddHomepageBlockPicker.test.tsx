@@ -5,6 +5,22 @@ import { describe, expect, it, vi } from 'vitest'
 import AddHomepageBlockPicker from './AddHomepageBlockPicker'
 
 describe('AddHomepageBlockPicker', () => {
+  it('orders common homepage block types first', () => {
+    render(
+      <AddHomepageBlockPicker
+        isPending={false}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    )
+
+    const options = screen.getAllByRole('button')
+
+    expect(options[0]).toHaveTextContent('Multi-Article Feature')
+    expect(options[1]).toHaveTextContent('Hotel Grid')
+    expect(options[2]).toHaveTextContent('Tour Grid')
+  })
+
   it('submits newsletter-signup in one click (fixed zero slots)', async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn()

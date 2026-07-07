@@ -171,6 +171,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
 
   const hasStep2Content = Boolean(
     (doc.header?.intro && typeof doc.header.intro === 'object')
+    || getRelationshipId(doc.header?.featuredMediaSet)
     || getRelationshipId(doc.header?.featuredImage),
   )
   const hasStep3Content = days.some((d) => d.whereStaying.length > 0 || d.items.length > 0)
@@ -201,6 +202,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
       introMarkdown: doc.header?.intro ? lexicalRichTextToMarkdown(doc.header.intro) : '',
       introLexical: doc.header?.intro,
       introJsonText: doc.header?.intro ? JSON.stringify(doc.header.intro, null, 2) : '',
+      featuredMediaSet: getRelationshipId(doc.header?.featuredMediaSet),
       featuredImage: getRelationshipId(doc.header?.featuredImage),
     },
     dayCount,

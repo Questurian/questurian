@@ -138,7 +138,7 @@ export default function HomepageFeaturedSlotEditor({
   const currentSlotKey = currentSlotItem
     ? `${currentSlotItem.relationTo}:${currentSlotItem.id}`
     : null
-  const totalSlots = selectionQuery.data?.totalSlots ?? slots.length
+  const totalSlots = slots.length
 
   const mainContent = (
     <>
@@ -159,7 +159,7 @@ export default function HomepageFeaturedSlotEditor({
         <div className="hf-slot-controls">
           <span className="hf-panel-desc">
             {slots.filter(Boolean).length} /{' '}
-            {selectionQuery.data?.totalSlots ?? slots.length} slots filled
+            {slots.length} slots filled
           </span>
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             <button

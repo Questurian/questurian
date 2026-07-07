@@ -4,15 +4,17 @@ import { BrowseTab } from './components/BrowseTab'
 import { AuditTab } from './components/AuditTab'
 import { OrphansTab } from './components/OrphansTab'
 import { UploadTab } from './components/UploadTab'
+import { CompositeTab } from './components/CompositeTab'
 import './styles.css'
 
-type Tab = 'browse' | 'audit' | 'orphans' | 'upload'
+type Tab = 'browse' | 'audit' | 'orphans' | 'upload' | 'composite'
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'browse', label: 'Browse' },
   { id: 'audit', label: 'Audit' },
   { id: 'orphans', label: 'Orphans' },
   { id: 'upload', label: 'Upload' },
+  { id: 'composite', label: 'Composite' },
 ]
 
 export function MediaLibraryPage() {
@@ -46,6 +48,7 @@ export function MediaLibraryPage() {
         {activeTab === 'audit' && <AuditTab token={token} />}
         {activeTab === 'orphans' && <OrphansTab token={token} />}
         {activeTab === 'upload' && <UploadTab token={token} />}
+        {activeTab === 'composite' && <CompositeTab token={token} />}
       </div>
     </div>
   )

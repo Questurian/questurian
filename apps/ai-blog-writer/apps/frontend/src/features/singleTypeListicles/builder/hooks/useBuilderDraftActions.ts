@@ -98,6 +98,7 @@ export function useBuilderDraftActions({
     current.title.trim().length > 0
     || current.targetItemCount > 0
     || current.items.length > 0
+    || current.header.featuredMediaSet != null
     || current.header.featuredImage !== null
     || current.header.introMarkdown.trim().length > 0
     || (current.header.introJsonText || '').trim().length > 0
@@ -268,6 +269,7 @@ export function useBuilderDraftActions({
           header: {
             introMarkdown: '',
             introJsonText: '',
+            featuredMediaSet: null,
             featuredImage: null,
           },
           items: [],

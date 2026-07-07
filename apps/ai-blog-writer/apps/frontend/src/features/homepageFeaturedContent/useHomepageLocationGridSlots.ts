@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 
 import type {
   HomepageLocationGridInvalidItem,
@@ -74,9 +75,17 @@ export function useHomepageLocationGridSlots(
     pickerSlotIndex
   })
 
+  const slots = draftSlots ?? savedSlots
+  const currentSaveSlotCountRef = useRef(selection.totalSlots)
+
+  useEffect(() => {
+    currentSaveSlotCountRef.current = slots.length
+  }, [slots.length])
+
   const saveMutation = useHomepageLocationGridSaveMutation({
     token,
     saveSelection,
+    slotCountRef: currentSaveSlotCountRef,
     onSuccess: (selection) => {
       applySelection(selection)
       setResultMessage('Homepage location grid saved.')
@@ -90,7 +99,6 @@ export function useHomepageLocationGridSlots(
     }
   })
 
-  const slots = draftSlots ?? savedSlots
   const usedIds = new Set(slots.flatMap((item) => (item ? [item.id] : [])))
   const hasAllSlotsFilled = slots.every((item) => item !== null)
   const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false
@@ -114,6 +122,22 @@ export function useHomepageLocationGridSlots(
     saveMutation.mutate(buildSaveItems(slots))
   }
 
+  function handleResizeSlotCount(slotCount: number) {
+    if (slotCount < 0) return
+    if (pickerSlotIndex !== null && pickerSlotIndex >= slotCount) {
+      setPickerSlotIndex(null)
+    }
+    updateSlots((current) => {
+      if (slotCount === current.length) return current
+      if (slotCount < current.length) return current.slice(0, slotCount)
+
+      return [
+        ...current,
+        ...Array.from({ length: slotCount - current.length }, () => null)
+      ]
+    })
+  }
+
   return {
     selectionQuery,
     candidatesQuery,
@@ -132,6 +156,7 @@ export function useHomepageLocationGridSlots(
     searchValue,
     candidatePage,
     ...actions,
+    handleResizeSlotCount,
     handleSave,
     setSearchValue,
     setCandidatePage,

@@ -5,6 +5,7 @@ import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
 import HomepageFeaturedSlotEditor from './HomepageFeaturedSlotEditor'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
+import HomepageBlockSlotCountSection from './HomepageBlockSlotCountSection'
 import {
   ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES,
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
@@ -214,11 +215,11 @@ export default function CuratedHomepageBlockEditor({
   })
 
   const {
-    selectionQuery,
     saveMutation,
     slots,
     saveDisabled,
     handleSave,
+    handleResizeSlotCount,
     savedSlots,
     savedInvalidItems,
     hasUnsavedChanges,
@@ -248,14 +249,15 @@ export default function CuratedHomepageBlockEditor({
       ? { ...slotEditorState, usedKeys: mergedUsedKeys, saveDisabled: saveDisabled || hasCrossBlockDuplicate }
       : slotEditorState
 
-  const totalSlots = block.selection.totalSlots
+  const totalSlots = slots.length
+  const savedTotalSlots = block.selection.totalSlots
   const slotsFilled = slots.filter(Boolean).length
-  const slotsTotal = selectionQuery.data?.totalSlots ?? slots.length
+  const slotsTotal = slots.length
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
   const staleSlotNotice =
     savedInvalidItems.length === 0
       ? null
-      : `${savedInvalidItems.length} slot${savedInvalidItems.length === 1 ? '' : 's'} ${savedInvalidItems.length === 1 ? 'has a broken item' : 'have broken items'}. This block stays at ${totalSlots} slot${totalSlots === 1 ? '' : 's'} and is blocked — hidden from the published homepage — until you replace ${savedInvalidItems.length === 1 ? 'it' : 'them'}.`
+      : `${savedInvalidItems.length} slot${savedInvalidItems.length === 1 ? '' : 's'} ${savedInvalidItems.length === 1 ? 'has a broken item' : 'have broken items'}. This block stays at ${savedTotalSlots} slot${savedTotalSlots === 1 ? '' : 's'} and is blocked — hidden from the published homepage — until you replace ${savedInvalidItems.length === 1 ? 'it' : 'them'}.`
 
   const canConvertEmptyFeaturedArticles =
     ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES.includes(block.blockType)
@@ -333,6 +335,18 @@ export default function CuratedHomepageBlockEditor({
             settingsOpen={settingsOpen}
             saveSectionHeading={saveSectionHeading}
             saveSectionSubheading={saveSectionSubheading}
+          />
+
+          <HomepageBlockSlotCountSection
+            blockId={block.id}
+            blockType={block.blockType}
+            currentSlotCount={slots.length}
+            savedSlotCount={savedTotalSlots}
+            slots={slots}
+            invalidSlots={savedInvalidItems.map((item) => item.slot)}
+            disabled={!token || saveMutation.isPending}
+            isPending={saveMutation.isPending}
+            onResize={handleResizeSlotCount}
           />
 
           {saveSlot3Layout &&

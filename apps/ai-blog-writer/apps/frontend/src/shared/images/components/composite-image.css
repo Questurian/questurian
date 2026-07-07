@@ -1,0 +1,257 @@
+.ci-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.ci-modal {
+  width: min(1120px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24);
+  overflow: hidden;
+}
+
+.ci-header,
+.ci-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ci-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 0;
+}
+
+.ci-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.ci-close {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #4b5563;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.ci-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px;
+  overflow: auto;
+}
+
+.ci-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ci-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8125rem;
+  font-weight: 650;
+  color: #374151;
+}
+
+.ci-field input,
+.ci-field select,
+.ci-field textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+  color: #111827;
+  background: #fff;
+}
+
+.ci-source-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.ci-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ci-slot {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.ci-slot-media {
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #e5e7eb;
+  color: #6b7280;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.ci-slot-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ci-slot-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ci-slot-copy strong {
+  font-size: 0.8rem;
+  color: #111827;
+}
+
+.ci-slot-copy span {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ci-slot-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.ci-slot-actions button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.ci-preview {
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ci-preview img,
+.ci-preview-empty {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.ci-preview img {
+  object-fit: contain;
+}
+
+.ci-preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.ci-warnings,
+.ci-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+.ci-warnings {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.ci-warnings p {
+  margin: 0 0 4px;
+}
+
+.ci-warnings p:last-child {
+  margin-bottom: 0;
+}
+
+.ci-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.ci-primary,
+.ci-secondary {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ci-primary {
+  border-color: #4f46e5;
+  background: #4f46e5;
+  color: #fff;
+}
+
+.ci-secondary {
+  background: #fff;
+  color: #374151;
+}
+
+.ci-primary:disabled,
+.ci-secondary:disabled,
+.ci-slot-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 860px) {
+  .ci-body {
+    grid-template-columns: 1fr;
+  }
+}

@@ -308,6 +308,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
       introMarkdown: typeof header.introMarkdown === 'string' ? header.introMarkdown : '',
       introLexical: isRecord(header.introLexical) ? header.introLexical : undefined,
       introJsonText: typeof header.introJsonText === 'string' ? header.introJsonText : '',
+      featuredMediaSet: typeof header.featuredMediaSet === 'number' ? header.featuredMediaSet : null,
       featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
     },
     ...(() => {
@@ -421,6 +422,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     header: {
       introMarkdown: '',
       introJsonText: '',
+      featuredMediaSet: null,
       featuredImage: null,
     },
     dayCount: 1,

@@ -283,6 +283,7 @@ export function useItinerarySubmit({
         itineraryDays: payloadItineraryDays,
         header: {
           intro: headerIntro,
+          featuredMediaSet: submitDraft.header.featuredMediaSet || undefined,
           featuredImage: submitDraft.header.featuredImage || undefined,
         },
         seoSection: buildSeoPayload(seoSectionForSubmit),

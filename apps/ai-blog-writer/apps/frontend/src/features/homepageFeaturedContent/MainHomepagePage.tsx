@@ -455,8 +455,8 @@ export default function MainHomepagePage() {
                     ...homepageBlockEditorIdentity(block),
                     token,
                   ]}
-                  saveSelection={async (currentToken, items) => {
-                    const updated = await updateMainHomepageBlock(currentToken, block.id, items)
+                  saveSelection={async (currentToken, items, slotCount) => {
+                    const updated = await updateMainHomepageBlock(currentToken, block.id, items, slotCount)
                     const updatedBlock = updated.pageBlocks.find(
                       (candidate): candidate is LocationGridBlockResponse =>
                         candidate.id === block.id && candidate.blockType === block.blockType,
@@ -526,8 +526,8 @@ export default function MainHomepagePage() {
                     ...homepageBlockEditorIdentity(gridBlock),
                     token,
                   ]}
-                  saveSelection={async (currentToken, items) => {
-                    const updated = await updateMainHomepageBlock(currentToken, gridBlock.id, items)
+                  saveSelection={async (currentToken, items, slotCount) => {
+                    const updated = await updateMainHomepageBlock(currentToken, gridBlock.id, items, slotCount)
                     const updatedBlock = updated.pageBlocks.find(
                       (candidate): candidate is HotelOrAttractionGridBlockResponse =>
                         candidate.id === gridBlock.id && candidate.blockType === gridBlock.blockType,

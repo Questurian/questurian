@@ -56,6 +56,20 @@ Related terms: MediaSet, MediaAsset (both defined in Questura's context).
 Do not confuse with: Questura's Payload admin UI (that's the CMS admin panel); the old `batchUpload` feature (removed, superseded by Media Library).
 Code references: `apps/frontend/src/features/mediaLibrary/`.
 
+### Composite Image
+
+Definition: one editorial visual assembled from multiple source images and treated by operators as a single image.
+Related terms: MediaSet, MediaAsset (both defined in Questura's context), Image Picker.
+Do not confuse with: a MediaSet itself; the Composite Image is the visual concept, while the MediaSet is the Payload storage object that carries its variants.
+Source rule: operators choose source MediaSets, not individual variant assets; generated output is persisted as a new MediaSet.
+Usage rule: Composite Images are reusable Media Library outputs; itinerary builders may launch the tool and attach the generated MediaSet to the Itinerary Header.
+
+### Composite Image Layout
+
+Definition: the fixed arrangement recipe for a Composite Image, currently either four sources in a 2x2 grid or two sources side by side.
+Related terms: Composite Image.
+Do not confuse with: a public page layout; it only describes how the generated visual is assembled before the MediaSet variants are used elsewhere.
+
 ### Pipeline Artifact
 
 Definition: the immutable record of a run. Bundles `PipelineMeta` + all stage outputs + final markdown path.

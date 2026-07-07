@@ -21,7 +21,8 @@ export type UseHomepageLocationGridSlotsOptions = {
   selection: HomepageLocationGridSelection
   saveSelection: (
     token: string,
-    items: HomepageLocationGridItemRef[]
+    items: HomepageLocationGridItemRef[],
+    slotCount?: number
   ) => Promise<HomepageLocationGridSelection>
   fetchCandidates: (
     token: string,
@@ -58,6 +59,7 @@ export type UseHomepageLocationGridSlotsResult = {
   handleCandidatePick: (candidate: HomepageLocationGridCandidate) => void
   handleMove: (slotIndex: number, direction: -1 | 1) => void
   handleReorderAll: (newSlots: LocationGridSlotValue[]) => void
+  handleResizeSlotCount: (slotCount: number) => void
   handleRemove: (slotIndex: number) => void
   handleReset: () => void
   handleSave: () => void

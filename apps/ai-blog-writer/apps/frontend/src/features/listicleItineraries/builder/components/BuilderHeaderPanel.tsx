@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { BuilderHeaderPanel as SharedBuilderHeaderPanel } from '../../../../shared/builder/components/BuilderHeaderPanel'
 import { FieldInfoHint } from '../../../../shared/builder/components/FieldInfoHint'
+import { CompositeImageModal } from '../../../../shared/images/components/CompositeImageModal'
 import type { ListicleItineraryDraft, MediaAssetOption } from '../../types'
 
 type BuilderHeaderPanelProps = {
@@ -41,48 +43,77 @@ export function BuilderHeaderPanel({
   onSaveStep2,
   onCancelStep2Update,
 }: BuilderHeaderPanelProps) {
+  const [compositeOpen, setCompositeOpen] = useState(false)
+
   return (
-    <SharedBuilderHeaderPanel
-      draft={draft}
-      token={token}
-      locationRef={locationRef}
-      mediaAssets={mediaAssets}
-      updateHeader={updateHeader}
-      isLocked={isLocked}
-      isSynced={isSynced}
-      onContinueStep2={onContinueStep2}
-      onUpdateStep2={onUpdateStep2}
-      onSaveStep2={onSaveStep2}
-      onCancelStep2Update={onCancelStep2Update}
-      headerPreviewTitleFallback="Your itinerary headline will appear here"
-      introPlaceholder="Write the itinerary intro..."
-      renderIntroAiActions={() => (
-        <>
-          <FieldInfoHint text={'Writes the intro from your AI plan overview, the picks, and each “Why this pick” — plus the title, location, and list tone.'} />
+    <>
+      <SharedBuilderHeaderPanel
+        draft={draft}
+        token={token}
+        locationRef={locationRef}
+        mediaAssets={mediaAssets}
+        updateHeader={updateHeader}
+        isLocked={isLocked}
+        isSynced={isSynced}
+        onContinueStep2={onContinueStep2}
+        onUpdateStep2={onUpdateStep2}
+        onSaveStep2={onSaveStep2}
+        onCancelStep2Update={onCancelStep2Update}
+        headerPreviewTitleFallback="Your itinerary headline will appear here"
+        introPlaceholder="Write the itinerary intro..."
+        renderFeaturedImageActions={() => (
           <button
             type="button"
             className="stl-btn stl-btn-secondary"
-            onClick={() => void onIntroAiAutoWrite()}
-            disabled={isIntroAiGenerating || Boolean(introComposeDisabledReason)}
-            title={introComposeDisabledReason}
+            onClick={() => setCompositeOpen(true)}
+            disabled={!token}
           >
-            {isIntroAiGenerating
-              ? 'Composing...'
-              : draft.header.introMarkdown.trim()
-                ? 'Recompose from plan'
-                : 'Compose from plan'}
+            Create composite
           </button>
-          {hasIntroComposeReport && onViewIntroComposeReport ? (
+        )}
+        renderIntroAiActions={() => (
+          <>
+            <FieldInfoHint text={'Writes the intro from your AI plan overview, the picks, and each “Why this pick” — plus the title, location, and list tone.'} />
             <button
               type="button"
               className="stl-btn stl-btn-secondary"
-              onClick={onViewIntroComposeReport}
+              onClick={() => void onIntroAiAutoWrite()}
+              disabled={isIntroAiGenerating || Boolean(introComposeDisabledReason)}
+              title={introComposeDisabledReason}
             >
-              Inspect run
+              {isIntroAiGenerating
+                ? 'Composing...'
+                : draft.header.introMarkdown.trim()
+                  ? 'Recompose from plan'
+                  : 'Compose from plan'}
             </button>
-          ) : null}
-        </>
-      )}
-    />
+            {hasIntroComposeReport && onViewIntroComposeReport ? (
+              <button
+                type="button"
+                className="stl-btn stl-btn-secondary"
+                onClick={onViewIntroComposeReport}
+              >
+                Inspect run
+              </button>
+            ) : null}
+          </>
+        )}
+      />
+      {token ? (
+        <CompositeImageModal
+          isOpen={compositeOpen}
+          token={token}
+          locationRef={locationRef}
+          defaultTitle={`Composite: ${draft.title.trim() || 'Itinerary header'}`}
+          onCreated={(response) => {
+            const mediaSetId = Number(response.mediaSetId)
+            if (!Number.isNaN(mediaSetId)) {
+              updateHeader({ featuredMediaSet: mediaSetId, featuredImage: null })
+            }
+          }}
+          onClose={() => setCompositeOpen(false)}
+        />
+      ) : null}
+    </>
   )
 }

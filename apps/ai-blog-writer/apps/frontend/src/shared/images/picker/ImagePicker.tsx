@@ -7,7 +7,7 @@ import {
   type UploadImageResponse,
 } from '..'
 import { fetchMediaAssets } from '../../api/payload/payload.api'
-import type { MediaAsset } from '../../api/payload/payload.types'
+import type { MediaAsset, MediaSet } from '../../api/payload/payload.types'
 import { searchPexelsImages, searchUnsplashImages } from '../external/external-images.api'
 import type { PexelsPhoto, UnsplashPhoto } from '../external/external-images.types'
 import { getPexelsPhotoImportUrl, getUnsplashPhotoImportUrl, buildImageFileNamePrefix } from '../external/external-import.utils'
@@ -45,6 +45,8 @@ export type ImagePickerProps = {
   importAltContextLabel?: string
   /** Caller-owned controls (caption, trio toggle) rendered above the grid. */
   aboveGrid?: ReactNode
+  /** Hide upload/provider tabs; useful when only existing Payload records are valid inputs. */
+  payloadOnly?: boolean
   /** Confirm-button label in multi mode, e.g. 'Add Img Trio'. */
   confirmLabel?: string
   onSelect: (result: ImagePickerResult) => void
@@ -82,13 +84,14 @@ export function ImagePicker({
   importFileNameTitle,
   importAltContextLabel = 'Image',
   aboveGrid,
+  payloadOnly = false,
   confirmLabel = 'Add selected',
   onSelect,
   onClose,
 }: ImagePickerProps) {
   const isMulti = selection.mode === 'multiple'
   const requiredCount = isMulti ? selection.count : 1
-  const uploadAvailable = !isMulti
+  const uploadAvailable = !isMulti && !payloadOnly
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('payload')
   const [search, setSearch] = useState('')
@@ -99,6 +102,7 @@ export function ImagePicker({
   // Source-agnostic multi-select buffer: ordered ids + a resolution map.
   const [bufferIds, setBufferIds] = useState<number[]>([])
   const [bufferAssets, setBufferAssets] = useState<Map<number, MediaAsset>>(new Map())
+  const [bufferMediaSets, setBufferMediaSets] = useState<Map<number, MediaSet>>(new Map())
 
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -120,6 +124,7 @@ export function ImagePicker({
     setSearch('')
     setBufferIds([])
     setBufferAssets(new Map())
+    setBufferMediaSets(new Map())
     setUploadIdentity(buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle))
     unsplash.reset()
     pexels.reset()
@@ -163,6 +168,19 @@ export function ImagePicker({
     })
   }
 
+  const addMediaSetToBuffer = (mediaSet: MediaSet) => {
+    setBufferMediaSets((current) => {
+      const next = new Map(current)
+      next.set(mediaSet.id, mediaSet)
+      return next
+    })
+    setBufferIds((current) => {
+      if (current.includes(mediaSet.id)) return current.filter((value) => value !== mediaSet.id)
+      if (current.length < requiredCount) return [...current, mediaSet.id]
+      return current
+    })
+  }
+
   if (!isOpen) return null
 
   const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -170,6 +188,7 @@ export function ImagePicker({
   }
 
   const switchTab = (next: ActiveTab) => {
+    if (payloadOnly && next !== 'payload') return
     if (next !== activeTab) importer.reset()
     if (next === 'upload') setUploadIdentity(buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle))
     setActiveTab(next)
@@ -187,6 +206,10 @@ export function ImagePicker({
   }
 
   const handleMediaSetClick = (mediaSet: (typeof data.mediaSets)[number]) => {
+    if (isMulti) {
+      addMediaSetToBuffer(mediaSet)
+      return
+    }
     onSelect({ kind: 'mediaSets', mediaSets: [mediaSet] })
     onClose()
   }
@@ -197,6 +220,16 @@ export function ImagePicker({
   }
 
   const handleConfirmMulti = () => {
+    if (query.browseUnit === 'mediaSets') {
+      const mediaSets = bufferIds
+        .map((id) => bufferMediaSets.get(id))
+        .filter((mediaSet): mediaSet is MediaSet => Boolean(mediaSet))
+      if (mediaSets.length !== requiredCount) return
+      onSelect({ kind: 'mediaSets', mediaSets })
+      onClose()
+      return
+    }
+
     const assets = bufferIds
       .map((id) => bufferAssets.get(id))
       .filter((asset): asset is MediaAsset => Boolean(asset))
@@ -417,35 +450,39 @@ export function ImagePicker({
           >
             Payload Library
           </button>
-          <button
-            type="button"
-            className={`ip-tab${activeTab === 'upload' ? ' ip-tab--active' : ''}`}
-            onClick={() => switchTab('upload')}
-            disabled={!uploadAvailable || locationRef === null}
-            title={
-              !uploadAvailable
-                ? 'Upload is available for single-image selection only.'
-                : locationRef === null
-                  ? 'Set a location to enable uploads.'
-                  : undefined
-            }
-          >
-            Upload
-          </button>
-          <button
-            type="button"
-            className={`ip-tab${activeTab === 'unsplash' ? ' ip-tab--active' : ''}`}
-            onClick={() => switchTab('unsplash')}
-          >
-            Unsplash
-          </button>
-          <button
-            type="button"
-            className={`ip-tab${activeTab === 'pexels' ? ' ip-tab--active' : ''}`}
-            onClick={() => switchTab('pexels')}
-          >
-            Pexels
-          </button>
+          {!payloadOnly ? (
+            <>
+              <button
+                type="button"
+                className={`ip-tab${activeTab === 'upload' ? ' ip-tab--active' : ''}`}
+                onClick={() => switchTab('upload')}
+                disabled={!uploadAvailable || locationRef === null}
+                title={
+                  !uploadAvailable
+                    ? 'Upload is available for single-image selection only.'
+                    : locationRef === null
+                      ? 'Set a location to enable uploads.'
+                      : undefined
+                }
+              >
+                Upload
+              </button>
+              <button
+                type="button"
+                className={`ip-tab${activeTab === 'unsplash' ? ' ip-tab--active' : ''}`}
+                onClick={() => switchTab('unsplash')}
+              >
+                Unsplash
+              </button>
+              <button
+                type="button"
+                className={`ip-tab${activeTab === 'pexels' ? ' ip-tab--active' : ''}`}
+                onClick={() => switchTab('pexels')}
+              >
+                Pexels
+              </button>
+            </>
+          ) : null}
         </div>
 
         {query.requirementLabel && activeTab === 'payload' && (
@@ -582,7 +619,8 @@ function ImagePickerGrid({
             const previewUrl = resolveMediaSetPreviewUrl(mediaSet)
             const previewAssetId = resolveMediaSetPreviewAssetId(mediaSet)
             const label = formatMediaSetLabel(mediaSet)
-            const isSelected = selectedId !== null && String(mediaSet.id) === String(selectedId)
+            const bufferIndex = bufferIds ? bufferIds.indexOf(mediaSet.id) : -1
+            const isSelected = bufferIds ? bufferIndex !== -1 : selectedId !== null && String(mediaSet.id) === String(selectedId)
             return (
               <button
                 key={mediaSet.id}
@@ -599,7 +637,7 @@ function ImagePickerGrid({
                 <div className="ip-card__info">
                   <span className="ip-card__name">{label}</span>
                 </div>
-                {isSelected && <div className="ip-card__badge">✓</div>}
+                {isSelected && <div className="ip-card__badge">{bufferIds ? bufferIndex + 1 : '✓'}</div>}
               </button>
             )
           })

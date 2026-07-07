@@ -109,6 +109,7 @@ export function buildItineraryDraftSyncSignature(draft: ListicleItineraryDraft):
         draft.header.introJsonText,
         draft.header.introLexical,
       ),
+      featuredMediaSet: draft.header.featuredMediaSet ?? null,
       featuredImage: draft.header.featuredImage ?? null,
     },
     dayCount,

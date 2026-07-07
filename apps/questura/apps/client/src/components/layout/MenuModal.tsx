@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Search, X } from "lucide-react";
-import { useAuth } from "@/lib/user/hooks";
-import { useLoginModalStore } from "@/lib/stores/loginModalStore";
-import { useMembership } from "@/features/Payments/hooks/useMembership";
+import { ArrowRight, Search, X } from "lucide-react";
 import { fetchLocationMenu } from "@/features/Navigation/lib/fetchLocationMenu";
 
 interface MenuModalProps {
@@ -16,18 +13,15 @@ interface MenuModalProps {
 }
 
 export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
-  const { user, isAuthenticated } = useAuth();
-  const { isActive } = useMembership(user);
-  const openLoginModal = useLoginModalStore((state) => state.openLoginModal);
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const shouldShowMembership = !isAuthenticated || !isActive;
   const locationMenuQuery = useQuery({
     queryKey: ["public-location-menu"],
     queryFn: fetchLocationMenu,
     enabled: isOpen,
     staleTime: 5 * 60 * 1000,
   });
+  const countries = locationMenuQuery.data?.countries ?? [];
 
   // The modal stays mounted while closed, so reset the field whenever it
   // closes — leftover text would otherwise reappear on the next open.
@@ -78,13 +72,48 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
           }
         }
 
+        @keyframes menuItemRise {
+          from {
+            transform: translateY(10px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
         .menu-sheet-enter {
           animation: menuSlideIn 0.25s ease-out forwards;
+        }
+
+        .menu-reveal > * {
+          animation: menuItemRise 0.42s ease-out both;
+        }
+
+        .menu-reveal > *:nth-child(2) {
+          animation-delay: 60ms;
+        }
+
+        .menu-reveal > *:nth-child(3) {
+          animation-delay: 120ms;
+        }
+
+        .menu-reveal > *:nth-child(4) {
+          animation-delay: 180ms;
         }
 
         @media (min-width: 1024px) {
           .menu-sheet-enter {
             animation: menuSlideDown 0.35s ease-out forwards;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .menu-sheet-enter,
+          .menu-overlay-enter,
+          .menu-reveal > * {
+            animation: none;
           }
         }
 
@@ -97,111 +126,99 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
         <button
           type="button"
           aria-label="Close menu"
-          className="menu-overlay-enter absolute inset-0 bg-black/40"
+          className="menu-overlay-enter absolute inset-0 bg-black/60"
           onClick={onClose}
         />
 
-        <aside className="menu-sheet-enter relative flex h-full w-[84%] max-w-[360px] flex-col border-r border-white/15 bg-[#1f1f1f] px-5 py-6 text-white shadow-2xl 1024:w-full 1024:max-w-none 1024:border-r-0">
-          <div className="mb-7 flex shrink-0 items-center justify-between">
-            <h2 className="font-display text-[1.15rem] tracking-[0.08em] uppercase">
-              Menu
-            </h2>
+        <aside className="menu-sheet-enter relative flex h-full w-[88%] max-w-[390px] flex-col overflow-hidden border-r border-white/15 bg-[#141414] text-white shadow-2xl 1024:h-auto 1024:max-h-[min(760px,calc(100vh-20px))] 1024:w-full 1024:max-w-none 1024:border-b 1024:border-r-0">
+          <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-4 1024:px-10 1024:py-5">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/40">
+                Questura
+              </p>
+              <h2 className="mt-1 font-display text-[1.35rem] leading-none tracking-[0.02em] 1024:text-[1.75rem]">
+                Menu
+              </h2>
+            </div>
             <button
               onClick={onClose}
-              className="rounded-full p-1.5 transition-colors hover:bg-white/10 focus:outline-none"
+              className="rounded-full border border-white/10 p-2 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/45"
               aria-label="Close modal"
             >
               <X className="h-5 w-5 text-white" />
             </button>
           </div>
 
-          <form onSubmit={submitSearch} className="mb-5 shrink-0">
-            <div className="flex items-center gap-2.5 rounded-xl border border-white/10 px-3.5 py-3 transition-colors focus-within:border-white/30">
-              <Search className="h-4 w-4 shrink-0 text-white/50" strokeWidth={1.5} aria-hidden />
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search articles, guides, maps, and itineraries…"
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40"
-                autoComplete="off"
-                aria-label="Search articles"
-              />
-            </div>
-          </form>
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 1024:px-10 1024:py-7">
+            <form onSubmit={submitSearch} className="mb-6 1024:mb-8 1024:max-w-[520px]">
+              <div className="flex items-center gap-2.5 border-b border-white/25 py-3 transition-colors focus-within:border-white/70">
+                <Search className="h-4 w-4 shrink-0 text-white/55" strokeWidth={1.5} aria-hidden />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search articles, guides, maps, and itineraries..."
+                  className="w-full bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/45"
+                  autoComplete="off"
+                  aria-label="Search articles"
+                />
+              </div>
+            </form>
 
-          <nav className="min-h-0 flex-1 overflow-y-auto pr-1" aria-label="Locations">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/42">
-              Locations
-            </p>
-
-            {locationMenuQuery.isPending ? (
-              <p className="rounded-xl border border-white/10 px-3.5 py-3 text-sm text-white/55">
-                Loading locations...
-              </p>
-            ) : locationMenuQuery.isError ? (
-              <p className="rounded-xl border border-white/10 px-3.5 py-3 text-sm text-white/55">
-                Locations unavailable
-              </p>
-            ) : locationMenuQuery.data.countries.length === 0 ? (
-              <p className="rounded-xl border border-white/10 px-3.5 py-3 text-sm text-white/55">
-                No locations yet
-              </p>
-            ) : (
-              <div className="space-y-5">
-                {locationMenuQuery.data.countries.map((country) => (
-                  <div key={country.locationKey}>
+            <nav className="menu-reveal grid gap-8 1024:grid-cols-3 1024:gap-0" aria-label="Locations">
+              {locationMenuQuery.isPending ? (
+                <p className="text-sm font-semibold text-white/55">Loading locations...</p>
+              ) : locationMenuQuery.isError ? (
+                <p className="text-sm font-semibold text-white/55">Locations unavailable</p>
+              ) : countries.length === 0 ? (
+                <p className="text-sm font-semibold text-white/55">No locations yet</p>
+              ) : (
+                countries.map((country, index) => (
+                  <section
+                    key={country.locationKey}
+                    className={`border-t border-white/10 pt-7 first:border-t-0 first:pt-0 1024:border-t-0 1024:pt-0 ${
+                      index % 3 === 0
+                        ? "1024:pr-9"
+                        : index % 3 === 1
+                          ? "1024:border-l 1024:border-r 1024:px-9"
+                          : "1024:pl-9"
+                    } ${index > 2 ? "1024:mt-10 1024:border-t 1024:pt-8" : ""}`}
+                  >
                     <Link
                       href={country.href}
                       onClick={onClose}
-                      className="block rounded-xl border border-white/10 px-3.5 py-3 font-display text-[23px] leading-none text-white transition-colors hover:bg-white/10 focus:outline-none focus-visible:bg-white/10"
+                      className="group inline-flex items-center gap-2 font-display text-[1.75rem] font-semibold leading-none text-white transition-colors hover:text-white/78 focus:outline-none focus-visible:text-white/78 1024:text-[2rem]"
                     >
                       {country.label}
+                      <ArrowRight className="mt-1 h-5 w-5 transition-transform group-hover:translate-x-1" aria-hidden />
                     </Link>
 
-                    {country.cities.length > 0 ? (
-                      <div className="mt-2 space-y-1.5 pl-3">
-                        {country.cities.map((city) => (
+                    <div className="mt-7 space-y-4">
+                      {country.cities.length > 0 ? (
+                        country.cities.map((city) => (
                           <Link
                             key={city.locationKey}
                             href={city.href}
                             onClick={onClose}
-                            className="block rounded-lg px-3 py-2 text-sm font-medium text-white/72 transition-colors hover:bg-white/10 hover:text-white focus:outline-none focus-visible:bg-white/10 focus-visible:text-white"
+                            className="block text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
                           >
                             {city.label}
                           </Link>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            )}
-          </nav>
-
-          <div className="mt-6 shrink-0 space-y-2 border-t border-white/10 pt-4">
-            {shouldShowMembership ? (
-              <Link
-                href="/join"
-                onClick={onClose}
-                className="block rounded-xl border border-white/10 px-3.5 py-3 text-sm font-semibold transition-colors hover:bg-white/10"
-              >
-                Join Membership
-              </Link>
-            ) : null}
-
-            {!isAuthenticated ? (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  openLoginModal();
-                }}
-                className="block w-full rounded-xl border border-white/10 px-3.5 py-3 text-left text-sm font-semibold transition-colors hover:bg-white/10"
-              >
-                Sign In
-              </button>
-            ) : null}
+                        ))
+                      ) : (
+                        <Link
+                          href={country.href}
+                          onClick={onClose}
+                          className="block text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
+                        >
+                          View all {country.label} guides
+                        </Link>
+                      )}
+                    </div>
+                  </section>
+                ))
+              )}
+            </nav>
           </div>
         </aside>
       </div>

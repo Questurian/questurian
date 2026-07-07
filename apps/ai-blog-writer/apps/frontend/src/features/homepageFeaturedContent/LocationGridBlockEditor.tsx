@@ -7,6 +7,7 @@ import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
+import HomepageBlockSlotCountSection from './HomepageBlockSlotCountSection'
 import {
   LOCATION_GRID_MEDIA_ASPECTS,
   type HomepageLocationGridCandidatesResponse,
@@ -42,7 +43,8 @@ type Props = {
   selectionQueryKey: unknown[]
   saveSelection: (
     token: string,
-    items: HomepageLocationGridItemRef[]
+    items: HomepageLocationGridItemRef[],
+    slotCount?: number
   ) => Promise<HomepageLocationGridSelection>
   fetchCandidates: (
     token: string,
@@ -137,6 +139,7 @@ export default function LocationGridBlockEditor({
     candidatePage,
     handleCandidatePick,
     handleReorderAll,
+    handleResizeSlotCount,
     handleSave,
     setSearchValue,
     setCandidatePage,
@@ -209,7 +212,7 @@ export default function LocationGridBlockEditor({
         </div>
         <div className="hf-block-header-actions">
           <span className="hf-block-slot-meta" aria-live="polite">
-            {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+            {slots.filter(Boolean).length} / {slots.length} filled
           </span>
           <button
             type="button"
@@ -236,7 +239,7 @@ export default function LocationGridBlockEditor({
               disabled={saveDisabled}
               title={
                 saveNeedsAllSlots
-                  ? `Fill all ${block.selection.totalSlots} locations before saving.`
+                  ? `Fill all ${slots.length} locations before saving.`
                   : undefined
               }
             >
@@ -257,7 +260,7 @@ export default function LocationGridBlockEditor({
           className="hf-block-slot-meta hf-block-settings-slot-summary"
           aria-live="polite"
         >
-          {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+          {slots.filter(Boolean).length} / {slots.length} filled
         </p>
         <HomepageBlockSectionTextFields
           blockId={block.id}
@@ -267,6 +270,18 @@ export default function LocationGridBlockEditor({
           settingsOpen={settingsOpen}
           saveSectionHeading={saveLocationGridSectionHeading}
           saveSectionSubheading={saveLocationGridSectionSubheading}
+        />
+
+        <HomepageBlockSlotCountSection
+          blockId={block.id}
+          blockType={block.blockType}
+          currentSlotCount={slots.length}
+          savedSlotCount={block.selection.totalSlots}
+          slots={slots}
+          invalidSlots={savedInvalidItems.map((item) => item.slot)}
+          disabled={!token || saveMutation.isPending}
+          isPending={saveMutation.isPending}
+          onResize={handleResizeSlotCount}
         />
 
         {saveLocationGridMediaAspect ? (
@@ -336,7 +351,7 @@ export default function LocationGridBlockEditor({
           <h3 className="hf-block-settings-kicker">Saving the grid</h3>
           <p className="hf-block-settings-hint">
             The public homepage expects every slot filled (
-            {block.selection.totalSlots} {childLabel}). Save is only available
+            {slots.length} {childLabel}). Save is only available
             when all slots have a location and there are no duplicate picks.
           </p>
           {saveNeedsAllSlots ? (

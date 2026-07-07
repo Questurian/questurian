@@ -78,6 +78,7 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
       introMarkdown: typeof header.introMarkdown === 'string' ? header.introMarkdown : '',
       introLexical: isRecord(header.introLexical) ? header.introLexical : undefined,
       introJsonText: typeof header.introJsonText === 'string' ? header.introJsonText : '',
+      featuredMediaSet: typeof header.featuredMediaSet === 'number' ? header.featuredMediaSet : null,
       featuredImage: typeof header.featuredImage === 'number' ? header.featuredImage : null,
     },
     items: Array.isArray(value.items) ? coerceStoredItems(value.items) : [],
@@ -125,6 +126,7 @@ export function createEmptyDraft(): SingleTypeListicleDraft {
     header: {
       introMarkdown: '',
       introJsonText: '',
+      featuredMediaSet: null,
       featuredImage: null,
     },
     items: [],

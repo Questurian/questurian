@@ -19,6 +19,7 @@ type FeaturedImagePickerProps = {
   /** @deprecated No longer used — the unified picker hydrates the selected asset itself. */
   prefetchedPayloadAssets?: MediaAsset[]
   onSelect: (mediaAssetId: number) => void
+  onSelectMediaSet?: (mediaSetId: number) => void
   onClose: () => void
 }
 
@@ -39,6 +40,7 @@ export function FeaturedImagePicker({
   uploadExternalRefBase = 'featured-image-picker',
   uploadFileNameTitle = 'featured-image',
   onSelect,
+  onSelectMediaSet,
   onClose,
 }: FeaturedImagePickerProps) {
   const handleSelect = (result: ImagePickerResult) => {
@@ -48,9 +50,21 @@ export function FeaturedImagePicker({
       return
     }
     if (result.kind === 'mediaSets') {
+      const mediaSetId = result.mediaSets[0]?.id
+      if (mediaSetId != null && onSelectMediaSet) {
+        onSelectMediaSet(Number(mediaSetId))
+        return
+      }
       const id = resolveMediaSetPreviewAssetId(result.mediaSets[0])
       if (id != null) onSelect(id)
       return
+    }
+    if (onSelectMediaSet) {
+      const mediaSetId = Number(result.response.mediaSetId)
+      if (!Number.isNaN(mediaSetId)) {
+        onSelectMediaSet(mediaSetId)
+        return
+      }
     }
     const id = pickUploadedAssetId(result.response, payloadVariant ?? 'editorial')
     if (id != null) onSelect(id)

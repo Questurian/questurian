@@ -4,6 +4,7 @@ import HomepageBlockConvertSection from './HomepageBlockConvertSection'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
+import HomepageBlockSlotCountSection from './HomepageBlockSlotCountSection'
 import HotelGridLayout from './HotelGridLayout'
 import { HotelGridPickerModal } from './HotelGridPickerModal'
 import type {
@@ -65,7 +66,8 @@ export default function HotelGridBlockEditor({
   selectionQueryKey: unknown[]
   saveSelection: (
     token: string,
-    items: HomepageHotelGridItemRef[]
+    items: HomepageHotelGridItemRef[],
+    slotCount?: number
   ) => Promise<HomepageHotelGridSelection>
   fetchCandidates: (
     token: string,
@@ -119,6 +121,7 @@ export default function HotelGridBlockEditor({
     candidatePage,
     handleCandidatePick,
     handleReorderAll,
+    handleResizeSlotCount,
     handleSave,
     setSearchValue,
     setCandidatePage,
@@ -178,12 +181,12 @@ export default function HotelGridBlockEditor({
         <div className="hf-block-label">
           <span>Block {blockIndex + 1}</span>
           <span className="hf-block-type-tag">
-            {blockConfig.label} · {block.selection.totalSlots} slots
+            {blockConfig.label} · {slots.length} slots
           </span>
         </div>
         <div className="hf-block-header-actions">
           <span className="hf-block-slot-meta" aria-live="polite">
-            {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+            {slots.filter(Boolean).length} / {slots.length} filled
           </span>
           <button
             type="button"
@@ -223,7 +226,7 @@ export default function HotelGridBlockEditor({
           className="hf-block-slot-meta hf-block-settings-slot-summary"
           aria-live="polite"
         >
-          {slots.filter(Boolean).length} / {block.selection.totalSlots} filled
+          {slots.filter(Boolean).length} / {slots.length} filled
         </p>
         <HomepageBlockSectionTextFields
           blockId={block.id}
@@ -233,6 +236,17 @@ export default function HotelGridBlockEditor({
           settingsOpen={settingsOpen}
           saveSectionHeading={saveHotelGridSectionHeading}
           saveSectionSubheading={saveHotelGridSectionSubheading}
+        />
+        <HomepageBlockSlotCountSection
+          blockId={block.id}
+          blockType={block.blockType}
+          currentSlotCount={slots.length}
+          savedSlotCount={block.selection.totalSlots}
+          slots={slots}
+          invalidSlots={savedInvalidItems.map((item) => item.slot)}
+          disabled={!token || saveMutation.isPending}
+          isPending={saveMutation.isPending}
+          onResize={handleResizeSlotCount}
         />
         <HomepageBlockConvertSection
           blockId={block.id}

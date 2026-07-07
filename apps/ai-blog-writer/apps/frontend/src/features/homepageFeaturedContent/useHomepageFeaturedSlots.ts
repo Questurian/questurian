@@ -3,7 +3,6 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 
 import type {
   HomepageFeaturedCandidate,
-  HomepageFeaturedCandidatesResponse,
   HomepageFeaturedCollection,
   HomepageFeaturedInvalidItem,
   HomepageFeaturedItemRef,
@@ -113,8 +112,16 @@ export function useHomepageFeaturedSlots(
     placeholderData: (previousData) => previousData,
   })
 
+  const slots = draftSlots ?? savedSlots
+  const currentSaveSlotCountRef = useRef(selection.totalSlots)
+
+  useEffect(() => {
+    currentSaveSlotCountRef.current = repairSlotCount ?? slots.length
+  }, [repairSlotCount, slots.length])
+
   const saveMutation = useMutation({
-    mutationFn: (items: HomepageFeaturedItemRef[]) => saveSelection(token!, items, repairSlotCount),
+    mutationFn: (items: HomepageFeaturedItemRef[]) =>
+      saveSelection(token!, items, currentSaveSlotCountRef.current),
     onSuccess: (selection) => {
       const nextSlots = mapSelectionToSlots(selection)
       setSavedSlots(nextSlots)
@@ -131,7 +138,6 @@ export function useHomepageFeaturedSlots(
     },
   })
 
-  const slots = draftSlots ?? savedSlots
   const saveItems = buildSaveItems(slots)
   const usedKeys = new Set(
     slots.flatMap((item) => (item ? [`${item.relationTo}:${item.id}`] : [])),
@@ -210,6 +216,22 @@ export function useHomepageFeaturedSlots(
     setResultMessage(null)
   }, [])
 
+  function handleResizeSlotCount(slotCount: number) {
+    if (slotCount < 0) return
+    if (pickerSlotIndex !== null && pickerSlotIndex >= slotCount) {
+      setPickerSlotIndex(null)
+    }
+    updateSlots((current) => {
+      if (slotCount === current.length) return current
+      if (slotCount < current.length) return current.slice(0, slotCount)
+
+      return [
+        ...current,
+        ...Array.from({ length: slotCount - current.length }, () => null),
+      ]
+    })
+  }
+
   function handleReset() {
     setDraftSlots([...savedSlots])
     setPickerSlotIndex(null)
@@ -247,6 +269,7 @@ export function useHomepageFeaturedSlots(
     handleMove,
     handleRemove,
     handleReorderAll,
+    handleResizeSlotCount,
     handleReset,
     handleSave,
     setSearchValue,

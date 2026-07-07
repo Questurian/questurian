@@ -58,6 +58,19 @@
   flex-direction: column;
 }
 
+.ml-composite {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem 1.5rem;
+}
+
+.ml-composite-panel {
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 /* ── Browse tab ──────────────────────────────────────────────────────────── */
 .ml-browse {
   display: flex;

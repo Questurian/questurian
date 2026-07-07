@@ -203,6 +203,7 @@ export type SingleTypeListicleDraft = {
     introMarkdown: string
     introLexical?: PayloadRichText
     introJsonText?: string
+    featuredMediaSet?: number | null
     featuredImage: number | null
   }
   items: ListicleItemBlock[]
@@ -237,6 +238,7 @@ export type PayloadListicleDoc = {
   step3_in_update_mode?: boolean
   header?: {
     intro?: PayloadRichText
+    featuredMediaSet?: number | { id?: number }
     featuredImage?: number | { id?: number }
   }
   items?: Array<{

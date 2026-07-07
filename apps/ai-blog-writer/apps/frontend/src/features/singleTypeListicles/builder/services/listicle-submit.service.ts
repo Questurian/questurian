@@ -106,6 +106,7 @@ export async function submitListicle({
     step3_in_update_mode: false,
     header: {
       intro: headerIntro,
+      featuredMediaSet: draft.header.featuredMediaSet || undefined,
       featuredImage: draft.header.featuredImage || undefined,
     },
     items: payloadItems,
