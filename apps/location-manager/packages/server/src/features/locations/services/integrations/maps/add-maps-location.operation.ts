@@ -1,4 +1,8 @@
 import type { CreateMapsRequest, LocationCategory, LocationResponse } from "../../../models/location";
+import {
+  sanitizeLocationProvenance,
+  serializeLocationProvenanceJson,
+} from "@questurian/lm-shared";
 import { BadRequestError } from "@shared/errors/http-error";
 import { validateCategory } from "../../../utils/category-utils";
 import type { MapsServiceOperationContext } from "./maps.types";
@@ -53,8 +57,11 @@ export async function addMapsLocationOperation(
   Object.assign(entry, context.resolveTripadvisorFields(payload.tripadvisorUrl));
   if (payload.email) entry.email = payload.email;
   if (payload.neighborhoodDescription) entry.neighborhoodDescription = payload.neighborhoodDescription;
-  if (payload.provenance && Object.keys(payload.provenance).length > 0) {
-    entry.provenanceJson = JSON.stringify(payload.provenance);
+  const provenanceJson = serializeLocationProvenanceJson(
+    sanitizeLocationProvenance(payload.provenance)
+  );
+  if (provenanceJson) {
+    entry.provenanceJson = provenanceJson;
   }
   if (context.shouldPersistIdealFor(category)) {
     context.validateIdealForTagsByCategory(category, payload.idealFor);

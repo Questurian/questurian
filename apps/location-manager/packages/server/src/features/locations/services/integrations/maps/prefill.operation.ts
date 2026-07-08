@@ -1,3 +1,4 @@
+import type { LocationProvenance } from "@questurian/lm-shared";
 import type { LocationCategory } from "../../../models/location";
 import { BadRequestError } from "@shared/errors/http-error";
 import type { GooglePrefillResult, MapsServiceOperationContext } from "./maps.types";
@@ -66,7 +67,7 @@ export async function resolveGooglePrefillOperation(
     context.resolveDiningEnrichment(category, entry.placeId, diningEnrichmentOverrides),
   ]);
 
-  const provenance: Record<string, string> = {};
+  const provenance: LocationProvenance = {};
   if (diningEnrichment.type) provenance.type = "google";
   if (diningEnrichment.tripadvisorUrl) {
     provenance.tripadvisorUrl = diningEnrichment.tripadvisorUrlProvenance;

@@ -5,7 +5,7 @@ import type {
   DiningFieldSuggestionResponse,
   TripadvisorPrefillFields,
 } from "@client/shared/services/api/types";
-import type { FieldProvenance } from "@questurian/lm-shared";
+import { isFieldProvenance, type FieldProvenance } from "@questurian/lm-shared";
 import {
   buildDiningPrefillSignature,
   normalizeDiningAddress,
@@ -20,7 +20,6 @@ import {
   type AiSuggestionFieldKey,
   type ProvenanceTrackedField,
 } from "../dining-create.types";
-import { isFieldProvenanceValue } from "../draft/dining-draft-storage";
 
 function initialAiFieldStatusMap(): Record<AiSuggestionFieldKey, AiFieldStatus> {
   return AI_FIELD_KEYS.reduce(
@@ -348,7 +347,7 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
       for (const field of PROVENANCE_TRACKED_FIELDS) {
         const value = prefill[field];
         const raw = prefill.provenance?.[field];
-        if (value && isFieldProvenanceValue(raw)) {
+        if (value && isFieldProvenance(raw)) {
           nextProvenance[field] = raw;
           nextPrefilled[field] = value;
         }

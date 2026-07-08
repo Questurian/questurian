@@ -1,3 +1,5 @@
+import type { LocationProvenance } from "@questurian/lm-shared";
+
 export type LocationCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key_locations';
 
 /** Last Payload `tours` doc sync for this LM row (from `tour_payload_sync_state`). */
@@ -269,7 +271,7 @@ export interface LocationResponse {
   instagram_embeds: InstagramEmbed[];
   uploads: Upload[];
   slug: string | null;
-  provenance: Record<string, string> | null;
+  provenance: LocationProvenance | null;
   pendingSuggestions: Record<string, { value: string | string[]; provenance: string }> | null;
   created_at: string;
   updated_at: string;

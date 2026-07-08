@@ -1,3 +1,4 @@
+import { parseLocationProvenanceJson } from "@questurian/lm-shared";
 import type {
   Location,
   LocationBasic,
@@ -86,21 +87,6 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
 
       if (normalized.length === 0) return null;
       return Array.from(new Set(normalized));
-    } catch {
-      return null;
-    }
-  };
-
-  const parseStringMap = (json?: string | null): Record<string, string> | null => {
-    if (!json) return null;
-    try {
-      const parsed = JSON.parse(json);
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-      const result: Record<string, string> = {};
-      for (const [key, value] of Object.entries(parsed)) {
-        if (typeof value === "string") result[key] = value;
-      }
-      return Object.keys(result).length > 0 ? result : null;
     } catch {
       return null;
     }
@@ -204,7 +190,10 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     instagram_embeds: location.instagram_embeds || [],
     uploads: location.uploads || [],
     slug: location.slug || null,
-    provenance: parseStringMap(location.provenanceJson || null),
+    provenance: (() => {
+      const provenance = parseLocationProvenanceJson(location.provenanceJson);
+      return Object.keys(provenance).length > 0 ? provenance : null;
+    })(),
     pendingSuggestions: parsePendingSuggestions(location.pendingSuggestionsJson || null),
     created_at: location.created_at || new Date().toISOString(),
     updated_at: location.updated_at || location.created_at || new Date().toISOString(),

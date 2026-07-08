@@ -1,3 +1,4 @@
+import type { LocationProvenance } from "@questurian/lm-shared";
 import type { Location, LocationCategory, LocationResponse } from "../../../models/location";
 import type { PatchMapsDto } from "../../../validation/schemas/maps.schemas";
 import type { EnvConfig } from "@server/shared/config/env.config";
@@ -41,7 +42,7 @@ export interface GooglePrefillResult {
   tripadvisorPlaceData: TripadvisorPrefillFields | null;
   menuUrl: string | null;
   bookingUrl: string | null;
-  provenance: Record<string, string>;
+  provenance: LocationProvenance;
 }
 
 export interface MapsServiceOperationContext {

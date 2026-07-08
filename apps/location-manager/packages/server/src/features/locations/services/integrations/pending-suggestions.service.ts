@@ -3,6 +3,10 @@
 // the suggestion's own provenance (ai), then remove the entry.
 // On dismiss: just remove the entry.
 
+import {
+  parseLocationProvenanceJson,
+  serializeLocationProvenanceJson,
+} from "@questurian/lm-shared";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { getLocationByIdForUpdate } from "../../repositories/core/location-read.repository";
 import { updateLocationById } from "../../repositories/core/location-write.repository";
@@ -47,26 +51,11 @@ function parsePending(json: string | null | undefined): PendingMap {
   }
 }
 
-function parseProvenance(json: string | null | undefined): Record<string, string> {
-  if (!json) return {};
-  try {
-    const parsed = JSON.parse(json);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-    const result: Record<string, string> = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value === "string") result[key] = value;
-    }
-    return result;
-  } catch {
-    return {};
-  }
-}
-
 function isPendingField(value: string): value is PendingField {
   return value === "type" || value === "idealFor" || value === "bookingUrl";
 }
 
-export { parsePending, parseProvenance };
+export { parsePending };
 
 export class PendingSuggestionsService {
   acceptOrDismiss(
@@ -89,7 +78,7 @@ export class PendingSuggestionsService {
       throw new NotFoundError(`No pending suggestion for ${field}`);
     }
 
-    const provenance = parseProvenance(location.provenanceJson);
+    const provenance = parseLocationProvenanceJson(location.provenanceJson);
     const updates: Parameters<typeof updateLocationById>[1] = {};
 
     if (action === "accept") {
@@ -109,7 +98,7 @@ export class PendingSuggestionsService {
 
     delete pending[field];
 
-    updates.provenanceJson = Object.keys(provenance).length > 0 ? JSON.stringify(provenance) : null;
+    updates.provenanceJson = serializeLocationProvenanceJson(provenance);
     updates.pendingSuggestionsJson =
       Object.keys(pending).length > 0 ? JSON.stringify(pending) : null;
 

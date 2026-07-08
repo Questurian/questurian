@@ -381,4 +381,98 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
       })
     );
   });
+
+  test("operator edit of a provenance-tracked field demotes it to operator", async () => {
+    const currentLocation = {
+      id: 92,
+      name: "Dining Test",
+      title: "Dining Test",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "dining",
+      type: "italian",
+      provenanceJson: JSON.stringify({ type: "google", bookingUrl: "ai" }),
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(92, { type: "peruvian" } as any);
+
+    expect(updateLocationByIdMock).toHaveBeenCalledWith(
+      92,
+      expect.objectContaining({
+        type: "peruvian",
+        provenanceJson: JSON.stringify({ bookingUrl: "ai" }),
+      })
+    );
+  });
+
+  test("resubmitting an unchanged value keeps its provenance", async () => {
+    const currentLocation = {
+      id: 93,
+      name: "Dining Test",
+      title: "Dining Test",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "dining",
+      type: "italian",
+      provenanceJson: JSON.stringify({ type: "google" }),
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(93, { type: "italian" } as any);
+
+    const [, persisted] = updateLocationByIdMock.mock.calls[0] as unknown as [number, Record<string, unknown>];
+    expect("provenanceJson" in persisted).toBe(false);
+  });
+
+  test("demoting the last provenance entry clears the sidecar column", async () => {
+    const currentLocation = {
+      id: 94,
+      name: "Dining Test",
+      title: "Dining Test",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "dining",
+      type: "italian",
+      bookingUrl: "https://resy.com/x",
+      provenanceJson: JSON.stringify({ bookingUrl: "ai" }),
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(94, {
+      bookingUrl: "https://opentable.com/y",
+    } as any);
+
+    expect(updateLocationByIdMock).toHaveBeenCalledWith(
+      94,
+      expect.objectContaining({ provenanceJson: null })
+    );
+  });
 });

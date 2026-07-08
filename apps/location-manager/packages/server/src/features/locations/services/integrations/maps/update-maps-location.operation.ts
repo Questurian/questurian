@@ -2,6 +2,7 @@ import type { LocationCategory, LocationResponse } from "../../../models/locatio
 import type { PatchMapsDto } from "../../../validation/schemas/maps.schemas";
 import { BadRequestError, NotFoundError } from "@shared/errors/http-error";
 import { validateCategory } from "../../../utils/category-utils";
+import { demoteProvenanceForOperatorEdit } from "../../../utils/location-utils/provenance";
 import type { MapsServiceOperationContext } from "./maps.types";
 import {
   generateGoogleMapsUrl,
@@ -115,8 +116,13 @@ export async function updateMapsLocationByIdOperation(
     ...(updates.tripadvisorUrl !== undefined && context.resolveTripadvisorFields(updates.tripadvisorUrl)),
   };
 
-  if (Object.keys(updateData).length > 0) {
-    const success = updateLocationById(id, updateData);
+  // ADR-0002 §2: operator edits flip field provenance to operator.
+  const provenanceJson = demoteProvenanceForOperatorEdit(currentLocation, updateData);
+  const persistedUpdate =
+    provenanceJson !== undefined ? { ...updateData, provenanceJson } : updateData;
+
+  if (Object.keys(persistedUpdate).length > 0) {
+    const success = updateLocationById(id, persistedUpdate);
 
     if (!success) {
       throw new BadRequestError("Failed to update location");

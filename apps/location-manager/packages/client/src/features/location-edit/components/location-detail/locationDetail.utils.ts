@@ -1,22 +1,12 @@
-import type { FieldProvenance } from "@questurian/lm-shared";
+import { isFieldProvenance, type FieldProvenance } from "@questurian/lm-shared";
 import type { LocationCategory } from "@shared/types/location-category";
 
 export function fieldProvenance(
   provenance: Record<string, string> | null,
   field: string
 ): FieldProvenance | undefined {
-  if (!provenance) return undefined;
-  const value = provenance[field];
-  if (
-    value === "google" ||
-    value === "tripadvisor" ||
-    value === "scraper" ||
-    value === "ai" ||
-    value === "operator"
-  ) {
-    return value;
-  }
-  return undefined;
+  const value = provenance?.[field];
+  return isFieldProvenance(value) ? value : undefined;
 }
 
 export function formatCoords(lat: number | null, lng: number | null): string | null {

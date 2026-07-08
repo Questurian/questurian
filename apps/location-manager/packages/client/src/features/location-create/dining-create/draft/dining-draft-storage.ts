@@ -1,5 +1,5 @@
 import type { TripadvisorPrefillFields } from "@client/shared/services/api/types";
-import type { FieldProvenance } from "@questurian/lm-shared";
+import { isFieldProvenance, type FieldProvenance } from "@questurian/lm-shared";
 import { addDiningSchema } from "../../validation/add-dining.schema";
 import {
   DINING_FORM_DEFAULT_VALUES,
@@ -24,16 +24,6 @@ function isDraftEffectivelyEmpty(payload: DiningDraftPayload) {
   return JSON.stringify(payload.formValues) === JSON.stringify(DINING_FORM_DEFAULT_VALUES);
 }
 
-export function isFieldProvenanceValue(value: unknown): value is FieldProvenance {
-  return (
-    value === "google" ||
-    value === "tripadvisor" ||
-    value === "scraper" ||
-    value === "ai" ||
-    value === "operator"
-  );
-}
-
 function sanitizeProvenanceMap(
   raw: unknown
 ): Partial<Record<ProvenanceTrackedField, FieldProvenance>> {
@@ -41,7 +31,7 @@ function sanitizeProvenanceMap(
   const result: Partial<Record<ProvenanceTrackedField, FieldProvenance>> = {};
   for (const field of PROVENANCE_TRACKED_FIELDS) {
     const value = raw[field];
-    if (isFieldProvenanceValue(value)) result[field] = value;
+    if (isFieldProvenance(value)) result[field] = value;
   }
   return result;
 }
