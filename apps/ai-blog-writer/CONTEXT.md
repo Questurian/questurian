@@ -9,7 +9,7 @@ Owns the **run lifecycle** (`run_id`, stages, artifacts) and **all LLM orchestra
 ## Out of Scope
 
 - Publishing the final article (handed off to Payload at Questura over HTTP).
-- The canonical Location store (lives in Location Manager; AI Blog Writer only fills `aiFieldPaths` defined by `/location-guide-contract.json`).
+- The canonical Location store and public Location page schema. `LocationDocumentsPage` may update only current Payload-supported Location fields.
 - Public rendering / SEO / SSR — Questura.
 - Operator UI for Locations themselves — Location Manager. AI Blog Writer's frontend is only for run management.
 - Public Visitor accounts or Visitor auth. AI Blog Writer is an Operator tool for Staff identities.
@@ -320,7 +320,7 @@ Do not confuse with: the `tour-agency` stop (a manual, free-typed itinerary bloc
 - A `run_id` is immutable for the life of the run.
 - Stage outputs are append-only; once persisted, they are read-only.
 - An article cannot be synced to Payload from a Draft with `hasUnsyncedPayloadChanges = false` that has not been edited locally — that's a no-op, not an error.
-- `aiFieldPaths` filled by AI Blog Writer **must** conform to `/location-guide-contract.json`. Out-of-contract writes are rejected at the contract boundary.
+- `LocationDocumentsPage` must not send legacy `guide.*` fields. Current Payload Location sync is limited to supported top-level fields such as `coverImage`.
 - Vertex AI usage is centralized in `packages/utils.get_vertex_llm`; features should not instantiate clients directly.
 - **Listicle Angle is always operator-selected.** The pipeline has no auto-angle path; generation is blocked until the operator picks an angle from the category pool (ADR 0010). In itineraries this gating is per-stop and scoped to pooled categories: a stop whose category has a pool requires an angle before that stop is eligible for auto-write, while `key_location` and `tour-agency` stops (no pool) are always eligible; bulk "auto-write all" generates eligible stops and skips angle-less ones with a visible reason rather than hard-failing. Single-angle nightlife stops (ADR 0008) are force-resolved to `best-for-night`, so they are never blocked.
 - A user-selected **Listicle Angle** is authoritative research intent; if cited evidence cannot support it, the writer may fall back to **Research Bucket** evidence only and must mark the item low-confidence rather than invent angle support or silently switch angles.

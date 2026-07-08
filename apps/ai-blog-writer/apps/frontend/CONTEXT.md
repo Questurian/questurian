@@ -49,7 +49,7 @@ Examples: `LocationDocumentDraft`, `Prompt2BlogDraft`, `Url2BlogDraft`.
 ### Payload entity
 
 Definition: a remote CMS record. The frontend treats Payload as the destination store.
-Examples: `PayloadArticle`, `PayloadLocationDoc`, `PayloadLocationGuide`.
+Examples: `PayloadArticle`, `PayloadLocationDoc`.
 
 ### Sync
 

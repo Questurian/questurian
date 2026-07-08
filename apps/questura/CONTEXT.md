@@ -2,7 +2,7 @@
 
 ## Scope
 
-Public-facing travel platform. Payload CMS backend + Next.js frontend. Serves multi-level location guides (country → city → neighborhood), tours, currencies, paid content via Stripe. **Source of truth for production data.**
+Public-facing travel platform. Payload CMS backend + Next.js frontend. Serves public location pages (country → city → neighborhood), tours, currencies, paid content via Stripe. **Source of truth for production data.**
 
 ## Out of Scope
 
@@ -12,7 +12,7 @@ Public-facing travel platform. Payload CMS backend + Next.js frontend. Serves mu
 
 ## Purpose
 
-This is what end users see. Everything else in the meta-monorepo exists to feed Questura. The bounded language here is **public-content language**: collections, pages, guides, placements, currencies, payments.
+This is what end users see. Everything else in the meta-monorepo exists to feed Questura. The bounded language here is **public-content language**: collections, pages, placements, currencies, payments.
 
 ## Tech Stack
 
@@ -32,17 +32,10 @@ A Payload collection. One row per place at one `LocationLevel`.
 
 `"country" | "city" | "neighborhood"`.
 
-### `LocationGuideRecord`
+### Location page
 
-Hierarchical content blob for a Location, with sections `media`, `core`, `explore`, `stay`, `move`.
-
-### `resolveLocationGuideForHierarchy`
-
-Server resolver. Merges guide content **up** the hierarchy: neighborhood inherits from city, city from country, with neighborhood values winning.
-
-### `hasMeaningfulLocationGuideValue`
-
-Predicate that decides whether a guide field counts as filled (vs. empty / placeholder / falsy).
+Public page for one Location URL, assembled from Location metadata, curated homepage blocks, and filtered public content.
+_Avoid_: LocationGuide, guide blob
 
 ### `PerfectForTag`
 
@@ -228,7 +221,7 @@ _Avoid_: public auth, visitor auth
 - A **MediaPlacement** defines which **MediaAsset** variants a **MediaSet** must have before that placement can serve it.
 - **MediaSetStatus** does not decide public readiness; **MediaPlacement** does.
 - A **Location** has zero or one **LocationHomepages** entry per level.
-- A **LocationGuideRecord** for a child Location can inherit fields from its parent via `resolveLocationGuideForHierarchy`.
+- A **Location** may have one **LocationHomepages** entry that supplies curated public page blocks.
 - A **Tour** belongs to one Location.
 - **`PerfectForTag.applicableTypes`** scopes a tag to one or more of dining/attractions/nightlife/accommodations.
 - A **Visitor account** may have an active **Membership entitlement**.
@@ -287,7 +280,7 @@ _Avoid_: public auth, visitor auth
 
 ## Domain Rules
 
-- A `LocationGuide` value counts as filled only when `hasMeaningfulLocationGuideValue` returns true. Empty strings, empty arrays, and placeholders are not filled.
+- Legacy `guide.*` Location fields are retired; current Location pages are assembled from top-level Location fields, LocationHomepages, and related public content.
 - Image URL selection happens **server-side**, in one media resolver, and is exposed as a placement-ready payload (URL, alt text, dimensions, selected variant, status). Public clients do not pick between `asset.url` / `bunny_original_url` / variant URLs.
 - Curated slots fail closed via API/admin validation when their `MediaPlacement` requirements are unmet. The public UI may render graceful placeholders instead of picking a wrong crop.
 - `bunny_original_url` is not part of the canonical public serving path (it encodes an Open Graph assumption). It may only be read as a migration fallback.
@@ -299,7 +292,7 @@ _Avoid_: public auth, visitor auth
 
 - Collections: PascalCase plural (`Locations`, `Dining`, `Accommodations`, `Attractions`, `Nightlife`, `KeyLocations`, `Tours`, `Articles`, …).
 - API slugs: kebab-case singular (`/api/collections/dining`, `/api/collections/key-locations`).
-- Helpers: camelCase verbs (`resolveLocationGuideForHierarchy`, `hasMeaningfulLocationGuideValue`).
+- Helpers: camelCase verbs.
 
 ## Decisions
 
@@ -317,7 +310,7 @@ See `docs/adr/` for current ADRs.
 ## AI Guidance
 
 - **Inspect first:** `apps/server/src/payload.config.ts` for the collection map, then the relevant `features/` folder, then `docs/adr/`.
-- **Preserve verbatim:** every collection name above, plus `MediaSet`, `MediaAsset`, `MediaPlacement`, `MediaSetStatus`, `LocationGuideRecord`, `resolveLocationGuideForHierarchy`, `hasMeaningfulLocationGuideValue`, `PerfectForTag`.
+- **Preserve verbatim:** every collection name above, plus `MediaSet`, `MediaAsset`, `MediaPlacement`, `MediaSetStatus`, `LocationHomepages`, `PerfectForTag`.
 - **Do not** pick image variants on the client — the media resolver returns placement-ready payloads.
 - **Do not** treat `MediaSetStatus` as a public-readiness check; use `MediaPlacement` rules.
 - **Do not** introduce `next/image` opportunistically; it requires an ADR.

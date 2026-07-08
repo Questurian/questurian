@@ -4,7 +4,7 @@
 
 Next.js public site. Renders:
 
-- Location guides at country, city, and neighborhood levels.
+- Location pages at country, city, and neighborhood levels.
 - Attractions, dining, accommodations, nightlife listings.
 - Tours and bookings.
 - Multi-language pages.
@@ -37,12 +37,8 @@ A country / city / neighborhood page rendered from a Questura `Locations` row.
 
 ### Public content page
 
-An SEO-indexed page rendered for anonymous visitors, such as a Location guide, article, listicle, map page, category page, or listing detail page.
+An SEO-indexed page rendered for anonymous visitors, such as a Location page, article, listicle, map page, category page, or listing detail page.
 _Avoid_: account page, auth page, payment page, membership page.
-
-### `LocationGuide`
-
-The resolved guide displayed on a Location page, with sections `media`, `core`, `explore`, `stay`, `move`. Comes from `resolveLocationGuideForHierarchy` server-side.
 
 ### Attraction / Dining / Accommodation / Nightlife
 
@@ -95,7 +91,7 @@ Stripe checkout flow for paid content.
 
 ## Relationships
 
-- A **Location** page renders one **`LocationGuide`** plus listings filtered by location.
+- A **Location** page renders server-provided location/homepage/content payloads plus listings filtered by location.
 - A listing card uses a **MediaSet** payload via the server-side media resolver — the client does not pick variants.
 - A **Tour** card renders price in the selected **Currency**.
 - A `PerfectForTag` filter narrows listings by `applicableTypes`.
@@ -106,7 +102,7 @@ Stripe checkout flow for paid content.
 
 ## Domain Rules
 
-- SSR uses `resolveLocationGuideForHierarchy` to ensure parent inheritance is applied before render.
+- SSR reads server public endpoints and view-model payloads; it does not consume raw Payload docs or a LocationGuide blob.
 - Client code does not pick image variants — it consumes placement-ready payloads from the server.
 - Stripe checkout is initiated server-side; the client only renders Stripe's hosted UI or the Elements components.
 - i18n strings live under `messages/` and are loaded via `next-intl`. Inline strings are a regression.
@@ -127,8 +123,8 @@ Stripe checkout flow for paid content.
 ## AI Guidance
 
 - **Inspect first:** the relevant `src/features/<feature>/` folder, then `src/app/<route>/`, then the server API call it depends on.
-- **Preserve verbatim:** `LocationGuide`, `PerfectForTag`, `Currency`, `Attraction`, `Dining`, `Accommodation`, `Nightlife`, `Tour`.
-- **Do not** read raw Payload data without resolution — go via the server endpoint that already calls `resolveLocationGuideForHierarchy`.
+- **Preserve verbatim:** `PerfectForTag`, `Currency`, `Attraction`, `Dining`, `Accommodation`, `Nightlife`, `Tour`.
+- **Do not** read raw Payload data directly — go via server public endpoints/view-model payloads.
 - **Do not** pick image variants client-side.
 - **Do not** add inline UI strings — register them in `messages/`.
 - **Ask before** restructuring route segments — neighborhood URLs are SEO-load-bearing.

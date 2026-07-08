@@ -247,7 +247,7 @@ _Avoid_: feature flag (connotes rollout/experimentation), env flag, kill switch.
 - **Inspect first:** `packages/shared/src/types/*.ts` (the contract), then the relevant `features/<domain>` folder on server + client.
 - **Preserve verbatim:** `Location`, `LocationHierarchy`, `LocationCategory`, `IdealForTag`, `PayloadSyncChecklist`, `PayloadSyncState`, `Tour`, `ImageVariant`, `CorrectionRule`.
 - **Do not** rename `IdealForTag` to match Questura's `PerfectForTag` — they live in different stores and the difference is intentional today.
-- **Do not** introduce a code-level dependency on Questura. Coupling is HTTP (`/api/collections/*`) and `/location-guide-contract.json`.
+- **Do not** introduce a code-level dependency on Questura. Coupling is HTTP (`/api/collections/*`) and documented Questura collection/API contracts.
 - **Do not** generate MediaSet variant catalogues unilaterally — coordinate with Questura's MediaPlacement rules.
 - Ask before changing the `country|city|neighborhood` key shape — it crosses the contract boundary.
 

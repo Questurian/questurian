@@ -5,7 +5,7 @@ Alan wants to operate on this codebase with the judgment of a senior developer w
 
 ## Success looks like
 - Can explain the system end-to-end (LM enrichment → Payload → public site; ABW pipelines → LexicalJSON → Payload) without consulting docs.
-- Can name the cross-context contracts (`location-guide-contract.json`, MediaSet ADRs, the *missing* LexicalJSON contract) and why each boundary is HTTP-only.
+- Can name the cross-context contracts (Payload collection/API shapes, MediaSet ADRs, the *missing* LexicalJSON contract) and why each boundary is HTTP-only.
 - Can locate the right entry point for any change (payload.config.ts, LM main.ts, ABW feature routes) and predict its blast radius.
 - Can defend or challenge the top architectural risks identified in the overview app.
 

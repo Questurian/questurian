@@ -5,7 +5,6 @@
 Payload 3 backend running on Next.js 15. Owns:
 
 - Every Payload collection (Locations, Dining, Accommodations, Attractions, Nightlife, KeyLocations, Tours, Articles, listicles, redirects, MediaSet, MediaAsset, PerfectForTags, Categories, Tags, Currencies, AffiliateProducts, InstagramPosts, LocationHomepages, Users).
-- Guide resolution up the country → city → neighborhood hierarchy.
 - GraphQL + REST endpoints.
 - Auth, payments (Stripe), email (Resend).
 
@@ -32,19 +31,12 @@ This is the canonical store for Questura. Everything written here lives in Postg
 
 ### `Locations`
 
-Hierarchical guide collection. Each row carries a `LocationLevel` (`country` / `city` / `neighborhood`) and may carry a `LocationGuideRecord`.
+Hierarchical location collection. Each row carries a `LocationLevel` (`country` / `city` / `neighborhood`), identity fields, display names, and optional top-level `coverImage`.
 
-### `LocationGuideRecord`
+### PublicLocationView
 
-Hierarchical content blob with sections `media`, `core`, `explore`, `stay`, `move`.
-
-### `resolveLocationGuideForHierarchy`
-
-Server resolver. Merges guide fields up the country → city → neighborhood chain, with the more specific level winning.
-
-### `hasMeaningfulLocationGuideValue`
-
-Predicate. Used by the resolver to decide whether a value is "filled".
+Placement-resolved public view of a `Locations` row.
+_Avoid_: LocationGuide, guide blob
 
 ### `Dining` / `Accommodations` / `Attractions` / `Nightlife` / `KeyLocations`
 
@@ -111,7 +103,7 @@ Identity + general-purpose taxonomy.
 ## Features
 
 - `features/data/` — dining, accommodations, attractions, nightlife, key-locations, tours, instagram, affiliate.
-- `features/location/` — Locations collection + guide resolution.
+- `features/location/` — Locations collection, hierarchy keys, and public view-models.
 - `features/articles/` — articles, single-type-listicles, listicle-itineraries, redirects, shared, public.
 - `features/homepage-featured-content/` — large family of blocks (article-grid, article-list, featured-article, featured-article-carousel, featured-articles, hotel-grid, location-grid, things-to-do-attractions, things-to-do-listicles, tour-grid, where-to-eat-drink, newsletter-signup, questurian-maps, slot-count, convert-empty-block, location-homepage-blocks, resolve-page-blocks).
 - `features/shared/` — currencies, taxonomy (Categories + Tags), perfect-for, config.
@@ -127,7 +119,6 @@ Identity + general-purpose taxonomy.
 ## Relationships
 
 - A **Location** has at most one **LocationHomepages** record per level.
-- A **LocationGuideRecord** for a child Location can be augmented by `resolveLocationGuideForHierarchy` with parent values.
 - A **MediaSet** has many **MediaAsset** variants.
 - A **MediaPlacement** declares which variant labels a `MediaSet` must contain before that placement may serve it.
 - **MediaSetStatus** is informational only; not consulted at serve time.
@@ -142,7 +133,7 @@ Identity + general-purpose taxonomy.
 - `MediaSetStatus` ≠ "all variants exist". It's an admin signal, not a serving gate.
 - `Currencies` exchange rates are pulled via `sync:exchange-rates`; do not hand-edit live values.
 - Synced inbound writes from Location Manager must validate against the collection schema; rejected writes return 4xx with a reason.
-- `resolveLocationGuideForHierarchy` is the **only** correct way to read a Location's guide for SSR; do not read `Locations` directly without resolving.
+- Legacy `guide.*` Location fields are retired; public reads should use server view-models/endpoints rather than raw Payload docs.
 - Any collection write that affects public content must register a Public Revalidation hook; otherwise the Next.js client serves stale cache.
 
 ## Naming Conventions
@@ -160,13 +151,13 @@ Identity + general-purpose taxonomy.
 - **Resend** for email; **Stripe** for payments — single providers, not abstracted.
 - **`next/image` is deferred** — see the ADR. Adopting it needs its own decision.
 - → **Suggest ADR**: the inbound LexicalJSON contract from AI Blog Writer; today it's implicit.
-- → **Suggest ADR**: the inbound write contract from Location Manager (which fields LM owns vs which Questura owns); the field list lives in `/location-guide-contract.json` but the rule of ownership is not separately documented.
+- → **Suggest ADR**: the inbound write contract from Location Manager (which fields LM owns vs which Questura owns) is still implicit in collection/API behaviour.
 
 ## AI Guidance
 
 - **Inspect first:** `src/payload.config.ts` (collection map), then `docs/adr/`, then the relevant `features/` folder, then the collection file (`features/<area>/collections/<Collection>.ts`).
 - **Preserve verbatim:** every collection and helper name in the glossary. Renaming a collection slug is a public-URL change.
-- **Do not** read a Location guide field directly — use `resolveLocationGuideForHierarchy`.
+- **Do not** add or read legacy `guide.*` Location fields without a new schema decision.
 - **Do not** decide image URLs on the client — go through the media resolver.
 - **Do not** treat `MediaSetStatus` as gating public serving.
 - **Do not** introduce `next/image` without an ADR.
