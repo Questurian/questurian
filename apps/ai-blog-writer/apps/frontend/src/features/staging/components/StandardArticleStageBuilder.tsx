@@ -178,6 +178,7 @@ export function StandardArticleStageBuilder({
   const isStep2Locked = Boolean(stagedArticle?.step2_complete && !stagedArticle?.step2_in_update_mode)
   const isStep3Locked = Boolean(stagedArticle?.step3_complete && !stagedArticle?.step3_in_update_mode)
   const isSynced = Boolean(stagedArticle?.publishedToPayload)
+  const hasUnsyncedPayloadChanges = Boolean(isSynced && stagedArticle?.hasUnsyncedPayloadChanges)
   const seoCoreComplete = isSeoCoreComplete(seoSection)
   const completionPercent = Math.round(([
     isStep1Locked,
@@ -562,6 +563,23 @@ export function StandardArticleStageBuilder({
             ) : null}
             {localError ? <p className="stl-error">{localError}</p> : null}
             {localResult ? <p className="stl-success">{localResult}</p> : null}
+
+            {hasUnsyncedPayloadChanges ? (
+              <div className="stl-out-of-sync-banner" role="status">
+                <span className="stl-out-of-sync-banner__dot" aria-hidden="true" />
+                <span className="stl-out-of-sync-banner__text">
+                  Out of sync — you have local changes. Sync to Payload to apply them to the live article.
+                </span>
+                <button
+                  type="button"
+                  className="stl-btn stl-out-of-sync-banner__btn"
+                  onClick={() => handlePayloadSubmit(isPublished ? 'published' : 'draft')}
+                  disabled={sidebarProps.isPublishing || syncIssues.length > 0}
+                >
+                  {sidebarProps.isPublishing ? 'Syncing...' : 'Save & Sync'}
+                </button>
+              </div>
+            ) : null}
 
             <section className="stl-panel sab-stage-panel">
               <div className="stl-panel-header">

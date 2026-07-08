@@ -22,6 +22,11 @@ import type { TimelineItem } from '../workflow.service'
 import type { EditorialStageUiEvent, PublishPhase } from '../state/editorialStageUiMachine'
 import { getLocationDisplayName } from '../utils/editorial-stage-view.utils'
 import { sanitizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
+import { markDraftAsPayloadSynced } from '../../../../../shared/payloadSync/draftPayloadSync'
+import {
+  buildStagedArticlePayloadComparableShape,
+  hasPayloadArticleIdentity,
+} from '../services/staged-article-payload-sync.service'
 
 type DispatchUiEvent = (event: EditorialStageUiEvent) => void
 
@@ -310,13 +315,30 @@ export function useEditorialStagePublishWorkflow({
         )
       }
 
+      const payloadMetadataPatch = buildPayloadArticleMetadataPatch({
+        doc: result,
+        fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
+      })
+      const syncedArticle = markDraftAsPayloadSynced(
+        {
+          ...stagedArticle,
+          ...payloadMetadataPatch,
+          seoSection: nextSeoSection,
+          lexicalConverted: true,
+        },
+        buildStagedArticlePayloadComparableShape,
+        result.updatedAt || new Date().toISOString(),
+        { hasPayloadIdentity: hasPayloadArticleIdentity },
+      )
+
       updateStagedArticle({
-        ...buildPayloadArticleMetadataPatch({
-          doc: result,
-          fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
-        }),
+        ...payloadMetadataPatch,
         seoSection: nextSeoSection,
         lexicalConverted: true,
+        currentPayloadSignature: syncedArticle.currentPayloadSignature,
+        lastPayloadSyncSignature: syncedArticle.lastPayloadSyncSignature,
+        lastPayloadSyncAt: syncedArticle.lastPayloadSyncAt,
+        hasUnsyncedPayloadChanges: syncedArticle.hasUnsyncedPayloadChanges,
       })
 
       const successMessage = targetStatus === 'published'

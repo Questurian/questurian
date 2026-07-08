@@ -33,6 +33,11 @@ import {
 } from '../editorial-markdown.service'
 import { composeArticleMarkdown } from '../editorial-placement/article-composition'
 import { buildPayloadArticleMetadataPatch } from './payload-article-metadata.service'
+import { markDraftAsPayloadSynced } from '../../../../../shared/payloadSync/draftPayloadSync'
+import {
+  buildStagedArticlePayloadComparableShape,
+  hasPayloadArticleIdentity,
+} from './staged-article-payload-sync.service'
 
 export type PayloadArticleDetail = PayloadArticleDoc & {
   location?: string | null
@@ -205,7 +210,7 @@ export async function buildStagedArticleFromPayloadDoc(input: {
         .filter((id): id is number => typeof id === 'number')
     : []
 
-  return {
+  const stagedArticle: StagedArticle = {
     id: buildPayloadImportStagedId(doc.id),
     runId: '',
     originalTitle: title,
@@ -233,4 +238,11 @@ export async function buildStagedArticleFromPayloadDoc(input: {
     createdAt: now,
     updatedAt: now,
   }
+
+  return markDraftAsPayloadSynced(
+    stagedArticle,
+    buildStagedArticlePayloadComparableShape,
+    doc.updatedAt || now,
+    { hasPayloadIdentity: hasPayloadArticleIdentity },
+  )
 }

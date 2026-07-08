@@ -1,5 +1,3 @@
-import { normalizeSeoSection } from '../services/seo-section.service'
-import type { ItineraryItemBlock, ListicleItineraryDraft, PayloadRichText } from '../../types'
 import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
 import {
   buildDraftPayloadSyncSignature,
@@ -7,6 +5,8 @@ import {
   normalizeText,
   sortKeysDeep,
 } from '../../../../shared/payloadSync/draftPayloadSync'
+import { normalizeSeoSection } from '../services/seo-section.service'
+import type { ListicleItemBlock, PayloadRichText, SingleTypeListicleDraft } from '../../types'
 
 function normalizeRichTextMarkdown(
   markdown: string | undefined,
@@ -35,55 +35,38 @@ function normalizeStructuredData(value: string): unknown {
   if (!trimmed) return ''
 
   try {
-    const parsed = JSON.parse(trimmed)
-    return sortKeysDeep(parsed)
+    return sortKeysDeep(JSON.parse(trimmed))
   } catch {
     return trimmed
   }
 }
 
-function itemSyncShape(item: ItineraryItemBlock): Record<string, unknown> {
+function itemSyncShape(item: ListicleItemBlock): Record<string, unknown> {
   return {
     blockType: item.blockType,
     item: item.item ?? null,
-    // Tour Picks are ordered, so no set-normalization here.
     tours: item.tours,
     mediaMode: item.mediaMode,
     selectedPhotos: item.selectedPhotos,
     selectedInstagramPost: item.selectedInstagramPost ?? null,
-    title: normalizeText(item.title),
-    operator: normalizeText(item.operator),
-    price: item.price || '',
-    url: normalizeText(item.url),
-    tourDuration: item.tourDuration,
-    startingPoint: {
-      label: normalizeText(item.startingPoint.label),
-      latitude: normalizeText(item.startingPoint.latitude),
-      longitude: normalizeText(item.startingPoint.longitude),
-    },
-    keyLocations: item.keyLocations.map((row) => ({
-      source: row.source,
-      relatedCollection: row.relatedCollection ?? null,
-      relatedItem: row.relatedItem ?? null,
-      title: normalizeText(row.title),
-      latitude: normalizeText(row.latitude),
-      longitude: normalizeText(row.longitude),
-    })),
-    image: item.image ?? null,
-    instagramPost: item.instagramPost ?? null,
+    angle: item.angle ?? null,
     blurbMarkdown: normalizeRichTextMarkdown(item.blurbMarkdown, item.blurbJsonText, item.blurbLexical),
   }
 }
 
-export function buildItineraryDraftComparableShape(draft: ListicleItineraryDraft): Record<string, unknown> {
+export function buildSingleTypeListicleDraftComparableShape(
+  draft: SingleTypeListicleDraft,
+): Record<string, unknown> {
   const seoSection = normalizeSeoSection(draft.seoSection)
-  const dayCount = Math.max(1, Math.min(7, Math.floor(draft.dayCount || draft.days.length || 1)))
 
   return {
     title: normalizeText(draft.title),
     payloadSlug: normalizeText(draft.payloadSlug),
     location: normalizeText(draft.location),
     sharedNeighborhoods: normalizeNumberSet(draft.sharedNeighborhoods),
+    listicleType: draft.listicleType,
+    targetItemCount: draft.targetItemCount,
+    listTone: draft.listTone,
     header: {
       introMarkdown: normalizeRichTextMarkdown(
         draft.header.introMarkdown,
@@ -93,11 +76,7 @@ export function buildItineraryDraftComparableShape(draft: ListicleItineraryDraft
       featuredMediaSet: draft.header.featuredMediaSet ?? null,
       featuredImage: draft.header.featuredImage ?? null,
     },
-    dayCount,
-    days: draft.days.slice(0, dayCount).map((day) => ({
-      whereStaying: day.whereStaying.map(itemSyncShape),
-      items: day.items.map(itemSyncShape),
-    })),
+    items: draft.items.map(itemSyncShape),
     seoSection: {
       ...seoSection,
       structuredData: normalizeStructuredData(seoSection.structuredData),
@@ -105,6 +84,8 @@ export function buildItineraryDraftComparableShape(draft: ListicleItineraryDraft
   }
 }
 
-export function buildItineraryDraftSyncSignature(draft: ListicleItineraryDraft): string {
-  return buildDraftPayloadSyncSignature(draft, buildItineraryDraftComparableShape)
+export function buildSingleTypeListicleDraftSyncSignature(
+  draft: SingleTypeListicleDraft,
+): string {
+  return buildDraftPayloadSyncSignature(draft, buildSingleTypeListicleDraftComparableShape)
 }

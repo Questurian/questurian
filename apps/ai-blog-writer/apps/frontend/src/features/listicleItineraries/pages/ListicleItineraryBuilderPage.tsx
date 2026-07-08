@@ -77,7 +77,7 @@ export default function ListicleItineraryBuilderPage() {
   })
 
   const {
-    hasLocalChanges,
+    hasUnsyncedPayloadChanges,
     isRevertingToPayload,
     isSynced,
     onSyncResult,
@@ -153,7 +153,7 @@ export default function ListicleItineraryBuilderPage() {
 
   useEffect(() => {
     if (!draft || !isStep4Ready || !canonicalStructuredData) return
-    if (isSynced && !hasLocalChanges) return
+    if (isSynced && !hasUnsyncedPayloadChanges) return
 
     setDraft((current) => {
       if (!current) return current
@@ -170,7 +170,7 @@ export default function ListicleItineraryBuilderPage() {
         },
       }
     })
-  }, [canonicalStructuredData, draft, hasLocalChanges, isStep4Ready, isSynced, setDraft])
+  }, [canonicalStructuredData, draft, hasUnsyncedPayloadChanges, isStep4Ready, isSynced, setDraft])
 
   const aiActions = useItineraryBuilderAiActions({
     token,
@@ -213,7 +213,7 @@ export default function ListicleItineraryBuilderPage() {
           {error ? <p className="stl-error">{error}</p> : null}
           {result ? <p className="stl-success">{result}</p> : null}
 
-          {isSynced && hasLocalChanges ? (
+          {isSynced && hasUnsyncedPayloadChanges ? (
             <OutOfSyncBanner
               isPublishedPayload={isPublishedPayload}
               isSaving={isSaving}

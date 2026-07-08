@@ -18,6 +18,7 @@ import { BuilderSeoPanel } from '../builder/components/BuilderSeoPanel'
 import { BuilderSetupPanel } from '../builder/components/BuilderSetupPanel'
 import { BuilderSidebar } from '../builder/components/BuilderSidebar'
 import { useBuilderAutosave } from '../../../shared/builder/hooks/useBuilderAutosave'
+import { useDraftPayloadSyncState } from '../../../shared/payloadSync/useDraftPayloadSyncState'
 import { useBuilderBootstrap } from '../builder/hooks/useBuilderBootstrap'
 import { useBuilderDraftActions } from '../builder/hooks/useBuilderDraftActions'
 import { useBuilderProgress } from '../builder/hooks/useBuilderProgress'
@@ -53,6 +54,7 @@ import {
 import { generateListicleContentWithAi, generateSeoMetadataWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../api'
 import { saveDraft } from '../storage'
 import { buildArticleOgUrl } from '../../../shared/seo/utils/buildArticleOgUrl'
+import { buildSingleTypeListicleDraftComparableShape } from '../builder/utils/single-type-listicle-draft-sync-signature'
 import '../styles.css'
 
 const AUTO_WRITE_EMPTY_FIELDS_JOB_ID = '__auto_write_empty_fields__'
@@ -68,8 +70,6 @@ export default function SingleTypeListicleBuilderPage() {
 
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<string | null>(null)
-  const [hasLocalChanges, setHasLocalChanges] = useState(false)
-  const bootstrapDoneRef = useRef(false)
   const [isGeneratingSeoTarget, setIsGeneratingSeoTarget] = useState<SeoAiTarget | null>(null)
   const [isGeneratingSeoImage, setIsGeneratingSeoImage] = useState(false)
   const [isUploadingOgImage, setIsUploadingOgImage] = useState(false)
@@ -133,18 +133,14 @@ export default function SingleTypeListicleBuilderPage() {
   useBuilderAutosave(draft, saveDraft)
 
   const isSynced = Boolean(draft?.payloadId)
-
-  // Mark dirty whenever the draft changes after the initial bootstrap load.
-  // Resets after a successful sync (handled in onSyncResult below).
-  useEffect(() => {
-    if (isLoading || !draft) return
-    if (!bootstrapDoneRef.current) {
-      bootstrapDoneRef.current = true
-      return
-    }
-    if (draft.payloadId) setHasLocalChanges(true)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft])
+  const { hasUnsyncedPayloadChanges } = useDraftPayloadSyncState({
+    draft,
+    setDraft,
+    isLoading,
+    routeKey: `${payloadIdParam ?? ''}:${draftIdParam ?? ''}`,
+    buildComparableShape: buildSingleTypeListicleDraftComparableShape,
+    initializeMissingBaselineAsSynced: true,
+  })
 
   const { relatedItems, isLoadingRelated } = useRelatedItems({ token, draft, locations, onError })
   const draftRef = useRef(draft)
@@ -217,9 +213,8 @@ export default function SingleTypeListicleBuilderPage() {
     setResult,
   })
 
-  const onSyncResult = useCallback((message: string) => {
+  const onSyncResult = useCallback((message: string | null) => {
     setResult(message)
-    if (message) setHasLocalChanges(false)
   }, [])
 
   const { isSaving, submit } = useListicleSubmit({
@@ -871,7 +866,7 @@ export default function SingleTypeListicleBuilderPage() {
           {error ? <p className="stl-error">{error}</p> : null}
           {result ? <p className="stl-success">{result}</p> : null}
 
-          {isSynced && hasLocalChanges ? (
+          {isSynced && hasUnsyncedPayloadChanges ? (
             <div className="stl-out-of-sync-banner" role="status">
               <span className="stl-out-of-sync-banner__dot" aria-hidden="true" />
               <span className="stl-out-of-sync-banner__text">

@@ -14,7 +14,14 @@ import {
   type MediaAssetOption,
 } from '../../types'
 import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
-import { buildItineraryDraftSyncSignature } from '../utils/itinerary-draft-sync-signature'
+import {
+  buildItineraryDraftComparableShape,
+  buildItineraryDraftSyncSignature,
+} from '../utils/itinerary-draft-sync-signature'
+import {
+  markDraftAsPayloadSynced,
+  refreshDraftPayloadSyncState,
+} from '../../../../shared/payloadSync/draftPayloadSync'
 
 type UseBuilderBootstrapParams = {
   token?: string | null
@@ -108,42 +115,46 @@ export function mergeLocalIntoPayloadDraft(
   payloadDraft: ListicleItineraryDraft,
   localDraft: ListicleItineraryDraft,
 ): ListicleItineraryDraft {
-  const payloadSyncBaseline = buildItineraryDraftSyncSignature(payloadDraft)
+  const payloadSyncedDraft = markDraftAsPayloadSynced(
+    payloadDraft,
+    buildItineraryDraftComparableShape,
+    payloadDraft.payloadUpdatedAt || payloadDraft.updatedAt || new Date().toISOString(),
+  )
+  const lastPayloadSyncSignature = payloadSyncedDraft.lastPayloadSyncSignature
+    ?? buildItineraryDraftSyncSignature(payloadSyncedDraft)
+  const localHasUnsyncedPayloadChanges = Boolean(localDraft.hasUnsyncedPayloadChanges)
+    || buildItineraryDraftSyncSignature(localDraft) !== lastPayloadSyncSignature
 
-  if (!localDraft.hasLocalChanges) {
+  if (!localHasUnsyncedPayloadChanges) {
     return {
-      ...payloadDraft,
+      ...payloadSyncedDraft,
       editorModelName: localDraft.editorModelName,
-      payloadSyncBaseline,
     }
   }
 
   const merged = {
     ...localDraft,
-    payloadId: payloadDraft.payloadId,
-    payloadStatus: payloadDraft.payloadStatus,
-    payloadPublishedAt: payloadDraft.payloadPublishedAt,
-    payloadUpdatedAt: payloadDraft.payloadUpdatedAt,
-    payloadAuthorName: payloadDraft.payloadAuthorName,
-    status: payloadDraft.status,
-    articleType: payloadDraft.articleType,
-    payloadSyncBaseline,
+    payloadId: payloadSyncedDraft.payloadId,
+    payloadStatus: payloadSyncedDraft.payloadStatus,
+    payloadPublishedAt: payloadSyncedDraft.payloadPublishedAt,
+    payloadUpdatedAt: payloadSyncedDraft.payloadUpdatedAt,
+    payloadAuthorName: payloadSyncedDraft.payloadAuthorName,
+    status: payloadSyncedDraft.status,
+    articleType: payloadSyncedDraft.articleType,
+    lastPayloadSyncSignature,
+    lastPayloadSyncAt: payloadSyncedDraft.lastPayloadSyncAt,
   }
+  const refreshed = refreshDraftPayloadSyncState(merged, buildItineraryDraftComparableShape)
 
-  if (buildItineraryDraftSyncSignature(merged) === payloadSyncBaseline) {
+  if (!refreshed.hasUnsyncedPayloadChanges) {
     return {
-      ...payloadDraft,
+      ...payloadSyncedDraft,
       draftId: localDraft.draftId,
       editorModelName: localDraft.editorModelName,
-      hasLocalChanges: false,
-      payloadSyncBaseline,
     }
   }
 
-  return {
-    ...merged,
-    hasLocalChanges: true,
-  }
+  return refreshed
 }
 
 export function useBuilderBootstrap({

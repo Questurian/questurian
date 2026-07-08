@@ -68,6 +68,7 @@ describe('payloadDocToDraft', () => {
     expect(draft.days[0]?.items[0]?.blurbMarkdown).toBe('Payload stop blurb')
     expect(draft.header.introJsonText).toContain('Payload intro copy')
     expect(draft.days[0]?.items[0]?.blurbJsonText).toContain('Payload stop blurb')
-    expect(draft.payloadSyncBaseline).toBeTypeOf('string')
+    expect(draft.lastPayloadSyncSignature).toBeTypeOf('string')
+    expect(draft.hasUnsyncedPayloadChanges).toBe(false)
   })
 })

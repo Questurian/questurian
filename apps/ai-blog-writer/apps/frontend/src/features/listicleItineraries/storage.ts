@@ -22,6 +22,10 @@ import {
   type TravelerProfileBudget,
 } from './types'
 import { normalizeLocationIds } from '../../shared/locationScope/ids'
+import {
+  readStoredPayloadSyncFields,
+  stripLegacyPayloadSyncFields,
+} from '../../shared/payloadSync/draftPayloadSync'
 
 const STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
 const DAY_SHELL_IDS = new Set<string>(BUILT_IN_DAY_SHELLS.map((shell) => shell.id))
@@ -284,7 +288,7 @@ function normalizeStoredDraft(value: unknown, index: number): ListicleItineraryD
     payloadPublishedAt: typeof value.payloadPublishedAt === 'string' && value.payloadPublishedAt.trim() ? value.payloadPublishedAt : undefined,
     payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim() ? value.payloadUpdatedAt : undefined,
     payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim() ? value.payloadAuthorName : undefined,
-    hasLocalChanges: Boolean(value.hasLocalChanges),
+    ...readStoredPayloadSyncFields(value),
     editorModelName: resolveEditorAssistModelName(
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined,
     ),
@@ -390,9 +394,7 @@ export const findDraftByPayloadId = storage.findDraftByPayloadId
 export const findDraftByDraftId = storage.findDraftByDraftId
 
 export function saveDraft(draft: ListicleItineraryDraft): void {
-  const persistableDraft = { ...draft }
-  delete persistableDraft.payloadSyncBaseline
-  storage.saveDraft(persistableDraft)
+  storage.saveDraft(stripLegacyPayloadSyncFields(draft))
 }
 
 export function createEmptyDraft(): ListicleItineraryDraft {
@@ -404,7 +406,7 @@ export function createEmptyDraft(): ListicleItineraryDraft {
     payloadPublishedAt: undefined,
     payloadUpdatedAt: undefined,
     payloadAuthorName: undefined,
-    hasLocalChanges: false,
+    hasUnsyncedPayloadChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     listTone: DEFAULT_LIST_TONE,
     includeLodging: true,

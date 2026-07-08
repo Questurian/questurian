@@ -5,8 +5,10 @@ import {
   type ItineraryItemBlock,
   type ListicleItineraryDraft,
 } from '../../types'
+import { markDraftAsPayloadUnsynced } from '../../../../shared/payloadSync/draftPayloadSync'
 import { BUILT_IN_DAY_SHELLS, DEFAULT_DAY_SHELL_ID } from '../constants/day-shells.constants'
 import type { AutobuildPlanStop, AutobuildPlanLodging, AutobuildResponse } from '../services/autobuild.api'
+import { buildItineraryDraftComparableShape } from '../utils/itinerary-draft-sync-signature'
 
 type IdFactory = (kind: 'day' | 'item', dayIndex: number, slotIndex: number) => string
 
@@ -95,7 +97,7 @@ export function applyAutobuildPlanToDraft(
     return { id: idFactory('day', dayIndex, 0), whereStaying, items }
   })
 
-  return {
+  return markDraftAsPayloadUnsynced({
     ...draft,
     dayCount: clampDays(days.length),
     days,
@@ -104,7 +106,6 @@ export function applyAutobuildPlanToDraft(
       shellId: normalizeShellId(draft, planDays[dayIndex]?.shell_id),
     })),
     planOverview: plan.plan_overview || '',
-    hasLocalChanges: true,
     updatedAt: new Date().toISOString(),
-  }
+  }, buildItineraryDraftComparableShape)
 }

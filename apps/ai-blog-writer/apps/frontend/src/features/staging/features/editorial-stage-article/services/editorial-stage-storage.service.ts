@@ -10,6 +10,7 @@ import {
 import { resolveEditorModelName } from '../constants'
 import { createEmptySeoSection, normalizeSeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import { normalizeSharedNeighborhoods } from '../utils/sharedNeighborhoods'
+import { readStoredPayloadSyncFields } from '../../../../../shared/payloadSync/draftPayloadSync'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => (
   Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -92,6 +93,7 @@ export function normalizeStagedArticle(value: unknown): StagedArticle | null {
     payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim()
       ? value.payloadAuthorName
       : undefined,
+    ...readStoredPayloadSyncFields(value),
     createdBy: normalizeUserStamp(value.createdBy),
     lastEditedBy: normalizeUserStamp(value.lastEditedBy),
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : nowIso,

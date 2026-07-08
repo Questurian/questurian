@@ -29,6 +29,11 @@ import {
 } from '../services/staged-draft-save-queue'
 import { buildPayloadArticleMetadataPatch } from '../services/payload-article-metadata.service'
 import { mergeMediaAssetLists } from '../media-utils'
+import { refreshDraftPayloadSyncState } from '../../../../../shared/payloadSync/draftPayloadSync'
+import {
+  buildStagedArticlePayloadComparableShape,
+  hasPayloadArticleIdentity,
+} from '../services/staged-article-payload-sync.service'
 
 const MEDIA_ASSET_PAGE_LIMIT = 200
 
@@ -153,7 +158,7 @@ export function useEditorialStagePageData({
       }
     }
 
-    return {
+    const normalizedArticle: StagedArticle = {
       ...existing,
       ...payloadMetadataPatch,
       originalContent: originalContentForReset,
@@ -163,6 +168,15 @@ export function useEditorialStagePageData({
       editorModelName: resolveEditorModelName(existing.editorModelName),
       syncBehavior,
     }
+
+    return refreshDraftPayloadSyncState(
+      normalizedArticle,
+      buildStagedArticlePayloadComparableShape,
+      {
+        hasPayloadIdentity: hasPayloadArticleIdentity,
+        missingBaselineIsUnsynced: true,
+      },
+    )
   }, [fetchResult, getArticleById, schemaPublisherConfig.defaultAuthorName, syncBehavior, token])
 
   useEffect(() => {
@@ -320,7 +334,7 @@ export function useEditorialStagePageData({
         const syncStatus = await getArticleSyncStatus(stagedArticle.runId)
         if (isCancelled || !syncStatus.synced_to_payload || !syncStatus.payload_article_id) return
 
-        const payloadMetadataPatch = (
+        const payloadMetadataPatch: Partial<StagedArticle> = (
           token && getArticleById
             ? await getArticleById(syncStatus.payload_article_id, token)
               .then((payloadDoc) => buildPayloadArticleMetadataPatch({
@@ -350,8 +364,17 @@ export function useEditorialStagePageData({
             updatedAt: previous.updatedAt,
           }
 
-          void saveQueueRef.current?.saveNow(updated)
-          return updated
+          const refreshed = refreshDraftPayloadSyncState(
+            updated,
+            buildStagedArticlePayloadComparableShape,
+            {
+              hasPayloadIdentity: hasPayloadArticleIdentity,
+              missingBaselineIsUnsynced: true,
+            },
+          )
+
+          void saveQueueRef.current?.saveNow(refreshed)
+          return refreshed
         })
       } catch {
         // Ignore sync-status bootstrap errors so staging still loads offline/local state.
@@ -407,13 +430,21 @@ export function useEditorialStagePageData({
         updated.blocks || [],
         updated.editorialBlocks || []
       )
+      const refreshed = refreshDraftPayloadSyncState(
+        updated,
+        buildStagedArticlePayloadComparableShape,
+        {
+          hasPayloadIdentity: hasPayloadArticleIdentity,
+          missingBaselineIsUnsynced: true,
+        },
+      )
 
       // Debounced + serialized: one PUT per typing pause, carrying the last
       // server timestamp so concurrent edits surface as a conflict, not a
       // silent overwrite. Re-invocation (StrictMode) just replaces the snapshot.
-      saveQueueRef.current?.schedule(updated)
+      saveQueueRef.current?.schedule(refreshed)
 
-      return updated
+      return refreshed
     })
   }, [])
 

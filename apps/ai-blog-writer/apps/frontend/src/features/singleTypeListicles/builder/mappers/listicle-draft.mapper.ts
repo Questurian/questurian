@@ -7,6 +7,8 @@ import { buildPayloadListicleMetadataPatch } from '../services/payload-listicle-
 import { getRelationshipId, getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
 import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
+import { markDraftAsPayloadSynced } from '../../../../shared/payloadSync/draftPayloadSync'
+import { buildSingleTypeListicleDraftComparableShape } from '../utils/single-type-listicle-draft-sync-signature'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
 
@@ -37,7 +39,7 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
   const hasStep3Content = items.length > 0
   const normalizedSeoSection = normalizeSeoSection(doc.seoSection || createEmptySeoSection())
 
-  return {
+  const draft: SingleTypeListicleDraft = {
     draftId: existingDraftId || `stl_payload_${doc.id}`,
     ...buildPayloadListicleMetadataPatch({
       doc,
@@ -70,4 +72,10 @@ export function payloadDocToDraft(doc: PayloadListicleDoc, existingDraftId?: str
     articleType: 'single-type-listicle',
     updatedAt: doc.updatedAt || new Date().toISOString(),
   }
+
+  return markDraftAsPayloadSynced(
+    draft,
+    buildSingleTypeListicleDraftComparableShape,
+    doc.updatedAt || new Date().toISOString(),
+  )
 }

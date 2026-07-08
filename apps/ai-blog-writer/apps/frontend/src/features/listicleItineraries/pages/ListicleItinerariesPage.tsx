@@ -76,7 +76,7 @@ export default function ListicleItinerariesPage() {
   const rows = useMemo(() => {
     const localChangesByPayloadId = new Map(
       localDrafts
-        .filter((draft) => draft.payloadId && draft.hasLocalChanges)
+        .filter((draft) => draft.payloadId && draft.hasUnsyncedPayloadChanges)
         .map((draft) => [draft.payloadId, draft.draftId]),
     )
 

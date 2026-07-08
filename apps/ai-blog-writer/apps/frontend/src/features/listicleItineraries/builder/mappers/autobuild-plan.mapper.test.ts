@@ -67,9 +67,13 @@ describe('applyAutobuildPlanToDraft', () => {
   })
 
   it('records the plan overview and marks local changes', () => {
-    const next = applyAutobuildPlanToDraft(baseDraft(), plan, ids)
+    const next = applyAutobuildPlanToDraft({
+      ...baseDraft(),
+      payloadId: 88,
+      lastPayloadSyncSignature: 'old-signature',
+    }, plan, ids)
     expect(next.planOverview).toBe('A single luxurious foodie day anchored at the Grand Hotel.')
-    expect(next.hasLocalChanges).toBe(true)
+    expect(next.hasUnsyncedPayloadChanges).toBe(true)
     expect(next.generationBrief).toBe('luxury foodie day') // preserved
   })
 

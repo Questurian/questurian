@@ -17,7 +17,8 @@ import { buildPayloadItineraryMetadataPatch } from '../services/payload-itinerar
 import { getRelationshipId } from '../utils/field-normalizers.utils'
 import { getRelationshipIds, isMediaMode } from '../../../../shared/builder/utils/item-media.utils'
 import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
-import { buildItineraryDraftSyncSignature } from '../utils/itinerary-draft-sync-signature'
+import { markDraftAsPayloadSynced } from '../../../../shared/payloadSync/draftPayloadSync'
+import { buildItineraryDraftComparableShape } from '../utils/itinerary-draft-sync-signature'
 import { DEFAULT_DAY_SHELL_ID } from '../constants/day-shells.constants'
 
 const schemaPublisherConfig = getSchemaPublisherConfig()
@@ -183,7 +184,7 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
       doc,
       fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
     }),
-    hasLocalChanges: false,
+    hasUnsyncedPayloadChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     listTone: resolveListTone(doc.listTone),
     generationBrief: doc.generationBrief?.trim() || '',
@@ -214,8 +215,9 @@ export function payloadDocToDraft(doc: PayloadItineraryDoc, existingDraftId?: st
     updatedAt: doc.updatedAt || new Date().toISOString(),
   }
 
-  return {
-    ...draft,
-    payloadSyncBaseline: buildItineraryDraftSyncSignature(draft),
-  }
+  return markDraftAsPayloadSynced(
+    draft,
+    buildItineraryDraftComparableShape,
+    doc.updatedAt || new Date().toISOString(),
+  )
 }

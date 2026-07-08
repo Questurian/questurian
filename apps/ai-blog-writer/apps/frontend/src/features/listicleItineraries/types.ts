@@ -6,6 +6,7 @@ import type {
   LinkedTourOption,
   MediaMode,
 } from '../../shared/builder/types'
+import type { PayloadSyncStateFields } from '../../shared/payloadSync/draftPayloadSync'
 
 export type {
   GalleryImageObject,
@@ -438,7 +439,7 @@ export type ItineraryItemBlock = {
   shellSlotDaypart?: ShellSlotDaypart
 }
 
-export type ListicleItineraryDraft = {
+export type ListicleItineraryDraft = PayloadSyncStateFields & {
   draftId: string
   payloadId?: number
   payloadStatus?: 'draft' | 'published'
@@ -446,8 +447,6 @@ export type ListicleItineraryDraft = {
   payloadPublishedAt?: string
   payloadUpdatedAt?: string
   payloadAuthorName?: string
-  payloadSyncBaseline?: string
-  hasLocalChanges?: boolean
   editorModelName: EditorAssistModelName
   /** One editorial register for every blurb and the intro in this itinerary. */
   listTone: ListTone

@@ -1,12 +1,17 @@
 import type {
   LocationDocumentDraft,
   LocationIndexRow,
-  LocationLevel,
   LocationOption,
   PayloadLocationBody,
   PayloadLocationDoc,
   PayloadRelationship,
 } from './types'
+import {
+  buildDraftPayloadSyncSignature,
+  markDraftAsPayloadSynced as markPayloadSyncStateSynced,
+  readStoredPayloadSyncFields,
+  refreshDraftPayloadSyncState as refreshPayloadSyncState,
+} from '../../shared/payloadSync/draftPayloadSync'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -54,10 +59,6 @@ function extractLegacyCoverImage(input: Record<string, unknown>): number | null 
   return extractRelationshipId(media.coverImage as PayloadRelationship)
 }
 
-function stableSerialize(value: unknown): string {
-  return JSON.stringify(value, Object.keys(value as Record<string, unknown>).sort())
-}
-
 function resolveHierarchyTitlePart(nameValue: string, keyValue: string): string {
   const name = nameValue.trim()
   if (name) return name
@@ -101,12 +102,7 @@ export function sanitizeLocationDraftShape(input: unknown): LocationDocumentDraf
     payloadId: typeof input.payloadId === 'number' && Number.isFinite(input.payloadId)
       ? input.payloadId
       : undefined,
-    currentPayloadSignature: trimText(input.currentPayloadSignature) || undefined,
-    lastPayloadSyncSignature: trimText(input.lastPayloadSyncSignature) || undefined,
-    lastPayloadSyncAt: trimText(input.lastPayloadSyncAt) || undefined,
-    hasUnsyncedPayloadChanges: typeof input.hasUnsyncedPayloadChanges === 'boolean'
-      ? input.hasUnsyncedPayloadChanges
-      : false,
+    ...readStoredPayloadSyncFields(input),
     level,
     country: trimText(input.country),
     city: trimText(input.city),
@@ -214,37 +210,20 @@ export function buildPayloadLocationBody(draft: LocationDocumentDraft): PayloadL
 }
 
 export function buildPayloadSyncSignature(draft: LocationDocumentDraft): string {
-  return stableSerialize(buildPayloadLocationBody(draft))
+  return buildDraftPayloadSyncSignature(draft, buildPayloadLocationBody)
 }
 
 export function refreshDraftPayloadSyncState(draft: LocationDocumentDraft): LocationDocumentDraft {
-  const next = sanitizeLocationDraftShape(draft)
-
-  if (typeof next.payloadId !== 'number' || !Number.isFinite(next.payloadId)) {
-    next.currentPayloadSignature = undefined
-    next.hasUnsyncedPayloadChanges = false
-    return next
-  }
-
-  next.currentPayloadSignature = buildPayloadSyncSignature(next)
-  next.hasUnsyncedPayloadChanges = next.lastPayloadSyncSignature
-    ? next.currentPayloadSignature !== next.lastPayloadSyncSignature
-    : true
-
-  return next
+  return refreshPayloadSyncState(sanitizeLocationDraftShape(draft), buildPayloadLocationBody, {
+    missingBaselineIsUnsynced: true,
+  })
 }
 
 export function markDraftAsPayloadSynced(
   draft: LocationDocumentDraft,
   syncedAt: string,
 ): LocationDocumentDraft {
-  const next = sanitizeLocationDraftShape(draft)
-  const signature = buildPayloadSyncSignature(next)
-  next.currentPayloadSignature = signature
-  next.lastPayloadSyncSignature = signature
-  next.lastPayloadSyncAt = syncedAt
-  next.hasUnsyncedPayloadChanges = false
-  return next
+  return markPayloadSyncStateSynced(sanitizeLocationDraftShape(draft), buildPayloadLocationBody, syncedAt)
 }
 
 export function validateDraft(draft: LocationDocumentDraft): string | null {

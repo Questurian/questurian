@@ -1,4 +1,5 @@
 import type { SeoSection } from '../../shared/seo/types'
+import type { PayloadSyncStateFields } from '../../shared/payloadSync/draftPayloadSync'
 
 export type ContentBlock = {
   id: string
@@ -36,7 +37,7 @@ export type DraftUserStamp = {
   name?: string
 }
 
-export type StagedArticle = {
+export type StagedArticle = PayloadSyncStateFields & {
   id: string
   runId: string
   originalTitle: string

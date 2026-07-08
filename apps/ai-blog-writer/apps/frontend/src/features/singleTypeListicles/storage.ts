@@ -4,6 +4,7 @@ import { createEmptySeoSection, normalizeSeoSection } from './builder/services/s
 import type { ListicleItemBlock, SingleTypeListicleDraft } from './types'
 import { DEFAULT_LIST_TONE, resolveListTone, resolveListicleAngleForBlockType } from './types'
 import { normalizeLocationIds } from '../../shared/locationScope/ids'
+import { readStoredPayloadSyncFields } from '../../shared/payloadSync/draftPayloadSync'
 
 const STORAGE_KEY = 'single_type_listicles_staged_v4_exact_neighborhoods'
 
@@ -52,6 +53,7 @@ function normalizeStoredDraft(value: unknown, index: number): SingleTypeListicle
     payloadPublishedAt: typeof value.payloadPublishedAt === 'string' && value.payloadPublishedAt.trim() ? value.payloadPublishedAt : undefined,
     payloadUpdatedAt: typeof value.payloadUpdatedAt === 'string' && value.payloadUpdatedAt.trim() ? value.payloadUpdatedAt : undefined,
     payloadAuthorName: typeof value.payloadAuthorName === 'string' && value.payloadAuthorName.trim() ? value.payloadAuthorName : undefined,
+    ...readStoredPayloadSyncFields(value),
     editorModelName: resolveEditorAssistModelName(
       typeof value.editorModelName === 'string' ? value.editorModelName : undefined,
     ),
@@ -109,6 +111,7 @@ export function createEmptyDraft(): SingleTypeListicleDraft {
     payloadPublishedAt: undefined,
     payloadUpdatedAt: undefined,
     payloadAuthorName: undefined,
+    hasUnsyncedPayloadChanges: false,
     editorModelName: DEFAULT_EDITOR_ASSIST_MODEL,
     listTone: DEFAULT_LIST_TONE,
     title: '',

@@ -23,6 +23,8 @@ import {
 } from '../services/structured-data-template.service'
 import { requiresInstagram, requiresPhotos } from '../../../../shared/builder/utils/item-media.utils'
 import { stripNestedRowIdsFromItineraryDays } from '../utils/itinerary-payload-sanitize'
+import { markDraftAsPayloadSynced } from '../../../../shared/payloadSync/draftPayloadSync'
+import { buildItineraryDraftComparableShape } from '../utils/itinerary-draft-sync-signature'
 import { readLexicalFromJsonText, stripLexicalEditorStateId } from '../../../../shared/builder/utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
@@ -334,9 +336,8 @@ export function useItinerarySubmit({
         })
       })
 
-      const nextDraft = payloadDocToDraft(doc, draft.draftId)
+      let nextDraft = payloadDocToDraft(doc, draft.draftId)
       nextDraft.editorModelName = draft.editorModelName
-      nextDraft.hasLocalChanges = false
       nextDraft.header.introMarkdown = submitDraft.header.introMarkdown
       nextDraft.days = nextDraft.days.map((day) => ({
         ...day,
@@ -349,6 +350,11 @@ export function useItinerarySubmit({
           blurbMarkdown: blurbsById.get(row.id) ?? row.blurbMarkdown,
         })),
       }))
+      nextDraft = markDraftAsPayloadSynced(
+        nextDraft,
+        buildItineraryDraftComparableShape,
+        doc.updatedAt || new Date().toISOString(),
+      )
 
       setResult(targetStatus === 'published' ? `Published itinerary #${doc.id}` : `Saved draft itinerary #${doc.id}`)
       setDraft(nextDraft)

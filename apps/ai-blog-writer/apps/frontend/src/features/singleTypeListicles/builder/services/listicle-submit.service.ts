@@ -11,6 +11,8 @@ import {
 import { requiresInstagram, requiresPhotos } from '../../../../shared/builder/utils/item-media.utils'
 import { readLexicalFromJsonText } from '../../../../shared/builder/utils/lexical-json.utils'
 import { validateSubmit } from '../validators/submit.validators'
+import { markDraftAsPayloadSynced } from '../../../../shared/payloadSync/draftPayloadSync'
+import { buildSingleTypeListicleDraftComparableShape } from '../utils/single-type-listicle-draft-sync-signature'
 
 export type SubmitListicleParams = {
   draft: SingleTypeListicleDraft
@@ -147,13 +149,18 @@ export async function submitListicle({
     }
   }
 
-  const nextDraft = payloadDocToDraft(doc, draft.draftId)
+  let nextDraft = payloadDocToDraft(doc, draft.draftId)
   nextDraft.editorModelName = draft.editorModelName
   nextDraft.header.introMarkdown = draft.header.introMarkdown
   nextDraft.items = nextDraft.items.map((nextItem, index) => ({
     ...nextItem,
     blurbMarkdown: draft.items[index]?.blurbMarkdown || '',
   }))
+  nextDraft = markDraftAsPayloadSynced(
+    nextDraft,
+    buildSingleTypeListicleDraftComparableShape,
+    doc.updatedAt || new Date().toISOString(),
+  )
 
   const resultMessage = targetStatus === 'published'
     ? `Published listicle #${doc.id}`

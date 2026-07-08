@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createEmptyDraft, listDrafts, saveDraft } from './storage'
 
 const CURRENT_STORAGE_KEY = 'listicle_itineraries_staged_v7_multiday'
@@ -97,14 +97,33 @@ describe('listicleItineraries storage', () => {
     })
   })
 
-  it('round-trips the local changes marker for Payload-linked drafts', () => {
+  it('round-trips the unsynced Payload changes marker for Payload-linked drafts', () => {
     const draft = createEmptyDraft()
     draft.payloadId = 123
-    draft.hasLocalChanges = true
+    draft.hasUnsyncedPayloadChanges = true
 
     saveDraft(draft)
 
-    expect(listDrafts()[0]?.hasLocalChanges).toBe(true)
+    expect(listDrafts()[0]?.hasUnsyncedPayloadChanges).toBe(true)
+  })
+
+  it('migrates legacy Payload sync field names on read', () => {
+    const legacyDraft = createEmptyDraft() as ReturnType<typeof createEmptyDraft> & {
+      payloadSyncBaseline?: string
+      hasLocalChanges?: boolean
+    }
+    delete legacyDraft.hasUnsyncedPayloadChanges
+    legacyDraft.payloadId = 123
+    legacyDraft.payloadSyncBaseline = 'legacy-signature'
+    legacyDraft.hasLocalChanges = true
+
+    localStorage.setItem(CURRENT_STORAGE_KEY, JSON.stringify([
+      legacyDraft,
+    ]))
+
+    const restored = listDrafts()[0]
+    expect(restored?.lastPayloadSyncSignature).toBe('legacy-signature')
+    expect(restored?.hasUnsyncedPayloadChanges).toBe(true)
   })
 
   it('round-trips manual tour-agency instagram and key-location rows', () => {

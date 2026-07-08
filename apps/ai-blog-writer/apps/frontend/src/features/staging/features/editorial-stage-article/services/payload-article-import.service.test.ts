@@ -72,6 +72,8 @@ describe('buildStagedArticleFromPayloadDoc', () => {
     expect(staged.payloadStatus).toBe('draft')
     expect(staged.payloadSlug).toBe('imported-article')
     expect(staged.publishedToPayload).toBe(true)
+    expect(staged.lastPayloadSyncSignature).toBeTypeOf('string')
+    expect(staged.hasUnsyncedPayloadChanges).toBe(false)
     expect(staged.step1_complete).toBe(true)
     expect(staged.step2_complete).toBe(true)
     expect(staged.step3_complete).toBe(true)

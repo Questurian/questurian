@@ -46,6 +46,7 @@ const EMPTY_STAGED_ARTICLE: StagedArticle = {
   syncBehavior: 'finalize',
   lexicalConverted: false,
   publishedToPayload: false,
+  hasUnsyncedPayloadChanges: false,
   payloadStatus: undefined,
   payloadSlug: undefined,
   payloadPublishedAt: undefined,

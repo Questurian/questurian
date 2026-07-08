@@ -15,14 +15,14 @@ describe('mergeLocalIntoPayloadDraft', () => {
     const localDraft = {
       ...payloadDraft,
       draftId: 'local-draft',
-      hasLocalChanges: true,
+      hasUnsyncedPayloadChanges: true,
     }
 
     const merged = mergeLocalIntoPayloadDraft(payloadDraft, localDraft)
 
     expect(merged.draftId).toBe('local-draft')
-    expect(merged.hasLocalChanges).toBe(false)
-    expect(merged.payloadSyncBaseline).toBe(buildItineraryDraftSyncSignature(payloadDraft))
+    expect(merged.hasUnsyncedPayloadChanges).toBe(false)
+    expect(merged.lastPayloadSyncSignature).toBe(buildItineraryDraftSyncSignature(payloadDraft))
   })
 
   it('preserves real local content changes over fresh Payload metadata', () => {
@@ -36,14 +36,14 @@ describe('mergeLocalIntoPayloadDraft', () => {
       ...payloadDraft,
       draftId: 'local-draft',
       title: 'Local edited title',
-      hasLocalChanges: true,
+      hasUnsyncedPayloadChanges: true,
     }
 
     const merged = mergeLocalIntoPayloadDraft(payloadDraft, localDraft)
 
     expect(merged.title).toBe('Local edited title')
     expect(merged.payloadStatus).toBe('published')
-    expect(merged.hasLocalChanges).toBe(true)
-    expect(merged.payloadSyncBaseline).toBe(buildItineraryDraftSyncSignature(payloadDraft))
+    expect(merged.hasUnsyncedPayloadChanges).toBe(true)
+    expect(merged.lastPayloadSyncSignature).toBe(buildItineraryDraftSyncSignature(payloadDraft))
   })
 })

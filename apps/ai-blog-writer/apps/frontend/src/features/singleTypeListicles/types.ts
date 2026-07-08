@@ -7,6 +7,7 @@ import type {
   LinkedTourOption,
   MediaMode,
 } from '../../shared/builder/types'
+import type { PayloadSyncStateFields } from '../../shared/payloadSync/draftPayloadSync'
 
 export type ListicleType = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
 
@@ -176,7 +177,7 @@ export type ListicleItemBlock = {
   angle?: ListicleAngle | null
 }
 
-export type SingleTypeListicleDraft = {
+export type SingleTypeListicleDraft = PayloadSyncStateFields & {
   draftId: string
   payloadId?: number
   payloadStatus?: 'draft' | 'published'

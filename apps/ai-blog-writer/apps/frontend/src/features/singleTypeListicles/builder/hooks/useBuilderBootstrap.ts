@@ -8,6 +8,14 @@ import { createEmptySeoSection, normalizeSeoSection } from '../services/seo-sect
 import type { LocationOption, MediaAssetOption, SingleTypeListicleDraft } from '../../types'
 import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
 import { normalizeTargetItemCount } from '../utils/item-target-count.utils'
+import {
+  buildSingleTypeListicleDraftComparableShape,
+  buildSingleTypeListicleDraftSyncSignature,
+} from '../utils/single-type-listicle-draft-sync-signature'
+import {
+  markDraftAsPayloadSynced,
+  refreshDraftPayloadSyncState,
+} from '../../../../shared/payloadSync/draftPayloadSync'
 
 type UseBuilderBootstrapParams = {
   token?: string | null
@@ -51,19 +59,46 @@ function mergeLocalIntoPayloadDraft(
   payloadDraft: SingleTypeListicleDraft,
   localDraft: SingleTypeListicleDraft,
 ): SingleTypeListicleDraft {
-  const next = { ...payloadDraft }
-  // Payload stores blurbs/intro as Lexical JSON; restore the editable markdown
-  // from the local draft so editors are not blank on reload.
-  if (localDraft.header.introMarkdown) {
-    next.header = { ...payloadDraft.header, introMarkdown: localDraft.header.introMarkdown }
+  const payloadSyncedDraft = markDraftAsPayloadSynced(
+    payloadDraft,
+    buildSingleTypeListicleDraftComparableShape,
+    payloadDraft.payloadUpdatedAt || payloadDraft.updatedAt || new Date().toISOString(),
+  )
+  const lastPayloadSyncSignature = payloadSyncedDraft.lastPayloadSyncSignature
+    ?? buildSingleTypeListicleDraftSyncSignature(payloadSyncedDraft)
+  const localHasUnsyncedPayloadChanges = Boolean(localDraft.hasUnsyncedPayloadChanges)
+    || buildSingleTypeListicleDraftSyncSignature(localDraft) !== lastPayloadSyncSignature
+
+  if (!localHasUnsyncedPayloadChanges) {
+    return {
+      ...payloadSyncedDraft,
+      editorModelName: localDraft.editorModelName,
+    }
   }
-  next.items = payloadDraft.items.map((item) => {
-    const localItem = localDraft.items.find((li) => li.item === item.item)
-    return localItem?.blurbMarkdown
-      ? { ...item, blurbMarkdown: localItem.blurbMarkdown }
-      : item
-  })
-  return next
+
+  const merged = {
+    ...localDraft,
+    payloadId: payloadSyncedDraft.payloadId,
+    payloadStatus: payloadSyncedDraft.payloadStatus,
+    payloadPublishedAt: payloadSyncedDraft.payloadPublishedAt,
+    payloadUpdatedAt: payloadSyncedDraft.payloadUpdatedAt,
+    payloadAuthorName: payloadSyncedDraft.payloadAuthorName,
+    status: payloadSyncedDraft.status,
+    articleType: payloadSyncedDraft.articleType,
+    lastPayloadSyncSignature,
+    lastPayloadSyncAt: payloadSyncedDraft.lastPayloadSyncAt,
+  }
+  const refreshed = refreshDraftPayloadSyncState(merged, buildSingleTypeListicleDraftComparableShape)
+
+  if (!refreshed.hasUnsyncedPayloadChanges) {
+    return {
+      ...payloadSyncedDraft,
+      draftId: localDraft.draftId,
+      editorModelName: localDraft.editorModelName,
+    }
+  }
+
+  return refreshed
 }
 
 export function useBuilderBootstrap({

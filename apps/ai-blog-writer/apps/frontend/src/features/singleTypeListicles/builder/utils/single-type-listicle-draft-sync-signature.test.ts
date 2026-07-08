@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { createEmptyDraft } from '../../storage'
-import { buildItineraryDraftSyncSignature } from './itinerary-draft-sync-signature'
+import { buildSingleTypeListicleDraftSyncSignature } from './single-type-listicle-draft-sync-signature'
 
-describe('buildItineraryDraftSyncSignature', () => {
-  it('ignores local-only workflow fields', () => {
+describe('buildSingleTypeListicleDraftSyncSignature', () => {
+  it('ignores local-only workflow and sync fields', () => {
     const draft = createEmptyDraft()
     draft.payloadId = 15
-    draft.title = 'Lima itinerary'
+    draft.title = 'Lima restaurants'
     draft.location = 'peru|lima'
-    draft.locationRef = 251
     draft.sharedNeighborhoods = [254, 253]
     draft.header.introMarkdown = 'Intro copy'
 
@@ -24,23 +23,23 @@ describe('buildItineraryDraftSyncSignature', () => {
       updatedAt: '2026-05-12T10:00:00.000Z',
     }
 
-    expect(buildItineraryDraftSyncSignature(changedWorkflowOnly))
-      .toBe(buildItineraryDraftSyncSignature(draft))
+    expect(buildSingleTypeListicleDraftSyncSignature(changedWorkflowOnly))
+      .toBe(buildSingleTypeListicleDraftSyncSignature(draft))
   })
 
   it('changes when live Payload content changes', () => {
     const draft = createEmptyDraft()
     draft.payloadId = 15
-    draft.title = 'Lima itinerary'
+    draft.title = 'Lima restaurants'
     draft.location = 'peru|lima'
     draft.header.introMarkdown = 'Intro copy'
 
     const changedContent = {
       ...draft,
-      title: 'Updated Lima itinerary',
+      title: 'Updated Lima restaurants',
     }
 
-    expect(buildItineraryDraftSyncSignature(changedContent))
-      .not.toBe(buildItineraryDraftSyncSignature(draft))
+    expect(buildSingleTypeListicleDraftSyncSignature(changedContent))
+      .not.toBe(buildSingleTypeListicleDraftSyncSignature(draft))
   })
 })
