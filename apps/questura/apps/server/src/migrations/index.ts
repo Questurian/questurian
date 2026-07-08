@@ -10,6 +10,7 @@ import * as migration_20260601_103652_visitor_profiles_payload_schema from './20
 import * as migration_20260612_023018_add_tour_picks_to_listicle_blocks from './20260612_023018_add_tour_picks_to_listicle_blocks';
 import * as migration_20260703_132643_add_itinerary_tour_agency_block_storage from './20260703_132643_add_itinerary_tour_agency_block_storage';
 import * as migration_20260704_000000_add_article_source_fields from './20260704_000000_add_article_source_fields';
+import * as migration_20260708_060450_reference_grid_registry_cleanup from './20260708_060450_reference_grid_registry_cleanup';
 
 export const migrations = [
   {
@@ -71,5 +72,10 @@ export const migrations = [
     up: migration_20260704_000000_add_article_source_fields.up,
     down: migration_20260704_000000_add_article_source_fields.down,
     name: '20260704_000000_add_article_source_fields',
+  },
+  {
+    up: migration_20260708_060450_reference_grid_registry_cleanup.up,
+    down: migration_20260708_060450_reference_grid_registry_cleanup.down,
+    name: '20260708_060450_reference_grid_registry_cleanup',
   },
 ];

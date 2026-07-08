@@ -1,7 +1,5 @@
 import type { Payload } from 'payload'
 
-import { APP_CONFIG } from '@/shared/config'
-
 import type {
   HomepageTourCandidatesResponse,
   PayloadFindWhere,
@@ -10,19 +8,16 @@ import type {
 } from '../types'
 
 import { normalizeTourCandidate, sortTours } from '../lib/candidate'
+import {
+  combinePayloadWhereClauses,
+  normalizeReferenceGridSearchOptions,
+} from '../../reference-grid/numeric-grid'
 
 export async function searchTourGridCandidates(
   payload: Payload,
   options: TourGridSearchOptions = {},
 ): Promise<HomepageTourCandidatesResponse> {
-  const query = options.query?.trim() || ''
-  const allowDrafts = options.allowDrafts ?? APP_CONFIG.features.homepageFeaturedAllowDrafts
-  const page =
-    Number.isFinite(options.page) && (options.page || 0) > 0 ? Math.trunc(options.page!) : 1
-  const limit =
-    Number.isFinite(options.limit) && (options.limit || 0) > 0
-      ? Math.min(Math.trunc(options.limit!), 50)
-      : 24
+  const { query, allowDrafts, page, limit } = normalizeReferenceGridSearchOptions(options)
 
   const whereClauses: PayloadFindWhere[] = []
   if (query) {
@@ -32,15 +27,13 @@ export async function searchTourGridCandidates(
     whereClauses.push({ status: { equals: 'published' } })
   }
 
-  const where: PayloadFindWhere | undefined =
-    whereClauses.length > 1 ? { and: whereClauses } : whereClauses[0]
   const response = await payload.find({
     collection: 'tours',
     depth: 2,
     limit,
     page,
     sort: '-updatedAt',
-    where,
+    where: combinePayloadWhereClauses(whereClauses),
     overrideAccess: true,
   })
 

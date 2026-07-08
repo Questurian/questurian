@@ -1,5 +1,7 @@
 import type { HomepageThingsToDoListiclesItemRef } from '../types'
 
+import { toReferenceKey } from '../../reference-grid/refs'
+
 export function toRefKey(ref: HomepageThingsToDoListiclesItemRef): string {
-  return `${ref.relationTo}:${ref.id}`
+  return toReferenceKey(ref)
 }

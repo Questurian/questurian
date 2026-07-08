@@ -1,45 +1,27 @@
 import type { HomepageFeaturedSelection } from './types'
-import type { HomepageLocationGridSelection, LocationGridMediaAspect } from './locationGridTypes'
+import type {
+  HomepageLocationGridSelection,
+  LocationGridMediaAspect
+} from './locationGridTypes'
 import type { HomepageHotelGridSelection } from './hotelGridTypes'
-
-export type CuratedHomepageBlockType =
-  | 'featured-article'
-  | 'featured-article-carousel'
-  | 'featured-articles'
-  | 'article-grid'
-  | 'location-grid'
-  | 'questurian-maps'
-  | 'hotel-grid'
-  | 'tour-grid'
-  | 'where-to-eat-drink'
-  | 'things-to-do-listicles'
-  | 'things-to-do-attractions'
-  | 'newsletter-signup'
-  | 'article-list'
-
-export type ArticleCuratedHomepageBlockType =
-  | 'featured-article'
-  | 'featured-article-carousel'
-  | 'featured-articles'
-  | 'article-grid'
-  | 'questurian-maps'
-  | 'where-to-eat-drink'
-  | 'things-to-do-listicles'
-  | 'article-list'
 
 export type CuratedHomepageBlockConfig = {
   label: string
   description: string
-  quickSlotCounts: number[]
+  quickSlotCounts: readonly number[]
   defaultSlotCount: number
   minSlotCount: number
   maxSlotCount: number
 }
 
-export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
-  CuratedHomepageBlockType,
-  CuratedHomepageBlockConfig
-> = {
+type PageBlockDefinition = CuratedHomepageBlockConfig & {
+  order: number
+  articlePayload: boolean
+  convertTarget: boolean
+  validSlotCounts?: readonly number[]
+}
+
+const PAGE_BLOCK_DEFINITIONS = {
   'featured-article': {
     label: 'Hero Article',
     description: 'One full-width dark hero for a single article or listicle',
@@ -47,47 +29,70 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 1,
     minSlotCount: 1,
     maxSlotCount: 1,
+    order: 5,
+    articlePayload: true,
+    convertTarget: true
   },
   'featured-article-carousel': {
     label: 'Featured Article Carousel',
-    description: 'Full-width dark hero with left/right arrows to cycle through multiple articles',
+    description:
+      'Full-width dark hero with left/right arrows to cycle through multiple articles',
     quickSlotCounts: [2, 3, 4, 5],
     defaultSlotCount: 3,
     minSlotCount: 2,
     maxSlotCount: 10,
+    order: 6,
+    articlePayload: true,
+    convertTarget: true
   },
   'featured-articles': {
     label: 'Multi-Article Feature',
-    // No 6-slot layout exists, so 6 is intentionally omitted (see isValidHomepageBlockSlotCount).
     description: 'A curated multi-slot editorial layout for several articles',
     quickSlotCounts: [3, 4, 5, 7, 8, 9],
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 9,
+    validSlotCounts: [3, 4, 5, 7, 8, 9],
+    order: 0,
+    articlePayload: true,
+    convertTarget: false
   },
   'article-grid': {
     label: 'Article Grid',
-    description: 'Square thumbnails: 4 (2×2 / four-across) or 8 (four columns × two rows)',
+    description:
+      'Square thumbnails: 4 (2×2 / four-across) or 8 (four columns × two rows)',
     quickSlotCounts: [4, 8],
     defaultSlotCount: 4,
     minSlotCount: 4,
     maxSlotCount: 8,
+    validSlotCounts: [4, 8],
+    order: 3,
+    articlePayload: true,
+    convertTarget: true
   },
   'location-grid': {
     label: 'Location Grid',
-    description: 'A child-location grid for cities on main and neighborhoods on city homepages',
+    description:
+      'A child-location grid for cities on main and neighborhoods on city homepages',
     quickSlotCounts: [4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 4,
     maxSlotCount: 8,
+    order: 7,
+    articlePayload: false,
+    convertTarget: true
   },
   'questurian-maps': {
     label: 'Questurian Maps',
-    description: 'Six single-type listicles in a 2×3 maps grid with headline styling',
+    description:
+      'Six single-type listicles in a 2×3 maps grid with headline styling',
     quickSlotCounts: [6],
     defaultSlotCount: 6,
     minSlotCount: 6,
     maxSlotCount: 6,
+    order: 11,
+    articlePayload: true,
+    convertTarget: true
   },
   'hotel-grid': {
     label: 'Hotel Grid',
@@ -96,6 +101,9 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 12,
+    order: 1,
+    articlePayload: false,
+    convertTarget: true
   },
   'tour-grid': {
     label: 'Tour Grid',
@@ -104,6 +112,9 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 12,
+    order: 2,
+    articlePayload: false,
+    convertTarget: true
   },
   'where-to-eat-drink': {
     label: 'Where to Eat & Drink',
@@ -112,6 +123,9 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 12,
+    order: 8,
+    articlePayload: true,
+    convertTarget: true
   },
   'things-to-do-listicles': {
     label: 'Things to Do (Listicles)',
@@ -120,6 +134,9 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 12,
+    order: 10,
+    articlePayload: true,
+    convertTarget: true
   },
   'things-to-do-attractions': {
     label: 'Things to Do (Places)',
@@ -128,57 +145,93 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG: Record<
     defaultSlotCount: 4,
     minSlotCount: 3,
     maxSlotCount: 12,
+    order: 9,
+    articlePayload: false,
+    convertTarget: true
   },
   'newsletter-signup': {
     label: 'Newsletter signup',
-    description: 'Dark full-width placeholder for a future email capture section',
+    description:
+      'Dark full-width placeholder for a future email capture section',
     quickSlotCounts: [0],
     defaultSlotCount: 0,
     minSlotCount: 0,
     maxSlotCount: 0,
+    order: 12,
+    articlePayload: false,
+    convertTarget: true
   },
   'article-list': {
     label: 'Article List',
-    description: 'Vertical list of articles — thumbnail left, title/excerpt/author right (5–25 items)',
+    description:
+      'Vertical list of articles — thumbnail left, title/excerpt/author right (5–25 items)',
     quickSlotCounts: [5, 10, 15, 20],
     defaultSlotCount: 10,
     minSlotCount: 5,
     maxSlotCount: 25,
-  },
+    order: 4,
+    articlePayload: true,
+    convertTarget: true
+  }
+} as const satisfies Record<string, PageBlockDefinition>
+
+export type CuratedHomepageBlockType = keyof typeof PAGE_BLOCK_DEFINITIONS
+
+export type ArticleCuratedHomepageBlockType = {
+  [K in CuratedHomepageBlockType]: (typeof PAGE_BLOCK_DEFINITIONS)[K]['articlePayload'] extends true
+    ? K
+    : never
+}[CuratedHomepageBlockType]
+
+function pageBlockTypesWhere(
+  predicate: (definition: PageBlockDefinition) => boolean
+) {
+  return (
+    Object.keys(PAGE_BLOCK_DEFINITIONS) as CuratedHomepageBlockType[]
+  ).filter((blockType) => predicate(PAGE_BLOCK_DEFINITIONS[blockType]))
 }
+
+export const HOMEPAGE_PAGE_BLOCK_CONFIG = Object.fromEntries(
+  (
+    Object.entries(PAGE_BLOCK_DEFINITIONS) as Array<
+      [CuratedHomepageBlockType, PageBlockDefinition]
+    >
+  ).map(([blockType, definition]) => [
+    blockType,
+    {
+      label: definition.label,
+      description: definition.description,
+      quickSlotCounts: definition.quickSlotCounts,
+      defaultSlotCount: definition.defaultSlotCount,
+      minSlotCount: definition.minSlotCount,
+      maxSlotCount: definition.maxSlotCount
+    }
+  ])
+) as Record<CuratedHomepageBlockType, CuratedHomepageBlockConfig>
 
 /** Validates slot count when adding a block (article-grid allows only 4 or 8). */
 export function isValidHomepageBlockSlotCount(
   blockType: CuratedHomepageBlockType,
-  slotCount: number,
+  slotCount: number
 ): boolean {
   if (!Number.isInteger(slotCount)) return false
-  if (blockType === 'article-grid') {
-    return slotCount === 4 || slotCount === 8
+  const definition = PAGE_BLOCK_DEFINITIONS[blockType]
+  const validSlotCounts: readonly number[] | undefined =
+    'validSlotCounts' in definition ? definition.validSlotCounts : undefined
+  if (validSlotCounts) {
+    return validSlotCounts.includes(slotCount)
   }
-  // Featured Articles has no 6-slot layout, so 6 is not a valid count.
-  if (blockType === 'featured-articles' && slotCount === 6) {
-    return false
-  }
-  const c = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
-  return slotCount >= c.minSlotCount && slotCount <= c.maxSlotCount
+  return (
+    slotCount >= definition.minSlotCount && slotCount <= definition.maxSlotCount
+  )
 }
 
-export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
-  'featured-articles',
-  'hotel-grid',
-  'tour-grid',
-  'article-grid',
-  'article-list',
-  'featured-article',
-  'featured-article-carousel',
-  'location-grid',
-  'where-to-eat-drink',
-  'things-to-do-attractions',
-  'things-to-do-listicles',
-  'questurian-maps',
-  'newsletter-signup',
-]
+export const HOMEPAGE_PAGE_BLOCK_TYPES = (
+  Object.keys(PAGE_BLOCK_DEFINITIONS) as CuratedHomepageBlockType[]
+).sort(
+  (left, right) =>
+    PAGE_BLOCK_DEFINITIONS[left].order - PAGE_BLOCK_DEFINITIONS[right].order
+)
 
 /**
  * Destination types when converting an empty block (any curated editor). Section title kept when
@@ -187,20 +240,8 @@ export const HOMEPAGE_PAGE_BLOCK_TYPES: CuratedHomepageBlockType[] = [
  * **Sync:** Questura `homepage-empty-convert-block-types.ts` → `HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES`.
  * This array = valid **targets** (no `featured-articles`; add that shape via Add block). New type → update both + slot limits + editor.
  */
-export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES: CuratedHomepageBlockType[] = [
-  'featured-article',
-  'featured-article-carousel',
-  'article-grid',
-  'location-grid',
-  'questurian-maps',
-  'hotel-grid',
-  'tour-grid',
-  'where-to-eat-drink',
-  'things-to-do-listicles',
-  'things-to-do-attractions',
-  'newsletter-signup',
-  'article-list',
-]
+export const CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES =
+  pageBlockTypesWhere((definition) => definition.convertTarget)
 
 export type FeaturedArticleBlockResponse = {
   id: string
@@ -340,16 +381,9 @@ export type ArticleCuratedHomepageBlockResponse =
   | ArticleListBlockResponse
 
 /** Block types edited with {@link CuratedHomepageBlockEditor}; empty blocks may convert to another type. */
-export const ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES: ArticleCuratedHomepageBlockType[] = [
-  'featured-article',
-  'featured-article-carousel',
-  'featured-articles',
-  'article-grid',
-  'questurian-maps',
-  'where-to-eat-drink',
-  'things-to-do-listicles',
-  'article-list',
-]
+export const ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES = pageBlockTypesWhere(
+  (definition) => definition.articlePayload
+) as ArticleCuratedHomepageBlockType[]
 
 export type CuratedHomepageBlockResponse =
   | ArticleCuratedHomepageBlockResponse
@@ -374,8 +408,18 @@ export type BlockPublishMeta = {
   publishBlockers?: string[]
 }
 
-export type PageBlockResponse = (CuratedHomepageBlockResponse | UnknownBlockResponse) &
+export type PageBlockResponse = (
+  | CuratedHomepageBlockResponse
+  | UnknownBlockResponse
+) &
   BlockPublishMeta
+
+const HOMEPAGE_PAGE_BLOCK_TYPE_SET = new Set<string>(
+  Object.keys(PAGE_BLOCK_DEFINITIONS)
+)
+const ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPE_SET = new Set<string>(
+  ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES
+)
 
 /** Stable identity for editor instances; layout-only setting changes should not remount a block. */
 export function homepageBlockEditorIdentity(block: {
@@ -408,79 +452,66 @@ export function homepageBlockShapeIdentity(block: {
     }
   } else if (block.blockType === 'location-grid') {
     layoutKey = `lg:${block.mediaAspect ?? 'rectangle'}`
-  } else if (block.blockType === 'article-grid' && block.selection.totalSlots === 4) {
+  } else if (
+    block.blockType === 'article-grid' &&
+    block.selection.totalSlots === 4
+  ) {
     layoutKey = `ag4:${block.articleGridFourLayout ?? 'four-across'}`
   }
   return [block.id, block.blockType, block.selection.totalSlots, layoutKey]
 }
 
 export function isCuratedHomepageBlock(
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): block is CuratedHomepageBlockResponse {
-  return (
-    block.blockType === 'featured-article'
-    || block.blockType === 'featured-article-carousel'
-    || block.blockType === 'featured-articles'
-    || block.blockType === 'article-grid'
-    || block.blockType === 'location-grid'
-    || block.blockType === 'questurian-maps'
-    || block.blockType === 'hotel-grid'
-    || block.blockType === 'tour-grid'
-    || block.blockType === 'where-to-eat-drink'
-    || block.blockType === 'things-to-do-listicles'
-    || block.blockType === 'things-to-do-attractions'
-    || block.blockType === 'newsletter-signup'
-    || block.blockType === 'article-list'
-  )
+  return HOMEPAGE_PAGE_BLOCK_TYPE_SET.has(block.blockType)
 }
 
 export function isArticleCuratedHomepageBlock(
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): block is ArticleCuratedHomepageBlockResponse {
-  return block.blockType === 'featured-article'
-    || block.blockType === 'featured-article-carousel'
-    || block.blockType === 'featured-articles'
-    || block.blockType === 'article-grid'
-    || block.blockType === 'questurian-maps'
-    || block.blockType === 'where-to-eat-drink'
-    || block.blockType === 'things-to-do-listicles'
-    || block.blockType === 'article-list'
+  return ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPE_SET.has(block.blockType)
 }
 
 export function isLocationGridBlock(
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): block is LocationGridBlockResponse {
   return block.blockType === 'location-grid'
 }
 
 export function isHotelGridBlock(
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): block is HotelGridBlockResponse {
   return block.blockType === 'hotel-grid'
 }
 
 export function isTourGridBlock(
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): block is TourGridBlockResponse {
   return block.blockType === 'tour-grid'
 }
 
 export function isThingsToDoAttractionsBlock(
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): block is ThingsToDoAttractionsBlockResponse {
   return block.blockType === 'things-to-do-attractions'
 }
 
 export function isNewsletterSignupBlock(
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): block is NewsletterSignupBlockResponse {
   return block.blockType === 'newsletter-signup'
 }
 
-export type HotelOrAttractionGridBlockResponse = HotelGridBlockResponse | TourGridBlockResponse | ThingsToDoAttractionsBlockResponse
+export type HotelOrAttractionGridBlockResponse =
+  | HotelGridBlockResponse
+  | TourGridBlockResponse
+  | ThingsToDoAttractionsBlockResponse
 
 /** Human-readable block type tag matching block editor headers (e.g. "Featured Articles · 7 slots"). */
-export function formatHomepageBlockTypeTagLabel(block: PageBlockResponse): string {
+export function formatHomepageBlockTypeTagLabel(
+  block: PageBlockResponse
+): string {
   if (!isCuratedHomepageBlock(block)) {
     return block.blockType
   }

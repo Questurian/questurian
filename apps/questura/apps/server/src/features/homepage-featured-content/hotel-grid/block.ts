@@ -1,57 +1,16 @@
 import type { Block } from 'payload'
 
-import {
-  HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
-  HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../resolve-page-blocks/lib/section-heading'
-import {
-  HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
-  HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
-} from '../types'
+import { createReferenceGridBlock } from '../reference-grid/block'
+import { HOMEPAGE_HOTEL_GRID_MAX_SLOTS, HOMEPAGE_HOTEL_GRID_MIN_SLOTS } from '../types'
 
-export const HotelGridBlock: Block = {
+export const HotelGridBlock: Block = createReferenceGridBlock({
   slug: 'hotel-grid',
   labels: {
     singular: 'Hotel Grid',
     plural: 'Hotel Grid Blocks',
   },
-  fields: [
-    {
-      name: 'slotCount',
-      type: 'number',
-      required: true,
-      min: HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
-      max: HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
-      admin: {
-        description: 'How many hotel cards this block contains.',
-      },
-    },
-    {
-      name: 'sectionHeading',
-      type: 'text',
-      required: false,
-      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
-      admin: {
-        description: 'Optional headline shown above this block on the public homepage.',
-      },
-    },
-    {
-      name: 'sectionSubheading',
-      type: 'text',
-      required: false,
-      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-      admin: {
-        description: 'Optional supporting line under the section heading.',
-      },
-    },
-    {
-      name: 'items',
-      type: 'relationship',
-      relationTo: 'accommodations',
-      hasMany: true,
-      admin: {
-        description: 'Hotels in display order.',
-      },
-    },
-  ],
-}
+  slotCounts: { min: HOMEPAGE_HOTEL_GRID_MIN_SLOTS, max: HOMEPAGE_HOTEL_GRID_MAX_SLOTS },
+  relationTo: 'accommodations',
+  slotCountDescription: 'How many hotel cards this block contains.',
+  itemsDescription: 'Hotels in display order.',
+})

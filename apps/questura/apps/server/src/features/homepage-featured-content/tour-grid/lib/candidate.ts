@@ -1,28 +1,11 @@
-import {
-  resolveMediaSetForPlacement,
-  type PublicImage,
-} from '@/features/media/lib/resolve-public-image'
-
 import type { HomepageTourCandidate, TourDocLike } from '../types'
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-export function normalizeNumericId(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.trunc(value)
-  if (typeof value === 'string' && value.trim()) {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed) && parsed > 0) return Math.trunc(parsed)
-  }
-  return null
-}
-
-function extractCardImage(doc: TourDocLike): PublicImage | null {
-  if (!isRecord(doc.img)) return null
-  const resolved = resolveMediaSetForPlacement(doc.img, 'card')
-  return resolved.url ? resolved : null
-}
+import {
+  imageFromMediaSet,
+  isRecord,
+  normalizeReferenceCardCandidate,
+  sortReferenceCandidates,
+} from '../../reference-grid/candidate'
 
 function extractLocation(doc: TourDocLike): string | null {
   if (!isRecord(doc.locationRef)) return null
@@ -34,25 +17,21 @@ function extractLocation(doc: TourDocLike): string | null {
 }
 
 export function normalizeTourCandidate(doc: TourDocLike): HomepageTourCandidate {
-  const image = extractCardImage(doc)
-  return {
-    id: normalizeNumericId(doc.id) ?? 0,
-    title: typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim() : 'Untitled',
-    slug:
-      typeof doc.bookingLink === 'string' && doc.bookingLink.trim() ? doc.bookingLink.trim() : null,
-    type: 'tour',
-    priceLevel: typeof doc.price === 'string' && doc.price.trim() ? doc.price.trim() : null,
-    status: typeof doc.status === 'string' && doc.status.trim() ? doc.status : null,
-    updatedAt: typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
-    imageUrl: image?.url ?? null,
-    image,
-    location: extractLocation(doc),
-  }
+  return normalizeReferenceCardCandidate(doc, {
+    slug: (value) =>
+      typeof value.bookingLink === 'string' && value.bookingLink.trim()
+        ? value.bookingLink.trim()
+        : null,
+    type: () => 'tour',
+    priceLevel: (value) =>
+      typeof value.price === 'string' && value.price.trim() ? value.price.trim() : null,
+    image: (value) => imageFromMediaSet(value.img),
+    location: extractLocation,
+  })
 }
 
 export function sortTours(left: HomepageTourCandidate, right: HomepageTourCandidate): number {
-  const leftTimestamp = Date.parse(left.updatedAt || '') || 0
-  const rightTimestamp = Date.parse(right.updatedAt || '') || 0
-  if (leftTimestamp !== rightTimestamp) return rightTimestamp - leftTimestamp
-  return left.title.localeCompare(right.title)
+  return sortReferenceCandidates(left, right)
 }
+
+export { normalizeNumericId } from '../../reference-grid/candidate'

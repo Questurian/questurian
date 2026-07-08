@@ -1,57 +1,22 @@
 import type { Block } from 'payload'
 
-import {
-  HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
-  HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-} from '../resolve-page-blocks/lib/section-heading'
+import { createReferenceGridBlock } from '../reference-grid/block'
 import {
   HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
   HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
 } from '../types'
 
-export const ThingsToDoListiclesBlock: Block = {
+export const ThingsToDoListiclesBlock: Block = createReferenceGridBlock({
   slug: 'things-to-do-listicles',
   labels: {
     singular: 'Things to Do — Listicles',
     plural: 'Things to Do — Listicle Blocks',
   },
-  fields: [
-    {
-      name: 'slotCount',
-      type: 'number',
-      required: true,
-      min: HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
-      max: HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
-      admin: {
-        description: 'How many attraction listicles this block contains.',
-      },
-    },
-    {
-      name: 'sectionHeading',
-      type: 'text',
-      required: false,
-      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
-      admin: {
-        description: 'Optional headline shown above this block on the public homepage.',
-      },
-    },
-    {
-      name: 'sectionSubheading',
-      type: 'text',
-      required: false,
-      maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
-      admin: {
-        description: 'Optional supporting line under the section heading.',
-      },
-    },
-    {
-      name: 'items',
-      type: 'relationship',
-      relationTo: ['single-type-listicles'] as const,
-      hasMany: true,
-      admin: {
-        description: 'Single-type listicles with data type Attractions only.',
-      },
-    },
-  ],
-}
+  slotCounts: {
+    min: HOMEPAGE_THINGS_TO_DO_LISTICLES_MIN_SLOTS,
+    max: HOMEPAGE_THINGS_TO_DO_LISTICLES_MAX_SLOTS,
+  },
+  relationTo: ['single-type-listicles'],
+  slotCountDescription: 'How many attraction listicles this block contains.',
+  itemsDescription: 'Single-type listicles with data type Attractions only.',
+})

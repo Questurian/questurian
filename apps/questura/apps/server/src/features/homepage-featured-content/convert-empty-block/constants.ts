@@ -1,27 +1,17 @@
+import { curatedBlockRegistry } from '../block-registry'
+
 /**
  * Single list: block may use POST …/blocks/convert when `items` empty.
  *
  * When adding curated homepage block type:
- * 1. Add slug here (and `slot-count` limits if new family).
- * 2. Mirror list in ai-blog-writer `pageBlocks.ts` → `CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES`
- *    (destination types) + `ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES` / editor props if new editor.
+ * 1. Set `convertibleWhenEmpty` in `block-registry/registry.ts`.
+ * 2. Mirror frontend target metadata in ai-blog-writer `pageBlocks.ts`.
  *
  * Editor lists current block type plus this list so empty blocks can resize slots or change type
  * (POST …/blocks/convert).
  */
-export const HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES = [
-  'featured-articles',
-  'featured-article',
-  'featured-article-carousel',
-  'article-grid',
-  'location-grid',
-  'questurian-maps',
-  'hotel-grid',
-  'tour-grid',
-  'where-to-eat-drink',
-  'things-to-do-listicles',
-  'things-to-do-attractions',
-] as const
+export const HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES =
+  curatedBlockRegistry.emptyConvertSourceBlockTypes
 
 export type HomepageEmptyConvertSourceBlockType =
   (typeof HOMEPAGE_EMPTY_CONVERT_SOURCE_BLOCK_TYPES)[number]

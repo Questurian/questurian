@@ -1,2 +1,6 @@
 export { curatedBlockRegistry } from './registry'
-export type { CuratedBlockDefinition } from './registry'
+export type {
+  CuratedBlockDefinition,
+  CuratedBlockPublicPayloadKind,
+  CuratedBlockSlotCounts,
+} from './registry'

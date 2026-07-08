@@ -1,6 +1,5 @@
 import type { Payload } from 'payload'
 
-import { APP_CONFIG } from '@/shared/config'
 import { getLocationScope } from '@/shared/location/server/locationScope'
 
 import type {
@@ -11,19 +10,16 @@ import type {
 } from '../types'
 
 import { normalizeHotelCandidate, sortHotels } from '../lib/candidate'
+import {
+  combinePayloadWhereClauses,
+  normalizeReferenceGridSearchOptions,
+} from '../../reference-grid/numeric-grid'
 
 export async function searchHotelGridCandidates(
   payload: Payload,
   options: HotelGridSearchOptions = {},
 ): Promise<HomepageHotelCandidatesResponse> {
-  const query = options.query?.trim() || ''
-  const allowDrafts = options.allowDrafts ?? APP_CONFIG.features.homepageFeaturedAllowDrafts
-  const page =
-    Number.isFinite(options.page) && (options.page || 0) > 0 ? Math.trunc(options.page!) : 1
-  const limit =
-    Number.isFinite(options.limit) && (options.limit || 0) > 0
-      ? Math.min(Math.trunc(options.limit!), 50)
-      : 24
+  const { query, allowDrafts, page, limit } = normalizeReferenceGridSearchOptions(options)
 
   const whereClauses: PayloadFindWhere[] = []
   if (query) {
@@ -58,15 +54,13 @@ export async function searchHotelGridCandidates(
     whereClauses.push(scopeOr.length === 1 ? scopeOr[0]! : { or: scopeOr })
   }
 
-  const where: PayloadFindWhere | undefined =
-    whereClauses.length > 1 ? { and: whereClauses } : whereClauses[0]
   const response = await payload.find({
     collection: 'accommodations',
     depth: 2,
     limit,
     page,
     sort: '-updatedAt',
-    where,
+    where: combinePayloadWhereClauses(whereClauses),
     overrideAccess: true,
   })
 

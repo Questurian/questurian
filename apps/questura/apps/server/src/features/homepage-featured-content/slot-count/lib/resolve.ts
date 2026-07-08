@@ -1,11 +1,6 @@
 import { HOMEPAGE_FEATURED_CONTENT_SLOTS } from '../../types'
 
-import { HOMEPAGE_BLOCK_SLOT_LIMITS, type HomepageBlockSlotTyped } from '../constants'
-
-function fallbackInRange(min: number, max: number): number {
-  if (min === max) return min
-  return Math.min(Math.max(4, min), max)
-}
+import { curatedBlockRegistry } from '../../block-registry'
 
 /**
  * Returns the effective slot count for a block type. Clamps stored values to that type’s limits
@@ -15,8 +10,8 @@ export function resolveStoredSlotCountForBlockType(
   blockType: string,
   storedSlotCount: unknown,
 ): number {
-  const limits = HOMEPAGE_BLOCK_SLOT_LIMITS[blockType as HomepageBlockSlotTyped]
-  if (!limits) {
+  const definition = curatedBlockRegistry.get(blockType)
+  if (!definition) {
     const n =
       typeof storedSlotCount === 'number' && Number.isFinite(storedSlotCount)
         ? Math.trunc(storedSlotCount)
@@ -24,7 +19,13 @@ export function resolveStoredSlotCountForBlockType(
     return Math.max(1, n)
   }
 
-  const { min, max } = limits
+  const {
+    min,
+    max,
+    default: defaultSlotCount,
+    validCounts,
+    invalidFallback,
+  } = definition.slotCounts
   if (min === max) return min
 
   const raw =
@@ -33,40 +34,34 @@ export function resolveStoredSlotCountForBlockType(
       : null
 
   if (raw === null) {
-    return fallbackInRange(min, max)
+    return defaultSlotCount
   }
 
-  if (blockType === 'article-grid') {
-    return raw === 8 ? 8 : 4
+  if (validCounts) {
+    if (validCounts.includes(raw)) return raw
+    if (invalidFallback === 'default') return defaultSlotCount
+    if (raw < min) return min
+    if (raw > max) return max
+    const previous = [...validCounts].reverse().find((count) => count <= raw)
+    return previous ?? defaultSlotCount
   }
 
-  const clamped = Math.min(Math.max(raw, min), max)
-
-  // Featured Articles has no 6-slot layout; snap a stored 6 down to 5.
-  if (blockType === 'featured-articles' && clamped === 6) {
-    return 5
-  }
-
-  return clamped
+  return Math.min(Math.max(raw, min), max)
 }
 
 /** Slot count accepted by POST /blocks when adding a block (strict for article-grid: 4 or 8 only). */
 export function isValidRequestedSlotCount(blockType: string, n: number): boolean {
-  const limits = HOMEPAGE_BLOCK_SLOT_LIMITS[blockType as HomepageBlockSlotTyped]
-  if (!limits) return Number.isInteger(n) && n >= 1
+  const definition = curatedBlockRegistry.get(blockType)
+  if (!definition) return Number.isInteger(n) && n >= 1
 
-  if (blockType === 'article-grid') {
-    return n === 4 || n === 8
+  const { min, max, validCounts } = definition.slotCounts
+  if (validCounts) {
+    return validCounts.includes(n)
   }
 
-  // Featured Articles has no 6-slot layout, so 6 is not an accepted count.
-  if (blockType === 'featured-articles' && n === 6) {
-    return false
+  if (min === max) {
+    return n === min
   }
 
-  if (limits.min === limits.max) {
-    return n === limits.min
-  }
-
-  return n >= limits.min && n <= limits.max
+  return n >= min && n <= max
 }
