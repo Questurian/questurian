@@ -1,12 +1,13 @@
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { getVisitorAuthMethods } from './account-query'
+import type { AuthProvider } from './account-query'
 import { visitorAuth } from './better-auth'
 import { deriveStaffMembership, deriveVisitorMembership } from './membership-entitlement'
 import type { MembershipSource } from './membership-entitlement'
 import { ensureVisitorProfileForAuthUser, findVisitorProfileByAuthUserId } from './visitor-profile'
 
-type AuthProvider = 'local' | 'google' | 'dual' | 'unknown'
 type StaffRole = 'admin' | 'editor' | 'writer'
 
 export type VisitorPrincipal = {
@@ -60,38 +61,6 @@ function unauthenticated<T extends CurrentPrincipal>(): PrincipalResult<T> {
   return {
     authenticated: false,
     principal: null,
-  }
-}
-
-async function getVisitorAuthMethods(headers: Headers): Promise<{
-  hasLocalPassword: boolean
-  hasGoogleOAuth: boolean
-  authProvider: AuthProvider
-}> {
-  try {
-    const accounts = await visitorAuth.api.listUserAccounts({ headers })
-    const hasLocalPassword = accounts.some((account) => account.providerId === 'credential')
-    const hasGoogleOAuth = accounts.some((account) => account.providerId === 'google')
-
-    return {
-      hasLocalPassword,
-      hasGoogleOAuth,
-      authProvider:
-        hasLocalPassword && hasGoogleOAuth
-          ? 'dual'
-          : hasLocalPassword
-            ? 'local'
-            : hasGoogleOAuth
-              ? 'google'
-              : 'unknown',
-    }
-  } catch (error) {
-    console.error('Failed to resolve Visitor auth methods:', error)
-    return {
-      hasLocalPassword: false,
-      hasGoogleOAuth: false,
-      authProvider: 'unknown',
-    }
   }
 }
 
