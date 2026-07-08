@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any, Literal
+
+from utils import parse_json_response
 
 from .angle_assignment import ListicleAngle
 
@@ -48,13 +49,13 @@ STANDARD_RESEARCH_BUCKETS: tuple[ResearchBucketName, ...] = (
 
 CATEGORY_BUCKET_PRIORITIES: dict[str, tuple[ResearchBucketName, ...]] = {
     "dining": (
-        "specific-offerings",        # signature-dish
-        "experience-texture",        # atmosphere
-        "history-or-ownership",      # founders-backstory
-        "standout-hook",             # insider-tip + whats-different
-        "best-for",                  # best-for
-        "social-proof",              # cross-angle reputation evidence
-        "caveats-or-fit-warnings",   # cross-angle restraint
+        "specific-offerings",  # signature-dish
+        "experience-texture",  # atmosphere
+        "history-or-ownership",  # founders-backstory
+        "standout-hook",  # insider-tip + whats-different
+        "best-for",  # best-for
+        "social-proof",  # cross-angle reputation evidence
+        "caveats-or-fit-warnings",  # cross-angle restraint
     ),
     "nightlife": (
         "experience-texture",
@@ -120,7 +121,11 @@ class ResearchProfile:
         merged: list[str] = []
         seen: set[str] = set()
         groups = [self.selected_angle.citations]
-        groups.extend(finding.citations for findings in self.standard_buckets.values() for finding in findings)
+        groups.extend(
+            finding.citations
+            for findings in self.standard_buckets.values()
+            for finding in findings
+        )
         for group in groups:
             for url in group:
                 if url in seen:
@@ -210,8 +215,6 @@ def _invoke_grounded(*args: Any, **kwargs: Any) -> Any:
     return _invoke(*args, **kwargs)
 
 
-_JSON_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.S | re.I)
-
 # Grounded models sometimes drop prose, sentence fragments, or empty strings
 # into the citations array. We only trust entries that look like URLs.
 _URL_RE = re.compile(r"^https?://\S+$", re.I)
@@ -246,20 +249,9 @@ def _clean_summary(raw: Any) -> str:
 
 
 def _extract_json(text: str) -> Any:
-    candidate = text.strip()
-    fenced = _JSON_FENCE_RE.match(candidate)
-    if fenced:
-        candidate = fenced.group(1).strip()
     try:
-        return json.loads(candidate)
-    except (ValueError, TypeError):
-        start = candidate.find("{")
-        end = candidate.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            try:
-                return json.loads(candidate[start : end + 1])
-            except (ValueError, TypeError):
-                return None
+        return parse_json_response(text)
+    except (RuntimeError, TypeError):
         return None
 
 
@@ -301,7 +293,9 @@ def _parse_research_profile_response(
     parsed = _extract_json(raw_text)
     if not isinstance(parsed, dict):
         return (
-            _fallback_profile(requested_angle, warning="Research Profile response was not JSON."),
+            _fallback_profile(
+                requested_angle, warning="Research Profile response was not JSON."
+            ),
             "response was not a JSON object",
         )
 
@@ -329,7 +323,9 @@ def _parse_research_profile_response(
             summary = ""
             citations = []
         elif status == "supported" and (not summary or not citations):
-            drop_reasons.append("selected_angle supported without summary/citations; downgraded to unsupported")
+            drop_reasons.append(
+                "selected_angle supported without summary/citations; downgraded to unsupported"
+            )
             status = "unsupported"
             summary = ""
             citations = []
@@ -367,26 +363,36 @@ def _parse_research_profile_response(
                     drop_reasons.append(f"{bucket_name}: empty summary")
                     continue
                 if not citations:
-                    drop_reasons.append(f"{bucket_name}: uncited finding dropped (no valid URL citations)")
+                    drop_reasons.append(
+                        f"{bucket_name}: uncited finding dropped (no valid URL citations)"
+                    )
                     continue
-                cleaned.append(ResearchFinding(
-                    summary=summary,
-                    citations=citations,
-                ))
+                cleaned.append(
+                    ResearchFinding(
+                        summary=summary,
+                        citations=citations,
+                    )
+                )
             buckets[bucket_name] = cleaned  # type: ignore[index]
     elif raw_buckets is not None:
         drop_reasons.append("standard_buckets was not an object")
 
-    warnings = [
-        warning.strip()
-        for warning in parsed.get("warnings", [])
-        if isinstance(warning, str) and warning.strip()
-    ] if isinstance(parsed.get("warnings"), list) else []
+    warnings = (
+        [
+            warning.strip()
+            for warning in parsed.get("warnings", [])
+            if isinstance(warning, str) and warning.strip()
+        ]
+        if isinstance(parsed.get("warnings"), list)
+        else []
+    )
 
     if requested_angle and selected.status != "supported":
         warnings.append(f'Selected angle "{requested_angle}" lacked cited support.')
 
-    usable_for_blurb = selected.status == "supported" or _has_usable_bucket_evidence(buckets)
+    usable_for_blurb = selected.status == "supported" or _has_usable_bucket_evidence(
+        buckets
+    )
     return (
         ResearchProfile(
             selected_angle=selected,
@@ -421,9 +427,13 @@ def run_research_profile(
             temperature=0.1,
         )
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Research Profile grounded call failed for venue %r", venue_name)
+        logger.exception(
+            "Research Profile grounded call failed for venue %r", venue_name
+        )
         return (
-            _fallback_profile(requested_angle, warning="Research Profile grounded call failed."),
+            _fallback_profile(
+                requested_angle, warning="Research Profile grounded call failed."
+            ),
             ResearchProfileTrace(
                 prompt=prompt,
                 model=grounded_model,
@@ -432,10 +442,16 @@ def run_research_profile(
         )
 
     raw_text = getattr(result, "text", "") if result is not None else ""
-    model_used = getattr(result, "model_name", grounded_model) if result is not None else grounded_model
+    model_used = (
+        getattr(result, "model_name", grounded_model)
+        if result is not None
+        else grounded_model
+    )
     if not raw_text.strip():
         return (
-            _fallback_profile(requested_angle, warning="Research Profile returned empty text."),
+            _fallback_profile(
+                requested_angle, warning="Research Profile returned empty text."
+            ),
             ResearchProfileTrace(
                 prompt=prompt,
                 raw_response=raw_text,

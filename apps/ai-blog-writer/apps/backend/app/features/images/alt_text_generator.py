@@ -2,43 +2,20 @@
 
 import asyncio
 import logging
-import os
 from functools import partial
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+from utils import invoke_vertex_multimodal_text, vertex_part_from_data
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
-DEFAULT_LOCATION = "us-central1"
-
-_initialized = False
 
 
-def _ensure_initialized():
-    """Initialize Vertex AI SDK once."""
-    global _initialized
-    if _initialized:
-        return
-
-    project = os.getenv("GOOGLE_CLOUD_PROJECT")
-    if not project:
-        raise RuntimeError(
-            "GOOGLE_CLOUD_PROJECT environment variable is required."
-        )
-
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_LOCATION)
-    vertexai.init(project=project, location=location)
-    _initialized = True
-
-
-def _generate_sync(image_bytes: bytes, content_type: str, narrative_focus: str | None) -> str:
+def _generate_sync(
+    image_bytes: bytes, content_type: str, narrative_focus: str | None
+) -> str:
     """Blocking Vertex AI call — runs in a thread pool to avoid blocking the event loop."""
-    _ensure_initialized()
-
-    model = GenerativeModel(DEFAULT_MODEL)
-    image_part = Part.from_data(data=image_bytes, mime_type=content_type)
+    image_part = vertex_part_from_data(data=image_bytes, mime_type=content_type)
 
     prompt = (
         "You are an accessibility expert writing HTML alt text.\n\n"
@@ -61,8 +38,14 @@ def _generate_sync(image_bytes: bytes, content_type: str, narrative_focus: str |
         )
 
     logger.info("Generating alt text with %s", DEFAULT_MODEL)
-    response = model.generate_content([image_part, prompt])
-    alt_text = response.text.strip().strip('"').strip("'")
+    alt_text = (
+        invoke_vertex_multimodal_text(
+            [image_part, prompt],
+            model_name=DEFAULT_MODEL,
+        )
+        .strip('"')
+        .strip("'")
+    )
     logger.info("Generated alt text: %s", alt_text)
     return alt_text
 
@@ -78,6 +61,8 @@ async def generate_alt_text(
     """
     loop = asyncio.get_running_loop()
     return await asyncio.wait_for(
-        loop.run_in_executor(None, partial(_generate_sync, image_bytes, content_type, narrative_focus)),
+        loop.run_in_executor(
+            None, partial(_generate_sync, image_bytes, content_type, narrative_focus)
+        ),
         timeout=20.0,
     )

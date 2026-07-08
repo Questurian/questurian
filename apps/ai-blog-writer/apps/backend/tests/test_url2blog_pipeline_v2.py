@@ -1,15 +1,7 @@
-import sys
-import types
-
 import pytest
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-
-# Avoid importing heavyweight external LLM clients during route-module import.
-utils_stub = types.ModuleType("utils")
-utils_stub.get_vertex_llm = lambda *args, **kwargs: None
-sys.modules.setdefault("utils", utils_stub)
 
 import app.features.url2blog.routes as url2blog_routes  # noqa: E402
 
@@ -193,7 +185,9 @@ def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypat
                     "improved_title": "Improved comparison headline v2",
                     "improved_content": "Improved body v2 with stronger originality.",
                     "guideline_alignment_summary": "Forced second pass improved originality.",
-                    "improvements_applied": ["Restructured flow for stronger originality."],
+                    "improvements_applied": [
+                        "Restructured flow for stronger originality."
+                    ],
                     "remaining_gaps": [],
                 },
                 '{"improved_title":"Improved comparison headline v2"}',
@@ -317,14 +311,33 @@ def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypat
     assert payload["pipeline_status"] == "ready_for_drafting"
     assert payload["improved_article"]["title"] == "Improved comparison headline"
     assert "clearer structure" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-START|in_the_know_box]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-LABEL|In The Know]" in payload["improved_article"]["content"]
+    assert (
+        "[!EDITORIAL-BLOCK-START|in_the_know_box]"
+        in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BLOCK-LABEL|In The Know]" in payload["improved_article"]["content"]
+    )
     assert "[!EDITORIAL-BOX|in_the_know_box]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-END|in_the_know_box]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-START|key_takeaways_box]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-LABEL|Key Takeaways]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BOX|key_takeaways_box]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-END|key_takeaways_box]" in payload["improved_article"]["content"]
+    assert (
+        "[!EDITORIAL-BLOCK-END|in_the_know_box]"
+        in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BLOCK-START|key_takeaways_box]"
+        in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BLOCK-LABEL|Key Takeaways]"
+        in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BOX|key_takeaways_box]" in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BLOCK-END|key_takeaways_box]"
+        in payload["improved_article"]["content"]
+    )
     assert "**In the know:**" in payload["improved_article"]["content"]
     assert "## Key Takeaways" in payload["improved_article"]["content"]
     assert "## " in payload["improved_article"]["content"]
@@ -872,10 +885,21 @@ def test_pipeline_v2_includes_debug_payload_only_when_requested(client, monkeypa
     assert payload["guideline_review"]["editorial_components_added"] == [
         "highlight_callout"
     ]
-    assert "[!EDITORIAL-BLOCK-START|highlight_callout]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-LABEL|Highlight Callout]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BOX|highlight_callout]" in payload["improved_article"]["content"]
-    assert "[!EDITORIAL-BLOCK-END|highlight_callout]" in payload["improved_article"]["content"]
+    assert (
+        "[!EDITORIAL-BLOCK-START|highlight_callout]"
+        in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BLOCK-LABEL|Highlight Callout]"
+        in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BOX|highlight_callout]" in payload["improved_article"]["content"]
+    )
+    assert (
+        "[!EDITORIAL-BLOCK-END|highlight_callout]"
+        in payload["improved_article"]["content"]
+    )
     assert "editorial_augmentation_raw_response" in payload["debug"]
     assert payload["debug"]["editorial_components_added"][0]["component"] == (
         "highlight_callout"
@@ -1230,8 +1254,12 @@ def test_editorial_augmentation_adds_official_label_inside_existing_block():
         fallback_content="## Overview\n\nFallback body.",
     )
 
-    assert "[!EDITORIAL-BLOCK-START|highlight_callout]" in sanitized["augmented_content"]
-    assert "[!EDITORIAL-BLOCK-LABEL|Highlight Callout]" in sanitized["augmented_content"]
+    assert (
+        "[!EDITORIAL-BLOCK-START|highlight_callout]" in sanitized["augmented_content"]
+    )
+    assert (
+        "[!EDITORIAL-BLOCK-LABEL|Highlight Callout]" in sanitized["augmented_content"]
+    )
     assert "[!EDITORIAL-BOX|highlight_callout]" in sanitized["augmented_content"]
     assert "**Component:** Highlight Callout" in sanitized["augmented_content"]
     assert "[!EDITORIAL-BLOCK-END|highlight_callout]" in sanitized["augmented_content"]
@@ -1258,7 +1286,9 @@ def test_invoke_json_llm_tracks_parse_recovery_when_truncated_repair_is_disabled
     )
 
     class StubLLM:
-        def invoke(self, prompt: str) -> str:  # noqa: ARG002 - prompt asserted by caller
+        def invoke(
+            self, prompt: str
+        ) -> str:  # noqa: ARG002 - prompt asserted by caller
             return next(responses)
 
     monkeypatch.setattr(
@@ -1311,7 +1341,9 @@ def test_invoke_json_llm_can_disable_truncated_repair(monkeypatch):
     )
 
     class StubLLM:
-        def invoke(self, prompt: str) -> str:  # noqa: ARG002 - prompt asserted by caller
+        def invoke(
+            self, prompt: str
+        ) -> str:  # noqa: ARG002 - prompt asserted by caller
             return next(responses)
 
     monkeypatch.setattr(
@@ -1373,9 +1405,9 @@ def test_editorial_augmentation_does_not_shorten_article_body():
         fallback_content=fallback_content,
     )
 
-    assert len(url2blog_routes._tokenize_similarity_words(sanitized["augmented_content"])) >= len(
-        url2blog_routes._tokenize_similarity_words(fallback_content)
-    )
+    assert len(
+        url2blog_routes._tokenize_similarity_words(sanitized["augmented_content"])
+    ) >= len(url2blog_routes._tokenize_similarity_words(fallback_content))
     assert "[!EDITORIAL-BLOCK-START|faq_block]" in sanitized["augmented_content"]
 
 
@@ -1383,10 +1415,26 @@ def test_sanitize_v2_editorial_blueprint_limits_components_and_defaults():
     parsed = {
         "apply_plan": True,
         "components": [
-            {"component": "faq", "placement": "Near end", "objective": "Answer common questions."},
-            {"component": "pull_quote", "placement": "After overview", "objective": "Emphasize a key line."},
-            {"component": "highlight", "placement": "Midpoint", "objective": "Break dense pacing."},
-            {"component": "key_takeaways_box", "placement": "End", "objective": "Summarize points."},
+            {
+                "component": "faq",
+                "placement": "Near end",
+                "objective": "Answer common questions.",
+            },
+            {
+                "component": "pull_quote",
+                "placement": "After overview",
+                "objective": "Emphasize a key line.",
+            },
+            {
+                "component": "highlight",
+                "placement": "Midpoint",
+                "objective": "Break dense pacing.",
+            },
+            {
+                "component": "key_takeaways_box",
+                "placement": "End",
+                "objective": "Summarize points.",
+            },
         ],
         "drafting_directives": [],
         "guardrails": [],
@@ -1395,7 +1443,10 @@ def test_sanitize_v2_editorial_blueprint_limits_components_and_defaults():
     blueprint = url2blog_routes._sanitize_v2_editorial_blueprint(parsed)
 
     assert blueprint["apply_plan"] is True
-    assert len(blueprint["components"]) == url2blog_routes.URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS
+    assert (
+        len(blueprint["components"])
+        == url2blog_routes.URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS
+    )
     assert blueprint["components"][0]["component"] == "faq_block"
     assert blueprint["components"][1]["component"] == "pull_quote"
     assert blueprint["drafting_directives"]

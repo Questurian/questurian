@@ -4,7 +4,7 @@
 
 Cross-feature Python helpers used by the backend's feature modules:
 
-- Vertex AI LLM client factory and presets.
+- Vertex AI text and multimodal client factories.
 - JSON parsing and structure validation for LLM output.
 - Google grounded generation.
 - CSV loading utility.
@@ -18,7 +18,7 @@ Cross-feature Python helpers used by the backend's feature modules:
 
 ## Purpose
 
-Without this package every feature would re-create the Vertex client and re-implement "extract JSON from noisy LLM output". Centralising means presets, retries, and grounding policy can be tuned once.
+Without this package every feature would re-create Vertex clients and re-implement "extract JSON from noisy LLM output". Centralising means model defaults, retries, parsing, and grounding policy can be tuned once.
 
 ## Tech Stack
 
@@ -30,11 +30,11 @@ Without this package every feature would re-create the Vertex client and re-impl
 
 ### `get_vertex_llm()`
 
-Factory that returns a configured Vertex AI client. Accepts a preset name.
+Factory that returns a configured text LLM client. Gemini models use Vertex AI; Claude models route to Anthropic through the same `.invoke(prompt)` surface.
 
-### `LLMPresets`
+### `invoke_vertex_multimodal_text(parts)`
 
-Enum of named configurations. Each preset bundles temperature, max output tokens, model name. Intents include `compose`, `classify`, `repair`, `augment`.
+Factory-backed Gemini multimodal call for image/text parts. Feature code builds parts with `vertex_part_from_data` and never imports Vertex SDKs directly.
 
 ### `parse_json_response(text)`
 
@@ -67,7 +67,7 @@ CSV → `list[dict]`.
 
 ## Domain Rules
 
-- All Vertex AI calls in the backend **must** route through `get_vertex_llm()`. Features may not instantiate Vertex clients directly.
+- All Vertex AI calls in the backend **must** route through `packages/utils` helpers. Features may not instantiate Vertex clients directly.
 - `parse_json_response` is the canonical entry point for parsing LLM JSON; ad-hoc regex parsing in feature code is a bug.
 - Grounded calls log citations; do not strip them downstream.
 
@@ -84,11 +84,10 @@ CSV → `list[dict]`.
 ## AI Guidance
 
 - **Inspect first:** the function you're touching plus its consumers in `apps/backend/app/features/`.
-- **Preserve verbatim:** `get_vertex_llm`, `LLMPresets`, `parse_json_response`, `invoke_google_grounded_text`, `GroundedGenerationResult`.
+- **Preserve verbatim:** `get_vertex_llm`, `invoke_vertex_multimodal_text`, `vertex_part_from_data`, `parse_json_response`, `invoke_google_grounded_text`, `GroundedGenerationResult`.
 - **Do not** add domain logic here. Anything that knows what an "article" or "run" is is wrong-package.
 - **Ask before** swapping the Vertex SDK or model defaults — every feature depends on these presets.
 
 ## Open Questions
 
-- Are `LLMPresets` documented anywhere else? Their parameters drift silently from the prompt expectations.
 - Should grounded generation be a separate utility package, given that it's used only by a couple of features?

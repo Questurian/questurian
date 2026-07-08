@@ -1,9 +1,12 @@
 """
 Robust JSON parsing utilities for LLM responses.
 
-LLMs often return JSON wrapped in markdown code blocks or with
-truncation issues. This module provides utilities to handle these cases.
+LLMs often return JSON wrapped in markdown, with prose around it, or with
+minor truncation defects. This module is the canonical parser for those cases.
 """
+
+from __future__ import annotations
+
 import json
 import logging
 import re
@@ -16,149 +19,260 @@ def parse_json_response(
     response: str,
     raise_on_error: bool = True,
     default: Optional[Dict[str, Any]] = None,
+    *,
+    allow_repair: bool = True,
 ) -> Dict[str, Any]:
     """
     Parse JSON from an LLM response with multiple fallback strategies.
 
-    Handles:
-    1. Complete markdown code blocks (```json ... ```)
-    2. Truncated markdown blocks (```json ... without closing ```)
-    3. Raw JSON objects in text
-    4. Truncated JSON (missing closing braces/quotes)
-
-    Args:
-        response: Raw LLM response text
-        raise_on_error: If True, raises RuntimeError on parse failure.
-                       If False, returns default value.
-        default: Default value to return if parsing fails and raise_on_error=False
-
-    Returns:
-        Parsed JSON as a dictionary
-
-    Raises:
-        RuntimeError: If JSON parsing fails and raise_on_error=True
+    Handles complete/truncated markdown fences, prose preambles, first balanced
+    JSON objects, and common malformed output such as raw newlines in strings,
+    unescaped quotes, dangling commas, and missing closing brackets.
     """
     if not response or not response.strip():
         if raise_on_error:
             raise RuntimeError("Cannot parse JSON from empty response")
         return default or {}
 
-    result_text = response.strip()
-    original_text = result_text  # Keep original for error messages
+    original_text = response.strip()
+    candidates = _json_candidates(original_text)
 
-    # Strategy 1: Extract from complete markdown code block
-    json_match = re.search(r"```(?:json)?\s*(.*?)\s*```", result_text, re.DOTALL)
-    if json_match:
-        result_text = json_match.group(1).strip()
-        logger.debug("Extracted JSON from complete markdown code block")
-    else:
-        # Strategy 2: Handle truncated markdown block (no closing ```)
-        truncated_match = re.search(r"```(?:json)?\s*(\{.*)", result_text, re.DOTALL)
-        if truncated_match:
-            result_text = truncated_match.group(1).strip()
-            logger.debug("Extracted JSON from truncated markdown block")
-        # Strategy 3: Find raw JSON object
-        elif not result_text.startswith("{"):
-            json_obj_match = re.search(r"\{.*", result_text, re.DOTALL)
-            if json_obj_match:
-                result_text = json_obj_match.group(0).strip()
-                logger.debug("Extracted JSON object from response")
+    first_error: json.JSONDecodeError | None = None
+    for candidate in candidates:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            first_error = first_error or exc
 
-    # Validate we have something that looks like JSON
-    if not result_text or not result_text.startswith("{"):
+    if allow_repair:
+        for candidate in candidates:
+            fixed_result = try_repair_json_object(candidate)
+            if fixed_result is not None:
+                return fixed_result
+
+    if first_error is None:
         error_msg = f"No JSON found in LLM response: {original_text[:300]}..."
-        if raise_on_error:
-            raise RuntimeError(error_msg)
-        logger.warning(error_msg)
-        return default or {}
+    else:
+        error_msg = (
+            f"JSON parse failed: {first_error}. " f"Response: {original_text[:300]}..."
+        )
 
-    # Try direct parsing
-    try:
-        return json.loads(result_text)
-    except json.JSONDecodeError as e:
-        logger.debug(f"Initial JSON parse failed: {e}")
-
-        # Strategy 4: Repair common LLM defects — trailing commas, unterminated
-        # strings, and truncated arrays/objects (missing closing brackets).
-        fixed_result = _repair_json(result_text)
-        if fixed_result is not None:
-            return fixed_result
-
-        # All strategies failed
-        error_msg = f"JSON parse failed: {e}. Response: {result_text[:300]}..."
-        if raise_on_error:
-            raise RuntimeError(error_msg) from e
-        logger.warning(error_msg)
-        return default or {}
+    if raise_on_error:
+        raise RuntimeError(error_msg) from first_error
+    logger.warning(error_msg)
+    return default or {}
 
 
-def _repair_json(text: str) -> Optional[Dict[str, Any]]:
-    """
-    Repair JSON that LLMs commonly emit malformed.
+def _json_candidates(text: str) -> list[str]:
+    cleaned_text = text.strip().lstrip("\ufeff")
+    if not cleaned_text:
+        return []
 
-    Handles, in a single string-aware pass:
-    - trailing commas before ``}`` / ``]`` (the usual cause of
-      "Expecting property name enclosed in double quotes")
-    - a response truncated mid-string (closes the open quote)
-    - a response truncated before its closing brackets (appends ``]``/``}``
-      in the correct nesting order, tracking both arrays and objects)
+    candidates: list[str] = []
 
-    Args:
-        text: Potentially malformed JSON string
+    # Fenced JSON can be complete or missing a closing fence.
+    if cleaned_text.startswith("```"):
+        unfenced = re.sub(
+            r"^```(?:json)?\s*",
+            "",
+            cleaned_text,
+            flags=re.IGNORECASE,
+        ).strip()
+        unfenced = re.sub(r"\s*```$", "", unfenced).strip()
+        if unfenced:
+            candidates.append(unfenced)
 
-    Returns:
-        Parsed JSON dict if repair succeeded, None otherwise
-    """
-    stack: list[str] = []  # open containers, e.g. ['{', '[', '{']
+    fence_match = re.search(
+        r"```(?:json)?\s*(.*?)(?:\s*```|\s*$)",
+        cleaned_text,
+        re.DOTALL | re.IGNORECASE,
+    )
+    if fence_match:
+        fenced = fence_match.group(1).strip()
+        if fenced:
+            candidates.append(fenced)
+
+    candidates.append(cleaned_text)
+
+    first_last = _first_to_last_brace(cleaned_text)
+    if first_last:
+        candidates.append(first_last)
+
+    first_balanced = extract_first_json_object(cleaned_text)
+    if first_balanced:
+        candidates.append(first_balanced)
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        if candidate and candidate not in seen:
+            deduped.append(candidate)
+            seen.add(candidate)
+    return deduped
+
+
+def _first_to_last_brace(text: str) -> str | None:
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return None
+    return text[start : end + 1].strip()
+
+
+def extract_first_json_object(text: str) -> str | None:
+    """Extract the first balanced JSON object substring from text."""
+    start = text.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
     in_string = False
     escaped = False
 
-    for ch in text:
+    for idx in range(start, len(text)):
+        char = text[idx]
+
         if in_string:
             if escaped:
                 escaped = False
-            elif ch == "\\":
+            elif char == "\\":
                 escaped = True
-            elif ch == '"':
+            elif char == '"':
                 in_string = False
             continue
 
-        if ch == '"':
+        if char == '"':
             in_string = True
-        elif ch in "{[":
-            stack.append(ch)
-        elif ch in "}]" and stack:
-            stack.pop()
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start : idx + 1]
 
-    fixed = text.rstrip()
+    return None
 
-    # Close a string left open by truncation (e.g. ``"fit_note": "High-end``).
+
+def try_repair_json_object(text: str) -> Dict[str, Any] | None:
+    """
+    Repair JSON that LLMs commonly emit malformed.
+
+    Handles trailing commas, raw control characters inside strings, a response
+    truncated mid-string/container, and likely unescaped quote characters inside
+    string values.
+    """
+    candidate = text.strip()
+    if not candidate:
+        return None
+
+    first_brace = candidate.find("{")
+    if first_brace == -1:
+        return None
+    candidate = candidate[first_brace:]
+
+    repaired_chars: list[str] = []
+    in_string = False
+    escaped = False
+    curly_depth = 0
+    square_depth = 0
+
+    for idx, char in enumerate(candidate):
+        if in_string:
+            if escaped:
+                repaired_chars.append(char)
+                escaped = False
+                continue
+
+            if char == "\\":
+                repaired_chars.append(char)
+                escaped = True
+                continue
+
+            if char == "\n":
+                repaired_chars.append("\\n")
+                continue
+            if char == "\r":
+                repaired_chars.append("\\r")
+                continue
+            if char == "\t":
+                repaired_chars.append("\\t")
+                continue
+
+            if char == '"':
+                lookahead = idx + 1
+                while lookahead < len(candidate) and candidate[lookahead].isspace():
+                    lookahead += 1
+                if lookahead < len(candidate) and candidate[lookahead] not in {
+                    ",",
+                    "}",
+                    "]",
+                    ":",
+                }:
+                    repaired_chars.append('\\"')
+                    continue
+                in_string = False
+                repaired_chars.append(char)
+                continue
+
+            repaired_chars.append(char)
+            continue
+
+        if char == '"':
+            in_string = True
+            repaired_chars.append(char)
+            continue
+
+        if char == "{":
+            curly_depth += 1
+            repaired_chars.append(char)
+            continue
+
+        if char == "}":
+            if curly_depth == 0:
+                continue
+            curly_depth -= 1
+            repaired_chars.append(char)
+            if curly_depth == 0 and square_depth == 0:
+                break
+            continue
+
+        if char == "[":
+            square_depth += 1
+            repaired_chars.append(char)
+            continue
+
+        if char == "]":
+            if square_depth == 0:
+                continue
+            square_depth -= 1
+            repaired_chars.append(char)
+            continue
+
+        repaired_chars.append(char)
+
+    candidate = "".join(repaired_chars)
+
     if in_string:
-        fixed += '"'
+        candidate += '"'
+    if square_depth > 0:
+        candidate += "]" * square_depth
+    if curly_depth > 0:
+        candidate += "}" * curly_depth
 
-    # Drop a dangling comma so the appended closer doesn't yield ``,}`` / ``,]``.
-    fixed = fixed.rstrip()
-    if fixed.endswith(","):
-        fixed = fixed[:-1].rstrip()
+    candidate = re.sub(r",\s*([}\]])", r"\1", candidate)
 
-    # Remove trailing commas that precede a closer anywhere in the body.
-    fixed = re.sub(r",(\s*[}\]])", r"\1", fixed)
-
-    # Append missing closers in reverse nesting order.
-    closers = {"{": "}", "[": "]"}
-    fixed += "".join(closers[ch] for ch in reversed(stack))
-
-    if fixed == text:
-        return None
-
-    logger.debug("Attempting to repair malformed JSON")
     try:
-        result = json.loads(fixed)
-        logger.debug("Successfully parsed repaired JSON")
-        return result
+        parsed = json.loads(candidate)
+        return parsed if isinstance(parsed, dict) else None
     except json.JSONDecodeError:
-        logger.debug("Failed to parse repaired JSON")
-        return None
+        fallback = extract_first_json_object(candidate)
+        if fallback:
+            try:
+                parsed = json.loads(fallback)
+                return parsed if isinstance(parsed, dict) else None
+            except json.JSONDecodeError:
+                return None
+    return None
 
 
 def extract_json_field(
@@ -170,14 +284,6 @@ def extract_json_field(
     Extract a specific field from a JSON response.
 
     Convenience function that combines parsing with field extraction.
-
-    Args:
-        response: Raw LLM response text
-        field: Field name to extract
-        default: Default value if field not found or parsing fails
-
-    Returns:
-        The field value or default
     """
     try:
         parsed = parse_json_response(response, raise_on_error=False, default={})
@@ -190,15 +296,6 @@ def validate_json_structure(
     data: Dict[str, Any],
     required_fields: list[str],
 ) -> tuple[bool, list[str]]:
-    """
-    Validate that a parsed JSON dict contains required fields.
-
-    Args:
-        data: Parsed JSON dictionary
-        required_fields: List of field names that must be present
-
-    Returns:
-        Tuple of (is_valid, missing_fields)
-    """
+    """Validate that a parsed JSON dict contains required fields."""
     missing = [field for field in required_fields if field not in data]
     return len(missing) == 0, missing

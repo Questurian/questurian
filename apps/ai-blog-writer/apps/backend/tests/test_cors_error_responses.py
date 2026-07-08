@@ -1,41 +1,37 @@
 import sys
 import types
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pytest
 import httpx
 
-# Avoid importing heavyweight external LLM clients during route-module import.
+from utils import parse_json_response as _canonical_parse_json_response
+
+
+# Keep route-module imports light for the full backend suite while preserving
+# the canonical JSON parser used by url2blog parser tests.
 utils_stub = types.ModuleType("utils")
+utils_stub.__path__ = [
+    str(Path(__file__).resolve().parents[3] / "packages" / "utils" / "src" / "utils")
+]
 
 
 class _StubPresetLLM:
+    model_name = "stub-model"
+
     def invoke(self, _prompt: str) -> str:
         return "{}"
 
 
-class _StubLLMPresets:
-    @staticmethod
-    def transcript_cleaning() -> _StubPresetLLM:
-        return _StubPresetLLM()
-
-    @staticmethod
-    def classification() -> _StubPresetLLM:
-        return _StubPresetLLM()
-
-    @staticmethod
-    def article_composition() -> _StubPresetLLM:
-        return _StubPresetLLM()
-
-    @staticmethod
-    def title_generation() -> _StubPresetLLM:
-        return _StubPresetLLM()
-
-
 utils_stub.get_vertex_llm = lambda *args, **kwargs: _StubPresetLLM()
-utils_stub.parse_json_response = lambda *_args, **_kwargs: {}
-utils_stub.LLMPresets = _StubLLMPresets
+utils_stub.parse_json_response = _canonical_parse_json_response
+utils_stub.invoke_google_grounded_text = lambda *args, **kwargs: None
+utils_stub.invoke_anthropic_structured_tool = lambda *args, **kwargs: ({}, "stub-model")
+utils_stub.get_vertex_generative_model = lambda *args, **kwargs: None
+utils_stub.vertex_part_from_data = lambda **kwargs: kwargs
+utils_stub.invoke_vertex_multimodal_text = lambda *args, **kwargs: "stub text"
 sys.modules["utils"] = utils_stub
 
 import app.features.youtube2blog.routes as youtube2blog_routes
@@ -58,8 +54,7 @@ def _build_cors_client(*, router) -> FastAPI:
 def _ensure_global_boom_route() -> str:
     path = "/__test__/global-error-boom"
     existing_paths = {
-        getattr(route, "path", "")
-        for route in main_module.app.router.routes
+        getattr(route, "path", "") for route in main_module.app.router.routes
     }
     if path in existing_paths:
         return path
@@ -77,7 +72,9 @@ async def test_global_unhandled_exception_returns_json_with_cors(monkeypatch):
     path = _ensure_global_boom_route()
 
     transport = httpx.ASGITransport(app=main_module.app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
         response = await client.get(path, headers={"Origin": "http://localhost:3003"})
 
     assert response.status_code == 500
@@ -94,7 +91,9 @@ async def test_global_unhandled_exception_can_expose_details_in_debug(monkeypatc
     path = _ensure_global_boom_route()
 
     transport = httpx.ASGITransport(app=main_module.app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
         response = await client.get(path, headers={"Origin": "http://localhost:3003"})
 
     assert response.status_code == 500
@@ -119,7 +118,9 @@ async def test_youtube_test_stage1_runtime_error_returns_502_with_cors(monkeypat
     )
 
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
         response = await client.post(
             "/youtube2blog/test-stage1",
             headers={"Origin": "http://localhost:3003"},
@@ -144,7 +145,9 @@ async def test_youtube_test_pipeline_runtime_error_returns_502_with_cors(monkeyp
     )
 
     transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as client:
         response = await client.post(
             "/youtube2blog/test",
             headers={"Origin": "http://localhost:3003"},

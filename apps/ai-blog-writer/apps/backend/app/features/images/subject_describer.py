@@ -2,39 +2,17 @@
 
 import asyncio
 import logging
-import os
 from functools import partial
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+from utils import invoke_vertex_multimodal_text, vertex_part_from_data
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "gemini-2.5-flash"
-DEFAULT_LOCATION = "us-central1"
-
-_initialized = False
-
-
-def _ensure_initialized():
-    global _initialized
-    if _initialized:
-        return
-
-    project = os.getenv("GOOGLE_CLOUD_PROJECT")
-    if not project:
-        raise RuntimeError("GOOGLE_CLOUD_PROJECT environment variable is required.")
-
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_LOCATION)
-    vertexai.init(project=project, location=location)
-    _initialized = True
 
 
 def _describe_sync(image_bytes: bytes, content_type: str) -> str:
-    _ensure_initialized()
-
-    model = GenerativeModel(DEFAULT_MODEL)
-    image_part = Part.from_data(data=image_bytes, mime_type=content_type)
+    image_part = vertex_part_from_data(data=image_bytes, mime_type=content_type)
 
     prompt = (
         "You are describing the main subject(s) of an image so that they can be "
@@ -56,8 +34,14 @@ def _describe_sync(image_bytes: bytes, content_type: str) -> str:
     )
 
     logger.info("Generating subject description with %s", DEFAULT_MODEL)
-    response = model.generate_content([image_part, prompt])
-    description = response.text.strip().strip('"').strip("'")
+    description = (
+        invoke_vertex_multimodal_text(
+            [image_part, prompt],
+            model_name=DEFAULT_MODEL,
+        )
+        .strip('"')
+        .strip("'")
+    )
     logger.info("Generated subject description (%d chars)", len(description))
     return description
 

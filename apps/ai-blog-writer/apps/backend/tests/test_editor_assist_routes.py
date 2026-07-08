@@ -649,10 +649,10 @@ def test_attractions_blurb_runs_lean_path(monkeypatch):
     ]
 
 
-# ---------- Intros bypass evidence research ----------
+# ---------- Intros bypass research profile ----------
 
 
-def test_intro_target_does_not_invoke_evidence_profile(monkeypatch):
+def test_intro_target_does_not_invoke_research_profile(monkeypatch):
     def _should_not_be_called(*a, **kw):
         raise AssertionError("evidence research must not run for intro targets")
 

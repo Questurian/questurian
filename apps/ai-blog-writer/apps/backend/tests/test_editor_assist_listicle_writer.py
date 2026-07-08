@@ -62,8 +62,8 @@ def test_build_writer_prompt_for_blurb_omits_article_context():
 
 
 def test_identity_only_writer_prompt_forbids_inferred_claims():
-    """Per ADR 0005, when Evidence Profile returns no validated targets, the
-    writer takes the identity-only path. The prompt must explicitly forbid
+    """When Research Profile has no usable evidence, writer takes the
+    identity-only path. The prompt must explicitly forbid
     invented vibe, signature anything, superlatives, and people/dates."""
     prompt = build_identity_only_writer_prompt(
         article_title="Best Bars in Lima",

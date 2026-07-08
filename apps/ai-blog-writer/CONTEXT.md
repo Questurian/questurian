@@ -321,7 +321,7 @@ Do not confuse with: the `tour-agency` stop (a manual, free-typed itinerary bloc
 - Stage outputs are append-only; once persisted, they are read-only.
 - An article cannot be synced to Payload from a Draft with `hasUnsyncedPayloadChanges = false` that has not been edited locally — that's a no-op, not an error.
 - `LocationDocumentsPage` must not send legacy `guide.*` fields. Current Payload Location sync is limited to supported top-level fields such as `coverImage`.
-- Vertex AI usage is centralized in `packages/utils.get_vertex_llm`; features should not instantiate clients directly.
+- Vertex AI usage is centralized in `packages/utils` helpers (`get_vertex_llm`, `invoke_vertex_multimodal_text`, and `invoke_google_grounded_text`); features should not instantiate clients directly.
 - **Listicle Angle is always operator-selected.** The pipeline has no auto-angle path; generation is blocked until the operator picks an angle from the category pool (ADR 0010). In itineraries this gating is per-stop and scoped to pooled categories: a stop whose category has a pool requires an angle before that stop is eligible for auto-write, while `key_location` and `tour-agency` stops (no pool) are always eligible; bulk "auto-write all" generates eligible stops and skips angle-less ones with a visible reason rather than hard-failing. Single-angle nightlife stops (ADR 0008) are force-resolved to `best-for-night`, so they are never blocked.
 - A user-selected **Listicle Angle** is authoritative research intent; if cited evidence cannot support it, the writer may fall back to **Research Bucket** evidence only and must mark the item low-confidence rather than invent angle support or silently switch angles.
 - **Research Profile** proves or rejects the selected angle while gathering standard **Research Buckets**; if selected-angle evidence is weak/unsupported, the writer falls back to Research Buckets as low-confidence, then identity-only low-confidence if buckets are also unusable.
@@ -337,7 +337,6 @@ Do not confuse with: the `tour-agency` stop (a manual, free-typed itinerary bloc
 - Stage classes: `Stage[N]Output`, `StageEditorialAugmentationOutput`.
 - Frontend feature pages: camelCase folder, `*Page` component (`Prompt2BlogPage`, `LocationDocumentsPage`).
 - REST routes: kebab-case feature path (`/youtube2blog`, `/url2blog`).
-- LLM presets: `LLMPresets.<intent>` (e.g. `compose`, `classify`).
 
 ## Decisions
 

@@ -2,32 +2,13 @@
 
 import asyncio
 import logging
-import os
 from functools import partial
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+from utils import invoke_vertex_multimodal_text, vertex_part_from_data
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "gemini-2.5-flash"
-DEFAULT_LOCATION = "us-central1"
-
-_initialized = False
-
-
-def _ensure_initialized():
-    global _initialized
-    if _initialized:
-        return
-
-    project = os.getenv("GOOGLE_CLOUD_PROJECT")
-    if not project:
-        raise RuntimeError("GOOGLE_CLOUD_PROJECT environment variable is required.")
-
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_LOCATION)
-    vertexai.init(project=project, location=location)
-    _initialized = True
 
 
 def _build_sync(
@@ -36,10 +17,7 @@ def _build_sync(
     scene_description: str,
     change_request: str,
 ) -> str:
-    _ensure_initialized()
-
-    model = GenerativeModel(DEFAULT_MODEL)
-    image_part = Part.from_data(data=image_bytes, mime_type=content_type)
+    image_part = vertex_part_from_data(data=image_bytes, mime_type=content_type)
 
     prompt = (
         "You are writing a prompt for an image-editing model. The user will paste your "
@@ -77,8 +55,14 @@ def _build_sync(
     )
 
     logger.info("Building edit prompt with %s", DEFAULT_MODEL)
-    response = model.generate_content([image_part, prompt])
-    edit_prompt = response.text.strip().strip('"').strip("'")
+    edit_prompt = (
+        invoke_vertex_multimodal_text(
+            [image_part, prompt],
+            model_name=DEFAULT_MODEL,
+        )
+        .strip('"')
+        .strip("'")
+    )
     logger.info("Built edit prompt (%d chars)", len(edit_prompt))
     return edit_prompt
 
@@ -94,7 +78,13 @@ async def build_edit_prompt(
     return await asyncio.wait_for(
         loop.run_in_executor(
             None,
-            partial(_build_sync, image_bytes, content_type, scene_description, change_request),
+            partial(
+                _build_sync,
+                image_bytes,
+                content_type,
+                scene_description,
+                change_request,
+            ),
         ),
         timeout=30.0,
     )

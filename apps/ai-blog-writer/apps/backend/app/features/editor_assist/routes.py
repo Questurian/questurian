@@ -240,7 +240,6 @@ class GenerateListicleContentRequest(BaseModel):
 
 StepEventName = Literal[
     "critical_fields_evaluated",
-    "evidence_profile_completed",
     "research_profile_completed",
     "writer_brief_completed",
     "writer_called",

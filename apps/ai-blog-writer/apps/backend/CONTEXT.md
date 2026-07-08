@@ -83,7 +83,7 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 
 ## Domain Rules
 
-- All Vertex AI calls go through `packages/utils.get_vertex_llm`. Features do not import `google-cloud-aiplatform` directly.
+- All Vertex AI calls go through `packages/utils` helpers such as `get_vertex_llm`, `invoke_vertex_multimodal_text`, and `invoke_google_grounded_text`. Features do not import Vertex SDKs directly.
 - `run_id` is generated server-side at run start; clients never invent one.
 - A Quality Gate failure must trigger at least one repair attempt before the run is marked `failed`.
 - StageResults are append-only.
@@ -104,7 +104,7 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 
 ## AI Guidance
 
-- **Inspect first:** the feature folder for the route you're touching (`app/features/<feature>/`), then `Stage*Output` in `packages/shared`, then `packages/utils.get_vertex_llm`.
+- **Inspect first:** the feature folder for the route you're touching (`app/features/<feature>/`), then `Stage*Output` in `packages/shared`, then `packages/utils`.
 - **Preserve verbatim:** `run_id`, `Stage[N]Output`, `Coverage Analysis`, `Quality Gate`, `Editorial Augmentation`, `Pipeline Route`.
 - **Do not** call Vertex directly — go through utils.
 - **Do not** add a new top-level Stage to the 0–4 chain without an ADR; it's a contract change for the frontend mirror.

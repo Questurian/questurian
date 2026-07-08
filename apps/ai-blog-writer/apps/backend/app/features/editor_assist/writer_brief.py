@@ -14,11 +14,11 @@ default) at low temperature.
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 from dataclasses import dataclass, field
 from typing import Any
+
+from utils import parse_json_response
 
 from .angle_assignment import ListicleAngle
 from .research_profile import ResearchProfile
@@ -156,8 +156,6 @@ ANGLE_DIRECTIVES_BY_CATEGORY: dict[str, dict[ListicleAngle, str]] = {
 MIN_SOURCE_FACTS = 2
 MAX_SOURCE_FACTS = 8
 
-_JSON_FENCE_RE = re.compile(r"^\s*```(?:json)?\s*(.*?)\s*```\s*$", re.S | re.I)
-
 
 @dataclass(frozen=True)
 class SourceFact:
@@ -190,9 +188,7 @@ def _format_research_profile_for_curator(profile: ResearchProfile) -> str:
     lines: list[str] = []
     selected = profile.selected_angle
     if selected.status == "supported" and selected.angle and selected.summary:
-        lines.append(
-            f"selected-angle ({selected.angle}): {selected.summary}"
-        )
+        lines.append(f"selected-angle ({selected.angle}): {selected.summary}")
     for bucket, findings in profile.standard_buckets.items():
         for finding in findings:
             lines.append(f"{bucket}: {finding.summary}")
@@ -255,20 +251,9 @@ def build_curator_prompt(
 
 
 def _extract_json(text: str) -> Any:
-    candidate = text.strip()
-    fenced = _JSON_FENCE_RE.match(candidate)
-    if fenced:
-        candidate = fenced.group(1).strip()
     try:
-        return json.loads(candidate)
-    except (ValueError, TypeError):
-        start = candidate.find("{")
-        end = candidate.rfind("}")
-        if start != -1 and end != -1 and end > start:
-            try:
-                return json.loads(candidate[start: end + 1])
-            except (ValueError, TypeError):
-                return None
+        return parse_json_response(text)
+    except (RuntimeError, TypeError):
         return None
 
 
@@ -413,7 +398,9 @@ def run_writer_brief(
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("Writer Brief curator call failed for venue %r", venue_name)
-        fallback_directive = _render_template_fallback(angle_directive_template, venue_name)
+        fallback_directive = _render_template_fallback(
+            angle_directive_template, venue_name
+        )
         return (
             WriterBrief(
                 angle_directive=fallback_directive,
@@ -429,7 +416,9 @@ def run_writer_brief(
         )
 
     if not raw_text.strip():
-        fallback_directive = _render_template_fallback(angle_directive_template, venue_name)
+        fallback_directive = _render_template_fallback(
+            angle_directive_template, venue_name
+        )
         return (
             WriterBrief(
                 angle_directive=fallback_directive,

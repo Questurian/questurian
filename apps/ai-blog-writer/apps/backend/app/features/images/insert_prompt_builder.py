@@ -2,32 +2,13 @@
 
 import asyncio
 import logging
-import os
 from functools import partial
 
-import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+from utils import invoke_vertex_multimodal_text, vertex_part_from_data
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "gemini-2.5-flash"
-DEFAULT_LOCATION = "us-central1"
-
-_initialized = False
-
-
-def _ensure_initialized():
-    global _initialized
-    if _initialized:
-        return
-
-    project = os.getenv("GOOGLE_CLOUD_PROJECT")
-    if not project:
-        raise RuntimeError("GOOGLE_CLOUD_PROJECT environment variable is required.")
-
-    location = os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_LOCATION)
-    vertexai.init(project=project, location=location)
-    _initialized = True
 
 
 def _build_sync(
@@ -37,17 +18,15 @@ def _build_sync(
     inserts: list[dict],
     change_request: str,
 ) -> str:
-    _ensure_initialized()
-
-    model = GenerativeModel(DEFAULT_MODEL)
-
-    parts: list = []
-    parts.append(Part.from_data(data=main_image_bytes, mime_type=main_content_type))
+    parts: list[object] = []
+    parts.append(
+        vertex_part_from_data(data=main_image_bytes, mime_type=main_content_type)
+    )
 
     inserts_block_lines: list[str] = []
     for index, insert in enumerate(inserts, start=1):
         parts.append(
-            Part.from_data(
+            vertex_part_from_data(
                 data=insert["image_bytes"], mime_type=insert["content_type"]
             )
         )
@@ -112,8 +91,14 @@ def _build_sync(
         DEFAULT_MODEL,
         len(inserts),
     )
-    response = model.generate_content(parts)
-    edit_prompt = response.text.strip().strip('"').strip("'")
+    edit_prompt = (
+        invoke_vertex_multimodal_text(
+            parts,
+            model_name=DEFAULT_MODEL,
+        )
+        .strip('"')
+        .strip("'")
+    )
     logger.info("Built insert prompt (%d chars)", len(edit_prompt))
     return edit_prompt
 
