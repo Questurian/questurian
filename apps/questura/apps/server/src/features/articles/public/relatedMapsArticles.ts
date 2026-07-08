@@ -1,9 +1,6 @@
 import type { Payload, Where } from 'payload'
 
-import {
-  resolveLegacyAssetForPlacement,
-  resolveMediaSetForPlacement,
-} from '@/features/media/lib/resolve-public-image'
+import { resolveArticleFeaturedImage } from './view-model'
 import {
   getLocationScope,
   normalizeLocationKey,
@@ -30,50 +27,13 @@ function idOrNull(value: unknown): string | number | null {
   return stringOrNull(value)
 }
 
-function formatFeaturedImage(value: unknown): RelatedMapsArticleTeaser['header'] {
-  if (!isRecord(value)) return null
-
-  const directMediaSet = isRecord(value.featuredMediaSet) ? value.featuredMediaSet : null
-  if (directMediaSet) {
-    const resolved = resolveMediaSetForPlacement(directMediaSet, 'card', {
-      allowMigrationFallback: true,
-    })
-    if (resolved.url) {
-      const altText = stringOrNull(resolved.alt)
-      return {
-        featuredImage: {
-          url: resolved.url,
-          ...(altText ? { alt_text: altText } : {}),
-        },
-      }
-    }
-  }
-
-  const image = isRecord(value.featuredImage) ? value.featuredImage : null
-  if (!image) return null
-
-  const assetMediaSet = isRecord(image.mediaSet) ? image.mediaSet : null
-  if (assetMediaSet) {
-    const resolved = resolveMediaSetForPlacement(assetMediaSet, 'card', {
-      allowMigrationFallback: true,
-    })
-    if (resolved.url) {
-      const altText = stringOrNull(resolved.alt)
-      return {
-        featuredImage: {
-          url: resolved.url,
-          ...(altText ? { alt_text: altText } : {}),
-        },
-      }
-    }
-  }
-
-  const legacy = resolveLegacyAssetForPlacement(image, 'card')
-  if (!legacy.url) return null
-  const altText = stringOrNull(legacy.alt) ?? stringOrNull(image.alt_text)
+function formatFeaturedImage(value: Record<string, unknown>): RelatedMapsArticleTeaser['header'] {
+  const image = resolveArticleFeaturedImage(value, { placement: 'card' })
+  if (!image.url) return null
+  const altText = stringOrNull(image.alt)
   return {
     featuredImage: {
-      url: legacy.url,
+      url: image.url,
       ...(altText ? { alt_text: altText } : {}),
     },
   }
@@ -96,7 +56,7 @@ function formatRelatedArticle(
     title,
     slug,
     routeType,
-    header: formatFeaturedImage(value.header),
+    header: formatFeaturedImage(value),
   }
 }
 

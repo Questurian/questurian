@@ -1,9 +1,5 @@
-import {
-  resolveLegacyAssetForPlacement,
-  resolveMediaSetForPlacement,
-  type MediaPlacement,
-  type PublicImage,
-} from '@/features/media/lib/resolve-public-image'
+import { resolveArticleFeaturedImage } from '@/features/articles/public/view-model'
+import type { MediaPlacement, PublicImage } from '@/features/media/lib/resolve-public-image'
 
 import { HOMEPAGE_FEATURED_COLLECTION_LABELS } from '../constants'
 import type {
@@ -86,44 +82,13 @@ function extractCategoryPreview(doc: PayloadDocLike): HomepageFeaturedCandidate[
   }
 }
 
-function getFeaturedHeaderSection(doc: PayloadDocLike): Record<string, unknown> | null {
-  // Articles use `headerSection`; listicles and itineraries use `header`
-  if (isRecord(doc.headerSection)) return doc.headerSection
-  if (isRecord(doc.header)) return doc.header
-  return null
-}
-
 function resolveFeaturedPlacement(
   doc: PayloadDocLike,
   placement: MediaPlacement,
   allowMigrationFallback = true,
 ): PublicImage | null {
-  const section = getFeaturedHeaderSection(doc)
-  if (!section) return null
-
-  const directMediaSet = isRecord(section.featuredMediaSet) ? section.featuredMediaSet : null
-  if (directMediaSet) {
-    const resolved = resolveMediaSetForPlacement(directMediaSet, placement, {
-      allowMigrationFallback,
-    })
-    if (resolved.url) return resolved
-  }
-
-  const featuredImage = isRecord(section.featuredImage) ? section.featuredImage : null
-  if (!featuredImage) return null
-
-  const assetMediaSet = isRecord(featuredImage.mediaSet) ? featuredImage.mediaSet : null
-  if (assetMediaSet) {
-    const resolved = resolveMediaSetForPlacement(assetMediaSet, placement, {
-      allowMigrationFallback,
-    })
-    if (resolved.url) return resolved
-  }
-
-  if (!allowMigrationFallback) return null
-
-  const legacy = resolveLegacyAssetForPlacement(featuredImage, placement)
-  return legacy.url ? legacy : null
+  const resolved = resolveArticleFeaturedImage(doc, { placement, allowMigrationFallback })
+  return resolved.url ? resolved : null
 }
 
 export function normalizeHomepageFeaturedCandidate(

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Ship Main"
+  short_description: "Commit, merge, push main safely"
+  default_prompt: "Use $ship-main to commit current changes, reconcile branches, and push latest main with a clean working tree."
+
+policy:
+  allow_implicit_invocation: false
