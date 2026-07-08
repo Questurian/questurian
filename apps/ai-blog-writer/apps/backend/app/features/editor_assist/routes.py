@@ -24,12 +24,19 @@ from .graph import (
 )
 from .angle_assignment import (
     ANTI_AI_PROMPT_CATEGORIES,
-    LEAN_PROMPT_CATEGORIES,
     ListicleAngle as AssignmentAngle,
+)
+from .blurb_composer import (
+    ListicleCompositionDeps,
+    ListicleCompositionResult,
+    ListicleCompositionSettings,
+    ListicleCompositionStep,
+    ListicleCompositionTarget,
+    ListicleCompositionWriterError,
+    compose_listicle_target,
 )
 from .critical_fields import CriticalFieldsResult, evaluate_critical_fields
 from .research_profile import (
-    ResearchFinding,
     ResearchProfile,
     ResearchProfileRequest,
     ResearchProfileTrace,
@@ -42,19 +49,10 @@ from .listicle_writer import (
     LISTICLE_ANGLE_GUIDANCE,
     ListicleArticleType,
     ListicleCategory,
-    ListicleWriterTarget,
-    build_identity_only_writer_prompt,
-    build_lean_writer_prompt,
-    build_retry_prompt,
-    build_writer_prompt,
     strip_generation_fence,
     validate_generated_text,
 )
-from .writer_brief import (
-    MIN_SOURCE_FACTS,
-    WriterBrief,
-    run_writer_brief,
-)
+from .writer_brief import run_writer_brief
 from .writer_models import (
     WriterModelError,
     invoke_anthropic_structured,
@@ -1230,70 +1228,10 @@ async def compose_itinerary_stop_reason(
         ) from exc
 
 
-def _merge_urls(*groups: list[str]) -> list[str]:
-    merged: list[str] = []
-    seen: set[str] = set()
-    for group in groups:
-        for url in group:
-            if url in seen:
-                continue
-            seen.add(url)
-            merged.append(url)
-    return merged
-
-
-def _format_research_profile_block(
-    profile: ResearchProfile | None,
-) -> str:
-    """Render supported angle evidence and bucket evidence for the writer."""
-    if profile is None:
-        return ""
-    lines: list[str] = ["RESEARCH PROFILE"]
-    selected = profile.selected_angle
-    if selected.status == "supported" and selected.angle and selected.summary:
-        lines.append("SELECTED ANGLE EVIDENCE")
-        lines.append(f"- {selected.angle} (effective angle): {selected.summary}")
-    bucket_lines: list[str] = []
-    for bucket, findings in profile.standard_buckets.items():
-        for finding in findings:
-            bucket_lines.append(f"- {bucket}: {finding.summary}")
-    if bucket_lines:
-        lines.append("STANDARD EVIDENCE BUCKETS")
-        lines.extend(bucket_lines)
-    return "\n".join(lines)
-
-
-def _research_buckets_details(
-    buckets: dict[str, list[ResearchFinding]],
-) -> dict[str, list[dict[str, Any]]]:
-    return {
-        bucket: [
-            {
-                "summary": finding.summary,
-                "citations": list(finding.citations),
-            }
-            for finding in findings
-        ]
-        for bucket, findings in buckets.items()
-    }
-
-
-def _to_listicle_writer_target(
+def _to_composition_target(
     request_target: GenerateListicleTargetRequest,
-    *,
-    extra_supporting_context: str = "",
-) -> ListicleWriterTarget:
-    base_context = request_target.supporting_context or ""
-    if extra_supporting_context:
-        supporting_context = (
-            f"{base_context}\n\n{extra_supporting_context}".strip()
-            if base_context.strip()
-            else extra_supporting_context
-        )
-    else:
-        supporting_context = base_context
-
-    return ListicleWriterTarget(
+) -> ListicleCompositionTarget:
+    return ListicleCompositionTarget(
         target_id=request_target.target_id,
         field_type=request_target.field_type,
         category=request_target.category,
@@ -1301,7 +1239,38 @@ def _to_listicle_writer_target(
         research_subject=request_target.research_subject,
         location_label=request_target.location_label,
         current_content=request_target.current_content or "",
-        supporting_context=supporting_context,
+        supporting_context=request_target.supporting_context,
+    )
+
+
+def _to_step_event(step: ListicleCompositionStep) -> StepEvent:
+    return StepEvent(
+        name=step.name,
+        status=step.status,
+        prompt=step.prompt,
+        output=step.output,
+        model=step.model,
+        details=step.details,
+        duration_ms=step.duration_ms,
+    )
+
+
+def _to_target_response(
+    result: ListicleCompositionResult,
+) -> GenerateListicleTargetResponse:
+    return GenerateListicleTargetResponse(
+        target_id=result.target_id,
+        status=result.status,
+        markdown=result.markdown,
+        model_used=result.model_used,
+        source_urls=result.source_urls,
+        validation_errors=result.validation_errors,
+        error_message=result.error_message,
+        low_confidence=result.low_confidence,
+        warnings=result.warnings,
+        requested_angle=result.requested_angle,
+        effective_angle=result.effective_angle,
+        steps=[_to_step_event(step) for step in result.steps],
     )
 
 
@@ -1321,439 +1290,32 @@ def _generate_single_listicle_target(
     requested_angle: AssignmentAngle | None = None,
     effective_angle: AssignmentAngle | None = None,
 ) -> GenerateListicleTargetResponse:
-    steps: list[StepEvent] = []
-    source_urls: list[str] = []
-    warnings: list[str] = []
-
-    def _elapsed_ms(start: float) -> int:
-        return int((time.perf_counter() - start) * 1000)
-
-    # 1) critical_fields_evaluated
-    cf_start = time.perf_counter()
-    steps.append(
-        StepEvent(
-            name="critical_fields_evaluated",
-            status="ok" if cf_result.passed else "failed",
-            details={
-                "passed": cf_result.passed,
-                "missing": list(cf_result.missing),
-                "category": request_target.category,
-                "field_type": request_target.field_type,
-            },
-            duration_ms=_elapsed_ms(cf_start),
-        )
-    )
-    if not cf_result.passed:
-        return GenerateListicleTargetResponse(
-            target_id=request_target.target_id,
-            status="error",
-            model_used=model_name,
-            error_message=f"Critical Fields gate failed: missing {', '.join(cf_result.missing)}",
-            requested_angle=requested_angle,
-            effective_angle=effective_angle,
-            steps=steps,
-        )
-
-    # 2) research_profile_completed (blurbs only)
-    is_blurb = request_target.field_type == "blurb"
-    if is_blurb and research_profile is not None:
-        rp_start = time.perf_counter()
-        source_urls = _merge_urls(source_urls, research_profile.source_urls)
-        warnings = list(research_profile.warnings)
-        trace = research_profile_trace or ResearchProfileTrace(prompt="")
-        steps.append(
-            StepEvent(
-                name="research_profile_completed",
-                status="ok" if research_profile.usable_for_blurb else "failed",
-                prompt=trace.prompt or None,
-                output=trace.raw_response or None,
-                model=trace.model or None,
-                details={
-                    "requested_angle": requested_angle,
-                    "effective_angle": research_profile.effective_angle,
-                    "selected_angle": {
-                        "angle": research_profile.selected_angle.angle,
-                        "status": research_profile.selected_angle.status,
-                        "summary": research_profile.selected_angle.summary,
-                        "citations": list(research_profile.selected_angle.citations),
-                        "reason": research_profile.selected_angle.reason,
-                    },
-                    "standard_buckets": _research_buckets_details(
-                        research_profile.standard_buckets
-                    ),
-                    "usable_for_blurb": research_profile.usable_for_blurb,
-                    "source_urls": list(source_urls),
-                    "warnings": list(warnings),
-                    "parser_dropped_reason": trace.parser_dropped_reason,
-                    "error": trace.error,
-                },
-                duration_ms=_elapsed_ms(rp_start),
-            )
-        )
-
-    # 3) writer_called
-    angle_failed = (
-        is_blurb
-        and request_target.category in ANTI_AI_PROMPT_CATEGORIES
-        and requested_angle is not None
-        and effective_angle is None
-    )
-    low_confidence = angle_failed
-    if (
-        is_blurb
-        and research_profile is not None
-        and not research_profile.usable_for_blurb
-    ):
-        low_confidence = True
-
-    # 2b) writer_brief. The Writer Brief curator compresses the Research
-    # Profile into a venue-tailored angle directive + flat Source Facts list.
-    # Runs for categories on the lean writer path (ADR 0007 nightlife,
-    # ADR 0009 dining, ADR 0011 accommodations, ADR 0012 attractions).
-    # The bucket-dump path remains for categories outside
-    # LEAN_PROMPT_CATEGORIES until they are individually ported.
-    use_lean_prompt = (
-        is_blurb
-        and request_target.category in LEAN_PROMPT_CATEGORIES
-        and research_profile is not None
-        and research_profile.usable_for_blurb
-    )
-    writer_brief: WriterBrief | None = None
-    if use_lean_prompt:
-        wb_start = time.perf_counter()
-        venue_name = (
-            request_target.research_subject or request_target.display_name or ""
-        ).strip()
-        location_label = (request_target.location_label or article_location).strip()
-        writer_brief, wb_trace = run_writer_brief(
-            venue_name=venue_name,
-            location_label=location_label,
-            category=request_target.category or "nightlife",
-            angle=effective_angle,
-            research_profile=research_profile,
-        )
-        if not writer_brief.is_usable:
-            low_confidence = True
-        steps.append(
-            StepEvent(
-                name="writer_brief_completed",
-                status="ok" if writer_brief.is_usable else "failed",
-                prompt=wb_trace.prompt or None,
-                output=wb_trace.raw_response or None,
-                model=wb_trace.model or None,
-                details={
-                    "angle": writer_brief.angle,
-                    "angle_directive": writer_brief.angle_directive,
-                    "source_facts": [
-                        {"fact": entry.fact, "citations": list(entry.citations)}
-                        for entry in writer_brief.source_facts
-                    ],
-                    "source_facts_count": len(writer_brief.source_facts),
-                    "min_source_facts": MIN_SOURCE_FACTS,
-                    "is_usable": writer_brief.is_usable,
-                    "parser_dropped_reason": wb_trace.parser_dropped_reason,
-                    "error": wb_trace.error,
-                },
-                duration_ms=_elapsed_ms(wb_start),
-            )
-        )
-
-    findings_block = _format_research_profile_block(research_profile)
-    target = _to_listicle_writer_target(
-        request_target, extra_supporting_context=findings_block
-    )
-
-    wr_start = time.perf_counter()
-    if use_lean_prompt and writer_brief is not None and writer_brief.is_usable:
-        # Lean path: prompt is built from the Writer Brief only. BUILDER CONTEXT
-        # and the bucket-labeled Research Profile findings are intentionally not
-        # passed to the writer for categories on the lean path.
-        lean_target = _to_listicle_writer_target(request_target)
-        prompt = build_lean_writer_prompt(
-            category=request_target.category or "nightlife",
-            article_title=article_title,
-            article_type=article_type,
-            article_location=article_location,
-            target=lean_target,
-            brief=writer_brief,
-            custom_instruction=custom_instruction,
-            list_tone=list_tone,
-        )
-    elif (
-        is_blurb
-        and research_profile is not None
-        and not research_profile.usable_for_blurb
-    ):
-        prompt = build_identity_only_writer_prompt(
-            article_title=article_title,
-            article_type=article_type,
-            article_location=article_location,
-            target=target,
-            article_context=article_context,
-            custom_instruction=custom_instruction,
-            list_tone=list_tone,
-        )
-    elif use_lean_prompt:
-        # Lean fallback: curator returned an unusable brief. Drop to the
-        # identity-only path with low_confidence already flagged above.
-        prompt = build_identity_only_writer_prompt(
-            article_title=article_title,
-            article_type=article_type,
-            article_location=article_location,
-            target=target,
-            article_context=article_context,
-            custom_instruction=custom_instruction,
-            list_tone=list_tone,
-        )
-    else:
-        prompt = build_writer_prompt(
-            article_title=article_title,
-            article_type=article_type,
-            article_location=article_location,
-            target=target,
-            article_context=article_context,
-            custom_instruction=custom_instruction,
-            list_tone=list_tone,
-            listicle_angle=effective_angle,
-        )
-    try:
-        writer_result = invoke_writer_model(
-            prompt=prompt,
-            model_name=model_name,
-            max_tokens=8192,
-            temperature=0.15,
-        )
-    except WriterModelError as exc:
-        steps.append(
-            StepEvent(
-                name="writer_called",
-                status="failed",
-                prompt=prompt,
-                model=model_name,
-                details={
-                    "error": str(exc),
-                    "custom_instruction": custom_instruction or None,
-                    "list_tone": list_tone,
-                    "requested_angle": requested_angle,
-                    "effective_angle": effective_angle,
-                    "low_confidence": low_confidence,
-                    "warnings": list(warnings),
-                },
-                duration_ms=_elapsed_ms(wr_start),
-            )
-        )
-        logger.exception(
-            "Writer model call failed for target %s", request_target.target_id
-        )
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-    candidate = strip_generation_fence(writer_result.text)
-    model_used = writer_result.model_name
-    steps.append(
-        StepEvent(
-            name="writer_called",
-            status="ok",
-            prompt=prompt,
-            output=candidate,
-            model=model_used,
-            details={
-                "raw_output": writer_result.text,
-                "custom_instruction": custom_instruction or None,
-                "list_tone": list_tone,
-                "requested_angle": requested_angle,
-                "effective_angle": effective_angle,
-                "low_confidence": low_confidence,
-                "warnings": list(warnings),
-            },
-            duration_ms=_elapsed_ms(wr_start),
-        )
-    )
-
-    # 4) validated
-    val_start = time.perf_counter()
-    validation_errors = validate_generated_text(
-        field_type=target.field_type,
-        text=candidate,
-    )
-    steps.append(
-        StepEvent(
-            name="validated",
-            status="ok" if not validation_errors else "failed",
-            details={
-                "validation_errors": list(validation_errors),
-                "passed": not validation_errors,
-                "field_type": target.field_type,
-            },
-            duration_ms=_elapsed_ms(val_start),
-        )
-    )
-
-    # 5) retry_called (only when first validation failed)
-    if validation_errors:
-        rt_start = time.perf_counter()
-        if (
-            use_lean_prompt
-            and writer_brief is not None
-            and writer_brief.is_usable
-            and request_target.category == "nightlife"
-        ):
-            # Nightlife: retry inline on the lean prompt (existing behavior
-            # preserved from ADR 0007). ADR 0009 intentionally leaves this
-            # path on inline construction rather than build_retry_prompt to
-            # avoid touching nightlife.
-            lean_target = _to_listicle_writer_target(request_target)
-            base_lean_prompt = build_lean_writer_prompt(
-                category="nightlife",
-                article_title=article_title,
-                article_type=article_type,
-                article_location=article_location,
-                target=lean_target,
-                brief=writer_brief,
-                custom_instruction=custom_instruction,
-                list_tone=list_tone,
-            )
-            failures = "\n".join(f"- {item}" for item in validation_errors)
-            retry_prompt = (
-                f"{base_lean_prompt}\n\n"
-                "REVISION TASK\n"
-                "The previous draft did not pass validation. Rewrite it so it fully complies.\n\n"
-                f"VALIDATION FAILURES\n{failures}\n\n"
-                f"CURRENT DRAFT\n{candidate.strip()}\n\n"
-                "Return only the corrected final paragraph."
-            )
-        else:
-            # Lean retry routes through build_retry_prompt with a usable
-            # brief for categories ported after nightlife. Other categories
-            # get the fat-prompt retry.
-            retry_brief = (
-                writer_brief
-                if (
-                    use_lean_prompt
-                    and writer_brief is not None
-                    and writer_brief.is_usable
-                    and request_target.category
-                    in {"dining", "accommodations", "attractions"}
-                )
-                else None
-            )
-            retry_prompt = build_retry_prompt(
-                article_title=article_title,
-                article_type=article_type,
-                article_location=article_location,
-                target=target,
-                article_context=article_context,
-                custom_instruction=custom_instruction,
-                current_output=candidate,
-                validation_errors=validation_errors,
-                list_tone=list_tone,
-                listicle_angle=effective_angle,
-                brief=retry_brief,
-            )
-        try:
-            retry_result = invoke_writer_model(
-                prompt=retry_prompt,
-                model_name=model_name,
-                max_tokens=8192,
-                temperature=0.1,
-            )
-        except WriterModelError as exc:
-            steps.append(
-                StepEvent(
-                    name="retry_called",
-                    status="failed",
-                    prompt=retry_prompt,
-                    model=model_name,
-                    details={"error": str(exc)},
-                    duration_ms=_elapsed_ms(rt_start),
-                )
-            )
-            logger.exception(
-                "Writer model retry failed for target %s", request_target.target_id
-            )
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-
-        candidate = strip_generation_fence(retry_result.text)
-        validation_errors = validate_generated_text(
-            field_type=target.field_type,
-            text=candidate,
-        )
-        model_used = retry_result.model_name
-        steps.append(
-            StepEvent(
-                name="retry_called",
-                status="ok" if not validation_errors else "failed",
-                prompt=retry_prompt,
-                output=candidate,
-                model=model_used,
-                details={
-                    "raw_output": retry_result.text,
-                    "post_retry_validation_errors": list(validation_errors),
-                    "passed": not validation_errors,
-                },
-                duration_ms=_elapsed_ms(rt_start),
-            )
-        )
-
-    # 6) finalized
-    fn_start = time.perf_counter()
-    if validation_errors:
-        steps.append(
-            StepEvent(
-                name="finalized",
-                status="failed",
-                output=candidate,
-                model=model_used,
-                details={
-                    "final_status": "error",
-                    "validation_errors": list(validation_errors),
-                    "source_urls": list(source_urls),
-                    "low_confidence": low_confidence,
-                    "warnings": list(warnings),
-                },
-                duration_ms=_elapsed_ms(fn_start),
-            )
-        )
-        return GenerateListicleTargetResponse(
-            target_id=request_target.target_id,
-            status="error",
-            model_used=model_used,
-            source_urls=source_urls,
-            validation_errors=validation_errors,
-            error_message="Generated content failed validation after retry.",
-            low_confidence=low_confidence,
-            warnings=warnings,
-            requested_angle=requested_angle,
-            effective_angle=effective_angle,
-            steps=steps,
-        )
-
-    steps.append(
-        StepEvent(
-            name="finalized",
-            status="ok",
-            output=candidate,
-            model=model_used,
-            details={
-                "final_status": "generated",
-                "source_urls": list(source_urls),
-                "low_confidence": low_confidence,
-                "warnings": list(warnings),
-            },
-            duration_ms=_elapsed_ms(fn_start),
-        )
-    )
-    return GenerateListicleTargetResponse(
-        target_id=request_target.target_id,
-        status="generated",
-        markdown=candidate,
-        model_used=model_used,
-        source_urls=source_urls,
-        low_confidence=low_confidence,
-        warnings=warnings,
+    settings = ListicleCompositionSettings(
+        article_title=article_title,
+        article_type=article_type,
+        article_location=article_location,
+        article_context=article_context,
+        custom_instruction=custom_instruction,
+        model_name=model_name,
+        list_tone=list_tone,
         requested_angle=requested_angle,
         effective_angle=effective_angle,
-        steps=steps,
     )
+    try:
+        result = compose_listicle_target(
+            target=_to_composition_target(request_target),
+            settings=settings,
+            cf_result=cf_result,
+            research_profile=research_profile,
+            research_profile_trace=research_profile_trace,
+            deps=ListicleCompositionDeps(
+                invoke_writer=invoke_writer_model,
+                run_writer_brief=run_writer_brief,
+            ),
+        )
+    except ListicleCompositionWriterError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return _to_target_response(result)
 
 
 def _evaluate_target_cf(
