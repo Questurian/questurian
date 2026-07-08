@@ -7,6 +7,14 @@ import type {
 } from "@client/shared/services/api/types";
 import { isFieldProvenance, type FieldProvenance } from "@questurian/lm-shared";
 import {
+  allAiUrlsAcknowledged,
+  initAiUrlAck,
+  liftAiUrlAckOnUserEdit,
+  markAiUrlSuggested,
+  setAiUrlAcknowledged,
+  type AiUrlAckState,
+} from "../../autofill/ai-url-ack";
+import {
   buildDiningPrefillSignature,
   normalizeDiningAddress,
   validateTripadvisorEntry,
@@ -20,6 +28,9 @@ import {
   type AiSuggestionFieldKey,
   type ProvenanceTrackedField,
 } from "../dining-create.types";
+
+const AI_URL_ACK_FIELDS = ["menuUrl", "bookingUrl"] as const;
+type AiUrlAckField = (typeof AI_URL_ACK_FIELDS)[number];
 
 function initialAiFieldStatusMap(): Record<AiSuggestionFieldKey, AiFieldStatus> {
   return AI_FIELD_KEYS.reduce(
@@ -83,10 +94,9 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
   const [prefillTripadvisorPlaceData, setPrefillTripadvisorPlaceData] =
     useState<TripadvisorPrefillFields | null>(null);
   const [aiBatchStep, setAiBatchStep] = useState<"google" | "tripadvisor" | "ai" | null>(null);
-  const [verifiedAiUrls, setVerifiedAiUrls] = useState<Record<"menuUrl" | "bookingUrl", boolean>>({
-    menuUrl: true,
-    bookingUrl: true,
-  });
+  const [verifiedAiUrls, setVerifiedAiUrls] = useState<AiUrlAckState<AiUrlAckField>>(() =>
+    initAiUrlAck(AI_URL_ACK_FIELDS)
+  );
   const [provenance, setProvenance] = useState<
     Partial<Record<ProvenanceTrackedField, FieldProvenance>>
   >({});
@@ -118,9 +128,7 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
           return next;
         });
         if (trackedField === "menuUrl" || trackedField === "bookingUrl") {
-          setVerifiedAiUrls((prev) =>
-            prev[trackedField] ? prev : { ...prev, [trackedField]: true }
-          );
+          setVerifiedAiUrls((prev) => liftAiUrlAckOnUserEdit(prev, trackedField));
         }
       }
     });
@@ -136,7 +144,7 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
     setPrefillTripadvisorPlaceData(null);
     setProvenance({});
     setPrefilledValues({});
-    setVerifiedAiUrls({ menuUrl: true, bookingUrl: true });
+    setVerifiedAiUrls(initAiUrlAck(AI_URL_ACK_FIELDS));
     setAiFieldStatus(initialAiFieldStatusMap());
   }
 
@@ -263,7 +271,7 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
       nextProvenance,
       nextPrefilled,
       onUrlSuggested: (urlField) => {
-        setVerifiedAiUrls((prev) => ({ ...prev, [urlField]: false }));
+        setVerifiedAiUrls((prev) => markAiUrlSuggested(prev, urlField));
       },
     });
     setProvenance(nextProvenance);
@@ -377,10 +385,7 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
         )
       );
 
-      const nextVerifiedAiUrls: Record<"menuUrl" | "bookingUrl", boolean> = {
-        menuUrl: true,
-        bookingUrl: true,
-      };
+      let nextVerifiedAiUrls = initAiUrlAck(AI_URL_ACK_FIELDS);
       const nextStatuses: Partial<Record<AiSuggestionFieldKey, AiFieldStatus>> = {};
 
       aiResults.forEach((settled, index) => {
@@ -398,7 +403,7 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
           nextProvenance,
           nextPrefilled,
           onUrlSuggested: (urlField) => {
-            nextVerifiedAiUrls[urlField] = false;
+            nextVerifiedAiUrls = markAiUrlSuggested(nextVerifiedAiUrls, urlField);
           },
         });
       });
@@ -424,10 +429,8 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
     }
   }
 
-  function acknowledgeAiUrl(field: "menuUrl" | "bookingUrl", verified: boolean) {
-    setVerifiedAiUrls((prev) =>
-      prev[field] === verified ? prev : { ...prev, [field]: verified }
-    );
+  function acknowledgeAiUrl(field: AiUrlAckField, verified: boolean) {
+    setVerifiedAiUrls((prev) => setAiUrlAcknowledged(prev, field, verified));
   }
 
   return {
@@ -459,6 +462,6 @@ export function useDiningEnrichment({ form }: UseDiningEnrichmentOptions) {
     retryAiField,
     resetEnrichmentState,
     acknowledgeAiUrl,
-    allAiUrlsVerified: verifiedAiUrls.menuUrl && verifiedAiUrls.bookingUrl,
+    allAiUrlsVerified: allAiUrlsAcknowledged(verifiedAiUrls),
   };
 }

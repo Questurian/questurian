@@ -17,10 +17,6 @@ import {
   rejectTaxonomyEntry,
 } from "./write.repository";
 import {
-  deduplicatePendingTaxonomy,
-  bulkUpdatePendingTaxonomy,
-} from "./bulk.repository";
-import {
   toCountries,
   toCountriesNested,
   toCitiesNestedByCountry,
@@ -58,6 +54,4 @@ export {
   rejectTaxonomyEntry,
   getPendingTaxonomyEntries,
   getLocationCountByTaxonomy,
-  deduplicatePendingTaxonomy,
-  bulkUpdatePendingTaxonomy,
 };

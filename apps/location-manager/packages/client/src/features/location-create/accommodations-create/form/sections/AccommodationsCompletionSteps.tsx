@@ -2,6 +2,7 @@ import { Input } from "@client/components/ui/input";
 import { Label } from "@client/components/ui/label";
 import { Button } from "@client/components/ui/button";
 import { PhotoImportPhase } from "../../../components/PhotoImportPhase";
+import { liftAiUrlAckOnUserEdit, setAiUrlAcknowledged } from "../../../autofill/ai-url-ack";
 import { WALKABILITY_OPTIONS } from "../../../constants/accommodations-options";
 import type { AddAccommodationsFormData } from "../../../validation/add-accommodations.schema";
 import { DETAILS_SUGGESTION_FIELDS } from "../../suggestions/accommodations-suggestion-utils";
@@ -157,7 +158,7 @@ export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsP
                         next.delete("bookingUrl");
                         return next;
                       });
-                      setVerifiedAiUrls((prev) => ({ ...prev, bookingUrl: true }));
+                      setVerifiedAiUrls((prev) => liftAiUrlAckOnUserEdit(prev, "bookingUrl"));
                     }
                   },
                 })}
@@ -171,10 +172,7 @@ export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsP
                     type="checkbox"
                     checked={verifiedAiUrls.bookingUrl}
                     onChange={(event) =>
-                      setVerifiedAiUrls((prev) => ({
-                        ...prev,
-                        bookingUrl: event.target.checked,
-                      }))
+                      setVerifiedAiUrls((prev) => setAiUrlAcknowledged(prev, "bookingUrl", event.target.checked))
                     }
                   />
                   I verified this booking URL works.

@@ -256,7 +256,7 @@ _Avoid_: feature flag (connotes rollout/experimentation), env flag, kill switch.
 - `IdealForTag` (LM) vs `PerfectForTag` (Questura) — are these intentionally parallel, or should one rename to converge?
 - Where is the catalogue of required image variants documented end-to-end? Questura's ADR talks about MediaPlacements; LM has `ImageVariant` types but no placement awareness.
 - Should `Tour` have its own CONTEXT.md inside `packages/server`? It has its own PayloadSyncState shape and is the only non-Location entity here.
-- Taxonomy corrections feel like they could be a top-level admin module — currently it's split across services.
+- (Resolved 2026-07-08) Taxonomy corrections are now one admin-owned module: `repositories/taxonomy/taxonomy-correction/` holds all rule CRUD, impact-preview, and retroactive bulk-apply SQL as private internals of `TaxonomyCorrectionService` (not exported from the `repositories/taxonomy` barrel). The retroactive apply is transactional end-to-end — bulk-apply failures now roll back the rule instead of committing it silently half-applied.
 - (Resolved 2026-05-18, ADR-0005) The Google + TripAdvisor review pipeline was removed. `/field-suggestion` is grounded-only via Vertex `GoogleSearch`. Accommodations + dining stage 2 are wired; other categories return 400 until rollout.
 - (Resolved 2026-05-18) In Add Accommodations, "pipeline" means the **Add Accommodations autofill flow**, not the removed Google + TripAdvisor review pipeline.
 

@@ -1,6 +1,5 @@
 import type { Location, LocationCategory } from "../../models/location";
 import { ensureLocationSlug } from "../../services/core/location-slug.service";
-import { bulkUpdateLocationKeys } from "./location-bulk.repository";
 import { deleteLocationById, deleteLocationBySlug } from "./location-delete.repository";
 import { findPotentialDuplicateLocations } from "./location-duplicate.repository";
 import {
@@ -29,7 +28,6 @@ export function saveLocationOrThrow(location: Location): number {
 }
 
 export {
-  bulkUpdateLocationKeys,
   deleteLocationById,
   deleteLocationBySlug,
   findPotentialDuplicateLocations,

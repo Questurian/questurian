@@ -1,3 +1,9 @@
+/**
+ * Precedence rule for add-time AI autofill: AI may only fill a field when
+ * prefill has completed, the API didn't already fill it, the operator hasn't
+ * touched it, AI hasn't already suggested it, and its value is still empty or
+ * the form default. API prefill beats AI; operator input beats both.
+ */
 export function optionValueMatchesDefault(value: unknown, defaultValue: unknown) {
   if (Array.isArray(defaultValue) && Array.isArray(value)) {
     return defaultValue.length === value.length && defaultValue.every((item) => value.includes(item));
@@ -10,7 +16,7 @@ export function optionValueIsEmpty(value: unknown) {
   return typeof value === "string" ? value.trim().length === 0 : false;
 }
 
-export function isAccommodationOptionSuggestionEligible(input: {
+export function isOptionSuggestionEligible(input: {
   value: unknown;
   defaultValue: unknown;
   isPrefillReady: boolean;

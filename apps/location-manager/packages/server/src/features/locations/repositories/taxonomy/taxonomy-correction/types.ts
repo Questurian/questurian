@@ -1,6 +1,4 @@
-import type { TaxonomyPartType } from "../location-hierarchy/types";
-
-export type { TaxonomyPartType };
+export type TaxonomyPartType = "country" | "city" | "neighborhood";
 
 export interface TaxonomyCorrection {
   id?: number;

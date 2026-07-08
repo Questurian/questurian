@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { isAccommodationOptionSuggestionEligible } from "./accommodations-ai-suggestions";
+import { isOptionSuggestionEligible } from "./option-suggestion-eligibility";
 
-describe("isAccommodationOptionSuggestionEligible", () => {
+describe("isOptionSuggestionEligible", () => {
   test("allows untouched default option values after prefill", () => {
     expect(
-      isAccommodationOptionSuggestionEligible({
+      isOptionSuggestionEligible({
         value: "$$$",
         defaultValue: "$$$",
         isPrefillReady: true,
@@ -18,7 +18,7 @@ describe("isAccommodationOptionSuggestionEligible", () => {
 
   test("blocks manually changed fields", () => {
     expect(
-      isAccommodationOptionSuggestionEligible({
+      isOptionSuggestionEligible({
         value: "$$",
         defaultValue: "$$$",
         isPrefillReady: true,
@@ -32,7 +32,7 @@ describe("isAccommodationOptionSuggestionEligible", () => {
 
   test("blocks API-filled fields", () => {
     expect(
-      isAccommodationOptionSuggestionEligible({
+      isOptionSuggestionEligible({
         value: "$$",
         defaultValue: "$$$",
         isPrefillReady: true,
@@ -40,6 +40,33 @@ describe("isAccommodationOptionSuggestionEligible", () => {
         isDirty: true,
         isApiFilled: true,
         isAiSuggested: false,
+      })
+    ).toBe(false);
+  });
+
+  test("URL-kind fields skip the options check but obey the rest of the rule", () => {
+    expect(
+      isOptionSuggestionEligible({
+        value: "",
+        defaultValue: "",
+        isPrefillReady: true,
+        optionsCount: 0,
+        isDirty: false,
+        isApiFilled: false,
+        isAiSuggested: false,
+        isUrlKind: true,
+      })
+    ).toBe(true);
+    expect(
+      isOptionSuggestionEligible({
+        value: "",
+        defaultValue: "",
+        isPrefillReady: false,
+        optionsCount: 0,
+        isDirty: false,
+        isApiFilled: false,
+        isAiSuggested: false,
+        isUrlKind: true,
       })
     ).toBe(false);
   });

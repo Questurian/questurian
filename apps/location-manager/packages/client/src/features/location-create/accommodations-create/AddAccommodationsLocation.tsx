@@ -8,6 +8,7 @@ import { useLocationTypes } from "@client/shared/services/api/hooks/useLocationT
 import { useGooglePhotoImportEnabled } from "@client/shared/services/api/hooks";
 import type { GooglePrefillResponse } from "@client/shared/services/api/types";
 import type { PhotoImportSessionState } from "../components/PhotoImportPhase";
+import { initAiUrlAck } from "../autofill/ai-url-ack";
 import {
   addAccommodationsSchema,
   buildAccommodationsPrefillSignature,
@@ -38,7 +39,7 @@ export function AddAccommodationsLocation() {
   const [prefillSignature, setPrefillSignature] = useState<string | null>(null);
   const [apiFilledFields, setApiFilledFields] = useState<Set<ApiFilledField>>(() => new Set());
   const [googlePrefillContext, setGooglePrefillContext] = useState<GooglePrefillResponse | null>(null);
-  const [verifiedAiUrls, setVerifiedAiUrls] = useState({ bookingUrl: true });
+  const [verifiedAiUrls, setVerifiedAiUrls] = useState(() => initAiUrlAck(["bookingUrl"] as const));
   const [createdName, setCreatedName] = useState<string | null>(null);
   const [photoSession, setPhotoSession] = useState<PhotoImportSessionState | null>(null);
   const form = useForm<AddAccommodationsFormData>({

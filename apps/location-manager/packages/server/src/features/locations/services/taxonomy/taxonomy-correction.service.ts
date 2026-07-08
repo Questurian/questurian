@@ -1,3 +1,4 @@
+import type { Database } from "bun:sqlite";
 import {
   getAllCorrections,
   findCorrection,
@@ -7,13 +8,11 @@ import {
   findAffectedPendingTaxonomy,
   countAffectedLocations,
   findAffectedLocationSamples,
-  type TaxonomyCorrection,
-} from "../../repositories/taxonomy";
-import {
   deduplicatePendingTaxonomy,
   bulkUpdatePendingTaxonomy,
-} from "../../repositories/taxonomy";
-import { bulkUpdateLocationKeys } from "../../repositories/core";
+  bulkUpdateLocationKeys,
+  type TaxonomyCorrection,
+} from "../../repositories/taxonomy/taxonomy-correction";
 import { getDb } from "@server/shared/db/client";
 import { parseLocationValue } from "../../utils/location-utils";
 import {
@@ -22,6 +21,12 @@ import {
 } from "@server/shared/core/errors/http-error";
 
 export class TaxonomyCorrectionService {
+  constructor(private readonly database?: Database) {}
+
+  private get db(): Database {
+    return this.database ?? getDb();
+  }
+
   /**
    * Apply corrections to a locationKey string
    * Example: "brazil|bras-lia|asa-sul" -> "brazil|brasilia|asa-sul"
@@ -60,7 +65,7 @@ export class TaxonomyCorrectionService {
     value: string,
     partType: "country" | "city" | "neighborhood"
   ): string {
-    const correction = findCorrection(value, partType);
+    const correction = findCorrection(value, partType, this.db);
     return correction ? correction.correct_value : value;
   }
 
@@ -68,7 +73,7 @@ export class TaxonomyCorrectionService {
    * Get all correction rules
    */
   getAllRules(): TaxonomyCorrection[] {
-    return getAllCorrections();
+    return getAllCorrections(this.db);
   }
 
   /**
@@ -90,33 +95,28 @@ export class TaxonomyCorrectionService {
       correctedKey: string;
     }>;
   } {
-    // Validate inputs (same as addRule)
-    if (!incorrectValue || !correctValue) {
-      throw new BadRequestError(
-        "Both incorrect_value and correct_value are required"
-      );
-    }
-
-    if (incorrectValue === correctValue) {
-      throw new BadRequestError(
-        "Incorrect and correct values cannot be the same"
-      );
-    }
+    this.validateRuleValues(incorrectValue, correctValue);
 
     // Find affected pending taxonomy entries
     const affectedPending = findAffectedPendingTaxonomy(
       incorrectValue,
-      partType
+      partType,
+      this.db
     );
 
     // Count total affected locations
-    const locationCount = countAffectedLocations(incorrectValue, partType);
+    const locationCount = countAffectedLocations(
+      incorrectValue,
+      partType,
+      this.db
+    );
 
     // Get sample locations with before/after
     const locationSamples = findAffectedLocationSamples(
       incorrectValue,
       correctValue,
-      partType
+      partType,
+      this.db
     );
 
     return {
@@ -128,7 +128,9 @@ export class TaxonomyCorrectionService {
   }
 
   /**
-   * Add a new correction rule and retroactively apply it to existing data
+   * Add a new correction rule and retroactively apply it to existing data.
+   * Runs in one transaction: an applied rule must update all matching rows
+   * (pending taxonomy + entities), or none.
    */
   addRule(
     incorrectValue: string,
@@ -139,27 +141,21 @@ export class TaxonomyCorrectionService {
     updatedPendingCount: number;
     updatedLocationCount: number;
   } {
-    // Validate inputs
-    if (!incorrectValue || !correctValue) {
-      throw new BadRequestError(
-        "Both incorrect_value and correct_value are required"
-      );
-    }
+    this.validateRuleValues(incorrectValue, correctValue);
 
-    if (incorrectValue === correctValue) {
-      throw new BadRequestError(
-        "Incorrect and correct values cannot be the same"
-      );
-    }
-
-    const db = getDb();
+    const db = this.db;
 
     try {
       // Begin transaction
       db.run("BEGIN TRANSACTION");
 
       // 1. Insert correction rule
-      const inserted = insertCorrection(incorrectValue, correctValue, partType);
+      const inserted = insertCorrection(
+        incorrectValue,
+        correctValue,
+        partType,
+        db
+      );
       if (!inserted) {
         throw new BadRequestError(
           "Failed to create correction rule (may already exist)"
@@ -167,20 +163,22 @@ export class TaxonomyCorrectionService {
       }
 
       // 2. Deduplicate pending entries (prevent UNIQUE constraint violation)
-      deduplicatePendingTaxonomy(incorrectValue, correctValue, partType);
+      deduplicatePendingTaxonomy(incorrectValue, correctValue, partType, db);
 
       // 3. Bulk update pending taxonomy entries
       const pendingCount = bulkUpdatePendingTaxonomy(
         incorrectValue,
         correctValue,
-        partType
+        partType,
+        db
       );
 
       // 4. Bulk update location records
       const locationCount = bulkUpdateLocationKeys(
         incorrectValue,
         correctValue,
-        partType
+        partType,
+        db
       );
 
       // Commit transaction
@@ -202,14 +200,31 @@ export class TaxonomyCorrectionService {
    * Remove a correction rule
    */
   removeRule(id: number): void {
-    const exists = getCorrectionById(id);
+    const exists = getCorrectionById(id, this.db);
     if (!exists) {
       throw new NotFoundError("Correction rule", id);
     }
 
-    const success = deleteCorrection(id);
+    const success = deleteCorrection(id, this.db);
     if (!success) {
       throw new BadRequestError("Failed to delete correction rule");
+    }
+  }
+
+  private validateRuleValues(
+    incorrectValue: string,
+    correctValue: string
+  ): void {
+    if (!incorrectValue || !correctValue) {
+      throw new BadRequestError(
+        "Both incorrect_value and correct_value are required"
+      );
+    }
+
+    if (incorrectValue === correctValue) {
+      throw new BadRequestError(
+        "Incorrect and correct values cannot be the same"
+      );
     }
   }
 }

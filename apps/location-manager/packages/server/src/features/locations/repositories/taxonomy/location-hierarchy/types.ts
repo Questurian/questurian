@@ -1,5 +1,3 @@
-export type TaxonomyPartType = "country" | "city" | "neighborhood";
-
 /**
  * Database row interface for location_taxonomy table.
  */

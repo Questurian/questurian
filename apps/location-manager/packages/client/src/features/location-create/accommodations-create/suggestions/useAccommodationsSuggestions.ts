@@ -5,11 +5,13 @@ import type {
   AccommodationsFieldSuggestionResponse,
   GooglePrefillResponse,
 } from "@client/shared/services/api/types";
+import { markAiUrlSuggested } from "../../autofill/ai-url-ack";
 import {
-  isAccommodationOptionSuggestionEligible,
+  isOptionSuggestionEligible,
   optionValueIsEmpty,
   optionValueMatchesDefault,
-} from "../../utils/accommodations-ai-suggestions";
+} from "../../autofill/option-suggestion-eligibility";
+import { runSuggestionBatch } from "../../autofill/run-suggestion-batch";
 import type { AddAccommodationsFormData } from "../../validation/add-accommodations.schema";
 import {
   ACCOMMODATIONS_FORM_DEFAULT_VALUES,
@@ -75,7 +77,7 @@ export function useAccommodationsSuggestions({
   const getCanSuggestField = (field: AiSuggestedField) => {
     if (pendingFields.has(field) || suggestionStack.some((item) => item.fieldKey === field)) return false;
     const definition = getSuggestionField(field);
-    return isAccommodationOptionSuggestionEligible({
+    return isOptionSuggestionEligible({
       value: form.watch(field) as AddAccommodationsFormData[AiSuggestedField],
       defaultValue: ACCOMMODATIONS_FORM_DEFAULT_VALUES[field],
       isPrefillReady,
@@ -148,7 +150,7 @@ export function useAccommodationsSuggestions({
     setAiSuggestedFields((fields) => new Set(fields).add(fieldKey));
     setManuallySelectedFields((fields) => new Set([...fields].filter((field) => field !== fieldKey)));
     if (item.kind === "url" && fieldKey === "bookingUrl") {
-      setVerifiedAiUrls((urls) => ({ ...urls, bookingUrl: false }));
+      setVerifiedAiUrls((urls) => markAiUrlSuggested(urls, "bookingUrl"));
     }
     if (source === "auto") setAiSuggestionEvidence((evidence) => ({ ...evidence, [fieldKey]: item }));
     return true;
@@ -163,37 +165,33 @@ export function useAccommodationsSuggestions({
     });
     if (eligibleFields.length === 0) return { applied: 0, failed: 0, total: 0 };
     setAutoFillProgress({ total: eligibleFields.length, completed: 0, applied: 0, failed: 0, currentFieldLabel: "Starting AI fill" });
-    let cursor = 0;
-    let applied = 0;
-    let failed = 0;
-    const worker = async () => {
-      while (cursor < eligibleFields.length) {
-        const fieldKey = eligibleFields[cursor++];
-        const field = getSuggestionField(fieldKey);
+    const result = await runSuggestionBatch({
+      fields: eligibleFields,
+      concurrency: AUTO_FILL_CONCURRENCY,
+      run: async (fieldKey) => {
+        const response = await locationsApi.suggestField(buildSuggestionRequest(fieldKey, context));
+        if (!response.error && applySuggestionToField(response, "auto")) return true;
+        setAiSuggestionEvidence((evidence) => ({ ...evidence, [fieldKey]: response }));
+        return false;
+      },
+      onFieldStart: (fieldKey) => {
         setPendingFields((pending) => new Set(pending).add(fieldKey));
-        setAutoFillProgress((progress) => progress ? { ...progress, currentFieldLabel: field?.label || fieldKey } : progress);
-        try {
-          const response = await locationsApi.suggestField(buildSuggestionRequest(fieldKey, context));
-          if (!response.error && applySuggestionToField(response, "auto")) applied += 1;
-          else {
-            failed += 1;
-            setAiSuggestionEvidence((evidence) => ({ ...evidence, [fieldKey]: response }));
-          }
-        } catch (error) {
-          failed += 1;
+        setAutoFillProgress((progress) => progress ? { ...progress, currentFieldLabel: getSuggestionField(fieldKey)?.label || fieldKey } : progress);
+      },
+      onFieldSettled: (fieldKey, outcome, error, progress) => {
+        if (outcome === "error") {
+          const field = getSuggestionField(fieldKey);
           setAiSuggestionEvidence((evidence) => ({
             ...evidence,
             [fieldKey]: { fieldKey, fieldLabel: field?.label || fieldKey, suggestion: null, kind: field?.kind || "single", confidence: 0, source: "ai", reason: "", sources: [], error: getErrorMessage(error) },
           }));
-        } finally {
-          setPendingFields((pending) => new Set([...pending].filter((item) => item !== fieldKey)));
-          setAutoFillProgress((progress) => progress ? { ...progress, completed: progress.completed + 1, applied, failed } : progress);
         }
-      }
-    };
-    await Promise.all(Array.from({ length: Math.min(AUTO_FILL_CONCURRENCY, eligibleFields.length) }, () => worker()));
+        setPendingFields((pending) => new Set([...pending].filter((item) => item !== fieldKey)));
+        setAutoFillProgress((current) => current ? { ...current, completed: progress.completed, applied: progress.applied, failed: progress.failed } : current);
+      },
+    });
     setAutoFillProgress(null);
-    return { applied, failed, total: eligibleFields.length };
+    return { applied: result.applied, failed: result.failed, total: result.total };
   };
   const queueSuggestion = async (fieldKey: AiSuggestedField) => {
     const field = getSuggestionField(fieldKey);

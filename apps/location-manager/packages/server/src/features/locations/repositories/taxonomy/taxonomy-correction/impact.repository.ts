@@ -1,9 +1,10 @@
+import type { Database } from "bun:sqlite";
 import { getDb } from "@server/shared/db/client";
 import {
   buildTaxonomyLikePattern,
   previewCorrectedLocationKey,
   threeSegmentLocationKeySqlPredicate,
-} from "../location-hierarchy/bulk.utils";
+} from "./bulk.utils";
 import type {
   TaxonomyPartType,
   AffectedPendingTaxonomyEntry,
@@ -19,9 +20,10 @@ function neighborhoodWhereExtra(partType: TaxonomyPartType): string {
 
 export function findAffectedPendingTaxonomy(
   incorrectValue: string,
-  partType: TaxonomyPartType
+  partType: TaxonomyPartType,
+  database?: Database
 ): AffectedPendingTaxonomyEntry[] {
-  const db = getDb();
+  const db = database ?? getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
   const extra = neighborhoodWhereExtra(partType);
 
@@ -38,9 +40,10 @@ export function findAffectedPendingTaxonomy(
 
 export function countAffectedLocations(
   incorrectValue: string,
-  partType: TaxonomyPartType
+  partType: TaxonomyPartType,
+  database?: Database
 ): number {
-  const db = getDb();
+  const db = database ?? getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
   const extra = neighborhoodWhereExtra(partType);
 
@@ -57,9 +60,10 @@ export function countAffectedLocations(
 export function findAffectedLocationSamples(
   incorrectValue: string,
   correctValue: string,
-  partType: TaxonomyPartType
+  partType: TaxonomyPartType,
+  database?: Database
 ): AffectedLocationSample[] {
-  const db = getDb();
+  const db = database ?? getDb();
   const likePattern = buildTaxonomyLikePattern(incorrectValue, partType);
   const extra = neighborhoodWhereExtra(partType);
 
