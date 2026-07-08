@@ -2,9 +2,10 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import { visitorAuth } from './better-auth'
+import { deriveStaffMembership, deriveVisitorMembership } from './membership-entitlement'
+import type { MembershipSource } from './membership-entitlement'
 import { ensureVisitorProfileForAuthUser, findVisitorProfileByAuthUserId } from './visitor-profile'
 
-type MembershipSource = 'stripe' | 'staff_grant' | null
 type AuthProvider = 'local' | 'google' | 'dual' | 'unknown'
 type StaffRole = 'admin' | 'editor' | 'writer'
 
@@ -62,28 +63,6 @@ function unauthenticated<T extends CurrentPrincipal>(): PrincipalResult<T> {
   }
 }
 
-function hasActiveStripeMembership(profile: any): boolean {
-  if (!profile) return false
-  if (profile.subscriptionStatus === 'active') return true
-
-  if (
-    (profile.subscriptionStatus === 'cancelled' || profile.subscriptionStatus === 'none') &&
-    profile.membershipExpiration
-  ) {
-    return new Date(profile.membershipExpiration) > new Date()
-  }
-
-  return false
-}
-
-function getStaffMembership(role: StaffRole | undefined): { active: boolean; source: MembershipSource } {
-  if (role === 'admin' || role === 'editor') {
-    return { active: true, source: 'staff_grant' }
-  }
-
-  return { active: false, source: null }
-}
-
 async function getVisitorAuthMethods(headers: Headers): Promise<{
   hasLocalPassword: boolean
   hasGoogleOAuth: boolean
@@ -127,7 +106,6 @@ async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincip
         email: visitorSession.user.email,
         name: visitorSession.user.name,
       }))
-    const active = hasActiveStripeMembership(profile)
     const authMethods = await getVisitorAuthMethods(headers)
 
     return {
@@ -139,13 +117,7 @@ async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincip
       profileId: profile?.id ?? null,
       firstName: profile?.firstName ?? '',
       lastName: profile?.lastName ?? '',
-      membership: {
-        active,
-        source: active ? 'stripe' : null,
-        status: profile?.subscriptionStatus ?? 'none',
-        expiresAt: profile?.membershipExpiration ?? null,
-        cancelAtPeriodEnd: Boolean(profile?.cancelAtPeriodEnd),
-      },
+      membership: deriveVisitorMembership(profile),
     }
   }
 
@@ -166,7 +138,7 @@ async function resolveStaffPrincipal(headers: Headers): Promise<StaffPrincipal |
     id: staff.id,
     email: staff.email,
     role: staff.role,
-    membership: getStaffMembership(staff.role),
+    membership: deriveStaffMembership(staff.role),
   }
 }
 

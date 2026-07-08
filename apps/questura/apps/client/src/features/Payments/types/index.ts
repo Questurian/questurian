@@ -23,6 +23,7 @@ export interface MembershipStatus {
  */
 export interface UserWithMembership {
   kind?: 'visitor';
+  membership?: { active: boolean };
   subscriptionStatus?: string | null;
   membershipExpiration?: string | Date | null;
   cancelAtPeriodEnd?: boolean;

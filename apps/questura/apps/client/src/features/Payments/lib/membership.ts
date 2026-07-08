@@ -6,22 +6,8 @@ export function isActiveMember(user: UserWithMembership): boolean {
     return true;
   }
 
-  if (user.subscriptionStatus === 'active') {
-    return true;
-  }
-
-  if (
-    (user.subscriptionStatus === 'canceled' || user.subscriptionStatus === 'cancelled') &&
-    user.membershipExpiration
-  ) {
-    const expiration =
-      typeof user.membershipExpiration === 'string'
-        ? new Date(user.membershipExpiration)
-        : user.membershipExpiration;
-    return expiration > new Date();
-  }
-
-  return false;
+  // Entitlement is derived server-side (GET /api/me → membership.active); the client only renders it.
+  return user.membership?.active ?? false;
 }
 
 export function getMembershipStatus(user: UserWithMembership): MembershipStatus {
