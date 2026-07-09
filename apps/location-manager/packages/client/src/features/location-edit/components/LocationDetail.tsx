@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Skeleton, ErrorAlert, SubmitButton } from "@client/shared/components/ui";
 import type { LocationCategory } from "@shared/types/location-category";
+import type { LocationResponse } from "@client/shared/services/api/types";
 import { useLocationDetailForm } from "../hooks/useLocationDetailForm";
 import { PendingSuggestionsPanel } from "./PendingSuggestionsPanel";
 import { BasicsSection } from "./location-detail/BasicsSection";
@@ -17,6 +18,8 @@ interface LocationDetailProps {
   headerSlot?: ReactNode;
   /** Slot appended after the Save/Cancel footer (e.g. Add Another / Done in post-create). */
   footerSlot?: (ctx: { isDirty: boolean }) => ReactNode;
+  /** Slot rendered after pending suggestions and before edit sections. */
+  summarySlot?: (ctx: { location: LocationResponse }) => ReactNode;
   /** When true, poll the location every 10s up to 2 min so late Stage-2 suggestions appear live. */
   pollForSuggestions?: boolean;
   /** Called after a successful batch update. Edit mode navigates home; post-create stays. */
@@ -30,6 +33,7 @@ export function LocationDetail({
   category,
   headerSlot,
   footerSlot,
+  summarySlot,
   pollForSuggestions = false,
   onUpdateSuccess,
   pendingEmptyHint,
@@ -109,6 +113,8 @@ export function LocationDetail({
             {pendingEmptyHint}
           </div>
         ) : null}
+
+        {summarySlot ? <div className="mb-4">{summarySlot({ location })}</div> : null}
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           <BasicsSection

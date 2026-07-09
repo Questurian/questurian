@@ -1,5 +1,8 @@
 import { Check } from "lucide-react";
+import { LocationCompleteness } from "@client/features/location-browse/components/detail/LocationCompleteness";
 import { LocationDetail } from "@client/features/location-edit/components/LocationDetail";
+import { LocationMediaGallery } from "@client/shared/components/location-media/LocationMediaGallery";
+import { DiningHomepageCardPreview } from "./DiningHomepageCardPreview";
 
 interface DiningPostCreatePhaseProps {
   locationId: number;
@@ -18,6 +21,21 @@ export function DiningPostCreatePhase({
       category="dining"
       pollForSuggestions
       pendingEmptyHint="AI suggestions will appear here as the grounded research completes."
+      summarySlot={({ location }) => (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Homepage card preview
+            </p>
+            <DiningHomepageCardPreview location={location} />
+          </div>
+
+          <div className="space-y-3">
+            <LocationCompleteness locationDetail={location} />
+            <LocationMediaGallery locationDetail={location} />
+          </div>
+        </div>
+      )}
       headerSlot={
         <div className="flex items-center gap-2.5 mb-4">
           <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center shrink-0">
@@ -28,7 +46,7 @@ export function DiningPostCreatePhase({
               Location Added
             </h1>
             <p className="text-xs text-muted-foreground">
-              Review everything below before moving on.
+              Preview the homepage card, then fix missing fields before moving on.
             </p>
           </div>
         </div>
