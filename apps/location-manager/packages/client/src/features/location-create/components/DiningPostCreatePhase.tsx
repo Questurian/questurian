@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
-import { LocationCompleteness } from "@client/features/location-browse/components/detail/LocationCompleteness";
+import { LocationDetailReviewStack } from "@client/features/location-browse/components/detail/LocationDetailReviewStack";
+import { useClipboardCopy } from "@client/features/location-browse/hooks/useClipboardCopy";
 import { LocationDetail } from "@client/features/location-edit/components/LocationDetail";
-import { LocationMediaGallery } from "@client/shared/components/location-media/LocationMediaGallery";
 import { DiningHomepageCardPreview } from "./DiningHomepageCardPreview";
 
 interface DiningPostCreatePhaseProps {
@@ -15,6 +15,8 @@ export function DiningPostCreatePhase({
   onAddAnother,
   onDone,
 }: DiningPostCreatePhaseProps) {
+  const { copyToClipboard } = useClipboardCopy();
+
   return (
     <LocationDetail
       locationId={locationId}
@@ -30,10 +32,10 @@ export function DiningPostCreatePhase({
             <DiningHomepageCardPreview location={location} />
           </div>
 
-          <div className="space-y-3">
-            <LocationCompleteness locationDetail={location} />
-            <LocationMediaGallery locationDetail={location} />
-          </div>
+          <LocationDetailReviewStack
+            locationDetail={location}
+            onCopyField={copyToClipboard}
+          />
         </div>
       )}
       headerSlot={
