@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type JSX } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
 
 import type {
   CityHomepageArticleBlock,
@@ -36,7 +36,17 @@ function MapCarouselCard({
   isPriority: boolean
   isLast: boolean
 }): JSX.Element {
+  const imgRef = useRef<HTMLImageElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
+
+  // Reconcile images that finished loading before hydration attached onLoad,
+  // otherwise the card can stay stuck at opacity-0 after an SSR render.
+  useEffect(() => {
+    const image = imgRef.current
+    if (image && image.complete && image.naturalWidth > 0) {
+      setImgLoaded(true)
+    }
+  }, [item.imageUrl])
 
   return (
     <article
@@ -50,6 +60,7 @@ function MapCarouselCard({
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={imgRef}
             src={item.imageUrl}
             alt={item.title}
             className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -74,8 +85,18 @@ function MapGridCard({
   item: FeaturedArticleTeaser
   isPriority: boolean
 }): JSX.Element {
+  const imgRef = useRef<HTMLImageElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
   const imgSrc = item.imageUrlSquare ?? item.imageUrl
+
+  // Reconcile images that finished loading before hydration attached onLoad,
+  // otherwise the card can stay stuck at opacity-0 after an SSR render.
+  useEffect(() => {
+    const image = imgRef.current
+    if (image && image.complete && image.naturalWidth > 0) {
+      setImgLoaded(true)
+    }
+  }, [imgSrc])
 
   return (
     <div className="city-four-side-card" style={{ background: '#fafaf8' }}>
@@ -83,6 +104,7 @@ function MapGridCard({
         {imgSrc ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={imgRef}
             src={imgSrc}
             alt={item.title}
             className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}

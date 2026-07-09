@@ -17,7 +17,18 @@ function formatPriceLevel(value: string | null): string | null {
 }
 
 function HotelCard({ item, isPriority, isLast }: { item: HotelGridItem; isPriority: boolean; isLast: boolean }): JSX.Element {
+  const imgRef = useRef<HTMLImageElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
+
+  // The image is server-rendered at opacity-0 and faded in via onLoad. If it
+  // finishes loading (e.g. from cache) before hydration attaches the handler,
+  // the load event is missed and the card stays blank. Reconcile on mount.
+  useEffect(() => {
+    const image = imgRef.current
+    if (image && image.complete && image.naturalWidth > 0) {
+      setImgLoaded(true)
+    }
+  }, [item.imageUrl])
 
   const priceLabel = formatPriceLevel(item.priceLevel)
   const meta = [priceLabel, item.location?.toUpperCase()].filter(Boolean).join(' | ')
@@ -28,6 +39,7 @@ function HotelCard({ item, isPriority, isLast }: { item: HotelGridItem; isPriori
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={imgRef}
             src={item.imageUrl}
             alt={item.title}
             className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}

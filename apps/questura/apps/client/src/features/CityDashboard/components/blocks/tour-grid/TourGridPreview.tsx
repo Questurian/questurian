@@ -5,7 +5,18 @@ import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import type { TourGridBlock, TourGridItem, HomepageBlockLayoutProps } from '../../../types'
 
 function TourCard({ item, isPriority, isLast }: { item: TourGridItem; isPriority: boolean; isLast: boolean }): JSX.Element {
+  const imgRef = useRef<HTMLImageElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
+
+  // The image is server-rendered at opacity-0 and faded in via onLoad. If it
+  // finishes loading (e.g. from cache) before hydration attaches the handler,
+  // the load event is missed and the card stays blank. Reconcile on mount.
+  useEffect(() => {
+    const image = imgRef.current
+    if (image && image.complete && image.naturalWidth > 0) {
+      setImgLoaded(true)
+    }
+  }, [item.imageUrl])
 
   const meta = [item.priceLevel, item.location?.toUpperCase()].filter(Boolean).join(' | ')
 
@@ -15,6 +26,7 @@ function TourCard({ item, isPriority, isLast }: { item: TourGridItem; isPriority
         {item.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
+            ref={imgRef}
             src={item.imageUrl}
             alt={item.title}
             className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}

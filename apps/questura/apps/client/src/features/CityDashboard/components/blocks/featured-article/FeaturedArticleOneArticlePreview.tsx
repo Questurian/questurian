@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState, type JSX } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
 
 import type {
   CityHomepageArticleBlock,
@@ -26,6 +26,15 @@ function ArticleImage({
 }): JSX.Element {
   const [loaded, setLoaded] = useState(false)
   const imgRef = useRef<HTMLImageElement>(null)
+
+  // Reconcile images that finished loading before hydration attached onLoad,
+  // otherwise the image can stay stuck at opacity-0 after an SSR render.
+  useEffect(() => {
+    const image = imgRef.current
+    if (image && image.complete && image.naturalWidth > 0) {
+      setLoaded(true)
+    }
+  }, [src])
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
