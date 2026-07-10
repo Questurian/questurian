@@ -6,7 +6,7 @@ import {
   getUploadById,
 } from "@server/features/locations/repositories/content";
 import type { ImageSetUpload } from "@server/features/locations/models/location";
-import type { PhotoImportStartRequest, PhotoImportRejectRequest } from "@questurian/lm-shared";
+import { orderStagedSourceSnapshots, type PhotoImportStartRequest, type PhotoImportRejectRequest } from "@questurian/lm-shared";
 import { getPhotoImportControllerDeps } from "../dependencies";
 
 const { photoImport, instagram } = getPhotoImportControllerDeps();
@@ -93,15 +93,9 @@ export async function getPhotoImportSources(c: Context) {
     .filter((u): u is ImageSetUpload =>
       !!(u as ImageSetUpload).stagedSourceStatus &&
       ((u as ImageSetUpload).imageSet?.variants?.length ?? 0) === 0
-    )
-    .sort((left, right) => {
-      if (left.instagramEmbedId && left.instagramEmbedId === right.instagramEmbedId) {
-        return (left.sourcePosition ?? 0) - (right.sourcePosition ?? 0);
-      }
-      return String(right.created_at ?? "").localeCompare(String(left.created_at ?? ""));
-    });
+    );
 
-  const sources = uploads.map((u) => ({
+  const sources = orderStagedSourceSnapshots(uploads.map((u) => ({
     uploadId: u.id!,
     origin: u.sourceKind ?? (u.googlePhotoName ? "google" : "instagram"),
     googlePhotoName: u.googlePhotoName ?? null,
@@ -116,7 +110,7 @@ export async function getPhotoImportSources(c: Context) {
     sourcePath: u.imageSet?.sourceImage?.path ?? null,
     altText: u.imageSet?.altText ?? null,
     photographerCredit: u.imageSet?.photographerCredit ?? null,
-  }));
+  })));
 
   return c.json(successResponse({ sources }));
 }

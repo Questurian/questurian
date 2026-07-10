@@ -1,4 +1,4 @@
-import type { ImageSet, InstagramMediaStagingStatus } from "@questurian/lm-shared";
+import { CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION, type ImageSet, type InstagramMediaStagingStatus } from "@questurian/lm-shared";
 import type { InstagramEmbed, ImageSetUpload } from "../../models/location";
 import { getLocationById, updateLocationById } from "../../repositories/core";
 import {
@@ -42,7 +42,7 @@ export class InstagramImageStagingService {
 
       if (media.eligibility !== "photos-only") {
         embed.media_staging_status = "skipped";
-        embed.media_staging_version = 1;
+        embed.media_staging_version = CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION;
         embed.staged_item_count = 0;
         saveInstagramEmbed(embed);
         return embed;
@@ -60,7 +60,7 @@ export class InstagramImageStagingService {
       }
 
       embed.media_staging_status = this.resolveStatus(readyCount, failedCount);
-      embed.media_staging_version = 1;
+      embed.media_staging_version = CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION;
       embed.media_staging_error = failedCount > 0 ? `${failedCount} image${failedCount === 1 ? "" : "s"} failed to stage` : null;
       embed.staged_item_count = readyCount;
       saveInstagramEmbed(embed);
@@ -69,7 +69,7 @@ export class InstagramImageStagingService {
     } catch (error) {
       const rateLimited = error instanceof InstagramApiError && error.status === 429;
       embed.media_staging_status = rateLimited ? "pending" : "failed";
-      embed.media_staging_version = rateLimited ? null : 1;
+      embed.media_staging_version = rateLimited ? null : CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION;
       embed.media_staging_error = error instanceof Error ? error.message : String(error);
       saveInstagramEmbed(embed);
       this.touchLocationUpdatedAt(embed.location_id);
@@ -82,7 +82,7 @@ export class InstagramImageStagingService {
     const embeds = getInstagramEmbedsForBackfill();
     for (let index = 0; index < embeds.length; index++) {
       const result = await this.stageEmbedMedia(embeds[index]!.id!);
-      if (result.media_staging_status === "pending" && result.media_staging_error?.includes("429")) {
+      if (result.media_staging_status === "pending") {
         await this.delay(RATE_LIMIT_RETRY_MS);
         index--;
         continue;

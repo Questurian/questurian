@@ -1,5 +1,6 @@
 import { getDb } from "@server/shared/db/client";
 import type { InstagramEmbed } from "../../models/location";
+import { CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION } from "@questurian/lm-shared";
 
 /**
  * Database row interface for instagram_embeds table
@@ -187,11 +188,11 @@ export function getInstagramEmbedsForBackfill(): InstagramEmbed[] {
   const rows = db.query(`
     SELECT ${SELECT_INSTAGRAM_COLUMNS}
     FROM instagram_embeds
-    WHERE media_staging_version IS NULL OR media_staging_version < 1
+    WHERE media_staging_version IS NULL OR media_staging_version < $version
        OR media_staging_status IS NULL
        OR media_staging_status IN ('pending', 'processing')
     ORDER BY id
-  `).all() as InstagramEmbedDbRow[];
+  `).all({ $version: CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION }) as InstagramEmbedDbRow[];
   return rows.map(mapRow);
 }
 
