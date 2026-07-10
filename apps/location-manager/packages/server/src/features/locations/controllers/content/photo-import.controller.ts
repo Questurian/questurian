@@ -93,7 +93,13 @@ export async function getPhotoImportSources(c: Context) {
     .filter((u): u is ImageSetUpload =>
       !!(u as ImageSetUpload).stagedSourceStatus &&
       ((u as ImageSetUpload).imageSet?.variants?.length ?? 0) === 0
-    );
+    )
+    .sort((left, right) => {
+      if (left.instagramEmbedId && left.instagramEmbedId === right.instagramEmbedId) {
+        return (left.sourcePosition ?? 0) - (right.sourcePosition ?? 0);
+      }
+      return String(right.created_at ?? "").localeCompare(String(left.created_at ?? ""));
+    });
 
   const sources = uploads.map((u) => ({
     uploadId: u.id!,

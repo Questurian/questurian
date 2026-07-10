@@ -7,14 +7,20 @@ type EmbedRow = {
   images: string | null;
 };
 
-function normalizePostUrl(value: string): string {
+function normalizePost(value: string): { url: string; identity: string } {
   try {
     const url = new URL(value);
-    url.search = "";
-    url.hash = "";
-    return `${url.origin}${url.pathname.replace(/\/+$/, "")}/`;
+    const match = url.pathname.match(/^\/(p|reel|tv)\/([^/]+)/i);
+    if (match) {
+      const kind = match[1]!.toLowerCase();
+      const shortcode = match[2]!;
+      return { url: `https://www.instagram.com/${kind}/${shortcode}/`, identity: `${kind}:${shortcode}` };
+    }
+    const path = url.pathname.replace(/\/+$/, "");
+    return { url: `https://www.instagram.com${path}/`, identity: `url:${path.toLowerCase()}` };
   } catch {
-    return value.split(/[?#]/, 1)[0]!.replace(/\/+$/, "") + "/";
+    const url = value.split(/[?#]/, 1)[0]!.replace(/\/+$/, "") + "/";
+    return { url, identity: `url:${url.toLowerCase()}` };
   }
 }
 
@@ -40,6 +46,8 @@ export function addInstagramImageStaging(db: Database): void {
   addColumn(db, "instagram_embeds", embedColumns, "media_staging_error", "TEXT");
   addColumn(db, "instagram_embeds", embedColumns, "media_item_count", "INTEGER");
   addColumn(db, "instagram_embeds", embedColumns, "staged_item_count", "INTEGER");
+  addColumn(db, "instagram_embeds", embedColumns, "media_staging_version", "INTEGER");
+  addColumn(db, "instagram_embeds", embedColumns, "post_identity", "TEXT");
 
   const uploadColumns = new Set(
     (db.query("PRAGMA table_info(uploads)").all() as Array<{ name: string }>).map((column) => column.name),
@@ -50,27 +58,36 @@ export function addInstagramImageStaging(db: Database): void {
   addColumn(db, "uploads", uploadColumns, "source_position", "INTEGER");
   addColumn(db, "uploads", uploadColumns, "source_url", "TEXT");
 
+  db.run("DROP INDEX IF EXISTS idx_instagram_embeds_entity_url");
+  db.run("DROP INDEX IF EXISTS idx_instagram_embeds_entity_identity");
+
   db.transaction(() => {
     const rows = db.query("SELECT id, entity_id, url, images FROM instagram_embeds ORDER BY id").all() as EmbedRow[];
     const groups = new Map<string, EmbedRow[]>();
     for (const row of rows) {
-      const normalizedUrl = normalizePostUrl(row.url);
-      const key = `${row.entity_id}|${normalizedUrl}`;
-      groups.set(key, [...(groups.get(key) ?? []), { ...row, url: normalizedUrl }]);
+      const normalized = normalizePost(row.url);
+      const key = `${row.entity_id}|${normalized.identity}`;
+      groups.set(key, [...(groups.get(key) ?? []), { ...row, url: normalized.url }]);
     }
 
     for (const group of groups.values()) {
       const keep = [...group].sort((a, b) => imageCount(b.images) - imageCount(a.images) || b.id - a.id)[0]!;
-      db.query("UPDATE instagram_embeds SET url = $url WHERE id = $id").run({ $id: keep.id, $url: keep.url });
+      const identity = normalizePost(keep.url).identity;
       for (const duplicate of group) {
         if (duplicate.id !== keep.id) {
           db.query("DELETE FROM instagram_embeds WHERE id = $id").run({ $id: duplicate.id });
         }
       }
+      db.query("UPDATE instagram_embeds SET url = $url, post_identity = $identity WHERE id = $id").run({
+        $id: keep.id,
+        $url: keep.url,
+        $identity: identity,
+      });
     }
   })();
 
   db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_instagram_embeds_entity_url ON instagram_embeds(entity_id, url)");
+  db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_instagram_embeds_entity_identity ON instagram_embeds(entity_id, post_identity)");
   db.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_uploads_instagram_item ON uploads(instagram_embed_id, instagram_media_key)");
   db.run(`CREATE TABLE IF NOT EXISTS rejected_instagram_media (
     instagram_embed_id INTEGER NOT NULL,
@@ -80,4 +97,9 @@ export function addInstagramImageStaging(db: Database): void {
     PRIMARY KEY(instagram_embed_id, media_key),
     FOREIGN KEY(instagram_embed_id) REFERENCES instagram_embeds(id) ON DELETE CASCADE
   )`);
+  db.run(`
+    UPDATE instagram_embeds
+    SET media_staging_status = 'pending', media_staging_error = NULL
+    WHERE media_staging_version IS NULL
+  `);
 }

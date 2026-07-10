@@ -1,4 +1,4 @@
-import type { ImageSet } from "@questurian/lm-shared";
+import type { ImageSet, InstagramMediaStagingFields, StagedSourceFields } from "@questurian/lm-shared";
 import type { Category } from "./common.types";
 
 export interface ContactInfo {
@@ -47,7 +47,7 @@ export interface Tour {
   payloadSync?: TourPayloadSyncSummary | null;
 }
 
-export interface InstagramEmbed {
+export interface InstagramEmbed extends InstagramMediaStagingFields {
   id?: number;
   location_id: number;
   username: string;
@@ -56,10 +56,6 @@ export interface InstagramEmbed {
   instagram?: string | null;
   images?: string[];
   original_image_urls?: string[];
-  media_staging_status?: import("@questurian/lm-shared").InstagramMediaStagingStatus | null;
-  media_staging_error?: string | null;
-  media_item_count?: number | null;
-  staged_item_count?: number | null;
   created_at?: string;
 }
 
@@ -71,20 +67,12 @@ export interface ImageMetadata {
 }
 
 // ImageSet Upload format (multi-variant system)
-export interface ImageSetUpload {
+export interface ImageSetUpload extends StagedSourceFields {
   id?: number;
   location_id: number;
   imageSet?: ImageSet;
   created_at?: string;
   format: 'imageset';
-  stagedSourceStatus?: import("@questurian/lm-shared").StagedSourceStatus | null;
-  errorMessage?: string | null;
-  googlePhotoName?: string | null;
-  sourceKind?: import("@questurian/lm-shared").StagedSourceOrigin | null;
-  instagramEmbedId?: number | null;
-  instagramMediaKey?: string | null;
-  sourcePosition?: number | null;
-  sourceUrl?: string | null;
 }
 
 // Upload type - now only supports ImageSet format

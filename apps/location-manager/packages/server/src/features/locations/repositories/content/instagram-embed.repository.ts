@@ -9,6 +9,7 @@ interface InstagramEmbedDbRow {
   location_id: number;
   username: string;
   url: string;
+  post_identity: string;
   embed_code: string;
   instagram: string | null;
   images: string | null;
@@ -17,6 +18,7 @@ interface InstagramEmbedDbRow {
   media_staging_error: string | null;
   media_item_count: number | null;
   staged_item_count: number | null;
+  media_staging_version: number | null;
   created_at: string;
 }
 
@@ -30,9 +32,9 @@ function mapRow(row: InstagramEmbedDbRow): InstagramEmbed {
 }
 
 const SELECT_INSTAGRAM_COLUMNS = `
-  id, entity_id as location_id, username, url, embed_code, instagram, images,
+  id, entity_id as location_id, username, url, post_identity, embed_code, instagram, images,
   original_image_urls, media_staging_status, media_staging_error,
-  media_item_count, staged_item_count, created_at
+  media_item_count, staged_item_count, media_staging_version, created_at
 `;
 
 export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
@@ -45,6 +47,7 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
         UPDATE instagram_embeds
         SET username = $username,
             url = $url,
+            post_identity = $post_identity,
             embed_code = $embed_code,
             instagram = $instagram,
             images = $images,
@@ -52,7 +55,8 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
             media_staging_status = $media_staging_status,
             media_staging_error = $media_staging_error,
             media_item_count = $media_item_count,
-            staged_item_count = $staged_item_count
+            staged_item_count = $staged_item_count,
+            media_staging_version = $media_staging_version
         WHERE id = $id
       `);
 
@@ -60,6 +64,7 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
         $id: embed.id,
         $username: embed.username,
         $url: embed.url,
+        $post_identity: embed.post_identity ?? `url:${embed.url}`,
         $embed_code: embed.embed_code,
         $instagram: embed.instagram || null,
         $images: embed.images ? JSON.stringify(embed.images) : null,
@@ -68,6 +73,7 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
         $media_staging_error: embed.media_staging_error ?? null,
         $media_item_count: embed.media_item_count ?? null,
         $staged_item_count: embed.staged_item_count ?? null,
+        $media_staging_version: embed.media_staging_version ?? null,
       });
 
       return embed.id;
@@ -75,17 +81,18 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
       // Insert new embed
       const insertSql = `
         INSERT INTO instagram_embeds (
-          entity_id, username, url, embed_code, instagram, images, original_image_urls,
-          media_staging_status, media_staging_error, media_item_count, staged_item_count
+          entity_id, username, url, post_identity, embed_code, instagram, images, original_image_urls,
+          media_staging_status, media_staging_error, media_item_count, staged_item_count, media_staging_version
         ) VALUES (
-          $location_id, $username, $url, $embed_code, $instagram, $images, $original_image_urls,
-          $media_staging_status, $media_staging_error, $media_item_count, $staged_item_count
+          $location_id, $username, $url, $post_identity, $embed_code, $instagram, $images, $original_image_urls,
+          $media_staging_status, $media_staging_error, $media_item_count, $staged_item_count, $media_staging_version
         )
       `;
       db.query(insertSql).run({
         $location_id: embed.location_id,
         $username: embed.username,
         $url: embed.url,
+        $post_identity: embed.post_identity ?? `url:${embed.url}`,
         $embed_code: embed.embed_code,
         $instagram: embed.instagram || null,
         $images: embed.images ? JSON.stringify(embed.images) : null,
@@ -94,6 +101,7 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
         $media_staging_error: embed.media_staging_error ?? null,
         $media_item_count: embed.media_item_count ?? null,
         $staged_item_count: embed.staged_item_count ?? null,
+        $media_staging_version: embed.media_staging_version ?? null,
       });
 
       const result = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
@@ -164,13 +172,13 @@ export function getInstagramEmbedsByLocationIds(locationIds: number[]): Map<numb
   return embedsByLocation;
 }
 
-export function getInstagramEmbedByLocationAndUrl(locationId: number, url: string): InstagramEmbed | null {
+export function getInstagramEmbedByLocationAndIdentity(locationId: number, identity: string): InstagramEmbed | null {
   const db = getDb();
   const row = db.query(`
     SELECT ${SELECT_INSTAGRAM_COLUMNS}
     FROM instagram_embeds
-    WHERE entity_id = $locationId AND url = $url
-  `).get({ $locationId: locationId, $url: url }) as InstagramEmbedDbRow | undefined;
+    WHERE entity_id = $locationId AND post_identity = $identity
+  `).get({ $locationId: locationId, $identity: identity }) as InstagramEmbedDbRow | undefined;
   return row ? mapRow(row) : null;
 }
 
@@ -179,7 +187,8 @@ export function getInstagramEmbedsForBackfill(): InstagramEmbed[] {
   const rows = db.query(`
     SELECT ${SELECT_INSTAGRAM_COLUMNS}
     FROM instagram_embeds
-    WHERE media_staging_status IS NULL
+    WHERE media_staging_version IS NULL OR media_staging_version < 1
+       OR media_staging_status IS NULL
        OR media_staging_status IN ('pending', 'processing')
     ORDER BY id
   `).all() as InstagramEmbedDbRow[];

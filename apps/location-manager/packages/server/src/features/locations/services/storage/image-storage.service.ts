@@ -129,6 +129,19 @@ export class ImageStorageService {
     );
   }
 
+  createStoragePath(
+    locationName: string,
+    storageType: ImageStorageConfig["storageType"],
+    timestamp: ImageStorageConfig["timestamp"],
+  ): string {
+    return this.generateStoragePath({
+      baseDir: this.baseImagesDir,
+      locationName,
+      storageType,
+      timestamp,
+    });
+  }
+
   /**
    * Ensure directory structure exists
    */

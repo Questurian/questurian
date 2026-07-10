@@ -1,4 +1,4 @@
-import type { LocationProvenance } from "@questurian/lm-shared";
+import type { InstagramMediaStagingFields, LocationProvenance, StagedSourceFields } from "@questurian/lm-shared";
 
 export type LocationCategory = 'dining' | 'accommodations' | 'attractions' | 'nightlife' | 'key_locations';
 
@@ -119,19 +119,16 @@ export interface Location {
  * Instagram Embed
  * Represents Instagram posts embedded for a location
  */
-export interface InstagramEmbed {
+export interface InstagramEmbed extends InstagramMediaStagingFields {
   id?: number;
   location_id: number;  // FK to locations table
   username: string;
   url: string;
+  post_identity?: string;
   embed_code: string;
   instagram?: string | null;  // Instagram profile URL
   images?: string[];
   original_image_urls?: string[];
-  media_staging_status?: import('@questurian/lm-shared').InstagramMediaStagingStatus | null;
-  media_staging_error?: string | null;
-  media_item_count?: number | null;
-  staged_item_count?: number | null;
   created_at?: string;
 }
 
@@ -150,23 +147,13 @@ export interface ImageMetadata {
  * ImageSet Upload (multi-variant system)
  * Represents the multi-variant upload format with ImageSet structure
  */
-export interface ImageSetUpload {
+export interface ImageSetUpload extends StagedSourceFields {
   id?: number;
   location_id: number;  // FK to locations table
   imageSet?: import('@questurian/lm-shared').ImageSet;  // Single ImageSet object
   created_at?: string;
   format: 'imageset';  // Format discriminator
   /** Photo Import flow: status of the StagedSource lifecycle. NULL = operator upload, not from Photo Import. */
-  stagedSourceStatus?: import('@questurian/lm-shared').StagedSourceStatus | null;
-  /** Photo Import flow: error message if stagedSourceStatus='failed'. */
-  errorMessage?: string | null;
-  /** Photo Import flow: Google resource name (places/X/photos/Y) this Upload originated from. */
-  googlePhotoName?: string | null;
-  sourceKind?: import('@questurian/lm-shared').StagedSourceOrigin | null;
-  instagramEmbedId?: number | null;
-  instagramMediaKey?: string | null;
-  sourcePosition?: number | null;
-  sourceUrl?: string | null;
 }
 
 /**

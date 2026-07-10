@@ -11,14 +11,14 @@ interface PhotoImportPanelProps {
   locationId: number;
   category: LocationCategory;
   placeId: string | null | undefined;
-  instagramStagingActive?: boolean;
+  hasActiveInstagramStaging?: boolean;
 }
 
-export function PhotoImportPanel({ locationId, category, placeId, instagramStagingActive }: PhotoImportPanelProps) {
+export function PhotoImportPanel({ locationId, category, placeId, hasActiveInstagramStaging }: PhotoImportPanelProps) {
   const panel = usePhotoImportPanel({
     category,
     locationId,
-    instagramStagingActive,
+    hasActiveInstagramStaging,
   });
 
   // Hide the panel completely when pulling isn't possible (no placeId, or the

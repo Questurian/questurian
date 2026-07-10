@@ -14,6 +14,13 @@ export interface InstagramMediaItem {
   imageUrl?: string;
 }
 
+export class InstagramApiError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message);
+    this.name = "InstagramApiError";
+  }
+}
+
 export class InstagramApiClient {
   private readonly apiKey: string;
   private readonly apiHost = "instagram120.p.rapidapi.com";
@@ -46,12 +53,12 @@ export class InstagramApiClient {
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Instagram API error: ${response.status} - ${errorText}`);
+      throw new InstagramApiError(response.status, `Instagram API error: ${response.status} - ${errorText}`);
     }
 
     const data: any = await response.json();
     const parsed = this.parseMediaResponse(data);
-    if (parsed.imageUrls.length === 0) {
+    if (parsed.items.length === 0) {
       throw new Error("Instagram API returned no image URLs for this post");
     }
     return parsed;
@@ -85,11 +92,24 @@ export class InstagramApiClient {
 
     // Fallback parsing for different response formats
     if (items.length === 0 && Array.isArray(data)) {
-      items = data.flatMap((item: any, position: number) => item?.pictureUrl
-        ? [{ key: String(item.id ?? `position-${position}`), position, mediaType: "unknown" as const, imageUrl: item.pictureUrl }]
-        : []);
+      items = data.flatMap((item: any, position: number) => {
+        const imageUrl = item?.pictureUrl ?? item?.picture_url ?? item?.thumbnailUrl ?? item?.thumbnail_url;
+        const hasVideo = !!(item?.videoUrl ?? item?.video_url ?? item?.video);
+        if (!imageUrl && !hasVideo) return [];
+        return [{
+          key: String(item.id ?? item.pk ?? `position-${position}`),
+          position,
+          mediaType: hasVideo ? "video" as const : imageUrl ? "photo" as const : "unknown" as const,
+          ...(imageUrl ? { imageUrl } : {}),
+        }];
+      });
     } else if (items.length === 0 && data?.pictureUrl) {
-      items = [{ key: String(data.id ?? "position-0"), position: 0, mediaType: "unknown", imageUrl: data.pictureUrl }];
+      items = [{
+        key: String(data.id ?? "position-0"),
+        position: 0,
+        mediaType: data.videoUrl ?? data.video_url ?? data.video ? "video" : "photo",
+        imageUrl: data.pictureUrl,
+      }];
     }
 
     // Generic deep fallback for provider response shape changes

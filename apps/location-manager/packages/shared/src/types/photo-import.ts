@@ -13,6 +13,42 @@ export type InstagramMediaStagingStatus =
   | "skipped"
   | "failed";
 
+export interface InstagramMediaStagingFields {
+  media_staging_status?: InstagramMediaStagingStatus | null;
+  media_staging_error?: string | null;
+  media_item_count?: number | null;
+  staged_item_count?: number | null;
+  media_staging_version?: number | null;
+}
+
+export interface StagedSourceFields {
+  stagedSourceStatus?: StagedSourceStatus | null;
+  errorMessage?: string | null;
+  googlePhotoName?: string | null;
+  sourceKind?: StagedSourceOrigin | null;
+  instagramEmbedId?: number | null;
+  instagramMediaKey?: string | null;
+  sourcePosition?: number | null;
+  sourceUrl?: string | null;
+}
+
+export interface StagedSourceSnapshot {
+  uploadId: number;
+  origin: StagedSourceOrigin;
+  googlePhotoName: string | null;
+  instagramEmbedId: number | null;
+  instagramMediaKey: string | null;
+  sourcePosition: number | null;
+  sourceUrl: string | null;
+  stagedSourceStatus: StagedSourceStatus | null;
+  errorMessage: string | null;
+  hasSource: boolean;
+  hasVariants: boolean;
+  sourcePath: string | null;
+  altText: string | null;
+  photographerCredit: string | null;
+}
+
 /**
  * Status of a single Google photo, computed per-Location at preview time.
  * - new: returned by Google, never imported or rejected for this Location.

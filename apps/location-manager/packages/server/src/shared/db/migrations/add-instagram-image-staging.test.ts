@@ -31,7 +31,7 @@ describe("addInstagramImageStaging", () => {
     db.run(`INSERT INTO instagram_embeds
       (id, entity_id, username, url, embed_code, images, original_image_urls)
       VALUES
-      (207, 144, '@place', 'https://www.instagram.com/p/POST/?utm=one', 'old', '[]', '[]'),
+      (207, 144, '@place', 'https://instagram.com/p/POST?utm=one', 'old', '[]', '[]'),
       (209, 144, '@place', 'https://www.instagram.com/p/POST/', 'new', '[\"cached.jpg\"]', '[\"https://cdn.test/cached.jpg\"]')`);
 
     addInstagramImageStaging(db);

@@ -47,10 +47,10 @@ const CLOSED_ALT_REVIEW_STATE: AltReviewState = {
 type UsePhotoImportPanelOptions = {
   locationId: number;
   category: LocationCategory;
-  instagramStagingActive?: boolean;
+  hasActiveInstagramStaging?: boolean;
 };
 
-export function usePhotoImportPanel({ locationId, category, instagramStagingActive }: UsePhotoImportPanelOptions) {
+export function usePhotoImportPanel({ locationId, category, hasActiveInstagramStaging }: UsePhotoImportPanelOptions) {
   const { showToast } = useToast();
   const { enabled: photoImportEnabled } = useGooglePhotoImportEnabled();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -59,7 +59,7 @@ export function usePhotoImportPanel({ locationId, category, instagramStagingActi
   const [cachedAltTexts, setCachedAltTexts] = useState<Record<number, string>>({});
   const [loadingSourceId, setLoadingSourceId] = useState<number | null>(null);
 
-  const sourcesQuery = useStagedSources(locationId, { pollForIncoming: instagramStagingActive });
+  const sourcesQuery = useStagedSources(locationId, { pollForIncoming: hasActiveInstagramStaging });
   const startImport = useStartPhotoImport();
   const retryStaged = useRetryStagedSource();
   const deleteStaged = useDeleteStagedSource();

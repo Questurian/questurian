@@ -3,24 +3,9 @@ import type {
   PhotoImportPreview,
   PhotoImportStartPhoto,
   PhotoImportStartResponse,
+  StagedSourceSnapshot,
 } from "@questurian/lm-shared";
-
-export interface StagedSourceSnapshot {
-  uploadId: number;
-  origin: "google" | "instagram";
-  googlePhotoName: string | null;
-  instagramEmbedId: number | null;
-  instagramMediaKey: string | null;
-  sourcePosition: number | null;
-  sourceUrl: string | null;
-  stagedSourceStatus: "downloading" | "ready" | "failed" | null;
-  errorMessage: string | null;
-  hasSource: boolean;
-  hasVariants: boolean;
-  sourcePath: string | null;
-  altText: string | null;
-  photographerCredit: string | null;
-}
+export type { StagedSourceSnapshot } from "@questurian/lm-shared";
 
 export const photoImportApi = {
   preview(locationId: number): Promise<{ preview: PhotoImportPreview }> {

@@ -8,7 +8,7 @@ import {
   saveInstagramEmbed,
   getInstagramEmbedById,
   deleteInstagramEmbedById,
-  getInstagramEmbedByLocationAndUrl,
+  getInstagramEmbedByLocationAndIdentity,
 } from "../../repositories/content";
 import { InstagramImageStagingService } from "./instagram-image-staging.service";
 
@@ -33,7 +33,7 @@ export class InstagramService {
       throw new NotFoundError("Location", payload.locationId);
     }
 
-    const { url: instaUrl, author } = extractInstagramData(payload.embedCode);
+    const { url: instaUrl, author, identity } = extractInstagramData(payload.embedCode);
     if (!instaUrl) {
       throw new BadRequestError("Invalid embed code");
     }
@@ -45,7 +45,7 @@ export class InstagramService {
       );
     }
 
-    const existing = getInstagramEmbedByLocationAndUrl(payload.locationId, instaUrl);
+    const existing = identity ? getInstagramEmbedByLocationAndIdentity(payload.locationId, identity) : null;
     if (existing) {
       if (this.imageStaging.isConfigured() && existing.media_staging_status !== "ready") {
         void this.imageStaging.stageEmbedMedia(existing.id!);

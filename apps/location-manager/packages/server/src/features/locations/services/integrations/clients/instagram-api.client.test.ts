@@ -46,4 +46,27 @@ describe("InstagramApiClient.fetchMediaUrls", () => {
     expect(result.eligibility).toBe("mixed");
     expect(result.items.map((item) => item.mediaType)).toEqual(["photo", "video"]);
   });
+
+  test("classifies provider pictureUrl arrays as photo carousels", async () => {
+    globalThis.fetch = mock(async () => new Response(JSON.stringify([
+      { id: "photo-a", pictureUrl: "https://cdn.test/a.jpg" },
+      { id: "photo-b", pictureUrl: "https://cdn.test/b.jpg" },
+    ]), { status: 200 })) as unknown as typeof fetch;
+
+    const result = await client().fetchMediaUrls("https://www.instagram.com/p/POST/");
+
+    expect(result.eligibility).toBe("photos-only");
+    expect(result.items.map((item) => item.key)).toEqual(["photo-a", "photo-b"]);
+  });
+
+  test("detects videoUrl entries in provider arrays", async () => {
+    globalThis.fetch = mock(async () => new Response(JSON.stringify([
+      { id: "photo-a", pictureUrl: "https://cdn.test/a.jpg" },
+      { id: "video-b", pictureUrl: "https://cdn.test/poster.jpg", videoUrl: "https://cdn.test/b.mp4" },
+    ]), { status: 200 })) as unknown as typeof fetch;
+
+    const result = await client().fetchMediaUrls("https://www.instagram.com/p/POST/");
+
+    expect(result.eligibility).toBe("mixed");
+  });
 });

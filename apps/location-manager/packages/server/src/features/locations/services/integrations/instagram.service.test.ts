@@ -5,8 +5,8 @@ import type { InstagramEmbed } from "../../models/location";
 const updateLocationById = mock((_locationId: number, _updates: Record<string, unknown>) => true);
 const saveInstagramEmbed = mock(() => 42);
 const deleteInstagramEmbedById = mock(() => true);
-const getInstagramEmbedByLocationAndUrl = mock((_locationId: number, url: string) =>
-  url.endsWith("/") ? storedEmbed : null
+const getInstagramEmbedByLocationAndIdentity = mock((_locationId: number, identity: string) =>
+  identity === "p:ABC123" ? storedEmbed : null
 );
 
 let storedEmbed: InstagramEmbed | null = null;
@@ -20,7 +20,7 @@ mock.module("../../repositories/content", () => ({
   saveInstagramEmbed,
   getInstagramEmbedById: (id: number) => storedEmbed?.id === id ? storedEmbed : null,
   deleteInstagramEmbedById,
-  getInstagramEmbedByLocationAndUrl,
+  getInstagramEmbedByLocationAndIdentity,
   getInstagramEmbedsForBackfill: () => [],
   getUploadByInstagramItem: () => null,
   getUploadsByInstagramEmbedId: () => [],
@@ -43,7 +43,7 @@ describe("InstagramService out-of-sync flagging", () => {
     updateLocationById.mockClear();
     saveInstagramEmbed.mockClear();
     deleteInstagramEmbedById.mockClear();
-    getInstagramEmbedByLocationAndUrl.mockClear();
+    getInstagramEmbedByLocationAndIdentity.mockClear();
     storedEmbed = null;
   });
 

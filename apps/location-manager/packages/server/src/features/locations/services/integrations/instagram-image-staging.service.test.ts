@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import type { InstagramEmbed, Upload } from "../../models/location";
-import type { InstagramMediaResponse } from "./clients/instagram-api.client";
+import { InstagramApiError, type InstagramMediaResponse } from "./clients/instagram-api.client";
 
 let embed: InstagramEmbed = {
   id: 42,
@@ -21,7 +21,7 @@ mock.module("../../repositories/core", () => ({
 
 mock.module("../../repositories/content", () => ({
   getInstagramEmbedById: () => embed,
-  getInstagramEmbedByLocationAndUrl: () => null,
+  getInstagramEmbedByLocationAndIdentity: () => null,
   deleteInstagramEmbedById: () => true,
   saveInstagramEmbed: (next: InstagramEmbed) => {
     embed = { ...next };
@@ -53,15 +53,20 @@ let mediaResponse: InstagramMediaResponse = {
   ],
 };
 let failingUrl: string | null = null;
+let apiError: Error | null = null;
 
 const api = {
   isConfigured: () => true,
-  fetchMediaUrls: mock(async () => mediaResponse),
+  fetchMediaUrls: mock(async () => {
+    if (apiError) throw apiError;
+    return mediaResponse;
+  }),
 };
 
 const storage = {
-  saveImagesFromUrls: mock(async () => ({ savedPaths: [], errors: [] })),
+  saveImagesFromUrls: mock(async (_urls: string[], _path: string) => ({ savedPaths: [], errors: [] })),
   generateStoragePath: mock(({ timestamp }: { timestamp: number | string }) => `/images/${timestamp}`),
+  createStoragePath: mock((_location: string, _kind: string, timestamp: number | string) => `/images/${timestamp}`),
   saveSanitizedImageFromUrl: mock(async (url: string, path: string) => {
     if (url === failingUrl) throw new Error("download failed");
     return {
@@ -76,6 +81,8 @@ describe("InstagramImageStagingService", () => {
     uploads.length = 0;
     embed = { ...embed, images: [], original_image_urls: [], media_staging_status: "pending", media_staging_error: null, media_item_count: null, staged_item_count: null };
     failingUrl = null;
+    apiError = null;
+    storage.saveImagesFromUrls.mockClear();
   });
 
   test("stages every photo in an eligible carousel as an independent candidate", async () => {
@@ -84,6 +91,7 @@ describe("InstagramImageStagingService", () => {
     expect(result.media_staging_status).toBe("ready");
     expect(result.media_item_count).toBe(2);
     expect(result.staged_item_count).toBe(2);
+    expect(storage.saveImagesFromUrls.mock.calls[0]?.[0]).toEqual(["https://cdn.test/a.jpg"]);
     expect(uploads.map((upload) => ({
       key: upload.instagramMediaKey,
       position: upload.sourcePosition,
@@ -117,5 +125,28 @@ describe("InstagramImageStagingService", () => {
 
     expect(result.media_staging_status).toBe("skipped");
     expect(uploads).toHaveLength(0);
+  });
+
+  test("keeps rate-limited backfill work pending for automatic resume", async () => {
+    apiError = new InstagramApiError(429, "Instagram API error: 429 - rate limit");
+    const result = await new InstagramImageStagingService(api as never, storage as never).stageEmbedMedia(42);
+
+    expect(result.media_staging_status).toBe("pending");
+    expect(result.media_staging_version).toBeNull();
+  });
+
+  test("persists a failed candidate when a photo item has no URL", async () => {
+    mediaResponse = {
+      imageUrls: [],
+      mediaType: "single",
+      eligibility: "photos-only",
+      items: [{ key: "missing", position: 0, mediaType: "photo" }],
+    };
+    const result = await new InstagramImageStagingService(api as never, storage as never).stageEmbedMedia(42);
+
+    expect(result.media_staging_status).toBe("failed");
+    expect(uploads.map((upload) => ({ key: upload.instagramMediaKey, status: upload.stagedSourceStatus }))).toEqual([
+      { key: "missing", status: "failed" },
+    ]);
   });
 });
