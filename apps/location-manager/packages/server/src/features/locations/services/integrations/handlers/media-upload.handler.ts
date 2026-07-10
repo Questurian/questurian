@@ -66,6 +66,9 @@ export async function uploadLocationImages(
   try {
     // Upload images using ImageSet format (multi-variant system)
     for (const upload of location.uploads) {
+      if (upload.stagedSourceStatus && (upload.imageSet?.variants?.length ?? 0) === 0) {
+        continue;
+      }
       // Only handle ImageSetUpload format
       if (upload.format === 'imageset' && upload.imageSet) {
         // ImageSet format: upload ONLY variants (skip source image)
@@ -319,13 +322,10 @@ export async function uploadLocationImages(
 
     // Process Instagram embeds (FIRST image only + create post)
     for (const embed of location.instagram_embeds) {
-      if (embed.images && embed.images.length > 0) {
-        const previewImagePath = embed.images[0];
-        if (!previewImagePath) continue; // Skip if no preview image
-
-        let previewMediaAssetId: string | null = null;
-
-        try {
+      let previewMediaAssetId: string | null = null;
+      try {
+        const previewImagePath = embed.images?.[0];
+        if (previewImagePath) {
           // Step 1: Upload ONLY first image as preview
           const imageBuffer = await imageStorage.readImage(previewImagePath);
 
@@ -364,29 +364,29 @@ export async function uploadLocationImages(
               photographerCredit: normalizeInstagramPhotographerCredit(embed.username),
             }
           );
-
-          // Step 2: Create Instagram post with preview image
-          const postTitle = createInstagramPostTitle(embed.username, location);
-          const instagramPostId = await payloadClient.createInstagramPost({
-            title: postTitle,
-            embedCode: embed.embed_code,
-            previewImage: previewMediaAssetId,
-            status: "published",
-          });
-
-          instagramPostIds.push(instagramPostId);
-
-        } catch (error) {
-          if (previewMediaAssetId) {
-            console.warn(
-              `⚠️  Instagram post creation failed for ${embed.username}, ` +
-              `but preview image was uploaded (MediaAsset: ${previewMediaAssetId})`
-            );
-          } else {
-            console.warn(`⚠️  Failed to process Instagram embed for ${embed.username}:`, error);
-          }
-          // Continue with other embeds
         }
+
+        // Step 2: Create Instagram post; preview is optional in Payload.
+        const postTitle = createInstagramPostTitle(embed.username, location);
+        const instagramPostId = await payloadClient.createInstagramPost({
+          title: postTitle,
+          embedCode: embed.embed_code,
+          ...(previewMediaAssetId ? { previewImage: previewMediaAssetId } : {}),
+          status: "published",
+        });
+
+        instagramPostIds.push(instagramPostId);
+
+      } catch (error) {
+        if (previewMediaAssetId) {
+          console.warn(
+            `⚠️  Instagram post creation failed for ${embed.username}, ` +
+            `but preview image was uploaded (MediaAsset: ${previewMediaAssetId})`
+          );
+        } else {
+          console.warn(`⚠️  Failed to process Instagram embed for ${embed.username}:`, error);
+        }
+        // Continue with other embeds
       }
     }
   } catch (error) {

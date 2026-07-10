@@ -134,7 +134,7 @@ export interface PayloadGalleryItem {
 export interface PayloadInstagramPostData {
   title: string;
   embedCode: string;
-  previewImage: string;
+  previewImage?: string;
   status: "draft" | "published";
 }
 

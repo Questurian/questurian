@@ -3,6 +3,15 @@ import { EnvConfig } from "@server/shared/config/env.config";
 export interface InstagramMediaResponse {
   imageUrls: string[];
   mediaType: "single" | "carousel";
+  eligibility: "photos-only" | "video" | "mixed" | "unknown";
+  items: InstagramMediaItem[];
+}
+
+export interface InstagramMediaItem {
+  key: string;
+  position: number;
+  mediaType: "photo" | "video" | "unknown";
+  imageUrl?: string;
 }
 
 export class InstagramApiClient {
@@ -49,47 +58,64 @@ export class InstagramApiClient {
   }
 
   private parseMediaResponse(data: any): InstagramMediaResponse {
-    const imageUrls = new Set<string>();
-
     const getBestUrl = (candidates: Array<{ url: string }> | undefined) => {
       if (!candidates || candidates.length === 0) return null;
       return candidates[0]!.url;
     };
 
-    if (data && data.media) {
-      if (data.media.carousel_media) {
-        data.media.carousel_media.forEach((item: any) => {
-          if (item.image_versions2?.candidates) {
-            const url = getBestUrl(item.image_versions2.candidates);
-            if (url) imageUrls.add(url);
-          }
-        });
-      } else if (data.media.image_versions2?.candidates) {
-        const url = getBestUrl(data.media.image_versions2.candidates);
-        if (url) imageUrls.add(url);
-      }
+    const toItem = (item: any, position: number): InstagramMediaItem => {
+      const video = item?.media_type === 2 || item?.product_type === "clips" ||
+        (Array.isArray(item?.video_versions) && item.video_versions.length > 0);
+      const photo = item?.media_type === 1 || (!video && !!item?.image_versions2?.candidates);
+      const imageUrl = getBestUrl(item?.image_versions2?.candidates) ?? undefined;
+      return {
+        key: String(item?.id ?? item?.pk ?? `position-${position}`),
+        position,
+        mediaType: video ? "video" : photo ? "photo" : "unknown",
+        ...(imageUrl ? { imageUrl } : {}),
+      };
+    };
+
+    let items: InstagramMediaItem[] = [];
+    if (data?.media?.carousel_media && Array.isArray(data.media.carousel_media)) {
+      items = data.media.carousel_media.map(toItem);
+    } else if (data?.media) {
+      items = [toItem(data.media, 0)];
     }
 
     // Fallback parsing for different response formats
-    if (imageUrls.size === 0 && Array.isArray(data)) {
-      data.forEach((item: any) => {
-        if (item.pictureUrl) imageUrls.add(item.pictureUrl);
-      });
-    } else if (imageUrls.size === 0 && data?.pictureUrl) {
-      imageUrls.add(data.pictureUrl);
+    if (items.length === 0 && Array.isArray(data)) {
+      items = data.flatMap((item: any, position: number) => item?.pictureUrl
+        ? [{ key: String(item.id ?? `position-${position}`), position, mediaType: "unknown" as const, imageUrl: item.pictureUrl }]
+        : []);
+    } else if (items.length === 0 && data?.pictureUrl) {
+      items = [{ key: String(data.id ?? "position-0"), position: 0, mediaType: "unknown", imageUrl: data.pictureUrl }];
     }
 
     // Generic deep fallback for provider response shape changes
-    if (imageUrls.size === 0) {
+    if (items.length === 0) {
       const discovered = this.collectImageUrlsDeep(data);
-      for (const url of discovered) imageUrls.add(url);
+      items = discovered.map((imageUrl, position) => ({
+        key: `position-${position}`,
+        position,
+        mediaType: "unknown" as const,
+        imageUrl,
+      }));
     }
 
-    const urls = Array.from(imageUrls);
+    const kinds = new Set(items.map((item) => item.mediaType));
+    const eligibility: InstagramMediaResponse["eligibility"] =
+      kinds.size === 1 && kinds.has("photo") ? "photos-only"
+      : kinds.size === 1 && kinds.has("video") ? "video"
+      : kinds.has("video") && kinds.has("photo") ? "mixed"
+      : "unknown";
+    const imageUrls = items.flatMap((item) => item.imageUrl ? [item.imageUrl] : []);
 
     return {
-      imageUrls: urls,
-      mediaType: urls.length > 1 ? "carousel" : "single"
+      imageUrls,
+      mediaType: items.length > 1 ? "carousel" : "single",
+      eligibility,
+      items,
     };
   }
 

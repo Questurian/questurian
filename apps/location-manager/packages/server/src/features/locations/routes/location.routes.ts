@@ -47,7 +47,7 @@ import {
   getLocationHierarchy, getCountries, getCountryNames, getCitiesByCountry, getNeighborhoodsByCity,
 
   // Content
-  postAddInstagram, deleteInstagramEmbed,
+  postAddInstagram, deleteInstagramEmbed, retryInstagramMediaStaging,
   postAddUpload, postAddUploadImageSet, postGenerateAltText, postGenerateNeighborhoodDescription, deleteUpload, patchUploadPhotographerCredit, postReprocessUploadVariants, postReplaceUploadVariants,
   serveImage,
   fetchTripAdvisorPlace, downloadTripAdvisorPlace, getTripAdvisorPlaceStatus, downloadLocationExport,
@@ -189,6 +189,11 @@ app.delete(
   "/api/uploads/:id",
   validateParams(deleteUploadParamsSchema),
   deleteUpload
+);
+app.post(
+  "/api/instagram-embeds/:id/staging/retry",
+  validateParams(deleteInstagramEmbedParamsSchema),
+  retryInstagramMediaStaging,
 );
 app.patch(
   "/api/uploads/:id/photographer-credit",

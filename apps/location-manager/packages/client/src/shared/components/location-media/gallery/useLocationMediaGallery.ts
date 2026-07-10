@@ -7,6 +7,7 @@ import { useDeleteUpload } from "@client/shared/services/api/hooks/useDeleteUplo
 import { useDeleteInstagramEmbed } from "@client/shared/services/api/hooks/useDeleteInstagramEmbed";
 import { useReplaceUploadVariants } from "@client/shared/services/api/hooks/useReplaceUploadVariants";
 import { useUpdateUploadPhotographerCredit } from "@client/shared/services/api/hooks/useUpdateUploadPhotographerCredit";
+import { useRetryInstagramStaging } from "@client/shared/services/api/hooks/useRetryInstagramStaging";
 import {
   usePayloadMediaSetSelection,
 } from "../payload-selection/usePayloadMediaSetSelection";
@@ -57,12 +58,11 @@ export function useLocationMediaGallery(locationDetail: LocationResponse) {
   const uploadsWithPreview = (locationDetail.uploads || []).filter((upload) =>
     upload.imageSet?.variants?.some((variant) => Boolean(variant.path?.trim())) ?? false
   );
-  const instagramEmbedsWithPreview = (locationDetail.instagram_embeds || []).filter((embed) =>
-    Boolean(embed.images?.[0]?.trim())
-  );
+  const instagramEmbedsWithPreview = locationDetail.instagram_embeds || [];
   const isAttraction = locationDetail.category === "attractions";
   const payloadSelection = usePayloadMediaSetSelection(locationDetail);
   const selectedMediaSets = isAttraction ? payloadSelection.selectedMediaSets : [];
+  const retryInstagramStaging = useRetryInstagramStaging(locationDetail.category, locationDetail.id);
   const totalGalleryCount = uploadsWithPreview.length + selectedMediaSets.length;
   const missingCreditCount = uploadsWithPreview.filter((upload) =>
     hasMissingPhotographerCredit(upload.imageSet?.photographerCredit)
@@ -210,5 +210,6 @@ export function useLocationMediaGallery(locationDetail: LocationResponse) {
     previousLightboxImage: () => setLightboxState((state) => ({ ...state, currentIndex: Math.max(state.currentIndex - 1, 0) })),
     openUpload, openInstagram, confirmDelete, savePhotographerCredit, editCreditFromLightbox,
     confirmManualCrop, updatePhotographerCreditMutation, showToast,
+    retryInstagramStaging,
   };
 }

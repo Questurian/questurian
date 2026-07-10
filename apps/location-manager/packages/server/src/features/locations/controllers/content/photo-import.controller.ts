@@ -3,12 +3,13 @@ import { successResponse } from "@shared/types/api-response";
 import { BadRequestError } from "@shared/errors/http-error";
 import {
   getUploadsByLocationId,
+  getUploadById,
 } from "@server/features/locations/repositories/content";
 import type { ImageSetUpload } from "@server/features/locations/models/location";
 import type { PhotoImportStartRequest, PhotoImportRejectRequest } from "@questurian/lm-shared";
 import { getPhotoImportControllerDeps } from "../dependencies";
 
-const { photoImport } = getPhotoImportControllerDeps();
+const { photoImport, instagram } = getPhotoImportControllerDeps();
 
 function parseId(c: Context, key: string = "id"): number {
   const raw = c.req.param(key);
@@ -89,11 +90,19 @@ export async function postPhotoImportStart(c: Context) {
 export async function getPhotoImportSources(c: Context) {
   const locationId = parseId(c);
   const uploads = getUploadsByLocationId(locationId)
-    .filter((u): u is ImageSetUpload => !!(u as ImageSetUpload).googlePhotoName);
+    .filter((u): u is ImageSetUpload =>
+      !!(u as ImageSetUpload).stagedSourceStatus &&
+      ((u as ImageSetUpload).imageSet?.variants?.length ?? 0) === 0
+    );
 
   const sources = uploads.map((u) => ({
     uploadId: u.id!,
-    googlePhotoName: u.googlePhotoName!,
+    origin: u.sourceKind ?? (u.googlePhotoName ? "google" : "instagram"),
+    googlePhotoName: u.googlePhotoName ?? null,
+    instagramEmbedId: u.instagramEmbedId ?? null,
+    instagramMediaKey: u.instagramMediaKey ?? null,
+    sourcePosition: u.sourcePosition ?? null,
+    sourceUrl: u.sourceUrl ?? null,
     stagedSourceStatus: u.stagedSourceStatus ?? null,
     errorMessage: u.errorMessage ?? null,
     hasSource: !!u.imageSet?.sourceImage?.path,
@@ -131,6 +140,11 @@ export async function postPhotoImportUnreject(c: Context) {
 /** POST /api/uploads/:id/photo-import/retry */
 export async function postPhotoImportRetry(c: Context) {
   const uploadId = parseId(c);
+  const existing = getUploadById(uploadId) as ImageSetUpload | null;
+  if (existing?.sourceKind === "instagram" && existing.instagramEmbedId) {
+    const entry = await instagram.retryMediaStaging(existing.instagramEmbedId);
+    return c.json(successResponse({ entry }));
+  }
   const upload = await photoImport.retry(uploadId);
   return c.json(successResponse({ upload }));
 }

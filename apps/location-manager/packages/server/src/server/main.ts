@@ -2,9 +2,11 @@ import { initDb } from "../shared/db/client";
 import { app } from "../shared/http/server";
 import "../features/locations/routes/location.routes";
 import "../features/scrape/routes/scrape.routes";
+import { ServiceContainer } from "../features/locations/container/service-container";
 
 export function startServer(port = Number(process.env.PORT || 4317)) {
   initDb();
+  void ServiceContainer.getInstance().content.instagram.backfillExistingMedia();
 
   // Routes are now defined directly in the app via imports
   // No need to collect routes separately

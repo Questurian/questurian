@@ -13,6 +13,10 @@ interface InstagramEmbedDbRow {
   instagram: string | null;
   images: string | null;
   original_image_urls: string | null;
+  media_staging_status: string | null;
+  media_staging_error: string | null;
+  media_item_count: number | null;
+  staged_item_count: number | null;
   created_at: string;
 }
 
@@ -22,8 +26,14 @@ function mapRow(row: InstagramEmbedDbRow): InstagramEmbed {
     ...rest,
     images: images ? JSON.parse(images) : [],
     original_image_urls: original_image_urls ? JSON.parse(original_image_urls) : [],
-  };
+  } as InstagramEmbed;
 }
+
+const SELECT_INSTAGRAM_COLUMNS = `
+  id, entity_id as location_id, username, url, embed_code, instagram, images,
+  original_image_urls, media_staging_status, media_staging_error,
+  media_item_count, staged_item_count, created_at
+`;
 
 export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
   try {
@@ -38,7 +48,11 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
             embed_code = $embed_code,
             instagram = $instagram,
             images = $images,
-            original_image_urls = $original_image_urls
+            original_image_urls = $original_image_urls,
+            media_staging_status = $media_staging_status,
+            media_staging_error = $media_staging_error,
+            media_item_count = $media_item_count,
+            staged_item_count = $staged_item_count
         WHERE id = $id
       `);
 
@@ -50,14 +64,23 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
         $instagram: embed.instagram || null,
         $images: embed.images ? JSON.stringify(embed.images) : null,
         $original_image_urls: embed.original_image_urls ? JSON.stringify(embed.original_image_urls) : null,
+        $media_staging_status: embed.media_staging_status ?? null,
+        $media_staging_error: embed.media_staging_error ?? null,
+        $media_item_count: embed.media_item_count ?? null,
+        $staged_item_count: embed.staged_item_count ?? null,
       });
 
       return embed.id;
     } else {
       // Insert new embed
       const insertSql = `
-        INSERT INTO instagram_embeds (entity_id, username, url, embed_code, instagram, images, original_image_urls)
-        VALUES ($location_id, $username, $url, $embed_code, $instagram, $images, $original_image_urls)
+        INSERT INTO instagram_embeds (
+          entity_id, username, url, embed_code, instagram, images, original_image_urls,
+          media_staging_status, media_staging_error, media_item_count, staged_item_count
+        ) VALUES (
+          $location_id, $username, $url, $embed_code, $instagram, $images, $original_image_urls,
+          $media_staging_status, $media_staging_error, $media_item_count, $staged_item_count
+        )
       `;
       db.query(insertSql).run({
         $location_id: embed.location_id,
@@ -67,6 +90,10 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
         $instagram: embed.instagram || null,
         $images: embed.images ? JSON.stringify(embed.images) : null,
         $original_image_urls: embed.original_image_urls ? JSON.stringify(embed.original_image_urls) : null,
+        $media_staging_status: embed.media_staging_status ?? null,
+        $media_staging_error: embed.media_staging_error ?? null,
+        $media_item_count: embed.media_item_count ?? null,
+        $staged_item_count: embed.staged_item_count ?? null,
       });
 
       const result = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
@@ -81,7 +108,7 @@ export function saveInstagramEmbed(embed: InstagramEmbed): number | boolean {
 export function getInstagramEmbedById(id: number): InstagramEmbed | null {
   const db = getDb();
   const query = db.query(`
-    SELECT id, entity_id as location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
+    SELECT ${SELECT_INSTAGRAM_COLUMNS}
     FROM instagram_embeds
     WHERE id = $id
   `);
@@ -93,7 +120,7 @@ export function getInstagramEmbedById(id: number): InstagramEmbed | null {
 export function getInstagramEmbedsByLocationId(locationId: number): InstagramEmbed[] {
   const db = getDb();
   const query = db.query(`
-    SELECT id, entity_id as location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
+    SELECT ${SELECT_INSTAGRAM_COLUMNS}
     FROM instagram_embeds
     WHERE entity_id = $locationId
     ORDER BY created_at DESC
@@ -115,7 +142,7 @@ export function getInstagramEmbedsByLocationIds(locationIds: number[]): Map<numb
   const db = getDb();
   const placeholders = locationIds.map(() => '?').join(',');
   const query = db.query(`
-    SELECT id, entity_id as location_id, username, url, embed_code, instagram, images, original_image_urls, created_at
+    SELECT ${SELECT_INSTAGRAM_COLUMNS}
     FROM instagram_embeds
     WHERE entity_id IN (${placeholders})
     ORDER BY created_at DESC
@@ -135,6 +162,28 @@ export function getInstagramEmbedsByLocationIds(locationIds: number[]): Map<numb
   });
 
   return embedsByLocation;
+}
+
+export function getInstagramEmbedByLocationAndUrl(locationId: number, url: string): InstagramEmbed | null {
+  const db = getDb();
+  const row = db.query(`
+    SELECT ${SELECT_INSTAGRAM_COLUMNS}
+    FROM instagram_embeds
+    WHERE entity_id = $locationId AND url = $url
+  `).get({ $locationId: locationId, $url: url }) as InstagramEmbedDbRow | undefined;
+  return row ? mapRow(row) : null;
+}
+
+export function getInstagramEmbedsForBackfill(): InstagramEmbed[] {
+  const db = getDb();
+  const rows = db.query(`
+    SELECT ${SELECT_INSTAGRAM_COLUMNS}
+    FROM instagram_embeds
+    WHERE media_staging_status IS NULL
+       OR media_staging_status IN ('pending', 'processing')
+    ORDER BY id
+  `).all() as InstagramEmbedDbRow[];
+  return rows.map(mapRow);
 }
 
 export function deleteInstagramEmbedById(id: number): boolean {

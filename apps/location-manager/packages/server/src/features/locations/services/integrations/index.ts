@@ -3,6 +3,7 @@ export { PayloadSyncService } from './payload-sync.service';
 
 // Other integration services
 export { InstagramService } from './instagram.service';
+export { InstagramImageStagingService } from './instagram-image-staging.service';
 export { MapsService } from './maps.service';
 export { UploadsService } from './uploads.service';
 export { PhotoImportService } from './photo-import.service';

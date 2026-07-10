@@ -8,8 +8,9 @@ interface UseGenerateAltTextOptions {
 
 export function useGenerateAltText(options?: UseGenerateAltTextOptions) {
   const mutation = useMutation({
-    mutationFn: async (imageFile: File): Promise<{ altText: string }> => {
-      return locationsApi.generateAltText(imageFile);
+    mutationFn: async (input: File | { imageFile: File; uploadId: number }): Promise<{ altText: string }> => {
+      if (input instanceof File) return locationsApi.generateAltText(input);
+      return locationsApi.generateAltText(input.imageFile, input.uploadId);
     },
     onSuccess: (data) => {
       options?.onSuccess?.(data);

@@ -85,9 +85,10 @@ export const locationsUploadsApi = {
     );
   },
 
-  async generateAltText(imageFile: File): Promise<{ altText: string }> {
+  async generateAltText(imageFile: File, uploadId?: number): Promise<{ altText: string }> {
     const formData = new FormData();
     formData.append("image", imageFile);
+    if (uploadId) formData.append("uploadId", String(uploadId));
 
     return apiPostFormData<{ altText: string }>(
       API_ENDPOINTS.GENERATE_ALT_TEXT,

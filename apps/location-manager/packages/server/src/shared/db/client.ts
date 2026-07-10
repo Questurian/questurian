@@ -12,6 +12,7 @@ import { addPhotoImportFields } from "./migrations/add-photo-import-fields";
 import { renameReservationUrlToBookingUrl } from "./migrations/rename-reservation-url-to-booking-url";
 import { addAppSettings } from "./migrations/add-app-settings";
 import { addEntityPhoneUnavailable } from "./migrations/add-entity-phone-unavailable";
+import { addInstagramImageStaging } from "./migrations/add-instagram-image-staging";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -85,6 +86,8 @@ export function initDb() {
   addAppSettings(database);
 
   addEntityPhoneUnavailable(database);
+
+  addInstagramImageStaging(database);
 
   const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
   if (nightlifeIdealForCleanup.cleared > 0) {

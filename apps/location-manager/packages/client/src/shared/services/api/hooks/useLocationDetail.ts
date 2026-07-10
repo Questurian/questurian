@@ -14,5 +14,8 @@ export function useLocationDetail(
     queryFn: () => locationsApi.getLocationById(id!, category!),
     enabled: enabled && id !== null && category !== null,
     refetchOnMount: 'always',
+    refetchInterval: (query) => query.state.data?.instagram_embeds?.some((embed) =>
+      embed.media_staging_status === 'pending' || embed.media_staging_status === 'processing'
+    ) ? 1500 : false,
   });
 }

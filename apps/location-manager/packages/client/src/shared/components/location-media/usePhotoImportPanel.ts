@@ -8,16 +8,11 @@ import {
 } from "@client/shared/services/api";
 import { useGooglePhotoImportEnabled } from "@client/shared/services/api/hooks";
 import { useReplaceUploadVariants } from "@client/shared/services/api/hooks/useReplaceUploadVariants";
+import { useGenerateAltText } from "@client/shared/services/api/hooks/useGenerateAltText";
 import { useToast } from "@client/shared/hooks/useToast";
-import { createMultiVariantImages } from "@client/shared/lib/image-processing";
 import type { ImageVariantUploadFile } from "@client/shared/types/location-media.types";
 import type { LocationCategory, PhotoImportStartPhoto } from "@questurian/lm-shared";
-import {
-  buildCenterCropStates,
-  getFileNameFromPath,
-  loadImageDimensions,
-  toImageApiPath,
-} from "./photoImportPanel.utils";
+import { getFileNameFromPath, toImageApiPath } from "./photoImportPanel.utils";
 
 type CropModalState = {
   isOpen: boolean;
@@ -33,23 +28,42 @@ const CLOSED_CROP_STATE: CropModalState = {
   altText: undefined,
 };
 
+type AltReviewState = {
+  isOpen: boolean;
+  uploadId: number | null;
+  file: File | null;
+  generatedText: string;
+  error: string | null;
+};
+
+const CLOSED_ALT_REVIEW_STATE: AltReviewState = {
+  isOpen: false,
+  uploadId: null,
+  file: null,
+  generatedText: "",
+  error: null,
+};
+
 type UsePhotoImportPanelOptions = {
   locationId: number;
   category: LocationCategory;
+  instagramStagingActive?: boolean;
 };
 
-export function usePhotoImportPanel({ locationId, category }: UsePhotoImportPanelOptions) {
+export function usePhotoImportPanel({ locationId, category, instagramStagingActive }: UsePhotoImportPanelOptions) {
   const { showToast } = useToast();
   const { enabled: photoImportEnabled } = useGooglePhotoImportEnabled();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [cropState, setCropState] = useState<CropModalState>(CLOSED_CROP_STATE);
+  const [altReviewState, setAltReviewState] = useState<AltReviewState>(CLOSED_ALT_REVIEW_STATE);
+  const [cachedAltTexts, setCachedAltTexts] = useState<Record<number, string>>({});
   const [loadingSourceId, setLoadingSourceId] = useState<number | null>(null);
-  const [autoCropSourceId, setAutoCropSourceId] = useState<number | null>(null);
 
-  const sourcesQuery = useStagedSources(locationId);
+  const sourcesQuery = useStagedSources(locationId, { pollForIncoming: instagramStagingActive });
   const startImport = useStartPhotoImport();
   const retryStaged = useRetryStagedSource();
   const deleteStaged = useDeleteStagedSource();
+  const generateAltText = useGenerateAltText();
 
   const replaceVariants = useReplaceUploadVariants({
     category,
@@ -100,22 +114,25 @@ export function usePhotoImportPanel({ locationId, category }: UsePhotoImportPane
     const blob = await response.blob();
     return new File(
       [blob],
-      getFileNameFromPath(source.sourcePath, `google-${source.uploadId}.webp`),
+      getFileNameFromPath(source.sourcePath, `${source.origin}-${source.uploadId}.webp`),
       { type: blob.type || "image/webp" }
     );
   }
 
-  async function handleOpenCrop(source: StagedSourceSnapshot) {
+  async function handleOpenReview(source: StagedSourceSnapshot) {
     if (!source.sourcePath) return;
     setLoadingSourceId(source.uploadId);
     try {
       const file = await fetchSourceFile(source);
-      setCropState({
+      const cachedAltText = cachedAltTexts[source.uploadId] ?? source.altText ?? "";
+      setAltReviewState({
         isOpen: true,
         uploadId: source.uploadId,
         file,
-        altText: source.altText ?? undefined,
+        generatedText: cachedAltText,
+        error: null,
       });
+      if (!cachedAltText) await generateAltTextForReview(file, source.uploadId);
     } catch (err) {
       const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
       showToast(err instanceof Error ? err.message : "Failed to load source", center);
@@ -124,28 +141,38 @@ export function usePhotoImportPanel({ locationId, category }: UsePhotoImportPane
     }
   }
 
-  async function handleAutoCrop(source: StagedSourceSnapshot) {
-    if (!source.sourcePath) return;
-    setAutoCropSourceId(source.uploadId);
-    let objectUrl: string | null = null;
+  async function generateAltTextForReview(file: File, uploadId: number) {
     try {
-      const file = await fetchSourceFile(source);
-      const { url: imageUrl, width, height } = await loadImageDimensions(file);
-      objectUrl = imageUrl;
-      const cropStates = buildCenterCropStates(width, height);
-      const variantFiles = await createMultiVariantImages(imageUrl, cropStates, file.name, 0);
-      replaceVariants.mutate({
-        uploadId: source.uploadId,
-        sourceFile: file,
-        variantFiles,
-        altText: source.altText ?? undefined,
-      });
-    } catch (err) {
-      const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(err instanceof Error ? err.message : "Auto-crop failed", center);
-    } finally {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      setAutoCropSourceId((current) => (current === source.uploadId ? null : current));
+      const result = await generateAltText.mutateAsync({ imageFile: file, uploadId });
+      setCachedAltTexts((current) => ({ ...current, [uploadId]: result.altText }));
+      setAltReviewState((state) => state.uploadId === uploadId
+        ? { ...state, generatedText: result.altText, error: null }
+        : state);
+    } catch (error) {
+      setAltReviewState((state) => state.uploadId === uploadId
+        ? { ...state, error: error instanceof Error ? error.message : "Alt-text generation failed" }
+        : state);
+    }
+  }
+
+  function closeAltReview() {
+    setAltReviewState(CLOSED_ALT_REVIEW_STATE);
+  }
+
+  function confirmAltText(altText: string) {
+    if (!altReviewState.uploadId || !altReviewState.file) return;
+    setCropState({
+      isOpen: true,
+      uploadId: altReviewState.uploadId,
+      file: altReviewState.file,
+      altText,
+    });
+    closeAltReview();
+  }
+
+  function regenerateAltText() {
+    if (altReviewState.file && altReviewState.uploadId) {
+      void generateAltTextForReview(altReviewState.file, altReviewState.uploadId);
     }
   }
 
@@ -175,16 +202,19 @@ export function usePhotoImportPanel({ locationId, category }: UsePhotoImportPane
     photoImportEnabled,
     pickerOpen,
     cropState,
+    altReviewState,
     loadingSourceId,
-    autoCropSourceId,
     startImport,
     retryPending: retryStaged.isPending,
     pendingSources,
     setPickerOpen,
     closeCropper,
+    closeAltReview,
     handleConfirmPick,
-    handleOpenCrop,
-    handleAutoCrop,
+    handleOpenReview,
+    confirmAltText,
+    regenerateAltText,
+    isGeneratingAltText: generateAltText.isPending,
     handleCropConfirm,
     handleDelete,
     handleRetry,

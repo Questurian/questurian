@@ -56,6 +56,10 @@ export interface InstagramEmbed {
   instagram?: string | null;
   images?: string[];
   original_image_urls?: string[];
+  media_staging_status?: import("@questurian/lm-shared").InstagramMediaStagingStatus | null;
+  media_staging_error?: string | null;
+  media_item_count?: number | null;
+  staged_item_count?: number | null;
   created_at?: string;
 }
 
@@ -73,6 +77,14 @@ export interface ImageSetUpload {
   imageSet?: ImageSet;
   created_at?: string;
   format: 'imageset';
+  stagedSourceStatus?: import("@questurian/lm-shared").StagedSourceStatus | null;
+  errorMessage?: string | null;
+  googlePhotoName?: string | null;
+  sourceKind?: import("@questurian/lm-shared").StagedSourceOrigin | null;
+  instagramEmbedId?: number | null;
+  instagramMediaKey?: string | null;
+  sourcePosition?: number | null;
+  sourceUrl?: string | null;
 }
 
 // Upload type - now only supports ImageSet format

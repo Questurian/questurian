@@ -28,6 +28,7 @@ export { useReprocessUploadVariants } from "./useReprocessUploadVariants";
 export { useReplaceUploadVariants } from "./useReplaceUploadVariants";
 export { usePayloadMediaSets } from "./usePayloadMediaSets";
 export { useGenerateAltText } from "./useGenerateAltText";
+export { useRetryInstagramStaging } from "./useRetryInstagramStaging";
 export {
   usePhotoImportPreview,
   usePhotoImportPreviewByPlace,

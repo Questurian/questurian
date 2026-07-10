@@ -4,6 +4,14 @@
  */
 
 export type StagedSourceStatus = "downloading" | "ready" | "failed";
+export type StagedSourceOrigin = "google" | "instagram";
+export type InstagramMediaStagingStatus =
+  | "pending"
+  | "processing"
+  | "ready"
+  | "partial"
+  | "skipped"
+  | "failed";
 
 /**
  * Status of a single Google photo, computed per-Location at preview time.

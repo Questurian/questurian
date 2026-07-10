@@ -1,4 +1,4 @@
-import { AlertTriangle, Loader2, RotateCw, Scissors, Trash2, Wand2 } from "lucide-react";
+import { AlertTriangle, Loader2, RotateCw, ScanText, Trash2 } from "lucide-react";
 import { Button } from "@client/components/ui";
 import type { StagedSourceSnapshot } from "@client/shared/services/api";
 import { toImageApiPath } from "./photoImportPanel.utils";
@@ -14,11 +14,9 @@ type PhotoImportSourceGridProps = {
   photoImportEnabled: boolean;
   retryPending: boolean;
   loadingSourceId: number | null;
-  autoCropSourceId: number | null;
   onDelete: (source: StagedSourceSnapshot) => void;
   onRetry: (source: StagedSourceSnapshot) => void;
-  onOpenCrop: (source: StagedSourceSnapshot) => void;
-  onAutoCrop: (source: StagedSourceSnapshot) => void;
+  onOpenReview: (source: StagedSourceSnapshot) => void;
 };
 
 export function PhotoImportSourceGrid({
@@ -26,11 +24,9 @@ export function PhotoImportSourceGrid({
   photoImportEnabled,
   retryPending,
   loadingSourceId,
-  autoCropSourceId,
   onDelete,
   onRetry,
-  onOpenCrop,
-  onAutoCrop,
+  onOpenReview,
 }: PhotoImportSourceGridProps) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -60,7 +56,10 @@ export function PhotoImportSourceGrid({
             <span
               className={`absolute left-2 top-2 rounded px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${STATUS_STYLES[status]}`}
             >
-              {status}
+              {status === "ready" ? "awaiting review" : status === "downloading" ? "staging" : status}
+            </span>
+            <span className="absolute left-2 top-8 rounded bg-black/65 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+              {source.origin}
             </span>
 
             <button
@@ -82,32 +81,16 @@ export function PhotoImportSourceGrid({
                     type="button"
                     size="sm"
                     variant="secondary"
-                    onClick={() => onOpenCrop(source)}
-                    disabled={loadingSourceId === source.uploadId || autoCropSourceId === source.uploadId}
+                    onClick={() => onOpenReview(source)}
+                    disabled={loadingSourceId === source.uploadId}
                     className="h-7 flex-1 gap-1.5 text-xs"
                   >
                     {loadingSourceId === source.uploadId ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <Scissors className="h-3 w-3" />
+                      <ScanText className="h-3 w-3" />
                     )}
-                    Crop
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => onAutoCrop(source)}
-                    disabled={autoCropSourceId === source.uploadId || loadingSourceId === source.uploadId}
-                    title="Auto-crop (center crop for all variants)"
-                    className="h-7 flex-1 gap-1.5 text-xs"
-                  >
-                    {autoCropSourceId === source.uploadId ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Wand2 className="h-3 w-3" />
-                    )}
-                    Auto
+                    Review
                   </Button>
                 </div>
               )}
@@ -118,7 +101,7 @@ export function PhotoImportSourceGrid({
                       {source.errorMessage}
                     </span>
                   )}
-                  {photoImportEnabled && (
+                  {(source.origin === "instagram" || photoImportEnabled) && (
                     <Button
                       type="button"
                       size="sm"

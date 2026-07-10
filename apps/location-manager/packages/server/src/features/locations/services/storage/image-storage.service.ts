@@ -3,17 +3,23 @@ import { mkdir, rm, readdir, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sanitizeUploadedImageBuffer } from "../../utils/image-upload-sanitizer";
+import { extractImageMetadata } from "../../utils/image-metadata-extractor";
 
 export interface ImageStorageConfig {
   baseDir: string;
   locationName: string;
   storageType: "instagram" | "uploads";
-  timestamp: number;
+  timestamp: number | string;
 }
 
 export interface SaveImageResult {
   savedPaths: string[];
   errors: Array<{ index: number; error: string }>;
+}
+
+export interface SavedImageSource {
+  path: string;
+  metadata: { width: number; height: number; size: number; format: string };
 }
 
 export interface PathMetadata {
@@ -195,6 +201,30 @@ export class ImageStorageService {
     }
 
     return { savedPaths, errors };
+  }
+
+  async saveSanitizedImageFromUrl(url: string, storagePath: string): Promise<SavedImageSource> {
+    await this.ensureDirectoryExists(storagePath);
+    let response = await fetch(url);
+    if (!response.ok) {
+      response = await fetch(url, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+          Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          Referer: "https://www.instagram.com/",
+        },
+      });
+    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const raw = Buffer.from(await response.arrayBuffer());
+    const sanitized = await sanitizeUploadedImageBuffer(raw);
+    const absolutePath = join(storagePath, "source_0.webp");
+    await Bun.write(absolutePath, sanitized);
+    return {
+      path: this.toStoredPath(absolutePath),
+      metadata: await extractImageMetadata(absolutePath),
+    };
   }
 
   /**

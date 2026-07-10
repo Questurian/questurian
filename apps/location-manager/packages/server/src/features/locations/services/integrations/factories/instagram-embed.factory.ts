@@ -3,7 +3,14 @@ import type { InstagramEmbed } from "../../../models/location";
 export function extractInstagramData(html: string): { url: string | null; author: string | null } {
   const permalinkMatch = html.match(/data-instgrm-permalink="([^"]+)"/);
   let url = permalinkMatch?.[1] ?? null;
-  if (url?.includes("?")) url = url.split("?")[0]!;
+  if (url) {
+    try {
+      const parsed = new URL(url);
+      url = `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}/`;
+    } catch {
+      url = `${url.split(/[?#]/, 1)[0]!.replace(/\/+$/, "")}/`;
+    }
+  }
 
   const authorMatch = html.match(/A post shared by ([^<]+)/);
   const author = typeof authorMatch?.[1] === "string" ? authorMatch[1].trim() : null;

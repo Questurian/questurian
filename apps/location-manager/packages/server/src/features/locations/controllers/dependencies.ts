@@ -32,6 +32,7 @@ export function getUploadsControllerDeps() {
 export function getPhotoImportControllerDeps() {
   return {
     photoImport: container.content.photoImport,
+    instagram: container.content.instagram,
   };
 }
 

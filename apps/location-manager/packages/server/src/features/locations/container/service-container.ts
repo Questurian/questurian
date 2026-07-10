@@ -99,7 +99,6 @@ export class ServiceContainer {
     const photoImport = new PhotoImportService(
       googlePhotos,
       imageStorage,
-      altTextApi
     );
     const accommodationsField = new AccommodationsFieldSuggestionService(altTextApi);
     const diningField = new DiningFieldSuggestionService(altTextApi);

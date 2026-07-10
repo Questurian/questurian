@@ -31,3 +31,9 @@ export async function deleteInstagramEmbed(c: Context) {
 
   return c.json(successResponse({ message: "Instagram embed deleted successfully" }));
 }
+
+export async function retryInstagramMediaStaging(c: Context) {
+  const { id } = c.get("validatedParams") as DeleteInstagramEmbedParams;
+  const entry = await instagram.retryMediaStaging(id);
+  return c.json(successResponse({ entry }));
+}

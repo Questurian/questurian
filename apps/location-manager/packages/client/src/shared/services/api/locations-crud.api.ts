@@ -150,6 +150,11 @@ export const locationsCrudApi = {
     await apiDelete(API_ENDPOINTS.DELETE_INSTAGRAM_EMBED(embedId));
   },
 
+  async retryInstagramStaging(embedId: number): Promise<InstagramEmbedResponse["entry"]> {
+    const response = await apiPost<InstagramEmbedResponse>(API_ENDPOINTS.RETRY_INSTAGRAM_STAGING(embedId));
+    return unwrapEntry(response);
+  },
+
   async getLocationByCategoryAndId(category: Category, id: number): Promise<LocationResponse> {
     return apiGet<LocationResponse>(API_ENDPOINTS.GET_LOCATION_BY_ID(category, id));
   },

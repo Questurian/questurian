@@ -15,6 +15,7 @@ interface AltTextReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (altText: string) => void;
+  onRegenerate?: () => void;
   imageFile: File;
   aiGeneratedAltText?: string;
   generationError?: string;
@@ -25,6 +26,7 @@ export function AltTextReviewModal({
   isOpen,
   onClose,
   onConfirm,
+  onRegenerate,
   imageFile,
   aiGeneratedAltText = "",
   generationError,
@@ -136,6 +138,11 @@ export function AltTextReviewModal({
         </div>
 
         <DialogFooter className="gap-2">
+          {onRegenerate && (
+            <Button type="button" variant="outline" onClick={onRegenerate} disabled={isLoading}>
+              Regenerate
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"

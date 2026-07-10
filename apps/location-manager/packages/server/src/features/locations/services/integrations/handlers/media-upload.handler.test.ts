@@ -3,6 +3,64 @@ import type { LocationResponse } from "../../../models/location";
 import { uploadLocationImages } from "./media-upload.handler";
 
 describe("uploadLocationImages", () => {
+  test("skips unfinalized staged sources without failing gallery sync", async () => {
+    const payloadClient = { createInstagramPost: async () => "unused" };
+    const location = {
+      id: 1,
+      source: { name: "Pending", address: "" },
+      uploads: [{
+        id: 10,
+        location_id: 1,
+        format: "imageset",
+        stagedSourceStatus: "ready",
+        sourceKind: "instagram",
+        imageSet: {
+          id: "pending",
+          sourceImage: { path: "source.webp", dimensions: { width: 10, height: 10 }, size: 10, format: "webp" },
+          variants: [],
+          photographerCredit: "Pending",
+          created_at: new Date().toISOString(),
+        },
+      }],
+      instagram_embeds: [],
+    } as unknown as LocationResponse;
+
+    const result = await uploadLocationImages(location, payloadClient as any, {} as any);
+
+    expect(result.galleryImageIds).toEqual([]);
+    expect(result.galleryUploadFailures).toBe(0);
+  });
+
+  test("syncs an Instagram embed when no private preview is available", async () => {
+    const posts: Array<Record<string, unknown>> = [];
+    const payloadClient = {
+      createInstagramPost: async (post: Record<string, unknown>) => {
+        posts.push(post);
+        return "instagram-post-1";
+      },
+    };
+    const location = {
+      id: 2,
+      title: "Previewless",
+      source: { name: "Previewless", address: "" },
+      uploads: [],
+      instagram_embeds: [{
+        id: 20,
+        location_id: 2,
+        username: "@previewless",
+        url: "https://www.instagram.com/p/POST/",
+        embed_code: "<blockquote></blockquote>",
+        images: [],
+        original_image_urls: [],
+      }],
+    } as unknown as LocationResponse;
+
+    const result = await uploadLocationImages(location, payloadClient as any, {} as any);
+
+    expect(result.instagramPostIds).toEqual(["instagram-post-1"]);
+    expect(posts[0]).not.toHaveProperty("previewImage");
+  });
+
   test("uses resolved locationRef for uploads and instagram previews", async () => {
     const uploadCalls: Array<{
       filename: string;

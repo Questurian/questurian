@@ -123,6 +123,10 @@ _Avoid_: confusing with `Tour.bookingLink`. A Location Booking URL is the locati
 
 Curated social post linked to a Location.
 
+### Instagram Image Staging
+
+The process that derives independently reviewable **StagedSource**s from eligible still-image media belonging to an **InstagramEmbed**.
+
 ### `TaxonomyCorrection` / `CorrectionRule`
 
 Operator-defined spelling/normalization rules, keyed by `part_type` (`country` / `city` / `neighborhood`).
@@ -162,17 +166,19 @@ _Avoid_: photo sync, Google photo upload, place photo pipeline.
 
 ### StagedSource
 
-A durable `Upload` row with `format: "imageset"`, source bytes on disk, **no variants yet**, awaiting manual per-variant cropping by the operator. Produced only by **Operator-staged photo import** on the Location's edit surface. The **Add-time photo import** path does *not* produce StagedSources — its sources arrive at Create time with all 7 variants already populated. Promoted to a fully-formed image-set when the operator completes the crop pass for that source. Distinct from **Pending Suggestion** (which holds an AI-derived value awaiting operator acceptance — a different concern).
+A durable `Upload` row with `format: "imageset"`, source bytes on disk, **no variants yet**, awaiting operator acceptance, AI-generated alt-text review, and manual per-variant cropping. Produced by post-Create source-ingestion flows, including **Operator-staged photo import** and accepted still images discovered while saving an **InstagramEmbed**. The **Add-time photo import** path does *not* produce StagedSources — its sources arrive at Create time with all 7 variants already populated. Promoted to a fully-formed image-set only after alt text is confirmed and the crop pass is complete. Distinct from **Pending Suggestion** (which holds an AI-derived value awaiting operator acceptance — a different concern).
 _Avoid_: pending upload, draft image, uncropped photo (overlapping with operator-uploaded uncropped state).
 
 ### Rejected Source
 
-A photo previously returned by Google for a Location that the operator deselected during a **Photo Import flow**. The set of rejected photo `name`s is remembered per-Location so that subsequent re-pulls do not re-surface them as default-selected. Rejection is an operator intent, not a system outcome: photos whose download failed remain re-importable and are **not** rejected.
-_Avoid_: deleted photo, hidden photo, failed photo.
+A source image the operator explicitly declined during a source-ingestion flow. Google-photo rejection is remembered per Location and photo name; Instagram-photo rejection is remembered per post and carousel item. Subsequent pulls or retries do not re-stage rejected sources. Rejection is operator intent, not a system outcome: failed downloads remain retryable and are **not** rejected.
+_Avoid_: hidden photo, failed photo.
 
 ### Photo Import provenance
 
 Photos sourced via the **Photo Import flow** carry their Google contributor name in `Upload.imageSet.photographerCredit` (mapped from `authorAttributions[0].displayName`). Operator may edit this string before finalizing the image-set. Provenance otherwise tracked via the existing **FieldProvenance** mechanism is not extended for image-sets today.
+
+Instagram-sourced **StagedSource**s follow operator-upload attribution rather than Google-photo provenance: photographer credit defaults to the Location's title, falling back to its source name. The Instagram account is treated as belonging to the Location owner and is not used as photographer credit.
 
 ### Integration Toggle
 
@@ -183,6 +189,16 @@ _Avoid_: feature flag (connotes rollout/experimentation), env flag, kill switch.
 
 - A **Location** has one **LocationHierarchy** and zero or more **IdealForTag**s (scoped by category).
 - A **Location** has one **PayloadSyncState** per target collection (`dining`, `accommodations`, `attractions`, `nightlife`, `key-locations`).
+- Saving an image-only **InstagramEmbed** may create one or more independent **StagedSource**s. Deleting either record does not delete the other; promoted image-sets remain independent of the social post that supplied them.
+- Instagram image staging accepts single-photo posts and all-photo carousels only. Video posts, Reels, and mixed photo/video carousels produce no **StagedSource**s.
+- An eligible all-photo Instagram carousel creates one **StagedSource** per photo, preserving source order while allowing each photo to be reviewed or deleted independently.
+- Every **StagedSource**, regardless of origin, follows one review lifecycle: awaiting review → AI-generated alt-text review → operator-confirmed crop → fully-formed image-set. Auto-cropping cannot finalize a staged candidate. Cancelling review leaves it staged; deleting it removes the candidate.
+- AI alt text for a **StagedSource** is generated on demand when review begins, then cached for reopening. Operators may explicitly regenerate it; staging does not spend AI calls on candidates that may be rejected.
+- Failure to inspect or stage Instagram media does not invalidate its **InstagramEmbed**. The embed remains saved with an operator-visible staging failure and retry; retries must not create duplicate candidates.
+- An **InstagramEmbed** is unique within a Location by normalized Instagram post identity. Re-adding it returns the existing embed and retries only missing, non-rejected image candidates; the same post may belong to multiple Locations.
+- Unfinalized **StagedSource**s do not block Payload sync and are not sent as gallery images. Only fully-formed image-sets sync; pending or failed candidates remain operator-visible warnings while their **InstagramEmbed** syncs independently.
+- An **InstagramEmbed** may carry a private first-image preview for admin reference, but that preview is independent of its **StagedSource**s. Candidate rejection does not alter the preview; deleting the embed does not delete staged or promoted images. An embed without an available preview remains valid and syncable.
+- Partial failure in an eligible Instagram carousel does not roll back its embed or successful candidates. Progress and failure are tracked per original carousel item; retry processes only failed items without duplicating or reordering successful ones.
 - A **Tour** belongs to one Location via `locationKey`; it has its own `TourPayloadSyncState`.
 - A **Tour** has one **Tour Display Title**.
 - A **ViatorProduct** maps into one **TourDraft**; a **TourDraft** may become one **Tour** after operator confirmation.

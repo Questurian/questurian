@@ -112,6 +112,15 @@ export class UploadsService {
     }
   }
 
+  cacheStagedAltText(uploadId: number, altText: string): void {
+    const upload = getUploadById(uploadId);
+    if (!upload?.imageSet || !upload.stagedSourceStatus) {
+      throw new BadRequestError("Staged image source not found");
+    }
+    upload.imageSet.altText = altText.trim() || undefined;
+    if (!saveUpload(upload)) throw new Error("Failed to cache staged alt text");
+  }
+
   /**
    * Add a new multi-variant image set upload
    * @param locationId - Parent location ID

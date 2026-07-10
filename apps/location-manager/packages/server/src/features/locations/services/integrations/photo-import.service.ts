@@ -10,7 +10,6 @@ import type {
   ImageSet,
 } from "@questurian/lm-shared";
 import { GooglePlacesPhotosClient } from "./clients/google-places-photos.client";
-import { AltTextApiClient } from "./clients/alt-text-api.client";
 import { ImageStorageService } from "../storage/image-storage.service";
 import { getLocationById, updateLocationById } from "../../repositories/core";
 import {
@@ -21,6 +20,8 @@ import {
   getRejectedGooglePhotoNames,
   addRejectedGooglePhoto,
   removeRejectedGooglePhoto,
+  rejectInstagramMedia,
+  getInstagramEmbedById,
 } from "../../repositories/content";
 import { sanitizeUploadedImageBuffer } from "../../utils/image-upload-sanitizer";
 import { extractImageMetadata } from "../../utils/image-metadata-extractor";
@@ -32,7 +33,6 @@ export class PhotoImportService {
   constructor(
     private readonly googlePhotos: GooglePlacesPhotosClient,
     private readonly imageStorage: ImageStorageService,
-    private readonly altTextApi: AltTextApiClient
   ) {}
 
   isConfigured(): boolean {
@@ -195,6 +195,7 @@ export class PhotoImportService {
         location_id: locationId,
         format: "imageset",
         stagedSourceStatus: "downloading",
+        sourceKind: "google",
         googlePhotoName: photoName,
         imageSet: undefined,
       };
@@ -268,6 +269,8 @@ export class PhotoImportService {
 
     if (u.googlePhotoName) {
       this.rejectPhoto(u.location_id, u.googlePhotoName);
+    } else if (u.instagramEmbedId && u.instagramMediaKey && getInstagramEmbedById(u.instagramEmbedId)) {
+      rejectInstagramMedia(u.instagramEmbedId, u.instagramMediaKey, u.sourcePosition ?? 0);
     }
 
     // Best-effort source file cleanup if present.
@@ -315,9 +318,6 @@ export class PhotoImportService {
       const relativeSourcePath = sourceFilePath.replace(process.cwd() + "/", "");
       const meta = await extractImageMetadata(sourceFilePath);
 
-      // Pre-warm alt text in parallel; tolerate failure.
-      const altText = await this.tryGenerateAltText(webpBytes, sourceFileName);
-
       const imageSet: ImageSet = {
         id: `${timestamp}`,
         sourceImage: {
@@ -328,7 +328,6 @@ export class PhotoImportService {
         },
         variants: [],
         photographerCredit: credit,
-        altText: altText || undefined,
         created_at: new Date().toISOString(),
       };
 
@@ -350,16 +349,6 @@ export class PhotoImportService {
       saveUpload(f);
       console.warn(`[PhotoImport] Download failed for ${photoName}: ${message}`);
       this.touchLocationUpdatedAt(entry.location_id);
-    }
-  }
-
-  private async tryGenerateAltText(buffer: Buffer, filename: string): Promise<string> {
-    try {
-      return await this.altTextApi.generateAltText(buffer, filename, "webp");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.warn(`[PhotoImport] Alt-text generation failed for ${filename}: ${message}`);
-      return "";
     }
   }
 

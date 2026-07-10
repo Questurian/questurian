@@ -7,7 +7,12 @@ import type {
 
 export interface StagedSourceSnapshot {
   uploadId: number;
-  googlePhotoName: string;
+  origin: "google" | "instagram";
+  googlePhotoName: string | null;
+  instagramEmbedId: number | null;
+  instagramMediaKey: string | null;
+  sourcePosition: number | null;
+  sourceUrl: string | null;
   stagedSourceStatus: "downloading" | "ready" | "failed" | null;
   errorMessage: string | null;
   hasSource: boolean;

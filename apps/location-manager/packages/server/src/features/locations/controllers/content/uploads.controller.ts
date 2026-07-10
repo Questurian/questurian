@@ -351,6 +351,12 @@ export async function postGenerateAltText(c: Context) {
       imageFile.name,
       fileExtension
     );
+    const uploadIdRaw = formData.get("uploadId");
+    if (typeof uploadIdRaw === "string" && uploadIdRaw.trim()) {
+      const uploadId = Number(uploadIdRaw);
+      if (!Number.isInteger(uploadId) || uploadId <= 0) throw new BadRequestError("Valid uploadId required");
+      uploads.cacheStagedAltText(uploadId, altText);
+    }
 
     return c.json(successResponse({ altText }));
   } catch (error) {

@@ -7,13 +7,16 @@ import { getLocationById, updateLocationById } from "../../repositories/core";
 import {
   saveInstagramEmbed,
   getInstagramEmbedById,
-  deleteInstagramEmbedById
+  deleteInstagramEmbedById,
+  getInstagramEmbedByLocationAndUrl,
 } from "../../repositories/content";
+import { InstagramImageStagingService } from "./instagram-image-staging.service";
 
 export class InstagramService {
   constructor(
     private readonly apiClient: InstagramApiClient,
-    private readonly imageStorage: ImageStorageService
+    private readonly imageStorage: ImageStorageService,
+    private readonly imageStaging = new InstagramImageStagingService(apiClient, imageStorage),
   ) {}
 
   async addInstagramEmbed(payload: AddInstagramRequest): Promise<InstagramEmbed> {
@@ -42,46 +45,27 @@ export class InstagramService {
       );
     }
 
+    const existing = getInstagramEmbedByLocationAndUrl(payload.locationId, instaUrl);
+    if (existing) {
+      if (this.imageStaging.isConfigured() && existing.media_staging_status !== "ready") {
+        void this.imageStaging.stageEmbedMedia(existing.id!);
+      }
+      return existing;
+    }
+
     // Create entry and save to DB
     const entry = createFromInstagram(payload.embedCode, payload.locationId);
+    entry.media_staging_status = this.imageStaging.isConfigured() ? "pending" : "failed";
+    entry.media_staging_error = this.imageStaging.isConfigured()
+      ? null
+      : "Instagram media provider is not configured";
     const savedId = saveInstagramEmbed(entry);
     if (typeof savedId === "number") {
       entry.id = savedId;
     }
 
-    // Download media if API is configured
-    if (this.apiClient.isConfigured()) {
-      try {
-        const timestamp = Date.now();
-        const storagePath = this.imageStorage.generateStoragePath({
-          baseDir: this.imageStorage["baseImagesDir"],
-          locationName: parentLocation.name,
-          storageType: "instagram",
-          timestamp
-        });
-
-        const mediaResponse = await this.apiClient.fetchMediaUrls(instaUrl);
-
-        if (mediaResponse.imageUrls.length > 0) {
-          const { savedPaths, errors } = await this.imageStorage.saveImagesFromUrls(
-            mediaResponse.imageUrls,
-            storagePath
-          );
-
-          if (errors.length > 0) {
-            console.warn("Some images failed to download:", errors);
-          }
-
-          if (savedPaths.length > 0) {
-            entry.images = savedPaths;
-            entry.original_image_urls = mediaResponse.imageUrls;
-            saveInstagramEmbed(entry);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching Instagram media:", error);
-        // Don't fail the request if media download fails
-      }
+    if (typeof savedId === "number" && this.imageStaging.isConfigured()) {
+      void this.imageStaging.stageEmbedMedia(savedId);
     }
 
     // Instagram embeds are part of the Payload sync payload, so adding one
@@ -95,6 +79,14 @@ export class InstagramService {
     }
 
     return entry;
+  }
+
+  retryMediaStaging(embedId: number): Promise<InstagramEmbed> {
+    return this.imageStaging.stageEmbedMedia(embedId);
+  }
+
+  backfillExistingMedia(): Promise<void> {
+    return this.imageStaging.backfillExistingEmbeds();
   }
 
   async deleteInstagramEmbed(id: number): Promise<void> {

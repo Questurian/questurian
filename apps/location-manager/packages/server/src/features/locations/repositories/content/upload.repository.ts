@@ -15,6 +15,11 @@ interface UploadDbRow {
   staged_source_status: string | null;
   error_message: string | null;
   google_photo_name: string | null;
+  source_kind: string | null;
+  instagram_embed_id: number | null;
+  instagram_media_key: string | null;
+  source_position: number | null;
+  source_url: string | null;
 }
 
 /**
@@ -31,12 +36,18 @@ function mapRow(row: UploadDbRow): Upload {
     stagedSourceStatus: (row.staged_source_status as ImageSetUpload['stagedSourceStatus']) ?? null,
     errorMessage: row.error_message ?? null,
     googlePhotoName: row.google_photo_name ?? null,
+    sourceKind: (row.source_kind as ImageSetUpload['sourceKind']) ?? null,
+    instagramEmbedId: row.instagram_embed_id ?? null,
+    instagramMediaKey: row.instagram_media_key ?? null,
+    sourcePosition: row.source_position ?? null,
+    sourceUrl: row.source_url ?? null,
   } as ImageSetUpload;
 }
 
 const SELECT_UPLOAD_COLUMNS = `
   id, entity_id as location_id, imageSets, uploadFormat, created_at,
-  staged_source_status, error_message, google_photo_name
+  staged_source_status, error_message, google_photo_name,
+  source_kind, instagram_embed_id, instagram_media_key, source_position, source_url
 `;
 
 /**
@@ -56,7 +67,12 @@ export function saveUpload(upload: Upload): number | boolean {
             uploadFormat = 'imageset',
             staged_source_status = $staged_source_status,
             error_message = $error_message,
-            google_photo_name = $google_photo_name
+            google_photo_name = $google_photo_name,
+            source_kind = $source_kind,
+            instagram_embed_id = $instagram_embed_id,
+            instagram_media_key = $instagram_media_key,
+            source_position = $source_position,
+            source_url = $source_url
         WHERE id = $id
       `);
 
@@ -66,20 +82,35 @@ export function saveUpload(upload: Upload): number | boolean {
         $staged_source_status: imageSetUpload.stagedSourceStatus ?? null,
         $error_message: imageSetUpload.errorMessage ?? null,
         $google_photo_name: imageSetUpload.googlePhotoName ?? null,
+        $source_kind: imageSetUpload.sourceKind ?? (imageSetUpload.googlePhotoName ? "google" : null),
+        $instagram_embed_id: imageSetUpload.instagramEmbedId ?? null,
+        $instagram_media_key: imageSetUpload.instagramMediaKey ?? null,
+        $source_position: imageSetUpload.sourcePosition ?? null,
+        $source_url: imageSetUpload.sourceUrl ?? null,
       });
 
       return imageSetUpload.id;
     } else {
       // Insert new
       db.query(`
-        INSERT INTO uploads (entity_id, imageSets, uploadFormat, staged_source_status, error_message, google_photo_name)
-        VALUES ($location_id, $imageSets, 'imageset', $staged_source_status, $error_message, $google_photo_name)
+        INSERT INTO uploads (
+          entity_id, imageSets, uploadFormat, staged_source_status, error_message, google_photo_name,
+          source_kind, instagram_embed_id, instagram_media_key, source_position, source_url
+        ) VALUES (
+          $location_id, $imageSets, 'imageset', $staged_source_status, $error_message, $google_photo_name,
+          $source_kind, $instagram_embed_id, $instagram_media_key, $source_position, $source_url
+        )
       `).run({
         $location_id: imageSetUpload.location_id,
         $imageSets: imageSetUpload.imageSet ? JSON.stringify(imageSetUpload.imageSet) : null,
         $staged_source_status: imageSetUpload.stagedSourceStatus ?? null,
         $error_message: imageSetUpload.errorMessage ?? null,
         $google_photo_name: imageSetUpload.googlePhotoName ?? null,
+        $source_kind: imageSetUpload.sourceKind ?? (imageSetUpload.googlePhotoName ? "google" : null),
+        $instagram_embed_id: imageSetUpload.instagramEmbedId ?? null,
+        $instagram_media_key: imageSetUpload.instagramMediaKey ?? null,
+        $source_position: imageSetUpload.sourcePosition ?? null,
+        $source_url: imageSetUpload.sourceUrl ?? null,
       });
 
       const result = db.query("SELECT last_insert_rowid() as id").get() as { id: number };
@@ -113,6 +144,27 @@ export function getUploadsByLocationId(locationId: number): Upload[] {
   `);
   const rows = query.all({ $locationId: locationId }) as UploadDbRow[];
   return rows.map(mapRow);
+}
+
+export function getUploadsByInstagramEmbedId(embedId: number): Upload[] {
+  const db = getDb();
+  const rows = db.query(`
+    SELECT ${SELECT_UPLOAD_COLUMNS}
+    FROM uploads
+    WHERE instagram_embed_id = $embedId
+    ORDER BY source_position, id
+  `).all({ $embedId: embedId }) as UploadDbRow[];
+  return rows.map(mapRow);
+}
+
+export function getUploadByInstagramItem(embedId: number, mediaKey: string): Upload | null {
+  const db = getDb();
+  const row = db.query(`
+    SELECT ${SELECT_UPLOAD_COLUMNS}
+    FROM uploads
+    WHERE instagram_embed_id = $embedId AND instagram_media_key = $mediaKey
+  `).get({ $embedId: embedId, $mediaKey: mediaKey }) as UploadDbRow | undefined;
+  return row ? mapRow(row) : null;
 }
 
 /**

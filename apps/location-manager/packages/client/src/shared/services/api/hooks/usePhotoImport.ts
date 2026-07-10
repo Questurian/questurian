@@ -30,7 +30,7 @@ export function usePhotoImportPreview(locationId: number | null, opts?: { enable
  * Poll StagedSource statuses while any source is still 'downloading'.
  * Stops polling once every snapshot is 'ready' or 'failed'.
  */
-export function useStagedSources(locationId: number | null, opts?: { enabled?: boolean }) {
+export function useStagedSources(locationId: number | null, opts?: { enabled?: boolean; pollForIncoming?: boolean }) {
   return useQuery({
     queryKey: photoImportKeys.sources(locationId ?? -1),
     queryFn: () => photoImportApi.sources(locationId!),
@@ -39,7 +39,7 @@ export function useStagedSources(locationId: number | null, opts?: { enabled?: b
       const data = query.state.data;
       if (!data) return 2000;
       const anyDownloading = data.sources.some((s) => s.stagedSourceStatus === "downloading");
-      return anyDownloading ? 1500 : false;
+      return anyDownloading || opts?.pollForIncoming ? 1500 : false;
     },
   });
 }
