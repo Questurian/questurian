@@ -51,7 +51,8 @@ export const addNightlifeSchema = z.object({
   countryCode: z.enum(SUPPORTED_COUNTRY_CODES),
 
   location: z.string().min(1, "Location is required"),
-  phone: z.string().trim().min(1, "Phone number is required"),
+  phone: z.string().trim().max(50, "Phone must be less than 50 characters").optional().or(z.literal("")),
+  phoneNotAvailable: z.boolean(),
   hours: z.string().optional().or(z.literal("")),
   tripadvisorUrl: z
     .string()
@@ -110,6 +111,21 @@ export const addNightlifeSchema = z.object({
       "Longitude must be a number between -180 and 180"
     ),
   daytimeRestaurant: z.enum(DAYTIME_RESTAURANT_VALUES),
+});
+
+/**
+ * Resolver schema for the create form. Phone is required unless the user
+ * explicitly marks it "not available". Kept separate from `addNightlifeSchema`
+ * so the base object schema stays a ZodObject for `.partial()` draft parsing.
+ */
+export const addNightlifeFormSchema = addNightlifeSchema.superRefine((data, ctx) => {
+  if (!data.phoneNotAvailable && !data.phone?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["phone"],
+      message: "Phone number is required (or mark it not available)",
+    });
+  }
 });
 
 export type AddNightlifeFormData = z.infer<typeof addNightlifeSchema>;

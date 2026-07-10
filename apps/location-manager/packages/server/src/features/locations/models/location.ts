@@ -85,6 +85,8 @@ export interface Location {
   countryCode?: string | null;
   ianaTimeId?: string | null;
   phoneNumber?: string | null;
+  /** Operator confirmed this place has no phone. Stored as 0/1 in SQLite. */
+  phoneUnavailable?: boolean | null;
   website?: string | null;
   menuUrl?: string | null;
   bookingUrl?: string | null;
@@ -187,6 +189,7 @@ export interface CreateMapsRequest {
   ianaTimeId?: string;
   placeId?: string;
   phoneNumber?: string;
+  phoneUnavailable?: boolean;
   website?: string;
   menuUrl?: string;
   bookingUrl?: string;
@@ -221,6 +224,7 @@ export interface AddInstagramRequest {
 export interface LocationContact {
   countryCode: string | null;
   phoneNumber: string | null;
+  phoneUnavailable: boolean;
   website: string | null;
   email: string | null;
   contactAddress: string | null;

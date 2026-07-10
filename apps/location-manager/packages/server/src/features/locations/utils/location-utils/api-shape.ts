@@ -174,6 +174,7 @@ export function transformLocationToResponse(location: LocationWithNested): Locat
     contact: {
       countryCode: location.countryCode || null,
       phoneNumber: location.phoneNumber || null,
+      phoneUnavailable: Boolean(location.phoneUnavailable),
       website: location.website || null,
       email: location.email || null,
       contactAddress: location.contactAddress || null,
@@ -444,6 +445,7 @@ export function transformLocationToBasicResponse(
   const hasCountryCode = Boolean(location.countryCode?.trim());
   const hasPhoneNumber =
     Boolean(location.phoneNumber?.trim()) ||
+    Boolean(location.phoneUnavailable) ||
     (isNightlife && Boolean(nightlifePhone)) ||
     (isAccommodations && Boolean(accommodationsPhone)) ||
     (isKeyLocations && Boolean(keyLocationsPhone));

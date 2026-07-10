@@ -80,6 +80,7 @@ export const createMapsSchema = z.object({
   ianaTimeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   placeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   phoneNumber: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
+  phoneUnavailable: z.boolean().optional(),
   website: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   menuUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
   bookingUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? undefined : val),
@@ -276,6 +277,7 @@ export const patchMapsSchema = z.object({
   countryCode: z.union([z.string().length(2), z.literal("")]).optional().transform(val => val === "" ? null : val),
   ianaTimeId: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   phoneNumber: z.string().trim().optional().or(z.literal("")).transform(val => val === "" ? null : val),
+  phoneUnavailable: z.boolean().optional(),
   website: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   menuUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
   bookingUrl: z.string().trim().url().optional().or(z.literal("")).transform(val => val === "" ? null : val),
@@ -331,6 +333,7 @@ export const patchMapsSchema = z.object({
          data.countryCode !== undefined ||
          data.ianaTimeId !== undefined ||
          data.phoneNumber !== undefined ||
+         data.phoneUnavailable !== undefined ||
          data.website !== undefined ||
          data.menuUrl !== undefined ||
          data.bookingUrl !== undefined ||

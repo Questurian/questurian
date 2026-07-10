@@ -37,6 +37,10 @@ export function ContactFieldsSection({ form, category, locationId }: ContactFiel
     { status: "idle" } | { status: "busy" } | { status: "error"; message: string }
   >({ status: "idle" });
 
+  const [phoneNotAvailable, setPhoneNotAvailable] = useState(
+    () => !(form.getValues("phoneNumber") ?? "").trim()
+  );
+
   const bookingUrlLabel = bookingUrlLabelFor(category);
   const canSuggest = Boolean(locationId) && bookingUrlLabel !== null;
 
@@ -76,12 +80,29 @@ export function ContactFieldsSection({ form, category, locationId }: ContactFiel
         ))}
       </FormSelect>
 
-      <FormInput
-        name="phoneNumber"
-        label="Phone Number"
-        control={form.control}
-        placeholder="Phone number (optional)"
-      />
+      <div className="space-y-2">
+        <FormInput
+          name="phoneNumber"
+          label="Phone Number"
+          control={form.control}
+          placeholder="Phone number (optional)"
+          disabled={phoneNotAvailable}
+        />
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={phoneNotAvailable}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setPhoneNotAvailable(checked);
+              if (checked) {
+                form.setValue("phoneNumber", "", { shouldDirty: true, shouldValidate: true });
+              }
+            }}
+          />
+          Phone not available
+        </label>
+      </div>
 
       <FormInput
         name="website"

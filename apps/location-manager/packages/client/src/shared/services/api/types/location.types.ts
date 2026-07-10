@@ -4,6 +4,8 @@ import type { Category } from "./common.types";
 export interface ContactInfo {
   countryCode: string | null;
   phoneNumber: string | null;
+  /** Operator confirmed this place has no phone; completeness treats it as satisfied. */
+  phoneUnavailable: boolean;
   website: string | null;
   email: string | null;
   contactAddress: string | null;

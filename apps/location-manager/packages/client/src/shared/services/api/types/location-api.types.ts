@@ -181,6 +181,7 @@ export interface UpdateMapsRequest {
   countryCode?: string;
   ianaTimeId?: string | null;
   phoneNumber?: string;
+  phoneUnavailable?: boolean;
   website?: string;
   menuUrl?: string | null;
   bookingUrl?: string | null;

@@ -1,7 +1,7 @@
 import type { CollectionAfterChangeHook } from 'payload'
 import { getExpectedBunnyOriginalUrl } from '@/features/media/lib/bunny-original-url'
 
-const BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY = 'skipBunnyOriginalUrlSync'
+export const BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY = 'skipBunnyOriginalUrlSync'
 
 export const syncBunnyOriginalUrl: CollectionAfterChangeHook = async ({ doc, req }) => {
   const context = (req.context as Record<string, unknown> | undefined) ?? {}

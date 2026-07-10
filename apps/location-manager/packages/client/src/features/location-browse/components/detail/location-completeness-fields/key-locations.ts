@@ -40,7 +40,7 @@ export function getKeyLocationsCompletenessFields({
       label: "Coordinates",
       present: locationDetail.coordinates?.lat != null && locationDetail.coordinates?.lng != null,
     },
-    { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim() || asString(keyLocationsDetails?.phone)) },
+    { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim() || asString(keyLocationsDetails?.phone) || contact.phoneUnavailable) },
     { key: "website", label: "Website", present: Boolean(contact.website?.trim() || asString(keyLocationsDetails?.website)) },
     { key: "media", label: "Images/Instagram", present: hasMedia || hasKeyLocationImages },
   ];

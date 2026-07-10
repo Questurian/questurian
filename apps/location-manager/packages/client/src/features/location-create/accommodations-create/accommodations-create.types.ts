@@ -83,6 +83,7 @@ export const ACCOMMODATIONS_FORM_DEFAULT_VALUES = {
   checkInTime: "",
   checkOutTime: "",
   phone: "",
+  phoneNotAvailable: false,
   websiteUrl: "",
   bookingUrl: "",
   googleMapsUrl: "",

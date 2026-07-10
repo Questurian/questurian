@@ -14,6 +14,7 @@ export const LOCATION_SELECT_COLUMNS = `
   e.countryCode,
   e.iana_time_id as ianaTimeId,
   e.phoneNumber,
+  e.phone_unavailable as phoneUnavailable,
   e.website,
   e.email,
   COALESCE(d.hours_json, n.hours_json, a.hours_json, at.hours_json, kl.hours_json) as hoursJson,

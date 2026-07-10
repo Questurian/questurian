@@ -278,8 +278,39 @@ const CORE_FIELD_REGISTRY = {
   },
   phone: {
     draftInit: (l) => l.contact?.phoneNumber?.trim() ?? "",
-    editor: textEditor(),
-    saveStrategy: simpleValueStrategy((t) => ({ phoneNumber: t || undefined })),
+    editor: ({ draft }) => (
+      <div className="space-y-2">
+        <Input
+          value={draft.value}
+          onChange={(event) => draft.setValue(event.target.value)}
+          placeholder="Enter phone"
+          disabled={draft.phoneNotAvailable}
+        />
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={draft.phoneNotAvailable}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              draft.setPhoneNotAvailable(checked);
+              if (checked) draft.setValue("");
+            }}
+          />
+          Phone not available
+        </label>
+      </div>
+    ),
+    saveStrategy: {
+      canSave: () => true,
+      save: ({ draft, save }) =>
+        save(
+          draft.phoneNotAvailable
+            ? { phoneNumber: "", phoneUnavailable: true }
+            : { phoneNumber: draft.value.trim(), phoneUnavailable: false },
+          "Phone saved",
+          "Failed to save phone"
+        ),
+    },
   },
   website: {
     draftInit: (l) => l.contact?.website?.trim() ?? "",

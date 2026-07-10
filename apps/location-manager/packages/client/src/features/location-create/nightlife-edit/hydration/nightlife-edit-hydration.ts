@@ -125,6 +125,7 @@ export function buildNightlifeEditFormValues(location: LocationResponse): EditNi
     countryCode: normalizeCountryCode(location.contact.countryCode),
     location: location.source.address || details.location || NIGHTLIFE_EDIT_FORM_DEFAULT_VALUES.location,
     phone: location.contact.phoneNumber || details.phone || "",
+    phoneNotAvailable: !(location.contact.phoneNumber || details.phone || "").trim(),
     hours: location.operationHours ? JSON.stringify(location.operationHours, null, 2) : details.hours || "",
     website: location.contact.website || details.website || "",
     bookingUrl: details.bookingUrl || "",

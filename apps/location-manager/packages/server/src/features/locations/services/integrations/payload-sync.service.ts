@@ -157,7 +157,7 @@ export class PayloadSyncService {
           `Gallery upload incomplete: ${failedCount} image set(s) failed to upload to Payload. ` +
           `Document ${response.doc.id} was saved with a partial gallery — re-run sync to retry.`;
         console.error(`❌ [SYNC] Location ${locationId}: ${message}`);
-        // saveSyncState keeps the existing payload_doc_id for non-success statuses.
+        // saveSyncState preserves this doc id even though the overall sync failed.
         PayloadSyncRepo.saveSyncState(locationId, collection, response.doc.id, "failed", message);
         // Intentionally do NOT touch updated_at — leaving it ahead of last_synced_at
         // keeps the location flagged rather than equalizing it into a false green.

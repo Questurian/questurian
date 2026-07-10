@@ -54,7 +54,25 @@ export function EditDetailsSection({
         </div>
         <div className="space-y-2">
           <Label>Phone</Label>
-          <Input placeholder="+1 (555) 700-1200" {...register("phone")} />
+          <Input
+            placeholder="+1 (555) 700-1200"
+            disabled={watch("phoneNotAvailable")}
+            {...register("phone")}
+          />
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={watch("phoneNotAvailable")}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setValue("phoneNotAvailable", checked, { shouldDirty: true, shouldValidate: true });
+                if (checked) {
+                  setValue("phone", "", { shouldDirty: true, shouldValidate: true });
+                }
+              }}
+            />
+            Phone not available
+          </label>
           {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
         </div>
         <div className="space-y-2">

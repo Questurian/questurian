@@ -61,7 +61,7 @@ export function EditContactSection({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <TextField form={form} field="phone" label="Phone" placeholder="+1 (555) 234-5678" />
+        <PhoneField form={form} />
         <div className="space-y-2">
           <Label>Hours</Label>
           <div className="flex items-center gap-2 flex-wrap">
@@ -129,6 +129,33 @@ function TextField({
       <Label>{label}</Label>
       <Input placeholder={placeholder} {...form.register(field)} />
       {error && <p className="text-xs text-destructive">{error.message}</p>}
+    </div>
+  );
+}
+
+function PhoneField({ form }: { form: UseFormReturn<EditNightlifeFormData> }) {
+  const notAvailable = form.watch("phoneNotAvailable");
+  return (
+    <div className="space-y-2">
+      <Label>Phone</Label>
+      <Input placeholder="+1 (555) 234-5678" disabled={notAvailable} {...form.register("phone")} />
+      <label className="flex items-center gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          checked={notAvailable}
+          onChange={(event) => {
+            const checked = event.target.checked;
+            form.setValue("phoneNotAvailable", checked, { shouldDirty: true, shouldValidate: true });
+            if (checked) {
+              form.setValue("phone", "", { shouldDirty: true, shouldValidate: true });
+            }
+          }}
+        />
+        Phone not available
+      </label>
+      {form.formState.errors.phone && (
+        <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
+      )}
     </div>
   );
 }

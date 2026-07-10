@@ -116,6 +116,20 @@ def _is_variant_conflict_error(parsed_error: str, variant: str) -> bool:
     )
 
 
+def _is_missing_storage_file_delete_error(error: PayloadUploadError) -> bool:
+    """Detect Payload/Bunny delete failures caused by an already-missing file."""
+    normalized = f"{error.detail} {error.response_body}".lower()
+    return (
+        error.status_code >= 500
+        and "delete file" in normalized
+        and (
+            "couldn't" in normalized
+            or "could not" in normalized
+            or "failed" in normalized
+        )
+    )
+
+
 def _extract_relationship_id(value: Any) -> str | int | None:
     if value is None:
         return None
@@ -241,11 +255,29 @@ class PayloadClient:
             )
             existing_asset_id = existing_asset.get("id") if existing_asset else None
             if existing_asset_id:
-                await self.delete_media_asset(str(existing_asset_id))
+                replacement_action = "deleted"
+                try:
+                    await self.delete_media_asset(str(existing_asset_id))
+                except PayloadUploadError as exc:
+                    if not _is_missing_storage_file_delete_error(exc):
+                        raise
+                    detached = await self.detach_media_asset_from_media_set(
+                        asset_id=str(existing_asset_id),
+                        media_set_id=media_set_id,
+                        variant=variant.variant_type.value,
+                    )
+                    logger.warning(
+                        "%s stale variant asset_id=%s delete failed because storage file is missing; detached=%s before upload",
+                        step,
+                        existing_asset_id,
+                        detached,
+                    )
+                    replacement_action = "detached stale" if detached else "skipped stale"
                 logger.info(
-                    "%s ↻ existing variant found for media_set_id=%s; deleted asset_id=%s before upload",
+                    "%s ↻ existing variant found for media_set_id=%s; %s asset_id=%s before upload",
                     step,
                     media_set_id,
+                    replacement_action,
                     existing_asset_id,
                 )
 
@@ -865,6 +897,74 @@ class PayloadClient:
             found.get('id') if found else "not found",
         )
         return found
+
+    async def detach_media_asset_from_media_set(
+        self,
+        asset_id: str,
+        media_set_id: str | int,
+        variant: str,
+    ) -> bool:
+        """Clear mediaSet/variant on a stale asset without deleting its storage file."""
+        current_asset = await self.get_media_asset_by_id(asset_id)
+        if current_asset is None:
+            return False
+
+        if (
+            str(current_asset.get("mediaSet")) != str(media_set_id)
+            or current_asset.get("variant") != variant
+        ):
+            logger.warning(
+                "detach_media_asset(%s) skipped; expected mediaSet=%s variant=%s, got mediaSet=%s variant=%s",
+                asset_id,
+                media_set_id,
+                variant,
+                current_asset.get("mediaSet"),
+                current_asset.get("variant"),
+            )
+            return False
+
+        url = f"{self.api_url}/api/media-assets/{asset_id}"
+        headers = {**self._get_headers(), "Content-Type": "application/json"}
+        step = f"detach_media_asset({asset_id})"
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.patch(
+                    url,
+                    headers=headers,
+                    json={"mediaSet": None, "variant": None},
+                )
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Cannot connect to Payload CMS",
+                request_url=url,
+                detail=f"Is Payload running at {self.api_url}? ({e})",
+            )
+        except httpx.TimeoutException as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Payload CMS request timed out (30s)",
+                request_url=url,
+                detail=str(e),
+            )
+
+        if response.status_code == 404:
+            return False
+
+        if response.status_code >= 400:
+            body = response.text
+            parsed = _parse_payload_error(body)
+            raise PayloadUploadError(
+                step=step,
+                message="Failed to detach stale media-asset from MediaSet",
+                status_code=response.status_code,
+                response_body=body,
+                request_url=url,
+                detail=parsed,
+            )
+
+        return True
 
     async def find_or_create_tag(self, name: str) -> int:
         """Find a tag by name in Payload, creating it if it doesn't exist. Returns tag ID."""

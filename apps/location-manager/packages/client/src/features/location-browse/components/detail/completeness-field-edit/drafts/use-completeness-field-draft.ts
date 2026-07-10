@@ -38,6 +38,7 @@ export function useCompletenessFieldDraft({
     field.key === "type" ? locationDetail.category : undefined
   );
   const [value, setValue] = useState("");
+  const [phoneNotAvailable, setPhoneNotAvailable] = useState(false);
   const [idealForDraft, setIdealForDraft] = useState<string[]>([]);
   const [cuisinesDraft, setCuisinesDraft] = useState<string[]>([]);
   const [nightlifeMultiDraft, setNightlifeMultiDraft] = useState<string[]>([]);
@@ -64,6 +65,7 @@ export function useCompletenessFieldDraft({
   useEffect(() => {
     if (!open) return;
     setValue(getCoreFieldConfig(field.key)?.draftInit?.(locationDetail) ?? "");
+    setPhoneNotAvailable(Boolean(locationDetail.contact?.phoneUnavailable));
     setCoordinateDraft({
       lat: locationDetail.coordinates?.lat != null ? String(locationDetail.coordinates.lat) : "",
       lng: locationDetail.coordinates?.lng != null ? String(locationDetail.coordinates.lng) : "",
@@ -157,6 +159,7 @@ export function useCompletenessFieldDraft({
 
   return {
     value, setValue,
+    phoneNotAvailable, setPhoneNotAvailable,
     idealForDraft, addIdealForTag, removeIdealForTag,
     cuisinesDraft, setCuisinesDraft,
     nightlifeMultiDraft, setNightlifeMultiDraft,

@@ -51,6 +51,7 @@ export async function addMapsLocationOperation(
   if (payload.ianaTimeId !== undefined) entry.ianaTimeId = payload.ianaTimeId;
   if (payload.placeId !== undefined) entry.placeId = payload.placeId;
   if (payload.phoneNumber !== undefined) entry.phoneNumber = payload.phoneNumber;
+  if (payload.phoneUnavailable !== undefined) entry.phoneUnavailable = payload.phoneUnavailable;
   if (payload.website !== undefined) entry.website = payload.website;
   if (payload.menuUrl !== undefined) entry.menuUrl = payload.menuUrl;
   if (payload.bookingUrl !== undefined) entry.bookingUrl = payload.bookingUrl;

@@ -131,7 +131,28 @@ export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsP
             </div>
             <div className="space-y-2">
               <FieldLabel apiFilled={isApiFilled("phone")}>Phone</FieldLabel>
-              <Input placeholder="+1 (555) 700-1200" {...form.register("phone")} />
+              <Input
+                placeholder="+1 (555) 700-1200"
+                disabled={form.watch("phoneNotAvailable")}
+                {...form.register("phone")}
+              />
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={form.watch("phoneNotAvailable")}
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    form.setValue("phoneNotAvailable", checked, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                    if (checked) {
+                      form.setValue("phone", "", { shouldValidate: true, shouldDirty: true });
+                    }
+                  }}
+                />
+                Phone not available
+              </label>
               {form.formState.errors.phone && (
                 <p className="text-xs text-destructive">{form.formState.errors.phone.message}</p>
               )}

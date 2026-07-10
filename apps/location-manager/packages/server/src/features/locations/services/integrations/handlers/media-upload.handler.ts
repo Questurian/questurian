@@ -79,6 +79,7 @@ export async function uploadLocationImages(
         // Validate variants exist
         if (!imageSet.variants || imageSet.variants.length === 0) {
           console.warn(`⚠️  ImageSet ${imageSet.id} has no variants, skipping`);
+          galleryUploadFailures++;
           continue;
         }
 

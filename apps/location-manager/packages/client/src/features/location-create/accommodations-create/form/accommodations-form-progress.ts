@@ -34,7 +34,7 @@ export function getAccommodationsFormProgress(
     hasValue(values.gym);
   const detailsComplete =
     hasValue(values.walkability) &&
-    hasValue(values.phone) &&
+    (hasValue(values.phone) || values.phoneNotAvailable) &&
     hasValue(values.websiteUrl) &&
     hasValue(values.checkInTime) &&
     hasValue(values.checkOutTime);
@@ -59,7 +59,7 @@ export function getAccommodationsFormProgress(
     !hasValue(values.walkability) ? "Walkability" : null,
     !hasValue(values.checkInTime) ? "Check-In Time" : null,
     !hasValue(values.checkOutTime) ? "Check-Out Time" : null,
-    !hasValue(values.phone) ? "Phone" : null,
+    !hasValue(values.phone) && !values.phoneNotAvailable ? "Phone" : null,
     !hasValue(values.websiteUrl) ? "Website URL" : null,
     !hasValue(values.placeId) ? "Place ID" : null,
     !hasValue(values.latitude) ? "Latitude" : null,

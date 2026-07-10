@@ -93,6 +93,91 @@ def test_upload_image_replaces_existing_variant_before_post(monkeypatch):
     assert asset_id == "101"
 
 
+def test_upload_image_detaches_stale_variant_when_payload_delete_file_missing(monkeypatch):
+    client = PayloadClient("jwt")
+    detached_assets: list[tuple[str, str, str]] = []
+    post_calls = {"count": 0}
+
+    async def fake_find_media_asset(self, media_set_id: str, variant: str):
+        assert media_set_id == "7"
+        assert variant == ImageVariantType.OPEN_GRAPH.value
+        return {"id": "67"}
+
+    async def fake_delete_media_asset(self, asset_id: str):
+        raise PayloadUploadError(
+            step=f"delete_media_asset({asset_id})",
+            message="Failed to delete existing media-asset",
+            status_code=500,
+            detail="Couldn't delete file: featured-27rb3_open_graph.webp",
+        )
+
+    async def fake_detach_media_asset_from_media_set(
+        self,
+        asset_id: str,
+        media_set_id: str,
+        variant: str,
+    ):
+        detached_assets.append((asset_id, media_set_id, variant))
+        return True
+
+    class FakeResponse:
+        status_code = 201
+        text = '{"doc":{"id":"101"}}'
+
+        @staticmethod
+        def json():
+            return {"doc": {"id": "101"}}
+
+    class FakeAsyncClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def post(self, *args, **kwargs):
+            post_calls["count"] += 1
+            return FakeResponse()
+
+    monkeypatch.setattr(
+        PayloadClient,
+        "find_media_asset_by_variant",
+        fake_find_media_asset,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "delete_media_asset",
+        fake_delete_media_asset,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "detach_media_asset_from_media_set",
+        fake_detach_media_asset_from_media_set,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "app.features.images.payload_client.httpx.AsyncClient",
+        FakeAsyncClient,
+    )
+
+    asset_id = asyncio.run(
+        client.upload_image(
+            variant=_variant(ImageVariantType.OPEN_GRAPH),
+            alt_text="Alt text",
+            photographer_credit="Photo by Test",
+            media_set_id="7",
+            location_ref=42,
+        )
+    )
+
+    assert detached_assets == [("67", "7", "open_graph")]
+    assert post_calls["count"] == 1
+    assert asset_id == "101"
+
+
 def test_upload_image_reuses_existing_asset_after_conflict(monkeypatch):
     client = PayloadClient("jwt")
     find_calls = {"count": 0}

@@ -95,6 +95,7 @@ export async function updateMapsLocationByIdOperation(
     ...(updates.countryCode !== undefined && { countryCode: updates.countryCode }),
     ...(updates.ianaTimeId !== undefined && { ianaTimeId: updates.ianaTimeId }),
     ...(updates.phoneNumber !== undefined && { phoneNumber: updates.phoneNumber }),
+    ...(updates.phoneUnavailable !== undefined && { phoneUnavailable: updates.phoneUnavailable }),
     ...(updates.website !== undefined && { website: updates.website }),
     ...(updates.menuUrl !== undefined && { menuUrl: updates.menuUrl }),
     ...(updates.bookingUrl !== undefined && { bookingUrl: updates.bookingUrl }),

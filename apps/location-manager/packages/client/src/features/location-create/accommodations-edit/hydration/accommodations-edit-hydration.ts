@@ -87,6 +87,7 @@ export function buildAccommodationsEditFormValues(
     checkInTime: details.checkInTime || ACCOMMODATIONS_FORM_DEFAULT_VALUES.checkInTime,
     checkOutTime: details.checkOutTime || ACCOMMODATIONS_FORM_DEFAULT_VALUES.checkOutTime,
     phone: location.contact.phoneNumber || details.phone || "",
+    phoneNotAvailable: !(location.contact.phoneNumber || details.phone || "").trim(),
     websiteUrl: location.contact.website || details.websiteUrl || "",
     bookingUrl: details.bookingUrl || "",
     googleMapsUrl: details.googleMapsUrl || location.contact.url || "",

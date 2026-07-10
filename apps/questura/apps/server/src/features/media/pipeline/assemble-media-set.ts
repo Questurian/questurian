@@ -1,5 +1,6 @@
 import type { Payload, PayloadRequest } from 'payload'
 
+import { BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY } from '@/features/media/collections/hooks/syncBunnyOriginalUrl'
 import { MEDIA_VARIANT_KEYS, type MediaVariantKey } from '@/features/media/constants'
 import {
   generateVariantsFromSource,
@@ -32,6 +33,10 @@ export type AssembleMediaSetResult = {
   mediaSetId: number
   sourceAssetId: number
   variantAssetIds: Partial<Record<MediaVariantKey, number>>
+}
+
+const SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT = {
+  [BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY]: true,
 }
 
 const toNumericId = (raw: unknown): number => {
@@ -86,6 +91,7 @@ export const assembleMediaSetFromSource = async ({
     },
     overrideAccess: true,
     req,
+    context: SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT,
   })
 
   const sourceAssetId = toNumericId((sourceAsset as { id: unknown }).id)
@@ -140,6 +146,7 @@ export const assembleMediaSetFromSource = async ({
       },
       overrideAccess: true,
       req,
+      context: SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT,
     })
 
     variantAssetIds[generated.variant] = toNumericId((variantAsset as { id: unknown }).id)

@@ -10,7 +10,7 @@ import type { GooglePrefillResponse } from "@client/shared/services/api/types";
 import type { PhotoImportSessionState } from "../components/PhotoImportPhase";
 import { initAiUrlAck } from "../autofill/ai-url-ack";
 import {
-  addAccommodationsSchema,
+  addAccommodationsFormSchema,
   buildAccommodationsPrefillSignature,
   type AddAccommodationsFormData,
 } from "../validation/add-accommodations.schema";
@@ -43,7 +43,7 @@ export function AddAccommodationsLocation() {
   const [createdName, setCreatedName] = useState<string | null>(null);
   const [photoSession, setPhotoSession] = useState<PhotoImportSessionState | null>(null);
   const form = useForm<AddAccommodationsFormData>({
-    resolver: zodResolver(addAccommodationsSchema),
+    resolver: zodResolver(addAccommodationsFormSchema),
     defaultValues: ACCOMMODATIONS_FORM_DEFAULT_VALUES,
     mode: "onChange",
   });

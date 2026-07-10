@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@client/components/ui/dialog";
 import { Button } from "@client/components/ui/button";
-import { Check, ChevronLeft, RotateCcw, RotateCw } from "lucide-react";
+import { Check, ChevronLeft, RotateCcw, RotateCw, Sparkles } from "lucide-react";
 import { type ImageVariantType, VARIANT_SPECS } from "@questurian/lm-shared";
 import { useToast } from "@client/shared/hooks/useToast";
 import {
@@ -50,6 +50,51 @@ function clampStraightenAngle(angle: number): number {
 
 function normalizeDegrees(angle: number): number {
   return ((angle % 360) + 360) % 360;
+}
+
+/**
+ * Dimensions of the axis-aligned bounding box after rotating a width×height
+ * rectangle. Mirrors the `rotateSize` used in image-processing so auto-crop
+ * areas land in the same coordinate space that `createCroppedImage` consumes.
+ */
+function rotatedBoundingBox(width: number, height: number, degrees: number) {
+  const radians = (degrees * Math.PI) / 180;
+  return {
+    width: Math.abs(Math.cos(radians) * width) + Math.abs(Math.sin(radians) * height),
+    height: Math.abs(Math.sin(radians) * width) + Math.abs(Math.cos(radians) * height),
+  };
+}
+
+/**
+ * Largest centered rectangle of the target aspect ratio that fits inside a
+ * width×height box. Matches react-easy-crop's default (`objectFit: contain`)
+ * crop area at zoom 1 with the image centered, so a manually-cropped variant
+ * and an auto-cropped one resolve to the same pixels.
+ */
+function centeredCropArea(width: number, height: number, ratio: number): Area {
+  let cropWidth = width;
+  let cropHeight = width / ratio;
+
+  if (cropHeight > height) {
+    cropHeight = height;
+    cropWidth = height * ratio;
+  }
+
+  return {
+    x: Math.round((width - cropWidth) / 2),
+    y: Math.round((height - cropHeight) / 2),
+    width: Math.round(cropWidth),
+    height: Math.round(cropHeight),
+  };
+}
+
+function loadImageSize(src: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => reject(new Error("Failed to load image"));
+    image.src = src;
+  });
 }
 
 function formatDegrees(angle: number): string {
@@ -174,6 +219,7 @@ export function MultiVariantCropperModal({
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [currentVariantIndex, setCurrentVariantIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isAutoCropping, setIsAutoCropping] = useState(false);
   const [baseRotation, setBaseRotation] = useState(0);
   const [straightenAngle, setStraightenAngle] = useState(0);
   const showCreditField = initialPhotographerCredit !== undefined;
@@ -206,6 +252,7 @@ export function MultiVariantCropperModal({
   useEffect(() => {
     setCurrentVariantIndex(0);
     setIsProcessing(false);
+    setIsAutoCropping(false);
     setBaseRotation(0);
     setStraightenAngle(0);
     setCropStates(createInitialCropStates());
@@ -269,6 +316,42 @@ export function MultiVariantCropperModal({
   const handleStraightenChange = (nextAngle: number) => {
     applyOrientation(baseRotation, nextAngle);
   };
+
+  // Fill every variant with a centered crop so the operator can confirm in one
+  // step. Each area is the largest centered rect of the variant's aspect ratio,
+  // computed in the rotated image's coordinate space to match manual crops.
+  const applyAutoCrop = useCallback(async () => {
+    if (!previewUrl || isProcessing || isAutoCropping) {
+      return;
+    }
+
+    setIsAutoCropping(true);
+
+    try {
+      const { width, height } = await loadImageSize(previewUrl);
+      const box = rotatedBoundingBox(width, height, normalizeDegrees(rotation));
+
+      setCropStates((prev) => {
+        const next = { ...prev };
+        for (const type of variantSequence) {
+          next[type] = {
+            ...prev[type],
+            crop: { x: 0, y: 0 },
+            zoom: 1,
+            croppedAreaPixels: centeredCropArea(box.width, box.height, VARIANT_SPECS[type].ratio),
+            completed: true,
+          };
+        }
+        return next;
+      });
+    } catch (error) {
+      console.error("Auto-crop failed:", error);
+      const centerPosition = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      showToast("Could not auto-crop this image", centerPosition);
+    } finally {
+      setIsAutoCropping(false);
+    }
+  }, [previewUrl, isProcessing, isAutoCropping, rotation, showToast]);
 
   const saveCurrentCrop = () => {
     if (!currentState.croppedAreaPixels) {
@@ -362,15 +445,15 @@ export function MultiVariantCropperModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl w-full h-[90vh] md:h-auto p-0">
-        <DialogHeader className="p-6 pb-0">
+      <DialogContent className="flex max-w-4xl w-full h-[90dvh] md:h-auto md:max-h-[90vh] flex-col p-0">
+        <DialogHeader className="shrink-0 p-4 pb-0 sm:p-6 sm:pb-0">
           <DialogTitle>Review Image Crop</DialogTitle>
           <p className="text-sm text-muted-foreground mt-2">
             Step {currentVariantIndex + 1} of {totalVariants} • {currentSpec.label} • Target: {currentSpec.width}×{currentSpec.height}px
           </p>
         </DialogHeader>
 
-        <div className="space-y-4 p-6 pt-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 pt-4 sm:p-6">
           {/* Cropper area */}
           <div className="overflow-hidden rounded-xl border border-border bg-black">
             <div className="relative h-[48vh] md:h-[460px]">
@@ -465,11 +548,24 @@ export function MultiVariantCropperModal({
 
           {/* Variant progress badges */}
           <div className="rounded-lg border border-border bg-muted/30 px-4 py-3">
-            <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-              <span>Crop Progress</span>
-              <span>{completedCount}/{totalVariants} complete</span>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-baseline gap-2 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Crop Progress</span>
+                <span className="tabular-nums">{completedCount}/{totalVariants} complete</span>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 px-2.5 text-xs"
+                onClick={() => void applyAutoCrop()}
+                disabled={isAutoCropping || isProcessing}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                {isAutoCropping ? "Auto-cropping…" : "Auto-crop all"}
+              </Button>
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7">
               {variantSequence.map((type, idx) => {
                 const isActive = idx === currentVariantIndex;
                 const isCompleted = cropStates[type].completed || cropStates[type].croppedAreaPixels !== null;
@@ -480,8 +576,10 @@ export function MultiVariantCropperModal({
                     key={type}
                     type="button"
                     onClick={() => jumpToVariant(idx)}
+                    aria-pressed={isActive}
+                    title={`${type} (${spec.label})`}
                     className={`
-                    flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors
+                    flex min-w-0 items-center justify-center gap-1 rounded px-2 py-1.5 text-xs font-medium transition-colors
                     ${isActive
                       ? 'bg-blue-600 text-white'
                       : isCompleted
@@ -490,9 +588,11 @@ export function MultiVariantCropperModal({
                     }
                   `}
                   >
-                    {isCompleted && <Check className="h-3 w-3" />}
-                    <span className="capitalize">{type}</span>
-                    <span className="text-[10px] opacity-70">({spec.label})</span>
+                    <span className="flex h-3 w-3 shrink-0 items-center justify-center">
+                      {isCompleted && <Check className="h-3 w-3" />}
+                    </span>
+                    <span className="truncate capitalize">{type}</span>
+                    <span className="shrink-0 text-[10px] opacity-70">{spec.label}</span>
                   </button>
                 );
               })}
@@ -539,7 +639,7 @@ export function MultiVariantCropperModal({
           </div>
         </div>
 
-        <DialogFooter className="gap-2 p-6 pt-0">
+        <DialogFooter className="shrink-0 flex-wrap gap-2 border-t border-border p-4 sm:p-6">
           <div className="mr-auto flex items-center gap-2">
             <Button
               type="button"

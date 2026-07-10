@@ -89,7 +89,7 @@ export function saveSyncState(
       INSERT INTO payload_sync_state (entity_id, payload_collection, payload_doc_id, last_synced_at, sync_status, error_message)
       VALUES ($locationId, $collection, $payloadDocId, $timestamp, $status, $errorMessage)
       ON CONFLICT(entity_id, payload_collection) DO UPDATE SET
-        payload_doc_id = CASE WHEN excluded.sync_status = 'success' THEN excluded.payload_doc_id ELSE payload_sync_state.payload_doc_id END,
+        payload_doc_id = CASE WHEN excluded.sync_status = 'success' OR excluded.payload_doc_id <> '' THEN excluded.payload_doc_id ELSE payload_sync_state.payload_doc_id END,
         last_synced_at = excluded.last_synced_at,
         sync_status = excluded.sync_status,
         error_message = excluded.error_message

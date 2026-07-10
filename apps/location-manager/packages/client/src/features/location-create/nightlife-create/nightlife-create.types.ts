@@ -32,6 +32,7 @@ export const NIGHTLIFE_FORM_DEFAULT_VALUES: AddNightlifeFormData = {
   countryCode: "PE",
   location: "",
   phone: "",
+  phoneNotAvailable: false,
   hours: "",
   tripadvisorUrl: "",
   website: "",

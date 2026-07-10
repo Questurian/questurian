@@ -19,6 +19,8 @@ export function ControlledInputRow({
   provenance,
   description,
   placeholder,
+  disabled,
+  footer,
 }: {
   label: string;
   name: keyof EditLocationFormData;
@@ -26,6 +28,8 @@ export function ControlledInputRow({
   provenance?: FieldProvenance;
   description?: string;
   placeholder?: string;
+  disabled?: boolean;
+  footer?: ReactNode;
 }) {
   return (
     <Controller
@@ -44,9 +48,11 @@ export function ControlledInputRow({
             onChange={field.onChange}
             onBlur={field.onBlur}
             placeholder={placeholder}
+            disabled={disabled}
             aria-invalid={fieldState.invalid}
             className="h-9"
           />
+          {footer}
         </DetailRow>
       )}
     />

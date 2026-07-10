@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, Music2 } from 'lucide-react';
 import { Button } from '@client/components/ui/button';
 import { toggleNightlifeMusicSelection } from '@client/shared/lib/nightlife-music';
-import { addNightlifeSchema, type AddNightlifeFormData } from '../validation/add-nightlife.schema';
+import { addNightlifeFormSchema, type AddNightlifeFormData } from '../validation/add-nightlife.schema';
 import {
   NIGHTLIFE_FORM_DEFAULT_VALUES,
   NIGHTLIFE_SECTION_ORDER,
@@ -31,7 +31,7 @@ export function AddNightlifeLocation() {
   const [createdName, setCreatedName] = useState<string | null>(null);
 
   const form = useForm<AddNightlifeFormData>({
-    resolver: zodResolver(addNightlifeSchema),
+    resolver: zodResolver(addNightlifeFormSchema),
     defaultValues: NIGHTLIFE_FORM_DEFAULT_VALUES,
     mode: 'onChange',
   });

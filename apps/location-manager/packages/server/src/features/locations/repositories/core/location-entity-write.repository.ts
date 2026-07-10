@@ -66,6 +66,7 @@ export function updateExistingEntity(db: DbClient, entityId: number, location: L
       countryCode = $countryCode,
       iana_time_id = $iana_time_id,
       phoneNumber = $phoneNumber,
+      phone_unavailable = $phone_unavailable,
       website = $website,
       email = $email,
       neighborhood_description = $neighborhood_description,
@@ -89,6 +90,7 @@ export function updateExistingEntity(db: DbClient, entityId: number, location: L
     $countryCode: location.countryCode || null,
     $iana_time_id: location.ianaTimeId || null,
     $phoneNumber: location.phoneNumber || null,
+    $phone_unavailable: location.phoneUnavailable ? 1 : 0,
     $website: location.website || null,
     $email: location.email || null,
     $neighborhood_description: location.neighborhoodDescription || null,
@@ -119,6 +121,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       countryCode,
       iana_time_id,
       phoneNumber,
+      phone_unavailable,
       website,
       email,
       neighborhood_description,
@@ -146,6 +149,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
       $countryCode,
       $iana_time_id,
       $phoneNumber,
+      $phone_unavailable,
       $website,
       $email,
       $neighborhood_description,
@@ -173,6 +177,7 @@ export function insertEntity(db: DbClient, category: LocationCategory, location:
     $countryCode: location.countryCode || null,
     $iana_time_id: location.ianaTimeId || null,
     $phoneNumber: location.phoneNumber || null,
+    $phone_unavailable: location.phoneUnavailable ? 1 : 0,
     $website: location.website || null,
     $email: location.email || null,
     $neighborhood_description: location.neighborhoodDescription || null,
@@ -248,6 +253,10 @@ export function buildEntityUpdatePlan(id: number, updates: Partial<Location>): U
   if (updates.phoneNumber !== undefined) {
     setClause.push("phoneNumber = $phoneNumber");
     params.$phoneNumber = updates.phoneNumber;
+  }
+  if (updates.phoneUnavailable !== undefined) {
+    setClause.push("phone_unavailable = $phone_unavailable");
+    params.$phone_unavailable = updates.phoneUnavailable ? 1 : 0;
   }
   if (updates.website !== undefined) {
     setClause.push("website = $website");

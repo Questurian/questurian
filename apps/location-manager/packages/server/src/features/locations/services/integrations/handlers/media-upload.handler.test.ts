@@ -325,4 +325,64 @@ describe("uploadLocationImages", () => {
     expect(uploadCalls).toHaveLength(1);
     expect(uploadCalls[0]?.photographerCredit).toBe("Unknown");
   });
+
+  test("counts image sets with no variants as gallery upload failures", async () => {
+    const payloadClient = {
+      findMediaSetByExternalRef: async () => {
+        throw new Error("should not check Payload for an empty image set");
+      },
+      createMediaSet: async () => "media-set-unused",
+      uploadImage: async () => "media-asset-unused",
+      createInstagramPost: async () => "instagram-post-unused",
+    };
+
+    const imageStorage = {
+      readImage: async (_path: string) => Buffer.from("image-bytes"),
+    };
+
+    const location = {
+      id: 91,
+      title: "Empty ImageSet Location",
+      source: {
+        name: "Empty ImageSet Location",
+        address: "123 Empty Ln",
+      },
+      locationKey: "peru|lima|miraflores",
+      payload_location_ref: "777",
+      uploads: [
+        {
+          id: 12,
+          location_id: 91,
+          format: "imageset",
+          imageSet: {
+            id: "imgset-empty",
+            sourceImage: {
+              path: "packages/server/data/images/test/uploads/source.webp",
+              dimensions: { width: 1600, height: 1200 },
+              size: 1000,
+              format: "webp",
+            },
+            variants: [],
+            photographerCredit: "Test Credit",
+            altText: "Empty image set",
+            created_at: new Date().toISOString(),
+          },
+        },
+      ],
+      instagram_embeds: [],
+    } as unknown as LocationResponse;
+
+    const result = await uploadLocationImages(
+      location,
+      payloadClient as any,
+      imageStorage as any,
+      "777"
+    );
+
+    expect(result).toEqual({
+      galleryImageIds: [],
+      instagramPostIds: [],
+      galleryUploadFailures: 1,
+    });
+  });
 });

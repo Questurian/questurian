@@ -35,7 +35,7 @@ export function buildAccommodationsCreatePayload(data: AddAccommodationsFormData
     walkability: data.walkability,
     checkInTime: data.checkInTime,
     checkOutTime: data.checkOutTime,
-    phone: data.phone,
+    phone: data.phone || "",
     websiteUrl: data.websiteUrl,
     bookingUrl: data.bookingUrl || "",
     googleMapsUrl: data.googleMapsUrl || "",

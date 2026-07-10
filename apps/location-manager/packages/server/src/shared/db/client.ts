@@ -11,6 +11,7 @@ import { dropReviewPipelineSchema } from "./migrations/drop-review-pipeline-sche
 import { addPhotoImportFields } from "./migrations/add-photo-import-fields";
 import { renameReservationUrlToBookingUrl } from "./migrations/rename-reservation-url-to-booking-url";
 import { addAppSettings } from "./migrations/add-app-settings";
+import { addEntityPhoneUnavailable } from "./migrations/add-entity-phone-unavailable";
 
 let db: Database | null = null;
 let dbPathUsed: string | null = null;
@@ -82,6 +83,8 @@ export function initDb() {
   renameReservationUrlToBookingUrl(database);
 
   addAppSettings(database);
+
+  addEntityPhoneUnavailable(database);
 
   const nightlifeIdealForCleanup = clearInvalidNightlifeIdealFor(database);
   if (nightlifeIdealForCleanup.cleared > 0) {
