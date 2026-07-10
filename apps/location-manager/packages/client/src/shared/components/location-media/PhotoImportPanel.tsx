@@ -1,5 +1,9 @@
 import { Camera } from "lucide-react";
 import { Button } from "@client/components/ui";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@client/components/ui/alert-dialog";
 import type { LocationCategory } from "@questurian/lm-shared";
 import { MultiVariantCropperModal } from "./modals/MultiVariantCropperModal";
 import { AltTextReviewModal } from "./modals/AltTextReviewModal";
@@ -97,6 +101,24 @@ export function PhotoImportPanel({ locationId, category, placeId, hasActiveInsta
           isLoading={panel.isGeneratingAltText}
         />
       )}
+
+      <AlertDialog open={Boolean(panel.deleteConfirmSource)} onOpenChange={(open) => { if (!open) panel.cancelDelete(); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this image?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the image from Awaiting Review and remembers it as rejected, so it won't be re-offered on future{" "}
+              {panel.deleteConfirmSource?.origin === "instagram" ? "Instagram staging retries" : "photo imports"}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={panel.isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={panel.confirmDelete} disabled={panel.isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {panel.isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

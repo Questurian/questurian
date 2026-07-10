@@ -58,6 +58,7 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
   const [altReviewState, setAltReviewState] = useState<AltReviewState>(CLOSED_ALT_REVIEW_STATE);
   const [cachedAltTexts, setCachedAltTexts] = useState<Record<number, string>>({});
   const [loadingSourceId, setLoadingSourceId] = useState<number | null>(null);
+  const [deleteConfirmSource, setDeleteConfirmSource] = useState<StagedSourceSnapshot | null>(null);
 
   const sourcesQuery = useStagedSources(locationId, { pollForIncoming: hasActiveInstagramStaging });
   const startImport = useStartPhotoImport();
@@ -188,10 +189,17 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
   }
 
   function handleDelete(source: StagedSourceSnapshot) {
-    if (!window.confirm("Delete and remember as rejected? This photo won't be re-offered on future imports.")) {
-      return;
-    }
-    deleteStaged.mutate({ uploadId: source.uploadId, locationId });
+    setDeleteConfirmSource(source);
+  }
+
+  function cancelDelete() {
+    setDeleteConfirmSource(null);
+  }
+
+  function confirmDelete() {
+    if (!deleteConfirmSource) return;
+    deleteStaged.mutate({ uploadId: deleteConfirmSource.uploadId, locationId });
+    setDeleteConfirmSource(null);
   }
 
   function handleRetry(source: StagedSourceSnapshot) {
@@ -218,5 +226,9 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
     handleCropConfirm,
     handleDelete,
     handleRetry,
+    deleteConfirmSource,
+    cancelDelete,
+    confirmDelete,
+    isDeleting: deleteStaged.isPending,
   };
 }

@@ -241,6 +241,24 @@ export class ImageStorageService {
   }
 
   /**
+   * Stage a StagedSource from an image already on disk (relative `data/...`
+   * or absolute path), re-encoding it into an independent `source_0.webp` under
+   * `storagePath`. Mirrors {@link saveSanitizedImageFromUrl} without a network
+   * fetch — used to backfill Instagram staging from previously-downloaded bytes.
+   */
+  async saveSanitizedImageFromFile(localPath: string, storagePath: string): Promise<SavedImageSource> {
+    await this.ensureDirectoryExists(storagePath);
+    const raw = await this.readImage(localPath);
+    const sanitized = await sanitizeUploadedImageBuffer(raw);
+    const absolutePath = join(storagePath, "source_0.webp");
+    await Bun.write(absolutePath, sanitized);
+    return {
+      path: this.toStoredPath(absolutePath),
+      metadata: await extractImageMetadata(absolutePath),
+    };
+  }
+
+  /**
    * Save uploaded File objects to filesystem, converting to WebP format
    */
   async saveUploadedFiles(
