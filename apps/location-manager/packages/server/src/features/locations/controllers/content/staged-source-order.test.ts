@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { orderStagedSourceSnapshots, type StagedSourceSnapshot } from "@questurian/lm-shared";
+import type { StagedSourceSnapshot } from "@questurian/lm-shared";
+import { orderStagedSourceSnapshots } from "./staged-source-order";
 
 const source = (values: Partial<StagedSourceSnapshot> & Pick<StagedSourceSnapshot, "uploadId" | "origin">): StagedSourceSnapshot => ({
   googlePhotoName: null,

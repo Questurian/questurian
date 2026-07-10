@@ -1,4 +1,5 @@
-import { CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION, type ImageSet, type InstagramMediaStagingStatus } from "@questurian/lm-shared";
+import type { ImageSet, InstagramMediaStagingStatus } from "@questurian/lm-shared";
+import { CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION } from "../../constants/instagram-staging";
 import type { InstagramEmbed, ImageSetUpload } from "../../models/location";
 import { getLocationById, updateLocationById } from "../../repositories/core";
 import {

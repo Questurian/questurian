@@ -6,7 +6,8 @@ import {
   getUploadById,
 } from "@server/features/locations/repositories/content";
 import type { ImageSetUpload } from "@server/features/locations/models/location";
-import { orderStagedSourceSnapshots, type PhotoImportStartRequest, type PhotoImportRejectRequest } from "@questurian/lm-shared";
+import type { PhotoImportStartRequest, PhotoImportRejectRequest } from "@questurian/lm-shared";
+import { orderStagedSourceSnapshots } from "./staged-source-order";
 import { getPhotoImportControllerDeps } from "../dependencies";
 
 const { photoImport, instagram } = getPhotoImportControllerDeps();

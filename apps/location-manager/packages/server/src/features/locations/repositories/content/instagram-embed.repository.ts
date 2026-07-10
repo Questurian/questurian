@@ -1,6 +1,6 @@
 import { getDb } from "@server/shared/db/client";
 import type { InstagramEmbed } from "../../models/location";
-import { CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION } from "@questurian/lm-shared";
+import { CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION } from "../../constants/instagram-staging";
 
 /**
  * Database row interface for instagram_embeds table
