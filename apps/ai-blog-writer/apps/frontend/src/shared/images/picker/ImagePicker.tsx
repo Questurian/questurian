@@ -15,6 +15,7 @@ import type { ImagePickerQuery, ImagePickerResult, ImagePickerSelectionMode } fr
 import {
   formatMediaSetLabel,
   getMediaAssetAltText,
+  isMediaSetSelected,
   pickUploadedAssetId,
   resolveAssetUrl,
   resolveMediaSetPreviewAssetId,
@@ -620,7 +621,7 @@ function ImagePickerGrid({
             const previewAssetId = resolveMediaSetPreviewAssetId(mediaSet)
             const label = formatMediaSetLabel(mediaSet)
             const bufferIndex = bufferIds ? bufferIds.indexOf(mediaSet.id) : -1
-            const isSelected = bufferIds ? bufferIndex !== -1 : selectedId !== null && String(mediaSet.id) === String(selectedId)
+            const isSelected = bufferIds ? bufferIndex !== -1 : isMediaSetSelected(mediaSet, selectedId)
             return (
               <button
                 key={mediaSet.id}

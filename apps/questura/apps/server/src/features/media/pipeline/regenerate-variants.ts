@@ -1,6 +1,8 @@
 import type { Payload, PayloadRequest } from 'payload'
 
+import { BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY } from '@/features/media/collections/hooks/syncBunnyOriginalUrl'
 import { MEDIA_VARIANT_KEYS, type MediaVariantKey } from '@/features/media/constants'
+import { APP_URLS } from '@/shared/config'
 import { generateVariantsFromSource, normalizeFocalPoint } from './from-source'
 
 export type RegenerateInput = {
@@ -15,6 +17,31 @@ export type RegenerateResult = {
 }
 
 const SOURCE_MIME = 'image/webp'
+const SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT = {
+  [BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY]: true,
+}
+
+const uploadGeneratedVariantToBunny = async (filename: string, buffer: Buffer) => {
+  const apiKey = process.env.BUNNY_STORAGE_API_KEY
+  const zoneName = process.env.BUNNY_STORAGE_ZONE_NAME
+  if (!apiKey || !zoneName) return
+
+  const response = await fetch(
+    `https://ny.storage.bunnycdn.com/${zoneName}/media/${encodeURIComponent(filename)}`,
+    {
+      method: 'PUT',
+      headers: {
+        AccessKey: apiKey,
+        'Content-Type': SOURCE_MIME,
+      },
+      body: buffer,
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload generated variant ${filename} to Bunny (${response.status})`)
+  }
+}
 
 const toNumericId = (raw: unknown): number => {
   if (typeof raw === 'number') return raw
@@ -31,8 +58,21 @@ const sanitizeStem = (filename: string): string => {
   return cleaned || 'image'
 }
 
+export const resolveFetchableSourceUrl = (sourceUrl: string): string => {
+  const mediaFilePath = '/api/media-assets/file/'
+  if (sourceUrl.startsWith(mediaFilePath) && process.env.BUNNY_STORAGE_HOSTNAME) {
+    return `https://${process.env.BUNNY_STORAGE_HOSTNAME}/media/${encodeURIComponent(sourceUrl.slice(mediaFilePath.length))}`
+  }
+
+  try {
+    return new URL(sourceUrl).toString()
+  } catch {
+    return new URL(sourceUrl, APP_URLS.backend).toString()
+  }
+}
+
 const fetchSourceBuffer = async (sourceUrl: string): Promise<Buffer> => {
-  const response = await fetch(sourceUrl)
+  const response = await fetch(resolveFetchableSourceUrl(sourceUrl))
   if (!response.ok) {
     throw new Error(`Failed to fetch source image (${response.status})`)
   }
@@ -95,6 +135,20 @@ export const regenerateVariantsForMediaSet = async ({
     return null
   }).filter((id): id is number => id !== null)
 
+  for (const id of previousVariantAssetIds) {
+    await payload.update({
+      collection: 'media-assets',
+      id,
+      data: {
+        mediaSet: null,
+        variant: null,
+      },
+      overrideAccess: true,
+      req,
+      context: { skipCloudStorage: true },
+    })
+  }
+
   const stem = sanitizeStem(sourceFilename)
   const altText = typeof mediaSet.alt_text === 'string' ? mediaSet.alt_text : null
   const photographerCredit =
@@ -111,9 +165,10 @@ export const regenerateVariantsForMediaSet = async ({
         : null
 
   const variantAssetIds: Partial<Record<MediaVariantKey, number>> = {}
+  const variantNameToken = `${mediaSetId}-${Date.now()}`
 
   for (const generated of newVariants) {
-    const variantFilename = `${stem}_${generated.variant}.webp`
+    const variantFilename = `${stem}-${variantNameToken}_${generated.variant}.webp`
     const variantAsset = await payload.create({
       collection: 'media-assets',
       file: {
@@ -132,7 +187,13 @@ export const regenerateVariantsForMediaSet = async ({
       },
       overrideAccess: true,
       req,
+      context: {
+        ...SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT,
+        skipCloudStorage: true,
+      },
     })
+
+    await uploadGeneratedVariantToBunny(variantFilename, generated.buffer)
 
     variantAssetIds[generated.variant] = toNumericId((variantAsset as { id: unknown }).id)
   }

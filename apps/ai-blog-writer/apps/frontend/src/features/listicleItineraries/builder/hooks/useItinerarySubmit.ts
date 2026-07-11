@@ -25,6 +25,7 @@ import { requiresInstagram, requiresPhotos } from '../../../../shared/builder/ut
 import { stripNestedRowIdsFromItineraryDays } from '../utils/itinerary-payload-sanitize'
 import { markDraftAsPayloadSynced } from '../../../../shared/payloadSync/draftPayloadSync'
 import { buildItineraryDraftComparableShape } from '../utils/itinerary-draft-sync-signature'
+import { buildItineraryMediaFingerprint } from '../utils/itinerary-media-fingerprint'
 import { readLexicalFromJsonText, stripLexicalEditorStateId } from '../../../../shared/builder/utils/lexical-json.utils'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateSeoSection, validateStep2, validateStep3 } from '../validators/step.validators'
@@ -355,6 +356,7 @@ export function useItinerarySubmit({
         buildItineraryDraftComparableShape,
         doc.updatedAt || new Date().toISOString(),
       )
+      nextDraft.lastPayloadSyncMediaFingerprint = buildItineraryMediaFingerprint(nextDraft, relatedByBlockType)
 
       setResult(targetStatus === 'published' ? `Published itinerary #${doc.id}` : `Saved draft itinerary #${doc.id}`)
       setDraft(nextDraft)

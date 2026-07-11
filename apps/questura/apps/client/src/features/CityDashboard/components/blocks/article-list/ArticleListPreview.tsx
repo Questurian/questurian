@@ -9,6 +9,7 @@ import type {
   HomepageBlockLayoutProps,
 } from '../../../types'
 import { BlockSection } from '../BlockSection'
+import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -74,7 +75,7 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
         ) : null}
 
         <p className="mt-3 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:text-[0.65rem]">
-          By {authorLabel}
+          By <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} nested className="hover:underline">{authorLabel}</AuthorLink>
         </p>
       </div>
 

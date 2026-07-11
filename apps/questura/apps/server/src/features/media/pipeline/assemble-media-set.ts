@@ -39,6 +39,28 @@ const SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT = {
   [BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY]: true,
 }
 
+const uploadGeneratedVariantToBunny = async (filename: string, buffer: Buffer) => {
+  const apiKey = process.env.BUNNY_STORAGE_API_KEY
+  const zoneName = process.env.BUNNY_STORAGE_ZONE_NAME
+  if (!apiKey || !zoneName) return
+
+  const response = await fetch(
+    `https://ny.storage.bunnycdn.com/${zoneName}/media/${encodeURIComponent(filename)}`,
+    {
+      method: 'PUT',
+      headers: {
+        AccessKey: apiKey,
+        'Content-Type': SOURCE_MIME,
+      },
+      body: buffer,
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload generated variant ${filename} to Bunny (${response.status})`)
+  }
+}
+
 const toNumericId = (raw: unknown): number => {
   if (typeof raw === 'number') return raw
   if (typeof raw === 'string') {
@@ -122,7 +144,7 @@ export const assembleMediaSetFromSource = async ({
   const variantAssetIds: Partial<Record<MediaVariantKey, number>> = {}
 
   for (const generated of variants) {
-    const variantFilename = `${stem}_${generated.variant}.${SOURCE_EXTENSION}`
+    const variantFilename = `${stem}-${mediaSetId}_${generated.variant}.${SOURCE_EXTENSION}`
 
     const variantAsset = await payload.create({
       collection: 'media-assets',
@@ -146,8 +168,13 @@ export const assembleMediaSetFromSource = async ({
       },
       overrideAccess: true,
       req,
-      context: SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT,
+      context: {
+        ...SKIP_BUNNY_ORIGINAL_URL_SYNC_CONTEXT,
+        skipCloudStorage: true,
+      },
     })
+
+    await uploadGeneratedVariantToBunny(variantFilename, generated.buffer)
 
     variantAssetIds[generated.variant] = toNumericId((variantAsset as { id: unknown }).id)
   }

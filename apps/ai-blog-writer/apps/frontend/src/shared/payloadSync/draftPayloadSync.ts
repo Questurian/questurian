@@ -3,6 +3,13 @@ export type PayloadSyncStateFields = {
   lastPayloadSyncSignature?: string
   lastPayloadSyncAt?: string
   hasUnsyncedPayloadChanges?: boolean
+  /**
+   * Fingerprint of upstream Location Manager media pools (per referenced
+   * related item) captured at the moment of the last Payload sync. Unlike the
+   * sync signature, this cannot be rebuilt from the Payload doc — it records
+   * external state, so it must be carried across draft merges and reloads.
+   */
+  lastPayloadSyncMediaFingerprint?: string
 }
 
 type PayloadIdentityOptions<TDraft> = {
@@ -87,10 +94,12 @@ export function readStoredPayloadSyncFields(value: unknown): PayloadSyncStateFie
   const currentPayloadSignature = cleanString(value.currentPayloadSignature)
   const lastPayloadSyncSignature = cleanString(value.lastPayloadSyncSignature) || legacyBaseline
   const lastPayloadSyncAt = cleanString(value.lastPayloadSyncAt)
+  const lastPayloadSyncMediaFingerprint = cleanString(value.lastPayloadSyncMediaFingerprint)
 
   if (currentPayloadSignature) fields.currentPayloadSignature = currentPayloadSignature
   if (lastPayloadSyncSignature) fields.lastPayloadSyncSignature = lastPayloadSyncSignature
   if (lastPayloadSyncAt) fields.lastPayloadSyncAt = lastPayloadSyncAt
+  if (lastPayloadSyncMediaFingerprint) fields.lastPayloadSyncMediaFingerprint = lastPayloadSyncMediaFingerprint
   if (typeof value.hasUnsyncedPayloadChanges === 'boolean') {
     fields.hasUnsyncedPayloadChanges = value.hasUnsyncedPayloadChanges
   } else if (typeof legacyDirty === 'boolean') {
@@ -107,6 +116,7 @@ export function payloadSyncFieldsEqual(
   return left.currentPayloadSignature === right.currentPayloadSignature
     && left.lastPayloadSyncSignature === right.lastPayloadSyncSignature
     && left.lastPayloadSyncAt === right.lastPayloadSyncAt
+    && left.lastPayloadSyncMediaFingerprint === right.lastPayloadSyncMediaFingerprint
     && Boolean(left.hasUnsyncedPayloadChanges) === Boolean(right.hasUnsyncedPayloadChanges)
 }
 
@@ -140,6 +150,7 @@ export function refreshDraftPayloadSyncState<TDraft extends PayloadSyncStateFiel
       currentPayloadSignature: undefined,
       lastPayloadSyncSignature: undefined,
       lastPayloadSyncAt: undefined,
+      lastPayloadSyncMediaFingerprint: undefined,
       hasUnsyncedPayloadChanges: false,
     }
   }

@@ -8,6 +8,8 @@ import type {
   FeaturedArticleTeaser,
   HomepageBlockLayoutProps,
 } from '../../../types'
+import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
+import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 function getAuthorLabel(article: FeaturedArticleTeaser): string {
   const name = article.author?.name
@@ -84,7 +86,7 @@ export function FeaturedArticleOneArticlePreview({
           </p>
         ) : null}
         <p className="mt-7 text-center font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#6a635c]">
-          BY {authorLabel}
+          BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} nested className="hover:underline">{authorLabel}</AuthorLink>
         </p>
       </div>
     </>
@@ -92,7 +94,7 @@ export function FeaturedArticleOneArticlePreview({
 
   const desktopContent = (
     <>
-      <div className="flex flex-col justify-center px-12 py-14 768:w-1/2 1024:px-20 1280:px-28">
+      <div className="flex flex-col justify-center py-14 pl-6 pr-10 768:w-1/2 1024:pl-10 1024:pr-14 1280:pl-12 1280:pr-16">
         <h2 className="font-editorial font-semibold leading-[1.0] text-white text-[2.4rem] 1024:text-[3rem] 1280:text-[3.6rem]">
           {article.title}
         </h2>
@@ -102,10 +104,10 @@ export function FeaturedArticleOneArticlePreview({
           </p>
         ) : null}
         <p className="mt-8 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#6a635c]">
-          BY {authorLabel}
+          BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} nested className="hover:underline">{authorLabel}</AuthorLink>
         </p>
       </div>
-      <div className="768:w-1/2 768:py-8 768:pr-8 1024:py-10 1024:pr-12 flex items-stretch">
+      <div className="768:w-1/2 768:py-8 768:pr-6 1024:py-10 1024:pr-10 1280:pr-12 flex items-stretch">
         <div className="w-full overflow-hidden bg-[#1a1a1a] 768:min-h-[360px] 1024:min-h-[420px]">
           {desktopImageUrl ? (
             <ArticleImage src={desktopImageUrl} priority className="h-full w-full object-cover" />
@@ -118,7 +120,7 @@ export function FeaturedArticleOneArticlePreview({
   return (
     <section className="bg-[#0a0a0a] text-white">
       {sectionHeading ? (
-        <div className="mx-auto w-full max-w-[1400px] px-6 pt-8 pb-2 768:px-12 1024:px-20 1280:px-28">
+        <div className={`${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS} pt-8 pb-2`}>
           <h2 className="font-editorial font-semibold leading-tight text-white text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
             {sectionHeading}
           </h2>
@@ -139,11 +141,14 @@ export function FeaturedArticleOneArticlePreview({
 
       {/* ── Desktop ────────────────────────────────────────────── */}
       {articlePath ? (
-        <Link href={articlePath} className="hidden 768:flex 768:items-stretch mx-auto w-full max-w-[1400px]">
+        <Link
+          href={articlePath}
+          className={`hidden 768:flex 768:items-stretch ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
+        >
           {desktopContent}
         </Link>
       ) : (
-        <div className="hidden 768:flex 768:items-stretch mx-auto w-full max-w-[1400px]">
+        <div className={`hidden 768:flex 768:items-stretch ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}>
           {desktopContent}
         </div>
       )}

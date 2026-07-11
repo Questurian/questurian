@@ -48,6 +48,18 @@ const buildVariantOverrides = (
   return overrides;
 };
 
+const formatMediaSetUploadLabel = (
+  imageSetId: string,
+  upload: LocationResponse["uploads"][number],
+): string => {
+  const instagramMatch = imageSetId.match(/^instagram-(\d+)-(.+)$/);
+  if (!instagramMatch) return imageSetId;
+
+  const embedId = instagramMatch[1];
+  const position = typeof upload.sourcePosition === "number" ? upload.sourcePosition + 1 : null;
+  return position ? `Instagram ${embedId} image ${position}` : `Instagram ${embedId}`;
+};
+
 /**
  * Upload images and create Instagram posts for a location
  * Returns separate arrays for gallery images and Instagram post IDs
@@ -88,7 +100,8 @@ export async function uploadLocationImages(
 
         try {
           // ⭐ STEP 1: Check if media-set already exists (from previous sync)
-          const mediaSetTitle = `${location.title || location.source.name} - Upload ${imageSet.id}`;
+          const imageSetToken = toSafeFileToken(imageSet.id, "imageset");
+          const mediaSetTitle = `${location.title || location.source.name} - Upload ${formatMediaSetUploadLabel(imageSet.id, upload)}`;
           const externalRef = `location-${location.id}-imageset-${imageSet.id}`;
           const altText = imageSet.altText || `${location.title || location.source.name}`;
 
@@ -180,7 +193,8 @@ export async function uploadLocationImages(
             if (overrides && sourcePath) {
               try {
                 const sourceBuffer = await imageStorage.readImage(sourcePath);
-                const sourceFilename = basename(sourcePath);
+                const sourceExtension = getFileExtension(sourcePath);
+                const sourceFilename = `${imageSetToken}_source.${sourceExtension}`;
                 const sourceMime = inferSourceMimeType(sourcePath);
 
                 console.log(
@@ -257,7 +271,6 @@ export async function uploadLocationImages(
                 // Generate filename: {sanitized-source-name}_{imageset-id}_{variantType}.{extension}
                 const sanitizedName = sanitizeLocationName(location.source.name);
                 const extension = getFileExtension(variant.path);
-                const imageSetToken = toSafeFileToken(imageSet.id, "imageset");
                 const filename = `${sanitizedName}_${imageSetToken}_${variantType}.${extension}`;
 
                 console.log(`🖼️  [VARIANT] Uploading ${variantType} for media-set ${mediaSetId}`);

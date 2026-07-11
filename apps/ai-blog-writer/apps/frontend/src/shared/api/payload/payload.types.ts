@@ -85,6 +85,7 @@ export type MediaSetVariantAsset = {
   alt_text?: string | null
   width?: number | null
   height?: number | null
+  updatedAt?: string | null
 }
 
 export type MediaSetStatus = 'empty' | 'partial' | 'usable' | 'complete'

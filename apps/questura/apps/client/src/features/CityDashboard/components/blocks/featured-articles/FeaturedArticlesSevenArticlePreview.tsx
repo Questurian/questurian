@@ -8,6 +8,7 @@ import type {
   FeaturedArticlesBlock,
   HomepageBlockLayoutProps,
 } from '../../../types'
+import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 const PREVIEW_ARTICLE_COUNT = 3
 
@@ -143,7 +144,7 @@ function FeaturedArticlePreviewCard({
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:mt-4 768:text-[0.72rem] 768:tracking-[0.1em]">
-            {authorLabel}
+            <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
           </p>
         </div>
 
@@ -195,7 +196,9 @@ function CompactArticlePreviewCard({
           ) : article.title}
         </h2>
         <p className="city-compact-article-meta">{excerpt}</p>
-        <p className="city-compact-article-author">By {authorLabel}</p>
+        <p className="city-compact-article-author">
+          By <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+        </p>
       </div>
 
       <div className="city-article-image-shell city-compact-article-image">

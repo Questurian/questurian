@@ -129,6 +129,9 @@ export function mergeLocalIntoPayloadDraft(
     return {
       ...payloadSyncedDraft,
       editorModelName: localDraft.editorModelName,
+      // The media fingerprint records external Location Manager state at last
+      // sync; the Payload doc can't rebuild it, so keep the local stamp.
+      lastPayloadSyncMediaFingerprint: localDraft.lastPayloadSyncMediaFingerprint,
     }
   }
 
@@ -151,6 +154,7 @@ export function mergeLocalIntoPayloadDraft(
       ...payloadSyncedDraft,
       draftId: localDraft.draftId,
       editorModelName: localDraft.editorModelName,
+      lastPayloadSyncMediaFingerprint: localDraft.lastPayloadSyncMediaFingerprint,
     }
   }
 

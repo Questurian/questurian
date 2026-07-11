@@ -58,8 +58,11 @@ function extractAuthorPreview(doc: PayloadDocLike): HomepageFeaturedCandidate['a
   const email = typeof author.email === 'string' ? author.email.trim() : ''
   const displayName = name || email || null
 
+  const slug = typeof author.slug === 'string' && author.slug.trim() ? author.slug.trim() : null
+
   return {
     id: normalizeNumericId(author.id),
+    slug,
     name: displayName,
     firstName: first || null,
     lastName: last || null,

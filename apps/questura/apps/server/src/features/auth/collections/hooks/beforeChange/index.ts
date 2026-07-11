@@ -1,5 +1,6 @@
 import type { CollectionBeforeChangeHook } from 'payload'
 import { firstUserPromotionHook } from './firstUserPromotion'
+import { authorSlugHook } from './authorSlug'
 
 /**
  * All beforeChange hooks for Users collection
@@ -8,4 +9,5 @@ import { firstUserPromotionHook } from './firstUserPromotion'
  */
 export const beforeChangeHooks: CollectionBeforeChangeHook[] = [
   firstUserPromotionHook,
+  authorSlugHook,
 ]

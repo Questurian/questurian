@@ -38,6 +38,8 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set([
   'settings',
   'users',
   'user',
+  'authors',
+  'author',
   'static',
   'public',
   'images',

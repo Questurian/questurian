@@ -32,6 +32,7 @@ import {
   serializeStructuredDataTemplate,
 } from '../builder/services/structured-data-template.service'
 import { getItinerarySchemaPublisherConfig } from '../builder/services/schema-config.service'
+import { hasUpstreamMediaDrift } from '../builder/utils/itinerary-media-fingerprint'
 import { InspectAutobuildRunModal } from '../builder/components/InspectAutobuildRunModal'
 import { InspectIntroComposeRunModal } from '../builder/components/InspectIntroComposeRunModal'
 import { InspectDayBlurbComposeRunModal } from '../builder/components/InspectDayBlurbComposeRunModal'
@@ -108,6 +109,11 @@ export default function ListicleItineraryBuilderPage() {
     locations,
     onError,
   })
+
+  const hasMediaDrift = useMemo(() => {
+    if (!draft || isLoadingRelated) return false
+    return hasUpstreamMediaDrift(draft, relatedByBlockType)
+  }, [draft, isLoadingRelated, relatedByBlockType])
 
   const actions = useBuilderDraftActions({
     draft,
@@ -213,10 +219,12 @@ export default function ListicleItineraryBuilderPage() {
           {error ? <p className="stl-error">{error}</p> : null}
           {result ? <p className="stl-success">{result}</p> : null}
 
-          {isSynced && hasUnsyncedPayloadChanges ? (
+          {isSynced && (hasUnsyncedPayloadChanges || hasMediaDrift) ? (
             <OutOfSyncBanner
               isPublishedPayload={isPublishedPayload}
               isSaving={isSaving}
+              hasLocalChanges={hasUnsyncedPayloadChanges}
+              hasMediaDrift={hasMediaDrift}
               onSync={() => void submit(syncTargetStatus)}
             />
           ) : null}

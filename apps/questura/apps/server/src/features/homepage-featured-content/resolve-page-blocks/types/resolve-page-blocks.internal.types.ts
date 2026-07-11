@@ -12,6 +12,7 @@ export type ApiCuratedBlock = {
 
 export type PublicPreviewPerson = {
   id: number | null
+  slug: string | null
   name: string | null
   firstName: string | null
   lastName: string | null

@@ -127,6 +127,19 @@ export const Users: CollectionConfig = {
       },
     },
 
+    // Public author-page URL: /authors/<slug>
+    {
+      name: 'slug',
+      type: 'text',
+      unique: true,
+      index: true,
+      admin: {
+        position: 'sidebar',
+        description:
+          'URL slug for the public author page (/authors/<slug>). Auto-generated from the display name if left empty.',
+      },
+    },
+
     // Main content organized in tabs
     {
       type: 'tabs',

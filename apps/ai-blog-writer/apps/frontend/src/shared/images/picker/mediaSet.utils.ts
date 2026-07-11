@@ -4,6 +4,13 @@ import type { MediaAsset, MediaSet, MediaSetVariantAsset } from '../../api/paylo
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
 const PREFERRED_MEDIA_SET_VARIANTS = ['thumbnail', 'square', 'editorial', 'wide', 'portrait', 'hero', 'open_graph'] as const
 
+function withAssetCacheKey(url: string, asset: Pick<MediaSetVariantAsset, 'id' | 'updatedAt'>): string {
+  const key = asset.updatedAt || asset.id
+  if (!key) return url
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}v=${encodeURIComponent(String(key))}`
+}
+
 export function getMediaSetId(mediaSet: MediaAsset['mediaSet']): string | number | null {
   if (mediaSet === null || mediaSet === undefined) return null
   if (typeof mediaSet === 'string' || typeof mediaSet === 'number') return mediaSet
@@ -52,13 +59,24 @@ export function resolveMediaSetPreviewAssetId(
   return null
 }
 
+export function isMediaSetSelected(
+  mediaSet: Pick<MediaSet, 'id' | 'variants'> | null | undefined,
+  selectedId: number | null,
+): boolean {
+  if (!mediaSet || selectedId === null) return false
+  if (String(mediaSet.id) === String(selectedId)) return true
+  return resolveMediaSetPreviewAssetId(mediaSet) === selectedId
+}
+
 export function resolveMediaSetPreviewUrl(
   mediaSet: Pick<MediaSet, 'variants'> | null | undefined,
 ): string | undefined {
   const previewAsset = resolveMediaSetPreviewAsset(mediaSet)
   if (!previewAsset) return undefined
-  if (previewAsset.url) return previewAsset.url
-  if (previewAsset.filename) return `${PAYLOAD_API_URL}/api/media-assets/file/${previewAsset.filename}`
+  if (previewAsset.url) return withAssetCacheKey(previewAsset.url, previewAsset)
+  if (previewAsset.filename) {
+    return withAssetCacheKey(`${PAYLOAD_API_URL}/api/media-assets/file/${previewAsset.filename}`, previewAsset)
+  }
   return undefined
 }
 

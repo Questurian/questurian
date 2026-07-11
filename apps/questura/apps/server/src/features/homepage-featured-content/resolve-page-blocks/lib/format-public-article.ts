@@ -14,7 +14,7 @@ export function formatPublicAuthor(
 ): PublicPreviewPerson | null {
   if (!isRecord(value)) {
     const name = stringOrNull(fallbackName)
-    return name ? { id: null, name, firstName: null, lastName: null } : null
+    return name ? { id: null, slug: null, name, firstName: null, lastName: null } : null
   }
 
   const firstName = stringOrNull(value.firstName)
@@ -24,6 +24,7 @@ export function formatPublicAuthor(
 
   const author = {
     id: normalizeNumericId(value.id),
+    slug: stringOrNull(value.slug),
     name,
     firstName,
     lastName,

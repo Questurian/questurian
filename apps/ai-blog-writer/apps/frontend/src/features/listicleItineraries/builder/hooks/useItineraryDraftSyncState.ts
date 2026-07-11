@@ -81,6 +81,9 @@ export function useItineraryDraftSyncState({
       const doc = await fetchItineraryById(draft.payloadId, token)
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
       nextDraft.editorModelName = draft.editorModelName
+      // Reverting reloads the doc but doesn't resync Payload, so the media
+      // fingerprint from the last real sync still applies.
+      nextDraft.lastPayloadSyncMediaFingerprint = draft.lastPayloadSyncMediaFingerprint
 
       setDraft(nextDraft)
       saveDraft(nextDraft)

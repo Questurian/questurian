@@ -57,6 +57,7 @@ describe('formatPublicLocationHomepageDoc', () => {
               excerpt: 'Public excerpt.',
               author: {
                 id: 7,
+                slug: 'ana-rivera',
                 name: 'Ana Rivera',
                 firstName: 'Ana',
                 lastName: 'Rivera',
@@ -89,6 +90,7 @@ describe('formatPublicLocationHomepageDoc', () => {
               excerpt: 'Public excerpt.',
               author: {
                 id: 7,
+                slug: 'ana-rivera',
                 name: 'Ana Rivera',
                 firstName: 'Ana',
                 lastName: 'Rivera',

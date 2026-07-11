@@ -5,8 +5,10 @@ import {
   formatMediaSetLabel,
   getMediaSetId,
   hasMediaSet,
+  isMediaSetSelected,
   pickUploadedAssetId,
   resolveMediaSetPreviewAssetId,
+  resolveMediaSetPreviewUrl,
 } from './mediaSet.utils'
 
 describe('mediaSet utils', () => {
@@ -55,6 +57,40 @@ describe('mediaSet utils', () => {
         },
       } as never),
     ).toBe(41)
+  })
+
+  it('matches media set selections by either set id or preview asset id', () => {
+    const mediaSet = {
+      id: 9,
+      variants: {
+        thumbnail: { id: 101, filename: 'thumbnail.webp' },
+      },
+    } as never
+
+    expect(isMediaSetSelected(mediaSet, 9)).toBe(true)
+    expect(isMediaSetSelected(mediaSet, 101)).toBe(true)
+    expect(isMediaSetSelected(mediaSet, 102)).toBe(false)
+    expect(isMediaSetSelected(mediaSet, null)).toBe(false)
+  })
+
+  it('adds a variant asset cache key to media-set preview URLs', () => {
+    expect(
+      resolveMediaSetPreviewUrl({
+        variants: {
+          thumbnail: { id: 101, filename: 'thumbnail.webp', updatedAt: '2026-07-11T00:00:00.000Z' },
+        },
+      } as never),
+    ).toBe(
+      'http://localhost:4000/api/media-assets/file/thumbnail.webp?v=2026-07-11T00%3A00%3A00.000Z',
+    )
+
+    expect(
+      resolveMediaSetPreviewUrl({
+        variants: {
+          thumbnail: { id: 102, url: '/api/media-assets/file/thumbnail.webp' },
+        },
+      } as never),
+    ).toBe('/api/media-assets/file/thumbnail.webp?v=102')
   })
 
   it('picks the preferred variant asset id from an upload response, falling back to any', () => {

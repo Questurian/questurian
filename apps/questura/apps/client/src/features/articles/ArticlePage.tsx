@@ -1,5 +1,6 @@
 import { Bookmark, Share2 } from 'lucide-react'
 import { PublicImage } from '@/components/media/PublicImage'
+import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import {
   Article,
   ContentBlock,
@@ -72,7 +73,7 @@ function StandardArticleHeader({ article }: { article: Article }) {
       ) : null}
       {displayName ? (
         <p className="mt-7 font-display text-[20px] leading-snug text-foreground sm:text-[22px]">
-          By {displayName}
+          By <AuthorLink authorSlug={author?.slug} authorId={author?.id} className="hover:underline">{displayName}</AuthorLink>
         </p>
       ) : null}
       {dateLine ? (

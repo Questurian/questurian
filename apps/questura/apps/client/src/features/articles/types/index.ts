@@ -91,6 +91,7 @@ export type ContentBlock =
 
 export type ArticleAuthor = {
   id: number
+  slug?: string | null
   firstName: string
   lastName: string
   publicProfile: {

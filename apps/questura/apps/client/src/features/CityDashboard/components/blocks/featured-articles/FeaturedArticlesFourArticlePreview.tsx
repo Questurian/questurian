@@ -9,6 +9,7 @@ import type {
   HomepageBlockLayoutProps,
 } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
+import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -140,7 +141,7 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
-            {authorLabel}
+            <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
           </p>
         </div>
 
@@ -207,7 +208,9 @@ function SideListArticleCard({ article, slotNumber }: SideListArticleCardProps):
           ) : article.title}
         </h3>
         <p className="city-four-side-meta">{excerpt}</p>
-        <p className="city-four-side-author">{authorLabel}</p>
+        <p className="city-four-side-author">
+          <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+        </p>
       </div>
     </section>
   )

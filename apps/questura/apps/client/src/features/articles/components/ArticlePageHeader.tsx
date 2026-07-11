@@ -3,6 +3,7 @@ import type { JSX } from 'react'
 import { PublicImage } from '@/components/media/PublicImage'
 import type { ArticleAuthor } from '@/features/articles/types'
 import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
+import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 type ArticlePageHeaderProps = {
   title: string
@@ -25,7 +26,7 @@ function AuthorBlock({
   return (
     <div className="mx-auto flex w-full min-w-0 max-w-[44ch] flex-col items-center gap-1.5 text-center">
       <span className="break-words text-balance font-display text-[13px] font-semibold leading-snug text-foreground 480:text-[14px] sm:text-[15px]">
-        By {displayName}
+        By <AuthorLink authorSlug={author.slug} authorId={author.id} className="hover:underline">{displayName}</AuthorLink>
       </span>
       {publishedLine ? (
         <span className="break-words text-balance font-display text-[11px] font-normal leading-snug tracking-[0.02em] text-foreground/50 480:text-[12px]">
