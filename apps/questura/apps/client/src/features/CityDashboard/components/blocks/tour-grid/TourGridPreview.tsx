@@ -1,8 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
+import { useEffect, useRef, useState, type JSX } from 'react'
 
 import type { TourGridBlock, TourGridItem, HomepageBlockLayoutProps } from '../../../types'
+import { BlockSection, BLOCK_GUTTER_CLASS } from '../BlockSection'
+import { useSnapCarousel } from '../useSnapCarousel'
 
 function TourCard({ item, isPriority, isLast }: { item: TourGridItem; isPriority: boolean; isLast: boolean }): JSX.Element {
   const imgRef = useRef<HTMLImageElement | null>(null)
@@ -81,54 +83,24 @@ function TourCard({ item, isPriority, isLast }: { item: TourGridItem; isPriority
 export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBlock>): JSX.Element | null {
   const items = block.selection?.items ?? []
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [activeIndex, setActiveIndex] = useState(0)
+  const { scrollRef, pageCount, activePage, scrollToPage, scrollByPage } = useSnapCarousel(items.length)
 
   const heading = block.sectionHeading?.trim() || null
   const subheading = block.sectionSubheading?.trim() || null
 
-  const scrollToIndex = useCallback((index: number) => {
-    const container = scrollRef.current
-    if (!container) return
-    const card = container.children[index] as HTMLElement | undefined
-    if (!card) return
-    const paddingLeft = parseFloat(getComputedStyle(container).paddingLeft) || 0
-    container.scrollTo({ left: card.offsetLeft - paddingLeft, behavior: 'smooth' })
-    setActiveIndex(index)
-  }, [])
-
-  const scrollBy = useCallback((direction: -1 | 1) => {
-    const next = Math.max(0, Math.min(items.length - 1, activeIndex + direction))
-    scrollToIndex(next)
-  }, [activeIndex, items.length, scrollToIndex])
-
-  useEffect(() => {
-    const container = scrollRef.current
-    if (!container) return
-
-    const handleScroll = () => {
-      const first = container.children[0] as HTMLElement | null
-      const second = container.children[1] as HTMLElement | null
-      if (!first) return
-      const step = second ? second.offsetLeft - first.offsetLeft : first.offsetWidth
-      if (step === 0) return
-      setActiveIndex(Math.round(container.scrollLeft / step))
-    }
-
-    container.addEventListener('scroll', handleScroll, { passive: true })
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [])
+  // Pages are measured after mount; until then fall back to one page per item
+  // so the server-rendered controls match the multi-item case.
+  const dotCount = pageCount > 0 ? pageCount : items.length
+  const canScrollNext = pageCount > 0 ? activePage < pageCount - 1 : items.length > 1
 
   if (items.length === 0) return null
 
   return (
-    // PAGE-WIDTH RULE: every block section on this page must constrain its content
-    // to 1400px and center it with mx-auto, while keeping the section background
-    // full-width. Apply the inner wrapper pattern below to every new block section.
-    <section className="relative py-8 bg-[#f5f0e8]">
-      <div className="mx-auto w-full max-w-[1400px]">
+    // Flush BlockSection: the carousel bleeds to the wrapper edge, so the
+    // gutter is applied per inner element via BLOCK_GUTTER_CLASS instead.
+    <BlockSection className="py-8 bg-[#f5f0e8]" flush>
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-6 mb-5">
+      <div className={`flex items-center justify-between gap-3 ${BLOCK_GUTTER_CLASS} mb-5`}>
         <div className="flex-1 min-w-0">
           {heading ? (
             <h2 className="font-editorial font-semibold leading-tight text-[#1a1a1a] text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
@@ -146,8 +118,8 @@ export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBloc
           <div className="flex items-center gap-1 768:gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => scrollBy(-1)}
-              disabled={activeIndex === 0}
+              onClick={() => scrollByPage(-1)}
+              disabled={activePage === 0}
               aria-label="Previous tours"
               className="
                 flex items-center justify-center transition-colors
@@ -161,8 +133,8 @@ export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBloc
             </button>
             <button
               type="button"
-              onClick={() => scrollBy(1)}
-              disabled={activeIndex >= items.length - 1}
+              onClick={() => scrollByPage(1)}
+              disabled={!canScrollNext}
               aria-label="Next tours"
               className="
                 flex items-center justify-center transition-colors
@@ -182,34 +154,33 @@ export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBloc
       <div className="relative">
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto pl-6"
-          style={{ scrollSnapType: 'x mandatory', scrollPaddingLeft: '1.5rem', scrollPaddingRight: '1.5rem', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
+          className="flex gap-3 overflow-x-auto pl-[var(--block-gutter)]"
+          style={{ scrollSnapType: 'x mandatory', scrollPaddingLeft: 'var(--block-gutter)', scrollPaddingRight: 'var(--block-gutter)', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
         >
           {items.map((item, index) => (
             <TourCard key={item.id} item={item} isPriority={index === 0} isLast={index === items.length - 1} />
           ))}
-          <div className="w-6 shrink-0" aria-hidden="true" />
+          <div className="w-[var(--block-gutter)] shrink-0" aria-hidden="true" />
         </div>
-        <div className="absolute inset-y-0 left-0 w-6 bg-[#f5f0e8] pointer-events-none" aria-hidden="true" />
+        <div className="absolute inset-y-0 left-0 w-[var(--block-gutter)] bg-[#f5f0e8] pointer-events-none" aria-hidden="true" />
       </div>
 
-      {/* Dot indicators */}
-      {items.length > 1 ? (
+      {/* Dot indicators — one per scroll page, not per item */}
+      {dotCount > 1 ? (
         <div className="flex justify-center gap-2.5 mt-6">
-          {items.map((item, index) => (
+          {Array.from({ length: dotCount }, (_, index) => (
             <button
-              key={item.id}
+              key={index}
               type="button"
-              onClick={() => scrollToIndex(index)}
-              aria-label={`Go to ${item.title}`}
+              onClick={() => scrollToPage(index)}
+              aria-label={`Go to slide ${index + 1}`}
               className={`w-2 h-2 rounded-full transition-colors duration-200 ${
-                index === activeIndex ? 'bg-[#1a1a1a]' : 'bg-[#c8c2b8]'
+                index === activePage ? 'bg-[#1a1a1a]' : 'bg-[#c8c2b8]'
               }`}
             />
           ))}
         </div>
       ) : null}
-      </div>
-    </section>
+    </BlockSection>
   )
 }

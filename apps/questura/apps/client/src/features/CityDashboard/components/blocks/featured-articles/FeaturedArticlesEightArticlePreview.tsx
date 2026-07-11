@@ -97,7 +97,7 @@ function FeaturedArticlePreviewCard({
   return (
     <section
       className={joinClassNames(
-        'city-article-card grid gap-3 px-6 py-4 768:px-[30px]',
+        'city-article-card grid gap-3 px-[var(--block-gutter)] py-4',
         placement ? `city-article-card--${placement}` : null,
       )}
       data-content-ready={isContentReady ? 'true' : 'false'}
@@ -182,7 +182,7 @@ function CompactArticlePreviewCard({
   return (
     <section
       className={joinClassNames(
-        'city-compact-article-card px-6 py-4',
+        'city-compact-article-card px-[var(--block-gutter)] py-4',
         placement ? `city-compact-article-card--${placement}` : null,
       )}
       data-content-ready={isContentReady ? 'true' : 'false'}
@@ -232,7 +232,7 @@ function getArticleKey(article: FeaturedArticleTeaser, index: number): string {
 
 function RecommendedDivider(): JSX.Element {
   return (
-    <div className="city-recommended-divider px-6" aria-label="Recommended articles">
+    <div className="city-recommended-divider px-[var(--block-gutter)]" aria-label="Recommended articles">
       <span className="city-recommended-divider__label">Recommended</span>
     </div>
   )

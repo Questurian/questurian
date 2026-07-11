@@ -3,6 +3,7 @@
 import { useState, type JSX, type FormEvent } from 'react'
 
 import type { NewsletterSignupBlock, HomepageBlockLayoutProps } from '../../../types'
+import { BlockSection } from '../BlockSection'
 
 export function NewsletterSignupPreview({
   block,
@@ -20,8 +21,7 @@ export function NewsletterSignupPreview({
   }
 
   return (
-    <section className="bg-[#0a0a0a]" aria-label="Newsletter signup">
-      <div className="mx-auto w-full max-w-[1400px] px-5 py-12 768:px-[30px] 768:py-16 1024:px-10">
+    <BlockSection className="bg-[#0a0a0a]" contentClassName="py-12 768:py-16" aria-label="Newsletter signup">
         <div className="border-t border-white/20 pt-10 768:pt-12">
           <div className="grid grid-cols-1 gap-10 1024:grid-cols-2 1024:gap-16">
 
@@ -79,7 +79,6 @@ export function NewsletterSignupPreview({
             <div className="hidden 1024:block" aria-hidden="true" />
           </div>
         </div>
-      </div>
-    </section>
+    </BlockSection>
   )
 }

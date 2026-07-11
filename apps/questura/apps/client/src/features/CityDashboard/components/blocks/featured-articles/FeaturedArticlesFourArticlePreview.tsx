@@ -8,6 +8,7 @@ import type {
   FeaturedArticlesBlock,
   HomepageBlockLayoutProps,
 } from '../../../types'
+import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -101,7 +102,6 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
             {desktopImageUrl ? (
               <source media="(min-width: 1024px)" srcSet={desktopImageUrl} />
             ) : null}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={imageRef}
               src={mobileImageUrl ?? desktopImageUrl ?? undefined}
@@ -118,7 +118,7 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
         <NumberBadge n={1} />
       </div>
 
-      <div className="relative px-6 768:px-[30px]">
+      <div className="relative px-[var(--block-gutter)]">
         <div className="city-article-content flex w-full flex-col justify-start py-3">
           <p className="font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase leading-3 tracking-[0.08em] text-[#1e3599] 768:text-[0.74rem] 768:leading-4 768:tracking-[0.1em]">
             {articleTypeLabel}
@@ -146,7 +146,7 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
 
         <div
           aria-hidden="true"
-          className="city-article-text-skeleton absolute inset-0 flex flex-col justify-start px-6 py-3 768:px-[30px]"
+          className="city-article-text-skeleton absolute inset-0 flex flex-col justify-start px-[var(--block-gutter)] py-3"
         >
           <span className="city-skeleton-line h-3 w-28" />
           <span className="city-skeleton-line mt-3 h-7 w-11/12" />
@@ -226,7 +226,7 @@ export function FeaturedArticlesFourArticlePreview({
   return (
     <section className="bg-[#f5f0e8]" aria-label="Featured articles">
       {sectionHeading ? (
-        <div className="mx-auto w-full max-w-[1400px] px-6 pt-8 pb-4 768:px-[30px]">
+        <div className={`${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS} pt-8 pb-4`}>
           <h2 className="font-editorial font-semibold leading-tight text-[#1a1a1a] text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
             {sectionHeading}
           </h2>

@@ -8,6 +8,7 @@ import type {
   FeaturedArticleTeaser,
   HomepageBlockLayoutProps,
 } from '../../../types'
+import { BlockSection } from '../BlockSection'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -120,8 +121,7 @@ export function ArticleListPreview({
   const sectionSubheading = block.sectionSubheading?.trim() || null
 
   return (
-    <section className="bg-[#f5f0e8]" aria-label="Article list">
-      <div className="mx-auto w-full max-w-[1400px] px-5 pb-6 pt-8 768:px-[30px] 1024:px-10">
+    <BlockSection className="bg-[#f5f0e8]" contentClassName="pb-6 pt-8" aria-label="Article list">
         {sectionHeading ? (
           <div className="mb-4 pb-2">
             <h2 className="font-editorial text-[1.4rem] font-semibold leading-tight text-[#1a1a1a] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
@@ -144,7 +144,6 @@ export function ArticleListPreview({
             />
           ))}
         </div>
-      </div>
-    </section>
+    </BlockSection>
   )
 }

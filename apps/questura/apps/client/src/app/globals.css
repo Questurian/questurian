@@ -23,6 +23,15 @@ html {
   
   /* Typography */
   --font-display: 'Playfair Display', Georgia, serif;
+
+  /* PAGE-WIDTH RULE — single source of truth for city homepage block sections.
+     Content is centered at --block-max-width and inset by --block-gutter on
+     each side, so the content edges of every section line up exactly.
+     React blocks get this via the BlockSection component
+     (features/CityDashboard/components/blocks/BlockSection.tsx); raw-CSS block
+     layouts below must use these variables. Keep both in sync. */
+  --block-max-width: 1400px;
+  --block-gutter: 24px;
 }
 
 @theme inline {
@@ -847,8 +856,8 @@ input:-webkit-autofill:active {
   content: '';
   position: absolute;
   top: 0;
-  left: 24px;
-  right: 24px;
+  left: var(--block-gutter);
+  right: var(--block-gutter);
   height: 1px;
   background: rgba(95, 89, 82, 0.24);
 }
@@ -899,7 +908,7 @@ input:-webkit-autofill:active {
 .city-compact-article-image {
   position: absolute;
   top: 16px;
-  right: 24px;
+  right: var(--block-gutter);
   width: 86px;
   height: 72px;
   overflow: hidden;
@@ -909,7 +918,7 @@ input:-webkit-autofill:active {
 
 .city-compact-article-skeleton {
   position: absolute;
-  inset: 16px 128px auto 24px;
+  inset: 16px 128px auto var(--block-gutter);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.18s ease;
@@ -929,10 +938,10 @@ input:-webkit-autofill:active {
     grid-template-columns: minmax(200px, 1fr) minmax(0, clamp(400px, 40vw, 720px)) minmax(200px, 1fr);
     gap: 24px;
     align-items: stretch;
-    width: min(calc(100% - 48px), 1400px);
-    max-width: 1400px;
+    width: 100%;
+    max-width: var(--block-max-width);
     margin-inline: auto;
-    padding: 32px 0 56px;
+    padding: 32px var(--block-gutter) 56px;
   }
 
   .city-featured-seven-center,
@@ -1237,13 +1246,13 @@ input:-webkit-autofill:active {
 
   .city-compact-article-image {
     top: 16px;
-    right: 24px;
+    right: var(--block-gutter);
     width: 74px;
     height: 66px;
   }
 
   .city-compact-article-skeleton {
-    inset: 16px 112px auto 24px;
+    inset: 16px 112px auto var(--block-gutter);
   }
 }
 
@@ -1261,13 +1270,7 @@ input:-webkit-autofill:active {
   display: grid;
   gap: 0;
   background: var(--background);
-  padding: 0 24px;
-}
-
-@media (min-width: 768px) {
-  .city-four-hero-card {
-    padding: 0 30px;
-  }
+  padding: 0 var(--block-gutter);
 }
 
 .city-four-hero-image {
@@ -1287,7 +1290,7 @@ input:-webkit-autofill:active {
   overflow: hidden;
   background: var(--background);
   color: #1a1a1a;
-  padding: 16px 24px;
+  padding: 16px var(--block-gutter);
   gap: 14px;
 }
 
@@ -1419,9 +1422,10 @@ input:-webkit-autofill:active {
     grid-template-columns: 1fr 1fr;
     align-items: stretch;
     gap: 0;
-    width: min(calc(100% - 48px), 1400px);
+    width: 100%;
+    max-width: var(--block-max-width);
     margin-inline: auto;
-    padding: 24px 0 56px;
+    padding: 24px var(--block-gutter) 56px;
     border-top: 1px solid rgba(95, 89, 82, 0.18);
   }
 

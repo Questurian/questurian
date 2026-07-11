@@ -7,6 +7,7 @@ import type {
   FeaturedArticleTeaser,
   HomepageBlockLayoutProps,
 } from '../../../types'
+import { BlockSection, BLOCK_GUTTER_CLASS } from '../BlockSection'
 
 function MapPinIcon(): JSX.Element {
   return (
@@ -135,14 +136,12 @@ export function QuestUrianMapsPreview({
   const row2 = items.slice(3, 6)
 
   return (
-    // PAGE-WIDTH RULE: every block section on this page must constrain its content
-    // to 1400px and center it with mx-auto, while keeping the section background
-    // full-width. Apply the inner wrapper pattern below to every new block section.
-    <section className="relative py-10 bg-[#fafaf8]">
-      <div className="mx-auto w-full max-w-[1400px]">
+    // Flush BlockSection: the mobile carousel bleeds to the wrapper edge, so
+    // the gutter is applied per inner element via BLOCK_GUTTER_CLASS instead.
+    <BlockSection className="py-10 bg-[#fafaf8]" flush>
 
         {/* Editorial rule-on-sides header */}
-        <div className="flex items-center gap-4 px-6 mb-8">
+        <div className={`flex items-center gap-4 ${BLOCK_GUTTER_CLASS} mb-8`}>
           <div className="flex-1 h-px bg-[#d6d0ca]" aria-hidden="true" />
           <div className="flex flex-col items-center gap-1.5 shrink-0">
             <MapPinIcon />
@@ -157,11 +156,11 @@ export function QuestUrianMapsPreview({
         <div className="768:hidden">
           <div
             ref={scrollRef}
-            className="flex overflow-x-auto pl-6"
+            className="flex overflow-x-auto pl-[var(--block-gutter)]"
             style={
               {
                 scrollSnapType: 'x mandatory',
-                scrollPaddingLeft: '1.5rem',
+                scrollPaddingLeft: 'var(--block-gutter)',
                 scrollbarWidth: 'none',
                 WebkitOverflowScrolling: 'touch',
               } as React.CSSProperties
@@ -175,12 +174,12 @@ export function QuestUrianMapsPreview({
                 isLast={index === items.length - 1}
               />
             ))}
-            <div className="w-6 shrink-0" aria-hidden="true" />
+            <div className="w-[var(--block-gutter)] shrink-0" aria-hidden="true" />
           </div>
         </div>
 
         {/* Desktop: 2×3 compact grid using city-four-side-* classes */}
-        <div className="hidden 768:block px-6">
+        <div className={`hidden 768:block ${BLOCK_GUTTER_CLASS}`}>
           <div className="grid grid-cols-3 border-b border-[rgba(95,89,82,0.18)]">
             {row1.map((item, index) => (
               <div
@@ -206,7 +205,6 @@ export function QuestUrianMapsPreview({
           ) : null}
         </div>
 
-      </div>
-    </section>
+    </BlockSection>
   )
 }
