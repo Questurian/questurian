@@ -59,6 +59,7 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
   const [cachedAltTexts, setCachedAltTexts] = useState<Record<number, string>>({});
   const [loadingSourceId, setLoadingSourceId] = useState<number | null>(null);
   const [deleteConfirmSource, setDeleteConfirmSource] = useState<StagedSourceSnapshot | null>(null);
+  const [previewSource, setPreviewSource] = useState<StagedSourceSnapshot | null>(null);
 
   const sourcesQuery = useStagedSources(locationId, { pollForIncoming: hasActiveInstagramStaging });
   const startImport = useStartPhotoImport();
@@ -188,6 +189,32 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
     closeCropper();
   }
 
+  // Opens a read-only, full-size view of the staged image. Deliberately does
+  // NOT touch the alt-text AI — that only fires from handleOpenReview.
+  function openPreview(source: StagedSourceSnapshot) {
+    setPreviewSource(source);
+  }
+
+  function closePreview() {
+    setPreviewSource(null);
+  }
+
+  // From the preview, jump into the real Review flow (which does trigger the AI).
+  function reviewFromPreview() {
+    if (!previewSource) return;
+    const source = previewSource;
+    setPreviewSource(null);
+    void handleOpenReview(source);
+  }
+
+  // From the preview, hand off to the delete-confirmation flow.
+  function deleteFromPreview() {
+    if (!previewSource) return;
+    const source = previewSource;
+    setPreviewSource(null);
+    setDeleteConfirmSource(source);
+  }
+
   function handleDelete(source: StagedSourceSnapshot) {
     setDeleteConfirmSource(source);
   }
@@ -220,6 +247,11 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
     closeAltReview,
     handleConfirmPick,
     handleOpenReview,
+    previewSource,
+    openPreview,
+    closePreview,
+    reviewFromPreview,
+    deleteFromPreview,
     confirmAltText,
     regenerateAltText,
     isGeneratingAltText: generateAltText.isPending,

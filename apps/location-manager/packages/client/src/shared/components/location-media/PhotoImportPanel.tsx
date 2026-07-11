@@ -7,8 +7,10 @@ import {
 import type { LocationCategory } from "@questurian/lm-shared";
 import { MultiVariantCropperModal } from "./modals/MultiVariantCropperModal";
 import { AltTextReviewModal } from "./modals/AltTextReviewModal";
+import { ImagePreviewModal } from "./modals/ImagePreviewModal";
 import { PhotoImportPickerDialog } from "./PhotoImportPickerDialog";
 import { PhotoImportSourceGrid } from "./PhotoImportSourceGrid";
+import { toImageApiPath } from "./photoImportPanel.utils";
 import { usePhotoImportPanel } from "./usePhotoImportPanel";
 
 interface PhotoImportPanelProps {
@@ -69,6 +71,7 @@ export function PhotoImportPanel({ locationId, category, placeId, hasActiveInsta
             onDelete={panel.handleDelete}
             onRetry={panel.handleRetry}
             onOpenReview={(source) => void panel.handleOpenReview(source)}
+            onPreview={panel.openPreview}
           />
         </div>
       )}
@@ -99,6 +102,20 @@ export function PhotoImportPanel({ locationId, category, placeId, hasActiveInsta
           aiGeneratedAltText={panel.altReviewState.generatedText}
           generationError={panel.altReviewState.error ?? undefined}
           isLoading={panel.isGeneratingAltText}
+        />
+      )}
+
+      {panel.previewSource?.sourcePath && (
+        <ImagePreviewModal
+          isOpen={Boolean(panel.previewSource)}
+          imageUrl={toImageApiPath(panel.previewSource.sourcePath)}
+          altText={panel.previewSource.altText ?? undefined}
+          photographerCredit={panel.previewSource.photographerCredit ?? undefined}
+          origin={panel.previewSource.origin}
+          reviewLoading={panel.loadingSourceId === panel.previewSource.uploadId}
+          onClose={panel.closePreview}
+          onReview={panel.reviewFromPreview}
+          onDelete={panel.deleteFromPreview}
         />
       )}
 

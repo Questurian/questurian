@@ -1,4 +1,4 @@
-import { AlertTriangle, Loader2, RotateCw, ScanText, Trash2 } from "lucide-react";
+import { AlertTriangle, Eye, Loader2, RotateCw, ScanText, Trash2 } from "lucide-react";
 import { Button } from "@client/components/ui";
 import type { StagedSourceSnapshot } from "@client/shared/services/api";
 import { toImageApiPath } from "./photoImportPanel.utils";
@@ -17,6 +17,7 @@ type PhotoImportSourceGridProps = {
   onDelete: (source: StagedSourceSnapshot) => void;
   onRetry: (source: StagedSourceSnapshot) => void;
   onOpenReview: (source: StagedSourceSnapshot) => void;
+  onPreview: (source: StagedSourceSnapshot) => void;
 };
 
 export function PhotoImportSourceGrid({
@@ -27,6 +28,7 @@ export function PhotoImportSourceGrid({
   onDelete,
   onRetry,
   onOpenReview,
+  onPreview,
 }: PhotoImportSourceGridProps) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -77,6 +79,17 @@ export function PhotoImportSourceGrid({
               )}
               {status === "ready" && (
                 <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => onPreview(source)}
+                    title="Preview full image (no AI)"
+                    className="h-7 flex-1 gap-1.5 text-xs"
+                  >
+                    <Eye className="h-3 w-3" />
+                    Preview
+                  </Button>
                   <Button
                     type="button"
                     size="sm"
