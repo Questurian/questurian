@@ -6,6 +6,7 @@ import '../../../css/landing.css'
 type LandingSectionId =
   | 'article-generation'
   | 'structured-publishing'
+  | 'content-library'
   | 'editorial-tools'
   | 'media-tools'
 
@@ -36,18 +37,13 @@ const PRIMARY_SECTIONS: LandingSectionConfig[] = [
     id: 'structured-publishing',
     title: 'Structured Publishing',
   },
+  {
+    id: 'content-library',
+    title: 'Content Library',
+  },
 ]
 
-const OCCASIONAL_SUBSECTIONS: LandingSectionConfig[] = [
-  {
-    id: 'editorial-tools',
-    title: 'Editorial Utilities',
-  },
-  {
-    id: 'media-tools',
-    title: 'Media Tools',
-  },
-]
+const OCCASIONAL_SECTION_IDS: LandingSectionId[] = ['editorial-tools', 'media-tools']
 
 function ArrowIcon() {
   return (
@@ -283,8 +279,8 @@ const LANDING_CARDS: LandingCardConfig[] = [
     title: 'Homepage Featured Content',
     description: 'Manage the exact 10 front-page content slots shared with Payload and the site homepage.',
     to: '/homepage-featured-content',
-    section: 'structured-publishing',
-    priority: 5,
+    section: 'content-library',
+    priority: 1,
     accentClass: 'landing-card--locations',
     actionLabel: 'Open Manager',
     roles: ['admin', 'editor'],
@@ -416,8 +412,8 @@ const LANDING_CARDS: LandingCardConfig[] = [
     title: 'Media Library',
     description: 'Browse, audit, and edit Payload MediaSets. Find missing alt text, detect orphaned assets, bulk-generate AI alt text, and upload new images.',
     to: '/media-library',
-    section: 'media-tools',
-    priority: 3,
+    section: 'content-library',
+    priority: 2,
     accentClass: 'landing-card--media-library',
     actionLabel: 'Open Library',
     icon: (
@@ -516,10 +512,7 @@ function LandingSection({
   return (
     <section className="landing-section" aria-labelledby={`landing-section-${section.id}`}>
       <div className="landing-section-header">
-        <div>
-          <p className="landing-section-kicker">Primary Domain</p>
-          <h2 id={`landing-section-${section.id}`}>{section.title}</h2>
-        </div>
+        <h2 id={`landing-section-${section.id}`}>{section.title}</h2>
       </div>
       <div className="landing-section-grid">
         {cards.map((card) => (
@@ -533,17 +526,15 @@ function LandingSection({
 export default function DashboardPage() {
   const { role: currentRole } = usePermissions()
   const [isOccasionalOpen, setIsOccasionalOpen] = useState(false)
-  const occasionalToolCount = LANDING_CARDS.filter((card) => (
-    OCCASIONAL_SUBSECTIONS.some((section) => section.id === card.section)
-    && (!card.roles || (currentRole ? card.roles.includes(currentRole) : false))
-  )).length
+  const occasionalCards = OCCASIONAL_SECTION_IDS.flatMap((sectionId) =>
+    getCardsForSection(sectionId, currentRole),
+  )
 
   return (
     <div className="landing-page">
       <header className="landing-hero">
-        <p className="landing-eyebrow">Questurian Studio</p>
-        <h1>AI <span className="landing-highlight">Tools</span></h1>
-        <p className="landing-lede">Choose a tool to get started.</p>
+        <h1>Questurian Studio</h1>
+        <p className="landing-lede">This Studio is Layered above Questurian Payload CMS</p>
       </header>
 
       <main className="landing-sections">
@@ -552,14 +543,8 @@ export default function DashboardPage() {
         ))}
 
         <section className="landing-section landing-section--secondary" aria-labelledby="landing-occasional-heading">
-          <div className="landing-secondary-shell">
-            <div className="landing-section-header landing-section-header--secondary">
-              <div>
-                <p className="landing-section-kicker">Secondary Access</p>
-                <h2 id="landing-occasional-heading">Occasional Tools</h2>
-              </div>
-            </div>
-
+          <div className="landing-section-header landing-section-header--secondary">
+            <h2 id="landing-occasional-heading">Occasional Tools</h2>
             <button
               type="button"
               className="landing-secondary-toggle"
@@ -567,38 +552,22 @@ export default function DashboardPage() {
               aria-controls="landing-occasional-content"
               onClick={() => setIsOccasionalOpen((open) => !open)}
             >
-              <span className="landing-secondary-toggle-copy">
-                <span className="landing-secondary-toggle-label">
-                  {isOccasionalOpen ? 'Hide occasional tools' : 'Show occasional tools'}
-                </span>
-                <span className="landing-secondary-toggle-meta">
-                  {occasionalToolCount} tools
-                </span>
+              <span className="landing-secondary-toggle-label">
+                {isOccasionalOpen ? 'Hide occasional tools' : 'Show occasional tools'}
               </span>
               <ToggleChevron open={isOccasionalOpen} />
             </button>
+          </div>
 
-            {isOccasionalOpen ? (
-              <div id="landing-occasional-content" className="landing-secondary-content">
-                {OCCASIONAL_SUBSECTIONS.map((section) => (
-                  <section
-                    key={section.id}
-                    className="landing-subsection"
-                    aria-labelledby={`landing-subsection-${section.id}`}
-                  >
-                    <div className="landing-subsection-header">
-                      <h3 id={`landing-subsection-${section.id}`}>{section.title}</h3>
-                    </div>
-                    <div className="landing-section-grid">
-                      {getCardsForSection(section.id, currentRole).map((card) => (
-                        <LandingCard key={card.id} card={card} />
-                      ))}
-                    </div>
-                  </section>
+          {isOccasionalOpen ? (
+            <div id="landing-occasional-content" className="landing-secondary-content">
+              <div className="landing-section-grid">
+                {occasionalCards.map((card) => (
+                  <LandingCard key={card.id} card={card} />
                 ))}
               </div>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </section>
       </main>
     </div>

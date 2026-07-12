@@ -12,13 +12,13 @@ const PRIMARY_CARD_TITLES = [
   'Listicle Itineraries',
   'Location Images',
   'Homepage Featured Content',
+  'Media Library',
 ]
 
 const OCCASIONAL_CARD_TITLES = [
   'Itineraries Pipeline',
   'Image Recreation Prompts',
   'Batch Image Recreation',
-  'Media Library',
 ]
 
 function createAuthValue(role = 'admin'): AuthContextValue {
@@ -55,7 +55,7 @@ describe('DashboardPage', () => {
 
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['Article Generation', 'Structured Publishing', 'Occasional Tools'])
+    ).toEqual(['Article Generation', 'Structured Publishing', 'Content Library', 'Occasional Tools'])
 
     expect(
       screen.getByRole('button', { name: /show occasional tools/i }),
@@ -78,8 +78,6 @@ describe('DashboardPage', () => {
     expect(
       screen.getByRole('button', { name: /hide occasional tools/i }),
     ).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('heading', { level: 3, name: 'Editorial Utilities' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 3, name: 'Media Tools' })).toBeInTheDocument()
 
     ;[...PRIMARY_CARD_TITLES, ...OCCASIONAL_CARD_TITLES].forEach((title) => {
       expect(screen.getAllByRole('heading', { level: 3, name: title })).toHaveLength(1)
@@ -96,7 +94,8 @@ describe('DashboardPage', () => {
     expect(
       screen.getByRole('button', { name: /show occasional tools/i }),
     ).toHaveAttribute('aria-expanded', 'false')
-    expect(screen.queryByRole('heading', { level: 3, name: 'Media Library' })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 3, name: 'Media Library' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 3, name: 'Batch Image Recreation' })).not.toBeInTheDocument()
   })
 
   it('hides homepage featured content for writer accounts', () => {
