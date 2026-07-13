@@ -1,5 +1,7 @@
 import { convertLexicalToHTMLAsync } from '@payloadcms/richtext-lexical/html-async'
 
+import { resolveArticleFeaturedImage } from './view-model'
+
 async function toLexicalHTML(data: unknown): Promise<string> {
   return convertLexicalToHTMLAsync({
     data: data as Parameters<typeof convertLexicalToHTMLAsync>[0]['data'],
@@ -91,6 +93,34 @@ async function serializeItineraryBlocks(article: Record<string, unknown>) {
   )
 }
 
+/**
+ * Public detail routes return the raw doc, so clients only ever read
+ * `featuredImage`. Resolve the preferred source (featuredMediaSet, falling
+ * back to the legacy upload) into that field so media-set-only articles
+ * render a header image.
+ */
+function attachResolvedFeaturedImage(article: Record<string, unknown>) {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null
+
+  const section = isRecord(article.headerSection)
+    ? article.headerSection
+    : isRecord(article.header)
+      ? article.header
+      : null
+  if (!section) return
+
+  const resolved = resolveArticleFeaturedImage(article, { placement: 'article-header' })
+  section.featuredImage = resolved.url
+    ? {
+        url: resolved.url,
+        alt_text: resolved.alt,
+        width: resolved.width,
+        height: resolved.height,
+      }
+    : null
+}
+
 export type ArticleCollectionSlug =
   | 'articles'
   | 'single-type-listicles'
@@ -103,4 +133,5 @@ export async function serializeArticleByCollection(
   if (collection === 'articles') await serializeStandardArticleBlocks(article)
   if (collection === 'single-type-listicles') await serializeMapsListicleBlocks(article)
   if (collection === 'listicle-itineraries') await serializeItineraryBlocks(article)
+  attachResolvedFeaturedImage(article)
 }
