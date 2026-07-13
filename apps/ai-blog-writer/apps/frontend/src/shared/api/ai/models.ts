@@ -1,4 +1,4 @@
-export type EditorAssistModelName = 'claude-opus-4-8' | 'claude-sonnet-5'
+export type EditorAssistModelName = 'claude-opus-4-8' | 'claude-sonnet-5' | 'gemini-3.1-pro-preview'
 
 export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'claude-opus-4-8'
 
@@ -10,6 +10,10 @@ export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; 
   {
     value: 'claude-sonnet-5',
     label: 'Claude Sonnet 5 (faster, cheaper writer; Evidence Profile runs on Gemini)',
+  },
+  {
+    value: 'gemini-3.1-pro-preview',
+    label: 'Gemini 3.1 Pro (Preview — deep reasoning writer)',
   },
 ]
 
@@ -30,6 +34,7 @@ export type Y2BWriterModel =
   | 'claude-opus-4-8'
   | 'claude-opus-4-7'
   | 'claude-sonnet-5'
+  | 'gemini-3.1-pro-preview'
   | 'gemini-2.5-pro'
   | 'gemini-2.5-flash'
 
@@ -39,6 +44,7 @@ export const Y2B_WRITER_MODEL_OPTIONS: Array<{ value: Y2BWriterModel; label: str
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
   { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
   { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (cheaper, fast writer)' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — deep reasoning)' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
 ]
@@ -85,5 +91,6 @@ export type ToneProfile = {
 
 export function resolveEditorAssistModelName(value?: string): EditorAssistModelName {
   if (value === 'claude-sonnet-5') return value
+  if (value === 'gemini-3.1-pro-preview') return value
   return DEFAULT_EDITOR_ASSIST_MODEL
 }

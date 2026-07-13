@@ -11,13 +11,22 @@ import logging
 import os
 from typing import Any, Optional
 
-from langchain_google_vertexai import VertexAI
+from langchain_google_vertexai import ChatVertexAI, VertexAI
 
 logger = logging.getLogger(__name__)
 
 # Default model configuration
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_LOCATION = "us-central1"
+
+# Gemini 3.x models are served only from the global endpoint; regional
+# locations (including us-central1) return 404 for them.
+GEMINI3_LOCATION = "global"
+
+
+def _is_gemini3_model(model_name: str) -> bool:
+    return model_name.lower().startswith("gemini-3")
+
 
 # Free-text generation calls share one large response ceiling. Call sites may
 # describe a smaller expected response, but they must never accidentally starve
@@ -119,6 +128,62 @@ class ClaudeTextLLM:
         return text
 
 
+def _gemini_chat_text(content: Any) -> str:
+    """Extract plain text from a ChatVertexAI response.
+
+    Gemini 3.x returns content as a list of parts (text parts carry a
+    `thought_signature` alongside the text); older models return a str.
+    """
+    if isinstance(content, str):
+        return content.strip()
+    text_parts = [
+        part.get("text")
+        for part in (content or [])
+        if isinstance(part, dict)
+        and part.get("type") == "text"
+        and isinstance(part.get("text"), str)
+    ]
+    return "\n".join(text_parts).strip()
+
+
+class Gemini3ChatTextLLM:
+    """ChatVertexAI wrapper exposing the same `.invoke(prompt) -> str` surface
+    as the LangChain VertexAI completion wrapper.
+
+    Gemini 3.x is unreachable through the legacy completion class: the model
+    only exists on the global endpoint and its parts-shaped responses fail the
+    completion parser. Temperature is accepted but not forwarded — Google
+    recommends leaving Gemini 3 at its default temperature.
+    """
+
+    def __init__(
+        self,
+        *,
+        model_name: str,
+        max_tokens: int,
+        project: str,
+    ) -> None:
+        self.model_name = model_name
+        self.max_tokens = max_tokens
+        self.project = project
+
+    def invoke(self, prompt: str) -> str:
+        llm = ChatVertexAI(
+            model_name=self.model_name,
+            max_tokens=self.max_tokens,
+            project=self.project,
+            location=GEMINI3_LOCATION,
+        )
+        message = llm.invoke(prompt)
+        text = _gemini_chat_text(getattr(message, "content", None))
+        if not text:
+            raise RuntimeError(
+                f"Gemini model '{self.model_name}' returned no text "
+                f"(response_metadata={getattr(message, 'response_metadata', None)!r})"
+            )
+        return text
+
+
 def invoke_anthropic_structured_tool(
     *,
     prompt: str,
@@ -168,7 +233,7 @@ def get_vertex_llm(
     model_name: Optional[str] = None,
     project: Optional[str] = None,
     location: Optional[str] = None,
-) -> "VertexAI | ClaudeTextLLM":
+) -> "VertexAI | ClaudeTextLLM | Gemini3ChatTextLLM":
     """
     Create a configured LLM instance (Vertex AI, or Anthropic for claude-* models).
 
@@ -199,6 +264,19 @@ def get_vertex_llm(
         )
 
     resolved_project = _resolve_vertex_project(project)
+
+    # Gemini 3.x routing: global endpoint + chat API (see Gemini3ChatTextLLM).
+    if _is_gemini3_model(model_name or ""):
+        logger.debug(
+            "Routing LLM call to Gemini 3 chat path: "
+            f"model={model_name}, max_tokens={effective_max_tokens}"
+        )
+        return Gemini3ChatTextLLM(
+            model_name=model_name,
+            max_tokens=effective_max_tokens,
+            project=resolved_project,
+        )
+
     resolved_location = _resolve_vertex_location(location)
 
     # Resolve model

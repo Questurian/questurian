@@ -15,6 +15,7 @@ export const URL2BLOG_WRITER_MODEL_OPTIONS: Array<{
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
   { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
   { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (cheaper, fast writer)' },
+  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — deep reasoning)' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
 ]

@@ -1673,6 +1673,10 @@ def _generate_seo_metadata_impl(
         (request.model_name or SEO_STRUCTURED_DEFAULT_MODEL).strip()
         or SEO_STRUCTURED_DEFAULT_MODEL
     )
+    # Builders send their editor model here; non-Claude selections (e.g. a
+    # Gemini writer) must not reach the Anthropic-only forced-tool call.
+    if not model_used.startswith("claude"):
+        model_used = SEO_STRUCTURED_DEFAULT_MODEL
 
     llm_prompt = (
         f"{prompt}\n\n"

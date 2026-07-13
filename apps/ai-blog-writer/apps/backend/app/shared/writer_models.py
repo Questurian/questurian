@@ -10,6 +10,7 @@ WRITER_MODEL_OPTIONS = (
     "claude-opus-4-8",
     "claude-opus-4-7",
     "claude-sonnet-5",
+    "gemini-3.1-pro-preview",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
 )

@@ -98,6 +98,8 @@ google_appengine.*
 .secrets/
 *.sqlite3
 *.db
+*.db-shm
+*.db-wal
 Pipfile.lock
 
 # Testing
