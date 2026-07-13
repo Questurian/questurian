@@ -19,6 +19,8 @@ export type ListicleMapPoint = {
   title: string
   lat: number
   lng: number
+  /** 'stay' pins render a house glyph instead of the entry number. */
+  kind?: 'stay' | 'stop'
 }
 
 type ListicleMapSyncValue = {

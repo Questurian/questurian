@@ -1,75 +1,32 @@
 'use client'
 
 import type { JSX } from 'react'
-import { useMemo, useState } from 'react'
 import { Clock, ExternalLink, MapPin, Route } from 'lucide-react'
 import { ArticlePageHeader } from '@/features/articles/components/ArticlePageHeader'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
+import { ItineraryStayCard } from '@/features/articles/components/ItineraryStayCard'
 import { ListicleSeparator } from '@/features/articles/components/ListicleSeparator'
 import { ListicleVenueEntry } from '@/features/articles/components/ListicleVenueEntry'
+import {
+  isTourAgencyBlock,
+  populatedVenueStops,
+  venueRowFromBlock,
+} from '@/features/articles/lib/itineraryDays'
 import { isHttpUrl } from '@/features/articles/lib/listicleVenueFormatters'
 import type {
   ItineraryDay,
   ItineraryStopBlock,
   ItineraryTourAgencyBlock,
   ItineraryTourAgencyKeyLocation,
-  ItineraryVenueBlock,
   ListicleItineraryArticle,
 } from '@/features/articles/types/itineraryListicle'
-import {
-  isListicleVenue,
-  type ListicleItemRow,
-} from '@/features/articles/types/mapsListicle'
+import { isListicleVenue } from '@/features/articles/types/mapsListicle'
 
 type ItineraryListicleArticlePageProps = {
   article: ListicleItineraryArticle
-}
-
-function itineraryDaysForArticle(article: ListicleItineraryArticle): ItineraryDay[] {
-  const days = article.itineraryDays?.filter(Boolean) ?? []
-  if (days.length > 0) {
-    return days
-  }
-
-  return [
-    {
-      id: 'legacy-single-day',
-      whereStaying: article.whereStaying ?? [],
-      items: article.items ?? [],
-    },
-  ]
-}
-
-function isTourAgencyBlock(
-  block: ItineraryStopBlock,
-): block is ItineraryTourAgencyBlock {
-  return block.blockType === 'itinerary-tour-agency'
-}
-
-function venueRowFromBlock(
-  block: ItineraryVenueBlock,
-  fallbackId: string,
-): ListicleItemRow | null {
-  if (!isListicleVenue(block.item)) {
-    return null
-  }
-
-  return {
-    id: block.id ?? fallbackId,
-    blurb: block.blurb,
-    item: block.item,
-    blockType: block.blockType,
-    mediaMode: block.mediaMode,
-    selectedPhotos: block.selectedPhotos ?? undefined,
-    selectedInstagramPost: block.selectedInstagramPost,
-    tours: block.tours,
-  }
-}
-
-function populatedVenueStops(blocks: ItineraryVenueBlock[] | null | undefined): ListicleItemRow[] {
-  return (blocks ?? [])
-    .map((block, index) => venueRowFromBlock(block, `${block.blockType}-${index}`))
-    .filter((row): row is ListicleItemRow => Boolean(row))
+  days: ItineraryDay[]
+  selectedDayIndex: number
+  onSelectDay: (index: number) => void
 }
 
 function formatDuration(hours: number): string {
@@ -261,9 +218,10 @@ function StopList({ stops }: { stops: ItineraryStopBlock[] }): JSX.Element | nul
 
 export function ItineraryListicleArticlePage({
   article,
+  days,
+  selectedDayIndex,
+  onSelectDay,
 }: ItineraryListicleArticlePageProps): JSX.Element {
-  const days = useMemo(() => itineraryDaysForArticle(article), [article])
-  const [selectedDayIndex, setSelectedDayIndex] = useState(0)
   const dayIndex = Math.min(selectedDayIndex, Math.max(days.length - 1, 0))
   const selectedDay = days[dayIndex] ?? { whereStaying: [], items: [] }
   const whereStaying = populatedVenueStops(selectedDay.whereStaying)
@@ -300,11 +258,11 @@ export function ItineraryListicleArticlePage({
       <ListicleSeparator />
 
       {days.length > 1 ? (
-        <div className="px-3 pt-5 380:px-4 480:px-5 550:px-6 sm:px-8 sm:pt-7 768:px-10">
+        <div className="sticky top-[var(--navbar-height,0px)] z-10 bg-background px-3 380:px-4 480:px-5 550:px-6 sm:px-8 768:px-10">
           <div
             role="tablist"
             aria-label="Itinerary days"
-            className="flex gap-1.5 overflow-x-auto border-b border-foreground/15 pb-2"
+            className="flex gap-5 overflow-x-auto border-b border-foreground/15 480:gap-7"
           >
             {days.map((day, index) => {
               const selected = index === dayIndex
@@ -315,12 +273,12 @@ export function ItineraryListicleArticlePage({
                   type="button"
                   role="tab"
                   aria-selected={selected}
-                  className={`shrink-0 border px-3.5 py-2 text-[11px] font-bold uppercase leading-none tracking-[0.14em] transition-colors 480:px-4 480:text-[12px] ${
+                  className={`shrink-0 -mb-px border-b-2 px-0.5 pt-4 pb-3 text-[11px] font-bold uppercase leading-none tracking-[0.16em] transition-colors 480:text-[12px] ${
                     selected
-                      ? 'border-[var(--maps-listicle-accent)] bg-[var(--maps-listicle-accent)] text-white'
-                      : 'border-foreground/15 bg-background text-foreground/55 hover:border-foreground/35 hover:text-foreground'
+                      ? 'border-[var(--maps-listicle-accent)] text-foreground'
+                      : 'border-transparent text-foreground/45 hover:text-foreground'
                   }`}
-                  onClick={() => setSelectedDayIndex(index)}
+                  onClick={() => onSelectDay(index)}
                 >
                   Day {index + 1}
                 </button>
@@ -330,34 +288,16 @@ export function ItineraryListicleArticlePage({
         </div>
       ) : null}
 
-      <div className="px-3 pb-20 pt-4 380:px-4 380:pt-6 480:px-5 480:pt-8 480:pb-24 550:px-6 550:pt-10 sm:px-8 sm:pt-8 sm:pb-32 768:px-10">
+      <div className="px-3 pb-20 pt-6 380:px-4 380:pt-7 480:px-5 480:pt-8 480:pb-24 550:px-6 550:pt-10 sm:px-8 sm:pt-8 sm:pb-32 768:px-10">
         {whereStaying.length > 0 ? (
-          <section className="mb-8 480:mb-10 sm:mb-12" aria-labelledby="where-staying-heading">
-            <h2
-              id="where-staying-heading"
-              className="mb-4 font-display text-[1.35rem] font-semibold leading-tight text-foreground 480:mb-5 480:text-[1.5rem] sm:text-[1.7rem]"
-            >
-              Where you&apos;re staying
-            </h2>
-            <ol className="m-0 list-none p-0">
-              {whereStaying.map((row, index) => (
-                <ListicleVenueEntry key={row.id} row={row} index={index} />
-              ))}
-            </ol>
-          </section>
+          <div className="mb-8 space-y-4 480:mb-10 sm:mb-12">
+            {whereStaying.map((row) => (
+              <ItineraryStayCard key={row.id} row={row} />
+            ))}
+          </div>
         ) : null}
 
-        {stops.length > 0 ? (
-          <section aria-labelledby="stops-heading">
-            <h2
-              id="stops-heading"
-              className="mb-4 font-display text-[1.35rem] font-semibold leading-tight text-foreground 480:mb-5 480:text-[1.5rem] sm:text-[1.7rem]"
-            >
-              Stops
-            </h2>
-            <StopList stops={stops} />
-          </section>
-        ) : null}
+        <StopList stops={stops} />
       </div>
     </article>
   )

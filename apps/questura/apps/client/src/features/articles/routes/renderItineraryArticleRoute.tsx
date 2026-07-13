@@ -1,11 +1,10 @@
 import { notFound } from 'next/navigation'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { ItineraryListicleArticlePage } from '@/features/articles/ItineraryListicleArticlePage'
 import { buildArticleBreadcrumbJsonLd } from '@/features/articles/lib/articleBreadcrumbJsonLd'
 import { articleHrefForScope } from '@/features/articles/lib/articleScope'
 import { fetchArticle } from '@/features/articles/lib/fetchArticle'
 import { fetchRelatedMapsArticles } from '@/features/articles/lib/fetchRelatedMapsArticles'
-import { ListicleArticleLayout } from '@/features/articles/layouts/ListicleArticleLayout'
+import { ItineraryArticleLayout } from '@/features/articles/layouts/ItineraryArticleLayout'
 import { isListicleItineraryArticle } from '@/features/articles/types/itineraryListicle'
 import type { ArticleScope } from '@/features/articles/lib/articleScope'
 
@@ -35,13 +34,12 @@ export async function renderItineraryArticleRoute({
     <>
       <JsonLd data={article.seoSection?.structuredData} />
       <JsonLd data={buildArticleBreadcrumbJsonLd({ path, articleTitle: article.title })} />
-      <ListicleArticleLayout
+      <ItineraryArticleLayout
+        article={article}
         relatedArticles={relatedArticles}
         country={scope.country}
         city={scope.city}
-      >
-        <ItineraryListicleArticlePage article={article} />
-      </ListicleArticleLayout>
+      />
     </>
   )
 }

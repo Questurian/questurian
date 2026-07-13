@@ -10,7 +10,9 @@ import {
 const LIMA_CENTER = { lat: -12.0464, lng: -77.0428 }
 const DEFAULT_ZOOM = 13
 const ACTIVE_ZOOM = 16
+const MAX_FIT_ZOOM = 17
 const FIT_PADDING = 56
+const WORLD_TILE_PX = 256
 const ACCENT = '#3B5BDB'
 const ACTIVE_PIN = '#1a1a1a'
 
@@ -53,7 +55,7 @@ function flyTo(
   const from = { lat: startCenter.lat(), lng: startCenter.lng() }
   const distance = haversineMeters(from, target)
 
-  if (distance < 1) {
+  if (distance < 1 && Math.abs(targetZoom - startZoom) < 0.01) {
     map.moveCamera({ center: target, zoom: targetZoom })
     return
   }
@@ -80,20 +82,80 @@ function flyTo(
   animation.frame = requestAnimationFrame(step)
 }
 
-function fitToPoints(map: google.maps.Map, points: ListicleMapPoint[]) {
-  if (points.length === 0) {
-    map.setCenter(LIMA_CENTER)
-    map.setZoom(DEFAULT_ZOOM)
-    return
+/** Numbered glyph for stops; a white house icon for 'stay' pins. */
+function pinGlyph(point: ListicleMapPoint): string | Element {
+  if (point.kind !== 'stay') {
+    return String(point.index + 1)
   }
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  svg.setAttribute('width', '14')
+  svg.setAttribute('height', '14')
+  svg.setAttribute('fill', 'none')
+  svg.setAttribute('stroke', '#ffffff')
+  svg.setAttribute('stroke-width', '2')
+  svg.setAttribute('stroke-linecap', 'round')
+  svg.setAttribute('stroke-linejoin', 'round')
+  for (const d of [
+    'M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8',
+    'M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  ]) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    path.setAttribute('d', d)
+    svg.appendChild(path)
+  }
+  return svg
+}
+
+function mercatorY(lat: number): number {
+  const sin = Math.sin((lat * Math.PI) / 180)
+  return Math.log((1 + sin) / (1 - sin)) / 2
+}
+
+function latFromMercatorY(y: number): number {
+  return ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180) / Math.PI
+}
+
+/**
+ * The center/zoom `fitBounds` would land on, computed up front so the move
+ * can go through `flyTo` and animate — `fitBounds` itself snaps on jumps
+ * larger than a viewport, which is what made day switches flash.
+ */
+function cameraForPoints(
+  mapDiv: HTMLElement,
+  points: ListicleMapPoint[],
+): { center: google.maps.LatLngLiteral; zoom: number } {
+  if (points.length === 0) return { center: LIMA_CENTER, zoom: DEFAULT_ZOOM }
   if (points.length === 1) {
-    map.panTo({ lat: points[0].lat, lng: points[0].lng })
-    map.setZoom(ACTIVE_ZOOM - 1)
-    return
+    return {
+      center: { lat: points[0].lat, lng: points[0].lng },
+      zoom: ACTIVE_ZOOM - 1,
+    }
   }
-  const bounds = new google.maps.LatLngBounds()
-  for (const point of points) bounds.extend({ lat: point.lat, lng: point.lng })
-  map.fitBounds(bounds, FIT_PADDING)
+
+  const lats = points.map((point) => point.lat)
+  const lngs = points.map((point) => point.lng)
+  const north = Math.max(...lats)
+  const south = Math.min(...lats)
+  const east = Math.max(...lngs)
+  const west = Math.min(...lngs)
+
+  const latFraction = (mercatorY(north) - mercatorY(south)) / (2 * Math.PI)
+  const lngFraction = (east - west) / 360
+
+  const width = Math.max(mapDiv.clientWidth - FIT_PADDING * 2, 1)
+  const height = Math.max(mapDiv.clientHeight - FIT_PADDING * 2, 1)
+  const latZoom = Math.log2(height / WORLD_TILE_PX / Math.max(latFraction, 1e-9))
+  const lngZoom = Math.log2(width / WORLD_TILE_PX / Math.max(lngFraction, 1e-9))
+
+  return {
+    center: {
+      lat: latFromMercatorY((mercatorY(north) + mercatorY(south)) / 2),
+      lng: (east + west) / 2,
+    },
+    zoom: Math.min(latZoom, lngZoom, MAX_FIT_ZOOM),
+  }
 }
 
 export function MapPanel() {
@@ -106,6 +168,10 @@ export function MapPanel() {
     new Map<string, google.maps.marker.AdvancedMarkerElement>(),
   )
   const cameraAnimation = useRef<CameraAnimation>({ frame: 0 })
+  // First framing happens while the map is still hidden behind tile loading,
+  // so it jumps straight there; every later re-frame (day switch, scroll out
+  // of the active band) animates.
+  const hasFramedPoints = useRef(false)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -143,7 +209,7 @@ export function MapPanel() {
 
     for (const point of points) {
       const pin = new lib.PinElement({
-        glyph: String(point.index + 1),
+        glyph: pinGlyph(point),
         glyphColor: '#ffffff',
         background: ACCENT,
         borderColor: ACCENT,
@@ -156,8 +222,6 @@ export function MapPanel() {
       })
       markersById.current.set(point.id, marker)
     }
-
-    fitToPoints(map, points)
   }, [ready, points])
 
   useEffect(() => {
@@ -170,7 +234,7 @@ export function MapPanel() {
       if (!marker) continue
       const isActive = point.id === activeId
       const pin = new lib.PinElement({
-        glyph: String(point.index + 1),
+        glyph: pinGlyph(point),
         glyphColor: '#ffffff',
         background: isActive ? ACTIVE_PIN : ACCENT,
         borderColor: isActive ? ACTIVE_PIN : ACCENT,
@@ -183,10 +247,16 @@ export function MapPanel() {
     const active = points.find((point) => point.id === activeId)
     if (active) {
       flyTo(map, cameraAnimation.current, { lat: active.lat, lng: active.lng }, ACTIVE_ZOOM)
-    } else {
-      cancelAnimationFrame(cameraAnimation.current.frame)
-      fitToPoints(map, points)
+    } else if (mapRef.current) {
+      const camera = cameraForPoints(mapRef.current, points)
+      if (hasFramedPoints.current) {
+        flyTo(map, cameraAnimation.current, camera.center, camera.zoom)
+      } else {
+        cancelAnimationFrame(cameraAnimation.current.frame)
+        map.moveCamera(camera)
+      }
     }
+    hasFramedPoints.current = true
   }, [ready, activeId, points])
 
   useEffect(() => {
