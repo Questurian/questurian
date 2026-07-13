@@ -16,6 +16,7 @@ import type {
 import { FeaturedArticleOneArticlePreview } from '../components/blocks/featured-article/FeaturedArticleOneArticlePreview'
 import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
 import { FeaturedArticlesFourArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFourArticlePreview'
+import { FeaturedArticlesThreeArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesThreeArticlePreview'
 import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesSevenArticlePreview'
 import { HotelGridPreview } from '../components/blocks/hotel-grid/HotelGridPreview'
 import { TourGridPreview } from '../components/blocks/tour-grid/TourGridPreview'
@@ -56,6 +57,11 @@ export function getHomepageBlockTotalSlots(block: CityHomepageBlock): number | n
 
 // Exact match: blockType + specific totalSlots
 const homepageBlockLayouts: HomepageBlockLayoutDefinition[] = [
+  defineHomepageBlockLayout<FeaturedArticlesBlock>({
+    blockType: 'featured-articles',
+    totalSlots: 3,
+    Component: FeaturedArticlesThreeArticlePreview,
+  }),
   defineHomepageBlockLayout<FeaturedArticlesBlock>({
     blockType: 'featured-articles',
     totalSlots: 4,

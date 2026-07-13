@@ -187,8 +187,12 @@ export type CityHomepageBlock<TItem = unknown> =
   | NewsletterSignupBlock
   | CityHomepageLegacyBlock<TItem>
 
+export type FeaturedArticlesSlot3Layout = 'hero-left' | 'featured-center'
+
 export type FeaturedArticlesBlock = CityHomepageArticleBlock & {
   blockType: 'featured-articles'
+  /** Present when totalSlots === 3; picks between the two public 3-slot layouts. */
+  slot3Layout?: FeaturedArticlesSlot3Layout | null
 }
 
 export type HomepageBlockLayoutProps<TBlock extends CityHomepageBlock = CityHomepageBlock> = {
