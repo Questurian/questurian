@@ -14,6 +14,7 @@ import type {
   HomepageBlockLayoutProps,
 } from '../types'
 import { FeaturedArticleOneArticlePreview } from '../components/blocks/featured-article/FeaturedArticleOneArticlePreview'
+import { FeaturedArticleCarouselPreview } from '../components/blocks/featured-article-carousel/FeaturedArticleCarouselPreview'
 import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
 import { FeaturedArticlesFiveArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFiveArticlePreview'
 import { FeaturedArticlesFourArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFourArticlePreview'
@@ -103,6 +104,10 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
   defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
     blockType: 'featured-article',
     Component: FeaturedArticleOneArticlePreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
+    blockType: 'featured-article-carousel',
+    Component: FeaturedArticleCarouselPreview,
   }),
   defineHomepageBlockLayoutAnySlots<HotelGridBlock>({
     blockType: 'hotel-grid',
