@@ -25,6 +25,9 @@ export type BuilderSidebarProps = {
   /** Sync-issue message when step 3 has unsaved changes (e.g. "Stops have unsaved changes."). */
   stepThreeSyncIssueLabel: string
 
+  /** When false, Step 2 remains optional and never gates later steps or Payload sync. */
+  requiresStep2Lock?: boolean
+
   /** Optional extra row rendered between Step 3 and SEO core in the progress checklist. */
   extraChecklistRow?: ReactNode
 
@@ -57,6 +60,7 @@ export function BuilderSidebar({
   stepIssues,
   seoCoreComplete,
   stepThreeSyncIssueLabel,
+  requiresStep2Lock = true,
   extraChecklistRow,
   showPublishedBadge = false,
   editorModelName,
@@ -85,7 +89,7 @@ export function BuilderSidebar({
   if (isSynced) {
     if (!draft.payloadSlug?.trim()) syncIssues.push('Slug is required.')
     if (!isStep1Locked) syncIssues.push('Setup has unsaved changes.')
-    if (!isStep2Locked) syncIssues.push('Header/image has unsaved changes.')
+    if (requiresStep2Lock && !isStep2Locked) syncIssues.push('Header/image has unsaved changes.')
     if (!isStep3Locked) syncIssues.push(stepThreeSyncIssueLabel)
     if (!seoCoreComplete) syncIssues.push('SEO title and meta description required.')
   }
@@ -125,11 +129,21 @@ export function BuilderSidebar({
             <li className={isStep1Locked ? 'done' : ''}>
               Setup: {isStep1Locked ? 'Locked' : draft.in_update_mode ? 'Editing' : isSetupReady ? 'Ready to continue' : 'Incomplete'}
             </li>
-            <li className={isStep2Locked ? 'done' : ''}>
-              Step 2: {isStep2Locked ? 'Locked' : draft.step2_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
+            <li className={isStep2Locked || !requiresStep2Lock ? 'done' : ''}>
+              Step 2: {isStep2Locked
+                ? requiresStep2Lock ? 'Locked' : 'Saved'
+                : draft.step2_in_update_mode
+                  ? 'Editing'
+                  : requiresStep2Lock
+                    ? isStep1Locked ? 'Ready' : 'Blocked'
+                    : 'Skippable'}
             </li>
             <li className={isStep3Locked ? 'done' : ''}>
-              Step 3: {isStep3Locked ? 'Locked' : draft.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
+              Step 3: {isStep3Locked
+                ? 'Locked'
+                : draft.step3_in_update_mode
+                  ? 'Editing'
+                  : (requiresStep2Lock ? isStep2Locked : isStep1Locked) ? 'Ready' : 'Blocked'}
             </li>
             {extraChecklistRow}
             <li className={seoCoreComplete ? 'done' : ''}>

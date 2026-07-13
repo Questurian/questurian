@@ -35,6 +35,7 @@ const locations: LocationOption[] = [
 function buildDraft(): SingleTypeListicleDraft {
   const draft = createEmptyDraft()
   draft.title = 'Best brunch in Lima'
+  draft.payloadSlug = 'best-brunch-in-lima'
   draft.location = 'peru|lima'
   draft.locationRef = 2
   draft.listicleType = 'dining'
@@ -91,6 +92,24 @@ function useHarness(initialDraft: SingleTypeListicleDraft) {
 }
 
 describe('singleTypeListicles useBuilderDraftActions', () => {
+  it('allows Step 2 to pass with an empty header', () => {
+    const draft = buildDraft()
+    draft.step2_complete = false
+    draft.header.introMarkdown = ''
+    draft.header.introJsonText = ''
+    draft.header.featuredImage = null
+    draft.header.featuredMediaSet = null
+    const { result } = renderHook(() => useHarness(draft))
+
+    act(() => {
+      result.current.handleContinueStep2()
+    })
+
+    expect(result.current.draft?.step2_complete).toBe(true)
+    expect(result.current.draft?.step2_in_update_mode).toBe(false)
+    expect(result.current.draft?.step3_complete).toBe(true)
+  })
+
   it('resets item selections but preserves header and SEO when shared neighborhoods change', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const { result } = renderHook(() => useHarness(buildDraft()))

@@ -232,7 +232,7 @@ export default function SingleTypeListicleBuilderPage() {
   const isStep1Locked = Boolean(draft?.step1_complete && !draft?.in_update_mode)
   const isStep2Locked = Boolean(draft?.step2_complete && !draft?.step2_in_update_mode)
   const isStep3Locked = Boolean(draft?.step3_complete && !draft?.step3_in_update_mode)
-  const isStep4Ready = isStep1Locked && isStep2Locked && isStep3Locked
+  const isStep4Ready = isStep1Locked && isStep3Locked
 
   useEffect(() => {
     if (!draft || !isStep4Ready) return
@@ -928,7 +928,7 @@ export default function SingleTypeListicleBuilderPage() {
             />
           ) : null}
 
-          {(isStep1Locked && isStep2Locked) || isSynced ? (
+          {isStep1Locked || isSynced ? (
             <BuilderItemsPanel
               draft={draft}
               relatedItems={relatedItems}
@@ -957,7 +957,7 @@ export default function SingleTypeListicleBuilderPage() {
             />
           ) : null}
 
-          {(isStep1Locked && isStep2Locked && isStep3Locked) || isSynced ? (
+          {(isStep1Locked && isStep3Locked) || isSynced ? (
             <BuilderSeoPanel
               draft={draft}
               setDraft={setDraft}
@@ -984,7 +984,7 @@ export default function SingleTypeListicleBuilderPage() {
           isAutoWritingEmptyFields={bulkVisualState === 'running'}
           autoWriteEmptyFieldsQueueCount={autoWriteEmptyFieldsQueueCount}
           autoWriteEmptyFieldsStatus={autoWriteEmptyFieldsStatus}
-          canAutoWriteEmptyFields={(isSynced || (isStep1Locked && isStep2Locked)) && getSingleTypeAutoWriteTargetIds(draft, relatedItems).length > 0}
+          canAutoWriteEmptyFields={(isSynced || isStep1Locked) && getSingleTypeAutoWriteTargetIds(draft, relatedItems).length > 0}
           onAutoWriteEmptyFields={autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}
           onSyncToPayload={() => submit('draft')}

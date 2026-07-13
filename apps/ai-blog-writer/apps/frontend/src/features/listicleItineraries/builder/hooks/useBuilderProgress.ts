@@ -17,5 +17,6 @@ export function useBuilderProgress({ draft }: UseBuilderProgressParams): UseBuil
   return useSharedBuilderProgress<ListicleItineraryDraft>(draft, {
     validateStep1,
     isSeoCoreComplete,
+    requiresStep2Lock: false,
   })
 }

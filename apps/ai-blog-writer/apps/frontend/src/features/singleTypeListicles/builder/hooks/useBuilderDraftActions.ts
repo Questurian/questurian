@@ -25,7 +25,7 @@ import {
   resizeItemsToTargetCount,
 } from '../utils/item-target-count.utils'
 import { validateStep1 } from '../validators/setup.validators'
-import { validateStep2, validateStep3 } from '../validators/submit.validators'
+import { validateStep3 } from '../validators/submit.validators'
 
 type UseBuilderDraftActionsParams = {
   draft: SingleTypeListicleDraft | null
@@ -150,7 +150,8 @@ export function useBuilderDraftActions({
     updateDraft: (next) => updateDraft(next as Partial<SingleTypeListicleDraft>),
     selectedLocationRefId,
     validateStep1,
-    validateStep2,
+    validateStep2: () => [],
+    step2GatesStep3: false,
     validateStep3: (d) => validateStep3(d, relatedItems),
     onError,
   })

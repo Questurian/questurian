@@ -57,7 +57,7 @@ function buildDraft(): ListicleItineraryDraft {
   draft.location = 'peru|cusco'
   draft.locationRef = 1
   draft.step1_complete = true
-  draft.step2_complete = true
+  draft.step2_complete = false
   draft.step3_complete = true
   draft.header.introMarkdown = 'Intro copy'
   draft.days = [{
@@ -99,7 +99,7 @@ function buildDraft(): ListicleItineraryDraft {
 }
 
 describe('useItinerarySubmit', () => {
-  it('submits normalized manual tour-agency payload fields', async () => {
+  it('submits normalized manual tour-agency payload fields without a Step 2 lock', async () => {
     createItineraryMock.mockResolvedValue({
       id: 99,
       ...buildDraft(),

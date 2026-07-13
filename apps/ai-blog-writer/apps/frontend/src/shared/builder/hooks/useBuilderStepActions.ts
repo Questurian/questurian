@@ -28,6 +28,8 @@ export type UseBuilderStepActionsParams<TDraft extends StepFlags> = {
   selectedLocationRefId: number | null
   validateStep1: (draft: TDraft) => string[]
   validateStep2: (draft: TDraft) => string[]
+  /** When false, saving optional Step 2 content does not invalidate completed Step 3 work. */
+  step2GatesStep3?: boolean
   /** Closure over the feature-specific Step-3 context (relatedItems / relatedByBlockType). */
   validateStep3: (draft: TDraft) => string[]
   onError: (message: string) => void
@@ -74,6 +76,7 @@ export function useBuilderStepActions<TDraft extends StepFlags>({
   selectedLocationRefId,
   validateStep1,
   validateStep2,
+  step2GatesStep3 = true,
   validateStep3,
   onError,
 }: UseBuilderStepActionsParams<TDraft>): UseBuilderStepActionsResult {
@@ -112,8 +115,9 @@ export function useBuilderStepActions<TDraft extends StepFlags>({
     updateDraft({
       step2_complete: true,
       step2_in_update_mode: false,
-      step3_complete: false,
-      step3_in_update_mode: false,
+      ...(step2GatesStep3
+        ? { step3_complete: false, step3_in_update_mode: false }
+        : {}),
     })
     onError('')
   }
@@ -134,8 +138,9 @@ export function useBuilderStepActions<TDraft extends StepFlags>({
     updateDraft({
       step2_complete: true,
       step2_in_update_mode: false,
-      step3_complete: false,
-      step3_in_update_mode: false,
+      ...(step2GatesStep3
+        ? { step3_complete: false, step3_in_update_mode: false }
+        : {}),
     })
     onError('')
   }

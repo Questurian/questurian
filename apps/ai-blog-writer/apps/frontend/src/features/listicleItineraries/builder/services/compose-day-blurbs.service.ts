@@ -52,15 +52,6 @@ export function buildFailedDayBlurbComposeReport(params: {
   }
 }
 
-/** True only when the intro has been finalized (Step 2 locked, ADR 0019). */
-function isIntroFinalized(draft: ListicleItineraryDraft): boolean {
-  return Boolean(
-    draft.step2_complete
-    && !draft.step2_in_update_mode
-    && draft.header.introMarkdown.trim(),
-  )
-}
-
 export function resolveStopTitle(
   item: ItineraryItemBlock,
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
@@ -121,18 +112,15 @@ function toNeighborStop(
 
 /**
  * Why day `dayIndex`'s blurbs cannot be composed, or undefined if it is ready.
- * Gated on: a finalized Intro (Step 2 locked, ADR 0019), ≥1 resolved stop, every
- * pooled-category stop having an Angle (ADR 0010 preserved), and every resolved
- * stop having a Selection reason to seed its blurb (ADR 0020).
+ * Gated on: ≥1 resolved stop, every pooled-category stop having an Angle
+ * (ADR 0010), and every resolved stop having a Selection reason (ADR 0020).
+ * Intro is optional framing input; Step 2 lock state never blocks composition.
  */
 export function getItineraryDayBlurbComposeDisabledReason(
   draft: ListicleItineraryDraft,
   dayIndex: number,
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
 ): string | undefined {
-  if (!isIntroFinalized(draft)) {
-    return 'Lock the intro in Step 2 before composing day blurbs'
-  }
   const day = draft.days[dayIndex]
   if (!day) return 'Day not found'
 
@@ -241,16 +229,14 @@ export function buildItineraryComposeDayBlurbsRequest(params: {
  * `getItineraryDayBlurbComposeDisabledReason`: the day-wide gate fails if any
  * sibling lacks an angle/reason, but a single-stop aware compose only needs THIS
  * stop ready — siblings ride along as read-only context. Still gated on the
- * finalized Intro (ADR 0019) and this stop's own angle + "Why this pick" (ADR 0020).
+ * this stop's own angle + "Why this pick" (ADR 0020). Intro and Step 2 lock
+ * state are optional context, not gates.
  */
 export function getItineraryStopBlurbComposeDisabledReason(
   draft: ListicleItineraryDraft,
   item: ItineraryItemBlock,
   relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
 ): string | undefined {
-  if (!isIntroFinalized(draft)) {
-    return 'Lock the intro in Step 2 before composing blurbs'
-  }
   const title = resolveStopTitle(item, relatedByBlockType)
   if (!title) {
     return 'Resolve this stop (pick or name it) before composing its blurb'

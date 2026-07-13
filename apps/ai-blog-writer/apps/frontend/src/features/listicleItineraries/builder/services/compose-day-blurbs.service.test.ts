@@ -162,18 +162,18 @@ describe('day-blurb composer service', () => {
     ).toBeUndefined()
   })
 
-  it('gates on a finalized intro (Step 2 locked + intro present)', () => {
+  it('does not gate day composition on intro content or Step 2 lock state', () => {
     const related = buildRelatedByBlockType()
     expect(
       getItineraryDayBlurbComposeDisabledReason(buildDraft({ step2_in_update_mode: true }), 0, related),
-    ).toBe('Lock the intro in Step 2 before composing day blurbs')
+    ).toBeUndefined()
     expect(
       getItineraryDayBlurbComposeDisabledReason(
         buildDraft({ header: { introMarkdown: '   ', featuredImage: null } }),
         0,
         related,
       ),
-    ).toBe('Lock the intro in Step 2 before composing day blurbs')
+    ).toBeUndefined()
   })
 
   it('gates on a missing angle for a pooled-category stop (ADR 0010)', () => {
@@ -282,13 +282,13 @@ describe('day-blurb composer service', () => {
       ).toBeUndefined()
     })
 
-    it('gates on the finalized intro, this stop\'s angle, and its reason — not on siblings', () => {
+    it('gates on this stop\'s angle and reason, not intro lock or siblings', () => {
       const related = buildRelatedByBlockType()
 
       const noIntro = buildDraft({ step2_in_update_mode: true })
       expect(
         getItineraryStopBlurbComposeDisabledReason(noIntro, noIntro.days[0].items[0], related),
-      ).toBe('Lock the intro in Step 2 before composing blurbs')
+      ).toBeUndefined()
 
       const noAngle = buildDraft()
       noAngle.days[0].items[0].angle = null

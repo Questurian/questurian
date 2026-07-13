@@ -12,6 +12,7 @@ type StepFlags = {
 type UseBuilderProgressValidators<TDraft> = {
   validateStep1: (draft: TDraft) => string[]
   isSeoCoreComplete: (draft: TDraft) => boolean
+  requiresStep2Lock?: boolean
 }
 
 type UseBuilderProgressResult = {
@@ -22,7 +23,7 @@ type UseBuilderProgressResult = {
 
 export function useBuilderProgress<TDraft extends StepFlags>(
   draft: TDraft | null,
-  { validateStep1, isSeoCoreComplete }: UseBuilderProgressValidators<TDraft>,
+  { validateStep1, isSeoCoreComplete, requiresStep2Lock = true }: UseBuilderProgressValidators<TDraft>,
 ): UseBuilderProgressResult {
   return useMemo(() => {
     if (!draft) {
@@ -36,21 +37,23 @@ export function useBuilderProgress<TDraft extends StepFlags>(
     const isStep2Locked = draft.step2_complete && !draft.step2_in_update_mode
     const isStep3Locked = draft.step3_complete && !draft.step3_in_update_mode
 
+    const completionChecks = [
+      isStep1Locked,
+      isStep3Locked,
+      seoCoreComplete,
+      ...(requiresStep2Lock ? [isStep2Locked] : []),
+    ]
+
     const completionPercent = Math.max(
       8,
       Math.min(
         100,
         Math.round(
-          ([
-            isStep1Locked ? 1 : 0,
-            isStep2Locked ? 1 : 0,
-            isStep3Locked ? 1 : 0,
-            seoCoreComplete ? 1 : 0,
-          ].reduce((sum, value) => sum + value, 0) / 4) * 100,
+          (completionChecks.filter(Boolean).length / completionChecks.length) * 100,
         ),
       ),
     )
 
     return { stepIssues, isSetupReady, completionPercent }
-  }, [draft, validateStep1, isSeoCoreComplete])
+  }, [draft, validateStep1, isSeoCoreComplete, requiresStep2Lock])
 }

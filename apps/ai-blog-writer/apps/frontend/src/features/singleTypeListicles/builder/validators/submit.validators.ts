@@ -23,7 +23,7 @@ const isValidAbsoluteUrl = (value: string): boolean => {
 export function validateStep2(draft: SingleTypeListicleDraft): string[] {
   const issues: string[] = []
   const introText = (draft.header.introMarkdown || draft.header.introJsonText || '').trim()
-  if (!introText) issues.push('Step 2 requires a header intro before locking.')
+  if (!introText) issues.push('Add a header intro before syncing to Payload.')
   return issues
 }
 
@@ -173,10 +173,6 @@ export function validateSubmit(
 
   const step3Issues = validateStep3(draft, relatedItems)
   if (step3Issues.length > 0) return step3Issues[0]
-
-  if (!draft.step2_complete || draft.step2_in_update_mode) {
-    return 'Lock Step 2 before syncing to Payload.'
-  }
 
   if (!draft.step3_complete || draft.step3_in_update_mode) {
     return 'Lock Step 3 before syncing to Payload.'

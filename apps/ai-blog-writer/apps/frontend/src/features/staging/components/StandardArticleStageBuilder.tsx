@@ -63,7 +63,7 @@ function validateSetupStep(title: string, locationId?: number): string[] {
 }
 
 function validateFeaturedImageStep(featuredImageId?: number): string[] {
-  return featuredImageId ? [] : ['Step 2 requires a featured image.']
+  return featuredImageId ? [] : ['Select a featured image before syncing to Payload.']
 }
 
 function validateContentStep(input: {
@@ -182,10 +182,9 @@ export function StandardArticleStageBuilder({
   const seoCoreComplete = isSeoCoreComplete(seoSection)
   const completionPercent = Math.round(([
     isStep1Locked,
-    isStep2Locked,
     isStep3Locked,
     seoCoreComplete,
-  ].filter(Boolean).length / 4) * 100)
+  ].filter(Boolean).length / 3) * 100)
 
   const syncIssues = useMemo(() => {
     const issues: string[] = []
@@ -199,14 +198,14 @@ export function StandardArticleStageBuilder({
     } else {
       if (!isStep1Locked) issues.push('Lock Step 1 before syncing to Payload.')
       if (!stagedArticle?.payloadSlug?.trim()) issues.push('Slug is required before syncing to Payload.')
-      if (!isStep2Locked) issues.push('Lock Step 2 before syncing to Payload.')
+      if (step2Issues.length > 0) issues.push(step2Issues[0])
       if (!isStep3Locked) issues.push('Lock Step 3 before syncing to Payload.')
       if (!seoCoreComplete) issues.push('Add SEO title and meta description before syncing to Payload.')
       if (step3Issues.length > 0) issues.push(step3Issues[0])
       if (seoIssues.length > 0) issues.push(seoIssues[0])
     }
     return issues
-  }, [isSynced, isStep1Locked, isStep2Locked, isStep3Locked, seoCoreComplete, seoIssues, stagedArticle?.payloadSlug, step1Issues, step2Issues, step3Issues])
+  }, [isSynced, isStep1Locked, isStep3Locked, seoCoreComplete, seoIssues, stagedArticle?.payloadSlug, step1Issues, step2Issues, step3Issues])
 
   const setStageArticle = useCallback((updates: Partial<NonNullable<typeof stagedArticle>>) => {
     sidebarProps?.onUpdateStagedArticle(updates)
@@ -350,19 +349,13 @@ export function StandardArticleStageBuilder({
 
   const handleContinueFeaturedImage = useCallback(() => {
     if (!sidebarProps) return
-    if (step2Issues.length > 0) {
-      setLocalError(step2Issues[0])
-      return
-    }
     setLocalError(null)
     setLocalResult(null)
     sidebarProps.onUpdateStagedArticle({
       step2_complete: true,
       step2_in_update_mode: false,
-      step3_complete: false,
-      step3_in_update_mode: false,
     })
-  }, [sidebarProps, step2Issues])
+  }, [sidebarProps])
 
   const handleContinueContent = useCallback(() => {
     if (!sidebarProps) return
@@ -803,7 +796,7 @@ export function StandardArticleStageBuilder({
               </section>
             ) : null}
 
-            {(isStep1Locked && isStep2Locked) || isSynced ? (
+            {isStep1Locked || isSynced ? (
               <section className="stl-panel sab-stage-panel sab-stage-panel-content">
                 <div className="stl-panel-header">
                   <h2>{!isSynced ? <span className="stl-kicker">Step 3</span> : null} Content Blocks</h2>
@@ -845,7 +838,7 @@ export function StandardArticleStageBuilder({
               </section>
             ) : null}
 
-            {(isStep1Locked && isStep2Locked && isStep3Locked) || isSynced ? (
+            {(isStep1Locked && isStep3Locked) || isSynced ? (
               <SeoEditorPanel
                 seoSection={seoSection}
                 setSeoSection={updateSeoSection}
@@ -884,11 +877,11 @@ export function StandardArticleStageBuilder({
                   <li className={isStep1Locked ? 'done' : ''}>
                     Setup: {isStep1Locked ? 'Locked' : stagedArticle.in_update_mode ? 'Editing' : 'Incomplete'}
                   </li>
-                  <li className={isStep2Locked ? 'done' : ''}>
-                    Featured image: {isStep2Locked ? 'Locked' : stagedArticle.step2_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
+                  <li className="done">
+                    Featured image: {isStep2Locked ? 'Saved' : stagedArticle.step2_in_update_mode ? 'Editing' : 'Skippable'}
                   </li>
                   <li className={isStep3Locked ? 'done' : ''}>
-                    Content blocks: {isStep3Locked ? 'Locked' : stagedArticle.step3_in_update_mode ? 'Editing' : isStep2Locked ? 'Ready' : 'Blocked'}
+                    Content blocks: {isStep3Locked ? 'Locked' : stagedArticle.step3_in_update_mode ? 'Editing' : isStep1Locked ? 'Ready' : 'Blocked'}
                   </li>
                   <li className={seoCoreComplete ? 'done' : ''}>
                     SEO core: {seoCoreComplete ? 'Complete' : 'Missing SEO title or meta description'}

@@ -141,9 +141,8 @@ export default function ListicleItineraryBuilderPage() {
 
   const progress = useBuilderProgress({ draft })
   const isStep1Locked = draft?.step1_complete && !draft?.in_update_mode
-  const isStep2Locked = draft?.step2_complete && !draft?.step2_in_update_mode
   const isStep3Locked = draft?.step3_complete && !draft?.step3_in_update_mode
-  const isStep4Ready = Boolean(isStep1Locked && isStep2Locked && isStep3Locked)
+  const isStep4Ready = Boolean(isStep1Locked && isStep3Locked)
   const canonicalStructuredData = useMemo(() => {
     if (!draft || !isStep4Ready) return ''
     return serializeStructuredDataTemplate(
@@ -296,7 +295,7 @@ export default function ListicleItineraryBuilderPage() {
             report={aiActions.introComposeReport}
           />
 
-          {(isStep1LockedView && isStep2LockedView) || isSynced ? (
+          {isStep1LockedView || isSynced ? (
             <>
               <BuilderDayTabs
                 dayCount={draft.dayCount}
@@ -365,7 +364,7 @@ export default function ListicleItineraryBuilderPage() {
             </>
           ) : null}
 
-          {(isStep1LockedView && isStep2LockedView && isStep3LockedView) || isSynced ? (
+          {(isStep1LockedView && isStep3LockedView) || isSynced ? (
             <BuilderSeoPanel
               draft={draft}
               setDraft={setDraft}
@@ -379,7 +378,7 @@ export default function ListicleItineraryBuilderPage() {
             />
           ) : null}
 
-          {(isStep1LockedView && isStep2LockedView && isStep3LockedView) || isSynced ? (
+          {(isStep1LockedView && isStep3LockedView) || isSynced ? (
             <BuilderPublishPanel
               draft={draft}
               isSaving={isSaving}
@@ -398,7 +397,7 @@ export default function ListicleItineraryBuilderPage() {
           isSaving={isSaving}
           isRevertingToPayload={isRevertingToPayload}
           isAutoWritingEmptyFields={aiActions.isAutoWritingEmptyFields}
-          canAutoWriteEmptyFields={Boolean((isSynced || (isStep1LockedView && isStep2LockedView)) && (getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0 || (!draft.header.introMarkdown.trim() && !getItineraryIntroComposeDisabledReason(draft, relatedByBlockType))))}
+          canAutoWriteEmptyFields={Boolean((isSynced || isStep1LockedView) && (getItineraryAutoWriteTargetIds(draft, relatedByBlockType).length > 0 || (!draft.header.introMarkdown.trim() && !getItineraryIntroComposeDisabledReason(draft, relatedByBlockType))))}
           stepIssues={progress.stepIssues}
           onAutoWriteEmptyFields={aiActions.autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}

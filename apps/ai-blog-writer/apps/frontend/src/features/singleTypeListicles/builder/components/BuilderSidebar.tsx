@@ -59,6 +59,7 @@ export function BuilderSidebar({
       stepIssues={stepIssues}
       seoCoreComplete={seoComplete}
       stepThreeSyncIssueLabel="Items have unsaved changes."
+      requiresStep2Lock={false}
       extraChecklistRow={(
         <li className={hasTargetCount ? 'done' : ''}>
           Target match: {hasTargetCount

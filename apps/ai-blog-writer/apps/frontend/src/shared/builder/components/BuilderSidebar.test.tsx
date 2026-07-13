@@ -54,4 +54,25 @@ describe('BuilderSidebar', () => {
 
     expect(screen.queryByRole('button', { name: /Revert to/i })).toBeNull()
   })
+
+  it('does not gate sync status on Step 2 when Step 2 is optional', () => {
+    renderSidebar({
+      draft: {
+        payloadId: 15,
+        payloadStatus: 'draft',
+        payloadSlug: 'draft-listicle',
+        status: 'draft',
+        step1_complete: true,
+        in_update_mode: false,
+        step2_complete: false,
+        step2_in_update_mode: false,
+        step3_complete: true,
+        step3_in_update_mode: false,
+      },
+      requiresStep2Lock: false,
+    })
+
+    expect(screen.getByText('All fields complete.')).toBeInTheDocument()
+    expect(screen.queryByText('Header/image has unsaved changes.')).toBeNull()
+  })
 })

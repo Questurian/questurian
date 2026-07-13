@@ -46,6 +46,7 @@ export function BuilderSidebar({
       stepIssues={stepIssues}
       seoCoreComplete={isSeoCoreComplete(draft)}
       stepThreeSyncIssueLabel="Stops have unsaved changes."
+      requiresStep2Lock={false}
       showPublishedBadge
       editorModelName={editorModelName}
       onEditorModelChange={onEditorModelChange}

@@ -164,10 +164,10 @@ export function useBuilderDraftActions({
     updateDraft: (next) => updateDraft(next as Partial<ListicleItineraryDraft>),
     selectedLocationRefId,
     validateStep1,
-    // Step 2 (header) is intentionally not gated for navigation/locking — moving
-    // 2 -> 3 must never be blocked by an empty intro. The intro requirement is
-    // still enforced before Payload sync via validateStep2 in useItinerarySubmit.
+    // Step 2 can be skipped while building. Payload sync still validates its
+    // schema-required content, but no later editor step depends on its lock.
     validateStep2: () => [],
+    step2GatesStep3: false,
     validateStep3: (d) => validateStep3(d, relatedByBlockType),
     onError,
   })

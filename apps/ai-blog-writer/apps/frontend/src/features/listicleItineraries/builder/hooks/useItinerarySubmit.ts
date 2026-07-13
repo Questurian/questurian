@@ -176,11 +176,6 @@ export function useItinerarySubmit({
       return
     }
 
-    if (!submitDraft.step2_complete || submitDraft.step2_in_update_mode) {
-      onError('Lock Step 2 before syncing to Payload.')
-      return
-    }
-
     if (!submitDraft.step3_complete || submitDraft.step3_in_update_mode) {
       onError('Lock Step 3 before syncing to Payload.')
       return

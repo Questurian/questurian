@@ -205,7 +205,7 @@ describe('StandardArticleStageBuilder', () => {
     mockedViewModel = buildViewModel({
       stagedArticle: buildStagedArticle({
         step1_complete: true,
-        step2_complete: true,
+        step2_complete: false,
         step3_complete: true,
         seoSection: buildSeoSection({
           seoTitle: 'SEO title',
@@ -237,7 +237,7 @@ describe('StandardArticleStageBuilder', () => {
     expect(screen.getByText('Step 1 requires an article title.')).toBeInTheDocument()
   })
 
-  it('blocks Step 2 until a featured image is selected', () => {
+  it('allows Step 2 to pass without a featured image', () => {
     mockedViewModel = buildViewModel({
       stagedArticle: buildStagedArticle({
         step1_complete: true,
@@ -249,7 +249,11 @@ describe('StandardArticleStageBuilder', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue to Step 3' }))
 
-    expect(screen.getByText('Step 2 requires a featured image.')).toBeInTheDocument()
+    expect(mockedViewModel.sidebarProps.onUpdateStagedArticle).toHaveBeenCalledWith({
+      step2_complete: true,
+      step2_in_update_mode: false,
+    })
+    expect(screen.queryByText('Select a featured image before syncing to Payload.')).toBeNull()
   })
 
   it('blocks Step 3 when no article body exists', () => {

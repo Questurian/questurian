@@ -14,7 +14,7 @@ type UseBuilderProgressResult = {
 export function useBuilderProgress(draft: SingleTypeListicleDraft | null): UseBuilderProgressResult {
   const { stepIssues, isSetupReady, completionPercent } = useSharedBuilderProgress<SingleTypeListicleDraft>(
     draft,
-    { validateStep1, isSeoCoreComplete },
+    { validateStep1, isSeoCoreComplete, requiresStep2Lock: false },
   )
 
   const hasTargetCount = useMemo(() => {

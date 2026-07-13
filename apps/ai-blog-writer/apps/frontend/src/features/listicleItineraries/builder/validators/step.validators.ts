@@ -40,7 +40,7 @@ const isLongitude = (value: string): boolean => {
 export function validateStep2(draft: ListicleItineraryDraft): string[] {
   const issues: string[] = []
   const introText = (draft.header.introMarkdown || draft.header.introJsonText || '').trim()
-  if (!introText) issues.push('Step 2 requires a header intro before locking.')
+  if (!introText) issues.push('Add a header intro before syncing to Payload.')
   return issues
 }
 

@@ -95,6 +95,20 @@ function useHarness(initialDraft: ListicleItineraryDraft) {
 }
 
 describe('listicleItineraries useBuilderDraftActions', () => {
+  it('allows Step 2 to pass empty without invalidating completed Step 3', () => {
+    const draft = buildDraft()
+    draft.step2_complete = false
+    draft.header.introMarkdown = ''
+    const { result } = renderHook(() => useHarness(draft))
+
+    act(() => {
+      result.current.handleContinueStep2()
+    })
+
+    expect(result.current.draft?.step2_complete).toBe(true)
+    expect(result.current.draft?.step3_complete).toBe(true)
+  })
+
   it('clears stops but preserves header and SEO when shared neighborhoods change', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const { result } = renderHook(() => useHarness(buildDraft()))
