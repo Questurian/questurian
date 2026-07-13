@@ -160,7 +160,9 @@ export const getRequiredVariantsForPublicUse = (input: {
 }): MediaVariantKey[] => {
   if (input.publicUse === 'card-visual') return ['thumbnail']
 
-  const variants: MediaVariantKey[] = ['thumbnail', 'wide']
+  // Migrated article media is also selectable in every curated homepage article block.
+  // Those placements require square (article grids) and hero (featured lead cards).
+  const variants: MediaVariantKey[] = ['thumbnail', 'square', 'wide', 'hero']
   if (input.hasSeoImage) variants.push('open_graph')
   return variants
 }

@@ -53,15 +53,17 @@ describe('finish media set migration helpers', () => {
     expect(inferAssetVariant({ width: 1200, height: 1500 })).toBe('portrait')
   })
 
-  it('requires context minimum variants only', () => {
+  it('requires every curated article placement variant during migration', () => {
     expect(getRequiredVariantsForPublicUse({ publicUse: 'card-visual' })).toEqual(['thumbnail'])
     expect(getRequiredVariantsForPublicUse({ publicUse: 'article-header' })).toEqual([
       'thumbnail',
+      'square',
       'wide',
+      'hero',
     ])
     expect(
       getRequiredVariantsForPublicUse({ publicUse: 'article-header', hasSeoImage: true }),
-    ).toEqual(['thumbnail', 'wide', 'open_graph'])
+    ).toEqual(['thumbnail', 'square', 'wide', 'hero', 'open_graph'])
   })
 
   it('plans only missing generated variants from best source asset', () => {
