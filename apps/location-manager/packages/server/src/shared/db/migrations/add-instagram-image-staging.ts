@@ -4,6 +4,7 @@ type EmbedRow = {
   id: number;
   entity_id: number;
   url: string;
+  post_identity: string | null;
   images: string | null;
 };
 
@@ -62,27 +63,33 @@ export function addInstagramImageStaging(db: Database): void {
   db.run("DROP INDEX IF EXISTS idx_instagram_embeds_entity_identity");
 
   db.transaction(() => {
-    const rows = db.query("SELECT id, entity_id, url, images FROM instagram_embeds ORDER BY id").all() as EmbedRow[];
+    const rows = db.query("SELECT id, entity_id, url, post_identity, images FROM instagram_embeds ORDER BY id").all() as EmbedRow[];
     const groups = new Map<string, EmbedRow[]>();
     for (const row of rows) {
       const normalized = normalizePost(row.url);
       const key = `${row.entity_id}|${normalized.identity}`;
-      groups.set(key, [...(groups.get(key) ?? []), { ...row, url: normalized.url }]);
+      groups.set(key, [...(groups.get(key) ?? []), row]);
     }
 
     for (const group of groups.values()) {
       const keep = [...group].sort((a, b) => imageCount(b.images) - imageCount(a.images) || b.id - a.id)[0]!;
-      const identity = normalizePost(keep.url).identity;
+      const normalized = normalizePost(keep.url);
       for (const duplicate of group) {
         if (duplicate.id !== keep.id) {
           db.query("DELETE FROM instagram_embeds WHERE id = $id").run({ $id: duplicate.id });
         }
       }
-      db.query("UPDATE instagram_embeds SET url = $url, post_identity = $identity WHERE id = $id").run({
-        $id: keep.id,
-        $url: keep.url,
-        $identity: identity,
-      });
+      // Skip already-normalized rows: this runs on every boot, and the
+      // touch_entities_from_instagram_embeds_update trigger bumps
+      // entities.updated_at even on a no-op UPDATE, flagging every synced
+      // location as needing a Payload re-sync.
+      if (keep.url !== normalized.url || keep.post_identity !== normalized.identity) {
+        db.query("UPDATE instagram_embeds SET url = $url, post_identity = $identity WHERE id = $id").run({
+          $id: keep.id,
+          $url: normalized.url,
+          $identity: normalized.identity,
+        });
+      }
     }
   })();
 
@@ -101,5 +108,6 @@ export function addInstagramImageStaging(db: Database): void {
     UPDATE instagram_embeds
     SET media_staging_status = 'pending', media_staging_error = NULL
     WHERE media_staging_version IS NULL
+      AND (media_staging_status IS NOT 'pending' OR media_staging_error IS NOT NULL)
   `);
 }
