@@ -159,12 +159,14 @@ export type LocationGridSelection = {
   totalSlots: number
 }
 
+export type LocationGridMediaAspect = 'rectangle' | 'square' | 'portrait'
+
 export type LocationGridBlock = {
   id: string
   blockType: 'location-grid'
   sectionHeading: string | null
   sectionSubheading: string | null
-  mediaAspect: string | null
+  mediaAspect: LocationGridMediaAspect | null
   selection: LocationGridSelection
 }
 

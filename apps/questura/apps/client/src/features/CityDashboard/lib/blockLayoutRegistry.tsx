@@ -15,7 +15,9 @@ import type {
 } from '../types'
 import { FeaturedArticleOneArticlePreview } from '../components/blocks/featured-article/FeaturedArticleOneArticlePreview'
 import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
+import { FeaturedArticlesFiveArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFiveArticlePreview'
 import { FeaturedArticlesFourArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFourArticlePreview'
+import { FeaturedArticlesNineArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesNineArticlePreview'
 import { FeaturedArticlesThreeArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesThreeArticlePreview'
 import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesSevenArticlePreview'
 import { HotelGridPreview } from '../components/blocks/hotel-grid/HotelGridPreview'
@@ -69,6 +71,11 @@ const homepageBlockLayouts: HomepageBlockLayoutDefinition[] = [
   }),
   defineHomepageBlockLayout<FeaturedArticlesBlock>({
     blockType: 'featured-articles',
+    totalSlots: 5,
+    Component: FeaturedArticlesFiveArticlePreview,
+  }),
+  defineHomepageBlockLayout<FeaturedArticlesBlock>({
+    blockType: 'featured-articles',
     totalSlots: 7,
     Component: FeaturedArticlesSevenArticlePreview,
   }),
@@ -76,6 +83,11 @@ const homepageBlockLayouts: HomepageBlockLayoutDefinition[] = [
     blockType: 'featured-articles',
     totalSlots: 8,
     Component: FeaturedArticlesEightArticlePreview,
+  }),
+  defineHomepageBlockLayout<FeaturedArticlesBlock>({
+    blockType: 'featured-articles',
+    totalSlots: 9,
+    Component: FeaturedArticlesNineArticlePreview,
   }),
 ]
 

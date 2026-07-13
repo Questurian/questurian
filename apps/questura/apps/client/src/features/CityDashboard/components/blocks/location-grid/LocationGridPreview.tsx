@@ -3,9 +3,19 @@ import { type JSX } from 'react'
 import type { LocationGridBlock, LocationGridItem, HomepageBlockLayoutProps } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 
-function LocationCard({ item, isPriority }: { item: LocationGridItem; isPriority: boolean }): JSX.Element {
+const MEDIA_ASPECT_CLASSES: Record<string, string> = {
+  rectangle: 'h-28 768:h-36 1024:h-40',
+  square: 'aspect-square',
+  portrait: 'aspect-[3/4]',
+}
+
+function mediaAspectClass(mediaAspect: string | null): string {
+  return MEDIA_ASPECT_CLASSES[mediaAspect ?? 'rectangle'] ?? MEDIA_ASPECT_CLASSES.rectangle
+}
+
+function LocationCard({ item, isPriority, aspectClass }: { item: LocationGridItem; isPriority: boolean; aspectClass: string }): JSX.Element {
   return (
-    <article className="relative w-full h-28 768:h-36 1024:h-40 overflow-hidden bg-[#1a1a1a]">
+    <article className={`relative w-full ${aspectClass} overflow-hidden bg-[#1a1a1a]`}>
       {item.coverImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -45,6 +55,7 @@ export function LocationGridPreview({ block }: HomepageBlockLayoutProps<Location
 
   const heading = block.sectionHeading?.trim() || null
   const subheading = block.sectionSubheading?.trim() || null
+  const aspectClass = mediaAspectClass(block.mediaAspect)
 
   return (
     <section className="bg-[#f5f0e8]">
@@ -65,7 +76,7 @@ export function LocationGridPreview({ block }: HomepageBlockLayoutProps<Location
 
       <div className="mx-auto w-full max-w-[1400px] 1024:max-w-none grid grid-cols-1 768:grid-cols-2 1024:grid-cols-4">
         {items.map((item, index) => (
-          <LocationCard key={item.id} item={item} isPriority={index === 0} />
+          <LocationCard key={item.id} item={item} isPriority={index === 0} aspectClass={aspectClass} />
         ))}
       </div>
     </section>

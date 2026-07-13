@@ -65,48 +65,42 @@ function useArticleImageStatus(imageUrl: string | null) {
   return { imageRef, isContentReady, isImageLoaded, setImageStatus }
 }
 
-type HeroArticleCardProps = {
+type MagazineHeroCardProps = {
   article: FeaturedArticleTeaser
 }
 
-function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
-  const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
-  const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
-  const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
+/** Slot 1: magazine hero — square image over serif title, dek, byline. */
+function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
+  const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const { imageRef, isContentReady, isImageLoaded, setImageStatus } =
-    useArticleImageStatus(mobileImageUrl ?? desktopImageUrl)
+    useArticleImageStatus(imageUrl)
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
   const authorLabel = getAuthorLabel(article)
   const smallMobileTitleClass = getSmallMobileTitleClass(article.title)
-
   const articlePath = article.articlePath ?? null
 
   return (
     <section
-      className="city-article-card city-four-hero-card"
+      className="city-article-card city-five-hero-card"
       data-content-ready={isContentReady ? 'true' : 'false'}
       data-image-loaded={isImageLoaded ? 'true' : 'false'}
     >
-      <div className="city-article-image-shell city-four-hero-image relative aspect-square overflow-hidden bg-[#d7dcde]">
-        {hasImage ? (
-          <picture className="block h-full w-full">
-            {desktopImageUrl ? (
-              <source media="(min-width: 1024px)" srcSet={desktopImageUrl} />
-            ) : null}
-            <img
-              ref={imageRef}
-              src={mobileImageUrl ?? desktopImageUrl ?? undefined}
-              alt=""
-              className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
-              decoding="async"
-              fetchPriority="high"
-              loading="eager"
-              onError={() => setImageStatus('failed')}
-              onLoad={() => setImageStatus('loaded')}
-            />
-          </picture>
+      <div className="city-article-image-shell city-five-hero-image relative aspect-square overflow-hidden bg-[#d7dcde]">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            ref={imageRef}
+            src={imageUrl}
+            alt=""
+            className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            decoding="async"
+            fetchPriority="high"
+            loading="eager"
+            onError={() => setImageStatus('failed')}
+            onLoad={() => setImageStatus('loaded')}
+          />
         ) : null}
       </div>
 
@@ -152,27 +146,27 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
   )
 }
 
-type SideListArticleCardProps = {
+type SidebarMediaCardProps = {
   article: FeaturedArticleTeaser
 }
 
-function SideListArticleCard({ article }: SideListArticleCardProps): JSX.Element {
+/** Slot 2: sidebar media row — square thumb with label, title, byline. */
+function SidebarMediaCard({ article }: SidebarMediaCardProps): JSX.Element {
   const imageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const { imageRef, isContentReady, isImageLoaded, setImageStatus } =
     useArticleImageStatus(imageUrl)
 
   const articleTypeLabel = getArticleTypeLabel(article)
-  const excerpt = article.excerpt ?? 'Meta description not set'
   const authorLabel = getAuthorLabel(article)
   const articlePath = article.articlePath ?? null
 
   return (
     <section
-      className="city-four-side-card"
+      className="city-five-side-media"
       data-content-ready={isContentReady ? 'true' : 'false'}
       data-image-loaded={isImageLoaded ? 'true' : 'false'}
     >
-      <div className="city-four-side-image city-article-image-shell">
+      <div className="city-article-image-shell city-five-side-thumb">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -189,15 +183,14 @@ function SideListArticleCard({ article }: SideListArticleCardProps): JSX.Element
         ) : null}
       </div>
 
-      <div className="city-four-side-copy">
-        <p className="city-four-side-type">{articleTypeLabel}</p>
-        <h3 className="city-four-side-title">
+      <div className="city-five-side-copy">
+        <p className="city-five-side-type">{articleTypeLabel}</p>
+        <h3 className="city-five-side-title">
           {articlePath ? (
             <Link href={articlePath} className="hover:underline">{article.title}</Link>
           ) : article.title}
         </h3>
-        <p className="city-four-side-meta">{excerpt}</p>
-        <p className="city-four-side-author">
+        <p className="city-five-side-author">
           <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
         </p>
       </div>
@@ -205,13 +198,41 @@ function SideListArticleCard({ article }: SideListArticleCardProps): JSX.Element
   )
 }
 
-export function FeaturedArticlesFourArticlePreview({
+type SidebarTextRowProps = {
+  article: FeaturedArticleTeaser
+}
+
+/** Slots 3-5: text-only sidebar rows. */
+function SidebarTextRow({ article }: SidebarTextRowProps): JSX.Element {
+  const articleTypeLabel = getArticleTypeLabel(article)
+  const excerpt = article.excerpt ?? 'Meta description not set'
+  const authorLabel = getAuthorLabel(article)
+  const articlePath = article.articlePath ?? null
+
+  return (
+    <section className="city-five-side-text">
+      <p className="city-five-side-type">{articleTypeLabel}</p>
+      <h3 className="city-five-side-title">
+        {articlePath ? (
+          <Link href={articlePath} className="hover:underline">{article.title}</Link>
+        ) : article.title}
+      </h3>
+      <p className="city-five-side-dek">{excerpt}</p>
+      <p className="city-five-side-author">
+        <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+      </p>
+    </section>
+  )
+}
+
+export function FeaturedArticlesFiveArticlePreview({
   block,
 }: HomepageBlockLayoutProps<FeaturedArticlesBlock>): JSX.Element | null {
   if (block.items.length === 0) return null
 
   const heroArticle = block.items[0]
-  const sideArticles = block.items.slice(1, 4)
+  const mediaArticle = block.items[1] ?? null
+  const textArticles = block.items.slice(2, 5)
   const sectionHeading = block.sectionHeading?.trim() || getBlockSectionHeading(block.items)
   const sectionSubheading = block.sectionSubheading?.trim() || null
 
@@ -230,20 +251,20 @@ export function FeaturedArticlesFourArticlePreview({
         </div>
       ) : null}
 
-      <div className="city-featured-four-layout">
-        <div className="city-featured-four-hero">
+      <div className="city-featured-five-layout">
+        <div className="city-featured-five-hero">
           {heroArticle ? (
-            <HeroArticleCard
-              key={getArticleKey(heroArticle, 0)}
-              article={heroArticle}
-            />
+            <MagazineHeroCard key={getArticleKey(heroArticle, 0)} article={heroArticle} />
           ) : null}
         </div>
 
-        <div className="city-featured-four-list">
-          {sideArticles.map((article, index) => (
-            <SideListArticleCard
-              key={getArticleKey(article, index + 1)}
+        <div className="city-featured-five-sidebar">
+          {mediaArticle ? (
+            <SidebarMediaCard key={getArticleKey(mediaArticle, 1)} article={mediaArticle} />
+          ) : null}
+          {textArticles.map((article, index) => (
+            <SidebarTextRow
+              key={getArticleKey(article, index + 2)}
               article={article}
             />
           ))}

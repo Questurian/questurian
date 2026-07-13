@@ -65,14 +65,6 @@ function useArticleImageStatus(imageUrl: string | null) {
   return { imageRef, isContentReady, isImageLoaded, setImageStatus }
 }
 
-function NumberBadge({ n }: { n: number }): JSX.Element {
-  return (
-    <span aria-hidden className="city-three-badge">
-      {n}
-    </span>
-  )
-}
-
 function ArticleTitleLink({ article }: { article: FeaturedArticleTeaser }): JSX.Element {
   return article.articlePath ? (
     <Link href={article.articlePath} className="hover:underline">
@@ -125,7 +117,6 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
             />
           </picture>
         ) : null}
-        <NumberBadge n={1} />
       </div>
 
       <div className="relative px-[var(--block-gutter)]">
@@ -170,14 +161,12 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
 
 type StackedWideCardProps = {
   article: FeaturedArticleTeaser
-  slotNumber: number
   variant?: 'stack' | 'fc-side'
 }
 
 // Wide-image card: right-column stack in hero-left, side columns in featured-center.
 function StackedWideCard({
   article,
-  slotNumber,
   variant = 'stack',
 }: StackedWideCardProps): JSX.Element {
   const imageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
@@ -211,7 +200,6 @@ function StackedWideCard({
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
-        <NumberBadge n={slotNumber} />
       </div>
 
       <div className="city-three-stack-copy">
@@ -229,11 +217,10 @@ function StackedWideCard({
 
 type CenterFeatureCardProps = {
   article: FeaturedArticleTeaser
-  slotNumber: number
 }
 
 // Slot 2 in the featured-center layout: tall center feature.
-function CenterFeatureCard({ article, slotNumber }: CenterFeatureCardProps): JSX.Element {
+function CenterFeatureCard({ article }: CenterFeatureCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
@@ -269,7 +256,6 @@ function CenterFeatureCard({ article, slotNumber }: CenterFeatureCardProps): JSX
             />
           </picture>
         ) : null}
-        <NumberBadge n={slotNumber} />
       </div>
 
       <div className="city-three-stack-copy">
@@ -318,13 +304,11 @@ export function FeaturedArticlesThreeArticlePreview({
               <CenterFeatureCard
                 key={getArticleKey(article, index)}
                 article={article}
-                slotNumber={index + 1}
               />
             ) : (
               <StackedWideCard
                 key={getArticleKey(article, index)}
                 article={article}
-                slotNumber={index + 1}
                 variant="fc-side"
               />
             ),
@@ -344,7 +328,6 @@ export function FeaturedArticlesThreeArticlePreview({
               <StackedWideCard
                 key={getArticleKey(article, index + 1)}
                 article={article}
-                slotNumber={index + 2}
               />
             ))}
           </div>
