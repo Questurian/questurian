@@ -1,3 +1,4 @@
+import { publicArticleGridFourLayout } from '../../article-grid/service'
 import { publicFeaturedArticlesSlot3Layout } from '../../featured-articles/lib/slot-layouts'
 import { PUBLIC_ARTICLE_BLOCK_TYPES } from '../constants'
 import { formatPublicArticleItem } from './format-public-article'
@@ -35,6 +36,13 @@ export function formatPublicHomepageBlock(block: unknown, location?: LocationCon
 
   if (slot3Layout) {
     return { ...base, slot3Layout }
+  }
+
+  const articleGridFourLayout =
+    blockType === 'article-grid' ? publicArticleGridFourLayout(block, totalSlots) : null
+
+  if (articleGridFourLayout) {
+    return { ...base, articleGridFourLayout }
   }
 
   return base

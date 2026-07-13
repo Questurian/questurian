@@ -257,6 +257,54 @@ describe('formatPublicLocationHomepageDoc', () => {
     expect(response.pageBlocks[0]).not.toHaveProperty('slot3Layout')
   })
 
+  it('exposes articleGridFourLayout on 4-slot article-grid blocks', () => {
+    const response = formatPublicLocationHomepageDoc([
+      {
+        blockType: 'article-grid',
+        articleGridFourLayout: 'two-by-two',
+        selection: {
+          totalSlots: 4,
+          items: [{ relationTo: 'articles', title: 'Best Lima Cafes' }],
+        },
+      },
+    ] as never)
+
+    expect(response.pageBlocks[0]).toMatchObject({
+      blockType: 'article-grid',
+      totalSlots: 4,
+      articleGridFourLayout: 'two-by-two',
+    })
+  })
+
+  it('defaults articleGridFourLayout to four-across on 4-slot article-grid blocks', () => {
+    const response = formatPublicLocationHomepageDoc([
+      {
+        blockType: 'article-grid',
+        selection: {
+          totalSlots: 4,
+          items: [{ relationTo: 'articles', title: 'Best Lima Cafes' }],
+        },
+      },
+    ] as never)
+
+    expect(response.pageBlocks[0]).toMatchObject({ articleGridFourLayout: 'four-across' })
+  })
+
+  it('omits articleGridFourLayout when article-grid has other slot counts', () => {
+    const response = formatPublicLocationHomepageDoc([
+      {
+        blockType: 'article-grid',
+        articleGridFourLayout: 'two-by-two',
+        selection: {
+          totalSlots: 8,
+          items: [{ relationTo: 'articles', title: 'Best Lima Cafes' }],
+        },
+      },
+    ] as never)
+
+    expect(response.pageBlocks[0]).not.toHaveProperty('articleGridFourLayout')
+  })
+
   it('leaves non-article blocks unchanged', () => {
     const nonArticleBlock = {
       id: 'location-grid-1',

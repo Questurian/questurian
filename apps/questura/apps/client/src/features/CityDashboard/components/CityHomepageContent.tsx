@@ -15,6 +15,9 @@ export function CityHomepageContent({ location = null, pageBlocks }: CityHomepag
       const layout = getHomepageBlockLayout(block)
 
       if (!layout) {
+        console.warn(
+          `[CityHomepageContent] No client layout registered for homepage block "${block.blockType}".`,
+        )
         return null
       }
 

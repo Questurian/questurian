@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 
 import type {
+  ArticleGridBlock,
   CityHomepageBlock,
   CityHomepageArticleBlock,
   FeaturedArticlesBlock,
@@ -8,6 +9,7 @@ import type {
   TourGridBlock,
   LocationGridBlock,
   NewsletterSignupBlock,
+  ThingsToDoAttractionsBlock,
   HomepageBlockLayoutDefinition,
   HomepageBlockLayoutFallbackDefinition,
   HomepageBlockLayoutKey,
@@ -21,7 +23,9 @@ import { FeaturedArticlesFourArticlePreview } from '../components/blocks/feature
 import { FeaturedArticlesNineArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesNineArticlePreview'
 import { FeaturedArticlesThreeArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesThreeArticlePreview'
 import { FeaturedArticlesSevenArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesSevenArticlePreview'
+import { ArticleGridPreview } from '../components/blocks/article-grid/ArticleGridPreview'
 import { HotelGridPreview } from '../components/blocks/hotel-grid/HotelGridPreview'
+import { ThingsToDoAttractionsPreview } from '../components/blocks/things-to-do-attractions/ThingsToDoAttractionsPreview'
 import { TourGridPreview } from '../components/blocks/tour-grid/TourGridPreview'
 import { LocationGridPreview } from '../components/blocks/location-grid/LocationGridPreview'
 import { QuestUrianMapsPreview } from '../components/blocks/questurian-maps/QuestUrianMapsPreview'
@@ -109,9 +113,27 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
     blockType: 'featured-article-carousel',
     Component: FeaturedArticleCarouselPreview,
   }),
+  defineHomepageBlockLayoutAnySlots<ArticleGridBlock>({
+    blockType: 'article-grid',
+    Component: ArticleGridPreview,
+  }),
   defineHomepageBlockLayoutAnySlots<HotelGridBlock>({
     blockType: 'hotel-grid',
     Component: HotelGridPreview,
+  }),
+  // Article-teaser carousels: same public payload shape as the featured
+  // article carousel, so they share its layout component.
+  defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
+    blockType: 'where-to-eat-drink',
+    Component: FeaturedArticleCarouselPreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
+    blockType: 'things-to-do-listicles',
+    Component: FeaturedArticleCarouselPreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<ThingsToDoAttractionsBlock>({
+    blockType: 'things-to-do-attractions',
+    Component: ThingsToDoAttractionsPreview,
   }),
   defineHomepageBlockLayoutAnySlots<TourGridBlock>({
     blockType: 'tour-grid',

@@ -170,6 +170,35 @@ export type LocationGridBlock = {
   selection: LocationGridSelection
 }
 
+export type ThingsToDoAttractionItem = {
+  id: number
+  title: string
+  slug: string | null
+  type: string | null
+  priceLevel: string | null
+  status: string | null
+  updatedAt: string | null
+  imageUrl: string | null
+  location: string | null
+  slot?: number
+}
+
+export type ThingsToDoAttractionsSelection = {
+  items: ThingsToDoAttractionItem[]
+  invalidItems: unknown[]
+  allowDrafts: boolean
+  totalSlots: number
+  isComplete: boolean
+}
+
+export type ThingsToDoAttractionsBlock = {
+  id: string
+  blockType: 'things-to-do-attractions'
+  sectionHeading: string | null
+  sectionSubheading: string | null
+  selection: ThingsToDoAttractionsSelection
+}
+
 export type NewsletterSignupBlock = {
   id: string
   blockType: 'newsletter-signup'
@@ -186,6 +215,7 @@ export type CityHomepageBlock<TItem = unknown> =
   | HotelGridBlock
   | TourGridBlock
   | LocationGridBlock
+  | ThingsToDoAttractionsBlock
   | NewsletterSignupBlock
   | CityHomepageLegacyBlock<TItem>
 
@@ -195,6 +225,14 @@ export type FeaturedArticlesBlock = CityHomepageArticleBlock & {
   blockType: 'featured-articles'
   /** Present when totalSlots === 3; picks between the two public 3-slot layouts. */
   slot3Layout?: FeaturedArticlesSlot3Layout | null
+}
+
+export type ArticleGridFourLayout = 'four-across' | 'two-by-two'
+
+export type ArticleGridBlock = CityHomepageArticleBlock & {
+  blockType: 'article-grid'
+  /** Present when totalSlots === 4; picks the wide strip vs the 2×2 square grid. */
+  articleGridFourLayout?: ArticleGridFourLayout | null
 }
 
 export type HomepageBlockLayoutProps<TBlock extends CityHomepageBlock = CityHomepageBlock> = {
