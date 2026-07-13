@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyItineraryComposedDayBlurbs,
+  buildFailedDayBlurbComposeReport,
   buildItineraryComposeDayBlurbsRequest,
   dayHasExistingBlurbs,
   getComposableDayIndexes,
@@ -136,6 +137,25 @@ function buildRelatedByBlockType(): Record<ItineraryBlockType, RelatedItemOption
 }
 
 describe('day-blurb composer service', () => {
+  it('captures failed requests for the inspector report', () => {
+    expect(buildFailedDayBlurbComposeReport({
+      modelName: 'claude-sonnet-5',
+      errorMessage: 'provider overloaded',
+      durationMs: 1234,
+    })).toEqual({
+      model_used: 'claude-sonnet-5',
+      results: {},
+      steps: [{
+        name: 'request',
+        label: 'Day composer request',
+        status: 'failed',
+        duration_ms: 1234,
+        model: 'claude-sonnet-5',
+        details: { error: 'provider overloaded' },
+      }],
+    })
+  })
+
   it('is ready when intro is locked, stops resolve, and pooled stops have angles', () => {
     expect(
       getItineraryDayBlurbComposeDisabledReason(buildDraft(), 0, buildRelatedByBlockType()),

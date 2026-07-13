@@ -19,6 +19,13 @@ logger = logging.getLogger(__name__)
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_LOCATION = "us-central1"
 
+# Free-text generation calls share one large response ceiling. Call sites may
+# describe a smaller expected response, but they must never accidentally starve
+# a writer or let model reasoning consume the space reserved for reader-facing
+# output. Structured tool calls keep their requested, schema-sized ceiling.
+# Providers bill actual generated tokens, not this ceiling.
+MIN_GENERATION_MAX_TOKENS = 64_000
+
 _vertexai_init_state: tuple[str, str] | None = None
 
 
@@ -65,6 +72,24 @@ def _message_text(message: Any) -> str:
     return "\n".join(text_parts).strip()
 
 
+def _resolve_generation_max_tokens(requested: int) -> int:
+    return max(requested, MIN_GENERATION_MAX_TOKENS)
+
+
+def _empty_message_error(message: Any) -> RuntimeError:
+    usage = getattr(message, "usage", None)
+    output_tokens = getattr(usage, "output_tokens", None)
+    block_types = [
+        str(getattr(block, "type", type(block).__name__))
+        for block in getattr(message, "content", []) or []
+    ]
+    return RuntimeError(
+        "Anthropic returned no text "
+        f"(stop_reason={getattr(message, 'stop_reason', None)!r}, "
+        f"output_tokens={output_tokens!r}, content_types={block_types!r})"
+    )
+
+
 class ClaudeTextLLM:
     """Minimal Anthropic client exposing the same `.invoke(prompt) -> str`
     surface as the LangChain VertexAI wrapper, so pipeline call sites can
@@ -84,12 +109,14 @@ class ClaudeTextLLM:
         with client.messages.stream(
             model=self.model_name,
             max_tokens=self.max_tokens,
-            thinking={"type": "adaptive"},
             messages=[{"role": "user", "content": prompt}],
         ) as stream:
             message = stream.get_final_message()
 
-        return _message_text(message)
+        text = _message_text(message)
+        if not text:
+            raise _empty_message_error(message)
+        return text
 
 
 def invoke_anthropic_structured_tool(
@@ -159,12 +186,17 @@ def get_vertex_llm(
     Raises:
         RuntimeError: If GOOGLE_CLOUD_PROJECT is not set and project not provided.
     """
+    effective_max_tokens = _resolve_generation_max_tokens(max_tokens)
+
     # Anthropic routing: claude-* models bypass Vertex entirely.
     if (model_name or "").lower().startswith("claude"):
         logger.debug(
-            f"Routing LLM call to Anthropic: model={model_name}, max_tokens={max_tokens}"
+            "Routing LLM call to Anthropic: "
+            f"model={model_name}, max_tokens={effective_max_tokens}"
         )
-        return ClaudeTextLLM(model_name=model_name, max_tokens=max_tokens)
+        return ClaudeTextLLM(
+            model_name=model_name, max_tokens=effective_max_tokens
+        )
 
     resolved_project = _resolve_vertex_project(project)
     resolved_location = _resolve_vertex_location(location)
@@ -174,14 +206,14 @@ def get_vertex_llm(
 
     logger.debug(
         f"Creating VertexAI LLM: model={resolved_model}, "
-        f"temperature={temperature}, max_tokens={max_tokens}, "
+        f"temperature={temperature}, max_tokens={effective_max_tokens}, "
         f"project={resolved_project}, location={resolved_location}"
     )
 
     return VertexAI(
         model_name=resolved_model,
         temperature=temperature,
-        max_tokens=max_tokens,
+        max_tokens=effective_max_tokens,
         project=resolved_project,
         location=resolved_location,
     )

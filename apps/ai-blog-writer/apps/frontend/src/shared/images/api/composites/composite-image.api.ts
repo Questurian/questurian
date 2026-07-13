@@ -24,8 +24,16 @@ async function parseCompositeError(response: Response, fallback: string): Promis
   if (body && typeof body === 'object') {
     const detail = (body as { detail?: unknown }).detail
     if (detail && typeof detail === 'object') {
-      const message = (detail as { message?: unknown }).message
-      if (typeof message === 'string' && message.trim()) return message
+      const { message, step, detail: inner } = detail as {
+        message?: unknown
+        step?: unknown
+        detail?: unknown
+      }
+      const parts: string[] = []
+      if (typeof message === 'string' && message.trim()) parts.push(message.trim())
+      if (typeof inner === 'string' && inner.trim()) parts.push(inner.trim())
+      if (typeof step === 'string' && step.trim()) parts.push(`(step: ${step.trim()})`)
+      if (parts.length > 0) return parts.join(' — ')
     }
   }
   return `${fallback} (${response.status})`
@@ -52,6 +60,62 @@ export async function previewCompositeImage(
   const warningsHeader = response.headers.get('X-Composite-Warnings')
   const warnings = warningsHeader ? JSON.parse(warningsHeader) as string[] : []
   return { blob: await response.blob(), warnings }
+}
+
+export type HangingComposite = {
+  mediaSetId: number
+  externalRef: string
+  title: string
+  createdAt: string | null
+  variantCount: number
+  expectedVariants: number
+  previewUrl: string | null
+  assetIds: string[]
+}
+
+export type HangingCompositesResponse = {
+  hanging: HangingComposite[]
+  count: number
+}
+
+export type CleanupCompositesResponse = {
+  deleted: string[]
+  skipped: string[]
+  errors: { mediaSetId: string; detail: string }[]
+  deletedCount: number
+}
+
+export async function fetchHangingComposites(token: string): Promise<HangingCompositesResponse> {
+  const response = await fetch(`${API_URL}/images/composites/hanging`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!response.ok) {
+    throw new Error(await parseCompositeError(response, 'Failed to load hanging composites'))
+  }
+  return response.json() as Promise<HangingCompositesResponse>
+}
+
+export async function cleanupHangingComposites(
+  mediaSetIds: number[],
+  token: string,
+): Promise<CleanupCompositesResponse> {
+  const response = await fetch(`${API_URL}/images/composites/cleanup`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ mediaSetIds }),
+  })
+  if (!response.ok) {
+    throw new Error(await parseCompositeError(response, 'Composite cleanup failed'))
+  }
+  return response.json() as Promise<CleanupCompositesResponse>
 }
 
 export async function createCompositeImage(

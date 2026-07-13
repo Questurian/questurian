@@ -33,6 +33,7 @@ import {
 import { generateItinerary, type AutobuildResponse } from '../services/autobuild.api'
 import {
   applyItineraryComposedDayBlurbs,
+  buildFailedDayBlurbComposeReport,
   buildItineraryComposeDayBlurbsRequest,
   dayHasExistingBlurbs,
   getComposableDayIndexes,
@@ -305,13 +306,15 @@ export function useItineraryBuilderAiActions({
     setIsComposingDayBlurbs(true)
 
     const singleStop = writeTargetIds?.length === 1
+    const modelName = resolveEditorAssistModelName(draft.editorModelName)
+    const startedAt = Date.now()
     try {
       const request = buildItineraryComposeDayBlurbsRequest({
         draft,
         dayIndex,
         relatedByBlockType,
         locations,
-        modelName: resolveEditorAssistModelName(draft.editorModelName),
+        modelName,
         writeTargetIds,
       })
       const response = await composeItineraryDayBlurbsWithAi(request)
@@ -327,7 +330,13 @@ export function useItineraryBuilderAiActions({
           : `No blurbs were composed for ${scope} - see report.`,
       )
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to compose day blurbs with AI.')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to compose day blurbs with AI.'
+      setDayBlurbReport(buildFailedDayBlurbComposeReport({
+        modelName,
+        errorMessage,
+        durationMs: Date.now() - startedAt,
+      }))
+      onError(`${errorMessage} See composer report.`)
     } finally {
       setIsComposingDayBlurbs(false)
     }
@@ -567,13 +576,15 @@ export function useItineraryBuilderAiActions({
 
     try {
       for (const dayIndex of dayIndexes) {
+        const modelName = resolveEditorAssistModelName(draft.editorModelName)
+        const startedAt = Date.now()
         try {
           const request = buildItineraryComposeDayBlurbsRequest({
             draft,
             dayIndex,
             relatedByBlockType,
             locations,
-            modelName: resolveEditorAssistModelName(draft.editorModelName),
+            modelName,
           })
           const response = await composeItineraryDayBlurbsWithAi(request)
           setDraft((current) => (current ? applyItineraryComposedDayBlurbs(current, dayIndex, response) : current))
@@ -584,7 +595,15 @@ export function useItineraryBuilderAiActions({
           )
           totalGenerated += countGeneratedBlurbs(response.results)
         } catch (err) {
-          errors.push(`Day ${dayIndex + 1}: ${err instanceof Error ? err.message : 'composition failed'}`)
+          const errorMessage = err instanceof Error ? err.message : 'composition failed'
+          errors.push(`Day ${dayIndex + 1}: ${errorMessage}`)
+          mergedSteps.push(...buildFailedDayBlurbComposeReport({
+            modelName,
+            errorMessage,
+            durationMs: Date.now() - startedAt,
+            label: `Day ${dayIndex + 1} - Day composer request`,
+          }).steps)
+          modelUsed ||= modelName
         }
       }
 
@@ -684,8 +703,9 @@ export function useItineraryBuilderAiActions({
   const generateSeoImageFromFeatured = useCallback(async (): Promise<void> => {
     if (!draft) return
 
+    const featuredMediaSetId = draft.header.featuredMediaSet ?? null
     const featuredAssetId = draft.header.featuredImage
-    if (!featuredAssetId) {
+    if (!featuredMediaSetId && !featuredAssetId) {
       onError('Select a featured image in Step 2 before generating social image URLs.')
       return
     }
@@ -700,7 +720,12 @@ export function useItineraryBuilderAiActions({
     setIsGeneratingSeoImage(true)
 
     try {
-      const response = await requestGenerateSocialImageFromFeatured(featuredAssetId, token)
+      const response = await requestGenerateSocialImageFromFeatured(
+        featuredMediaSetId
+          ? { featuredMediaSetId }
+          : { featuredAssetId: featuredAssetId as number },
+        token,
+      )
       const bunnyUrl = response.generatedImageUrl.trim()
       if (!bunnyUrl) {
         throw new Error('Generated social image is missing Bunny URL.')

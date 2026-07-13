@@ -706,6 +706,150 @@ def test_generate_social_image_rejects_non_positive_featured_asset_id():
     assert detail["featured_asset_id"] == 0
 
 
+def test_generate_social_image_rejects_missing_featured_reference():
+    client = TestClient(app)
+
+    response = client.post(
+        "/images/generate-social-image",
+        json={},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_featured_asset_id"
+
+
+def test_generate_social_image_rejects_non_positive_featured_media_set_id():
+    client = TestClient(app)
+
+    response = client.post(
+        "/images/generate-social-image",
+        json={"featuredMediaSetId": 0},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["step"] == "validate_featured_media_set_id"
+    assert detail["featured_media_set_id"] == 0
+
+
+def test_generate_social_image_supports_featured_media_set_id(monkeypatch):
+    client = TestClient(app)
+
+    async def fake_list_media_assets(self, media_set_id: str | int):
+        assert str(media_set_id) == "555"
+        return [
+            {
+                "id": "31",
+                "filename": "composite_square.webp",
+                "mediaSet": "555",
+                "variant": "square",
+                "width": 1080,
+                "height": 1080,
+                "bunny_original_url": None,
+                "url": None,
+            },
+            {
+                "id": "32",
+                "filename": "composite_hero.webp",
+                "mediaSet": "555",
+                "variant": "hero",
+                "width": 2100,
+                "height": 900,
+                "bunny_original_url": None,
+                "url": None,
+            },
+        ]
+
+    async def fake_get_media_asset(self, asset_id: str | int):
+        assert str(asset_id) == "902"
+        return {
+            "id": "902",
+            "filename": "composite_open_graph.webp",
+            "mediaSet": "555",
+            "variant": "open_graph",
+            "width": 1200,
+            "height": 630,
+            "bunny_original_url": "https://cdn.example.com/composite_open_graph.webp",
+            "url": None,
+        }
+
+    async def fake_upload_image(
+        self,
+        variant,
+        alt_text: str,
+        photographer_credit: str = "",
+        media_set_id: str | None = None,
+        location_ref: int | None = None,
+    ):
+        assert variant.variant_type.value == "open_graph"
+        assert media_set_id == "555"
+        return "902"
+
+    async def fake_download_media_asset_file(*, payload_client, jwt_token: str, filename: str):
+        assert filename == "composite_hero.webp"
+        return b"source-image-bytes"
+
+    def fake_process_single_variant(
+        source_buffer: bytes,
+        original_filename: str,
+        variant_type: ImageVariantType,
+        quality: int = 85,
+    ):
+        assert source_buffer == b"source-image-bytes"
+        assert variant_type == ImageVariantType.OPEN_GRAPH
+        return ProcessedVariant(
+            variant_type=ImageVariantType.OPEN_GRAPH,
+            buffer=b"og-image-bytes",
+            filename="composite_hero_open_graph.webp",
+            width=1200,
+            height=630,
+            content_type="image/webp",
+            file_size=321,
+        )
+
+    monkeypatch.setattr(
+        PayloadClient,
+        "list_media_assets_by_media_set",
+        fake_list_media_assets,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "get_media_asset_by_id",
+        fake_get_media_asset,
+    )
+    monkeypatch.setattr(
+        PayloadClient,
+        "upload_image",
+        fake_upload_image,
+    )
+    monkeypatch.setattr(
+        "app.features.images.social.routes._download_media_asset_file",
+        fake_download_media_asset_file,
+    )
+    monkeypatch.setattr(
+        "app.features.images.social.routes.process_single_variant",
+        fake_process_single_variant,
+    )
+
+    response = client.post(
+        "/images/generate-social-image",
+        json={"featuredMediaSetId": 555},
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["featuredAssetId"] is None
+    assert payload["mediaSetId"] == "555"
+    assert payload["sourceAssetId"] == "32"
+    assert payload["generatedAssetId"] == "902"
+    assert payload["generatedImageUrl"] == "https://cdn.example.com/composite_open_graph.webp"
+
+
 def test_generate_social_image_supports_featured_asset_without_media_set(
     monkeypatch,
 ):
@@ -1707,3 +1851,133 @@ def test_unsplash_search_rejects_invalid_orientation(monkeypatch):
     detail = response.json()["detail"]
     assert detail["step"] == "validate_unsplash_query"
     assert detail["orientation"] == "diagonal"
+
+
+def _composite_request_body() -> dict:
+    return {
+        "layout": "four-up",
+        "sources": [
+            {"mediaSetId": 1},
+            {"mediaSetId": 2},
+            {"mediaSetId": 3},
+            {"mediaSetId": 4},
+        ],
+        "title": "Composite image",
+        "altText": "A composite of four scenes",
+        "photographerCredit": "Questurian Composite",
+        "locationRef": 42,
+    }
+
+
+async def _fake_prepare_ok(request, authorization):
+    """Bypass source download/render machinery for composite route tests."""
+    return "jwt-token", 42, "Questurian Composite", [], []
+
+
+def test_create_composite_rolls_back_on_partial_failure(monkeypatch):
+    client = TestClient(app)
+
+    deleted_assets: list[str] = []
+    deleted_sets: list[str] = []
+    upload_calls = {"count": 0}
+
+    async def fake_create_media_set(self, **kwargs):
+        return "ms_777"
+
+    async def fake_upload_image(self, variant, **kwargs):
+        upload_calls["count"] += 1
+        if upload_calls["count"] <= 2:
+            return f"asset_{upload_calls['count']}"
+        raise PayloadUploadError(
+            step=f"upload_image({variant.variant_type.value})",
+            message="Payload rejected the upload",
+            status_code=400,
+            detail="Validation: something is wrong",
+        )
+
+    async def fake_delete_media_asset(self, asset_id: str):
+        deleted_assets.append(asset_id)
+
+    async def fake_delete_media_set(self, media_set_id: str):
+        deleted_sets.append(media_set_id)
+
+    monkeypatch.setattr(
+        "app.features.images.composites.routes._prepare", _fake_prepare_ok
+    )
+    monkeypatch.setattr(PayloadClient, "create_media_set", fake_create_media_set)
+    monkeypatch.setattr(PayloadClient, "upload_image", fake_upload_image)
+    monkeypatch.setattr(PayloadClient, "delete_media_asset", fake_delete_media_asset)
+    monkeypatch.setattr(PayloadClient, "delete_media_set", fake_delete_media_set)
+
+    response = client.post(
+        "/images/composites/create",
+        json=_composite_request_body(),
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 400
+    detail = response.json()["detail"]
+    assert detail["message"] == "Failed to create composite MediaSet"
+    # The two variants uploaded before the failure are cleaned up...
+    assert deleted_assets == ["asset_1", "asset_2"]
+    # ...and the orphaned MediaSet is deleted so nothing hangs.
+    assert deleted_sets == ["ms_777"]
+
+
+def test_create_composite_retries_transient_upload_error(monkeypatch):
+    client = TestClient(app)
+
+    deleted_assets: list[str] = []
+    deleted_sets: list[str] = []
+    calls = {"count": 0}
+
+    async def fake_create_media_set(self, **kwargs):
+        return "ms_888"
+
+    async def fake_upload_image(self, variant, **kwargs):
+        calls["count"] += 1
+        # Fail the very first attempt with a transient gateway error, then succeed.
+        if calls["count"] == 1:
+            raise PayloadUploadError(
+                step=f"upload_image({variant.variant_type.value})",
+                message="Payload rejected the upload",
+                status_code=503,
+                detail="Bunny CDN temporarily unavailable",
+            )
+        return f"asset_{calls['count']}"
+
+    async def fake_delete_media_asset(self, asset_id: str):
+        deleted_assets.append(asset_id)
+
+    async def fake_delete_media_set(self, media_set_id: str):
+        deleted_sets.append(media_set_id)
+
+    async def fake_sleep(_seconds):
+        return None
+
+    monkeypatch.setattr(
+        "app.features.images.composites.routes._prepare", _fake_prepare_ok
+    )
+    monkeypatch.setattr(
+        "app.features.images.composites.routes.asyncio.sleep", fake_sleep
+    )
+    monkeypatch.setattr(PayloadClient, "create_media_set", fake_create_media_set)
+    monkeypatch.setattr(PayloadClient, "upload_image", fake_upload_image)
+    monkeypatch.setattr(PayloadClient, "delete_media_asset", fake_delete_media_asset)
+    monkeypatch.setattr(PayloadClient, "delete_media_set", fake_delete_media_set)
+
+    response = client.post(
+        "/images/composites/create",
+        json=_composite_request_body(),
+        headers=_auth_headers(),
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["success"] is True
+    assert payload["mediaSetId"] == "ms_888"
+    # All seven variants ended up present despite the transient blip.
+    assert len(payload["variantAssetIds"]) == 7
+    # No rollback should have run on the successful path.
+    assert deleted_assets == []
+    assert deleted_sets == []

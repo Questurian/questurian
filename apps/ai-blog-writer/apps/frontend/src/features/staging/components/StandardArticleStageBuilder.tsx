@@ -432,7 +432,10 @@ export function StandardArticleStageBuilder({
     setIsGeneratingSeoImage(true)
 
     try {
-      const response = await requestGenerateSocialImageFromFeatured(stagedArticle.featuredImageId, token)
+      const response = await requestGenerateSocialImageFromFeatured(
+        { featuredAssetId: stagedArticle.featuredImageId },
+        token,
+      )
       const socialImageUrl = response.generatedImageUrl.trim()
       if (!socialImageUrl) {
         throw new Error('Social image generation did not return a usable URL.')

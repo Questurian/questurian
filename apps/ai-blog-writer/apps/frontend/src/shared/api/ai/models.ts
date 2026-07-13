@@ -1,4 +1,4 @@
-export type EditorAssistModelName = 'claude-opus-4-8'
+export type EditorAssistModelName = 'claude-opus-4-8' | 'claude-sonnet-5'
 
 export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'claude-opus-4-8'
 
@@ -6,6 +6,10 @@ export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; 
   {
     value: 'claude-opus-4-8',
     label: 'Claude Opus 4.8 (writer; Evidence Profile runs on Gemini)',
+  },
+  {
+    value: 'claude-sonnet-5',
+    label: 'Claude Sonnet 5 (faster, cheaper writer; Evidence Profile runs on Gemini)',
   },
 ]
 
@@ -79,6 +83,7 @@ export type ToneProfile = {
   order?: number
 }
 
-export function resolveEditorAssistModelName(_value?: string): EditorAssistModelName {
+export function resolveEditorAssistModelName(value?: string): EditorAssistModelName {
+  if (value === 'claude-sonnet-5') return value
   return DEFAULT_EDITOR_ASSIST_MODEL
 }

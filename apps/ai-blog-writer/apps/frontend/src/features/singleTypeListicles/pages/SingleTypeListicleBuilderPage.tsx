@@ -691,8 +691,9 @@ export default function SingleTypeListicleBuilderPage() {
   const generateSeoImageFromFeatured = useCallback(async (): Promise<void> => {
     if (!draft) return
 
+    const featuredMediaSetId = draft.header.featuredMediaSet ?? null
     const featuredAssetId = draft.header.featuredImage
-    if (!featuredAssetId) {
+    if (!featuredMediaSetId && !featuredAssetId) {
       onError('Select a featured image in Step 2 before generating social image URLs.')
       return
     }
@@ -707,7 +708,12 @@ export default function SingleTypeListicleBuilderPage() {
     setIsGeneratingSeoImage(true)
 
     try {
-      const response = await requestGenerateSocialImageFromFeatured(featuredAssetId, token)
+      const response = await requestGenerateSocialImageFromFeatured(
+        featuredMediaSetId
+          ? { featuredMediaSetId }
+          : { featuredAssetId: featuredAssetId as number },
+        token,
+      )
       const bunnyUrl = response.generatedImageUrl.trim()
       if (!bunnyUrl) {
         throw new Error('Generated social image is missing Bunny URL.')

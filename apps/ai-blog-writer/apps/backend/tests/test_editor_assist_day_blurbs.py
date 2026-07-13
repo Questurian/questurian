@@ -129,6 +129,25 @@ def test_day_blurbs_no_parseable_blocks_is_502(monkeypatch):
     assert response.status_code == 502
 
 
+def test_day_blurbs_writer_failure_returns_traceable_provider_error(monkeypatch):
+    def _raise_writer_error(**_kwargs):
+        raise editor_assist_routes.WriterModelError(
+            "Writer model call failed: provider overloaded"
+        )
+
+    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _raise_writer_error)
+
+    client = _build_client()
+    response = client.post(
+        "/editor-assist/compose-itinerary-day-blurbs", json=_request_body()
+    )
+
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert "error " in detail
+    assert "provider overloaded" in detail
+
+
 def test_day_blurbs_requires_a_stop():
     client = _build_client()
     response = client.post(

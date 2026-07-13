@@ -2,6 +2,7 @@ import hmac
 import os
 import sys
 import logging
+from logging.handlers import RotatingFileHandler
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
@@ -43,6 +44,37 @@ from app.api import router  # noqa: E402
 from app.core import fail_stale_runs  # noqa: E402
 
 logger = logging.getLogger(__name__)
+
+
+def _configure_error_file_logging() -> Path:
+    """Persist backend errors that would otherwise exist only in terminal scrollback."""
+    log_path = Path(os.getenv(
+        "ABW_ERROR_LOG_PATH", ROOT / "logs/backend-errors.log"
+    )).expanduser()
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    root_logger = logging.getLogger()
+    resolved_path = log_path.resolve()
+    for existing_handler in root_logger.handlers:
+        if getattr(existing_handler, "_abw_error_log_path", None) == resolved_path:
+            return log_path
+
+    handler = RotatingFileHandler(
+        log_path,
+        maxBytes=2 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8",
+    )
+    handler.setLevel(logging.ERROR)
+    handler.setFormatter(logging.Formatter(
+        "%(asctime)s %(levelname)s %(name)s %(message)s"
+    ))
+    handler._abw_error_log_path = resolved_path  # type: ignore[attr-defined]
+    root_logger.addHandler(handler)
+    return log_path
+
+
+ERROR_LOG_PATH = _configure_error_file_logging()
 
 # Paths reachable without an API key when ABW_API_KEY is set.
 AUTH_EXEMPT_PATHS = {"/health"}

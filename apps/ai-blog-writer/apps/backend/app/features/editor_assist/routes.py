@@ -8,6 +8,7 @@ import logging
 import re
 import time
 from typing import Any, Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -982,10 +983,22 @@ def _compose_day_blurbs_impl(
             temperature=0.55,
         )
     except WriterModelError as exc:
-        logger.exception("Editor assist compose-itinerary-day-blurbs failed: %s", exc)
+        error_id = str(uuid4())
+        logger.exception(
+            "Editor assist compose-itinerary-day-blurbs failed | "
+            "error_id=%s model=%s stops=%d write_stops=%d error=%s",
+            error_id,
+            model_used,
+            len(stops),
+            len(write_stops),
+            exc,
+        )
         raise HTTPException(
             status_code=502,
-            detail="AI day-blurb composition request failed",
+            detail=(
+                "AI day-blurb composition request failed "
+                f"(error {error_id}): {exc}"
+            ),
         ) from exc
 
     raw_text = (writer_result.text or "").strip()

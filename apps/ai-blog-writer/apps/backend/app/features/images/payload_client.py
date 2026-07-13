@@ -586,6 +586,78 @@ class PayloadClient:
             return result
         return None
 
+    async def find_media_sets_by_external_ref_prefix(
+        self,
+        prefix: str,
+        depth: int = 0,
+    ) -> list[dict]:
+        """List every MediaSet whose externalRef contains ``prefix`` (paginated)."""
+        url = f"{self.api_url}/api/media-sets"
+        headers = self._get_headers()
+        step = "find_media_sets_by_prefix"
+        page = 1
+        total_pages = 1
+        docs: list[dict] = []
+
+        while page <= total_pages:
+            params = {
+                "where[externalRef][like]": prefix,
+                "limit": 100,
+                "page": page,
+                "depth": depth,
+            }
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    response = await client.get(url, headers=headers, params=params)
+            except httpx.ConnectError as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Cannot connect to Payload CMS",
+                    request_url=url,
+                    detail=f"Is Payload running at {self.api_url}? ({e})",
+                )
+            except httpx.TimeoutException as e:
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload CMS request timed out (30s)",
+                    request_url=url,
+                    detail=str(e),
+                )
+
+            if response.status_code >= 400:
+                body = response.text
+                parsed = _parse_payload_error(body)
+                raise PayloadUploadError(
+                    step=step,
+                    message="Failed to query MediaSets by prefix",
+                    status_code=response.status_code,
+                    response_body=body,
+                    request_url=url,
+                    detail=parsed,
+                )
+
+            try:
+                result = response.json()
+            except json.JSONDecodeError:
+                body = response.text
+                raise PayloadUploadError(
+                    step=step,
+                    message="Payload returned invalid JSON while querying MediaSets",
+                    status_code=response.status_code,
+                    response_body=body,
+                    request_url=url,
+                )
+
+            for doc in result.get("docs", []):
+                if isinstance(doc, dict):
+                    docs.append(doc)
+
+            raw_total = result.get("totalPages", 1)
+            total_pages = raw_total if isinstance(raw_total, int) and raw_total > 0 else 1
+            page += 1
+
+        return docs
+
     async def find_media_set_by_external_ref(self, external_ref: str) -> Optional[dict]:
         """Find a MediaSet by its external reference."""
         url = f"{self.api_url}/api/media-sets"
@@ -1051,6 +1123,44 @@ class PayloadClient:
         raise PayloadUploadError(
             step=step,
             message="Failed to delete existing media-asset",
+            status_code=response.status_code,
+            response_body=body,
+            request_url=url,
+            detail=parsed,
+        )
+
+    async def delete_media_set(self, media_set_id: str) -> None:
+        """Delete a media-set by ID. Treats an already-missing set as success."""
+        url = f"{self.api_url}/api/media-sets/{media_set_id}"
+        headers = self._get_headers()
+        step = f"delete_media_set({media_set_id})"
+
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.delete(url, headers=headers)
+        except httpx.ConnectError as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Cannot connect to Payload CMS",
+                request_url=url,
+                detail=f"Is Payload running at {self.api_url}? ({e})",
+            )
+        except httpx.TimeoutException as e:
+            raise PayloadUploadError(
+                step=step,
+                message="Payload CMS request timed out (30s)",
+                request_url=url,
+                detail=str(e),
+            )
+
+        if response.status_code in {200, 202, 204, 404}:
+            return
+
+        body = response.text
+        parsed = _parse_payload_error(body)
+        raise PayloadUploadError(
+            step=step,
+            message="Failed to delete media-set",
             status_code=response.status_code,
             response_body=body,
             request_url=url,

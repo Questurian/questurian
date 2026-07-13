@@ -159,7 +159,11 @@ export default function ListicleItineraryBuilderPage() {
 
   useEffect(() => {
     if (!draft || !isStep4Ready || !canonicalStructuredData) return
-    if (isSynced && !hasUnsyncedPayloadChanges) return
+    // Guard on the draft's own sync flag, not the hook state: the state lags
+    // one render behind, so right after a sync it is still true and would let
+    // this effect overwrite structuredData with a newer dateModified,
+    // re-dirtying the freshly synced draft (banner never clears).
+    if (isSynced && !draft.hasUnsyncedPayloadChanges) return
 
     setDraft((current) => {
       if (!current) return current
@@ -176,7 +180,7 @@ export default function ListicleItineraryBuilderPage() {
         },
       }
     })
-  }, [canonicalStructuredData, draft, hasUnsyncedPayloadChanges, isStep4Ready, isSynced, setDraft])
+  }, [canonicalStructuredData, draft, isStep4Ready, isSynced, setDraft])
 
   const aiActions = useItineraryBuilderAiActions({
     token,

@@ -1,9 +1,11 @@
 """Composite image routes."""
 
+import asyncio
 import io
 import json
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, Header
@@ -320,6 +322,86 @@ def _safe_stem(title: str) -> str:
     return stem.strip("-")[:80] or "composite-image"
 
 
+_TRANSIENT_STATUS = {502, 503, 504}
+
+
+async def _upload_variant_with_retry(
+    *,
+    client: PayloadClient,
+    variant: ProcessedVariant,
+    alt_text: str,
+    photographer_credit: str,
+    media_set_id: str,
+    location_ref: Optional[int],
+    attempts: int = 3,
+) -> str:
+    """Upload one composite variant, retrying transient CDN/gateway failures.
+
+    ``upload_image`` is idempotent per (mediaSet, variant) — it replaces any
+    asset already present — so re-running after a transient failure is safe.
+    """
+    last_error: Optional[PayloadUploadError] = None
+    for attempt in range(attempts):
+        try:
+            return await client.upload_image(
+                variant,
+                alt_text=alt_text,
+                photographer_credit=photographer_credit,
+                media_set_id=media_set_id,
+                location_ref=location_ref,
+            )
+        except PayloadUploadError as exc:
+            if _status_from_payload_error(exc) not in _TRANSIENT_STATUS or attempt == attempts - 1:
+                raise
+            last_error = exc
+            backoff = 0.5 * (2 ** attempt)
+            logger.warning(
+                "Composite variant %s upload hit transient error (attempt %d/%d); retrying in %.1fs: %s",
+                variant.variant_type.value,
+                attempt + 1,
+                attempts,
+                backoff,
+                exc,
+            )
+            await asyncio.sleep(backoff)
+    # Unreachable: the loop either returns or raises, but keeps type-checkers happy.
+    raise last_error if last_error else PayloadUploadError(
+        step="upload_variant_with_retry",
+        message="Variant upload retry exhausted",
+    )
+
+
+async def _rollback_partial_composite(
+    *,
+    client: PayloadClient,
+    media_set_id: Optional[str],
+    uploaded_asset_ids: list[str],
+) -> None:
+    """Best-effort cleanup after a failed composite create.
+
+    Removes any variant assets that were already uploaded and the MediaSet
+    itself so a partial failure never leaves orphaned ("hanging") images.
+    Cleanup errors are swallowed and logged — the original failure is what
+    gets surfaced to the caller.
+    """
+    for asset_id in uploaded_asset_ids:
+        try:
+            await client.delete_media_asset(asset_id)
+        except PayloadUploadError:
+            logger.warning(
+                "Composite rollback could not delete asset_id=%s", asset_id, exc_info=True
+            )
+    if media_set_id is not None:
+        try:
+            await client.delete_media_set(media_set_id)
+        except PayloadUploadError:
+            logger.warning(
+                "Composite rollback could not delete media_set_id=%s",
+                media_set_id,
+                exc_info=True,
+            )
+
+
 async def _prepare(
     request: CompositeRequest,
     authorization: Optional[str],
@@ -395,6 +477,9 @@ async def create_composite(
         original_filename=f"{external_ref}.webp",
     )
 
+    media_set_id: Optional[str] = None
+    uploaded_asset_ids: list[str] = []
+    variant_asset_ids: dict[str, str] = {}
     try:
         media_set_id = await client.create_media_set(
             title=request.title.strip(),
@@ -403,18 +488,24 @@ async def create_composite(
             photographer_credit=photographer_credit,
             location_ref=location_ref,
         )
-        variant_asset_ids: dict[str, str] = {}
         for variant_type in ImageVariantType:
-            asset_id = await client.upload_image(
-                variants[variant_type],
+            asset_id = await _upload_variant_with_retry(
+                client=client,
+                variant=variants[variant_type],
                 alt_text=request.altText.strip(),
                 photographer_credit=photographer_credit,
                 media_set_id=media_set_id,
                 location_ref=location_ref,
             )
+            uploaded_asset_ids.append(asset_id)
             variant_asset_ids[variant_type.value] = asset_id
     except PayloadUploadError as exc:
         logger.exception("Payload error during /images/composites/create")
+        await _rollback_partial_composite(
+            client=client,
+            media_set_id=media_set_id,
+            uploaded_asset_ids=uploaded_asset_ids,
+        )
         _raise_http_error(
             status_code=_status_from_payload_error(exc),
             message="Failed to create composite MediaSet",
@@ -430,5 +521,172 @@ async def create_composite(
             "externalRef": external_ref,
             "variantAssetIds": variant_asset_ids,
             "warnings": warnings,
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Hanging-composite cleanup
+#
+# A composite that failed mid-upload before rollback existed leaves a MediaSet
+# with fewer than the full set of variants. These are invisible to the Orphans
+# tab (their assets still have a mediaSet) and the Audit tab (metadata is
+# complete), so we surface and clean them here.
+# ---------------------------------------------------------------------------
+
+HANGING_EXTERNAL_REF_PREFIX = "composite-"
+EXPECTED_VARIANT_COUNT = len(ImageVariantType)
+
+
+class HangingCleanupRequest(BaseModel):
+    mediaSetIds: list[int] = Field(min_length=1)
+
+
+def _parse_created_at(value: Any) -> Optional[datetime]:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _first_asset_preview(assets: list[dict]) -> Optional[str]:
+    for asset in assets:
+        url = asset.get("url")
+        if isinstance(url, str) and url:
+            return url
+    return None
+
+
+async def _find_hanging_composites(
+    *,
+    client: PayloadClient,
+    min_age_minutes: float,
+) -> list[dict]:
+    """Return composite MediaSets that have fewer than the full variant set."""
+    media_sets = await client.find_media_sets_by_external_ref_prefix(
+        HANGING_EXTERNAL_REF_PREFIX
+    )
+    now = datetime.now(timezone.utc)
+    hanging: list[dict] = []
+
+    for media_set in media_sets:
+        external_ref = str(media_set.get("externalRef") or "")
+        # `like` is a contains match — enforce a real prefix.
+        if not external_ref.startswith(HANGING_EXTERNAL_REF_PREFIX):
+            continue
+        set_id = media_set.get("id")
+        if set_id is None:
+            continue
+
+        created = _parse_created_at(media_set.get("createdAt"))
+        if created is not None:
+            age_minutes = (now - created).total_seconds() / 60
+            if age_minutes < min_age_minutes:
+                continue
+
+        assets = await client.list_media_assets_by_media_set(set_id)
+        if len(assets) >= EXPECTED_VARIANT_COUNT:
+            continue
+
+        hanging.append(
+            {
+                "mediaSetId": set_id,
+                "externalRef": external_ref,
+                "title": media_set.get("title") or "Untitled composite",
+                "createdAt": media_set.get("createdAt"),
+                "variantCount": len(assets),
+                "expectedVariants": EXPECTED_VARIANT_COUNT,
+                "previewUrl": _first_asset_preview(assets),
+                "assetIds": [str(a.get("id")) for a in assets if a.get("id") is not None],
+            }
+        )
+
+    return hanging
+
+
+@router.get("/hanging")
+async def list_hanging_composites(
+    authorization: Optional[str] = Header(None),
+    min_age_minutes: float = 5.0,
+) -> JSONResponse:
+    """List composite MediaSets left incomplete by a failed upload."""
+    jwt_token = _extract_bearer_token(authorization)
+    client = PayloadClient(jwt_token)
+    try:
+        hanging = await _find_hanging_composites(
+            client=client,
+            min_age_minutes=min_age_minutes,
+        )
+    except PayloadUploadError as exc:
+        logger.exception("Payload error during /images/composites/hanging")
+        _raise_http_error(
+            status_code=_status_from_payload_error(exc),
+            message="Failed to list hanging composites",
+            step=exc.step,
+            detail=exc.detail or str(exc),
+            payload_error=exc.to_dict(),
+        )
+    return JSONResponse({"hanging": hanging, "count": len(hanging)})
+
+
+@router.post("/cleanup")
+async def cleanup_hanging_composites(
+    request: HangingCleanupRequest,
+    authorization: Optional[str] = Header(None),
+) -> JSONResponse:
+    """Delete the given hanging composite MediaSets and their variant assets.
+
+    Only sets that are genuinely hanging (composite-prefixed and below the full
+    variant count) are removed — a guard against deleting a healthy MediaSet.
+    """
+    jwt_token = _extract_bearer_token(authorization)
+    client = PayloadClient(jwt_token)
+
+    try:
+        hanging = await _find_hanging_composites(client=client, min_age_minutes=0.0)
+    except PayloadUploadError as exc:
+        logger.exception("Payload error during /images/composites/cleanup scan")
+        _raise_http_error(
+            status_code=_status_from_payload_error(exc),
+            message="Failed to scan composites for cleanup",
+            step=exc.step,
+            detail=exc.detail or str(exc),
+            payload_error=exc.to_dict(),
+        )
+
+    hanging_by_id = {str(entry["mediaSetId"]): entry for entry in hanging}
+    requested_ids = [str(mid) for mid in request.mediaSetIds]
+
+    deleted: list[str] = []
+    skipped: list[str] = []
+    errors: list[dict] = []
+
+    for media_set_id in requested_ids:
+        entry = hanging_by_id.get(media_set_id)
+        if entry is None:
+            # Not hanging (already gone, or a healthy set) — never touch it.
+            skipped.append(media_set_id)
+            continue
+        try:
+            for asset_id in entry["assetIds"]:
+                await client.delete_media_asset(asset_id)
+            await client.delete_media_set(media_set_id)
+            deleted.append(media_set_id)
+        except PayloadUploadError as exc:
+            logger.warning(
+                "Cleanup failed for hanging composite media_set_id=%s: %s",
+                media_set_id,
+                exc,
+            )
+            errors.append({"mediaSetId": media_set_id, "detail": exc.detail or str(exc)})
+
+    return JSONResponse(
+        {
+            "deleted": deleted,
+            "skipped": skipped,
+            "errors": errors,
+            "deletedCount": len(deleted),
         }
     )

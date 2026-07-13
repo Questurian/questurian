@@ -142,11 +142,15 @@ export async function processImageOnly(
   return processImageOnlyApi({ file, altText });
 }
 
+export type FeaturedSocialImageRef =
+  | { featuredAssetId: number }
+  | { featuredMediaSetId: number };
+
 export async function generateSocialImageFromFeatured(
-  featuredAssetId: number,
+  ref: FeaturedSocialImageRef,
   token: string
 ): Promise<GenerateSocialImageResponse> {
-  return generateSocialImageApi({ featuredAssetId, token });
+  return generateSocialImageApi({ ...ref, token });
 }
 
 export async function uploadSocialImage(

@@ -8,6 +8,7 @@ from app.features.images import (
     scene_describer,
     subject_describer,
 )
+from utils import llm_client
 
 
 class _FakeLLM:
@@ -46,6 +47,115 @@ def test_writer_model_uses_shared_llm_factory(monkeypatch):
         "max_tokens": 123,
         "model_name": "claude-test",
     }
+
+
+def test_shared_llm_factory_never_uses_small_generation_budget(monkeypatch):
+    captured = {}
+
+    class _VertexLLM:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(llm_client, "VertexAI", _VertexLLM)
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
+
+    claude = llm_client.get_vertex_llm(
+        model_name="claude-sonnet-5", max_tokens=123
+    )
+    llm_client.get_vertex_llm(
+        model_name="gemini-2.5-flash-lite", max_tokens=456
+    )
+
+    assert claude.max_tokens == llm_client.MIN_GENERATION_MAX_TOKENS
+    assert captured["max_tokens"] == llm_client.MIN_GENERATION_MAX_TOKENS
+
+
+def test_structured_tool_call_keeps_requested_small_budget(monkeypatch):
+    captured = {}
+
+    class _ToolBlock:
+        type = "tool_use"
+        name = "emit_patch"
+        input = {"seoTitle": "Two Days in Lima"}
+
+    class _Message:
+        content = [_ToolBlock()]
+        model = "claude-opus-4-8"
+
+    class _Messages:
+        def create(self, **kwargs):
+            captured.update(kwargs)
+            return _Message()
+
+    class _Client:
+        messages = _Messages()
+
+    monkeypatch.setattr(
+        llm_client,
+        "_get_anthropic_client",
+        lambda **_kwargs: _Client(),
+    )
+
+    payload, _model = llm_client.invoke_anthropic_structured_tool(
+        prompt="Generate SEO metadata",
+        model_name="claude-opus-4-8",
+        tool_name="emit_patch",
+        tool_description="Emit SEO metadata",
+        input_schema={"type": "object"},
+        max_tokens=4096,
+    )
+
+    assert payload == {"seoTitle": "Two Days in Lima"}
+    assert captured["max_tokens"] == 4096
+
+
+def test_claude_writer_reserves_budget_for_text_and_reports_empty_metadata(
+    monkeypatch,
+):
+    captured = {}
+
+    class _Usage:
+        output_tokens = 64000
+
+    class _Message:
+        content = []
+        stop_reason = "max_tokens"
+        usage = _Usage()
+
+    class _Stream:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def get_final_message(self):
+            return _Message()
+
+    class _Messages:
+        def stream(self, **kwargs):
+            captured.update(kwargs)
+            return _Stream()
+
+    class _Client:
+        messages = _Messages()
+
+    monkeypatch.setattr(
+        llm_client,
+        "_get_anthropic_client",
+        lambda **_kwargs: _Client(),
+    )
+
+    llm = llm_client.ClaudeTextLLM(
+        model_name="claude-sonnet-5",
+        max_tokens=llm_client.MIN_GENERATION_MAX_TOKENS,
+    )
+
+    with pytest.raises(RuntimeError, match="stop_reason='max_tokens'"):
+        llm.invoke("write full article")
+
+    assert captured["max_tokens"] == llm_client.MIN_GENERATION_MAX_TOKENS
+    assert "thinking" not in captured
 
 
 @pytest.mark.parametrize(

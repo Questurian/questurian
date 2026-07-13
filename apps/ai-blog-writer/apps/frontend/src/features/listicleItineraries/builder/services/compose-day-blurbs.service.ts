@@ -30,6 +30,28 @@ export const ITINERARY_BLOCK_CATEGORY_LABELS: Record<ItineraryBlockType, string>
   'itinerary-tour-agency': 'Tour Agency',
 }
 
+export function buildFailedDayBlurbComposeReport(params: {
+  modelName: string
+  errorMessage: string
+  durationMs: number
+  label?: string
+}): ComposeDayBlurbsResponse {
+  return {
+    model_used: params.modelName,
+    results: {},
+    steps: [
+      {
+        name: 'request',
+        label: params.label ?? 'Day composer request',
+        status: 'failed',
+        duration_ms: params.durationMs,
+        model: params.modelName,
+        details: { error: params.errorMessage },
+      },
+    ],
+  }
+}
+
 /** True only when the intro has been finalized (Step 2 locked, ADR 0019). */
 function isIntroFinalized(draft: ListicleItineraryDraft): boolean {
   return Boolean(

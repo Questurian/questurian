@@ -68,6 +68,15 @@ CSV → `list[dict]`.
 ## Domain Rules
 
 - All Vertex AI calls in the backend **must** route through `packages/utils` helpers. Features may not instantiate Vertex clients directly.
+- Text-generation clients enforce `MIN_GENERATION_MAX_TOKENS` (64,000). Feature
+  code may state a smaller expected size, but shared clients must raise it to the
+  floor so articles and multi-item composer output cannot be truncated.
+- Claude free-text generation must reserve its response budget for returned
+  text. Do not enable adaptive thinking in `ClaudeTextLLM`; thinking and text
+  share the provider output ceiling.
+- Empty provider responses must include safe termination metadata (`stop_reason`,
+  output tokens, content block types) in the raised error. Never log hidden
+  reasoning or API credentials.
 - `parse_json_response` is the canonical entry point for parsing LLM JSON; ad-hoc regex parsing in feature code is a bug.
 - Grounded calls log citations; do not strip them downstream.
 

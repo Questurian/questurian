@@ -6,6 +6,20 @@ A multi-feature AI content pipeline. Turns source material (YouTube videos, URLs
 
 Owns the **run lifecycle** (`run_id`, stages, artifacts) and **all LLM orchestration** for content generation in the Questurian system.
 
+## Generation token policy
+
+- Generation must return the complete requested artifact. Article, composer,
+  rewrite, and other free-text calls must never use task-sized output caps that
+  can truncate valid output.
+- Shared LLM clients enforce a 64,000 output-token floor. Smaller values passed
+  by feature call sites are treated as expected-size hints, not hard ceilings.
+- `max_tokens` is a response ceiling, not reserved usage; providers bill actual
+  generated tokens. Keep ceiling large instead of risking a paid truncated run.
+- Reader-facing writer calls must not enable hidden/adaptive thinking when that
+  reasoning shares the output budget. Output text gets priority.
+- Provider ceilings still exist. New models/providers must be checked against
+  this policy before becoming selectable; never silently lower the shared floor.
+
 ## Out of Scope
 
 - Publishing the final article (handed off to Payload at Questura over HTTP).

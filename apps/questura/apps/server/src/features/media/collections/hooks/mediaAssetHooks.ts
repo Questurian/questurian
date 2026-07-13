@@ -6,6 +6,10 @@ import { syncBunnyOriginalUrl } from './syncBunnyOriginalUrl'
 
 export const mediaAssetHooks = {
   beforeValidate: [syncLocationFields()],
-  beforeChange: [ensureMediaSetVariant, setUploadedBy] as CollectionBeforeChangeHook[],
-  afterChange: [syncMediaSetVariant, syncBunnyOriginalUrl] as CollectionAfterChangeHook[],
+  beforeChange: [
+    ensureMediaSetVariant,
+    setUploadedBy,
+    syncBunnyOriginalUrl,
+  ] as CollectionBeforeChangeHook[],
+  afterChange: [syncMediaSetVariant] as CollectionAfterChangeHook[],
 }
