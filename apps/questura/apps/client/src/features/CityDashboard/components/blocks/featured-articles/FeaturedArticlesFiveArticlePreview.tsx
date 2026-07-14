@@ -134,12 +134,9 @@ function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
           aria-hidden="true"
           className="city-article-text-skeleton absolute inset-0 flex flex-col justify-start px-[var(--block-gutter)] py-3"
         >
-          <span className="city-skeleton-line h-3 w-28" />
-          <span className="city-skeleton-line mt-3 h-7 w-11/12" />
-          <span className="city-skeleton-line mt-2 h-7 w-4/5" />
-          <span className="city-skeleton-line mt-3 h-4 w-full" />
-          <span className="city-skeleton-line mt-1.5 h-4 w-5/6" />
-          <span className="city-skeleton-line mt-3.5 h-3 w-24" />
+          <span className="city-skeleton-line h-4 w-full" />
+          <span className="city-skeleton-line mt-2.5 h-4 w-full" />
+          <span className="city-skeleton-line mt-2.5 h-4 w-2/3" />
         </div>
       </div>
     </section>

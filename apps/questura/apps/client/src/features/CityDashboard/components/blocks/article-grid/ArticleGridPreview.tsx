@@ -56,7 +56,8 @@ function GridArticleCard({
     }
   }, [imageUrl])
 
-  const isImageLoaded = imageStatus === 'loaded'
+  const isImageLoaded = !imageUrl || imageStatus === 'loaded'
+  const isContentReady = !imageUrl || imageStatus !== 'loading'
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? null
   const authorLabel = getAuthorLabel(article)
@@ -65,7 +66,7 @@ function GridArticleCard({
   const inner = (
     <>
       <div
-        className={`${useSquareImage ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden bg-[#d7dcde]`}
+        className={`city-article-image-shell relative ${useSquareImage ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden bg-[#d7dcde]`}
       >
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -73,7 +74,7 @@ function GridArticleCard({
             ref={imageRef}
             src={imageUrl}
             alt=""
-            className={`h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
             decoding="async"
             fetchPriority={isPriority ? 'high' : 'auto'}
             loading={isPriority ? 'eager' : 'lazy'}
@@ -83,42 +84,64 @@ function GridArticleCard({
         ) : null}
       </div>
 
-      <div className="pt-4 flex flex-col flex-1">
-        <p className="font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase leading-none tracking-[0.12em] text-[#1e3599] 768:text-[0.67rem]">
-          {articleTypeLabel}
-        </p>
-
-        <h3 className="mt-2 font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
-          {article.title}
-        </h3>
-
-        {excerpt ? (
-          <p className="mt-2 overflow-hidden font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
-            {excerpt}
+      <div className="relative flex flex-col flex-1">
+        <div className="city-article-content pt-4 flex flex-col flex-1">
+          <p className="font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase leading-none tracking-[0.12em] text-[#1e3599] 768:text-[0.67rem]">
+            {articleTypeLabel}
           </p>
-        ) : null}
 
-        <p className="mt-auto pt-3 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:text-[0.65rem]">
-          By{' '}
-          <AuthorLink
-            authorSlug={article.author?.slug}
-            authorId={article.author?.id}
-            nested
-            className="hover:underline"
-          >
-            {authorLabel}
-          </AuthorLink>
-        </p>
+          <h3 className="mt-2 font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
+            {article.title}
+          </h3>
+
+          {excerpt ? (
+            <p className="mt-2 overflow-hidden font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+              {excerpt}
+            </p>
+          ) : null}
+
+          <p className="mt-auto pt-3 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:text-[0.65rem]">
+            By{' '}
+            <AuthorLink
+              authorSlug={article.author?.slug}
+              authorId={article.author?.id}
+              nested
+              className="hover:underline"
+            >
+              {authorLabel}
+            </AuthorLink>
+          </p>
+        </div>
+
+        <div
+          aria-hidden="true"
+          className="city-article-text-skeleton absolute inset-0 flex flex-col justify-start pt-4"
+        >
+          <span className="city-skeleton-line h-4 w-full" />
+          <span className="city-skeleton-line mt-2.5 h-4 w-full" />
+          <span className="city-skeleton-line mt-2.5 h-4 w-2/3" />
+        </div>
       </div>
     </>
   )
 
   return articlePath ? (
-    <Link href={articlePath} className="flex flex-col">
+    <Link
+      href={articlePath}
+      className="city-article-card flex flex-col"
+      data-content-ready={isContentReady ? 'true' : 'false'}
+      data-image-loaded={isImageLoaded ? 'true' : 'false'}
+    >
       {inner}
     </Link>
   ) : (
-    <article className="flex flex-col">{inner}</article>
+    <article
+      className="city-article-card flex flex-col"
+      data-content-ready={isContentReady ? 'true' : 'false'}
+      data-image-loaded={isImageLoaded ? 'true' : 'false'}
+    >
+      {inner}
+    </article>
   )
 }
 

@@ -1,227 +1,407 @@
 import Link from 'next/link';
 
-const features = [
+const tickerItems = [
+  'Neighborhood deep-dives',
+  'Day-by-day itineraries',
+  'Food & restaurant guides',
+  'Written by locals',
+  'Every city we cover',
+  'No paywalls',
+  'Always publishing',
+];
+
+const unlocks = [
   {
-    title: 'In-depth city guides',
-    description:
-      'Not another travel blog. Each guide covers neighborhoods block by block — cost of living, internet speeds, safety, walkability, food scenes, coworking spots, and the hundred small details that determine whether a city is right for your life.',
+    label: 'The library',
+    title: 'Every article, no paywalls',
+    body: 'Neighborhood deep-dives, food guides, and city reporting from experts who live where they write. Read everything, whenever you want.',
   },
   {
-    title: 'Step-by-step relocation playbooks',
-    description:
-      'Visa applications, opening a bank account, finding a phone plan, navigating healthcare, apartment hunting — everything documented step by step. Written by expats who\'ve actually done it, updated as regulations change.',
+    label: 'The itineraries',
+    title: 'Your days, already planned',
+    body: 'Day-by-day plans from locals — where to stay, where to eat, what’s worth your time and what isn’t. Land with a plan instead of a search tab.',
   },
   {
-    title: 'Curated accommodation picks',
-    description:
-      'Stop overpaying on Airbnb. Access vetted short-term rentals, co-living spaces, and long-term housing options in every city we cover. Arrive somewhere you\'ll actually love, at a price that makes sense.',
+    label: 'The experts',
+    title: 'Every writer, one membership',
+    body: 'You’re not subscribing to one voice. Membership unlocks every expert on Questurian at once, across every city we cover.',
   },
   {
-    title: 'A community of people doing it',
-    description:
-      'Get answers from people already on the ground. Our community connects you with remote workers, founders, and families building lives across Latin America — the kind of on-the-ground intel you can\'t find on Google.',
+    label: 'The upside',
+    title: 'It keeps getting better',
+    body: 'New articles and itineraries land regularly. Your membership grows more valuable the longer you hold it.',
+  },
+];
+
+const faqs = [
+  {
+    question: 'Can I cancel anytime?',
+    answer:
+      'Yes. Cancel in your account settings whenever you like — your access continues until the end of the billing period you’ve already paid for.',
   },
   {
-    title: 'New cities every month',
-    description:
-      'We\'re constantly expanding. New city guides, refreshed data, and emerging neighborhoods added regularly. Your membership gets more valuable the longer you hold it.',
+    question: 'What’s the difference between the plans?',
+    answer:
+      'Nothing but the billing. Both plans unlock every article, itinerary, and expert we publish. Annual simply costs about half as much per month.',
+  },
+  {
+    question: 'What if it’s not for me?',
+    answer:
+      'Annual members can request a prorated refund within the first 30 days. Monthly is non-refundable, but you can cancel before your next renewal and keep reading until it ends.',
   },
 ];
 
 export default function PricingDisplay() {
   return (
-    <div className="min-h-screen">
-      {/* ── Minimal Nav ── */}
-      <nav className="py-5 text-center border-b border-[#1A1A1A]/8 768:py-6">
-        <Link
-          href="/"
-          className="
-            font-display text-[1.05rem] uppercase tracking-[0.12em]
-            font-semibold text-[#25292d]
-            480:text-[1.15rem]
-          "
-        >
-          Questurian
-        </Link>
-      </nav>
-
-      {/* ── Dark Banner ── */}
-      <section className="relative bg-[#151515] text-white px-6 pt-11 pb-24 min-h-[320px] 480:pt-12 480:pb-28 768:pt-16 768:pb-44 768:min-h-[500px]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.1),transparent_45%)]" />
-        <div className="relative max-w-5xl mx-auto">
+    <div className="min-h-screen bg-[#F5F0E8]">
+      {/* ── Hero ── */}
+      <section className="px-6 pt-14 pb-10 text-center 768:pt-20 768:pb-14">
+        <div className="max-w-3xl mx-auto">
           <p
             className="
-              font-display text-center text-[1.35rem] leading-[1.15]
-              max-w-2xl mx-auto
-              480:text-[1.6rem]
-              768:text-[2.15rem]
+              animate-fade-in-up flex items-center justify-center gap-3
+              text-[0.66rem] font-bold uppercase
+              tracking-[0.22em] text-[#B73F31]
+              480:text-[0.7rem]
             "
+            style={{ fontFamily: 'var(--font-dm-sans)' }}
           >
-            See the world. Understand it better
+            <span className="h-px w-8 bg-[#C65D3B]/50" aria-hidden="true" />
+            Questurian Membership
+            <span className="h-px w-8 bg-[#C65D3B]/50" aria-hidden="true" />
           </p>
+
           <h1
             className="
-              mt-5 font-display text-center text-[1.45rem] leading-[1.16]
-              max-w-[860px] mx-auto text-white/95
-              480:text-[1.8rem]
-              768:text-[2.55rem] 768:mt-7
-              1024:text-[2.95rem]
+              animate-fade-in-up mt-6 font-display text-[2.15rem]
+              leading-[1.06] text-[#1A1A1A]
+              480:text-[2.6rem]
+              768:text-[3.3rem] 768:mt-8
+              1024:text-[3.8rem]
             "
+            style={{ animationDelay: '0.08s' }}
           >
-            The insider&apos;s guide to living in Latin America
+            Travel like you{' '}
+            <em className="font-editorial font-semibold italic text-[1.06em] text-[#C65D3B] whitespace-nowrap">
+              know someone
+            </em>{' '}
+            there.
           </h1>
+
           <p
             className="
-              mt-4 text-[0.93rem] text-white/80 leading-[1.65]
-              max-w-sm mx-auto text-center
-              480:text-[0.97rem] 480:max-w-lg
-              768:text-[1.05rem] 768:max-w-2xl 768:mt-5
+              animate-fade-in-up mt-5 max-w-md mx-auto text-[0.95rem]
+              leading-[1.7] text-[#4f4e4b]
+              480:max-w-lg 480:text-[1rem]
+              768:mt-6 768:max-w-xl 768:text-[1.08rem]
             "
+            style={{ animationDelay: '0.16s' }}
           >
-            In-depth city guides, relocation playbooks, and a community of
-            people already doing it. Starting at less than $1.55&nbsp;a&nbsp;week.
+            One membership unlocks every article and every day-by-day
+            itinerary from local experts, in every city we cover — for
+            less than $1.55&nbsp;a&nbsp;week.
           </p>
+
+          <div
+            className="animate-fade-in-up mt-8 768:mt-9"
+            style={{ animationDelay: '0.24s' }}
+          >
+            <a
+              href="#plans"
+              className="
+                inline-block rounded bg-[#C65D3B] px-9 py-3.5
+                text-[0.9rem] font-medium text-white
+                transition-colors hover:bg-[#B73F31]
+                focus-visible:outline-2 focus-visible:outline-offset-2
+                focus-visible:outline-[#B73F31]
+              "
+            >
+              See membership plans
+            </a>
+            <p className="mt-3.5 text-[0.76rem] text-[#8a857c]">
+              Cancel anytime · 30-day money-back guarantee on annual
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* ── Pricing Cards ── */}
-      <section id="plans" className="relative z-10 px-5 pb-10 max-w-6xl mx-auto -mt-14 480:-mt-16 768:px-8 768:-mt-28">
-        <div className="grid grid-cols-1 gap-6 768:grid-cols-2 768:gap-7">
+      {/* ── Departures-board ticker ── */}
+      <div
+        className="join-ticker overflow-hidden border-y border-[#1A1A1A]/15 py-3"
+        aria-hidden="true"
+      >
+        <div className="join-ticker-track">
+          {[0, 1].map((copy) => (
+            <div key={copy} className="flex shrink-0 items-center">
+              {tickerItems.map((item) => (
+                <span
+                  key={item}
+                  className="
+                    flex items-center font-mono text-[0.64rem] uppercase
+                    tracking-[0.2em] text-[#1A1A1A]/65
+                    480:text-[0.68rem]
+                  "
+                >
+                  <span className="px-5 480:px-7">{item}</span>
+                  <span className="text-[0.5rem] text-[#D4A574]">✦</span>
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Plans ── */}
+      <section
+        id="plans"
+        className="scroll-mt-28 px-5 pt-12 pb-10 max-w-5xl mx-auto 768:px-8 768:pt-16"
+      >
+        <p
+          className="
+            mb-8 text-center font-mono text-[0.64rem] uppercase
+            tracking-[0.2em] text-[#8a857c]
+            768:mb-10
+          "
+        >
+          Same full access — the only difference is how you&apos;re billed
+        </p>
+
+        <div className="grid grid-cols-1 items-stretch gap-6 768:grid-cols-[1fr_1.12fr] 768:gap-8">
+          {/* Annual — the member pass */}
+          <div
+            className="
+              relative flex flex-col overflow-hidden rounded-md
+              bg-[#2D4A3E] text-[#FAF7F2]
+              shadow-[0_28px_56px_-28px_rgba(45,74,62,0.6)]
+              768:order-last
+            "
+          >
+            <div className="flex flex-1 flex-col p-8 480:p-10">
+              <div className="flex items-start justify-between gap-4">
+                <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#D4A574]">
+                  Annual · Most popular
+                </p>
+                <p
+                  className="
+                    shrink-0 rounded-sm bg-[#C65D3B] px-2 py-1 font-mono
+                    text-[0.6rem] font-bold uppercase tracking-[0.14em]
+                    text-white
+                  "
+                >
+                  Save 49%
+                </p>
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-baseline gap-x-3">
+                <span className="text-[0.95rem] text-[#FAF7F2]/45 line-through">
+                  <span className="sr-only">Full price at the monthly rate: </span>
+                  $155.88
+                </span>
+                <span className="font-display text-[2.6rem] leading-none 768:text-[3rem]">
+                  $79.99
+                </span>
+                <span className="text-[0.9rem] text-[#FAF7F2]/70">/year</span>
+              </div>
+              <p className="mt-2.5 text-[0.86rem] font-medium text-[#D4A574]">
+                $6.67 a month — less than $1.55 a week
+              </p>
+
+              <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#FAF7F2]/75">
+                The complete Questurian library, billed once a year. Twelve
+                months of every article and itinerary for the price
+                of&nbsp;six.
+              </p>
+
+              <Link
+                href="/purchase/yearly"
+                className="
+                  block w-full rounded bg-[#C65D3B] py-3.5 text-center
+                  text-[0.92rem] font-medium text-white transition-colors
+                  hover:bg-[#B73F31]
+                  focus-visible:outline-2 focus-visible:outline-offset-2
+                  focus-visible:outline-[#D4A574]
+                "
+              >
+                Continue with Annual
+              </Link>
+            </div>
+
+            {/* Perforated stub */}
+            <div className="relative" aria-hidden="true">
+              <div className="border-t border-dashed border-[#FAF7F2]/30" />
+              <span className="absolute -left-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#F5F0E8]" />
+              <span className="absolute -right-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#F5F0E8]" />
+            </div>
+            <div className="flex items-center justify-between gap-3 px-8 py-4 480:px-10">
+              <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#FAF7F2]/60">
+                All-access · Every city
+              </p>
+              <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#D4A574]">
+                30-day guarantee
+              </p>
+            </div>
+          </div>
+
           {/* Monthly */}
-          <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-8 480:p-10 1024:p-12 flex flex-col min-h-[430px] 1024:min-h-[500px]">
-            <h2 className="font-display text-[1.55rem] text-[#1A1A1A] mb-3 768:text-[1.85rem]">
+          <div
+            className="
+              flex flex-col rounded-md border border-[#d7d4ce]
+              bg-[#FAF7F2] p-8 480:p-10
+            "
+          >
+            <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#8a857c]">
               Monthly
-            </h2>
-            <p className="text-[1.45rem] font-semibold text-[#1A1A1A] mb-4 768:text-[1.75rem]">
-              $12.99/month
             </p>
-            <p className="text-[0.98rem] text-[#4f4e4b] leading-[1.75] mb-9 flex-1 768:text-[1.03rem]">
-              Full access to every guide, tool, and community
-              resource. Flexibility to cancel anytime,
-              no&nbsp;commitment.
+
+            <div className="mt-6 flex items-baseline gap-x-3">
+              <span className="font-display text-[2.6rem] leading-none text-[#1A1A1A] 768:text-[3rem]">
+                $12.99
+              </span>
+              <span className="text-[0.9rem] text-[#6b6a68]">/month</span>
+            </div>
+            <p className="mt-2.5 text-[0.86rem] text-[#8a857c]">
+              No commitment — cancel anytime
             </p>
+
+            <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#4f4e4b]">
+              The same full access to every article and itinerary from all
+              of our travel experts, billed month to month.
+            </p>
+
             <Link
               href="/purchase/monthly"
               className="
-                block w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
-                text-white text-center py-3.5 rounded
-                text-[0.92rem] font-medium transition-colors
+                block w-full rounded border border-[#1A1A1A] py-3.5
+                text-center text-[0.92rem] font-medium text-[#1A1A1A]
+                transition-colors hover:bg-[#1A1A1A] hover:text-white
+                focus-visible:outline-2 focus-visible:outline-offset-2
+                focus-visible:outline-[#1A1A1A]
               "
             >
-              Select Monthly
-            </Link>
-          </div>
-
-          {/* Annual */}
-          <div className="bg-[#f7f6f2] border border-[#b73f31] rounded-sm p-8 480:p-10 1024:p-12 relative overflow-hidden flex flex-col min-h-[430px] 1024:min-h-[500px]">
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-[#C65D3B]" />
-            <p className="text-[0.64rem] uppercase tracking-[0.2em] font-bold text-[#B73F31] mb-3 768:mb-4">
-              For Sale
-            </p>
-
-            <div className="flex items-center gap-2.5 mb-3">
-              <h2 className="font-display text-[1.55rem] text-[#1A1A1A] 768:text-[1.85rem]">
-                Annual
-              </h2>
-              <span
-                className="
-                  text-[0.62rem] uppercase tracking-[0.1em] font-bold
-                  text-[#C65D3B] bg-[#C65D3B1A] px-2 py-0.5 rounded
-                "
-              >
-                Best value
-              </span>
-            </div>
-
-            <div className="mb-5">
-              <p className="text-[1.45rem] font-semibold text-[#1A1A1A] 768:text-[1.75rem]">
-                $79.99/year
-              </p>
-              <p className="text-[0.84rem] text-[#C65D3B] font-medium mt-1">
-                Save 49% — just $6.67/month
-              </p>
-            </div>
-
-            <p className="text-[0.98rem] text-[#4f4e4b] leading-[1.75] mb-9 flex-1 768:text-[1.03rem]">
-              Everything in Monthly, billed once a year.
-              Lock in the best rate and get a full year of
-              access for the price of&nbsp;six&nbsp;months.
-            </p>
-            <Link
-              href="/purchase/yearly"
-              className="
-                block w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
-                text-white text-center py-3.5 rounded
-                text-[0.92rem] font-medium transition-colors
-              "
-            >
-              Select Annual
+              Continue with Monthly
             </Link>
           </div>
         </div>
 
-        {/* Payment note */}
-        <p className="text-center text-[0.72rem] text-[#9a9894] mt-6 tracking-[0.01em]">
+        <p className="mt-6 text-center text-[0.72rem] tracking-[0.01em] text-[#9a9894]">
           Secure payment via Stripe · Visa, Mastercard, American Express,
           Apple&nbsp;Pay
         </p>
       </section>
 
-      {/* ── What's Included ── */}
-      <section className="px-6 pt-16 pb-14 768:pt-20 768:pb-16">
+      {/* ── Pull quote ── */}
+      <section className="mt-10 bg-[#EDE6DA] px-6 py-14 text-center 768:mt-16 768:py-20">
+        <div className="max-w-3xl mx-auto">
+          <span
+            className="mx-auto block h-px w-10 bg-[#C65D3B]"
+            aria-hidden="true"
+          />
+          <p
+            className="
+              mt-7 font-editorial text-[1.6rem] font-medium italic
+              leading-[1.3] text-[#1A1A1A]
+              480:text-[1.85rem]
+              768:text-[2.3rem] 768:leading-[1.25]
+            "
+          >
+            Every guide on Questurian is written by someone who actually
+            lives there.
+          </p>
+          <p className="mt-6 font-mono text-[0.62rem] uppercase tracking-[0.22em] text-[#8a857c]">
+            That&apos;s the whole point
+          </p>
+        </div>
+      </section>
+
+      {/* ── What membership unlocks ── */}
+      <section className="px-6 py-14 max-w-5xl mx-auto 768:px-8 768:py-20">
+        <h2
+          className="
+            text-center font-display text-[1.6rem] text-[#1A1A1A]
+            480:text-[1.8rem]
+            768:text-[2.1rem]
+          "
+        >
+          What membership unlocks
+        </h2>
+
+        <div className="mt-10 grid grid-cols-1 gap-x-12 gap-y-9 768:mt-14 768:grid-cols-2 768:gap-y-12">
+          {unlocks.map((item) => (
+            <div
+              key={item.title}
+              className="border-t border-[#1A1A1A]/15 pt-5 768:pt-6"
+            >
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[#B73F31]">
+                {item.label}
+              </p>
+              <h3 className="mt-2.5 font-display text-[1.15rem] text-[#1A1A1A] 768:text-[1.3rem]">
+                {item.title}
+              </h3>
+              <p className="mt-2.5 text-[0.88rem] leading-[1.75] text-[#5c5b58]">
+                {item.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="join-faq px-6 pb-16 max-w-2xl mx-auto 768:pb-20">
+        <h2 className="text-center font-display text-[1.35rem] text-[#1A1A1A] 768:text-[1.5rem]">
+          Before you ask
+        </h2>
+        <div className="mt-8 border-b border-[#1A1A1A]/15">
+          {faqs.map((faq) => (
+            <details key={faq.question} className="group border-t border-[#1A1A1A]/15">
+              <summary
+                className="
+                  flex items-center justify-between gap-4 py-5
+                  text-[0.95rem] font-medium text-[#1A1A1A]
+                "
+              >
+                {faq.question}
+                <span
+                  className="join-faq-plus shrink-0 text-[1.1rem] font-light leading-none text-[#C65D3B]"
+                  aria-hidden="true"
+                >
+                  +
+                </span>
+              </summary>
+              <p className="pb-5 pr-8 text-[0.88rem] leading-[1.75] text-[#5c5b58]">
+                {faq.answer}
+              </p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Final CTA ── */}
+      <section className="bg-[#2D4A3E] px-6 py-16 text-center text-[#FAF7F2] 768:py-20">
         <div className="max-w-2xl mx-auto">
           <h2
             className="
-              font-display text-[1.35rem] text-center text-[#1A1A1A]
-              uppercase tracking-[0.04em] mb-3
-              480:text-[1.5rem]
-              768:text-[1.75rem]
+              font-display text-[1.7rem] leading-[1.15]
+              480:text-[2rem]
+              768:text-[2.4rem]
             "
           >
-            What&apos;s included
+            Your next trip deserves better than guesswork.
           </h2>
-          <p
+          <a
+            href="#plans"
             className="
-              text-center text-[0.88rem] text-[#6b6a68] leading-relaxed
-              mb-12 max-w-md mx-auto
-              768:text-[0.92rem] 768:mb-14
+              mt-8 inline-block rounded bg-[#C65D3B] px-10 py-3.5
+              text-[0.9rem] font-medium text-white transition-colors
+              hover:bg-[#B73F31]
+              focus-visible:outline-2 focus-visible:outline-offset-2
+              focus-visible:outline-[#D4A574]
             "
           >
-            Every plan comes with full access to our guides, tools,
-            and community. Here&apos;s what you&apos;ll get:
+            Become a member
+          </a>
+          <p className="mt-4 text-[0.76rem] text-[#FAF7F2]/60">
+            From $6.67 a month, billed annually · 30-day money-back guarantee
           </p>
-
-          <div className="space-y-10 768:space-y-12">
-            {features.map((feature) => (
-              <div key={feature.title}>
-                <h3
-                  className="
-                    font-display text-[1.02rem] text-[#1A1A1A] mb-2
-                    768:text-[1.12rem]
-                  "
-                >
-                  {feature.title}
-                </h3>
-                <p className="text-[0.86rem] text-[#5c5b58] leading-[1.75]">
-                  {feature.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Bottom CTA */}
-          <div className="mt-14 text-center 768:mt-16">
-            <a
-              href="#plans"
-              className="
-                inline-block bg-[#2C2C2C] hover:bg-[#1A1A1A]
-                text-white py-3 px-10 rounded
-                text-[0.86rem] font-medium transition-colors
-              "
-            >
-              Select a Plan
-            </a>
-          </div>
         </div>
       </section>
 

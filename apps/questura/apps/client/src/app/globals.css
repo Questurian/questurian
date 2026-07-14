@@ -605,6 +605,50 @@ input:-webkit-autofill:active {
   }
 }
 
+/* ===== JOIN / MEMBERSHIP PAGE ===== */
+
+@keyframes join-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.join-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: join-ticker 46s linear infinite;
+}
+
+.join-ticker:hover .join-ticker-track {
+  animation-play-state: paused;
+}
+
+.join-faq details summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.join-faq details summary::-webkit-details-marker {
+  display: none;
+}
+
+.join-faq .join-faq-plus {
+  transition: transform 0.25s ease;
+}
+
+.join-faq details[open] .join-faq-plus {
+  transform: rotate(45deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .join-ticker-track {
+    animation: none;
+  }
+}
+
 /* ===== EDITORIAL ANIMATIONS ===== */
 
 @keyframes fade-in-up {
@@ -813,6 +857,13 @@ input:-webkit-autofill:active {
   background: linear-gradient(90deg, #d1d7da 0%, #edf0f1 45%, #c9d0d3 100%);
   background-size: 240% 100%;
   animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+/* Dark-surface variant (e.g. hero article block on a black background). */
+.city-article-card--dark .city-article-image-shell::before,
+.city-article-card--dark .city-skeleton-line {
+  background: linear-gradient(90deg, #1c1c1c 0%, #313131 45%, #1a1a1a 100%);
+  background-size: 240% 100%;
 }
 
 .city-recommended-divider {
