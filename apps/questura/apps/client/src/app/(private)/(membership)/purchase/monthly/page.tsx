@@ -5,7 +5,7 @@ export default function PurchaseMonthly() {
     <PurchasePage 
       planName="Monthly Plan"
       amount={12.99}
-      planDescription="Cancel anytime • All features included"
+      planDescription="All features included"
     />
   );
 }

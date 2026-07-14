@@ -19,7 +19,7 @@ interface PurchasePageProps {
 export default function PurchasePage({
   planName = "Monthly Plan",
   amount = 10,
-  planDescription = "Cancel anytime • All premium features"
+  planDescription = "All premium features"
 }: PurchasePageProps) {
   const { user, loading, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
@@ -187,7 +187,7 @@ export default function PurchasePage({
 
           <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
             <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Secure payment powered by Stripe • Cancel anytime
+              Secure payment powered by Stripe
             </p>
           </div>
         </div>

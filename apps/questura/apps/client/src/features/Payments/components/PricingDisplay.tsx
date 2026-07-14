@@ -35,19 +35,9 @@ const unlocks = [
 
 const faqs = [
   {
-    question: 'Can I cancel anytime?',
-    answer:
-      'Yes. Cancel in your account settings whenever you like — your access continues until the end of the billing period you’ve already paid for.',
-  },
-  {
     question: 'What’s the difference between the plans?',
     answer:
       'Nothing but the billing. Both plans unlock every article, itinerary, and expert we publish. Annual simply costs about half as much per month.',
-  },
-  {
-    question: 'What if it’s not for me?',
-    answer:
-      'Annual members can request a prorated refund within the first 30 days. Monthly is non-refundable, but you can cancel before your next renewal and keep reading until it ends.',
   },
 ];
 
@@ -57,20 +47,6 @@ export default function PricingDisplay() {
       {/* ── Hero ── */}
       <section className="px-6 pt-14 pb-10 text-center 768:pt-20 768:pb-14">
         <div className="max-w-3xl mx-auto">
-          <p
-            className="
-              animate-fade-in-up flex items-center justify-center gap-3
-              text-[0.66rem] font-bold uppercase
-              tracking-[0.22em] text-[#B73F31]
-              480:text-[0.7rem]
-            "
-            style={{ fontFamily: 'var(--font-dm-sans)' }}
-          >
-            <span className="h-px w-8 bg-[#C65D3B]/50" aria-hidden="true" />
-            Questurian Membership
-            <span className="h-px w-8 bg-[#C65D3B]/50" aria-hidden="true" />
-          </p>
-
           <h1
             className="
               animate-fade-in-up mt-6 font-display text-[2.15rem]
@@ -82,7 +58,7 @@ export default function PricingDisplay() {
             style={{ animationDelay: '0.08s' }}
           >
             Travel like you{' '}
-            <em className="font-editorial font-semibold italic text-[1.06em] text-[#C65D3B] whitespace-nowrap">
+            <em className="font-editorial font-semibold italic text-[1.06em] text-[#3B5BDB] whitespace-nowrap">
               know someone
             </em>{' '}
             there.
@@ -109,18 +85,15 @@ export default function PricingDisplay() {
             <a
               href="#plans"
               className="
-                inline-block rounded bg-[#C65D3B] px-9 py-3.5
+                inline-block rounded bg-[#3B5BDB] px-9 py-3.5
                 text-[0.9rem] font-medium text-white
-                transition-colors hover:bg-[#B73F31]
+                transition-colors hover:bg-[#3451C7]
                 focus-visible:outline-2 focus-visible:outline-offset-2
-                focus-visible:outline-[#B73F31]
+                focus-visible:outline-[#3451C7]
               "
             >
               See membership plans
             </a>
-            <p className="mt-3.5 text-[0.76rem] text-[#8a857c]">
-              Cancel anytime · 30-day money-back guarantee on annual
-            </p>
           </div>
         </div>
       </section>
@@ -143,7 +116,7 @@ export default function PricingDisplay() {
                   "
                 >
                   <span className="px-5 480:px-7">{item}</span>
-                  <span className="text-[0.5rem] text-[#D4A574]">✦</span>
+                  <span className="text-[0.5rem] text-[#9DACF2]">✦</span>
                 </span>
               ))}
             </div>
@@ -178,12 +151,12 @@ export default function PricingDisplay() {
           >
             <div className="flex flex-1 flex-col p-8 480:p-10">
               <div className="flex items-start justify-between gap-4">
-                <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#D4A574]">
+                <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#9DACF2]">
                   Annual · Most popular
                 </p>
                 <p
                   className="
-                    shrink-0 rounded-sm bg-[#C65D3B] px-2 py-1 font-mono
+                    shrink-0 rounded-sm bg-[#3B5BDB] px-2 py-1 font-mono
                     text-[0.6rem] font-bold uppercase tracking-[0.14em]
                     text-white
                   "
@@ -202,7 +175,7 @@ export default function PricingDisplay() {
                 </span>
                 <span className="text-[0.9rem] text-[#FAF7F2]/70">/year</span>
               </div>
-              <p className="mt-2.5 text-[0.86rem] font-medium text-[#D4A574]">
+              <p className="mt-2.5 text-[0.86rem] font-medium text-[#9DACF2]">
                 $6.67 a month — less than $1.55 a week
               </p>
 
@@ -215,11 +188,11 @@ export default function PricingDisplay() {
               <Link
                 href="/purchase/yearly"
                 className="
-                  block w-full rounded bg-[#C65D3B] py-3.5 text-center
+                  block w-full rounded bg-[#3B5BDB] py-3.5 text-center
                   text-[0.92rem] font-medium text-white transition-colors
-                  hover:bg-[#B73F31]
+                  hover:bg-[#3451C7]
                   focus-visible:outline-2 focus-visible:outline-offset-2
-                  focus-visible:outline-[#D4A574]
+                  focus-visible:outline-[#9DACF2]
                 "
               >
                 Continue with Annual
@@ -232,12 +205,9 @@ export default function PricingDisplay() {
               <span className="absolute -left-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#F5F0E8]" />
               <span className="absolute -right-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#F5F0E8]" />
             </div>
-            <div className="flex items-center justify-between gap-3 px-8 py-4 480:px-10">
+            <div className="flex items-center gap-3 px-8 py-4 480:px-10">
               <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#FAF7F2]/60">
                 All-access · Every city
-              </p>
-              <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#D4A574]">
-                30-day guarantee
               </p>
             </div>
           </div>
@@ -259,10 +229,6 @@ export default function PricingDisplay() {
               </span>
               <span className="text-[0.9rem] text-[#6b6a68]">/month</span>
             </div>
-            <p className="mt-2.5 text-[0.86rem] text-[#8a857c]">
-              No commitment — cancel anytime
-            </p>
-
             <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#4f4e4b]">
               The same full access to every article and itinerary from all
               of our travel experts, billed month to month.
@@ -293,7 +259,7 @@ export default function PricingDisplay() {
       <section className="mt-10 bg-[#EDE6DA] px-6 py-14 text-center 768:mt-16 768:py-20">
         <div className="max-w-3xl mx-auto">
           <span
-            className="mx-auto block h-px w-10 bg-[#C65D3B]"
+            className="mx-auto block h-px w-10 bg-[#3B5BDB]"
             aria-hidden="true"
           />
           <p
@@ -331,7 +297,7 @@ export default function PricingDisplay() {
               key={item.title}
               className="border-t border-[#1A1A1A]/15 pt-5 768:pt-6"
             >
-              <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[#B73F31]">
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[#3451C7]">
                 {item.label}
               </p>
               <h3 className="mt-2.5 font-display text-[1.15rem] text-[#1A1A1A] 768:text-[1.3rem]">
@@ -361,7 +327,7 @@ export default function PricingDisplay() {
               >
                 {faq.question}
                 <span
-                  className="join-faq-plus shrink-0 text-[1.1rem] font-light leading-none text-[#C65D3B]"
+                  className="join-faq-plus shrink-0 text-[1.1rem] font-light leading-none text-[#3B5BDB]"
                   aria-hidden="true"
                 >
                   +
@@ -390,17 +356,17 @@ export default function PricingDisplay() {
           <a
             href="#plans"
             className="
-              mt-8 inline-block rounded bg-[#C65D3B] px-10 py-3.5
+              mt-8 inline-block rounded bg-[#3B5BDB] px-10 py-3.5
               text-[0.9rem] font-medium text-white transition-colors
-              hover:bg-[#B73F31]
+              hover:bg-[#3451C7]
               focus-visible:outline-2 focus-visible:outline-offset-2
-              focus-visible:outline-[#D4A574]
+              focus-visible:outline-[#9DACF2]
             "
           >
             Become a member
           </a>
           <p className="mt-4 text-[0.76rem] text-[#FAF7F2]/60">
-            From $6.67 a month, billed annually · 30-day money-back guarantee
+            From $6.67 a month, billed annually
           </p>
         </div>
       </section>
@@ -413,15 +379,7 @@ export default function PricingDisplay() {
             <p>
               All prices are in U.S. dollars. Plus tax where applicable.
               Subscriptions renew automatically at the end of each billing
-              period unless cancelled. You may cancel your subscription at
-              any time from your account settings — your access will
-              continue until the end of your current billing period.
-            </p>
-            <p>
-              Annual subscribers may request a prorated refund within the
-              first 30 days of their subscription. After 30 days, no
-              refunds will be issued for the remainder of the annual
-              term. Monthly subscriptions are non-refundable.
+              period.
             </p>
           </div>
 
