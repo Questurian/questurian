@@ -85,56 +85,21 @@ export default function PricingDisplay() {
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
       {/* ── Hero ── */}
-      <section className="px-6 pt-14 pb-10 text-center 768:pt-20 768:pb-14">
+      <section className="px-6 py-14 text-center 768:py-20">
         <div className="max-w-3xl mx-auto">
           <h1
             className="
-              animate-fade-in-up mt-6 font-display text-[2.15rem]
+              animate-fade-in-up font-display text-[2.15rem]
               leading-[1.06] text-[#1A1A1A]
               480:text-[2.6rem]
-              768:text-[3.3rem] 768:mt-8
+              768:text-[3.3rem]
               1024:text-[3.8rem]
             "
             style={{ animationDelay: '0.08s' }}
           >
-            Travel like you{' '}
-            <em className="font-editorial font-semibold italic text-[1.06em] text-[#3B5BDB] whitespace-nowrap">
-              know someone
-            </em>{' '}
-            there.
+            Know more. Travel better.
           </h1>
 
-          <p
-            className="
-              animate-fade-in-up mt-5 max-w-md mx-auto text-[0.95rem]
-              leading-[1.7] text-[#4f4e4b]
-              480:max-w-lg 480:text-[1rem]
-              768:mt-6 768:max-w-xl 768:text-[1.08rem]
-            "
-            style={{ animationDelay: '0.16s' }}
-          >
-            One membership unlocks every article and every day-by-day
-            itinerary from local experts, in every city we cover — for
-            less than $1.55&nbsp;a&nbsp;week.
-          </p>
-
-          <div
-            className="animate-fade-in-up mt-8 768:mt-9"
-            style={{ animationDelay: '0.24s' }}
-          >
-            <a
-              href="#plans"
-              className="
-                inline-block rounded bg-[#3B5BDB] px-9 py-3.5
-                text-[0.9rem] font-medium text-white
-                transition-colors hover:bg-[#3451C7]
-                focus-visible:outline-2 focus-visible:outline-offset-2
-                focus-visible:outline-[#3451C7]
-              "
-            >
-              See membership plans
-            </a>
-          </div>
         </div>
       </section>
 
@@ -169,15 +134,17 @@ export default function PricingDisplay() {
         id="plans"
         className="scroll-mt-28 px-5 pt-12 pb-10 max-w-5xl mx-auto 768:px-8 768:pt-16"
       >
-        <p
-          className="
-            mb-8 text-center font-mono text-[0.64rem] uppercase
-            tracking-[0.2em] text-[#8a857c]
-            768:mb-10
-          "
-        >
-          Same full access — the only difference is how you&apos;re billed
-        </p>
+        <div className="mb-8 text-center 768:mb-10">
+          <h2 className="font-display text-[2rem] font-semibold leading-tight text-[#1A1A1A] 768:text-[2.4rem]">
+            Choose your plan.
+          </h2>
+          <p className="mt-2 text-[0.9rem] text-[#6f6a62]">
+            You can{' '}
+            <strong className="font-semibold text-[#1A1A1A]">
+              cancel anytime.
+            </strong>
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 items-stretch gap-6 768:grid-cols-[1fr_1.12fr] 768:gap-8">
           {/* Annual — the member pass */}
