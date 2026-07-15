@@ -94,7 +94,7 @@ export default function PricingDisplay() {
             width={3840}
             height={2160}
             priority
-            sizes="(max-width: 768px) 800px, (max-width: 1536px) 82vw, 1350px"
+            sizes="(max-width: 768px) 1000px, (max-width: 1536px) 100vw, 1650px"
             className="join-hero-globe-image"
           />
         </div>
