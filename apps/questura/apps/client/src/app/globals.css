@@ -616,6 +616,25 @@ input:-webkit-autofill:active {
   }
 }
 
+@keyframes join-plan-border-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes join-plan-arrow-ring-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 .join-ticker-track {
   display: flex;
   width: max-content;
@@ -624,6 +643,75 @@ input:-webkit-autofill:active {
 
 .join-ticker:hover .join-ticker-track {
   animation-play-state: paused;
+}
+
+.join-plan-card {
+  cursor: pointer;
+  isolation: isolate;
+  transition: box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.join-plan-card::after {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  padding: 4px;
+  border-radius: inherit;
+  background: linear-gradient(
+    110deg,
+    #5575ff 0%,
+    #9c83ff 18%,
+    #f0b7df 36%,
+    #ffd36b 54%,
+    #ff8a45 72%,
+    #ff4f5e 88%,
+    #5575ff 100%
+  );
+  background-size: 300% 300%;
+  content: '';
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.join-plan-card:hover,
+.join-plan-card:focus-within {
+  box-shadow:
+    0 26px 55px -30px rgb(40 64 156 / 0.34),
+    0 10px 22px -20px rgb(26 26 26 / 0.38);
+}
+
+.join-plan-card:hover::after,
+.join-plan-card:focus-within::after {
+  animation: join-plan-border-shift 4.8s ease-in-out infinite;
+  opacity: 1;
+}
+
+.join-plan-arrow-ring-track {
+  stroke: rgb(26 26 26 / 0.18);
+}
+
+.join-plan-arrow-ring-progress {
+  stroke: #5F5D59;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.join-plan-card--annual .join-plan-arrow-ring-progress {
+  stroke: #3B5BDB;
+}
+
+.join-plan-card:hover .join-plan-arrow-ring-progress,
+.join-plan-card:focus-within .join-plan-arrow-ring-progress {
+  animation: join-plan-arrow-ring-draw 700ms cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
 }
 
 .join-faq details summary {
@@ -646,6 +734,22 @@ input:-webkit-autofill:active {
 @media (prefers-reduced-motion: reduce) {
   .join-ticker-track {
     animation: none;
+  }
+
+  .join-plan-card,
+  .join-plan-card::after {
+    transition: none;
+  }
+
+  .join-plan-card:hover::after,
+  .join-plan-card:focus-within::after {
+    animation: none;
+  }
+
+  .join-plan-card:hover .join-plan-arrow-ring-progress,
+  .join-plan-card:focus-within .join-plan-arrow-ring-progress {
+    animation: none;
+    stroke-dashoffset: 0;
   }
 }
 

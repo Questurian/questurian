@@ -41,6 +41,46 @@ const faqs = [
   },
 ];
 
+function PlanArrowLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className="join-plan-arrow relative z-10 grid h-14 w-14 shrink-0 self-center place-items-center text-[#1A1A1A] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#1A1A1A]"
+    >
+      <svg
+        viewBox="0 0 56 56"
+        fill="none"
+        aria-hidden="true"
+        className="h-full w-full"
+      >
+        <circle
+          className="join-plan-arrow-ring-track"
+          cx="28"
+          cy="28"
+          r="25"
+          strokeWidth="1.5"
+        />
+        <circle
+          className="join-plan-arrow-ring-progress"
+          cx="28"
+          cy="28"
+          r="25"
+          pathLength="100"
+          strokeWidth="1.5"
+        />
+        <path
+          d="M20 28H36M30 22L36 28L30 34"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </Link>
+  );
+}
+
 export default function PricingDisplay() {
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
@@ -143,15 +183,16 @@ export default function PricingDisplay() {
           {/* Annual — the member pass */}
           <div
             className="
-              relative flex flex-col overflow-hidden rounded-md
-              bg-[#2D4A3E] text-[#FAF7F2]
-              shadow-[0_28px_56px_-28px_rgba(45,74,62,0.6)]
+              join-plan-card join-plan-card--annual
+              relative flex flex-col overflow-hidden
+              bg-[#FAF7F2] text-[#1A1A1A]
+              shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
               768:order-last
             "
           >
             <div className="flex flex-1 flex-col p-8 480:p-10">
               <div className="flex items-start justify-between gap-4">
-                <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#9DACF2]">
+                <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#3451C7]">
                   Annual · Most popular
                 </p>
                 <p
@@ -166,57 +207,40 @@ export default function PricingDisplay() {
               </div>
 
               <div className="mt-6 flex flex-wrap items-baseline gap-x-3">
-                <span className="text-[0.95rem] text-[#FAF7F2]/45 line-through">
+                <span className="text-[0.95rem] text-[#1A1A1A]/45 line-through">
                   <span className="sr-only">Full price at the monthly rate: </span>
                   $155.88
                 </span>
                 <span className="font-display text-[2.6rem] leading-none 768:text-[3rem]">
                   $79.99
                 </span>
-                <span className="text-[0.9rem] text-[#FAF7F2]/70">/year</span>
+                <span className="text-[0.9rem] text-[#6b6a68]">/year</span>
               </div>
               <p className="mt-2.5 text-[0.86rem] font-medium text-[#9DACF2]">
                 $6.67 a month — less than $1.55 a week
               </p>
 
-              <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#FAF7F2]/75">
+              <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#4f4e4b]">
                 The complete Questurian library, billed once a year. Twelve
                 months of every article and itinerary for the price
                 of&nbsp;six.
               </p>
 
-              <Link
+              <PlanArrowLink
                 href="/purchase/yearly"
-                className="
-                  block w-full rounded bg-[#3B5BDB] py-3.5 text-center
-                  text-[0.92rem] font-medium text-white transition-colors
-                  hover:bg-[#3451C7]
-                  focus-visible:outline-2 focus-visible:outline-offset-2
-                  focus-visible:outline-[#9DACF2]
-                "
-              >
-                Continue with Annual
-              </Link>
-            </div>
-
-            {/* Perforated stub */}
-            <div className="relative" aria-hidden="true">
-              <div className="border-t border-dashed border-[#FAF7F2]/30" />
-              <span className="absolute -left-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#F5F0E8]" />
-              <span className="absolute -right-2.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-[#F5F0E8]" />
-            </div>
-            <div className="flex items-center gap-3 px-8 py-4 480:px-10">
-              <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[#FAF7F2]/60">
-                All-access · Every city
-              </p>
+                label="Continue with Annual"
+              />
             </div>
           </div>
 
           {/* Monthly */}
           <div
             className="
-              flex flex-col rounded-md border border-[#d7d4ce]
-              bg-[#FAF7F2] p-8 480:p-10
+              join-plan-card
+              relative flex flex-col
+              bg-[#FAF7F2] p-8
+              shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
+              480:p-10
             "
           >
             <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#8a857c]">
@@ -234,18 +258,10 @@ export default function PricingDisplay() {
               of our travel experts, billed month to month.
             </p>
 
-            <Link
+            <PlanArrowLink
               href="/purchase/monthly"
-              className="
-                block w-full rounded border border-[#1A1A1A] py-3.5
-                text-center text-[0.92rem] font-medium text-[#1A1A1A]
-                transition-colors hover:bg-[#1A1A1A] hover:text-white
-                focus-visible:outline-2 focus-visible:outline-offset-2
-                focus-visible:outline-[#1A1A1A]
-              "
-            >
-              Continue with Monthly
-            </Link>
+              label="Continue with Monthly"
+            />
           </div>
         </div>
 
