@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 const tickerItems = [
@@ -85,21 +86,24 @@ export default function PricingDisplay() {
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
       {/* ── Hero ── */}
-      <section className="px-6 py-14 text-center 768:py-20">
-        <div className="max-w-3xl mx-auto">
-          <h1
-            className="
-              animate-fade-in-up font-display text-[2.15rem]
-              leading-[1.06] text-[#1A1A1A]
-              480:text-[2.6rem]
-              768:text-[3.3rem]
-              1024:text-[3.8rem]
-            "
-            style={{ animationDelay: '0.08s' }}
-          >
-            Know more. Travel better.
-          </h1>
+      <section className="join-hero" aria-labelledby="join-hero-title">
+        <div className="join-hero-visual" aria-hidden="true">
+          <Image
+            src="/images/join/questurian-globe.png"
+            alt=""
+            width={3840}
+            height={2160}
+            priority
+            sizes="(max-width: 768px) 800px, (max-width: 1536px) 82vw, 1350px"
+            className="join-hero-globe-image"
+          />
+        </div>
 
+        <div className="join-hero-copy">
+          <h1 id="join-hero-title" className="join-hero-title">
+            <span>Know more.</span>{' '}
+            <em>Travel better.</em>
+          </h1>
         </div>
       </section>
 

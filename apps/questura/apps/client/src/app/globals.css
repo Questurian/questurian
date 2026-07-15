@@ -607,6 +607,104 @@ input:-webkit-autofill:active {
 
 /* ===== JOIN / MEMBERSHIP PAGE ===== */
 
+.join-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(420px, 32vw, 470px);
+  overflow: hidden;
+  padding-inline: 24px;
+  color: #f4f0e7;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 48% 68% at 50% 108%, rgb(12 80 111 / 0.78), transparent 72%),
+    linear-gradient(180deg, #031522 0%, #041a29 68%, #03131f 100%);
+}
+
+.join-hero::after {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 18%;
+  background: linear-gradient(180deg, transparent, rgb(2 14 23 / 0.68));
+  content: '';
+  pointer-events: none;
+}
+
+.join-hero-copy {
+  position: relative;
+  z-index: 3;
+  width: min(100%, 900px);
+  margin-inline: auto;
+  padding-top: clamp(42px, 4.5vw, 64px);
+}
+
+.join-hero-title {
+  margin: 0;
+  color: #f4f0e7;
+  font-family: var(--font-editorial-serif), Georgia, serif;
+  font-size: clamp(2.65rem, 4.8vw, 4.7rem);
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  text-wrap: balance;
+  text-shadow: 0 3px 24px rgb(0 10 18 / 0.48);
+}
+
+.join-hero-title span,
+.join-hero-title em {
+  display: inline-block;
+}
+
+.join-hero-title em {
+  color: #cde7f0;
+  font-weight: 400;
+}
+
+.join-hero-visual {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.join-hero-globe-image {
+  position: absolute;
+  top: 118px;
+  left: 50%;
+  width: clamp(800px, 82vw, 1350px);
+  max-width: none;
+  height: auto;
+  opacity: 0.74;
+  filter: saturate(0.76) brightness(0.7) contrast(1.08) drop-shadow(0 0 24px rgb(45 160 207 / 0.22));
+  transform: translateX(-52.2%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 1%, #000 16%, #000 100%);
+  mask-image: linear-gradient(to bottom, transparent 1%, #000 16%, #000 100%);
+}
+
+@media (max-width: 767px) {
+  .join-hero {
+    min-height: 400px;
+    padding-inline: 20px;
+  }
+
+  .join-hero-copy {
+    padding-top: 38px;
+  }
+
+  .join-hero-title {
+    max-width: 360px;
+    margin-inline: auto;
+    font-size: clamp(2.45rem, 11.5vw, 3.3rem);
+    line-height: 0.94;
+  }
+
+  .join-hero-globe-image {
+    top: 165px;
+  }
+}
+
 @keyframes join-ticker {
   from {
     transform: translateX(0);
