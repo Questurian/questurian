@@ -688,6 +688,116 @@ input:-webkit-autofill:active {
   mask-image: linear-gradient(to bottom, transparent 1%, #000 16%, #000 100%);
 }
 
+.join-hero-routes {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 74%, transparent 98%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 74%, transparent 98%);
+}
+
+/*
+ * Mirrors .join-hero-globe-image placement so routes stay pinned to the US.
+ * The radial mask matches the globe's disc in the artwork (center 2014,1054
+ * radius 838 in the 3840x2160 image) so comets fade over the horizon at the
+ * limb instead of flying off the edge of the globe. Kept as a CSS mask (not
+ * an SVG <mask>) so the offset-path animation stays on the compositor.
+ */
+.join-hero-routes-svg {
+  position: absolute;
+  top: 100px;
+  left: 50%;
+  overflow: visible;
+  width: clamp(1000px, 100vw, 1650px);
+  max-width: none;
+  height: auto;
+  aspect-ratio: 3840 / 2160;
+  transform: translateX(-52.2%);
+  animation: join-hero-globe-drift 24s ease-in-out infinite;
+  -webkit-mask-image: radial-gradient(
+    ellipse 21.8% 38.8% at 52.45% 48.8%,
+    #000 76%,
+    transparent 96%
+  );
+  mask-image: radial-gradient(
+    ellipse 21.8% 38.8% at 52.45% 48.8%,
+    #000 76%,
+    transparent 96%
+  );
+}
+
+.join-route-trail {
+  stroke: rgb(78 232 216 / 0.12);
+  stroke-width: 3;
+}
+
+/*
+ * Comets move via offset-distance, which runs on the compositor in both
+ * Gecko and Blink (like transform/opacity) — no per-frame main-thread
+ * paints or filter re-rasterization. Glow comes from baked-in SVG
+ * gradients; keep this free of CSS filters.
+ */
+.join-route-comet {
+  opacity: 0;
+  offset-rotate: auto;
+}
+
+@supports (offset-path: path('M0 0H1')) {
+  .join-route-comet {
+    animation: join-route-fly var(--route-duration, 6.5s) linear infinite;
+    animation-delay: var(--route-delay, 0s);
+  }
+}
+
+.join-hub-dot {
+  fill: #7df0e2;
+}
+
+.join-hub-halo {
+  fill: rgb(78 232 216 / 0.16);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: join-hub-pulse 3.2s ease-in-out infinite;
+  animation-delay: var(--hub-delay, 0s);
+}
+
+@keyframes join-route-fly {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+
+  6% {
+    opacity: 1;
+  }
+
+  58% {
+    opacity: 1;
+  }
+
+  /* Flight ends at 70%; the rest of the cycle is an idle gap */
+  70%,
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes join-hub-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+}
+
 @keyframes join-hero-copy-reveal {
   from {
     opacity: 0;
@@ -730,7 +840,8 @@ input:-webkit-autofill:active {
     line-height: 0.94;
   }
 
-  .join-hero-globe-image {
+  .join-hero-globe-image,
+  .join-hero-routes-svg {
     top: 153px;
   }
 }
@@ -862,7 +973,10 @@ input:-webkit-autofill:active {
 @media (prefers-reduced-motion: reduce) {
   .join-hero-title span,
   .join-hero-title em,
-  .join-hero-globe-image {
+  .join-hero-globe-image,
+  .join-hero-routes-svg,
+  .join-route-comet,
+  .join-hub-halo {
     animation: none;
   }
 

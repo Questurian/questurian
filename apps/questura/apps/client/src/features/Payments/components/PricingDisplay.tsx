@@ -1,5 +1,37 @@
+import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+
+/*
+ * Flight routes drawn over the hero globe. Coordinates are in the globe
+ * image's pixel space (3840x2160) so the origins stay pinned to the US
+ * hub cities as the globe drifts.
+ */
+const flightRoutes = [
+  // NYC → Europe (east)
+  { d: 'M2210 560 Q2670 300 3040 480', duration: '6.4s', delay: '-1.8s' },
+  // NYC → Brazil (south)
+  { d: 'M2210 560 Q2390 830 2470 1330', duration: '6.1s', delay: '-0.9s' },
+  // Miami → West Africa (east)
+  { d: 'M2145 745 Q2610 620 2950 850', duration: '7s', delay: '-4.6s' },
+  // Miami → Peru / Chile (south)
+  { d: 'M2145 745 Q2165 1050 2360 1560', duration: '5.9s', delay: '-3.7s' },
+  // Miami → eastern Brazil (south)
+  { d: 'M2145 745 Q2325 960 2560 1320', duration: '7.3s', delay: '-0.3s' },
+  // Texas → Central / South America (south)
+  { d: 'M1850 655 Q1830 1000 2060 1500', duration: '6.4s', delay: '-2.5s' },
+  // LA → Pacific (west)
+  { d: 'M1640 620 Q1240 390 810 530', duration: '6.7s', delay: '-3.1s' },
+  // LA → Mexico and south
+  { d: 'M1640 620 Q1580 960 1770 1450', duration: '6.9s', delay: '-5.4s' },
+];
+
+const flightHubs = [
+  { cx: 2210, cy: 560, delay: '0s' }, // NYC
+  { cx: 2145, cy: 745, delay: '-0.8s' }, // Miami
+  { cx: 1850, cy: 655, delay: '-1.6s' }, // Texas
+  { cx: 1640, cy: 620, delay: '-2.4s' }, // LA
+];
 
 const tickerItems = [
   'Neighborhood deep-dives',
@@ -97,6 +129,88 @@ export default function PricingDisplay() {
             sizes="(max-width: 768px) 1000px, (max-width: 1536px) 100vw, 1650px"
             className="join-hero-globe-image"
           />
+
+          <div className="join-hero-routes">
+            <svg
+              viewBox="0 0 3840 2160"
+              className="join-hero-routes-svg"
+              fill="none"
+            >
+              <defs>
+                {/* Glow is baked into gradients so no CSS filters are needed */}
+                <linearGradient id="join-comet-core" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stopColor="#5df2e0" stopOpacity="0" />
+                  <stop offset="0.72" stopColor="#5df2e0" stopOpacity="0.7" />
+                  <stop offset="1" stopColor="#8df7ea" stopOpacity="0.95" />
+                </linearGradient>
+                <linearGradient id="join-comet-glow" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stopColor="#4ee8d8" stopOpacity="0" />
+                  <stop offset="1" stopColor="#4ee8d8" stopOpacity="0.3" />
+                </linearGradient>
+                <radialGradient id="join-glow-dot">
+                  <stop offset="0" stopColor="#4ee8d8" stopOpacity="0.55" />
+                  <stop offset="1" stopColor="#4ee8d8" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              {flightRoutes.map((route) => (
+                <g key={route.d}>
+                  <path d={route.d} className="join-route-trail" />
+                  <g
+                    className="join-route-comet"
+                    style={
+                      {
+                        offsetPath: `path("${route.d}")`,
+                        '--route-duration': route.duration,
+                        '--route-delay': route.delay,
+                      } as CSSProperties
+                    }
+                  >
+                    <rect
+                      x={-206}
+                      y={-14}
+                      width={220}
+                      height={28}
+                      rx={14}
+                      fill="url(#join-comet-glow)"
+                    />
+                    <rect
+                      x={-196}
+                      y={-3.5}
+                      width={196}
+                      height={7}
+                      rx={3.5}
+                      fill="url(#join-comet-core)"
+                    />
+                    <circle r={16} fill="url(#join-glow-dot)" />
+                    <circle r={6.5} fill="#b9fff5" />
+                  </g>
+                </g>
+              ))}
+              {flightHubs.map((hub) => (
+                <g key={`${hub.cx}-${hub.cy}`}>
+                  <circle
+                    className="join-hub-halo"
+                    cx={hub.cx}
+                    cy={hub.cy}
+                    r={26}
+                    style={{ '--hub-delay': hub.delay } as CSSProperties}
+                  />
+                  <circle
+                    cx={hub.cx}
+                    cy={hub.cy}
+                    r={22}
+                    fill="url(#join-glow-dot)"
+                  />
+                  <circle
+                    className="join-hub-dot"
+                    cx={hub.cx}
+                    cy={hub.cy}
+                    r={9}
+                  />
+                </g>
+              ))}
+            </svg>
+          </div>
         </div>
 
         <div className="join-hero-copy">
