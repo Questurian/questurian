@@ -694,8 +694,8 @@ input:-webkit-autofill:active {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 74%, transparent 98%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 74%, transparent 98%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 84%, transparent 100%);
 }
 
 /*
@@ -728,16 +728,45 @@ input:-webkit-autofill:active {
   );
 }
 
+/*
+ * pathLength is normalized to 100 in the markup, so a dasharray of 100
+ * with dashoffset 100→0 draws the course line out from the hub.
+ */
 .join-route-trail {
   stroke: rgb(78 232 216 / 0.12);
   stroke-width: 3;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
 }
 
 /*
- * Comets move via offset-distance, which runs on the compositor in both
- * Gecko and Blink (like transform/opacity) — no per-frame main-thread
- * paints or filter re-rasterization. Glow comes from baked-in SVG
- * gradients; keep this free of CSS filters.
+ * Afterburner flame: drawn in the comet group's local space (so it travels
+ * and rotates with the plane for free). The flicker is a fast scaleX pulse
+ * anchored at the engine end; fill-box keeps the origin on the flame itself.
+ */
+.join-route-exhaust {
+  transform-box: fill-box;
+  transform-origin: right center;
+  animation: join-exhaust-flicker 0.55s ease-in-out infinite;
+}
+
+@keyframes join-exhaust-flicker {
+  0%,
+  100% {
+    transform: scaleX(1);
+    opacity: 0.95;
+  }
+
+  50% {
+    transform: scaleX(0.7);
+    opacity: 0.65;
+  }
+}
+
+/*
+ * The plane moves via offset-distance, which runs on the compositor in both
+ * Gecko and Blink (like transform/opacity). Glow and exhaust come from
+ * baked-in SVG gradients; keep this free of CSS filters.
  */
 .join-route-comet {
   opacity: 0;
@@ -747,6 +776,12 @@ input:-webkit-autofill:active {
 @supports (offset-path: path('M0 0H1')) {
   .join-route-comet {
     animation: join-route-fly var(--route-duration, 6.5s) linear infinite;
+    animation-delay: var(--route-delay, 0s);
+  }
+
+  .join-route-trail {
+    animation: join-route-trail-cycle var(--route-duration, 6.5s) linear
+      infinite;
     animation-delay: var(--route-delay, 0s);
   }
 }
@@ -769,7 +804,8 @@ input:-webkit-autofill:active {
     opacity: 0;
   }
 
-  6% {
+  /* Visible almost immediately so the launch reads from the hub dot */
+  1.5% {
     opacity: 1;
   }
 
@@ -782,6 +818,52 @@ input:-webkit-autofill:active {
   100% {
     offset-distance: 100%;
     opacity: 0;
+  }
+}
+
+/*
+ * One route cycle, in step with join-route-fly. With pathLength 100 and
+ * dasharray 100, positive dashoffset keeps the hub-side stretch visible
+ * and negative keeps the destination side:
+ *   1. 76–90%: dashoffset 100→0 — the course shoots out from the hub.
+ *   2. 90–100%: the plotted course holds, ready for the plane.
+ *   3. 0–70%: dashoffset 0→-100 — the plane consumes the line at its own
+ *      position (the head traverses 0→100 over the same 0–70%), so only
+ *      the stretch ahead of it stays plotted until, at landing, no line
+ *      is left and the plane has faded out.
+ *   4. 70–76%: brief empty gap; the dash resets while invisible.
+ */
+@keyframes join-route-trail-cycle {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+
+  /* Fully consumed the moment the plane arrives at the destination */
+  70% {
+    stroke-dashoffset: -100;
+    opacity: 1;
+  }
+
+  74% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+
+  76% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+
+  78% {
+    opacity: 1;
+  }
+
+  /* Course shoots out from the hub, then holds until the next launch */
+  90%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
   }
 }
 
@@ -976,6 +1058,8 @@ input:-webkit-autofill:active {
   .join-hero-globe-image,
   .join-hero-routes-svg,
   .join-route-comet,
+  .join-route-trail,
+  .join-route-exhaust,
   .join-hub-halo {
     animation: none;
   }

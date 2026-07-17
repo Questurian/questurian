@@ -8,29 +8,43 @@ import Link from 'next/link';
  * hub cities as the globe drifts.
  */
 const flightRoutes = [
-  // NYC → Europe (east)
-  { d: 'M2210 560 Q2670 300 3040 480', duration: '6.4s', delay: '-1.8s' },
-  // NYC → Brazil (south)
-  { d: 'M2210 560 Q2390 830 2470 1330', duration: '6.1s', delay: '-0.9s' },
-  // Miami → West Africa (east)
-  { d: 'M2145 745 Q2610 620 2950 850', duration: '7s', delay: '-4.6s' },
-  // Miami → Peru / Chile (south)
-  { d: 'M2145 745 Q2165 1050 2360 1560', duration: '5.9s', delay: '-3.7s' },
-  // Miami → eastern Brazil (south)
-  { d: 'M2145 745 Q2325 960 2560 1320', duration: '7.3s', delay: '-0.3s' },
-  // Texas → Central / South America (south)
-  { d: 'M1850 655 Q1830 1000 2060 1500', duration: '6.4s', delay: '-2.5s' },
-  // LA → Pacific (west)
-  { d: 'M1640 620 Q1240 390 810 530', duration: '6.7s', delay: '-3.1s' },
-  // LA → Mexico and south
-  { d: 'M1640 620 Q1580 960 1770 1450', duration: '6.9s', delay: '-5.4s' },
+  // NYC → Europe (east): climbs hard early, flattens over the Atlantic
+  { d: 'M2210 560 C2400 340 2780 330 3060 500', duration: '6.4s', delay: '-1.8s' },
+  // NYC → Brazil (south): pushes offshore first, then straightens due south
+  { d: 'M2210 560 C2430 690 2480 1010 2450 1340', duration: '6.1s', delay: '-0.9s' },
+  // Miami → West Africa (east): low-slung lazy arc
+  { d: 'M2145 745 C2380 705 2740 745 2960 870', duration: '7s', delay: '-4.6s' },
+  // Miami → Peru / Chile (south): hugs the coast, bends out late
+  { d: 'M2145 745 C2110 1000 2230 1300 2380 1545', duration: '5.9s', delay: '-3.7s' },
+  // Miami → eastern Brazil (south): bulges east early, eases in
+  { d: 'M2145 745 C2360 820 2540 1070 2575 1330', duration: '7.3s', delay: '-0.3s' },
+  // Texas → Central / South America (south): leans west before swinging in
+  { d: 'M1850 655 C1795 890 1890 1250 2070 1490', duration: '6.4s', delay: '-2.5s' },
+  // LA → Pacific (west): dives steeply, levels off far out
+  { d: 'M1640 620 C1430 430 1080 430 800 545', duration: '6.7s', delay: '-3.1s' },
+  // LA → Mexico and south: near-straight with a gentle drift east
+  { d: 'M1640 620 C1615 850 1690 1180 1785 1440', duration: '6.9s', delay: '-5.4s' },
+  // Chicago → Europe (east): high flat-topped polar arc
+  { d: 'M2040 545 C2260 300 2680 290 2915 440', duration: '6.8s', delay: '-5s' },
+  // Seattle → Pacific / Asia (northwest): lifts toward the pole, fades at the limb
+  { d: 'M1680 445 C1430 330 1110 280 825 340', duration: '6.6s', delay: '-2.2s' },
 ];
+
+/*
+ * Jet silhouette drawn nose-up in a 24x24 box. The comet group's
+ * offset-rotate: auto points its +x axis along the route, so the plane is
+ * rotated 90° to face the direction of travel.
+ */
+const planePath =
+  'M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z';
 
 const flightHubs = [
   { cx: 2210, cy: 560, delay: '0s' }, // NYC
   { cx: 2145, cy: 745, delay: '-0.8s' }, // Miami
   { cx: 1850, cy: 655, delay: '-1.6s' }, // Texas
   { cx: 1640, cy: 620, delay: '-2.4s' }, // LA
+  { cx: 2040, cy: 545, delay: '-3.2s' }, // Chicago
+  { cx: 1680, cy: 445, delay: '-4s' }, // Seattle
 ];
 
 const tickerItems = [
@@ -138,54 +152,59 @@ export default function PricingDisplay() {
             >
               <defs>
                 {/* Glow is baked into gradients so no CSS filters are needed */}
-                <linearGradient id="join-comet-core" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stopColor="#5df2e0" stopOpacity="0" />
-                  <stop offset="0.72" stopColor="#5df2e0" stopOpacity="0.7" />
-                  <stop offset="1" stopColor="#8df7ea" stopOpacity="0.95" />
-                </linearGradient>
-                <linearGradient id="join-comet-glow" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stopColor="#4ee8d8" stopOpacity="0" />
-                  <stop offset="1" stopColor="#4ee8d8" stopOpacity="0.3" />
-                </linearGradient>
                 <radialGradient id="join-glow-dot">
                   <stop offset="0" stopColor="#4ee8d8" stopOpacity="0.55" />
                   <stop offset="1" stopColor="#4ee8d8" stopOpacity="0" />
                 </radialGradient>
+                {/* Fades left (flame tip) → right (engine), in local coords */}
+                <linearGradient id="join-exhaust" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stopColor="#4ee8d8" stopOpacity="0" />
+                  <stop offset="0.55" stopColor="#7df0e2" stopOpacity="0.4" />
+                  <stop offset="1" stopColor="#eafffb" stopOpacity="0.95" />
+                </linearGradient>
               </defs>
-              {flightRoutes.map((route) => (
-                <g key={route.d}>
-                  <path d={route.d} className="join-route-trail" />
-                  <g
-                    className="join-route-comet"
-                    style={
-                      {
-                        offsetPath: `path("${route.d}")`,
-                        '--route-duration': route.duration,
-                        '--route-delay': route.delay,
-                      } as CSSProperties
-                    }
-                  >
-                    <rect
-                      x={-206}
-                      y={-14}
-                      width={220}
-                      height={28}
-                      rx={14}
-                      fill="url(#join-comet-glow)"
+              {flightRoutes.map((route) => {
+                const routeVars = {
+                  '--route-duration': route.duration,
+                  '--route-delay': route.delay,
+                } as CSSProperties;
+                return (
+                  <g key={route.d}>
+                    <path
+                      d={route.d}
+                      pathLength={100}
+                      className="join-route-trail"
+                      style={routeVars}
                     />
-                    <rect
-                      x={-196}
-                      y={-3.5}
-                      width={196}
-                      height={7}
-                      rx={3.5}
-                      fill="url(#join-comet-core)"
-                    />
-                    <circle r={16} fill="url(#join-glow-dot)" />
-                    <circle r={6.5} fill="#b9fff5" />
+                    <g
+                      className="join-route-comet"
+                      style={
+                        {
+                          offsetPath: `path("${route.d}")`,
+                          ...routeVars,
+                        } as CSSProperties
+                      }
+                    >
+                      <circle r={16} fill="url(#join-glow-dot)" />
+                      {/*
+                       * Afterburner: a short tapered flame in the group's
+                       * local space (+x is the direction of travel, so it
+                       * trails off toward -x, just behind the fuselage).
+                       */}
+                      <path
+                        className="join-route-exhaust"
+                        d="M-12 2.4 Q-24 1.3 -34 0 Q-24 -1.3 -12 -2.4 Z"
+                        fill="url(#join-exhaust)"
+                      />
+                      <path
+                        d={planePath}
+                        fill="#b9fff5"
+                        transform="rotate(90) scale(1.5) translate(-11.5 -12)"
+                      />
+                    </g>
                   </g>
-                </g>
-              ))}
+                );
+              })}
               {flightHubs.map((hub) => (
                 <g key={`${hub.cx}-${hub.cy}`}>
                   <circle
