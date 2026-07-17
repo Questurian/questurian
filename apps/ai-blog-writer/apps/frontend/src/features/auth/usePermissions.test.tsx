@@ -74,7 +74,38 @@ describe('usePermissions', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.canManagePublished).toBe(false);
+    expect(result.current.canManageUsers).toBe(false);
     expect(result.current.role).toBeNull();
     expect(mockFetchAccess).not.toHaveBeenCalled();
+  });
+
+  it('grants canManageUsers when users.create is unrestricted (admin)', async () => {
+    stubAuth('admin');
+    mockFetchAccess.mockResolvedValue({ collections: { users: { create: true } } });
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.canManageUsers).toBe(true);
+  });
+
+  it('denies canManageUsers when users.create is absent (editor/writer)', async () => {
+    stubAuth('editor');
+    mockFetchAccess.mockResolvedValue({ collections: { articles: { update: true } } });
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.canManageUsers).toBe(false);
+  });
+
+  it('falls back to admin role for canManageUsers when /api/access is unreachable', async () => {
+    stubAuth('admin');
+    mockFetchAccess.mockResolvedValue(null);
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.canManageUsers).toBe(true);
   });
 });

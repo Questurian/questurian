@@ -51,6 +51,59 @@ export async function uploadAvatarAsset(file: File, token: string): Promise<Avat
   return data.doc
 }
 
+export async function fetchStaffUsers(token: string): Promise<StaffUser[]> {
+  const response = (await payloadRequest('/api/users?limit=200&sort=email&depth=0', token)) as {
+    docs?: StaffUser[]
+  }
+  return response.docs ?? []
+}
+
+/**
+ * Invite-style onboarding (ADR-0023): the account is created with a random
+ * password that is never shown to anyone; the new hire sets their own via the
+ * password-set email. Only `writer` and `editor` can be created from ABW.
+ */
+export async function createStaffUser(
+  input: { email: string; firstName: string; lastName: string; role: 'writer' | 'editor' },
+  token: string,
+): Promise<StaffUser> {
+  const response = (await payloadMutation(
+    '/api/users',
+    'POST',
+    { ...input, password: generateDiscardedPassword() },
+    token,
+  )) as { doc?: StaffUser }
+  if (!response.doc) {
+    throw new Error('Payload returned no created user document.')
+  }
+  return response.doc
+}
+
+/** Triggers Payload's forgot-password email so the hire sets their password. */
+export async function requestPasswordSetEmail(email: string): Promise<void> {
+  await payloadMutation('/api/users/forgot-password', 'POST', { email })
+}
+
+/** The only legal role change: admin promotes a writer to editor. */
+export async function promoteWriterToEditor(
+  id: number | string,
+  token: string,
+): Promise<StaffUser> {
+  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { role: 'editor' }, token)) as {
+    doc?: StaffUser
+  }
+  if (!response.doc) {
+    throw new Error('Payload returned no updated user document.')
+  }
+  return response.doc
+}
+
+function generateDiscardedPassword(): string {
+  const bytes = new Uint8Array(24)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
 export function avatarUrl(avatar: AvatarAsset | number | null | undefined): string | null {
   if (!avatar || typeof avatar === 'number') return null
   if (avatar.url) return avatar.url
