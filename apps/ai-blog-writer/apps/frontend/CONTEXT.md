@@ -8,6 +8,7 @@ React SPA for operators. Lets a human:
 - watch a Running Pipeline by polling status.
 - edit the resulting Draft locally.
 - Sync the Draft to a Payload entity (Questura).
+- manage editorial staffing (Staff management): admins create writer/editor Staff identities and promote writers; every Staff identity edits its own Author profile.
 
 ## Out of Scope
 
@@ -34,6 +35,12 @@ Operators need a tactile UI: pick inputs, watch progress, hand-edit before pushi
 
 Definition: one top-level UI per pipeline. Lives in `src/features/<featureCamelCase>/`.
 Examples: `Prompt2BlogPage`, `YouTube2BlogPage`, `Url2BlogPage`, `LocationDocumentsPage`, `ItinerariesPipelinePage`, `ListicleItinerariesPage`, `SingleTypeListiclesPage`, `BatchUploadPage`, `BatchImageRecreationPage`, `HomepageFeaturedContentPage`, `StagingPage`.
+
+### Staff management
+
+Definition: the admin-gated feature for editorial staffing — creating `writer`/`editor` Staff identities (invite-style, no shared passwords), promoting a writer to editor, and self-service Author profile editing for every logged-in Staff identity. Deliberately narrower than the Payload admin panel; see `docs/adr/0023`.
+Related terms: Staff identity, Author profile (both defined in Questura's CONTEXT.md — Payload owns the records; this is only a surface over them).
+Do not confuse with: Visitor accounts (BetterAuth, public site) — never touched here.
 
 ### Saved Articles Page
 
