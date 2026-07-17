@@ -1,5 +1,6 @@
 import { CollectionConfig } from 'payload'
 import { collectionAccess } from './access/collectionLevel'
+import { isAdminFieldLevel } from './access/fieldLevel'
 import { userCollectionHooks } from './hooks'
 import { basicFields, profileFields } from './fields'
 
@@ -133,10 +134,16 @@ export const Users: CollectionConfig = {
       type: 'text',
       unique: true,
       index: true,
+      access: {
+        // Author URLs are public and un-redirected once a slug changes, so
+        // only admins may rename a slug. Auto-generation via the beforeChange
+        // hook is unaffected (hook-set values bypass field access).
+        update: isAdminFieldLevel,
+      },
       admin: {
         position: 'sidebar',
         description:
-          'URL slug for the public author page (/authors/<slug>). Auto-generated from the display name if left empty.',
+          'URL slug for the public author page (/authors/<slug>). Auto-generated from the display name if left empty. Admin-only: changing it breaks inbound author URLs.',
       },
     },
 
@@ -170,11 +177,11 @@ export const Users: CollectionConfig = {
           ],
         },
         {
+          // Any Staff identity may have an Author profile, regardless of role
+          // (writers receive bylines on published articles). Visibility of the
+          // public author page is derived from published work, not a flag.
           label: 'Public Profile',
           fields: profileFields,
-          admin: {
-            condition: (data) => data?.role === 'editor',
-          },
         },
       ],
     },

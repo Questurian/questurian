@@ -12,6 +12,7 @@ import * as migration_20260703_132643_add_itinerary_tour_agency_block_storage fr
 import * as migration_20260704_000000_add_article_source_fields from './20260704_000000_add_article_source_fields';
 import * as migration_20260708_060450_reference_grid_registry_cleanup from './20260708_060450_reference_grid_registry_cleanup';
 import * as migration_20260711_000000_add_users_author_slug from './20260711_000000_add_users_author_slug';
+import * as migration_20260717_000000_retire_users_public_profile_is_public from './20260717_000000_retire_users_public_profile_is_public';
 
 export const migrations = [
   {
@@ -83,5 +84,10 @@ export const migrations = [
     up: migration_20260711_000000_add_users_author_slug.up,
     down: migration_20260711_000000_add_users_author_slug.down,
     name: '20260711_000000_add_users_author_slug',
+  },
+  {
+    up: migration_20260717_000000_retire_users_public_profile_is_public.up,
+    down: migration_20260717_000000_retire_users_public_profile_is_public.down,
+    name: '20260717_000000_retire_users_public_profile_is_public',
   },
 ];
