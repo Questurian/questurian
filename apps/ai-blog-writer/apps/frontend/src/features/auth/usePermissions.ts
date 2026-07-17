@@ -5,6 +5,8 @@ import { fetchAccessPermissions, type AccessResult } from './permissions-client'
 export type Permissions = {
   /** Can publish and update published Payload articles. */
   canManagePublished: boolean;
+  /** Can create Staff identities and promote writers (admins only). */
+  canManageUsers: boolean;
   role: string | null;
   isLoading: boolean;
 };
@@ -68,8 +70,15 @@ export function usePermissions(): Permissions {
       // role so the UI does not regress when the endpoint is unavailable.
       : roleAllowsManagePublished(user?.role);
 
+    // Payload only lets admins create users, so users.create === true is the
+    // /api/access signal for the staff-management surface (ADR-0023).
+    const canManageUsers = access
+      ? access.collections?.users?.create === true
+      : user?.role === 'admin';
+
     return {
       canManagePublished,
+      canManageUsers,
       role: user?.role ?? null,
       isLoading,
     };

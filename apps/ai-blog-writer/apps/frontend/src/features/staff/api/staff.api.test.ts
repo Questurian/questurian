@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { avatarUrl, fetchStaffUser, updateStaffUser, uploadAvatarAsset } from './staff.api'
+import {
+  avatarUrl,
+  createStaffUser,
+  fetchStaffUser,
+  fetchStaffUsers,
+  promoteWriterToEditor,
+  requestPasswordSetEmail,
+  updateStaffUser,
+  uploadAvatarAsset,
+} from './staff.api'
 
 const fetchMock = vi.fn()
 
@@ -71,6 +80,63 @@ describe('staff.api', () => {
     await expect(
       uploadAvatarAsset(new File(['x'], 'a.jpg', { type: 'image/jpeg' }), 'token-1'),
     ).rejects.toThrow('Avatar upload failed: 403')
+  })
+
+  it('lists staff users from the docs envelope', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ docs: [{ id: 1, email: 'a@questurian.com', role: 'admin' }] }),
+    )
+
+    const users = await fetchStaffUsers('token-1')
+
+    expect(users).toHaveLength(1)
+    const [url] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/users?limit=200')
+  })
+
+  it('creates a staff user with a discarded random password', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'writer' } }),
+    )
+
+    const created = await createStaffUser(
+      { email: 'new@questurian.com', firstName: 'New', lastName: 'Writer', role: 'writer' },
+      'token-1',
+    )
+
+    expect(created.id).toBe(5)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/users')
+    const body = JSON.parse(init.body)
+    expect(body.role).toBe('writer')
+    // Random creation password is present, unguessable-length, never shown
+    expect(typeof body.password).toBe('string')
+    expect(body.password.length).toBeGreaterThanOrEqual(32)
+  })
+
+  it('requests the password-set email without auth', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}))
+
+    await requestPasswordSetEmail('new@questurian.com')
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/users/forgot-password')
+    expect(JSON.parse(init.body)).toEqual({ email: 'new@questurian.com' })
+    expect(init.headers.Authorization).toBeUndefined()
+  })
+
+  it('promotes a writer to editor via role patch', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'editor' } }),
+    )
+
+    const updated = await promoteWriterToEditor(5, 'token-1')
+
+    expect(updated.role).toBe('editor')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/users/5')
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body)).toEqual({ role: 'editor' })
   })
 
   it('resolves avatar URLs from doc url, filename, or not at all', () => {

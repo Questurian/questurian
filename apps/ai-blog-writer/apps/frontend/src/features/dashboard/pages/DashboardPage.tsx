@@ -212,6 +212,35 @@ const LANDING_CARDS: LandingCardConfig[] = [
     ),
   },
   {
+    id: 'staff',
+    title: 'Staff Management',
+    description: 'Invite writers and editors, promote writers, and see every author page at a glance.',
+    to: '/staff',
+    section: 'editorial-tools',
+    priority: 3,
+    accentClass: 'landing-card--payload-articles',
+    actionLabel: 'Manage Staff',
+    roles: ['admin'],
+    icon: (
+      <>
+        <circle
+          cx="9"
+          cy="8"
+          r="3.5"
+          stroke="currentColor"
+          strokeWidth="2"
+        />
+        <path
+          d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5M16 5.5a3 3 0 010 5.5M17.5 14.8c1.6.6 2.6 1.9 3 3.7"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </>
+    ),
+  },
+  {
     id: 'itineraries-pipeline',
     title: 'Itineraries Pipeline',
     description: 'Run and manage the itineraries pipeline workflow from a single place.',
