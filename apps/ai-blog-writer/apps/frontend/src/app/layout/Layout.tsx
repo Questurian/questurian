@@ -116,6 +116,14 @@ export default function Layout() {
               {isUserMenuOpen ? (
                 <div className="nav-user-menu-dropdown" role="menu">
                   <div className="nav-user-menu-email">{user?.email ?? 'Unknown user'}</div>
+                  <Link
+                    to="/profile"
+                    className="nav-user-menu-link"
+                    role="menuitem"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  >
+                    My Profile
+                  </Link>
                   <button type="button" className="nav-user-menu-logout" onClick={handleLogout}>
                     Log out
                   </button>
@@ -137,6 +145,9 @@ export default function Layout() {
             <p className="nav-mobile-connection-error">{connectionError}</p>
           )}
           <span className="nav-mobile-user">{user?.email}</span>
+          <Link to="/profile" className="nav-mobile-profile-link">
+            My Profile
+          </Link>
           <button type="button" className="nav-mobile-logout" onClick={handleLogout}>
             Log out
           </button>
