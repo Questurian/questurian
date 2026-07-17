@@ -48,6 +48,7 @@ import {
 import { ImageRecreationPromptsPage } from './features/imageRecreationPrompts'
 import { MediaLibraryPage } from './features/mediaLibrary'
 import BatchImageRecreationPage from './features/batchImageRecreation/BatchImageRecreationPage'
+import { MyProfilePage } from './features/staff'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -123,6 +124,9 @@ export default function App() {
 
               {/* Batch Image Recreation */}
               <Route path="batch-image-recreation" element={<BatchImageRecreationPage />} />
+
+              {/* Staff management */}
+              <Route path="profile" element={<MyProfilePage />} />
             </Route>
           </Routes>
         </BrowserRouter>
