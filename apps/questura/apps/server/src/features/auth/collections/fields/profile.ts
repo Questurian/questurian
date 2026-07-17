@@ -17,14 +17,6 @@ export const profileFields: Field[] = [
         },
       },
       {
-        name: 'isPublic',
-        type: 'checkbox',
-        defaultValue: false,
-        admin: {
-          description: 'Make this profile visible on the website frontend',
-        },
-      },
-      {
         name: 'displayName',
         type: 'text',
         admin: {

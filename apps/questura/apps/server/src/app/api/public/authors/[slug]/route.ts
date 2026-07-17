@@ -6,6 +6,7 @@ import type { User } from '@/payload-types'
 import { DEFAULT_LANG, isSupportedLang } from '@/shared/i18n/languageField'
 import { serializeIndexItem, type IndexItem } from '@/features/articles/public/indexItem'
 import { TYPE_TO_COLLECTION, type ArticleTypeKey } from '@/features/articles/public/scope'
+import { hasPublishedAuthorContent } from '@/features/articles/public/authorVisibility'
 
 const ARTICLE_TYPES: ArticleTypeKey[] = ['articles', 'maps', 'itineraries']
 const MAX_ARTICLES_PER_COLLECTION = 100
@@ -56,6 +57,13 @@ export async function GET(
     }
 
     if (!user) {
+      return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
+    }
+
+    // Byline implies visibility: staff without published work have no public
+    // author page, so they are not enumerable through this route.
+    const isVisible = await hasPublishedAuthorContent(payload, user.id, ARTICLE_TYPES)
+    if (!isVisible) {
       return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
     }
 
