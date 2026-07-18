@@ -9,8 +9,13 @@ import {
 
 const LIMA_CENTER = { lat: -12.0464, lng: -77.0428 }
 const DEFAULT_ZOOM = 13
-const ACTIVE_ZOOM = 16
+// Street-level, close enough that the vector map extrudes buildings.
+const ACTIVE_ZOOM = 18
+const SINGLE_POINT_OVERVIEW_ZOOM = 15
 const MAX_FIT_ZOOM = 17
+// The overview should read as a neighborhood map with air around the pins,
+// not a tight crop, so back off from the exact fit.
+const OVERVIEW_ZOOM_OUT = 1.5
 const FIT_PADDING = 56
 const WORLD_TILE_PX = 256
 const ACCENT = '#3B5BDB'
@@ -130,7 +135,7 @@ function cameraForPoints(
   if (points.length === 1) {
     return {
       center: { lat: points[0].lat, lng: points[0].lng },
-      zoom: ACTIVE_ZOOM - 1,
+      zoom: SINGLE_POINT_OVERVIEW_ZOOM,
     }
   }
 
@@ -154,7 +159,7 @@ function cameraForPoints(
       lat: latFromMercatorY((mercatorY(north) + mercatorY(south)) / 2),
       lng: (east + west) / 2,
     },
-    zoom: Math.min(latZoom, lngZoom, MAX_FIT_ZOOM),
+    zoom: Math.min(latZoom, lngZoom, MAX_FIT_ZOOM) - OVERVIEW_ZOOM_OUT,
   }
 }
 
