@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { JSX } from 'react'
 import type { AuthorArticleItem, PublicAuthor } from '@/features/authors/lib/fetchAuthor'
 import { AuthorSocialIcons } from '@/features/authors/components/AuthorSocialLinks'
+import { AuthorAvatar } from '@/features/authors/components/AuthorAvatar'
 
 function formatDate(iso: string | null): string | null {
   if (!iso) return null
@@ -132,24 +133,6 @@ function LatestArticleRow({
   )
 }
 
-function AuthorAvatarPlaceholder(): JSX.Element {
-  return (
-    <div
-      aria-hidden="true"
-      className="flex size-[96px] shrink-0 items-center justify-center bg-[#d8d4cd] sm:size-[128px]"
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="size-[55%] text-[#8a857d]"
-        aria-hidden="true"
-      >
-        <circle cx="12" cy="8" r="4" fill="currentColor" />
-        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" fill="currentColor" />
-      </svg>
-    </div>
-  )
-}
 
 export function AuthorPage({ author }: { author: PublicAuthor }): JSX.Element {
   const name = author.displayName ?? 'Questurian'
@@ -160,16 +143,16 @@ export function AuthorPage({ author }: { author: PublicAuthor }): JSX.Element {
   return (
     <div className="bg-background">
       <header className="bg-[#ece9e3]">
-        <div className="mx-auto flex w-full max-w-[1080px] items-center gap-6 px-4 py-12 sm:gap-8 sm:px-6 sm:py-16">
-          <AuthorAvatarPlaceholder />
+        <div className="mx-auto flex w-full max-w-[920px] items-center gap-6 px-4 py-12 sm:gap-10 sm:px-6 sm:py-16">
+          <AuthorAvatar avatar={author.avatar} name={name} />
           <div className="min-w-0">
             <h1 className="font-display text-[34px] font-bold uppercase leading-[1.05] tracking-[0.01em] text-foreground sm:text-[44px]">
               {name}
             </h1>
-            <p className="mt-4 max-w-[64ch] font-display text-[16px] leading-[1.5] text-foreground/85 sm:text-[18px]">
+            <p className="mt-4 max-w-[62ch] font-display text-[16px] leading-[1.5] text-foreground/85 sm:text-[18px]">
               {bio}
             </p>
-            <div className="mt-5">
+            <div className="mt-6">
               <AuthorSocialIcons links={author.socialLinks} authorName={name} />
             </div>
           </div>

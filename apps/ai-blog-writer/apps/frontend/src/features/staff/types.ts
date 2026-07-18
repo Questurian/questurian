@@ -15,6 +15,11 @@ export type ExpertiseEntry = {
 export type SocialLinks = {
   instagram?: string | null
   twitter?: string | null
+  facebook?: string | null
+  linkedin?: string | null
+  reddit?: string | null
+  youtube?: string | null
+  patreon?: string | null
   website?: string | null
 }
 
@@ -38,9 +43,24 @@ export type StaffUser = {
   publicProfile?: PublicProfile | null
 }
 
+export type EmailLogStatus = 'sent' | 'failed'
+
+/** Row from the server's email-logs collection (admin-only delivery log). */
+export type EmailLog = {
+  id: number
+  emailType: string
+  recipient: string
+  subject?: string | null
+  status: EmailLogStatus
+  error?: string | null
+  createdAt: string
+}
+
 export type StaffUserPatch = {
   firstName?: string
   lastName?: string
+  /** Admin-only: Payload field access rejects slug changes from non-admins. */
+  slug?: string
   publicProfile?: {
     avatar?: number | null
     displayName?: string

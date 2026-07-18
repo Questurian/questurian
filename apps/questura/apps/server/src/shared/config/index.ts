@@ -58,6 +58,9 @@ export const APP_CONFIG = {
 
   // Feature Flags
   features: {
+    // Transactional-email delivery log (email-logs collection). On by default;
+    // set EMAIL_TRACKING=false to stop recording without touching send paths.
+    emailTracking: process.env.EMAIL_TRACKING !== 'false',
     enforcePasswordStrength: process.env.ENFORCE_PASSWORD_STRENGTH !== 'false',
     endorselyAffiliates: process.env.ENDORSELY_ENABLED === 'true',
     homepageFeaturedAllowDrafts: process.env.HOMEPAGE_FEATURED_ALLOW_DRAFTS === 'true',

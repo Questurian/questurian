@@ -111,7 +111,7 @@ Identity + general-purpose taxonomy.
 - `features/seo/` — SEO collections + lib.
 - `features/auth/` — Users + access.
 - `features/payments/` — Stripe flow.
-- `features/emails/` — transactional email templates.
+- `features/emails/` — transactional email templates + `EmailLogs` delivery log (append-only, admin-read-only; written by `recordEmailLog` from `sendEmail` and the Users `afterForgotPassword` hook; `EMAIL_TRACKING=false` disables recording).
 - `features/places/` — Places (Google) integration utilities.
 - `features/admin/` — Payload admin customisations.
 - `features/public-revalidation/` — Payload-write → Next.js cache invalidation hooks.

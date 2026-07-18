@@ -8,7 +8,7 @@ React SPA for operators. Lets a human:
 - watch a Running Pipeline by polling status.
 - edit the resulting Draft locally.
 - Sync the Draft to a Payload entity (Questura).
-- manage editorial staffing (Staff management): admins create writer/editor Staff identities and promote writers; every Staff identity edits its own Author profile.
+- manage editorial staffing (Staff management): admins create writer/editor Staff identities, promote writers, and edit any Staff identity's Author profile (including its slug); every Staff identity edits its own Author profile.
 
 ## Out of Scope
 
@@ -38,8 +38,8 @@ Examples: `Prompt2BlogPage`, `YouTube2BlogPage`, `Url2BlogPage`, `LocationDocume
 
 ### Staff management
 
-Definition: the admin-gated feature for editorial staffing — creating `writer`/`editor` Staff identities (invite-style, no shared passwords), promoting a writer to editor, and self-service Author profile editing for every logged-in Staff identity. Deliberately narrower than the Payload admin panel; see `docs/adr/0023`.
-Related terms: Staff identity, Author profile (both defined in Questura's CONTEXT.md — Payload owns the records; this is only a surface over them).
+Definition: the admin-gated feature for editorial staffing — creating `writer`/`editor` Staff identities (invite-style, no shared passwords), promoting a writer to editor, re-sending the password-set invite email, viewing the email delivery log, admin editing of any Staff identity's Author profile (Staff identities are often operated on the author's behalf; slug edits are admin-only), and self-service Author profile editing for every logged-in Staff identity. Deliberately narrower than the Payload admin panel; see `docs/adr/0023`.
+Related terms: Staff identity, Author profile (both defined in Questura's CONTEXT.md — Payload owns the records; this is only a surface over them). Email tracking rows come from Questura's `email-logs` collection ("Sent" = accepted by the provider, not delivered; server-side `EMAIL_TRACKING=false` turns recording off).
 Do not confuse with: Visitor accounts (BetterAuth, public site) — never touched here.
 
 ### Saved Articles Page

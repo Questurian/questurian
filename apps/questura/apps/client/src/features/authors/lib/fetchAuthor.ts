@@ -15,6 +15,11 @@ export type AuthorArticleItem = {
 export type AuthorSocialLinks = {
   instagram: string | null
   twitter: string | null
+  facebook: string | null
+  linkedin: string | null
+  reddit: string | null
+  youtube: string | null
+  patreon: string | null
   website: string | null
 }
 
@@ -23,6 +28,7 @@ export type PublicAuthor = {
   slug: string | null
   displayName: string | null
   bio: string | null
+  avatar: { url: string; alt: string | null } | null
   socialLinks: AuthorSocialLinks | null
   articles: AuthorArticleItem[]
 }
@@ -39,5 +45,10 @@ export async function fetchAuthor(
   if (!res.ok) throw new Error(`Failed to fetch author: ${res.status}`)
 
   const author = (await res.json()) as PublicAuthor
-  return { ...author, slug: author.slug ?? null, articles: author.articles ?? [] }
+  return {
+    ...author,
+    slug: author.slug ?? null,
+    avatar: author.avatar ?? null,
+    articles: author.articles ?? [],
+  }
 }

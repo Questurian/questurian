@@ -1,13 +1,15 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth, usePermissions } from '../../auth'
 import {
   createStaffUser,
+  fetchEmailLogs,
   fetchStaffUsers,
   promoteWriterToEditor,
   requestPasswordSetEmail,
 } from '../api/staff.api'
-import type { StaffUser } from '../types'
+import type { EmailLog, StaffUser } from '../types'
 
 type CreateFormState = {
   email: string
@@ -28,6 +30,31 @@ function staffDisplayName(user: StaffUser): string {
   return user.publicProfile?.displayName || fullName || '—'
 }
 
+/** The forgot-password email doubles as the staff invite (ADR-0023). */
+const INVITE_EMAIL_TYPE = 'password-set-link'
+
+const EMAIL_TYPE_LABELS: Record<string, string> = {
+  [INVITE_EMAIL_TYPE]: 'Invite / password set',
+}
+
+function emailTypeLabel(emailType: string): string {
+  return EMAIL_TYPE_LABELS[emailType] ?? emailType
+}
+
+function formatLogTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+/** Latest invite/password-set email per recipient, from the newest-first log. */
+function latestInviteByRecipient(logs: EmailLog[]): Map<string, EmailLog> {
+  const latest = new Map<string, EmailLog>()
+  for (const log of logs) {
+    if (log.emailType !== INVITE_EMAIL_TYPE) continue
+    if (!latest.has(log.recipient)) latest.set(log.recipient, log)
+  }
+  return latest
+}
+
 export default function StaffPage() {
   const { token } = useAuth()
   const { canManageUsers, isLoading: permissionsLoading } = usePermissions()
@@ -40,6 +67,12 @@ export default function StaffPage() {
   const staffQuery = useQuery({
     queryKey: ['staff', 'list'],
     queryFn: () => fetchStaffUsers(token as string),
+    enabled: Boolean(token) && canManageUsers,
+  })
+
+  const emailLogsQuery = useQuery({
+    queryKey: ['staff', 'email-logs'],
+    queryFn: () => fetchEmailLogs(token as string),
     enabled: Boolean(token) && canManageUsers,
   })
 
@@ -61,9 +94,26 @@ export default function StaffPage() {
     },
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
+      void queryClient.invalidateQueries({ queryKey: ['staff', 'email-logs'] })
       setCreateForm(EMPTY_CREATE_FORM)
       setErrorMessage(null)
       setStatusMessage(`Invite sent to ${created.email}. They set their own password by email.`)
+    },
+    onError: (error: Error) => {
+      setStatusMessage(null)
+      setErrorMessage(error.message)
+    },
+  })
+
+  const resendInvite = useMutation({
+    mutationFn: async (member: StaffUser) => {
+      await requestPasswordSetEmail(member.email)
+      return member
+    },
+    onSuccess: (member) => {
+      void queryClient.invalidateQueries({ queryKey: ['staff', 'email-logs'] })
+      setErrorMessage(null)
+      setStatusMessage(`Invite email re-sent to ${member.email}.`)
     },
     onError: (error: Error) => {
       setStatusMessage(null)
@@ -107,14 +157,16 @@ export default function StaffPage() {
   }
 
   const staff = staffQuery.data ?? []
+  const emailLogs = emailLogsQuery.data ?? []
+  const lastInviteByEmail = latestInviteByRecipient(emailLogs)
 
   return (
     <div className="staff-page staff-page-wide">
       <header className="staff-page-header">
         <h1>Staff</h1>
         <p className="staff-muted">
-          Create writer and editor accounts and promote writers. Admin accounts and offboarding are
-          handled in the Payload admin panel.
+          Create writer and editor accounts, promote writers, and edit any staff member's author
+          profile. Admin accounts and offboarding are handled in the Payload admin panel.
         </p>
       </header>
 
@@ -199,6 +251,7 @@ export default function StaffPage() {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Author page</th>
+                  <th>Last invite</th>
                   <th aria-label="Actions" />
                 </tr>
               </thead>
@@ -211,7 +264,38 @@ export default function StaffPage() {
                       <span className={`staff-role staff-role--${member.role}`}>{member.role}</span>
                     </td>
                     <td>{member.slug ? <code>/authors/{member.slug}</code> : '—'}</td>
-                    <td>
+                    <td className="staff-invite-cell">
+                      {(() => {
+                        const lastInvite = lastInviteByEmail.get(member.email)
+                        if (!lastInvite) return <span className="staff-muted">—</span>
+                        return (
+                          <span
+                            className={`staff-email-status staff-email-status--${lastInvite.status}`}
+                            title={lastInvite.error ?? undefined}
+                          >
+                            {lastInvite.status === 'sent' ? 'Sent' : 'Failed'}{' '}
+                            {formatLogTime(lastInvite.createdAt)}
+                          </span>
+                        )
+                      })()}
+                    </td>
+                    <td className="staff-actions-cell">
+                      <Link className="staff-button-secondary staff-button-link" to={`/staff/${member.id}`}>
+                        Edit profile
+                      </Link>
+                      <button
+                        type="button"
+                        className="staff-button-secondary"
+                        disabled={resendInvite.isPending}
+                        onClick={() => {
+                          const confirmed = window.confirm(
+                            `Re-send the password-set invite email to ${member.email}?`,
+                          )
+                          if (confirmed) resendInvite.mutate(member)
+                        }}
+                      >
+                        Resend invite
+                      </button>
                       {member.role === 'writer' ? (
                         <button
                           type="button"
@@ -227,6 +311,54 @@ export default function StaffPage() {
                           Promote to editor
                         </button>
                       ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="staff-card">
+        <h2 className="staff-card-title">Email activity</h2>
+        <p className="staff-muted">
+          Delivery log for invites and other transactional emails. "Sent" means the provider
+          accepted the message — it can still bounce if the mailbox doesn't exist yet, so re-send
+          the invite once the address is live. Tracking can be switched off server-side with{' '}
+          <code>EMAIL_TRACKING=false</code>.
+        </p>
+        {emailLogsQuery.isLoading ? <p className="staff-muted">Loading email activity…</p> : null}
+        {emailLogsQuery.isError ? (
+          <p className="staff-error">
+            Could not load email activity: {(emailLogsQuery.error as Error).message}
+          </p>
+        ) : null}
+        {!emailLogsQuery.isLoading && !emailLogsQuery.isError && emailLogs.length === 0 ? (
+          <p className="staff-muted">No emails recorded yet (or tracking is disabled).</p>
+        ) : null}
+        {emailLogs.length > 0 ? (
+          <div className="staff-table-wrap">
+            <table className="staff-table">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Type</th>
+                  <th>Recipient</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {emailLogs.map((log) => (
+                  <tr key={log.id}>
+                    <td>{formatLogTime(log.createdAt)}</td>
+                    <td>{emailTypeLabel(log.emailType)}</td>
+                    <td>{log.recipient}</td>
+                    <td>
+                      <span className={`staff-email-status staff-email-status--${log.status}`}>
+                        {log.status === 'sent' ? 'Sent' : 'Failed'}
+                      </span>
+                      {log.error ? <span className="staff-email-error">{log.error}</span> : null}
                     </td>
                   </tr>
                 ))}

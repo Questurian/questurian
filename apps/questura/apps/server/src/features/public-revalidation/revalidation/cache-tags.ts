@@ -23,6 +23,8 @@ export const publicCacheTags = {
     `article-index:${scopeTag(scope)}:${tagPart(type)}:${tagPart(lang)}`,
   relatedMapsScope: (country: string, city: string | null) =>
     `related-maps:${tagPart(country)}:${tagPart(city)}`,
+  // Matches the client's fetchAuthor tag `author:<slugOrId>`
+  author: (slugOrId: string | number) => `author:${tagPart(slugOrId)}`,
 }
 
 export function unique(values: Array<string | null | undefined>): string[] {

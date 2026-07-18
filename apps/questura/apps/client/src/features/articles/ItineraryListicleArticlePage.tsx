@@ -290,7 +290,7 @@ export function ItineraryListicleArticlePage({
 
       <div className="px-3 pb-20 pt-6 380:px-4 380:pt-7 480:px-5 480:pt-8 480:pb-24 550:px-6 550:pt-10 sm:px-8 sm:pt-8 sm:pb-32 768:px-10">
         {whereStaying.length > 0 ? (
-          <div className="mb-8 space-y-4 480:mb-10 sm:mb-12">
+          <div className="mb-7 space-y-8 border-b-[3px] border-double border-foreground/55 pb-7 max-[379px]:mb-6 max-[379px]:pb-6 480:mb-9 480:space-y-10 480:pb-9 550:mb-11 550:pb-11 sm:mb-12 sm:space-y-12 sm:pb-12 768:mb-14 768:pb-14">
             {whereStaying.map((row) => (
               <ItineraryStayCard key={row.id} row={row} />
             ))}

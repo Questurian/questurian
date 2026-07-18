@@ -70,9 +70,32 @@ export async function GET(
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
     const displayName = user.publicProfile?.displayName || fullName || null
     const bio = user.publicProfile?.bio || null
+
+    // depth is 0, so the avatar relation is an id; resolve it to a CDN URL.
+    let avatar: { url: string; alt: string | null } | null = null
+    const avatarId = user.publicProfile?.avatar
+    if (typeof avatarId === 'number') {
+      try {
+        const asset = await payload.findByID({
+          collection: 'media-assets',
+          id: avatarId,
+          depth: 0,
+          overrideAccess: true,
+        })
+        const url = asset?.url || asset?.bunny_original_url || null
+        if (url) avatar = { url, alt: asset?.alt_text || null }
+      } catch {
+        avatar = null
+      }
+    }
     const socialLinks = {
       instagram: user.publicProfile?.socialLinks?.instagram || null,
       twitter: user.publicProfile?.socialLinks?.twitter || null,
+      facebook: user.publicProfile?.socialLinks?.facebook || null,
+      linkedin: user.publicProfile?.socialLinks?.linkedin || null,
+      reddit: user.publicProfile?.socialLinks?.reddit || null,
+      youtube: user.publicProfile?.socialLinks?.youtube || null,
+      patreon: user.publicProfile?.socialLinks?.patreon || null,
       website: user.publicProfile?.socialLinks?.website || null,
     }
 
@@ -88,7 +111,8 @@ export async function GET(
             ],
           },
           limit: MAX_ARTICLES_PER_COLLECTION,
-          depth: 1,
+          // Article -> MediaSet -> variant asset requires two relationship hops.
+          depth: 2,
           sort: '-publishedAt',
           overrideAccess: true,
         })
@@ -105,6 +129,7 @@ export async function GET(
       slug: user.slug ?? null,
       displayName,
       bio,
+      avatar,
       socialLinks,
       articles,
     })

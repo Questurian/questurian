@@ -15,5 +15,9 @@ export { sendSubscriptionCancelledEmail } from './lib/subscription-cancelled'
 export { sendSubscriptionReactivatedEmail } from './lib/subscription-reactivated'
 export { sendMembershipConfirmationEmail } from './lib/membership-confirmation'
 
+// Email delivery tracking (optional system — see EmailLogs collection docs)
+export { EmailLogs } from './collections/EmailLogs'
+export { recordEmailLog, isEmailTrackingEnabled } from './lib/email-log'
+
 // Re-export types if needed
 export type { Payload } from 'payload'

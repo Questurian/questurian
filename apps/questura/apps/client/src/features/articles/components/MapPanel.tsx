@@ -187,7 +187,11 @@ export function MapPanel() {
         mapInstance.current = new Map(mapRef.current, {
           center: LIMA_CENTER,
           zoom: DEFAULT_ZOOM,
-          mapId: 'questura-maps',
+          // Cloud-styled map ("Questura Itinerary Map" in Map Management):
+          // minimal grayscale, POIs/transit hidden, parks kept as soft shapes.
+          mapId: 'b1fa459be393f82b57d646a2',
+          disableDefaultUI: true,
+          clickableIcons: false,
         })
         markerLib.current = marker
         setReady(true)

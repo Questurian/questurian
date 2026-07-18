@@ -339,3 +339,54 @@
   background: var(--cream-dark);
   color: var(--ink-light);
 }
+
+.staff-actions-cell {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.staff-button-link {
+  display: inline-block;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.staff-back-link {
+  font-size: 0.875rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.staff-back-link:hover {
+  color: var(--accent);
+}
+
+.staff-invite-cell {
+  white-space: nowrap;
+}
+
+.staff-email-status {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-3);
+}
+
+.staff-email-status--sent {
+  background: var(--sage-soft);
+  color: var(--sage);
+}
+
+.staff-email-status--failed {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.staff-email-error {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: 0.75rem;
+  color: var(--muted);
+}

@@ -25,7 +25,7 @@ export function NewsletterSignupPreview({
   return (
     <BlockSection
       className="overflow-hidden bg-[#0a0a0a]"
-      contentClassName="py-10 768:py-14"
+      contentClassName="py-10 768:py-8 1024:py-10"
       aria-label="Newsletter signup"
     >
       {/* Duotone background: grayscale photo, shadows lifted to deep blue, highlights pulled to brand blue */}
@@ -39,7 +39,8 @@ export function NewsletterSignupPreview({
         <div className="absolute inset-0 bg-[#3B5BDB] mix-blend-multiply" />
       </div>
 
-      <div className="relative bg-[#3B5BDB] px-6 py-12 480:px-10 768:px-14 768:py-16 1024:px-20 1024:py-20">
+      {/* min-h matches the featured-article card's image shell (768:360px, 1024:420px) so both bands render the same height */}
+      <div className="relative flex flex-col justify-center bg-[#3B5BDB] px-6 py-12 480:px-10 768:min-h-[360px] 768:px-14 768:py-16 1024:min-h-[420px] 1024:px-20 1024:py-20">
         <div className="grid grid-cols-1 gap-10 1024:grid-cols-2 1024:gap-16">
           {/* Left: rule + heading + subcopy */}
           <div className="flex flex-col justify-center">

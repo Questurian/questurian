@@ -86,6 +86,23 @@ export function locationTarget(doc: AnyDoc | null | undefined): RevalidationTarg
   }
 }
 
+export function authorTarget(doc: AnyDoc | null | undefined): RevalidationTarget {
+  if (!doc) return {}
+
+  const slug = stringValue(doc.slug)
+  const id = doc.id
+  const hasId = typeof id === 'number' || typeof id === 'string'
+
+  return {
+    tags: unique([
+      slug ? publicCacheTags.author(slug) : null,
+      // Legacy /authors/:id URLs fetch (and tag) by numeric id
+      hasId ? publicCacheTags.author(id) : null,
+    ]),
+    paths: unique([slug ? `/authors/${slug}` : null, hasId ? `/authors/${id}` : null]),
+  }
+}
+
 export function redirectTarget(doc: AnyDoc | null | undefined): RevalidationTarget {
   const oldPath = stringValue(doc?.oldPath)
   return {

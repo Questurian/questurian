@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   avatarUrl,
   createStaffUser,
+  fetchEmailLogs,
   fetchStaffUser,
   fetchStaffUsers,
   promoteWriterToEditor,
@@ -53,6 +54,16 @@ describe('staff.api', () => {
     expect(String(url)).toContain('/api/users/3')
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body)).toEqual({ firstName: 'Ana' })
+  })
+
+  it('passes admin slug renames through the user patch', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ doc: { id: 3, email: 'w@questurian.com', role: 'writer', slug: 'ana-writes' } }))
+
+    const user = await updateStaffUser(3, { slug: 'ana-writes' }, 'token-1')
+
+    expect(user.slug).toBe('ana-writes')
+    const [, init] = fetchMock.mock.calls[0]
+    expect(JSON.parse(init.body)).toEqual({ slug: 'ana-writes' })
   })
 
   it('throws when update returns no doc', async () => {
@@ -123,6 +134,36 @@ describe('staff.api', () => {
     expect(String(url)).toContain('/api/users/forgot-password')
     expect(JSON.parse(init.body)).toEqual({ email: 'new@questurian.com' })
     expect(init.headers.Authorization).toBeUndefined()
+  })
+
+  it('fetches recent email logs newest-first with auth', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        docs: [
+          {
+            id: 2,
+            emailType: 'password-set-link',
+            recipient: 'new@questurian.com',
+            status: 'sent',
+            createdAt: '2026-07-17T10:00:00.000Z',
+          },
+        ],
+      }),
+    )
+
+    const logs = await fetchEmailLogs('token-1')
+
+    expect(logs).toHaveLength(1)
+    expect(logs[0].emailType).toBe('password-set-link')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/email-logs?limit=50&sort=-createdAt')
+    expect(init.headers.Authorization).toBe('Bearer token-1')
+  })
+
+  it('returns an empty log list when the collection has no docs', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+
+    expect(await fetchEmailLogs('token-1')).toEqual([])
   })
 
   it('promotes a writer to editor via role patch', async () => {

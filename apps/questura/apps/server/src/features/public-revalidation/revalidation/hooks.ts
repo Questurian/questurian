@@ -2,6 +2,7 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'paylo
 import { triggerClientRevalidation } from './delivery'
 import {
   articleRevalidationTarget,
+  authorTarget,
   locationHomepageTarget,
   locationTarget,
   mergeTargets,
@@ -30,6 +31,22 @@ export function revalidateArticleCollection(
   }
 
   return { afterChange, afterDelete }
+}
+
+// Author profile edits (names, bio, avatar, social links, slug renames) must
+// refresh the public author page; both old and new slug URLs are covered.
+export const revalidateAuthorAfterChange: CollectionAfterChangeHook = async ({
+  doc,
+  previousDoc,
+  operation,
+}) => {
+  await triggerClientRevalidation(
+    mergeTargets(
+      authorTarget(previousDoc as AnyDoc | undefined),
+      authorTarget(doc as AnyDoc | undefined),
+    ),
+    `users:${operation}`,
+  )
 }
 
 export const revalidateLocationHomepageAfterChange: CollectionAfterChangeHook = async ({

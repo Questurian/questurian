@@ -1,6 +1,7 @@
 import type { Payload } from 'payload'
 
 import type { EmailResult } from '../types'
+import { recordEmailLog } from './email-log'
 
 /**
  * Builds a personalized greeting from first/last name
@@ -32,15 +33,29 @@ export async function sendEmail(
     })
 
     console.log(`✅ ${config.emailType} sent successfully to:`, config.to)
+    await recordEmailLog(payload, {
+      emailType: config.emailType,
+      recipient: config.to,
+      subject: config.subject,
+      status: 'sent',
+    })
     return { success: true }
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error(`❌ Failed to send ${config.emailType}:`, {
       email: config.to,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: message
+    })
+    await recordEmailLog(payload, {
+      emailType: config.emailType,
+      recipient: config.to,
+      subject: config.subject,
+      status: 'failed',
+      error: message,
     })
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: message
     }
   }
 }

@@ -1268,6 +1268,24 @@ input:-webkit-autofill:active {
   animation: none;
 }
 
+/* Author profile photo: same shimmer treatment, tinted for the beige header */
+.author-avatar-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 1;
+  background: linear-gradient(90deg, #d8d4cd 0%, #e9e5de 45%, #d3cfc7 100%);
+  background-size: 240% 100%;
+  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
+  transition: opacity 0.24s ease;
+}
+
+.author-avatar-shell[data-image-loaded='true']::before {
+  opacity: 0;
+  animation: none;
+}
+
 .city-article-content {
   opacity: 1;
   transition: opacity 0.24s ease;

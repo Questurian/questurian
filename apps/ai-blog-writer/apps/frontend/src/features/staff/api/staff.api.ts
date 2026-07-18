@@ -1,6 +1,6 @@
 import { PAYLOAD_API_URL } from '../../../shared/api/client/config'
 import { payloadMutation, payloadRequest } from '../../../shared/api/client/http'
-import type { AvatarAsset, StaffUser, StaffUserPatch } from '../types'
+import type { AvatarAsset, EmailLog, StaffUser, StaffUserPatch } from '../types'
 
 export async function fetchStaffUser(id: number | string, token: string): Promise<StaffUser> {
   // depth=1 populates the avatar upload relationship for preview
@@ -79,9 +79,26 @@ export async function createStaffUser(
   return response.doc
 }
 
-/** Triggers Payload's forgot-password email so the hire sets their password. */
+/**
+ * Triggers Payload's forgot-password email so the hire sets their password.
+ * Also the "resend invite" primitive: safe to call again when the first email
+ * went to a mailbox that didn't exist yet.
+ */
 export async function requestPasswordSetEmail(email: string): Promise<void> {
   await payloadMutation('/api/users/forgot-password', 'POST', { email })
+}
+
+/**
+ * Recent transactional-email delivery log (admin-only on the server). Rows are
+ * written by questura's email tracking; an empty result may just mean tracking
+ * is disabled (EMAIL_TRACKING=false).
+ */
+export async function fetchEmailLogs(token: string, limit = 50): Promise<EmailLog[]> {
+  const response = (await payloadRequest(
+    `/api/email-logs?limit=${limit}&sort=-createdAt&depth=0`,
+    token,
+  )) as { docs?: EmailLog[] }
+  return response.docs ?? []
 }
 
 /** The only legal role change: admin promotes a writer to editor. */

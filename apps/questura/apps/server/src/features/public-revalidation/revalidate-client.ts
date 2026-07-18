@@ -1,5 +1,6 @@
 export {
   revalidateArticleCollection,
+  revalidateAuthorAfterChange,
   revalidateArticleRedirectAfterChange,
   revalidateArticleRedirectAfterDelete,
   revalidateLocationAfterChange,
