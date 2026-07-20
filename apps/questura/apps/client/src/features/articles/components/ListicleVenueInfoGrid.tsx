@@ -17,7 +17,7 @@ import type { ListicleVenue } from '@/features/articles/types/mapsListicle'
 const accentClass = 'maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]'
 const linkClass = 'maps-listicle-info-label break-words font-light text-[12px] leading-tight text-foreground/72 hover:text-foreground focus-visible:text-foreground focus-visible:outline-none 480:text-[13px] sm:text-[14px]'
 
-type GridCell = {
+export type GridCell = {
   key: string
   icon: JSX.Element
   node: JSX.Element
@@ -31,7 +31,14 @@ function normalizeWebsiteUrl(url: string): string {
   return isHttpUrl(t) ? t : `https://${t}`
 }
 
-export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.Element | null {
+export function ListicleVenueInfoGrid({
+  item,
+  extraCells = [],
+}: {
+  item: ListicleVenue
+  /** Additional cells appended after the standard ones (e.g. stay amenities trigger). */
+  extraCells?: GridCell[]
+}): JSX.Element | null {
   const phoneDisplay = formatListiclePhone(item.countryCode, item.phoneNumber)
   const hoursRows = parseListicleOperationHoursRows(item.operationHours)
   const websiteRaw = typeof item.website === 'string' ? item.website.trim() : ''
@@ -101,6 +108,8 @@ export function ListicleVenueInfoGrid({ item }: { item: ListicleVenue }): JSX.El
       ),
     })
   }
+
+  cells.push(...extraCells)
 
   if (cells.length === 0 && !reserveHref) {
     return null

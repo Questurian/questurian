@@ -55,7 +55,7 @@ export function ListicleArticleLayout({
         {mapsEnabled && (
           <div
             aria-hidden="true"
-            className="maps-map-divider hidden 1024:block 1024:absolute 1024:top-[25px] 1024:bottom-0 1024:w-px 1024:pointer-events-none"
+            className="maps-map-divider hidden 1024:block 1024:absolute 1024:top-[25px] 1024:bottom-0 1024:z-20 1024:w-px 1024:pointer-events-none"
           />
         )}
         {mapsEnabled && (

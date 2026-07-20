@@ -1,6 +1,6 @@
 import { Share2, Bookmark } from 'lucide-react'
 import type { JSX } from 'react'
-import { PublicImage } from '@/components/media/PublicImage'
+import { ShimmerImage } from '@/components/media/ShimmerImage'
 import type { ArticleAuthor } from '@/features/articles/types'
 import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
@@ -100,13 +100,14 @@ export function ArticlePageHeader({
         {featuredImage?.url ? (
           <div className="mx-auto mb-5 sm:mb-6">
             <div className="relative mx-auto h-20 w-20 overflow-hidden rounded-full ring-1 ring-foreground/10 380:h-24 380:w-24 480:h-28 480:w-28 sm:h-32 sm:w-32 768:h-36 768:w-36">
-              <PublicImage
+              <ShimmerImage
                 src={featuredImage.url}
                 alt={featuredImage.alt ?? ''}
                 width={288}
                 height={288}
                 sizes="(min-width: 768px) 9rem, (min-width: 640px) 8rem, (min-width: 480px) 7rem, (min-width: 380px) 6rem, 5rem"
                 className="h-full w-full object-cover"
+                wrapperClassName="h-full w-full"
                 priority
               />
             </div>

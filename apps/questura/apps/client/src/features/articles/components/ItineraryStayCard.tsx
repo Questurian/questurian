@@ -1,8 +1,13 @@
 import type { JSX } from 'react'
 import { MapPin } from 'lucide-react'
-import { PublicImage } from '@/components/media/PublicImage'
+import { ShimmerImage } from '@/components/media/ShimmerImage'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
+import {
+  buildStayAmenitiesCell,
+  ItineraryStayBookingCard,
+  ItineraryStayVibeRow,
+} from '@/features/articles/components/ItineraryStayDetails'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
 import { listicleInstagramEmbedCode } from '@/features/articles/lib/listicleInstagram'
 import { listicleItemHeroFromRow } from '@/features/articles/lib/listicleItemHelpers'
@@ -45,6 +50,7 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
   const addressIsMapLink = addressRaw ? isHttpUrl(addressRaw) : false
   const blurb = row.blurb
   const instagramCode = listicleInstagramEmbedCode(row)
+  const amenitiesCell = buildStayAmenitiesCell(row.item)
 
   return (
     <div
@@ -63,13 +69,14 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
       {hero ? (
         <div className="overflow-hidden rounded-sm bg-foreground/[0.04]">
           <div className="aspect-[16/10] w-full 380:aspect-[4/3] 480:aspect-[3/2] sm:aspect-[16/9]">
-            <PublicImage
+            <ShimmerImage
               src={hero.url}
               alt={hero.alt}
               width={1200}
               height={675}
               sizes="(min-width: 768px) 700px, 100vw"
               className="h-full w-full object-cover"
+              wrapperClassName="h-full w-full"
             />
           </div>
         </div>
@@ -105,6 +112,8 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
             </div>
           </div>
         ) : null}
+
+        <ItineraryStayVibeRow item={row.item} />
       </div>
 
       {blurb ? (
@@ -114,7 +123,9 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
         />
       ) : null}
 
-      <ListicleVenueInfoGrid item={row.item} />
+      <ListicleVenueInfoGrid item={row.item} extraCells={amenitiesCell ? [amenitiesCell] : []} />
+
+      <ItineraryStayBookingCard item={row.item} />
 
       {instagramCode ? (
         <div className="-mx-1 flex w-full min-w-0 justify-center pt-1 480:pt-2 sm:pt-3">

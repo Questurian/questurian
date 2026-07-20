@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import { ShimmerImage } from '@/components/media/ShimmerImage'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 
 interface RelatedListicleShelfProps {
@@ -94,11 +95,14 @@ export function RelatedListicleShelf({
                 <article className="flex min-w-0 items-center gap-2">
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded-sm bg-[#e5e0d8]">
                     {imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <ShimmerImage
                         src={imageUrl}
                         alt={imageAlt}
+                        width={80}
+                        height={80}
+                        sizes="40px"
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                        wrapperClassName="h-full w-full"
                         loading="lazy"
                         decoding="async"
                       />

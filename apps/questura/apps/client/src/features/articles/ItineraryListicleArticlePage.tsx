@@ -2,6 +2,7 @@
 
 import type { JSX } from 'react'
 import { Clock, ExternalLink, MapPin, Route } from 'lucide-react'
+import { ShimmerImage } from '@/components/media/ShimmerImage'
 import { ArticlePageHeader } from '@/features/articles/components/ArticlePageHeader'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
 import { ItineraryStayCard } from '@/features/articles/components/ItineraryStayCard'
@@ -78,11 +79,14 @@ function TourAgencyCard({
         {imageUrl ? (
           <div className="overflow-hidden rounded-sm bg-foreground/[0.04]">
             <div className="aspect-[16/10] w-full 380:aspect-[4/3] 480:aspect-[3/2] sm:aspect-[16/9]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <ShimmerImage
                 src={imageUrl}
                 alt={image?.alt_text ?? block.title}
+                width={1200}
+                height={750}
+                sizes="(min-width: 768px) 700px, 100vw"
                 className="h-full w-full object-cover"
+                wrapperClassName="h-full w-full"
                 loading="lazy"
                 decoding="async"
               />
@@ -262,7 +266,7 @@ export function ItineraryListicleArticlePage({
           <div
             role="tablist"
             aria-label="Itinerary days"
-            className="flex gap-5 overflow-x-auto border-b border-foreground/15 480:gap-7"
+            className="day-tabs-scroll flex gap-5 overflow-x-auto border-b border-foreground/15 480:gap-7"
           >
             {days.map((day, index) => {
               const selected = index === dayIndex

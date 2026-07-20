@@ -87,16 +87,12 @@ function flyTo(
   animation.frame = requestAnimationFrame(step)
 }
 
-/** Numbered glyph for stops; a white house icon for 'stay' pins. */
-function pinGlyph(point: ListicleMapPoint): string | Element {
-  if (point.kind !== 'stay') {
-    return String(point.index + 1)
-  }
-
+/** White house icon for 'stay' pins. */
+function houseGlyph(): Element {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('viewBox', '0 0 24 24')
-  svg.setAttribute('width', '14')
-  svg.setAttribute('height', '14')
+  svg.setAttribute('width', '16')
+  svg.setAttribute('height', '16')
   svg.setAttribute('fill', 'none')
   svg.setAttribute('stroke', '#ffffff')
   svg.setAttribute('stroke-width', '2')
@@ -111,6 +107,90 @@ function pinGlyph(point: ListicleMapPoint): string | Element {
     svg.appendChild(path)
   }
   return svg
+}
+
+/** Small dot centered on the coordinate, for stops that aren't active. */
+function dotElement(): HTMLElement {
+  const dot = document.createElement('div')
+  dot.style.width = '18px'
+  dot.style.height = '18px'
+  dot.style.borderRadius = '50%'
+  dot.style.background = ACCENT
+  dot.style.border = '2.5px solid #ffffff'
+  dot.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.35)'
+  // AdvancedMarkerElement anchors content bottom-center; shift so the dot
+  // sits centered on the coordinate instead of floating above it.
+  dot.style.transform = 'translateY(50%)'
+  return dot
+}
+
+/**
+ * Custom balloon pin with a blunt, rounded tip (Google's PinElement tapers
+ * to a sharp point). The tip sits at bottom-center, matching the marker's
+ * default anchor, so it points at the exact coordinate.
+ */
+function pinElement(background: string, scale: number, glyph: Element): HTMLElement {
+  const width = 30 * scale
+  const height = 38 * scale
+
+  const wrap = document.createElement('div')
+  wrap.style.position = 'relative'
+  wrap.style.width = `${width}px`
+  wrap.style.height = `${height}px`
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 30 38')
+  svg.setAttribute('width', String(width))
+  svg.setAttribute('height', String(height))
+  svg.style.display = 'block'
+  svg.style.filter = 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35))'
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  // Round head that narrows into a short tail ending in a small arc,
+  // so the bottom is a rounded nub rather than a sharp point.
+  path.setAttribute(
+    'd',
+    'M15 1.5 C7.8 1.5 2 7.3 2 14.5 C2 21.5 9.6 30 13.2 35.2 A2.2 2.2 0 0 0 16.8 35.2 C20.4 30 28 21.5 28 14.5 C28 7.3 22.2 1.5 15 1.5 Z',
+  )
+  path.setAttribute('fill', background)
+  path.setAttribute('stroke', '#ffffff')
+  path.setAttribute('stroke-width', '2')
+  svg.appendChild(path)
+  wrap.appendChild(svg)
+
+  const glyphBox = document.createElement('div')
+  glyphBox.style.position = 'absolute'
+  glyphBox.style.left = '50%'
+  // Center of the pin head in the 30x38 viewBox is at y=14.5.
+  glyphBox.style.top = `${(14.5 / 38) * 100}%`
+  glyphBox.style.transform = 'translate(-50%, -50%)'
+  glyphBox.style.display = 'flex'
+  glyphBox.appendChild(glyph)
+  wrap.appendChild(glyphBox)
+
+  return wrap
+}
+
+/** Plain white dot glyph for the head of the active-stop pin. */
+function innerDotGlyph(): Element {
+  const dot = document.createElement('div')
+  dot.style.width = '8px'
+  dot.style.height = '8px'
+  dot.style.borderRadius = '50%'
+  dot.style.background = '#ffffff'
+  return dot
+}
+
+/**
+ * Stops render as dots until they're active, then swell into a soft-tipped
+ * pin. 'stay' points always keep the house pin regardless of active state.
+ */
+function markerContent(point: ListicleMapPoint, isActive: boolean): HTMLElement {
+  if (point.kind === 'stay') {
+    return pinElement(isActive ? ACTIVE_PIN : ACCENT, isActive ? 1.3 : 1, houseGlyph())
+  }
+
+  return isActive ? pinElement(ACTIVE_PIN, 1.3, innerDotGlyph()) : dotElement()
 }
 
 function mercatorY(lat: number): number {
@@ -217,17 +297,11 @@ export function MapPanel() {
     markersById.current.clear()
 
     for (const point of points) {
-      const pin = new lib.PinElement({
-        glyph: pinGlyph(point),
-        glyphColor: '#ffffff',
-        background: ACCENT,
-        borderColor: ACCENT,
-      })
       const marker = new lib.AdvancedMarkerElement({
         map,
         position: { lat: point.lat, lng: point.lng },
         title: point.title,
-        content: pin.element,
+        content: markerContent(point, false),
       })
       markersById.current.set(point.id, marker)
     }
@@ -242,15 +316,8 @@ export function MapPanel() {
       const marker = markersById.current.get(point.id)
       if (!marker) continue
       const isActive = point.id === activeId
-      const pin = new lib.PinElement({
-        glyph: pinGlyph(point),
-        glyphColor: '#ffffff',
-        background: isActive ? ACTIVE_PIN : ACCENT,
-        borderColor: isActive ? ACTIVE_PIN : ACCENT,
-        scale: isActive ? 1.45 : 1,
-      })
-      marker.content = pin.element
-      marker.zIndex = isActive ? 1000 : 0
+      marker.content = markerContent(point, isActive)
+      marker.zIndex = isActive ? 1000 : point.kind === 'stay' ? 500 : 0
     }
 
     const active = points.find((point) => point.id === activeId)
