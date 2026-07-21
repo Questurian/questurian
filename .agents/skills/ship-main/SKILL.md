@@ -16,6 +16,7 @@ Goal: leave `main` clean, pushed, and up to date with `origin/main`, after commi
 - Stop and ask before merging when intent, ownership, conflicts, CI, review state, or changed files are unclear.
 - Prefer `main`. If repo default branch is not `main`, tell the user and ask before shipping another branch.
 - If network or GitHub checks are blocked, request approval/escalation instead of skipping silently.
+- Never add AI attribution trailers to commit, merge, or PR text. Disallowed examples include `Co-authored-by: Cursor <cursoragent@cursor.com>`, Claude, Codex, or any other AI tool identity.
 
 ## Preflight
 
@@ -51,10 +52,14 @@ If `gh` is unavailable, use `git remote show origin` for the default branch and 
 
 - If no local changes exist, skip commit and continue branch/remote sync.
 - Stage only intended files. Use `git add -A` only after auditing all untracked files.
-- Commit with a concise inferred message unless the user supplied one:
+- Commit with a concise inferred message unless the user supplied one. Do not include any `Co-authored-by` trailers:
 
 ```bash
-git commit -m "<imperative summary>"
+git commit -m "$(cat <<'EOF'
+<imperative summary>
+
+EOF
+)"
 ```
 
 - If currently not on `main`, leave the commit on the current branch, then merge that branch into `main` using Merge Flow.
@@ -105,7 +110,11 @@ Stop if `main` diverged.
 - Merge only if the preview is expected and no conflicts appear:
 
 ```bash
-git merge --no-ff <branch> -m "Merge <branch> into main"
+git merge --no-ff <branch> -m "$(cat <<'EOF'
+Merge <branch> into main
+
+EOF
+)"
 ```
 
 - If the branch is already fast-forwardable and the repo prefers linear `main`, `git merge --ff-only <branch>` is acceptable.
@@ -118,6 +127,7 @@ If GitHub branch protection blocks direct push, use `gh pr merge` for the PR ins
 Run:
 
 ```bash
+if git log --format=%B origin/main..main | rg -i 'co-authored-by:.*(cursor|claude|codex)|cursoragent@cursor\.com'; then echo "Disallowed AI co-author trailer found; stop before push."; exit 1; fi
 git push origin main
 git fetch origin main --prune
 git status -sb
