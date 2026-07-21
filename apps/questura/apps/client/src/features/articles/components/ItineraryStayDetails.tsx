@@ -18,6 +18,7 @@ import {
   Mail,
   MapPin,
   Snowflake,
+  Sparkles,
   Sunset,
   UserPlus,
   UtensilsCrossed,
@@ -126,6 +127,7 @@ function buildAmenityRows(item: ListicleVenue): AmenityRow[] {
   pushBool('extra-guest', <UserPlus className={accentClass} strokeWidth={1.75} aria-hidden />, 'Extra guest fee', theStay.extraGuestFee)
   pushList('parking', <Car className={accentClass} strokeWidth={1.75} aria-hidden />, 'Parking', theStay.parking)
 
+  pushList('vibe', <Sparkles className={accentClass} strokeWidth={1.75} aria-hidden />, 'Vibe', theExperience.vibe)
   pushBool('restaurant', <UtensilsCrossed className={accentClass} strokeWidth={1.75} aria-hidden />, 'Restaurant', theExperience.restaurant)
   pushList('pool', <Waves className={accentClass} strokeWidth={1.75} aria-hidden />, 'Pool', theExperience.pool)
   pushBool('rooftop', <Sunset className={accentClass} strokeWidth={1.75} aria-hidden />, 'Rooftop lounge', theExperience.rooftopLounge)
@@ -164,39 +166,6 @@ function buildFinePrint(item: ListicleVenue): string[] {
   const source = text(raw.sourceName)
   if (source && source !== item.title) parts.push(`Source: ${source}`)
   return parts
-}
-
-function ChipRow({ label, values }: { label: string; values: string[] }): JSX.Element | null {
-  if (values.length === 0) return null
-  return (
-    <div className="flex flex-wrap gap-1.5 pt-1 380:gap-2">
-      <span className="inline-flex h-7 shrink-0 items-center justify-center px-2.5 text-center text-[9px] font-bold uppercase leading-none tracking-[0.16em] text-white rounded-none bg-[var(--maps-listicle-accent)] 380:h-8 380:px-3 380:text-[10px] 480:px-3.5 480:text-[11px]">
-        {label}
-      </span>
-      {values.map((tag) => (
-        <span
-          key={tag}
-          className="inline-flex min-h-7 max-w-full min-w-0 items-center justify-center px-2.5 text-center text-[9px] font-semibold leading-none text-foreground/80 rounded-none bg-[var(--maps-listicle-chip)] [overflow-wrap:anywhere] 380:min-h-8 380:px-3 380:text-[10px] 480:px-3.5 480:text-[11px] sm:whitespace-nowrap"
-        >
-          {tag}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-/** Vibe chips shown under the address when accommodation data provides them. */
-export function ItineraryStayVibeRow({ item }: { item: ListicleVenue }): JSX.Element | null {
-  const theExperience = group(item, 'theExperience')
-  const vibe = list(theExperience.vibe)
-
-  if (vibe.length === 0) return null
-
-  return (
-    <div>
-      <ChipRow label="Vibe" values={vibe.map(titleCase)} />
-    </div>
-  )
 }
 
 function StayAmenitiesModalTrigger({
@@ -242,7 +211,7 @@ function StayAmenitiesModalTrigger({
         aria-expanded={open}
         aria-controls={dialogId}
       >
-        See amenities &amp; details
+        Show Amenities and Details
       </button>
 
       {open ? (
@@ -329,7 +298,7 @@ export function buildStayAmenitiesCell(item: ListicleVenue): GridCell | null {
   }
 }
 
-/** "Book a room" reserve card wired to the accommodation profile booking URL. */
+/** Nav-style "BOOK NOW" link wired to the accommodation profile booking URL. */
 export function ItineraryStayBookingCard({ item }: { item: ListicleVenue }): JSX.Element | null {
   const theDetails = group(item, 'theDetails')
   const bookingRaw = text(theDetails.bookingUrl) || text(item.bookingUrl)
@@ -337,16 +306,13 @@ export function ItineraryStayBookingCard({ item }: { item: ListicleVenue }): JSX
   const bookingHref = isHttpUrl(bookingRaw) ? bookingRaw : `https://${bookingRaw}`
 
   return (
-    <div className="maps-listicle-reserve-card">
-      <a
-        href={bookingHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="maps-listicle-reserve-button"
-      >
-        <BedDouble className="size-[16px] shrink-0 480:size-[17px] sm:size-[18px]" strokeWidth={1.8} aria-hidden />
-        <span>Book a room</span>
-      </a>
-    </div>
+    <a
+      href={bookingHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex h-14 w-full items-center justify-center rounded-none bg-[#111111] px-5 font-[var(--font-dm-sans)] text-[0.9rem] font-light leading-none tracking-[0.015em] text-white transition-colors duration-150 ease-out hover:bg-[#3B5BDB] active:bg-[#3451C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3B5BDB]/50 focus-visible:ring-offset-2 motion-reduce:transition-none"
+    >
+      BOOK NOW
+    </a>
   )
 }

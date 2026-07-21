@@ -426,6 +426,38 @@ input:-webkit-autofill:active {
   text-decoration-color: currentColor;
 }
 
+.maps-listicle-info-list .maps-listicle-info-icon,
+.maps-listicle-info-list .maps-listicle-info-label {
+  color: rgb(26 26 26 / 0.82);
+  transition:
+    color 180ms ease,
+    text-decoration-color 180ms ease;
+}
+
+.maps-listicle-info-list .maps-listicle-info-label {
+  cursor: pointer;
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.35;
+  text-decoration-line: none;
+}
+
+.maps-listicle-info-list .itinerary-stay-info-address {
+  font-size: clamp(0.8rem, 1.5vw, 0.9rem);
+}
+
+.maps-listicle-info-row:is(:hover, :focus-within) .maps-listicle-info-icon,
+.maps-listicle-info-row:is(:hover, :focus-within) .maps-listicle-info-label {
+  color: var(--maps-listicle-accent);
+}
+
+.maps-listicle-info-list .maps-listicle-info-label:focus-visible {
+  text-decoration-line: underline;
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.18em;
+}
+
 .maps-listicle-reserve-button {
   display: inline-flex;
   width: 100%;

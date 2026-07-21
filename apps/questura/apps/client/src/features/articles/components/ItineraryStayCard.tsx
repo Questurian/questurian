@@ -1,20 +1,14 @@
 import type { JSX } from 'react'
-import { MapPin } from 'lucide-react'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
 import {
   buildStayAmenitiesCell,
   ItineraryStayBookingCard,
-  ItineraryStayVibeRow,
 } from '@/features/articles/components/ItineraryStayDetails'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
 import { listicleInstagramEmbedCode } from '@/features/articles/lib/listicleInstagram'
 import { listicleItemHeroFromRow } from '@/features/articles/lib/listicleItemHelpers'
-import {
-  formatListicleAddressLabel,
-  isHttpUrl,
-} from '@/features/articles/lib/listicleVenueFormatters'
 import type { ListicleItemRow } from '@/features/articles/types/mapsListicle'
 
 /**
@@ -45,9 +39,6 @@ function DrawnHouseIcon({ className }: { className?: string }): JSX.Element {
 export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Element {
   const { registerEntry } = useListicleMapSync()
   const hero = listicleItemHeroFromRow(row)
-  const addressRaw = typeof row.item.address === 'string' ? row.item.address.trim() : ''
-  const addressLabel = formatListicleAddressLabel(addressRaw, row.item.title)
-  const addressIsMapLink = addressRaw ? isHttpUrl(addressRaw) : false
   const blurb = row.blurb
   const instagramCode = listicleInstagramEmbedCode(row)
   const amenitiesCell = buildStayAmenitiesCell(row.item)
@@ -82,39 +73,9 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
         </div>
       ) : null}
 
-      <div className="space-y-2 480:space-y-2.5 sm:space-y-3">
-        <h2 className="font-display text-[1.15rem] font-semibold leading-[1.2] text-foreground 380:text-[1.35rem] 480:text-[1.5rem] 550:text-[1.55rem] sm:text-[1.7rem] 768:text-[1.8rem]">
-          {row.item.title}
-        </h2>
-
-        {addressRaw ? (
-          <div className="maps-listicle-address-row">
-            <MapPin
-              className="maps-listicle-address-icon"
-              strokeWidth={1.75}
-              aria-hidden
-            />
-            <div className="min-w-0 flex-1">
-              {addressIsMapLink ? (
-                <a
-                  href={addressRaw}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="maps-listicle-address-link"
-                >
-                  {addressLabel ?? 'Directions'}
-                </a>
-              ) : (
-                <span className="maps-listicle-address-text">
-                  {addressLabel ?? addressRaw}
-                </span>
-              )}
-            </div>
-          </div>
-        ) : null}
-
-        <ItineraryStayVibeRow item={row.item} />
-      </div>
+      <h2 className="text-[1.15rem] font-bold leading-[1.08] tracking-[-0.045em] text-foreground [font-family:var(--font-editorial-serif)] 380:text-[1.35rem] 480:text-[1.5rem] 550:text-[1.55rem] sm:text-[1.7rem] 768:text-[1.8rem]">
+        {row.item.title}
+      </h2>
 
       {blurb ? (
         <div
@@ -123,7 +84,11 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
         />
       ) : null}
 
-      <ListicleVenueInfoGrid item={row.item} extraCells={amenitiesCell ? [amenitiesCell] : []} />
+      <ListicleVenueInfoGrid
+        item={row.item}
+        extraCells={amenitiesCell ? [amenitiesCell] : []}
+        variant="list"
+      />
 
       <ItineraryStayBookingCard item={row.item} />
 
