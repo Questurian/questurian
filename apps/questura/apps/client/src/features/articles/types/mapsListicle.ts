@@ -37,12 +37,21 @@ export type ListicleInstagramPost = {
   embedCode?: string
 }
 
+/** Resolved tour image variant attached by the public API serializer. */
+export type ListicleTourImage = {
+  url: string
+  alt?: string
+  width?: number | null
+  height?: number | null
+}
+
 /** Tour Pick as shaped by the public API serializer (published tours only). */
 export type ListicleTourPick = {
   id?: number
   title?: string | null
   price?: string | null
   bookingLink?: string | null
+  image?: ListicleTourImage | null
 }
 
 export type ListicleItemRow = {

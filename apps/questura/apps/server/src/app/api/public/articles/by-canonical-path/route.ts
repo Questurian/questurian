@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     if (result.totalDocs === 0) return notFound()
 
     const article = result.docs[0] as unknown as Record<string, unknown>
-    await serializeArticleByCollection('articles', article)
+    await serializeArticleByCollection('articles', article, payload)
 
     return NextResponse.json(article)
   } catch (error) {

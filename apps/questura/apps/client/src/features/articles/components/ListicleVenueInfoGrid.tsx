@@ -38,12 +38,15 @@ export function ListicleVenueInfoGrid({
   item,
   extraCells = [],
   variant = 'grid',
+  actionVariant = 'card',
 }: {
   item: ListicleVenue
   /** Additional cells; list mode places them after address, grid mode appends them. */
   extraCells?: GridCell[]
   /** Stacked rows mirror the compact contact list used by accommodation cards. */
   variant?: 'grid' | 'list'
+  /** Editorial action mirrors the accommodation card's full-width CTA. */
+  actionVariant?: 'card' | 'editorial'
 }): JSX.Element | null {
   const phoneDisplay = formatListiclePhone(item.countryCode, item.phoneNumber)
   const addressRaw = typeof item.address === 'string' ? item.address.trim() : ''
@@ -186,17 +189,28 @@ export function ListicleVenueInfoGrid({
       ) : null}
 
       {reserveHref ? (
-        <div className="maps-listicle-reserve-card">
+        actionVariant === 'editorial' ? (
           <a
             href={reserveHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="maps-listicle-reserve-button"
+            className="inline-flex h-14 w-full items-center justify-center rounded-none bg-[#111111] px-5 font-[var(--font-dm-sans)] text-[0.9rem] font-light leading-none tracking-[0.015em] text-white transition-colors duration-150 ease-out hover:bg-[#3B5BDB] active:bg-[#3451C7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3B5BDB]/50 focus-visible:ring-offset-2 motion-reduce:transition-none"
           >
-            <Calendar className="size-[16px] shrink-0 480:size-[17px] sm:size-[18px]" strokeWidth={1.8} aria-hidden />
-            <span>Reserve a table</span>
+            RESERVE A TABLE
           </a>
-        </div>
+        ) : (
+          <div className="maps-listicle-reserve-card">
+            <a
+              href={reserveHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="maps-listicle-reserve-button"
+            >
+              <Calendar className="size-[16px] shrink-0 480:size-[17px] sm:size-[18px]" strokeWidth={1.8} aria-hidden />
+              <span>Reserve a table</span>
+            </a>
+          </div>
+        )
       ) : null}
     </div>
   )

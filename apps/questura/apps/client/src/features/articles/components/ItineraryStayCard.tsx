@@ -1,5 +1,4 @@
 import type { JSX } from 'react'
-import { Bookmark } from 'lucide-react'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
@@ -8,8 +7,12 @@ import {
   ItineraryStayBookingCard,
 } from '@/features/articles/components/ItineraryStayDetails'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
+import { ListicleVenueTitleRow } from '@/features/articles/components/ListicleVenueTitleRow'
 import { listicleInstagramEmbedCode } from '@/features/articles/lib/listicleInstagram'
-import { listicleItemHeroFromRow } from '@/features/articles/lib/listicleItemHelpers'
+import {
+  listicleItemHeroFromRow,
+  priceTierDescriptor,
+} from '@/features/articles/lib/listicleItemHelpers'
 import type { ListicleItemRow } from '@/features/articles/types/mapsListicle'
 
 /**
@@ -47,46 +50,11 @@ function stayPriceLevel(item: ListicleItemRow['item']): number | null {
   return fallback >= 1 && fallback <= MAX_STAY_PRICE_LEVEL ? fallback : null
 }
 
-const PRICE_TIER_LABELS = ['Budget', 'Moderate', 'Upscale', 'Luxury'] as const
-
-function StayPriceTier({ level }: { level: number }): JSX.Element {
-  const tier = `${'$'.repeat(level)} — ${PRICE_TIER_LABELS[level - 1]}`
-
-  return (
-    <span
-      className="group relative inline-flex cursor-default items-center rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--maps-listicle-accent)]"
-      tabIndex={0}
-      aria-label={tier}
-    >
-      <span
-        className="inline-flex items-center font-[var(--font-display)] text-[1rem] font-normal leading-none tracking-[-0.025em] 380:text-[1.05rem] 480:text-[1.1rem] sm:text-[1.15rem]"
-        aria-hidden
-      >
-        {Array.from({ length: MAX_STAY_PRICE_LEVEL }, (_, dollarIndex) => (
-          <span
-            key={dollarIndex}
-            className={
-              dollarIndex < level
-                ? 'text-foreground transition-colors group-hover:text-[var(--maps-listicle-accent)] group-focus-visible:text-[var(--maps-listicle-accent)]'
-                : 'text-foreground/18 transition-colors group-hover:text-[color:rgb(var(--maps-listicle-accent-rgb)/0.35)] group-focus-visible:text-[color:rgb(var(--maps-listicle-accent-rgb)/0.35)]'
-            }
-          >
-            $
-          </span>
-        ))}
-      </span>
-      <span className="pointer-events-none absolute bottom-[calc(100%+0.45rem)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-sm border border-foreground/12 bg-background px-2 py-1 font-[var(--font-dm-sans)] text-[0.68rem] font-medium tracking-normal text-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-        {tier}
-      </span>
-    </span>
-  )
-}
-
 /**
  * Full "home base" entry for the itinerary's where-staying venue. Follows the
- * same editorial format as the numbered stops, but leads with a House badge
- * where the others carry a number. Echoes the house pin on the map and
- * registers with the scroll sync so passing it highlights that pin.
+ * same editorial format as the itinerary stops, but leads with a House badge.
+ * Echoes the house pin on the map and registers with the scroll sync so
+ * passing it highlights that pin.
  */
 export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Element {
   const { registerEntry } = useListicleMapSync()
@@ -126,34 +94,11 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h2 className="text-[1.15rem] font-bold leading-[1.08] tracking-[-0.045em] text-foreground [font-family:var(--font-editorial-serif)] 380:text-[1.35rem] 480:text-[1.5rem] 550:text-[1.55rem] sm:text-[1.7rem] 768:text-[1.8rem]">
-          {row.item.title}
-        </h2>
-        <div className="inline-flex shrink-0 items-center gap-2">
-          <span className="text-[0.7rem] leading-none text-foreground/30" aria-hidden>
-            •
-          </span>
-          {priceLevel ? (
-            <>
-              <StayPriceTier level={priceLevel} />
-              <span className="text-[0.7rem] leading-none text-foreground/30" aria-hidden>
-                •
-              </span>
-            </>
-          ) : null}
-          <button
-            type="button"
-            className="group relative inline-flex shrink-0 cursor-pointer items-center justify-center rounded-sm p-0.5 text-foreground/55 transition-colors hover:text-[var(--maps-listicle-accent)] focus-visible:text-[var(--maps-listicle-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--maps-listicle-accent)]"
-            aria-label={`Save ${row.item.title}`}
-          >
-            <Bookmark className="size-[1.05rem] fill-transparent transition-[fill] group-hover:fill-current group-focus-visible:fill-current 380:size-[1.1rem] 480:size-[1.15rem] sm:size-[1.2rem] 768:size-[1.25rem]" strokeWidth={1.7} aria-hidden />
-            <span className="pointer-events-none absolute bottom-[calc(100%+0.45rem)] left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-sm border border-foreground/12 bg-background px-2 py-1 font-[var(--font-dm-sans)] text-[0.68rem] font-medium tracking-normal text-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-              Save
-            </span>
-          </button>
-        </div>
-      </div>
+      <ListicleVenueTitleRow
+        title={row.item.title}
+        priceLevel={priceLevel}
+        priceDescriptor={priceTierDescriptor(priceLevel)}
+      />
 
       {blurb ? (
         <div

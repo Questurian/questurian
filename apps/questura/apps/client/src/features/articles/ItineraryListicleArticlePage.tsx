@@ -51,13 +51,7 @@ function keyLocationLabel(row: ItineraryTourAgencyKeyLocation): string | null {
   return isListicleVenue(value) ? value.title : null
 }
 
-function TourAgencyCard({
-  block,
-  index,
-}: {
-  block: ItineraryTourAgencyBlock
-  index: number
-}): JSX.Element {
+function TourAgencyCard({ block }: { block: ItineraryTourAgencyBlock }): JSX.Element {
   const image = typeof block.image === 'object' && block.image !== null ? block.image : null
   const imageUrl = typeof image?.url === 'string' ? image.url : null
   const instagramCode =
@@ -96,9 +90,6 @@ function TourAgencyCard({
 
         <div className="space-y-2 480:space-y-2.5 sm:space-y-3">
           <h2 className="font-display text-[1.15rem] font-semibold leading-[1.2] text-foreground 380:text-[1.35rem] 480:text-[1.5rem] 550:text-[1.55rem] sm:text-[1.7rem] 768:text-[1.8rem]">
-            <span className="font-semibold text-foreground">
-              {index + 1}.
-            </span>{' '}
             {block.title}
           </h2>
 
@@ -200,7 +191,6 @@ function StopList({ stops }: { stops: ItineraryStopBlock[] }): JSX.Element | nul
             <TourAgencyCard
               key={block.id ?? `${block.blockType}-${index}`}
               block={block}
-              index={index}
             />
           )
         }
@@ -213,6 +203,7 @@ function StopList({ stops }: { stops: ItineraryStopBlock[] }): JSX.Element | nul
             key={row.id}
             row={row}
             index={index}
+            variant="itinerary"
           />
         )
       })}

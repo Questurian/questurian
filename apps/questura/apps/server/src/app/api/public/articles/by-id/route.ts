@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    await serializeArticleByCollection(collection, article)
+    await serializeArticleByCollection(collection, article, payload)
 
     return NextResponse.json(article)
   } catch (error) {

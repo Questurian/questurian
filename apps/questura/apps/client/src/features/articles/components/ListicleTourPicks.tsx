@@ -1,13 +1,15 @@
 import type { JSX } from 'react'
-import { ExternalLink, Ticket } from 'lucide-react'
+import { ArrowUpRight, Ticket } from 'lucide-react'
+import { ShimmerImage } from '@/components/media/ShimmerImage'
 import { isHttpUrl } from '@/features/articles/lib/listicleVenueFormatters'
-import type { ListicleTourPick } from '@/features/articles/types/mapsListicle'
+import type { ListicleTourImage, ListicleTourPick } from '@/features/articles/types/mapsListicle'
 
 type RenderableTourPick = {
   id: number | string
   title: string
   price: string | null
   href: string
+  image: ListicleTourImage | null
 }
 
 function renderableTourPicks(tours: ListicleTourPick[] | null | undefined): RenderableTourPick[] {
@@ -17,11 +19,17 @@ function renderableTourPicks(tours: ListicleTourPick[] | null | undefined): Rend
       const link = typeof tour?.bookingLink === 'string' ? tour.bookingLink.trim() : ''
       if (!title || !link) return null
 
+      const image =
+        tour.image && typeof tour.image.url === 'string' && tour.image.url.trim()
+          ? tour.image
+          : null
+
       return {
         id: tour.id ?? `tour-${index}`,
         title,
         price: typeof tour.price === 'string' && tour.price.trim() ? tour.price.trim() : null,
         href: isHttpUrl(link) ? link : `https://${link}`,
+        image,
       }
     })
     .filter((tour): tour is RenderableTourPick => Boolean(tour))
@@ -29,8 +37,8 @@ function renderableTourPicks(tours: ListicleTourPick[] | null | undefined): Rend
 
 /**
  * Tour Picks (ADR 0013): the operator-curated tours for an attraction entry,
- * rendered as structured booking rows beneath the editorial blurb. Tour data
- * is live from Location Manager → Payload.
+ * rendered as image booking cards beneath the editorial blurb. Tour data is live
+ * from Location Manager → Payload.
  */
 export function ListicleTourPicks({
   tours,
@@ -41,37 +49,56 @@ export function ListicleTourPicks({
   if (rows.length === 0) return null
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <div className="flex items-center gap-2 text-[10px] font-bold uppercase leading-none tracking-[0.16em] text-foreground/45">
         <Ticket className="size-[14px]" strokeWidth={1.8} aria-hidden />
-        Tours
+        Tours &amp; tickets
       </div>
-      <div className="overflow-hidden rounded-sm border border-foreground/12 bg-foreground/[0.07] sm:rounded">
-        <div className="grid grid-cols-1 gap-px bg-foreground/12">
-          {rows.map((tour) => (
-            <a
-              key={tour.id}
-              href={tour.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="maps-listicle-utility-cell flex items-center gap-2.5 bg-background px-3 py-2.5 hover:bg-foreground/[0.04] focus-visible:bg-foreground/[0.04] focus-visible:outline-none 380:px-3.5 480:gap-3 480:px-4 480:py-3 sm:px-4 sm:py-3.5 768:px-5 768:py-3.5"
-            >
-              <span className="maps-listicle-info-label min-w-0 flex-1 break-words text-[12px] font-light leading-tight text-foreground/72 480:text-[13px] sm:text-[14px]">
+      <div className="grid grid-cols-1 gap-2.5">
+        {rows.map((tour) => (
+          <a
+            key={tour.id}
+            href={tour.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-stretch gap-3 overflow-hidden rounded-sm border border-foreground/12 bg-foreground/[0.03] transition-colors hover:border-[var(--maps-listicle-accent)]/45 hover:bg-foreground/[0.06] focus-visible:border-[var(--maps-listicle-accent)] focus-visible:outline-none 480:gap-3.5"
+          >
+            {tour.image ? (
+              <div className="aspect-square w-[88px] shrink-0 overflow-hidden bg-foreground/[0.06] 380:w-[96px] 480:w-[108px] sm:w-[120px]">
+                <ShimmerImage
+                  src={tour.image.url}
+                  alt={tour.image.alt ?? tour.title}
+                  width={tour.image.width ?? 240}
+                  height={tour.image.height ?? 240}
+                  sizes="120px"
+                  className="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04] motion-reduce:transform-none"
+                  wrapperClassName="h-full w-full"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+            ) : null}
+
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 py-2.5 pr-3 480:gap-2 480:py-3">
+              <span className="line-clamp-2 break-words text-[12.5px] font-normal leading-snug text-foreground 480:text-[13.5px] sm:text-[14px]">
                 {tour.title}
               </span>
-              {tour.price ? (
-                <span className="shrink-0 text-[12px] font-semibold leading-none text-foreground/80 480:text-[13px]">
-                  {tour.price}
+              <div className="flex items-center justify-between gap-2">
+                {tour.price ? (
+                  <span className="text-[12px] font-semibold leading-none text-[var(--maps-listicle-accent)] 480:text-[13px]">
+                    {tour.price}
+                  </span>
+                ) : (
+                  <span />
+                )}
+                <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase leading-none tracking-[0.14em] text-foreground/50 transition-colors group-hover:text-[var(--maps-listicle-accent)] group-focus-visible:text-[var(--maps-listicle-accent)]">
+                  Book
+                  <ArrowUpRight className="size-[13px]" strokeWidth={2} aria-hidden />
                 </span>
-              ) : null}
-              <ExternalLink
-                className="maps-listicle-info-icon shrink-0 text-[var(--maps-listicle-accent)] size-[15px] 480:size-[16px] sm:size-[17px]"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-            </a>
-          ))}
-        </div>
+              </div>
+            </div>
+          </a>
+        ))}
       </div>
     </div>
   )

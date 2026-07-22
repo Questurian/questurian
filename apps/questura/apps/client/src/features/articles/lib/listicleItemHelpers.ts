@@ -29,6 +29,17 @@ export function listicleItemHeroFromRow(
   return { url, alt }
 }
 
+/** Human-readable price tiers shared by stay and dining cards (index = level - 1). */
+export const PRICE_TIER_LABELS = ['Budget', 'Moderate', 'Upscale', 'Luxury'] as const
+
+/** Descriptor for a 1-4 price level, e.g. 3 -> "Upscale". */
+export function priceTierDescriptor(priceLevel?: number | null): string | undefined {
+  if (!priceLevel || priceLevel < 1) {
+    return undefined
+  }
+  return PRICE_TIER_LABELS[Math.min(priceLevel, PRICE_TIER_LABELS.length) - 1]
+}
+
 export function priceLevelLabel(priceLevel?: string | null): string | null {
   if (!priceLevel) {
     return null

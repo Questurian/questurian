@@ -5,6 +5,7 @@ import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmb
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
 import { ListicleTourPicks } from '@/features/articles/components/ListicleTourPicks'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
+import { ListicleVenueTitleRow } from '@/features/articles/components/ListicleVenueTitleRow'
 import {
   listicleItemHeroFromRow,
   priceLevelLabel,
@@ -22,12 +23,23 @@ function stringArray(value: unknown): string[] {
     : []
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export function ListicleVenueEntry({
   row,
   index,
+  variant = 'numbered',
 }: {
   row: ListicleItemRow
   index: number
+  variant?: 'numbered' | 'itinerary'
 }): JSX.Element {
   const { registerEntry } = useListicleMapSync()
   const hero = listicleItemHeroFromRow(row)
@@ -39,12 +51,42 @@ export function ListicleVenueEntry({
   const addressRaw = typeof row.item.address === 'string' ? row.item.address.trim() : ''
   const addressLabel = formatListicleAddressLabel(addressRaw, row.item.title)
   const addressIsMapLink = addressRaw ? isHttpUrl(addressRaw) : false
+  const isItinerary = variant === 'itinerary'
 
-  const metaParts = [
-    price,
-    cuisines[0],
-    cuisines[1],
-  ].filter((p): p is string => typeof p === 'string' && p.length > 0)
+  const metaParts = (
+    isItinerary
+      ? // Itineraries omit both price and cuisines from the meta line.
+        []
+      : [price, cuisines[0], cuisines[1]]
+  ).filter((p): p is string => typeof p === 'string' && p.length > 0)
+
+  const idealForRow = idealFor.length > 0 ? (
+    <div className="flex flex-wrap gap-1.5 pt-1 380:gap-2">
+      <span className="inline-flex h-7 shrink-0 items-center justify-center rounded-none bg-[var(--maps-listicle-accent)] px-2.5 text-center text-[9px] font-bold uppercase leading-none tracking-[0.16em] text-white 380:h-8 380:px-3 380:text-[10px] 480:px-3.5 480:text-[11px]">
+        Ideal for
+      </span>
+      {idealFor.map((tag) => (
+        <span
+          key={tag}
+          className="inline-flex min-h-7 max-w-full min-w-0 items-center justify-center rounded-none bg-[var(--maps-listicle-chip)] px-2.5 text-center text-[9px] font-semibold leading-none text-foreground/80 [overflow-wrap:anywhere] 380:min-h-8 380:px-3 380:text-[10px] 480:px-3.5 480:text-[11px] sm:whitespace-nowrap"
+        >
+          {tag}
+        </span>
+      ))}
+    </div>
+  ) : null
+
+  // On itineraries the "Ideal for" line reads as the closing sentence of the
+  // blurb: it is appended into the same prose block so it inherits the exact
+  // font, size and paragraph spacing rather than sitting apart as chips.
+  const idealForProse =
+    isItinerary && idealFor.length > 0
+      ? `<p class="maps-listicle-ideal-for"><strong>Ideal for:</strong> ${idealFor
+          .map(escapeHtml)
+          .join(', ')}</p>`
+      : ''
+  const itineraryBlurbHtml =
+    isItinerary && (blurb || idealForProse) ? `${blurb ?? ''}${idealForProse}` : null
 
   return (
     <li
@@ -70,14 +112,18 @@ export function ListicleVenueEntry({
         ) : null}
 
         <div className="space-y-2 480:space-y-2.5 sm:space-y-3">
-          <h2 className="font-display text-[1.15rem] font-semibold leading-[1.2] text-foreground 380:text-[1.35rem] 480:text-[1.5rem] 550:text-[1.55rem] sm:text-[1.7rem] 768:text-[1.8rem]">
-            <span className="font-semibold text-foreground">
-              {index + 1}.
-            </span>{' '}
-            {row.item.title}
-          </h2>
+          {isItinerary ? (
+            <ListicleVenueTitleRow title={row.item.title} />
+          ) : (
+            <h2 className="font-display text-[1.15rem] font-semibold leading-[1.2] text-foreground 380:text-[1.35rem] 480:text-[1.5rem] 550:text-[1.55rem] sm:text-[1.7rem] 768:text-[1.8rem]">
+              <span className="font-semibold text-foreground">
+                {index + 1}.
+              </span>{' '}
+              {row.item.title}
+            </h2>
+          )}
 
-          {addressRaw ? (
+          {!isItinerary && addressRaw ? (
             <div className="maps-listicle-address-row">
               <MapPin
                 className="maps-listicle-address-icon"
@@ -116,24 +162,17 @@ export function ListicleVenueEntry({
             </p>
           ) : null}
 
-          {idealFor.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5 pt-1 380:gap-2">
-              <span className="inline-flex h-7 shrink-0 items-center justify-center px-2.5 text-center text-[9px] font-bold uppercase leading-none tracking-[0.16em] text-white rounded-none bg-[var(--maps-listicle-accent)] 380:h-8 380:px-3 380:text-[10px] 480:px-3.5 480:text-[11px]">
-                Ideal for
-              </span>
-              {idealFor.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex min-h-7 max-w-full min-w-0 items-center justify-center px-2.5 text-center text-[9px] font-semibold leading-none text-foreground/80 rounded-none bg-[var(--maps-listicle-chip)] [overflow-wrap:anywhere] 380:min-h-8 380:px-3 380:text-[10px] 480:px-3.5 480:text-[11px] sm:whitespace-nowrap"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
+          {!isItinerary ? idealForRow : null}
         </div>
 
-        {blurb ? (
+        {isItinerary ? (
+          itineraryBlurbHtml ? (
+            <div
+              className="article-prose maps-listicle-blurb maps-listicle-venue-blurb max-w-none pb-1"
+              dangerouslySetInnerHTML={{ __html: itineraryBlurbHtml }}
+            />
+          ) : null
+        ) : blurb ? (
           <div
             className="article-prose maps-listicle-blurb maps-listicle-venue-blurb max-w-none pb-1"
             dangerouslySetInnerHTML={{ __html: blurb }}
@@ -142,7 +181,11 @@ export function ListicleVenueEntry({
 
         <ListicleTourPicks tours={row.tours} />
 
-        <ListicleVenueInfoGrid item={row.item} />
+        <ListicleVenueInfoGrid
+          item={row.item}
+          variant={isItinerary ? 'list' : 'grid'}
+          actionVariant={isItinerary ? 'editorial' : 'card'}
+        />
 
         {instagramCode ? (
           <div className="-mx-1 flex w-full min-w-0 justify-center pt-1 480:pt-2 sm:pt-3">
