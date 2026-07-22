@@ -1136,6 +1136,36 @@ input:-webkit-autofill:active {
     forwards;
 }
 
+/*
+ * Tour Picks booking ring — reuses the /join arrow draw, tinted with the
+ * listicle accent so it tracks the entry's theme.
+ */
+.listicle-tour-ring-track {
+  stroke: rgb(var(--maps-listicle-accent-rgb) / 0.2);
+}
+
+.listicle-tour-ring-progress {
+  stroke: var(--maps-listicle-accent);
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.listicle-tour-card:hover .listicle-tour-ring-progress,
+.listicle-tour-card:focus-visible .listicle-tour-ring-progress {
+  animation: join-plan-arrow-ring-draw 620ms cubic-bezier(0.22, 1, 0.36, 1)
+    forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listicle-tour-card:hover .listicle-tour-ring-progress,
+  .listicle-tour-card:focus-visible .listicle-tour-ring-progress {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
 .join-faq details summary {
   list-style: none;
   cursor: pointer;

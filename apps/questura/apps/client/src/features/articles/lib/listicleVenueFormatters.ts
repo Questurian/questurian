@@ -113,6 +113,45 @@ export function formatListiclePhone(
 
 export type ListicleHoursRow = { day: string; hours: string }
 
+const WEEKDAYS = new Set([
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+])
+
+function isFullDayHours(value: string): boolean {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s+/g, ' ')
+
+  return [
+    '00:00 - 23:59',
+    '00:00 - 24:00',
+    '00:00:00 - 23:59:59',
+    '00:00:00 - 24:00:00',
+    '24 hours',
+    'open 24 hours',
+    '24/7',
+  ].includes(normalized)
+}
+
+export function areListicleHoursAlwaysOpen(
+  rows: ListicleHoursRow[],
+): boolean {
+  if (rows.length !== WEEKDAYS.size || !rows.every((row) => isFullDayHours(row.hours))) {
+    return false
+  }
+
+  const days = new Set(rows.map((row) => row.day.trim().toLowerCase()))
+  return days.size === WEEKDAYS.size && [...WEEKDAYS].every((day) => days.has(day))
+}
+
 export function parseListicleOperationHoursRows(
   raw: unknown,
 ): ListicleHoursRow[] | null {

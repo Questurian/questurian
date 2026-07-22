@@ -3,9 +3,13 @@
 import type { JSX } from 'react'
 import { useCallback, useEffect, useId, useState } from 'react'
 import { X } from 'lucide-react'
-import type { ListicleHoursRow } from '@/features/articles/lib/listicleVenueFormatters'
+import {
+  areListicleHoursAlwaysOpen,
+  type ListicleHoursRow,
+} from '@/features/articles/lib/listicleVenueFormatters'
 
-const linkClass = 'maps-listicle-info-label break-words text-left text-[12px] font-light leading-tight text-foreground/72 hover:text-foreground focus-visible:text-foreground focus-visible:outline-none 480:text-[13px] sm:text-[14px]'
+const labelClass = 'maps-listicle-info-label break-words text-left text-[12px] font-light leading-tight text-foreground/72 480:text-[13px] sm:text-[14px]'
+const linkClass = `${labelClass} hover:text-foreground focus-visible:text-foreground focus-visible:outline-none`
 
 type ListicleHoursModalTriggerProps = {
   venueTitle: string
@@ -19,6 +23,7 @@ export function ListicleHoursModalTrigger({
   const [open, setOpen] = useState(false)
   const titleId = useId()
   const dialogId = useId()
+  const alwaysOpen = areListicleHoursAlwaysOpen(rows)
 
   const close = useCallback(() => setOpen(false), [])
 
@@ -39,6 +44,10 @@ export function ListicleHoursModalTrigger({
       document.body.style.overflow = prev
     }
   }, [open, close])
+
+  if (alwaysOpen) {
+    return <span className={labelClass}>Always Open</span>
+  }
 
   return (
     <>
