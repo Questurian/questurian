@@ -130,7 +130,7 @@ export function AccommodationsCompletionSteps(props: AccommodationsFormSectionsP
               )}
             </div>
             <div className="space-y-2">
-              <FieldLabel apiFilled={isApiFilled("phone")}>Phone</FieldLabel>
+              <FieldLabel apiFilled={isApiFilled("phone")}>Phone (optional)</FieldLabel>
               <Input
                 placeholder="+1 (555) 700-1200"
                 disabled={form.watch("phoneNotAvailable")}

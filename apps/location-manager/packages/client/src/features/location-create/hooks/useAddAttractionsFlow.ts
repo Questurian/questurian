@@ -40,7 +40,7 @@ const ATTRACTIONS_FORM_DEFAULT_VALUES: AddAttractionsFormData = {
   name: "",
   address: "",
   type: "",
-  priceLevel: "free",
+  priceLevel: "",
   bookingRequired: "no",
   website: "",
   phone: "",
@@ -320,7 +320,7 @@ export function useAddAttractionsFlow() {
     const operationHours = buildAttractionsOperationHours(data);
     const attractionsDetails = buildAttractionsDetails({
       type: data.type,
-      pricing: data.priceLevel,
+      pricing: data.priceLevel || undefined,
       locationKey: data.locationKey || "",
       district: data.district || undefined,
       hours: operationHours,
@@ -336,7 +336,7 @@ export function useAddAttractionsFlow() {
         address: normalizeAttractionsAddress(data.address),
         category: "attractions",
         type: data.type,
-        priceLevel: data.priceLevel,
+        ...(data.priceLevel ? { priceLevel: data.priceLevel } : {}),
         tripadvisorUrl: data.tripadvisorUrl || undefined,
         url: data.googleUrl || undefined,
         placeId: data.placeId || undefined,

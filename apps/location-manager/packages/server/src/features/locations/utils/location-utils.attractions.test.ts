@@ -97,6 +97,36 @@ describe("attractions completeness", () => {
     expect(basic.isComplete).toBe(true);
   });
 
+  test("marks attractions location complete when pricing and phone are missing", () => {
+    const details = buildAttractionsDetails({
+      core: {
+        attraction_type: "museum",
+        location_key: "peru|lima|pueblo-libre",
+      },
+      contact: {},
+    });
+    const location = buildAttractionsLocation({
+      attractionsDetailsJson: JSON.stringify(details),
+      phoneNumber: null,
+      priceLevel: null,
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.isComplete).toBe(true);
+  });
+
+  test("marks attractions incomplete when location key and district are missing", () => {
+    const location = buildAttractionsLocation({
+      locationKey: null,
+      district: null,
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.isComplete).toBe(false);
+  });
+
   test("treats selected Payload media sets as satisfying media completeness", () => {
     const location = buildAttractionsLocation({
       uploadsCount: 0,

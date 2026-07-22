@@ -51,7 +51,7 @@ export function ConfirmLocationPhase({
 
           <FormInput
             name="phoneNumber"
-            label="Phone Number"
+            label="Phone Number (optional)"
             control={confirmForm.control}
             placeholder="Phone number (optional)"
             description={`Current: ${createdLocation.phoneNumber || "None"}`}

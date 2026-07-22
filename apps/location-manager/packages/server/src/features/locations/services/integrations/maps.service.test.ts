@@ -12,7 +12,7 @@ const findPotentialDuplicateLocationsMock = mock<() => any[]>(() => []);
 const getLocationByIdForUpdateMock = mock<(id?: number) => any>(() => null as any);
 const saveLocationOrThrowMock = mock(() => 101);
 const setAttractionToursMock = mock(() => []);
-const getAttractionToursMock = mock(() => []);
+const getAttractionToursMock = mock<(id?: number) => any[]>(() => []);
 const updateLocationByIdMock = mock(() => true);
 const getInstagramEmbedsByLocationIdMock = mock<(id?: number) => any[]>(() => []);
 const getUploadsByLocationIdMock = mock<(id?: number) => any[]>(() => []);
@@ -439,8 +439,74 @@ describe("MapsService nightlife TripAdvisor auto-fetch", () => {
 
     await service.updateMapsLocationById(93, { type: "italian" } as any);
 
-    const [, persisted] = updateLocationByIdMock.mock.calls[0] as unknown as [number, Record<string, unknown>];
-    expect("provenanceJson" in persisted).toBe(false);
+    expect(updateLocationByIdMock).not.toHaveBeenCalled();
+  });
+
+  test("resubmitting unchanged nullable contact fields does not touch the location", async () => {
+    const currentLocation = {
+      id: 95,
+      name: "Malecón de Miraflores",
+      title: "Malecón de Miraflores",
+      address: "Miraflores, Lima",
+      url: "https://www.google.com/maps",
+      category: "attractions",
+      type: "boardwalk",
+      phoneNumber: null,
+      phoneUnavailable: 1,
+      website: null,
+      attractionsDetailsJson: JSON.stringify({
+        core: { attraction_type: "boardwalk" },
+        contact: {},
+      }),
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(95, {
+      phoneNumber: null,
+      phoneUnavailable: true,
+      attractionsDetails: {
+        contact: {},
+        core: { attraction_type: "boardwalk" },
+      },
+    } as any);
+
+    expect(updateLocationByIdMock).not.toHaveBeenCalled();
+  });
+
+  test("resubmitting unchanged attraction tours does not rewrite links", async () => {
+    const currentLocation = {
+      id: 96,
+      name: "Museum",
+      title: "Museum",
+      address: "123 Main St, Lima",
+      url: "https://www.google.com/maps",
+      category: "attractions",
+      type: "museum",
+    };
+
+    getLocationByIdForUpdateMock.mockImplementation(() => currentLocation);
+    getAttractionToursMock.mockReturnValue([{ id: 3 }, { id: 4 }]);
+
+    const service = new MapsService(
+      { hasGoogleMapsKey: () => false } as any,
+      { ensureTaxonomyEntry: () => true } as any,
+      { applyCorrections: (value: string) => value } as any,
+      {} as any,
+      { fetchAndMergePlaceData: mock(async () => true) } as any
+    );
+
+    await service.updateMapsLocationById(96, { tourIds: [3, 4, 3] } as any);
+
+    expect(setAttractionToursMock).not.toHaveBeenCalled();
   });
 
   test("demoting the last provenance entry clears the sidecar column", async () => {

@@ -301,6 +301,23 @@ describe("field suggestion schema", () => {
 });
 
 describe("maps patch schema reviews toggle", () => {
+  test("normalizes blank optional attraction fields to null", () => {
+    const result = patchMapsSchema.safeParse({
+      website: "",
+      phoneNumber: "",
+      bookingUrl: "",
+      priceLevel: "",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.website).toBe(null);
+    expect(result.data.phoneNumber).toBe(null);
+    expect(result.data.bookingUrl).toBe(null);
+    expect(result.data.priceLevel).toBe(null);
+  });
+
   test("accepts attractionsDetails as a patch field", () => {
     const result = patchMapsSchema.safeParse({
       attractionsDetails: {

@@ -25,6 +25,7 @@ function createTestDb(): Database {
       countryCode TEXT,
       iana_time_id TEXT,
       phoneNumber TEXT,
+      phone_unavailable INTEGER DEFAULT 0,
       website TEXT,
       email TEXT,
       neighborhood_description TEXT,
@@ -33,6 +34,8 @@ function createTestDb(): Database {
       tripadvisor_url TEXT,
       tripadvisor_location_id TEXT,
       payload_location_ref TEXT,
+      selected_payload_media_set_ids_json TEXT,
+      provenance TEXT,
       created_at TEXT,
       updated_at TEXT,
       UNIQUE(category, name, address)

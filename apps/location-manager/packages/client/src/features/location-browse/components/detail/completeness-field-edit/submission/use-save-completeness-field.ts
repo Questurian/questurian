@@ -8,6 +8,7 @@ import {
 } from "@client/shared/lib/nightlife-details";
 import {
   buildDetailFieldUpdatePayload,
+  canSaveDetailFieldValue,
   getDetailFieldConfig,
 } from "../completeness-detail-fields";
 import { getCoreFieldConfig } from "../core-completeness-fields";
@@ -83,15 +84,16 @@ const detailFieldStrategy: SaveStrategy = {
   canSave: ({ field, draft }) => {
     const config = getDetailFieldConfig(field.key);
     if (!config) return false;
-    return config.kind === "multi"
-      ? draft.detailMultiDraft.length > 0
-      : draft.value.trim().length > 0;
+    return canSaveDetailFieldValue(
+      config,
+      config.kind === "multi" ? draft.detailMultiDraft : draft.value
+    );
   },
   save: ({ field, locationDetail, draft, save, showValidationError }) => {
     const config = getDetailFieldConfig(field.key);
     if (!config) return;
     const value = config.kind === "multi" ? draft.detailMultiDraft : draft.value;
-    if (Array.isArray(value) ? !value.length : !value.trim()) {
+    if (!canSaveDetailFieldValue(config, value)) {
       showValidationError(
         config.kind === "multi"
           ? `Select at least one ${config.label.toLowerCase()} option`

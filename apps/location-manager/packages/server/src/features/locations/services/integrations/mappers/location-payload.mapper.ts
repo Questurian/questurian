@@ -238,8 +238,8 @@ function getNightlifeDetailsPayload(location: LocationResponse): PayloadNightlif
   const sectionDetails = asRecord(details.theDetails);
 
   const coreName = asString(core?.name) ?? asString(details.name) ?? location.title ?? location.source.name ?? "";
-  const clubType = asString(core?.clubType) ?? asString(details.club_type) ?? asString(location.type) ?? "";
-  const priceTier = asString(core?.priceTier) ?? asString(details.price_tier) ?? asString(location.priceLevel) ?? "";
+  const clubType = asString(core?.clubType) ?? asString(details.club_type) ?? asString(location.type) ?? null;
+  const priceTier = asString(core?.priceTier) ?? asString(details.price_tier) ?? asString(location.priceLevel) ?? null;
   const music = asStringArray(core?.music ?? details.music) ?? [];
   const idealFor = asStringArray(core?.idealFor ?? location.idealFor) ?? [];
 
@@ -247,13 +247,13 @@ function getNightlifeDetailsPayload(location: LocationResponse): PayloadNightlif
     asRecord(sectionDetails?.operationHours)
     ?? asRecord(getNightlifeSectionValue(details, "theDetails", "operationHours"))
     ?? location.operationHours
-    ?? {};
+    ?? null;
   const bookingUrl = location.bookingUrl
     ?? asString(sectionDetails?.bookingUrl)
     ?? asString(details.booking_url)
     ?? asString(getNightlifeSectionValue(details, "theDetails", "bookingUrl"))
     ?? asString(details.reserve_url) // legacy pre-ADR-0009 JSON key
-    ?? "";
+    ?? null;
   const daytimeRestaurant = asBoolean(sectionDetails?.daytimeRestaurant)
     ?? asBoolean(details.daytime_restaurant)
     ?? asBoolean(getNightlifeSectionValue(details, "theDetails", "daytimeRestaurant"))
@@ -268,19 +268,19 @@ function getNightlifeDetailsPayload(location: LocationResponse): PayloadNightlif
       idealFor,
     },
     theSpace: {
-      venueType: asString(getNightlifeSectionValue(details, "theSpace", "venueType")) ?? "",
-      venueSize: asString(getNightlifeSectionValue(details, "theSpace", "venueSize")) ?? "",
+      venueType: asString(getNightlifeSectionValue(details, "theSpace", "venueType")) ?? null,
+      venueSize: asString(getNightlifeSectionValue(details, "theSpace", "venueSize")) ?? null,
       spaceLayout: asStringArray(getNightlifeSectionValue(details, "theSpace", "spaceLayout")) ?? [],
       vibe: asStringArray(getNightlifeSectionValue(details, "theSpace", "vibe")) ?? [],
-      peakHours: asString(getNightlifeSectionValue(details, "theSpace", "peakHours")) ?? "",
+      peakHours: asString(getNightlifeSectionValue(details, "theSpace", "peakHours")) ?? null,
     },
     theScene: {
       musicFormat: asStringArray(getNightlifeSectionValue(details, "theScene", "musicFormat")) ?? [],
-      touristPresence: asString(getNightlifeSectionValue(details, "theScene", "touristPresence")) ?? "",
+      touristPresence: asString(getNightlifeSectionValue(details, "theScene", "touristPresence")) ?? null,
       dressCode: asStringArray(getNightlifeSectionValue(details, "theScene", "dressCode")) ?? [],
-      energyLevel: asString(getNightlifeSectionValue(details, "theScene", "energyLevel")) ?? "",
-      vipAndBottleService: asString(getNightlifeSectionValue(details, "theScene", "vipAndBottleService")) ?? "",
-      crowdProfile: asString(getNightlifeSectionValue(details, "theScene", "crowdProfile")) ?? "",
+      energyLevel: asString(getNightlifeSectionValue(details, "theScene", "energyLevel")) ?? null,
+      vipAndBottleService: asString(getNightlifeSectionValue(details, "theScene", "vipAndBottleService")) ?? null,
+      crowdProfile: asString(getNightlifeSectionValue(details, "theScene", "crowdProfile")) ?? null,
     },
     theDetails: {
       operationHours,
@@ -297,18 +297,15 @@ function getAttractionsDetailsPayload(location: LocationResponse): Record<string
   const attractionType = asString(core?.attraction_type) ?? asString(location.type);
   const pricing = asString(core?.pricing) ?? asString(location.priceLevel);
   const bookingRequired = asBoolean(visit?.booking_required);
-  const payloadCore = {
-    ...(attractionType ? { attractionType } : {}),
-    ...(pricing ? { pricing } : {}),
-  };
-
-  const payloadVisit = {
-    ...(bookingRequired !== undefined ? { bookingRequired } : {}),
-    ...(location.bookingUrl ? { bookingUrl: location.bookingUrl } : {}),
-  };
   return {
-    ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
-    ...(Object.keys(payloadVisit).length > 0 ? { visit: payloadVisit } : {}),
+    core: {
+      attractionType: attractionType ?? null,
+      pricing: pricing ?? null,
+    },
+    visit: {
+      bookingRequired: bookingRequired ?? false,
+      bookingUrl: asString(location.bookingUrl) ?? null,
+    },
   };
 }
 
@@ -324,20 +321,17 @@ function getKeyLocationsDetailsPayload(location: LocationResponse): Record<strin
   const status = asString(details.status) ?? asString(core?.status);
   const neighborhood = asString(details.neighborhood) ?? asString(core?.neighborhood);
 
-  const payloadCore = {
-    ...(locationType ? { locationType } : {}),
-    ...(status ? { status } : {}),
-    ...(neighborhood ? { neighborhood } : {}),
-  };
-
   return {
-    ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
+    core: {
+      locationType: locationType ?? null,
+      status: status ?? null,
+      neighborhood: neighborhood ?? null,
+    },
   };
 }
 
 function parseAccommodationsGroups(location: LocationResponse): Record<string, unknown> {
-  const details = asRecord(location.accommodationsDetails);
-  if (!details) return {};
+  const details = asRecord(location.accommodationsDetails) ?? {};
 
   const core = asRecord(details.core);
   const theStay = asRecord(details.the_stay);
@@ -345,10 +339,10 @@ function parseAccommodationsGroups(location: LocationResponse): Record<string, u
   const theDetails = asRecord(details.the_details);
 
   const payloadCore = {
-    ...(asString(core?.name) ? { name: asString(core?.name) } : {}),
-    ...(asString(core?.price) ? { price: asString(core?.price) } : {}),
-    ...(asString(core?.district) ? { district: asString(core?.district) } : {}),
-    ...(asString(core?.type) ? { type: asString(core?.type) } : {}),
+    name: asString(core?.name) ?? null,
+    price: asString(core?.price) ?? null,
+    district: asString(core?.district) ?? null,
+    type: asString(core?.type) ?? null,
   };
 
   const parkingForPayload = filterPayloadMultiSelect(
@@ -366,45 +360,41 @@ function parseAccommodationsGroups(location: LocationResponse): Record<string, u
   const workspaceForPayload = normalizeWorkspaceForPayload(theExperience?.workspace);
 
   const payloadStay = {
-    ...(asStringArray(theStay?.perfect_for) ? { perfectFor: asStringArray(theStay?.perfect_for) } : {}),
-    ...(asBoolean(theStay?.kid_friendly) !== undefined ? { kidFriendly: asBoolean(theStay?.kid_friendly) } : {}),
-    ...(asBoolean(theStay?.ac) !== undefined ? { ac: asBoolean(theStay?.ac) } : {}),
-    ...(asBoolean(theStay?.wifi) !== undefined ? { wifi: asBoolean(theStay?.wifi) } : {}),
-    ...(asBoolean(theStay?.extra_guest_fee) !== undefined ? { extraGuestFee: asBoolean(theStay?.extra_guest_fee) } : {}),
-    ...(parkingForPayload ? { parking: parkingForPayload } : {}),
-    ...(asBoolean(theStay?.breakfast_served) !== undefined ? { breakfastServed: asBoolean(theStay?.breakfast_served) } : {}),
+    perfectFor: asStringArray(theStay?.perfect_for) ?? [],
+    kidFriendly: asBoolean(theStay?.kid_friendly) ?? false,
+    ac: asBoolean(theStay?.ac) ?? false,
+    wifi: asBoolean(theStay?.wifi) ?? false,
+    extraGuestFee: asBoolean(theStay?.extra_guest_fee) ?? false,
+    parking: parkingForPayload ?? [],
+    breakfastServed: asBoolean(theStay?.breakfast_served) ?? false,
   };
 
   const payloadExperience = {
-    ...(asStringArray(theExperience?.vibe) ? { vibe: asStringArray(theExperience?.vibe) } : {}),
-    ...(workspaceForPayload ? { workspace: workspaceForPayload } : {}),
-    ...(asBoolean(theExperience?.restaurant) !== undefined ? { restaurant: asBoolean(theExperience?.restaurant) } : {}),
-    ...(poolForPayload ? { pool: poolForPayload } : {}),
-    ...(asBoolean(theExperience?.rooftop_lounge) !== undefined ? { rooftopLounge: asBoolean(theExperience?.rooftop_lounge) } : {}),
-    ...(jacuzziForPayload ? { jacuzzi: jacuzziForPayload } : {}),
-    ...(asString(theExperience?.gym) ? { gym: asString(theExperience?.gym) } : {}),
+    vibe: asStringArray(theExperience?.vibe) ?? [],
+    workspace: workspaceForPayload ?? null,
+    restaurant: asBoolean(theExperience?.restaurant) ?? false,
+    pool: poolForPayload ?? [],
+    rooftopLounge: asBoolean(theExperience?.rooftop_lounge) ?? false,
+    jacuzzi: jacuzziForPayload ?? [],
+    gym: asString(theExperience?.gym) ?? null,
   };
 
   const payloadDetails = {
-    ...(asString(theDetails?.address) ? { address: asString(theDetails?.address) } : {}),
-    ...(asString(theDetails?.walkability) ? { walkability: asString(theDetails?.walkability) } : {}),
-    ...(asString(theDetails?.check_in_time) ? { checkInTime: asString(theDetails?.check_in_time) } : {}),
-    ...(asString(theDetails?.check_out_time) ? { checkOutTime: asString(theDetails?.check_out_time) } : {}),
-    ...(asString(theDetails?.phone) ? { phone: asString(theDetails?.phone) } : {}),
-    ...(asString(theDetails?.website_url) ? { websiteUrl: asString(theDetails?.website_url) } : {}),
-    ...(location.bookingUrl
-      ? { bookingUrl: location.bookingUrl }
-      : asString(theDetails?.booking_url)
-        ? { bookingUrl: asString(theDetails?.booking_url) }
-        : {}),
-    ...(asString(theDetails?.google_maps_url) ? { googleMapsUrl: asString(theDetails?.google_maps_url) } : {}),
+    address: asString(theDetails?.address) ?? null,
+    walkability: asString(theDetails?.walkability) ?? null,
+    checkInTime: asString(theDetails?.check_in_time) ?? null,
+    checkOutTime: asString(theDetails?.check_out_time) ?? null,
+    phone: asString(theDetails?.phone) ?? null,
+    websiteUrl: asString(theDetails?.website_url) ?? null,
+    bookingUrl: asString(location.bookingUrl) ?? asString(theDetails?.booking_url) ?? null,
+    googleMapsUrl: asString(theDetails?.google_maps_url) ?? null,
   };
 
   return {
-    ...(Object.keys(payloadCore).length > 0 ? { core: payloadCore } : {}),
-    ...(Object.keys(payloadStay).length > 0 ? { theStay: payloadStay } : {}),
-    ...(Object.keys(payloadExperience).length > 0 ? { theExperience: payloadExperience } : {}),
-    ...(Object.keys(payloadDetails).length > 0 ? { theDetails: payloadDetails } : {}),
+    core: payloadCore,
+    theStay: payloadStay,
+    theExperience: payloadExperience,
+    theDetails: payloadDetails,
   };
 }
 
@@ -431,6 +421,7 @@ function mapSharedPayloadFields(
 > {
   const galleryImageIds = getGalleryImageIds(location, uploadedImages);
   const payloadCountryCode = convertIsoToPhoneCountryCode(location.contact.countryCode || undefined);
+  const phoneNumber = extractPhoneNumber(location.contact.phoneNumber || undefined);
 
   return {
     title: location.title || location.source.name,
@@ -444,25 +435,26 @@ function mapSharedPayloadFields(
       post: toPayloadRelationshipId(id),
     })),
     address: location.contact.url || "",
-    ...(payloadCountryCode ? { countryCode: payloadCountryCode } : {}),
-    phoneNumber: extractPhoneNumber(location.contact.phoneNumber || undefined) || "",
-    website: location.contact.website || "",
-    latitude: location.coordinates.lat || undefined,
-    longitude: location.coordinates.lng || undefined,
+    countryCode: payloadCountryCode ?? null,
+    phoneNumber: phoneNumber ?? null,
+    website: asString(location.contact.website) ?? null,
+    latitude: location.coordinates.lat ?? null,
+    longitude: location.coordinates.lng ?? null,
     status: "published" as const,
-    ...(location.contact.email ? { email: location.contact.email } : {}),
-    ...(location.contact.countryCode ? { countryCodeIso: location.contact.countryCode } : {}),
-    ...(location.source.name ? { sourceName: location.source.name } : {}),
+    email: asString(location.contact.email) ?? null,
+    countryCodeIso: asString(location.contact.countryCode) ?? null,
+    sourceName: asString(location.source.name) ?? null,
   };
 }
 
 function mapCategoryCommonPayloadFields(location: LocationResponse) {
+  const mappedPriceLevel = location.priceLevel
+    ? PRICE_LEVEL_TO_PAYLOAD[location.priceLevel.toLowerCase()]
+    : undefined;
   return {
-    ...(location.type ? { type: location.type } : {}),
-    ...(location.priceLevel && PRICE_LEVEL_TO_PAYLOAD[location.priceLevel.toLowerCase()]
-      ? { priceLevel: PRICE_LEVEL_TO_PAYLOAD[location.priceLevel.toLowerCase()] }
-      : {}),
-    ...(location.ianaTimeId ? { ianaTimeId: location.ianaTimeId } : {}),
+    type: asString(location.type) ?? null,
+    priceLevel: mappedPriceLevel ?? null,
+    ianaTimeId: asString(location.ianaTimeId) ?? null,
   };
 }
 
@@ -478,11 +470,11 @@ function mapDiningPayload(
   return {
     ...diningSharedFields,
     ...mapCategoryCommonPayloadFields(location),
-    ...(operationHours ? { operationHours } : {}),
-    ...(location.idealFor ? { idealFor: location.idealFor } : {}),
-    ...(location.tripadvisorCuisines ? { cuisines: location.tripadvisorCuisines } : {}),
-    ...(location.menuUrl ? { menuUrl: location.menuUrl } : {}),
-    ...(location.bookingUrl ? { bookingUrl: location.bookingUrl } : {}),
+    operationHours: operationHours ?? null,
+    idealFor: location.idealFor ?? [],
+    cuisines: location.tripadvisorCuisines ?? [],
+    menuUrl: asString(location.menuUrl) ?? null,
+    bookingUrl: asString(location.bookingUrl) ?? null,
   };
 }
 
@@ -504,10 +496,7 @@ function mapAttractionsPayload(
   locationRef: string,
   tourPayloadIds?: string[]
 ): PayloadEntryData {
-  const {
-    website,
-    ...sharedFields
-  } = mapSharedPayloadFields(location, uploadedImages, locationRef);
+  const sharedFields = mapSharedPayloadFields(location, uploadedImages, locationRef);
   const operationHours = normalizeOperationHoursForPayload(location.operationHours);
   const attractionsDetails = getAttractionsDetailsPayload(location);
 
@@ -515,9 +504,8 @@ function mapAttractionsPayload(
     ...sharedFields,
     ...mapCategoryCommonPayloadFields(location),
     ...(location.locationKey ? { location: location.locationKey } : {}),
-    ...(location.contact.website?.trim() ? { website } : {}),
-    ...(operationHours ? { operationHours } : {}),
-    ...(Object.keys(attractionsDetails).length > 0 ? { attractionsDetails } : {}),
+    operationHours: operationHours ?? null,
+    attractionsDetails,
     ...(tourPayloadIds ? { tours: tourPayloadIds.map(toPayloadRelationshipId) } : {}),
   };
 }
@@ -545,14 +533,16 @@ function mapKeyLocationsPayload(
   const operationHours = normalizeOperationHoursForPayload(location.operationHours);
   const keyLocationsDetails = getKeyLocationsDetailsPayload(location);
   const keyLocationStatus = parseKeyLocationStatus(location);
+  const { type, ianaTimeId } = mapCategoryCommonPayloadFields(location);
 
   return {
     ...mapSharedPayloadFields(location, uploadedImages, locationRef),
-    ...mapCategoryCommonPayloadFields(location),
+    type,
+    ianaTimeId,
     ...(location.locationKey ? { location: location.locationKey } : {}),
-    ...(operationHours ? { operationHours } : {}),
-    ...(Object.keys(keyLocationsDetails).length > 0 ? { keyLocationsDetails } : {}),
-    ...(keyLocationStatus ? { keyLocationStatus } : {}),
+    operationHours: operationHours ?? null,
+    keyLocationsDetails,
+    keyLocationStatus: keyLocationStatus ?? null,
   };
 }
 

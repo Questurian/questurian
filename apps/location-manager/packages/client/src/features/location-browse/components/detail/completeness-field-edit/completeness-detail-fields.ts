@@ -52,6 +52,8 @@ export interface DetailFieldConfig {
   path: string[];
   /** Top-level column to keep in sync (e.g. `type`, `priceLevel`). */
   mirror?: "type" | "priceLevel";
+  /** Optional checklist fields may be explicitly cleared. */
+  allowEmpty?: boolean;
   /** Reads the current value for the editor draft. */
   read: (location: LocationResponse) => DetailDraftValue;
 }
@@ -101,6 +103,16 @@ function setNested(root: UnknownRecord, path: string[], value: unknown) {
     current = current[key] as UnknownRecord;
   }
   current[path[path.length - 1]] = value;
+}
+
+function deleteNested(root: UnknownRecord, path: string[]) {
+  let current = root;
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const next = current[path[index]];
+    if (!isRecord(next)) return;
+    current = next;
+  }
+  delete current[path[path.length - 1]];
 }
 
 function encodeValue(kind: DetailFieldKind, value: DetailDraftValue): unknown {
@@ -242,6 +254,7 @@ const ATTRACTIONS_FIELDS: Record<string, DetailFieldConfig> = {
     detailsKey: "attractionsDetails",
     path: ["core", "pricing"],
     mirror: "priceLevel",
+    allowEmpty: true,
     read: (location) =>
       parseAttractionsDetails(location.attractionsDetails).pricing ?? location.priceLevel?.trim() ?? "",
   },
@@ -309,13 +322,50 @@ export function isDetailMultiFieldKey(fieldKey: string): boolean {
   return DETAIL_FIELD_CONFIG[fieldKey]?.kind === "multi";
 }
 
+function hasDetailFieldValue(config: DetailFieldConfig, value: DetailDraftValue): boolean {
+  return config.kind === "multi"
+    ? normalizeMulti(value).length > 0
+    : normalizeSingle(value).length > 0;
+}
+
+export function canSaveDetailFieldValue(
+  config: DetailFieldConfig,
+  value: DetailDraftValue
+): boolean {
+  return Boolean(config.allowEmpty || hasDetailFieldValue(config, value));
+}
+
+export function withAttractionContactDetail(
+  location: LocationResponse,
+  payload: UpdateMapsRequest,
+  field: "website" | "phone",
+  value: string
+): UpdateMapsRequest {
+  if (location.category !== "attractions") return payload;
+
+  const details = cloneDetails(location.attractionsDetails);
+  const path = ["contact", field];
+  const normalized = value.trim();
+  if (normalized) {
+    setNested(details, path, normalized);
+  } else {
+    deleteNested(details, path);
+  }
+
+  return { ...payload, attractionsDetails: details };
+}
+
 export function buildDetailFieldUpdatePayload(
   config: DetailFieldConfig,
   location: LocationResponse,
   value: DetailDraftValue
 ): UpdateMapsRequest {
   const details = cloneDetails(location[config.detailsKey]);
-  setNested(details, config.path, encodeValue(config.kind, value));
+  if (config.allowEmpty && !hasDetailFieldValue(config, value)) {
+    deleteNested(details, config.path);
+  } else {
+    setNested(details, config.path, encodeValue(config.kind, value));
+  }
 
   const payload: UpdateMapsRequest = { [config.detailsKey]: details };
   if (config.mirror === "type") payload.type = normalizeSingle(value);

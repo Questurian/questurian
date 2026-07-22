@@ -17,6 +17,7 @@ import { DINING_ESTABLISHMENT_TYPE_GROUPS } from "@shared/types/dining-taxonomy"
 import type { FieldDef } from "./completeness-field-edit.types";
 import type { CompletenessFieldDraft } from "./drafts/use-completeness-field-draft";
 import { PRICE_LEVELS, TIMEZONE_OPTIONS } from "./field-options";
+import { withAttractionContactDetail } from "./completeness-detail-fields";
 import { parseCoordinateInput } from "./field-value-utils";
 import { buildOperationHoursJson } from "./operation-hours/operation-hours-utils";
 import { OperationHoursFieldEditor } from "./operation-hours/OperationHoursFieldEditor";
@@ -302,25 +303,40 @@ const CORE_FIELD_REGISTRY = {
     ),
     saveStrategy: {
       canSave: () => true,
-      save: ({ draft, save }) =>
+      save: ({ locationDetail, draft, save }) => {
+        const phoneNumber = draft.phoneNotAvailable ? "" : draft.value.trim();
         save(
-          draft.phoneNotAvailable
-            ? { phoneNumber: "", phoneUnavailable: true }
-            : { phoneNumber: draft.value.trim(), phoneUnavailable: false },
+          withAttractionContactDetail(
+            locationDetail,
+            { phoneNumber, phoneUnavailable: draft.phoneNotAvailable },
+            "phone",
+            phoneNumber
+          ),
           "Phone saved",
           "Failed to save phone"
-        ),
+        );
+      },
     },
   },
   website: {
     draftInit: (l) => l.contact?.website?.trim() ?? "",
     editor: textEditor("url"),
-    saveStrategy: simpleValueStrategy((t) => ({ website: t || undefined })),
+    saveStrategy: {
+      canSave: () => true,
+      save: ({ locationDetail, draft, save }) => {
+        const website = draft.value.trim();
+        save(
+          withAttractionContactDetail(locationDetail, { website }, "website", website),
+          "Website saved",
+          "Failed to save Website"
+        );
+      },
+    },
   },
   bookingUrl: {
     draftInit: (l) => l.bookingUrl?.trim() ?? "",
     editor: textEditor("url"),
-    saveStrategy: simpleValueStrategy((t) => ({ bookingUrl: t || null })),
+    saveStrategy: simpleValueStrategy((t) => ({ bookingUrl: t })),
   },
   contactUrl: {
     draftInit: (l) => l.contact?.url?.trim() ?? "",

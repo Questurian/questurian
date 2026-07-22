@@ -1,6 +1,7 @@
 import type { LocationResponse } from "@client/shared/services/api/types";
 import {
   buildDetailFieldUpdatePayload,
+  canSaveDetailFieldValue,
   getDetailFieldConfig,
   isDetailFieldKey,
   isDetailMultiFieldKey,
@@ -20,6 +21,16 @@ const accommodationsLocation = {
     core: { name: "The Meridian", price: "$$$" },
     the_stay: { kid_friendly: true, perfect_for: ["Couples"] },
     the_experience: { vibe: ["Luxury"] },
+  },
+} as unknown as LocationResponse;
+
+const attractionsLocation = {
+  id: "loc-2",
+  category: "attractions",
+  priceLevel: "$$$",
+  attractionsDetails: {
+    core: { attraction_type: "museum", pricing: "$$$" },
+    visit: { booking_required: false },
   },
 } as unknown as LocationResponse;
 
@@ -67,5 +78,19 @@ describe("completeness detail field helpers", () => {
 
     expect(details.the_stay.parking).toEqual(["valet", "garage"]);
     expect(details.the_stay.kid_friendly).toBe(true);
+  });
+
+  test("allows optional attraction pricing to be cleared", () => {
+    const config = getDetailFieldConfig("attractions.pricing");
+    if (!config) throw new Error("missing config");
+
+    expect(canSaveDetailFieldValue(config, "")).toBe(true);
+
+    const payload = buildDetailFieldUpdatePayload(config, attractionsLocation, "");
+    const details = payload.attractionsDetails as Record<string, Record<string, unknown>>;
+
+    expect(details.core.attraction_type).toBe("museum");
+    expect(details.core.pricing).toBe(undefined);
+    expect(payload.priceLevel).toBe("");
   });
 });

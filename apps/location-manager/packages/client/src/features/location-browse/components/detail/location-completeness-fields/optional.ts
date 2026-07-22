@@ -1,16 +1,22 @@
 import type { LocationResponse } from "@client/shared/services/api/types";
 import { parseAccommodationsDetails } from "@client/shared/lib/accommodations-details";
 import { parseNightlifeDetails } from "../../../utils/nightlife-details";
+import { getAttractionsOptionalCompletenessFields } from "./attractions";
+import { createCompletenessFieldContext } from "./common";
 import type { CompletenessField } from "./types";
 
 export function getImportantOptionalCompletenessFields(
   locationDetail: LocationResponse
 ): CompletenessField[] {
   const category = locationDetail.category;
+  if (category === "attractions") {
+    return getAttractionsOptionalCompletenessFields(
+      createCompletenessFieldContext(locationDetail)
+    );
+  }
   if (
     category !== "dining" &&
     category !== "accommodations" &&
-    category !== "attractions" &&
     category !== "nightlife"
   ) {
     return [];
@@ -19,9 +25,7 @@ export function getImportantOptionalCompletenessFields(
   const label =
     category === "accommodations"
       ? "Booking URL"
-      : category === "attractions"
-        ? "Tickets URL"
-        : "Reservation URL";
+      : "Reservation URL";
   const detailsUrl =
     category === "accommodations"
       ? parseAccommodationsDetails(locationDetail.accommodationsDetails).bookingUrl

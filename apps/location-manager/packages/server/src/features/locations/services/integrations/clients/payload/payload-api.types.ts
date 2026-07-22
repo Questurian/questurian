@@ -162,29 +162,29 @@ export interface PayloadInstagramGalleryItem {
 export interface PayloadNightlifeDetails {
   core: {
     name: string;
-    clubType: string;
-    priceTier: string;
+    clubType: string | null;
+    priceTier: string | null;
     music: string[];
     idealFor: string[];
   };
   theSpace: {
-    venueType: string;
-    venueSize: string;
+    venueType: string | null;
+    venueSize: string | null;
     spaceLayout: string[];
     vibe: string[];
-    peakHours: string;
+    peakHours: string | null;
   };
   theScene: {
     musicFormat: string[];
-    touristPresence: string;
+    touristPresence: string | null;
     dressCode: string[];
-    energyLevel: string;
-    vipAndBottleService: string;
-    crowdProfile: string;
+    energyLevel: string | null;
+    vipAndBottleService: string | null;
+    crowdProfile: string | null;
   };
   theDetails: {
-    operationHours: Record<string, unknown>;
-    bookingUrl: string;
+    operationHours: Record<string, unknown> | null;
+    bookingUrl: string | null;
     daytimeRestaurant: boolean;
   };
 }
@@ -334,20 +334,20 @@ export interface PayloadEntryData {
   gallery: PayloadGalleryItem[];
   instagramGallery?: PayloadInstagramGalleryItem[];
   address?: string;
-  countryCode?: string;
-  phoneNumber?: string;
-  website?: string;
-  menuUrl?: string;
-  bookingUrl?: string;
-  email?: string;
+  countryCode?: string | null;
+  phoneNumber?: string | null;
+  website?: string | null;
+  menuUrl?: string | null;
+  bookingUrl?: string | null;
+  email?: string | null;
   operationHours?: {
     hours: Array<{
       day: string;
       hours: string;
     }>;
-  };
-  countryCodeIso?: string;
-  sourceName?: string;
+  } | null;
+  countryCodeIso?: string | null;
+  sourceName?: string | null;
   cuisines?: string[];
   idealFor?: string[];
   nightlifeDetails?: PayloadNightlifeDetails;
@@ -358,9 +358,9 @@ export interface PayloadEntryData {
   attractionsDetails?: Record<string, unknown>;
   tours?: PayloadRelationshipId[];
   keyLocationsDetails?: Record<string, unknown>;
-  ianaTimeId?: string;
-  latitude?: number;
-  longitude?: number;
+  ianaTimeId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   status: "draft" | "published";
 }
 

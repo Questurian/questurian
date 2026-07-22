@@ -213,6 +213,9 @@ _Avoid_: feature flag (connotes rollout/experimentation), env flag, kill switch.
 
 - Two Locations may **not** share the same `country|city|neighborhood` key.
 - A Location cannot be synced to Payload while its `PayloadSyncChecklist` reports a required field as `missing`/`invalid`.
+- A phone number is optional for every Location category; absence does not block create, completeness, or Payload sync. `phoneUnavailable` remains a useful explicit source fact but is not required.
+- Attractions pricing is optional; an unknown price must remain absent rather than defaulting to `free`.
+- **Open 24/7** uses the canonical operation-hours schedule: all seven days contain `00:00:00 - 23:59:59`. It is derived from schedule data, not stored as a second boolean.
 - Image variant files are generated **on the LM side** before sync — Questura validates and serves, but does not produce variants (per the MediaSet ADR).
 - TaxonomyCorrections apply uniformly: an applied rule must update all matching rows, not only newly imported ones.
 - `IdealForTag` selections are category-bound; an `AccommodationsIdealForTag` may not appear on a `dining` Location.

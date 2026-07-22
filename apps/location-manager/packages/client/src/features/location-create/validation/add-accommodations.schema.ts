@@ -83,32 +83,7 @@ export const addAccommodationsSchema = z.object({
   ianaTimeId: z.string().trim().optional().or(z.literal("")),
 });
 
-/**
- * Phone is required unless the user explicitly marks it "not available".
- * Shared by the resolver schema and the submit schema.
- */
-function requirePhoneUnlessUnavailable(
-  data: { phone?: string; phoneNotAvailable: boolean },
-  ctx: z.RefinementCtx,
-  path: (string | number)[] = ["phone"]
-) {
-  if (!data.phoneNotAvailable && !data.phone?.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path,
-      message: "Phone is required (or mark it not available)",
-    });
-  }
-}
-
-/**
- * Resolver schema for the create form. Kept separate from `addAccommodationsSchema`
- * so the base object schema stays a ZodObject for `.partial()` draft parsing and
- * for nesting inside `addAccommodationsSubmitSchema`.
- */
-export const addAccommodationsFormSchema = addAccommodationsSchema.superRefine(
-  (data, ctx) => requirePhoneUnlessUnavailable(data, ctx)
-);
+export const addAccommodationsFormSchema = addAccommodationsSchema;
 
 export const addAccommodationsSubmitSchema = z
   .object({
@@ -116,7 +91,6 @@ export const addAccommodationsSubmitSchema = z
     formValues: addAccommodationsSchema,
   })
   .superRefine((data, ctx) => {
-    requirePhoneUnlessUnavailable(data.formValues, ctx, ["formValues", "phone"]);
     if (data.prefillSignature === null) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

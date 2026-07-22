@@ -405,7 +405,7 @@ export function AddDiningStagedForm({
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label>Phone number</Label>
+                    <Label>Phone number (optional)</Label>
                     <Input
                       placeholder="+51 1 555 5555"
                       {...form.register("phoneNumber")}

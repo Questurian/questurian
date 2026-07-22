@@ -1,3 +1,5 @@
+import { hasMeaningfulOperationHours } from "./operation-hours";
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | null {
@@ -50,16 +52,14 @@ function hasVisitHoursValue(value: unknown): boolean {
   if (!value) return false;
   if (typeof value === "string") return value.trim().length > 0;
   if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === "object") {
-    return Object.keys(value as Record<string, unknown>).length > 0;
-  }
+  if (typeof value === "object") return hasMeaningfulOperationHours(value);
   return false;
 }
 
 export interface AttractionsDetailsPayload extends Record<string, unknown> {
   core: {
     attraction_type: string;
-    pricing: string;
+    pricing?: string;
     location_key: string;
     district?: string;
   };
@@ -76,7 +76,7 @@ export interface AttractionsDetailsPayload extends Record<string, unknown> {
 
 export interface BuildAttractionsDetailsInput {
   type: string;
-  pricing: string;
+  pricing?: string;
   locationKey: string;
   district?: string;
   hours: Record<string, unknown>;
@@ -92,7 +92,7 @@ export function buildAttractionsDetails(
   return {
     core: {
       attraction_type: input.type,
-      pricing: input.pricing,
+      ...(input.pricing ? { pricing: input.pricing } : {}),
       location_key: input.locationKey,
       ...(input.district ? { district: input.district } : {}),
     },

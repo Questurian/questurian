@@ -39,6 +39,27 @@ function buildDiningLocation(
 }
 
 describe("dining completeness", () => {
+  test("marks dining complete when phone is missing", () => {
+    const location = buildDiningLocation({
+      phoneNumber: null,
+      phoneUnavailable: false,
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.isComplete).toBe(true);
+  });
+
+  test("does not count an empty canonical hours array as complete", () => {
+    const location = buildDiningLocation({
+      hoursJson: JSON.stringify({ hours: [] }),
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.isComplete).toBe(false);
+  });
+
   test("marks dining complete when operator confirmed phone is unavailable", () => {
     const location = buildDiningLocation({
       phoneNumber: null,

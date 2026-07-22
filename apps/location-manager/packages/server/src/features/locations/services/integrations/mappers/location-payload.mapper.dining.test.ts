@@ -73,7 +73,7 @@ describe("mapLocationToPayloadFormat dining", () => {
     expect(payload).not.toHaveProperty("sourceName");
   });
 
-  test("omits menu and reservation urls when not present", () => {
+  test("sends explicit clears when optional values are not present", () => {
     const location = {
       id: 2,
       title: "Dining Test",
@@ -115,7 +115,8 @@ describe("mapLocationToPayloadFormat dining", () => {
       "123"
     );
 
-    expect(payload).not.toHaveProperty("menuUrl");
-    expect(payload).not.toHaveProperty("bookingUrl");
+    expect(payload).toHaveProperty("menuUrl", null);
+    expect(payload).toHaveProperty("bookingUrl", null);
+    expect(payload).toHaveProperty("phoneNumber", null);
   });
 });

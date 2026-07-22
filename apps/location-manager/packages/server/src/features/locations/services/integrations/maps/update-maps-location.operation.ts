@@ -6,6 +6,7 @@ import { demoteProvenanceForOperatorEdit } from "../../../utils/location-utils/p
 import type { MapsServiceOperationContext } from "./maps.types";
 import {
   generateGoogleMapsUrl,
+  getAttractionTours,
   getLocationByIdForUpdate,
   getUploadsByLocationId,
   setAttractionTours,
@@ -13,6 +14,71 @@ import {
 } from "../maps.dependencies";
 
 const MAX_ATTRACTION_GALLERY_ITEMS = 20;
+
+const JSON_UPDATE_COLUMNS = new Set([
+  "selectedPayloadMediaSetIdsJson",
+  "idealForJson",
+  "nightlifeDetailsJson",
+  "accommodationsDetailsJson",
+  "attractionsDetailsJson",
+  "keyLocationsDetailsJson",
+  "hoursJson",
+  "tripadvisorMealTypesJson",
+  "tripadvisorCuisinesJson",
+  "tripadvisorFeaturesJson",
+]);
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortJsonValue);
+  if (!value || typeof value !== "object") return value;
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => [key, sortJsonValue(child)])
+  );
+}
+
+function comparableJson(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    return JSON.stringify(sortJsonValue(parsed));
+  } catch {
+    return String(value);
+  }
+}
+
+function updateValueChanged(column: string, currentValue: unknown, nextValue: unknown): boolean {
+  if (column === "phoneUnavailable") {
+    return Boolean(currentValue) !== Boolean(nextValue);
+  }
+  if (JSON_UPDATE_COLUMNS.has(column)) {
+    return comparableJson(currentValue) !== comparableJson(nextValue);
+  }
+
+  const currentEmpty = currentValue === null || currentValue === undefined || currentValue === "";
+  const nextEmpty = nextValue === null || nextValue === undefined || nextValue === "";
+  if (currentEmpty && nextEmpty) return false;
+
+  return !Object.is(currentValue, nextValue);
+}
+
+function changedLocationUpdates(
+  currentLocation: object,
+  updates: Record<string, unknown>
+): Record<string, unknown> {
+  const current = currentLocation as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(updates).filter(([column, value]) =>
+      updateValueChanged(column, current[column], value)
+    )
+  );
+}
+
+function sameOrderedIds(left: number[], right: number[]): boolean {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
+}
 
 export async function updateMapsLocationByIdOperation(
   context: MapsServiceOperationContext,
@@ -117,10 +183,12 @@ export async function updateMapsLocationByIdOperation(
     ...(updates.tripadvisorUrl !== undefined && context.resolveTripadvisorFields(updates.tripadvisorUrl)),
   };
 
+  const changedUpdateData = changedLocationUpdates(currentLocation, updateData);
+
   // ADR-0002 §2: operator edits flip field provenance to operator.
-  const provenanceJson = demoteProvenanceForOperatorEdit(currentLocation, updateData);
+  const provenanceJson = demoteProvenanceForOperatorEdit(currentLocation, changedUpdateData);
   const persistedUpdate =
-    provenanceJson !== undefined ? { ...updateData, provenanceJson } : updateData;
+    provenanceJson !== undefined ? { ...changedUpdateData, provenanceJson } : changedUpdateData;
 
   if (Object.keys(persistedUpdate).length > 0) {
     const success = updateLocationById(id, persistedUpdate);
@@ -130,7 +198,14 @@ export async function updateMapsLocationByIdOperation(
     }
   }
 
-  if (tourIds !== undefined) {
+  const currentTourIds = tourIds === undefined
+    ? undefined
+    : getAttractionTours(id).map((tour) => tour.id);
+  if (
+    tourIds !== undefined &&
+    currentTourIds !== undefined &&
+    !sameOrderedIds(currentTourIds, tourIds)
+  ) {
     setAttractionTours(id, tourIds);
   }
 

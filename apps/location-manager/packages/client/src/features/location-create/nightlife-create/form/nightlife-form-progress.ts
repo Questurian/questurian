@@ -64,7 +64,6 @@ export function getNightlifeFormProgress(
         label: "Contact",
         complete:
           Boolean(values.countryCode) &&
-          (hasValue(values.phone) || values.phoneNotAvailable) &&
           hasValue(values.website) &&
           !errors.phone &&
           !errors.website &&

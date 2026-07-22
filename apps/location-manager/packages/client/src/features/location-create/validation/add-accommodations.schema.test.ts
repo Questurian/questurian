@@ -1,4 +1,5 @@
 import {
+  addAccommodationsFormSchema,
   addAccommodationsSchema,
   addAccommodationsSubmitSchema,
   buildAccommodationsPrefillSignature,
@@ -34,6 +35,7 @@ const validBaseForm = {
   checkInTime: "15:00",
   checkOutTime: "11:00",
   phone: "+1 (555) 700-1200",
+  phoneNotAvailable: false,
   websiteUrl: "https://example.com/meridian-grand",
   bookingUrl: "https://example.com/meridian-grand/book",
   googleMapsUrl: "https://maps.google.com/?q=220+Market+Street+Miami",
@@ -49,6 +51,15 @@ const validBaseForm = {
 describe("add accommodations schema", () => {
   test("accepts a valid staged accommodations payload", () => {
     const result = addAccommodationsSchema.safeParse(validBaseForm);
+    expect(result.success).toBe(true);
+  });
+
+  test("accepts a staged accommodations payload without a phone", () => {
+    const result = addAccommodationsFormSchema.safeParse({
+      ...validBaseForm,
+      phone: "",
+      phoneNotAvailable: false,
+    });
     expect(result.success).toBe(true);
   });
 

@@ -79,6 +79,18 @@ describe("key locations completeness", () => {
     expect(basic.isComplete).toBe(true);
   });
 
+  test("marks key locations complete when phone is missing", () => {
+    const details = buildKeyLocationsDetails({ phone: "" });
+    const location = buildKeyLocationsLocation({
+      phoneNumber: null,
+      keyLocationsDetailsJson: JSON.stringify(details),
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.isComplete).toBe(true);
+  });
+
   test("marks key locations incomplete when representative required fields are missing", () => {
     const incompleteDetails = buildKeyLocationsDetails({
       status: "",

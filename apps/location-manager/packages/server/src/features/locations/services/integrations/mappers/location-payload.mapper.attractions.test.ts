@@ -64,13 +64,14 @@ describe("mapLocationToPayloadFormat attractions", () => {
       },
       visit: {
         bookingRequired: true,
+        bookingUrl: null,
       },
     });
     expect(payload.tours).toEqual([101, "tour-abc"]);
     expect(payload).not.toHaveProperty("idealFor");
   });
 
-  test("omits top-level website when attractions website is blank", () => {
+  test("sends explicit clears for blank optional website, phone, and pricing fields", () => {
     const location = {
       id: 2,
       title: "Attraction Test No Website",
@@ -84,7 +85,6 @@ describe("mapLocationToPayloadFormat attractions", () => {
       attractionsDetails: {
         core: {
           attraction_type: "museum",
-          pricing: "$$",
         },
         visit: {
           booking_required: true,
@@ -95,10 +95,10 @@ describe("mapLocationToPayloadFormat attractions", () => {
       tripadvisorMealTypes: null,
       tripadvisorCuisines: null,
       tripadvisorFeatures: null,
-      priceLevel: "$$",
+      priceLevel: null,
       contact: {
         countryCode: "PE",
-        phoneNumber: "+51 999 999 999",
+        phoneNumber: null,
         website: "",
         email: "hello@attractions.example.com",
         contactAddress: "Secondary contact address",
@@ -119,7 +119,13 @@ describe("mapLocationToPayloadFormat attractions", () => {
       "790"
     );
 
-    expect(payload).not.toHaveProperty("website");
+    expect(payload).toHaveProperty("website", null);
+    expect(payload).toHaveProperty("phoneNumber", null);
+    expect(payload).toHaveProperty("priceLevel", null);
+    expect(payload.attractionsDetails).toEqual({
+      core: { attractionType: "museum", pricing: null },
+      visit: { bookingRequired: true, bookingUrl: null },
+    });
   });
 
   test("appends selected Payload media sets after uploads and removes duplicates", () => {

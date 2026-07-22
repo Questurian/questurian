@@ -1,4 +1,4 @@
-import { addNightlifeSchema } from './add-nightlife.schema';
+import { addNightlifeFormSchema, addNightlifeSchema } from './add-nightlife.schema';
 
 declare const describe: (name: string, callback: () => void) => void;
 declare const test: (name: string, callback: () => void) => void;
@@ -26,6 +26,7 @@ const validBaseForm = {
   countryCode: 'PE',
   location: '123 Main St, Lima',
   phone: '+51 999 555 444',
+  phoneNotAvailable: false,
   hours: '',
   tripadvisorUrl: '',
   website: 'https://example.com/club',
@@ -43,6 +44,15 @@ const validBaseForm = {
 describe('add nightlife schema', () => {
   test('accepts a valid nightlife payload with blank TripAdvisor URL', () => {
     const result = addNightlifeSchema.safeParse(validBaseForm);
+    expect(result.success).toBe(true);
+  });
+
+  test('accepts a nightlife payload without a phone', () => {
+    const result = addNightlifeFormSchema.safeParse({
+      ...validBaseForm,
+      phone: '',
+      phoneNotAvailable: false,
+    });
     expect(result.success).toBe(true);
   });
 

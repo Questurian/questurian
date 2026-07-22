@@ -58,7 +58,6 @@ export function getAccommodationsCompletenessFields({
     { key: "accommodations.walkability", label: "Walkability", present: Boolean(accommodationsDetails.walkability) },
     { key: "accommodations.checkInTime", label: "Check-In", present: Boolean(accommodationsDetails.checkInTime) },
     { key: "accommodations.checkOutTime", label: "Check-Out", present: Boolean(accommodationsDetails.checkOutTime) },
-    { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim() || accommodationsDetails.phone || contact.phoneUnavailable) },
     { key: "website", label: "Website", present: Boolean(contact.website?.trim() || accommodationsDetails.websiteUrl) },
     { key: "media", label: "Images/Instagram", present: hasMedia },
   ];

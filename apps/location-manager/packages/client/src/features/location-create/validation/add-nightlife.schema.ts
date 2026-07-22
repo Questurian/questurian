@@ -113,19 +113,6 @@ export const addNightlifeSchema = z.object({
   daytimeRestaurant: z.enum(DAYTIME_RESTAURANT_VALUES),
 });
 
-/**
- * Resolver schema for the create form. Phone is required unless the user
- * explicitly marks it "not available". Kept separate from `addNightlifeSchema`
- * so the base object schema stays a ZodObject for `.partial()` draft parsing.
- */
-export const addNightlifeFormSchema = addNightlifeSchema.superRefine((data, ctx) => {
-  if (!data.phoneNotAvailable && !data.phone?.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["phone"],
-      message: "Phone number is required (or mark it not available)",
-    });
-  }
-});
+export const addNightlifeFormSchema = addNightlifeSchema;
 
 export type AddNightlifeFormData = z.infer<typeof addNightlifeSchema>;

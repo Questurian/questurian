@@ -36,6 +36,7 @@ const validBaseForm = {
     null,
     2
   ),
+  tourIds: [],
 };
 
 describe("add attractions schema", () => {
@@ -48,6 +49,15 @@ describe("add attractions schema", () => {
     const result = addAttractionsSchema.safeParse({
       ...validBaseForm,
       website: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("accepts a staged attractions payload without pricing or phone", () => {
+    const result = addAttractionsSchema.safeParse({
+      ...validBaseForm,
+      priceLevel: "",
+      phone: "",
     });
     expect(result.success).toBe(true);
   });

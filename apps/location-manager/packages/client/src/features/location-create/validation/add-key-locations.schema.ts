@@ -28,7 +28,7 @@ function parseOperationHoursJson(value: string): Record<string, unknown> | null 
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
 
     const record = parsed as Record<string, unknown>;
-    if (!Array.isArray(record.hours)) return null;
+    if (!Array.isArray(record.hours) || record.hours.length === 0) return null;
 
     const hasInvalidRow = record.hours.some((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return true;

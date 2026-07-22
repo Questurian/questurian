@@ -1,4 +1,8 @@
-import { parseLocationProvenanceJson } from "@questurian/lm-shared";
+import {
+  isAttractionComplete,
+  parseLocationProvenanceJson,
+  type AttractionCompletenessFacts,
+} from "@questurian/lm-shared";
 import type {
   Location,
   LocationBasic,
@@ -267,6 +271,24 @@ export function transformLocationToBasicResponse(
   const accommodationsDetails = parseAccommodationsDetails();
   const attractionsDetails = parseAttractionsDetails();
   const keyLocationsDetails = parseKeyLocationsDetails();
+  const weekdayKeys = new Set([
+    "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+  ]);
+  const hasMeaningfulOperationHours = (value: unknown): boolean => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const record = value as Record<string, unknown>;
+    if ("hours" in record) {
+      return Array.isArray(record.hours) && record.hours.some((row) => {
+        if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+        const normalized = row as Record<string, unknown>;
+        return typeof normalized.day === "string" && normalized.day.trim().length > 0 &&
+          typeof normalized.hours === "string" && normalized.hours.trim().length > 0;
+      });
+    }
+    return Object.entries(record).some(([key, entry]) =>
+      weekdayKeys.has(key.toLowerCase()) && typeof entry === "string" && entry.trim().length > 0
+    );
+  };
   const nightlifeSectionValue = (section: "theSpace" | "theScene", key: string): unknown => {
     const detailsRoot = nightlifeDetails?.["details"];
     if (!detailsRoot || typeof detailsRoot !== "object" || Array.isArray(detailsRoot)) return null;
@@ -358,11 +380,7 @@ export function transformLocationToBasicResponse(
     return false;
   };
 
-  const nightlifePhone = nightlifeString(nightlifeDetails?.["phone"]);
   const nightlifeWebsite = nightlifeString(nightlifeDetails?.["website"]);
-  const accommodationsPhone =
-    accommodationsString(accommodationsSectionValue("the_details", "phone")) ||
-    accommodationsString(accommodationsDetails?.["phone"]);
   const accommodationsWebsite =
     accommodationsString(accommodationsSectionValue("the_details", "website_url")) ||
     accommodationsString(accommodationsDetails?.["website_url"]);
@@ -412,12 +430,13 @@ export function transformLocationToBasicResponse(
     accommodationsString(location.priceLevel);
   const attractionsVisitHours = attractionsSectionValue("visit", "hours");
   const attractionsBookingRequired = attractionsSectionValue("visit", "booking_required");
+  const attractionsWebsite = accommodationsString(attractionsSectionValue("contact", "website"));
+  const attractionsPhone = accommodationsString(attractionsSectionValue("contact", "phone"));
   const keyLocationsType =
     keyLocationsString(keyLocationsValue("location_type")) ||
     keyLocationsString(location.type);
   const keyLocationsStatus = keyLocationsString(keyLocationsValue("status"));
   const keyLocationsWebsite = keyLocationsString(keyLocationsValue("website")) || accommodationsString(location.website);
-  const keyLocationsPhone = keyLocationsString(keyLocationsValue("phone")) || accommodationsString(location.phoneNumber);
   const keyLocationsHours = keyLocationsValue("hours");
   const keyLocationsDistrict = keyLocationsString(keyLocationsValue("neighborhood")) || accommodationsString(location.district);
   const keyLocationsImages = keyLocationsValue("images");
@@ -443,18 +462,19 @@ export function transformLocationToBasicResponse(
     hasSelectedPayloadMediaSets;
   const hasAddress = Boolean(location.address?.trim());
   const hasCountryCode = Boolean(location.countryCode?.trim());
-  const hasPhoneNumber =
-    Boolean(location.phoneNumber?.trim()) ||
-    Boolean(location.phoneUnavailable) ||
-    (isNightlife && Boolean(nightlifePhone)) ||
-    (isAccommodations && Boolean(accommodationsPhone)) ||
-    (isKeyLocations && Boolean(keyLocationsPhone));
   const hasWebsite =
     Boolean(location.website?.trim()) ||
     (isNightlife && Boolean(nightlifeWebsite)) ||
     (isAccommodations && Boolean(accommodationsWebsite)) ||
     (isKeyLocations && Boolean(keyLocationsWebsite));
-  const hasOperationHours = Boolean(location.hoursJson && location.hoursJson !== '{}' && location.hoursJson !== 'null');
+  const hasOperationHours = (() => {
+    if (!location.hoursJson) return false;
+    try {
+      return hasMeaningfulOperationHours(JSON.parse(location.hoursJson));
+    } catch {
+      return false;
+    }
+  })();
   const hasCuisines = Boolean(location.tripadvisorCuisinesJson);
   const hasIdealFor = (() => {
     if (!location.idealForJson) return false;
@@ -507,9 +527,7 @@ export function transformLocationToBasicResponse(
   const hasAccommodationsWalkability = Boolean(accommodationsString(accommodationsWalkability));
   const hasAccommodationsCheckIn = Boolean(accommodationsString(accommodationsCheckIn));
   const hasAccommodationsCheckOut = Boolean(accommodationsString(accommodationsCheckOut));
-  const hasAttractionsProfile = Boolean(attractionsDetails && Object.keys(attractionsDetails).length > 0);
   const hasAttractionsType = Boolean(attractionsType);
-  const hasAttractionsPricing = Boolean(attractionsPricing);
   const hasAttractionsBookingRequired = accommodationsBooleanPresent(attractionsBookingRequired);
   const hasAttractionsVisitHours = (() => {
     if (hasOperationHours) return true;
@@ -520,9 +538,7 @@ export function transformLocationToBasicResponse(
     if (Array.isArray(attractionsVisitHours)) {
       return attractionsVisitHours.some((item) => accommodationsString(item) !== null);
     }
-    if (typeof attractionsVisitHours === "object") {
-      return Object.keys(attractionsVisitHours as Record<string, unknown>).length > 0;
-    }
+    if (typeof attractionsVisitHours === "object") return hasMeaningfulOperationHours(attractionsVisitHours);
     return false;
   })();
   const hasKeyLocationsProfile = Boolean(keyLocationsDetails && Object.keys(keyLocationsDetails).length > 0);
@@ -537,13 +553,32 @@ export function transformLocationToBasicResponse(
     if (Array.isArray(keyLocationsHours)) {
       return keyLocationsHours.length > 0;
     }
-    if (typeof keyLocationsHours === "object") {
-      return Object.keys(keyLocationsHours as Record<string, unknown>).length > 0;
-    }
+    if (typeof keyLocationsHours === "object") return hasMeaningfulOperationHours(keyLocationsHours);
     return false;
   })();
   const hasKeyLocationsDistrict = Boolean(keyLocationsDistrict);
   const hasKeyLocationsImages = Array.isArray(keyLocationsImages) && keyLocationsImages.length > 0;
+  const attractionCompletenessFacts: AttractionCompletenessFacts = {
+    name: Boolean(location.name?.trim()),
+    title: hasTitle,
+    sourceAddress: hasAddress,
+    category: isAttractions,
+    locationKey: Boolean(location.locationKey?.trim()),
+    district: Boolean(location.district?.trim()),
+    countryCode: hasCountryCode,
+    ianaTimeId: hasIanaTimeId,
+    coordinates: hasCoordinates,
+    "attractions.type": hasAttractionsType,
+    "attractions.bookingRequired": hasAttractionsBookingRequired,
+    operationHours: hasAttractionsVisitHours,
+    media: hasMedia,
+    website: Boolean(location.website?.trim() || attractionsWebsite),
+    phone: Boolean(
+      location.phoneNumber?.trim() || location.phoneUnavailable || attractionsPhone
+    ),
+    "attractions.pricing": Boolean(attractionsPricing),
+    bookingUrl: Boolean(location.bookingUrl?.trim()),
+  };
 
   const hasSharedCommonFields =
     hasTitle &&
@@ -569,13 +604,6 @@ export function transformLocationToBasicResponse(
     hasIanaTimeId &&
     hasCoordinates;
 
-  const hasAttractionsCommonFields =
-    hasTitle &&
-    hasMedia &&
-    hasAddress &&
-    hasCountryCode &&
-    hasIanaTimeId &&
-    hasCoordinates;
   const hasKeyLocationsCommonFields =
     hasTitle &&
     hasMedia &&
@@ -603,7 +631,6 @@ export function transformLocationToBasicResponse(
       hasNightlifeCrowdProfile &&
       hasNightlifeDaytimeRestaurant &&
       hasNightlifePriceTier &&
-      hasPhoneNumber &&
       hasWebsite
     )
     : isAccommodations
@@ -628,18 +655,10 @@ export function transformLocationToBasicResponse(
         hasAccommodationsWalkability &&
         hasAccommodationsCheckIn &&
         hasAccommodationsCheckOut &&
-        hasPhoneNumber &&
         hasWebsite
       )
     : isAttractions
-      ? (
-        hasAttractionsCommonFields &&
-        hasAttractionsProfile &&
-        hasAttractionsType &&
-        hasAttractionsPricing &&
-        hasAttractionsBookingRequired &&
-        hasAttractionsVisitHours
-      )
+      ? isAttractionComplete(attractionCompletenessFacts)
     : isKeyLocations
       ? (
         hasKeyLocationsCommonFields &&
@@ -649,12 +668,10 @@ export function transformLocationToBasicResponse(
         hasKeyLocationsVisitHours &&
         hasKeyLocationsDistrict &&
         (hasMedia || hasKeyLocationsImages) &&
-        hasPhoneNumber &&
         hasWebsite
       )
     : (
       hasSharedCommonFields &&
-      hasPhoneNumber &&
       hasWebsite &&
       hasOperationHours &&
       hasCuisines &&

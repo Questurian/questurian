@@ -94,6 +94,26 @@ describe("accommodations completeness", () => {
     expect(basic.isComplete).toBe(true);
   });
 
+  test("marks accommodations complete when phone is missing", () => {
+    const details = buildAccommodationsDetails({
+      the_details: {
+        address: "220 Market Street, Financial District",
+        walkability: "Walkable Downtown",
+        check_in_time: "15:00",
+        check_out_time: "11:00",
+        website_url: "https://example.com/meridian-grand",
+      },
+    });
+    const location = buildAccommodationsLocation({
+      phoneNumber: null,
+      accommodationsDetailsJson: JSON.stringify(details),
+    });
+
+    const basic = transformLocationToBasicResponse(location);
+
+    expect(basic.isComplete).toBe(true);
+  });
+
   test("treats workspace as complete when stored as string array (form shape)", () => {
     const details = buildAccommodationsDetails({
       the_experience: {

@@ -349,7 +349,7 @@ export function AddAttractionsStagedForm({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Pricing</Label>
+                    <Label>Pricing (optional)</Label>
                     <select
                       value={form.watch("priceLevel")}
                       onChange={(event) =>
@@ -361,6 +361,7 @@ export function AddAttractionsStagedForm({
                       }
                       className="w-full h-10 px-3 text-sm border border-border rounded-md bg-background text-foreground"
                     >
+                      <option value="">Not specified</option>
                       <option value="free">free</option>
                       <option value="$">$</option>
                       <option value="$$">$$</option>

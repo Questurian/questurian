@@ -27,7 +27,7 @@ function parseOperationHoursJson(value: string): Record<string, unknown> | null 
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
 
     const record = parsed as Record<string, unknown>;
-    if (!Array.isArray(record.hours)) return null;
+    if (!Array.isArray(record.hours) || record.hours.length === 0) return null;
 
     const hasInvalidRow = record.hours.some((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return true;
@@ -61,7 +61,7 @@ export const addAttractionsSchema = z.object({
     .min(1, "Address is required")
     .max(500, "Address must be less than 500 characters"),
   type: z.string().trim().min(1, "Type is required"),
-  priceLevel: z.enum(PRICE_LEVEL_VALUES),
+  priceLevel: z.enum(PRICE_LEVEL_VALUES).optional().or(z.literal("")),
   bookingRequired: z.enum(BOOKING_REQUIRED_VALUES),
   website: z
     .string()

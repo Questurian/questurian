@@ -29,7 +29,6 @@ export function getDefaultCompletenessFields({
     },
     { key: "ianaTimeId", label: "Time Zone (IANA)", present: Boolean(locationDetail.ianaTimeId?.trim()) },
     { key: "countryCode", label: "Country Code", present: Boolean(contact.countryCode?.trim()) },
-    { key: "phone", label: "Phone", present: Boolean(contact.phoneNumber?.trim() || contact.phoneUnavailable) },
     { key: "website", label: "Website", present: Boolean(contact.website?.trim()) },
     { key: "contactUrl", label: "Google URL", present: Boolean(contact.url?.trim()) },
   ];
