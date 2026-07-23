@@ -48,6 +48,11 @@ Listing entities pulled from the corresponding Payload collections.
 
 A bookable activity. Rendered with availability + price.
 
+### Itinerary Moment
+
+A reader-facing cue shown with a non-lodging Listicle Itinerary stop. The Moment key chooses the cue; an optional Moment label replaces its default wording.
+_Avoid_: stop type, daypart, itinerary tag
+
 ### `PerfectForTag`
 
 Tag used for filter and browse UI. Scoped to a `LocationCategory` via `applicableTypes`.
@@ -94,6 +99,7 @@ Stripe checkout flow for paid content.
 - A **Location** page renders server-provided location/homepage/content payloads plus listings filtered by location.
 - A listing card uses a **MediaSet** payload via the server-side media resolver — the client does not pick variants.
 - A **Tour** card renders price in the selected **Currency**.
+- An **Itinerary Moment** presents the vocabulary owned by Questura Server; unknown Moment keys are omitted.
 - A `PerfectForTag` filter narrows listings by `applicableTypes`.
 - A **Visitor account** is the public identity behind account, saved-guide, profile, and checkout flows.
 - A **Current principal** may represent a Visitor account or a Staff identity.
@@ -107,6 +113,7 @@ Stripe checkout flow for paid content.
 - Stripe checkout is initiated server-side; the client only renders Stripe's hosted UI or the Elements components.
 - i18n strings live under `messages/` and are loaded via `next-intl`. Inline strings are a regression.
 - Instagram embeds must keep their loaded third-party DOM stable after mount. `InstagramEmbedBlock` pins the raw blockquote HTML in a memoized leaf so React 19 re-renders cannot re-commit `dangerouslySetInnerHTML` and destroy loaded iframes. Listicle embeds warm in page order with bounded concurrency; do not switch to eager-all loading because slow connections starve concurrent Instagram iframes.
+- An Itinerary Moment uses its Moment label when present; otherwise it uses the default wording for its Moment key.
 
 ## Naming Conventions
 

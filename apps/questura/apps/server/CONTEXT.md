@@ -92,6 +92,11 @@ Per-location homepage content (featured blocks).
 
 Editorial collections.
 
+### Itinerary Moment
+
+The canonical optional reader-facing cue for a non-lodging `ListicleItineraries` stop. Questura Server owns accepted Moment keys; a Moment label may override the default reader wording without changing the key.
+_Avoid_: stop type, daypart, itinerary tag
+
 ### `AffiliateProducts`, `InstagramPosts`
 
 External / curated content collections.
@@ -124,6 +129,7 @@ Identity + general-purpose taxonomy.
 - **MediaSetStatus** is informational only; not consulted at serve time.
 - A **Tour** belongs to one **Location**.
 - A **`PerfectForTag.applicableTypes`** restricts the tag to a subset of `(dining, accommodations, attractions, nightlife)`.
+- A non-lodging `ListicleItineraries` stop has at most one **Itinerary Moment**; lodging has none.
 
 ## Domain Rules
 
@@ -135,6 +141,7 @@ Identity + general-purpose taxonomy.
 - Synced inbound writes from Location Manager must validate against the collection schema; rejected writes return 4xx with a reason.
 - Legacy `guide.*` Location fields are retired; public reads should use server view-models/endpoints rather than raw Payload docs.
 - Any collection write that affects public content must register a Public Revalidation hook; otherwise the Next.js client serves stale cache.
+- Synced Itinerary Moments must use a Moment key from Questura Server's canonical vocabulary.
 
 ## Naming Conventions
 

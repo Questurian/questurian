@@ -16,6 +16,7 @@ import * as migration_20260717_000000_retire_users_public_profile_is_public from
 import * as migration_20260717_010000_add_users_social_link_platforms from './20260717_010000_add_users_social_link_platforms'
 import * as migration_20260717_020000_add_email_logs from './20260717_020000_add_email_logs'
 import * as migration_20260723_060311_add_itinerary_stop_moments from './20260723_060311_add_itinerary_stop_moments'
+import * as migration_20260723_180417_add_itinerary_moment_options from './20260723_180417_add_itinerary_moment_options'
 
 export const migrations = [
   {
@@ -107,5 +108,10 @@ export const migrations = [
     up: migration_20260723_060311_add_itinerary_stop_moments.up,
     down: migration_20260723_060311_add_itinerary_stop_moments.down,
     name: '20260723_060311_add_itinerary_stop_moments',
+  },
+  {
+    up: migration_20260723_180417_add_itinerary_moment_options.up,
+    down: migration_20260723_180417_add_itinerary_moment_options.down,
+    name: '20260723_180417_add_itinerary_moment_options',
   },
 ]

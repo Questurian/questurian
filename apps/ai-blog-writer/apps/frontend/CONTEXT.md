@@ -149,6 +149,17 @@ Related terms: Plan overview, Stop, Itinerary Autobuild.
 Do not confuse with: the stop's **blurb** (reader-facing prose).
 Code references: `item.selectionReason`; `StopReasonField.tsx` ("Why this pick" + Refine); backend `editor_assist/compose-itinerary-stop-reason`.
 
+### Itinerary Moment
+
+Definition: an optional reader-facing cue selected by an operator for a non-lodging itinerary stop. It has a stable **Moment key** and optional **Moment label**; the builder calls the control a **Moment badge**.
+Related terms: Stop, Sync, Payload entity.
+Do not confuse with: a stop's block type, daypart, Selection reason, or blurb.
+
+### Moment label
+
+Definition: optional operator wording for an Itinerary Moment. It changes reader-facing text without changing the stable Moment key.
+Do not confuse with: the Moment key or stop title.
+
 ### Page-level article exclusion
 
 Definition: the rule that any item (article, listicle, or itinerary — all `HomepageFeaturedCollection` types) already present in any block's draft slots on a page is blocked from being picked into any other block on the same page. Enforced in the picker UI (greyed out, "In use") and at save time (`saveDisabled`). Applies to both `MainHomepagePage` and `LocationHomepagePage`.
@@ -191,6 +202,7 @@ Do not confuse with: Slot swap, which exchanges two existing slot contents.
 - A **Feature Page** owns at most one active **Run** at a time (current poll).
 - A **Run** result produces one or more **Draft**s.
 - A **Draft** points to zero or one **Payload entity**; Sync writes through.
+- An **Itinerary Moment** selected in a Draft must use a Moment key accepted by Questura Server before Sync can succeed.
 - A **Saved Articles Page** can share workflow UI across article-producing pipeline features while delegating feature-specific fetch, delete, map, route, and Draft creation logic.
 - A `PipelineStatusResponse.state = "completed"` is the trigger for hydrating a Draft from the run output.
 - **Featured Articles** has 3–9 **Curated slots**; a **Slot swap** preserves the number of slots and exchanges exactly two slot contents.

@@ -89,6 +89,11 @@ Server module per public-facing feature (e.g. `features/articles/public/view-mod
 
 Editorial content collections.
 
+### Itinerary Moment
+
+An optional reader-facing cue on a non-lodging Listicle Itinerary stop. Its stable **Moment key** selects the cue; its optional **Moment label** customizes the displayed wording.
+_Avoid_: stop type, daypart, itinerary tag
+
 ### AffiliateProducts / InstagramPosts
 
 Curated external content.

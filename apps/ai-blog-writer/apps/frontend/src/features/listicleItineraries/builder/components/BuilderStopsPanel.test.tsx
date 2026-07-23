@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
@@ -313,14 +313,27 @@ function Harness({
 }
 
 describe('BuilderStopsPanel', () => {
-  it('adds an editable preset moment badge to a stop', async () => {
+  it('shows icon options and adds an editable preset moment badge', async () => {
     const user = userEvent.setup()
 
     render(<Harness />)
 
     expect(screen.queryByLabelText('Moment label')).not.toBeInTheDocument()
 
-    await user.selectOptions(screen.getByLabelText('Moment badge'), 'breakfast')
+    await user.click(screen.getByLabelText('Moment badge'))
+
+    const listbox = screen.getByRole('listbox', {
+      name: 'Moment badge options'
+    })
+    const options = within(listbox).getAllByRole('option')
+    expect(options).toHaveLength(30)
+    expect(
+      options.every((option) =>
+        option.querySelector('.stl-moment-picker__icon > svg')
+      )
+    ).toBe(true)
+
+    await user.click(within(listbox).getByRole('option', { name: 'Breakfast' }))
 
     expect(screen.getByLabelText('Moment label')).toHaveValue('Breakfast')
 

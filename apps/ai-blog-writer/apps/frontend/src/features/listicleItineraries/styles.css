@@ -698,27 +698,129 @@
   margin-top: 1rem;
 }
 
-.stl-moment-select {
+.stl-moment-picker {
   position: relative;
-  display: flex;
-  align-items: center;
 }
 
-.stl-moment-select > svg {
-  position: absolute;
-  left: 0.75rem;
-  z-index: 1;
-  color: var(--stl-accent);
-  pointer-events: none;
-}
-
-.stl-field .stl-moment-select > select {
+.stl-moment-picker__trigger {
   width: 100%;
-  padding-left: 2.5rem;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.42rem 0.65rem;
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--stl-ink);
+  cursor: pointer;
+  font:
+    400 0.92rem/1.2 'IBM Plex Sans',
+    sans-serif;
+  text-align: left;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
-.stl-moment-select:not(:has(svg)) > select {
-  padding-left: 0.75rem;
+.stl-moment-picker__trigger:hover,
+.stl-moment-picker__trigger[aria-expanded='true'] {
+  border-color: var(--stl-accent);
+}
+
+.stl-moment-picker__trigger:focus-visible {
+  outline: none;
+  border-color: var(--stl-accent);
+  box-shadow: 0 0 0 3px rgba(47, 79, 143, 0.14);
+}
+
+.stl-moment-picker__icon {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: #eef3fb;
+  color: var(--stl-accent);
+}
+
+.stl-moment-picker__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stl-moment-picker__value--empty {
+  color: var(--stl-muted);
+}
+
+.stl-moment-picker__chevron {
+  color: var(--stl-muted);
+  transition: transform 120ms ease;
+}
+
+.stl-moment-picker__chevron--open {
+  transform: rotate(180deg);
+}
+
+.stl-moment-picker__menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  width: max(100%, 240px);
+  max-height: 290px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(25, 38, 63, 0.16);
+}
+
+.stl-moment-picker__option {
+  width: 100%;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.45rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--stl-ink);
+  cursor: pointer;
+  font:
+    500 0.84rem/1.2 'IBM Plex Sans',
+    sans-serif;
+  text-align: left;
+}
+
+.stl-moment-picker__option:hover,
+.stl-moment-picker__option:focus-visible {
+  outline: none;
+  background: #f2f5fa;
+}
+
+.stl-moment-picker__option--selected {
+  background: #eaf1fb;
+  color: var(--stl-accent);
+}
+
+.stl-moment-picker__option--selected .stl-moment-picker__icon {
+  background: #dbe7f8;
+}
+
+.stl-moment-picker__option > svg {
+  justify-self: center;
+  color: var(--stl-accent);
 }
 
 .stl-moment-library {
