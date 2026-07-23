@@ -21,11 +21,12 @@ describe('buildItineraryDraftSyncSignature', () => {
       editorModelName: 'claude-opus-4-8',
       locationRef: null,
       sharedNeighborhoods: [253, 254],
-      updatedAt: '2026-05-12T10:00:00.000Z',
+      updatedAt: '2026-05-12T10:00:00.000Z'
     }
 
-    expect(buildItineraryDraftSyncSignature(changedWorkflowOnly))
-      .toBe(buildItineraryDraftSyncSignature(draft))
+    expect(buildItineraryDraftSyncSignature(changedWorkflowOnly)).toBe(
+      buildItineraryDraftSyncSignature(draft)
+    )
   })
 
   it('changes when live Payload content changes', () => {
@@ -37,10 +38,58 @@ describe('buildItineraryDraftSyncSignature', () => {
 
     const changedContent = {
       ...draft,
-      title: 'Updated Lima itinerary',
+      title: 'Updated Lima itinerary'
     }
 
-    expect(buildItineraryDraftSyncSignature(changedContent))
-      .not.toBe(buildItineraryDraftSyncSignature(draft))
+    expect(buildItineraryDraftSyncSignature(changedContent)).not.toBe(
+      buildItineraryDraftSyncSignature(draft)
+    )
+  })
+
+  it('changes when a stop moment badge changes', () => {
+    const draft = createEmptyDraft()
+    draft.days[0].items = [
+      {
+        id: 'breakfast-stop',
+        blockType: 'itinerary-dining',
+        item: 10,
+        moment: 'breakfast',
+        momentLabel: 'Breakfast',
+        tours: [],
+        mediaMode: 'photos',
+        selectedPhotos: [],
+        selectedInstagramPost: null,
+        title: '',
+        operator: '',
+        price: '',
+        url: '',
+        tourDuration: 1,
+        startingPoint: { label: '', latitude: '', longitude: '' },
+        keyLocations: [],
+        image: null,
+        instagramPost: null,
+        blurbMarkdown: 'Start with a local classic.'
+      }
+    ]
+
+    const changedMoment = {
+      ...draft,
+      days: [
+        {
+          ...draft.days[0],
+          items: [
+            {
+              ...draft.days[0].items[0],
+              moment: 'coffee' as const,
+              momentLabel: 'Coffee break'
+            }
+          ]
+        }
+      ]
+    }
+
+    expect(buildItineraryDraftSyncSignature(changedMoment)).not.toBe(
+      buildItineraryDraftSyncSignature(draft)
+    )
   })
 })

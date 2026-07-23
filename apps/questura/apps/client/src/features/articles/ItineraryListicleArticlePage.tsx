@@ -1,75 +1,88 @@
-'use client'
+"use client";
 
-import type { JSX } from 'react'
-import { Clock, ExternalLink, MapPin, Route } from 'lucide-react'
-import { ShimmerImage } from '@/components/media/ShimmerImage'
-import { ArticlePageHeader } from '@/features/articles/components/ArticlePageHeader'
-import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
-import { ItineraryStayCard } from '@/features/articles/components/ItineraryStayCard'
-import { ListicleSeparator } from '@/features/articles/components/ListicleSeparator'
-import { ListicleVenueEntry } from '@/features/articles/components/ListicleVenueEntry'
+import type { JSX } from "react";
+import { Clock, ExternalLink, MapPin, Route } from "lucide-react";
+import { ShimmerImage } from "@/components/media/ShimmerImage";
+import { ArticlePageHeader } from "@/features/articles/components/ArticlePageHeader";
+import { InstagramEmbedBlock } from "@/features/articles/components/InstagramEmbedBlock";
+import { ItineraryStayCard } from "@/features/articles/components/ItineraryStayCard";
+import { ItineraryMomentBadge } from "@/features/articles/components/ItineraryMomentBadge";
+import { ListicleSeparator } from "@/features/articles/components/ListicleSeparator";
+import { ListicleVenueEntry } from "@/features/articles/components/ListicleVenueEntry";
 import {
   isTourAgencyBlock,
   populatedVenueStops,
   venueRowFromBlock,
-} from '@/features/articles/lib/itineraryDays'
-import { isHttpUrl } from '@/features/articles/lib/listicleVenueFormatters'
+} from "@/features/articles/lib/itineraryDays";
+import { isHttpUrl } from "@/features/articles/lib/listicleVenueFormatters";
 import type {
   ItineraryDay,
   ItineraryStopBlock,
   ItineraryTourAgencyBlock,
   ItineraryTourAgencyKeyLocation,
   ListicleItineraryArticle,
-} from '@/features/articles/types/itineraryListicle'
-import { isListicleVenue } from '@/features/articles/types/mapsListicle'
+} from "@/features/articles/types/itineraryListicle";
+import { isListicleVenue } from "@/features/articles/types/mapsListicle";
 
 type ItineraryListicleArticlePageProps = {
-  article: ListicleItineraryArticle
-  days: ItineraryDay[]
-  selectedDayIndex: number
-  onSelectDay: (index: number) => void
-}
+  article: ListicleItineraryArticle;
+  days: ItineraryDay[];
+  selectedDayIndex: number;
+  onSelectDay: (index: number) => void;
+};
 
 function formatDuration(hours: number): string {
   if (!Number.isFinite(hours) || hours <= 0) {
-    return 'Tour'
+    return "Tour";
   }
-  return `${hours} ${hours === 1 ? 'hour' : 'hours'}`
+  return `${hours} ${hours === 1 ? "hour" : "hours"}`;
 }
 
 function normalizedHref(url: string): string {
-  const trimmed = url.trim()
-  return isHttpUrl(trimmed) ? trimmed : `https://${trimmed}`
+  const trimmed = url.trim();
+  return isHttpUrl(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
 function keyLocationLabel(row: ItineraryTourAgencyKeyLocation): string | null {
-  if (row.source === 'manual') {
-    return typeof row.title === 'string' && row.title.trim() ? row.title.trim() : null
+  if (row.source === "manual") {
+    return typeof row.title === "string" && row.title.trim()
+      ? row.title.trim()
+      : null;
   }
 
-  const value = row.relatedItem?.value
-  return isListicleVenue(value) ? value.title : null
+  const value = row.relatedItem?.value;
+  return isListicleVenue(value) ? value.title : null;
 }
 
-function TourAgencyCard({ block }: { block: ItineraryTourAgencyBlock }): JSX.Element {
-  const image = typeof block.image === 'object' && block.image !== null ? block.image : null
-  const imageUrl = typeof image?.url === 'string' ? image.url : null
+function TourAgencyCard({
+  block,
+}: {
+  block: ItineraryTourAgencyBlock;
+}): JSX.Element {
+  const image =
+    typeof block.image === "object" && block.image !== null
+      ? block.image
+      : null;
+  const imageUrl = typeof image?.url === "string" ? image.url : null;
   const instagramCode =
-    typeof block.instagramPost === 'object' && block.instagramPost !== null
+    typeof block.instagramPost === "object" && block.instagramPost !== null
       ? block.instagramPost.embedCode
-      : null
+      : null;
   const startingPoint =
-    typeof block.startingPoint?.label === 'string' && block.startingPoint.label.trim()
+    typeof block.startingPoint?.label === "string" &&
+    block.startingPoint.label.trim()
       ? block.startingPoint.label.trim()
-      : null
+      : null;
   const keyLocations = (block.keyLocations ?? [])
     .map(keyLocationLabel)
-    .filter((label): label is string => Boolean(label))
-  const href = block.url ? normalizedHref(block.url) : null
+    .filter((label): label is string => Boolean(label));
+  const href = block.url ? normalizedHref(block.url) : null;
 
   return (
     <li className="scroll-mt-4 border-t-[3px] border-double border-foreground/55 first:border-t-0 first:pt-0 pt-7 pb-7 last:pb-1 max-[379px]:pt-6 max-[379px]:pb-6 480:pt-9 480:pb-9 550:pt-11 550:pb-11 sm:pt-12 sm:pb-12 768:pt-14 768:pb-14">
       <div className="min-w-0 space-y-3 380:space-y-3.5 480:space-y-4 sm:space-y-5">
+        <ItineraryMomentBadge moment={block.moment} label={block.momentLabel} />
+
         {imageUrl ? (
           <div className="overflow-hidden rounded-sm bg-foreground/[0.04]">
             <div className="aspect-[16/10] w-full 380:aspect-[4/3] 480:aspect-[3/2] sm:aspect-[16/9]">
@@ -109,7 +122,11 @@ function TourAgencyCard({ block }: { block: ItineraryTourAgencyBlock }): JSX.Ele
         <div className="overflow-hidden rounded-sm border border-foreground/12 bg-foreground/[0.07] sm:rounded">
           <div className="grid grid-cols-1 gap-px bg-foreground/12 480:grid-cols-2">
             <div className="maps-listicle-utility-cell flex items-center gap-2.5 px-3 py-2.5 380:px-3.5 480:gap-3 480:px-4 480:py-3 sm:px-4 sm:py-3.5 768:px-5 768:py-3.5">
-              <Clock className="maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]" strokeWidth={1.75} aria-hidden />
+              <Clock
+                className="maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]"
+                strokeWidth={1.75}
+                aria-hidden
+              />
               <span className="maps-listicle-info-label break-words text-[12px] font-light leading-tight text-foreground/72 480:text-[13px] sm:text-[14px]">
                 {formatDuration(block.tourDuration)}
               </span>
@@ -117,7 +134,11 @@ function TourAgencyCard({ block }: { block: ItineraryTourAgencyBlock }): JSX.Ele
 
             {startingPoint ? (
               <div className="maps-listicle-utility-cell flex items-center gap-2.5 px-3 py-2.5 380:px-3.5 480:gap-3 480:px-4 480:py-3 sm:px-4 sm:py-3.5 768:px-5 768:py-3.5">
-                <MapPin className="maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]" strokeWidth={1.75} aria-hidden />
+                <MapPin
+                  className="maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
                 <span className="maps-listicle-info-label break-words text-[12px] font-light leading-tight text-foreground/72 480:text-[13px] sm:text-[14px]">
                   {startingPoint}
                 </span>
@@ -126,7 +147,11 @@ function TourAgencyCard({ block }: { block: ItineraryTourAgencyBlock }): JSX.Ele
 
             {href ? (
               <div className="maps-listicle-utility-cell flex items-center gap-2.5 px-3 py-2.5 380:px-3.5 480:col-span-2 480:gap-3 480:px-4 480:py-3 sm:px-4 sm:py-3.5 768:px-5 768:py-3.5">
-                <ExternalLink className="maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]" strokeWidth={1.75} aria-hidden />
+                <ExternalLink
+                  className="maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]"
+                  strokeWidth={1.75}
+                  aria-hidden
+                />
                 <a
                   href={href}
                   target="_blank"
@@ -177,11 +202,15 @@ function TourAgencyCard({ block }: { block: ItineraryTourAgencyBlock }): JSX.Ele
         ) : null}
       </div>
     </li>
-  )
+  );
 }
 
-function StopList({ stops }: { stops: ItineraryStopBlock[] }): JSX.Element | null {
-  if (stops.length === 0) return null
+function StopList({
+  stops,
+}: {
+  stops: ItineraryStopBlock[];
+}): JSX.Element | null {
+  if (stops.length === 0) return null;
 
   return (
     <ol className="m-0 list-none p-0">
@@ -192,11 +221,11 @@ function StopList({ stops }: { stops: ItineraryStopBlock[] }): JSX.Element | nul
               key={block.id ?? `${block.blockType}-${index}`}
               block={block}
             />
-          )
+          );
         }
 
-        const row = venueRowFromBlock(block, `${block.blockType}-${index}`)
-        if (!row) return null
+        const row = venueRowFromBlock(block, `${block.blockType}-${index}`);
+        if (!row) return null;
 
         return (
           <ListicleVenueEntry
@@ -204,11 +233,13 @@ function StopList({ stops }: { stops: ItineraryStopBlock[] }): JSX.Element | nul
             row={row}
             index={index}
             variant="itinerary"
+            moment={block.moment}
+            momentLabel={block.momentLabel}
           />
-        )
+        );
       })}
     </ol>
-  )
+  );
 }
 
 export function ItineraryListicleArticlePage({
@@ -217,14 +248,14 @@ export function ItineraryListicleArticlePage({
   selectedDayIndex,
   onSelectDay,
 }: ItineraryListicleArticlePageProps): JSX.Element {
-  const dayIndex = Math.min(selectedDayIndex, Math.max(days.length - 1, 0))
-  const selectedDay = days[dayIndex] ?? { whereStaying: [], items: [] }
-  const whereStaying = populatedVenueStops(selectedDay.whereStaying)
-  const stops = selectedDay.items ?? []
-  const featuredImage = article.header?.featuredImage
-  const introRaw = article.header?.intro
-  const introHtml = typeof introRaw === 'string' ? introRaw : null
-  const description = article.seoSection?.metaDescription
+  const dayIndex = Math.min(selectedDayIndex, Math.max(days.length - 1, 0));
+  const selectedDay = days[dayIndex] ?? { whereStaying: [], items: [] };
+  const whereStaying = populatedVenueStops(selectedDay.whereStaying);
+  const stops = selectedDay.items ?? [];
+  const featuredImage = article.header?.featuredImage;
+  const introRaw = article.header?.intro;
+  const introHtml = typeof introRaw === "string" ? introRaw : null;
+  const description = article.seoSection?.metaDescription;
 
   return (
     <article className="maps-listicle-article min-h-screen bg-background sm:max-w-[600px] sm:mx-auto 1024:max-w-none 1024:mx-0">
@@ -260,7 +291,7 @@ export function ItineraryListicleArticlePage({
             className="day-tabs-scroll flex gap-5 overflow-x-auto border-b border-foreground/15 480:gap-7"
           >
             {days.map((day, index) => {
-              const selected = index === dayIndex
+              const selected = index === dayIndex;
 
               return (
                 <button
@@ -270,14 +301,14 @@ export function ItineraryListicleArticlePage({
                   aria-selected={selected}
                   className={`shrink-0 -mb-px border-b-2 px-0.5 pt-4 pb-3 text-[11px] font-bold uppercase leading-none tracking-[0.16em] transition-colors 480:text-[12px] ${
                     selected
-                      ? 'border-[var(--maps-listicle-accent)] text-foreground'
-                      : 'border-transparent text-foreground/45 hover:text-foreground'
+                      ? "border-[var(--maps-listicle-accent)] text-foreground"
+                      : "border-transparent text-foreground/45 hover:text-foreground"
                   }`}
                   onClick={() => onSelectDay(index)}
                 >
                   Day {index + 1}
                 </button>
-              )
+              );
             })}
           </div>
         </div>
@@ -295,5 +326,5 @@ export function ItineraryListicleArticlePage({
         <StopList stops={stops} />
       </div>
     </article>
-  )
+  );
 }

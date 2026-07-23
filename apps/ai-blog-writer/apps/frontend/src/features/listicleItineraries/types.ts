@@ -4,7 +4,7 @@ import type {
   GalleryImageObject,
   InstagramPostOption,
   LinkedTourOption,
-  MediaMode,
+  MediaMode
 } from '../../shared/builder/types'
 import type { PayloadSyncStateFields } from '../../shared/payloadSync/draftPayloadSync'
 
@@ -15,7 +15,7 @@ export type {
   InstagramPreviewAsset,
   LinkedTourOption,
   MediaAssetOption,
-  MediaMode,
+  MediaMode
 } from '../../shared/builder/types'
 export { TOUR_PICKS_MAX } from '../../shared/builder/types'
 
@@ -30,13 +30,17 @@ export type ItineraryBlockType =
 
 export const TOUR_AGENCY_BLOCK_TYPE = 'itinerary-tour-agency'
 
-export function isManualItineraryBlockType(blockType: ItineraryBlockType): boolean {
+export function isManualItineraryBlockType(
+  blockType: ItineraryBlockType
+): boolean {
   return blockType === TOUR_AGENCY_BLOCK_TYPE
 }
 
 export const WHERE_STAYING_BLOCK_TYPE = 'itinerary-where-staying' as const
 
-export function isWhereStayingBlockType(blockType: ItineraryBlockType): boolean {
+export function isWhereStayingBlockType(
+  blockType: ItineraryBlockType
+): boolean {
   return blockType === WHERE_STAYING_BLOCK_TYPE
 }
 
@@ -47,7 +51,9 @@ export function isWhereStayingBlockType(blockType: ItineraryBlockType): boolean 
  * (a swap), the stop's Selection reason and blurb describe the previous venue
  * and must be invalidated (ADR 0020).
  */
-export function resolveItineraryStopIdentityKey(item: ItineraryItemBlock): string {
+export function resolveItineraryStopIdentityKey(
+  item: ItineraryItemBlock
+): string {
   if (isManualItineraryBlockType(item.blockType)) {
     return `${item.blockType}|manual|${item.title.trim()}|${item.operator.trim()}`
   }
@@ -88,39 +94,41 @@ export type ListicleAngle =
 
 export type ListicleAngleOption = { value: ListicleAngle; label: string }
 
-export const DINING_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
-  { value: 'signature-dish', label: 'Signature Dish' },
-  { value: 'atmosphere', label: 'Atmosphere' },
-  { value: 'founders-backstory', label: 'Founders / Backstory' },
-  { value: 'insider-tip', label: 'Insider Tip' },
-  { value: 'best-for', label: 'Best-For' },
-  { value: 'whats-different', label: "What's Different" },
-]
+export const DINING_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> =
+  [
+    { value: 'signature-dish', label: 'Signature Dish' },
+    { value: 'atmosphere', label: 'Atmosphere' },
+    { value: 'founders-backstory', label: 'Founders / Backstory' },
+    { value: 'insider-tip', label: 'Insider Tip' },
+    { value: 'best-for', label: 'Best-For' },
+    { value: 'whats-different', label: "What's Different" }
+  ]
 
-export const NIGHTLIFE_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
-  { value: 'best-for-night', label: 'Best For Night' },
-]
+export const NIGHTLIFE_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> =
+  [{ value: 'best-for-night', label: 'Best For Night' }]
 
-export const ACCOMMODATIONS_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
-  { value: 'location-and-setting', label: 'Location & Setting' },
-  { value: 'view-and-vista', label: 'View & Vista' },
-  { value: 'design-and-aesthetic', label: 'Design & Aesthetic' },
-  { value: 'signature-amenity', label: 'Signature Amenity' },
-  { value: 'food-and-beverage', label: 'Food & Beverage' },
-  { value: 'trip-fit', label: 'Trip Fit' },
-  { value: 'property-backstory', label: 'Property Backstory' },
-  { value: 'booking-tip', label: 'Booking Tip' },
-  { value: 'whats-different', label: "What's Different" },
-]
+export const ACCOMMODATIONS_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> =
+  [
+    { value: 'location-and-setting', label: 'Location & Setting' },
+    { value: 'view-and-vista', label: 'View & Vista' },
+    { value: 'design-and-aesthetic', label: 'Design & Aesthetic' },
+    { value: 'signature-amenity', label: 'Signature Amenity' },
+    { value: 'food-and-beverage', label: 'Food & Beverage' },
+    { value: 'trip-fit', label: 'Trip Fit' },
+    { value: 'property-backstory', label: 'Property Backstory' },
+    { value: 'booking-tip', label: 'Booking Tip' },
+    { value: 'whats-different', label: "What's Different" }
+  ]
 
-export const ATTRACTIONS_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
-  { value: 'signature-feature', label: 'Signature Feature' },
-  { value: 'setting', label: 'Setting' },
-  { value: 'history-built', label: 'History / Built' },
-  { value: 'visit-time-tip', label: 'Visit-Time Tip' },
-  { value: 'best-for-visit-type', label: 'Best For Visit Type' },
-  { value: 'whats-different', label: "What's Different" },
-]
+export const ATTRACTIONS_LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> =
+  [
+    { value: 'signature-feature', label: 'Signature Feature' },
+    { value: 'setting', label: 'Setting' },
+    { value: 'history-built', label: 'History / Built' },
+    { value: 'visit-time-tip', label: 'Visit-Time Tip' },
+    { value: 'best-for-visit-type', label: 'Best For Visit Type' },
+    { value: 'whats-different', label: "What's Different" }
+  ]
 
 /** Single-angle nightlife pool per ADR 0008; operator never has to pick. */
 export const NIGHTLIFE_DEFAULT_ANGLE: ListicleAngle = 'best-for-night'
@@ -129,7 +137,7 @@ export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
   ...DINING_LISTICLE_ANGLE_OPTIONS,
   ...NIGHTLIFE_LISTICLE_ANGLE_OPTIONS,
   ...ACCOMMODATIONS_LISTICLE_ANGLE_OPTIONS,
-  ...ATTRACTIONS_LISTICLE_ANGLE_OPTIONS,
+  ...ATTRACTIONS_LISTICLE_ANGLE_OPTIONS
 ]
 
 /**
@@ -138,7 +146,7 @@ export const LISTICLE_ANGLE_OPTIONS: ReadonlyArray<ListicleAngleOption> = [
  * structured fields) intentionally return no angles.
  */
 export function getItineraryAngleOptions(
-  blockType: ItineraryBlockType,
+  blockType: ItineraryBlockType
 ): ReadonlyArray<ListicleAngleOption> {
   switch (blockType) {
     case 'itinerary-dining':
@@ -173,7 +181,7 @@ export function resolveListicleAngle(value: unknown): ListicleAngle | null {
  */
 export function resolveItineraryAngleForBlockType(
   blockType: ItineraryBlockType,
-  value: unknown,
+  value: unknown
 ): ListicleAngle | null {
   if (blockType === 'itinerary-nightlife') return NIGHTLIFE_DEFAULT_ANGLE
   if (getItineraryAngleOptions(blockType).length === 0) return null
@@ -188,13 +196,41 @@ export type ListTone =
   | 'date-night'
   | 'budget'
 
-export const LIST_TONE_OPTIONS: ReadonlyArray<{ value: ListTone; label: string; description: string }> = [
-  { value: 'elevated', label: 'Elevated', description: 'Polished, refined, slightly formal' },
-  { value: 'casual', label: 'Casual', description: 'Friendly, conversational, easygoing' },
-  { value: 'hidden-gem', label: 'Hidden Gem', description: 'Off-the-radar, insider, discovery-led' },
-  { value: 'family-friendly', label: 'Family-Friendly', description: 'Warm, practical, kid-aware' },
-  { value: 'date-night', label: 'Date Night', description: 'Intimate, atmospheric, romantic' },
-  { value: 'budget', label: 'Budget', description: 'Value-focused, practical, accessible' },
+export const LIST_TONE_OPTIONS: ReadonlyArray<{
+  value: ListTone
+  label: string
+  description: string
+}> = [
+  {
+    value: 'elevated',
+    label: 'Elevated',
+    description: 'Polished, refined, slightly formal'
+  },
+  {
+    value: 'casual',
+    label: 'Casual',
+    description: 'Friendly, conversational, easygoing'
+  },
+  {
+    value: 'hidden-gem',
+    label: 'Hidden Gem',
+    description: 'Off-the-radar, insider, discovery-led'
+  },
+  {
+    value: 'family-friendly',
+    label: 'Family-Friendly',
+    description: 'Warm, practical, kid-aware'
+  },
+  {
+    value: 'date-night',
+    label: 'Date Night',
+    description: 'Intimate, atmospheric, romantic'
+  },
+  {
+    value: 'budget',
+    label: 'Budget',
+    description: 'Value-focused, practical, accessible'
+  }
 ]
 
 export const DEFAULT_LIST_TONE: ListTone = 'elevated'
@@ -208,7 +244,9 @@ export function resolveListTone(value: unknown): ListTone {
 }
 
 /** Lodging rows first, then stops, Day1→DayN (matches Payload `itineraryDays` order). */
-export function getItineraryBlocksInArticleOrder(draft: ListicleItineraryDraft): ItineraryItemBlock[] {
+export function getItineraryBlocksInArticleOrder(
+  draft: ListicleItineraryDraft
+): ItineraryItemBlock[] {
   return draft.days.flatMap((day) => [...day.whereStaying, ...day.items])
 }
 
@@ -242,25 +280,25 @@ export function createEmptyTravelerProfile(): TravelerProfile {
     accommodations: [],
     practicalNeeds: [],
     notes: '',
-    composedBrief: '',
+    composedBrief: ''
   }
 }
 
 export function isTravelerProfileEmpty(profile: TravelerProfile): boolean {
   return (
-    profile.travelerTypes.length === 0
-    && profile.motivations.length === 0
-    && profile.interests.length === 0
-    && !profile.budget
-    && profile.accommodations.length === 0
-    && profile.practicalNeeds.length === 0
-    && !profile.notes.trim()
+    profile.travelerTypes.length === 0 &&
+    profile.motivations.length === 0 &&
+    profile.interests.length === 0 &&
+    !profile.budget &&
+    profile.accommodations.length === 0 &&
+    profile.practicalNeeds.length === 0 &&
+    !profile.notes.trim()
   )
 }
 
 export function findItineraryItemById(
   draft: ListicleItineraryDraft,
-  itemId: string,
+  itemId: string
 ): { dayIndex: number; item: ItineraryItemBlock } | null {
   for (let dayIndex = 0; dayIndex < draft.days.length; dayIndex += 1) {
     const day = draft.days[dayIndex]
@@ -282,11 +320,14 @@ export function createEmptyDaySlice(): ItineraryDaySlice {
   return {
     id: `day_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     whereStaying: [],
-    items: [],
+    items: []
   }
 }
 
-export function resizeItineraryDays(draft: ListicleItineraryDraft, nextCount: number): ListicleItineraryDraft {
+export function resizeItineraryDays(
+  draft: ListicleItineraryDraft,
+  nextCount: number
+): ListicleItineraryDraft {
   const clamped = Math.max(1, Math.min(7, Math.floor(nextCount)))
   const nextDays = [...draft.days]
   while (nextDays.length < clamped) {
@@ -298,7 +339,7 @@ export function resizeItineraryDays(draft: ListicleItineraryDraft, nextCount: nu
   return {
     ...draft,
     dayCount: clamped,
-    days: nextDays,
+    days: nextDays
   }
 }
 
@@ -320,7 +361,11 @@ export type ShellSlotDaypart =
   | 'evening'
   | 'nightlife'
 
-export type ShellSlotCollection = 'dining' | 'accommodations' | 'attractions' | 'nightlife'
+export type ShellSlotCollection =
+  | 'dining'
+  | 'accommodations'
+  | 'attractions'
+  | 'nightlife'
 
 export type DayShellSlot = {
   id: string
@@ -397,10 +442,35 @@ export type SeoSection = {
   }
 }
 
+export const ITINERARY_MOMENTS = [
+  'breakfast',
+  'coffee',
+  'lunch',
+  'sweet-treat',
+  'culture',
+  'landmark',
+  'shopping',
+  'outdoor',
+  'sunset',
+  'dinner',
+  'drinks',
+  'nightlife'
+] as const
+
+export type ItineraryMoment = (typeof ITINERARY_MOMENTS)[number]
+
+const ITINERARY_MOMENT_SET = new Set<string>(ITINERARY_MOMENTS)
+
+export function isItineraryMoment(value: unknown): value is ItineraryMoment {
+  return typeof value === 'string' && ITINERARY_MOMENT_SET.has(value)
+}
+
 export type ItineraryItemBlock = {
   id: string
   blockType: ItineraryBlockType
   item: number | null
+  moment?: ItineraryMoment | null
+  momentLabel?: string
   /**
    * Tour Picks (ADR 0013): operator-curated, ordered subset (max 4) of the
    * selected attraction's LM-linked tours. Only meaningful for
@@ -556,6 +626,8 @@ export type PayloadItineraryDoc = {
       id?: string
       blockType?: ItineraryBlockType
       item?: number | { id?: number }
+      moment?: ItineraryMoment | null
+      momentLabel?: string | null
       tours?: Array<number | { id?: number }> | null
       mediaMode?: MediaMode
       selectedPhotos?: Array<number | { id?: number }>
@@ -620,6 +692,8 @@ export type PayloadItineraryDoc = {
     id?: string
     blockType?: ItineraryBlockType
     item?: number | { id?: number }
+    moment?: ItineraryMoment | null
+    momentLabel?: string | null
     tours?: Array<number | { id?: number }> | null
     mediaMode?: MediaMode
     selectedPhotos?: Array<number | { id?: number }>
@@ -711,26 +785,27 @@ export type RelatedItemOption = {
   tours?: Array<number | LinkedTourOption>
 }
 
-export function isRelatedItemCollection(value: unknown): value is RelatedItemCollection {
+export function isRelatedItemCollection(
+  value: unknown
+): value is RelatedItemCollection {
   return (
-    value === 'dining'
-    || value === 'accommodations'
-    || value === 'attractions'
-    || value === 'nightlife'
-    || value === 'key-locations'
+    value === 'dining' ||
+    value === 'accommodations' ||
+    value === 'attractions' ||
+    value === 'nightlife' ||
+    value === 'key-locations'
   )
 }
 
-export function isTourAgencyPriceTier(value: unknown): value is TourAgencyPriceTier {
-  return (
-    value === '$'
-    || value === '$$'
-    || value === '$$$'
-    || value === '$$$$'
-  )
+export function isTourAgencyPriceTier(
+  value: unknown
+): value is TourAgencyPriceTier {
+  return value === '$' || value === '$$' || value === '$$$' || value === '$$$$'
 }
 
-export function relatedCollectionToBlockType(collection: RelatedItemCollection): ItineraryBlockType {
+export function relatedCollectionToBlockType(
+  collection: RelatedItemCollection
+): ItineraryBlockType {
   switch (collection) {
     case 'dining':
       return 'itinerary-dining'

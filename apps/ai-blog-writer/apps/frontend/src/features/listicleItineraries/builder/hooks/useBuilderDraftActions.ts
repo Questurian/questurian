@@ -3,12 +3,12 @@ import { useState } from 'react'
 import type { SetURLSearchParams } from 'react-router-dom'
 import {
   areLocationIdSelectionsEqual,
-  normalizeLocationIds,
+  normalizeLocationIds
 } from '../../../../shared/locationScope/ids'
 import { normalizeLocationKey } from '../../../../shared/locationScope/keys'
 import {
   useBuilderStepActions,
-  useSelectedLocationRefId,
+  useSelectedLocationRefId
 } from '../../../../shared/builder/hooks/useBuilderStepActions'
 import { createEmptyDraft, removeDraft } from '../../storage'
 import type {
@@ -16,14 +16,14 @@ import type {
   ItineraryItemBlock,
   ListicleItineraryDraft,
   LocationOption,
-  RelatedItemOption,
+  RelatedItemOption
 } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateStep3 } from '../validators/step.validators'
 import {
   createEmptyDaySlice,
   resolveItineraryStopIdentityKey,
-  WHERE_STAYING_BLOCK_TYPE,
+  WHERE_STAYING_BLOCK_TYPE
 } from '../../types'
 
 /**
@@ -33,10 +33,13 @@ import {
  */
 function applyItemUpdate(
   item: ItineraryItemBlock,
-  updater: (item: ItineraryItemBlock) => ItineraryItemBlock,
+  updater: (item: ItineraryItemBlock) => ItineraryItemBlock
 ): ItineraryItemBlock {
   const next = updater(item)
-  if (resolveItineraryStopIdentityKey(next) === resolveItineraryStopIdentityKey(item)) {
+  if (
+    resolveItineraryStopIdentityKey(next) ===
+    resolveItineraryStopIdentityKey(item)
+  ) {
     return next
   }
   return {
@@ -44,7 +47,7 @@ function applyItemUpdate(
     selectionReason: '',
     blurbMarkdown: '',
     blurbJsonText: '',
-    blurbLexical: undefined,
+    blurbLexical: undefined
   }
 }
 
@@ -53,6 +56,8 @@ function createNewItem(): ItineraryItemBlock {
     id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
     blockType: 'itinerary-dining',
     item: null,
+    moment: null,
+    momentLabel: '',
     tours: [],
     mediaMode: 'photos',
     selectedPhotos: [],
@@ -65,7 +70,7 @@ function createNewItem(): ItineraryItemBlock {
     startingPoint: {
       label: '',
       latitude: '',
-      longitude: '',
+      longitude: ''
     },
     keyLocations: [],
     image: null,
@@ -76,14 +81,14 @@ function createNewItem(): ItineraryItemBlock {
     // Operator-added stop: no Autobuild rationale. Empty string (not undefined)
     // so the "Why this pick" field renders and the day-compose gate sees it as
     // an unfilled reason to prompt for (ADR 0020).
-    selectionReason: '',
+    selectionReason: ''
   }
 }
 
 function createNewWhereStayingItem(): ItineraryItemBlock {
   return {
     ...createNewItem(),
-    blockType: WHERE_STAYING_BLOCK_TYPE,
+    blockType: WHERE_STAYING_BLOCK_TYPE
   }
 }
 
@@ -102,7 +107,10 @@ type UseBuilderDraftActionsResult = {
   selectedLocationRefId: number | null
   updateDraft: (next: Partial<ListicleItineraryDraft>) => void
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
-  updateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
+  updateItem: (
+    itemId: string,
+    updater: (item: ItineraryItemBlock) => ItineraryItemBlock
+  ) => void
   removeItem: (itemId: string) => void
   moveItem: (itemId: string, direction: 'up' | 'down') => void
   addItem: (dayIndex: number, insertIndex?: number) => void
@@ -131,7 +139,7 @@ export function useBuilderDraftActions({
   navigate,
   setSearchParams,
   onError,
-  setResult,
+  setResult
 }: UseBuilderDraftActionsParams): UseBuilderDraftActionsResult {
   const [setupBaseline, setSetupBaseline] = useState<{
     location: string
@@ -143,18 +151,19 @@ export function useBuilderDraftActions({
   function updateDraft(next: Partial<ListicleItineraryDraft>) {
     setDraft((current) => {
       if (!current) return current
-      const locationChanged = (
-        typeof next.location === 'string'
-        && normalizeLocationKey(next.location) !== normalizeLocationKey(current.location)
-      )
+      const locationChanged =
+        typeof next.location === 'string' &&
+        normalizeLocationKey(next.location) !==
+          normalizeLocationKey(current.location)
       return {
         ...current,
         ...next,
-        sharedNeighborhoods: 'sharedNeighborhoods' in next
-          ? normalizeLocationIds(next.sharedNeighborhoods)
-          : locationChanged
-            ? []
-            : current.sharedNeighborhoods,
+        sharedNeighborhoods:
+          'sharedNeighborhoods' in next
+            ? normalizeLocationIds(next.sharedNeighborhoods)
+            : locationChanged
+              ? []
+              : current.sharedNeighborhoods
       }
     })
   }
@@ -169,7 +178,7 @@ export function useBuilderDraftActions({
     validateStep2: () => [],
     step2GatesStep3: false,
     validateStep3: (d) => validateStep3(d, relatedByBlockType),
-    onError,
+    onError
   })
 
   function updateHeader(next: Partial<ListicleItineraryDraft['header']>) {
@@ -177,12 +186,15 @@ export function useBuilderDraftActions({
       if (!current) return current
       return {
         ...current,
-        header: { ...current.header, ...next },
+        header: { ...current.header, ...next }
       }
     })
   }
 
-  function updateItem(itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) {
+  function updateItem(
+    itemId: string,
+    updater: (item: ItineraryItemBlock) => ItineraryItemBlock
+  ) {
     setDraft((current) => {
       if (!current) return current
       const nextDays = current.days.map((day) => {
@@ -190,16 +202,16 @@ export function useBuilderDraftActions({
           return {
             ...day,
             whereStaying: day.whereStaying.map((item) =>
-              item.id === itemId ? applyItemUpdate(item, updater) : item,
-            ),
+              item.id === itemId ? applyItemUpdate(item, updater) : item
+            )
           }
         }
         if (day.items.some((item) => item.id === itemId)) {
           return {
             ...day,
             items: day.items.map((item) =>
-              item.id === itemId ? applyItemUpdate(item, updater) : item,
-            ),
+              item.id === itemId ? applyItemUpdate(item, updater) : item
+            )
           }
         }
         return day
@@ -215,13 +227,13 @@ export function useBuilderDraftActions({
         if (day.whereStaying.some((item) => item.id === itemId)) {
           return {
             ...day,
-            whereStaying: day.whereStaying.filter((item) => item.id !== itemId),
+            whereStaying: day.whereStaying.filter((item) => item.id !== itemId)
           }
         }
         if (day.items.some((item) => item.id === itemId)) {
           return {
             ...day,
-            items: day.items.filter((item) => item.id !== itemId),
+            items: day.items.filter((item) => item.id !== itemId)
           }
         }
         return day
@@ -263,9 +275,10 @@ export function useBuilderDraftActions({
       if (!day) return current
       const items = [...day.items]
       // Clamp so an out-of-range index can't drop the stop or throw; undefined = append.
-      const at = insertIndex === undefined
-        ? items.length
-        : Math.max(0, Math.min(insertIndex, items.length))
+      const at =
+        insertIndex === undefined
+          ? items.length
+          : Math.max(0, Math.min(insertIndex, items.length))
       items.splice(at, 0, createNewItem())
       const nextDays = [...current.days]
       nextDays[dayIndex] = { ...day, items }
@@ -281,7 +294,7 @@ export function useBuilderDraftActions({
       const nextDays = [...current.days]
       nextDays[dayIndex] = {
         ...day,
-        whereStaying: [...day.whereStaying, createNewWhereStayingItem()],
+        whereStaying: [...day.whereStaying, createNewWhereStayingItem()]
       }
       return { ...current, days: nextDays }
     })
@@ -291,7 +304,7 @@ export function useBuilderDraftActions({
     if (!draft) return
     setSetupBaseline({
       location: draft.location,
-      sharedNeighborhoods: [...draft.sharedNeighborhoods],
+      sharedNeighborhoods: [...draft.sharedNeighborhoods]
     })
     updateDraft({ in_update_mode: true })
     onError('')
@@ -307,18 +320,22 @@ export function useBuilderDraftActions({
     }
 
     const locationChanged = setupBaseline
-      ? normalizeLocationKey(setupBaseline.location) !== normalizeLocationKey(draft.location)
+      ? normalizeLocationKey(setupBaseline.location) !==
+        normalizeLocationKey(draft.location)
       : false
     const sharedNeighborhoodsChanged = setupBaseline
-      ? !areLocationIdSelectionsEqual(setupBaseline.sharedNeighborhoods, draft.sharedNeighborhoods)
+      ? !areLocationIdSelectionsEqual(
+          setupBaseline.sharedNeighborhoods,
+          draft.sharedNeighborhoods
+        )
       : false
 
     if (
-      (locationChanged || sharedNeighborhoodsChanged)
-      && draft.days.some((d) => d.items.length > 0 || d.whereStaying.length > 0)
+      (locationChanged || sharedNeighborhoodsChanged) &&
+      draft.days.some((d) => d.items.length > 0 || d.whereStaying.length > 0)
     ) {
       const confirmed = window.confirm(
-        'Changing location or shared neighborhoods clears lodging and itinerary stops. Continue?',
+        'Changing location or shared neighborhoods clears lodging and itinerary stops. Continue?'
       )
       if (!confirmed) return
       setDraft((current) => {
@@ -332,7 +349,7 @@ export function useBuilderDraftActions({
           step2_in_update_mode: false,
           step3_complete: false,
           step3_in_update_mode: false,
-          locationRef: selectedLocationRefId,
+          locationRef: selectedLocationRefId
         }
       })
       setSetupBaseline(null)
@@ -352,7 +369,7 @@ export function useBuilderDraftActions({
           step2_in_update_mode: false,
           step3_complete: false,
           step3_in_update_mode: false,
-          locationRef: selectedLocationRefId ?? current.locationRef,
+          locationRef: selectedLocationRefId ?? current.locationRef
         }
       })
       setSetupBaseline(null)
@@ -367,7 +384,7 @@ export function useBuilderDraftActions({
       step2_in_update_mode: false,
       step3_complete: false,
       step3_in_update_mode: false,
-      locationRef: selectedLocationRefId,
+      locationRef: selectedLocationRefId
     })
     setSetupBaseline(null)
     onError('')
@@ -415,6 +432,6 @@ export function useBuilderDraftActions({
     handleSaveStep3: stepActions.handleSaveStep3,
     cancelUpdateStep3: stepActions.cancelUpdateStep3,
     setEditorModelName: stepActions.setEditorModelName,
-    handleDiscardLocalDraft,
+    handleDiscardLocalDraft
   }
 }

@@ -2,12 +2,17 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import type { ItineraryBlockType, ItineraryItemBlock, ListicleItineraryDraft, RelatedItemOption } from '../../types'
+import type {
+  ItineraryBlockType,
+  ItineraryItemBlock,
+  ListicleItineraryDraft,
+  RelatedItemOption
+} from '../../types'
 import { createEmptyDraft } from '../../storage'
 import { BuilderStopsPanel } from './BuilderStopsPanel'
 
 vi.mock('../../../../components/FeaturedImagePicker', () => ({
-  FeaturedImagePicker: () => null,
+  FeaturedImagePicker: () => null
 }))
 
 vi.mock('../../../../shared/markdown-editor', () => ({
@@ -15,7 +20,7 @@ vi.mock('../../../../shared/markdown-editor', () => ({
     value,
     onChange,
     placeholder,
-    ariaLabel,
+    ariaLabel
   }: {
     value: string
     onChange: (nextValue: string) => void
@@ -28,23 +33,23 @@ vi.mock('../../../../shared/markdown-editor', () => ({
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
     />
-  ),
+  )
 }))
 
 vi.mock('../../../../shared/builder/components/InstagramPickerModal', () => ({
-  InstagramPickerModal: () => null,
+  InstagramPickerModal: () => null
 }))
 
 vi.mock('../../../../shared/builder/components/PhotoPickerModal', () => ({
-  PhotoPickerModal: () => null,
+  PhotoPickerModal: () => null
 }))
 
 vi.mock('../../../../shared/builder/components/RelatedItemPickerModal', () => ({
-  RelatedItemPickerModal: () => null,
+  RelatedItemPickerModal: () => null
 }))
 
 function buildRelatedByBlockType(
-  overrides: Partial<Record<ItineraryBlockType, RelatedItemOption[]>> = {},
+  overrides: Partial<Record<ItineraryBlockType, RelatedItemOption[]>> = {}
 ): Record<ItineraryBlockType, RelatedItemOption[]> {
   return {
     'itinerary-dining': [],
@@ -54,11 +59,12 @@ function buildRelatedByBlockType(
     'itinerary-nightlife': [],
     'itinerary-key-location': [],
     'itinerary-tour-agency': [],
-    ...overrides,
+    ...overrides
   }
 }
 
-const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> = buildRelatedByBlockType()
+const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> =
+  buildRelatedByBlockType()
 
 const diningItems: RelatedItemOption[] = [
   {
@@ -66,15 +72,15 @@ const diningItems: RelatedItemOption[] = [
     title: 'Cafe Andino',
     location: 'Peru > Cusco',
     latitude: -13.531,
-    longitude: -71.972,
+    longitude: -71.972
   },
   {
     id: 102,
     title: 'San Pedro Market',
     location: 'Peru > Cusco',
     latitude: '-13.522',
-    longitude: '-71.982',
-  },
+    longitude: '-71.982'
+  }
 ]
 
 const hotelItems: RelatedItemOption[] = [
@@ -83,8 +89,8 @@ const hotelItems: RelatedItemOption[] = [
     title: 'Hotel Sol',
     location: 'Peru > Cusco',
     latitude: -13.518,
-    longitude: -71.974,
-  },
+    longitude: -71.974
+  }
 ]
 
 const attractionItems: RelatedItemOption[] = [
@@ -93,8 +99,8 @@ const attractionItems: RelatedItemOption[] = [
     title: 'Sacsayhuaman',
     location: 'Peru > Cusco',
     latitude: -13.509,
-    longitude: -71.982,
-  },
+    longitude: -71.982
+  }
 ]
 
 const attractionItemsWithTours: RelatedItemOption[] = [
@@ -107,9 +113,9 @@ const attractionItemsWithTours: RelatedItemOption[] = [
     tours: [
       { id: 901, title: 'Sunrise Walking Tour', price: '$45' },
       { id: 902, title: 'Horseback Ride', price: '$60' },
-      { id: 903, title: 'Night Stargazing' },
-    ],
-  },
+      { id: 903, title: 'Night Stargazing' }
+    ]
+  }
 ]
 
 const keyLocationItems: RelatedItemOption[] = [
@@ -118,8 +124,8 @@ const keyLocationItems: RelatedItemOption[] = [
     title: 'Cusco Airport',
     location: 'Peru > Cusco',
     latitude: -13.535,
-    longitude: -71.943,
-  },
+    longitude: -71.943
+  }
 ]
 
 function buildManualTourAgencyItem(): ItineraryItemBlock {
@@ -139,13 +145,13 @@ function buildManualTourAgencyItem(): ItineraryItemBlock {
     startingPoint: {
       label: '',
       latitude: '',
-      longitude: '',
+      longitude: ''
     },
     keyLocations: [],
     image: null,
     instagramPost: null,
     blurbMarkdown: 'Manual stop blurb',
-    blurbJsonText: '',
+    blurbJsonText: ''
   }
 }
 
@@ -166,13 +172,13 @@ function buildAttractionItem(): ItineraryItemBlock {
     startingPoint: {
       label: '',
       latitude: '',
-      longitude: '',
+      longitude: ''
     },
     keyLocations: [],
     image: null,
     instagramPost: null,
     blurbMarkdown: '',
-    blurbJsonText: '',
+    blurbJsonText: ''
   }
 }
 
@@ -184,11 +190,13 @@ function buildDraft(): ListicleItineraryDraft {
   draft.step1_complete = true
   draft.step2_complete = true
   draft.header.introMarkdown = 'Intro copy'
-  draft.days = [{
-    ...draft.days[0],
-    whereStaying: [],
-    items: [buildManualTourAgencyItem()],
-  }]
+  draft.days = [
+    {
+      ...draft.days[0],
+      whereStaying: [],
+      items: [buildManualTourAgencyItem()]
+    }
+  ]
   return draft
 }
 
@@ -196,34 +204,36 @@ function buildDraftWithKeyLocations(): ListicleItineraryDraft {
   const base = buildDraft()
   return {
     ...base,
-    days: [{
-      ...base.days[0],
-      items: [
-        {
-          ...buildManualTourAgencyItem(),
-          keyLocations: [
-            {
-              id: 'existing-restaurant-row',
-              source: 'existing',
-              relatedCollection: 'dining',
-              relatedItem: 201,
-              title: '',
-              latitude: '',
-              longitude: '',
-            },
-            {
-              id: 'manual-overlook-row',
-              source: 'manual',
-              relatedCollection: null,
-              relatedItem: null,
-              title: 'Manual overlook',
-              latitude: '-13.51',
-              longitude: '-71.97',
-            },
-          ],
-        },
-      ],
-    }],
+    days: [
+      {
+        ...base.days[0],
+        items: [
+          {
+            ...buildManualTourAgencyItem(),
+            keyLocations: [
+              {
+                id: 'existing-restaurant-row',
+                source: 'existing',
+                relatedCollection: 'dining',
+                relatedItem: 201,
+                title: '',
+                latitude: '',
+                longitude: ''
+              },
+              {
+                id: 'manual-overlook-row',
+                source: 'manual',
+                relatedCollection: null,
+                relatedItem: null,
+                title: 'Manual overlook',
+                latitude: '-13.51',
+                longitude: '-71.97'
+              }
+            ]
+          }
+        ]
+      }
+    ]
   }
 }
 
@@ -238,7 +248,7 @@ function Harness({
   initialDraft = buildDraft(),
   relatedItems = relatedByBlockType,
   onStopBlurbAiAutoWrite = async () => {},
-  onAddItem = () => {},
+  onAddItem = () => {}
 }: HarnessProps = {}) {
   const [draft, setDraft] = useState<ListicleItineraryDraft>(initialDraft)
 
@@ -265,20 +275,27 @@ function Harness({
             const nextDays = [...current.days]
             nextDays[dayIdx] = {
               ...day,
-              whereStaying: day.whereStaying.map((item) => (item.id === itemId ? updater(item) : item)),
+              whereStaying: day.whereStaying.map((item) =>
+                item.id === itemId ? updater(item) : item
+              )
             }
             return { ...current, days: nextDays }
           }
           const nextDays = [...current.days]
           nextDays[dayIdx] = {
             ...day,
-            items: day.items.map((item) => (item.id === itemId ? updater(item) : item)),
+            items: day.items.map((item) =>
+              item.id === itemId ? updater(item) : item
+            )
           }
           return { ...current, days: nextDays }
         })
       }}
       onStopBlurbAiAutoWrite={onStopBlurbAiAutoWrite}
-      onRefineStopReason={async (_itemId, roughReason) => ({ reason: roughReason, fallback: false })}
+      onRefineStopReason={async (_itemId, roughReason) => ({
+        reason: roughReason,
+        fallback: false
+      })}
       activeAiItemId={null}
       onComposeActiveDayBlurbs={() => {}}
       onComposeAllDayBlurbs={() => {}}
@@ -296,6 +313,28 @@ function Harness({
 }
 
 describe('BuilderStopsPanel', () => {
+  it('adds an editable preset moment badge to a stop', async () => {
+    const user = userEvent.setup()
+
+    render(<Harness />)
+
+    expect(screen.queryByLabelText('Moment label')).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Moment badge'), 'breakfast')
+
+    expect(screen.getByLabelText('Moment label')).toHaveValue('Breakfast')
+
+    await user.clear(screen.getByLabelText('Moment label'))
+    await user.type(
+      screen.getByLabelText('Moment label'),
+      "Lima's classic breakfast"
+    )
+
+    expect(screen.getByLabelText('Moment label')).toHaveValue(
+      "Lima's classic breakfast"
+    )
+  })
+
   it('inserts a stop at the clicked position via inline zones', async () => {
     const user = userEvent.setup()
     const onAddItem = vi.fn()
@@ -321,14 +360,20 @@ describe('BuilderStopsPanel', () => {
         {
           ...buildDraft().days[0],
           whereStaying: [
-            { ...buildManualTourAgencyItem(), id: 'lodging-1', blockType: 'itinerary-where-staying' },
+            {
+              ...buildManualTourAgencyItem(),
+              id: 'lodging-1',
+              blockType: 'itinerary-where-staying'
+            }
           ],
-          items: [],
-        },
-      ],
+          items: []
+        }
+      ]
     }
 
     render(<Harness initialDraft={draftWithLodgingOnly} />)
+
+    expect(screen.queryByLabelText('Moment badge')).not.toBeInTheDocument()
 
     // The header "Add stop" button is named "Add stop", so an exact "Stop"
     // match isolates the inline insert zones — there should be none.
@@ -344,7 +389,9 @@ describe('BuilderStopsPanel', () => {
 
     expect(onStopBlurbAiAutoWrite).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: /regenerate|auto write/i }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /regenerate|auto write/i })
+    )
 
     expect(onStopBlurbAiAutoWrite).toHaveBeenCalledTimes(1)
     expect(onStopBlurbAiAutoWrite).toHaveBeenCalledWith('tour-stop-1')
@@ -378,12 +425,14 @@ describe('BuilderStopsPanel', () => {
       'itinerary-dining': diningItems,
       'itinerary-accommodations': hotelItems,
       'itinerary-attractions': attractionItems,
-      'itinerary-key-location': keyLocationItems,
+      'itinerary-key-location': keyLocationItems
     })
 
     render(<Harness relatedItems={relatedItems} />)
 
-    await user.click(screen.getByRole('button', { name: 'Choose Existing Stop' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Choose Existing Stop' })
+    )
     await user.click(screen.getByRole('radio', { name: /Hotel Sol/ }))
     await user.click(screen.getByRole('button', { name: 'Use Selected' }))
 
@@ -398,12 +447,19 @@ describe('BuilderStopsPanel', () => {
       'itinerary-dining': diningItems,
       'itinerary-accommodations': hotelItems,
       'itinerary-attractions': attractionItems,
-      'itinerary-key-location': keyLocationItems,
+      'itinerary-key-location': keyLocationItems
     })
 
-    render(<Harness initialDraft={buildDraftWithKeyLocations()} relatedItems={relatedItems} />)
+    render(
+      <Harness
+        initialDraft={buildDraftWithKeyLocations()}
+        relatedItems={relatedItems}
+      />
+    )
 
-    await user.click(screen.getByRole('button', { name: 'Select Existing Stops' }))
+    await user.click(
+      screen.getByRole('button', { name: 'Select Existing Stops' })
+    )
     expect(screen.getByRole('checkbox', { name: /Cafe Andino/ })).toBeChecked()
     await user.click(screen.getByRole('checkbox', { name: /Hotel Sol/ }))
     await user.click(screen.getByRole('checkbox', { name: /Sacsayhuaman/ }))
@@ -418,10 +474,12 @@ describe('BuilderStopsPanel', () => {
   it('selects and reorders attraction tour picks through the modal', async () => {
     const user = userEvent.setup()
     const relatedItems = buildRelatedByBlockType({
-      'itinerary-attractions': attractionItemsWithTours,
+      'itinerary-attractions': attractionItemsWithTours
     })
     const draft = buildDraft()
-    draft.days = [{ ...draft.days[0], whereStaying: [], items: [buildAttractionItem()] }]
+    draft.days = [
+      { ...draft.days[0], whereStaying: [], items: [buildAttractionItem()] }
+    ]
 
     render(<Harness initialDraft={draft} relatedItems={relatedItems} />)
 
@@ -429,24 +487,38 @@ describe('BuilderStopsPanel', () => {
 
     const modal = screen.getByRole('dialog', { name: 'Select Tour Picks' })
     expect(modal).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: 'Night Stargazing' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('checkbox', { name: 'Night Stargazing' })
+    ).toBeInTheDocument()
 
     await user.click(screen.getByRole('checkbox', { name: 'Horseback Ride' }))
-    await user.click(screen.getByRole('checkbox', { name: 'Sunrise Walking Tour' }))
+    await user.click(
+      screen.getByRole('checkbox', { name: 'Sunrise Walking Tour' })
+    )
     await user.click(screen.getByRole('button', { name: 'Save Picks' }))
 
-    expect(screen.queryByRole('dialog', { name: 'Select Tour Picks' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('dialog', { name: 'Select Tour Picks' })
+    ).not.toBeInTheDocument()
     expect(screen.getByText('2 tours selected')).toBeInTheDocument()
-    expect(screen.getByText('#1').parentElement).toHaveTextContent('Horseback Ride')
-    expect(screen.getByText('#2').parentElement).toHaveTextContent('Sunrise Walking Tour')
+    expect(screen.getByText('#1').parentElement).toHaveTextContent(
+      'Horseback Ride'
+    )
+    expect(screen.getByText('#2').parentElement).toHaveTextContent(
+      'Sunrise Walking Tour'
+    )
 
     await user.click(screen.getByRole('button', { name: /2 tours selected/i }))
-    expect(screen.getByRole('checkbox', { name: 'Horseback Ride' })).toBeChecked()
+    expect(
+      screen.getByRole('checkbox', { name: 'Horseback Ride' })
+    ).toBeChecked()
 
     await user.click(screen.getByRole('checkbox', { name: 'Horseback Ride' }))
     await user.click(screen.getByRole('button', { name: 'Save Picks' }))
 
     expect(screen.getByText('1 tour selected')).toBeInTheDocument()
-    expect(screen.getByText('#1').parentElement).toHaveTextContent('Sunrise Walking Tour')
+    expect(screen.getByText('#1').parentElement).toHaveTextContent(
+      'Sunrise Walking Tour'
+    )
   })
 })

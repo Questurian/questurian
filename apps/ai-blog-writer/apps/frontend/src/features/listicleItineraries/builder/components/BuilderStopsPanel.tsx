@@ -2,7 +2,10 @@ import { Fragment, useEffect, useMemo, useState } from 'react'
 import { FeaturedImagePicker } from '../../../../components/FeaturedImagePicker'
 import { getRelatedItemDisplayLabel } from '../../../../shared/related-items/normalizeRelatedItems'
 import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
-import { BLOCK_TYPE_OPTIONS, BLOCK_TYPE_OPTIONS_STOPS } from '../constants/builder-options.constants'
+import {
+  BLOCK_TYPE_OPTIONS,
+  BLOCK_TYPE_OPTIONS_STOPS
+} from '../constants/builder-options.constants'
 import type {
   InstagramPostOption,
   ItineraryBlockType,
@@ -12,14 +15,14 @@ import type {
   MediaAssetOption,
   MediaMode,
   RelatedItemOption,
-  TourAgencyPriceTier,
+  TourAgencyPriceTier
 } from '../../types'
 import {
   getItineraryAngleOptions,
   isManualItineraryBlockType as isManualBlockType,
   TOUR_AGENCY_PRICE_TIERS,
   TOUR_PICKS_MAX,
-  WHERE_STAYING_BLOCK_TYPE,
+  WHERE_STAYING_BLOCK_TYPE
 } from '../../types'
 import { getItineraryStopAngleDisabledReason } from '../services/ai-autowrite.service'
 import {
@@ -30,7 +33,7 @@ import {
   requiresPhotos,
   resolveInstagramEmbedUrl,
   resolveInstagramPreviewUrl,
-  resolveImageUrl,
+  resolveImageUrl
 } from '../../../../shared/builder/utils/item-media.utils'
 import { ExistingStopPickerModal } from './ExistingStopPickerModal'
 import { TourPicksModal } from './TourPicksModal'
@@ -47,14 +50,15 @@ import {
   buildStartingPointFromExistingStop,
   findExistingStopOptionForRow,
   getSelectedExistingRouteKeys,
-  getSelectedStartingPointExistingStopKey,
+  getSelectedStartingPointExistingStopKey
 } from '../utils/existingStopSelection.utils'
 import {
   createKeyLocationRow,
   formatTourDurationLabel,
-  resetItemForBlockType,
+  resetItemForBlockType
 } from '../utils/itineraryStopBlock.utils'
 import { StopInsertZone } from './stops/StopInsertZone'
+import { ItineraryMomentFields } from './ItineraryMomentFields'
 
 type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
@@ -70,10 +74,16 @@ type BuilderStopsPanelProps = {
   onAddItem: (insertIndex?: number) => void
   onMoveItem: (itemId: string, direction: 'up' | 'down') => void
   onRemoveItem: (itemId: string) => void
-  onUpdateItem: (itemId: string, updater: (item: ItineraryItemBlock) => ItineraryItemBlock) => void
+  onUpdateItem: (
+    itemId: string,
+    updater: (item: ItineraryItemBlock) => ItineraryItemBlock
+  ) => void
   onStopBlurbAiAutoWrite: (itemId: string) => Promise<void>
   /** Refine an operator's rough "why this pick" note into a Selection reason (ADR 0020). */
-  onRefineStopReason: (itemId: string, roughReason: string) => Promise<ComposeStopReasonResult>
+  onRefineStopReason: (
+    itemId: string,
+    roughReason: string
+  ) => Promise<ComposeStopReasonResult>
   activeAiItemId: string | null
   /** Compose the active day's stop blurbs as one narrative set (ADR 0019). */
   onComposeActiveDayBlurbs: () => void
@@ -133,49 +143,68 @@ export function BuilderStopsPanel({
   onContinueStep3,
   onUpdateStep3,
   onSaveStep3,
-  onCancelStep3Update,
+  onCancelStep3Update
 }: BuilderStopsPanelProps) {
   const resolvedToken = token ?? ''
   const dayDraft = useMemo(() => {
     const day = draft.days[activeDayIndex] ?? draft.days[0]
-    return day ?? { id: '', whereStaying: [] as ItineraryItemBlock[], items: [] as ItineraryItemBlock[] }
+    return (
+      day ?? {
+        id: '',
+        whereStaying: [] as ItineraryItemBlock[],
+        items: [] as ItineraryItemBlock[]
+      }
+    )
   }, [draft.days, activeDayIndex])
   const [activePicker, setActivePicker] = useState<ActivePicker>(null)
-  const [photoPreviewIndexByItem, setPhotoPreviewIndexByItem] = useState<Record<string, number>>({})
-  const [activeInstagramEmbedPreviewItemId, setActiveInstagramEmbedPreviewItemId] = useState<string | null>(null)
-  const [imagePickerItemId, setImagePickerItemId] = useState<string | null>(null)
+  const [photoPreviewIndexByItem, setPhotoPreviewIndexByItem] = useState<
+    Record<string, number>
+  >({})
+  const [
+    activeInstagramEmbedPreviewItemId,
+    setActiveInstagramEmbedPreviewItemId
+  ] = useState<string | null>(null)
+  const [imagePickerItemId, setImagePickerItemId] = useState<string | null>(
+    null
+  )
 
   const step3Rows = useMemo(
     () => [
       ...dayDraft.whereStaying.map((item, index) => ({
         item,
         section: 'whereStaying' as const,
-        localIndex: index,
+        localIndex: index
       })),
       ...dayDraft.items.map((item, index) => ({
         item,
         section: 'stops' as const,
-        localIndex: index,
-      })),
+        localIndex: index
+      }))
     ],
-    [dayDraft.whereStaying, dayDraft.items],
+    [dayDraft.whereStaying, dayDraft.items]
   )
 
   const activeItemPicker = activePicker?.type === 'item' ? activePicker : null
-  const activePhotoPicker = activePicker?.type === 'photos' ? activePicker : null
-  const activeInstagramPicker = activePicker?.type === 'instagram' ? activePicker : null
-  const activeManualInstagramPicker = activePicker?.type === 'manual-instagram' ? activePicker : null
-  const activeStartingPointExistingStopPicker = activePicker?.type === 'starting-point-existing-stop' ? activePicker : null
-  const activeRouteExistingStopsPicker = activePicker?.type === 'route-existing-stops' ? activePicker : null
-  const activeTourPicksPicker = activePicker?.type === 'tour-picks' ? activePicker : null
+  const activePhotoPicker =
+    activePicker?.type === 'photos' ? activePicker : null
+  const activeInstagramPicker =
+    activePicker?.type === 'instagram' ? activePicker : null
+  const activeManualInstagramPicker =
+    activePicker?.type === 'manual-instagram' ? activePicker : null
+  const activeStartingPointExistingStopPicker =
+    activePicker?.type === 'starting-point-existing-stop' ? activePicker : null
+  const activeRouteExistingStopsPicker =
+    activePicker?.type === 'route-existing-stops' ? activePicker : null
+  const activeTourPicksPicker =
+    activePicker?.type === 'tour-picks' ? activePicker : null
   const allStep3Items = useMemo(
     () => [...dayDraft.whereStaying, ...dayDraft.items],
-    [dayDraft.whereStaying, dayDraft.items],
+    [dayDraft.whereStaying, dayDraft.items]
   )
   const fetchedManualImageAssets = useManualStopImageAssets({
     token: resolvedToken,
     items: allStep3Items,
-    mediaAssets,
+    mediaAssets
   })
 
   useEffect(() => {
@@ -208,20 +237,30 @@ export function BuilderStopsPanel({
       }
 
       const relatedOptions = relatedByBlockType[item.blockType] || []
-      const selectedRelatedItem = relatedOptions.find((entry) => entry.id === item.item) || null
+      const selectedRelatedItem =
+        relatedOptions.find((entry) => entry.id === item.item) || null
       const hasPhotos = getRelatedPhotoObjects(selectedRelatedItem).length > 0
-      const hasInstagram = getRelatedInstagramPostObjects(selectedRelatedItem).length > 0
-      const availableOptions = getAvailableMediaModeOptions(hasPhotos, hasInstagram)
+      const hasInstagram =
+        getRelatedInstagramPostObjects(selectedRelatedItem).length > 0
+      const availableOptions = getAvailableMediaModeOptions(
+        hasPhotos,
+        hasInstagram
+      )
 
       if (availableOptions.length === 0) return
-      if (availableOptions.some((option) => option.value === item.mediaMode)) return
+      if (availableOptions.some((option) => option.value === item.mediaMode))
+        return
 
       const fallbackMode = availableOptions[0].value
       onUpdateItem(item.id, (current) => ({
         ...current,
         mediaMode: fallbackMode,
-        selectedPhotos: requiresPhotos(fallbackMode) ? current.selectedPhotos : [],
-        selectedInstagramPost: requiresInstagram(fallbackMode) ? current.selectedInstagramPost : null,
+        selectedPhotos: requiresPhotos(fallbackMode)
+          ? current.selectedPhotos
+          : [],
+        selectedInstagramPost: requiresInstagram(fallbackMode)
+          ? current.selectedInstagramPost
+          : null
       }))
     })
   }, [dayDraft.whereStaying, dayDraft.items, onUpdateItem, relatedByBlockType])
@@ -230,11 +269,13 @@ export function BuilderStopsPanel({
     <section className="stl-panel">
       <div className="stl-panel-header">
         <h2>
-          {!isSynced ? <span className="stl-kicker">Step 3</span> : null} Lodging & stops
+          {!isSynced ? <span className="stl-kicker">Step 3</span> : null}{' '}
+          Lodging & stops
           <span className="stl-step3-header-counts">
             {' '}
-            {draft.dayCount > 1 ? `Day ${activeDayIndex + 1} · ` : ''}
-            ({dayDraft.whereStaying.length} lodging · {dayDraft.items.length} stops)
+            {draft.dayCount > 1 ? `Day ${activeDayIndex + 1} · ` : ''}(
+            {dayDraft.whereStaying.length} lodging · {dayDraft.items.length}{' '}
+            stops)
           </span>
         </h2>
         <div className="stl-inline-actions">
@@ -247,21 +288,37 @@ export function BuilderStopsPanel({
           {!isSynced ? (
             <>
               {!draft.step3_complete ? (
-                <button type="button" className="stl-btn" onClick={onContinueStep3}>
+                <button
+                  type="button"
+                  className="stl-btn"
+                  onClick={onContinueStep3}
+                >
                   Continue
                 </button>
               ) : null}
               {draft.step3_complete && !draft.step3_in_update_mode ? (
-                <button type="button" className="stl-btn stl-btn-secondary" onClick={onUpdateStep3}>
+                <button
+                  type="button"
+                  className="stl-btn stl-btn-secondary"
+                  onClick={onUpdateStep3}
+                >
                   Update Stops
                 </button>
               ) : null}
               {draft.step3_in_update_mode ? (
                 <>
-                  <button type="button" className="stl-btn" onClick={onSaveStep3}>
+                  <button
+                    type="button"
+                    className="stl-btn"
+                    onClick={onSaveStep3}
+                  >
                     Save Stops
                   </button>
-                  <button type="button" className="stl-btn stl-btn-secondary" onClick={onCancelStep3Update}>
+                  <button
+                    type="button"
+                    className="stl-btn stl-btn-secondary"
+                    onClick={onCancelStep3Update}
+                  >
                     Cancel
                   </button>
                 </>
@@ -278,7 +335,11 @@ export function BuilderStopsPanel({
         </div>
       ) : null}
 
-      <div className="stl-blurb-compose-bar" role="group" aria-label="AI stop blurbs">
+      <div
+        className="stl-blurb-compose-bar"
+        role="group"
+        aria-label="AI stop blurbs"
+      >
         <div className="stl-blurb-compose-bar__copy">
           <span className="stl-blurb-compose-bar__title">AI stop blurbs</span>
           <span className="stl-blurb-compose-bar__hint">
@@ -292,10 +353,14 @@ export function BuilderStopsPanel({
             type="button"
             className="stl-btn"
             onClick={onComposeActiveDayBlurbs}
-            disabled={isComposingDayBlurbs || Boolean(activeDayBlurbDisabledReason)}
+            disabled={
+              isComposingDayBlurbs || Boolean(activeDayBlurbDisabledReason)
+            }
             title={activeDayBlurbDisabledReason}
           >
-            {isComposingDayBlurbs ? 'Composing…' : `Write Day ${activeDayIndex + 1} blurbs`}
+            {isComposingDayBlurbs
+              ? 'Composing…'
+              : `Write Day ${activeDayIndex + 1} blurbs`}
           </button>
           {draft.dayCount > 1 ? (
             <button
@@ -303,7 +368,11 @@ export function BuilderStopsPanel({
               className="stl-btn stl-btn-secondary"
               onClick={onComposeAllDayBlurbs}
               disabled={isComposingDayBlurbs || composableDayCount < 1}
-              title={composableDayCount < 1 ? 'No days are ready to compose' : undefined}
+              title={
+                composableDayCount < 1
+                  ? 'No days are ready to compose'
+                  : undefined
+              }
             >
               {`Write all days (${composableDayCount})`}
             </button>
@@ -321,35 +390,54 @@ export function BuilderStopsPanel({
       </div>
 
       <fieldset className="stl-panel-fieldset" disabled={!isSynced && isLocked}>
-        {isLoadingRelated ? <p className="stl-placeholder">Loading related items...</p> : null}
+        {isLoadingRelated ? (
+          <p className="stl-placeholder">Loading related items...</p>
+        ) : null}
 
         <div className="stl-list">
           {step3Rows.map((row, idx) => {
             const { item, section, localIndex } = row
-            const showHeading = idx === 0 || step3Rows[idx - 1].section !== section
+            const showHeading =
+              idx === 0 || step3Rows[idx - 1].section !== section
             const isManualStop = isManualBlockType(item.blockType)
             const relatedOptions = relatedByBlockType[item.blockType] || []
-            const selectedRelatedItem = relatedOptions.find((entry) => entry.id === item.item) || null
+            const selectedRelatedItem =
+              relatedOptions.find((entry) => entry.id === item.item) || null
             const photoObjects = getRelatedPhotoObjects(selectedRelatedItem)
-            const instagramPostObjects = getRelatedInstagramPostObjects(selectedRelatedItem)
+            const instagramPostObjects =
+              getRelatedInstagramPostObjects(selectedRelatedItem)
             const hasPhotosAvailable = photoObjects.length > 0
             const hasInstagramAvailable = instagramPostObjects.length > 0
             const availableMediaModeOptions = isManualStop
               ? []
-              : getAvailableMediaModeOptions(hasPhotosAvailable, hasInstagramAvailable)
+              : getAvailableMediaModeOptions(
+                  hasPhotosAvailable,
+                  hasInstagramAvailable
+                )
             const effectiveMediaMode =
-              availableMediaModeOptions.find((option) => option.value === item.mediaMode)?.value
-              ?? availableMediaModeOptions[0]?.value
-              ?? null
-            const modeNeedsPhotos = !isManualStop && effectiveMediaMode ? requiresPhotos(effectiveMediaMode) : false
-            const modeNeedsInstagram = !isManualStop && effectiveMediaMode ? requiresInstagram(effectiveMediaMode) : false
-            const selectedInstagramPost = instagramPostObjects.find(
-              (post) => post.id === item.selectedInstagramPost,
-            ) || null
-            const selectedManualInstagramPost = instagramPosts.find(
-              (post) => post.id === item.instagramPost,
-            ) || null
-            const previewInstagramPost = isManualStop ? selectedManualInstagramPost : selectedInstagramPost
+              availableMediaModeOptions.find(
+                (option) => option.value === item.mediaMode
+              )?.value ??
+              availableMediaModeOptions[0]?.value ??
+              null
+            const modeNeedsPhotos =
+              !isManualStop && effectiveMediaMode
+                ? requiresPhotos(effectiveMediaMode)
+                : false
+            const modeNeedsInstagram =
+              !isManualStop && effectiveMediaMode
+                ? requiresInstagram(effectiveMediaMode)
+                : false
+            const selectedInstagramPost =
+              instagramPostObjects.find(
+                (post) => post.id === item.selectedInstagramPost
+              ) || null
+            const selectedManualInstagramPost =
+              instagramPosts.find((post) => post.id === item.instagramPost) ||
+              null
+            const previewInstagramPost = isManualStop
+              ? selectedManualInstagramPost
+              : selectedInstagramPost
             const selectedInstagramEmbedUrl = previewInstagramPost
               ? resolveInstagramEmbedUrl(previewInstagramPost)
               : undefined
@@ -357,24 +445,39 @@ export function BuilderStopsPanel({
               ? resolveInstagramPreviewUrl(previewInstagramPost)
               : undefined
             const firstItemPhoto = photoObjects[0]
-            const firstItemPhotoUrl = firstItemPhoto ? resolveImageUrl(firstItemPhoto) : undefined
-            const selectedRelatedItemLabel = getRelatedItemDisplayLabel(selectedRelatedItem)
+            const firstItemPhotoUrl = firstItemPhoto
+              ? resolveImageUrl(firstItemPhoto)
+              : undefined
+            const selectedRelatedItemLabel =
+              getRelatedItemDisplayLabel(selectedRelatedItem)
             const angleOptions = getItineraryAngleOptions(item.blockType)
-            const angleDisabledReason = getItineraryStopAngleDisabledReason(item)
-            const linkedTours = item.blockType === 'itinerary-attractions'
-              ? getLinkedTourObjects(selectedRelatedItem)
-              : []
-            const staleTourPickIds = item.blockType === 'itinerary-attractions' && selectedRelatedItem
-              ? item.tours.filter((tourId) => !linkedTours.some((tour) => tour.id === tourId))
-              : []
-            const existingStopOptions = buildExistingStopOptions(relatedByBlockType)
-            const selectedStartingPointExistingStopKey = getSelectedStartingPointExistingStopKey(
-              item.startingPoint,
-              existingStopOptions,
-            )
-            const selectedStartingPointExistingStop = selectedStartingPointExistingStopKey
-              ? existingStopOptions.find((option) => option.selectionKey === selectedStartingPointExistingStopKey) || null
-              : null
+            const angleDisabledReason =
+              getItineraryStopAngleDisabledReason(item)
+            const linkedTours =
+              item.blockType === 'itinerary-attractions'
+                ? getLinkedTourObjects(selectedRelatedItem)
+                : []
+            const staleTourPickIds =
+              item.blockType === 'itinerary-attractions' && selectedRelatedItem
+                ? item.tours.filter(
+                    (tourId) => !linkedTours.some((tour) => tour.id === tourId)
+                  )
+                : []
+            const existingStopOptions =
+              buildExistingStopOptions(relatedByBlockType)
+            const selectedStartingPointExistingStopKey =
+              getSelectedStartingPointExistingStopKey(
+                item.startingPoint,
+                existingStopOptions
+              )
+            const selectedStartingPointExistingStop =
+              selectedStartingPointExistingStopKey
+                ? existingStopOptions.find(
+                    (option) =>
+                      option.selectionKey ===
+                      selectedStartingPointExistingStopKey
+                  ) || null
+                : null
             const selectedExistingRouteKeys = getSelectedExistingRouteKeys(item)
             const selectedPhotoPreviews = item.selectedPhotos
               .map((photoId) => {
@@ -382,1064 +485,1320 @@ export function BuilderStopsPanel({
                 const url = photo ? resolveImageUrl(photo) : undefined
                 return url ? { id: photoId, url } : null
               })
-              .filter((entry): entry is { id: number; url: string } => Boolean(entry))
-            const selectedManualImage = (
-              mediaAssets.find((asset) => asset.id === item.image)
-              || (item.image ? fetchedManualImageAssets[item.image] : null)
-              || null
-            )
-            const selectedManualImageUrl = selectedManualImage ? resolveImageUrl(selectedManualImage) : undefined
+              .filter((entry): entry is { id: number; url: string } =>
+                Boolean(entry)
+              )
+            const selectedManualImage =
+              mediaAssets.find((asset) => asset.id === item.image) ||
+              (item.image ? fetchedManualImageAssets[item.image] : null) ||
+              null
+            const selectedManualImageUrl = selectedManualImage
+              ? resolveImageUrl(selectedManualImage)
+              : undefined
             const photoPreviewCount = selectedPhotoPreviews.length
             const activePhotoPreviewIndex = Math.min(
               photoPreviewIndexByItem[item.id] ?? 0,
-              Math.max(photoPreviewCount - 1, 0),
+              Math.max(photoPreviewCount - 1, 0)
             )
-            const activePhotoPreview = selectedPhotoPreviews[activePhotoPreviewIndex]
+            const activePhotoPreview =
+              selectedPhotoPreviews[activePhotoPreviewIndex]
 
             return (
               <Fragment key={item.id}>
                 {showHeading ? (
                   <h3 className="stl-step3-section-heading">
-                    {section === 'whereStaying' ? "Where you're staying" : 'Stops'}
+                    {section === 'whereStaying'
+                      ? "Where you're staying"
+                      : 'Stops'}
                   </h3>
                 ) : null}
                 {section === 'stops' && localIndex === 0 ? (
-                  <StopInsertZone label="Insert stop here" onInsert={() => onAddItem(0)} />
+                  <StopInsertZone
+                    label="Insert stop here"
+                    onInsert={() => onAddItem(0)}
+                  />
                 ) : null}
                 <article className="stl-item-card">
-                <header className="stl-item-header">
-                  <div>
-                    <h3>{section === 'whereStaying' ? `Lodging ${localIndex + 1}` : `Stop ${localIndex + 1}`}</h3>
-                    {section !== 'whereStaying' && item.shellSlotLabel ? (
-                      <p className="stl-shell-slot-badge">
-                        {item.shellSlotDaypart?.replace('_', ' ') || 'shell slot'} · {item.shellSlotLabel}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="stl-inline-actions">
-                    <button type="button" className="stl-btn stl-btn-secondary" onClick={() => onMoveItem(item.id, 'up')}>
-                      Up
-                    </button>
-                    <button
-                      type="button"
-                      className="stl-btn stl-btn-secondary"
-                      onClick={() => onMoveItem(item.id, 'down')}
-                    >
-                      Down
-                    </button>
-                    <button type="button" className="stl-btn stl-btn-danger" onClick={() => onRemoveItem(item.id)}>
-                      Remove
-                    </button>
-                  </div>
-                </header>
-
-                <div className="stl-grid stl-grid-2">
-                  <label className="stl-field">
-                    <span>Block Type *</span>
-                    <select
-                      value={item.blockType}
-                      disabled={section === 'whereStaying'}
-                      onChange={(event) =>
-                        onUpdateItem(item.id, (current) => resetItemForBlockType(
-                          current,
-                          event.target.value as ItineraryBlockType,
-                        ))
-                      }
-                    >
-                      {(section === 'whereStaying'
-                        ? BLOCK_TYPE_OPTIONS.filter((option) => option.value === WHERE_STAYING_BLOCK_TYPE)
-                        : BLOCK_TYPE_OPTIONS_STOPS
-                      ).map((blockType) => (
-                        <option key={blockType.value} value={blockType.value}>
-                          {blockType.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  {isManualStop ? (
-                    <label className="stl-field">
-                      <span>Tour Title *</span>
-                      <input
-                        type="text"
-                        value={item.title}
-                        onChange={(event) =>
-                          onUpdateItem(item.id, (current) => ({
-                            ...current,
-                            title: event.target.value,
-                          }))
-                        }
-                        placeholder="Ex. Sacred Valley day tour"
-                      />
-                    </label>
-                  ) : (
-                    <div className="stl-field">
-                      <span>Related Item *</span>
-                      <button
-                        type="button"
-                        className="stl-picker-trigger"
-                        onClick={() => setActivePicker({ type: 'item', itemId: item.id })}
-                      >
-                        <span className="stl-picker-trigger__preview">
-                          {selectedRelatedItem ? (
-                            <>
-                              {firstItemPhotoUrl && (
-                                <img src={firstItemPhotoUrl} alt="" />
-                              )}
-                              <span className="stl-picker-trigger__label">{selectedRelatedItemLabel}</span>
-                            </>
-                          ) : (
-                            <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
-                              Select item...
-                            </span>
-                          )}
-                        </span>
-                        <span className="stl-picker-trigger__caret">▼</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {isManualStop ? (
-                  <>
-                    <div className="stl-grid stl-grid-2">
-                      <label className="stl-field">
-                        <span>Operator *</span>
-                        <input
-                          type="text"
-                          value={item.operator}
-                          onChange={(event) =>
-                            onUpdateItem(item.id, (current) => ({
-                              ...current,
-                              operator: event.target.value,
-                            }))
-                          }
-                          placeholder="Ex. Alpaca Expeditions"
-                        />
-                      </label>
-
-                      <label className="stl-field">
-                        <span>Price</span>
-                        <select
-                          value={item.price}
-                          onChange={(event) =>
-                            onUpdateItem(item.id, (current) => ({
-                              ...current,
-                              price: event.target.value as TourAgencyPriceTier | '',
-                            }))
-                          }
-                        >
-                          <option value="">Not specified</option>
-                          {TOUR_AGENCY_PRICE_TIERS.map((tier) => (
-                            <option key={tier} value={tier}>
-                              {tier}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-
-                    <div className="stl-grid stl-grid-2">
-                      <label className="stl-field">
-                        <span>URL *</span>
-                        <input
-                          type="url"
-                          value={item.url}
-                          onChange={(event) =>
-                            onUpdateItem(item.id, (current) => ({
-                              ...current,
-                              url: event.target.value,
-                            }))
-                          }
-                          placeholder="https://example.com/tour"
-                        />
-                      </label>
-
-                      <label className="stl-field">
-                        <div className="stl-field-label-row">
-                          <span>Tour Duration *</span>
-                          <span className="stl-tour-duration-badge">
-                            {formatTourDurationLabel(item.tourDuration)}
-                          </span>
-                        </div>
-                        <input
-                          className="stl-tour-duration-slider"
-                          type="range"
-                          min={1}
-                          max={24}
-                          step={1}
-                          value={item.tourDuration}
-                          onChange={(event) =>
-                            onUpdateItem(item.id, (current) => ({
-                              ...current,
-                              tourDuration: Number(event.target.value),
-                            }))
-                          }
-                          aria-label="Tour Duration"
-                        />
-                      </label>
-                    </div>
-
-                    <div className="stl-grid stl-grid-2">
-                      <div className="stl-field">
-                        <div className="stl-field-label-row">
-                          <span>Starting Point</span>
-                          <button
-                            type="button"
-                            className="stl-btn stl-btn-secondary stl-btn-xs"
-                            onClick={() => setActivePicker({ type: 'starting-point-existing-stop', itemId: item.id })}
-                            disabled={existingStopOptions.length < 1}
-                          >
-                            Choose Existing Stop
-                          </button>
-                        </div>
-                        <p className="stl-legacy-note">
-                          Pull from dining, hotels, attractions, nightlife, or key locations. You can still edit the fields after picking.
+                  <header className="stl-item-header">
+                    <div>
+                      <h3>
+                        {section === 'whereStaying'
+                          ? `Lodging ${localIndex + 1}`
+                          : `Stop ${localIndex + 1}`}
+                      </h3>
+                      {section !== 'whereStaying' && item.shellSlotLabel ? (
+                        <p className="stl-shell-slot-badge">
+                          {item.shellSlotDaypart?.replace('_', ' ') ||
+                            'shell slot'}{' '}
+                          · {item.shellSlotLabel}
                         </p>
-                        {selectedStartingPointExistingStop ? (
-                          <div className="stl-tour-existing-point">
-                            <div className="stl-tour-existing-point__meta">
-                              <span className="stl-tour-existing-point__badge">
-                                {selectedStartingPointExistingStop.collectionLabel}
-                              </span>
-                              <strong>{getRelatedItemDisplayLabel(selectedStartingPointExistingStop.item)}</strong>
-                            </div>
-                            {selectedStartingPointExistingStop.item.location ? (
-                              <p className="stl-tour-existing-point__location">
-                                {selectedStartingPointExistingStop.item.location}
-                              </p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        <div className="stl-grid stl-grid-3">
-                          <label className="stl-field">
-                            <span>Label</span>
-                            <input
-                              type="text"
-                              value={item.startingPoint.label}
-                              onChange={(event) =>
-                                onUpdateItem(item.id, (current) => ({
-                                  ...current,
-                                  startingPoint: {
-                                    ...current.startingPoint,
-                                    label: event.target.value,
-                                  },
-                                }))
-                              }
-                              placeholder="Ex. Plaza de Armas"
-                            />
-                          </label>
-                          <label className="stl-field">
-                            <span>Latitude</span>
-                            <input
-                              type="text"
-                              value={item.startingPoint.latitude}
-                              onChange={(event) =>
-                                onUpdateItem(item.id, (current) => ({
-                                  ...current,
-                                  startingPoint: {
-                                    ...current.startingPoint,
-                                    latitude: event.target.value,
-                                  },
-                                }))
-                              }
-                              placeholder="-13.5319"
-                            />
-                          </label>
-                          <label className="stl-field">
-                            <span>Longitude</span>
-                            <input
-                              type="text"
-                              value={item.startingPoint.longitude}
-                              onChange={(event) =>
-                                onUpdateItem(item.id, (current) => ({
-                                  ...current,
-                                  startingPoint: {
-                                    ...current.startingPoint,
-                                    longitude: event.target.value,
-                                  },
-                                }))
-                              }
-                              placeholder="-71.9675"
-                            />
-                          </label>
-                        </div>
-                      </div>
-
-                      <div className="stl-field">
-                        <span>Instagram</span>
-                        {selectedManualInstagramPost ? (
-                          <button
-                            type="button"
-                            className="stl-picker-trigger stl-picker-trigger--instagram-preview"
-                            onClick={() => setActiveInstagramEmbedPreviewItemId(item.id)}
-                          >
-                            <span className="stl-picker-trigger__preview">
-                              {selectedInstagramPreviewUrl ? (
-                                <img src={selectedInstagramPreviewUrl} alt="" />
-                              ) : (
-                                <span className="stl-picker-trigger__thumb-empty" />
-                              )}
-                              <span className="stl-picker-trigger__label">{selectedManualInstagramPost.title}</span>
-                            </span>
-                            <span className="stl-picker-trigger__caret">Preview</span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="stl-picker-trigger"
-                            onClick={() => setActivePicker({ type: 'manual-instagram', itemId: item.id })}
-                          >
-                            <span className="stl-picker-trigger__preview">
-                              <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
-                                Select Instagram post...
-                              </span>
-                            </span>
-                            <span className="stl-picker-trigger__caret">▼</span>
-                          </button>
-                        )}
-                        {selectedManualInstagramPost ? (
-                          <div className="stl-inline-actions">
-                            <button
-                              type="button"
-                              className="stl-btn stl-btn-secondary stl-btn-xs"
-                              onClick={() => setActivePicker({ type: 'manual-instagram', itemId: item.id })}
-                            >
-                              Change
-                            </button>
-                            <button
-                              type="button"
-                              className="stl-btn stl-btn-secondary stl-btn-xs"
-                              onClick={() =>
-                                onUpdateItem(item.id, (current) => ({
-                                  ...current,
-                                  instagramPost: null,
-                                }))
-                              }
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        ) : null}
-                        {instagramPosts.length < 1 ? (
-                          <p className="stl-legacy-note">No Instagram posts are loaded.</p>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </div>
-
-                    <div className="stl-field">
-                      <span>Img</span>
+                    <div className="stl-inline-actions">
                       <button
                         type="button"
-                        className="stl-picker-trigger"
-                        onClick={() => setImagePickerItemId(item.id)}
+                        className="stl-btn stl-btn-secondary"
+                        onClick={() => onMoveItem(item.id, 'up')}
                       >
-                        <span className="stl-picker-trigger__preview">
-                          {selectedManualImage ? (
-                            <>
-                              {selectedManualImageUrl && <img src={selectedManualImageUrl} alt="" />}
-                              <span className="stl-picker-trigger__label">{selectedManualImage.filename}</span>
-                            </>
-                          ) : (
-                            <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
-                              Select image...
-                            </span>
-                          )}
-                        </span>
-                        <span className="stl-picker-trigger__caret">▼</span>
+                        Up
+                      </button>
+                      <button
+                        type="button"
+                        className="stl-btn stl-btn-secondary"
+                        onClick={() => onMoveItem(item.id, 'down')}
+                      >
+                        Down
+                      </button>
+                      <button
+                        type="button"
+                        className="stl-btn stl-btn-danger"
+                        onClick={() => onRemoveItem(item.id)}
+                      >
+                        Remove
                       </button>
                     </div>
+                  </header>
 
-                    <div className="stl-field">
-                      <div className="stl-field-label-row">
-                        <span>Key Locations</span>
-                        <div className="stl-inline-actions">
-                          <button
-                            type="button"
-                            className="stl-btn stl-btn-secondary"
-                            onClick={() => setActivePicker({ type: 'route-existing-stops', itemId: item.id })}
-                            disabled={existingStopOptions.length < 1}
-                          >
-                            Select Existing Stops
-                          </button>
-                          <button
-                            type="button"
-                            className="stl-btn stl-btn-secondary"
-                            onClick={() =>
-                              onUpdateItem(item.id, (current) => ({
-                                ...current,
-                                keyLocations: [...current.keyLocations, createKeyLocationRow(item.id, 'manual')],
-                              }))
-                            }
-                          >
-                            Add Manual Point
-                          </button>
-                        </div>
-                      </div>
-                      <p className="stl-legacy-note">
-                        Keep route points simple: bulk-pick existing stops, then add only the custom coordinates you still need.
-                      </p>
-
-                      {item.keyLocations.length < 1 ? (
-                        <p className="stl-legacy-note">Add existing stops or manual coordinates for the route.</p>
-                      ) : (
-                        <div className="stl-tour-key-locations">
-                          {item.keyLocations.map((location, locationIndex) => {
-                            const selectedExistingStop = findExistingStopOptionForRow(existingStopOptions, location)
-
-                            return (
-                              <div key={location.id} className="stl-tour-key-location-row">
-                                <div className="stl-tour-key-location-row__header">
-                                  <div className="stl-tour-key-location-row__title">
-                                    <strong>Route Point {locationIndex + 1}</strong>
-                                    <span className="stl-tour-key-location-row__kind">
-                                      {location.source === 'existing' ? 'Existing stop' : 'Manual point'}
-                                    </span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className="stl-btn stl-btn-danger stl-btn-xs"
-                                    onClick={() =>
-                                      onUpdateItem(item.id, (current) => ({
-                                        ...current,
-                                        keyLocations: current.keyLocations.filter((entry) => entry.id !== location.id),
-                                      }))
-                                    }
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-
-                                {location.source === 'existing' ? (
-                                  <div className="stl-tour-existing-point">
-                                    <div className="stl-tour-existing-point__meta">
-                                      <span className="stl-tour-existing-point__badge">
-                                        {selectedExistingStop?.collectionLabel || location.relatedCollection || 'Existing'}
-                                      </span>
-                                      <strong>
-                                        {selectedExistingStop
-                                          ? getRelatedItemDisplayLabel(selectedExistingStop.item)
-                                          : 'Saved item is unavailable'}
-                                      </strong>
-                                    </div>
-                                    {selectedExistingStop?.item.location ? (
-                                      <p className="stl-tour-existing-point__location">
-                                        {selectedExistingStop.item.location}
-                                      </p>
-                                    ) : null}
-                                    {!selectedExistingStop ? (
-                                      <p className="stl-legacy-note">
-                                        This existing stop is outside the current itinerary scope or no longer published.
-                                      </p>
-                                    ) : null}
-                                  </div>
-                                ) : (
-                                  <div className="stl-grid stl-grid-3">
-                                    <label className="stl-field">
-                                      <span>Title</span>
-                                      <input
-                                        type="text"
-                                        value={location.title}
-                                        onChange={(event) =>
-                                          onUpdateItem(item.id, (current) => ({
-                                            ...current,
-                                            keyLocations: current.keyLocations.map((entry) => (
-                                              entry.id !== location.id
-                                                ? entry
-                                                : {
-                                                    ...entry,
-                                                    title: event.target.value,
-                                                  }
-                                            )),
-                                          }))
-                                        }
-                                        placeholder="Ex. Scenic overlook"
-                                      />
-                                    </label>
-                                    <label className="stl-field">
-                                      <span>Latitude</span>
-                                      <input
-                                        type="text"
-                                        value={location.latitude}
-                                        onChange={(event) =>
-                                          onUpdateItem(item.id, (current) => ({
-                                            ...current,
-                                            keyLocations: current.keyLocations.map((entry) => (
-                                              entry.id !== location.id
-                                                ? entry
-                                                : {
-                                                    ...entry,
-                                                    latitude: event.target.value,
-                                                  }
-                                            )),
-                                          }))
-                                        }
-                                        placeholder="-13.5319"
-                                      />
-                                    </label>
-                                    <label className="stl-field">
-                                      <span>Longitude</span>
-                                      <input
-                                        type="text"
-                                        value={location.longitude}
-                                        onChange={(event) =>
-                                          onUpdateItem(item.id, (current) => ({
-                                            ...current,
-                                            keyLocations: current.keyLocations.map((entry) => (
-                                              entry.id !== location.id
-                                                ? entry
-                                                : {
-                                                    ...entry,
-                                                    longitude: event.target.value,
-                                                  }
-                                            )),
-                                          }))
-                                        }
-                                        placeholder="-71.9675"
-                                      />
-                                    </label>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : selectedRelatedItem ? (
-                  <label className="stl-field">
-                    <span>Media Mode *</span>
-                    {availableMediaModeOptions.length > 0 ? (
+                  <div className="stl-grid stl-grid-2">
+                    <label className="stl-field">
+                      <span>Block Type *</span>
                       <select
-                        value={effectiveMediaMode ?? ''}
+                        value={item.blockType}
+                        disabled={section === 'whereStaying'}
                         onChange={(event) =>
-                          onUpdateItem(item.id, (current) => {
-                            const nextMode = event.target.value as MediaMode
-                            if (nextMode === 'photos') {
-                              return { ...current, mediaMode: nextMode, selectedInstagramPost: null }
-                            }
-                            if (nextMode === 'instagram') {
-                              return { ...current, mediaMode: nextMode, selectedPhotos: [] }
-                            }
-                            return { ...current, mediaMode: nextMode }
-                          })
+                          onUpdateItem(item.id, (current) =>
+                            resetItemForBlockType(
+                              current,
+                              event.target.value as ItineraryBlockType
+                            )
+                          )
                         }
                       >
-                        {availableMediaModeOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
+                        {(section === 'whereStaying'
+                          ? BLOCK_TYPE_OPTIONS.filter(
+                              (option) =>
+                                option.value === WHERE_STAYING_BLOCK_TYPE
+                            )
+                          : BLOCK_TYPE_OPTIONS_STOPS
+                        ).map((blockType) => (
+                          <option key={blockType.value} value={blockType.value}>
+                            {blockType.label}
                           </option>
                         ))}
                       </select>
+                    </label>
+
+                    {isManualStop ? (
+                      <label className="stl-field">
+                        <span>Tour Title *</span>
+                        <input
+                          type="text"
+                          value={item.title}
+                          onChange={(event) =>
+                            onUpdateItem(item.id, (current) => ({
+                              ...current,
+                              title: event.target.value
+                            }))
+                          }
+                          placeholder="Ex. Sacred Valley day tour"
+                        />
+                      </label>
                     ) : (
-                      <p className="stl-media-mode-empty">
-                        No photos or Instagram posts are available for this related item.
-                      </p>
-                    )}
-                  </label>
-                ) : (
-                  <p className="stl-legacy-note">Select a related item to unlock media options and blurb.</p>
-                )}
-
-                {item.blockType === 'itinerary-attractions' && selectedRelatedItem && linkedTours.length > 0 ? (
-                  <div className="stl-field">
-                    <div className="stl-field-label-row">
-                      <span>Tour Picks</span>
-                      <span className="stl-tour-duration-badge">
-                        {item.tours.length}/{TOUR_PICKS_MAX}
-                      </span>
-                    </div>
-                    <p className="stl-legacy-note">
-                      Feature up to {TOUR_PICKS_MAX} of this attraction's linked tours, in the order you pick them.
-                      Tour titles, prices, and booking links stay live from Location Manager.
-                    </p>
-                    <button
-                      type="button"
-                      className="stl-picker-trigger"
-                      onClick={() => setActivePicker({ type: 'tour-picks', itemId: item.id })}
-                    >
-                      <span className="stl-picker-trigger__preview">
-                        {item.tours.length > 0 ? (
-                          <span className="stl-picker-trigger__label">
-                            {item.tours.length} tour{item.tours.length === 1 ? '' : 's'} selected
-                          </span>
-                        ) : (
-                          <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
-                            Select tours...
-                          </span>
-                        )}
-                      </span>
-                      <span className="stl-picker-trigger__caret">▼</span>
-                    </button>
-                    {item.tours.length > 0 ? (
-                      <div className="stl-tour-picks">
-                        {item.tours.map((tourId, pickIndex) => {
-                          const tour = linkedTours.find((entry) => entry.id === tourId)
-                          if (!tour) return null
-
-                          return (
-                            <div key={tourId} className="stl-tour-pick-row stl-tour-pick-row--picked">
-                              <span className="stl-tour-pick-row__order">#{pickIndex + 1}</span>
-                              <span className="stl-tour-pick-row__title">
-                                {tour.title?.trim() || `Tour #${tour.id}`}
+                      <div className="stl-field">
+                        <span>Related Item *</span>
+                        <button
+                          type="button"
+                          className="stl-picker-trigger"
+                          onClick={() =>
+                            setActivePicker({ type: 'item', itemId: item.id })
+                          }
+                        >
+                          <span className="stl-picker-trigger__preview">
+                            {selectedRelatedItem ? (
+                              <>
+                                {firstItemPhotoUrl && (
+                                  <img src={firstItemPhotoUrl} alt="" />
+                                )}
+                                <span className="stl-picker-trigger__label">
+                                  {selectedRelatedItemLabel}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                                Select item...
                               </span>
-                              {tour.price?.trim() ? (
-                                <span className="stl-tour-pick-row__price">{tour.price}</span>
+                            )}
+                          </span>
+                          <span className="stl-picker-trigger__caret">▼</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {section !== 'whereStaying' ? (
+                    <ItineraryMomentFields
+                      item={item}
+                      onChange={(updater) => onUpdateItem(item.id, updater)}
+                    />
+                  ) : null}
+
+                  {isManualStop ? (
+                    <>
+                      <div className="stl-grid stl-grid-2">
+                        <label className="stl-field">
+                          <span>Operator *</span>
+                          <input
+                            type="text"
+                            value={item.operator}
+                            onChange={(event) =>
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                operator: event.target.value
+                              }))
+                            }
+                            placeholder="Ex. Alpaca Expeditions"
+                          />
+                        </label>
+
+                        <label className="stl-field">
+                          <span>Price</span>
+                          <select
+                            value={item.price}
+                            onChange={(event) =>
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                price: event.target.value as
+                                  | TourAgencyPriceTier
+                                  | ''
+                              }))
+                            }
+                          >
+                            <option value="">Not specified</option>
+                            {TOUR_AGENCY_PRICE_TIERS.map((tier) => (
+                              <option key={tier} value={tier}>
+                                {tier}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <div className="stl-grid stl-grid-2">
+                        <label className="stl-field">
+                          <span>URL *</span>
+                          <input
+                            type="url"
+                            value={item.url}
+                            onChange={(event) =>
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                url: event.target.value
+                              }))
+                            }
+                            placeholder="https://example.com/tour"
+                          />
+                        </label>
+
+                        <label className="stl-field">
+                          <div className="stl-field-label-row">
+                            <span>Tour Duration *</span>
+                            <span className="stl-tour-duration-badge">
+                              {formatTourDurationLabel(item.tourDuration)}
+                            </span>
+                          </div>
+                          <input
+                            className="stl-tour-duration-slider"
+                            type="range"
+                            min={1}
+                            max={24}
+                            step={1}
+                            value={item.tourDuration}
+                            onChange={(event) =>
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                tourDuration: Number(event.target.value)
+                              }))
+                            }
+                            aria-label="Tour Duration"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="stl-grid stl-grid-2">
+                        <div className="stl-field">
+                          <div className="stl-field-label-row">
+                            <span>Starting Point</span>
+                            <button
+                              type="button"
+                              className="stl-btn stl-btn-secondary stl-btn-xs"
+                              onClick={() =>
+                                setActivePicker({
+                                  type: 'starting-point-existing-stop',
+                                  itemId: item.id
+                                })
+                              }
+                              disabled={existingStopOptions.length < 1}
+                            >
+                              Choose Existing Stop
+                            </button>
+                          </div>
+                          <p className="stl-legacy-note">
+                            Pull from dining, hotels, attractions, nightlife, or
+                            key locations. You can still edit the fields after
+                            picking.
+                          </p>
+                          {selectedStartingPointExistingStop ? (
+                            <div className="stl-tour-existing-point">
+                              <div className="stl-tour-existing-point__meta">
+                                <span className="stl-tour-existing-point__badge">
+                                  {
+                                    selectedStartingPointExistingStop.collectionLabel
+                                  }
+                                </span>
+                                <strong>
+                                  {getRelatedItemDisplayLabel(
+                                    selectedStartingPointExistingStop.item
+                                  )}
+                                </strong>
+                              </div>
+                              {selectedStartingPointExistingStop.item
+                                .location ? (
+                                <p className="stl-tour-existing-point__location">
+                                  {
+                                    selectedStartingPointExistingStop.item
+                                      .location
+                                  }
+                                </p>
                               ) : null}
                             </div>
-                          )
-                        })}
-                      </div>
-                    ) : null}
-                    {staleTourPickIds.length > 0 ? (
-                      <p className="stl-tour-picks__stale-warning">
-                        {staleTourPickIds.length} saved tour pick{staleTourPickIds.length === 1 ? ' is' : 's are'} no
-                        longer linked to this attraction in Location Manager and will block syncing.{' '}
-                        <button
-                          type="button"
-                          className="stl-btn stl-btn-secondary stl-btn-xs"
-                          onClick={() =>
-                            onUpdateItem(item.id, (current) => ({
-                              ...current,
-                              tours: current.tours.filter(
-                                (tourId) => !staleTourPickIds.includes(tourId),
-                              ),
-                            }))
-                          }
-                        >
-                          Remove stale picks
-                        </button>
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
+                          ) : null}
+                          <div className="stl-grid stl-grid-3">
+                            <label className="stl-field">
+                              <span>Label</span>
+                              <input
+                                type="text"
+                                value={item.startingPoint.label}
+                                onChange={(event) =>
+                                  onUpdateItem(item.id, (current) => ({
+                                    ...current,
+                                    startingPoint: {
+                                      ...current.startingPoint,
+                                      label: event.target.value
+                                    }
+                                  }))
+                                }
+                                placeholder="Ex. Plaza de Armas"
+                              />
+                            </label>
+                            <label className="stl-field">
+                              <span>Latitude</span>
+                              <input
+                                type="text"
+                                value={item.startingPoint.latitude}
+                                onChange={(event) =>
+                                  onUpdateItem(item.id, (current) => ({
+                                    ...current,
+                                    startingPoint: {
+                                      ...current.startingPoint,
+                                      latitude: event.target.value
+                                    }
+                                  }))
+                                }
+                                placeholder="-13.5319"
+                              />
+                            </label>
+                            <label className="stl-field">
+                              <span>Longitude</span>
+                              <input
+                                type="text"
+                                value={item.startingPoint.longitude}
+                                onChange={(event) =>
+                                  onUpdateItem(item.id, (current) => ({
+                                    ...current,
+                                    startingPoint: {
+                                      ...current.startingPoint,
+                                      longitude: event.target.value
+                                    }
+                                  }))
+                                }
+                                placeholder="-71.9675"
+                              />
+                            </label>
+                          </div>
+                        </div>
 
-                {!isManualStop && modeNeedsPhotos ? (
-                  <div className="stl-field">
-                    <span>Selected Photos * (1-6)</span>
-                    {photoPreviewCount > 0 ? (
-                      <div className="stl-item-photo-preview">
-                        <button
-                          type="button"
-                          className="stl-item-photo-preview__media"
-                          onClick={() => setActivePicker({ type: 'photos', itemId: item.id })}
-                        >
-                          {activePhotoPreview ? (
-                            <img src={activePhotoPreview.url} alt="" />
-                          ) : (
-                            <div className="stl-item-photo-preview__fallback">Photos selected</div>
-                          )}
-                          <span className="stl-item-photo-preview__count">
-                            {activePhotoPreviewIndex + 1}/{photoPreviewCount}
-                          </span>
-                        </button>
-                        {photoPreviewCount > 1 ? (
-                          <>
+                        <div className="stl-field">
+                          <span>Instagram</span>
+                          {selectedManualInstagramPost ? (
                             <button
                               type="button"
-                              className="stl-item-photo-preview__nav stl-item-photo-preview__nav--prev"
-                              aria-label={
-                        section === 'whereStaying'
-                          ? `Show previous photo for lodging ${localIndex + 1}`
-                          : `Show previous photo for stop ${localIndex + 1}`
-                      }
+                              className="stl-picker-trigger stl-picker-trigger--instagram-preview"
                               onClick={() =>
-                                setPhotoPreviewIndexByItem((prev) => ({
-                                  ...prev,
-                                  [item.id]:
-                                    (activePhotoPreviewIndex - 1 + photoPreviewCount) % photoPreviewCount,
-                                }))
+                                setActiveInstagramEmbedPreviewItemId(item.id)
                               }
                             >
-                              ‹
+                              <span className="stl-picker-trigger__preview">
+                                {selectedInstagramPreviewUrl ? (
+                                  <img
+                                    src={selectedInstagramPreviewUrl}
+                                    alt=""
+                                  />
+                                ) : (
+                                  <span className="stl-picker-trigger__thumb-empty" />
+                                )}
+                                <span className="stl-picker-trigger__label">
+                                  {selectedManualInstagramPost.title}
+                                </span>
+                              </span>
+                              <span className="stl-picker-trigger__caret">
+                                Preview
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="stl-picker-trigger"
+                              onClick={() =>
+                                setActivePicker({
+                                  type: 'manual-instagram',
+                                  itemId: item.id
+                                })
+                              }
+                            >
+                              <span className="stl-picker-trigger__preview">
+                                <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                                  Select Instagram post...
+                                </span>
+                              </span>
+                              <span className="stl-picker-trigger__caret">
+                                ▼
+                              </span>
+                            </button>
+                          )}
+                          {selectedManualInstagramPost ? (
+                            <div className="stl-inline-actions">
+                              <button
+                                type="button"
+                                className="stl-btn stl-btn-secondary stl-btn-xs"
+                                onClick={() =>
+                                  setActivePicker({
+                                    type: 'manual-instagram',
+                                    itemId: item.id
+                                  })
+                                }
+                              >
+                                Change
+                              </button>
+                              <button
+                                type="button"
+                                className="stl-btn stl-btn-secondary stl-btn-xs"
+                                onClick={() =>
+                                  onUpdateItem(item.id, (current) => ({
+                                    ...current,
+                                    instagramPost: null
+                                  }))
+                                }
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          ) : null}
+                          {instagramPosts.length < 1 ? (
+                            <p className="stl-legacy-note">
+                              No Instagram posts are loaded.
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="stl-field">
+                        <span>Img</span>
+                        <button
+                          type="button"
+                          className="stl-picker-trigger"
+                          onClick={() => setImagePickerItemId(item.id)}
+                        >
+                          <span className="stl-picker-trigger__preview">
+                            {selectedManualImage ? (
+                              <>
+                                {selectedManualImageUrl && (
+                                  <img src={selectedManualImageUrl} alt="" />
+                                )}
+                                <span className="stl-picker-trigger__label">
+                                  {selectedManualImage.filename}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                                Select image...
+                              </span>
+                            )}
+                          </span>
+                          <span className="stl-picker-trigger__caret">▼</span>
+                        </button>
+                      </div>
+
+                      <div className="stl-field">
+                        <div className="stl-field-label-row">
+                          <span>Key Locations</span>
+                          <div className="stl-inline-actions">
+                            <button
+                              type="button"
+                              className="stl-btn stl-btn-secondary"
+                              onClick={() =>
+                                setActivePicker({
+                                  type: 'route-existing-stops',
+                                  itemId: item.id
+                                })
+                              }
+                              disabled={existingStopOptions.length < 1}
+                            >
+                              Select Existing Stops
                             </button>
                             <button
                               type="button"
-                              className="stl-item-photo-preview__nav stl-item-photo-preview__nav--next"
-                              aria-label={
-                        section === 'whereStaying'
-                          ? `Show next photo for lodging ${localIndex + 1}`
-                          : `Show next photo for stop ${localIndex + 1}`
-                      }
+                              className="stl-btn stl-btn-secondary"
                               onClick={() =>
-                                setPhotoPreviewIndexByItem((prev) => ({
-                                  ...prev,
-                                  [item.id]:
-                                    (activePhotoPreviewIndex + 1) % photoPreviewCount,
+                                onUpdateItem(item.id, (current) => ({
+                                  ...current,
+                                  keyLocations: [
+                                    ...current.keyLocations,
+                                    createKeyLocationRow(item.id, 'manual')
+                                  ]
                                 }))
                               }
                             >
-                              ›
+                              Add Manual Point
                             </button>
-                          </>
-                        ) : null}
+                          </div>
+                        </div>
+                        <p className="stl-legacy-note">
+                          Keep route points simple: bulk-pick existing stops,
+                          then add only the custom coordinates you still need.
+                        </p>
+
+                        {item.keyLocations.length < 1 ? (
+                          <p className="stl-legacy-note">
+                            Add existing stops or manual coordinates for the
+                            route.
+                          </p>
+                        ) : (
+                          <div className="stl-tour-key-locations">
+                            {item.keyLocations.map(
+                              (location, locationIndex) => {
+                                const selectedExistingStop =
+                                  findExistingStopOptionForRow(
+                                    existingStopOptions,
+                                    location
+                                  )
+
+                                return (
+                                  <div
+                                    key={location.id}
+                                    className="stl-tour-key-location-row"
+                                  >
+                                    <div className="stl-tour-key-location-row__header">
+                                      <div className="stl-tour-key-location-row__title">
+                                        <strong>
+                                          Route Point {locationIndex + 1}
+                                        </strong>
+                                        <span className="stl-tour-key-location-row__kind">
+                                          {location.source === 'existing'
+                                            ? 'Existing stop'
+                                            : 'Manual point'}
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="stl-btn stl-btn-danger stl-btn-xs"
+                                        onClick={() =>
+                                          onUpdateItem(item.id, (current) => ({
+                                            ...current,
+                                            keyLocations:
+                                              current.keyLocations.filter(
+                                                (entry) =>
+                                                  entry.id !== location.id
+                                              )
+                                          }))
+                                        }
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+
+                                    {location.source === 'existing' ? (
+                                      <div className="stl-tour-existing-point">
+                                        <div className="stl-tour-existing-point__meta">
+                                          <span className="stl-tour-existing-point__badge">
+                                            {selectedExistingStop?.collectionLabel ||
+                                              location.relatedCollection ||
+                                              'Existing'}
+                                          </span>
+                                          <strong>
+                                            {selectedExistingStop
+                                              ? getRelatedItemDisplayLabel(
+                                                  selectedExistingStop.item
+                                                )
+                                              : 'Saved item is unavailable'}
+                                          </strong>
+                                        </div>
+                                        {selectedExistingStop?.item.location ? (
+                                          <p className="stl-tour-existing-point__location">
+                                            {selectedExistingStop.item.location}
+                                          </p>
+                                        ) : null}
+                                        {!selectedExistingStop ? (
+                                          <p className="stl-legacy-note">
+                                            This existing stop is outside the
+                                            current itinerary scope or no longer
+                                            published.
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                    ) : (
+                                      <div className="stl-grid stl-grid-3">
+                                        <label className="stl-field">
+                                          <span>Title</span>
+                                          <input
+                                            type="text"
+                                            value={location.title}
+                                            onChange={(event) =>
+                                              onUpdateItem(
+                                                item.id,
+                                                (current) => ({
+                                                  ...current,
+                                                  keyLocations:
+                                                    current.keyLocations.map(
+                                                      (entry) =>
+                                                        entry.id !== location.id
+                                                          ? entry
+                                                          : {
+                                                              ...entry,
+                                                              title:
+                                                                event.target
+                                                                  .value
+                                                            }
+                                                    )
+                                                })
+                                              )
+                                            }
+                                            placeholder="Ex. Scenic overlook"
+                                          />
+                                        </label>
+                                        <label className="stl-field">
+                                          <span>Latitude</span>
+                                          <input
+                                            type="text"
+                                            value={location.latitude}
+                                            onChange={(event) =>
+                                              onUpdateItem(
+                                                item.id,
+                                                (current) => ({
+                                                  ...current,
+                                                  keyLocations:
+                                                    current.keyLocations.map(
+                                                      (entry) =>
+                                                        entry.id !== location.id
+                                                          ? entry
+                                                          : {
+                                                              ...entry,
+                                                              latitude:
+                                                                event.target
+                                                                  .value
+                                                            }
+                                                    )
+                                                })
+                                              )
+                                            }
+                                            placeholder="-13.5319"
+                                          />
+                                        </label>
+                                        <label className="stl-field">
+                                          <span>Longitude</span>
+                                          <input
+                                            type="text"
+                                            value={location.longitude}
+                                            onChange={(event) =>
+                                              onUpdateItem(
+                                                item.id,
+                                                (current) => ({
+                                                  ...current,
+                                                  keyLocations:
+                                                    current.keyLocations.map(
+                                                      (entry) =>
+                                                        entry.id !== location.id
+                                                          ? entry
+                                                          : {
+                                                              ...entry,
+                                                              longitude:
+                                                                event.target
+                                                                  .value
+                                                            }
+                                                    )
+                                                })
+                                              )
+                                            }
+                                            placeholder="-71.9675"
+                                          />
+                                        </label>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              }
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        className="stl-picker-trigger"
-                        disabled={!selectedRelatedItem}
-                        onClick={() => setActivePicker({ type: 'photos', itemId: item.id })}
-                      >
-                        <span className="stl-picker-trigger__preview">
-                          <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
-                            Select photos...
-                          </span>
-                        </span>
-                        <span className="stl-picker-trigger__caret">▼</span>
-                      </button>
-                    )}
-                    {!selectedRelatedItem ? (
-                      <p className="stl-legacy-note">Select a related item to choose photos.</p>
-                    ) : null}
-                    {selectedRelatedItem && photoObjects.length === 0 ? (
-                      <p className="stl-legacy-note">The selected related item has no gallery photos available.</p>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {!isManualStop && modeNeedsInstagram ? (
-                  <div className="stl-field">
-                    <span>Selected Instagram Post *</span>
-                    {selectedInstagramPost ? (
-                      <button
-                        type="button"
-                        className="stl-picker-trigger stl-picker-trigger--instagram-preview"
-                        onClick={() => setActiveInstagramEmbedPreviewItemId(item.id)}
-                      >
-                        <span className="stl-picker-trigger__preview">
-                          {selectedInstagramPreviewUrl ? (
-                            <img src={selectedInstagramPreviewUrl} alt="" />
-                          ) : (
-                            <span className="stl-picker-trigger__thumb-empty" />
-                          )}
-                          <span className="stl-picker-trigger__label">{selectedInstagramPost.title}</span>
-                        </span>
-                        <span className="stl-picker-trigger__caret">Preview</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="stl-picker-trigger"
-                        disabled={!selectedRelatedItem}
-                        onClick={() => setActivePicker({ type: 'instagram', itemId: item.id })}
-                      >
-                        <span className="stl-picker-trigger__preview">
-                          <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
-                            Select Instagram post...
-                          </span>
-                        </span>
-                        <span className="stl-picker-trigger__caret">▼</span>
-                      </button>
-                    )}
-                    {!selectedRelatedItem ? (
-                      <p className="stl-legacy-note">Select a related item to choose an Instagram post.</p>
-                    ) : null}
-                    {selectedRelatedItem && instagramPostObjects.length === 0 ? (
-                      <p className="stl-legacy-note">The selected related item has no Instagram posts available.</p>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                <div className="stl-field">
-                  <div className="stl-field-label-row stl-blurb-label-row">
-                    <span>Blurb *</span>
-                    <div className="stl-inline-actions stl-blurb-actions">
-                      {angleOptions.length > 0 ? (
+                    </>
+                  ) : selectedRelatedItem ? (
+                    <label className="stl-field">
+                      <span>Media Mode *</span>
+                      {availableMediaModeOptions.length > 0 ? (
                         <select
-                          className="stl-field-input stl-angle-select"
-                          value={item.angle && angleOptions.some((option) => option.value === item.angle) ? item.angle : ''}
-                          onChange={(event) => {
-                            const next = event.target.value
-                            onUpdateItem(item.id, (current) => ({
-                              ...current,
-                              angle: next === '' ? null : (next as ListicleAngle),
-                            }))
-                          }}
-                          aria-label={
-                            section === 'whereStaying'
-                              ? `Blurb angle for lodging ${localIndex + 1}`
-                              : `Blurb angle for stop ${localIndex + 1}`
+                          value={effectiveMediaMode ?? ''}
+                          onChange={(event) =>
+                            onUpdateItem(item.id, (current) => {
+                              const nextMode = event.target.value as MediaMode
+                              if (nextMode === 'photos') {
+                                return {
+                                  ...current,
+                                  mediaMode: nextMode,
+                                  selectedInstagramPost: null
+                                }
+                              }
+                              if (nextMode === 'instagram') {
+                                return {
+                                  ...current,
+                                  mediaMode: nextMode,
+                                  selectedPhotos: []
+                                }
+                              }
+                              return { ...current, mediaMode: nextMode }
+                            })
                           }
-                          title="Blurb angle — operator must select one before generating"
                         >
-                          <option value="" disabled>
-                            Select an angle…
-                          </option>
-                          {angleOptions.map((option) => (
+                          {availableMediaModeOptions.map((option) => (
                             <option key={option.value} value={option.value}>
                               {option.label}
                             </option>
                           ))}
                         </select>
-                      ) : null}
+                      ) : (
+                        <p className="stl-media-mode-empty">
+                          No photos or Instagram posts are available for this
+                          related item.
+                        </p>
+                      )}
+                    </label>
+                  ) : (
+                    <p className="stl-legacy-note">
+                      Select a related item to unlock media options and blurb.
+                    </p>
+                  )}
+
+                  {item.blockType === 'itinerary-attractions' &&
+                  selectedRelatedItem &&
+                  linkedTours.length > 0 ? (
+                    <div className="stl-field">
+                      <div className="stl-field-label-row">
+                        <span>Tour Picks</span>
+                        <span className="stl-tour-duration-badge">
+                          {item.tours.length}/{TOUR_PICKS_MAX}
+                        </span>
+                      </div>
+                      <p className="stl-legacy-note">
+                        Feature up to {TOUR_PICKS_MAX} of this attraction's
+                        linked tours, in the order you pick them. Tour titles,
+                        prices, and booking links stay live from Location
+                        Manager.
+                      </p>
                       <button
                         type="button"
-                        className="stl-btn stl-btn-secondary"
-                        onClick={() => void onStopBlurbAiAutoWrite(item.id)}
-                        disabled={activeAiItemId === item.id || Boolean(angleDisabledReason)}
-                        title={angleDisabledReason}
+                        className="stl-picker-trigger"
+                        onClick={() =>
+                          setActivePicker({
+                            type: 'tour-picks',
+                            itemId: item.id
+                          })
+                        }
                       >
-                        {activeAiItemId === item.id
-                          ? 'Writing...'
-                          : item.blurbMarkdown.trim()
-                            ? 'Regenerate'
-                            : 'Auto Write'}
+                        <span className="stl-picker-trigger__preview">
+                          {item.tours.length > 0 ? (
+                            <span className="stl-picker-trigger__label">
+                              {item.tours.length} tour
+                              {item.tours.length === 1 ? '' : 's'} selected
+                            </span>
+                          ) : (
+                            <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                              Select tours...
+                            </span>
+                          )}
+                        </span>
+                        <span className="stl-picker-trigger__caret">▼</span>
                       </button>
+                      {item.tours.length > 0 ? (
+                        <div className="stl-tour-picks">
+                          {item.tours.map((tourId, pickIndex) => {
+                            const tour = linkedTours.find(
+                              (entry) => entry.id === tourId
+                            )
+                            if (!tour) return null
+
+                            return (
+                              <div
+                                key={tourId}
+                                className="stl-tour-pick-row stl-tour-pick-row--picked"
+                              >
+                                <span className="stl-tour-pick-row__order">
+                                  #{pickIndex + 1}
+                                </span>
+                                <span className="stl-tour-pick-row__title">
+                                  {tour.title?.trim() || `Tour #${tour.id}`}
+                                </span>
+                                {tour.price?.trim() ? (
+                                  <span className="stl-tour-pick-row__price">
+                                    {tour.price}
+                                  </span>
+                                ) : null}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                      {staleTourPickIds.length > 0 ? (
+                        <p className="stl-tour-picks__stale-warning">
+                          {staleTourPickIds.length} saved tour pick
+                          {staleTourPickIds.length === 1 ? ' is' : 's are'} no
+                          longer linked to this attraction in Location Manager
+                          and will block syncing.{' '}
+                          <button
+                            type="button"
+                            className="stl-btn stl-btn-secondary stl-btn-xs"
+                            onClick={() =>
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                tours: current.tours.filter(
+                                  (tourId) => !staleTourPickIds.includes(tourId)
+                                )
+                              }))
+                            }
+                          >
+                            Remove stale picks
+                          </button>
+                        </p>
+                      ) : null}
                     </div>
-                  </div>
-                  <MarkdownBlockEditor
-                    blockId={`${item.id}_blurb`}
-                    value={item.blurbMarkdown}
-                    onChange={(nextValue) =>
-                      onUpdateItem(item.id, (current) => ({
-                        ...current,
-                        blurbMarkdown: nextValue,
-                        blurbJsonText: '',
-                      }))
-                    }
-                    showToolbar
-                    enforceHeadingStructure={false}
-                    placeholder="Write editorial context for this stop..."
-                    className="stl-markdown-textarea"
-                    rows={5}
-                    ariaLabel={
-                      section === 'whereStaying'
-                        ? `Blurb for lodging ${localIndex + 1}`
-                        : `Blurb for stop ${localIndex + 1}`
-                    }
-                  />
-                </div>
-                {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
-                  <p className="stl-legacy-note">This blurb currently exists as Lexical JSON in Payload. Editing here will replace it.</p>
-                ) : null}
+                  ) : null}
 
-                <StopReasonField
-                  item={item}
-                  disabled={isLocked}
-                  onUpdateItem={onUpdateItem}
-                  onRefineStopReason={onRefineStopReason}
-                />
-
-                <RelatedItemPickerModal
-                  isOpen={activeItemPicker?.itemId === item.id}
-                  items={relatedOptions}
-                  selectedItemId={item.item}
-                  onSelect={(nextId) =>
-                    onUpdateItem(item.id, (current) => {
-                      const nextRelatedItem = relatedOptions.find((entry) => entry.id === nextId) || null
-                      const nextHasPhotos = getRelatedPhotoObjects(nextRelatedItem).length > 0
-                      const nextHasInstagram = getRelatedInstagramPostObjects(nextRelatedItem).length > 0
-                      const nextAvailableModes = getAvailableMediaModeOptions(nextHasPhotos, nextHasInstagram)
-                      const nextMediaMode =
-                        nextAvailableModes.find((option) => option.value === current.mediaMode)?.value
-                        ?? nextAvailableModes[0]?.value
-                        ?? current.mediaMode
-
-                      const pickChanged = nextId !== current.item
-                      // The Selection reason and blurb are invalidated centrally
-                      // on identity change (applyItemUpdate, ADR 0020) — no need
-                      // to clear them here.
-                      return {
-                        ...current,
-                        item: nextId,
-                        // Tour Picks belong to the previous attraction's linked list.
-                        tours: pickChanged ? [] : current.tours,
-                        mediaMode: nextMediaMode,
-                        selectedPhotos: [],
-                        selectedInstagramPost: null,
-                      }
-                    })
-                  }
-                  onClose={() => setActivePicker(null)}
-                />
-
-                <ExistingStopPickerModal
-                  isOpen={activeStartingPointExistingStopPicker?.itemId === item.id}
-                  items={existingStopOptions}
-                  mode="single"
-                  title="Choose Starting Point"
-                  description="Use an existing dining stop, hotel, attraction, nightlife venue, or key location with coordinates."
-                  selectedKeys={selectedStartingPointExistingStopKey ? [selectedStartingPointExistingStopKey] : []}
-                  confirmLabel="Use Selected"
-                  emptyMessage="No existing stops match this itinerary."
-                  searchPlaceholder="Search dining, hotels, attractions, nightlife, or key locations..."
-                  requireCoordinates
-                  onConfirm={(keys) => {
-                    const selected = existingStopOptions.find((option) => option.selectionKey === keys[0])
-                    if (!selected) return
-                    onUpdateItem(item.id, (current) => ({
-                      ...current,
-                      startingPoint: buildStartingPointFromExistingStop(selected.item),
-                    }))
-                  }}
-                  onClose={() => setActivePicker(null)}
-                />
-
-                <ExistingStopPickerModal
-                  isOpen={activeRouteExistingStopsPicker?.itemId === item.id}
-                  items={existingStopOptions}
-                  mode="multiple"
-                  title="Select Existing Stops"
-                  description="Pick from published dining, hotels, attractions, nightlife, and key locations in one list."
-                  selectedKeys={selectedExistingRouteKeys}
-                  confirmLabel="Save Selection"
-                  emptyMessage="No existing stops match this itinerary."
-                  searchPlaceholder="Search all existing stops..."
-                  onConfirm={(keys) =>
-                    onUpdateItem(item.id, (current) => ({
-                      ...current,
-                      keyLocations: buildRoutePointRowsFromSelection(current, keys, existingStopOptions),
-                    }))
-                  }
-                  onClose={() => setActivePicker(null)}
-                />
-
-                <TourPicksModal
-                  isOpen={activeTourPicksPicker?.itemId === item.id}
-                  tours={linkedTours}
-                  selectedTourIds={item.tours}
-                  onConfirm={(tourIds) =>
-                    onUpdateItem(item.id, (current) => ({
-                      ...current,
-                      tours: tourIds,
-                    }))
-                  }
-                  onClose={() => setActivePicker(null)}
-                />
-
-                <PhotoPickerModal
-                  isOpen={activePhotoPicker?.itemId === item.id}
-                  photoObjects={photoObjects}
-                  selectedPhotoIds={item.selectedPhotos}
-                  onConfirm={(ids) =>
-                    onUpdateItem(item.id, (current) => ({
-                      ...current,
-                      selectedPhotos: ids,
-                    }))
-                  }
-                  onClose={() => setActivePicker(null)}
-                />
-
-                <FeaturedImagePicker
-                  isOpen={imagePickerItemId === item.id}
-                  selectedId={item.image}
-                  token={resolvedToken}
-                  locationRef={locationRef}
-                  payloadSourceMode="mediaSets"
-                  requireMediaSet={false}
-                  onSelect={(mediaAssetId) =>
-                    onUpdateItem(item.id, (current) => ({
-                      ...current,
-                      image: mediaAssetId,
-                    }))
-                  }
-                  onClose={() => setImagePickerItemId(null)}
-                />
-
-                <InstagramPickerModal
-                  isOpen={activeInstagramPicker?.itemId === item.id}
-                  posts={instagramPostObjects}
-                  selectedPostId={item.selectedInstagramPost}
-                  onSelect={(nextId) =>
-                    onUpdateItem(item.id, (current) => ({
-                      ...current,
-                      selectedInstagramPost: nextId,
-                    }))
-                  }
-                  onClose={() => setActivePicker(null)}
-                />
-
-                <InstagramPickerModal
-                  isOpen={activeManualInstagramPicker?.itemId === item.id}
-                  posts={instagramPosts}
-                  selectedPostId={item.instagramPost}
-                  onSelect={(nextId) =>
-                    onUpdateItem(item.id, (current) => ({
-                      ...current,
-                      instagramPost: nextId,
-                    }))
-                  }
-                  onClose={() => setActivePicker(null)}
-                />
-
-                {activeInstagramEmbedPreviewItemId === item.id ? (
-                  <div
-                    className="stl-modal-overlay"
-                    onClick={(event) => {
-                      if (event.target === event.currentTarget) {
-                        setActiveInstagramEmbedPreviewItemId(null)
-                      }
-                    }}
-                  >
-                    <div
-                      className="stl-picker-modal stl-picker-modal--instagram-preview"
-                      role="dialog"
-                      aria-modal="true"
-                      aria-label="Instagram embed preview"
-                    >
-                      <div className="stl-picker-modal__header">
-                        <h3>{previewInstagramPost?.title || 'Instagram Post Preview'}</h3>
+                  {!isManualStop && modeNeedsPhotos ? (
+                    <div className="stl-field">
+                      <span>Selected Photos * (1-6)</span>
+                      {photoPreviewCount > 0 ? (
+                        <div className="stl-item-photo-preview">
+                          <button
+                            type="button"
+                            className="stl-item-photo-preview__media"
+                            onClick={() =>
+                              setActivePicker({
+                                type: 'photos',
+                                itemId: item.id
+                              })
+                            }
+                          >
+                            {activePhotoPreview ? (
+                              <img src={activePhotoPreview.url} alt="" />
+                            ) : (
+                              <div className="stl-item-photo-preview__fallback">
+                                Photos selected
+                              </div>
+                            )}
+                            <span className="stl-item-photo-preview__count">
+                              {activePhotoPreviewIndex + 1}/{photoPreviewCount}
+                            </span>
+                          </button>
+                          {photoPreviewCount > 1 ? (
+                            <>
+                              <button
+                                type="button"
+                                className="stl-item-photo-preview__nav stl-item-photo-preview__nav--prev"
+                                aria-label={
+                                  section === 'whereStaying'
+                                    ? `Show previous photo for lodging ${localIndex + 1}`
+                                    : `Show previous photo for stop ${localIndex + 1}`
+                                }
+                                onClick={() =>
+                                  setPhotoPreviewIndexByItem((prev) => ({
+                                    ...prev,
+                                    [item.id]:
+                                      (activePhotoPreviewIndex -
+                                        1 +
+                                        photoPreviewCount) %
+                                      photoPreviewCount
+                                  }))
+                                }
+                              >
+                                ‹
+                              </button>
+                              <button
+                                type="button"
+                                className="stl-item-photo-preview__nav stl-item-photo-preview__nav--next"
+                                aria-label={
+                                  section === 'whereStaying'
+                                    ? `Show next photo for lodging ${localIndex + 1}`
+                                    : `Show next photo for stop ${localIndex + 1}`
+                                }
+                                onClick={() =>
+                                  setPhotoPreviewIndexByItem((prev) => ({
+                                    ...prev,
+                                    [item.id]:
+                                      (activePhotoPreviewIndex + 1) %
+                                      photoPreviewCount
+                                  }))
+                                }
+                              >
+                                ›
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
+                      ) : (
                         <button
                           type="button"
-                          className="stl-picker-modal__close"
-                          onClick={() => setActiveInstagramEmbedPreviewItemId(null)}
-                          aria-label="Close"
+                          className="stl-picker-trigger"
+                          disabled={!selectedRelatedItem}
+                          onClick={() =>
+                            setActivePicker({ type: 'photos', itemId: item.id })
+                          }
                         >
-                          ✕
+                          <span className="stl-picker-trigger__preview">
+                            <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                              Select photos...
+                            </span>
+                          </span>
+                          <span className="stl-picker-trigger__caret">▼</span>
                         </button>
-                      </div>
+                      )}
+                      {!selectedRelatedItem ? (
+                        <p className="stl-legacy-note">
+                          Select a related item to choose photos.
+                        </p>
+                      ) : null}
+                      {selectedRelatedItem && photoObjects.length === 0 ? (
+                        <p className="stl-legacy-note">
+                          The selected related item has no gallery photos
+                          available.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
 
-                      <div className="stl-instagram-embed-modal__body">
-                        {selectedInstagramEmbedUrl ? (
-                          <div className="stl-instagram-embed-modal__frame-wrap">
-                            <iframe
-                              src={selectedInstagramEmbedUrl}
-                              title={
-                                section === 'whereStaying'
-                                  ? `Instagram post embed for lodging ${localIndex + 1}`
-                                  : `Instagram post embed for stop ${localIndex + 1}`
-                              }
-                              className="stl-instagram-embed-modal__frame"
-                              loading="lazy"
-                              allow="encrypted-media; fullscreen; picture-in-picture"
-                            />
-                          </div>
-                        ) : selectedInstagramPreviewUrl ? (
-                          <div className="stl-instagram-embed-modal__image-wrap">
-                            <img src={selectedInstagramPreviewUrl} alt="" />
-                          </div>
-                        ) : (
-                          <div className="stl-instagram-embed-modal__empty">
-                            Preview unavailable for this post.
-                          </div>
-                        )}
-                      </div>
+                  {!isManualStop && modeNeedsInstagram ? (
+                    <div className="stl-field">
+                      <span>Selected Instagram Post *</span>
+                      {selectedInstagramPost ? (
+                        <button
+                          type="button"
+                          className="stl-picker-trigger stl-picker-trigger--instagram-preview"
+                          onClick={() =>
+                            setActiveInstagramEmbedPreviewItemId(item.id)
+                          }
+                        >
+                          <span className="stl-picker-trigger__preview">
+                            {selectedInstagramPreviewUrl ? (
+                              <img src={selectedInstagramPreviewUrl} alt="" />
+                            ) : (
+                              <span className="stl-picker-trigger__thumb-empty" />
+                            )}
+                            <span className="stl-picker-trigger__label">
+                              {selectedInstagramPost.title}
+                            </span>
+                          </span>
+                          <span className="stl-picker-trigger__caret">
+                            Preview
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="stl-picker-trigger"
+                          disabled={!selectedRelatedItem}
+                          onClick={() =>
+                            setActivePicker({
+                              type: 'instagram',
+                              itemId: item.id
+                            })
+                          }
+                        >
+                          <span className="stl-picker-trigger__preview">
+                            <span className="stl-picker-trigger__label stl-picker-trigger__label--placeholder">
+                              Select Instagram post...
+                            </span>
+                          </span>
+                          <span className="stl-picker-trigger__caret">▼</span>
+                        </button>
+                      )}
+                      {!selectedRelatedItem ? (
+                        <p className="stl-legacy-note">
+                          Select a related item to choose an Instagram post.
+                        </p>
+                      ) : null}
+                      {selectedRelatedItem &&
+                      instagramPostObjects.length === 0 ? (
+                        <p className="stl-legacy-note">
+                          The selected related item has no Instagram posts
+                          available.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
 
-                      <div className="stl-picker-modal__footer">
+                  <div className="stl-field">
+                    <div className="stl-field-label-row stl-blurb-label-row">
+                      <span>Blurb *</span>
+                      <div className="stl-inline-actions stl-blurb-actions">
+                        {angleOptions.length > 0 ? (
+                          <select
+                            className="stl-field-input stl-angle-select"
+                            value={
+                              item.angle &&
+                              angleOptions.some(
+                                (option) => option.value === item.angle
+                              )
+                                ? item.angle
+                                : ''
+                            }
+                            onChange={(event) => {
+                              const next = event.target.value
+                              onUpdateItem(item.id, (current) => ({
+                                ...current,
+                                angle:
+                                  next === '' ? null : (next as ListicleAngle)
+                              }))
+                            }}
+                            aria-label={
+                              section === 'whereStaying'
+                                ? `Blurb angle for lodging ${localIndex + 1}`
+                                : `Blurb angle for stop ${localIndex + 1}`
+                            }
+                            title="Blurb angle — operator must select one before generating"
+                          >
+                            <option value="" disabled>
+                              Select an angle…
+                            </option>
+                            {angleOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : null}
                         <button
                           type="button"
                           className="stl-btn stl-btn-secondary"
-                          onClick={() => {
-                            setActiveInstagramEmbedPreviewItemId(null)
-                            setActivePicker({ type: 'instagram', itemId: item.id })
-                          }}
+                          onClick={() => void onStopBlurbAiAutoWrite(item.id)}
+                          disabled={
+                            activeAiItemId === item.id ||
+                            Boolean(angleDisabledReason)
+                          }
+                          title={angleDisabledReason}
                         >
-                          Change Post
-                        </button>
-                        <button
-                          type="button"
-                          className="stl-btn stl-btn-success"
-                          onClick={() => setActiveInstagramEmbedPreviewItemId(null)}
-                        >
-                          Close
+                          {activeAiItemId === item.id
+                            ? 'Writing...'
+                            : item.blurbMarkdown.trim()
+                              ? 'Regenerate'
+                              : 'Auto Write'}
                         </button>
                       </div>
                     </div>
+                    <MarkdownBlockEditor
+                      blockId={`${item.id}_blurb`}
+                      value={item.blurbMarkdown}
+                      onChange={(nextValue) =>
+                        onUpdateItem(item.id, (current) => ({
+                          ...current,
+                          blurbMarkdown: nextValue,
+                          blurbJsonText: ''
+                        }))
+                      }
+                      showToolbar
+                      enforceHeadingStructure={false}
+                      placeholder="Write editorial context for this stop..."
+                      className="stl-markdown-textarea"
+                      rows={5}
+                      ariaLabel={
+                        section === 'whereStaying'
+                          ? `Blurb for lodging ${localIndex + 1}`
+                          : `Blurb for stop ${localIndex + 1}`
+                      }
+                    />
                   </div>
-                ) : null}
-              </article>
+                  {!item.blurbMarkdown.trim() && item.blurbJsonText?.trim() ? (
+                    <p className="stl-legacy-note">
+                      This blurb currently exists as Lexical JSON in Payload.
+                      Editing here will replace it.
+                    </p>
+                  ) : null}
+
+                  <StopReasonField
+                    item={item}
+                    disabled={isLocked}
+                    onUpdateItem={onUpdateItem}
+                    onRefineStopReason={onRefineStopReason}
+                  />
+
+                  <RelatedItemPickerModal
+                    isOpen={activeItemPicker?.itemId === item.id}
+                    items={relatedOptions}
+                    selectedItemId={item.item}
+                    onSelect={(nextId) =>
+                      onUpdateItem(item.id, (current) => {
+                        const nextRelatedItem =
+                          relatedOptions.find((entry) => entry.id === nextId) ||
+                          null
+                        const nextHasPhotos =
+                          getRelatedPhotoObjects(nextRelatedItem).length > 0
+                        const nextHasInstagram =
+                          getRelatedInstagramPostObjects(nextRelatedItem)
+                            .length > 0
+                        const nextAvailableModes = getAvailableMediaModeOptions(
+                          nextHasPhotos,
+                          nextHasInstagram
+                        )
+                        const nextMediaMode =
+                          nextAvailableModes.find(
+                            (option) => option.value === current.mediaMode
+                          )?.value ??
+                          nextAvailableModes[0]?.value ??
+                          current.mediaMode
+
+                        const pickChanged = nextId !== current.item
+                        // The Selection reason and blurb are invalidated centrally
+                        // on identity change (applyItemUpdate, ADR 0020) — no need
+                        // to clear them here.
+                        return {
+                          ...current,
+                          item: nextId,
+                          // Tour Picks belong to the previous attraction's linked list.
+                          tours: pickChanged ? [] : current.tours,
+                          mediaMode: nextMediaMode,
+                          selectedPhotos: [],
+                          selectedInstagramPost: null
+                        }
+                      })
+                    }
+                    onClose={() => setActivePicker(null)}
+                  />
+
+                  <ExistingStopPickerModal
+                    isOpen={
+                      activeStartingPointExistingStopPicker?.itemId === item.id
+                    }
+                    items={existingStopOptions}
+                    mode="single"
+                    title="Choose Starting Point"
+                    description="Use an existing dining stop, hotel, attraction, nightlife venue, or key location with coordinates."
+                    selectedKeys={
+                      selectedStartingPointExistingStopKey
+                        ? [selectedStartingPointExistingStopKey]
+                        : []
+                    }
+                    confirmLabel="Use Selected"
+                    emptyMessage="No existing stops match this itinerary."
+                    searchPlaceholder="Search dining, hotels, attractions, nightlife, or key locations..."
+                    requireCoordinates
+                    onConfirm={(keys) => {
+                      const selected = existingStopOptions.find(
+                        (option) => option.selectionKey === keys[0]
+                      )
+                      if (!selected) return
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        startingPoint: buildStartingPointFromExistingStop(
+                          selected.item
+                        )
+                      }))
+                    }}
+                    onClose={() => setActivePicker(null)}
+                  />
+
+                  <ExistingStopPickerModal
+                    isOpen={activeRouteExistingStopsPicker?.itemId === item.id}
+                    items={existingStopOptions}
+                    mode="multiple"
+                    title="Select Existing Stops"
+                    description="Pick from published dining, hotels, attractions, nightlife, and key locations in one list."
+                    selectedKeys={selectedExistingRouteKeys}
+                    confirmLabel="Save Selection"
+                    emptyMessage="No existing stops match this itinerary."
+                    searchPlaceholder="Search all existing stops..."
+                    onConfirm={(keys) =>
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        keyLocations: buildRoutePointRowsFromSelection(
+                          current,
+                          keys,
+                          existingStopOptions
+                        )
+                      }))
+                    }
+                    onClose={() => setActivePicker(null)}
+                  />
+
+                  <TourPicksModal
+                    isOpen={activeTourPicksPicker?.itemId === item.id}
+                    tours={linkedTours}
+                    selectedTourIds={item.tours}
+                    onConfirm={(tourIds) =>
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        tours: tourIds
+                      }))
+                    }
+                    onClose={() => setActivePicker(null)}
+                  />
+
+                  <PhotoPickerModal
+                    isOpen={activePhotoPicker?.itemId === item.id}
+                    photoObjects={photoObjects}
+                    selectedPhotoIds={item.selectedPhotos}
+                    onConfirm={(ids) =>
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        selectedPhotos: ids
+                      }))
+                    }
+                    onClose={() => setActivePicker(null)}
+                  />
+
+                  <FeaturedImagePicker
+                    isOpen={imagePickerItemId === item.id}
+                    selectedId={item.image}
+                    token={resolvedToken}
+                    locationRef={locationRef}
+                    payloadSourceMode="mediaSets"
+                    requireMediaSet={false}
+                    onSelect={(mediaAssetId) =>
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        image: mediaAssetId
+                      }))
+                    }
+                    onClose={() => setImagePickerItemId(null)}
+                  />
+
+                  <InstagramPickerModal
+                    isOpen={activeInstagramPicker?.itemId === item.id}
+                    posts={instagramPostObjects}
+                    selectedPostId={item.selectedInstagramPost}
+                    onSelect={(nextId) =>
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        selectedInstagramPost: nextId
+                      }))
+                    }
+                    onClose={() => setActivePicker(null)}
+                  />
+
+                  <InstagramPickerModal
+                    isOpen={activeManualInstagramPicker?.itemId === item.id}
+                    posts={instagramPosts}
+                    selectedPostId={item.instagramPost}
+                    onSelect={(nextId) =>
+                      onUpdateItem(item.id, (current) => ({
+                        ...current,
+                        instagramPost: nextId
+                      }))
+                    }
+                    onClose={() => setActivePicker(null)}
+                  />
+
+                  {activeInstagramEmbedPreviewItemId === item.id ? (
+                    <div
+                      className="stl-modal-overlay"
+                      onClick={(event) => {
+                        if (event.target === event.currentTarget) {
+                          setActiveInstagramEmbedPreviewItemId(null)
+                        }
+                      }}
+                    >
+                      <div
+                        className="stl-picker-modal stl-picker-modal--instagram-preview"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Instagram embed preview"
+                      >
+                        <div className="stl-picker-modal__header">
+                          <h3>
+                            {previewInstagramPost?.title ||
+                              'Instagram Post Preview'}
+                          </h3>
+                          <button
+                            type="button"
+                            className="stl-picker-modal__close"
+                            onClick={() =>
+                              setActiveInstagramEmbedPreviewItemId(null)
+                            }
+                            aria-label="Close"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="stl-instagram-embed-modal__body">
+                          {selectedInstagramEmbedUrl ? (
+                            <div className="stl-instagram-embed-modal__frame-wrap">
+                              <iframe
+                                src={selectedInstagramEmbedUrl}
+                                title={
+                                  section === 'whereStaying'
+                                    ? `Instagram post embed for lodging ${localIndex + 1}`
+                                    : `Instagram post embed for stop ${localIndex + 1}`
+                                }
+                                className="stl-instagram-embed-modal__frame"
+                                loading="lazy"
+                                allow="encrypted-media; fullscreen; picture-in-picture"
+                              />
+                            </div>
+                          ) : selectedInstagramPreviewUrl ? (
+                            <div className="stl-instagram-embed-modal__image-wrap">
+                              <img src={selectedInstagramPreviewUrl} alt="" />
+                            </div>
+                          ) : (
+                            <div className="stl-instagram-embed-modal__empty">
+                              Preview unavailable for this post.
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="stl-picker-modal__footer">
+                          <button
+                            type="button"
+                            className="stl-btn stl-btn-secondary"
+                            onClick={() => {
+                              setActiveInstagramEmbedPreviewItemId(null)
+                              setActivePicker({
+                                type: 'instagram',
+                                itemId: item.id
+                              })
+                            }}
+                          >
+                            Change Post
+                          </button>
+                          <button
+                            type="button"
+                            className="stl-btn stl-btn-success"
+                            onClick={() =>
+                              setActiveInstagramEmbedPreviewItemId(null)
+                            }
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </article>
                 {section === 'stops' ? (
                   <StopInsertZone
                     label="Insert stop here"

@@ -2,7 +2,11 @@ import { act, renderHook } from '@testing-library/react'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { createEmptyDraft } from '../../storage'
-import type { ItineraryBlockType, ListicleItineraryDraft, RelatedItemOption } from '../../types'
+import type {
+  ItineraryBlockType,
+  ListicleItineraryDraft,
+  RelatedItemOption
+} from '../../types'
 import { useItinerarySubmit } from './useItinerarySubmit'
 
 const { createItineraryMock, markdownToLexicalMock } = vi.hoisted(() => ({
@@ -15,11 +19,11 @@ const { createItineraryMock, markdownToLexicalMock } = vi.hoisted(() => ({
         {
           id: 'lexical-node-dup',
           type: 'paragraph',
-          children: [{ type: 'text', text: markdown }],
-        },
-      ],
-    },
-  })),
+          children: [{ type: 'text', text: markdown }]
+        }
+      ]
+    }
+  }))
 }))
 
 vi.mock('../../api', async () => {
@@ -28,7 +32,7 @@ vi.mock('../../api', async () => {
     ...actual,
     createItinerary: createItineraryMock,
     updateItinerary: vi.fn(),
-    markdownToLexical: markdownToLexicalMock,
+    markdownToLexical: markdownToLexicalMock
   }
 })
 
@@ -36,7 +40,7 @@ vi.mock('../../storage', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../storage')>()
   return {
     ...actual,
-    saveDraft: vi.fn(),
+    saveDraft: vi.fn()
   }
 })
 
@@ -47,7 +51,7 @@ const relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]> = {
   'itinerary-attractions': [],
   'itinerary-nightlife': [],
   'itinerary-key-location': [],
-  'itinerary-tour-agency': [],
+  'itinerary-tour-agency': []
 }
 
 function buildDraft(): ListicleItineraryDraft {
@@ -60,41 +64,49 @@ function buildDraft(): ListicleItineraryDraft {
   draft.step2_complete = false
   draft.step3_complete = true
   draft.header.introMarkdown = 'Intro copy'
-  draft.days = [{
-    ...draft.days[0],
-    items: [{
-      id: 'tour-stop-1',
-      blockType: 'itinerary-tour-agency',
-      item: null,
-      tours: [],
-      mediaMode: 'photos',
-      selectedPhotos: [],
-      selectedInstagramPost: null,
-      title: 'Sacred Valley Day Tour',
-      operator: 'Andes Routes',
-      price: '$$$',
-      url: 'https://example.com/tours/sacred-valley',
-      tourDuration: 8,
-      startingPoint: {
-        label: 'Plaza de Armas',
-        latitude: '-13.516',
-        longitude: '-71.978',
-      },
-      keyLocations: [{
-        id: 'tour-stop-1_key_location_0',
-        source: 'existing',
-        relatedCollection: 'attractions',
-        relatedItem: 202,
-        title: '',
-        latitude: '',
-        longitude: '',
-      }],
-      image: null,
-      instagramPost: null,
-      blurbMarkdown: 'Manual stop blurb',
-      blurbJsonText: '',
-    }],
-  }]
+  draft.days = [
+    {
+      ...draft.days[0],
+      items: [
+        {
+          id: 'tour-stop-1',
+          blockType: 'itinerary-tour-agency',
+          item: null,
+          moment: 'culture',
+          momentLabel: 'A deeper look at the Sacred Valley',
+          tours: [],
+          mediaMode: 'photos',
+          selectedPhotos: [],
+          selectedInstagramPost: null,
+          title: 'Sacred Valley Day Tour',
+          operator: 'Andes Routes',
+          price: '$$$',
+          url: 'https://example.com/tours/sacred-valley',
+          tourDuration: 8,
+          startingPoint: {
+            label: 'Plaza de Armas',
+            latitude: '-13.516',
+            longitude: '-71.978'
+          },
+          keyLocations: [
+            {
+              id: 'tour-stop-1_key_location_0',
+              source: 'existing',
+              relatedCollection: 'attractions',
+              relatedItem: 202,
+              title: '',
+              latitude: '',
+              longitude: ''
+            }
+          ],
+          image: null,
+          instagramPost: null,
+          blurbMarkdown: 'Manual stop blurb',
+          blurbJsonText: ''
+        }
+      ]
+    }
+  ]
   return draft
 }
 
@@ -105,20 +117,22 @@ describe('useItinerarySubmit', () => {
       ...buildDraft(),
       header: {
         intro: { root: { type: 'root' } },
-        featuredImage: null,
+        featuredImage: null
       },
       itineraryDays: [{ whereStaying: [], items: [] }],
       dayCount: 1,
       items: [],
       updatedAt: '2026-04-07T12:00:00.000Z',
-      createdAt: '2026-04-07T12:00:00.000Z',
+      createdAt: '2026-04-07T12:00:00.000Z'
     })
 
     const onError = vi.fn()
     const setResult = vi.fn()
 
     const { result } = renderHook(() => {
-      const [draft, setDraft] = useState<ListicleItineraryDraft | null>(buildDraft())
+      const [draft, setDraft] = useState<ListicleItineraryDraft | null>(
+        buildDraft()
+      )
 
       return useItinerarySubmit({
         token: 'test-token',
@@ -130,7 +144,7 @@ describe('useItinerarySubmit', () => {
         instagramPosts: [],
         setSearchParams: vi.fn() as never,
         onError,
-        setResult,
+        setResult
       })
     })
 
@@ -139,14 +153,21 @@ describe('useItinerarySubmit', () => {
     })
 
     expect(createItineraryMock).toHaveBeenCalledTimes(1)
-    const submitBody = createItineraryMock.mock.calls[0]?.[0] as Record<string, unknown>
-    const itineraryDays = submitBody.itineraryDays as Array<{ items: Array<Record<string, unknown>> }>
+    const submitBody = createItineraryMock.mock.calls[0]?.[0] as Record<
+      string,
+      unknown
+    >
+    const itineraryDays = submitBody.itineraryDays as Array<{
+      items: Array<Record<string, unknown>>
+    }>
     const submitItems = itineraryDays[0]?.items ?? []
     const firstItem = submitItems[0] || {}
     const header = submitBody.header as { intro: Record<string, unknown> }
 
     expect(header.intro).not.toHaveProperty('id')
-    const introRoot = (header.intro as { root?: { children?: Array<Record<string, unknown>> } }).root
+    const introRoot = (
+      header.intro as { root?: { children?: Array<Record<string, unknown>> } }
+    ).root
     expect(introRoot?.children?.[0]).not.toHaveProperty('id')
     expect(firstItem.blurb).toBeDefined()
     expect(firstItem.blurb as Record<string, unknown>).not.toHaveProperty('id')
@@ -155,19 +176,21 @@ describe('useItinerarySubmit', () => {
     expect(firstItem).not.toHaveProperty('timeHour')
     expect(firstItem).not.toHaveProperty('durationHours')
     expect(firstItem).toMatchObject({
+      moment: 'culture',
+      momentLabel: 'A deeper look at the Sacred Valley',
       price: '$$$',
       tourDuration: 8,
       startingPoint: {
         label: 'Plaza de Armas',
         latitude: -13.516,
-        longitude: -71.978,
-      },
+        longitude: -71.978
+      }
     })
     const keyLocs = firstItem.keyLocations as Array<Record<string, unknown>>
     expect(keyLocs[0]).not.toHaveProperty('id')
     expect(keyLocs[0]).toMatchObject({
       source: 'existing',
-      relatedItem: { relationTo: 'attractions', value: 202 },
+      relatedItem: { relationTo: 'attractions', value: 202 }
     })
     expect(onError).not.toHaveBeenCalledWith(expect.stringMatching(/\S/))
   })

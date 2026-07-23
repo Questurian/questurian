@@ -1,4 +1,5 @@
 import { Block } from 'payload'
+import { itineraryMomentFields } from './utils/momentFields'
 
 const isValidAbsoluteUrl = (value: string | null | undefined): boolean => {
   if (!value) return true
@@ -36,6 +37,7 @@ export const ItineraryTourAgencyBlock: Block = {
     plural: 'Tour Agency Stops',
   },
   fields: [
+    ...itineraryMomentFields,
     {
       name: 'title',
       type: 'text',
@@ -66,7 +68,8 @@ export const ItineraryTourAgencyBlock: Block = {
       name: 'url',
       type: 'text',
       required: true,
-      validate: (value: string | null | undefined) => (isValidAbsoluteUrl(value) ? true : urlValidationMessage),
+      validate: (value: string | null | undefined) =>
+        isValidAbsoluteUrl(value) ? true : urlValidationMessage,
       admin: {
         description: 'Booking or landing page URL for the tour.',
       },
@@ -81,7 +84,8 @@ export const ItineraryTourAgencyBlock: Block = {
       defaultValue: 1,
       admin: {
         components: {
-          Field: 'src/features/articles/listicle-itineraries/components/field-components/TourDurationSliderField.tsx',
+          Field:
+            'src/features/articles/listicle-itineraries/components/field-components/TourDurationSliderField.tsx',
         },
         description: 'Tour duration in hours.',
       },

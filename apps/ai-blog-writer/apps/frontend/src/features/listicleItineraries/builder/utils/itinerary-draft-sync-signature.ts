@@ -1,17 +1,21 @@
 import { normalizeSeoSection } from '../services/seo-section.service'
-import type { ItineraryItemBlock, ListicleItineraryDraft, PayloadRichText } from '../../types'
+import type {
+  ItineraryItemBlock,
+  ListicleItineraryDraft,
+  PayloadRichText
+} from '../../types'
 import { lexicalRichTextToMarkdown } from '../../../../shared/builder/utils/lexical-json.utils'
 import {
   buildDraftPayloadSyncSignature,
   normalizeNumberSet,
   normalizeText,
-  sortKeysDeep,
+  sortKeysDeep
 } from '../../../../shared/payloadSync/draftPayloadSync'
 
 function normalizeRichTextMarkdown(
   markdown: string | undefined,
   jsonText: string | undefined,
-  lexical: PayloadRichText | undefined,
+  lexical: PayloadRichText | undefined
 ): string {
   const markdownText = normalizeText(markdown)
   if (markdownText) return markdownText
@@ -46,6 +50,8 @@ function itemSyncShape(item: ItineraryItemBlock): Record<string, unknown> {
   return {
     blockType: item.blockType,
     item: item.item ?? null,
+    moment: item.moment ?? null,
+    momentLabel: normalizeText(item.momentLabel),
     // Tour Picks are ordered, so no set-normalization here.
     tours: item.tours,
     mediaMode: item.mediaMode,
@@ -59,7 +65,7 @@ function itemSyncShape(item: ItineraryItemBlock): Record<string, unknown> {
     startingPoint: {
       label: normalizeText(item.startingPoint.label),
       latitude: normalizeText(item.startingPoint.latitude),
-      longitude: normalizeText(item.startingPoint.longitude),
+      longitude: normalizeText(item.startingPoint.longitude)
     },
     keyLocations: item.keyLocations.map((row) => ({
       source: row.source,
@@ -67,17 +73,26 @@ function itemSyncShape(item: ItineraryItemBlock): Record<string, unknown> {
       relatedItem: row.relatedItem ?? null,
       title: normalizeText(row.title),
       latitude: normalizeText(row.latitude),
-      longitude: normalizeText(row.longitude),
+      longitude: normalizeText(row.longitude)
     })),
     image: item.image ?? null,
     instagramPost: item.instagramPost ?? null,
-    blurbMarkdown: normalizeRichTextMarkdown(item.blurbMarkdown, item.blurbJsonText, item.blurbLexical),
+    blurbMarkdown: normalizeRichTextMarkdown(
+      item.blurbMarkdown,
+      item.blurbJsonText,
+      item.blurbLexical
+    )
   }
 }
 
-export function buildItineraryDraftComparableShape(draft: ListicleItineraryDraft): Record<string, unknown> {
+export function buildItineraryDraftComparableShape(
+  draft: ListicleItineraryDraft
+): Record<string, unknown> {
   const seoSection = normalizeSeoSection(draft.seoSection)
-  const dayCount = Math.max(1, Math.min(7, Math.floor(draft.dayCount || draft.days.length || 1)))
+  const dayCount = Math.max(
+    1,
+    Math.min(7, Math.floor(draft.dayCount || draft.days.length || 1))
+  )
 
   return {
     title: normalizeText(draft.title),
@@ -88,23 +103,28 @@ export function buildItineraryDraftComparableShape(draft: ListicleItineraryDraft
       introMarkdown: normalizeRichTextMarkdown(
         draft.header.introMarkdown,
         draft.header.introJsonText,
-        draft.header.introLexical,
+        draft.header.introLexical
       ),
       featuredMediaSet: draft.header.featuredMediaSet ?? null,
-      featuredImage: draft.header.featuredImage ?? null,
+      featuredImage: draft.header.featuredImage ?? null
     },
     dayCount,
     days: draft.days.slice(0, dayCount).map((day) => ({
       whereStaying: day.whereStaying.map(itemSyncShape),
-      items: day.items.map(itemSyncShape),
+      items: day.items.map(itemSyncShape)
     })),
     seoSection: {
       ...seoSection,
-      structuredData: normalizeStructuredData(seoSection.structuredData),
-    },
+      structuredData: normalizeStructuredData(seoSection.structuredData)
+    }
   }
 }
 
-export function buildItineraryDraftSyncSignature(draft: ListicleItineraryDraft): string {
-  return buildDraftPayloadSyncSignature(draft, buildItineraryDraftComparableShape)
+export function buildItineraryDraftSyncSignature(
+  draft: ListicleItineraryDraft
+): string {
+  return buildDraftPayloadSyncSignature(
+    draft,
+    buildItineraryDraftComparableShape
+  )
 }

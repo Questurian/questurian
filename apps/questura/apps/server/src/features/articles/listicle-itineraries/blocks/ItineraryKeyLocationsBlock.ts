@@ -1,6 +1,7 @@
 import { Block } from 'payload'
 import { createLocationFilter } from '../../shared/utils/locationFilter'
 import { createItineraryItemMediaFields } from './utils/itemMedia'
+import { itineraryMomentFields } from './utils/momentFields'
 
 export const ItineraryKeyLocationsBlock: Block = {
   slug: 'itinerary-key-location',
@@ -19,6 +20,7 @@ export const ItineraryKeyLocationsBlock: Block = {
         description: 'Select a key location for this itinerary timeslot',
       },
     },
+    ...itineraryMomentFields,
     ...createItineraryItemMediaFields('key-locations'),
     {
       name: 'blurb',

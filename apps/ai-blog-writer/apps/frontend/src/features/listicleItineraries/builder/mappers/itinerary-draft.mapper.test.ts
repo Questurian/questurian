@@ -12,12 +12,12 @@ function lexicalFromText(text: string): PayloadRichText {
           children: [
             {
               type: 'text',
-              text,
-            },
-          ],
-        },
-      ],
-    },
+              text
+            }
+          ]
+        }
+      ]
+    }
   }
 }
 
@@ -29,7 +29,7 @@ describe('payloadDocToDraft', () => {
       location: 'peru|lima',
       header: {
         intro: lexicalFromText('Payload intro copy'),
-        featuredImage: 101,
+        featuredImage: 101
       },
       itineraryDays: [
         {
@@ -41,33 +41,43 @@ describe('payloadDocToDraft', () => {
               item: 201,
               mediaMode: 'photos',
               selectedPhotos: [301],
-              blurb: lexicalFromText('Payload lodging blurb'),
-            },
+              blurb: lexicalFromText('Payload lodging blurb')
+            }
           ],
           items: [
             {
               id: 'stop-one',
               blockType: 'itinerary-dining',
               item: 202,
+              moment: 'breakfast',
+              momentLabel: "Lima's classic breakfast",
               mediaMode: 'photos',
               selectedPhotos: [302],
-              blurb: lexicalFromText('Payload stop blurb'),
-            },
-          ],
-        },
+              blurb: lexicalFromText('Payload stop blurb')
+            }
+          ]
+        }
       ],
       status: 'draft',
-      updatedAt: '2026-05-10T12:00:00.000Z',
+      updatedAt: '2026-05-10T12:00:00.000Z'
     }
 
     const draft = payloadDocToDraft(doc, 'lit_local_1')
 
     expect(draft.draftId).toBe('lit_local_1')
     expect(draft.header.introMarkdown).toBe('Payload intro copy')
-    expect(draft.days[0]?.whereStaying[0]?.blurbMarkdown).toBe('Payload lodging blurb')
+    expect(draft.days[0]?.whereStaying[0]?.blurbMarkdown).toBe(
+      'Payload lodging blurb'
+    )
     expect(draft.days[0]?.items[0]?.blurbMarkdown).toBe('Payload stop blurb')
+    expect(draft.days[0]?.items[0]?.moment).toBe('breakfast')
+    expect(draft.days[0]?.items[0]?.momentLabel).toBe(
+      "Lima's classic breakfast"
+    )
     expect(draft.header.introJsonText).toContain('Payload intro copy')
-    expect(draft.days[0]?.items[0]?.blurbJsonText).toContain('Payload stop blurb')
+    expect(draft.days[0]?.items[0]?.blurbJsonText).toContain(
+      'Payload stop blurb'
+    )
     expect(draft.lastPayloadSyncSignature).toBeTypeOf('string')
     expect(draft.hasUnsyncedPayloadChanges).toBe(false)
   })

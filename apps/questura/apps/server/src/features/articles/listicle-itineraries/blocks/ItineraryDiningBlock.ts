@@ -3,6 +3,7 @@ import { angleField } from './utils/angleField'
 import { selectionReasonField } from './utils/selectionReasonField'
 import { createLocationFilter } from '../../shared/utils/locationFilter'
 import { createItineraryItemMediaFields } from './utils/itemMedia'
+import { itineraryMomentFields } from './utils/momentFields'
 
 export const ItineraryDiningBlock: Block = {
   slug: 'itinerary-dining',
@@ -21,6 +22,7 @@ export const ItineraryDiningBlock: Block = {
         description: 'Select a dining listing for this itinerary timeslot',
       },
     },
+    ...itineraryMomentFields,
     ...createItineraryItemMediaFields('dining'),
     angleField,
     {
