@@ -73,9 +73,7 @@ async function createAndWarm(): Promise<Session> {
   const proxy = buildProxy(newSessionId());
   console.log(`[tour-import:viator] starting session ${proxy.sessionId}`);
   const browser = await chromium.launch({
-    // Viator blocks headless Chromium, so keep headed mode offscreen and minimized.
     headless: false,
-    args: ["--window-position=-10000,-10000", "--start-minimized"],
     proxy: {
       server: proxy.server,
       username: proxy.username,
