@@ -1,32 +1,43 @@
 import type { ListicleItemRow } from '@/features/articles/types/mapsListicle'
 import { isListicleVenue } from '@/features/articles/types/mapsListicle'
 
-/** Hero image for a listicle row from editor-selected photos (public API depth). */
-export function listicleItemHeroFromRow(
-  row: ListicleItemRow,
-): { url: string; alt: string } | null {
+export type ListicleItemImage = {
+  url: string
+  alt: string
+}
+
+/** Images for a listicle row from editor-selected photos (public API depth). */
+export function listicleItemImagesFromRow(row: ListicleItemRow): ListicleItemImage[] {
   const photos = row.selectedPhotos
   if (!Array.isArray(photos) || photos.length === 0) {
-    return null
+    return []
   }
 
-  const p = photos[0]
-  const v = p.variants
-  const url =
-    v?.wide?.url ??
-    v?.editorial?.url ??
-    v?.hero?.url ??
-    v?.square?.url ??
-    p.url
+  return photos.flatMap((photo) => {
+    const variants = photo.variants
+    const url =
+      variants?.wide?.url ??
+      variants?.editorial?.url ??
+      variants?.hero?.url ??
+      variants?.square?.url ??
+      photo.url
 
-  if (!url) {
-    return null
-  }
+    if (!url) return []
 
-  const alt =
-    typeof p.alt_text === 'string' ? p.alt_text : isListicleVenue(row.item) ? row.item.title : ''
+    const alt =
+      typeof photo.alt_text === 'string'
+        ? photo.alt_text
+        : isListicleVenue(row.item)
+          ? row.item.title
+          : ''
 
-  return { url, alt }
+    return [{ url, alt }]
+  })
+}
+
+/** First image retained for callers that only need a thumbnail. */
+export function listicleItemHeroFromRow(row: ListicleItemRow): ListicleItemImage | null {
+  return listicleItemImagesFromRow(row)[0] ?? null
 }
 
 /** Human-readable price tiers shared by stay and dining cards (index = level - 1). */

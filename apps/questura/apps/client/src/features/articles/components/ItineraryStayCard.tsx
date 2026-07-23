@@ -1,16 +1,16 @@
-import type { JSX } from 'react'
-import { ShimmerImage } from '@/components/media/ShimmerImage'
+import { useCallback, type JSX } from 'react'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
 import {
   buildStayAmenitiesCell,
   ItineraryStayBookingCard,
 } from '@/features/articles/components/ItineraryStayDetails'
+import { ListiclePhotoCarousel } from '@/features/articles/components/ListiclePhotoCarousel'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
 import { ListicleVenueTitleRow } from '@/features/articles/components/ListicleVenueTitleRow'
 import { listicleInstagramEmbedCode } from '@/features/articles/lib/listicleInstagram'
 import {
-  listicleItemHeroFromRow,
+  listicleItemImagesFromRow,
   priceTierDescriptor,
 } from '@/features/articles/lib/listicleItemHelpers'
 import type { ListicleItemRow } from '@/features/articles/types/mapsListicle'
@@ -58,17 +58,19 @@ function stayPriceLevel(item: ListicleItemRow['item']): number | null {
  */
 export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Element {
   const { registerEntry } = useListicleMapSync()
-  const hero = listicleItemHeroFromRow(row)
+  const images = listicleItemImagesFromRow(row)
   const blurb = row.blurb
   const instagramCode = listicleInstagramEmbedCode(row)
   const amenitiesCell = buildStayAmenitiesCell(row.item)
   const priceLevel = stayPriceLevel(row.item)
+  const entryRef = useCallback(
+    (el: HTMLDivElement | null) => registerEntry(row.id, el),
+    [registerEntry, row.id],
+  )
 
   return (
     <div
-      ref={(el) => {
-        registerEntry(row.id, el)
-      }}
+      ref={entryRef}
       className="min-w-0 scroll-mt-4 space-y-3 380:space-y-3.5 480:space-y-4 sm:space-y-5"
     >
       <div className="flex items-center gap-2.5 380:gap-3 480:gap-3.5">
@@ -78,21 +80,7 @@ export function ItineraryStayCard({ row }: { row: ListicleItemRow }): JSX.Elemen
         </span>
       </div>
 
-      {hero ? (
-        <div className="overflow-hidden rounded-sm bg-foreground/[0.04]">
-          <div className="aspect-[16/10] w-full 380:aspect-[4/3] 480:aspect-[3/2] sm:aspect-[16/9]">
-            <ShimmerImage
-              src={hero.url}
-              alt={hero.alt}
-              width={1200}
-              height={675}
-              sizes="(min-width: 768px) 700px, 100vw"
-              className="h-full w-full object-cover"
-              wrapperClassName="h-full w-full"
-            />
-          </div>
-        </div>
-      ) : null}
+      <ListiclePhotoCarousel images={images} />
 
       <ListicleVenueTitleRow
         title={row.item.title}

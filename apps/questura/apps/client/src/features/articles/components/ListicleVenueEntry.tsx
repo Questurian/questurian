@@ -1,14 +1,16 @@
-import type { JSX } from 'react'
+import { useCallback, type JSX } from 'react'
 import { MapPin } from 'lucide-react'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
 import { InstagramEmbedBlock } from '@/features/articles/components/InstagramEmbedBlock'
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
+import { ListiclePhotoCarousel } from '@/features/articles/components/ListiclePhotoCarousel'
 import { ListicleTourPicks } from '@/features/articles/components/ListicleTourPicks'
 import { ListicleVenueInfoGrid } from '@/features/articles/components/ListicleVenueInfoGrid'
 import { ListicleVenueTitleRow } from '@/features/articles/components/ListicleVenueTitleRow'
 import {
-  listicleItemHeroFromRow,
+  listicleItemImagesFromRow,
   priceLevelLabel,
+  priceTierDescriptor,
 } from '@/features/articles/lib/listicleItemHelpers'
 import { listicleInstagramEmbedCode } from '@/features/articles/lib/listicleInstagram'
 import {
@@ -42,7 +44,7 @@ export function ListicleVenueEntry({
   variant?: 'numbered' | 'itinerary'
 }): JSX.Element {
   const { registerEntry } = useListicleMapSync()
-  const hero = listicleItemHeroFromRow(row)
+  const images = listicleItemImagesFromRow(row)
   const price = priceLevelLabel(row.item.priceLevel)
   const cuisines = stringArray(row.item.cuisines)
   const idealFor = stringArray(row.item.idealFor)
@@ -52,6 +54,13 @@ export function ListicleVenueEntry({
   const addressLabel = formatListicleAddressLabel(addressRaw, row.item.title)
   const addressIsMapLink = addressRaw ? isHttpUrl(addressRaw) : false
   const isItinerary = variant === 'itinerary'
+  const hero = images[0] ?? null
+  const diningPriceLevel =
+    isItinerary && row.blockType === 'itinerary-dining' && price ? price.length : null
+  const entryRef = useCallback(
+    (el: HTMLLIElement | null) => registerEntry(row.id, el),
+    [registerEntry, row.id],
+  )
 
   const metaParts = (
     isItinerary
@@ -90,12 +99,12 @@ export function ListicleVenueEntry({
 
   return (
     <li
-      ref={(el) => {
-        registerEntry(row.id, el)
-      }}
+      ref={entryRef}
       className="scroll-mt-4 border-t-[3px] border-double border-foreground/55 first:border-t-0 first:pt-0 pt-7 pb-7 last:pb-1 max-[379px]:pt-6 max-[379px]:pb-6 480:pt-9 480:pb-9 550:pt-11 550:pb-11 sm:pt-12 sm:pb-12 768:pt-14 768:pb-14">
       <div className="min-w-0 space-y-3 380:space-y-3.5 480:space-y-4 sm:space-y-5">
-        {hero ? (
+        {isItinerary ? (
+          <ListiclePhotoCarousel images={images} />
+        ) : hero ? (
           <div className="overflow-hidden rounded-sm bg-foreground/[0.04]">
             <div className="aspect-[16/10] w-full 380:aspect-[4/3] 480:aspect-[3/2] sm:aspect-[16/9]">
               <ShimmerImage
@@ -113,7 +122,11 @@ export function ListicleVenueEntry({
 
         <div className="space-y-2 480:space-y-2.5 sm:space-y-3">
           {isItinerary ? (
-            <ListicleVenueTitleRow title={row.item.title} />
+            <ListicleVenueTitleRow
+              title={row.item.title}
+              priceLevel={diningPriceLevel}
+              priceDescriptor={priceTierDescriptor(diningPriceLevel)}
+            />
           ) : (
             <h2 className="font-display text-[1.15rem] font-semibold leading-[1.2] text-foreground 380:text-[1.35rem] 480:text-[1.5rem] 550:text-[1.55rem] sm:text-[1.7rem] 768:text-[1.8rem]">
               <span className="font-semibold text-foreground">

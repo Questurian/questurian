@@ -577,6 +577,15 @@ input:-webkit-autofill:active {
   display: none;
 }
 
+.listicle-photo-carousel {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.listicle-photo-carousel::-webkit-scrollbar {
+  display: none;
+}
+
 /* Editorial media keeps its final footprint while remote images load. */
 .shimmer-image {
   position: relative;

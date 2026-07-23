@@ -9,7 +9,7 @@ export function ListicleVenueTitleRow({
   priceDescriptor,
 }: {
   title: string
-  /** Omit (attractions) to hide the price tier; stays pass 1-4 to show it. */
+  /** Omit (attractions) to hide the price tier; stays and dining pass 1-4 to show it. */
   priceLevel?: number | null
   priceDescriptor?: string
 }): JSX.Element {

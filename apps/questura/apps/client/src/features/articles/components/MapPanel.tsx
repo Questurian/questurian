@@ -9,8 +9,8 @@ import {
 
 const LIMA_CENTER = { lat: -12.0464, lng: -77.0428 }
 const DEFAULT_ZOOM = 13
-// Street-level, close enough that the vector map extrudes buildings.
-const ACTIVE_ZOOM = 18
+// Keep enough neighborhood context visible while focusing the active stop.
+const ACTIVE_ZOOM = 17
 const SINGLE_POINT_OVERVIEW_ZOOM = 15
 const MAX_FIT_ZOOM = 17
 // The overview should read as a neighborhood map with air around the pins,
@@ -112,8 +112,8 @@ function houseGlyph(): Element {
 /** Small dot centered on the coordinate, for stops that aren't active. */
 function dotElement(): HTMLElement {
   const dot = document.createElement('div')
-  dot.style.width = '18px'
-  dot.style.height = '18px'
+  dot.style.width = '22px'
+  dot.style.height = '22px'
   dot.style.borderRadius = '50%'
   dot.style.background = ACCENT
   dot.style.border = '2.5px solid #ffffff'
@@ -245,7 +245,7 @@ function cameraForPoints(
 
 export function MapPanel() {
   const mapRef = useRef<HTMLDivElement>(null)
-  const { points, activeId } = useListicleMapSync()
+  const { points, activeId, scrollToEntry } = useListicleMapSync()
 
   const mapInstance = useRef<google.maps.Map | null>(null)
   const markerLib = useRef<google.maps.MarkerLibrary | null>(null)
@@ -302,10 +302,12 @@ export function MapPanel() {
         position: { lat: point.lat, lng: point.lng },
         title: point.title,
         content: markerContent(point, false),
+        gmpClickable: true,
       })
+      marker.addEventListener('gmp-click', () => scrollToEntry(point.id))
       markersById.current.set(point.id, marker)
     }
-  }, [ready, points])
+  }, [ready, points, scrollToEntry])
 
   useEffect(() => {
     const map = mapInstance.current

@@ -6,11 +6,30 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useReducer,
   useRef,
-  useState,
   type JSX,
   type ReactNode,
 } from 'react'
+import {
+  initialListicleMapNavigationState,
+  listicleMapNavigationReducer,
+} from '@/features/articles/components/ListicleMapNavigation'
+
+const READING_BAND_TOP = 0.35
+const READING_BAND_BOTTOM = 0.45
+const NAVIGATION_TOP = 0.18
+const SCROLL_SETTLE_MS = 140
+const SCROLL_FALLBACK_MS = 2000
+const SCROLL_KEYS = new Set([
+  'ArrowDown',
+  'ArrowUp',
+  'End',
+  'Home',
+  'PageDown',
+  'PageUp',
+  ' ',
+])
 
 export type ListicleMapPoint = {
   /** Listicle row id - rows can share a venue, so keys must come from the row. */
@@ -27,12 +46,14 @@ type ListicleMapSyncValue = {
   points: ListicleMapPoint[]
   activeId: string | null
   registerEntry: (id: string, el: HTMLElement | null) => void
+  scrollToEntry: (id: string) => void
 }
 
 const ListicleMapSyncContext = createContext<ListicleMapSyncValue>({
   points: [],
   activeId: null,
   registerEntry: () => {},
+  scrollToEntry: () => {},
 })
 
 // The workspace hoists a second @types/react copy, which makes TS reject
@@ -45,6 +66,24 @@ const MapSyncProvider = ListicleMapSyncContext.Provider as unknown as (props: {
 
 export function useListicleMapSync(): ListicleMapSyncValue {
   return useContext(ListicleMapSyncContext)
+}
+
+function entryInReadingBand(elementsById: Map<string, HTMLElement>): string | null {
+  const bandTop = window.innerHeight * READING_BAND_TOP
+  const bandBottom = window.innerHeight * READING_BAND_BOTTOM
+  let nextId: string | null = null
+  let nextTop = Infinity
+
+  for (const [id, el] of elementsById) {
+    const rect = el.getBoundingClientRect()
+    if (rect.bottom <= bandTop || rect.top >= bandBottom) continue
+    if (rect.top < nextTop) {
+      nextTop = rect.top
+      nextId = id
+    }
+  }
+
+  return nextId
 }
 
 /**
@@ -60,11 +99,15 @@ export function ListicleMapSyncProvider({
   points: ListicleMapPoint[]
   children: ReactNode
 }): JSX.Element {
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [{ activeId }, dispatchNavigation] = useReducer(
+    listicleMapNavigationReducer,
+    initialListicleMapNavigationState,
+  )
   const observerRef = useRef<IntersectionObserver | null>(null)
   const elementsById = useRef(new Map<string, HTMLElement>())
   const idsByElement = useRef(new Map<Element, string>())
   const inBand = useRef(new Set<string>())
+  const navigationCleanup = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -87,7 +130,7 @@ export function ListicleMapSyncProvider({
             nextId = id
           }
         }
-        setActiveId(nextId)
+        dispatchNavigation({ type: 'observe', id: nextId })
       },
       // Band from 35% to 45% of viewport height: the entry crossing it is
       // the one the reader is looking at.
@@ -105,6 +148,7 @@ export function ListicleMapSyncProvider({
 
   const registerEntry = useCallback((id: string, el: HTMLElement | null) => {
     const previous = elementsById.current.get(id)
+    if (previous === el) return
     if (previous) {
       observerRef.current?.unobserve(previous)
       idsByElement.current.delete(previous)
@@ -118,9 +162,102 @@ export function ListicleMapSyncProvider({
     }
   }, [])
 
+  const scrollToEntry = useCallback((id: string) => {
+    const el = elementsById.current.get(id)
+    if (!el) return
+
+    navigationCleanup.current?.()
+    dispatchNavigation({ type: 'navigate', id })
+
+    const desiredTop = window.innerHeight * NAVIGATION_TOP
+    const top = window.scrollY + el.getBoundingClientRect().top - desiredTop
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const alreadyAligned = Math.abs(el.getBoundingClientRect().top - desiredTop) <= 2
+    let done = false
+    let settleTimer: number | null = null
+    let fallbackTimer: number | null = null
+
+    const cleanup = () => {
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('wheel', handleUserInterrupt)
+      window.removeEventListener('touchstart', handleUserInterrupt)
+      window.removeEventListener('keydown', handleKeyDown)
+      if (settleTimer !== null) window.clearTimeout(settleTimer)
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer)
+      if (navigationCleanup.current === cancel) navigationCleanup.current = null
+    }
+
+    const release = (alignTarget: boolean) => {
+      if (done) return
+      done = true
+      cleanup()
+
+      const currentTarget = elementsById.current.get(id)
+      if (alignTarget && currentTarget) {
+        const correction = currentTarget.getBoundingClientRect().top - desiredTop
+        if (Math.abs(correction) > 2) {
+          window.scrollBy({ top: correction, behavior: 'auto' })
+        }
+      }
+
+      dispatchNavigation({
+        type: 'release',
+        targetId: id,
+        observedId: entryInReadingBand(elementsById.current) ?? (alignTarget ? id : null),
+      })
+    }
+
+    const cancel = () => {
+      if (done) return
+      done = true
+      cleanup()
+    }
+
+    function handleScroll() {
+      if (settleTimer !== null) window.clearTimeout(settleTimer)
+      settleTimer = window.setTimeout(() => release(true), SCROLL_SETTLE_MS)
+    }
+
+    function handleUserInterrupt() {
+      release(false)
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (SCROLL_KEYS.has(event.key)) handleUserInterrupt()
+    }
+
+    navigationCleanup.current = cancel
+
+    if (reduceMotion || alreadyAligned) {
+      window.scrollTo({ top, behavior: 'auto' })
+      window.requestAnimationFrame(() => release(true))
+      return
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('wheel', handleUserInterrupt, { passive: true })
+    window.addEventListener('touchstart', handleUserInterrupt, { passive: true })
+    window.addEventListener('keydown', handleKeyDown)
+    fallbackTimer = window.setTimeout(() => release(true), SCROLL_FALLBACK_MS)
+    window.scrollTo({ top, behavior: 'smooth' })
+  }, [])
+
+  useEffect(() => {
+    navigationCleanup.current?.()
+    navigationCleanup.current = null
+    dispatchNavigation({ type: 'reset' })
+  }, [points])
+
+  useEffect(
+    () => () => {
+      navigationCleanup.current?.()
+    },
+    [],
+  )
+
   const value = useMemo(
-    () => ({ points, activeId, registerEntry }),
-    [points, activeId, registerEntry],
+    () => ({ points, activeId, registerEntry, scrollToEntry }),
+    [points, activeId, registerEntry, scrollToEntry],
   )
 
   return <MapSyncProvider value={value}>{children}</MapSyncProvider>
