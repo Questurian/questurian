@@ -1,7 +1,6 @@
 'use client'
 
 import type { JSX } from 'react'
-import { useCallback, useEffect, useId, useState } from 'react'
 import {
   Baby,
   Bath,
@@ -24,8 +23,11 @@ import {
   UtensilsCrossed,
   Waves,
   Wifi,
-  X,
 } from 'lucide-react'
+import {
+  ItineraryDetailsModal,
+  type ItineraryDetailRow,
+} from '@/features/articles/components/ItineraryDetailsModal'
 import { isHttpUrl } from '@/features/articles/lib/listicleVenueFormatters'
 import type { GridCell } from '@/features/articles/components/ListicleVenueInfoGrid'
 import type { ListicleVenue } from '@/features/articles/types/mapsListicle'
@@ -80,24 +82,15 @@ function formatClockTime(raw: string): string {
 
 const accentClass =
   'maps-listicle-info-icon text-[var(--maps-listicle-accent)] shrink-0 size-[15px] 480:size-[16px] sm:size-[17px]'
-const triggerLinkClass =
-  'maps-listicle-info-label break-words text-left text-[12px] font-light leading-tight text-foreground/72 hover:text-foreground focus-visible:text-foreground focus-visible:outline-none 480:text-[13px] sm:text-[14px]'
 
-type AmenityRow = {
-  key: string
-  icon: JSX.Element
-  label: string
-  value: string
-}
-
-function buildAmenityRows(item: ListicleVenue): AmenityRow[] {
+function buildAmenityRows(item: ListicleVenue): ItineraryDetailRow[] {
   const raw = item as unknown as Record<string, unknown>
   const core = group(item, 'core')
   const theStay = group(item, 'theStay')
   const theExperience = group(item, 'theExperience')
   const theDetails = group(item, 'theDetails')
 
-  const rows: AmenityRow[] = []
+  const rows: ItineraryDetailRow[] = []
   const push = (key: string, icon: JSX.Element, label: string, value: string) => {
     if (value) rows.push({ key, icon, label, value })
   }
@@ -168,114 +161,6 @@ function buildFinePrint(item: ListicleVenue): string[] {
   return parts
 }
 
-function StayAmenitiesModalTrigger({
-  venueTitle,
-  rows,
-  finePrint,
-}: {
-  venueTitle: string
-  rows: AmenityRow[]
-  finePrint: string[]
-}): JSX.Element {
-  const [open, setOpen] = useState(false)
-  const titleId = useId()
-  const dialogId = useId()
-
-  const close = useCallback(() => setOpen(false), [])
-
-  useEffect(() => {
-    if (!open) {
-      return
-    }
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') {
-        close()
-      }
-    }
-    document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
-  }, [open, close])
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={triggerLinkClass}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls={dialogId}
-      >
-        Show Amenities and Details
-      </button>
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4"
-          role="presentation"
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/45"
-            aria-label="Close"
-            onClick={close}
-          />
-          <div
-            id={dialogId}
-            className="relative z-[101] flex max-h-[min(85dvh,32rem)] w-full max-w-md flex-col rounded-t-lg bg-background shadow-lg sm:max-h-[85vh] sm:rounded-lg"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-          >
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-foreground/10 px-4 py-3">
-              <h2
-                id={titleId}
-                className="font-display text-[1.05rem] font-semibold leading-tight text-foreground pr-2"
-              >
-                Amenities · {venueTitle}
-              </h2>
-              <button
-                type="button"
-                onClick={close}
-                className="shrink-0 rounded-sm p-1 text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
-                aria-label="Close amenities"
-              >
-                <X className="size-5" strokeWidth={1.75} />
-              </button>
-            </div>
-            <ul className="min-h-0 flex-1 list-none space-y-0 overflow-y-auto overscroll-contain p-0 m-0">
-              {rows.map((r) => (
-                <li
-                  key={r.key}
-                  className="flex items-center gap-3 border-b border-foreground/08 px-4 py-2.5 last:border-b-0"
-                >
-                  <span>{r.icon}</span>
-                  <span className="min-w-0 flex-1 text-[12px] font-semibold text-[var(--maps-listicle-accent)]">
-                    {r.label}
-                  </span>
-                  <span className="shrink-0 text-right text-[12px] leading-snug text-foreground/90">
-                    {r.value}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {finePrint.length > 0 ? (
-              <p className="shrink-0 border-t border-foreground/10 px-4 py-3 text-[10px] font-medium leading-snug tracking-[0.02em] text-foreground/40 480:text-[11px]">
-                {finePrint.join(' · ')}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-    </>
-  )
-}
-
 /**
  * Cell for ListicleVenueInfoGrid's `extraCells` opening the amenities modal.
  * Null when the accommodation has no profile data to show.
@@ -289,8 +174,9 @@ export function buildStayAmenitiesCell(item: ListicleVenue): GridCell | null {
     key: 'stay-amenities',
     icon: <BedDouble className={accentClass} strokeWidth={1.75} aria-hidden />,
     node: (
-      <StayAmenitiesModalTrigger
+      <ItineraryDetailsModal
         venueTitle={item.title}
+        heading="Amenities"
         rows={rows}
         finePrint={finePrint}
       />

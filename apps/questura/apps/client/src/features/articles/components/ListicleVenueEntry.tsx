@@ -19,6 +19,7 @@ import {
 } from "@/features/articles/lib/listicleVenueFormatters";
 import type { ListicleItemRow } from "@/features/articles/types/mapsListicle";
 import { ItineraryMomentBadge } from "@/features/articles/components/ItineraryMomentBadge";
+import { buildNightlifeDetailsCell } from "@/features/articles/components/ItineraryNightlifeDetails";
 
 function stringArray(value: unknown): string[] {
   return Array.isArray(value)
@@ -62,6 +63,10 @@ export function ListicleVenueEntry({
   const addressLabel = formatListicleAddressLabel(addressRaw, row.item.title);
   const addressIsMapLink = addressRaw ? isHttpUrl(addressRaw) : false;
   const isItinerary = variant === "itinerary";
+  const nightlifeDetailsCell =
+    isItinerary && row.blockType === "itinerary-nightlife"
+      ? buildNightlifeDetailsCell(row.item)
+      : null;
   const hero = images[0] ?? null;
   const diningPriceLevel =
     isItinerary && row.blockType === "itinerary-dining" && price
@@ -217,6 +222,7 @@ export function ListicleVenueEntry({
 
         <ListicleVenueInfoGrid
           item={row.item}
+          extraCells={nightlifeDetailsCell ? [nightlifeDetailsCell] : []}
           variant={isItinerary ? "list" : "grid"}
           actionVariant={isItinerary ? "editorial" : "card"}
         />
