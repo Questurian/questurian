@@ -1,7 +1,16 @@
+import { createHash, timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { syncCurrencyUsdRates } from '@/features/shared/currencies/exchange-rates'
+
+// Hashing both sides first gives equal-length buffers, so the comparison leaks
+// neither content nor length.
+function secretsMatch(provided: string, configured: string): boolean {
+  const providedDigest = createHash('sha256').update(provided).digest()
+  const configuredDigest = createHash('sha256').update(configured).digest()
+  return timingSafeEqual(providedDigest, configuredDigest)
+}
 
 function extractProvidedSecret(req: NextRequest): string {
   const bearerToken = req.headers.get('authorization')
@@ -21,7 +30,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  if (extractProvidedSecret(req) !== configuredSecret) {
+  if (!secretsMatch(extractProvidedSecret(req), configuredSecret)) {
     return NextResponse.json(
       { message: 'Unauthorized exchange-rate sync request.' },
       { status: 401 },
@@ -33,11 +42,7 @@ export async function POST(req: NextRequest) {
     const result = await syncCurrencyUsdRates(payload)
     return NextResponse.json(result)
   } catch (error) {
-    return NextResponse.json(
-      {
-        message: error instanceof Error ? error.message : 'Exchange-rate sync failed.',
-      },
-      { status: 500 },
-    )
+    console.error('Exchange-rate sync failed:', error)
+    return NextResponse.json({ message: 'Exchange-rate sync failed.' }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { logger } from '@/shared/utils/logger'
 import { stripe } from './stripe'
 import { sendSubscriptionCancelledEmail, sendSubscriptionReactivatedEmail } from '@/emails'
 import { convertStripeTimestamp, getSubscriptionProductName } from './payment-helpers'
@@ -22,15 +23,9 @@ export async function updateUserSubscription(
     const profile = await findVisitorProfileByStripeCustomerId(stripeCustomerId)
 
     if (!profile) {
-      console.error('No VisitorProfile found with Stripe customer ID:', stripeCustomerId)
+      logger.error('No VisitorProfile found for Stripe customer', { stripeCustomerId })
       return false
     }
-
-    console.log('Found VisitorProfile for subscription update:', {
-      profileId: profile.id,
-      email: profile.email,
-      currentStatus: profile.subscriptionStatus
-    })
 
     await payload.update({
       collection: 'visitor-profiles',
@@ -38,15 +33,17 @@ export async function updateUserSubscription(
       data: updates
     })
 
-    console.log('Successfully updated VisitorProfile subscription:', {
+    logger.info('Updated VisitorProfile subscription', {
       profileId: profile.id,
-      updates
+      updatedFields: Object.keys(updates),
     })
 
     return true
 
   } catch (error) {
-    console.error('Error updating user subscription:', error)
+    logger.error('Error updating user subscription', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return false
   }
 }
@@ -58,7 +55,6 @@ export async function updateUserSubscription(
  */
 export async function getStripeSubscriptionDetails(subscriptionId: string) {
   try {
-    console.log('🔄 getStripeSubscriptionDetails called for:', subscriptionId)
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
 
     const expanded = subscription as unknown as StripeSubscriptionExpanded
@@ -72,11 +68,6 @@ export async function getStripeSubscriptionDetails(subscriptionId: string) {
       const firstItem = expanded.items.data[0] as any
       currentPeriodEnd = firstItem.current_period_end || null
       currentPeriodStart = firstItem.current_period_start || null
-      console.log('📦 Found subscription item timestamps:', {
-        currentPeriodEnd,
-        currentPeriodStart,
-        itemId: firstItem.id
-      })
     }
 
     const result = {
@@ -86,13 +77,12 @@ export async function getStripeSubscriptionDetails(subscriptionId: string) {
       cancelAtPeriodEnd: expanded.cancel_at_period_end,
       customerId: expanded.customer as string
     }
-    console.log('✅ Converted result:', {
-      currentPeriodEnd: result.currentPeriodEnd,
-      currentPeriodStart: result.currentPeriodStart
-    })
     return result
   } catch (error) {
-    console.error('❌ Error retrieving Stripe subscription:', error)
+    logger.error('Error retrieving Stripe subscription', {
+      subscriptionId,
+      error: error instanceof Error ? error.message : String(error),
+    })
     return null
   }
 }
@@ -140,10 +130,9 @@ export async function cancelUserSubscription(authUserId: string): Promise<{
       }
     })
 
-    console.log('Successfully cancelled subscription:', {
-      authUserId,
+    logger.info('Cancelled subscription', {
       subscriptionId: profile.stripeSubscriptionId,
-      expiresAt: membershipExpiresAt
+      expiresAt: membershipExpiresAt?.toISOString() ?? null,
     })
 
     const subscriptionType = await getSubscriptionProductName(profile.stripeSubscriptionId)
@@ -159,7 +148,9 @@ export async function cancelUserSubscription(authUserId: string): Promise<{
         wasImmediate: false // User-initiated cancellations honor paid period
       })
     } catch (error) {
-      console.error('Failed to send cancellation email:', error)
+      logger.error('Failed to send cancellation email', {
+        error: error instanceof Error ? error.message : String(error),
+      })
       // Don't fail the cancellation if email fails
     }
 
@@ -170,7 +161,9 @@ export async function cancelUserSubscription(authUserId: string): Promise<{
     }
 
   } catch (error) {
-    console.error('Error cancelling user subscription:', error)
+    logger.error('Error cancelling user subscription', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return { success: false, message: 'Failed to cancel subscription' }
   }
 }
@@ -244,10 +237,9 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
       }
     })
 
-    console.log('Successfully reactivated subscription:', {
-      authUserId,
+    logger.info('Reactivated subscription', {
       subscriptionId: profile.stripeSubscriptionId,
-      renewsAt: renewsAt.toISOString()
+      renewsAt: renewsAt.toISOString(),
     })
 
     const subscriptionType = await getSubscriptionProductName(profile.stripeSubscriptionId)
@@ -262,7 +254,9 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
         renewsAt
       })
     } catch (error) {
-      console.error('Failed to send reactivation email:', error)
+      logger.error('Failed to send reactivation email', {
+        error: error instanceof Error ? error.message : String(error),
+      })
       // Don't fail the reactivation if email fails
     }
 
@@ -273,7 +267,9 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
     }
 
   } catch (error) {
-    console.error('Error reactivating user subscription:', error)
+    logger.error('Error reactivating user subscription', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return { success: false, message: 'Failed to reactivate subscription' }
   }
 }
@@ -292,14 +288,13 @@ export function mapStripeStatusToInternal(stripeStatus: string): 'active' | 'can
     case 'incomplete':
       // Subscription created but payment not completed yet
       // Treat as past_due to indicate action is needed, but not as harsh as a failed payment
-      console.log('Stripe status incomplete - payment method needed')
       return 'past_due'
     case 'canceled':
     case 'cancelled':
     case 'incomplete_expired':
       return 'cancelled'
     default:
-      console.warn('Unknown Stripe status:', stripeStatus, 'defaulting to past_due')
+      logger.warn('Unknown Stripe subscription status, defaulting to past_due', { stripeStatus })
       return 'past_due'
   }
 }

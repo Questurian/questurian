@@ -1,3 +1,4 @@
+import { APIError } from 'better-auth/api'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { visitorAuth } from '@/features/visitor-auth/lib/better-auth'
@@ -22,8 +23,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result, { headers: corsHeaders })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to set password.'
-    return NextResponse.json({ error: message }, { status: 400, headers: corsHeaders })
+    // APIError messages are written by better-auth for the client; anything else stays server-side.
+    if (error instanceof APIError) {
+      return NextResponse.json(
+        { error: error.body?.message ?? 'Failed to set password.' },
+        { status: error.statusCode, headers: corsHeaders }
+      )
+    }
+    console.error('Error setting password:', error)
+    return NextResponse.json({ error: 'Failed to set password.' }, { status: 400, headers: corsHeaders })
   }
 }
 

@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
       // Log affiliate conversion for debugging
       if (referralId) {
-        console.log(`[Affiliate] Visitor ${visitor.email} referred by ${referralId}`)
+        console.log(`[Affiliate] Visitor referred by ${referralId}`)
       }
     }
 

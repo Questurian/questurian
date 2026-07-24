@@ -10,20 +10,15 @@ import Stripe from 'stripe'
 import type { StripeSubscriptionExpanded } from '@/payments/types'
 import { APP_CONFIG } from '@/shared/config'
 import { findVisitorProfileByStripeCustomerId } from '@/features/visitor-auth/lib/visitor-profile'
+import { logger } from '@/shared/utils/logger'
 
 export async function POST(req: NextRequest) {
-  console.log('🔔 Stripe webhook received!')
-  console.log('🔐 STRIPE_WEBHOOK_SECRET exists:', !!APP_CONFIG.stripe.webhookSecret)
-
   const body = await req.text()
   const headersList = await headers()
   const sig = headersList.get('stripe-signature')
 
-  console.log('📝 Webhook body length:', body.length)
-  console.log('🔑 Signature present:', !!sig)
-
   if (!sig) {
-    console.error('❌ No stripe-signature header found')
+    logger.warn('Stripe webhook rejected: missing stripe-signature header')
     return NextResponse.json({ error: 'No signature' }, { status: 400 })
   }
 
@@ -35,14 +30,14 @@ export async function POST(req: NextRequest) {
       sig,
       APP_CONFIG.stripe.webhookSecret
     )
-    console.log('✅ Webhook signature verified successfully')
   } catch (err) {
-    console.error('❌ Webhook signature verification failed:', err)
+    logger.error('Stripe webhook signature verification failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  console.log('📨 Received Stripe event:', event.type)
-  console.log('💳 Event ID:', event.id)
+  logger.info('Stripe webhook received', { eventId: event.id, eventType: event.type })
 
   const payload = await getPayload({ config })
 
@@ -55,7 +50,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (alreadyProcessed.totalDocs > 0) {
-    console.log('🔁 Duplicate delivery of event', event.id, '- skipping')
+    logger.info('Duplicate Stripe event delivery skipped', { eventId: event.id })
     return NextResponse.json({ received: true, duplicate: true })
   }
 
@@ -77,7 +72,10 @@ export async function POST(req: NextRequest) {
     })
 
     if (newerEvent.totalDocs > 0) {
-      console.log('⏭️ Stale event', event.id, '- a newer event for subscription', subscriptionId, 'was already processed, skipping')
+      logger.info('Stale Stripe event skipped: newer event already processed', {
+        eventId: event.id,
+        subscriptionId,
+      })
       // Record it so retries of this stale event are also skipped
       await recordProcessedEvent(payload, event, subscriptionId)
       return NextResponse.json({ received: true, stale: true })
@@ -112,8 +110,7 @@ export async function POST(req: NextRequest) {
         break
 
       default:
-        console.log(`⚠️ Unhandled event type: ${event.type}`)
-        console.log('Event data:', JSON.stringify(event.data.object, null, 2))
+        logger.info('Unhandled Stripe event type', { eventId: event.id, eventType: event.type })
     }
 
     // Only record after successful processing so failed events are retried by Stripe
@@ -121,7 +118,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    logger.error('Error processing Stripe webhook', {
+      eventId: event.id,
+      eventType: event.type,
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
   }
 }
@@ -163,7 +164,10 @@ async function recordProcessedEvent(
       },
     })
   } catch (error) {
-    console.warn('⚠️ Could not record processed event', event.id, error)
+    logger.warn('Could not record processed Stripe event', {
+      eventId: event.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
@@ -172,13 +176,15 @@ async function recordProcessedEvent(
  * This is triggered when a user completes their subscription checkout
  */
 async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) {
-  console.log('🛒 Processing checkout.session.completed for session:', session.id)
+  logger.info('Processing checkout.session.completed', { sessionId: session.id })
 
   const customerId = session.customer as string
   const subscriptionId = session.subscription as string
 
   if (!customerId || !subscriptionId) {
-    console.error('Missing customer or subscription ID in checkout session')
+    logger.error('Missing customer or subscription ID in checkout session', {
+      sessionId: session.id,
+    })
     return
   }
 
@@ -186,10 +192,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const subscriptionDetails = await getStripeSubscriptionDetails(subscriptionId)
   const subscriptionRenewsAt = subscriptionDetails?.currentPeriodEnd?.toISOString() || null
 
-  if (subscriptionRenewsAt) {
-    console.log('✅ Got renewal date from Stripe API:', subscriptionRenewsAt)
-  } else {
-    console.warn('⚠️ Could not determine renewal date for subscription', subscriptionId)
+  if (!subscriptionRenewsAt) {
+    logger.warn('Could not determine renewal date for subscription', { subscriptionId })
   }
 
   // Extract affiliate referral ID from metadata if present (and feature enabled)
@@ -202,7 +206,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   if (APP_CONFIG.features.endorselyAffiliates) {
     const referralId = session.metadata?.endorsely_referral
     if (referralId) {
-      console.log(`[Affiliate] Subscription created via referral ${referralId}`)
+      logger.info('Subscription created via affiliate referral', { referralId, subscriptionId })
       // Store affiliate referral info
       updateData.affiliateReferralId = referralId
       updateData.affiliateReferredAt = new Date()
@@ -226,12 +230,12 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   const success = await updateUserSubscription(customerId, updateData)
 
   if (success) {
-    console.log('✅ Visitor subscription activated via checkout completion')
+    logger.info('Visitor subscription activated via checkout completion', { subscriptionId })
 
     // Send membership confirmation email for new subscription
     await sendMembershipConfirmationAfterPayment(customerId, subscriptionId, true)
   } else {
-    console.error('❌ Failed to update visitor subscription from checkout')
+    logger.error('Failed to update visitor subscription from checkout', { subscriptionId })
   }
 }
 
@@ -239,13 +243,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
  * Handle subscription creation
  */
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  console.log('🔄 Processing customer.subscription.created for subscription:', subscription.id)
-  const sub = subscription as any
-  console.log('📦 Raw subscription webhook data:', {
-    current_period_end: sub.current_period_end,
-    current_period_start: sub.current_period_start,
-    type_of_current_period_end: typeof sub.current_period_end
-  })
+  logger.info('Processing customer.subscription.created', { subscriptionId: subscription.id })
 
   const customerId = subscription.customer as string
 
@@ -261,24 +259,27 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
         const convertedDate = convertStripeTimestamp(expandedSubscription.current_period_end)
         if (convertedDate) {
           subscriptionRenewsAt = convertedDate.toISOString()
-          console.log('📅 Got renewal date from webhook:', subscriptionRenewsAt)
         }
       } catch (error) {
-        console.error('Error converting current_period_end:', expandedSubscription.current_period_end, error)
+        logger.error('Error converting current_period_end from webhook', {
+          subscriptionId: subscription.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     }
 
     // Fallback to Stripe API if webhook data failed
     if (!subscriptionRenewsAt) {
-      console.log('🔍 Fetching subscription details from Stripe API for renewal date')
       try {
         const subscriptionDetails = await getStripeSubscriptionDetails(subscription.id)
         if (subscriptionDetails?.currentPeriodEnd) {
           subscriptionRenewsAt = subscriptionDetails.currentPeriodEnd.toISOString()
-          console.log('📅 Got renewal date from Stripe API:', subscriptionRenewsAt)
         }
       } catch (error) {
-        console.error('Error fetching subscription details from Stripe:', error)
+        logger.error('Error fetching subscription details from Stripe', {
+          subscriptionId: subscription.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     }
   }
@@ -289,7 +290,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     subscriptionRenewsAt
   })
 
-  console.log('✅ User subscription created with status:', status)
+  logger.info('User subscription created', { subscriptionId: subscription.id, status })
 
   // Send membership confirmation email for active subscriptions
   if (status === 'active') {
@@ -302,11 +303,11 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
  * This covers status changes like active -> past_due -> cancelled
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  console.log('🔄 Processing customer.subscription.updated for subscription:', subscription.id)
+  logger.info('Processing customer.subscription.updated', {
+    subscriptionId: subscription.id,
+    status: subscription.status,
+  })
   const expandedSubscription = subscription as StripeSubscriptionExpanded
-  console.log('Subscription status:', subscription.status)
-  console.log('Cancel at period end:', expandedSubscription.cancel_at_period_end)
-  console.log('Current period end:', expandedSubscription.current_period_end, typeof expandedSubscription.current_period_end)
 
   const customerId = subscription.customer as string
 
@@ -323,24 +324,27 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         const convertedDate = convertStripeTimestamp(expandedSubscription.current_period_end)
         if (convertedDate) {
           subscriptionRenewsAt = convertedDate.toISOString()
-          console.log('📅 Got renewal date from webhook:', subscriptionRenewsAt)
         }
       } catch (error) {
-        console.error('Error converting current_period_end:', expandedSubscription.current_period_end, error)
+        logger.error('Error converting current_period_end from webhook', {
+          subscriptionId: subscription.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     }
 
     // Fallback to Stripe API if webhook data failed
     if (!subscriptionRenewsAt) {
-      console.log('🔍 Fetching subscription details from Stripe API for renewal date')
       try {
         const subscriptionDetails = await getStripeSubscriptionDetails(subscription.id)
         if (subscriptionDetails?.currentPeriodEnd) {
           subscriptionRenewsAt = subscriptionDetails.currentPeriodEnd.toISOString()
-          console.log('📅 Got renewal date from Stripe API:', subscriptionRenewsAt)
         }
       } catch (error) {
-        console.error('Error fetching subscription details from Stripe:', error)
+        logger.error('Error fetching subscription details from Stripe', {
+          subscriptionId: subscription.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     }
   }
@@ -355,28 +359,36 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
         const convertedDate = convertStripeTimestamp(expandedSubscription.current_period_end)
         if (convertedDate) {
           membershipExpiration = convertedDate.toISOString()
-          console.log('📅 Subscription cancelled but active until:', membershipExpiration)
         }
       } catch (error) {
-        console.error('Error converting expiration date from webhook event:', error)
+        logger.error('Error converting expiration date from webhook event', {
+          subscriptionId: subscription.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
     } else {
       // Fetch subscription details from Stripe API to get the period end date
-      console.log('🔍 Fetching subscription details from Stripe API for period end date')
       try {
         const subscriptionDetails = await getStripeSubscriptionDetails(subscription.id)
         if (subscriptionDetails?.currentPeriodEnd) {
           membershipExpiration = subscriptionDetails.currentPeriodEnd.toISOString()
-          console.log('📅 Subscription cancelled but active until (from API):', membershipExpiration)
         }
       } catch (error) {
-        console.error('Error fetching subscription details from Stripe:', error)
+        logger.error('Error fetching subscription details from Stripe', {
+          subscriptionId: subscription.id,
+          error: error instanceof Error ? error.message : String(error),
+        })
       }
+    }
+    if (membershipExpiration) {
+      logger.info('Subscription cancelled but active until period end', {
+        subscriptionId: subscription.id,
+        membershipExpiration,
+      })
     }
   } else if (!cancelAtPeriodEnd && status === 'active') {
     // Subscription was reactivated or renewed - clear expiration and cancel flag
     membershipExpiration = null
-    console.log('🔄 Subscription active and renewing - clearing membership expiration and cancel flag')
   }
 
   await updateUserSubscription(customerId, {
@@ -387,7 +399,11 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     membershipExpiration
   })
 
-  console.log('✅ User subscription updated to status:', status, 'cancelAtPeriodEnd:', cancelAtPeriodEnd)
+  logger.info('User subscription updated', {
+    subscriptionId: subscription.id,
+    status,
+    cancelAtPeriodEnd,
+  })
 }
 
 /**
@@ -395,7 +411,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
  * Honor the paid period by setting membershipExpiration to current_period_end
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  console.log('❌ Processing customer.subscription.deleted for subscription:', subscription.id)
+  logger.info('Processing customer.subscription.deleted', { subscriptionId: subscription.id })
 
   const customerId = subscription.customer as string
 
@@ -409,11 +425,14 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   let membershipExpiration: string | null = null
   if (currentPeriodEnd && currentPeriodEnd > now) {
     membershipExpiration = currentPeriodEnd.toISOString()
-    console.log('📅 Honoring paid period until:', membershipExpiration)
+    logger.info('Honoring paid period after cancellation', {
+      subscriptionId: subscription.id,
+      membershipExpiration,
+    })
   } else if (!currentPeriodEnd) {
-    console.warn('⚠️ Could not convert subscription period end date, treating as immediate revocation')
-  } else {
-    console.log('⏰ Subscription period already ended, immediate revocation')
+    logger.warn('Could not convert subscription period end date, treating as immediate revocation', {
+      subscriptionId: subscription.id,
+    })
   }
 
   await updateUserSubscription(customerId, {
@@ -423,7 +442,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     cancelAtPeriodEnd: false // Clear cancel flag since subscription is now fully deleted
   })
 
-  console.log('✅ User subscription cancelled')
+  logger.info('User subscription cancelled', { subscriptionId: subscription.id })
 
   // Send cancellation email - this is typically triggered by Stripe when the subscription period actually ends
   const wasImmediate = !membershipExpiration // If no expiration, access was revoked immediately
@@ -436,10 +455,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  * Also updates the renewal date for subscription renewals
  */
 async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  console.log('💰 Processing invoice.payment_succeeded for invoice:', invoice.id)
-  console.log('Invoice customer:', invoice.customer, typeof invoice.customer)
-  console.log('Invoice subscription:', (invoice as any).subscription, typeof (invoice as any).subscription)
-  console.log('Invoice billing_reason:', (invoice as any).billing_reason)
+  logger.info('Processing invoice.payment_succeeded', { invoiceId: invoice.id })
 
   const customerId = invoice.customer as string
 
@@ -448,14 +464,11 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   if ((invoice as any).subscription) {
     subscriptionId = (invoice as any).subscription as string
-    console.log('✅ Found subscription via direct field:', subscriptionId)
   } else if ((invoice as any).subscription_id) {
     subscriptionId = (invoice as any).subscription_id as string
-    console.log('✅ Found subscription via subscription_id field:', subscriptionId)
   } else {
     // Webhook event may not have subscription field populated
     // Fetch full invoice from Stripe API to get subscription ID
-    console.log('🔍 Subscription field missing from webhook, fetching full invoice')
     try {
       if (!invoice.id) {
         throw new Error('Invoice ID is missing')
@@ -464,39 +477,45 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
       const invoiceData = stripeInvoice as any
       if (invoiceData.subscription) {
         subscriptionId = invoiceData.subscription as string
-        console.log('✅ Found subscription via API fetch:', subscriptionId)
       }
     } catch (error) {
-      console.error('Error fetching invoice from Stripe API:', error)
+      logger.error('Error fetching invoice from Stripe API', {
+        invoiceId: invoice.id,
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 
   if (!subscriptionId) {
-    console.log('Invoice not related to subscription, skipping')
+    logger.info('Invoice not related to subscription, skipping', { invoiceId: invoice.id })
     return
   }
 
   const billingReason = (invoice as any).billing_reason
 
-  console.log('✅ Payment successful for subscription:', subscriptionId, '- billing reason:', billingReason)
+  logger.info('Payment successful for subscription', { subscriptionId, billingReason })
 
   // For renewal payments, update the subscription renewal date
   if (billingReason === 'subscription_cycle') {
-    console.log('🔄 Regular renewal payment processed - fetching updated renewal date')
     try {
       const subscriptionDetails = await getStripeSubscriptionDetails(subscriptionId)
       if (subscriptionDetails?.currentPeriodEnd) {
         const updatedRenewalDate = subscriptionDetails.currentPeriodEnd.toISOString()
-        console.log('📅 Updating renewal date for subscription:', updatedRenewalDate)
 
         await updateUserSubscription(customerId, {
           subscriptionRenewsAt: updatedRenewalDate
         })
 
-        console.log('✅ Renewal date updated successfully')
+        logger.info('Renewal date updated after renewal payment', {
+          subscriptionId,
+          subscriptionRenewsAt: updatedRenewalDate,
+        })
       }
     } catch (error) {
-      console.error('⚠️ Failed to update renewal date on subscription renewal:', error)
+      logger.error('Failed to update renewal date on subscription renewal', {
+        subscriptionId,
+        error: error instanceof Error ? error.message : String(error),
+      })
       // Don't fail the webhook if renewal date update fails - the subscription is still active
     }
   }
@@ -504,7 +523,6 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   // Send membership confirmation email only for new subscriptions
   // Regular renewals are handled silently (renewal date already updated above)
   if (billingReason === 'subscription_create') {
-    console.log('📧 Sending membership confirmation for new subscription')
     await sendMembershipConfirmationAfterPayment(customerId, subscriptionId, true)
   }
 }
@@ -514,10 +532,10 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
  * This can lead to past_due status
  */
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
-  console.log('💸 Processing invoice.payment_failed for invoice:', invoice.id)
+  logger.info('Processing invoice.payment_failed', { invoiceId: invoice.id })
 
   if (!(invoice as any).subscription) {
-    console.log('Invoice not related to subscription, skipping')
+    logger.info('Invoice not related to subscription, skipping', { invoiceId: invoice.id })
     return
   }
 
@@ -529,7 +547,9 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     subscriptionStatus: 'past_due'
   })
 
-  console.log('⚠️ User subscription marked as past due due to payment failure')
+  logger.warn('User subscription marked as past due after payment failure', {
+    invoiceId: invoice.id,
+  })
 }
 
 /**
@@ -545,14 +565,14 @@ async function sendMembershipConfirmationAfterPayment(
 
     const profile = await findVisitorProfileByStripeCustomerId(customerId)
     if (!profile) {
-      console.error('❌ No VisitorProfile found for membership confirmation email:', customerId)
+      logger.error('No VisitorProfile found for membership confirmation email', { subscriptionId })
       return
     }
 
     // Get subscription details for the email
     const subscriptionDetails = await getStripeSubscriptionDetails(subscriptionId)
     if (!subscriptionDetails) {
-      console.error('❌ Could not retrieve subscription details for email:', subscriptionId)
+      logger.error('Could not retrieve subscription details for email', { subscriptionId })
       return
     }
 
@@ -569,9 +589,12 @@ async function sendMembershipConfirmationAfterPayment(
       isRecurring
     })
 
-    console.log('✅ Membership confirmation email sent to:', profile.email)
+    logger.info('Membership confirmation email sent', { profileId: profile.id, subscriptionId })
   } catch (error) {
-    console.error('❌ Failed to send membership confirmation email:', error)
+    logger.error('Failed to send membership confirmation email', {
+      subscriptionId,
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
@@ -589,7 +612,7 @@ async function sendSubscriptionCancellationEmail(
 
     const profile = await findVisitorProfileByStripeCustomerId(customerId)
     if (!profile) {
-      console.error('❌ No VisitorProfile found for cancellation email:', customerId)
+      logger.error('No VisitorProfile found for cancellation email', { subscriptionId })
       return
     }
 
@@ -606,8 +629,11 @@ async function sendSubscriptionCancellationEmail(
       wasImmediate
     })
 
-    console.log('✅ Subscription cancellation email sent to:', profile.email)
+    logger.info('Subscription cancellation email sent', { profileId: profile.id, subscriptionId })
   } catch (error) {
-    console.error('❌ Failed to send subscription cancellation email:', error)
+    logger.error('Failed to send subscription cancellation email', {
+      subscriptionId,
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
