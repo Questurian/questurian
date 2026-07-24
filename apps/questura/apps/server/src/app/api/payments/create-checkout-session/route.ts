@@ -8,6 +8,22 @@ import {
   updateVisitorProfileByAuthUserId,
 } from '@/features/visitor-auth/lib/visitor-profile'
 
+// Referral IDs are opaque tokens from the Endorsely script; anything else in
+// the body must not reach Stripe metadata. Stripe caps metadata values at 500
+// chars — bound well below that.
+const REFERRAL_ID_MAX_LENGTH = 100
+
+function sanitizeReferralId(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+  const trimmed = value.trim()
+  if (trimmed.length === 0 || trimmed.length > REFERRAL_ID_MAX_LENGTH) {
+    return null
+  }
+  return trimmed
+}
+
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
 
@@ -38,7 +54,7 @@ export async function POST(req: NextRequest) {
     if (APP_CONFIG.features.endorselyAffiliates) {
       try {
         const body = await req.json()
-        referralId = body.referralId || null
+        referralId = sanitizeReferralId(body?.referralId)
       } catch {
         // Body is optional, continue without it
       }
