@@ -356,6 +356,29 @@ describe('Stripe webhook route', () => {
     expect(mocks.sendMembershipConfirmationEmail).not.toHaveBeenCalled()
   })
 
+  it('fetches a successful invoice when its webhook omits the subscription', async () => {
+    givenEvent('invoice.payment_succeeded', {
+      id: 'in_success_fallback',
+      customer: 'cus_1',
+      billing_reason: 'subscription_cycle',
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_success_fallback',
+      subscription: 'sub_from_api',
+    })
+    mocks.getStripeSubscriptionDetails.mockResolvedValue({
+      currentPeriodEnd: new Date(FUTURE_TS * 1000),
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_success_fallback')
+    expect(mocks.getStripeSubscriptionDetails).toHaveBeenCalledWith('sub_from_api')
+    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
+      subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString(),
+    })
+  })
+
   it('marks the subscription past_due on failed invoice payments', async () => {
     givenEvent('invoice.payment_failed', {
       id: 'in_1',
@@ -365,6 +388,24 @@ describe('Stripe webhook route', () => {
 
     await POST(createRequest())
 
+    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
+      subscriptionStatus: 'past_due',
+    })
+  })
+
+  it('fetches a failed invoice when its webhook omits the subscription', async () => {
+    givenEvent('invoice.payment_failed', {
+      id: 'in_failed_fallback',
+      customer: 'cus_1',
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_failed_fallback',
+      subscription: 'sub_from_api',
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_failed_fallback')
     expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
       subscriptionStatus: 'past_due',
     })

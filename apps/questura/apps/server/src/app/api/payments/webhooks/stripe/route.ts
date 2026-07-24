@@ -388,6 +388,56 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   await sendSubscriptionCancellationEmail(customerId, subscription.id, membershipExpiration ? new Date(membershipExpiration) : null, wasImmediate)
 }
 
+type InvoiceWithSubscription = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription | null
+  subscription_id?: string | Stripe.Subscription | null
+  parent?: {
+    subscription_details?: {
+      subscription?: string | Stripe.Subscription | null
+    } | null
+  } | null
+}
+
+function subscriptionIdFromInvoice(invoice: Stripe.Invoice): string | null {
+  const invoiceData = invoice as InvoiceWithSubscription
+  const subscription =
+    invoiceData.subscription ??
+    invoiceData.subscription_id ??
+    invoiceData.parent?.subscription_details?.subscription
+
+  if (typeof subscription === 'string') {
+    return subscription
+  }
+
+  return subscription?.id ?? null
+}
+
+/**
+ * Invoice webhook payloads do not always include their subscription relation.
+ * Resolve it from the payload when possible, then fetch the full invoice as a
+ * fallback so success and failure handlers behave consistently.
+ */
+async function resolveInvoiceSubscriptionId(invoice: Stripe.Invoice): Promise<string | null> {
+  const subscriptionId = subscriptionIdFromInvoice(invoice)
+  if (subscriptionId) {
+    return subscriptionId
+  }
+
+  try {
+    if (!invoice.id) {
+      throw new Error('Invoice ID is missing')
+    }
+
+    return subscriptionIdFromInvoice(await stripe.invoices.retrieve(invoice.id))
+  } catch (error) {
+    logger.error('Error fetching invoice from Stripe API', {
+      invoiceId: invoice.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
+    return null
+  }
+}
+
 /**
  * Handle successful invoice payments
  * This is triggered for recurring subscription payments and serves as payment confirmation
@@ -398,32 +448,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 
   const customerId = invoice.customer as string
 
-  // Check if this invoice is related to a subscription
-  let subscriptionId: string | null = null
-
-  if ((invoice as any).subscription) {
-    subscriptionId = (invoice as any).subscription as string
-  } else if ((invoice as any).subscription_id) {
-    subscriptionId = (invoice as any).subscription_id as string
-  } else {
-    // Webhook event may not have subscription field populated
-    // Fetch full invoice from Stripe API to get subscription ID
-    try {
-      if (!invoice.id) {
-        throw new Error('Invoice ID is missing')
-      }
-      const stripeInvoice = await stripe.invoices.retrieve(invoice.id)
-      const invoiceData = stripeInvoice as any
-      if (invoiceData.subscription) {
-        subscriptionId = invoiceData.subscription as string
-      }
-    } catch (error) {
-      logger.error('Error fetching invoice from Stripe API', {
-        invoiceId: invoice.id,
-        error: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }
+  const subscriptionId = await resolveInvoiceSubscriptionId(invoice)
 
   if (!subscriptionId) {
     logger.info('Invoice not related to subscription, skipping', { invoiceId: invoice.id })
@@ -473,7 +498,8 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
 async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
   logger.info('Processing invoice.payment_failed', { invoiceId: invoice.id })
 
-  if (!(invoice as any).subscription) {
+  const subscriptionId = await resolveInvoiceSubscriptionId(invoice)
+  if (!subscriptionId) {
     logger.info('Invoice not related to subscription, skipping', { invoiceId: invoice.id })
     return
   }
@@ -488,6 +514,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
 
   logger.warn('User subscription marked as past due after payment failure', {
     invoiceId: invoice.id,
+    subscriptionId,
   })
 }
 

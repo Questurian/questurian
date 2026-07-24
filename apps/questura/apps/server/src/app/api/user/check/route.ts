@@ -1,19 +1,42 @@
 import { NextRequest } from 'next/server'
 
-import { checkVisitorAccount, responseWithCors } from '@/features/visitor-auth/lib/legacy-auth-compat'
-import { handleCorsOptions } from '@/shared/utils/cors'
+import { checkAccountCheckRateLimit } from '@/features/visitor-auth/lib/account-check-rate-limit'
+import {
+  assertValidEmail,
+  checkVisitorAccount,
+} from '@/features/visitor-auth/lib/legacy-auth-compat'
+import { corsResponse, handleCorsOptions } from '@/shared/utils/cors'
 
 export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json()
-    const result = await checkVisitorAccount(email)
-    return responseWithCors(req, result)
+    const normalizedEmail = assertValidEmail(email)
+    const rateLimit = await checkAccountCheckRateLimit(req, normalizedEmail)
+
+    if (!rateLimit.allowed) {
+      const response = corsResponse(
+        { success: false, message: 'Too many account checks. Please try again shortly.' },
+        req,
+        429
+      )
+      response.headers.set('Retry-After', String(rateLimit.retryAfterSeconds))
+      return response
+    }
+
+    const result = await checkVisitorAccount(normalizedEmail)
+    return corsResponse(result, req)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to check user'
-    return responseWithCors(
+    const errorMessage = error instanceof Error ? error.message : ''
+    const isValidationError =
+      errorMessage.includes('valid email') || errorMessage.includes('Email is required')
+
+    return corsResponse(
+      {
+        success: false,
+        message: isValidationError ? errorMessage : 'Failed to check user',
+      },
       req,
-      { success: false, message },
-      { status: message.includes('valid email') || message.includes('Email is required') ? 400 : 500 }
+      isValidationError ? 400 : 500
     )
   }
 }
