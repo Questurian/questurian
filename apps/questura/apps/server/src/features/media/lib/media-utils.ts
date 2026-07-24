@@ -52,18 +52,6 @@ export function getMaxFileSizeDisplay(): string {
 }
 
 /**
- * Build a CDN URL for a media asset
- */
-export function buildMediaUrl(
-  filename: string,
-  variant?: string
-): string {
-  const cdnUrl = process.env.BUNNY_STORAGE_HOSTNAME || 'https://questurian-cdn.b-cdn.net'
-  const path = variant ? `${filename}?v=${variant}` : filename
-  return `${cdnUrl}/${path}`
-}
-
-/**
  * Check if Bunny.net is enabled
  */
 export function isBunnyEnabled(): boolean {
@@ -75,27 +63,4 @@ export function isBunnyEnabled(): boolean {
  */
 export function getCostThreshold(): number {
   return 30
-}
-
-/**
- * Initialize BunnyService with app configuration
- * @deprecated Use @seshuk/payload-storage-bunny plugin instead
- */
-export function initializeBunnyService(): any {
-  const apiKey = process.env.BUNNY_STORAGE_API_KEY
-  const hostname = process.env.BUNNY_STORAGE_HOSTNAME
-  const zoneName = process.env.BUNNY_STORAGE_ZONE_NAME
-
-  if (!apiKey) {
-    throw new Error(
-      'BUNNY_STORAGE_API_KEY not configured. Set BUNNY_STORAGE_API_KEY environment variable.'
-    )
-  }
-
-  // Return config object instead of BunnyService since it's no longer used
-  return {
-    apiKey,
-    hostname,
-    zoneName,
-  }
 }

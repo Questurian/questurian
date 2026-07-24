@@ -10,7 +10,7 @@ import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { redisSecondaryStorage } from './redis-secondary-storage'
 import { auditVisitorAuthSecurityEvent } from './security-audit'
 import { isStaffEmail, normalizeEmail } from './staff-email-guard'
-import { ensureVisitorProfileForAuthUser, updateVisitorProfileByAuthUserId } from './visitor-profile'
+import { ensureVisitorProfileForAuthUser, splitDisplayName, updateVisitorProfileByAuthUserId } from './visitor-profile'
 
 const databaseUrl = APP_CONFIG.database.uri
 
@@ -24,16 +24,6 @@ if (APP_CONFIG.isProduction && !APP_CONFIG.redis.url) {
 
 if (APP_CONFIG.isProduction && APP_CONFIG.turnstile.enabled && !APP_CONFIG.turnstile.secretKey) {
   throw new Error('TURNSTILE_SECRET_KEY is required when Visitor auth bot protection is enabled')
-}
-
-function splitDisplayName(name: string | null | undefined): { firstName: string; lastName: string } {
-  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return { firstName: '', lastName: '' }
-  if (parts.length === 1) return { firstName: parts[0], lastName: '' }
-  return {
-    firstName: parts[0],
-    lastName: parts.slice(1).join(' '),
-  }
 }
 
 const googleProvider =

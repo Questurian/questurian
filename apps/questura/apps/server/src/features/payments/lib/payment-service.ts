@@ -11,6 +11,27 @@ import {
 } from '@/features/visitor-auth/lib/visitor-profile'
 
 /**
+ * Stripe returns current_period_end/start on the first subscription item,
+ * not at the subscription root.
+ */
+function getFirstSubscriptionItem(
+  subscription: StripeSubscriptionExpanded
+): { current_period_end?: number | null; current_period_start?: number | null } | null {
+  if (subscription.items && Array.isArray(subscription.items.data) && subscription.items.data.length > 0) {
+    return subscription.items.data[0] as any
+  }
+  return null
+}
+
+/**
+ * Extract the subscription's current period end from items.data[0] and
+ * convert it to a Date. Returns null when it can't be determined.
+ */
+export function getCurrentPeriodEnd(subscription: StripeSubscriptionExpanded): Date | null {
+  return convertStripeTimestamp(getFirstSubscriptionItem(subscription)?.current_period_end || null)
+}
+
+/**
  * Updates a VisitorProfile subscription based on Stripe customer ID.
  */
 export async function updateUserSubscription(
@@ -59,25 +80,13 @@ export async function getStripeSubscriptionDetails(subscriptionId: string) {
 
     const expanded = subscription as unknown as StripeSubscriptionExpanded
 
-    // CRITICAL: Stripe returns the period dates in the subscription items, not at the root level
-    // Access them from subscription.items.data[0].current_period_end/start
-    let currentPeriodEnd: number | null = null
-    let currentPeriodStart: number | null = null
-
-    if (expanded.items && Array.isArray(expanded.items.data) && expanded.items.data.length > 0) {
-      const firstItem = expanded.items.data[0] as any
-      currentPeriodEnd = firstItem.current_period_end || null
-      currentPeriodStart = firstItem.current_period_start || null
-    }
-
-    const result = {
+    return {
       status: expanded.status,
-      currentPeriodEnd: convertStripeTimestamp(currentPeriodEnd),
-      currentPeriodStart: convertStripeTimestamp(currentPeriodStart),
+      currentPeriodEnd: getCurrentPeriodEnd(expanded),
+      currentPeriodStart: convertStripeTimestamp(getFirstSubscriptionItem(expanded)?.current_period_start || null),
       cancelAtPeriodEnd: expanded.cancel_at_period_end,
       customerId: expanded.customer as string
     }
-    return result
   } catch (error) {
     logger.error('Error retrieving Stripe subscription', {
       subscriptionId,
@@ -113,13 +122,8 @@ export async function cancelUserSubscription(authUserId: string): Promise<{
       cancel_at_period_end: true
     }) as unknown as StripeSubscriptionExpanded
 
-    // Calculate when membership will actually expire (extract from nested items.data[0] location)
-    let membershipExpiresAt: Date | null = null
-    if (cancelledSubscription.items && Array.isArray(cancelledSubscription.items.data) && cancelledSubscription.items.data.length > 0) {
-      const firstItem = cancelledSubscription.items.data[0] as any
-      const currentPeriodEnd = firstItem.current_period_end || null
-      membershipExpiresAt = convertStripeTimestamp(currentPeriodEnd)
-    }
+    // Calculate when membership will actually expire
+    const membershipExpiresAt = getCurrentPeriodEnd(cancelledSubscription)
 
     await payload.update({
       collection: 'visitor-profiles',
@@ -211,13 +215,8 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
       cancel_at_period_end: false
     }) as unknown as StripeSubscriptionExpanded
 
-    // Get the new renewal date from the nested items.data[0] location (same as retrieve)
-    let renewsAt: Date | null = null
-    if (updatedSubscription.items && Array.isArray(updatedSubscription.items.data) && updatedSubscription.items.data.length > 0) {
-      const firstItem = updatedSubscription.items.data[0] as any
-      const currentPeriodEnd = firstItem.current_period_end || null
-      renewsAt = convertStripeTimestamp(currentPeriodEnd)
-    }
+    // Get the new renewal date
+    const renewsAt = getCurrentPeriodEnd(updatedSubscription)
 
     if (!renewsAt) {
       return {

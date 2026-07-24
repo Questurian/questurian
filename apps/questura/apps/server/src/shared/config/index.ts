@@ -19,12 +19,12 @@ export const APP_CONFIG = {
   // Security & Authentication
   payloadSecret: process.env.PAYLOAD_SECRET || '',
 
-  // Google OAuth Configuration (redirectUri set below after backendUrl is computed)
+  // Google OAuth Configuration (the redirect URI is built where the provider
+  // is configured, in visitor-auth/lib/better-auth.ts)
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    redirectUri: '', // Set dynamically below
-  } as any,
+  },
 
   // Stripe Configuration
   stripe: {
@@ -74,16 +74,6 @@ export const APP_CONFIG = {
   isProduction: process.env.NODE_ENV === 'production',
   nodeEnv: (process.env.NODE_ENV || 'development') as 'development' | 'production' | 'test',
 } as const
-
-// Set Google redirect URI to use ngrok (external service requirement)
-// Google OAuth requires a real URL, not localhost
-export const APP_CONFIG_WITH_GOOGLE = {
-  ...APP_CONFIG,
-  google: {
-    ...APP_CONFIG.google,
-    redirectUri: `${APP_CONFIG.backendUrl}/api/visitor-auth/callback/google`,
-  },
-}
 
 // Re-export URL utilities for convenience
 export { APP_URLS }

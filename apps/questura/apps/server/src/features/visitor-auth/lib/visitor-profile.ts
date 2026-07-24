@@ -9,7 +9,7 @@ type BetterAuthUser = {
   name?: string | null
 }
 
-function splitDisplayName(name: string | null | undefined): { firstName: string; lastName: string } {
+export function splitDisplayName(name: string | null | undefined): { firstName: string; lastName: string } {
   const parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return { firstName: '', lastName: '' }
   if (parts.length === 1) return { firstName: parts[0], lastName: '' }
