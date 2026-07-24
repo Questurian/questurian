@@ -46,4 +46,33 @@ export const redisSecondaryStorage = {
     }
     return value
   },
+
+  async incrementWithExpiry(
+    key: string,
+    ttlSeconds: number
+  ): Promise<{ count: number; ttlSeconds: number }> {
+    const result = await getRedis().eval(
+      `
+        local count = redis.call('INCR', KEYS[1])
+        local ttl = redis.call('TTL', KEYS[1])
+        if count == 1 or ttl < 0 then
+          redis.call('EXPIRE', KEYS[1], ARGV[1])
+          ttl = tonumber(ARGV[1])
+        end
+        return { count, ttl }
+      `,
+      1,
+      key,
+      ttlSeconds
+    )
+
+    if (!Array.isArray(result) || result.length !== 2) {
+      throw new Error('Redis returned an invalid rate-limit result')
+    }
+
+    return {
+      count: Number(result[0]),
+      ttlSeconds: Number(result[1]),
+    }
+  },
 }

@@ -1,4 +1,3 @@
-import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { findVisitorAccountByEmail } from './account-query'
 import type { AuthProvider, VisitorAccountLookup } from './account-query'
 import type { CurrentPrincipal } from './current-principal'
@@ -100,20 +99,4 @@ export async function parseJsonResponse(response: Response) {
   } catch {
     return { message: text }
   }
-}
-
-export function responseWithCors(req: Request, data: unknown, init: ResponseInit = {}) {
-  const headers = new Headers(init.headers)
-  const origin = req.headers.get('origin')
-  const corsOrigin = APP_CONFIG.CORS_ORIGINS.includes(origin || '') ? origin : APP_URLS.frontend
-  headers.set('Access-Control-Allow-Origin', corsOrigin!)
-  headers.set('Access-Control-Allow-Credentials', 'true')
-  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-  headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, ngrok-skip-browser-warning, x-captcha-response')
-  headers.set('Content-Type', 'application/json')
-
-  return new Response(JSON.stringify(data), {
-    ...init,
-    headers,
-  })
 }
