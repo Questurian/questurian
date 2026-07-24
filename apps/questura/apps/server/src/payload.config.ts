@@ -30,6 +30,7 @@ import { ListicleItineraries } from './features/articles/listicle-itineraries/co
 import { ArticleRedirects } from './features/articles/redirects/collections'
 import { LocationHomepages, MainHomepage } from './features/homepage-featured-content'
 import { VisitorProfiles } from './features/visitor-auth'
+import { StripeWebhookEvents } from './features/payments/collections/StripeWebhookEvents'
 import { APP_CONFIG, APP_URLS } from './shared/config'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -47,7 +48,7 @@ export default buildConfig({
   serverURL: APP_URLS.backendLocal,
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
-  collections: [Users, EmailLogs, VisitorProfiles, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages],
+  collections: [Users, EmailLogs, VisitorProfiles, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages, StripeWebhookEvents],
   globals: [MainHomepage],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,

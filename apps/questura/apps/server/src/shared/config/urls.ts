@@ -12,7 +12,7 @@ export const APP_URLS = {
 
   /**
    * Constructs a frontend URL with the given path
-   * @param path - The path to append (e.g., '/login', '/auth?token=xyz')
+   * @param path - The path to append (e.g., '/login')
    * @returns Full frontend URL
    */
   frontendUrl(path: string): string {

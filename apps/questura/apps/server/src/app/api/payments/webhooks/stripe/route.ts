@@ -44,6 +44,46 @@ export async function POST(req: NextRequest) {
   console.log('📨 Received Stripe event:', event.type)
   console.log('💳 Event ID:', event.id)
 
+  const payload = await getPayload({ config })
+
+  // Idempotency guard: Stripe retries deliveries, so the same event can arrive
+  // more than once. Skip events we've already processed.
+  const alreadyProcessed = await payload.find({
+    collection: 'stripe-webhook-events',
+    where: { eventId: { equals: event.id } },
+    limit: 1,
+  })
+
+  if (alreadyProcessed.totalDocs > 0) {
+    console.log('🔁 Duplicate delivery of event', event.id, '- skipping')
+    return NextResponse.json({ received: true, duplicate: true })
+  }
+
+  // Ordering guard: Stripe does not guarantee delivery order. If we've already
+  // processed a newer event for this subscription (e.g. subscription.deleted),
+  // don't let this older event overwrite that state.
+  const subscriptionId = getSubscriptionIdFromEvent(event)
+
+  if (subscriptionId) {
+    const newerEvent = await payload.find({
+      collection: 'stripe-webhook-events',
+      where: {
+        and: [
+          { subscriptionId: { equals: subscriptionId } },
+          { eventCreated: { greater_than: event.created } },
+        ],
+      },
+      limit: 1,
+    })
+
+    if (newerEvent.totalDocs > 0) {
+      console.log('⏭️ Stale event', event.id, '- a newer event for subscription', subscriptionId, 'was already processed, skipping')
+      // Record it so retries of this stale event are also skipped
+      await recordProcessedEvent(payload, event, subscriptionId)
+      return NextResponse.json({ received: true, stale: true })
+    }
+  }
+
   try {
     // Handle Stripe subscription events
     switch (event.type) {
@@ -76,10 +116,54 @@ export async function POST(req: NextRequest) {
         console.log('Event data:', JSON.stringify(event.data.object, null, 2))
     }
 
+    // Only record after successful processing so failed events are retried by Stripe
+    await recordProcessedEvent(payload, event, subscriptionId)
+
     return NextResponse.json({ received: true })
   } catch (error) {
     console.error('Error processing webhook:', error)
     return NextResponse.json({ error: 'Processing failed' }, { status: 500 })
+  }
+}
+
+/**
+ * Extract the subscription ID from subscription lifecycle events.
+ * Used for the ordering guard — only these events carry full subscription
+ * state that a stale delivery could overwrite.
+ */
+function getSubscriptionIdFromEvent(event: Stripe.Event): string | null {
+  switch (event.type) {
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+    case 'customer.subscription.deleted':
+      return (event.data.object as Stripe.Subscription).id
+    default:
+      return null
+  }
+}
+
+/**
+ * Persist a processed event ID so duplicate deliveries can be skipped.
+ * A concurrent duplicate delivery can hit the unique constraint on eventId —
+ * that just means the other delivery won, so the error is safe to swallow.
+ */
+async function recordProcessedEvent(
+  payload: Awaited<ReturnType<typeof getPayload>>,
+  event: Stripe.Event,
+  subscriptionId: string | null
+) {
+  try {
+    await payload.create({
+      collection: 'stripe-webhook-events',
+      data: {
+        eventId: event.id,
+        eventType: event.type,
+        eventCreated: event.created,
+        subscriptionId,
+      },
+    })
+  } catch (error) {
+    console.warn('⚠️ Could not record processed event', event.id, error)
   }
 }
 

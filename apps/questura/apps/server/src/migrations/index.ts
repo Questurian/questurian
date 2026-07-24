@@ -17,6 +17,7 @@ import * as migration_20260717_010000_add_users_social_link_platforms from './20
 import * as migration_20260717_020000_add_email_logs from './20260717_020000_add_email_logs'
 import * as migration_20260723_060311_add_itinerary_stop_moments from './20260723_060311_add_itinerary_stop_moments'
 import * as migration_20260723_180417_add_itinerary_moment_options from './20260723_180417_add_itinerary_moment_options'
+import * as migration_20260724_171322_add_stripe_webhook_events from './20260724_171322_add_stripe_webhook_events'
 
 export const migrations = [
   {
@@ -113,5 +114,10 @@ export const migrations = [
     up: migration_20260723_180417_add_itinerary_moment_options.up,
     down: migration_20260723_180417_add_itinerary_moment_options.down,
     name: '20260723_180417_add_itinerary_moment_options',
+  },
+  {
+    up: migration_20260724_171322_add_stripe_webhook_events.up,
+    down: migration_20260724_171322_add_stripe_webhook_events.down,
+    name: '20260724_171322_add_stripe_webhook_events',
   },
 ]
