@@ -333,7 +333,7 @@ export async function GET(req: NextRequest) {
       items,
     })
   } catch (error) {
-    const message = error instanceof Error && error.message ? error.message : 'Search failed.'
-    return NextResponse.json({ message }, { status: 500 })
+    console.error('Error searching articles:', error)
+    return NextResponse.json({ message: 'Search failed.' }, { status: 500 })
   }
 }

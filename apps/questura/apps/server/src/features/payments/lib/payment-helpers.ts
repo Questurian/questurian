@@ -1,40 +1,31 @@
 import { stripe } from './stripe'
 import type { StripePriceWithProduct } from '../types'
+import { logger } from '@/shared/utils/logger'
 
 /**
  * Converts Stripe Unix timestamp to JavaScript Date
  * Returns null for invalid/missing timestamps
  */
 export function convertStripeTimestamp(timestamp: number | null | undefined): Date | null {
-  // Log raw input for debugging
-  console.log('🔄 convertStripeTimestamp input:', { timestamp, type: typeof timestamp })
-
-  // Validate input
   if (timestamp === null || timestamp === undefined) {
-    console.warn('⚠️ convertStripeTimestamp received null/undefined timestamp')
     return null
   }
 
   // Stripe timestamps should be positive integers
   if (typeof timestamp !== 'number' || timestamp <= 0) {
-    console.warn('⚠️ convertStripeTimestamp received invalid timestamp:', timestamp)
+    logger.warn('convertStripeTimestamp received invalid timestamp', { timestamp })
     return null
   }
 
-  try {
-    const date = new Date(timestamp * 1000)
+  const date = new Date(timestamp * 1000)
 
-    // Validate that the resulting date is valid
-    if (isNaN(date.getTime())) {
-      console.warn('⚠️ convertStripeTimestamp resulted in invalid Date:', timestamp)
-      return null
-    }
-
-    return date
-  } catch (error) {
-    console.error('❌ Error converting Stripe timestamp:', timestamp, error)
+  // Validate that the resulting date is valid
+  if (isNaN(date.getTime())) {
+    logger.warn('convertStripeTimestamp resulted in invalid Date', { timestamp })
     return null
   }
+
+  return date
 }
 
 /**
@@ -56,7 +47,10 @@ export async function getSubscriptionProductName(subscriptionId: string): Promis
 
     return 'Premium Membership'
   } catch (error) {
-    console.error('Error fetching subscription product name:', error)
+    logger.error('Error fetching subscription product name', {
+      subscriptionId,
+      error: error instanceof Error ? error.message : String(error),
+    })
     return 'Premium Membership'
   }
 }
