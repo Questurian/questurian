@@ -7,7 +7,7 @@ import { sendMembershipConfirmationEmail, sendSubscriptionCancelledEmail } from 
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import Stripe from 'stripe'
-import type { StripeSubscriptionExpanded } from '@/payments/types'
+import type { StripeSubscriptionExpanded, UserSubscriptionUpdate } from '@/payments/types'
 import { APP_CONFIG } from '@/shared/config'
 import { findVisitorProfileByStripeCustomerId, splitDisplayName } from '@/features/visitor-auth/lib/visitor-profile'
 import { logger } from '@/shared/utils/logger'
@@ -227,7 +227,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   }
 
   // Extract affiliate referral ID from metadata if present (and feature enabled)
-  const updateData: any = {
+  const updateData: UserSubscriptionUpdate = {
     stripeSubscriptionId: subscriptionId,
     subscriptionStatus: 'active',
     subscriptionRenewsAt
@@ -239,7 +239,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       logger.info('Subscription created via affiliate referral', { referralId, subscriptionId })
       // Store affiliate referral info
       updateData.affiliateReferralId = referralId
-      updateData.affiliateReferredAt = new Date()
+      updateData.affiliateReferredAt = new Date().toISOString()
     }
   }
 
