@@ -9,7 +9,7 @@ import config from '@/payload.config'
 import Stripe from 'stripe'
 import type { StripeSubscriptionExpanded } from '@/payments/types'
 import { APP_CONFIG } from '@/shared/config'
-import { findVisitorProfileByStripeCustomerId } from '@/features/visitor-auth/lib/visitor-profile'
+import { findVisitorProfileByStripeCustomerId, splitDisplayName } from '@/features/visitor-auth/lib/visitor-profile'
 import { logger } from '@/shared/utils/logger'
 
 export async function POST(req: NextRequest) {
@@ -128,6 +128,36 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * Resolve the subscription's current period end as an ISO string, preferring
+ * the timestamp on the webhook payload and falling back to the Stripe API
+ * when the payload doesn't carry a usable value.
+ */
+async function resolveRenewalDate(subscription: Stripe.Subscription): Promise<string | null> {
+  const expandedSubscription = subscription as StripeSubscriptionExpanded
+
+  if (expandedSubscription.current_period_end) {
+    const convertedDate = convertStripeTimestamp(expandedSubscription.current_period_end)
+    if (convertedDate) {
+      return convertedDate.toISOString()
+    }
+  }
+
+  try {
+    const subscriptionDetails = await getStripeSubscriptionDetails(subscription.id)
+    if (subscriptionDetails?.currentPeriodEnd) {
+      return subscriptionDetails.currentPeriodEnd.toISOString()
+    }
+  } catch (error) {
+    logger.error('Error fetching subscription details from Stripe', {
+      subscriptionId: subscription.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+
+  return null
+}
+
+/**
  * Extract the subscription ID from subscription lifecycle events.
  * Used for the ordering guard — only these events carry full subscription
  * state that a stale delivery could overwrite.
@@ -220,9 +250,9 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   if (billingName) {
     const profile = await findVisitorProfileByStripeCustomerId(customerId)
     if (profile && !profile.firstName && !profile.lastName) {
-      const parts = billingName.split(/\s+/).filter(Boolean)
-      updateData.firstName = parts[0] ?? ''
-      updateData.lastName = parts.slice(1).join(' ')
+      const { firstName, lastName } = splitDisplayName(billingName)
+      updateData.firstName = firstName
+      updateData.lastName = lastName
     }
   }
 
@@ -248,41 +278,9 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string
 
   const status = mapStripeStatusToInternal(subscription.status)
-  const expandedSubscription = subscription as StripeSubscriptionExpanded
 
   // Get renewal date for active subscriptions
-  let subscriptionRenewsAt: string | null = null
-  if (status === 'active') {
-    // Try to get renewal date from webhook event data first
-    if (expandedSubscription.current_period_end) {
-      try {
-        const convertedDate = convertStripeTimestamp(expandedSubscription.current_period_end)
-        if (convertedDate) {
-          subscriptionRenewsAt = convertedDate.toISOString()
-        }
-      } catch (error) {
-        logger.error('Error converting current_period_end from webhook', {
-          subscriptionId: subscription.id,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-
-    // Fallback to Stripe API if webhook data failed
-    if (!subscriptionRenewsAt) {
-      try {
-        const subscriptionDetails = await getStripeSubscriptionDetails(subscription.id)
-        if (subscriptionDetails?.currentPeriodEnd) {
-          subscriptionRenewsAt = subscriptionDetails.currentPeriodEnd.toISOString()
-        }
-      } catch (error) {
-        logger.error('Error fetching subscription details from Stripe', {
-          subscriptionId: subscription.id,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-  }
+  const subscriptionRenewsAt = status === 'active' ? await resolveRenewalDate(subscription) : null
 
   await updateUserSubscription(customerId, {
     stripeSubscriptionId: subscription.id,
@@ -316,79 +314,20 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const cancelAtPeriodEnd = expandedSubscription.cancel_at_period_end || false
 
   // Get renewal date for active subscriptions, clear for inactive ones
-  let subscriptionRenewsAt: string | null = null
-  if (status === 'active') {
-    // Try to get renewal date from webhook event data first
-    if (expandedSubscription.current_period_end) {
-      try {
-        const convertedDate = convertStripeTimestamp(expandedSubscription.current_period_end)
-        if (convertedDate) {
-          subscriptionRenewsAt = convertedDate.toISOString()
-        }
-      } catch (error) {
-        logger.error('Error converting current_period_end from webhook', {
-          subscriptionId: subscription.id,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-
-    // Fallback to Stripe API if webhook data failed
-    if (!subscriptionRenewsAt) {
-      try {
-        const subscriptionDetails = await getStripeSubscriptionDetails(subscription.id)
-        if (subscriptionDetails?.currentPeriodEnd) {
-          subscriptionRenewsAt = subscriptionDetails.currentPeriodEnd.toISOString()
-        }
-      } catch (error) {
-        logger.error('Error fetching subscription details from Stripe', {
-          subscriptionId: subscription.id,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
-  }
+  const subscriptionRenewsAt = status === 'active' ? await resolveRenewalDate(subscription) : null
 
   // Set membershipExpiration when subscription is cancelled but still active
-  // Clear it when subscription is reactivated or renewed
+  // (the paid period runs to the same current-period-end a renewal would use).
+  // Stays null when the subscription is renewing, which clears any previous value.
   let membershipExpiration: string | null = null
   if (cancelAtPeriodEnd && status === 'active') {
-    // Subscription cancelled but still active until period end
-    if (expandedSubscription.current_period_end) {
-      try {
-        const convertedDate = convertStripeTimestamp(expandedSubscription.current_period_end)
-        if (convertedDate) {
-          membershipExpiration = convertedDate.toISOString()
-        }
-      } catch (error) {
-        logger.error('Error converting expiration date from webhook event', {
-          subscriptionId: subscription.id,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    } else {
-      // Fetch subscription details from Stripe API to get the period end date
-      try {
-        const subscriptionDetails = await getStripeSubscriptionDetails(subscription.id)
-        if (subscriptionDetails?.currentPeriodEnd) {
-          membershipExpiration = subscriptionDetails.currentPeriodEnd.toISOString()
-        }
-      } catch (error) {
-        logger.error('Error fetching subscription details from Stripe', {
-          subscriptionId: subscription.id,
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-    }
+    membershipExpiration = subscriptionRenewsAt
     if (membershipExpiration) {
       logger.info('Subscription cancelled but active until period end', {
         subscriptionId: subscription.id,
         membershipExpiration,
       })
     }
-  } else if (!cancelAtPeriodEnd && status === 'active') {
-    // Subscription was reactivated or renewed - clear expiration and cancel flag
-    membershipExpiration = null
   }
 
   await updateUserSubscription(customerId, {
