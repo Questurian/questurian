@@ -6,6 +6,8 @@ export interface UserSubscriptionUpdate {
   cancelAtPeriodEnd?: boolean
   firstName?: string
   lastName?: string
+  affiliateReferralId?: string
+  affiliateReferredAt?: string
 }
 
 export interface StripeCleanupResult {
