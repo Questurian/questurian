@@ -6,6 +6,22 @@ extend-ignore = E501,W292,E203
 # re-export each other's namespaces with `from x import *` (each already tagged
 # `# noqa: F401,F403`). F405 fires at every *use* of such a name, which cannot be
 # suppressed inline, so it is ignored for exactly the modules using that pattern.
+#
+# Converting these to explicit imports was evaluated (2026-07-25) and rejected.
+# The star imports do double duty: they bind names for local use AND form the
+# re-export surface other modules and the tests bind against. Measured:
+#   - 618 F405 uses over 80 distinct names in 7 files; every name does resolve
+#     to a directly star-imported module, so the *local* rewrite is mechanical.
+#   - But the modules re-export far more than they use — phases.py carries 133
+#     star-imported names in its namespace against 51 used locally, routes.py
+#     157 against 5. An explicit-import rewrite drops those pass-through names.
+#   - 32 of those pass-through names are reached elsewhere via attribute access
+#     (`routes.X`, `phases.X`), and the suite monkeypatches 65 distinct names,
+#     overwhelmingly as module attributes. Narrowing the surface would silently
+#     break patch targets rather than fail loudly.
+# The suite is a weak net for exactly this: test_url2blog_storage_routes leaked
+# live API calls for months while still passing in isolation, because a name was
+# bound from the wrong module. There is no CI. Leave these suppressions in place.
 per-file-ignores =
     apps/backend/app/features/url2blog/content/editorial_blocks.py:F405
     apps/backend/app/features/url2blog/content/sanitizers.py:F405
@@ -16,4 +32,7 @@ per-file-ignores =
     # routes.py additionally interleaves imports with code on purpose: the re-export
     # blocks must run after `router`/`logger` exist, and the pipeline_v2 phases are
     # imported at the bottom to close an intentional import cycle (see its docstring).
+    # Those bottom imports are already explicit, not star imports. E402 cannot be
+    # lifted: moving them to the top is an import cycle (routes -> phases -> routes),
+    # and dropping them breaks every test that patches url2blog_routes._pipeline_*.
     apps/backend/app/features/url2blog/routes.py:F405,E402
