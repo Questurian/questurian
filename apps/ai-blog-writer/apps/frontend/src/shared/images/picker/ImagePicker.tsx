@@ -2,7 +2,6 @@ import { type MouseEvent, type ReactNode, useEffect, useRef, useState } from 're
 import { createPortal } from 'react-dom'
 import {
   ImageUpload,
-  MultiVariantCropper,
   type ImageVariantType,
   type UploadImageResponse,
 } from '..'
@@ -10,20 +9,16 @@ import { fetchMediaAssets } from '../../api/payload/payload.api'
 import type { MediaAsset, MediaSet } from '../../api/payload/payload.types'
 import { searchPexelsImages, searchUnsplashImages } from '../external/external-images.api'
 import type { PexelsPhoto, UnsplashPhoto } from '../external/external-images.types'
-import { getPexelsPhotoImportUrl, getUnsplashPhotoImportUrl, buildImageFileNamePrefix } from '../external/external-import.utils'
+import { getPexelsPhotoImportUrl, getUnsplashPhotoImportUrl } from '../external/external-import.utils'
 import type { ImagePickerQuery, ImagePickerResult, ImagePickerSelectionMode } from './imagePicker.types'
-import {
-  formatMediaSetLabel,
-  getMediaAssetAltText,
-  isMediaSetSelected,
-  pickUploadedAssetId,
-  resolveAssetUrl,
-  resolveMediaSetPreviewAssetId,
-  resolveMediaSetPreviewUrl,
-} from './mediaSet.utils'
-import { useExternalImageImport, type ExternalImagePhoto } from './useExternalImageImport'
+import { pickUploadedAssetId } from './mediaSet.utils'
+import { useExternalImageImport } from './useExternalImageImport'
 import { useImagePickerData } from './useImagePickerData'
 import { useProviderImageSearch } from './useProviderImageSearch'
+import { useImagePickerSelectionBuffer } from './useImagePickerSelectionBuffer'
+import { buildUploadIdentity } from './imagePicker.utils'
+import { ImagePickerGrid } from './ImagePickerGrid'
+import { ExternalImagePanel, MultiSelectFooter } from './ExternalImagePanel'
 import './imagePicker.css'
 
 type ActiveTab = 'payload' | 'upload' | 'unsplash' | 'pexels'
@@ -54,24 +49,6 @@ export type ImagePickerProps = {
   onClose: () => void
 }
 
-
-function sanitizeRef(value: string): string {
-  return (
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 48) || 'image-picker'
-  )
-}
-
-function buildUploadIdentity(base: string, title: string) {
-  const externalRef = `${sanitizeRef(base)}_${Date.now()}`
-  return { externalRef, fileNamePrefix: buildImageFileNamePrefix(title, externalRef) }
-}
-
 export function ImagePicker({
   isOpen,
   token,
@@ -100,10 +77,7 @@ export function ImagePicker({
     buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle),
   )
 
-  // Source-agnostic multi-select buffer: ordered ids + a resolution map.
-  const [bufferIds, setBufferIds] = useState<number[]>([])
-  const [bufferAssets, setBufferAssets] = useState<Map<number, MediaAsset>>(new Map())
-  const [bufferMediaSets, setBufferMediaSets] = useState<Map<number, MediaSet>>(new Map())
+  const buffer = useImagePickerSelectionBuffer(requiredCount)
 
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -123,9 +97,7 @@ export function ImagePicker({
     if (!isOpen) return
     setActiveTab('payload')
     setSearch('')
-    setBufferIds([])
-    setBufferAssets(new Map())
-    setBufferMediaSets(new Map())
+    buffer.reset()
     setUploadIdentity(buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle))
     unsplash.reset()
     pexels.reset()
@@ -152,36 +124,6 @@ export function ImagePicker({
     }
   }, [isOpen, onClose])
 
-  const addToBuffer = (id: number, asset: MediaAsset | null, mode: 'toggle' | 'rolling') => {
-    setBufferAssets((current) => {
-      if (!asset) return current
-      const next = new Map(current)
-      next.set(id, asset)
-      return next
-    })
-    setBufferIds((current) => {
-      if (current.includes(id)) {
-        return mode === 'toggle' ? current.filter((value) => value !== id) : current
-      }
-      if (current.length < requiredCount) return [...current, id]
-      // Buffer full: rolling drops the oldest; toggle ignores the extra click.
-      return mode === 'rolling' ? [...current.slice(1), id] : current
-    })
-  }
-
-  const addMediaSetToBuffer = (mediaSet: MediaSet) => {
-    setBufferMediaSets((current) => {
-      const next = new Map(current)
-      next.set(mediaSet.id, mediaSet)
-      return next
-    })
-    setBufferIds((current) => {
-      if (current.includes(mediaSet.id)) return current.filter((value) => value !== mediaSet.id)
-      if (current.length < requiredCount) return [...current, mediaSet.id]
-      return current
-    })
-  }
-
   if (!isOpen) return null
 
   const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -199,7 +141,7 @@ export function ImagePicker({
 
   const handlePayloadAssetClick = (asset: MediaAsset) => {
     if (isMulti) {
-      addToBuffer(asset.id, asset, 'toggle')
+      buffer.addToBuffer(asset.id, asset, 'toggle')
       return
     }
     emitAssets([asset])
@@ -208,7 +150,7 @@ export function ImagePicker({
 
   const handleMediaSetClick = (mediaSet: (typeof data.mediaSets)[number]) => {
     if (isMulti) {
-      addMediaSetToBuffer(mediaSet)
+      buffer.addMediaSetToBuffer(mediaSet)
       return
     }
     onSelect({ kind: 'mediaSets', mediaSets: [mediaSet] })
@@ -222,8 +164,8 @@ export function ImagePicker({
 
   const handleConfirmMulti = () => {
     if (query.browseUnit === 'mediaSets') {
-      const mediaSets = bufferIds
-        .map((id) => bufferMediaSets.get(id))
+      const mediaSets = buffer.bufferIds
+        .map((id) => buffer.bufferMediaSets.get(id))
         .filter((mediaSet): mediaSet is MediaSet => Boolean(mediaSet))
       if (mediaSets.length !== requiredCount) return
       onSelect({ kind: 'mediaSets', mediaSets })
@@ -231,8 +173,8 @@ export function ImagePicker({
       return
     }
 
-    const assets = bufferIds
-      .map((id) => bufferAssets.get(id))
+    const assets = buffer.bufferIds
+      .map((id) => buffer.bufferAssets.get(id))
       .filter((asset): asset is MediaAsset => Boolean(asset))
     if (assets.length !== requiredCount) return
     emitAssets(assets)
@@ -254,7 +196,7 @@ export function ImagePicker({
     if (assetId === null || !token) return
     try {
       const res = await fetchMediaAssets(token, { limit: 1, id: assetId })
-      addToBuffer(assetId, res.docs[0] ?? null, 'rolling')
+      buffer.addToBuffer(assetId, res.docs[0] ?? null, 'rolling')
     } catch {
       // Import succeeded but resolution failed; the asset is still in Payload.
     }
@@ -268,164 +210,6 @@ export function ImagePicker({
         : activeTab === 'unsplash'
           ? 'Search Unsplash'
           : 'Search Pexels'
-
-  const renderExternalCropEditor = () => {
-    const draft = importer.cropDraft
-    if (!draft) return null
-    const providerLabel = draft.provider === 'unsplash' ? 'Unsplash' : 'Pexels'
-    return (
-      <div className="ip-external-crop">
-        <p className="ip-masonry-header">Cropping selected {providerLabel} image before upload.</p>
-        <label className="ip-external-crop__label">Alt Text</label>
-        <input
-          type="text"
-          className="ip-external-crop__input"
-          value={draft.altText}
-          onChange={(event) => importer.updateDraft({ altText: event.target.value })}
-          placeholder="Describe the image for accessibility"
-          disabled={importer.isUploading}
-        />
-        <label className="ip-external-crop__label">
-          Photographer Credit <span className="ip-required">*</span>
-        </label>
-        <input
-          type="text"
-          className="ip-external-crop__input"
-          value={draft.photographerCredit}
-          onChange={(event) => importer.updateDraft({ photographerCredit: event.target.value })}
-          placeholder={`Example: Photographer / ${providerLabel}`}
-          disabled={importer.isUploading}
-        />
-        {importer.error && <p className="ip-error">{importer.error}</p>}
-        {importer.uploadProgress && (
-          <p className="ip-external-crop__progress">
-            {importer.uploadProgress.message} ({importer.uploadProgress.progress}%)
-          </p>
-        )}
-        <div className="ip-external-crop__actions">
-          <button type="button" className="ip-btn" onClick={importer.cancel} disabled={importer.isUploading}>
-            Back to Results
-          </button>
-        </div>
-        <MultiVariantCropper
-          file={draft.file}
-          fileNamePrefix={draft.fileNamePrefix}
-          onConfirm={(variantFiles) => {
-            void handleExternalCropConfirm(variantFiles)
-          }}
-          onCancel={importer.cancel}
-        />
-      </div>
-    )
-  }
-
-  const renderExternalPanel = (
-    provider: 'unsplash' | 'pexels',
-    controller: typeof unsplash | typeof pexels,
-    importUrl: (photo: ExternalImagePhoto) => string,
-  ) => {
-    if (importer.cropDraft?.provider === provider) return renderExternalCropEditor()
-    return (
-      <>
-        <div className="ip-search-row">
-          <input
-            type="text"
-            className="ip-search-input"
-            placeholder={`Search ${provider === 'unsplash' ? 'Unsplash' : 'Pexels'}...`}
-            value={controller.query}
-            onChange={(event) => controller.setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                void controller.run()
-              }
-            }}
-          />
-          <select
-            className="ip-search-select"
-            value={controller.orientation}
-            onChange={(event) =>
-              controller.setOrientation(event.target.value as typeof controller.orientation)
-            }
-          >
-            <option value="">Any orientation</option>
-            <option value="landscape">Landscape</option>
-            <option value="portrait">Portrait</option>
-            <option value="square">Square</option>
-          </select>
-          <button
-            type="button"
-            className="ip-btn"
-            onClick={() => void controller.run()}
-            disabled={controller.isSearching || !controller.query.trim()}
-          >
-            {controller.isSearching ? 'Searching...' : 'Search'}
-          </button>
-        </div>
-
-        {controller.error && <p className="ip-error">{controller.error}</p>}
-        {importer.error && <p className="ip-error">{importer.error}</p>}
-        {locationRef === null && controller.results.length > 0 && (
-          <p className="ip-notice">Set a location to import images into Payload.</p>
-        )}
-
-        {controller.results.length > 0 ? (
-          <>
-            <p className="ip-masonry-header">
-              Click an image to open the crop editor before importing it into Payload.
-            </p>
-            <div className="ip-masonry">
-              {controller.results.map((photo) => {
-                const isImporting = importer.importingId === photo.id
-                return (
-                  <button
-                    key={photo.id}
-                    type="button"
-                    className={`ip-card ip-masonry-item${isImporting ? ' ip-card--importing' : ''}`}
-                    onClick={() => void importer.prepareCropDraft(photo as ExternalImagePhoto, provider)}
-                    disabled={importer.importingId !== null || locationRef === null || importer.isUploading}
-                    title={photo.photographer ?? 'Open crop editor'}
-                  >
-                    <img
-                      className="ip-card__thumb ip-card__thumb--natural"
-                      src={importUrl(photo as ExternalImagePhoto)}
-                      alt={photo.alt ?? `${provider} photo`}
-                      loading="lazy"
-                      width={photo.width}
-                      height={photo.height}
-                    />
-                    {isImporting && (
-                      <div className="ip-card__spinner">
-                        <span className="ip-spinner" />
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-            {isMulti && (
-              <div className="ip-footer">
-                <span className="ip-footer__count">
-                  Selected {bufferIds.length}/{requiredCount}
-                </span>
-                <button
-                  type="button"
-                  className="ip-btn ip-btn--primary"
-                  onClick={handleConfirmMulti}
-                  disabled={bufferIds.length !== requiredCount}
-                >
-                  {confirmLabel}
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          !controller.isSearching &&
-          !controller.error && <p className="ip-empty">Enter a query and click Search.</p>
-        )}
-      </>
-    )
-  }
 
   return createPortal(
     <div className="ip-overlay" ref={overlayRef} onClick={handleOverlayClick} role="presentation">
@@ -524,26 +308,19 @@ export function ImagePicker({
                   data={data}
                   browseUnit={query.browseUnit}
                   selectedId={selectedId}
-                  bufferIds={isMulti ? bufferIds : null}
+                  bufferIds={isMulti ? buffer.bufferIds : null}
                   onAssetClick={handlePayloadAssetClick}
                   onMediaSetClick={handleMediaSetClick}
                 />
               )}
 
               {isMulti && (
-                <div className="ip-footer">
-                  <span className="ip-footer__count">
-                    Selected {bufferIds.length}/{requiredCount}
-                  </span>
-                  <button
-                    type="button"
-                    className="ip-btn ip-btn--primary"
-                    onClick={handleConfirmMulti}
-                    disabled={bufferIds.length !== requiredCount}
-                  >
-                    {confirmLabel}
-                  </button>
-                </div>
+                <MultiSelectFooter
+                  selectedCount={buffer.bufferIds.length}
+                  requiredCount={requiredCount}
+                  confirmLabel={confirmLabel}
+                  onConfirm={handleConfirmMulti}
+                />
               )}
             </>
           )}
@@ -566,110 +343,43 @@ export function ImagePicker({
             </div>
           )}
 
-          {activeTab === 'unsplash' &&
-            renderExternalPanel('unsplash', unsplash, (photo) => getUnsplashPhotoImportUrl(photo as UnsplashPhoto))}
-          {activeTab === 'pexels' &&
-            renderExternalPanel('pexels', pexels, (photo) => getPexelsPhotoImportUrl(photo as PexelsPhoto))}
+          {activeTab === 'unsplash' && (
+            <ExternalImagePanel
+              provider="unsplash"
+              controller={unsplash}
+              importUrl={(photo) => getUnsplashPhotoImportUrl(photo as UnsplashPhoto)}
+              importer={importer}
+              locationRef={locationRef}
+              isMulti={isMulti}
+              bufferIds={buffer.bufferIds}
+              requiredCount={requiredCount}
+              confirmLabel={confirmLabel}
+              onConfirmMulti={handleConfirmMulti}
+              onCropConfirm={(variantFiles) => {
+                void handleExternalCropConfirm(variantFiles)
+              }}
+            />
+          )}
+          {activeTab === 'pexels' && (
+            <ExternalImagePanel
+              provider="pexels"
+              controller={pexels}
+              importUrl={(photo) => getPexelsPhotoImportUrl(photo as PexelsPhoto)}
+              importer={importer}
+              locationRef={locationRef}
+              isMulti={isMulti}
+              bufferIds={buffer.bufferIds}
+              requiredCount={requiredCount}
+              confirmLabel={confirmLabel}
+              onConfirmMulti={handleConfirmMulti}
+              onCropConfirm={(variantFiles) => {
+                void handleExternalCropConfirm(variantFiles)
+              }}
+            />
+          )}
         </div>
       </div>
     </div>,
     document.body,
-  )
-}
-
-type ImagePickerGridProps = {
-  data: ReturnType<typeof useImagePickerData>
-  browseUnit: ImagePickerQuery['browseUnit']
-  selectedId: number | null
-  bufferIds: number[] | null
-  onAssetClick: (asset: MediaAsset) => void
-  onMediaSetClick: (mediaSet: ReturnType<typeof useImagePickerData>['mediaSets'][number]) => void
-}
-
-function ImagePickerGrid({
-  data,
-  browseUnit,
-  selectedId,
-  bufferIds,
-  onAssetClick,
-  onMediaSetClick,
-}: ImagePickerGridProps) {
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  const gridRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (data.error || !data.hasMore || data.isLoading) return
-    const el = sentinelRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) data.loadMore()
-      },
-      { root: gridRef.current, rootMargin: '0px 0px 320px 0px', threshold: 0 },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [data])
-
-  const isEmpty = browseUnit === 'mediaSets' ? data.mediaSets.length === 0 : data.assets.length === 0
-
-  return (
-    <div ref={gridRef} className="ip-grid">
-      {browseUnit === 'mediaSets'
-        ? data.mediaSets.map((mediaSet) => {
-            const previewUrl = resolveMediaSetPreviewUrl(mediaSet)
-            const previewAssetId = resolveMediaSetPreviewAssetId(mediaSet)
-            const label = formatMediaSetLabel(mediaSet)
-            const bufferIndex = bufferIds ? bufferIds.indexOf(mediaSet.id) : -1
-            const isSelected = bufferIds ? bufferIndex !== -1 : isMediaSetSelected(mediaSet, selectedId)
-            return (
-              <button
-                key={mediaSet.id}
-                type="button"
-                className={`ip-card${isSelected ? ' ip-card--selected' : ''}`}
-                onClick={() => onMediaSetClick(mediaSet)}
-                disabled={previewAssetId === null && !previewUrl}
-              >
-                {previewUrl ? (
-                  <img className="ip-card__thumb" src={previewUrl} alt={mediaSet.alt_text ?? label} loading="lazy" />
-                ) : (
-                  <div className="ip-card__thumb ip-card__thumb--empty">No preview</div>
-                )}
-                <div className="ip-card__info">
-                  <span className="ip-card__name">{label}</span>
-                </div>
-                {isSelected && <div className="ip-card__badge">{bufferIds ? bufferIndex + 1 : '✓'}</div>}
-              </button>
-            )
-          })
-        : data.assets.map((asset) => {
-            const bufferIndex = bufferIds ? bufferIds.indexOf(asset.id) : -1
-            const isSelected = bufferIds ? bufferIndex !== -1 : selectedId === asset.id
-            return (
-              <button
-                key={asset.id}
-                type="button"
-                className={`ip-card${isSelected ? ' ip-card--selected' : ''}`}
-                onClick={() => onAssetClick(asset)}
-              >
-                <img
-                  className="ip-card__thumb"
-                  src={resolveAssetUrl(asset)}
-                  alt={getMediaAssetAltText(asset) || asset.filename}
-                  loading="lazy"
-                />
-                <div className="ip-card__info">
-                  <span className="ip-card__name">{asset.filename}</span>
-                </div>
-                {isSelected && <div className="ip-card__badge">{bufferIds ? bufferIndex + 1 : '✓'}</div>}
-              </button>
-            )
-          })}
-
-      {data.hasMore && <div ref={sentinelRef} style={{ height: 2, gridColumn: '1 / -1' }} />}
-
-      {isEmpty && !data.isLoading && <p className="ip-empty">No images found.</p>}
-      {data.isLoading && !data.isBootstrapping && <p className="ip-empty">Loading more...</p>}
-    </div>
   )
 }
