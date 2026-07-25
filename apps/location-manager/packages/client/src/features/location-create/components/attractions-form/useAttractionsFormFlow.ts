@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { AddAttractionsFormData } from "../../validation/add-attractions.schema";
 import type { AttractionsFormSection } from "./attractionsForm.types";
@@ -31,9 +31,11 @@ export function useAttractionsFormFlow({
   isPrefillReady,
   onRunGooglePrefill,
 }: Params) {
-  const [activeSection, setActiveSection] =
+  const [selectedSection, setSelectedSection] =
     useState<AttractionsFormSection>("step1");
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const activeSection =
+    isPrefillReady || selectedSection === "step1" ? selectedSection : "step1";
 
   const hasValue = (value: string | undefined) =>
     Boolean(value && value.trim().length > 0);
@@ -71,7 +73,7 @@ export function useAttractionsFormFlow({
     section === "step1" || isPrefillReady;
 
   const goToSection = (section: AttractionsFormSection) => {
-    if (canOpenSection(section)) setActiveSection(section);
+    if (canOpenSection(section)) setSelectedSection(section);
   };
 
   const goToPreviousSection = () => {
@@ -92,15 +94,9 @@ export function useAttractionsFormFlow({
 
   const handleContinue = async () => {
     setIsAdvancing(true);
-    if (await onRunGooglePrefill()) setActiveSection("entities");
+    if (await onRunGooglePrefill()) setSelectedSection("entities");
     setIsAdvancing(false);
   };
-
-  useEffect(() => {
-    if (!isPrefillReady && activeSection !== "step1") {
-      setActiveSection("step1");
-    }
-  }, [activeSection, isPrefillReady]);
 
   return {
     activeSection,
