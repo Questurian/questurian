@@ -1,73 +1,31 @@
-import {
-  useDeferredValue,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState
-} from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
+import type { HomepageHotelGridSelection } from './hotelGridTypes'
 import type {
-  HomepageHotelGridCandidate,
-  HomepageHotelGridCandidatesResponse,
-  HomepageHotelGridInvalidItem,
-  HomepageHotelGridItemRef,
-  HomepageHotelGridSelection
-} from './hotelGridTypes'
+  UseHomepageHotelGridSlotsOptions,
+  UseHomepageHotelGridSlotsResult
+} from './homepageHotelGridSlots.types'
+import {
+  areHotelSlotListsEqual,
+  buildHotelGridSaveItems,
+  mapHotelInvalidItemsBySlot
+} from './homepageHotelGridSlots.utils'
+import { useHomepageHotelGridActions } from './useHomepageHotelGridActions'
+import { useHomepageHotelGridCandidates } from './useHomepageHotelGridCandidates'
+import { useHomepageHotelGridDraftSlots } from './useHomepageHotelGridDraftSlots'
+import { useHomepageHotelGridSaveMutation } from './useHomepageHotelGridSaveMutation'
 
-const CANDIDATE_PAGE_SIZE = 24
+export type {
+  HotelGridCandidateParams,
+  HotelGridSlotValue,
+  UseHomepageHotelGridSlotsOptions,
+  UseHomepageHotelGridSlotsResult
+} from './homepageHotelGridSlots.types'
 
-export type HotelGridSlotValue = HomepageHotelGridCandidate | null
-
-function createEmptySlots(count: number): HotelGridSlotValue[] {
-  return Array.from({ length: count }, () => null)
-}
-
-function mapSelectionToSlots(
-  selection: HomepageHotelGridSelection
-): HotelGridSlotValue[] {
-  const slots = createEmptySlots(selection.totalSlots)
-  for (const item of selection.items) {
-    if (!item.slot) continue
-    const slotIndex = item.slot - 1
-    if (slotIndex < 0 || slotIndex >= slots.length) continue
-    slots[slotIndex] = item
-  }
-  return slots
-}
-
-function areSlotListsEqual(
-  left: HotelGridSlotValue[] | null,
-  right: HotelGridSlotValue[]
-): boolean {
-  if (!left) return false
-  return (
-    left.length === right.length &&
-    left.every((item, index) => item?.id === right[index]?.id)
-  )
-}
-
-export type HotelGridCandidateParams = {
-  query?: string
-  page?: number
-  limit?: number
-}
-
-export function useHomepageHotelGridSlots(options: {
-  token: string | null
-  canManage: boolean
-  selection: HomepageHotelGridSelection
-  saveSelection: (
-    token: string,
-    items: HomepageHotelGridItemRef[],
-    slotCount?: number
-  ) => Promise<HomepageHotelGridSelection>
-  fetchCandidates: (
-    token: string,
-    params: HotelGridCandidateParams
-  ) => Promise<HomepageHotelGridCandidatesResponse>
-  selectionQueryKey: unknown[]
-}) {
+export function useHomepageHotelGridSlots(
+  options: UseHomepageHotelGridSlotsOptions
+): UseHomepageHotelGridSlotsResult {
   const {
     token,
     canManage,
@@ -76,38 +34,22 @@ export function useHomepageHotelGridSlots(options: {
     fetchCandidates,
     selectionQueryKey
   } = options
-  const [searchValue, setSearchValue] = useState('')
-  const deferredSearchValue = useDeferredValue(searchValue.trim())
-  const [candidatePage, setCandidatePage] = useState(1)
-  const [draftSlots, setDraftSlots] = useState<HotelGridSlotValue[] | null>(
-    null
+  const draftState = useHomepageHotelGridDraftSlots(
+    selection,
+    selectionQueryKey
   )
-  const [savedSlots, setSavedSlots] = useState<HotelGridSlotValue[]>([])
-  const [savedInvalidItems, setSavedInvalidItems] = useState<
-    HomepageHotelGridInvalidItem[]
-  >([])
-  const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null)
-  const [resultMessage, setResultMessage] = useState<string | null>(null)
-
-  const selectionKeyJson = JSON.stringify(selectionQueryKey)
-  const prevSelectionKeyJsonRef = useRef<string | null>(null)
-  const prevSelectionRef = useRef<HomepageHotelGridSelection | null>(null)
-
-  useLayoutEffect(() => {
-    if (
-      prevSelectionKeyJsonRef.current === selectionKeyJson &&
-      prevSelectionRef.current === selection
-    ) {
-      return
-    }
-    prevSelectionKeyJsonRef.current = selectionKeyJson
-    prevSelectionRef.current = selection
-    const nextSlots = mapSelectionToSlots(selection)
-    setDraftSlots(nextSlots)
-    setSavedSlots(nextSlots)
-    setSavedInvalidItems(selection.invalidItems)
-    setPickerSlotIndex(null)
-  }, [selection, selectionKeyJson])
+  const {
+    draftSlots,
+    savedSlots,
+    savedInvalidItems,
+    pickerSlotIndex,
+    resultMessage,
+    setPickerSlotIndex,
+    setResultMessage,
+    applySelection,
+    updateSlots,
+    resetToSavedSlots
+  } = draftState
 
   const selectionQuery = {
     data: selection,
@@ -117,25 +59,12 @@ export function useHomepageHotelGridSlots(options: {
     isFetching: false
   } as ReturnType<typeof useQuery<HomepageHotelGridSelection>>
 
-  useEffect(() => {
-    setCandidatePage(1)
-  }, [deferredSearchValue])
-
-  const candidatesQuery = useQuery({
-    queryKey: [
-      ...selectionQueryKey,
-      'hotel-candidates',
-      deferredSearchValue,
-      candidatePage
-    ],
-    queryFn: () =>
-      fetchCandidates(token!, {
-        query: deferredSearchValue || undefined,
-        page: candidatePage,
-        limit: CANDIDATE_PAGE_SIZE
-      }),
-    enabled: Boolean(token && canManage && pickerSlotIndex !== null),
-    placeholderData: (previousData) => previousData
+  const candidateState = useHomepageHotelGridCandidates({
+    token,
+    canManage,
+    fetchCandidates,
+    selectionQueryKey,
+    pickerSlotIndex
   })
 
   const slots = draftSlots ?? savedSlots
@@ -145,18 +74,15 @@ export function useHomepageHotelGridSlots(options: {
     currentSaveSlotCountRef.current = slots.length
   }, [slots.length])
 
-  const saveMutation = useMutation({
-    mutationFn: (items: HomepageHotelGridItemRef[]) =>
-      saveSelection(token!, items, currentSaveSlotCountRef.current),
-    onSuccess: (selection) => {
-      const nextSlots = mapSelectionToSlots(selection)
-      setSavedSlots(nextSlots)
-      setDraftSlots(nextSlots)
-      setSavedInvalidItems(selection.invalidItems)
-      setPickerSlotIndex(null)
+  const saveMutation = useHomepageHotelGridSaveMutation({
+    token,
+    saveSelection,
+    slotCountRef: currentSaveSlotCountRef,
+    onSuccess: (nextSelection) => {
+      applySelection(nextSelection)
       setResultMessage('Homepage hotel grid saved.')
     },
-    onError: (error: unknown) => {
+    onError: (error) => {
       setResultMessage(
         error instanceof Error
           ? error.message
@@ -165,114 +91,44 @@ export function useHomepageHotelGridSlots(options: {
     }
   })
 
-  const usedIds = new Set(slots.flatMap((item) => (item ? [item.id] : [])))
-  const hasAllSlotsFilled = slots.every((item) => item !== null)
-  const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false
+  const hasUnsavedChanges = !areHotelSlotListsEqual(draftSlots, savedSlots)
   const saveDisabled =
-    !token || !hasAllSlotsFilled || saveMutation.isPending || !hasUnsavedChanges
-  const invalidItemsBySlot = new Map<number, HomepageHotelGridInvalidItem>()
-  for (const item of savedInvalidItems) invalidItemsBySlot.set(item.slot, item)
-
-  function updateSlots(
-    transform: (current: HotelGridSlotValue[]) => HotelGridSlotValue[]
-  ) {
-    setDraftSlots((current) => {
-      const base = current ?? savedSlots
-      return transform([...base])
-    })
-    setResultMessage(null)
-  }
-
-  function handleCandidatePick(candidate: HomepageHotelGridCandidate) {
-    if (pickerSlotIndex === null) return
-    updateSlots((current) => {
-      const next = [...current]
-      next[pickerSlotIndex] = candidate
-      return next
-    })
-    setPickerSlotIndex(null)
-  }
-
-  function handleMove(slotIndex: number, direction: -1 | 1) {
-    updateSlots((current) => {
-      const nextIndex = slotIndex + direction
-      if (nextIndex < 0 || nextIndex >= current.length) return current
-      const next = [...current]
-      const currentValue = next[slotIndex]
-      next[slotIndex] = next[nextIndex]
-      next[nextIndex] = currentValue
-      return next
-    })
-  }
-
-  function handleReorderAll(newSlots: HotelGridSlotValue[]) {
-    updateSlots((current) => {
-      if (newSlots.length !== current.length) return current
-      return [...newSlots]
-    })
-  }
-
-  function handleResizeSlotCount(slotCount: number) {
-    if (slotCount < 0) return
-    if (pickerSlotIndex !== null && pickerSlotIndex >= slotCount) {
-      setPickerSlotIndex(null)
-    }
-    updateSlots((current) => {
-      if (slotCount === current.length) return current
-      if (slotCount < current.length) return current.slice(0, slotCount)
-
-      return [
-        ...current,
-        ...Array.from({ length: slotCount - current.length }, () => null)
-      ]
-    })
-  }
-
-  function handleRemove(slotIndex: number) {
-    updateSlots((current) => {
-      const next = [...current]
-      next[slotIndex] = null
-      return next
-    })
-  }
-
-  function handleReset() {
-    setDraftSlots([...savedSlots])
-    setPickerSlotIndex(null)
-    setResultMessage('Local changes discarded. Restored saved hotel selection.')
-  }
+    !token ||
+    slots.some((item) => item === null) ||
+    saveMutation.isPending ||
+    !hasUnsavedChanges
+  const actions = useHomepageHotelGridActions({
+    pickerSlotIndex,
+    setPickerSlotIndex,
+    updateSlots,
+    resetToSavedSlots
+  })
 
   function handleSave() {
     if (saveDisabled) return
-    const items = slots.flatMap((item) => (item ? [{ id: item.id }] : []))
-    saveMutation.mutate(items)
+    saveMutation.mutate(buildHotelGridSaveItems(slots))
   }
 
   return {
     selectionQuery,
-    candidatesQuery,
+    candidatesQuery: candidateState.candidatesQuery,
     saveMutation,
     slots,
     savedSlots,
+    draftSlots,
     savedInvalidItems,
     pickerSlotIndex,
-    usedIds,
+    usedIds: new Set(slots.flatMap((item) => (item ? [item.id] : []))),
     hasUnsavedChanges,
     saveDisabled,
-    invalidItemsBySlot,
+    invalidItemsBySlot: mapHotelInvalidItemsBySlot(savedInvalidItems),
     resultMessage,
-    searchValue,
-    candidatePage,
-    handleCandidatePick,
-    handleMove,
-    handleReorderAll,
-    handleResizeSlotCount,
-    handleRemove,
-    handleReset,
+    searchValue: candidateState.searchValue,
+    candidatePage: candidateState.candidatePage,
+    ...actions,
     handleSave,
-    setSearchValue,
-    setCandidatePage,
-    setPickerSlotIndex,
-    draftSlots
+    setSearchValue: candidateState.setSearchValue,
+    setCandidatePage: candidateState.setCandidatePage,
+    setPickerSlotIndex
   }
 }
