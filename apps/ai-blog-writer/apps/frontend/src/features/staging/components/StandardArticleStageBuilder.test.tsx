@@ -1,5 +1,5 @@
 /* @vitest-environment jsdom */
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { StandardArticleStageBuilder } from './StandardArticleStageBuilder'
@@ -235,6 +235,20 @@ describe('StandardArticleStageBuilder', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue to Step 2' }))
 
     expect(screen.getByText('Step 1 requires an article title.')).toBeInTheDocument()
+  })
+
+  it('applies an AI-generated slug through the staged Draft update boundary', async () => {
+    mockedViewModel = buildViewModel()
+
+    renderBuilder()
+
+    fireEvent.click(screen.getByRole('button', { name: 'AI' }))
+
+    await waitFor(() => {
+      expect(mockedViewModel.sidebarProps.onUpdateStagedArticle).toHaveBeenCalledWith({
+        payloadSlug: 'rewritten',
+      })
+    })
   })
 
   it('allows Step 2 to pass without a featured image', () => {
