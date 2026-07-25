@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mapFoursquarePlaceToAccommodationsHints } from "./foursquare-api.client";
+import { mapFoursquarePlaceToAccommodationsHints } from "./foursquare-accommodations.mapper";
 
 describe("mapFoursquarePlaceToAccommodationsHints", () => {
   test("maps structured Foursquare price, audience, wifi, and parking fields", () => {

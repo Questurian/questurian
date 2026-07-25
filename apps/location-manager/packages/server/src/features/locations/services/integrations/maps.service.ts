@@ -2,10 +2,8 @@ import type { CreateMapsRequest, Location, LocationCategory, LocationResponse } 
 import type { GooglePrefillResult, TripadvisorPrefillFields } from "./maps/maps.types";
 import type { PatchMapsDto } from "../../validation/schemas/maps.schemas";
 import { EnvConfig } from "@server/shared/config/env.config";
-import {
-  type AccommodationsApiHints,
-  FoursquareApiClient,
-} from "./clients/foursquare-api.client";
+import { FoursquareApiClient } from "./clients/foursquare-api.client";
+import type { AccommodationsApiHints } from "./clients/foursquare.types";
 import { addMapsLocationOperation } from "./maps/add-maps-location.operation";
 import { resolveGooglePrefillOperation } from "./maps/prefill.operation";
 import { updateMapsLocationByIdOperation } from "./maps/update-maps-location.operation";

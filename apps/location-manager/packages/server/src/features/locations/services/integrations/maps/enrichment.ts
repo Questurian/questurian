@@ -1,7 +1,7 @@
 import type { LocationCategory } from "../../../models/location";
 import type { TripadvisorPrefillFields } from "./maps.types";
 import type { MapsService } from "../maps.service";
-import type { AccommodationsApiHints } from "../clients/foursquare-api.client";
+import type { AccommodationsApiHints } from "../clients/foursquare.types";
 import { fetchPlaceTypes, mapGoogleTypesToDiningType } from "../google-dining-type";
 import { extractTripadvisorPrefillFields } from "./tripadvisor-prefill";
 import {

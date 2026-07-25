@@ -5,10 +5,8 @@ import type { EnvConfig } from "@server/shared/config/env.config";
 import type { TaxonomyService } from "../../taxonomy/taxonomy.service";
 import type { TaxonomyCorrectionService } from "../../taxonomy/taxonomy-correction.service";
 import type { PayloadApiClient } from "../clients/payload-api.client";
-import type {
-  AccommodationsApiHints,
-  FoursquareApiClient,
-} from "../clients/foursquare-api.client";
+import type { FoursquareApiClient } from "../clients/foursquare-api.client";
+import type { AccommodationsApiHints } from "../clients/foursquare.types";
 import type { TripAdvisorPlaceService } from "../tripadvisor-place.service";
 
 export interface TripadvisorPrefillFields {
