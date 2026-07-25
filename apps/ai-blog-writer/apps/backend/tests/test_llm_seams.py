@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from app.features.editor_assist import writer_models
@@ -139,6 +141,58 @@ def test_gemini_tool_schema_drops_unsupported_keywords():
         },
         "required": ["seoTitle"],
     }
+
+
+def test_gemini_tool_schema_drops_benign_keywords_quietly(caplog):
+    with caplog.at_level(logging.WARNING, logger=llm_client.__name__):
+        llm_client._gemini_tool_schema(
+            {
+                "type": "object",
+                "title": "Patch",
+                "additionalProperties": False,
+                "properties": {"a": {"type": "string", "examples": ["x"]}},
+            }
+        )
+
+    assert caplog.records == []
+
+
+def test_gemini_tool_schema_reports_dropped_constraints(caplog):
+    with caplog.at_level(logging.WARNING, logger=llm_client.__name__):
+        cleaned = llm_client._gemini_tool_schema(
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "seoTitle": {"type": "string", "maxLength": 60},
+                    "target": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+                    "tags": {
+                        "type": "array",
+                        "items": {"$ref": "#/$defs/tag"},
+                    },
+                },
+            },
+            tool_name="emit_seo_patch",
+        )
+
+    # The rejected keywords still have to go -- Gemini would 400 otherwise.
+    assert cleaned == {
+        "type": "object",
+        "properties": {
+            "seoTitle": {"type": "string"},
+            "target": {},
+            "tags": {"type": "array", "items": {}},
+        },
+    }
+
+    assert len(caplog.records) == 1
+    message = caplog.records[0].getMessage()
+    assert "emit_seo_patch" in message
+    assert "properties.seoTitle.maxLength" in message
+    assert "properties.target.anyOf" in message
+    assert "properties.tags.items.$ref" in message
+    # additionalProperties is expected collateral, not a reportable loss.
+    assert "additionalProperties" not in message
 
 
 def test_structured_tool_call_keeps_requested_small_budget(monkeypatch):

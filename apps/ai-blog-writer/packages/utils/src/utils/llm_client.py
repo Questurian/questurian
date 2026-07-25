@@ -292,26 +292,72 @@ _GEMINI_SCHEMA_KEYS = {
     "items",
 }
 
+# Keywords Gemini cannot accept whose removal does not change which payloads
+# satisfy the schema (or only relaxes an anti-hallucination hint). These are
+# dropped silently. Everything else outside _GEMINI_SCHEMA_KEYS constrains the
+# accepted value space -- `anyOf`, `$ref`, `minimum`, `maxLength`, `const`,
+# `pattern` and friends -- so dropping one silently would degrade a schema with
+# no signal at all. Those are dropped too (Gemini would reject the call
+# otherwise) but reported loudly, so the author can decide whether to enforce
+# the constraint after the call instead.
+_GEMINI_BENIGN_DROPPED_KEYS = {
+    "$id",
+    "$schema",
+    "additionalProperties",
+    "examples",
+    "title",
+}
 
-def _gemini_tool_schema(schema: Any) -> Any:
-    """Recursively drop schema keywords Gemini's tool declarations reject."""
+
+def _strip_for_gemini(schema: Any, path: str, dropped: list[str]) -> Any:
+    """Drop rejected keywords, recording significant losses into ``dropped``."""
     if isinstance(schema, list):
-        return [_gemini_tool_schema(item) for item in schema]
+        return [
+            _strip_for_gemini(item, f"{path}[{index}]", dropped)
+            for index, item in enumerate(schema)
+        ]
     if not isinstance(schema, dict):
         return schema
 
     cleaned: dict[str, Any] = {}
     for key, value in schema.items():
         if key not in _GEMINI_SCHEMA_KEYS:
+            if key not in _GEMINI_BENIGN_DROPPED_KEYS:
+                dropped.append(f"{path}.{key}" if path else key)
             continue
         if key == "properties" and isinstance(value, dict):
+            base = f"{path}.properties" if path else "properties"
             cleaned[key] = {
-                prop: _gemini_tool_schema(sub) for prop, sub in value.items()
+                prop: _strip_for_gemini(sub, f"{base}.{prop}", dropped)
+                for prop, sub in value.items()
             }
         elif key == "items":
-            cleaned[key] = _gemini_tool_schema(value)
+            cleaned[key] = _strip_for_gemini(
+                value, f"{path}.items" if path else "items", dropped
+            )
         else:
             cleaned[key] = value
+    return cleaned
+
+
+def _gemini_tool_schema(schema: Any, *, tool_name: str = "") -> Any:
+    """Recursively drop schema keywords Gemini's tool declarations reject.
+
+    Constraint-bearing keywords have to go as well, but they are logged rather
+    than discarded in silence -- an unvalidated payload is the caller's problem
+    to handle, and they cannot handle what they never hear about.
+    """
+    dropped: list[str] = []
+    cleaned = _strip_for_gemini(schema, "", dropped)
+    if dropped:
+        logger.warning(
+            "Gemini tool schema%s dropped %d constraint(s) it cannot express: "
+            "%s. The returned payload is NOT guaranteed to satisfy them -- "
+            "validate it after the call.",
+            f" for '{tool_name}'" if tool_name else "",
+            len(dropped),
+            ", ".join(sorted(dropped)),
+        )
     return cleaned
 
 
@@ -344,7 +390,9 @@ def _invoke_gemini_structured_tool(
             {
                 "name": tool_name,
                 "description": tool_description,
-                "parameters": _gemini_tool_schema(input_schema),
+                "parameters": _gemini_tool_schema(
+                    input_schema, tool_name=tool_name
+                ),
             }
         ],
         tool_choice=tool_name,
