@@ -3,7 +3,7 @@ import type { DragEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { generateFluxEditedImage } from '../../shared/images'
 import { useAuth } from '../auth'
-import { FLUX_MODEL_OPTIONS } from '../imageRecreationPrompts/config'
+import { FLUX_MODEL_OPTIONS } from './fluxModelOptions'
 
 const MAX_IMAGES = 8 // 1 primary + 7 additional (API limit)
 
