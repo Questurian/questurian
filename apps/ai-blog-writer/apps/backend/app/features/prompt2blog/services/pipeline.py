@@ -43,9 +43,11 @@ logger = logging.getLogger(__name__)
 FEATURE_NAME = "prompt2blog"
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
 # Stage-specific overrides: compose and editorial augmentation are the two
-# writing-quality stages, pinned to Claude regardless of the run's base model.
-P2B_COMPOSE_MODEL = "claude-opus-4-8"
-P2B_EDITORIAL_AUGMENTATION_MODEL = "claude-opus-4-8"
+# writing-quality stages, pinned to a stronger model than the run's base. Both
+# were "claude-opus-4-8" until Anthropic billing ran out; restore those values
+# (and set ANTHROPIC_MODELS_ENABLED=1) once it is funded again.
+P2B_COMPOSE_MODEL = "gemini-3.1-pro-preview"
+P2B_EDITORIAL_AUGMENTATION_MODEL = "gemini-3.1-pro-preview"
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
     "in_the_know_box": "In The Know",

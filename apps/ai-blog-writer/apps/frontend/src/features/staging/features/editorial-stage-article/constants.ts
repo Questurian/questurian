@@ -1,3 +1,4 @@
+import { CLAUDE_MODELS_ENABLED } from '../../../../shared/api/ai/models'
 import type { ExternalImageProvider } from '../../api'
 import type {
   BlockImageModalMode,
@@ -23,10 +24,14 @@ export const IMG_TRIO_REQUIRED_IMAGE_COUNT = 3
 export const IMG_TRIO_DEFAULT_FORMAT: ImgTrioFormat = 'square'
 export const DEFAULT_EDITOR_MODEL_NAME: EditorModelName = 'gemini-2.5-flash'
 
-export const EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string }> = [
+const CLAUDE_EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string }> = [
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
   { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
   { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (cheaper, fast writer)' },
+]
+
+export const EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string }> = [
+  ...(CLAUDE_MODELS_ENABLED ? CLAUDE_EDITOR_MODEL_OPTIONS : []),
   { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — best Gemini quality)' },
   { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (Preview — fast & cheap)' },
   { value: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash Image (Preview — multimodal)' },
@@ -117,9 +122,10 @@ export function getEditorialComponentDefaultLabel(component: string): string {
 }
 
 export function resolveEditorModelName(value?: string): EditorModelName {
-  if (value === 'claude-opus-4-8') return value
-  if (value === 'claude-opus-4-7') return value
-  if (value === 'claude-sonnet-5') return value
+  // Stored Claude selections fall through to the default while Claude is off.
+  if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-8') return value
+  if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-7') return value
+  if (CLAUDE_MODELS_ENABLED && value === 'claude-sonnet-5') return value
   if (value === 'gemini-3.1-pro-preview') return value
   if (value === 'gemini-3.1-flash-lite-preview') return value
   if (value === 'gemini-3.1-flash-image-preview') return value

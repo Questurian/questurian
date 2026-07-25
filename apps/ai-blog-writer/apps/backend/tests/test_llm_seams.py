@@ -58,6 +58,9 @@ def test_shared_llm_factory_never_uses_small_generation_budget(monkeypatch):
 
     monkeypatch.setattr(llm_client, "VertexAI", _VertexLLM)
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
+    # The budget floor must hold on the Anthropic branch too, which is only
+    # reachable while Claude is switched on (it is off by default: no funds).
+    monkeypatch.setenv("ANTHROPIC_MODELS_ENABLED", "1")
 
     claude = llm_client.get_vertex_llm(
         model_name="claude-sonnet-5", max_tokens=123
@@ -68,6 +71,74 @@ def test_shared_llm_factory_never_uses_small_generation_budget(monkeypatch):
 
     assert claude.max_tokens == llm_client.MIN_GENERATION_MAX_TOKENS
     assert captured["max_tokens"] == llm_client.MIN_GENERATION_MAX_TOKENS
+
+
+def test_claude_models_are_substituted_with_google_by_default(monkeypatch):
+    """Anthropic is unfunded, so claude-* must not reach the Anthropic client."""
+    monkeypatch.delenv("ANTHROPIC_MODELS_ENABLED", raising=False)
+
+    assert llm_client.anthropic_models_enabled() is False
+    assert llm_client.resolve_effective_model("claude-opus-4-8") == (
+        "gemini-3.1-pro-preview"
+    )
+    assert llm_client.resolve_effective_model("claude-sonnet-5") == "gemini-2.5-pro"
+    # An unmapped Claude name still must not fall through to Anthropic.
+    assert not llm_client.is_claude_model(
+        llm_client.resolve_effective_model("claude-something-new")
+    )
+    # Non-Claude names are untouched.
+    assert llm_client.resolve_effective_model("gemini-2.5-flash") == "gemini-2.5-flash"
+
+
+def test_claude_models_pass_through_when_switched_back_on(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_MODELS_ENABLED", "1")
+
+    assert llm_client.anthropic_models_enabled() is True
+    assert llm_client.resolve_effective_model("claude-opus-4-8") == "claude-opus-4-8"
+
+
+def test_get_vertex_llm_routes_disabled_claude_to_vertex(monkeypatch):
+    captured = {}
+
+    class _VertexLLM:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(llm_client, "VertexAI", _VertexLLM)
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
+    monkeypatch.delenv("ANTHROPIC_MODELS_ENABLED", raising=False)
+
+    llm = llm_client.get_vertex_llm(model_name="claude-sonnet-5", max_tokens=1024)
+
+    assert not isinstance(llm, llm_client.ClaudeTextLLM)
+    assert captured["model_name"] == "gemini-2.5-pro"
+
+
+def test_gemini_tool_schema_drops_unsupported_keywords():
+    cleaned = llm_client._gemini_tool_schema(
+        {
+            "type": "object",
+            "additionalProperties": False,
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "properties": {
+                "seoTitle": {"type": "string", "description": "Title"},
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string", "additionalProperties": False},
+                },
+            },
+            "required": ["seoTitle"],
+        }
+    )
+
+    assert cleaned == {
+        "type": "object",
+        "properties": {
+            "seoTitle": {"type": "string", "description": "Title"},
+            "tags": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["seoTitle"],
+    }
 
 
 def test_structured_tool_call_keeps_requested_small_budget(monkeypatch):

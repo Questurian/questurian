@@ -1,8 +1,18 @@
+/**
+ * Anthropic billing is exhausted, so Claude options are hidden from every
+ * picker and the defaults point at Google models. The `claude-*` names stay in
+ * the unions so saved runs and stored selections still type-check, and the
+ * backend substitutes a Google model for them (utils.resolve_effective_model).
+ * To restore: set ANTHROPIC_MODELS_ENABLED=1 on the backend and move the
+ * entries in CLAUDE_*_OPTIONS back into the exported option lists.
+ */
+export const CLAUDE_MODELS_ENABLED = false
+
 export type EditorAssistModelName = 'claude-opus-4-8' | 'claude-sonnet-5' | 'gemini-3.1-pro-preview'
 
-export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'claude-opus-4-8'
+export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'gemini-3.1-pro-preview'
 
-export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; label: string }> = [
+const CLAUDE_EDITOR_ASSIST_OPTIONS: Array<{ value: EditorAssistModelName; label: string }> = [
   {
     value: 'claude-opus-4-8',
     label: 'Claude Opus 4.8 (writer; Evidence Profile runs on Gemini)',
@@ -11,6 +21,10 @@ export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; 
     value: 'claude-sonnet-5',
     label: 'Claude Sonnet 5 (faster, cheaper writer; Evidence Profile runs on Gemini)',
   },
+]
+
+export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; label: string }> = [
+  ...(CLAUDE_MODELS_ENABLED ? CLAUDE_EDITOR_ASSIST_OPTIONS : []),
   {
     value: 'gemini-3.1-pro-preview',
     label: 'Gemini 3.1 Pro (Preview — deep reasoning writer)',
@@ -55,12 +69,16 @@ export type Y2BWriterModel =
   | 'gemini-2.5-pro'
   | 'gemini-2.5-flash'
 
-export const DEFAULT_Y2B_WRITER_MODEL: Y2BWriterModel = 'claude-opus-4-8'
+export const DEFAULT_Y2B_WRITER_MODEL: Y2BWriterModel = 'gemini-3.1-pro-preview'
 
-export const Y2B_WRITER_MODEL_OPTIONS: Array<{ value: Y2BWriterModel; label: string }> = [
+const CLAUDE_Y2B_WRITER_OPTIONS: Array<{ value: Y2BWriterModel; label: string }> = [
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
   { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
   { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (cheaper, fast writer)' },
+]
+
+export const Y2B_WRITER_MODEL_OPTIONS: Array<{ value: Y2BWriterModel; label: string }> = [
+  ...(CLAUDE_MODELS_ENABLED ? CLAUDE_Y2B_WRITER_OPTIONS : []),
   { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — deep reasoning)' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
@@ -107,7 +125,9 @@ export type ToneProfile = {
 }
 
 export function resolveEditorAssistModelName(value?: string): EditorAssistModelName {
-  if (value === 'claude-sonnet-5') return value
+  // Stored Claude selections fall through to the default while Claude is off.
+  if (CLAUDE_MODELS_ENABLED && value === 'claude-sonnet-5') return value
+  if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-8') return value
   if (value === 'gemini-3.1-pro-preview') return value
   return DEFAULT_EDITOR_ASSIST_MODEL
 }

@@ -36,14 +36,18 @@ def invoke_anthropic_structured(
     input_schema: dict,
     max_tokens: int = 4096,
 ) -> StructuredWriterResult:
-    """Call Anthropic with a forced tool so the response is schema-shaped JSON."""
+    """Call the writer with a forced tool so the response is schema-shaped JSON.
+
+    Dispatches on ``model_name``: Anthropic when Claude is switched on, the
+    Gemini equivalent otherwise. The name is kept for call-site compatibility.
+    """
     try:
-        from utils import invoke_anthropic_structured_tool  # type: ignore
+        from utils import invoke_structured_tool  # type: ignore
     except ImportError as exc:
         raise WriterModelError("LLM helper unavailable") from exc
 
     try:
-        payload, resolved_model = invoke_anthropic_structured_tool(
+        payload, resolved_model = invoke_structured_tool(
             prompt=prompt,
             model_name=model_name,
             tool_name=tool_name,
@@ -52,9 +56,7 @@ def invoke_anthropic_structured(
             max_tokens=max_tokens,
         )
     except Exception as exc:  # noqa: BLE001
-        raise WriterModelError(
-            f"Anthropic structured writer call failed: {exc}"
-        ) from exc
+        raise WriterModelError(f"Structured writer call failed: {exc}") from exc
 
     return StructuredWriterResult(payload=payload, model_name=resolved_model)
 

@@ -22,6 +22,12 @@ def invoke_anthropic_structured_tool(*args, **kwargs):
     return _invoke_anthropic_structured_tool(*args, **kwargs)
 
 
+def invoke_structured_tool(*args, **kwargs):
+    from .llm_client import invoke_structured_tool as _invoke_structured_tool
+
+    return _invoke_structured_tool(*args, **kwargs)
+
+
 def get_vertex_generative_model(*args, **kwargs):
     from .llm_client import get_vertex_generative_model as _get_vertex_generative_model
 
@@ -61,6 +67,7 @@ __all__ = [
     # LLM utilities
     "get_vertex_llm",
     "invoke_anthropic_structured_tool",
+    "invoke_structured_tool",
     "get_vertex_generative_model",
     "vertex_part_from_data",
     "invoke_vertex_multimodal_text",

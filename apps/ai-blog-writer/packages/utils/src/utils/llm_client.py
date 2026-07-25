@@ -23,6 +23,58 @@ DEFAULT_LOCATION = "us-central1"
 # locations (including us-central1) return 404 for them.
 GEMINI3_LOCATION = "global"
 
+# --- Anthropic availability switch -------------------------------------------
+# Anthropic billing is exhausted, so claude-* selections are transparently
+# served by their Google counterparts instead of failing with a 400 "credit
+# balance is too low". None of the Claude transport was removed: set
+# ANTHROPIC_MODELS_ENABLED=1 (and restore ANTHROPIC_API_KEY) to route back.
+ANTHROPIC_MODELS_ENABLED_ENV = "ANTHROPIC_MODELS_ENABLED"
+ANTHROPIC_MODELS_ENABLED_DEFAULT = False
+
+# Substitutes are matched by role: the Opus-class writers map to Gemini's
+# deep-reasoning writer, Sonnet to the faster tier. Every value is already in
+# the writer allowlist (app/shared/writer_models.py).
+CLAUDE_GOOGLE_SUBSTITUTES = {
+    "claude-opus-4-8": "gemini-3.1-pro-preview",
+    "claude-opus-4-7": "gemini-3.1-pro-preview",
+    "claude-sonnet-5": "gemini-2.5-pro",
+}
+DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE = "gemini-3.1-pro-preview"
+
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def anthropic_models_enabled() -> bool:
+    """Whether claude-* names may reach the Anthropic API."""
+    raw = os.getenv(ANTHROPIC_MODELS_ENABLED_ENV)
+    if raw is None or not raw.strip():
+        return ANTHROPIC_MODELS_ENABLED_DEFAULT
+    return raw.strip().lower() in _TRUTHY
+
+
+def is_claude_model(model_name: Optional[str]) -> bool:
+    return str(model_name or "").lower().startswith("claude")
+
+
+def resolve_effective_model(model_name: Optional[str]) -> Optional[str]:
+    """Map a requested model to the one that will actually serve the call.
+
+    Non-Claude names and (once re-funded) Claude names pass through unchanged.
+    """
+    if not is_claude_model(model_name) or anthropic_models_enabled():
+        return model_name
+
+    substitute = CLAUDE_GOOGLE_SUBSTITUTES.get(
+        str(model_name).strip().lower(), DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE
+    )
+    logger.info(
+        "Anthropic models are disabled (%s); serving '%s' with '%s'.",
+        ANTHROPIC_MODELS_ENABLED_ENV,
+        model_name,
+        substitute,
+    )
+    return substitute
+
 
 def _is_gemini3_model(model_name: str) -> bool:
     return model_name.lower().startswith("gemini-3")
@@ -227,6 +279,124 @@ def invoke_anthropic_structured_tool(
     raise RuntimeError("Anthropic structured writer returned no tool output")
 
 
+# Gemini's function-declaration schema is a subset of JSON Schema; keys such as
+# `additionalProperties` and `$schema` are rejected outright.
+_GEMINI_SCHEMA_KEYS = {
+    "type",
+    "description",
+    "enum",
+    "format",
+    "nullable",
+    "properties",
+    "required",
+    "items",
+}
+
+
+def _gemini_tool_schema(schema: Any) -> Any:
+    """Recursively drop schema keywords Gemini's tool declarations reject."""
+    if isinstance(schema, list):
+        return [_gemini_tool_schema(item) for item in schema]
+    if not isinstance(schema, dict):
+        return schema
+
+    cleaned: dict[str, Any] = {}
+    for key, value in schema.items():
+        if key not in _GEMINI_SCHEMA_KEYS:
+            continue
+        if key == "properties" and isinstance(value, dict):
+            cleaned[key] = {
+                prop: _gemini_tool_schema(sub) for prop, sub in value.items()
+            }
+        elif key == "items":
+            cleaned[key] = _gemini_tool_schema(value)
+        else:
+            cleaned[key] = value
+    return cleaned
+
+
+def _invoke_gemini_structured_tool(
+    *,
+    prompt: str,
+    model_name: str,
+    tool_name: str,
+    tool_description: str,
+    input_schema: dict[str, Any],
+    max_tokens: int,
+    project: Optional[str] = None,
+) -> tuple[dict[str, Any], str]:
+    """Gemini equivalent of the Anthropic forced-tool call."""
+    resolved_project = _resolve_vertex_project(project)
+    location = (
+        GEMINI3_LOCATION
+        if _is_gemini3_model(model_name)
+        else _resolve_vertex_location()
+    )
+
+    llm = ChatVertexAI(
+        model_name=model_name,
+        max_tokens=max_tokens,
+        project=resolved_project,
+        location=location,
+    )
+    bound = llm.bind_tools(
+        [
+            {
+                "name": tool_name,
+                "description": tool_description,
+                "parameters": _gemini_tool_schema(input_schema),
+            }
+        ],
+        tool_choice=tool_name,
+    )
+    message = bound.invoke(prompt)
+
+    for call in getattr(message, "tool_calls", []) or []:
+        if call.get("name") == tool_name and isinstance(call.get("args"), dict):
+            return call["args"], model_name
+
+    raise RuntimeError(
+        f"Gemini structured writer returned no '{tool_name}' tool call "
+        f"(response_metadata={getattr(message, 'response_metadata', None)!r})"
+    )
+
+
+def invoke_structured_tool(
+    *,
+    prompt: str,
+    model_name: str,
+    tool_name: str,
+    tool_description: str,
+    input_schema: dict[str, Any],
+    max_tokens: int = 4096,
+    project: Optional[str] = None,
+) -> tuple[dict[str, Any], str]:
+    """Force a schema-shaped tool payload from whichever provider serves
+    ``model_name``. Callers get the same ``(payload, resolved_model)`` contract
+    regardless of whether Anthropic is switched on."""
+    effective_model = resolve_effective_model(model_name) or model_name
+
+    if is_claude_model(effective_model):
+        return invoke_anthropic_structured_tool(
+            prompt=prompt,
+            model_name=effective_model,
+            tool_name=tool_name,
+            tool_description=tool_description,
+            input_schema=input_schema,
+            max_tokens=max_tokens,
+        )
+
+    return _invoke_gemini_structured_tool(
+        prompt=prompt,
+        model_name=effective_model,
+        tool_name=tool_name,
+        tool_description=tool_description,
+        input_schema=input_schema,
+        max_tokens=max_tokens,
+        project=project,
+    )
+
+
 def get_vertex_llm(
     temperature: float = 0.1,
     max_tokens: int = 2048,
@@ -253,8 +423,12 @@ def get_vertex_llm(
     """
     effective_max_tokens = _resolve_generation_max_tokens(max_tokens)
 
+    # Substitutes a Google model when Anthropic is switched off; otherwise a
+    # no-op. Runs before dispatch so claude-* never reaches the Anthropic branch.
+    model_name = resolve_effective_model(model_name)
+
     # Anthropic routing: claude-* models bypass Vertex entirely.
-    if (model_name or "").lower().startswith("claude"):
+    if is_claude_model(model_name):
         logger.debug(
             "Routing LLM call to Anthropic: "
             f"model={model_name}, max_tokens={effective_max_tokens}"

@@ -23,7 +23,9 @@ from .shell_library import (
 router = APIRouter(prefix="/itineraries-pipeline", tags=["itineraries-pipeline"])
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-opus-4-8"
+# Was "claude-opus-4-8" until Anthropic billing ran out; restore that value
+# (and set ANTHROPIC_MODELS_ENABLED=1) once it is funded again.
+DEFAULT_MODEL = "gemini-3.1-pro-preview"
 MAX_PROMPT_CHARS = 120_000
 
 

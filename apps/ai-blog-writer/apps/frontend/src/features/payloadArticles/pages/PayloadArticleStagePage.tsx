@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth'
 import {
+  EDITOR_ASSIST_MODEL_OPTIONS,
+  type EditorAssistModelName,
+} from '../../../shared/api/ai/models'
+import {
   buildStagedArticleFromPayloadDoc,
   convertLexicalToMarkdown,
   convertMarkdownToLexical,
@@ -41,12 +45,19 @@ const noopFetchResult = async (): Promise<{ markdown: string }> => {
 }
 
 // The rewrite backend only accepts editor-assist models; drop anything else so
-// the wider editor model union from the builder still typechecks.
+// the wider editor model union from the builder still typechecks. Driven by the
+// live option list so it follows CLAUDE_MODELS_ENABLED instead of pinning one name.
+const ASSIST_MODEL_NAMES = new Set<string>(
+  EDITOR_ASSIST_MODEL_OPTIONS.map((option) => option.value),
+)
+
 const rewriteBlockWithAssistModel: Parameters<typeof StandardArticleStageBuilder>[0]['api']['rewriteBlockWithAi'] =
   ({ modelName, ...rest }) =>
     rewriteBlockWithAi({
       ...rest,
-      modelName: modelName === 'claude-opus-4-8' ? modelName : undefined,
+      modelName: ASSIST_MODEL_NAMES.has(modelName as string)
+        ? (modelName as EditorAssistModelName)
+        : undefined,
     })
 
 function PayloadArticleImport({ payloadId }: { payloadId: number }) {

@@ -27,10 +27,11 @@ URL2BLOG_DEFAULT_EXECUTION_PROFILE = "standard"
 URL2BLOG_DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_GROUNDED_MODEL = "gemini-2.5-flash-lite"
 # Stage-specific overrides: the guideline rewrite (compose) and editorial
-# augmentation are the writing-quality stages, pinned to Claude regardless
-# of the run's base model. Routed via get_vertex_llm's claude-* dispatch.
-URL2BLOG_COMPOSE_MODEL = "claude-opus-4-8"
-URL2BLOG_EDITORIAL_AUGMENTATION_MODEL = "claude-opus-4-8"
+# augmentation are the writing-quality stages, pinned to a stronger model than
+# the run's base. Both were "claude-opus-4-8" until Anthropic billing ran out;
+# restore those values (and set ANTHROPIC_MODELS_ENABLED=1) once it is funded.
+URL2BLOG_COMPOSE_MODEL = "gemini-3.1-pro-preview"
+URL2BLOG_EDITORIAL_AUGMENTATION_MODEL = "gemini-3.1-pro-preview"
 SHORT_ARTICLE_WORD_THRESHOLD = 450
 DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS = 3
 MIN_EXPANDED_WORD_DELTA = 80

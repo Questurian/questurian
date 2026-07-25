@@ -1,3 +1,4 @@
+import { CLAUDE_MODELS_ENABLED } from '../../../shared/api/ai/models'
 import type { Url2BlogWriterModel } from '../types/pipeline.types'
 
 export type NarrativeFocusPreset = {
@@ -6,15 +7,22 @@ export type NarrativeFocusPreset = {
   prompt: string
 }
 
-export const URL2BLOG_DEFAULT_WRITER_MODEL: Url2BlogWriterModel = 'claude-opus-4-8'
+export const URL2BLOG_DEFAULT_WRITER_MODEL: Url2BlogWriterModel = 'gemini-3.1-pro-preview'
 
-export const URL2BLOG_WRITER_MODEL_OPTIONS: Array<{
+const CLAUDE_URL2BLOG_WRITER_OPTIONS: Array<{
   value: Url2BlogWriterModel
   label: string
 }> = [
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
   { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
   { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (cheaper, fast writer)' },
+]
+
+export const URL2BLOG_WRITER_MODEL_OPTIONS: Array<{
+  value: Url2BlogWriterModel
+  label: string
+}> = [
+  ...(CLAUDE_MODELS_ENABLED ? CLAUDE_URL2BLOG_WRITER_OPTIONS : []),
   { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — deep reasoning)' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },

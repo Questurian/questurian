@@ -1582,9 +1582,10 @@ async def rewrite_block(request: RewriteBlockRequest) -> RewriteBlockResponse:
 
 SEO_PATCH_TOOL_NAME = "emit_seo_patch"
 
-# Structured (forced tool) calls are Anthropic-only, so this endpoint cannot
-# fall back to the Gemini DEFAULT_MODEL used by the free-text routes.
-SEO_STRUCTURED_DEFAULT_MODEL = "claude-opus-4-8"
+# Forced-tool calls now dispatch per provider (see utils.invoke_structured_tool),
+# so this endpoint accepts Gemini writers too. While Anthropic is switched off a
+# claude-* default would just be substituted, so pin the Google writer directly.
+SEO_STRUCTURED_DEFAULT_MODEL = "gemini-3.1-pro-preview"
 
 SEO_PATCH_INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -1673,10 +1674,6 @@ def _generate_seo_metadata_impl(
         (request.model_name or SEO_STRUCTURED_DEFAULT_MODEL).strip()
         or SEO_STRUCTURED_DEFAULT_MODEL
     )
-    # Builders send their editor model here; non-Claude selections (e.g. a
-    # Gemini writer) must not reach the Anthropic-only forced-tool call.
-    if not model_used.startswith("claude"):
-        model_used = SEO_STRUCTURED_DEFAULT_MODEL
 
     llm_prompt = (
         f"{prompt}\n\n"

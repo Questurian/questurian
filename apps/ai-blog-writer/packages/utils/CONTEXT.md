@@ -32,6 +32,12 @@ Without this package every feature would re-create Vertex clients and re-impleme
 
 Factory that returns a configured text LLM client. Gemini models use Vertex AI; Claude models route to Anthropic through the same `.invoke(prompt)` surface.
 
+**Anthropic is currently switched off** (no credit). `resolve_effective_model()` runs before dispatch and rewrites every `claude-*` name to its Google counterpart from `CLAUDE_GOOGLE_SUBSTITUTES`, so no call can reach the Anthropic API and fail on billing. The Claude transport is untouched — set `ANTHROPIC_MODELS_ENABLED=1` (plus `ANTHROPIC_API_KEY`) to route back.
+
+### `invoke_structured_tool()`
+
+Provider-agnostic forced-tool call returning `(payload, resolved_model)`. Dispatches to `invoke_anthropic_structured_tool` when Claude is on, otherwise to the Gemini `bind_tools` equivalent. Prefer this over the Anthropic-only helper so structured call sites survive the switch.
+
 ### `invoke_vertex_multimodal_text(parts)`
 
 Factory-backed Gemini multimodal call for image/text parts. Feature code builds parts with `vertex_part_from_data` and never imports Vertex SDKs directly.
