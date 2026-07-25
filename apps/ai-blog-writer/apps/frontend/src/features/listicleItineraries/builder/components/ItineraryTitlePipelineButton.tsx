@@ -1,17 +1,15 @@
 import { useMemo, useState } from 'react'
 import {
+  buildItinerariesPipelineChatPrompt,
   DEFAULT_ITINERARY_TITLE_MODEL,
-  ITINERARY_TITLE_MODEL_OPTIONS,
-  resolveItineraryTitleModelName,
-  type ItineraryTitleModelName,
-} from '../../../itinerariesPipeline/constants/titleModel.constants'
-import { generateItineraryTitles } from '../../../itinerariesPipeline/api'
-import { buildItinerariesPipelineChatPrompt } from '../../../itinerariesPipeline/buildChatPrompt'
-import {
+  generateItineraryTitles,
   getItineraryPipelineTypeMarkdown,
   ITINERARY_PIPELINE_TYPE_OPTIONS,
+  ITINERARY_TITLE_MODEL_OPTIONS,
+  resolveItineraryTitleModelName,
   type ItineraryPipelineTypeId,
-} from '../../../itinerariesPipeline/type-content/itineraryTypeSources'
+  type ItineraryTitleModelName,
+} from '../../../itinerariesPipeline'
 import { ITINERARY_DAY_COUNT_OPTIONS } from '../constants/builder-options.constants'
 
 type Phase =

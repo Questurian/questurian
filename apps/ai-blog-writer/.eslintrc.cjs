@@ -15,6 +15,18 @@ module.exports = {
   },
   ignorePatterns: ['dist', 'node_modules'],
   rules: {
-    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }]
+    'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+    // Honour the `_name` convention already used for deliberately-discarded
+    // bindings (e.g. omitting a key via rest destructuring).
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+        destructuredArrayIgnorePattern: '^_',
+        ignoreRestSiblings: true
+      }
+    ]
   }
 }

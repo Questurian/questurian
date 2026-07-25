@@ -11,7 +11,7 @@ import type { LocationOption, RelatedItemOption, SingleTypeListicleDraft } from 
 function buildDraft(): SingleTypeListicleDraft {
   return {
     draftId: 'draft-1',
-    editorModelName: 'gemini-2.5-flash',
+    editorModelName: 'claude-opus-4-8',
     listTone: 'elevated',
     title: 'Best Restaurants in Lima',
     location: 'peru|lima|barranco',
@@ -128,7 +128,7 @@ describe('singleTypeListicles ai autowrite service', () => {
       relatedItems: buildRelatedItems(),
       locations: buildLocations(),
       targetIds: [introTargetId, 'item-1_blurb'],
-      modelName: 'gemini-2.5-flash',
+      modelName: 'claude-opus-4-8',
       skipExisting: true,
     })
 
@@ -160,7 +160,7 @@ describe('singleTypeListicles ai autowrite service', () => {
       relatedItems: buildRelatedItems(),
       locations: buildLocations(),
       targetIds: ['item-1_blurb'],
-      modelName: 'gemini-2.5-flash',
+      modelName: 'claude-opus-4-8',
     })
 
     expect(request.articleContext).toBeUndefined()
@@ -198,7 +198,7 @@ describe('singleTypeListicles ai autowrite service', () => {
           target_id: getSingleTypeIntroTargetId(draft),
           status: 'generated',
           markdown: 'Fresh intro',
-          model_used: 'gemini-2.5-flash',
+          model_used: 'claude-opus-4-8',
           source_urls: ['https://example.com'],
           validation_errors: [],
         },
@@ -206,7 +206,7 @@ describe('singleTypeListicles ai autowrite service', () => {
           target_id: 'item-1_blurb',
           status: 'generated',
           markdown: 'Fresh blurb',
-          model_used: 'gemini-2.5-flash',
+          model_used: 'claude-opus-4-8',
           source_urls: [],
           validation_errors: [],
         },
@@ -214,7 +214,7 @@ describe('singleTypeListicles ai autowrite service', () => {
           target_id: 'item-2_blurb',
           status: 'skipped',
           markdown: 'Keep this existing copy.',
-          model_used: 'gemini-2.5-flash',
+          model_used: 'claude-opus-4-8',
           source_urls: [],
           validation_errors: [],
         },

@@ -370,6 +370,7 @@ def _ensure_editorial_component_boxes(
 
     return f"{updated_content.strip()}\n\n{fallback_boxes}".strip()
 
+
 __all__ = [
     "_format_editorial_blueprint_for_prompt",
     "_editorial_blueprint_to_component_entries",

@@ -1,15 +1,23 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { mockCoreRepository } from "../../../../test/repository-mocks";
+
+// tripadvisor-place.repository is only mocked here, but the override still leaks to
+// later files, so spread the real module rather than replacing it wholesale.
+const actualTripAdvisorPlaceRepository = await import(
+  "../../repositories/content/tripadvisor-place.repository"
+);
 
 const getLocationByIdForUpdateMock = mock(() => null as any);
 const updateLocationByIdMock = mock(() => true);
 const saveTripAdvisorPlaceMock = mock(() => 1);
 
-mock.module("../../repositories/core", () => ({
+mockCoreRepository({
   getLocationByIdForUpdate: getLocationByIdForUpdateMock,
   updateLocationById: updateLocationByIdMock,
-}));
+});
 
 mock.module("../../repositories/content/tripadvisor-place.repository", () => ({
+  ...actualTripAdvisorPlaceRepository,
   saveTripAdvisorPlace: saveTripAdvisorPlaceMock,
 }));
 

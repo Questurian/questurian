@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../auth'
-import { StandardArticleStageBuilder } from '../../staging/components/StandardArticleStageBuilder'
 import {
+  buildStagedArticleFromPayloadDoc,
   convertLexicalToMarkdown,
   convertMarkdownToLexical,
   createArticle,
@@ -10,26 +10,22 @@ import {
   fetchLocations,
   fetchMediaAssets,
   generateSeoMetadataWithAi,
+  getAllStagedArticles,
   getArticleById,
   importExternalImage,
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
+  StandardArticleStageBuilder,
   updateArticle,
-} from '../../staging/api'
-import {
-  buildStagedArticleFromPayloadDoc,
-  type PayloadArticleDetail,
-} from '../../staging/features/editorial-stage-article/services/payload-article-import.service'
-import {
-  getAllStagedArticles,
   upsertStagedArticle,
-} from '../../staging/features/editorial-stage-article/services/editorial-stage-storage.service'
+  type PayloadArticleDetail,
+} from '../../staging'
 import {
   PAYLOAD_ARTICLES_PATH,
   PAYLOAD_ARTICLES_STAGE_PATH,
   buildPayloadArticleDraftUrl,
-} from '../../blogArticles/utils/payload-article-links'
+} from '../../blogArticles'
 import { PAYLOAD_ARTICLES_STORAGE_KEY } from '../constants'
 
 // This editor works on Payload documents directly; there is no pipeline run

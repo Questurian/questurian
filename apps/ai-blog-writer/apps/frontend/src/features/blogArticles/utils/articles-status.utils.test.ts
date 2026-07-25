@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { StagedArticle } from '../../staging/types'
+import type { StagedArticle } from '../../staging'
 import type { SavedBlogArticle } from '../types'
 import {
   findLocalDraftForGeneratedArticle,

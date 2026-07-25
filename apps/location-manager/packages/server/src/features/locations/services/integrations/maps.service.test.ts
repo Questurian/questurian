@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { mockContentRepository, mockCoreRepository } from "../../../../test/repository-mocks";
 
 const createFromMapsMock = mock(async (): Promise<any> => ({
   name: "Nebula",
@@ -22,19 +23,19 @@ mock.module("../geocoding/maps-location.factory", () => ({
   createFromMaps: createFromMapsMock,
 }));
 
-mock.module("../../repositories/core", () => ({
+mockCoreRepository({
   findPotentialDuplicateLocations: findPotentialDuplicateLocationsMock,
   getLocationByIdForUpdate: getLocationByIdForUpdateMock,
   saveLocationOrThrow: saveLocationOrThrowMock,
   setAttractionTours: setAttractionToursMock,
   getAttractionTours: getAttractionToursMock,
   updateLocationById: updateLocationByIdMock,
-}));
+});
 
-mock.module("../../repositories/content", () => ({
+mockContentRepository({
   getInstagramEmbedsByLocationId: getInstagramEmbedsByLocationIdMock,
   getUploadsByLocationId: getUploadsByLocationIdMock,
-}));
+});
 
 mock.module("../../utils/location-utils", () => ({
   transformLocationToResponse: transformLocationToResponseMock,

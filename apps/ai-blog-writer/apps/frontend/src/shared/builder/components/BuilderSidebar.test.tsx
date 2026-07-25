@@ -23,7 +23,7 @@ function renderSidebar(overrides: Partial<ComponentProps<typeof BuilderSidebar>>
     seoCoreComplete: true,
     stepThreeSyncIssueLabel: 'Stops have unsaved changes.',
     showPublishedBadge: true,
-    editorModelName: 'gemini-2.5-flash',
+    editorModelName: 'claude-opus-4-8',
     onEditorModelChange: vi.fn(),
     isSaving: false,
     renderAutoWriteButton: () => <button type="button">Auto write</button>,

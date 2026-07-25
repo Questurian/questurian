@@ -89,4 +89,5 @@ def _remove_academic_conclusion_phrases(text: str) -> str:
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
 
+
 __all__ = ['_ensure_markdown_section_headers', '_remove_academic_conclusion_phrases']

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { StagedArticle } from '../../staging/types'
 import {
   clearAllStagedArticles,
   getAllStagedArticles,
+  migrateLocalDraftsToServer,
   removeStagedArticle,
-} from '../../staging/features/editorial-stage-article/services/editorial-stage-storage.service'
-import { migrateLocalDraftsToServer } from '../../staging/features/editorial-stage-article/services/migrate-local-drafts.service'
+  type StagedArticle,
+} from '../../staging'
 
 async function loadLocalDrafts(storageKey: string): Promise<StagedArticle[]> {
   const drafts = await getAllStagedArticles(storageKey)

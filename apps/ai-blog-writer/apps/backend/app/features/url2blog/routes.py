@@ -10,7 +10,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.core import (
+from app.core import (  # noqa: F401  (get_article_type_by_id re-exported for tests)
     cleanup_run,
     get_all_runs,
     get_article_type_by_id,
@@ -28,8 +28,12 @@ from .storage import (
     get_article_sync_status,
     mark_article_synced,
 )
-from .content.text_cleanup import _cleanup_pasted_article_text, _strip_html
-from .stages import classify_article_type, extract_article
+# Re-exported so url2blog_routes.<name> stays monkeypatchable from the test-suite.
+from .content.text_cleanup import (  # noqa: F401
+    _cleanup_pasted_article_text,
+    _strip_html,
+)
+from .stages import classify_article_type, extract_article  # noqa: F401
 
 router = APIRouter(prefix="/url2blog", tags=["url2blog"])
 logger = logging.getLogger(__name__)
@@ -57,7 +61,7 @@ def invoke_google_grounded_text(*args: Any, **kwargs: Any) -> Any:
 
 # Prompt templates live in the prompts/ package, grouped by domain.
 # Re-exported here so url2blog_routes.<PROMPT> keeps resolving for callers/tests.
-from .prompts import (
+from .prompts import (  # noqa: F401
     EXTRACT_PROMPT,
     TRANSLATE_PROMPT,
     CLASSIFY_ARTICLE_TYPE_PROMPT,
@@ -274,15 +278,9 @@ def _invoke_json_llm_tracked(*args: Any, **kwargs: Any) -> tuple[dict[str, Any],
     return _llm_invocation._invoke_json_llm_tracked(*args, **kwargs)
 
 
-def _invoke_json_llm(*args: Any, **kwargs: Any) -> tuple[dict[str, Any], str]:
-    return _llm_invocation._invoke_json_llm(*args, **kwargs)
-
-
-def _invoke_json_llm_best_effort(
-    *args: Any, **kwargs: Any
-) -> tuple[dict[str, Any] | None, str, str | None]:
-    return _llm_invocation._invoke_json_llm_best_effort(*args, **kwargs)
-
+# NOTE: `_invoke_json_llm` / `_invoke_json_llm_best_effort` are NOT delegated to
+# `_llm_invocation` the way their siblings above are — the real implementations are
+# defined further down in this module and are what callers and the test-suite bind to.
 
 # Pure pipeline-support helpers now live in dedicated domain packages.
 from .content.markdown import *  # noqa: F401,F403

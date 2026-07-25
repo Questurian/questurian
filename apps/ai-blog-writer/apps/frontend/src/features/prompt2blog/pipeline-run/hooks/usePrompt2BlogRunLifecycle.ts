@@ -7,8 +7,7 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from 'react'
-import { usePipelineRunPoll } from '../../../pipelineRuns/hooks/usePipelineRunPoll'
-import { useTerminalPipelineRun } from '../../../pipelineRuns/hooks/useTerminalPipelineRun'
+import { usePipelineRunPoll, useTerminalPipelineRun } from '../../../pipelineRuns'
 import {
   getPrompt2BlogStatus,
   type Prompt2BlogDebugStages,

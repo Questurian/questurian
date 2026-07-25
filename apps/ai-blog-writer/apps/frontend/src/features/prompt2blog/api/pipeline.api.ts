@@ -11,7 +11,7 @@ import type {
   Prompt2BlogStatusResponse,
 } from '../types/pipeline.types'
 import { PROMPT2BLOG_PIPELINE_STAGES } from '../types/pipeline.types'
-import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns/progress'
+import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns'
 
 export function normalizePrompt2BlogStatusResponse(
   value: unknown,

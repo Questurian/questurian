@@ -179,10 +179,10 @@ describe('Prompt2BlogPage', () => {
     })
   })
 
-  it('defaults the writing model selector to flash lite', async () => {
+  it('defaults the base draft model selector to flash lite', async () => {
     renderPage()
 
-    const modelSelect = await screen.findByLabelText('Writing Model')
+    const modelSelect = await screen.findByLabelText('Base Draft Model')
 
     expect(modelSelect).toHaveValue(DEFAULT_PROMPT2BLOG_MODEL)
   })
@@ -206,7 +206,7 @@ describe('Prompt2BlogPage', () => {
     fireEvent.change(screen.getByLabelText('Destination Context'), {
       target: { value: 'Lisbon, Portugal' },
     })
-    fireEvent.change(screen.getByLabelText('Writing Model'), {
+    fireEvent.change(screen.getByLabelText('Base Draft Model'), {
       target: { value: 'gemini-2.5-pro' },
     })
     fireEvent.change(screen.getByLabelText('Source Block 1'), {

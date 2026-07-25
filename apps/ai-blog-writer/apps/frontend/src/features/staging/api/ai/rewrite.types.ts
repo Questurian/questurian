@@ -1,4 +1,7 @@
-import type { EditorAssistModelName } from '../../../../shared/api/ai/models'
+import type {
+  EditorAssistModelName,
+  EditorBlockRewriteModelName,
+} from '../../../../shared/api/ai/models'
 
 export type RewriteBlockWithAiResponse = {
   rewritten_content: string
@@ -8,7 +11,8 @@ export type RewriteBlockWithAiResponse = {
 export type RewriteBlockWithAiRequest = {
   prompt: string
   blockContent: string
-  modelName?: EditorAssistModelName
+  /** Wider than the assist allowlist — the rewrite-block route takes any model name. */
+  modelName?: EditorBlockRewriteModelName
   articleTitle?: string
   articleContext?: string
 }

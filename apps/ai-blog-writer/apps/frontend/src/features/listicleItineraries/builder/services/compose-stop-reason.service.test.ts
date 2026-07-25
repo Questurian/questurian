@@ -42,7 +42,7 @@ function buildItem(overrides: Partial<ItineraryItemBlock> & { id: string }): Iti
 function buildDraft(overrides: Partial<ListicleItineraryDraft> = {}): ListicleItineraryDraft {
   return {
     draftId: 'draft-1',
-    editorModelName: 'gemini-2.5-flash',
+    editorModelName: 'claude-opus-4-8',
     listTone: 'elevated',
     title: 'One Perfect Day in Lima',
     location: 'peru|lima',

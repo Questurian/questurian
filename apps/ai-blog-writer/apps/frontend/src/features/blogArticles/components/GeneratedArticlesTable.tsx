@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import type { StagedArticle } from '../../staging/types'
+import type { StagedArticle } from '../../staging'
 import { findLocalDraftForGeneratedArticle } from '../utils/articles-status.utils'
 import { formatDate } from '../utils/articles-format.utils'
 import type { SavedBlogArticle } from '../types'

@@ -5,7 +5,6 @@ import json
 import logging
 import os
 import re
-import time
 from collections import Counter
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
@@ -17,15 +16,11 @@ from .bfl_client import BflApiError
 from .image_processor import (
     VARIANT_SPECS,
     ImageVariantType,
-    ProcessedVariant,
-    process_image_variants,
-    process_single_variant,
 )
 from .payload_client import (
     PayloadClient,
     PayloadMediaAssetDoc,
     PayloadUploadError,
-    upload_image_set,
 )
 
 

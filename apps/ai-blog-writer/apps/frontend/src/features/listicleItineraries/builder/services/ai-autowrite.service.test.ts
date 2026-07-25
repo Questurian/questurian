@@ -15,7 +15,7 @@ import type {
 function buildDraft(): ListicleItineraryDraft {
   return {
     draftId: 'draft-1',
-    editorModelName: 'gemini-2.5-flash',
+    editorModelName: 'claude-opus-4-8',
     listTone: 'elevated',
     title: 'One Perfect Day in Lima',
     location: 'peru|lima',
@@ -169,7 +169,7 @@ describe('listicleItineraries ai autowrite service', () => {
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
       targetIds: ['stop-1_blurb'],
-      modelName: 'gemini-2.5-flash',
+      modelName: 'claude-opus-4-8',
     })
 
     expect(request.articleType).toBe('listicle-itinerary')
@@ -210,7 +210,7 @@ describe('listicleItineraries ai autowrite service', () => {
           target_id: 'stop-1_blurb',
           status: 'generated',
           markdown: 'Bridge blurb',
-          model_used: 'gemini-2.5-flash',
+          model_used: 'claude-opus-4-8',
           source_urls: [],
           validation_errors: [],
         },
@@ -218,7 +218,7 @@ describe('listicleItineraries ai autowrite service', () => {
           target_id: 'stop-2_blurb',
           status: 'skipped',
           markdown: 'Existing lunch copy',
-          model_used: 'gemini-2.5-flash',
+          model_used: 'claude-opus-4-8',
           source_urls: [],
           validation_errors: [],
         },
@@ -266,7 +266,7 @@ describe('listicleItineraries ai autowrite service', () => {
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
       targetIds: ['tour-stop_blurb'],
-      modelName: 'gemini-2.5-flash',
+      modelName: 'claude-opus-4-8',
     })
 
     expect(request.targets[0]?.supportingContext).toContain('Price: $$$')
@@ -287,7 +287,7 @@ describe('listicleItineraries ai autowrite service', () => {
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
       targetIds: ['stop-2_blurb'],
-      modelName: 'gemini-2.5-flash',
+      modelName: 'claude-opus-4-8',
     })
 
     expect(request.listTone).toBe('elevated')
@@ -323,7 +323,7 @@ describe('listicleItineraries ai autowrite service', () => {
       relatedByBlockType: related,
       locations: buildLocations(),
       targetIds: ['night-1_blurb'],
-      modelName: 'gemini-2.5-flash',
+      modelName: 'claude-opus-4-8',
     })
 
     expect(request.targets[0]).toEqual(expect.objectContaining({
@@ -341,7 +341,7 @@ describe('listicleItineraries ai autowrite service', () => {
       relatedByBlockType: buildRelatedByBlockType(),
       locations: buildLocations(),
       targetIds: ['stop-1_blurb'],
-      modelName: 'gemini-2.5-flash',
+      modelName: 'claude-opus-4-8',
     })
 
     expect(request.targets[0]).toEqual(expect.objectContaining({

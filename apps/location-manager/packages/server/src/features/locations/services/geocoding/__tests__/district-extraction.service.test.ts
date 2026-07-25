@@ -134,7 +134,7 @@ describe("DistrictExtractionService", () => {
     expect(mappings["PE"]).toEqual([8]);
     expect(mappings["CO"]).toEqual([8]);
     expect(mappings["BR"]).toEqual([10, 8]);
-    expect(mappings["MX"]).toEqual([8, 10]);
+    expect(mappings["MX"]).toEqual([9, 6, 8, 10]);
     expect(mappings["AR"]).toEqual([8, 10]);
     expect(mappings["CL"]).toEqual([8, 10]);
   });

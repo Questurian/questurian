@@ -241,7 +241,6 @@ export function BuilderItemsPanel({
         }
         itemAngle={guidelinePreviewItem?.angle ?? null}
         listTone={draft.listTone}
-        listicleType={draft.listicleType}
         guidelines={guidelines}
         isLoading={guidelinesLoading}
         error={guidelinesError}

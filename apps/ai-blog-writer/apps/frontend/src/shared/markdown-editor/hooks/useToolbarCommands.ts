@@ -115,9 +115,6 @@ export function useToolbarCommands({
         case 'numbered':
           execEditorCommand('insertOrderedList')
           break
-        case 'ai':
-        case 'link':
-          return
         default:
           break
       }

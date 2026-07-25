@@ -138,6 +138,7 @@ def _ngram_overlap_ratio(
 
     return overlap_hits / rewritten_total
 
+
 __all__ = [
     "_normalize_article_type_name",
     "_enforce_editorial_reasoning",

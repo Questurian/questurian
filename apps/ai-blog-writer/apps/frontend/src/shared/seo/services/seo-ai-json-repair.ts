@@ -21,7 +21,7 @@ const isPrimitiveStart = (value: string): boolean => (
   || value === 'n'
 )
 
-function tryParseRecord(value: string): Record<string, unknown> | null {
+function tryParseRecord(value: string): Record<string, unknown> {
   const parsed = JSON.parse(value)
   const record = asRecord(parsed)
   if (!record) {

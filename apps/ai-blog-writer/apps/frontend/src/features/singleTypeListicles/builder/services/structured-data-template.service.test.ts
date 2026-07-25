@@ -12,7 +12,7 @@ function buildDraft(): SingleTypeListicleDraft {
     payloadPublishedAt: undefined,
     payloadUpdatedAt: undefined,
     payloadAuthorName: undefined,
-    editorModelName: 'gemini-2.5-flash',
+    editorModelName: 'claude-opus-4-8',
     listTone: 'elevated',
     title: 'Best Gelato in Lima',
     location: 'Lima, Peru',

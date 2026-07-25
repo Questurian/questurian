@@ -4,7 +4,7 @@ import { API_BASE_URL, FEATURE_PREFIX } from '../constants/api.constants'
 import { STAGE_ORDER } from '../constants/pipeline.constants'
 import type { DebugResponse } from '../types/pipeline.types'
 import { resolveErrorMessage } from './request-error'
-import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns/progress'
+import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns'
 
 function normalizeYouTube2BlogStatusResponse(value: unknown, fallbackRunId: string): StatusResponse {
   const normalized = normalizePipelineStatus({

@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '../../auth'
-import { fetchPayloadArticles } from '../../staging/api'
-import { useLocalStagedDrafts } from '../../blogArticles/hooks/useLocalStagedDrafts'
-import { PayloadDocumentsTable } from '../../blogArticles/components/PayloadDocumentsTable'
-import { LocalDraftsTable } from '../../blogArticles/components/LocalDraftsTable'
-import { buildPayloadArticleDraftUrl } from '../../blogArticles/utils/payload-article-links'
+import { fetchPayloadArticles } from '../../staging'
+import {
+  buildPayloadArticleDraftUrl,
+  LocalDraftsTable,
+  PayloadDocumentsTable,
+  useLocalStagedDrafts,
+} from '../../blogArticles'
 import { PAYLOAD_ARTICLES_STORAGE_KEY } from '../constants'
 
 export default function PayloadArticlesPage() {

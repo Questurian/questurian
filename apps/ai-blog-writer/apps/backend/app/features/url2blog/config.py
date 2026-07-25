@@ -201,6 +201,7 @@ def _resolve_grounded_model(model_name: str | None) -> str:
         return resolved
     return DEFAULT_GROUNDED_MODEL
 
+
 __all__ = [
     "FEATURE_NAME",
     "URL2BLOG_ALLOWED_MODELS",

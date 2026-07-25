@@ -1,6 +1,7 @@
 """URL2Blog stage 2 article-type classification."""
 
 import logging
+from typing import Any
 
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse

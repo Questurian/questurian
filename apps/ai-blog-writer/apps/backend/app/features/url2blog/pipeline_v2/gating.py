@@ -3,7 +3,6 @@
 Extracted verbatim from url2blog/routes.py.
 """
 
-import re
 from typing import Any
 
 from ..llm.coerce import *  # noqa: F401,F403
@@ -126,6 +125,7 @@ def _build_v2_rewrite_retry_feedback(
         .replace("{quality_summary}", quality_summary)
         .replace("{required_revisions}", required_revisions_text)
     )
+
 
 __all__ = [
     "_should_force_v2_fact_repair",

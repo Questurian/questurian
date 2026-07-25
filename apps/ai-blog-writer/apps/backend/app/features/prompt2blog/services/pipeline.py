@@ -18,7 +18,6 @@ from html import unescape
 from pathlib import Path
 from datetime import UTC, datetime
 from typing import Any, List
-from uuid import uuid4
 
 from pydantic import BaseModel, Field
 

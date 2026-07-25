@@ -1,0 +1,4 @@
+[test]
+# Captures the real repository barrels before any test file can register a partial
+# global mock.module override. See src/test/repository-mocks.ts.
+preload = ["./src/test/repository-mocks.ts"]

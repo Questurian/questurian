@@ -8,7 +8,7 @@ import {
   fetchToneProfiles,
   runUrl2BlogPipelineV2,
 } from '../api'
-import { usePipelineRunPoll } from '../../pipelineRuns/hooks/usePipelineRunPoll'
+import { usePipelineRunPoll } from '../../pipelineRuns'
 import {
   DEFAULT_ARTICLE_TONE_ID,
   type ArticleToneId,

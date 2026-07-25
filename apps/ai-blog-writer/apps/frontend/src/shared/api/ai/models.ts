@@ -17,6 +17,23 @@ export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; 
   },
 ]
 
+/**
+ * Models selectable for the editorial stage's block-rewrite editor. Deliberately
+ * wider than EditorAssistModelName: `/editor-assist/rewrite-block` takes a
+ * free-form `model_name` (see backend `RewriteBlockRequest`) rather than the
+ * assist allowlist, and the stage exposes the full picker via EDITOR_MODEL_OPTIONS.
+ */
+export type EditorBlockRewriteModelName =
+  | 'claude-opus-4-8'
+  | 'claude-opus-4-7'
+  | 'claude-sonnet-5'
+  | 'gemini-3.1-pro-preview'
+  | 'gemini-3.1-flash-lite-preview'
+  | 'gemini-3.1-flash-image-preview'
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.0-flash'
+
 export type Y2BModelName = 'gemini-2.5-flash-lite'
 
 export const DEFAULT_Y2B_MODEL: Y2BModelName = 'gemini-2.5-flash-lite'

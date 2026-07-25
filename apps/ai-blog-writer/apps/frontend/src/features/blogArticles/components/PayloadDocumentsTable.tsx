@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
-import type { PayloadArticleDoc } from '../../staging/api'
-import { buildPayloadAdminArticleUrl } from '../../staging/api'
-import type { StagedArticle } from '../../staging/types'
+import {
+  buildPayloadAdminArticleUrl,
+  type PayloadArticleDoc,
+  type StagedArticle,
+} from '../../staging'
 import { statusMeta } from '../utils/articles-status.utils'
 import { formatDate } from '../utils/articles-format.utils'
 import { buildPayloadArticleEditUrl } from '../utils/payload-article-links'

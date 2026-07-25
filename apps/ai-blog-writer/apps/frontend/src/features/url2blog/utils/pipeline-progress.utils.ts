@@ -3,7 +3,7 @@ import {
   URL2BLOG_PROGRESS_STEPS,
   type Url2BlogProgressStep,
 } from '../constants/pipeline-ui.constants'
-import { getStepStatus, type PipelineStepState } from '../../pipelineRuns/progress'
+import { getStepStatus, type PipelineStepState } from '../../pipelineRuns'
 
 export type ProgressItemState = PipelineStepState
 

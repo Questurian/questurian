@@ -43,7 +43,7 @@ function buildDraft(listicleType: SingleTypeListicleDraft['listicleType']): Sing
 
   return {
     draftId: 'draft-1',
-    editorModelName: 'gemini-2.5-flash',
+    editorModelName: 'claude-opus-4-8',
     listTone: 'elevated',
     title: 'Best Restaurants',
     location: 'lima-peru',

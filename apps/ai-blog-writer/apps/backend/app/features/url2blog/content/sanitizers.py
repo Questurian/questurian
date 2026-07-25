@@ -4,7 +4,6 @@ Extracted verbatim from url2blog/routes.py.
 """
 
 import math
-import re
 from typing import Any
 
 from ..llm.coerce import *  # noqa: F401,F403
@@ -524,6 +523,7 @@ def _sanitize_v2_fact_coverage(
         "missing_count": len(missing_facts),
         "missing_high_count": missing_high_count,
     }
+
 
 __all__ = [
     "_sanitize_v2_guideline_rewrite",

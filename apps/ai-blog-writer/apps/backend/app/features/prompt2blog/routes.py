@@ -151,6 +151,7 @@ def _run_full_pipeline(run_id: str, request: Prompt2BlogInputRequest) -> None:
     _sync_compat_overrides()
     return _pipeline_service._run_full_pipeline(run_id, request)
 
+
 __all__ = [
     "router",
     "synthesize_sources",

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PROMPT2BLOG_MODEL } from '../constants/prompt2blog.constants'
+import {
+  DEFAULT_PROMPT2BLOG_MODEL,
+  DEFAULT_PROMPT2BLOG_WRITER_MODEL,
+} from '../constants/prompt2blog.constants'
 import type { P2BFormState } from './composer.types'
 import { buildPrompt2BlogPayload } from './prompt-payload'
 
@@ -10,6 +13,7 @@ function createState(overrides: Partial<P2BFormState> = {}): P2BFormState {
     targetReader: 'First-time visitors',
     destinationContext: 'Lisbon, Portugal',
     modelName: DEFAULT_PROMPT2BLOG_MODEL,
+    writingModel: DEFAULT_PROMPT2BLOG_WRITER_MODEL,
     toneId: 'balanced',
     lengthId: 'standard',
     brandVoiceId: 'questurian',

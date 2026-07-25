@@ -4,7 +4,7 @@ import {
   type Prompt2BlogPipelineStage,
   type Prompt2BlogStatusResponse,
 } from '../types/pipeline.types'
-import { getStepStatus } from '../../pipelineRuns/progress'
+import { getStepStatus } from '../../pipelineRuns'
 import type { PipelineStepStatus } from './pipeline-run.types'
 
 export const PIPELINE_STAGE_LABELS: Record<Prompt2BlogPipelineStage, string> = {

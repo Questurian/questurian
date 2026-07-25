@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { StagedArticle } from '../../staging/types'
+import type { StagedArticle } from '../../staging'
 import type { SavedArticlesPageConfig, SavedBlogArticle } from '../types'
 import SavedArticlesPage from './SavedArticlesPage'
 
@@ -17,16 +17,15 @@ vi.mock('../../auth', () => ({
   useAuth: mockUseAuth,
 }))
 
-vi.mock('../../staging/api', () => ({
+vi.mock('../../staging', () => ({
   getArticleById: mockGetArticleById,
   fetchPayloadArticles: mockFetchPayloadArticles,
   buildPayloadAdminArticleUrl: (articleId: number) =>
     `http://localhost:4000/admin/collections/articles/${articleId}`,
-}))
-
-vi.mock('../../staging/features/editorial-stage-article/services/editorial-stage-storage.service', () => ({
   getAllStagedArticles: mockGetAllStagedArticles,
   removeStagedArticle: mockRemoveStagedArticle,
+  clearAllStagedArticles: vi.fn(),
+  migrateLocalDraftsToServer: vi.fn(),
 }))
 
 function makeQueryClient() {

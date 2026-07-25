@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import type { StagedArticle } from '../../staging/types'
+import type { StagedArticle } from '../../staging'
 import { formatDate, shortRunId } from '../utils/articles-format.utils'
 
 export type LocalDraftsTableProps = {

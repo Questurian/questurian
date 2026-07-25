@@ -10,8 +10,7 @@ export type {
   RewriteBlockWithAiResponse,
   UnsplashPhoto,
   UnsplashSearchResponse,
-} from '../../staging/api'
-
+} from '../../staging'
 export {
   convertMarkdownToLexical,
   createArticle,
@@ -25,4 +24,4 @@ export {
   searchPexelsImages,
   searchUnsplashImages,
   updateArticle,
-} from '../../staging/api'
+} from '../../staging'

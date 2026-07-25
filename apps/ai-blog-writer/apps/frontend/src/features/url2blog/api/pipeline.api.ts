@@ -10,7 +10,7 @@ import type {
 } from '../types/pipeline.types'
 import { resolveErrorMessage } from './request-error'
 import { URL2BLOG_PROGRESS_STEPS } from '../constants/pipeline-ui.constants'
-import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns/progress'
+import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns'
 
 const URL2BLOG_PIPELINE_STAGES = URL2BLOG_PROGRESS_STEPS
   .map((step) => step.stage)

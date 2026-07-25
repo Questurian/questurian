@@ -1,4 +1,4 @@
-import type { StagedArticle } from '../../staging/types'
+import type { StagedArticle } from '../../staging'
 import type { SavedBlogArticle } from '../types'
 
 export type PayloadPublicationStatus = 'draft' | 'published'

@@ -1,2 +1,19 @@
 [flake8]
-extend-ignore = E501,W292
+# E203 (whitespace before ':') conflicts with black's slice formatting.
+extend-ignore = E501,W292,E203
+
+# The url2blog pipeline was split out of one large routes.py and the pieces
+# re-export each other's namespaces with `from x import *` (each already tagged
+# `# noqa: F401,F403`). F405 fires at every *use* of such a name, which cannot be
+# suppressed inline, so it is ignored for exactly the modules using that pattern.
+per-file-ignores =
+    apps/backend/app/features/url2blog/content/editorial_blocks.py:F405
+    apps/backend/app/features/url2blog/content/sanitizers.py:F405
+    apps/backend/app/features/url2blog/llm/invocation.py:F405
+    apps/backend/app/features/url2blog/pipeline_v2/gating.py:F405
+    apps/backend/app/features/url2blog/pipeline_v2/orchestration.py:F405
+    apps/backend/app/features/url2blog/pipeline_v2/phases.py:F405
+    # routes.py additionally interleaves imports with code on purpose: the re-export
+    # blocks must run after `router`/`logger` exist, and the pipeline_v2 phases are
+    # imported at the bottom to close an intentional import cycle (see its docstring).
+    apps/backend/app/features/url2blog/routes.py:F405,E402

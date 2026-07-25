@@ -16,7 +16,6 @@ from app.features.editor_assist.writer_models import invoke_writer_model
 
 from .schemas import (
     Candidate,
-    Category,
     IntentSpec,
     PlanStop,
     ScoredCandidate,
@@ -24,6 +23,7 @@ from .schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 def _complete(*, prompt: str, model_name: str, temperature: float, max_tokens: int) -> str:
     """Run one completion, routing ``claude*`` models to Anthropic and the rest to Vertex."""

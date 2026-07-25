@@ -3,7 +3,6 @@ import type { StagedArticle } from '../../../types'
 import type { Location, MediaAsset } from '../../../api'
 import type { TimelineItem } from '../workflow.service'
 import { getMediaAssetUrl } from '../utils/editorial-stage-view.utils'
-import { buildImageFileNamePrefix } from '../media-utils'
 import {
   buildBlockModalView,
   buildFeaturedModalView,
@@ -28,10 +27,8 @@ import type {
   SupportedEditorialComponent,
   OpenBlockImageModalOptions,
   PexelsOrientationOption,
-  ExternalImageCropDraft,
   ImageSourceOption,
 } from '../types'
-import type { UploadImageResponse } from '../../../../../shared/images'
 import type { PexelsPhoto, UnsplashPhoto } from '../../../api'
 import type { EditorialPublishAnalysis } from '../editorial-markdown.service'
 
@@ -211,19 +208,11 @@ export function useEditorialStageLoadedArticleViews(
     missingPublishFields,
     editorialBlockingMessages,
     hasMissingFeaturedImage,
-    isImgBlockModal,
-    isImgTrioModal,
-    isMultiImageModal,
     featuredImageRequirementLabel,
     singleImageRequirementLabel,
     imgPairRequirementLabel,
     imgTrioRequirementLabel,
-    activeBlockImageRequirementLabel,
-    filteredFeaturedImageAssets,
-    filteredBlockImageAssets,
-    imgTrioDimensions,
     requiredImageCount,
-    selectedImgBlockAssets,
   } = useEditorialStageDerivedState({
     stagedArticle: params.stagedArticle,
     locations: params.locations,
@@ -238,15 +227,6 @@ export function useEditorialStageLoadedArticleViews(
     imgTrioFormat: params.imgTrioFormat,
     findPreferredVariantAsset: params.findPreferredVariantAsset,
   })
-
-  const blockImageExternalRef = params.blockImageModal
-    ? `${params.stagedArticle.id}_block_${params.blockImageModal.blockId}`
-    : ''
-  const blockImageFileNamePrefix = blockImageExternalRef
-    ? buildImageFileNamePrefix(params.stagedArticle.title, blockImageExternalRef)
-    : undefined
-
-  const selectedImgBlockAssetsCount = selectedImgBlockAssets.length
 
   const handleAddSelectedImgBlock = useEditorialStageImageBlockAction({
     blockImageModal: params.blockImageModal,

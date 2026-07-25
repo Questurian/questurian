@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, RefObject } from 'react'
-import type { UploadImageResponse, UploadProgress } from '../api/imagesApi'
+import type { UploadProgress } from '../api/imagesApi'
 import { readFileAsDataUrl, requestGeneratedAltText, uploadPreparedVariants } from '../services/image-upload-flow.service'
 import type { ImageUploadProps, UploadStage, VariantUploadFile } from '../types'
 import { validateImageFile } from '../validators/image-upload.validators'
@@ -35,7 +35,6 @@ export type UseImageUploadFlowResult = {
 
 export function useImageUploadFlow({
   externalRef,
-  fileNamePrefix,
   locationRef,
   token,
   initialAltText = '',

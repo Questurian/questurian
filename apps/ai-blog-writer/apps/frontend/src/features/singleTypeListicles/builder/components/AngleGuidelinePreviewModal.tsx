@@ -1,5 +1,5 @@
-import type { ListicleAngle, ListTone, ListicleType } from '../../types'
-import { LISTICLE_ANGLE_OPTIONS, LIST_TONE_OPTIONS, getListicleAngleOptions } from '../../types'
+import type { ListicleAngle, ListTone } from '../../types'
+import { LISTICLE_ANGLE_OPTIONS, LIST_TONE_OPTIONS } from '../../types'
 
 type AngleGuidelinePreviewModalProps = {
   isOpen: boolean
@@ -7,7 +7,6 @@ type AngleGuidelinePreviewModalProps = {
   itemLabel: string
   itemAngle: ListicleAngle | null
   listTone: ListTone
-  listicleType: ListicleType | ''
   guidelines: { angles: Record<string, string>; tones: Record<string, string> } | null
   isLoading: boolean
   error: string | null
@@ -45,7 +44,6 @@ export function AngleGuidelinePreviewModal({
   itemLabel,
   itemAngle,
   listTone,
-  listicleType,
   guidelines,
   isLoading,
   error,
@@ -55,7 +53,6 @@ export function AngleGuidelinePreviewModal({
   const toneLabel = TONE_LABEL_BY_VALUE[listTone] ?? listTone
   const toneGuidance = guidelines?.tones[listTone] ?? ''
 
-  const angleOptions = getListicleAngleOptions(listicleType)
   const isUnselected = itemAngle === null
 
   return (

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import type { InstagramEmbed } from "../../models/location";
+import { mockContentRepository, mockCoreRepository } from "../../../../test/repository-mocks";
 
 // Spies shared across mocked repository modules.
 const updateLocationById = mock((_locationId: number, _updates: Record<string, unknown>) => true);
@@ -11,12 +12,12 @@ const getInstagramEmbedByLocationAndIdentity = mock((_locationId: number, identi
 
 let storedEmbed: InstagramEmbed | null = null;
 
-mock.module("../../repositories/core", () => ({
+mockCoreRepository({
   getLocationById: () => ({ id: 7, name: "Pucllana Site Museum" }),
   updateLocationById,
-}));
+} as any);
 
-mock.module("../../repositories/content", () => ({
+mockContentRepository({
   saveInstagramEmbed,
   getInstagramEmbedById: (id: number) => storedEmbed?.id === id ? storedEmbed : null,
   deleteInstagramEmbedById,
@@ -26,7 +27,7 @@ mock.module("../../repositories/content", () => ({
   getUploadsByInstagramEmbedId: () => [],
   saveUpload: () => 1,
   isInstagramMediaRejected: () => false,
-}));
+} as any);
 
 // Imported after mocks so the service binds to the mocked repositories.
 const { InstagramService } = await import("./instagram.service");

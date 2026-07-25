@@ -1,7 +1,7 @@
 import type { StatusResponse } from '@shared/types'
 
 import { PIPELINE_TIMELINE, STAGE_LABELS, STAGE_ORDER } from '../constants/pipeline.constants'
-import { getStepStatus } from '../../pipelineRuns/progress'
+import { getStepStatus } from '../../pipelineRuns'
 
 export type TimelineStep = (typeof PIPELINE_TIMELINE)[number]
 

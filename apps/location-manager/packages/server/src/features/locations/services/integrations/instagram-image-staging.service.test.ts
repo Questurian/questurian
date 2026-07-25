@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import type { InstagramEmbed, Upload } from "../../models/location";
 import { InstagramApiError, type InstagramMediaResponse } from "./clients/instagram-api.client";
+import { mockContentRepository, mockCoreRepository } from "../../../../test/repository-mocks";
 
 let embed: InstagramEmbed = {
   id: 42,
@@ -14,12 +15,12 @@ let embed: InstagramEmbed = {
 };
 const uploads: Upload[] = [];
 
-mock.module("../../repositories/core", () => ({
+mockCoreRepository({
   getLocationById: () => ({ id: 7, name: "Source Place", title: "Public Place" }),
   updateLocationById: () => true,
-}));
+} as any);
 
-mock.module("../../repositories/content", () => ({
+mockContentRepository({
   getInstagramEmbedById: () => embed,
   getInstagramEmbedByLocationAndIdentity: () => null,
   deleteInstagramEmbedById: () => true,
@@ -39,7 +40,7 @@ mock.module("../../repositories/content", () => ({
   },
   isInstagramMediaRejected: () => false,
   getInstagramEmbedsForBackfill: () => [],
-}));
+} as any);
 
 const { InstagramImageStagingService } = await import("./instagram-image-staging.service");
 

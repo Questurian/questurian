@@ -1,6 +1,9 @@
-import type { EditorAssistModelName } from '../../../../shared/api/ai/models'
+import type {
+  EditorAssistModelName,
+  EditorBlockRewriteModelName,
+} from '../../../../shared/api/ai/models'
 import type { UploadImageResponse } from '../../../../shared/images'
-import type { PayloadArticleDoc } from '../../../api/articles/articles.types'
+import type { PayloadArticleDoc } from '../../api/articles/articles.types'
 import type {
   CreateArticlePayload,
   ExternalImageProvider,
@@ -24,16 +27,7 @@ export type BlockImageModalMode = 'default' | 'img' | 'img-trio'
 export type ImgTrioFormat = 'square' | 'landscape'
 export type PexelsOrientationOption = PexelsOrientation | ''
 export type ImageSourceOption = 'payload' | 'upload' | 'unsplash' | 'pexels'
-export type EditorModelName =
-  | 'claude-opus-4-8'
-  | 'claude-opus-4-7'
-  | 'claude-sonnet-5'
-  | 'gemini-3.1-pro-preview'
-  | 'gemini-3.1-flash-lite-preview'
-  | 'gemini-3.1-flash-image-preview'
-  | 'gemini-2.5-flash'
-  | 'gemini-2.5-pro'
-  | 'gemini-2.0-flash'
+export type EditorModelName = EditorBlockRewriteModelName
 
 export type EditorialStageArticleApi = {
   fetchLocations: (

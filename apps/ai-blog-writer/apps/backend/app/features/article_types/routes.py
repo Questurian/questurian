@@ -3,7 +3,6 @@ Shared article types API routes.
 """
 import sqlite3
 import re
-from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse

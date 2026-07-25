@@ -1,5 +1,5 @@
 import type { Prompt2BlogPipelinePayload } from '../api'
-import type { PipelineStepState } from '../../pipelineRuns/progress'
+import type { PipelineStepState } from '../../pipelineRuns'
 
 export type SourceStep = 'edit' | 'pipeline_running' | 'pipeline_complete'
 export type PipelineStepStatus = PipelineStepState

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { usePipelineRunPoll } from '../../pipelineRuns/hooks/usePipelineRunPoll'
+import { usePipelineRunPoll } from '../../pipelineRuns'
 
 import {
   clearDatabase,
