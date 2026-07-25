@@ -1,0 +1,1 @@
+export const DEFAULT_GOOGLE_PHOTO_MAX_WIDTH = 1600;
