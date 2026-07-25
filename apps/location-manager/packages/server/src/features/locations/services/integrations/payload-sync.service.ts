@@ -23,7 +23,7 @@ import type { SyncResult, SyncStatusResponse, TourPayloadSyncResult } from "./ty
 import { uploadLocationImages } from "./handlers";
 import type { PayloadCollection } from "./mappers/location-payload.mapper";
 import { mapLocationToPayloadFormat, mapCategoryToCollection } from "./mappers";
-import type { PayloadTourData } from "./clients/payload/payload-api.types";
+import type { PayloadTourData } from "./clients/payload/payload-tour.types";
 import { ensurePayloadLocationRefForKey } from "./resolvers/payload-location.resolver";
 
 export class PayloadSyncService {

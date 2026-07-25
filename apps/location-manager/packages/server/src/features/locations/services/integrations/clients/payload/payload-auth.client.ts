@@ -1,6 +1,6 @@
 import { EnvConfig } from "@server/shared/config/env.config";
 import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
-import type { PayloadAuthResponse, PayloadCustomAuthResponse } from "./payload-api.types";
+import type { PayloadAuthResponse, PayloadCustomAuthResponse } from "./payload-auth.types";
 
 export class PayloadAuthClient {
   private readonly apiUrl: string;

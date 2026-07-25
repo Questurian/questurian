@@ -1,7 +1,10 @@
 import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
 import { normalizeDocResponse } from "./payload-http.client";
 import { PayloadAuthClient } from "./payload-auth.client";
-import type { PayloadInstagramPostData, PayloadInstagramPostResponse } from "./payload-api.types";
+import type {
+  PayloadInstagramPostData,
+  PayloadInstagramPostResponse,
+} from "./payload-instagram.types";
 
 export class PayloadInstagramClient {
   constructor(private readonly authClient: PayloadAuthClient) {}

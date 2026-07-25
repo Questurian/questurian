@@ -5,14 +5,16 @@ import type {
   PayloadMediaSetData,
   PayloadMediaSetFromSourceData,
   PayloadMediaSetFromSourceResponse,
+  PayloadMediaSetResponse,
+  PayloadMediaVariantType,
+} from "./payload-media-set.types";
+import type {
   PayloadMediaSetListItem,
   PayloadMediaSetListResponse,
   PayloadMediaSetQueryResponse,
-  PayloadMediaSetResponse,
   PayloadMediaSetSearchQueryDoc,
   PayloadMediaSetSearchResponse,
-  PayloadMediaVariantType,
-} from "./payload-api.types";
+} from "./payload-media-set-search.types";
 
 export class PayloadMediaSetsClient {
   constructor(private readonly authClient: PayloadAuthClient) {}

@@ -1,9 +1,6 @@
 import type { PayloadEntriesClient } from "./payload-entries.client";
-import type {
-  PayloadCollection,
-  PayloadEntryData,
-  PayloadRelationshipId,
-} from "./payload-api.types";
+import type { PayloadEntryData } from "./payload-entry.types";
+import type { PayloadCollection, PayloadRelationshipId } from "./payload-shared.types";
 
 export class PayloadGalleryMergerService {
   constructor(private readonly entriesClient: PayloadEntriesClient) {}
