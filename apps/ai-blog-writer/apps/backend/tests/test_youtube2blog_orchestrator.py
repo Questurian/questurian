@@ -153,7 +153,9 @@ def test_process_run_writes_editorial_stage_and_final_markdown(monkeypatch):
     monkeypatch.setattr(
         y2b_orchestrator,
         "run_youtube2blog_graph",
-        lambda record, meta: y2b_orchestrator._process_run_stages(record, meta),
+        # This test covers stage writes, not model routing: swallow the run
+        # options process_run forwards and exercise the stage pipeline directly.
+        lambda record, meta, **_kwargs: y2b_orchestrator._process_run_stages(record, meta),
     )
 
     markdown = y2b_orchestrator.process_run(_sample_record(), _sample_meta())
@@ -179,15 +181,30 @@ def test_process_run_uses_langgraph_runner(monkeypatch):
     meta = _sample_meta()
     captured: dict[str, object] = {}
 
-    def _fake_graph_runner(record_arg, meta_arg):
+    def _fake_graph_runner(record_arg, meta_arg, **kwargs):
         captured["record"] = record_arg
         captured["meta"] = meta_arg
+        captured["kwargs"] = kwargs
         return "# Graph Markdown"
 
     monkeypatch.setattr(y2b_orchestrator, "run_youtube2blog_graph", _fake_graph_runner)
 
-    markdown = y2b_orchestrator.process_run(record, meta)
+    markdown = y2b_orchestrator.process_run(
+        record,
+        meta,
+        model_name="gemini-2.5-flash-lite",
+        forced_article_type="listicle",
+        tone_id="tone-abc",
+        writing_model="gemini-2.5-pro",
+    )
 
     assert markdown == "# Graph Markdown"
     assert captured["record"] is record
     assert captured["meta"] is meta
+    # process_run is a pass-through: every run option must reach the graph runner.
+    assert captured["kwargs"] == {
+        "model_name": "gemini-2.5-flash-lite",
+        "forced_article_type": "listicle",
+        "tone_id": "tone-abc",
+        "writing_model": "gemini-2.5-pro",
+    }

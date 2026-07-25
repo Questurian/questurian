@@ -348,10 +348,14 @@ def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypat
     assert "in conclusion" not in payload["final_markdown"].lower()
     assert payload["guideline_review"]["alignment_summary"]
     assert payload["guideline_review"]["quality_scores"]["overall"] == 9
-    assert (
-        payload["guideline_review"]["narrative_focus_applied"]
-        == "Prioritize practical insights for travelers."
+    # `narrative_focus_applied` reports the composed steering directive that
+    # actually reached the prompts: the caller's focus followed by the resolved
+    # tone profile (Practical is the default when no tone_id is sent).
+    narrative_focus_applied = payload["guideline_review"]["narrative_focus_applied"]
+    assert narrative_focus_applied.startswith(
+        "Prioritize practical insights for travelers."
     )
+    assert "TONE PROFILE (Practical):" in narrative_focus_applied
     assert payload["guideline_review"]["model_used"] == "gemini-2.5-flash-lite"
     assert payload["guideline_review"]["execution_profile"] == "standard"
     assert payload["guideline_review"]["length_requirement_met"] is True

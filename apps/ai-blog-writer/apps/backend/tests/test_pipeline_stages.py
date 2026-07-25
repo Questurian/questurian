@@ -17,12 +17,30 @@ def sample_record() -> RawVideoRecord:
     )
 
 
+_ENFORCEMENT_MARKER = "If the following text is already in English"
+
+
+def _is_translation_enforcement(prompt: str) -> bool:
+    """Stage 1 runs an idempotent English pass over the cleaned transcript and
+    the title. Those calls reuse the same LLM, so stubs must tell them apart
+    from cleaning calls or the canned cleaning output leaks into the title."""
+    return prompt.startswith(_ENFORCEMENT_MARKER)
+
+
+def _enforcement_input_text(prompt: str) -> str:
+    """Echo back what the enforcement pass was handed, matching its contract:
+    already-English text is returned exactly as-is."""
+    return prompt.split("Text:\n", 1)[1]
+
+
 def test_stage_1_clean_transcript_uses_ai_output(monkeypatch):
-    captured_prompt = {"value": ""}
+    cleaning_prompts: list[str] = []
 
     class StubLLM:
         def invoke(self, prompt: str) -> str:
-            captured_prompt["value"] = prompt
+            if _is_translation_enforcement(prompt):
+                return _enforcement_input_text(prompt)
+            cleaning_prompts.append(prompt)
             return "  Cleaned transcript output.  "
 
     monkeypatch.setattr(
@@ -37,7 +55,8 @@ def test_stage_1_clean_transcript_uses_ai_output(monkeypatch):
     assert output.cleaned_transcript == "Cleaned transcript output."
     assert output.video_id == record.video_id
     assert output.title == record.title
-    assert record.transcript in captured_prompt["value"]
+    assert len(cleaning_prompts) == 1
+    assert record.transcript in cleaning_prompts[0]
 
 
 def test_stage_1_clean_transcript_chunks_long_inputs(monkeypatch):
@@ -45,6 +64,8 @@ def test_stage_1_clean_transcript_chunks_long_inputs(monkeypatch):
 
     class StubLLM:
         def invoke(self, prompt: str) -> str:
+            if _is_translation_enforcement(prompt):
+                return _enforcement_input_text(prompt)
             prompts.append(prompt)
             return f"Cleaned chunk {len(prompts)}"
 

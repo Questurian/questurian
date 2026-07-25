@@ -6,11 +6,27 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app.core.article_types as article_types_store
+import app.features.article_types.routes as article_types_routes
 from app.main import app
 
 
 @pytest.fixture
-def client_with_temp_article_types_db(tmp_path, monkeypatch):
+def temp_guidelines_dir(tmp_path, monkeypatch):
+    """Point the guideline-file lookup at an empty directory.
+
+    The read routes override a stored guideline with `<name>.md` from
+    ARTICLE_GUIDELINES_DIR when one exists. The real directory ships ~40
+    guidelines, so without this the tests' outcome depends on which names
+    happen to collide with shipped content.
+    """
+    guidelines_dir = tmp_path / 'guidelines'
+    guidelines_dir.mkdir()
+    monkeypatch.setattr(article_types_routes, 'GUIDELINES_DIR', guidelines_dir)
+    return guidelines_dir
+
+
+@pytest.fixture
+def client_with_temp_article_types_db(tmp_path, monkeypatch, temp_guidelines_dir):
     db_path = tmp_path / 'pipeline.db'
 
     @contextmanager
@@ -157,3 +173,34 @@ def test_get_article_type_guidelines_by_id_and_name(
 
     missing_name_response = client.get('/article-types/by-name/does-not-exist/guidelines')
     assert missing_name_response.status_code == 404
+
+
+def test_guideline_file_overrides_stored_guideline(
+    client_with_temp_article_types_db,
+    temp_guidelines_dir,
+):
+    """A `<name>.md` guideline file wins over whatever the DB holds."""
+    client = client_with_temp_article_types_db
+
+    created = client.post(
+        '/article-types',
+        json={'name': 'Adventure Guide', 'definition': 'Hiking, diving, trekking.'},
+    ).json()
+
+    article_types_store.write_article_type(
+        name='Adventure Guide',
+        definition=created['definition'],
+        guideline='Stored guideline that the file should replace.',
+        title_guideline='Use action verbs and mention activity type.',
+    )
+    (temp_guidelines_dir / 'Adventure Guide.md').write_text(
+        '## Adventure Guide\n\nFile-sourced guideline.\n',
+        encoding='utf-8',
+    )
+
+    response = client.get(f"/article-types/{created['id']}/guidelines")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['guideline'] == '## Adventure Guide\n\nFile-sourced guideline.\n'
+    # Only `guideline` is file-backed; `title_guideline` still comes from the DB.
+    assert payload['title_guideline'] == 'Use action verbs and mention activity type.'

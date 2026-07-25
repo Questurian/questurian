@@ -102,6 +102,15 @@ def test_url2blog_persists_result_articles_and_sync_endpoints(monkeypatch):
             '{"improved_title": "Persisted URL2Blog Title"}',
         )
 
+    # routes.py does `from utils import get_vertex_llm` at import time, so the
+    # module-level `utils` stub above only lands if this file is imported first
+    # (`sys.modules.setdefault` is a no-op once a real `utils` is loaded). Patch
+    # the bound name directly, otherwise the markdown long-output and title
+    # stages build a real client and call a live API. Returning None is the
+    # "LLM client unavailable" sentinel both stages already handle: the rewrite
+    # falls back to the mocked JSON transport and the title falls back to the
+    # stage-1 title.
+    monkeypatch.setattr(url2blog_routes, "get_vertex_llm", lambda *a, **kw: None)
     monkeypatch.setattr(url2blog_routes, "extract_article", stub_extract_article)
     monkeypatch.setattr(
         url2blog_routes, "classify_article_type", stub_classify_article_type

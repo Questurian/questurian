@@ -71,9 +71,10 @@ def test_from_url_queues_single_run(monkeypatch):
         captured["notes"] = notes
         return _sample_meta(source=source, notes=notes)
 
-    def fake_process_run(record: RawVideoRecord, meta: PipelineMeta):
+    def fake_process_run(record: RawVideoRecord, meta: PipelineMeta, **kwargs):
         captured["process_record"] = record
         captured["process_meta"] = meta
+        captured["process_kwargs"] = kwargs
         return "# done"
 
     monkeypatch.setattr(youtube2blog_routes, "initialize_run", fake_initialize_run)
@@ -99,6 +100,14 @@ def test_from_url_queues_single_run(monkeypatch):
     assert captured["source"] == "youtube-url"
     assert str(captured["notes"]).startswith("url:https://www.youtube.com/watch?v=")
     assert captured["process_meta"] is not None
+    # A body carrying only `url` must queue the run with every option unset,
+    # so the pipeline falls back to its configured defaults.
+    assert captured["process_kwargs"] == {
+        "model_name": None,
+        "forced_article_type": None,
+        "tone_id": None,
+        "writing_model": None,
+    }
 
 
 def test_from_url_rejects_invalid_or_non_video_url():
@@ -166,7 +175,12 @@ def test_from_url_uses_fallback_title_when_oembed_fails(monkeypatch):
         return _sample_meta(source=source, notes=notes)
 
     monkeypatch.setattr(youtube2blog_routes, "initialize_run", fake_initialize_run)
-    monkeypatch.setattr(youtube2blog_routes, "process_run", lambda _record, _meta: "# done")
+    monkeypatch.setattr(
+        youtube2blog_routes,
+        "process_run",
+        # Title fallback only; run options are irrelevant here.
+        lambda _record, _meta, **_kwargs: "# done",
+    )
 
     response = client.post(
         "/youtube2blog/from-url",

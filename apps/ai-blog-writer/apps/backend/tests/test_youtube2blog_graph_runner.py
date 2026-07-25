@@ -22,7 +22,10 @@ def test_stage1_gate_uses_standard_retention_ratio_for_short_transcripts():
     assert decision == "retry"
     assert gate_data["checks"]["minimum_retention_ratio"] is False
     assert gate_data["metrics"]["minimum_retention_ratio_threshold"] == 0.2
-    assert gate_data["metrics"]["maximum_retention_ratio_threshold"] == 0.9
+    # The standard tier is the most lenient ceiling (1.05 vs 0.98 long-form,
+    # 0.95 medium-form) because Stage 1 also translates non-English transcripts
+    # into English, which can make the cleaned text longer than the source.
+    assert gate_data["metrics"]["maximum_retention_ratio_threshold"] == 1.05
     assert gate_data["metrics"]["transcript_length_profile"] == "standard"
 
 
