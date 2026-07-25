@@ -1,18 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { SingleTypeListicles } from './SingleTypeListicles'
-
-// clearStaleSocialImagesOnFeaturedImageChange sits after the unpublish guard.
-const beforeChangeHook = SingleTypeListicles.hooks?.beforeChange?.[1]
+import { clearStaleSocialImagesOnFeaturedImageChange } from './hooks/clearStaleSocialImages'
+import { validateSingleTypeListicle } from './hooks/validateSingleTypeListicle'
 
 async function runBeforeChange(
   data: Record<string, unknown>,
   originalDoc: Record<string, unknown>,
 ) {
-  if (!beforeChangeHook) {
-    throw new Error('SingleTypeListicles beforeChange hook is unavailable')
-  }
-
-  return beforeChangeHook({
+  return clearStaleSocialImagesOnFeaturedImageChange({
     data,
     originalDoc,
     operation: 'update',
@@ -131,15 +126,8 @@ describe('SingleTypeListicles featured image SEO sync', () => {
   })
 })
 
-// Item validation hook sits after the two location sync hooks.
-const beforeValidateHook = SingleTypeListicles.hooks?.beforeValidate?.[2]
-
 async function runBeforeValidate(data: Record<string, unknown>) {
-  if (!beforeValidateHook) {
-    throw new Error('SingleTypeListicles beforeValidate hook is unavailable')
-  }
-
-  return beforeValidateHook({
+  return validateSingleTypeListicle({
     data,
     operation: 'update',
     req: {
@@ -162,6 +150,15 @@ function buildVenueRow(rowId: string, venueId: number) {
     selectedPhotos: [1],
   }
 }
+
+describe('SingleTypeListicles hook wiring', () => {
+  it('registers the extracted SEO and validation hooks', () => {
+    expect(SingleTypeListicles.hooks?.beforeChange).toContain(
+      clearStaleSocialImagesOnFeaturedImageChange,
+    )
+    expect(SingleTypeListicles.hooks?.beforeValidate).toContain(validateSingleTypeListicle)
+  })
+})
 
 describe('SingleTypeListicles duplicate venue guard', () => {
   it('rejects a list where two rows reference the same source venue', async () => {
