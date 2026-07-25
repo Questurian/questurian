@@ -1,6 +1,7 @@
 import type { ImageVariantType } from "@questurian/lm-shared";
 import { VARIANT_SPECS } from "@questurian/lm-shared";
 import type { CropState } from "@client/shared/types/location-media.types";
+import type { StagedSourceSnapshot } from "@client/shared/services/api";
 
 export const PHOTO_IMPORT_VARIANT_TYPES: ImageVariantType[] = [
   "thumbnail",
@@ -73,4 +74,22 @@ export function toImageApiPath(path: string): string {
 export function getFileNameFromPath(path: string, fallback: string): string {
   const fileName = path.split("/").pop();
   return fileName?.trim() ? fileName : fallback;
+}
+
+/**
+ * Download a staged source image as a File so it can be fed to the cropper or
+ * the alt-text model. The `?v=` cache-buster keeps a re-staged source from
+ * resolving to a stale cached response at the same path.
+ */
+export async function fetchSourceFile(source: StagedSourceSnapshot): Promise<File> {
+  if (!source.sourcePath) throw new Error("Missing source image");
+  const url = `${toImageApiPath(source.sourcePath)}?v=${source.uploadId}-${Date.now()}`;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to load source (${response.status})`);
+  const blob = await response.blob();
+  return new File(
+    [blob],
+    getFileNameFromPath(source.sourcePath, `${source.origin}-${source.uploadId}.webp`),
+    { type: blob.type || "image/webp" }
+  );
 }

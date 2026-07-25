@@ -8,11 +8,10 @@ import {
 } from "@client/shared/services/api";
 import { useGooglePhotoImportEnabled } from "@client/shared/services/api/hooks";
 import { useReplaceUploadVariants } from "@client/shared/services/api/hooks/useReplaceUploadVariants";
-import { useGenerateAltText } from "@client/shared/services/api/hooks/useGenerateAltText";
 import { useToast } from "@client/shared/hooks/useToast";
 import type { ImageVariantUploadFile } from "@client/shared/types/location-media.types";
 import type { LocationCategory, PhotoImportStartPhoto } from "@questurian/lm-shared";
-import { getFileNameFromPath, toImageApiPath } from "./photoImportPanel.utils";
+import { useAltTextReview } from "./useAltTextReview";
 
 type CropModalState = {
   isOpen: boolean;
@@ -28,22 +27,6 @@ const CLOSED_CROP_STATE: CropModalState = {
   altText: undefined,
 };
 
-type AltReviewState = {
-  isOpen: boolean;
-  uploadId: number | null;
-  file: File | null;
-  generatedText: string;
-  error: string | null;
-};
-
-const CLOSED_ALT_REVIEW_STATE: AltReviewState = {
-  isOpen: false,
-  uploadId: null,
-  file: null,
-  generatedText: "",
-  error: null,
-};
-
 type UsePhotoImportPanelOptions = {
   locationId: number;
   category: LocationCategory;
@@ -55,9 +38,6 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
   const { enabled: photoImportEnabled } = useGooglePhotoImportEnabled();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [cropState, setCropState] = useState<CropModalState>(CLOSED_CROP_STATE);
-  const [altReviewState, setAltReviewState] = useState<AltReviewState>(CLOSED_ALT_REVIEW_STATE);
-  const [cachedAltTexts, setCachedAltTexts] = useState<Record<number, string>>({});
-  const [loadingSourceId, setLoadingSourceId] = useState<number | null>(null);
   const [deleteConfirmSource, setDeleteConfirmSource] = useState<StagedSourceSnapshot | null>(null);
   const [previewSource, setPreviewSource] = useState<StagedSourceSnapshot | null>(null);
 
@@ -65,7 +45,13 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
   const startImport = useStartPhotoImport();
   const retryStaged = useRetryStagedSource();
   const deleteStaged = useDeleteStagedSource();
-  const generateAltText = useGenerateAltText();
+
+  // Approving an alt text advances straight into the cropper for that source.
+  const altReview = useAltTextReview({
+    onApproved: (uploadId, file, altText) => {
+      setCropState({ isOpen: true, uploadId, file, altText });
+    },
+  });
 
   const replaceVariants = useReplaceUploadVariants({
     category,
@@ -108,76 +94,6 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
     );
   }
 
-  async function fetchSourceFile(source: StagedSourceSnapshot): Promise<File> {
-    if (!source.sourcePath) throw new Error("Missing source image");
-    const url = `${toImageApiPath(source.sourcePath)}?v=${source.uploadId}-${Date.now()}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Failed to load source (${response.status})`);
-    const blob = await response.blob();
-    return new File(
-      [blob],
-      getFileNameFromPath(source.sourcePath, `${source.origin}-${source.uploadId}.webp`),
-      { type: blob.type || "image/webp" }
-    );
-  }
-
-  async function handleOpenReview(source: StagedSourceSnapshot) {
-    if (!source.sourcePath) return;
-    setLoadingSourceId(source.uploadId);
-    try {
-      const file = await fetchSourceFile(source);
-      const cachedAltText = cachedAltTexts[source.uploadId] ?? source.altText ?? "";
-      setAltReviewState({
-        isOpen: true,
-        uploadId: source.uploadId,
-        file,
-        generatedText: cachedAltText,
-        error: null,
-      });
-      if (!cachedAltText) await generateAltTextForReview(file, source.uploadId);
-    } catch (err) {
-      const center = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      showToast(err instanceof Error ? err.message : "Failed to load source", center);
-    } finally {
-      setLoadingSourceId((current) => (current === source.uploadId ? null : current));
-    }
-  }
-
-  async function generateAltTextForReview(file: File, uploadId: number) {
-    try {
-      const result = await generateAltText.mutateAsync({ imageFile: file, uploadId });
-      setCachedAltTexts((current) => ({ ...current, [uploadId]: result.altText }));
-      setAltReviewState((state) => state.uploadId === uploadId
-        ? { ...state, generatedText: result.altText, error: null }
-        : state);
-    } catch (error) {
-      setAltReviewState((state) => state.uploadId === uploadId
-        ? { ...state, error: error instanceof Error ? error.message : "Alt-text generation failed" }
-        : state);
-    }
-  }
-
-  function closeAltReview() {
-    setAltReviewState(CLOSED_ALT_REVIEW_STATE);
-  }
-
-  function confirmAltText(altText: string) {
-    if (!altReviewState.uploadId || !altReviewState.file) return;
-    setCropState({
-      isOpen: true,
-      uploadId: altReviewState.uploadId,
-      file: altReviewState.file,
-      altText,
-    });
-    closeAltReview();
-  }
-
-  function regenerateAltText() {
-    if (altReviewState.file && altReviewState.uploadId) {
-      void generateAltTextForReview(altReviewState.file, altReviewState.uploadId);
-    }
-  }
-
   function handleCropConfirm(sourceFile: File, variantFiles: ImageVariantUploadFile[]) {
     if (!cropState.uploadId) return;
     replaceVariants.mutate({
@@ -204,7 +120,7 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
     if (!previewSource) return;
     const source = previewSource;
     setPreviewSource(null);
-    void handleOpenReview(source);
+    void altReview.handleOpenReview(source);
   }
 
   // From the preview, hand off to the delete-confirmation flow.
@@ -237,24 +153,24 @@ export function usePhotoImportPanel({ locationId, category, hasActiveInstagramSt
     photoImportEnabled,
     pickerOpen,
     cropState,
-    altReviewState,
-    loadingSourceId,
+    altReviewState: altReview.altReviewState,
+    loadingSourceId: altReview.loadingSourceId,
     startImport,
     retryPending: retryStaged.isPending,
     pendingSources,
     setPickerOpen,
     closeCropper,
-    closeAltReview,
+    closeAltReview: altReview.closeAltReview,
     handleConfirmPick,
-    handleOpenReview,
+    handleOpenReview: altReview.handleOpenReview,
     previewSource,
     openPreview,
     closePreview,
     reviewFromPreview,
     deleteFromPreview,
-    confirmAltText,
-    regenerateAltText,
-    isGeneratingAltText: generateAltText.isPending,
+    confirmAltText: altReview.confirmAltText,
+    regenerateAltText: altReview.regenerateAltText,
+    isGeneratingAltText: altReview.isGeneratingAltText,
     handleCropConfirm,
     handleDelete,
     handleRetry,
