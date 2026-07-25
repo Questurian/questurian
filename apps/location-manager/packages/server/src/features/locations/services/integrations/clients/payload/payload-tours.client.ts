@@ -1,7 +1,7 @@
 import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
 import { normalizeDocResponse } from "./payload-http.client";
 import { PayloadAuthClient } from "./payload-auth.client";
-import type { PayloadTourData, PayloadTourResponse } from "./payload-api.types";
+import type { PayloadTourData, PayloadTourResponse } from "./payload-tour.types";
 
 export class PayloadToursClient {
   constructor(private readonly authClient: PayloadAuthClient) {}

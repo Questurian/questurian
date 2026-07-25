@@ -3,7 +3,7 @@ import type {
   ImageVariantType,
 } from "@questurian/lm-shared";
 import { getFileExtension } from "../../../../utils/location-utils";
-import type { PayloadVariantOverride } from "../../clients/payload-api.client";
+import type { PayloadVariantOverride } from "../../clients/payload/payload-media-set.types";
 import type { LocationResponse } from "../../../../models/location";
 import type { LocationUpload } from "./media-upload.types";
 

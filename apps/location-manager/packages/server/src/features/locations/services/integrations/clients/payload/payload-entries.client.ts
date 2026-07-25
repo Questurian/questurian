@@ -1,12 +1,11 @@
 import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
 import { normalizeDocResponse } from "./payload-http.client";
 import { PayloadAuthClient } from "./payload-auth.client";
+import type { PayloadEntryData, PayloadEntryResponse } from "./payload-entry.types";
+import type { PayloadLocationQueryResponse } from "./payload-location.types";
 import type {
   PayloadCollection,
-  PayloadEntryData,
-  PayloadEntryResponse,
-  PayloadLocationQueryResponse,
-} from "./payload-api.types";
+} from "./payload-shared.types";
 
 export class PayloadEntriesClient {
   constructor(private readonly authClient: PayloadAuthClient) {}

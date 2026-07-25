@@ -13,43 +13,27 @@ import { PayloadToursClient } from "./payload/payload-tours.client";
 export type {
   PayloadCollection,
   PayloadRelationshipId,
-  PayloadMediaVariantType,
-  PayloadAuthResponse,
-  PayloadMediaAssetResponse,
+} from "./payload/payload-shared.types";
+export type {
+  PayloadEntryData,
   PayloadEntryResponse,
-  PayloadLocationQueryResponse,
-  PayloadLocationCreateData,
-  PayloadLocationCreateResponse,
-  PayloadGalleryItem,
-  PayloadInstagramPostData,
-  PayloadInstagramPostResponse,
-  PayloadInstagramGalleryItem,
   PayloadNightlifeDetails,
+} from "./payload/payload-entry.types";
+export type { PayloadLocationCreateData } from "./payload/payload-location.types";
+import type { PayloadCollection } from "./payload/payload-shared.types";
+import type { PayloadEntryData, PayloadEntryResponse } from "./payload/payload-entry.types";
+import type { PayloadInstagramPostData } from "./payload/payload-instagram.types";
+import type { PayloadLocationCreateData } from "./payload/payload-location.types";
+import type {
   PayloadMediaSetData,
-  PayloadMediaSetVariant,
-  PayloadMediaSetResponse,
-  PayloadMediaSetQueryResponse,
-  PayloadMediaSetListItem,
-  PayloadMediaSetListResponse,
-  PayloadMediaSetSearchResponse,
   PayloadMediaSetFromSourceData,
   PayloadMediaSetFromSourceResponse,
-  PayloadVariantOverride,
-  PayloadEntryData,
-  PayloadTourData,
-  PayloadTourResponse,
-} from "./payload/payload-api.types";
+} from "./payload/payload-media-set.types";
+import type { PayloadMediaSetListResponse } from "./payload/payload-media-set-search.types";
 import type {
-  PayloadCollection,
-  PayloadEntryData,
-  PayloadEntryResponse,
-  PayloadInstagramPostData,
-  PayloadLocationCreateData,
-  PayloadMediaSetData,
-  PayloadMediaSetListResponse,
   PayloadTourData,
   PayloadTourResponse,
-} from "./payload/payload-api.types";
+} from "./payload/payload-tour.types";
 
 export class PayloadApiClient {
   private readonly authClient: PayloadAuthClient;

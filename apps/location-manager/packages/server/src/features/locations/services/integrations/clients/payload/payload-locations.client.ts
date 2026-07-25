@@ -5,7 +5,7 @@ import type {
   PayloadLocationCreateData,
   PayloadLocationCreateResponse,
   PayloadLocationQueryResponse,
-} from "./payload-api.types";
+} from "./payload-location.types";
 
 export class PayloadLocationsClient {
   constructor(private readonly authClient: PayloadAuthClient) {}

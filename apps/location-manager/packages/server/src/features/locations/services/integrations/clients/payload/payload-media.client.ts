@@ -1,7 +1,7 @@
 import { ServiceUnavailableError } from "@server/shared/core/errors/http-error";
 import type { ImageVariantType } from "@questurian/lm-shared";
 import { normalizeDocResponse } from "./payload-http.client";
-import type { PayloadMediaAssetResponse } from "./payload-api.types";
+import type { PayloadMediaAssetResponse } from "./payload-media.types";
 import { PayloadAuthClient } from "./payload-auth.client";
 
 export class PayloadMediaClient {
