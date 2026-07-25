@@ -1,253 +1,48 @@
-import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth, usePermissions } from '../auth'
 import './homepageFeaturedContent.css'
 import HomepageBlocksSortableList from './HomepageBlocksSortableList'
 import AddHomepageBlockPicker from './AddHomepageBlockPicker'
-import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
-import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
-import HotelGridBlockEditor from './HotelGridBlockEditor'
-import LocationGridBlockEditor from './LocationGridBlockEditor'
-import NewsletterSignupBlockEditor from './NewsletterSignupBlockEditor'
 import PublishedHomepagePreview from './PublishedHomepagePreview'
 import HomepageDraftPublishSummary from './HomepageDraftPublishSummary'
-import {
-  addLocationHomepageBlock,
-  deleteLocationHomepageBlock,
-  fetchLocationHomepage,
-  fetchLocationHomepageCandidates,
-  fetchLocationHomepageHotelGridCandidates,
-  fetchLocationHomepageTourGridCandidates,
-  fetchLocationHomepageLocationGridCandidates,
-  fetchLocationHomepageThingsToDoAttractionCandidates,
-  fetchLocationHomepageThingsToDoListicleCandidates,
-  fetchLocationHomepageWhereToEatDrinkCandidates,
-  publishLocationHomepage,
-  reorderLocationHomepageBlocks,
-  convertLocationHomepageFeaturedArticlesBlock,
-  toggleLocationHomepage,
-  updateLocationHomepageBlock,
-  updateLocationHomepageFeaturedSectionHeading,
-  updateLocationHomepageFeaturedSectionSubheading,
-  updateLocationHomepageLocationGridMediaAspect,
-  updateLocationHomepageFeaturedSlot3Layout,
-  updateLocationHomepageFeaturedSlot4Layout,
-  updateLocationHomepageFeaturedSlot5Layout,
-  updateLocationHomepageArticleGridFourLayout,
-  type LocationHomepageResponse,
-  type LocationRef,
-} from './locationHomepages'
-import {
-  buildOptimisticConvertedHomepageBlock,
-  deleteHomepageBlockFromCache,
-  reorderHomepageBlocksInCache,
-  replaceHomepageBlockInCache,
-} from './homepageBlockOptimisticUpdates'
+import LocationHomepageBlockRenderer, {
+  locationHomepageBlockKey,
+} from './LocationHomepageBlockRenderer'
+import { useLocationHomepageEditor } from './useLocationHomepageEditor'
+import { getLocationLabel } from './locationHomepagePage.utils'
 import {
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
   HOMEPAGE_PAGE_BLOCK_TYPES,
-  homepageBlockEditorIdentity,
-  isHotelGridBlock,
-  isTourGridBlock,
-  isThingsToDoAttractionsBlock,
-  isArticleCuratedHomepageBlock,
-  isLocationGridBlock,
-  isNewsletterSignupBlock,
-  type ArticleCuratedHomepageBlockResponse,
-  type CuratedHomepageBlockType,
-  type HotelOrAttractionGridBlockResponse,
-  type LocationGridBlockResponse,
   type PageBlockResponse,
 } from './pageBlocks'
-function getLocationLabel(location: LocationRef | null): string {
-  if (!location) return 'Location Homepage'
-
-  if (location.neighborhoodName) {
-    return `${location.neighborhoodName}${location.cityName ? `, ${location.cityName}` : ''}`
-  }
-
-  if (location.cityName) return location.cityName
-
-  return location.countryName ?? 'Location Homepage'
-}
 
 export default function LocationHomepagePage() {
   const { id } = useParams<{ id: string }>()
   const numericId = Number(id)
   const { token } = useAuth()
   const { canManagePublished: canManage } = usePermissions()
-  const queryClient = useQueryClient()
-  const homepageQueryKey = ['location-homepage', numericId, token]
 
-  const homepageQuery = useQuery({
-    queryKey: homepageQueryKey,
-    queryFn: ({ signal }) => fetchLocationHomepage(token!, numericId, signal),
-    enabled: Boolean(token && canManage && numericId),
-  })
-
-  const [isEnabled, setIsEnabled] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    if (homepageQuery.data && isEnabled === null) {
-      setIsEnabled(homepageQuery.data.isEnabled)
-    }
-  }, [homepageQuery.data, isEnabled])
-
-  const toggleMutation = useMutation({
-    mutationFn: () => toggleLocationHomepage(token!, numericId),
-    onSuccess: (result) => {
-      setIsEnabled(result.isEnabled)
-      queryClient.invalidateQueries({ queryKey: ['location-homepages-list'] })
-    },
-  })
-
-  const publishMutation = useMutation({
-    mutationFn: () => publishLocationHomepage(token!, numericId),
-    onSuccess: (result) => {
-      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, result)
-      queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-    },
-  })
-
-  const [showAddBlock, setShowAddBlock] = useState(false)
-  const [viewMode, setViewMode] = useState<'draft' | 'published'>('draft')
-  const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
-  const [pageBlockSlotKeys, setPageBlockSlotKeys] = useState<Map<string, Set<string>>>(() => new Map())
-
-  const handleSlotsChange = useCallback((blockId: string, keys: Set<string>) => {
-    setPageBlockSlotKeys((prev) => {
-      // Bail out without a state change when the keys are unchanged; block
-      // editors report on every keys-identity change, and an unconditional new
-      // Map here would re-render them and loop.
-      const existing = prev.get(blockId)
-      if (keys.size === 0 && !existing) return prev
-      if (existing && existing.size === keys.size && [...keys].every((key) => existing.has(key))) {
-        return prev
-      }
-      const next = new Map(prev)
-      if (keys.size === 0) {
-        next.delete(blockId)
-      } else {
-        next.set(blockId, keys)
-      }
-      return next
-    })
-  }, [])
-
-  const addBlockMutation = useMutation({
-    mutationFn: ({
-      blockType,
-      slotCount,
-      sectionHeading,
-      sectionSubheading,
-    }: {
-      blockType: CuratedHomepageBlockType
-      slotCount: number
-      sectionHeading?: string | null
-      sectionSubheading?: string | null
-    }) =>
-      addLocationHomepageBlock(token!, numericId, blockType, slotCount, sectionHeading, sectionSubheading),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-      setShowAddBlock(false)
-    },
-  })
-
-  const deleteBlockMutation = useMutation({
-    mutationFn: ({ blockId }: { blockId: string }) =>
-      deleteLocationHomepageBlock(token!, numericId, blockId),
-    onMutate: async ({ blockId }) => {
-      setDeletingBlockId(blockId)
-      await queryClient.cancelQueries({ queryKey: homepageQueryKey })
-      const previousHomepage =
-        queryClient.getQueryData<LocationHomepageResponse>(homepageQueryKey)
-      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
-        deleteHomepageBlockFromCache(current, blockId),
-      )
-      return { previousHomepage }
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousHomepage) {
-        queryClient.setQueryData(homepageQueryKey, context.previousHomepage)
-      }
-    },
-    onSettled: () => {
-      setDeletingBlockId(null)
-    },
-  })
-
-  const reorderBlocksMutation = useMutation({
-    mutationFn: (orderedBlockIds: string[]) =>
-      reorderLocationHomepageBlocks(token!, numericId, orderedBlockIds),
-    onMutate: async (orderedBlockIds) => {
-      await queryClient.cancelQueries({ queryKey: homepageQueryKey })
-      const previousHomepage =
-        queryClient.getQueryData<LocationHomepageResponse>(homepageQueryKey)
-      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
-        reorderHomepageBlocksInCache(current, orderedBlockIds),
-      )
-      return { previousHomepage }
-    },
-    onSuccess: (result) => {
-      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
-        reorderHomepageBlocksInCache(current, result.orderedBlockIds),
-      )
-    },
-    onError: (_error, _variables, context) => {
-      if (context?.previousHomepage) {
-        queryClient.setQueryData(homepageQueryKey, context.previousHomepage)
-      }
-    },
-  })
-
-  async function handleConvertBlock(
-    block: PageBlockResponse,
-    currentToken: string,
-    blockType: CuratedHomepageBlockType,
-    slotCount: number,
-  ) {
-    await queryClient.cancelQueries({ queryKey: homepageQueryKey })
-    const previousHomepage =
-      queryClient.getQueryData<LocationHomepageResponse>(homepageQueryKey)
-    const optimisticBlock = buildOptimisticConvertedHomepageBlock(block, blockType, slotCount)
-
-    queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
-      replaceHomepageBlockInCache(current, optimisticBlock),
-    )
-
-    try {
-      const result = await convertLocationHomepageFeaturedArticlesBlock(
-        currentToken,
-        numericId,
-        block.id,
-        blockType,
-        slotCount,
-      )
-      queryClient.setQueryData<LocationHomepageResponse>(homepageQueryKey, (current) =>
-        replaceHomepageBlockInCache(current, result.block),
-      )
-    } catch (error) {
-      if (previousHomepage) {
-        queryClient.setQueryData(homepageQueryKey, previousHomepage)
-      }
-      throw error
-    }
-  }
-
-  function handleConfirmAddBlock(
-    blockType: CuratedHomepageBlockType,
-    slotCount: number,
-    sectionHeading?: string | null,
-    sectionSubheading?: string | null,
-  ) {
-    addBlockMutation.mutate({ blockType, slotCount, sectionHeading, sectionSubheading })
-  }
-
-  const deleteError = deleteBlockMutation.isError
-    ? (deleteBlockMutation.error instanceof Error ? deleteBlockMutation.error.message : 'Failed to delete block.')
-    : null
+  const {
+    homepageQuery,
+    isEnabled,
+    toggleMutation,
+    publishMutation,
+    showAddBlock,
+    setShowAddBlock,
+    viewMode,
+    setViewMode,
+    deletingBlockId,
+    pageBlockSlotKeys,
+    handleSlotsChange,
+    addBlockMutation,
+    deleteBlockMutation,
+    reorderBlocksMutation,
+    handleConvertBlock,
+    handleConfirmAddBlock,
+    deleteError,
+    invalidateHomepage,
+  } = useLocationHomepageEditor(numericId, token, canManage)
 
   if (!canManage) {
     return (
@@ -403,248 +198,25 @@ export default function LocationHomepagePage() {
               return combined
             })()
 
-            if (isArticleCuratedHomepageBlock(block)) {
-              return (
-                <CuratedHomepageBlockEditor
-                  key={homepageBlockEditorIdentity(block).join(':')}
-                  block={block}
-                  blockIndex={idx}
-                  token={token}
-                  canManage={canManage}
-                  onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
-                  isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
-                  deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
-                  selectionQueryKey={[
-                    'location-homepage-block',
-                    numericId,
-                    ...homepageBlockEditorIdentity(block),
-                    token,
-                  ]}
-                  saveSelection={async (currentToken, items, slotCount) => {
-                    const updated = await updateLocationHomepageBlock(
-                      currentToken,
-                      numericId,
-                      block.id,
-                      items,
-                      slotCount,
-                    )
-                    const updatedBlock = updated.pageBlocks.find(
-                      (candidate): candidate is ArticleCuratedHomepageBlockResponse =>
-                        candidate.id === block.id && candidate.blockType === block.blockType,
-                    )
-                    if (!updatedBlock) throw new Error('Block not found after save.')
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                    return updatedBlock.selection
-                  }}
-                  fetchCandidates={(currentToken, params) =>
-                    block.blockType === 'questurian-maps'
-                      ? fetchLocationHomepageCandidates(currentToken, numericId, {
-                          ...params,
-                          type: 'single-type-listicles',
-                        })
-                      : block.blockType === 'where-to-eat-drink'
-                        ? fetchLocationHomepageWhereToEatDrinkCandidates(currentToken, numericId, params)
-                        : block.blockType === 'things-to-do-listicles'
-                          ? fetchLocationHomepageThingsToDoListicleCandidates(currentToken, numericId, params)
-                          : fetchLocationHomepageCandidates(
-                            currentToken,
-                            numericId,
-                            params as Parameters<typeof fetchLocationHomepageCandidates>[2],
-                          )}
-                  saveSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                  saveSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                  saveSlot3Layout={
-                    block.blockType === 'featured-articles' && block.selection.totalSlots === 3
-                      ? async (currentToken, value) => {
-                          await updateLocationHomepageFeaturedSlot3Layout(currentToken, numericId, block.id, value)
-                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                        }
-                      : undefined
-                  }
-                  saveSlot4Layout={
-                    block.blockType === 'featured-articles' && block.selection.totalSlots === 4
-                      ? async (currentToken, value) => {
-                          await updateLocationHomepageFeaturedSlot4Layout(currentToken, numericId, block.id, value)
-                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                        }
-                      : undefined
-                  }
-                  saveSlot5Layout={
-                    block.blockType === 'featured-articles' && block.selection.totalSlots === 5
-                      ? async (currentToken, value) => {
-                          await updateLocationHomepageFeaturedSlot5Layout(currentToken, numericId, block.id, value)
-                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                        }
-                      : undefined
-                  }
-                  saveArticleGridFourLayout={
-                    block.blockType === 'article-grid' && block.selection.totalSlots === 4
-                      ? async (currentToken, value) => {
-                          await updateLocationHomepageArticleGridFourLayout(currentToken, numericId, block.id, value)
-                          queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                        }
-                      : undefined
-                  }
-                  convertEmptyFeaturedArticlesTargets={convertEmptyFeaturedArticlesTargets}
-                  onConvertEmptyFeaturedArticlesBlock={async (currentToken, blockType, slotCount) => {
-                    await handleConvertBlock(block, currentToken, blockType, slotCount)
-                  }}
-                  externalUsedKeys={externalUsedKeys}
-                  onSlotsChange={handleSlotsChange}
-                />
-              )
-            }
-            if (isLocationGridBlock(block) && locationGridChildLevel) {
-              return (
-                <LocationGridBlockEditor
-                  key={homepageBlockEditorIdentity(block).join(':')}
-                  block={block}
-                  blockIndex={idx}
-                  token={token}
-                  canManage={canManage}
-                  onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
-                  isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
-                  deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
-                  childLevel={locationGridChildLevel}
-                  selectionQueryKey={[
-                    'location-homepage-location-grid',
-                    numericId,
-                    ...homepageBlockEditorIdentity(block),
-                    token,
-                  ]}
-                  saveSelection={async (currentToken, items, slotCount) => {
-                    const updated = await updateLocationHomepageBlock(currentToken, numericId, block.id, items, slotCount)
-                    const updatedBlock = updated.pageBlocks.find(
-                      (candidate): candidate is LocationGridBlockResponse =>
-                        candidate.id === block.id && candidate.blockType === block.blockType,
-                    )
-                    if (!updatedBlock) throw new Error('Block not found after save.')
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                    return updatedBlock.selection
-                  }}
-                  fetchCandidates={(currentToken, params) =>
-                    fetchLocationHomepageLocationGridCandidates(currentToken, numericId, params)}
-                  saveLocationGridSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                  saveLocationGridSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                  saveLocationGridMediaAspect={async (currentToken, value) => {
-                    await updateLocationHomepageLocationGridMediaAspect(currentToken, numericId, block.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                  convertBlockTargets={convertEmptyFeaturedArticlesTargets}
-                  onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-                    await handleConvertBlock(block, currentToken, blockType, slotCount)
-                  }}
-                />
-              )
-            }
-            if (isNewsletterSignupBlock(block)) {
-              return (
-                <NewsletterSignupBlockEditor
-                  key={homepageBlockEditorIdentity(block).join(':')}
-                  block={block}
-                  blockIndex={idx}
-                  token={token}
-                  onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
-                  isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
-                  deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
-                  saveSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                  saveSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                />
-              )
-            }
-            if (isHotelGridBlock(block) || isTourGridBlock(block) || isThingsToDoAttractionsBlock(block)) {
-              const gridBlock = block
-              return (
-                <HotelGridBlockEditor
-                  key={homepageBlockEditorIdentity(gridBlock).join(':')}
-                  block={gridBlock}
-                  blockIndex={idx}
-                  token={token}
-                  canManage={canManage}
-                  onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
-                  isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === gridBlock.id}
-                  deleteError={
-                    deleteBlockMutation.isPending || deletingBlockId !== gridBlock.id ? null : deleteError
-                  }
-                  selectionQueryKey={[
-                    'location-homepage-hotel-grid',
-                    numericId,
-                    ...homepageBlockEditorIdentity(gridBlock),
-                    token,
-                  ]}
-                  saveSelection={async (currentToken, items, slotCount) => {
-                    const updated = await updateLocationHomepageBlock(currentToken, numericId, gridBlock.id, items, slotCount)
-                    const updatedBlock = updated.pageBlocks.find(
-                      (candidate): candidate is HotelOrAttractionGridBlockResponse =>
-                        candidate.id === gridBlock.id && candidate.blockType === gridBlock.blockType,
-                    )
-                    if (!updatedBlock) throw new Error('Block not found after save.')
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                    return updatedBlock.selection
-                  }}
-                  fetchCandidates={(currentToken, params) =>
-                    gridBlock.blockType === 'things-to-do-attractions'
-                      ? fetchLocationHomepageThingsToDoAttractionCandidates(
-                        currentToken,
-                        numericId,
-                        params,
-                      )
-                      : gridBlock.blockType === 'tour-grid'
-                        ? fetchLocationHomepageTourGridCandidates(currentToken, numericId, params)
-                        : fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
-                  convertBlockTargets={convertEmptyFeaturedArticlesTargets}
-                  onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-                    await handleConvertBlock(gridBlock, currentToken, blockType, slotCount)
-                  }}
-                  saveHotelGridSectionHeading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, gridBlock.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                  saveHotelGridSectionSubheading={async (currentToken, value) => {
-                    await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, gridBlock.id, value)
-                    queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-                  }}
-                />
-              )
-            }
             return (
-              <div key={block.id} className="hf-block-section">
-                <div className="hf-block-header">
-                  <div className="hf-block-label">
-                    <span>Block {idx + 1}</span>
-                    <span className="hf-block-type-tag">{block.blockType}</span>
-                  </div>
-                  <HomepageBlockDeleteTrigger
-                    blockId={block.id}
-                    blockIndex={idx}
-                    blockLabel={block.blockType}
-                    onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
-                    isDeletingBlock={deleteBlockMutation.isPending && deletingBlockId === block.id}
-                    deleteError={deleteBlockMutation.isPending || deletingBlockId !== block.id ? null : deleteError}
-                  />
-                </div>
-                <div className="hf-block-content hf-empty">
-                  <p>Editor for &ldquo;{block.blockType}&rdquo; blocks is not yet available in this tool.</p>
-                </div>
-              </div>
+              <LocationHomepageBlockRenderer
+                key={locationHomepageBlockKey(block, locationGridChildLevel)}
+                block={block}
+                blockIndex={idx}
+                homepageId={numericId}
+                token={token}
+                canManage={canManage}
+                locationGridChildLevel={locationGridChildLevel}
+                convertTargets={convertEmptyFeaturedArticlesTargets}
+                externalUsedKeys={externalUsedKeys}
+                onSlotsChange={handleSlotsChange}
+                onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
+                isDeletePending={deleteBlockMutation.isPending}
+                deletingBlockId={deletingBlockId}
+                deleteError={deleteError}
+                onConvertBlock={handleConvertBlock}
+                invalidateHomepage={invalidateHomepage}
+              />
             )
           }}
         </HomepageBlocksSortableList>
