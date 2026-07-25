@@ -2,6 +2,10 @@ export * from './converter/converter.api'
 export * from './converter/converter.types'
 
 export * from './ai/rewrite.api'
+export * from './ai/title.api'
+export * from './ai/seo-metadata.api'
+export * from './ai/itinerary-composition.api'
+export * from './ai/listicle-content.api'
 export * from './ai/rewrite.types'
 export * from '../../../shared/api/ai/models'
 
