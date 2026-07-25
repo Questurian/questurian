@@ -74,6 +74,13 @@ export function MediaSetSidePanel({ mediaSet, health, token, onSave, onClose }: 
       tags: existingTagIds,
     })
     setSaved(false)
+    // Deliberately keyed on identity only. This effect seeds the edit form from
+    // the selected media set, so it must run when the selection changes and at
+    // no other time. Adding the mediaSet.* fields the linter asks for would
+    // re-seed on every refetch of the same record — overwriting whatever the
+    // user has typed but not saved, and clearing the "Saved" confirmation the
+    // moment the post-save refetch lands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mediaSet.id])
 
   const handleSave = async () => {

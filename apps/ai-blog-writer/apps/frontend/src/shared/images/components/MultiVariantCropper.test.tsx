@@ -17,12 +17,18 @@ vi.mock('react-easy-crop', async () => {
       croppedAreaPixels: { x: number; y: number; width: number; height: number }
     ) => void;
   }) {
+    // Destructured so the effect depends on the specific values it reads rather
+    // than the whole props object. onCropComplete is useCallback-memoized in the
+    // real component, so listing it does not add spurious fires.
+    const { onCropComplete } = props;
+    const { x: cropX, y: cropY } = props.crop;
+
     React.useEffect(() => {
-      props.onCropComplete(
+      onCropComplete(
         { x: 0, y: 0, width: 100, height: 100 },
-        { x: props.crop.x, y: props.crop.y, width: 100, height: 100 }
+        { x: cropX, y: cropY, width: 100, height: 100 }
       );
-    }, [props.crop.x, props.crop.y]);
+    }, [onCropComplete, cropX, cropY]);
 
     return React.createElement(
       'div',

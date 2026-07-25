@@ -6,9 +6,8 @@ import HomepageBlocksSortableList from './HomepageBlocksSortableList'
 import AddHomepageBlockPicker from './AddHomepageBlockPicker'
 import PublishedHomepagePreview from './PublishedHomepagePreview'
 import HomepageDraftPublishSummary from './HomepageDraftPublishSummary'
-import LocationHomepageBlockRenderer, {
-  locationHomepageBlockKey,
-} from './LocationHomepageBlockRenderer'
+import LocationHomepageBlockRenderer from './LocationHomepageBlockRenderer'
+import { locationHomepageBlockKey } from './locationHomepageBlockKey'
 import { useLocationHomepageEditor } from './useLocationHomepageEditor'
 import { getLocationLabel } from './locationHomepagePage.utils'
 import {

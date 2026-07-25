@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   swapCuratedArticleSlots,
   swapCuratedSlots
-} from './CuratedArticleSlotSwap'
+} from './curatedSlotSwap'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 
 function article(id: number, title: string): NonNullable<SlotValue> {

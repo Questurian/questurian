@@ -19,7 +19,12 @@ export function PhotoPickerModal({ isOpen, photoObjects, selectedPhotoIds, onCon
     if (isOpen) {
       setLocalSelection([...selectedPhotoIds])
     }
-  }, [isOpen]) // intentionally omitting selectedPhotoIds — reset only on open
+    // Seeds the modal's draft selection from the committed one, so it must run
+    // on open and nowhere else. selectedPhotoIds is a fresh array on most parent
+    // renders; including it would re-seed mid-session and discard the picks the
+    // user has made but not yet confirmed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
 
   useEffect(() => {
     if (!isOpen) return
