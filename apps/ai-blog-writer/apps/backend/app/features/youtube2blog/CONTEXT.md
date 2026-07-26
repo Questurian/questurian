@@ -30,6 +30,11 @@ operations.
 | `stages/listicle_rewrite.py` | Listicle detection and complete curated-item rewrites |
 | `stages/deep_expand_llm.py` | JSON/text LLM invocation policy shared by the two expansion paths |
 | `stages/stage_deep_expand.py` | Stable public facade, branch selection, and terminal job status |
+| `content/editorial_blocks.py` | Pure Editorial Augmentation Markdown marker repair |
+| `stages/editorial_augmentation_prompts.py` | Editorial Augmentation prompt policy |
+| `stages/editorial_augmentation_validation.py` | Model-output normalization and preservation checks |
+| `stages/editorial_augmentation_llm.py` | Editorial model invocation, JSON retry, and prose repair |
+| `stages/stage_editorial_augmentation.py` | Stable thin Editorial Augmentation Stage facade |
 
 ## Dependency direction
 
