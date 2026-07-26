@@ -1,16 +1,16 @@
 from fastapi import APIRouter, HTTPException
 
-from ..services.pipeline import (
-    DEFAULT_MODEL,
-    SYNTHESIZE_PROMPT,
+from ..classification import _classify_cleaned_material
+from ..config import DEFAULT_MODEL
+from ..llm import _invoke_text_llm
+from ..models import (
     ClassifyRequest,
     ClassifyResponse,
     SynthesizeRequest,
     SynthesizeResponse,
-    _classify_cleaned_material,
-    _invoke_text_llm,
-    _safe_str,
 )
+from ..prompts.preparation import SYNTHESIZE_PROMPT
+from ..support import _safe_str
 
 router = APIRouter()
 
@@ -58,4 +58,6 @@ async def classify_article_type(req: ClassifyRequest) -> ClassifyResponse:
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001
-        raise HTTPException(status_code=500, detail=f"Classification failed: {exc}") from exc
+        raise HTTPException(
+            status_code=500, detail=f"Classification failed: {exc}"
+        ) from exc
