@@ -46,6 +46,11 @@ _Avoid_: article prose, full SEO document
 - Simple operations use the shared traced graph executor. Their one-step shape is intentional.
 - Writer calls enter through `EditorAssistDependencies`; tests provide fake adapters at the same seam.
 - The root `routes.py` only aggregates family routers.
+- `itinerary_composition.py` is a compatibility facade. Shared HTTP contracts
+  and graph-backed route orchestration live in adjacent modules; Traveler
+  Profile brief, Intro, day-blurb, and Selection Reason execution are separate
+  workflows. Day-blurb prompt preparation is split from provider execution and
+  output validation because its sequence-aware context is independently complex.
 - `listicle_writer.py` is a compatibility facade. Prompt contracts, static
   editorial policy, builders, and output validation live in the adjacent
   `listicle_writer_contracts.py`, `listicle_prompt_policy.py`,
