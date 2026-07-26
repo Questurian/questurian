@@ -93,6 +93,7 @@ Structured Prompt2Blog run input now uses:
 | GET | `/` | Converter service info and endpoint docs |
 | GET | `/health` | Converter health check |
 | POST | `/convert/markdown` | Convert Markdown to Lexical JSON |
+| POST | `/convert/lexical` | Convert Lexical JSON to Markdown |
 | POST | `/convert/html` | Convert HTML to Lexical JSON |
 | POST | `/convert/validate` | Validate Lexical JSON shape |
 | OPTIONS | `*` | CORS preflight handler |

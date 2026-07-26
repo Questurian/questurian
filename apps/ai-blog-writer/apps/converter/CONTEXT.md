@@ -65,6 +65,7 @@ Function. `EditorState` → HTML.
 ## Routes
 
 - `POST /convert/markdown` — body Markdown → `EditorState`.
+- `POST /convert/lexical` — body `EditorState` → Markdown.
 - `POST /convert/html` — body HTML → `EditorState`.
 - `POST /convert/validate` — checks an `EditorState` parses cleanly.
 - `GET /health` — liveness.
@@ -94,13 +95,17 @@ Function. `EditorState` → HTML.
 
 ## AI Guidance
 
-- **Inspect first:** `src/index.ts` (single file) — routes and conversion calls live together.
+- **Inspect first:** `src/app.ts` for HTTP composition, `src/http/` for routes,
+  and `src/conversion/converter.ts` for conversion calls. `src/index.ts` only
+  starts the process and preserves the conversion-function exports.
 - **Do not** add LLM calls or domain logic here. Any drift away from "shape transform only" is wrong.
 - **Do not** introduce shared types with sibling packages; this service is intentionally standalone.
 - **Preserve verbatim:** `EditorState`, `SerializedLexicalNode`, `markdownToLexical`, `htmlToLexical`, `lexicalToHtml`.
 
 ## Open Questions
 
-- No regression tests at the converter boundary. Should there be a corpus of (Markdown, expected Lexical) pairs?
+- Boundary tests cover representative Markdown, HTML, Lexical, validation,
+  health, and CORS behavior. Should that grow into a larger fixture corpus for
+  uncommon rich-text combinations?
 - Tables and embedded media survive HTML but not Markdown — should the calling features know to prefer HTML for those?
 - Does anyone actually consume `POST /convert/validate`? If not, prune it.
