@@ -32,7 +32,12 @@ callers and tests that reach in via `url2blog_routes.<name>` keep working.
 | `content/editorial_blocks.py` | Editorial markers, metadata boxes, labels, blueprint formatting. |
 | `content/sanitizers.py` | `_sanitize_v2_*` — normalize raw LLM JSON for each stage (imports `content/editorial_blocks`). |
 | `pipeline_v2/gating.py` | Quality/fact gating decisions + rewrite-retry feedback. |
-| `pipeline_v2/phases.py` | The 5 heavy stage phases: rewrite/quality, fact/length, editorial, editorial post-recheck, finalize. |
+| `pipeline_v2/phases.py` | Compatibility exports for the 5 pipeline phases. |
+| `pipeline_v2/rewrite_quality*.py` | Thin rewrite/quality orchestrator plus setup, blueprint, composition, repair, and persistence steps. |
+| `pipeline_v2/fact_length*.py` | Thin fact/length orchestrator plus fact repair, expansion, final audit, and persistence steps. |
+| `pipeline_v2/editorial.py` | Editorial Augmentation phase. |
+| `pipeline_v2/editorial_recheck.py` | Post-augmentation quality/fact recheck and rollback decision. |
+| `pipeline_v2/finalize*.py` | Thin response finalizer plus artifact/response assembly steps. |
 
 ## Key constraint: test monkeypatching
 
@@ -41,14 +46,14 @@ The test-suite patches functions on the `url2blog_routes` module object
 visible, the patched function **and its bare-name caller must live in the same
 module** (`routes.py`). That is why the invocation layer stays in `routes.py`.
 
-`pipeline_v2/phases.py` calls two patched wrappers — `_invoke_json_llm_tracked`
+The pipeline-v2 phase modules call two patched wrappers — `_invoke_json_llm_tracked`
 and `_invoke_google_grounded_json` — as `routes.<name>(...)` (attribute lookup at
 call time) so patches still apply. Non-patched helpers are imported directly.
 
 ## Key constraint: import cycle
 
-`pipeline_v2/phases.py` imports the invoke/build wrappers from `routes.py`, and
-`routes.py` imports the phases back (so the graph runner can call
+The pipeline-v2 phase modules import the invoke/build wrappers from `routes.py`,
+and `routes.py` imports the compatibility exports back (so the graph runner can call
 `url2blog_routes._pipeline_v2_run_*`). The cycle is closed by importing the phases
 at the **bottom** of `routes.py`, after those wrappers are defined.
 
