@@ -26,7 +26,7 @@ import {
 import {
   getComposableDayIndexes,
   getItineraryDayBlurbComposeDisabledReason,
-} from '../builder/services/compose-day-blurbs.service'
+} from '../builder/services/day-blurb-readiness.service'
 import {
   buildListicleItineraryStructuredDataTemplate,
   serializeStructuredDataTemplate,
