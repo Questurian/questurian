@@ -6,7 +6,7 @@ import {
   type ListicleItineraryDraft,
   type RelatedItemOption,
 } from '../../types'
-import { validateListicleItineraryStructuredDataShape } from '../services/structured-data-template.service'
+import { validateListicleItineraryStructuredDataShape } from './structured-data-template.validator'
 import { validateItemMediaSelections } from './media.validators'
 
 const isValidAbsoluteUrl = (value: string): boolean => {
