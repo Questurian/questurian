@@ -1,507 +1,72 @@
 import type { LocationCategory } from "../../models/location";
-import type { Tour } from "../../models/location";
-import { BadRequestError, NotFoundError, ServiceUnavailableError } from "@shared/errors/http-error";
-import type {
-  PayloadApiClient,
-  PayloadEntryData,
-  PayloadEntryResponse
-} from "./clients/payload-api.client";
-import { ImageStorageService } from "../storage/image-storage.service";
-import { LocationQueryService } from "../core/location-query.service";
-import * as PayloadSyncRepo from "../../repositories/integration";
-import {
-  getAllTours,
-  getAttractionTours,
-  getTourById,
-  getTourSyncState,
-  saveTourSyncState,
-  updateLocationById,
-} from "../../repositories/core";
-
-// Import sub-modules
+import type { ImageStorageService } from "../storage/image-storage.service";
+import type { LocationQueryService } from "../core/location-query.service";
+import type { PayloadApiClient } from "./clients/payload-api.client";
+import { LocationPayloadSyncService } from "./payload-sync/location-payload-sync.service";
+import { LocationPayloadSyncStateService } from "./payload-sync/location-payload-sync-state.service";
+import { PayloadCollectionResolver } from "./payload-sync/payload-collection.resolver";
+import { PayloadEntryUpsertService } from "./payload-sync/payload-entry-upsert.service";
+import { PayloadLocationRefService } from "./payload-sync/payload-location-ref.service";
+import { PayloadSyncOrchestratorService } from "./payload-sync/payload-sync-orchestrator.service";
+import { PayloadSyncStatusService } from "./payload-sync/payload-sync-status.service";
+import { TourPayloadSyncService } from "./payload-sync/tour-payload-sync.service";
 import type { SyncResult, SyncStatusResponse, TourPayloadSyncResult } from "./types";
-import { uploadLocationImages } from "./handlers";
-import type { PayloadCollection } from "./mappers/location-payload.mapper";
-import { mapLocationToPayloadFormat, mapCategoryToCollection } from "./mappers";
-import type { PayloadTourData } from "./clients/payload/payload-tour.types";
-import { ensurePayloadLocationRefForKey } from "./resolvers/payload-location.resolver";
 
+/**
+ * Backwards-compatible facade for the Payload sync API used by controllers.
+ *
+ * Sync policies live in focused collaborators; this class only wires and delegates
+ * the four public operations exposed by the existing service contract.
+ */
 export class PayloadSyncService {
+  private readonly locationSync: LocationPayloadSyncService;
+  private readonly orchestrator: PayloadSyncOrchestratorService;
+  private readonly status: PayloadSyncStatusService;
+  private readonly tourSync: TourPayloadSyncService;
+
   constructor(
-    private readonly payloadClient: PayloadApiClient,
-    private readonly imageStorage: ImageStorageService,
-    private readonly locationQuery: LocationQueryService
-  ) {}
+    payloadClient: PayloadApiClient,
+    imageStorage: ImageStorageService,
+    locationQuery: LocationQueryService
+  ) {
+    const collectionResolver = new PayloadCollectionResolver(locationQuery);
+    const entryUpsert = new PayloadEntryUpsertService(payloadClient);
+    const locationRef = new PayloadLocationRefService(payloadClient);
+    const locationSyncState = new LocationPayloadSyncStateService(locationQuery);
 
-  /**
-   * Sync a single location to Payload CMS
-   */
-  async syncLocation(locationId: number): Promise<SyncResult> {
-    // Check if Payload is configured
-    if (!this.payloadClient.isConfigured()) {
-      throw new ServiceUnavailableError("Payload CMS");
-    }
-
-    // Diagnostic context — populated as we go, available in catch block
-    let locationRefSource = "unknown";
-    let locationRef: string | null = null;
-    let galleryIds: string[] = [];
-    let instagramIds: string[] = [];
-
-    try {
-      // Mark sync as pending
-      const collection = await this.getCollectionForLocation(locationId);
-      PayloadSyncRepo.saveSyncState(locationId, collection, "", "pending");
-
-      // Fetch location data
-      const location = this.locationQuery.getLocationById(locationId);
-      if (!location) {
-        throw new NotFoundError("Location", locationId);
-      }
-
-      // Use stored locationRef (or auto-resolve if missing)
-      locationRef = location.payload_location_ref;
-      locationRefSource = locationRef ? "stored" : "pending-resolve";
-
-      // If missing, auto-resolve (graceful handling for legacy locations)
-      if (!locationRef) {
-        locationRefSource = "auto-resolved (was null)";
-        console.warn(`⚠️  Location ${locationId} missing payload_location_ref, auto-resolving...`);
-
-        // Dynamic import to avoid circular dependencies
-        const { resolvePayloadLocationRef } = await import('./resolvers');
-        locationRef = await resolvePayloadLocationRef(location, this.payloadClient);
-
-        if (!locationRef) {
-          throw new BadRequestError(
-            `Failed to resolve Payload location for locationKey: ${location.locationKey || "none"}. ` +
-            `Ensure the location hierarchy exists in Payload CMS.`
-          );
-        }
-
-        // Update local database with resolved ref
-        const updated = updateLocationById(locationId, { payload_location_ref: locationRef });
-        if (!updated) {
-          console.warn(`⚠️  Failed to save payload_location_ref to database for location ${locationId}`);
-        } else {
-          console.log(`✅ Auto-resolved and saved locationRef: ${locationRef}`);
-        }
-      } else {
-        console.log(`✓ Using stored locationRef for location ${locationId}: ${locationRef}`);
-      }
-
-      // Keep the in-memory location aligned so downstream upload logic sees the resolved ref.
-      location.payload_location_ref = locationRef;
-
-      // Upload images and create Instagram posts
-      const uploadedImages = await uploadLocationImages(
-        location,
-        this.payloadClient,
-        this.imageStorage,
-        locationRef
-      );
-      galleryIds = uploadedImages.galleryImageIds;
-      instagramIds = uploadedImages.instagramPostIds;
-
-      const tourPayloadIds = location.category === "attractions"
-        ? await this.syncLinkedTours(locationId)
-        : undefined;
-
-      // Map location data to Payload format (locationRef is guaranteed at this point)
-      const payloadData = mapLocationToPayloadFormat(location, uploadedImages, locationRef, {
-        tourPayloadIds,
-      });
-
-      console.log(`🔄 [SYNC] Location ${locationId} type value:`, location.type);
-      console.log(`🔄 [SYNC] Payload data type:`, payloadData.type);
-
-      // Check if this location has a stored Payload document ID
-      const existingSyncState = PayloadSyncRepo.getSyncState(locationId, collection);
-
-      const existingDocId = existingSyncState?.payload_doc_id;
-      if (existingDocId) {
-        // Update existing document using stored payload_doc_id (regardless of previous sync status)
-        console.log(`✓ Updating existing Payload document: ${existingDocId}`);
-      } else {
-        // Create new document (first time sync)
-        console.log(`✓ Creating new Payload document`);
-      }
-
-      // Pre-send diagnostics — log everything that will be sent to Payload
-      console.log(`🔍 [SYNC DIAGNOSTICS] location ${locationId} → ${collection}`, {
-        operation: existingDocId ? `PATCH ${existingDocId}` : "POST (new)",
-        locationRef: payloadData.locationRef,
-        locationRefSource,
-        locationKey: location.locationKey,
-        galleryIds: uploadedImages.galleryImageIds,
-        instagramIds: uploadedImages.instagramPostIds,
-        galleryCount: uploadedImages.galleryImageIds.length,
-        instagramCount: uploadedImages.instagramPostIds.length,
-      });
-
-      const response = await this.upsertPayloadEntryWithTypeFallback(
-        collection,
-        payloadData,
-        existingDocId
-      );
-
-      // Log and save the Payload document ID
-      console.log(`📄 Payload document ID: ${response.doc.id} (location ${locationId})`);
-
-      // If any image-set upload silently failed, the Payload gallery is incomplete.
-      // Record a FAILED state (preserving the real doc id) instead of a false "success",
-      // so the location surfaces as not-synced and gets retried — see media-upload.handler.
-      if (uploadedImages.galleryUploadFailures > 0) {
-        const failedCount = uploadedImages.galleryUploadFailures;
-        const message =
-          `Gallery upload incomplete: ${failedCount} image set(s) failed to upload to Payload. ` +
-          `Document ${response.doc.id} was saved with a partial gallery — re-run sync to retry.`;
-        console.error(`❌ [SYNC] Location ${locationId}: ${message}`);
-        // saveSyncState preserves this doc id even though the overall sync failed.
-        PayloadSyncRepo.saveSyncState(locationId, collection, response.doc.id, "failed", message);
-        // Intentionally do NOT touch updated_at — leaving it ahead of last_synced_at
-        // keeps the location flagged rather than equalizing it into a false green.
-        return {
-          locationId,
-          payloadDocId: response.doc.id,
-          status: "failed",
-          error: message,
-        };
-      }
-
-      // Generate a single timestamp for both sync state and location update
-      // Use SQLite's datetime format (YYYY-MM-DD HH:MM:SS) without timezone
-      // This matches how SQLite stores DATETIME columns and prevents timezone parsing issues
-      const now = new Date();
-      now.setMilliseconds(0); // Remove milliseconds
-      const syncTimestamp = now.toISOString().replace('T', ' ').replace('.000Z', '');
-      console.log(`🕐 Generated sync timestamp (SQLite format): ${syncTimestamp}`);
-
-      // Update location's updated_at FIRST
-      const updateSuccess = updateLocationById(locationId, { updated_at: syncTimestamp });
-      console.log(`📝 Updated location ${locationId} updated_at: ${updateSuccess ? syncTimestamp : 'FAILED'}`);
-
-      // Save sync state using the SAME timestamp
-      PayloadSyncRepo.saveSyncState(
-        locationId,
-        collection,
-        response.doc.id,
-        "success",
-        undefined, // no error message
-        syncTimestamp // use the same timestamp
-      );
-      console.log(`💾 Saved sync state for location ${locationId} with timestamp: ${syncTimestamp}`);
-
-      // Verify what was actually saved to the database
-      const verifyLocation = this.locationQuery.getLocationById(locationId);
-      const verifySyncState = PayloadSyncRepo.getSyncState(locationId, collection);
-      console.log(`✅ VERIFICATION for location ${locationId}:`);
-      console.log(`   DB location.updated_at: ${verifyLocation?.updated_at}`);
-      console.log(`   DB syncState.last_synced_at: ${verifySyncState?.last_synced_at}`);
-      console.log(`   Match: ${verifyLocation?.updated_at === verifySyncState?.last_synced_at}`);
-
-      return {
-        locationId,
-        payloadDocId: response.doc.id,
-        status: "success",
-      };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      const diagnostics = `[locationRef=${locationRef ?? "null"} source=${locationRefSource} gallery=[${galleryIds.join(",")}] instagram=[${instagramIds.join(",")}]]`;
-      console.error(`❌ Failed to sync location ${locationId}: ${errorMessage} ${diagnostics}`);
-
-      // Save failed state
-      try {
-        const collection = await this.getCollectionForLocation(locationId);
-        PayloadSyncRepo.saveSyncState(locationId, collection, "", "failed", `${errorMessage} ${diagnostics}`);
-      } catch {
-        // Ignore error if we can't save sync state
-      }
-
-      return {
-        locationId,
-        payloadDocId: "",
-        status: "failed",
-        error: `${errorMessage} ${diagnostics}`,
-      };
-    }
+    this.tourSync = new TourPayloadSyncService(payloadClient);
+    this.locationSync = new LocationPayloadSyncService(
+      payloadClient,
+      imageStorage,
+      locationQuery,
+      collectionResolver,
+      locationRef,
+      this.tourSync,
+      entryUpsert,
+      locationSyncState
+    );
+    this.orchestrator = new PayloadSyncOrchestratorService(
+      payloadClient,
+      locationQuery,
+      this.locationSync,
+      this.tourSync
+    );
+    this.status = new PayloadSyncStatusService(locationQuery, collectionResolver);
   }
 
-  /**
-   * Sync all locations, optionally filtered by category
-   */
-  async syncAllLocations(category?: LocationCategory): Promise<SyncResult[]> {
-    if (!this.payloadClient.isConfigured()) {
-      throw new ServiceUnavailableError("Payload CMS");
-    }
-
-    if (category === undefined || category === "attractions") {
-      await this.syncAllTours();
-    }
-
-    // Get all locations
-    const locations = this.locationQuery.listLocations(category);
-
-    const results: SyncResult[] = [];
-
-    for (const location of locations) {
-      const result = await this.syncLocation(location.id!);
-      results.push(result);
-
-      // Small delay to avoid overwhelming Payload
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    return results;
+  syncLocation(locationId: number): Promise<SyncResult> {
+    return this.locationSync.syncLocation(locationId);
   }
 
-  private toPayloadRelationshipId(id: string): string | number {
-    const trimmed = id.trim();
-    if (/^\d+$/.test(trimmed)) {
-      return Number(trimmed);
-    }
-    return trimmed;
+  syncAllLocations(category?: LocationCategory): Promise<SyncResult[]> {
+    return this.orchestrator.syncAllLocations(category);
   }
 
-  private async buildPayloadTourData(tour: Tour): Promise<PayloadTourData> {
-    const base: PayloadTourData = {
-      title: tour.title,
-      img: this.toPayloadRelationshipId(tour.imgPayloadMediaSetId),
-      bookingLink: tour.bookingLink,
-      price: tour.price,
-      status: "published",
-    };
-    const locationRef = await ensurePayloadLocationRefForKey(tour.locationKey, this.payloadClient);
-    if (locationRef) {
-      base.locationRef = this.toPayloadRelationshipId(locationRef);
-    }
-    return base;
+  syncTourToPayload(tourId: number): Promise<TourPayloadSyncResult> {
+    return this.tourSync.syncTourToPayload(tourId);
   }
 
-  private async syncAllTours(): Promise<void> {
-    const tours = getAllTours();
-
-    for (const tour of tours) {
-      await this.syncTour(tour.id);
-      await new Promise(resolve => setTimeout(resolve, 250));
-    }
-  }
-
-  private async syncLinkedTours(locationId: number): Promise<string[]> {
-    const tours = getAttractionTours(locationId);
-    const payloadIds: string[] = [];
-
-    for (const tour of tours) {
-      payloadIds.push(await this.syncTour(tour.id));
-    }
-
-    return payloadIds;
-  }
-
-  /**
-   * Create or update one tour in Payload. Returns result (does not throw on Payload failure).
-   */
-  async syncTourToPayload(tourId: number): Promise<TourPayloadSyncResult> {
-    if (!this.payloadClient.isConfigured()) {
-      throw new ServiceUnavailableError("Payload CMS");
-    }
-
-    const tour = getTourById(tourId);
-    if (!tour) {
-      throw new NotFoundError("Tour", tourId);
-    }
-
-    saveTourSyncState(tourId, "", "pending");
-
-    try {
-      const payloadData = await this.buildPayloadTourData(tour);
-      const existingSyncState = getTourSyncState(tourId);
-      const existingDocId =
-        existingSyncState?.payloadDocId || await this.payloadClient.findTourByTitle(tour.title);
-
-      const response = existingDocId
-        ? await this.payloadClient.updateTour(existingDocId, payloadData)
-        : await this.payloadClient.createTour(payloadData);
-
-      const now = new Date();
-      now.setMilliseconds(0);
-      const syncTimestamp = now.toISOString().replace("T", " ").replace(".000Z", "");
-      saveTourSyncState(tourId, response.doc.id, "success", undefined, syncTimestamp);
-      return { tourId, payloadDocId: response.doc.id, status: "success" };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      saveTourSyncState(tourId, "", "failed", errorMessage);
-      return { tourId, payloadDocId: "", status: "failed", error: errorMessage };
-    }
-  }
-
-  private async syncTour(tourId: number): Promise<string> {
-    const result = await this.syncTourToPayload(tourId);
-    if (result.status === "failed") {
-      throw new Error(result.error || `Failed to sync tour ${tourId}`);
-    }
-    return result.payloadDocId;
-  }
-
-  /**
-   * Get sync status for location(s)
-   */
   getSyncStatus(locationId?: number): SyncStatusResponse[] {
-    if (locationId) {
-      const location = this.locationQuery.getLocationById(locationId);
-      if (!location) {
-        throw new NotFoundError("Location", locationId);
-      }
-
-      const collection = mapCategoryToCollection(location.category);
-      const syncState = PayloadSyncRepo.getSyncState(locationId, collection);
-
-      // Check if location has been modified since last successful sync
-      const needsResync = this.hasLocationChangedSinceLastSync(location, syncState);
-
-      return [{
-        locationId,
-        title: location.title || location.source.name,
-        category: location.category,
-        synced: !!syncState && syncState.sync_status === "success",
-        needsResync,
-        syncState: syncState || undefined,
-      }];
-    }
-
-    // Get all locations with sync state
-    const allLocations = this.locationQuery.listLocations();
-    const allSyncStates = PayloadSyncRepo.getAllSyncedLocations();
-
-    // Create a map for quick lookup
-    const syncStateMap = new Map<number, any>();
-    allSyncStates.forEach(state => {
-      syncStateMap.set(state.location_id, state);
-    });
-
-    return allLocations.map(location => {
-      const syncState = syncStateMap.get(location.id!);
-      const needsResync = this.hasLocationChangedSinceLastSync(location, syncState);
-
-      return {
-        locationId: location.id!,
-        title: location.title || location.source.name,
-        category: location.category,
-        synced: !!syncState && syncState.sync_status === "success",
-        needsResync,
-        syncState,
-      };
-    });
-  }
-
-  /**
-   * Helper: Check if location has been modified since last successful sync
-   */
-  private hasLocationChangedSinceLastSync(location: any, syncState: any): boolean {
-    // If there's no sync state or no successful sync, it doesn't need resync (needs initial sync)
-    if (!syncState || syncState.sync_status !== "success") {
-      console.log(`🔍 Location ${location.id}: No sync state or not successful - needsResync=false`);
-      return false;
-    }
-
-    // If location has no updated_at, assume it hasn't changed
-    if (!location.updated_at) {
-      console.log(`🔍 Location ${location.id}: No updated_at - needsResync=false`);
-      return false;
-    }
-
-    // Compare timestamps - if location was modified after last successful sync, it needs resync
-    const lastModified = new Date(location.updated_at);
-    const lastSynced = new Date(syncState.last_synced_at);
-
-    console.log(`🔍 Location ${location.id} timestamp comparison:`);
-    console.log(`   location.updated_at: ${location.updated_at} (Date: ${lastModified.toISOString()})`);
-    console.log(`   syncState.last_synced_at: ${syncState.last_synced_at} (Date: ${lastSynced.toISOString()})`);
-    console.log(`   needsResync: ${lastModified > lastSynced}`);
-
-    return lastModified > lastSynced;
-  }
-
-  /**
-   * Helper: Create/update a Payload entry with type fallback handling.
-   */
-  private async upsertPayloadEntryWithTypeFallback(
-    collection: PayloadCollection,
-    payloadData: PayloadEntryData,
-    existingDocId?: string
-  ): Promise<PayloadEntryResponse> {
-    try {
-      return await this.upsertPayloadEntry(collection, payloadData, existingDocId);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      if (!payloadData.type || !this.isPayloadTypeSelectionError(errorMessage)) {
-        throw error;
-      }
-
-      const normalizedType = this.toNormalizedType(payloadData.type);
-      if (normalizedType !== payloadData.type) {
-        console.warn(
-          `⚠️  Payload rejected type "${payloadData.type}" for ${collection}. ` +
-          `Retrying with "${normalizedType}".`
-        );
-
-        try {
-          return await this.upsertPayloadEntry(
-            collection,
-            { ...payloadData, type: normalizedType },
-            existingDocId
-          );
-        } catch (fallbackError) {
-          const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-          if (!this.isPayloadTypeSelectionError(fallbackMessage)) {
-            throw fallbackError;
-          }
-        }
-      }
-
-      console.warn(
-        `⚠️  Payload rejected type "${payloadData.type}" for ${collection}. Retrying without type.`
-      );
-
-      const { type, ...payloadDataWithoutType } = payloadData;
-      return await this.upsertPayloadEntry(collection, payloadDataWithoutType, existingDocId);
-    }
-  }
-
-  private async upsertPayloadEntry(
-    collection: PayloadCollection,
-    payloadData: PayloadEntryData,
-    existingDocId?: string
-  ): Promise<PayloadEntryResponse> {
-    if (existingDocId) {
-      return await this.payloadClient.updateEntry(collection, existingDocId, payloadData);
-    }
-
-    return await this.payloadClient.upsertEntry(collection, payloadData, {
-      replaceGallery: collection === "attractions",
-    });
-  }
-
-  private isPayloadTypeSelectionError(errorMessage: string): boolean {
-    return errorMessage.includes("Details > Type") || errorMessage.includes("\"path\":\"type\"");
-  }
-
-  private toNormalizedType(value: string): string {
-    return value.trim().toLowerCase().replace(/[_\s]+/g, "-");
-  }
-
-  /**
-   * Helper: Get collection for a location
-   */
-  private async getCollectionForLocation(
-    locationId: number
-  ): Promise<PayloadCollection> {
-    const location = this.locationQuery.getLocationById(locationId);
-    if (!location) {
-      throw new NotFoundError("Location", locationId);
-    }
-
-    return mapCategoryToCollection(location.category);
+    return this.status.getSyncStatus(locationId);
   }
 }
