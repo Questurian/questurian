@@ -23,7 +23,7 @@ from .blurb_composition_validation import (
     finalize_validated_result,
     validate_candidate,
 )
-from .listicle_writer import strip_generation_fence
+from .listicle_writer_validation import strip_generation_fence
 
 logger = logging.getLogger(__name__)
 

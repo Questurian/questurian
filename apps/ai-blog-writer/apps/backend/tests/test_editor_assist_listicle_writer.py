@@ -10,6 +10,35 @@ from app.features.editor_assist.listicle_writer import (
 )
 
 
+def test_compatibility_facade_reexports_canonical_implementations():
+    from app.features.editor_assist import (
+        blurb_composition_retry,
+        listicle_prompt_builders,
+        listicle_prompt_policy,
+        listicle_writer,
+        listicle_writer_validation,
+    )
+
+    assert (
+        listicle_writer.build_generation_prompt
+        is listicle_prompt_builders.build_generation_prompt
+    )
+    assert (
+        listicle_writer.build_writer_prompt
+        is listicle_prompt_builders.build_writer_prompt
+    )
+    assert (
+        listicle_writer.build_retry_prompt is blurb_composition_retry.build_retry_prompt
+    )
+    assert (
+        listicle_writer.validate_generated_text
+        is listicle_writer_validation.validate_generated_text
+    )
+    assert (
+        listicle_writer._voice_rules_block is listicle_prompt_policy.voice_rules_block
+    )
+
+
 def _paragraph(word_count: int, token: str = "polished") -> str:
     return " ".join([token] * word_count)
 

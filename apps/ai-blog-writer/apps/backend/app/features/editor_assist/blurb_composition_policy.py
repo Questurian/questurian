@@ -10,12 +10,12 @@ from .blurb_composition_contracts import (
     ListicleCompositionSettings,
     ListicleCompositionTarget,
 )
-from .listicle_writer import (
-    ListicleWriterTarget,
+from .listicle_prompt_builders import (
     build_identity_only_writer_prompt,
     build_lean_writer_prompt,
     build_writer_prompt,
 )
+from .listicle_writer_contracts import ListicleWriterTarget
 from .research_profile import ResearchProfile
 from .writer_brief import WriterBrief
 

@@ -46,3 +46,11 @@ _Avoid_: article prose, full SEO document
 - Simple operations use the shared traced graph executor. Their one-step shape is intentional.
 - Writer calls enter through `EditorAssistDependencies`; tests provide fake adapters at the same seam.
 - The root `routes.py` only aggregates family routers.
+- `listicle_writer.py` is a compatibility facade. Prompt contracts, static
+  editorial policy, builders, and output validation live in the adjacent
+  `listicle_writer_contracts.py`, `listicle_prompt_policy.py`,
+  `listicle_prompt_builders.py`, and `listicle_writer_validation.py` modules.
+- The `blurb_composition_*` family owns Listicle Content Generation path
+  selection, retry policy, validation traces, and writer execution. New prompt
+  modules must reuse that execution boundary rather than introduce another
+  listicle runner.

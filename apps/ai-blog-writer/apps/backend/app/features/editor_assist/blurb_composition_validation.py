@@ -11,7 +11,8 @@ from .blurb_composition_contracts import (
     ListicleCompositionStep,
     ListicleCompositionTarget,
 )
-from .listicle_writer import ListicleFieldType, validate_generated_text
+from .listicle_writer_contracts import ListicleFieldType
+from .listicle_writer_validation import validate_generated_text
 
 
 def _elapsed_ms(start: float) -> int:

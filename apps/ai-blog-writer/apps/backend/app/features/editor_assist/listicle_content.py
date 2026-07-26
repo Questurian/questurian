@@ -29,9 +29,11 @@ from .contracts import (
 )
 from .critical_fields import CriticalFieldsResult, evaluate_critical_fields
 from .dependencies import EditorAssistDependencies, get_editor_assist_dependencies
-from .listicle_writer import (
+from .listicle_prompt_policy import (
     LIST_TONE_GUIDANCE,
     LISTICLE_ANGLE_GUIDANCE,
+)
+from .listicle_writer_contracts import (
     ListicleArticleType,
     ListicleCategory,
 )

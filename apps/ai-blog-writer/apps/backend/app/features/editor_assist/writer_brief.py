@@ -21,6 +21,7 @@ from typing import Any
 from utils import parse_json_response
 
 from .angle_assignment import ListicleAngle
+from .listicle_prompt_policy import format_location_for_prompt
 from .research_profile import ResearchProfile
 
 logger = logging.getLogger(__name__)
@@ -204,9 +205,6 @@ def build_curator_prompt(
     angle_directive_template: str | None,
     research_profile: ResearchProfile,
 ) -> str:
-    # Deferred to avoid a circular import (listicle_writer imports WriterBrief).
-    from .listicle_writer import format_location_for_prompt
-
     findings_block = _format_research_profile_for_curator(research_profile)
     location = format_location_for_prompt(location_label)
     if angle_directive_template:

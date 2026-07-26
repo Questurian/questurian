@@ -8,7 +8,7 @@ from typing import Any, Literal, Protocol
 from app.shared.writer_invocation import invoke_writer_model
 
 from .angle_assignment import ListicleAngle
-from .listicle_writer import (
+from .listicle_writer_contracts import (
     ListTone,
     ListicleArticleType,
     ListicleCategory,
