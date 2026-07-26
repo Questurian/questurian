@@ -1,0 +1,79 @@
+html {
+  background: #F5F0E8 !important;
+  color: #1A1A1A !important;
+}
+
+:root {
+  /* Modernist Latin Color Palette */
+  --background: #F5F0E8;
+  --background-warm: #EDE6DA;
+  --foreground: #1A1A1A;
+  --terracotta: #C65D3B;
+  --terracotta-light: #D97B5D;
+  --forest: #2D4A3E;
+  --forest-light: #3D5F4E;
+  --ochre: #D4A574;
+  --cream: #FAF7F2;
+  --charcoal: #2C2C2C;
+  --maps-listicle-accent: #3B5BDB;
+  --maps-listicle-accent-rgb: 59 91 219;
+  --maps-listicle-chip: #e4e0d8;
+
+  /* Typography */
+  --font-display: 'Playfair Display', Georgia, serif;
+
+  /* PAGE-WIDTH RULE — single source of truth for city homepage block sections.
+     Content is centered at --block-max-width and inset by --block-gutter on
+     each side, so the content edges of every section line up exactly.
+     React blocks get this via the BlockSection component
+     (features/CityDashboard/components/blocks/BlockSection.tsx); raw-CSS block
+     layouts below must use these variables. Keep both in sync. */
+  --block-max-width: 1400px;
+  --block-gutter: 24px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+  --font-editorial: var(--font-editorial-serif);
+
+  /* Custom Breakpoints */
+  --breakpoint-280: 280px;
+  --breakpoint-320: 320px;
+  --breakpoint-380: 380px;
+  --breakpoint-480: 480px;
+  --breakpoint-550: 550px;
+  --breakpoint-640: 640px;
+  --breakpoint-768: 768px;
+  --breakpoint-1024: 1024px;
+  --breakpoint-1280: 1280px;
+  --breakpoint-1536: 1536px;
+}
+
+body {
+  background: #F5F0E8 !important;
+  color: #1A1A1A !important;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Display Font Utility */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Roboto Utility (Google-brand UI like the "Add Us On Google" button) */
+.font-roboto {
+  font-family: var(--font-roboto), 'Roboto', 'Google Sans', system-ui, sans-serif;
+}
+
+/* Remove browser autofill styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #F5F0E8 inset !important;
+  -webkit-text-fill-color: #1A1A1A !important;
+}
