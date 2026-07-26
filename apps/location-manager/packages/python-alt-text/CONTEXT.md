@@ -53,6 +53,15 @@ The service base64-decodes and validates inputs before model calls. No long-term
 - `POST /neighborhood-description` — context → prose.
 - `POST /accommodations-field-suggestion` — image → field suggestions.
 
+## Module map
+
+- `app.py` — FastAPI routes and backwards-compatible public imports.
+- `vertex_runtime.py` — local environment loading and lazy Vertex initialization.
+- `models.py` — request schemas and the accommodations compatibility adapter.
+- `prompts.py` — pure prompt construction.
+- `grounding.py` — grounded-source extraction, JSON parsing, and URL validation.
+- `generation.py` — Vertex text, multimodal, grounded, and field-suggestion calls.
+
 ## Relationships
 
 - No package-level imports from siblings. Called by `packages/server` over HTTP.
