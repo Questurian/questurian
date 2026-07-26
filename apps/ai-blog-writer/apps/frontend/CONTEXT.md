@@ -99,9 +99,10 @@ Definition: payload sent to backend to start a run.
 
 Definition: backend → client poll response. Field `state` is `pending` / `running` / `completed` / `failed`; field `stage` names the current pipeline phase.
 
-### `LocationFieldDefinition`
+### `RelationshipFieldDefinition`
 
-Definition: schema row for the location-documents form. Includes `type`, `path`, `aiEnabled`, optional `relationshipFieldDefinition`.
+Definition: configuration for the Location Images editor's cover-image relationship. It identifies the `media-sets` relation, its option source, and the shared Image Picker used to select a MediaSet.
+Code references: `src/features/locationDocuments/types.ts`, `CoverImagePickerField.tsx`.
 
 ### `EditorAssistModelName`
 
