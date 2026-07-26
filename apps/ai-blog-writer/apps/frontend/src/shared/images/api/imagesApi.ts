@@ -1,5 +1,8 @@
 /**
- * API client for image upload and processing
+ * Compatibility facade for shared image APIs.
+ *
+ * Keep the positional call signatures stable; focused API modules own transport,
+ * response parsing, and error handling.
  */
 
 import type { ImageVariantType } from '../utils/imageProcessing';
@@ -9,8 +12,6 @@ import { describeSceneApi } from './describe-scene.api';
 import { describeSubjectApi } from './describe-subject.api';
 import { buildEditPromptApi } from './build-edit-prompt.api';
 import { buildInsertPromptApi, type InsertImage } from './build-insert-prompt.api';
-import { postJson } from './client/imageApiClient';
-import { parseErrorMessage } from './errors/image-api-error.utils';
 import type {
   FluxEditImageResponse,
   GenerateSocialImageResponse,
@@ -167,22 +168,6 @@ export async function uploadSocialImage(
     token,
     photographerCredit,
   });
-}
-
-/**
- * Resolve tag names to IDs, creating any that don't exist in Payload.
- */
-export async function resolveTagsByName(
-  names: string[],
-  token: string,
-): Promise<{ id: number; name: string }[]> {
-  const response = await postJson('/images/tags/resolve', { names }, token)
-  if (!response.ok) {
-    const message = await parseErrorMessage(response, 'Failed to resolve tags')
-    throw new Error(message)
-  }
-  const data = await response.json() as { tags: { id: number; name: string }[] }
-  return data.tags
 }
 
 export async function generateFluxEditedImage(
