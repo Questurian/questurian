@@ -1,15 +1,9 @@
 import json
-import sys
-import types
 
 from fastapi.responses import JSONResponse
 
-# Avoid importing heavyweight external LLM clients during route-module import.
-utils_stub = types.ModuleType("utils")
-utils_stub.get_vertex_llm = lambda *args, **kwargs: None
-sys.modules.setdefault("utils", utils_stub)
-
-import app.features.url2blog.graph.runner as url2blog_graph_runner  # noqa: E402
+import app.features.url2blog.graph.runner as url2blog_graph_runner
+import app.features.url2blog.graph.routing as url2blog_routing
 
 
 def _build_rewrite_context(
@@ -30,7 +24,7 @@ def _build_rewrite_context(
 
 
 def test_rewrite_gate_requests_retry_before_max_retries():
-    decision, gate_data = url2blog_graph_runner._evaluate_rewrite_gate(
+    decision, gate_data = url2blog_routing.evaluate_rewrite_gate(
         context=_build_rewrite_context(score=6.0, required_revisions=3),
         retry_count=0,
     )
@@ -40,9 +34,9 @@ def test_rewrite_gate_requests_retry_before_max_retries():
 
 
 def test_rewrite_gate_allows_fallback_pass_after_retries():
-    decision, gate_data = url2blog_graph_runner._evaluate_rewrite_gate(
+    decision, gate_data = url2blog_routing.evaluate_rewrite_gate(
         context=_build_rewrite_context(score=6.0, required_revisions=3),
-        retry_count=url2blog_graph_runner.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
+        retry_count=url2blog_routing.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
     )
 
     assert decision == "pass"
@@ -51,13 +45,13 @@ def test_rewrite_gate_allows_fallback_pass_after_retries():
 
 
 def test_rewrite_gate_rejects_fallback_when_too_close_to_source():
-    decision, gate_data = url2blog_graph_runner._evaluate_rewrite_gate(
+    decision, gate_data = url2blog_routing.evaluate_rewrite_gate(
         context=_build_rewrite_context(
             score=6.0,
             required_revisions=3,
             too_close_to_source=True,
         ),
-        retry_count=url2blog_graph_runner.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
+        retry_count=url2blog_routing.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
     )
 
     assert decision == "fail"
@@ -66,9 +60,9 @@ def test_rewrite_gate_rejects_fallback_when_too_close_to_source():
 
 
 def test_rewrite_gate_rejects_fallback_when_revisions_too_high():
-    decision, gate_data = url2blog_graph_runner._evaluate_rewrite_gate(
+    decision, gate_data = url2blog_routing.evaluate_rewrite_gate(
         context=_build_rewrite_context(score=6.0, required_revisions=6),
-        retry_count=url2blog_graph_runner.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
+        retry_count=url2blog_routing.URL2BLOG_REWRITE_GATE_MAX_RETRIES,
     )
 
     assert decision == "fail"
@@ -77,7 +71,7 @@ def test_rewrite_gate_rejects_fallback_when_revisions_too_high():
 
 
 def test_fact_gate_soft_fails_with_unverified_facts_warning():
-    decision, gate_data = url2blog_graph_runner._evaluate_fact_gate(
+    decision, gate_data = url2blog_routing.evaluate_fact_gate(
         context={
             "fact_coverage": {
                 "coverage_score": 7.0,
@@ -87,7 +81,7 @@ def test_fact_gate_soft_fails_with_unverified_facts_warning():
                 "coverage_summary": "one high fact missing",
             },
         },
-        retry_count=url2blog_graph_runner.URL2BLOG_FACT_GATE_MAX_RETRIES,
+        retry_count=url2blog_routing.URL2BLOG_FACT_GATE_MAX_RETRIES,
     )
 
     assert decision == "pass"

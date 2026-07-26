@@ -7,19 +7,14 @@ from ..prompts import (
     V2_QUALITY_AUDIT_PROMPT,
     V2_TITLE_GENERATION_PROMPT,
 )
-from ..routes import (
-    _build_v2_rewrite_from_markdown,
-    _invoke_markdown_long_output,
-    _invoke_title_generation,
-    _pipeline_v2_append_stage_trace,
-)
+from ..llm.invocation import _build_v2_rewrite_from_markdown
+from ..observability import append_stage_trace
 from ..config import _llm_context_text
 from ..llm.coerce import _ngram_overlap_ratio, _safe_str, _tokenize_similarity_words
 from ..content.sanitizers import (
     _sanitize_v2_guideline_rewrite,
     _sanitize_v2_quality_audit,
 )
-from .. import routes
 
 
 class _RewriteQualityComposition:
@@ -30,7 +25,7 @@ class _RewriteQualityComposition:
         self.rewrite_title_raw_response = ''
         self.rewrite_parsed: dict[str, Any] = {}
         if self.use_markdown_long_stages:
-            self.rewrite_long_output = _invoke_markdown_long_output(
+            self.rewrite_long_output = self.llm.invoke_markdown(
                 prompt=self.rewrite_prompt_markdown,
                 stage_name='guideline_rewrite_initial',
                 model_name=self.writing_model,
@@ -78,7 +73,7 @@ class _RewriteQualityComposition:
                 )
             )
             self.generated_title, self.rewrite_title_raw_response = (
-                _invoke_title_generation(
+                self.llm.invoke_title(
                     prompt=self.title_prompt,
                     model_name=self.selected_model_name,
                     fallback_title=self.rewrite_fallback_title,
@@ -91,7 +86,7 @@ class _RewriteQualityComposition:
             )
         else:
             self.rewrite_parsed, self.rewrite_raw_response = (
-                routes._invoke_json_llm_tracked(
+                self.llm.invoke_json_tracked(
                     prompt=self.rewrite_prompt,
                     stage_name='guideline_rewrite_initial',
                     parse_metrics=self.json_parse_metrics,
@@ -107,7 +102,7 @@ class _RewriteQualityComposition:
             )
 
     def _audit_initial_quality(self) -> None:
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='guideline_rewrite_initial',
@@ -179,7 +174,7 @@ class _RewriteQualityComposition:
             .replace('{external_context}', self.external_context_for_prompt)
         )
         self.quality_parsed, self.quality_raw_response = (
-            routes._invoke_json_llm_tracked(
+            self.llm.invoke_json_tracked(
                 prompt=self.quality_prompt,
                 stage_name='quality_audit_initial',
                 parse_metrics=self.json_parse_metrics,
@@ -189,7 +184,7 @@ class _RewriteQualityComposition:
             )
         )
         self.quality = _sanitize_v2_quality_audit(self.quality_parsed)
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='quality_audit_initial',

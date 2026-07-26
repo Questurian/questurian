@@ -4,7 +4,6 @@ import json
 import logging
 from typing import Any
 from ..config import (
-    FEATURE_NAME,
     URL2BLOG_EDITORIAL_AUGMENTATION_MODEL,
     URL2BLOG_EDITORIAL_INSERT_ONLY_POST_ENABLED_DEFAULT,
     _llm_context_text,
@@ -13,16 +12,18 @@ from fastapi import HTTPException
 from ..prompts import V2_EDITORIAL_AUGMENTATION_PROMPT
 from ..content.editorial_blocks import _build_insert_only_editorial_augmentation
 from ..content.markdown import _ensure_markdown_section_headers
-from ..routes import _now_iso, _pipeline_v2_append_stage_trace
+from ..dependencies import PipelineDependencies
 from ..llm.coerce import _safe_bool, _safe_dict, _safe_str, _tokenize_similarity_words
 from ..content.sanitizers import _sanitize_v2_editorial_augmentation
-from .. import routes
-from app.core import write_stage_result, write_status
+from ..observability import append_stage_trace
 
 logger = logging.getLogger(__name__)
 
 
-def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
+def _pipeline_v2_run_editorial_phase(
+    context: dict[str, Any],
+    dependencies: PipelineDependencies,
+) -> dict[str, Any]:
     run_id = _safe_str(context.get('run_id'))
     selected_model_name = _safe_str(context.get('selected_model_name'))
     writing_model = (
@@ -49,17 +50,7 @@ def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
             'recovered_parse_failures': 0,
             'failures_by_stage': {},
         }
-    write_status(
-        run_id,
-        {
-            'run_id': run_id,
-            'state': 'running',
-            'stage': 'editorial_augmentation',
-            'error': None,
-            'updated_at': _now_iso(),
-        },
-        feature=FEATURE_NAME,
-    )
+    dependencies.recorder.mark_running(run_id, 'editorial_augmentation')
     final_improved_content = _ensure_markdown_section_headers(
         rewrite.get('improved_content') or ''
     )
@@ -79,7 +70,7 @@ def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
                 fallback_content=final_improved_content,
                 editorial_blueprint=editorial_blueprint,
             )
-            stage_trace = _pipeline_v2_append_stage_trace(
+            stage_trace = append_stage_trace(
                 stage_trace=stage_trace,
                 include_debug=include_debug,
                 stage='editorial_augmentation',
@@ -113,7 +104,7 @@ def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
             )
             try:
                 augmentation_parsed, editorial_augmentation_raw_response = (
-                    routes._invoke_json_llm_tracked(
+                    dependencies.llm.invoke_json_tracked(
                         prompt=augmentation_prompt,
                         stage_name='editorial_augmentation',
                         parse_metrics=json_parse_metrics,
@@ -125,7 +116,7 @@ def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
                 editorial_augmentation = _sanitize_v2_editorial_augmentation(
                     augmentation_parsed, fallback_content=final_improved_content
                 )
-                stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace = append_stage_trace(
                     stage_trace=stage_trace,
                     include_debug=include_debug,
                     stage='editorial_augmentation',
@@ -146,7 +137,7 @@ def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
                 )
             except HTTPException as exc:
                 logger.warning('URL2Blog editorial augmentation failed: %s', exc.detail)
-                stage_trace = _pipeline_v2_append_stage_trace(
+                stage_trace = append_stage_trace(
                     stage_trace=stage_trace,
                     include_debug=include_debug,
                     stage='editorial_augmentation',
@@ -164,7 +155,7 @@ def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
                     error=_safe_str(exc.detail),
                 )
     else:
-        stage_trace = _pipeline_v2_append_stage_trace(
+        stage_trace = append_stage_trace(
             stage_trace=stage_trace,
             include_debug=include_debug,
             stage='editorial_augmentation',
@@ -178,26 +169,23 @@ def _pipeline_v2_run_editorial_phase(context: dict[str, Any]) -> dict[str, Any]:
         )
     final_improved_content = editorial_augmentation['augmented_content']
     post_editorial_word_count = len(_tokenize_similarity_words(final_improved_content))
-    write_stage_result(
+    dependencies.recorder.record_stage(
         run_id,
         'editorial_augmentation_stage',
         {
-            'created_at': _now_iso(),
-            'data': {
-                'editorial_augmentation_applied': editorial_augmentation[
-                    'augmentation_applied'
-                ],
-                'pre_editorial_word_count': pre_editorial_word_count,
-                'post_editorial_word_count': post_editorial_word_count,
-                'editorial_components_added': [
-                    item['component']
-                    for item in editorial_augmentation['components_added']
-                ],
-                'editorial_augmentation_summary': editorial_augmentation[
-                    'augmentation_summary'
-                ],
-                'editorial_insert_only_post_applied': editorial_insert_only_post_applied,
-            },
+            'editorial_augmentation_applied': editorial_augmentation[
+                'augmentation_applied'
+            ],
+            'pre_editorial_word_count': pre_editorial_word_count,
+            'post_editorial_word_count': post_editorial_word_count,
+            'editorial_components_added': [
+                item['component']
+                for item in editorial_augmentation['components_added']
+            ],
+            'editorial_augmentation_summary': editorial_augmentation[
+                'augmentation_summary'
+            ],
+            'editorial_insert_only_post_applied': editorial_insert_only_post_applied,
         },
     )
     context.update(

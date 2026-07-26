@@ -4,7 +4,6 @@ import json
 from typing import Any
 from ..config import (
     DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS,
-    FEATURE_NAME,
     SHORT_ARTICLE_WORD_THRESHOLD,
     URL2BLOG_COMPOSE_MODEL,
     URL2BLOG_EDITORIAL_BLUEPRINT_ENABLED_DEFAULT,
@@ -16,14 +15,12 @@ from ..prompts import (
     V2_SOURCE_FACTS_EXTRACTION_PROMPT,
 )
 from ..content.editorial_blocks import _format_editorial_blueprint_for_prompt
-from ..routes import _now_iso, _pipeline_v2_append_stage_trace
+from ..observability import append_stage_trace
 from ..llm.coerce import _safe_bool, _safe_dict, _safe_int, _safe_str
 from ..content.sanitizers import (
     _sanitize_v2_external_context,
     _sanitize_v2_source_facts,
 )
-from .. import routes
-from app.core import write_stage_result, write_status
 
 
 class _RewriteQualitySetup:
@@ -119,20 +116,13 @@ class _RewriteQualitySetup:
             and self.use_editorial_blueprint
             and (not self.is_lean_profile)
         )
-        write_status(
+        self.recorder.mark_running(
             self.run_id,
-            {
-                'run_id': self.run_id,
-                'state': 'running',
-                'stage': (
-                    'editorial_blueprint'
-                    if self.should_generate_editorial_blueprint
-                    else 'rewrite_quality'
-                ),
-                'error': None,
-                'updated_at': _now_iso(),
-            },
-            feature=FEATURE_NAME,
+            (
+                'editorial_blueprint'
+                if self.should_generate_editorial_blueprint
+                else 'rewrite_quality'
+            ),
         )
         self.external_context_points: list[dict[str, str]] = []
         self.external_context_usage_note = ''
@@ -168,7 +158,7 @@ class _RewriteQualitySetup:
                 self.external_context_parsed,
                 self.external_context_raw_response,
                 self.external_context_grounded_urls,
-            ) = routes._invoke_google_grounded_json(
+            ) = self.llm.invoke_grounded_json(
                 self.enrichment_prompt,
                 max_tokens=1024,
                 temperature=0.05,
@@ -182,7 +172,7 @@ class _RewriteQualitySetup:
             self.external_context_points = self.external_context['context_points']
             self.external_context_usage_note = self.external_context['usage_note']
             self.short_article_enrichment_applied = bool(self.external_context_points)
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='short_article_enrichment',
@@ -204,7 +194,7 @@ class _RewriteQualitySetup:
                 grounded_urls=self.external_context_grounded_urls,
             )
         else:
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='short_article_enrichment',
@@ -234,7 +224,7 @@ class _RewriteQualitySetup:
             .replace('{source_content}', _llm_context_text(self.normalized_content))
         )
         self.source_facts_parsed, self.source_facts_raw_response = (
-            routes._invoke_json_llm_tracked(
+            self.llm.invoke_json_tracked(
                 prompt=self.source_facts_prompt,
                 stage_name='source_facts_extraction',
                 parse_metrics=self.json_parse_metrics,
@@ -246,7 +236,7 @@ class _RewriteQualitySetup:
         self.source_fact_anchors = _sanitize_v2_source_facts(
             self.source_facts_parsed, max_facts=18
         )
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='source_facts_extraction',
@@ -265,39 +255,36 @@ class _RewriteQualitySetup:
         )
 
     def _persist_result(self) -> None:
-        write_stage_result(
+        self.recorder.record_stage(
             self.run_id,
             'rewrite_quality',
             {
-                'created_at': _now_iso(),
-                'data': {
-                    'second_pass_applied': self.second_pass_applied,
-                    'quality_scores': {
-                        'overall': self.quality['overall_score'],
-                        'guideline_coverage': self.quality['guideline_coverage_score'],
-                        'informativeness': self.quality['informativeness_score'],
-                        'originality': self.quality['originality_score'],
-                    },
-                    'quality_summary': self.quality.get('quality_summary'),
-                    'required_revisions': list(
-                        self.quality.get('required_revisions') or []
-                    ),
-                    'too_close_to_source': self.quality.get('too_close_to_source'),
-                    'similarity_ngram_overlap': round(self.ngram_overlap, 3),
-                    'short_article_enrichment_applied': self.short_article_enrichment_applied,
-                    'external_context_points_used': len(self.external_context_points),
-                    'source_facts_extracted_count': len(self.source_fact_anchors),
-                    'editorial_blueprint_applied': self.editorial_blueprint_applied,
-                    'editorial_blueprint_components_planned': [
-                        _safe_str(item.get('component'))
-                        for item in list(
-                            self.editorial_blueprint.get('components') or []
-                        )
-                        if isinstance(item, dict)
-                    ],
-                    'long_output_transport': self.long_output_transport,
-                    'title_pass_applied_count': self.title_pass_applied_count,
+                'second_pass_applied': self.second_pass_applied,
+                'quality_scores': {
+                    'overall': self.quality['overall_score'],
+                    'guideline_coverage': self.quality['guideline_coverage_score'],
+                    'informativeness': self.quality['informativeness_score'],
+                    'originality': self.quality['originality_score'],
                 },
+                'quality_summary': self.quality.get('quality_summary'),
+                'required_revisions': list(
+                    self.quality.get('required_revisions') or []
+                ),
+                'too_close_to_source': self.quality.get('too_close_to_source'),
+                'similarity_ngram_overlap': round(self.ngram_overlap, 3),
+                'short_article_enrichment_applied': self.short_article_enrichment_applied,
+                'external_context_points_used': len(self.external_context_points),
+                'source_facts_extracted_count': len(self.source_fact_anchors),
+                'editorial_blueprint_applied': self.editorial_blueprint_applied,
+                'editorial_blueprint_components_planned': [
+                    _safe_str(item.get('component'))
+                    for item in list(
+                        self.editorial_blueprint.get('components') or []
+                    )
+                    if isinstance(item, dict)
+                ],
+                'long_output_transport': self.long_output_transport,
+                'title_pass_applied_count': self.title_pass_applied_count,
             },
         )
         self.context.update(

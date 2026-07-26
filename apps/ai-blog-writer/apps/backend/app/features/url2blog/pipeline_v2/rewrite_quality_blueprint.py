@@ -1,7 +1,7 @@
 """Rewrite quality blueprint steps for URL2Blog pipeline v2."""
 
 import json
-from ..config import FEATURE_NAME, _llm_context_text
+from ..config import _llm_context_text
 from ..prompts import (
     SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
     V2_EDITORIAL_BLUEPRINT_PROMPT,
@@ -10,11 +10,9 @@ from ..prompts import (
 )
 from .gating import _build_v2_rewrite_retry_feedback
 from ..content.editorial_blocks import _format_editorial_blueprint_for_prompt
-from ..routes import _now_iso, _pipeline_v2_append_stage_trace
+from ..observability import append_stage_trace
 from ..llm.coerce import _safe_bool, _safe_str
 from ..content.sanitizers import _sanitize_v2_editorial_blueprint
-from .. import routes
-from app.core import write_stage_result, write_status
 
 
 class _RewriteQualityBlueprint:
@@ -62,7 +60,7 @@ class _RewriteQualityBlueprint:
                 (
                     self.editorial_blueprint_parsed,
                     self.editorial_blueprint_raw_response,
-                ) = routes._invoke_json_llm_tracked(
+                ) = self.llm.invoke_json_tracked(
                     prompt=self.editorial_blueprint_prompt,
                     stage_name='editorial_blueprint',
                     parse_metrics=self.json_parse_metrics,
@@ -76,7 +74,7 @@ class _RewriteQualityBlueprint:
                 self.editorial_blueprint_applied = _safe_bool(
                     self.editorial_blueprint.get('apply_plan'), default=False
                 ) and bool(list(self.editorial_blueprint.get('components') or []))
-                self.stage_trace = _pipeline_v2_append_stage_trace(
+                self.stage_trace = append_stage_trace(
                     stage_trace=self.stage_trace,
                     include_debug=self.include_debug,
                     stage='editorial_blueprint',
@@ -99,10 +97,10 @@ class _RewriteQualityBlueprint:
                     parsed=self.editorial_blueprint_parsed,
                     output=self.editorial_blueprint,
                 )
-                write_stage_result(
+                self.recorder.record_stage(
                     self.run_id,
                     'editorial_blueprint',
-                    {'created_at': _now_iso(), 'data': self.editorial_blueprint},
+                    self.editorial_blueprint,
                 )
             else:
                 self.editorial_blueprint = _sanitize_v2_editorial_blueprint(
@@ -111,7 +109,7 @@ class _RewriteQualityBlueprint:
                 self.editorial_blueprint_applied = _safe_bool(
                     self.editorial_blueprint.get('apply_plan'), default=False
                 ) and bool(list(self.editorial_blueprint.get('components') or []))
-                self.stage_trace = _pipeline_v2_append_stage_trace(
+                self.stage_trace = append_stage_trace(
                     stage_trace=self.stage_trace,
                     include_debug=self.include_debug,
                     stage='editorial_blueprint',
@@ -130,23 +128,13 @@ class _RewriteQualityBlueprint:
                         ],
                     },
                 )
-            write_status(
-                self.run_id,
-                {
-                    'run_id': self.run_id,
-                    'state': 'running',
-                    'stage': 'rewrite_quality',
-                    'error': None,
-                    'updated_at': _now_iso(),
-                },
-                feature=FEATURE_NAME,
-            )
+            self.recorder.mark_running(self.run_id, 'rewrite_quality')
         else:
             self.editorial_blueprint = _sanitize_v2_editorial_blueprint(
                 self.editorial_blueprint
             )
             self.editorial_blueprint_applied = False
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='editorial_blueprint',

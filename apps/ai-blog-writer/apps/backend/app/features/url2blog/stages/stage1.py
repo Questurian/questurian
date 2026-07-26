@@ -1,7 +1,7 @@
 """URL2Blog stage 1 extraction from URL."""
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
@@ -16,10 +16,17 @@ from ..content.fetching import ArticleFetchError, fetch_article_html
 from ..models import ExtractRequest
 from ..prompts import EXTRACT_PROMPT, TRANSLATE_PROMPT
 
+if TYPE_CHECKING:
+    from ..dependencies import Url2BlogLLM
+
 logger = logging.getLogger(__name__)
 
 
-async def extract_article(request: ExtractRequest) -> JSONResponse:
+async def extract_article(
+    request: ExtractRequest,
+    *,
+    llm: "Url2BlogLLM | None" = None,
+) -> JSONResponse:
     """
     Fetch an article URL and extract title + content using Gemini.
 
@@ -57,9 +64,12 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
     prompt = EXTRACT_PROMPT + raw_text
 
     logger.info("URL2Blog Stage 1: sending prompt to Gemini (%d chars)", len(raw_text))
-    from .. import routes
+    if llm is None:
+        from ..dependencies import DefaultUrl2BlogLLM
 
-    parsed, raw_response, parse_error = routes._invoke_json_llm_best_effort(
+        llm = DefaultUrl2BlogLLM()
+
+    parsed, raw_response, parse_error = llm.invoke_json_best_effort(
         prompt=prompt,
         max_tokens=8192,
         temperature=0.1,
@@ -133,7 +143,7 @@ async def extract_article(request: ExtractRequest) -> JSONResponse:
                 content=parsed.get("content", ""),
             )
             translated, translation_raw_response, translation_error = (
-                routes._invoke_json_llm_best_effort(
+                llm.invoke_json_best_effort(
                     prompt=translation_prompt,
                     max_tokens=8192,
                     temperature=0.1,

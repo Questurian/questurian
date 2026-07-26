@@ -3,13 +3,40 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
-import app.features.url2blog.routes as url2blog_routes  # noqa: E402
+from app.features.url2blog.api import generation as generation_api
+from app.features.url2blog.api.router import router
+from app.features.url2blog.config import (
+    URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS,
+)
+from app.features.url2blog.content.editorial_blocks import (
+    _build_insert_only_editorial_augmentation,
+    _format_editorial_blueprint_for_prompt,
+)
+from app.features.url2blog.content.sanitizers import (
+    _resolve_min_expanded_word_target,
+    _sanitize_v2_editorial_augmentation,
+    _sanitize_v2_editorial_blueprint,
+)
+from app.features.url2blog.dependencies import PipelineDependencies
+from app.features.url2blog.llm import invocation as llm_invocation
+from app.features.url2blog.llm.coerce import _tokenize_similarity_words
+from app.features.url2blog.llm.parsing import (
+    _extract_json_from_response,
+    _json_parse_tracking_scope,
+)
+from app.features.url2blog.pipeline_v2.editorial_recheck import (
+    _pipeline_v2_run_editorial_post_recheck_phase,
+)
+from app.features.url2blog.pipeline_v2.gating import (
+    _build_v2_rewrite_retry_feedback,
+)
+from tests.url2blog_test_support import build_pipeline_dependencies
 
 
 @pytest.fixture
 def client():
     app = FastAPI()
-    app.include_router(url2blog_routes.router)
+    app.include_router(router)
     return TestClient(app)
 
 
@@ -20,12 +47,12 @@ def _disable_markdown_long_stages_by_default(monkeypatch):
 
 
 def test_pipeline_v2_uses_langgraph_runner(client, monkeypatch):
-    async def _fake_graph_runner(*, request):
-        del request
+    async def _fake_graph_runner(*, request, dependencies):
+        del request, dependencies
         return JSONResponse({"message": "langgraph path"})
 
     monkeypatch.setattr(
-        url2blog_routes,
+        generation_api,
         "run_url2blog_pipeline_graph",
         _fake_graph_runner,
     )
@@ -259,15 +286,11 @@ def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypat
             '{"improved_title":"Improved comparison headline"}',
         )
 
-    monkeypatch.setattr(url2blog_routes, "extract_article", stub_extract_article)
-    monkeypatch.setattr(
-        url2blog_routes, "classify_article_type", stub_classify_article_type
-    )
-    monkeypatch.setattr(url2blog_routes, "_invoke_json_llm", stub_invoke_json_llm)
-    monkeypatch.setattr(
-        url2blog_routes,
-        "_invoke_google_grounded_json",
-        lambda *args, **kwargs: (
+    dependencies = build_pipeline_dependencies(
+        json_call=stub_invoke_json_llm,
+        extract_article=stub_extract_article,
+        classify_article_type=stub_classify_article_type,
+        grounded_call=lambda *args, **kwargs: (
             {
                 "context_points": [
                     {
@@ -282,16 +305,15 @@ def test_pipeline_v2_runs_stage1_stage2_then_guideline_rewrite(client, monkeypat
             '{"context_points":[{"insight":"Travelers often compare reservation channels before peak dining times."}]}',
             ["https://example.com/source"],
         ),
-    )
-    monkeypatch.setattr(
-        url2blog_routes,
-        "get_article_type_by_id",
-        lambda article_type_id: {
+        get_article_type=lambda article_type_id: {
             "id": article_type_id,
             "name": "Service Comparison",
             "guideline": "Use criteria-first comparison framing.",
             "title_guideline": "Keep title specific and neutral.",
         },
+    )
+    client.app.dependency_overrides[generation_api.get_pipeline_dependencies] = (
+        lambda: dependencies
     )
 
     response = client.post(
@@ -458,29 +480,24 @@ def test_pipeline_v2_falls_back_to_original_when_rewrite_fields_missing(
 
         return ({}, "{}")
 
-    monkeypatch.setattr(url2blog_routes, "extract_article", stub_extract_article)
-    monkeypatch.setattr(
-        url2blog_routes, "classify_article_type", stub_classify_article_type
-    )
-    monkeypatch.setattr(url2blog_routes, "_invoke_json_llm", stub_invoke_json_llm)
-    monkeypatch.setattr(
-        url2blog_routes,
-        "_invoke_google_grounded_json",
-        lambda *args, **kwargs: (
+    dependencies = build_pipeline_dependencies(
+        json_call=stub_invoke_json_llm,
+        extract_article=stub_extract_article,
+        classify_article_type=stub_classify_article_type,
+        grounded_call=lambda *args, **kwargs: (
             {"context_points": [], "usage_note": "No context added."},
             '{"context_points":[]}',
             [],
         ),
-    )
-    monkeypatch.setattr(
-        url2blog_routes,
-        "get_article_type_by_id",
-        lambda article_type_id: {
+        get_article_type=lambda article_type_id: {
             "id": article_type_id,
             "name": "Explainer",
             "guideline": "Use clear plain-language explanations.",
             "title_guideline": "",
         },
+    )
+    client.app.dependency_overrides[generation_api.get_pipeline_dependencies] = (
+        lambda: dependencies
     )
 
     response = client.post(
@@ -653,30 +670,25 @@ def test_pipeline_v2_lean_profile_skips_optional_heavy_stages(client, monkeypatc
             '{"improved_title":"Lean profile rewritten title"}',
         )
 
-    monkeypatch.setattr(url2blog_routes, "extract_article", stub_extract_article)
-    monkeypatch.setattr(
-        url2blog_routes, "classify_article_type", stub_classify_article_type
-    )
-    monkeypatch.setattr(url2blog_routes, "_invoke_json_llm", stub_invoke_json_llm)
-    monkeypatch.setattr(
-        url2blog_routes,
-        "_invoke_google_grounded_json",
-        lambda *args, **kwargs: (
+    dependencies = build_pipeline_dependencies(
+        json_call=stub_invoke_json_llm,
+        extract_article=stub_extract_article,
+        classify_article_type=stub_classify_article_type,
+        grounded_call=lambda *args, **kwargs: (
             captured.__setitem__("grounded_enrichment_called", True),
             {"context_points": [], "usage_note": "Not used in lean profile."},
             "{}",
             [],
         )[1:],
-    )
-    monkeypatch.setattr(
-        url2blog_routes,
-        "get_article_type_by_id",
-        lambda article_type_id: {
+        get_article_type=lambda article_type_id: {
             "id": article_type_id,
             "name": "Guide",
             "guideline": "Keep guidance explicit.",
             "title_guideline": "Use practical titles.",
         },
+    )
+    client.app.dependency_overrides[generation_api.get_pipeline_dependencies] = (
+        lambda: dependencies
     )
 
     response = client.post(
@@ -835,15 +847,11 @@ def test_pipeline_v2_includes_debug_payload_only_when_requested(client, monkeypa
             '{"improved_title":"Debug rewritten title"}',
         )
 
-    monkeypatch.setattr(url2blog_routes, "extract_article", stub_extract_article)
-    monkeypatch.setattr(
-        url2blog_routes, "classify_article_type", stub_classify_article_type
-    )
-    monkeypatch.setattr(url2blog_routes, "_invoke_json_llm", stub_invoke_json_llm)
-    monkeypatch.setattr(
-        url2blog_routes,
-        "_invoke_google_grounded_json",
-        lambda *args, **kwargs: (
+    dependencies = build_pipeline_dependencies(
+        json_call=stub_invoke_json_llm,
+        extract_article=stub_extract_article,
+        classify_article_type=stub_classify_article_type,
+        grounded_call=lambda *args, **kwargs: (
             {
                 "context_points": [
                     {
@@ -858,16 +866,15 @@ def test_pipeline_v2_includes_debug_payload_only_when_requested(client, monkeypa
             '{"context_points":[{"insight":"External context point"}]}',
             ["https://example.com/context"],
         ),
-    )
-    monkeypatch.setattr(
-        url2blog_routes,
-        "get_article_type_by_id",
-        lambda article_type_id: {
+        get_article_type=lambda article_type_id: {
             "id": article_type_id,
             "name": "Guide",
             "guideline": "Use clear structure.",
             "title_guideline": "Use clear title.",
         },
+    )
+    client.app.dependency_overrides[generation_api.get_pipeline_dependencies] = (
+        lambda: dependencies
     )
 
     response = client.post(
@@ -931,7 +938,7 @@ def test_extract_json_from_response_handles_unclosed_markdown_fence():
         "}"
     )
 
-    parsed, parse_error = url2blog_routes._extract_json_from_response(raw_response)
+    parsed, parse_error = _extract_json_from_response(raw_response)
 
     assert parse_error is None
     assert parsed is not None
@@ -947,7 +954,7 @@ def test_extract_json_from_response_repairs_unterminated_string():
         '  "content": "This article compares shoulder season weather and crowds'
     )
 
-    parsed, parse_error = url2blog_routes._extract_json_from_response(raw_response)
+    parsed, parse_error = _extract_json_from_response(raw_response)
 
     assert parse_error is None
     assert parsed is not None
@@ -965,7 +972,7 @@ def test_extract_json_from_response_repairs_raw_newline_in_string():
         "}"
     )
 
-    parsed, parse_error = url2blog_routes._extract_json_from_response(raw_response)
+    parsed, parse_error = _extract_json_from_response(raw_response)
 
     assert parse_error is None
     assert parsed is not None
@@ -983,7 +990,7 @@ def test_extract_json_from_response_repairs_unescaped_quote_in_string():
         "}"
     )
 
-    parsed, parse_error = url2blog_routes._extract_json_from_response(raw_response)
+    parsed, parse_error = _extract_json_from_response(raw_response)
 
     assert parse_error is None
     assert parsed is not None
@@ -992,7 +999,7 @@ def test_extract_json_from_response_repairs_unescaped_quote_in_string():
 
 
 def test_build_v2_rewrite_retry_feedback_is_empty_for_initial_attempt():
-    feedback = url2blog_routes._build_v2_rewrite_retry_feedback(
+    feedback = _build_v2_rewrite_retry_feedback(
         retry_count=0,
         retry_feedback={},
         previous_quality={},
@@ -1002,7 +1009,7 @@ def test_build_v2_rewrite_retry_feedback_is_empty_for_initial_attempt():
 
 
 def test_build_v2_rewrite_retry_feedback_uses_previous_quality_details():
-    feedback = url2blog_routes._build_v2_rewrite_retry_feedback(
+    feedback = _build_v2_rewrite_retry_feedback(
         retry_count=1,
         retry_feedback={},
         previous_quality={
@@ -1030,12 +1037,12 @@ def test_invoke_markdown_long_output_accepts_markdown(monkeypatch):
             return "## Overview\n\nExpanded body content."
 
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: _FakeLLM(),
     )
 
-    result = url2blog_routes._invoke_markdown_long_output(
+    result = llm_invocation._invoke_markdown_long_output(
         prompt="Write markdown",
         stage_name="guideline_rewrite_initial",
         model_name="gemini-2.5-flash",
@@ -1055,12 +1062,12 @@ def test_invoke_markdown_long_output_accepts_markdown(monkeypatch):
 
 def test_invoke_markdown_long_output_falls_back_to_legacy_json(monkeypatch):
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "_invoke_json_llm_tracked",
         lambda **kwargs: (
             {
@@ -1071,7 +1078,7 @@ def test_invoke_markdown_long_output_falls_back_to_legacy_json(monkeypatch):
         ),
     )
 
-    result = url2blog_routes._invoke_markdown_long_output(
+    result = llm_invocation._invoke_markdown_long_output(
         prompt="Write markdown",
         stage_name="fact_repair",
         model_name="gemini-2.5-flash",
@@ -1094,12 +1101,12 @@ def test_invoke_markdown_long_output_raises_when_legacy_json_content_missing(
     monkeypatch,
 ):
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "_invoke_json_llm_tracked",
         lambda **kwargs: (
             {"improved_title": "Fallback generated title"},
@@ -1108,7 +1115,7 @@ def test_invoke_markdown_long_output_raises_when_legacy_json_content_missing(
     )
 
     with pytest.raises(Exception) as exc_info:  # HTTPException from FastAPI
-        url2blog_routes._invoke_markdown_long_output(
+        llm_invocation._invoke_markdown_long_output(
             prompt="Write markdown",
             stage_name="guideline_rewrite_initial",
             model_name="gemini-2.5-flash",
@@ -1130,12 +1137,12 @@ def test_invoke_markdown_long_output_raises_when_legacy_json_content_missing(
 def test_invoke_markdown_long_output_allows_source_fallback_with_flag(monkeypatch):
     monkeypatch.setenv("URL2BLOG_LONG_OUTPUT_ALLOW_SOURCE_FALLBACK", "1")
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: None,
     )
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "_invoke_json_llm_tracked",
         lambda **kwargs: (
             {"improved_title": "Fallback generated title"},
@@ -1143,7 +1150,7 @@ def test_invoke_markdown_long_output_allows_source_fallback_with_flag(monkeypatc
         ),
     )
 
-    result = url2blog_routes._invoke_markdown_long_output(
+    result = llm_invocation._invoke_markdown_long_output(
         prompt="Write markdown",
         stage_name="guideline_rewrite_initial",
         model_name="gemini-2.5-flash",
@@ -1164,12 +1171,12 @@ def test_invoke_markdown_long_output_allows_source_fallback_with_flag(monkeypatc
 
 def test_invoke_title_generation_returns_fallback_when_llm_unavailable(monkeypatch):
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: None,
     )
 
-    title, raw = url2blog_routes._invoke_title_generation(
+    title, raw = llm_invocation._invoke_title_generation(
         prompt="Generate a title",
         model_name="gemini-2.5-flash",
         fallback_title="Existing fallback title",
@@ -1186,12 +1193,12 @@ def test_invoke_title_generation_sanitizes_markdown_heading(monkeypatch):
             return "###  Better Comparison Title  \n\nExtra line"
 
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: _FakeTitleLLM(),
     )
 
-    title, raw = url2blog_routes._invoke_title_generation(
+    title, raw = llm_invocation._invoke_title_generation(
         prompt="Generate a title",
         model_name="gemini-2.5-flash",
         fallback_title="Existing fallback title",
@@ -1222,7 +1229,7 @@ def test_editorial_augmentation_normalizes_faq_component_and_adds_box():
         "augmentation_summary": "Added compact FAQ block for search-intent coverage.",
     }
 
-    sanitized = url2blog_routes._sanitize_v2_editorial_augmentation(
+    sanitized = _sanitize_v2_editorial_augmentation(
         parsed,
         fallback_content="## Overview\n\nFallback body.",
     )
@@ -1253,7 +1260,7 @@ def test_editorial_augmentation_adds_official_label_inside_existing_block():
         ],
     }
 
-    sanitized = url2blog_routes._sanitize_v2_editorial_augmentation(
+    sanitized = _sanitize_v2_editorial_augmentation(
         parsed,
         fallback_content="## Overview\n\nFallback body.",
     )
@@ -1296,7 +1303,7 @@ def test_invoke_json_llm_tracks_parse_recovery_when_truncated_repair_is_disabled
             return next(responses)
 
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: StubLLM(),  # noqa: ARG005 - signature parity
     )
@@ -1308,8 +1315,8 @@ def test_invoke_json_llm_tracks_parse_recovery_when_truncated_repair_is_disabled
         "failures_by_stage": {},
     }
 
-    with url2blog_routes._json_parse_tracking_scope(metrics, "unit_test_stage"):
-        parsed, _ = url2blog_routes._invoke_json_llm(
+    with _json_parse_tracking_scope(metrics, "unit_test_stage"):
+        parsed, _ = llm_invocation._invoke_json_llm(
             prompt="Return strict JSON.",
             max_tokens=256,
             temperature=0.1,
@@ -1351,7 +1358,7 @@ def test_invoke_json_llm_can_disable_truncated_repair(monkeypatch):
             return next(responses)
 
     monkeypatch.setattr(
-        url2blog_routes,
+        llm_invocation,
         "get_vertex_llm",
         lambda *args, **kwargs: StubLLM(),  # noqa: ARG005 - signature parity
     )
@@ -1363,8 +1370,8 @@ def test_invoke_json_llm_can_disable_truncated_repair(monkeypatch):
         "failures_by_stage": {},
     }
 
-    with url2blog_routes._json_parse_tracking_scope(metrics, "unit_test_stage"):
-        parsed, _ = url2blog_routes._invoke_json_llm(
+    with _json_parse_tracking_scope(metrics, "unit_test_stage"):
+        parsed, _ = llm_invocation._invoke_json_llm(
             prompt="Return strict JSON.",
             max_tokens=256,
             temperature=0.1,
@@ -1380,8 +1387,8 @@ def test_invoke_json_llm_can_disable_truncated_repair(monkeypatch):
 
 
 def test_resolve_min_expanded_word_target_enforces_growth():
-    assert url2blog_routes._resolve_min_expanded_word_target(100) >= 180
-    assert url2blog_routes._resolve_min_expanded_word_target(450) >= 530
+    assert _resolve_min_expanded_word_target(100) >= 180
+    assert _resolve_min_expanded_word_target(450) >= 530
 
 
 def test_editorial_augmentation_does_not_shorten_article_body():
@@ -1404,14 +1411,14 @@ def test_editorial_augmentation_does_not_shorten_article_body():
         ],
     }
 
-    sanitized = url2blog_routes._sanitize_v2_editorial_augmentation(
+    sanitized = _sanitize_v2_editorial_augmentation(
         parsed,
         fallback_content=fallback_content,
     )
 
     assert len(
-        url2blog_routes._tokenize_similarity_words(sanitized["augmented_content"])
-    ) >= len(url2blog_routes._tokenize_similarity_words(fallback_content))
+        _tokenize_similarity_words(sanitized["augmented_content"])
+    ) >= len(_tokenize_similarity_words(fallback_content))
     assert "[!EDITORIAL-BLOCK-START|faq_block]" in sanitized["augmented_content"]
 
 
@@ -1444,12 +1451,12 @@ def test_sanitize_v2_editorial_blueprint_limits_components_and_defaults():
         "guardrails": [],
     }
 
-    blueprint = url2blog_routes._sanitize_v2_editorial_blueprint(parsed)
+    blueprint = _sanitize_v2_editorial_blueprint(parsed)
 
     assert blueprint["apply_plan"] is True
     assert (
         len(blueprint["components"])
-        == url2blog_routes.URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS
+        == URL2BLOG_EDITORIAL_BLUEPRINT_MAX_COMPONENTS
     )
     assert blueprint["components"][0]["component"] == "faq_block"
     assert blueprint["components"][1]["component"] == "pull_quote"
@@ -1458,7 +1465,7 @@ def test_sanitize_v2_editorial_blueprint_limits_components_and_defaults():
 
 
 def test_format_editorial_blueprint_for_prompt_handles_no_plan():
-    text = url2blog_routes._format_editorial_blueprint_for_prompt(
+    text = _format_editorial_blueprint_for_prompt(
         {"apply_plan": False, "components": []}
     )
     assert text == "No editorial blueprint directives."
@@ -1482,7 +1489,7 @@ def test_build_insert_only_editorial_augmentation_adds_component_boxes():
         ],
     }
 
-    result = url2blog_routes._build_insert_only_editorial_augmentation(
+    result = _build_insert_only_editorial_augmentation(
         fallback_content=fallback,
         editorial_blueprint=blueprint,
     )
@@ -1505,7 +1512,9 @@ def test_editorial_post_recheck_skips_when_disabled():
         "stage_trace": [],
     }
 
-    updated = url2blog_routes._pipeline_v2_run_editorial_post_recheck_phase(context)
+    updated = _pipeline_v2_run_editorial_post_recheck_phase(
+        context, PipelineDependencies()
+    )
 
     assert updated["editorial_post_recheck"]["decision"] == "skipped"
     assert updated["editorial_post_recheck"]["pass_mode"] == "skipped"

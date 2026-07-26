@@ -1,18 +1,11 @@
-import sys
-import types
-
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from app.core import clear_all_runs
-
-# Avoid importing heavyweight external LLM clients during route-module import.
-utils_stub = types.ModuleType("utils")
-utils_stub.get_vertex_llm = lambda *args, **kwargs: None
-sys.modules.setdefault("utils", utils_stub)
-
-import app.features.url2blog.routes as url2blog_routes
+from app.features.url2blog.api import generation as generation_api
+from app.features.url2blog.api.router import router
+from tests.url2blog_test_support import build_pipeline_dependencies
 
 
 def _long_markdown_body() -> str:
@@ -24,9 +17,9 @@ def _long_markdown_body() -> str:
     return "## Overview\n\n" + "\n\n".join(paragraphs)
 
 
-def test_url2blog_persists_result_articles_and_sync_endpoints(monkeypatch):
+def test_url2blog_persists_result_articles_and_sync_endpoints():
     app = FastAPI()
-    app.include_router(url2blog_routes.router)
+    app.include_router(router)
     client = TestClient(app)
 
     clear_all_runs(feature="url2blog")
@@ -102,34 +95,24 @@ def test_url2blog_persists_result_articles_and_sync_endpoints(monkeypatch):
             '{"improved_title": "Persisted URL2Blog Title"}',
         )
 
-    # routes.py does `from utils import get_vertex_llm` at import time, so the
-    # module-level `utils` stub above only lands if this file is imported first
-    # (`sys.modules.setdefault` is a no-op once a real `utils` is loaded). Patch
-    # the bound name directly, otherwise the markdown long-output and title
-    # stages build a real client and call a live API. Returning None is the
-    # "LLM client unavailable" sentinel both stages already handle: the rewrite
-    # falls back to the mocked JSON transport and the title falls back to the
-    # stage-1 title.
-    monkeypatch.setattr(url2blog_routes, "get_vertex_llm", lambda *a, **kw: None)
-    monkeypatch.setattr(url2blog_routes, "extract_article", stub_extract_article)
-    monkeypatch.setattr(
-        url2blog_routes, "classify_article_type", stub_classify_article_type
-    )
-    monkeypatch.setattr(url2blog_routes, "_invoke_json_llm", stub_invoke_json_llm)
-    monkeypatch.setattr(
-        url2blog_routes,
-        "_invoke_google_grounded_json",
-        lambda *args, **kwargs: ({"context_points": [], "usage_note": ""}, "{}", []),
-    )
-    monkeypatch.setattr(
-        url2blog_routes,
-        "get_article_type_by_id",
-        lambda article_type_id: {
+    dependencies = build_pipeline_dependencies(
+        json_call=stub_invoke_json_llm,
+        extract_article=stub_extract_article,
+        classify_article_type=stub_classify_article_type,
+        grounded_call=lambda *args, **kwargs: (
+            {"context_points": [], "usage_note": ""},
+            "{}",
+            [],
+        ),
+        get_article_type=lambda article_type_id: {
             "id": article_type_id,
             "name": "Explainer",
             "guideline": "Use clear structure.",
             "title_guideline": "Keep title explicit.",
         },
+    )
+    app.dependency_overrides[generation_api.get_pipeline_dependencies] = (
+        lambda: dependencies
     )
 
     run_response = client.post(

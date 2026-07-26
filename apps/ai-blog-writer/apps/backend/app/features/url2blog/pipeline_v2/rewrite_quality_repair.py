@@ -9,12 +9,8 @@ from ..prompts import (
     V2_REWRITE_REPAIR_PROMPT,
     V2_TITLE_GENERATION_PROMPT,
 )
-from ..routes import (
-    _build_v2_rewrite_from_markdown,
-    _invoke_markdown_long_output,
-    _invoke_title_generation,
-    _pipeline_v2_append_stage_trace,
-)
+from ..llm.invocation import _build_v2_rewrite_from_markdown
+from ..observability import append_stage_trace
 from ..config import _llm_context_text
 from ..llm.coerce import _ngram_overlap_ratio, _safe_str, _tokenize_similarity_words
 from ..content.sanitizers import (
@@ -22,7 +18,6 @@ from ..content.sanitizers import (
     _sanitize_v2_quality_audit,
 )
 from .gating import _should_force_v2_second_pass
-from .. import routes
 
 
 class _RewriteQualityRepair:
@@ -34,7 +29,7 @@ class _RewriteQualityRepair:
             self._prepare_second_pass_rewrite()
             self._audit_second_pass_rewrite()
         else:
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='rewrite_repair_second_pass',
@@ -125,7 +120,7 @@ class _RewriteQualityRepair:
         self.repair_title_raw_response = ''
         self.repair_parsed: dict[str, Any] = {}
         if self.use_markdown_long_stages:
-            self.repair_long_output = _invoke_markdown_long_output(
+            self.repair_long_output = self.llm.invoke_markdown(
                 prompt=self.repair_prompt_markdown,
                 stage_name='rewrite_repair_second_pass',
                 model_name=self.selected_model_name,
@@ -173,7 +168,7 @@ class _RewriteQualityRepair:
                 )
             )
             self.generated_title, self.repair_title_raw_response = (
-                _invoke_title_generation(
+                self.llm.invoke_title(
                     prompt=self.title_prompt,
                     model_name=self.selected_model_name,
                     fallback_title=self.repair_fallback_title,
@@ -193,7 +188,7 @@ class _RewriteQualityRepair:
             )
         else:
             self.repair_parsed, self.repair_raw_response = (
-                routes._invoke_json_llm_tracked(
+                self.llm.invoke_json_tracked(
                     prompt=self.repair_prompt,
                     stage_name='rewrite_repair_second_pass',
                     parse_metrics=self.json_parse_metrics,
@@ -209,7 +204,7 @@ class _RewriteQualityRepair:
             )
 
     def _audit_second_pass_rewrite(self) -> None:
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='rewrite_repair_second_pass',
@@ -280,7 +275,7 @@ class _RewriteQualityRepair:
             .replace('{external_context}', self.external_context_for_prompt)
         )
         self.quality_parsed, self.quality_raw_response = (
-            routes._invoke_json_llm_tracked(
+            self.llm.invoke_json_tracked(
                 prompt=self.quality_prompt,
                 stage_name='quality_audit_after_second_pass',
                 parse_metrics=self.json_parse_metrics,
@@ -290,7 +285,7 @@ class _RewriteQualityRepair:
             )
         )
         self.quality = _sanitize_v2_quality_audit(self.quality_parsed)
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='quality_audit_after_second_pass',

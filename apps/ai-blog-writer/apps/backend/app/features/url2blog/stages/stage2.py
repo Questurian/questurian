@@ -1,7 +1,7 @@
 """URL2Blog stage 2 article-type classification."""
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
@@ -19,10 +19,17 @@ from ..llm.coerce import (
 from ..models import Stage2ClassifyRequest
 from ..prompts import CLASSIFY_ARTICLE_TYPE_PROMPT
 
+if TYPE_CHECKING:
+    from ..dependencies import Url2BlogLLM
+
 logger = logging.getLogger(__name__)
 
 
-async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
+async def classify_article_type(
+    request: Stage2ClassifyRequest,
+    *,
+    llm: "Url2BlogLLM | None" = None,
+) -> JSONResponse:
     """
     Classify Stage 1 article output into one article type.
 
@@ -62,9 +69,12 @@ async def classify_article_type(request: Stage2ClassifyRequest) -> JSONResponse:
         len(content_for_prompt),
         len(article_types),
     )
-    from .. import routes
+    if llm is None:
+        from ..dependencies import DefaultUrl2BlogLLM
 
-    parsed, raw_response = routes._invoke_json_llm(
+        llm = DefaultUrl2BlogLLM()
+
+    parsed, raw_response = llm.invoke_json(
         prompt=prompt,
         max_tokens=1024,
         temperature=0.1,

@@ -2,19 +2,16 @@
 
 import json
 from ..config import (
-    FEATURE_NAME,
     MAX_LENGTH_EXPANSION_PASSES,
     URL2BLOG_USE_MARKDOWN_LONG_STAGES_DEFAULT,
     _llm_context_text,
 )
 from ..prompts import V2_FACT_COVERAGE_AUDIT_PROMPT
 from ..content.editorial_blocks import _format_editorial_blueprint_for_prompt
-from ..routes import _now_iso, _pipeline_v2_append_stage_trace
+from ..observability import append_stage_trace
 from ..llm.coerce import _safe_bool, _safe_dict, _safe_int, _safe_str
 from ..content.sanitizers import _sanitize_v2_fact_coverage
 from .gating import _should_force_v2_fact_repair
-from .. import routes
-from app.core import write_status
 
 
 class _FactLengthSetup:
@@ -95,17 +92,7 @@ class _FactLengthSetup:
             or 'No external context collected.'
         )
         self.source_fact_anchors = list(self.context.get('source_fact_anchors') or [])
-        write_status(
-            self.run_id,
-            {
-                'run_id': self.run_id,
-                'state': 'running',
-                'stage': 'fact_length',
-                'error': None,
-                'updated_at': _now_iso(),
-            },
-            feature=FEATURE_NAME,
-        )
+        self.recorder.mark_running(self.run_id, 'fact_length')
         self.fact_coverage = _sanitize_v2_fact_coverage({}, self.source_fact_anchors)
         self.fact_coverage_raw_response = ''
         self.fact_repair_applied = False
@@ -129,7 +116,7 @@ class _FactLengthSetup:
                 )
             )
             self.fact_coverage_parsed, self.fact_coverage_raw_response = (
-                routes._invoke_json_llm_tracked(
+                self.llm.invoke_json_tracked(
                     prompt=self.fact_coverage_prompt,
                     stage_name='fact_coverage_audit_initial',
                     parse_metrics=self.json_parse_metrics,
@@ -141,7 +128,7 @@ class _FactLengthSetup:
             self.fact_coverage = _sanitize_v2_fact_coverage(
                 self.fact_coverage_parsed, self.source_fact_anchors
             )
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='fact_coverage_audit_initial',
@@ -162,7 +149,7 @@ class _FactLengthSetup:
             )
             self._repair_facts_if_needed()
         else:
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='fact_coverage_audit_initial',
@@ -180,7 +167,7 @@ class _FactLengthSetup:
             self._apply_fact_repair()
             self._reaudit_fact_coverage()
         else:
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='fact_repair',
