@@ -26,6 +26,8 @@ operations.
 | `orchestrator.py` | Run initialization and the graph entrypoint |
 | `content/` | Pure Markdown transformations and measurements |
 | `quality/` | Pure Quality Gate, retry, near-pass, and rollback policy |
+| `quality/article_assessment.py` | Pure Stage 3 assessment normalization and heuristic fallback |
+| `quality/article_revision.py` | Pure Stage 3 rewrite-mode selection and targeted feedback |
 | `dependencies.py` | Explicit external collaborators |
 | `run_recorder.py` | The only adapter that writes lifecycle, StageResult, trace, or Pipeline Artifact data |
 | `graph/state.py` | Typed graph state |
@@ -49,6 +51,9 @@ operations.
 | `stages/stage_3_composition.py` | Final article prompt, composition, and prose repair |
 | `stages/stage_3_pipeline.py` | Legacy sequential Stage 3 orchestration |
 | `stages/stage_3.py` | Stable thin Stage 3 facade and compatibility seams |
+| `stages/stage_3_quality_assessment.py` | Stage 3 quality prompt, LLM invocation, and fallback selection |
+| `stages/stage_3_quality_rewrite.py` | Stage 3 rewrite prompt, LLM invocation, anti-AI repair, and length safeguard |
+| `stages/stage_3_quality.py` | Stable thin Stage 3 quality facade |
 
 ## Dependency direction
 
