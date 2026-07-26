@@ -6,8 +6,11 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
+from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
 
+from app.features.url2blog.api.router import router
 from app.features.url2blog.dependencies import PipelineDependencies, Url2BlogLLM
 
 
@@ -71,6 +74,12 @@ class FakeUrl2BlogLLM:
 
     def invoke_text(self, **_kwargs: Any) -> str:
         return ""
+
+
+def build_pipeline_test_client() -> TestClient:
+    app = FastAPI()
+    app.include_router(router)
+    return TestClient(app)
 
 
 def build_pipeline_dependencies(
