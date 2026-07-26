@@ -1,13 +1,5 @@
-import type {
-  LocationDocumentDraft,
-  LocationIndexRow,
-  LocationOption,
-  PayloadLocationBody,
-  PayloadLocationDoc,
-  PayloadRelationship,
-} from './types'
+import type { LocationDocumentDraft, PayloadLocationBody, PayloadLocationDoc, PayloadRelationship } from './types'
 import {
-  buildDraftPayloadSyncSignature,
   markDraftAsPayloadSynced as markPayloadSyncStateSynced,
   readStoredPayloadSyncFields,
   refreshDraftPayloadSyncState as refreshPayloadSyncState,
@@ -17,7 +9,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
-export function normalizeKeyPart(value: string): string {
+function normalizeKeyPart(value: string): string {
   return value
     .trim()
     .toLowerCase()
@@ -28,7 +20,7 @@ export function normalizeKeyPart(value: string): string {
     .replace(/^-+|-+$/g, '')
 }
 
-export function formatFallbackName(value: string): string {
+function formatFallbackName(value: string): string {
   if (!value) return ''
 
   return value
@@ -84,24 +76,20 @@ export function createEmptyLocationDraft(): LocationDocumentDraft {
   }
 }
 
-export const createEmptyLocationDocumentDraft = createEmptyLocationDraft
-
 export function sanitizeLocationDraftShape(input: unknown): LocationDocumentDraft {
   const base = createEmptyLocationDraft()
   if (!isRecord(input)) return base
 
   const level = input.level === 'city' || input.level === 'neighborhood' ? input.level : 'country'
-  const hasTopLevelCoverImage = Object.prototype.hasOwnProperty.call(input, 'coverImage')
-    && input.coverImage !== undefined
+  const hasTopLevelCoverImage =
+    Object.prototype.hasOwnProperty.call(input, 'coverImage') && input.coverImage !== undefined
   const topLevelCoverImage = extractRelationshipId(input.coverImage as PayloadRelationship)
   const legacyCoverImage = extractLegacyCoverImage(input)
 
   return {
     ...base,
     draftId: trimText(input.draftId) || base.draftId,
-    payloadId: typeof input.payloadId === 'number' && Number.isFinite(input.payloadId)
-      ? input.payloadId
-      : undefined,
+    payloadId: typeof input.payloadId === 'number' && Number.isFinite(input.payloadId) ? input.payloadId : undefined,
     ...readStoredPayloadSyncFields(input),
     level,
     country: trimText(input.country),
@@ -125,62 +113,14 @@ export function buildLocationHierarchyTitle(
 ): string {
   const country = resolveHierarchyTitlePart(draft.countryName, draft.country)
   const city = resolveHierarchyTitlePart(draft.cityName, draft.city)
-  const neighborhood = resolveHierarchyTitlePart(
-    draft.neighborhoodName,
-    draft.neighborhood,
-  )
+  const neighborhood = resolveHierarchyTitlePart(draft.neighborhoodName, draft.neighborhood)
 
   if (draft.level === 'country') return country
   if (draft.level === 'city') return [city, country].filter(Boolean).join(', ')
   return [neighborhood, city, country].filter(Boolean).join(', ')
 }
 
-export function buildLocationKeyPreview(
-  draft: Pick<LocationDocumentDraft, 'level' | 'country' | 'city' | 'neighborhood'>,
-): string {
-  const country = normalizeKeyPart(draft.country)
-  const city = normalizeKeyPart(draft.city)
-  const neighborhood = normalizeKeyPart(draft.neighborhood)
-
-  if (!country) return ''
-  if (draft.level === 'country') return country
-  if (draft.level === 'city') return city ? `${country}|${city}` : country
-  if (!city) return country
-  return neighborhood ? `${country}|${city}|${neighborhood}` : `${country}|${city}`
-}
-
-export function buildParentKeyPreview(
-  draft: Pick<LocationDocumentDraft, 'level' | 'country' | 'city'>,
-): string {
-  const country = normalizeKeyPart(draft.country)
-  const city = normalizeKeyPart(draft.city)
-
-  if (!country || draft.level === 'country') return ''
-  if (draft.level === 'city') return country
-  return city ? `${country}|${city}` : country
-}
-
-export function resolveLocationDraftRef(
-  draft: Pick<LocationDocumentDraft, 'payloadId' | 'level' | 'country' | 'city' | 'neighborhood'>,
-  locationOptions: LocationOption[],
-): number | null {
-  if (typeof draft.payloadId === 'number' && Number.isFinite(draft.payloadId)) {
-    return draft.payloadId
-  }
-
-  const locationKey = buildLocationKeyPreview(draft)
-  if (!locationKey) return null
-
-  const normalizedLocationKey = locationKey.trim().toLowerCase()
-  const match = locationOptions.find((location) => (
-    location.level === draft.level
-      && location.locationKey.trim().toLowerCase() === normalizedLocationKey
-  ))
-
-  return match?.id ?? null
-}
-
-export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumentDraft {
+export function buildDraftFromPayloadDoc(doc: PayloadLocationDoc): LocationDocumentDraft {
   const draft = sanitizeLocationDraftShape({
     payloadId: doc.id,
     level: doc.level,
@@ -200,17 +140,11 @@ export function payloadLocationToDraft(doc: PayloadLocationDoc): LocationDocumen
   return markDraftAsPayloadSynced(draft, doc.updatedAt || new Date().toISOString())
 }
 
-export const buildDraftFromPayloadDoc = payloadLocationToDraft
-
 export function buildPayloadLocationBody(draft: LocationDocumentDraft): PayloadLocationBody {
   const sanitized = sanitizeLocationDraftShape(draft)
   return {
     coverImage: sanitized.coverImage,
   }
-}
-
-export function buildPayloadSyncSignature(draft: LocationDocumentDraft): string {
-  return buildDraftPayloadSyncSignature(draft, buildPayloadLocationBody)
 }
 
 export function refreshDraftPayloadSyncState(draft: LocationDocumentDraft): LocationDocumentDraft {
@@ -219,10 +153,7 @@ export function refreshDraftPayloadSyncState(draft: LocationDocumentDraft): Loca
   })
 }
 
-export function markDraftAsPayloadSynced(
-  draft: LocationDocumentDraft,
-  syncedAt: string,
-): LocationDocumentDraft {
+export function markDraftAsPayloadSynced(draft: LocationDocumentDraft, syncedAt: string): LocationDocumentDraft {
   return markPayloadSyncStateSynced(sanitizeLocationDraftShape(draft), buildPayloadLocationBody, syncedAt)
 }
 
@@ -232,18 +163,4 @@ export function validateDraft(draft: LocationDocumentDraft): string | null {
   }
 
   return null
-}
-
-export function formatLocationLabel(
-  location: Pick<LocationIndexRow, 'level' | 'countryName' | 'cityName' | 'neighborhoodName' | 'locationKey'>,
-): string {
-  if (location.level === 'country') {
-    return location.countryName || location.locationKey
-  }
-
-  if (location.level === 'city') {
-    return location.cityName || location.locationKey
-  }
-
-  return location.neighborhoodName || location.locationKey
 }

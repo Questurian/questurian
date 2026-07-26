@@ -4,16 +4,13 @@ import {
   buildDraftFromPayloadDoc,
   buildLocationHierarchyTitle,
   buildPayloadLocationBody,
-  buildPayloadSyncSignature,
   createEmptyLocationDraft,
   markDraftAsPayloadSynced,
-  payloadLocationToDraft,
   refreshDraftPayloadSyncState,
-  resolveLocationDraftRef,
   sanitizeLocationDraftShape,
   validateDraft,
 } from './schema'
-import type { LocationOption, PayloadLocationDoc } from './types'
+import type { PayloadLocationDoc } from './types'
 
 describe('location image schema helpers', () => {
   it('migrates legacy guide media cover image into top-level coverImage', () => {
@@ -93,7 +90,7 @@ describe('location image schema helpers', () => {
   })
 
   it('falls back to legacy Payload guide media only when top-level coverImage is absent', () => {
-    const draft = payloadLocationToDraft({
+    const draft = buildDraftFromPayloadDoc({
       id: 12,
       level: 'city',
       country: 'peru',
@@ -116,7 +113,8 @@ describe('location image schema helpers', () => {
 
     const synced = markDraftAsPayloadSynced(draft, '2026-03-09T00:00:00.000Z')
     expect(synced.hasUnsyncedPayloadChanges).toBe(false)
-    expect(synced.lastPayloadSyncSignature).toBe(buildPayloadSyncSignature(synced))
+    expect(synced.currentPayloadSignature).toBe(synced.lastPayloadSyncSignature)
+    expect(synced.lastPayloadSyncSignature).toBeTruthy()
 
     const edited = refreshDraftPayloadSyncState({
       ...synced,
@@ -126,12 +124,10 @@ describe('location image schema helpers', () => {
   })
 
   it('requires an existing Payload location before syncing', () => {
-    expect(validateDraft(createEmptyLocationDraft())).toBe(
-      'Open an existing Payload location before syncing.',
-    )
+    expect(validateDraft(createEmptyLocationDraft())).toBe('Open an existing Payload location before syncing.')
   })
 
-  it('builds readable hierarchy titles and resolves existing location refs', () => {
+  it('builds readable hierarchy titles', () => {
     const draft = createEmptyLocationDraft()
     draft.level = 'neighborhood'
     draft.country = 'peru'
@@ -141,21 +137,16 @@ describe('location image schema helpers', () => {
     draft.cityName = 'Lima'
     draft.neighborhoodName = 'Barranco'
 
-    const options: LocationOption[] = [
-      {
-        id: 44,
-        level: 'neighborhood',
-        country: 'peru',
-        city: 'lima',
-        neighborhood: 'barranco',
-        countryName: 'Peru',
-        cityName: 'Lima',
-        neighborhoodName: 'Barranco',
-        locationKey: 'peru|lima|barranco',
-      },
-    ]
-
     expect(buildLocationHierarchyTitle(draft)).toBe('Barranco, Lima, Peru')
-    expect(resolveLocationDraftRef(draft, options)).toBe(44)
+  })
+
+  it('falls back to normalized hierarchy keys when display names are missing', () => {
+    const draft = createEmptyLocationDraft()
+    draft.level = 'neighborhood'
+    draft.country = '  Côte d Ivoire! '
+    draft.city = 'san--pedro'
+    draft.neighborhood = 'le   bardot'
+
+    expect(buildLocationHierarchyTitle(draft)).toBe('Le Bardot, San Pedro, Côte D Ivoire')
   })
 })
