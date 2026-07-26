@@ -63,3 +63,8 @@ _Avoid_: article prose, full SEO document
   selection, retry policy, validation traces, and writer execution. New prompt
   modules must reuse that execution boundary rather than introduce another
   listicle runner.
+- `listicle_content.py` is the compatible HTTP facade for Listicle Content
+  Generation. Its Pydantic contracts, Critical Fields and Research Profile batch
+  preparation, single-target composition adapter, batch orchestration, and
+  writer-vocabulary endpoint live in the adjacent `listicle_content_*` and
+  `listicle_guidelines.py` modules.
