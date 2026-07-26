@@ -50,6 +50,10 @@ _Avoid_: article prose, full SEO document
   editorial policy, builders, and output validation live in the adjacent
   `listicle_writer_contracts.py`, `listicle_prompt_policy.py`,
   `listicle_prompt_builders.py`, and `listicle_writer_validation.py` modules.
+- `research_profile.py` is a compatibility facade. Research Profile contracts,
+  prompt construction, response parsing, grounded execution, fallback policy,
+  and batch concurrency live in cohesive adjacent `research_profile_*` modules.
+  The facade preserves the grounded-invocation patch seam used by route tests.
 - The `blurb_composition_*` family owns Listicle Content Generation path
   selection, retry policy, validation traces, and writer execution. New prompt
   modules must reuse that execution boundary rather than introduce another
