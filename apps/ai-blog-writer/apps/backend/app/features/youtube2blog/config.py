@@ -4,6 +4,7 @@ from __future__ import annotations
 
 # Always-strong model policy for YouTube2Blog.
 Y2B_PRIMARY_MODEL = "gemini-2.5-flash-lite"
+VALID_Y2B_MODELS = {Y2B_PRIMARY_MODEL}
 
 # Stage-specific overrides: article composition and editorial augmentation are
 # the writing-quality stages, pinned to a stronger model than the run's base.

@@ -14,7 +14,15 @@ operations.
 
 | Area | Owns |
 | --- | --- |
-| `routes.py` | Pipeline Routes and request/response handling |
+| `routes.py` | Thin public facade preserving the feature router and handler imports |
+| `api/router.py` | Aggregates route-family routers under `/youtube2blog` |
+| `api/pipeline.py` | YouTube intake, run status/results, and tone options |
+| `api/diagnostics.py` | Stage-by-stage run diagnostics |
+| `api/testing.py` | Development-only Stage 1 probe endpoints |
+| `api/articles.py` | Completed-article listing, deletion, and run cleanup |
+| `api/sync.py` | Payload Sync bookkeeping |
+| `api/expansion.py` | Listicle detection and Deep Expansion job lifecycle |
+| `models.py` | Public API request shapes |
 | `orchestrator.py` | Run initialization and the graph entrypoint |
 | `content/` | Pure Markdown transformations and measurements |
 | `quality/` | Pure Quality Gate, retry, near-pass, and rollback policy |
