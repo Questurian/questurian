@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.features.itineraries_pipeline.routes as itineraries_pipeline_routes
-from app.features.editor_assist.writer_models import WriterResult
+from app.shared.writer_invocation import WriterResult
 
 
 def _build_client() -> TestClient:

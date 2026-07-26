@@ -43,7 +43,7 @@ from .writer_brief import (
     WriterBriefTrace,
     run_writer_brief,
 )
-from .writer_models import WriterModelError, invoke_writer_model
+from app.shared.writer_invocation import WriterModelError, invoke_writer_model
 
 logger = logging.getLogger(__name__)
 

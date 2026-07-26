@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from app.features.editor_assist import writer_models
+from app.shared import writer_invocation as writer_models
 from app.features.images import (
     alt_text_generator,
     edit_prompt_builder,
@@ -64,12 +64,8 @@ def test_shared_llm_factory_never_uses_small_generation_budget(monkeypatch):
     # reachable while Claude is switched on (it is off by default: no funds).
     monkeypatch.setenv("ANTHROPIC_MODELS_ENABLED", "1")
 
-    claude = llm_client.get_vertex_llm(
-        model_name="claude-sonnet-5", max_tokens=123
-    )
-    llm_client.get_vertex_llm(
-        model_name="gemini-2.5-flash-lite", max_tokens=456
-    )
+    claude = llm_client.get_vertex_llm(model_name="claude-sonnet-5", max_tokens=123)
+    llm_client.get_vertex_llm(model_name="gemini-2.5-flash-lite", max_tokens=456)
 
     assert claude.max_tokens == llm_client.MIN_GENERATION_MAX_TOKENS
     assert captured["max_tokens"] == llm_client.MIN_GENERATION_MAX_TOKENS

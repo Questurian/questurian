@@ -1,9 +1,9 @@
-"""Writer-model adapter for Editor Assist and itinerary prose calls.
+"""Shared writer-model invocation adapter.
 
 Free-text calls go through ``utils.get_vertex_llm``. That shared factory routes
 ``claude-*`` model names to Anthropic and Gemini names to Vertex. Forced-tool
-Anthropic calls also live in utils; this module only wraps feature-specific
-result shapes and errors.
+calls also live in utils; this module normalizes the result shapes and errors
+used by backend features.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Editor Assist LangGraph runners."""
+"""LangGraph execution for Editor Assist operations."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class EditorAssistGraphState(TypedDict, total=False):
     completed: bool
 
 
-def _run_editor_assist_graph(
+def run_editor_assist_graph(
     *,
     node_name: str,
     step_runner: Callable[[], T],
@@ -58,7 +58,10 @@ def _run_editor_assist_graph(
                     config={
                         "configurable": {"thread_id": thread_id},
                         "tags": ["langgraph", "editor_assist", node_name],
-                        "metadata": {"feature": "editor_assist", "thread_id": thread_id},
+                        "metadata": {
+                            "feature": "editor_assist",
+                            "thread_id": thread_id,
+                        },
                         "run_name": f"editor_assist_{node_name}_graph",
                     },
                 )
@@ -78,83 +81,3 @@ def _run_editor_assist_graph(
     if result is None:
         raise RuntimeError("Editor Assist LangGraph returned no result")
     return result
-
-
-def run_editor_assist_generate_title_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_generate_title",
-        step_runner=step_runner,
-    )
-
-
-def run_editor_assist_compose_brief_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_compose_itinerary_brief",
-        step_runner=step_runner,
-    )
-
-
-def run_editor_assist_compose_intro_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_compose_itinerary_intro",
-        step_runner=step_runner,
-    )
-
-
-def run_editor_assist_compose_day_blurbs_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_compose_itinerary_day_blurbs",
-        step_runner=step_runner,
-    )
-
-
-def run_editor_assist_compose_stop_reason_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_compose_itinerary_stop_reason",
-        step_runner=step_runner,
-    )
-
-
-def run_editor_assist_rewrite_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_rewrite_block",
-        step_runner=step_runner,
-    )
-
-
-def run_editor_assist_generate_seo_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_generate_seo_metadata",
-        step_runner=step_runner,
-    )
-
-
-def run_editor_assist_listicle_generation_graph(
-    *,
-    step_runner: Callable[[], T],
-) -> T:
-    return _run_editor_assist_graph(
-        node_name="editor_assist_generate_listicle_content",
-        step_runner=step_runner,
-    )
