@@ -1,0 +1,63 @@
+@media (max-width: 1100px) {
+  .stl-builder-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stl-builder-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .stl-seo-input-wrap-featured .stl-seo-input-with-ai {
+    padding-right: 10.3rem;
+  }
+
+  .stl-seo-input-wrap-social-image {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .stl-seo-image-actions {
+    justify-content: flex-start;
+  }
+
+  .stl-og-upload-modal__header {
+    flex-direction: column;
+  }
+
+  .stl-og-upload-modal__actions {
+    justify-content: flex-start;
+  }
+
+  .stl-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .stl-hero {
+    flex-direction: column;
+  }
+
+  .stl-panel {
+    padding: 1rem;
+  }
+
+  .stl-setup-note {
+    margin-top: 0.62rem;
+  }
+
+  .stl-title-input-wrap .stl-title-input {
+    padding-right: 2.9rem;
+  }
+
+  .stl-copyable-item-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .stl-instagram-embed-modal__frame {
+    width: 100%;
+    height: min(72vh, 640px);
+    min-height: 420px;
+  }
+}

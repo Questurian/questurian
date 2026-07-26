@@ -1,0 +1,72 @@
+.stl-placeholder {
+  color: var(--stl-muted);
+}
+
+.stl-error,
+.stl-success {
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  margin: 0;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+}
+
+.stl-error {
+  background: #fef5f5;
+  color: #7f2230;
+  border-color: #eed7dc;
+}
+
+.stl-success {
+  background: #f3f8f5;
+  color: #2d5d4a;
+  border-color: #d3e4dd;
+}
+
+.stl-out-of-sync-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem 0.6rem 0.65rem;
+  border-radius: 10px;
+  background: #fff8ec;
+  border: 1px solid #f0d98a;
+  font-size: 0.875rem;
+  color: #6b4a0d;
+}
+
+.stl-out-of-sync-banner__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e8a020;
+  animation: stl-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes stl-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.stl-out-of-sync-banner__text {
+  flex: 1;
+}
+
+.stl-out-of-sync-banner__btn {
+  flex-shrink: 0;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  background: #e8a020;
+  color: #fff;
+  border: none;
+}
+
+.stl-out-of-sync-banner__btn:hover:not(:disabled) {
+  background: #c98a10;
+}

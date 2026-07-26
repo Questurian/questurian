@@ -1,0 +1,14 @@
+@media (max-width: 700px) {
+  .stl-picker-grid--items {
+    gap: 0.65rem;
+  }
+
+  .stl-picker-grid--items > .stl-picker-card,
+  .stl-picker-grid--items > .stl-picker-empty {
+    flex-basis: calc((100% - 0.65rem) / 2);
+  }
+
+  .stl-picker-grid--photos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
