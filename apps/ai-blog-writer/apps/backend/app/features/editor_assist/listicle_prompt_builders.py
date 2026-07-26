@@ -25,7 +25,8 @@ from .listicle_writer_contracts import (
     ListicleCategory,
     ListicleWriterTarget,
 )
-from .writer_brief import WriterBrief, render_source_facts_block
+from .writer_brief_contracts import WriterBrief
+from .writer_brief_rendering import render_source_facts_block
 
 
 def build_generation_prompt(

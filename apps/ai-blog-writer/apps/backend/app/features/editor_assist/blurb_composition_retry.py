@@ -12,7 +12,7 @@ from .listicle_writer_contracts import (
     ListicleArticleType,
     ListicleWriterTarget,
 )
-from .writer_brief import WriterBrief
+from .writer_brief_contracts import WriterBrief
 
 _LEAN_INLINE_RETRY_CATEGORIES = {"nightlife"}
 _LEAN_RETRY_BUILDER_CATEGORIES = {"dining", "accommodations", "attractions"}

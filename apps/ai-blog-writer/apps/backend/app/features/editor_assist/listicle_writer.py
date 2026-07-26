@@ -58,7 +58,8 @@ from .listicle_writer_validation import (  # noqa: F401
     validate_generated_text,
     word_count as _word_count,
 )
-from .writer_brief import WriterBrief, render_source_facts_block
+from .writer_brief_contracts import WriterBrief
+from .writer_brief_rendering import render_source_facts_block
 
 __all__ = [
     "ANTI_AI_PROMPT_CATEGORIES",
