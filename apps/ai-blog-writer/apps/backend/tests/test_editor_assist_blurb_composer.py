@@ -1,7 +1,10 @@
+import pytest
+
 from app.features.editor_assist.blurb_composer import (
     ListicleCompositionDeps,
     ListicleCompositionSettings,
     ListicleCompositionTarget,
+    ListicleCompositionWriterError,
     compose_listicle_target,
 )
 from app.features.editor_assist.critical_fields import CriticalFieldsResult
@@ -16,6 +19,7 @@ from app.features.editor_assist.writer_brief import (
     WriterBrief,
     WriterBriefTrace,
 )
+from app.shared.writer_invocation import WriterModelError
 
 
 class _WriterResult:
@@ -61,6 +65,7 @@ def _profile(
     *,
     angle="signature-dish",
     usable_for_blurb=True,
+    warnings=None,
 ) -> ResearchProfile:
     return ResearchProfile(
         selected_angle=SelectedAngleEvidence(
@@ -84,6 +89,7 @@ def _profile(
             "experience-texture": [],
         },
         usable_for_blurb=usable_for_blurb,
+        warnings=warnings or [],
     )
 
 
@@ -192,3 +198,115 @@ def test_lean_retry_stays_inside_composer_without_http_route():
     assert "Source facts (use only what you need):" in prompts[1]
     assert "BUILDER CONTEXT" not in prompts[1]
     assert "RESEARCH PROFILE" not in prompts[1]
+
+
+def test_critical_fields_failure_short_circuits_all_model_dependencies():
+    def _should_not_run(**_kwargs):
+        raise AssertionError(
+            "model dependency must not run after Critical Fields failure"
+        )
+
+    result = compose_listicle_target(
+        target=_target(),
+        settings=_settings(),
+        cf_result=CriticalFieldsResult(passed=False, missing=["payload_doc_id"]),
+        research_profile=None,
+        research_profile_trace=None,
+        deps=ListicleCompositionDeps(
+            invoke_writer=_should_not_run,
+            run_writer_brief=_should_not_run,
+        ),
+    )
+
+    assert result.status == "error"
+    assert result.error_message == (
+        "Critical Fields gate failed: missing payload_doc_id"
+    )
+    assert [step.name for step in result.steps] == ["critical_fields_evaluated"]
+    assert result.steps[0].status == "failed"
+
+
+def test_unusable_research_preserves_warnings_sources_and_confidence_reasons():
+    profile = ResearchProfile(
+        selected_angle=SelectedAngleEvidence(
+            angle="signature-dish",
+            status="unsupported",
+            reason="No cited dish evidence.",
+        ),
+        standard_buckets={
+            "standout-hook": [
+                ResearchFinding(
+                    summary="The dining room overlooks the coast.",
+                    citations=["https://example.com/hook"],
+                )
+            ],
+            "experience-texture": [],
+        },
+        usable_for_blurb=False,
+        warnings=["Selected angle could not be supported."],
+    )
+
+    result = compose_listicle_target(
+        target=_target(),
+        settings=_settings(effective_angle=None),
+        cf_result=CriticalFieldsResult(passed=True, missing=[]),
+        research_profile=profile,
+        research_profile_trace=None,
+        deps=ListicleCompositionDeps(
+            invoke_writer=lambda **_kwargs: _WriterResult(_paragraph(100))
+        ),
+    )
+
+    assert result.status == "generated"
+    assert result.source_urls == ["https://example.com/hook"]
+    assert result.warnings == ["Selected angle could not be supported."]
+    assert result.low_confidence is True
+    writer_step = next(step for step in result.steps if step.name == "writer_called")
+    assert writer_step.details["low_confidence_reasons"] == [
+        "requested angle unsupported",
+        "research profile unusable",
+    ]
+
+
+def test_second_validation_failure_returns_error_with_retry_trace():
+    calls = 0
+
+    def _writer(**_kwargs):
+        nonlocal calls
+        calls += 1
+        return _WriterResult("still too short")
+
+    result = compose_listicle_target(
+        target=_target(category="key_location"),
+        settings=_settings(requested_angle=None, effective_angle=None),
+        cf_result=CriticalFieldsResult(passed=True, missing=[]),
+        research_profile=None,
+        research_profile_trace=None,
+        deps=ListicleCompositionDeps(invoke_writer=_writer),
+    )
+
+    assert calls == 2
+    assert result.status == "error"
+    assert result.markdown is None
+    assert result.error_message == "Generated content failed validation after retry."
+    assert result.validation_errors
+    assert [(step.name, step.status) for step in result.steps[-3:]] == [
+        ("validated", "failed"),
+        ("retry_called", "failed"),
+        ("finalized", "failed"),
+    ]
+
+
+def test_writer_error_is_translated_through_compatible_composer_exception():
+    def _writer(**_kwargs):
+        raise WriterModelError("writer unavailable")
+
+    with pytest.raises(ListicleCompositionWriterError, match="writer unavailable"):
+        compose_listicle_target(
+            target=_target(category="key_location"),
+            settings=_settings(requested_angle=None, effective_angle=None),
+            cf_result=CriticalFieldsResult(passed=True, missing=[]),
+            research_profile=None,
+            research_profile_trace=None,
+            deps=ListicleCompositionDeps(invoke_writer=_writer),
+        )

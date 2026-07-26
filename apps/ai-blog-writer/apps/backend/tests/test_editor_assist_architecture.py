@@ -53,3 +53,35 @@ def test_root_routes_module_only_aggregates_family_routers():
         and node.value.func.attr == "include_router"
     ]
     assert len(included_routers) == 4
+
+
+def test_blurb_composer_remains_a_thin_compatible_orchestrator():
+    composer_path = (
+        Path(__file__).parents[1]
+        / "app"
+        / "features"
+        / "editor_assist"
+        / "blurb_composer.py"
+    )
+    source = composer_path.read_text()
+    module = ast.parse(source)
+
+    top_level_defs = [
+        node
+        for node in module.body
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    assert len(source.splitlines()) <= 200
+    assert [node.name for node in top_level_defs] == [
+        "_elapsed_ms",
+        "_critical_fields_step",
+        "compose_listicle_target",
+    ]
+
+    imported_modules = {
+        node.module
+        for node in module.body
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+    assert "listicle_writer" not in imported_modules
+    assert "writer_brief" not in imported_modules
