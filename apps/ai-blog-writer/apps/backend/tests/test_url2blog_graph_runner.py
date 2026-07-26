@@ -4,6 +4,9 @@ from fastapi.responses import JSONResponse
 
 import app.features.url2blog.graph.runner as url2blog_graph_runner
 import app.features.url2blog.graph.routing as url2blog_routing
+from app.features.url2blog.pipeline_v2.gating import (
+    _build_v2_rewrite_retry_feedback,
+)
 
 
 def _build_rewrite_context(
@@ -16,7 +19,9 @@ def _build_rewrite_context(
     return {
         "quality": {
             "overall_score": score,
-            "required_revisions": [f"revision-{idx}" for idx in range(required_revisions)],
+            "required_revisions": [
+                f"revision-{idx}" for idx in range(required_revisions)
+            ],
             "too_close_to_source": too_close_to_source,
         },
         "ngram_overlap": ngram_overlap,
@@ -68,6 +73,38 @@ def test_rewrite_gate_rejects_fallback_when_revisions_too_high():
     assert decision == "fail"
     assert gate_data["pass_mode"] == "failed_after_retries"
     assert "rewrite quality gate failed after retries" in gate_data["failure_reason"]
+
+
+def test_build_v2_rewrite_retry_feedback_is_empty_for_initial_attempt():
+    feedback = _build_v2_rewrite_retry_feedback(
+        retry_count=0,
+        retry_feedback={},
+        previous_quality={},
+    )
+
+    assert feedback == ""
+
+
+def test_build_v2_rewrite_retry_feedback_uses_previous_quality_details():
+    feedback = _build_v2_rewrite_retry_feedback(
+        retry_count=1,
+        retry_feedback={},
+        previous_quality={
+            "overall_score": 6,
+            "quality_summary": "Needs stronger structure and clearer utility.",
+            "required_revisions": [
+                "Improve section progression and transitions.",
+                "Add concrete reader takeaways in each section.",
+            ],
+        },
+    )
+
+    assert "rewrite attempt #2" in feedback
+    assert "Prior overall score: 6/10" in feedback
+    assert "Recommended rewrite intensity: strong" in feedback
+    assert "Needs stronger structure and clearer utility." in feedback
+    assert "- Improve section progression and transitions." in feedback
+    assert "- Add concrete reader takeaways in each section." in feedback
 
 
 def test_fact_gate_soft_fails_with_unverified_facts_warning():
