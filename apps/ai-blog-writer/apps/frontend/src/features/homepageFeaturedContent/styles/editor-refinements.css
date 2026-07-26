@@ -1,0 +1,49 @@
+/* ── L7 column padding refinement ────────────────────────────── */
+
+.hf-l7-col--left,
+.hf-l7-col--center,
+.hf-l7-col--right {
+  padding: var(--space-4);
+}
+
+.hf-l7-col--left {
+  gap: var(--space-4);
+}
+
+/* ── Block header polish ──────────────────────────────────────── */
+
+.hf-block-header {
+  padding: var(--space-3) var(--space-4);
+}
+
+.hf-block-label {
+  gap: var(--space-3);
+}
+
+/* ── Block settings modal refinement ─────────────────────────── */
+
+.hf-block-settings-modal {
+  width: min(480px, 95vw);
+}
+
+.hf-block-settings-modal-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border);
+  background: rgba(250, 248, 245, 0.7);
+  justify-content: space-between;
+}
+
+/* ── Slot controls row ────────────────────────────────────────── */
+
+.hf-slot-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: rgba(250, 248, 245, 0.6);
+}

@@ -1,0 +1,266 @@
+/* ── 8-Slot Editorial Layout ──────────────────────────────────── */
+
+.hf-l8 {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.hf-l8-left {
+  display: flex;
+  flex-direction: column;
+}
+.hf-l8-center {
+  display: flex;
+  flex-direction: column;
+}
+.hf-l8-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ── Text-only list (slots 1-5) ─── */
+.hf-l8-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  width: 100%;
+}
+.hf-l8-left .hf-l8-card-text:first-child {
+  border-top: 1px solid var(--border);
+}
+.hf-l8-card-text:hover {
+  opacity: 0.75;
+}
+.hf-l8-card-text.invalid .hf-l8-text-title {
+  color: var(--error);
+}
+
+.hf-l8-text-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.hf-l8-date {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.hf-l8-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 2px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hf-l8-text-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+/* ── Hero card (slot 6) ─── */
+.hf-l8-card-hero {
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+  transition: box-shadow 0.15s;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.hf-l8-card-hero:hover {
+  box-shadow: 0 6px 24px var(--shadow-soft);
+}
+
+.hf-l8-hero-thumb {
+  aspect-ratio: 16 / 10;
+  position: relative;
+  background: rgba(220, 218, 214, 0.35);
+  overflow: hidden;
+}
+.hf-l8-hero-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hf-l8-hero-thumb-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hf-l8-hero-empty {
+  aspect-ratio: 16 / 10;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+.hf-l8-hero-empty:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hf-l8-hero-body {
+  padding: var(--space-4) var(--space-2) var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hf-l8-hero-label {
+  margin: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hf-l8-hero-title {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* ── Image cards (slots 7-8) ─── */
+.hf-l8-card-img {
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+  transition: box-shadow 0.15s;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.hf-l8-card-img:hover {
+  box-shadow: 0 4px 16px var(--shadow-soft);
+}
+
+.hf-l8-img-thumb {
+  aspect-ratio: 4 / 3;
+  position: relative;
+  background: rgba(220, 218, 214, 0.35);
+  overflow: hidden;
+}
+.hf-l8-img-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hf-l8-img-empty {
+  aspect-ratio: 4 / 3;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+.hf-l8-img-empty:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hf-l8-img-body {
+  padding: var(--space-3) var(--space-1) var(--space-1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 2rem;
+}
+
+.hf-l8-img-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+/* ── Shared slot number badge ─── */
+.hf-l8-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: rgba(30, 28, 24, 0.72);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Overlaid on images */
+.hf-l8-hero-thumb .hf-l8-num,
+.hf-l8-img-thumb .hf-l8-num {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: 1;
+}
+
+/* ── Mobile: single column ─── */
+@media (max-width: 720px) {
+  .hf-l8 {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  .hf-l8-hero-title {
+    font-size: 1.2rem;
+  }
+}

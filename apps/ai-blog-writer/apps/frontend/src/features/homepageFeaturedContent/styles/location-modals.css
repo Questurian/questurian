@@ -1,0 +1,333 @@
+/* ── Location Picker Modal ────────────────────────────────────── */
+
+/** Stacks above block settings modal when confirming delete */
+.hf-block-delete-confirm-backdrop {
+  z-index: 220;
+}
+
+.hf-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 28, 24, 0.45);
+  backdrop-filter: blur(6px);
+}
+
+.hf-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(580px, 95vw);
+  max-height: 82vh;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: #fff;
+  box-shadow: 0 28px 64px rgba(30, 28, 24, 0.22);
+  overflow: hidden;
+}
+
+.hf-modal-top {
+  padding: var(--space-5) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.hf-modal-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.hf-modal-title-row h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.hf-modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--muted);
+  line-height: 1;
+}
+
+.hf-modal-close:hover {
+  background: var(--error-soft);
+  color: var(--error);
+  border-color: rgba(184, 68, 68, 0.25);
+}
+
+.hf-modal-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hf-modal-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.hf-modal-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.6rem;
+  padding: 0.6rem 0.85rem 0.6rem 2.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: rgba(250, 248, 245, 0.7);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  box-sizing: border-box;
+}
+
+.hf-modal-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: #fff;
+}
+
+.hf-modal-search select {
+  min-height: 2.6rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  flex-shrink: 0;
+}
+
+.hf-modal-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.hf-modal-group {
+  padding: var(--space-3) var(--space-6) var(--space-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  position: sticky;
+  top: 0;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+
+.hf-modal-country-group + .hf-modal-country-group {
+  border-top: 1px solid rgba(45, 42, 38, 0.08);
+}
+
+.hf-modal-city-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.hf-modal-city-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+}
+
+.hf-modal-city-group-kicker {
+  margin: 0 0 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hf-modal-city-group-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.hf-modal-error {
+  margin: var(--space-3) var(--space-6);
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(184, 68, 68, 0.2);
+  background: var(--error-soft);
+  color: var(--error);
+  font-size: 0.88rem;
+}
+
+/* ── Delete confirmation modal ────────────────────────────────── */
+
+.hf-delete-modal {
+  width: min(440px, 95vw);
+  max-height: none;
+}
+
+.hf-delete-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-3);
+  padding: var(--space-7) var(--space-6) var(--space-5);
+}
+
+.hf-delete-modal-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  background: var(--error-soft);
+  border: 1px solid rgba(184, 68, 68, 0.2);
+  font-size: 1.4rem;
+  color: var(--error);
+  flex-shrink: 0;
+}
+
+.hf-delete-modal-body h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.hf-delete-modal-body p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ink-light);
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+.hf-delete-modal-body .hf-modal-error {
+  margin: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.hf-delete-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  background: rgba(250, 248, 245, 0.6);
+}
+
+/* ── Danger primary button ────────────────────────────────────── */
+
+.hf-btn-primary.hf-btn-danger {
+  background: var(--error);
+}
+
+.hf-btn-primary.hf-btn-danger:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.hf-modal-empty {
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.hf-modal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(45, 42, 38, 0.08);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    transform var(--transition-base);
+  width: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  text-align: left;
+}
+
+.hf-modal-row:hover:not(:disabled) {
+  background: rgba(245, 240, 232, 0.72);
+  border-color: rgba(197, 90, 59, 0.2);
+  transform: translateY(-1px);
+}
+
+.hf-modal-row:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hf-modal-row-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.hf-modal-row-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.hf-modal-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.hf-modal-row-city {
+  margin-top: 0.2rem;
+}
+
+.hf-modal-neighborhood-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: rgba(248, 246, 242, 0.92);
+  border: 1px solid rgba(45, 42, 38, 0.06);
+}
+
+.hf-modal-neighborhood-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hf-modal-row-child {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.hf-modal-row-key {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: monospace;
+}
