@@ -1,6 +1,7 @@
 """Thin orchestrator for URL2Blog fact retention and length work."""
 
 from typing import Any
+from ..dependencies import PipelineDependencies
 from .fact_length_audit import _FactLengthAudit
 from .fact_length_expansion import _FactLengthExpansion
 from .fact_length_repair import _FactLengthRepair
@@ -11,8 +12,15 @@ class _FactLengthPhase(
     _FactLengthSetup, _FactLengthRepair, _FactLengthExpansion, _FactLengthAudit
 ):
 
-    def __init__(self, context: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        context: dict[str, Any],
+        dependencies: PipelineDependencies,
+    ) -> None:
         self.context = context
+        self.dependencies = dependencies
+        self.llm = dependencies.llm
+        self.recorder = dependencies.recorder
 
     def run(self) -> dict[str, Any]:
         self._initialize()
@@ -24,5 +32,8 @@ class _FactLengthPhase(
         return self.context
 
 
-def _pipeline_v2_run_fact_length_phase(context: dict[str, Any]) -> dict[str, Any]:
-    return _FactLengthPhase(context).run()
+def _pipeline_v2_run_fact_length_phase(
+    context: dict[str, Any],
+    dependencies: PipelineDependencies,
+) -> dict[str, Any]:
+    return _FactLengthPhase(context, dependencies).run()

@@ -2,9 +2,9 @@ import asyncio
 import json
 
 import app.features.prompt2blog.routes as prompt2blog_routes
-import app.features.url2blog.routes as url2blog_routes
 from app.features.prompt2blog import observability as prompt2blog_observability
 from app.features.prompt2blog.api import runs as prompt2blog_runs
+from app.features.url2blog.api import runs as url2blog_runs
 
 
 def _response_json(response) -> dict:
@@ -67,12 +67,12 @@ def test_url2blog_result_includes_langgraph_trace_metadata(monkeypatch):
     }
 
     monkeypatch.setattr(
-        url2blog_routes,
+        url2blog_runs,
         "read_status",
         lambda _run_id: {"run_id": _run_id, "feature": "url2blog"},
     )
     monkeypatch.setattr(
-        url2blog_routes,
+        url2blog_runs,
         "read_output",
         lambda _run_id: {
             "markdown": "# URL2Blog",
@@ -85,14 +85,12 @@ def test_url2blog_result_includes_langgraph_trace_metadata(monkeypatch):
         },
     )
     monkeypatch.setattr(
-        url2blog_routes,
-        "read_stage_result",
-        lambda _run_id, stage: (
-            {"data": trace_payload} if stage == "langgraph_trace" else None
-        ),
+        url2blog_runs,
+        "read_langgraph_trace",
+        lambda _run_id: trace_payload,
     )
 
-    response = asyncio.run(url2blog_routes.get_result(run_id))
+    response = asyncio.run(url2blog_runs.get_result(run_id))
     payload = _response_json(response)
 
     assert payload["langsmith_trace_url"] == trace_payload["langsmith_trace_url"]

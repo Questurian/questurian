@@ -6,10 +6,12 @@ from typing import Any
 
 from fastapi import HTTPException
 from app.shared.text import enforce_anti_ai_tells_markdown
+from utils import get_vertex_llm, invoke_google_grounded_text
 
 from ..config import *  # noqa: F401,F403
 from ..llm.coerce import *  # noqa: F401,F403
 from ..llm.parsing import (
+    _extract_json_from_response,
     _json_parse_tracking_scope,
     _record_json_parse_failure,
     _record_json_parse_recovery,
@@ -18,9 +20,6 @@ from ..content.markdown import *  # noqa: F401,F403
 from ..content.sanitizers import *  # noqa: F401,F403
 
 logger = logging.getLogger(__name__)
-
-
-from .. import routes  # noqa: E402
 
 
 def _invoke_google_grounded_json(
@@ -32,7 +31,7 @@ def _invoke_google_grounded_json(
 ) -> tuple[dict[str, Any], str, list[str]]:
     """Invoke Gemini with Google Search grounding and parse JSON output."""
     grounded_model_name = _resolve_grounded_model(model_name)
-    grounded = routes.invoke_google_grounded_text(
+    grounded = invoke_google_grounded_text(
         (
             f"{prompt}\n\n"
             "CRITICAL OUTPUT RULE:\n"
@@ -48,7 +47,7 @@ def _invoke_google_grounded_json(
         return {}, "", []
 
     raw_response = _safe_str(grounded.text)
-    parsed, parse_error = routes._extract_json_from_response(raw_response)
+    parsed, parse_error = _extract_json_from_response(raw_response)
     if parse_error or not parsed:
         logger.warning(
             "URL2Blog pipeline v2: grounded enrichment JSON parse failed: %s",
@@ -131,7 +130,7 @@ def _invoke_markdown_long_output(
     effective_max_tokens = _resolve_max_tokens(max_tokens)
 
     for attempt in range(1, URL2BLOG_LONG_OUTPUT_MAX_RETRIES + 1):
-        llm = routes.get_vertex_llm(
+        llm = get_vertex_llm(
             temperature=temperature if attempt == 1 else min(0.25, temperature + 0.05),
             max_tokens=effective_max_tokens,
             model_name=model_name,
@@ -178,7 +177,7 @@ def _invoke_markdown_long_output(
             stage_name,
             last_error or "empty response",
         )
-        parsed, raw_response = routes._invoke_json_llm_tracked(
+        parsed, raw_response = _invoke_json_llm_tracked(
             prompt=legacy_json_prompt,
             stage_name=legacy_json_stage_name,
             parse_metrics=parse_metrics,
@@ -210,7 +209,7 @@ def _invoke_markdown_long_output(
         fallback_value = enforce_anti_ai_tells_markdown(
             fallback_value,
             repair=lambda repair_prompt: _safe_str(
-                routes.get_vertex_llm(
+                get_vertex_llm(
                     temperature=0.1,
                     max_tokens=effective_max_tokens,
                     model_name=model_name,
@@ -249,7 +248,7 @@ def _invoke_title_generation(
     last_raw_response = ""
 
     for attempt in range(1, URL2BLOG_LONG_OUTPUT_MAX_RETRIES + 1):
-        llm = routes.get_vertex_llm(
+        llm = get_vertex_llm(
             temperature=temperature if attempt == 1 else 0.0,
             max_tokens=max_tokens,
             model_name=model_name,
@@ -348,14 +347,14 @@ def _invoke_json_llm_tracked(
     """Invoke JSON LLM with parse-retry tracking for a named stage."""
     with _json_parse_tracking_scope(parse_metrics, stage_name):
         if allow_truncated_repair:
-            return routes._invoke_json_llm(
+            return _invoke_json_llm(
                 prompt=prompt,
                 max_tokens=max_tokens,
                 temperature=temperature,
                 model_name=model_name,
                 allow_truncated_repair=True,
             )
-        return routes._invoke_json_llm(
+        return _invoke_json_llm(
             prompt=prompt,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -413,7 +412,7 @@ def _invoke_json_llm_best_effort(
         parse_failures_this_call = 0
 
         for attempt in range(1, 4):
-            llm = routes.get_vertex_llm(
+            llm = get_vertex_llm(
                 temperature=temperature if attempt == 1 else 0.0,
                 max_tokens=effective_max_tokens,
                 model_name=resolved_model_name,
@@ -426,7 +425,7 @@ def _invoke_json_llm_best_effort(
                 continue
 
             raw_response = result.strip()
-            parsed, parse_error = routes._extract_json_from_response(
+            parsed, parse_error = _extract_json_from_response(
                 raw_response,
                 allow_truncated_repair=allow_truncated_repair,
             )

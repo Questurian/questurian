@@ -10,12 +10,10 @@ from ..prompts import (
     V2_QUALITY_AUDIT_PROMPT,
     V2_TITLE_GENERATION_PROMPT,
 )
-from ..routes import (
+from ..llm.invocation import (
     _build_v2_rewrite_from_markdown,
-    _invoke_markdown_long_output,
-    _invoke_title_generation,
-    _pipeline_v2_append_stage_trace,
 )
+from ..observability import append_stage_trace
 from ..config import _llm_context_text
 from ..llm.coerce import _ngram_overlap_ratio, _safe_str, _tokenize_similarity_words
 from ..content.sanitizers import (
@@ -23,7 +21,6 @@ from ..content.sanitizers import (
     _sanitize_v2_guideline_rewrite,
     _sanitize_v2_quality_audit,
 )
-from .. import routes
 
 
 class _FactLengthRepair:
@@ -106,7 +103,7 @@ class _FactLengthRepair:
         self.fact_repair_title_raw_response = ''
         self.fact_repair_parsed: dict[str, Any] = {}
         if self.use_markdown_long_stages:
-            self.fact_repair_long_output = _invoke_markdown_long_output(
+            self.fact_repair_long_output = self.llm.invoke_markdown(
                 prompt=self.fact_repair_prompt_markdown,
                 stage_name='fact_repair',
                 model_name=self.selected_model_name,
@@ -154,7 +151,7 @@ class _FactLengthRepair:
                 )
             )
             self.generated_title, self.fact_repair_title_raw_response = (
-                _invoke_title_generation(
+                self.llm.invoke_title(
                     prompt=self.title_prompt,
                     model_name=self.selected_model_name,
                     fallback_title=self.fact_repair_fallback_title,
@@ -174,7 +171,7 @@ class _FactLengthRepair:
             )
         else:
             self.fact_repair_parsed, self.fact_repair_raw_response = (
-                routes._invoke_json_llm_tracked(
+                self.llm.invoke_json_tracked(
                     prompt=self.fact_repair_prompt,
                     stage_name='fact_repair',
                     parse_metrics=self.json_parse_metrics,
@@ -190,7 +187,7 @@ class _FactLengthRepair:
             )
 
     def _apply_fact_repair(self) -> None:
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='fact_repair',
@@ -263,7 +260,7 @@ class _FactLengthRepair:
             .replace('{external_context}', self.external_context_for_prompt)
         )
         self.quality_parsed, self.quality_raw_response = (
-            routes._invoke_json_llm_tracked(
+            self.llm.invoke_json_tracked(
                 prompt=self.quality_prompt,
                 stage_name='quality_audit_after_fact_repair',
                 parse_metrics=self.json_parse_metrics,
@@ -273,7 +270,7 @@ class _FactLengthRepair:
             )
         )
         self.quality = _sanitize_v2_quality_audit(self.quality_parsed)
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='quality_audit_after_fact_repair',
@@ -315,7 +312,7 @@ class _FactLengthRepair:
             )
         )
         self.fact_coverage_parsed, self.fact_coverage_raw_response = (
-            routes._invoke_json_llm_tracked(
+            self.llm.invoke_json_tracked(
                 prompt=self.fact_coverage_prompt,
                 stage_name='fact_coverage_audit_after_fact_repair',
                 parse_metrics=self.json_parse_metrics,
@@ -327,7 +324,7 @@ class _FactLengthRepair:
         self.fact_coverage = _sanitize_v2_fact_coverage(
             self.fact_coverage_parsed, self.source_fact_anchors
         )
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='fact_coverage_audit_after_fact_repair',

@@ -1,10 +1,9 @@
 """Finalize payload steps for URL2Blog pipeline v2."""
 
 from typing import Any
-from ..config import DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS, FEATURE_NAME
-from ..routes import _build_excerpt, _now_iso
+from ..config import DEFAULT_MAX_EXTERNAL_CONTEXT_ITEMS
+from ..llm.invocation import _build_excerpt
 from ..llm.coerce import _safe_bool, _safe_dict, _safe_int, _safe_str
-from app.core import write_artifact, write_stage_result, write_status
 
 
 class _FinalizePayload:
@@ -255,12 +254,8 @@ class _FinalizePayload:
             }
 
     def _persist_artifact_and_status(self) -> None:
-        write_stage_result(
-            self.run_id,
-            'pipeline_v2',
-            {'created_at': _now_iso(), 'data': self.response_payload},
-        )
-        write_artifact(
+        self.recorder.record_stage(self.run_id, 'pipeline_v2', self.response_payload)
+        self.recorder.record_artifact(
             self.run_id,
             {
                 'markdown': self.final_markdown,
@@ -271,14 +266,4 @@ class _FinalizePayload:
                 },
             },
         )
-        write_status(
-            self.run_id,
-            {
-                'run_id': self.run_id,
-                'state': 'completed',
-                'stage': 'complete',
-                'error': None,
-                'updated_at': _now_iso(),
-            },
-            feature=FEATURE_NAME,
-        )
+        self.recorder.mark_completed(self.run_id)

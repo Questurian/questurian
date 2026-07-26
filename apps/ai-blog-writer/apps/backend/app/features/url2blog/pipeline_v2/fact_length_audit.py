@@ -8,10 +8,8 @@ from ..prompts import (
 )
 from ..config import _llm_context_text
 from ..llm.coerce import _ngram_overlap_ratio
-from ..routes import _now_iso, _pipeline_v2_append_stage_trace
+from ..observability import append_stage_trace
 from ..content.sanitizers import _sanitize_v2_fact_coverage, _sanitize_v2_quality_audit
-from .. import routes
-from app.core import write_stage_result
 
 
 class _FactLengthAudit:
@@ -51,7 +49,7 @@ class _FactLengthAudit:
                 .replace('{external_context}', self.external_context_for_prompt)
             )
             self.quality_parsed, self.quality_raw_response = (
-                routes._invoke_json_llm_tracked(
+                self.llm.invoke_json_tracked(
                     prompt=self.quality_prompt,
                     stage_name='quality_audit_after_length_expansion',
                     parse_metrics=self.json_parse_metrics,
@@ -61,7 +59,7 @@ class _FactLengthAudit:
                 )
             )
             self.quality = _sanitize_v2_quality_audit(self.quality_parsed)
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='quality_audit_after_length_expansion',
@@ -104,7 +102,7 @@ class _FactLengthAudit:
                     )
                 )
                 self.fact_coverage_parsed, self.fact_coverage_raw_response = (
-                    routes._invoke_json_llm_tracked(
+                    self.llm.invoke_json_tracked(
                         prompt=self.fact_coverage_prompt,
                         stage_name='fact_coverage_audit_after_length_expansion',
                         parse_metrics=self.json_parse_metrics,
@@ -116,7 +114,7 @@ class _FactLengthAudit:
                 self.fact_coverage = _sanitize_v2_fact_coverage(
                     self.fact_coverage_parsed, self.source_fact_anchors
                 )
-                self.stage_trace = _pipeline_v2_append_stage_trace(
+                self.stage_trace = append_stage_trace(
                     stage_trace=self.stage_trace,
                     include_debug=self.include_debug,
                     stage='fact_coverage_audit_after_length_expansion',
@@ -136,7 +134,7 @@ class _FactLengthAudit:
                     output=self.fact_coverage,
                 )
         else:
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage='length_expansion',
@@ -152,28 +150,25 @@ class _FactLengthAudit:
             )
 
     def _persist_result(self) -> None:
-        write_stage_result(
+        self.recorder.record_stage(
             self.run_id,
             'fact_length',
             {
-                'created_at': _now_iso(),
-                'data': {
-                    'factual_coverage_score': self.fact_coverage['coverage_score'],
-                    'coverage_summary': self.fact_coverage['coverage_summary'],
-                    'missing_source_facts_count': self.fact_coverage['missing_count'],
-                    'missing_high_priority_facts_count': self.fact_coverage[
-                        'missing_high_count'
-                    ],
-                    'missing_facts': self.fact_coverage['missing_facts'],
-                    'covered_fact_ids': self.fact_coverage['covered_fact_ids'],
-                    'source_fact_anchors': self.source_fact_anchors,
-                    'fact_repair_applied': self.fact_repair_applied,
-                    'length_expansion_applied': self.length_expansion_applied,
-                    'length_expansion_passes': self.length_expansion_passes,
-                    'length_expansion_summary': self.length_expansion_summary,
-                    'long_output_transport': self.long_output_transport,
-                    'title_pass_applied_count': self.title_pass_applied_count,
-                },
+                'factual_coverage_score': self.fact_coverage['coverage_score'],
+                'coverage_summary': self.fact_coverage['coverage_summary'],
+                'missing_source_facts_count': self.fact_coverage['missing_count'],
+                'missing_high_priority_facts_count': self.fact_coverage[
+                    'missing_high_count'
+                ],
+                'missing_facts': self.fact_coverage['missing_facts'],
+                'covered_fact_ids': self.fact_coverage['covered_fact_ids'],
+                'source_fact_anchors': self.source_fact_anchors,
+                'fact_repair_applied': self.fact_repair_applied,
+                'length_expansion_applied': self.length_expansion_applied,
+                'length_expansion_passes': self.length_expansion_passes,
+                'length_expansion_summary': self.length_expansion_summary,
+                'long_output_transport': self.long_output_transport,
+                'title_pass_applied_count': self.title_pass_applied_count,
             },
         )
         self.context.update(

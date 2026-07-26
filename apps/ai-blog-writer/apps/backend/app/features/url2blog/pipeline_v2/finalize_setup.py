@@ -10,7 +10,8 @@ from ..config import (
     URL2BLOG_MAX_TOKENS_FLOOR_DEFAULT,
     URL2BLOG_USE_MARKDOWN_LONG_STAGES_DEFAULT,
 )
-from ..routes import _build_markdown, _pipeline_v2_append_stage_trace
+from ..llm.invocation import _build_markdown
+from ..observability import append_stage_trace
 from ..content.markdown import _ensure_markdown_section_headers
 from ..llm.coerce import (
     _safe_bool,
@@ -25,7 +26,6 @@ from ..content.sanitizers import (
     _sanitize_v2_quality_audit,
 )
 from app.shared.text import enforce_anti_ai_tells_markdown, normalize_dashes
-from .. import routes
 
 
 class _FinalizeSetup:
@@ -96,11 +96,12 @@ class _FinalizeSetup:
                 or self.editorial_augmentation.get('augmented_content')
             ),
             repair=lambda repair_prompt: _safe_str(
-                routes.get_vertex_llm(
+                self.llm.invoke_text(
+                    prompt=repair_prompt,
                     temperature=0.1,
                     max_tokens=URL2BLOG_MAX_TOKENS_FLOOR_DEFAULT,
                     model_name=self.selected_model_name or URL2BLOG_COMPOSE_MODEL,
-                ).invoke(repair_prompt)
+                )
             ),
             context='url2blog final content',
         )
@@ -224,7 +225,7 @@ class _FinalizeSetup:
         self.final_markdown = _build_markdown(
             _safe_str(self.rewrite.get('improved_title')), self.final_improved_content
         )
-        self.stage_trace = _pipeline_v2_append_stage_trace(
+        self.stage_trace = append_stage_trace(
             stage_trace=self.stage_trace,
             include_debug=self.include_debug,
             stage='finalize_output',

@@ -10,15 +10,10 @@ from ..prompts import (
     V2_LENGTH_EXPANSION_PROMPT,
     V2_TITLE_GENERATION_PROMPT,
 )
-from ..routes import (
-    _invoke_markdown_long_output,
-    _invoke_title_generation,
-    _pipeline_v2_append_stage_trace,
-)
+from ..observability import append_stage_trace
 from ..config import _llm_context_text
 from ..llm.coerce import _safe_str, _tokenize_similarity_words
 from ..content.sanitizers import _sanitize_v2_length_expansion
-from .. import routes
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +119,7 @@ class _FactLengthExpansion:
             self.expansion_parsed: dict[str, Any] = {}
             try:
                 if self.use_markdown_long_stages:
-                    self.expansion_long_output = _invoke_markdown_long_output(
+                    self.expansion_long_output = self.llm.invoke_markdown(
                         prompt=self.expansion_prompt_markdown,
                         stage_name=self.stage_name,
                         model_name=self.selected_model_name,
@@ -153,7 +148,7 @@ class _FactLengthExpansion:
                     }
                 else:
                     self.expansion_parsed, self.length_expansion_raw_response = (
-                        routes._invoke_json_llm_tracked(
+                        self.llm.invoke_json_tracked(
                             prompt=self.expansion_prompt,
                             stage_name=self.stage_name,
                             parse_metrics=self.json_parse_metrics,
@@ -168,7 +163,7 @@ class _FactLengthExpansion:
                     )
             except HTTPException as exc:
                 logger.warning('URL2Blog length expansion failed: %s', exc.detail)
-                self.stage_trace = _pipeline_v2_append_stage_trace(
+                self.stage_trace = append_stage_trace(
                     stage_trace=self.stage_trace,
                     include_debug=self.include_debug,
                     stage=self.stage_name,
@@ -205,7 +200,7 @@ class _FactLengthExpansion:
             self.expanded_content = self.expansion['expanded_content']
             self.expanded_words = _tokenize_similarity_words(self.expanded_content)
             self.expanded_word_count = len(self.expanded_words)
-            self.stage_trace = _pipeline_v2_append_stage_trace(
+            self.stage_trace = append_stage_trace(
                 stage_trace=self.stage_trace,
                 include_debug=self.include_debug,
                 stage=self.stage_name,
@@ -271,7 +266,7 @@ class _FactLengthExpansion:
                         '{rewritten_content}', _llm_context_text(self.expanded_content)
                     )
                 )
-                self.generated_title, self._ = _invoke_title_generation(
+                self.generated_title, self._ = self.llm.invoke_title(
                     prompt=self.title_prompt,
                     model_name=self.selected_model_name,
                     fallback_title=_safe_str(self.rewrite.get('improved_title'))

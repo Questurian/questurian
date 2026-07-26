@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import trafilatura
 
@@ -18,6 +18,9 @@ from ..prompts import (
     URL2BLOG_TEXT_CLEANUP_CHUNK_PROMPT,
     URL2BLOG_TEXT_CLEANUP_PROMPT,
 )
+
+if TYPE_CHECKING:
+    from ..dependencies import Url2BlogLLM
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +163,7 @@ def _cleanup_pasted_article_text(
     *,
     raw_text: str,
     model_name: str,
+    llm: "Url2BlogLLM | None" = None,
 ) -> dict[str, Any]:
     """
     Clean messy pasted article text using AI chunked cleanup.
@@ -202,6 +206,10 @@ def _cleanup_pasted_article_text(
         return fallback_payload
 
     try:
+        if llm is None:
+            from ..dependencies import DefaultUrl2BlogLLM
+
+            llm = DefaultUrl2BlogLLM()
         cleaned_chunks: list[str] = []
         title = ""
         language = ""
@@ -218,9 +226,7 @@ def _cleanup_pasted_article_text(
                 chunk_count=len(chunks),
                 source_text=chunk,
             )
-            from .. import routes
-
-            parsed, raw_response = routes._invoke_json_llm(
+            parsed, raw_response = llm.invoke_json(
                 prompt=prompt,
                 max_tokens=URL2BLOG_TEXT_CLEANUP_MAX_OUTPUT_TOKENS,
                 temperature=0.1,

@@ -1,6 +1,7 @@
 """Thin orchestrator for URL2Blog rewrite and quality work."""
 
 from typing import Any
+from ..dependencies import PipelineDependencies
 from .rewrite_quality_blueprint import _RewriteQualityBlueprint
 from .rewrite_quality_composition import _RewriteQualityComposition
 from .rewrite_quality_repair import _RewriteQualityRepair
@@ -14,8 +15,15 @@ class _RewriteQualityPhase(
     _RewriteQualityRepair,
 ):
 
-    def __init__(self, context: dict[str, Any]) -> None:
+    def __init__(
+        self,
+        context: dict[str, Any],
+        dependencies: PipelineDependencies,
+    ) -> None:
         self.context = context
+        self.dependencies = dependencies
+        self.llm = dependencies.llm
+        self.recorder = dependencies.recorder
 
     def run(self) -> dict[str, Any]:
         self._initialize()
@@ -30,5 +38,8 @@ class _RewriteQualityPhase(
         return self.context
 
 
-def _pipeline_v2_run_rewrite_quality_phase(context: dict[str, Any]) -> dict[str, Any]:
-    return _RewriteQualityPhase(context).run()
+def _pipeline_v2_run_rewrite_quality_phase(
+    context: dict[str, Any],
+    dependencies: PipelineDependencies,
+) -> dict[str, Any]:
+    return _RewriteQualityPhase(context, dependencies).run()

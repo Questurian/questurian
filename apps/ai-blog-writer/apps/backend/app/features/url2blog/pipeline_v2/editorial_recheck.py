@@ -3,7 +3,6 @@
 import json
 from typing import Any
 from ..config import (
-    FEATURE_NAME,
     URL2BLOG_EDITORIAL_POST_RECHECK_ENABLED_DEFAULT,
     URL2BLOG_EDITORIAL_RECHECK_MIN_FACT_SCORE,
     URL2BLOG_EDITORIAL_RECHECK_MIN_QUALITY_SCORE,
@@ -16,6 +15,7 @@ from ..prompts import (
     V2_QUALITY_AUDIT_PROMPT,
 )
 from ..content.markdown import _ensure_markdown_section_headers
+from ..dependencies import PipelineDependencies
 from ..llm.coerce import (
     _ngram_overlap_ratio,
     _safe_bool,
@@ -23,14 +23,13 @@ from ..llm.coerce import (
     _safe_str,
     _tokenize_similarity_words,
 )
-from ..routes import _now_iso, _pipeline_v2_append_stage_trace
+from ..observability import append_stage_trace
 from ..content.sanitizers import _sanitize_v2_fact_coverage, _sanitize_v2_quality_audit
-from .. import routes
-from app.core import write_stage_result, write_status
 
 
 def _pipeline_v2_run_editorial_post_recheck_phase(
-    context: dict[str, Any]
+    context: dict[str, Any],
+    dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
     """Run post-editorial quality/fact recheck with rollback fallback."""
     run_id = _safe_str(context.get('run_id'))
@@ -82,7 +81,7 @@ def _pipeline_v2_run_editorial_post_recheck_phase(
                 else 'Editorial augmentation not applied.'
             ),
         }
-        stage_trace = _pipeline_v2_append_stage_trace(
+        stage_trace = append_stage_trace(
             stage_trace=stage_trace,
             include_debug=include_debug,
             stage='editorial_post_recheck',
@@ -96,17 +95,7 @@ def _pipeline_v2_run_editorial_post_recheck_phase(
             }
         )
         return context
-    write_status(
-        run_id,
-        {
-            'run_id': run_id,
-            'state': 'running',
-            'stage': 'editorial_post_recheck',
-            'error': None,
-            'updated_at': _now_iso(),
-        },
-        feature=FEATURE_NAME,
-    )
+    dependencies.recorder.mark_running(run_id, 'editorial_post_recheck')
     source_words = list(context.get('source_words') or [])
     if not source_words:
         source_words = _tokenize_similarity_words(normalized_content)
@@ -139,7 +128,7 @@ def _pipeline_v2_run_editorial_post_recheck_phase(
         .replace('{external_context}', external_context_for_prompt)
     )
     quality_parsed, editorial_post_quality_raw_response = (
-        routes._invoke_json_llm_tracked(
+        dependencies.llm.invoke_json_tracked(
             prompt=quality_prompt,
             stage_name='editorial_post_recheck_quality_audit',
             parse_metrics=json_parse_metrics,
@@ -162,7 +151,7 @@ def _pipeline_v2_run_editorial_post_recheck_phase(
             .replace('{rewritten_content}', _llm_context_text(final_improved_content))
         )
         fact_coverage_parsed, editorial_post_fact_coverage_raw_response = (
-            routes._invoke_json_llm_tracked(
+            dependencies.llm.invoke_json_tracked(
                 prompt=fact_coverage_prompt,
                 stage_name='editorial_post_recheck_fact_coverage',
                 parse_metrics=json_parse_metrics,
@@ -255,7 +244,7 @@ def _pipeline_v2_run_editorial_post_recheck_phase(
         'near_pass_margin': URL2BLOG_EDITORIAL_RECHECK_NEAR_PASS_MARGIN,
         'rollback_data': rollback_data,
     }
-    stage_trace = _pipeline_v2_append_stage_trace(
+    stage_trace = append_stage_trace(
         stage_trace=stage_trace,
         include_debug=include_debug,
         stage='editorial_post_recheck',
@@ -277,16 +266,12 @@ def _pipeline_v2_run_editorial_post_recheck_phase(
             ),
         },
     )
-    write_stage_result(
-        run_id,
-        'editorial_post_recheck',
-        {'created_at': _now_iso(), 'data': editorial_post_recheck},
+    dependencies.recorder.record_stage(
+        run_id, 'editorial_post_recheck', editorial_post_recheck
     )
     if rollback_data:
-        write_stage_result(
-            run_id,
-            'editorial_post_recheck_rollback',
-            {'created_at': _now_iso(), 'data': rollback_data},
+        dependencies.recorder.record_stage(
+            run_id, 'editorial_post_recheck_rollback', rollback_data
         )
     context.update(
         {
