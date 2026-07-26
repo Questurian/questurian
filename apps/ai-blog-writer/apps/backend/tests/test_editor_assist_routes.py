@@ -1,11 +1,16 @@
 import json
+from dataclasses import replace
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.features.editor_assist.routes as editor_assist_routes
+import app.features.editor_assist.editorial_actions as editorial_actions
+import app.features.editor_assist.listicle_content as listicle_content
+import app.features.editor_assist.seo_metadata as seo_metadata
 import app.features.editor_assist.research_profile as research_profile_mod
 import app.features.editor_assist.writer_brief as writer_brief_mod
+from app.features.editor_assist.dependencies import get_editor_assist_dependencies
 
 
 def _fake_curator(*, prompt, model_name, max_tokens, temperature):
@@ -46,9 +51,25 @@ class _FakeGroundedResult:
         self.model_name = "gemini-2.5-flash"
 
 
-def _build_client() -> TestClient:
+def _build_client(
+    *,
+    writer=None,
+    structured_writer=None,
+    graph_runner=None,
+) -> TestClient:
     app = FastAPI()
     app.include_router(editor_assist_routes.router)
+    dependencies = get_editor_assist_dependencies()
+    replacements = {}
+    if writer is not None:
+        replacements["invoke_writer"] = writer
+    if structured_writer is not None:
+        replacements["invoke_structured_writer"] = structured_writer
+    if graph_runner is not None:
+        replacements["run_graph"] = graph_runner
+    if replacements:
+        dependencies = replace(dependencies, **replacements)
+    app.dependency_overrides[get_editor_assist_dependencies] = lambda: dependencies
     return TestClient(app)
 
 
@@ -110,18 +131,30 @@ def _research_profile_payload(
 # ---------- Unrelated routes still work (regression coverage) ----------
 
 
+def test_generate_title_uses_injected_writer():
+    class _WriterResult:
+        text = "A Better Lima Headline"
+        model_name = editorial_actions.DEFAULT_MODEL
+
+    client = _build_client(writer=lambda **_kwargs: _WriterResult())
+    response = client.post(
+        "/editor-assist/generate-title",
+        json={
+            "current_title": "A Lima Headline",
+            "prompt": "Make it more specific.",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"title": "A Better Lima Headline"}
+
+
 def test_rewrite_block_returns_envelope_content(monkeypatch):
     class _WriterResult:
         text = "<<<BLOCK>>>\n## Getting Around\n\nUpdated block text.\n<<<END_BLOCK>>>"
-        model_name = editor_assist_routes.DEFAULT_MODEL
+        model_name = editorial_actions.DEFAULT_MODEL
 
-    monkeypatch.setattr(
-        editor_assist_routes,
-        "invoke_writer_model",
-        lambda **_kwargs: _WriterResult(),
-    )
-
-    client = _build_client()
+    client = _build_client(writer=lambda **_kwargs: _WriterResult())
     response = client.post(
         "/editor-assist/rewrite-block",
         json={
@@ -133,7 +166,7 @@ def test_rewrite_block_returns_envelope_content(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["rewritten_content"] == "## Getting Around\n\nUpdated block text."
-    assert payload["model_used"] == editor_assist_routes.DEFAULT_MODEL
+    assert payload["model_used"] == editorial_actions.DEFAULT_MODEL
 
 
 # ---------- Structured SEO metadata generation ----------
@@ -147,17 +180,13 @@ def test_generate_seo_metadata_returns_structured_patch(monkeypatch):
             "seoTitle": "Two Days in Lima: Food, Art & Coastline",
             "metaDescription": "A compact two-day Lima plan.",
         }
-        model_name = editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
+        model_name = seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
 
     def _fake_structured(**kwargs):
         captured.update(kwargs)
         return _StructuredResult()
 
-    monkeypatch.setattr(
-        editor_assist_routes, "invoke_anthropic_structured", _fake_structured
-    )
-
-    client = _build_client()
+    client = _build_client(structured_writer=_fake_structured)
     response = client.post(
         "/editor-assist/generate-seo-metadata",
         json={
@@ -171,11 +200,11 @@ def test_generate_seo_metadata_returns_structured_patch(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["seo_patch"]["seoTitle"].startswith("Two Days in Lima")
-    assert payload["model_used"] == editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
+    assert payload["model_used"] == seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
     # Endpoint defaults to the Anthropic model since forced-tool calls are
     # Anthropic-only.
-    assert captured["model_name"] == editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
-    assert captured["tool_name"] == editor_assist_routes.SEO_PATCH_TOOL_NAME
+    assert captured["model_name"] == seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
+    assert captured["tool_name"] == seo_metadata.SEO_PATCH_TOOL_NAME
     assert "<<<CURRENT_SEO>>>" in captured["prompt"]
     assert "<<<ARTICLE_CONTEXT>>>" in captured["prompt"]
 
@@ -183,15 +212,9 @@ def test_generate_seo_metadata_returns_structured_patch(monkeypatch):
 def test_generate_seo_metadata_empty_patch_is_502(monkeypatch):
     class _EmptyResult:
         payload: dict = {}
-        model_name = editor_assist_routes.SEO_STRUCTURED_DEFAULT_MODEL
+        model_name = seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
 
-    monkeypatch.setattr(
-        editor_assist_routes,
-        "invoke_anthropic_structured",
-        lambda **_kwargs: _EmptyResult(),
-    )
-
-    client = _build_client()
+    client = _build_client(structured_writer=lambda **_kwargs: _EmptyResult())
     response = client.post(
         "/editor-assist/generate-seo-metadata",
         json={
@@ -204,6 +227,17 @@ def test_generate_seo_metadata_empty_patch_is_502(monkeypatch):
 
 
 # ---------- Listicle pipeline: Critical Fields gate ----------
+
+
+def test_listicle_guidelines_returns_writer_vocabulary():
+    client = _build_client()
+
+    response = client.get("/editor-assist/listicle-guidelines")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["angles"]["signature-dish"]
+    assert payload["tones"]["elevated"]
 
 
 def test_blurb_target_missing_payload_doc_id_fails_critical_fields(monkeypatch):
@@ -264,9 +298,7 @@ def test_blurb_with_supported_angle_generates_normally(monkeypatch):
         captured["prompt"] = prompt
         return _WriterResult(_paragraph(100))
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
-
-    client = _build_client()
+    client = _build_client(writer=_fake_writer)
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -340,9 +372,7 @@ def test_manual_angle_uses_research_profile(monkeypatch):
         captured["prompt"] = prompt
         return _WriterResult(_paragraph(100))
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
-
-    client = _build_client()
+    client = _build_client(writer=_fake_writer)
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -407,9 +437,7 @@ def test_blurb_with_no_evidence_takes_identity_only_path(monkeypatch):
         captured["prompt"] = prompt
         return _WriterResult(_paragraph(95))
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
-
-    client = _build_client()
+    client = _build_client(writer=_fake_writer)
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -498,9 +526,7 @@ def test_accommodations_blurb_runs_lean_path(monkeypatch):
         captured["prompt"] = prompt
         return _WriterResult(_paragraph(100))
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
-
-    client = _build_client()
+    client = _build_client(writer=_fake_writer)
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -599,9 +625,7 @@ def test_attractions_blurb_runs_lean_path(monkeypatch):
         captured["prompt"] = prompt
         return _WriterResult(_paragraph(100))
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
-
-    client = _build_client()
+    client = _build_client(writer=_fake_writer)
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -663,13 +687,7 @@ def test_intro_target_does_not_invoke_research_profile(monkeypatch):
             self.text = text
             self.model_name = "gemini-2.5-pro"
 
-    monkeypatch.setattr(
-        editor_assist_routes,
-        "invoke_writer_model",
-        lambda **kw: _WriterResult(_paragraph(90)),
-    )
-
-    client = _build_client()
+    client = _build_client(writer=lambda **kw: _WriterResult(_paragraph(90)))
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -703,11 +721,7 @@ def test_skip_existing_preserves_current_content(monkeypatch):
     def _writer_should_not_be_called(**kw):
         raise AssertionError("writer must not run for skipped targets")
 
-    monkeypatch.setattr(
-        editor_assist_routes, "invoke_writer_model", _writer_should_not_be_called
-    )
-
-    client = _build_client()
+    client = _build_client(writer=_writer_should_not_be_called)
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -741,12 +755,13 @@ def test_skip_existing_preserves_current_content(monkeypatch):
 def test_generate_listicle_content_uses_langgraph_runner(monkeypatch):
     called = {"graph": False}
 
-    def _fake_graph_runner(*, step_runner):
+    def _fake_graph_runner(*, node_name, step_runner):
+        assert node_name == "editor_assist_generate_listicle_content"
         del step_runner
         called["graph"] = True
-        return editor_assist_routes.GenerateListicleContentResponse(
+        return listicle_content.GenerateListicleContentResponse(
             results={
-                "item-1_blurb": editor_assist_routes.GenerateListicleTargetResponse(
+                "item-1_blurb": listicle_content.GenerateListicleTargetResponse(
                     target_id="item-1_blurb",
                     status="generated",
                     markdown="Generated blurb",
@@ -755,13 +770,7 @@ def test_generate_listicle_content_uses_langgraph_runner(monkeypatch):
             }
         )
 
-    monkeypatch.setattr(
-        editor_assist_routes,
-        "run_editor_assist_listicle_generation_graph",
-        _fake_graph_runner,
-    )
-
-    client = _build_client()
+    client = _build_client(graph_runner=_fake_graph_runner)
     response = client.post(
         "/editor-assist/generate-listicle-content",
         json={
@@ -789,6 +798,25 @@ def test_generate_listicle_content_uses_langgraph_runner(monkeypatch):
 # ---------- Itinerary intro composer (ADR 0018) ----------
 
 
+def test_compose_itinerary_brief_uses_injected_writer():
+    class _WriterResult:
+        text = "A food-led Lima trip for curious couples."
+        model_name = editorial_actions.DEFAULT_MODEL
+
+    client = _build_client(writer=lambda **_kwargs: _WriterResult())
+    response = client.post(
+        "/editor-assist/compose-itinerary-brief",
+        json={
+            "traveler_types": ["Couples"],
+            "interests": ["Food"],
+            "location_label": "Lima, Peru",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["brief"] == "A food-led Lima trip for curious couples."
+
+
 def test_compose_itinerary_intro_feeds_plan_signal_into_prompt(monkeypatch):
     captured: dict[str, str] = {}
 
@@ -800,9 +828,7 @@ def test_compose_itinerary_intro_feeds_plan_signal_into_prompt(monkeypatch):
         captured["prompt"] = kwargs["prompt"]
         return _WriterResult()
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _fake_writer)
-
-    client = _build_client()
+    client = _build_client(writer=_fake_writer)
     response = client.post(
         "/editor-assist/compose-itinerary-intro",
         json={
@@ -855,11 +881,7 @@ def test_compose_itinerary_intro_inputs_step_warns_without_plan_overview(monkeyp
         text = "An opener."
         model_name = "gemini-2.5-flash"
 
-    monkeypatch.setattr(
-        editor_assist_routes, "invoke_writer_model", lambda **_kwargs: _WriterResult()
-    )
-
-    client = _build_client()
+    client = _build_client(writer=lambda **_kwargs: _WriterResult())
     response = client.post(
         "/editor-assist/compose-itinerary-intro",
         json={
@@ -880,11 +902,7 @@ def test_compose_itinerary_intro_requires_at_least_one_stop(monkeypatch):
     def _writer_should_not_be_called(**kwargs):
         raise AssertionError("writer must not run without stops")
 
-    monkeypatch.setattr(
-        editor_assist_routes, "invoke_writer_model", _writer_should_not_be_called
-    )
-
-    client = _build_client()
+    client = _build_client(writer=_writer_should_not_be_called)
     response = client.post(
         "/editor-assist/compose-itinerary-intro",
         json={

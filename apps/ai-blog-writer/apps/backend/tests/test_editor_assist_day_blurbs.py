@@ -1,14 +1,22 @@
 """Route tests for the itinerary day-blurb composer (ADR 0019)."""
 
+from dataclasses import replace
+
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 import app.features.editor_assist.routes as editor_assist_routes
+import app.features.editor_assist.itinerary_composition as itinerary_composition
+from app.features.editor_assist.dependencies import get_editor_assist_dependencies
 
 
-def _build_client() -> TestClient:
+def _build_client(*, writer=None) -> TestClient:
     app = FastAPI()
     app.include_router(editor_assist_routes.router)
+    dependencies = get_editor_assist_dependencies()
+    if writer is not None:
+        dependencies = replace(dependencies, invoke_writer=writer)
+    app.dependency_overrides[get_editor_assist_dependencies] = lambda: dependencies
     return TestClient(app)
 
 
@@ -20,7 +28,7 @@ def _writer_returning(text: str):
     class _WriterResult:
         def __init__(self) -> None:
             self.text = text
-            self.model_name = editor_assist_routes.DEFAULT_MODEL
+            self.model_name = itinerary_composition.DEFAULT_MODEL
 
     return lambda **_kwargs: _WriterResult()
 
@@ -29,7 +37,7 @@ def _writer_capturing(text: str, sink: dict):
     class _WriterResult:
         def __init__(self) -> None:
             self.text = text
-            self.model_name = editor_assist_routes.DEFAULT_MODEL
+            self.model_name = itinerary_composition.DEFAULT_MODEL
 
     def _invoke(**kwargs):
         sink["prompt"] = kwargs.get("prompt", "")
@@ -49,8 +57,18 @@ def _request_body(**overrides):
         "day_count": 2,
         "next_day_first_stop": {"title": "Museo Larco", "category": "Attractions"},
         "stops": [
-            {"target_id": "ws-1_blurb", "title": "Grand Hotel", "category": "Accommodations", "angle": "location-and-setting"},
-            {"target_id": "stop-1_blurb", "title": "Mérito", "category": "Dining", "angle": "signature-dish"},
+            {
+                "target_id": "ws-1_blurb",
+                "title": "Grand Hotel",
+                "category": "Accommodations",
+                "angle": "location-and-setting",
+            },
+            {
+                "target_id": "stop-1_blurb",
+                "title": "Mérito",
+                "category": "Dining",
+                "angle": "signature-dish",
+            },
         ],
     }
     body.update(overrides)
@@ -62,14 +80,14 @@ def test_day_blurbs_composes_one_paragraph_per_stop(monkeypatch):
         f"<<<BLURB:ws-1_blurb>>>\n{_paragraph(100)}\n<<<END>>>\n"
         f"<<<BLURB:stop-1_blurb>>>\n{_paragraph(110)}\n<<<END>>>"
     )
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _writer_returning(text))
-
-    client = _build_client()
-    response = client.post("/editor-assist/compose-itinerary-day-blurbs", json=_request_body())
+    client = _build_client(writer=_writer_returning(text))
+    response = client.post(
+        "/editor-assist/compose-itinerary-day-blurbs", json=_request_body()
+    )
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["model_used"] == editor_assist_routes.DEFAULT_MODEL
+    assert payload["model_used"] == itinerary_composition.DEFAULT_MODEL
 
     results = payload["results"]
     assert results["ws-1_blurb"]["status"] == "generated"
@@ -88,10 +106,10 @@ def test_day_blurbs_composes_one_paragraph_per_stop(monkeypatch):
 def test_day_blurbs_marks_missing_stop_as_error(monkeypatch):
     # Writer only returned a block for one of the two requested stops.
     text = f"<<<BLURB:stop-1_blurb>>>\n{_paragraph(100)}\n<<<END>>>"
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _writer_returning(text))
-
-    client = _build_client()
-    response = client.post("/editor-assist/compose-itinerary-day-blurbs", json=_request_body())
+    client = _build_client(writer=_writer_returning(text))
+    response = client.post(
+        "/editor-assist/compose-itinerary-day-blurbs", json=_request_body()
+    )
 
     assert response.status_code == 200
     results = response.json()["results"]
@@ -103,11 +121,18 @@ def test_day_blurbs_marks_missing_stop_as_error(monkeypatch):
 def test_day_blurbs_flags_validation_without_dropping_output(monkeypatch):
     # A too-short blurb still lands, but carries a validation warning (ADR 0019:
     # output contract preserved, surfaced rather than auto-retried).
-    text = f"<<<BLURB:stop-1_blurb>>>\nToo short.\n<<<END>>>"
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _writer_returning(text))
-
-    client = _build_client()
-    body = _request_body(stops=[{"target_id": "stop-1_blurb", "title": "Mérito", "category": "Dining", "angle": "signature-dish"}])
+    text = "<<<BLURB:stop-1_blurb>>>\nToo short.\n<<<END>>>"
+    client = _build_client(writer=_writer_returning(text))
+    body = _request_body(
+        stops=[
+            {
+                "target_id": "stop-1_blurb",
+                "title": "Mérito",
+                "category": "Dining",
+                "angle": "signature-dish",
+            }
+        ]
+    )
     response = client.post("/editor-assist/compose-itinerary-day-blurbs", json=body)
 
     assert response.status_code == 200
@@ -117,27 +142,21 @@ def test_day_blurbs_flags_validation_without_dropping_output(monkeypatch):
 
 
 def test_day_blurbs_no_parseable_blocks_is_502(monkeypatch):
-    monkeypatch.setattr(
-        editor_assist_routes,
-        "invoke_writer_model",
-        _writer_returning("Sorry, I could not write these."),
+    client = _build_client(writer=_writer_returning("Sorry, I could not write these."))
+    response = client.post(
+        "/editor-assist/compose-itinerary-day-blurbs", json=_request_body()
     )
-
-    client = _build_client()
-    response = client.post("/editor-assist/compose-itinerary-day-blurbs", json=_request_body())
 
     assert response.status_code == 502
 
 
 def test_day_blurbs_writer_failure_returns_traceable_provider_error(monkeypatch):
     def _raise_writer_error(**_kwargs):
-        raise editor_assist_routes.WriterModelError(
+        raise itinerary_composition.WriterModelError(
             "Writer model call failed: provider overloaded"
         )
 
-    monkeypatch.setattr(editor_assist_routes, "invoke_writer_model", _raise_writer_error)
-
-    client = _build_client()
+    client = _build_client(writer=_raise_writer_error)
     response = client.post(
         "/editor-assist/compose-itinerary-day-blurbs", json=_request_body()
     )
@@ -161,11 +180,7 @@ def test_day_blurbs_write_subset_authors_only_named_stops(monkeypatch):
     # ADR 0022: write only stop-1; ws-1 is context-only with its existing copy.
     captured: dict = {}
     text = f"<<<BLURB:stop-1_blurb>>>\n{_paragraph(110)}\n<<<END>>>"
-    monkeypatch.setattr(
-        editor_assist_routes, "invoke_writer_model", _writer_capturing(text, captured)
-    )
-
-    client = _build_client()
+    client = _build_client(writer=_writer_capturing(text, captured))
     body = _request_body(
         write_target_ids=["stop-1_blurb"],
         stops=[
@@ -205,10 +220,7 @@ def test_day_blurbs_write_subset_authors_only_named_stops(monkeypatch):
 
 
 def test_day_blurbs_invalid_write_targets_is_400(monkeypatch):
-    monkeypatch.setattr(
-        editor_assist_routes, "invoke_writer_model", _writer_returning("unused")
-    )
-    client = _build_client()
+    client = _build_client(writer=_writer_returning("unused"))
     response = client.post(
         "/editor-assist/compose-itinerary-day-blurbs",
         json=_request_body(write_target_ids=["does-not-exist_blurb"]),

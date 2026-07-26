@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.features.editor_assist.writer_models import invoke_writer_model
+from app.shared.writer_invocation import invoke_writer_model
 
 from .day_shells import BUILT_IN_DAY_SHELL_IDS
 from .graph import run_itinerary_pipeline

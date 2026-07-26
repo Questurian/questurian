@@ -25,6 +25,9 @@ Pipelines need a single home: shared run lifecycle, shared LLM client, shared st
 - Python 3.11, FastAPI, Pydantic
 - SQLite (run + feature storage)
 - LangGraph via the shared `ai_graph` runtime (used by `prompt2blog`, `youtube2blog`, `url2blog`, `editor_assist`)
+
+Editor Assist has its own domain vocabulary and internal Module map in
+[`app/features/editor_assist/CONTEXT.md`](./app/features/editor_assist/CONTEXT.md).
 - Vertex AI Gemini (`packages/utils.get_vertex_llm`)
 - Nx for build/serve via the parent ABW monorepo
 
@@ -113,5 +116,5 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 
 ## Open Questions
 
-- Should non-article features (`images`, `editor_assist`) live in a separate sub-context with their own non-stage vocabulary?
+- Should the non-article `images` feature also gain its own sub-context and non-stage vocabulary?
 - Where does the contract for pushing into Payload live? Today the frontend assembles writes; the backend does not own the schema there.

@@ -12,7 +12,7 @@ from typing import Any
 
 from utils import parse_json_response
 
-from app.features.editor_assist.writer_models import invoke_writer_model
+from app.shared.writer_invocation import invoke_writer_model
 
 from .schemas import (
     Candidate,
