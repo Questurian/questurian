@@ -1,4 +1,4 @@
-import type { UploadImageResponse } from '../../../../shared/images'
+import type { UploadImageResponse } from '../../../../shared/images/api/contracts/image-api.contracts'
 import type { MediaAsset } from '../../api'
 import {
   CONTENT_BLOCK_HEIGHT,

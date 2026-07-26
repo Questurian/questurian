@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { resolveEditorAssistModelName } from '../../../staging/api'
-import { generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured } from '../../../../shared/images'
+import { generateSocialImageFromFeatured as requestGenerateSocialImageFromFeatured } from '../../../../shared/images/api/social/social-images.api'
 import { generateSeoMetadataWithAi } from '../../api'
 import {
   buildItineraryAiArticleContext,

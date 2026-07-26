@@ -3,7 +3,7 @@ import { fetchMediaAssets } from '../../api/payload/payload.api'
 import type { MediaAsset, MediaSet } from '../../api/payload/payload.types'
 import { searchPexelsImages, searchUnsplashImages } from '../external/external-images.api'
 import type { PexelsPhoto, UnsplashPhoto } from '../external/external-images.types'
-import type { UploadImageResponse } from '../api/imagesApi'
+import type { UploadImageResponse } from '../api/contracts/image-api.contracts'
 import type { ImageVariantType } from '../utils/imageProcessing'
 import type {
   ImagePickerProps,

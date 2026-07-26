@@ -1,4 +1,4 @@
-import type { UploadImageResponse } from './api/imagesApi'
+import type { UploadImageResponse } from './api/contracts/image-api.contracts'
 import type { ImageVariantType } from './utils/imageProcessing'
 
 export interface ImageUploadProps {

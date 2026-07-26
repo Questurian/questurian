@@ -1,4 +1,4 @@
-import type { UploadImageResponse } from '../api/imagesApi'
+import type { UploadImageResponse } from '../api/contracts/image-api.contracts'
 import type { MediaAsset, MediaSet, MediaSetVariantAsset } from '../../api/payload/payload.types'
 
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'

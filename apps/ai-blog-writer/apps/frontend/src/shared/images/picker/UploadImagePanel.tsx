@@ -1,5 +1,5 @@
 import { ImageUpload } from '../components/ImageUpload'
-import type { UploadImageResponse } from '../api/imagesApi'
+import type { UploadImageResponse } from '../api/contracts/image-api.contracts'
 
 type UploadImagePanelProps = {
   locationRef: number | null

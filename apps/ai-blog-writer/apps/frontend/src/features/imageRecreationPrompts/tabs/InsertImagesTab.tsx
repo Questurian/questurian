@@ -4,7 +4,7 @@ import {
   describeImageScene,
   describeImageSubject,
   type InsertImage,
-} from '../../../shared/images/api/imagesApi'
+} from '../../../shared/images/api/analysis-prompts/image-analysis-prompts.api'
 
 type InsertEntry = {
   id: string

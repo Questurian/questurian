@@ -4,7 +4,7 @@ import { resolveEditorAssistModelName } from '../../../staging/api'
 import {
   generateSocialImageFromFeatured,
   uploadSocialImage,
-} from '../../../../shared/images'
+} from '../../../../shared/images/api/social/social-images.api'
 import { generateSeoMetadataWithAi } from '../../api'
 import type { RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import {

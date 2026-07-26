@@ -1,22 +1,30 @@
 // Image upload feature exports
-export { ImageUpload } from './components/ImageUpload';
-export { MultiVariantCropper } from './components/MultiVariantCropper';
-export type { ImageUploadProps, VariantUploadFile } from './types';
+export { ImageUpload } from './components/ImageUpload'
+export { MultiVariantCropper } from './components/MultiVariantCropper'
+export type { ImageUploadProps, VariantUploadFile } from './types'
 export {
   uploadImage,
-  uploadImageVariants,
-  processImageOnly,
+  uploadImageVariants
+} from './api/uploads/image-uploads.api'
+export { processImageOnly } from './api/processing/image-processing.api'
+export {
   generateSocialImageFromFeatured,
-  uploadSocialImage,
-  generateFluxEditedImage,
-} from './api/imagesApi';
+  uploadSocialImage
+} from './api/social/social-images.api'
+export { generateFluxEditedImage } from './api/flux/flux-editing.api'
 export type {
   UploadImageResponse,
-  UploadProgress,
+  UploadProgress
+} from './api/uploads/image-uploads.api'
+export type { ProcessImageOnlyResponse } from './api/processing/image-processing.api'
+export type {
   GenerateSocialImageResponse,
-  UploadSocialImageResponse,
+  UploadSocialImageResponse
+} from './api/social/social-images.api'
+export type {
   FluxEditImageResponse,
-} from './api/imagesApi';
+  FluxEditOptions
+} from './api/flux/flux-editing.api'
 export {
   calculateDefaultCrop,
   VARIANT_SPECS,
@@ -30,5 +38,5 @@ export {
   type CropState,
   type CropStates,
   type VariantSpec,
-  type CropData,
-} from './utils/imageProcessing';
+  type CropData
+} from './utils/imageProcessing'

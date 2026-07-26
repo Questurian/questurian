@@ -2,7 +2,7 @@ import type {
   EditorAssistModelName,
   EditorBlockRewriteModelName,
 } from '../../../../shared/api/ai/models'
-import type { UploadImageResponse } from '../../../../shared/images'
+import type { UploadImageResponse } from '../../../../shared/images/api/contracts/image-api.contracts'
 import type { PayloadArticleDoc } from '../../api/articles/articles.types'
 import type {
   CreateArticlePayload,
