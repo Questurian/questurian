@@ -43,6 +43,12 @@ operations.
 | `stages/editorial_augmentation_validation.py` | Model-output normalization and preservation checks |
 | `stages/editorial_augmentation_llm.py` | Editorial model invocation, JSON retry, and prose repair |
 | `stages/stage_editorial_augmentation.py` | Stable thin Editorial Augmentation Stage facade |
+| `stages/stage_3_guidelines.py` | Stage 3 general and Article Type guideline retrieval |
+| `stages/stage_3_coverage.py` | Coverage Analysis prompt, invocation, and response parsing |
+| `stages/stage_3_supplement.py` | Missing-section supplementation and prose repair |
+| `stages/stage_3_composition.py` | Final article prompt, composition, and prose repair |
+| `stages/stage_3_pipeline.py` | Legacy sequential Stage 3 orchestration |
+| `stages/stage_3.py` | Stable thin Stage 3 facade and compatibility seams |
 
 ## Dependency direction
 
