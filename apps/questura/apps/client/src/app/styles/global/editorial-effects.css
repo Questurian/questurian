@@ -1,0 +1,234 @@
+/* ===== EDITORIAL ANIMATIONS ===== */
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes image-reveal {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes city-skeleton-shimmer {
+  from {
+    background-position: 140% 0;
+  }
+  to {
+    background-position: -140% 0;
+  }
+}
+
+@keyframes text-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes next-pop-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.86) rotate(-2deg);
+    filter: blur(2px);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.08) rotate(-0.5deg);
+    filter: blur(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes next-pop-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+.animate-image-reveal {
+  animation: image-reveal 1.2s cubic-bezier(0.77, 0, 0.175, 1) forwards;
+}
+
+.animate-text-reveal {
+  animation: text-reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.4s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* Image zoom on hover */
+.image-zoom {
+  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .image-zoom {
+  transform: scale(1.08);
+}
+
+.city-article-image-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 1;
+  background: linear-gradient(90deg, #d1d7da 0%, #edf0f1 45%, #c9d0d3 100%);
+  background-size: 240% 100%;
+  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
+  transition: opacity 0.24s ease;
+}
+
+.city-article-card[data-image-loaded='true'] .city-article-image-shell::before {
+  opacity: 0;
+  animation: none;
+}
+
+/* Author profile photo: same shimmer treatment, tinted for the beige header */
+.author-avatar-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 1;
+  background: linear-gradient(90deg, #d8d4cd 0%, #e9e5de 45%, #d3cfc7 100%);
+  background-size: 240% 100%;
+  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
+  transition: opacity 0.24s ease;
+}
+
+.author-avatar-shell[data-image-loaded='true']::before {
+  opacity: 0;
+  animation: none;
+}
+
+.city-article-content {
+  opacity: 1;
+  transition: opacity 0.24s ease;
+}
+
+.city-article-text-skeleton {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.city-article-card[data-content-ready='false'] .city-article-content {
+  opacity: 0;
+}
+
+.city-article-card[data-content-ready='false'] .city-article-text-skeleton {
+  opacity: 1;
+}
+
+.city-skeleton-line {
+  display: block;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #d1d7da 0%, #edf0f1 45%, #c9d0d3 100%);
+  background-size: 240% 100%;
+  animation: city-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+/* Dark-surface variant (e.g. hero article block on a black background). */
+.city-article-card--dark .city-article-image-shell::before,
+.city-article-card--dark .city-skeleton-line {
+  background: linear-gradient(90deg, #1c1c1c 0%, #313131 45%, #1a1a1a 100%);
+  background-size: 240% 100%;
+}

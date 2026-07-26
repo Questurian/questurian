@@ -1,0 +1,16 @@
+@media (prefers-reduced-motion: reduce) {
+  .city-article-image-shell::before {
+    animation: none;
+    background-position: 50% 0;
+  }
+
+  .city-skeleton-line {
+    animation: none;
+    background-position: 50% 0;
+  }
+
+  .city-next-pop {
+    animation: none;
+    background-position: 45% 50%;
+  }
+}

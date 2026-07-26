@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/show-commands.cjs && next dev --turbopack -p 3000",
     "build": "next build",
+    "check:global-css": "node scripts/check-global-css-boundaries.mjs",
     "start": "next start",
     "lint": "next lint"
   },
