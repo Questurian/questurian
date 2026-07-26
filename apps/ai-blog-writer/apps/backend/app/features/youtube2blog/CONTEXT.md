@@ -26,6 +26,10 @@ operations.
 | `graph/nodes/` | Cohesive node families for Transcript, Classification, composition, SEO, Editorial Augmentation, title, and finalization |
 | `graph/runner.py` | Model/tone resolution, graph execution, checkpointing, and tracing |
 | `stages/` | LLM-backed Stage implementations and prompt handling |
+| `stages/deep_expansion.py` | Gap analysis and additive article expansion |
+| `stages/listicle_rewrite.py` | Listicle detection and complete curated-item rewrites |
+| `stages/deep_expand_llm.py` | JSON/text LLM invocation policy shared by the two expansion paths |
+| `stages/stage_deep_expand.py` | Stable public facade, branch selection, and terminal job status |
 
 ## Dependency direction
 
