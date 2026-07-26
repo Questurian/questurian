@@ -19,11 +19,13 @@ from .contracts import (
     ListTone,
 )
 from .dependencies import EditorAssistDependencies, get_editor_assist_dependencies
-from .listicle_writer import (
+from .listicle_prompt_policy import (
     BLURB_MAX_WORDS,
     BLURB_MIN_WORDS,
     LIST_TONE_GUIDANCE,
     LISTICLE_ANGLE_GUIDANCE,
+)
+from .listicle_writer_validation import (
     strip_generation_fence,
     validate_generated_text,
 )

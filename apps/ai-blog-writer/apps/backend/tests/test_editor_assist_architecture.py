@@ -85,3 +85,47 @@ def test_blurb_composer_remains_a_thin_compatible_orchestrator():
     }
     assert "listicle_writer" not in imported_modules
     assert "writer_brief" not in imported_modules
+
+
+def test_listicle_writer_remains_a_thin_compatible_facade():
+    feature_path = Path(__file__).parents[1] / "app" / "features" / "editor_assist"
+    facade_path = feature_path / "listicle_writer.py"
+    source = facade_path.read_text()
+    module = ast.parse(source)
+
+    top_level_defs = [
+        node
+        for node in module.body
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    imported_modules = {
+        node.module
+        for node in module.body
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+
+    assert len(source.splitlines()) <= 120
+    assert top_level_defs == []
+    assert {
+        "blurb_composition_retry",
+        "listicle_prompt_builders",
+        "listicle_prompt_policy",
+        "listicle_writer_contracts",
+        "listicle_writer_validation",
+    }.issubset(imported_modules)
+
+
+def test_editor_assist_internals_do_not_depend_on_listicle_writer_facade():
+    feature_path = Path(__file__).parents[1] / "app" / "features" / "editor_assist"
+    facade_importers: list[str] = []
+    for path in feature_path.rglob("*.py"):
+        if path.name == "listicle_writer.py":
+            continue
+        module = ast.parse(path.read_text())
+        if any(
+            isinstance(node, ast.ImportFrom) and node.module == "listicle_writer"
+            for node in module.body
+        ):
+            facade_importers.append(path.name)
+
+    assert facade_importers == []
