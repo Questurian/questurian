@@ -10,7 +10,7 @@ const locations: LocationOption[] = [
     locationKey: 'peru|lima',
     country: 'peru',
     city: 'lima',
-    level: 'city',
+    level: 'city'
   },
   {
     id: 3,
@@ -19,8 +19,8 @@ const locations: LocationOption[] = [
     city: 'lima',
     neighborhood: 'barranco',
     parentKey: 'peru|lima',
-    level: 'neighborhood',
-  },
+    level: 'neighborhood'
+  }
 ]
 
 function buildDraft(): ListicleItineraryDraft {
@@ -34,41 +34,45 @@ function buildDraft(): ListicleItineraryDraft {
   draft.step3_complete = true
   draft.header.introMarkdown = 'Keep this itinerary intro'
   draft.seoSection.metaDescription = 'Keep this itinerary SEO description'
-  draft.days = [{
-    ...draft.days[0],
-    items: [
-      {
-        id: 'stop-1',
-        blockType: 'itinerary-dining',
-        item: 101,
-        tours: [],
-        mediaMode: 'photos',
-        selectedPhotos: [9001],
-        selectedInstagramPost: null,
-        title: '',
-        operator: '',
-        price: '',
-        url: '',
-        tourDuration: 1,
-        startingPoint: {
-          label: '',
-          latitude: '',
-          longitude: '',
-        },
-        keyLocations: [],
-        image: null,
-        instagramPost: null,
-        blurbMarkdown: 'Existing stop copy',
-        blurbJsonText: '',
-        selectionReason: 'original autobuild reason',
-      },
-    ],
-  }]
+  draft.days = [
+    {
+      ...draft.days[0],
+      items: [
+        {
+          id: 'stop-1',
+          blockType: 'itinerary-dining',
+          item: 101,
+          tours: [],
+          mediaMode: 'photos',
+          selectedPhotos: [9001],
+          selectedInstagramPost: null,
+          title: '',
+          operator: '',
+          price: '',
+          url: '',
+          tourDuration: 1,
+          startingPoint: {
+            label: '',
+            latitude: '',
+            longitude: ''
+          },
+          keyLocations: [],
+          image: null,
+          instagramPost: null,
+          blurbMarkdown: 'Existing stop copy',
+          blurbJsonText: '',
+          selectionReason: 'original autobuild reason'
+        }
+      ]
+    }
+  ]
   return draft
 }
 
 function useHarness(initialDraft: ListicleItineraryDraft) {
-  const [draft, setDraft] = useState<ListicleItineraryDraft | null>(initialDraft)
+  const [draft, setDraft] = useState<ListicleItineraryDraft | null>(
+    initialDraft
+  )
   const actions = useBuilderDraftActions({
     draft,
     setDraft,
@@ -80,17 +84,17 @@ function useHarness(initialDraft: ListicleItineraryDraft) {
       'itinerary-attractions': [],
       'itinerary-nightlife': [],
       'itinerary-key-location': [],
-      'itinerary-tour-agency': [],
+      'itinerary-tour-agency': []
     },
     navigate: vi.fn(),
     setSearchParams: vi.fn() as never,
     onError: vi.fn(),
-    setResult: vi.fn(),
+    setResult: vi.fn()
   })
 
   return {
     draft,
-    ...actions,
+    ...actions
   }
 }
 
@@ -129,8 +133,12 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     expect(result.current.draft?.sharedNeighborhoods).toEqual([3])
     expect(result.current.draft?.step2_complete).toBe(false)
     expect(result.current.draft?.step3_complete).toBe(false)
-    expect(result.current.draft?.header.introMarkdown).toBe('Keep this itinerary intro')
-    expect(result.current.draft?.seoSection.metaDescription).toBe('Keep this itinerary SEO description')
+    expect(result.current.draft?.header.introMarkdown).toBe(
+      'Keep this itinerary intro'
+    )
+    expect(result.current.draft?.seoSection.metaDescription).toBe(
+      'Keep this itinerary SEO description'
+    )
     expect(result.current.draft?.days[0]?.items).toEqual([])
   })
 
@@ -138,7 +146,10 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     const { result } = renderHook(() => useHarness(buildDraft()))
 
     act(() => {
-      result.current.updateItem('stop-1', (current) => ({ ...current, item: 202 }))
+      result.current.updateItem('stop-1', (current) => ({
+        ...current,
+        item: 202
+      }))
     })
 
     const item = result.current.draft?.days[0]?.items[0]
@@ -151,7 +162,10 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     const { result } = renderHook(() => useHarness(buildDraft()))
 
     act(() => {
-      result.current.updateItem('stop-1', (current) => ({ ...current, price: '$$$' }))
+      result.current.updateItem('stop-1', (current) => ({
+        ...current,
+        price: '$$$'
+      }))
     })
 
     const item = result.current.draft?.days[0]?.items[0]
@@ -198,5 +212,29 @@ describe('listicleItineraries useBuilderDraftActions', () => {
     expect(items).toHaveLength(2)
     expect(items[0]?.id).toBe('stop-1')
     expect(items[1]?.item).toBeNull()
+  })
+
+  it('preserves the action contract for lodging, ordering, and removal', () => {
+    const { result } = renderHook(() => useHarness(buildDraft()))
+
+    act(() => {
+      result.current.addWhereStayingItem(0)
+      result.current.addItem(0)
+    })
+
+    const newStopId = result.current.draft?.days[0]?.items[1]?.id
+    const lodgingId = result.current.draft?.days[0]?.whereStaying[0]?.id
+    expect(newStopId).toMatch(/^item_/)
+    expect(lodgingId).toMatch(/^item_/)
+
+    act(() => {
+      result.current.moveItem(newStopId!, 'up')
+      result.current.removeItem(lodgingId!)
+    })
+
+    expect(result.current.draft?.days[0]?.items.map((item) => item.id)).toEqual(
+      [newStopId, 'stop-1']
+    )
+    expect(result.current.draft?.days[0]?.whereStaying).toEqual([])
   })
 })

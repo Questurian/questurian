@@ -11,86 +11,19 @@ import {
   useSelectedLocationRefId
 } from '../../../../shared/builder/hooks/useBuilderStepActions'
 import { createEmptyDraft, removeDraft } from '../../storage'
-import type {
-  ItineraryBlockType,
-  ItineraryItemBlock,
-  ListicleItineraryDraft,
-  LocationOption,
-  RelatedItemOption
+import {
+  createEmptyDaySlice,
+  type ItineraryBlockType,
+  type ListicleItineraryDraft,
+  type LocationOption,
+  type RelatedItemOption
 } from '../../types'
 import { validateStep1 } from '../validators/setup.validators'
 import { validateStep3 } from '../validators/step.validators'
 import {
-  createEmptyDaySlice,
-  resolveItineraryStopIdentityKey,
-  WHERE_STAYING_BLOCK_TYPE
-} from '../../types'
-
-/**
- * Run an item updater, then invalidate the Selection reason and blurb if the
- * stop's resolved identity changed (a swap). Both describe the previous venue,
- * so clearing them re-arms the why-gate and forces a day recompose (ADR 0020).
- */
-function applyItemUpdate(
-  item: ItineraryItemBlock,
-  updater: (item: ItineraryItemBlock) => ItineraryItemBlock
-): ItineraryItemBlock {
-  const next = updater(item)
-  if (
-    resolveItineraryStopIdentityKey(next) ===
-    resolveItineraryStopIdentityKey(item)
-  ) {
-    return next
-  }
-  return {
-    ...next,
-    selectionReason: '',
-    blurbMarkdown: '',
-    blurbJsonText: '',
-    blurbLexical: undefined
-  }
-}
-
-function createNewItem(): ItineraryItemBlock {
-  return {
-    id: `item_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-    blockType: 'itinerary-dining',
-    item: null,
-    moment: null,
-    momentLabel: '',
-    tours: [],
-    mediaMode: 'photos',
-    selectedPhotos: [],
-    selectedInstagramPost: null,
-    title: '',
-    operator: '',
-    price: '',
-    url: '',
-    tourDuration: 1,
-    startingPoint: {
-      label: '',
-      latitude: '',
-      longitude: ''
-    },
-    keyLocations: [],
-    image: null,
-    instagramPost: null,
-    blurbMarkdown: '',
-    blurbLexical: undefined,
-    blurbJsonText: '',
-    // Operator-added stop: no Autobuild rationale. Empty string (not undefined)
-    // so the "Why this pick" field renders and the day-compose gate sees it as
-    // an unfilled reason to prompt for (ADR 0020).
-    selectionReason: ''
-  }
-}
-
-function createNewWhereStayingItem(): ItineraryItemBlock {
-  return {
-    ...createNewItem(),
-    blockType: WHERE_STAYING_BLOCK_TYPE
-  }
-}
+  useItineraryItemActions,
+  type ItineraryItemActions
+} from './useItineraryItemActions'
 
 type UseBuilderDraftActionsParams = {
   draft: ListicleItineraryDraft | null
@@ -107,14 +40,6 @@ type UseBuilderDraftActionsResult = {
   selectedLocationRefId: number | null
   updateDraft: (next: Partial<ListicleItineraryDraft>) => void
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
-  updateItem: (
-    itemId: string,
-    updater: (item: ItineraryItemBlock) => ItineraryItemBlock
-  ) => void
-  removeItem: (itemId: string) => void
-  moveItem: (itemId: string, direction: 'up' | 'down') => void
-  addItem: (dayIndex: number, insertIndex?: number) => void
-  addWhereStayingItem: (dayIndex: number) => void
   handleContinue: () => void
   handleUpdateSetup: () => void
   handleSaveSetup: () => void
@@ -129,7 +54,7 @@ type UseBuilderDraftActionsResult = {
   cancelUpdateStep3: () => void
   setEditorModelName: (modelName: string) => void
   handleDiscardLocalDraft: () => void
-}
+} & ItineraryItemActions
 
 export function useBuilderDraftActions({
   draft,
@@ -147,6 +72,7 @@ export function useBuilderDraftActions({
   } | null>(null)
 
   const selectedLocationRefId = useSelectedLocationRefId(draft, locations)
+  const itemActions = useItineraryItemActions(setDraft)
 
   function updateDraft(next: Partial<ListicleItineraryDraft>) {
     setDraft((current) => {
@@ -188,115 +114,6 @@ export function useBuilderDraftActions({
         ...current,
         header: { ...current.header, ...next }
       }
-    })
-  }
-
-  function updateItem(
-    itemId: string,
-    updater: (item: ItineraryItemBlock) => ItineraryItemBlock
-  ) {
-    setDraft((current) => {
-      if (!current) return current
-      const nextDays = current.days.map((day) => {
-        if (day.whereStaying.some((item) => item.id === itemId)) {
-          return {
-            ...day,
-            whereStaying: day.whereStaying.map((item) =>
-              item.id === itemId ? applyItemUpdate(item, updater) : item
-            )
-          }
-        }
-        if (day.items.some((item) => item.id === itemId)) {
-          return {
-            ...day,
-            items: day.items.map((item) =>
-              item.id === itemId ? applyItemUpdate(item, updater) : item
-            )
-          }
-        }
-        return day
-      })
-      return { ...current, days: nextDays }
-    })
-  }
-
-  function removeItem(itemId: string) {
-    setDraft((current) => {
-      if (!current) return current
-      const nextDays = current.days.map((day) => {
-        if (day.whereStaying.some((item) => item.id === itemId)) {
-          return {
-            ...day,
-            whereStaying: day.whereStaying.filter((item) => item.id !== itemId)
-          }
-        }
-        if (day.items.some((item) => item.id === itemId)) {
-          return {
-            ...day,
-            items: day.items.filter((item) => item.id !== itemId)
-          }
-        }
-        return day
-      })
-      return { ...current, days: nextDays }
-    })
-  }
-
-  function moveItem(itemId: string, direction: 'up' | 'down') {
-    setDraft((current) => {
-      if (!current) return current
-      const nextDays = current.days.map((day) => {
-        const wsIndex = day.whereStaying.findIndex((item) => item.id === itemId)
-        if (wsIndex >= 0) {
-          const whereStaying = [...day.whereStaying]
-          const target = direction === 'up' ? wsIndex - 1 : wsIndex + 1
-          if (target < 0 || target >= whereStaying.length) return day
-          const [row] = whereStaying.splice(wsIndex, 1)
-          whereStaying.splice(target, 0, row)
-          return { ...day, whereStaying }
-        }
-        const items = [...day.items]
-        const index = items.findIndex((item) => item.id === itemId)
-        if (index < 0) return day
-        const target = direction === 'up' ? index - 1 : index + 1
-        if (target < 0 || target >= items.length) return day
-        const [item] = items.splice(index, 1)
-        items.splice(target, 0, item)
-        return { ...day, items }
-      })
-      return { ...current, days: nextDays }
-    })
-  }
-
-  function addItem(dayIndex: number, insertIndex?: number) {
-    setDraft((current) => {
-      if (!current) return current
-      const day = current.days[dayIndex]
-      if (!day) return current
-      const items = [...day.items]
-      // Clamp so an out-of-range index can't drop the stop or throw; undefined = append.
-      const at =
-        insertIndex === undefined
-          ? items.length
-          : Math.max(0, Math.min(insertIndex, items.length))
-      items.splice(at, 0, createNewItem())
-      const nextDays = [...current.days]
-      nextDays[dayIndex] = { ...day, items }
-      return { ...current, days: nextDays }
-    })
-  }
-
-  function addWhereStayingItem(dayIndex: number) {
-    setDraft((current) => {
-      if (!current) return current
-      const day = current.days[dayIndex]
-      if (!day) return current
-      const nextDays = [...current.days]
-      nextDays[dayIndex] = {
-        ...day,
-        whereStaying: [...day.whereStaying, createNewWhereStayingItem()]
-      }
-      return { ...current, days: nextDays }
     })
   }
 
@@ -414,11 +231,7 @@ export function useBuilderDraftActions({
     selectedLocationRefId,
     updateDraft,
     updateHeader,
-    updateItem,
-    removeItem,
-    moveItem,
-    addItem,
-    addWhereStayingItem,
+    ...itemActions,
     handleContinue: stepActions.handleContinue,
     handleUpdateSetup,
     handleSaveSetup,
