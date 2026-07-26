@@ -115,6 +115,38 @@ def test_listicle_writer_remains_a_thin_compatible_facade():
     }.issubset(imported_modules)
 
 
+def test_research_profile_remains_a_thin_compatible_facade():
+    feature_path = Path(__file__).parents[1] / "app" / "features" / "editor_assist"
+    facade_path = feature_path / "research_profile.py"
+    source = facade_path.read_text()
+    module = ast.parse(source)
+
+    top_level_defs = [
+        node
+        for node in module.body
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    imported_modules = {
+        node.module
+        for node in module.body
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+
+    assert len(source.splitlines()) <= 120
+    assert [node.name for node in top_level_defs] == [
+        "_invoke_grounded",
+        "run_research_profile",
+        "run_research_profiles_concurrently",
+    ]
+    assert {
+        "research_profile_batch",
+        "research_profile_contracts",
+        "research_profile_execution",
+        "research_profile_parsing",
+        "research_profile_prompt",
+    }.issubset(imported_modules)
+
+
 def test_editor_assist_internals_do_not_depend_on_listicle_writer_facade():
     feature_path = Path(__file__).parents[1] / "app" / "features" / "editor_assist"
     facade_importers: list[str] = []
