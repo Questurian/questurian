@@ -230,6 +230,60 @@ def test_listicle_content_facade_preserves_http_contract_imports():
     )
 
 
+def test_itinerary_composition_remains_a_thin_compatible_facade():
+    feature_path = Path(__file__).parents[1] / "app" / "features" / "editor_assist"
+    facade_path = feature_path / "itinerary_composition.py"
+    source = facade_path.read_text()
+    module = ast.parse(source)
+
+    top_level_defs = [
+        node
+        for node in module.body
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    imported_modules = {
+        node.module
+        for node in module.body
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+
+    assert len(source.splitlines()) <= 120
+    assert top_level_defs == []
+    assert {
+        "itinerary_brief",
+        "itinerary_composition_contracts",
+        "itinerary_composition_routes",
+        "itinerary_day_blurb_execution",
+        "itinerary_day_blurb_prompt",
+        "itinerary_intro",
+        "itinerary_stop_reason",
+    }.issubset(imported_modules)
+
+
+def test_itinerary_composition_facade_preserves_contract_imports():
+    from app.features.editor_assist import itinerary_composition
+    from app.features.editor_assist import itinerary_composition_contracts
+    from app.features.editor_assist import itinerary_composition_routes
+
+    assert (
+        itinerary_composition.ComposeItineraryBriefRequest
+        is itinerary_composition_contracts.ComposeItineraryBriefRequest
+    )
+    assert (
+        itinerary_composition.ComposeItineraryIntroResponse
+        is itinerary_composition_contracts.ComposeItineraryIntroResponse
+    )
+    assert (
+        itinerary_composition.ComposeDayBlurbsRequest
+        is itinerary_composition_contracts.ComposeDayBlurbsRequest
+    )
+    assert (
+        itinerary_composition.ComposeStopReasonResponse
+        is itinerary_composition_contracts.ComposeStopReasonResponse
+    )
+    assert itinerary_composition.router is itinerary_composition_routes.router
+
+
 def test_editor_assist_internals_do_not_depend_on_listicle_writer_facade():
     feature_path = Path(__file__).parents[1] / "app" / "features" / "editor_assist"
     facade_importers: list[str] = []
