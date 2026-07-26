@@ -4,7 +4,7 @@ import {
   normalizeNumberSet,
   normalizeText,
   sortKeysDeep,
-} from '../../../../shared/payloadSync/draftPayloadSync'
+} from '../../../../shared/payloadSync/payloadSyncSignature'
 import { normalizeSeoSection } from '../services/seo-section.service'
 import type { ListicleItemBlock, PayloadRichText, SingleTypeListicleDraft } from '../../types'
 

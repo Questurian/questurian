@@ -10,7 +10,7 @@ import {
   normalizeNumberSet,
   normalizeText,
   sortKeysDeep
-} from '../../../../shared/payloadSync/draftPayloadSync'
+} from '../../../../shared/payloadSync/payloadSyncSignature'
 
 function normalizeRichTextMarkdown(
   markdown: string | undefined,
