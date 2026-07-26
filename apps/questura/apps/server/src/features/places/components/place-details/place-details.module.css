@@ -1,0 +1,51 @@
+.container {
+  margin-top: 20px;
+}
+
+.emptyMessage {
+  color: var(--theme-elevation-500);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.loadingMessage {
+  color: var(--theme-elevation-500);
+  font-size: 14px;
+}
+
+.heading {
+  margin-bottom: 16px;
+  color: var(--theme-elevation-800);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  color: var(--theme-elevation-700);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.select {
+  width: 100%;
+  max-width: 300px;
+  padding: 10px 12px;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: 4px;
+  background-color: var(--theme-input-bg);
+  color: var(--theme-elevation-800);
+  cursor: pointer;
+  font-size: 14px;
+}
