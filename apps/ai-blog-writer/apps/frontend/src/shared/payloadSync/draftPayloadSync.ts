@@ -1,3 +1,5 @@
+import { buildDraftPayloadSyncSignature } from './payloadSyncSignature'
+
 export type PayloadSyncStateFields = {
   currentPayloadSignature?: string
   lastPayloadSyncSignature?: string
@@ -30,66 +32,18 @@ function cleanString(value: unknown): string | undefined {
 }
 
 function hasDefaultPayloadIdentity(value: unknown): boolean {
-  return isRecord(value)
-    && typeof value.payloadId === 'number'
-    && Number.isFinite(value.payloadId)
+  return isRecord(value) && typeof value.payloadId === 'number' && Number.isFinite(value.payloadId)
 }
 
-function resolveHasPayloadIdentity<TDraft>(
-  draft: TDraft,
-  options: PayloadIdentityOptions<TDraft> = {},
-): boolean {
-  return options.hasPayloadIdentity
-    ? options.hasPayloadIdentity(draft)
-    : hasDefaultPayloadIdentity(draft)
-}
-
-export function normalizeText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
-}
-
-export function normalizeNumberSet(values: unknown): number[] {
-  return Array.isArray(values)
-    ? [...new Set(values.filter((value): value is number => Number.isFinite(value)))]
-        .sort((a, b) => a - b)
-    : []
-}
-
-export function normalizeRelationshipId(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  if (isRecord(value) && typeof value.id === 'number' && Number.isFinite(value.id)) return value.id
-  return null
-}
-
-export function sortKeysDeep(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sortKeysDeep)
-  if (!value || typeof value !== 'object') return value
-
-  return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, entry]) => [key, sortKeysDeep(entry)]),
-  )
-}
-
-export function stableSerialize(value: unknown): string {
-  return JSON.stringify(sortKeysDeep(value))
-}
-
-export function buildDraftPayloadSyncSignature<TDraft>(
-  draft: TDraft,
-  buildComparableShape: (draft: TDraft) => unknown,
-): string {
-  return stableSerialize(buildComparableShape(draft))
+function resolveHasPayloadIdentity<TDraft>(draft: TDraft, options: PayloadIdentityOptions<TDraft> = {}): boolean {
+  return options.hasPayloadIdentity ? options.hasPayloadIdentity(draft) : hasDefaultPayloadIdentity(draft)
 }
 
 export function readStoredPayloadSyncFields(value: unknown): PayloadSyncStateFields {
   if (!isRecord(value)) return {}
 
   const legacyBaseline = cleanString(value.payloadSyncBaseline)
-  const legacyDirty = typeof value.hasLocalChanges === 'boolean'
-    ? value.hasLocalChanges
-    : undefined
+  const legacyDirty = typeof value.hasLocalChanges === 'boolean' ? value.hasLocalChanges : undefined
   const fields: PayloadSyncStateFields = {}
   const currentPayloadSignature = cleanString(value.currentPayloadSignature)
   const lastPayloadSyncSignature = cleanString(value.lastPayloadSyncSignature) || legacyBaseline
@@ -109,15 +63,14 @@ export function readStoredPayloadSyncFields(value: unknown): PayloadSyncStateFie
   return fields
 }
 
-export function payloadSyncFieldsEqual(
-  left: PayloadSyncStateFields,
-  right: PayloadSyncStateFields,
-): boolean {
-  return left.currentPayloadSignature === right.currentPayloadSignature
-    && left.lastPayloadSyncSignature === right.lastPayloadSyncSignature
-    && left.lastPayloadSyncAt === right.lastPayloadSyncAt
-    && left.lastPayloadSyncMediaFingerprint === right.lastPayloadSyncMediaFingerprint
-    && Boolean(left.hasUnsyncedPayloadChanges) === Boolean(right.hasUnsyncedPayloadChanges)
+export function payloadSyncFieldsEqual(left: PayloadSyncStateFields, right: PayloadSyncStateFields): boolean {
+  return (
+    left.currentPayloadSignature === right.currentPayloadSignature &&
+    left.lastPayloadSyncSignature === right.lastPayloadSyncSignature &&
+    left.lastPayloadSyncAt === right.lastPayloadSyncAt &&
+    left.lastPayloadSyncMediaFingerprint === right.lastPayloadSyncMediaFingerprint &&
+    Boolean(left.hasUnsyncedPayloadChanges) === Boolean(right.hasUnsyncedPayloadChanges)
+  )
 }
 
 export function hasUnsyncedPayloadChanges(input: {
@@ -158,8 +111,9 @@ export function refreshDraftPayloadSyncState<TDraft extends PayloadSyncStateFiel
   const currentPayloadSignature = buildDraftPayloadSyncSignature(draft, buildComparableShape)
   const storedFields = readStoredPayloadSyncFields(draft)
   const storedDirty = Boolean(storedFields.hasUnsyncedPayloadChanges)
-  const lastPayloadSyncSignature = storedFields.lastPayloadSyncSignature
-    || (options.initializeMissingBaselineAsSynced && !storedDirty ? currentPayloadSignature : undefined)
+  const lastPayloadSyncSignature =
+    storedFields.lastPayloadSyncSignature ||
+    (options.initializeMissingBaselineAsSynced && !storedDirty ? currentPayloadSignature : undefined)
 
   return {
     ...draft,

@@ -1,5 +1,5 @@
 import { getRelatedPhotoIds } from '../../../../shared/builder/utils/item-media.utils'
-import { stableSerialize } from '../../../../shared/payloadSync/draftPayloadSync'
+import { stableSerialize } from '../../../../shared/payloadSync/payloadSyncSignature'
 import {
   getItineraryBlocksInArticleOrder,
   isManualItineraryBlockType,

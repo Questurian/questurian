@@ -4,7 +4,7 @@ import {
   normalizeNumberSet,
   normalizeText,
   sortKeysDeep,
-} from '../../../../../shared/payloadSync/draftPayloadSync'
+} from '../../../../../shared/payloadSync/payloadSyncSignature'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../../../types'
 
 export function hasPayloadArticleIdentity(article: StagedArticle): boolean {
