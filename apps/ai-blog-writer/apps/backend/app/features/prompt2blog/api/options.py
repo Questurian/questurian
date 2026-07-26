@@ -7,16 +7,18 @@ from app.core import (
     read_article_type_name_definitions,
 )
 
-from ..services.pipeline import (
+from ..config import (
     PROMPT2BLOG_GUIDELINE_FILE_ALIASES,
     PROMPT2BLOG_GUIDELINES_DIR,
     PROMPT2BLOG_TITLE_FILE_ALIASES,
     PROMPT2BLOG_TITLE_GUIDELINES_DIR,
+)
+from ..options import (
     _default_option,
     _load_prompt2blog_option_catalog,
     _read_article_type_markdown,
-    _safe_str,
 )
+from ..support import _safe_str
 
 router = APIRouter()
 
@@ -53,10 +55,14 @@ async def get_input_options() -> JSONResponse:
             "brand_voices": brand_voices,
             "defaults": {
                 "tone_id": _safe_str(default_tone.get("id")) if default_tone else "",
-                "length_id": _safe_str(default_length.get("id")) if default_length else "",
-                "brand_voice_id": _safe_str(default_brand_voice.get("id"))
-                if default_brand_voice
-                else "",
+                "length_id": (
+                    _safe_str(default_length.get("id")) if default_length else ""
+                ),
+                "brand_voice_id": (
+                    _safe_str(default_brand_voice.get("id"))
+                    if default_brand_voice
+                    else ""
+                ),
             },
         }
     )

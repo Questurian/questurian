@@ -1,0 +1,36 @@
+from __future__ import annotations
+
+from typing import Any, TypedDict
+
+from ..models import PipelineV2RuntimeRequest, Prompt2BlogInputRequest
+
+
+class Prompt2BlogGraphState(TypedDict, total=False):
+    run_id: str
+    input_request: Prompt2BlogInputRequest
+    request: PipelineV2RuntimeRequest
+    model_name: str
+    writing_model: str
+    cleaned_data: str
+    raw_sources: list[str]
+    raw_sources_text: str
+    writing_brief: dict[str, Any]
+    option_context: dict[str, Any]
+    narrative_focus: str
+    include_debug: bool
+    enable_editorial_augmentation: bool
+    current_stage: str
+    trace: list[dict[str, Any]]
+    guideline: dict[str, Any]
+    coverage: dict[str, Any]
+    supplemental_content: str
+    rewrite: dict[str, Any]
+    quality: dict[str, Any]
+    quality_checks: dict[str, Any]
+    repair_applied: bool
+    editorial_augmentation: dict[str, Any]
+    editorial_augmentation_raw_response: str
+    final_title: str
+    final_markdown: str
+    response_payload: dict[str, Any]
+    completed: bool

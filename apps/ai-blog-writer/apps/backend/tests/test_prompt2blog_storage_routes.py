@@ -8,7 +8,13 @@ import pytest
 from fastapi import BackgroundTasks
 from pydantic import ValidationError
 
-from app.core import clear_all_runs, read_stage_result, read_status
+from app.core import (
+    clear_all_runs,
+    read_stage_result,
+    read_status,
+    write_artifact,
+    write_status,
+)
 
 # Avoid importing heavyweight external LLM clients during route-module import.
 utils_stub = types.ModuleType("utils")
@@ -16,7 +22,18 @@ utils_stub.get_vertex_llm = lambda *args, **kwargs: None
 utils_stub.parse_json_response = lambda value: json.loads(value)
 sys.modules.setdefault("utils", utils_stub)
 
-import app.features.prompt2blog.routes as prompt2blog_routes
+import app.features.prompt2blog.routes as prompt2blog_routes  # noqa: E402
+from app.features.prompt2blog.api import options as options_api  # noqa: E402
+from app.features.prompt2blog.api import runs as runs_api  # noqa: E402
+from app.features.prompt2blog.content.source_text import (  # noqa: E402
+    _preclean_source_text,
+)
+from app.features.prompt2blog.dependencies import (  # noqa: E402
+    PipelineDependencies,
+)
+from app.features.prompt2blog.stages.preparation import (  # noqa: E402
+    prepare_full_pipeline_request,
+)
 
 
 PERU_SOURCE_SAMPLE = """Machu Picchu, Peru
@@ -104,7 +121,7 @@ def _response_payload(response) -> dict:
 
 
 def _seed_completed_run(run_id: str) -> None:
-    prompt2blog_routes.write_status(
+    write_status(
         run_id,
         {
             "run_id": run_id,
@@ -115,7 +132,7 @@ def _seed_completed_run(run_id: str) -> None:
         },
         feature="prompt2blog",
     )
-    prompt2blog_routes.write_artifact(
+    write_artifact(
         run_id,
         {
             "markdown": "# Persisted Prompt2Blog Title\n\n## Overview\n\nBody content.",
@@ -130,7 +147,9 @@ def _seed_completed_run(run_id: str) -> None:
     )
 
 
-def _build_prompt2blog_request(source_material: list[str]) -> prompt2blog_routes.Prompt2BlogInputRequest:
+def _build_prompt2blog_request(
+    source_material: list[str],
+) -> prompt2blog_routes.Prompt2BlogInputRequest:
     return prompt2blog_routes.Prompt2BlogInputRequest(
         article_type_id=7,
         source_material=source_material,
@@ -165,16 +184,45 @@ def _stub_writing_brief(request, option_context, cleaned_sources):  # noqa: ANN0
     }
 
 
+class _StubLLM:
+    def __init__(self, *, invoke_json, invoke_text):  # noqa: ANN001
+        self._invoke_json = invoke_json
+        self._invoke_text = invoke_text
+
+    def invoke_json(self, **kwargs):  # noqa: ANN003
+        return self._invoke_json(**kwargs)
+
+    def invoke_text(self, **kwargs):  # noqa: ANN003
+        return self._invoke_text(**kwargs)
+
+    def enforce_anti_ai(self, text: str, **kwargs):  # noqa: ANN003
+        return text
+
+
+def _preparation_dependencies(
+    *, invoke_json, invoke_text
+) -> PipelineDependencies:  # noqa: ANN001
+    return PipelineDependencies(
+        llm=_StubLLM(invoke_json=invoke_json, invoke_text=invoke_text),
+        resolve_input_options=lambda request: _stub_option_context(),
+        build_writing_brief=_stub_writing_brief,
+    )
+
+
 def test_prompt2blog_storage_endpoints_without_http_client():
     clear_all_runs(feature="prompt2blog")
     run_id = f"p2b-{uuid4()}"
     _seed_completed_run(run_id)
 
-    status_payload = _response_payload(asyncio.run(prompt2blog_routes.get_status(run_id)))
+    status_payload = _response_payload(
+        asyncio.run(prompt2blog_routes.get_status(run_id))
+    )
     assert status_payload["feature"] == "prompt2blog"
     assert status_payload["state"] == "completed"
 
-    result_payload = _response_payload(asyncio.run(prompt2blog_routes.get_result(run_id)))
+    result_payload = _response_payload(
+        asyncio.run(prompt2blog_routes.get_result(run_id))
+    )
     assert result_payload["run_id"] == run_id
     assert result_payload["markdown"].startswith("# Persisted Prompt2Blog Title")
 
@@ -184,7 +232,9 @@ def test_prompt2blog_storage_endpoints_without_http_client():
     assert matching[0]["title"] == "Persisted Prompt2Blog Title"
     assert matching[0]["article_type"] == "Explainer"
 
-    sync_before = _response_payload(asyncio.run(prompt2blog_routes.get_sync_status(run_id)))
+    sync_before = _response_payload(
+        asyncio.run(prompt2blog_routes.get_sync_status(run_id))
+    )
     assert sync_before["synced_to_payload"] is False
 
     sync_mark = _response_payload(
@@ -197,7 +247,9 @@ def test_prompt2blog_storage_endpoints_without_http_client():
     )
     assert sync_mark["payload_article_id"] == 8883
 
-    sync_after = _response_payload(asyncio.run(prompt2blog_routes.get_sync_status(run_id)))
+    sync_after = _response_payload(
+        asyncio.run(prompt2blog_routes.get_sync_status(run_id))
+    )
     assert sync_after["synced_to_payload"] is True
     assert sync_after["payload_article_id"] == 8883
 
@@ -212,7 +264,7 @@ def test_prompt2blog_start_pipeline_v2_queues_background_task(monkeypatch):
         captured["run_id"] = run_id
         captured["request"] = request
 
-    monkeypatch.setattr(prompt2blog_routes, "_run_full_pipeline", _fake_run_full_pipeline)
+    monkeypatch.setattr(runs_api, "run_full_pipeline", _fake_run_full_pipeline)
 
     request = prompt2blog_routes.Prompt2BlogInputRequest(
         article_type_id=1,
@@ -261,12 +313,12 @@ def test_prompt2blog_rejects_legacy_payload_shape():
 
 def test_prompt2blog_input_options_endpoint_returns_catalog(monkeypatch):
     monkeypatch.setattr(
-        prompt2blog_routes,
+        options_api,
         "read_article_type_name_definitions",
         lambda: [{"name": "Explainer", "definition": "Explains things clearly."}],
     )
     monkeypatch.setattr(
-        prompt2blog_routes,
+        options_api,
         "get_article_type_by_name",
         lambda _name: {
             "id": 11,
@@ -284,7 +336,7 @@ def test_prompt2blog_input_options_endpoint_returns_catalog(monkeypatch):
 
 def test_prompt2blog_guideline_preview_endpoint_returns_selected_type(monkeypatch):
     monkeypatch.setattr(
-        prompt2blog_routes,
+        options_api,
         "get_article_type_by_id",
         lambda article_type_id: {
             "id": article_type_id,
@@ -355,18 +407,6 @@ Drink boiled water or bottled water with sealed lids
 Avoid ice cubes
 Avoid raw and undercooked food, such as salads"""
 
-    monkeypatch.setattr(prompt2blog_routes, "_resolve_input_options", lambda request: _stub_option_context())
-    monkeypatch.setattr(
-        prompt2blog_routes,
-        "_build_writing_brief_from_input",
-        _stub_writing_brief,
-    )
-    monkeypatch.setattr(
-        prompt2blog_routes,
-        "_invoke_text_llm",
-        lambda **kwargs: "Synthesized source material",
-    )
-
     def _fake_cleanup_llm(*, prompt, **kwargs):  # noqa: ANN001
         assert "Machu Picchu" in prompt
         return (
@@ -400,11 +440,14 @@ Avoid raw and undercooked food, such as salads"""
             "{}",
         )
 
-    monkeypatch.setattr(prompt2blog_routes, "_invoke_json_llm", _fake_cleanup_llm)
-
-    runtime_request = prompt2blog_routes._prepare_full_pipeline_request(
+    dependencies = _preparation_dependencies(
+        invoke_json=_fake_cleanup_llm,
+        invoke_text=lambda **kwargs: "Synthesized source material",
+    )
+    runtime_request = prepare_full_pipeline_request(
         run_id,
         _build_prompt2blog_request([PERU_SOURCE_SAMPLE]),
+        dependencies,
     )
 
     assert runtime_request.raw_sources == [cleaned_text]
@@ -427,7 +470,9 @@ Avoid raw and undercooked food, such as salads"""
     clear_all_runs(feature="prompt2blog")
 
 
-def test_prompt2blog_cleanup_falls_back_to_precleaned_text_when_ai_cleanup_fails(monkeypatch):
+def test_prompt2blog_cleanup_falls_back_to_precleaned_text_when_ai_cleanup_fails(
+    monkeypatch,
+):
     clear_all_runs(feature="prompt2blog")
     run_id = f"p2b-{uuid4()}"
     source_text = """Cookie banner
@@ -436,31 +481,25 @@ Main travel safety guidance stays here.
 
 Keep this logistics paragraph."""
 
-    monkeypatch.setattr(prompt2blog_routes, "_resolve_input_options", lambda request: _stub_option_context())
-    monkeypatch.setattr(
-        prompt2blog_routes,
-        "_build_writing_brief_from_input",
-        _stub_writing_brief,
-    )
-
     captured_prompt: dict[str, str] = {}
 
     def _fake_synthesize_llm(**kwargs):  # noqa: ANN001
         captured_prompt["prompt"] = kwargs["prompt"]
         return "Synthesized source material"
 
-    monkeypatch.setattr(prompt2blog_routes, "_invoke_text_llm", _fake_synthesize_llm)
-
     def _raising_cleanup_llm(**kwargs):  # noqa: ANN001
         raise RuntimeError("Invalid JSON")
 
-    monkeypatch.setattr(prompt2blog_routes, "_invoke_json_llm", _raising_cleanup_llm)
-
-    runtime_request = prompt2blog_routes._prepare_full_pipeline_request(
+    dependencies = _preparation_dependencies(
+        invoke_json=_raising_cleanup_llm,
+        invoke_text=_fake_synthesize_llm,
+    )
+    runtime_request = prepare_full_pipeline_request(
         run_id,
         _build_prompt2blog_request([source_text]),
+        dependencies,
     )
-    expected_fallback, _ = prompt2blog_routes._preclean_source_text(source_text)
+    expected_fallback, _ = _preclean_source_text(source_text)
 
     assert runtime_request.raw_sources == [expected_fallback]
     assert expected_fallback in captured_prompt["prompt"]
@@ -478,20 +517,10 @@ def test_prompt2blog_cleanup_chunks_long_sources_and_merges_duplicates(monkeypat
     clear_all_runs(feature="prompt2blog")
     run_id = f"p2b-{uuid4()}"
     segment_one = ("Chunk one factual sentence about Peru logistics. " * 220).strip()
-    segment_two = ("Chunk two factual sentence about Peru health guidance. " * 220).strip()
+    segment_two = (
+        "Chunk two factual sentence about Peru health guidance. " * 220
+    ).strip()
     long_source = f"{segment_one}\n\n{segment_two}"
-
-    monkeypatch.setattr(prompt2blog_routes, "_resolve_input_options", lambda request: _stub_option_context())
-    monkeypatch.setattr(
-        prompt2blog_routes,
-        "_build_writing_brief_from_input",
-        _stub_writing_brief,
-    )
-    monkeypatch.setattr(
-        prompt2blog_routes,
-        "_invoke_text_llm",
-        lambda **kwargs: "Synthesized source material",
-    )
 
     cleanup_prompts: list[str] = []
 
@@ -529,13 +558,18 @@ def test_prompt2blog_cleanup_chunks_long_sources_and_merges_duplicates(monkeypat
             "{}",
         )
 
-    monkeypatch.setattr(prompt2blog_routes, "_invoke_json_llm", _fake_chunk_cleanup_llm)
-
-    runtime_request = prompt2blog_routes._prepare_full_pipeline_request(
+    dependencies = _preparation_dependencies(
+        invoke_json=_fake_chunk_cleanup_llm,
+        invoke_text=lambda **kwargs: "Synthesized source material",
+    )
+    runtime_request = prepare_full_pipeline_request(
         run_id,
         _build_prompt2blog_request([long_source]),
+        dependencies,
     )
-    expected_cleaned = "Shared boundary paragraph.\n\nChunk one facts.\n\nChunk two facts."
+    expected_cleaned = (
+        "Shared boundary paragraph.\n\nChunk one facts.\n\nChunk two facts."
+    )
 
     assert runtime_request.raw_sources == [expected_cleaned]
     assert len(cleanup_prompts) == 2

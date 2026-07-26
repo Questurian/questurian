@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+from typing import Any
+
+from ..content.markdown import _build_markdown
+from ..dependencies import PipelineDependencies
+from ..graph.state import Prompt2BlogGraphState
+from ..quality import _build_constraint_checks
+from ..support import _safe_dict, _safe_str
+
+
+def run_finalize_stage(
+    state: Prompt2BlogGraphState,
+    dependencies: PipelineDependencies,
+) -> dict[str, Any]:
+    stage = "stage_finalize"
+    run_id = state["run_id"]
+    rewrite = state["rewrite"]
+    quality = state["quality"]
+    quality_checks = state["quality_checks"]
+    augmentation = state["editorial_augmentation"]
+    guideline = state["guideline"]
+    dependencies.recorder.start_stage(run_id, stage)
+
+    final_title = dependencies.normalize_dashes(state["final_title"])
+    final_content = dependencies.llm.enforce_anti_ai(
+        rewrite["improved_content"],
+        model_name=state["writing_model"],
+        max_tokens=6144,
+        context="prompt2blog finalize",
+    )
+    rewrite = {**rewrite, "improved_content": final_content}
+    final_markdown = _build_markdown(final_title, final_content)
+    final_checks = _build_constraint_checks(
+        final_title,
+        final_content,
+        state["writing_brief"],
+    )
+    pipeline_status = (
+        "ready_for_staging"
+        if final_checks["target_word_count_met"]
+        and final_checks["primary_keyword_present"]
+        else "needs_revision"
+    )
+    dependencies.recorder.record_stage(
+        run_id,
+        stage,
+        {
+            "pipeline_status": pipeline_status,
+            "final_title": final_title,
+            "word_count_estimate": final_checks["word_count_estimate"],
+            "constraint_checks": final_checks,
+        },
+    )
+
+    response_payload: dict[str, Any] = {
+        "message": "Prompt2Blog pipeline v2 completed",
+        "run_id": run_id,
+        "pipeline_status": pipeline_status,
+        "article_type": {
+            "id": guideline["id"],
+            "name": guideline["name"],
+            "definition": guideline["definition"],
+        },
+        "guideline_meta": {
+            "guideline": guideline["guideline"],
+            "title_guideline": guideline["title_guideline"],
+            "guideline_file": guideline.get("guideline_file"),
+            "title_guideline_file": guideline.get("title_guideline_file"),
+        },
+        "improved_article": {
+            "title": final_title,
+            "content": final_content,
+        },
+        "final_markdown": final_markdown,
+        "input_profiles": {
+            "tone": _safe_dict(state["option_context"].get("tone")),
+            "length": _safe_dict(state["option_context"].get("length")),
+            "brand_voice": _safe_dict(state["option_context"].get("brand_voice")),
+            "creativity_level": _safe_str(
+                state["option_context"].get("creativity_level")
+            ),
+        },
+        "quality_review": {
+            "alignment_summary": rewrite["guideline_alignment_summary"],
+            "improvements_applied": rewrite["improvements_applied"],
+            "remaining_gaps": rewrite["remaining_gaps"],
+            "quality_summary": quality["quality_summary"],
+            "quality_scores": {
+                "overall": quality["overall_score"],
+                "guideline_coverage": quality["guideline_coverage_score"],
+                "informativeness": quality["informativeness_score"],
+                "originality": quality["originality_score"],
+                "brief_adherence": quality["brief_adherence_score"],
+                "seo": quality["seo_score"],
+            },
+            "constraint_checks": {
+                **quality_checks,
+                "target_word_count_met": final_checks["target_word_count_met"],
+                "paragraph_length_met": final_checks["paragraph_length_met"],
+                "cta_present": final_checks["cta_present"],
+                "primary_keyword_present": final_checks["primary_keyword_present"],
+                "secondary_keywords_present": final_checks[
+                    "secondary_keywords_present"
+                ],
+                "audience_match": final_checks["audience_match"],
+                "tone_match": final_checks["tone_match"],
+            },
+            "word_count_estimate": final_checks["word_count_estimate"],
+            "repair_applied": state["repair_applied"],
+            "editorial_augmentation_applied": augmentation["augmentation_applied"],
+            "editorial_components_added": augmentation["components_added"],
+            "editorial_augmentation_summary": augmentation["augmentation_summary"],
+            "editorial_diagnostic": augmentation["diagnostic"],
+            "coverage": state["coverage"],
+            "model_used": state["model_name"],
+            "stage_model_overrides": {
+                "stage_compose": state["writing_model"],
+                "stage_editorial_augmentation": state["writing_model"],
+            },
+        },
+    }
+    if state["include_debug"]:
+        response_payload["debug"] = {
+            "pipeline_input": {
+                "article_type_id": state["request"].article_type_id,
+                "model_name": state["model_name"],
+                "include_debug": state["include_debug"],
+                "enable_editorial_augmentation": state["enable_editorial_augmentation"],
+                "raw_sources_count": len(state["raw_sources"]),
+                "input_profiles": state["option_context"],
+            },
+            "writing_brief": state["writing_brief"],
+            "pipeline_trace": state["trace"],
+            "editorial_augmentation_raw_response": state[
+                "editorial_augmentation_raw_response"
+            ],
+            "editorial_components_added": augmentation["components_added"],
+            "editorial_diagnostic": augmentation["diagnostic"],
+        }
+
+    dependencies.recorder.record_stage(run_id, "pipeline_v2", response_payload)
+    dependencies.recorder.record_artifact(
+        run_id,
+        {
+            "markdown": final_markdown,
+            "pipeline_v2": response_payload,
+            "stages": {
+                "stage_guideline_fetch": guideline,
+                "stage_coverage_check": state["coverage"],
+                "stage_compose": rewrite,
+                "stage_quality_audit": quality,
+                "stage_editorial_augmentation": augmentation,
+                "stage_title": {"final_title": final_title},
+            },
+        },
+    )
+    dependencies.recorder.complete(run_id)
+    return {
+        "current_stage": stage,
+        "rewrite": rewrite,
+        "final_title": final_title,
+        "final_markdown": final_markdown,
+        "response_payload": response_payload,
+        "completed": True,
+    }

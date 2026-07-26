@@ -4,21 +4,36 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.core import read_output, read_stage_result, read_status, write_stage_result, write_status
+from app.core import (
+    read_output,
+    read_stage_result,
+    read_status,
+    write_stage_result,
+    write_status,
+)
 from app.shared.writer_models import resolve_writer_model
 
-from ..services.pipeline import (
-    DEFAULT_MODEL,
-    FEATURE_NAME,
-    Prompt2BlogInputRequest,
-    _clean_string_list,
-    _now_iso,
-    _read_langgraph_trace,
-    _run_full_pipeline,
-    _safe_str,
-)
+from ..config import DEFAULT_MODEL, FEATURE_NAME
+from ..models import Prompt2BlogInputRequest
+from ..observability import _now_iso, _read_langgraph_trace
+from ..orchestrator import run_full_pipeline
+from ..support import _clean_string_list, _safe_str
 
 router = APIRouter()
+
+
+def _run_full_pipeline_background(
+    run_id: str,
+    request: Prompt2BlogInputRequest,
+) -> None:
+    """Keep background-task failures contained after the graph records them."""
+    try:
+        run_full_pipeline(run_id, request)
+    except Exception:  # noqa: BLE001
+        # The orchestrator records the active failed stage and logs the exception.
+        # Re-raising from a Starlette background task only adds an unhandled-task
+        # error after the HTTP response has already been sent.
+        return
 
 
 def _validate_prompt2blog_input_request(request: Prompt2BlogInputRequest) -> None:
@@ -75,7 +90,9 @@ async def start_pipeline_v2(
             "created_at": _now_iso(),
             "data": {
                 "article_type_id": request.article_type_id,
-                "source_material_count": len(_clean_string_list(request.source_material)),
+                "source_material_count": len(
+                    _clean_string_list(request.source_material)
+                ),
                 "tone_id": _safe_str(request.tone_id),
                 "length_id": _safe_str(request.length_id),
                 "brand_voice_id": _safe_str(request.brand_voice_id),
@@ -85,7 +102,7 @@ async def start_pipeline_v2(
             },
         },
     )
-    background_tasks.add_task(_run_full_pipeline, run_id, request)
+    background_tasks.add_task(_run_full_pipeline_background, run_id, request)
     return JSONResponse({"message": "Prompt2Blog pipeline v2 queued", "run_id": run_id})
 
 
@@ -117,7 +134,9 @@ async def start_full_run(
             "data": {
                 "mode": "structured_v2",
                 "article_type_id": request.article_type_id,
-                "source_material_count": len(_clean_string_list(request.source_material)),
+                "source_material_count": len(
+                    _clean_string_list(request.source_material)
+                ),
                 "tone_id": _safe_str(request.tone_id),
                 "length_id": _safe_str(request.length_id),
                 "brand_voice_id": _safe_str(request.brand_voice_id),
@@ -127,7 +146,7 @@ async def start_full_run(
             },
         },
     )
-    background_tasks.add_task(_run_full_pipeline, run_id, request)
+    background_tasks.add_task(_run_full_pipeline_background, run_id, request)
     return JSONResponse({"message": "Prompt2Blog full run queued", "run_id": run_id})
 
 

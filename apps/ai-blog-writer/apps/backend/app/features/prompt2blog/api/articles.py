@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.core import cleanup_run, read_status
 
-from ..services.pipeline import FEATURE_NAME
+from ..config import FEATURE_NAME
 from ..storage import (
     get_all_completed_articles,
     get_article_sync_status,

@@ -1,10 +1,10 @@
-"""Prompt2Blog LangGraph runners."""
+"""Prompt2Blog LangGraph runner with first-class pipeline stages."""
 
 from __future__ import annotations
 
 import logging
-from datetime import datetime
-from typing import Any, Callable, TypedDict
+from collections.abc import Callable
+from typing import Any
 
 from app.ai_graph.runtime import (
     finalize_langsmith_trace,
@@ -12,34 +12,33 @@ from app.ai_graph.runtime import (
     langgraph_trace,
     langsmith_trace_payload,
 )
-from app.core import write_stage_result
+
+from ..run_recorder import RunRecorder
+from .state import Prompt2BlogGraphState
 
 logger = logging.getLogger(__name__)
 
-
-class Prompt2BlogGraphState(TypedDict, total=False):
-    run_id: str
-    pipeline_request: dict[str, Any]
-    completed: bool
+GraphNode = Callable[[Prompt2BlogGraphState], dict[str, Any]]
 
 
-def _invoke_sync_graph(
+def run_prompt2blog_stage_graph(
     *,
     run_id: str,
     trace_name: str,
     initial_state: Prompt2BlogGraphState,
-    node_builders: list[tuple[str, Callable[[Prompt2BlogGraphState], Prompt2BlogGraphState]]],
-) -> None:
+    nodes: list[tuple[str, GraphNode]],
+    recorder: RunRecorder,
+) -> Prompt2BlogGraphState:
+    """Compile and invoke a graph whose nodes are the real pipeline stages."""
     from langgraph.graph import END, START, StateGraph
 
     builder = StateGraph(Prompt2BlogGraphState)
     previous_node_name: str | None = None
-    for node_name, node_fn in node_builders:
+    for node_name, node_fn in nodes:
         builder.add_node(node_name, node_fn)
-        if previous_node_name is None:
-            builder.add_edge(START, node_name)
-        else:
-            builder.add_edge(previous_node_name, node_name)
+        builder.add_edge(
+            START if previous_node_name is None else previous_node_name, node_name
+        )
         previous_node_name = node_name
     if previous_node_name is not None:
         builder.add_edge(previous_node_name, END)
@@ -57,7 +56,7 @@ def _invoke_sync_graph(
         ) as (trace_run, trace_metadata):
             with langgraph_checkpoint() as checkpointer:
                 graph = builder.compile(checkpointer=checkpointer)
-                graph.invoke(
+                result = graph.invoke(
                     {
                         "run_id": run_id,
                         **initial_state,
@@ -78,54 +77,5 @@ def _invoke_sync_graph(
         raise
 
     if trace_payload:
-        write_stage_result(
-            run_id,
-            "langgraph_trace",
-            {
-                "created_at": datetime.utcnow().isoformat(),
-                "data": trace_payload,
-            },
-        )
-
-
-def run_prompt2blog_pipeline_v2_graph(
-    *,
-    run_id: str,
-    pipeline_runner: Callable[[], None],
-) -> None:
-    def pipeline_node(_state: Prompt2BlogGraphState) -> Prompt2BlogGraphState:
-        pipeline_runner()
-        return {"completed": True}
-
-    _invoke_sync_graph(
-        run_id=run_id,
-        trace_name="prompt2blog.pipeline_v2",
-        initial_state={},
-        node_builders=[("pipeline_v2", pipeline_node)],
-    )
-
-
-def run_prompt2blog_full_graph(
-    *,
-    run_id: str,
-    prepare_runner: Callable[[], dict[str, Any]],
-    pipeline_runner: Callable[[dict[str, Any]], None],
-) -> None:
-    def prepare_node(_state: Prompt2BlogGraphState) -> Prompt2BlogGraphState:
-        pipeline_request = prepare_runner()
-        return {"pipeline_request": pipeline_request}
-
-    def pipeline_node(state: Prompt2BlogGraphState) -> Prompt2BlogGraphState:
-        pipeline_request = state.get("pipeline_request") or {}
-        pipeline_runner(pipeline_request)
-        return {"completed": True}
-
-    _invoke_sync_graph(
-        run_id=run_id,
-        trace_name="prompt2blog.full_run",
-        initial_state={},
-        node_builders=[
-            ("prepare_full_run", prepare_node),
-            ("execute_pipeline_v2", pipeline_node),
-        ],
-    )
+        recorder.record_stage(run_id, "langgraph_trace", trace_payload)
+    return Prompt2BlogGraphState(result)
