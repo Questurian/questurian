@@ -1,4 +1,9 @@
-import { generateAltText, uploadImageVariants, type UploadProgress, type UploadImageResponse } from '../api/imagesApi';
+import { generateAltText } from '../api/alt-text/alt-text.api';
+import {
+  uploadImageVariants,
+  type UploadImageResponse,
+  type UploadProgress,
+} from '../api/uploads/image-uploads.api';
 import type { VariantUploadFile } from '../types';
 
 type UploadPreparedVariantsParams = {

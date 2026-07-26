@@ -1,140 +1,38 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fluxEditApi } from './flux-edit.api'
-import { generateSocialImageApi } from './generate-social-image.api'
-import {
-  generateFluxEditedImage,
-  generateSocialImageFromFeatured,
-  uploadImageVariants
-} from './imagesApi'
-import { uploadVariantsApi } from './uploads/upload-variants.api'
+import { describe, expect, it } from 'vitest'
+import * as altTextApi from './alt-text/alt-text.api'
+import * as analysisPromptsApi from './analysis-prompts/image-analysis-prompts.api'
+import * as fluxEditingApi from './flux/flux-editing.api'
+import * as imagesApi from './imagesApi'
+import * as imageProcessingApi from './processing/image-processing.api'
+import * as socialImagesApi from './social/social-images.api'
+import * as imageUploadsApi from './uploads/image-uploads.api'
 
-vi.mock('./flux-edit.api', () => ({
-  fluxEditApi: vi.fn()
-}))
-
-vi.mock('./generate-social-image.api', () => ({
-  generateSocialImageApi: vi.fn()
-}))
-
-vi.mock('./uploads/upload-variants.api', () => ({
-  uploadVariantsApi: vi.fn()
-}))
-
-describe('imagesApi compatibility facade', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('maps the positional variant upload contract to the focused upload API', async () => {
-    const variantFiles = [
-      {
-        type: 'wide' as const,
-        file: new File(['wide'], 'wide.webp', { type: 'image/webp' })
-      }
-    ]
-    const onProgress = vi.fn()
-    const response = {
-      success: true,
-      mediaSetId: '42',
-      externalRef: 'featured-upload',
-      variants: {}
-    }
-    vi.mocked(uploadVariantsApi).mockResolvedValue(response)
-
-    await expect(
-      uploadImageVariants(
-        variantFiles,
-        'featured-upload',
-        'A waterfront skyline',
-        undefined,
-        'token',
-        'Photographer',
-        onProgress,
-        [3, 5]
-      )
-    ).resolves.toBe(response)
-
-    expect(uploadVariantsApi).toHaveBeenCalledWith({
-      variantFiles,
-      externalRef: 'featured-upload',
-      altText: 'A waterfront skyline',
-      locationRef: undefined,
-      token: 'token',
-      photographerCredit: 'Photographer',
-      onProgress,
-      tags: [3, 5]
-    })
-  })
-
-  it('preserves the featured MediaSet discriminator for social generation', async () => {
-    const response = {
-      success: true,
-      featuredAssetId: null,
-      mediaSetId: '17',
-      sourceAssetId: '21',
-      generatedAssetId: '22',
-      generatedImageUrl: 'https://images.example/social.webp',
-      width: 1200,
-      height: 630
-    }
-    vi.mocked(generateSocialImageApi).mockResolvedValue(response)
-
-    await expect(
-      generateSocialImageFromFeatured({ featuredMediaSetId: 17 }, 'token')
-    ).resolves.toBe(response)
-
-    expect(generateSocialImageApi).toHaveBeenCalledWith({
-      featuredMediaSetId: 17,
-      token: 'token'
-    })
-  })
-
-  it('forwards optional FLUX settings without changing the public signature', async () => {
-    const referenceImage = new File(['reference'], 'reference.png', {
-      type: 'image/png'
-    })
-    const additionalReferenceImage = new File(
-      ['additional'],
-      'additional.png',
-      {
-        type: 'image/png'
-      }
+describe('imagesApi compatibility barrel', () => {
+  it('re-exports every concern-specific runtime API', () => {
+    expect(imagesApi.generateAltText).toBe(altTextApi.generateAltText)
+    expect(imagesApi.describeImageScene).toBe(
+      analysisPromptsApi.describeImageScene
     )
-    const response = {
-      blob: new Blob(['generated'], { type: 'image/png' }),
-      fileName: 'generated.png',
-      contentType: 'image/png',
-      requestId: 'request-1',
-      model: 'flux-2-pro',
-      cost: 0.1,
-      inputMegapixels: 1,
-      outputMegapixels: 1
-    }
-    vi.mocked(fluxEditApi).mockResolvedValue(response)
-
-    await expect(
-      generateFluxEditedImage('Recreate this scene', referenceImage, 'token', {
-        additionalReferenceImages: [additionalReferenceImage],
-        modelId: 'flux-2-pro',
-        width: 1200,
-        height: 630,
-        safetyTolerance: 2,
-        promptUpsampling: true,
-        seed: '1234'
-      })
-    ).resolves.toBe(response)
-
-    expect(fluxEditApi).toHaveBeenCalledWith({
-      prompt: 'Recreate this scene',
-      referenceImage,
-      token: 'token',
-      additionalReferenceImages: [additionalReferenceImage],
-      modelId: 'flux-2-pro',
-      width: 1200,
-      height: 630,
-      safetyTolerance: 2,
-      promptUpsampling: true,
-      seed: '1234'
-    })
+    expect(imagesApi.buildImageEditPrompt).toBe(
+      analysisPromptsApi.buildImageEditPrompt
+    )
+    expect(imagesApi.describeImageSubject).toBe(
+      analysisPromptsApi.describeImageSubject
+    )
+    expect(imagesApi.buildImageInsertPrompt).toBe(
+      analysisPromptsApi.buildImageInsertPrompt
+    )
+    expect(imagesApi.generateFluxEditedImage).toBe(
+      fluxEditingApi.generateFluxEditedImage
+    )
+    expect(imagesApi.processImageOnly).toBe(imageProcessingApi.processImageOnly)
+    expect(imagesApi.generateSocialImageFromFeatured).toBe(
+      socialImagesApi.generateSocialImageFromFeatured
+    )
+    expect(imagesApi.uploadSocialImage).toBe(socialImagesApi.uploadSocialImage)
+    expect(imagesApi.uploadImage).toBe(imageUploadsApi.uploadImage)
+    expect(imagesApi.uploadImageVariants).toBe(
+      imageUploadsApi.uploadImageVariants
+    )
   })
 })

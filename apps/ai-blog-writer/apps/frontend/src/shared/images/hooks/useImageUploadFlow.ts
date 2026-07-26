@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent, RefObject } from 'react'
-import type { UploadProgress } from '../api/imagesApi'
+import type { UploadProgress } from '../api/contracts/image-api.contracts'
 import { readFileAsDataUrl, requestGeneratedAltText, uploadPreparedVariants } from '../services/image-upload-flow.service'
 import type { ImageUploadProps, UploadStage, VariantUploadFile } from '../types'
 import { validateImageFile } from '../validators/image-upload.validators'

@@ -1,10 +1,9 @@
 import { useCallback, useState } from 'react'
 import {
   uploadImageVariants,
-  type ImageVariantType,
   type UploadImageResponse,
   type UploadProgress,
-} from '..'
+} from '../api/uploads/image-uploads.api'
 import { fetchExternalImageSource } from '../external/external-images.api'
 import type {
   ExternalImageProvider,
@@ -19,6 +18,7 @@ import {
   getPexelsPhotoImportUrl,
   getUnsplashPhotoImportUrl,
 } from '../external/external-import.utils'
+import type { ImageVariantType } from '../utils/imageProcessing'
 
 export type ExternalImagePhoto = UnsplashPhoto | PexelsPhoto
 

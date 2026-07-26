@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   buildImageEditPrompt,
   describeImageScene,
-} from '../../../shared/images/api/imagesApi'
+} from '../../../shared/images/api/analysis-prompts/image-analysis-prompts.api'
 
 type CopyTarget = 'description' | 'edit-prompt' | null
 

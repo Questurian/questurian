@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import {
   generateSocialImageFromFeatured,
   uploadSocialImage,
-} from '../../../../../shared/images'
+} from '../../../../../shared/images/api/social/social-images.api'
 import type { SeoSection } from '../../../../../shared/seo/types'
 import {
   applySeoAiPatch,

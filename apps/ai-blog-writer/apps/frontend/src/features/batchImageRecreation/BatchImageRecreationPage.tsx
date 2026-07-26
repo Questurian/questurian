@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { generateFluxEditedImage } from '../../shared/images'
+import { generateFluxEditedImage } from '../../shared/images/api/flux/flux-editing.api'
 import { useAuth } from '../auth'
 import { FLUX_MODEL_OPTIONS } from './fluxModelOptions'
 

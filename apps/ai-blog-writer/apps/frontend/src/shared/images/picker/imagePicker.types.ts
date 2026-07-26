@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { MediaAsset, MediaSet } from '../../api/payload/payload.types'
-import type { UploadImageResponse } from '../api/imagesApi'
+import type { UploadImageResponse } from '../api/contracts/image-api.contracts'
 
 /** What the Payload grid browses. */
 export type ImagePickerBrowseUnit = 'assets' | 'mediaSets'

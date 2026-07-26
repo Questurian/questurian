@@ -1,4 +1,4 @@
-import type { UploadProgress } from '../../api/imagesApi'
+import type { UploadProgress } from '../../api/contracts/image-api.contracts'
 
 type UploadProgressBarProps = {
   progress: UploadProgress
