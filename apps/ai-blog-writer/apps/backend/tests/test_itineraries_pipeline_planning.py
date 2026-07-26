@@ -11,18 +11,19 @@ import pytest
 # so these pure-logic tests don't pull in Vertex/LangChain.
 utils_stub = types.ModuleType("utils")
 utils_stub.get_vertex_llm = lambda *args, **kwargs: None
+utils_stub.invoke_vertex_multimodal_text = lambda *args, **kwargs: ""
 utils_stub.parse_json_response = lambda *args, **kwargs: {}
+utils_stub.vertex_part_from_data = lambda *args, **kwargs: None
 sys.modules.setdefault("utils", utils_stub)
 
-from app.features.itineraries_pipeline.ordering import (
+from app.features.itineraries_pipeline.ordering import (  # noqa: E402
     haversine_km,
     order_day,
-)  # noqa: E402
-from app.features.itineraries_pipeline.graph import (
-    _categories_for_shells,
-    _pool_for_slot,
-    _resolve_day_shells,
-)  # noqa: E402
+)
+from app.features.itineraries_pipeline.retrieval_stage import (  # noqa: E402
+    categories_for_shells,
+    resolve_day_shells,
+)
 from app.features.itineraries_pipeline.schemas import (  # noqa: E402
     Candidate,
     DayShellSelection,
@@ -34,6 +35,9 @@ from app.features.itineraries_pipeline.selection import (  # noqa: E402
     distribute_across_days,
     pick_lodging_anchor,
     select_stops,
+)
+from app.features.itineraries_pipeline.selection_stage import (  # noqa: E402
+    candidate_pool_for_slot,
 )
 
 
@@ -204,11 +208,17 @@ def _slot(slot_id: str, daypart: str, collections: list[str], tags: list[str]) -
     }
 
 
-def _selection(day_index: int, shell_id: str, slots: list[dict], **kwargs) -> DayShellSelection:
-    return DayShellSelection(day_index=day_index, shell_id=shell_id, slots=slots, **kwargs)
+def _selection(
+    day_index: int, shell_id: str, slots: list[dict], **kwargs
+) -> DayShellSelection:
+    return DayShellSelection(
+        day_index=day_index, shell_id=shell_id, slots=slots, **kwargs
+    )
 
 
-def _request(day_count: int, day_shells: list[DayShellSelection]) -> GenerateItineraryRequest:
+def _request(
+    day_count: int, day_shells: list[DayShellSelection]
+) -> GenerateItineraryRequest:
     return GenerateItineraryRequest(
         location="peru|lima",
         title="Lima days",
@@ -240,9 +250,15 @@ def test_resolve_day_shells_uses_one_shell_per_day_verbatim():
             ),
         ],
     )
-    shells = _resolve_day_shells(req)
-    assert [shell.id for shell in shells] == ["nightlife_full_day", "custom_day_shell_1"]
-    assert [slot.id for slot in shells[0].slots] == ["late_start_lunch", "entertainment"]
+    shells = resolve_day_shells(req)
+    assert [shell.id for shell in shells] == [
+        "nightlife_full_day",
+        "custom_day_shell_1",
+    ]
+    assert [slot.id for slot in shells[0].slots] == [
+        "late_start_lunch",
+        "entertainment",
+    ]
     assert shells[1].name == "Coffee culture night"
     assert shells[1].description == "Operator-built layout"
     assert [slot.id for slot in shells[1].slots] == ["morning_coffee"]
@@ -251,9 +267,15 @@ def test_resolve_day_shells_uses_one_shell_per_day_verbatim():
 def test_resolve_day_shells_falls_back_to_id_for_missing_name():
     req = _request(
         1,
-        [_selection(0, "custom_day_shell_2", [_slot("dinner", "dinner", ["dining"], ["dinner"])])],
+        [
+            _selection(
+                0,
+                "custom_day_shell_2",
+                [_slot("dinner", "dinner", ["dining"], ["dinner"])],
+            )
+        ],
     )
-    shells = _resolve_day_shells(req)
+    shells = resolve_day_shells(req)
     assert shells[0].name == "custom_day_shell_2"
     assert shells[0].description == ""
 
@@ -294,8 +316,8 @@ def test_categories_derive_from_shell_slots_not_intent():
             )
         ],
     )
-    shells = _resolve_day_shells(req)
-    assert _categories_for_shells(shells) == ["dining", "attractions", "nightlife"]
+    shells = resolve_day_shells(req)
+    assert categories_for_shells(shells) == ["dining", "attractions", "nightlife"]
 
 
 # --- Lodging gate + Autobuild Report steps -------------------------------------
@@ -305,7 +327,7 @@ def test_categories_derive_from_shell_slots_not_intent():
 
 
 def _select_state(req: GenerateItineraryRequest, accommodations: list[Candidate]):
-    shells = _resolve_day_shells(req)
+    shells = resolve_day_shells(req)
     return {
         "request": req,
         "intent": IntentSpec(),
@@ -317,32 +339,42 @@ def _select_state(req: GenerateItineraryRequest, accommodations: list[Candidate]
 def _run_select(state, monkeypatch, scored_by_pool):
     import asyncio
 
-    from app.features.itineraries_pipeline import graph as graph_module
+    from app.features.itineraries_pipeline import lodging_selection
+    from app.features.itineraries_pipeline import selection_stage
+    from app.features.itineraries_pipeline.candidate_scoring import CandidateScores
 
-    def fake_score(*, intent, slot, candidates, brief, model_name, trace=None):
-        if trace is not None:
-            trace["prompt"] = "p"
-            trace["output"] = "o"
-        return scored_by_pool(slot, candidates)
+    def fake_score(*, intent, slot, candidates, brief):
+        return CandidateScores(
+            scored=scored_by_pool(slot, candidates),
+            prompt="p",
+            output="o",
+        )
 
-    monkeypatch.setattr(graph_module, "score_candidates", fake_score)
-    return asyncio.run(graph_module._node_select(state))
+    monkeypatch.setattr(selection_stage, "score_for_slot", fake_score)
+    monkeypatch.setattr(lodging_selection, "score_for_slot", fake_score)
+    return asyncio.run(selection_stage.score_and_select_slots(state))
 
 
 def test_include_lodging_defaults_on():
-    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    req = _request(
+        1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])]
+    )
     assert req.include_lodging is True
 
 
 def test_select_skips_lodging_with_visible_step_when_excluded(monkeypatch):
-    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    req = _request(
+        1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])]
+    )
     req = req.model_copy(update={"include_lodging": False})
     state = _select_state(req, accommodations=[_cand(9, cat="accommodations")])
 
     out = _run_select(
         state,
         monkeypatch,
-        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=90) for c in candidates],
+        lambda slot, candidates: [
+            ScoredCandidate(candidate=c, fit_score=90) for c in candidates
+        ],
     )
 
     assert out["anchor"] is None
@@ -352,13 +384,17 @@ def test_select_skips_lodging_with_visible_step_when_excluded(monkeypatch):
 
 
 def test_select_delivers_low_fit_lodging_flagged_as_warning(monkeypatch):
-    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    req = _request(
+        1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])]
+    )
     state = _select_state(req, accommodations=[_cand(9, cat="accommodations")])
 
     out = _run_select(
         state,
         monkeypatch,
-        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=10) for c in candidates],
+        lambda slot, candidates: [
+            ScoredCandidate(candidate=c, fit_score=10) for c in candidates
+        ],
     )
 
     # Operator opted in, so the best available ships even below the threshold —
@@ -371,13 +407,17 @@ def test_select_delivers_low_fit_lodging_flagged_as_warning(monkeypatch):
 
 
 def test_select_reports_failed_lodging_step_on_empty_pool(monkeypatch):
-    req = _request(1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])])
+    req = _request(
+        1, [_selection(0, "shell", [_slot("dinner", "dinner", ["dining"], [])])]
+    )
     state = _select_state(req, accommodations=[])
 
     out = _run_select(
         state,
         monkeypatch,
-        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=90) for c in candidates],
+        lambda slot, candidates: [
+            ScoredCandidate(candidate=c, fit_score=90) for c in candidates
+        ],
     )
 
     lodging_step = next(s for s in out["steps"] if s.name == "lodging")
@@ -406,7 +446,9 @@ def test_select_emits_one_step_per_shell_slot(monkeypatch):
     out = _run_select(
         state,
         monkeypatch,
-        lambda slot, candidates: [ScoredCandidate(candidate=c, fit_score=90) for c in candidates],
+        lambda slot, candidates: [
+            ScoredCandidate(candidate=c, fit_score=90) for c in candidates
+        ],
     )
 
     slot_steps = [s for s in out["steps"] if s.name == "slot"]
@@ -426,12 +468,19 @@ def test_pool_for_slot_excludes_already_filled_places():
             _selection(
                 0,
                 "food_focused_full_day",
-                [_slot("dessert_drinks", "evening", ["dining", "nightlife"], ["dessert"])],
+                [
+                    _slot(
+                        "dessert_drinks",
+                        "evening",
+                        ["dining", "nightlife"],
+                        ["dessert"],
+                    )
+                ],
             )
         ],
     )
-    dessert_slot = _resolve_day_shells(req)[0].slots[-1]
-    pool = _pool_for_slot(
+    dessert_slot = resolve_day_shells(req)[0].slots[-1]
+    pool = candidate_pool_for_slot(
         dessert_slot,
         {
             "dining": [_cand(1, "dining"), _cand(2, "dining")],

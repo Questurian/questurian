@@ -1,9 +1,8 @@
-"""Legacy deterministic selection utilities retained for pure planning tests.
+"""Deterministic selection utilities.
 
-Active Itinerary Autobuild now fills operator-selected Day Shell slots in
-`graph.py` (ADR 0016). `pick_lodging_anchor` remains in use; `select_stops` and
-`distribute_across_days` describe the pre-shell strategy and are kept until old
-tests/callers are retired.
+The active slot-scoring workflow lives in ``selection_stage.py``. The
+round-robin and day-distribution helpers describe the pre-shell strategy and
+remain available for their existing callers.
 """
 
 from __future__ import annotations
@@ -11,7 +10,9 @@ from __future__ import annotations
 from .schemas import Category, IntentSpec, ScoredCandidate
 
 
-def pick_lodging_anchor(accommodations: list[ScoredCandidate]) -> ScoredCandidate | None:
+def pick_lodging_anchor(
+    accommodations: list[ScoredCandidate],
+) -> ScoredCandidate | None:
     """Highest-fit accommodation is the trip's anchor; None when there are
     none (graceful fallback — the day then orders from its centroid)."""
     if not accommodations:
@@ -30,12 +31,16 @@ def select_stops(
     preserved; when a category runs dry the remaining slots fall through to
     whatever else has the highest fit. Deduplicated by record id.
     """
-    categories: list[Category] = [c for c in getattr(intent, "categories", []) if c != "accommodations"]
+    categories: list[Category] = [
+        c for c in getattr(intent, "categories", []) if c != "accommodations"
+    ]
     if not categories:
         categories = [c for c in scored_by_category if c != "accommodations"]
 
     queues: dict[Category, list[ScoredCandidate]] = {
-        c: sorted(scored_by_category.get(c, []), key=lambda s: s.fit_score, reverse=True)
+        c: sorted(
+            scored_by_category.get(c, []), key=lambda s: s.fit_score, reverse=True
+        )
         for c in categories
     }
 
@@ -101,6 +106,6 @@ def distribute_across_days(
     cursor = 0
     for day_index in range(day_count):
         size = base + (1 if day_index < remainder else 0)
-        days.append(ordered[cursor:cursor + size])
+        days.append(ordered[cursor : cursor + size])
         cursor += size
     return days
