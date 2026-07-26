@@ -1,154 +1,53 @@
-"""
-Shared LLM client utilities for Vertex AI / Google Gemini and Anthropic Claude.
-
-Provides a factory function to create configured LLM instances
-that can be used across different pipelines. Model names starting with
-"claude" are routed to the Anthropic Messages API; everything else goes
-to Vertex AI.
-"""
+"""Public provider-agnostic LLM facade."""
 
 import logging
-import os
 from typing import Any, Optional
 
-from langchain_google_vertexai import ChatVertexAI, VertexAI
+from langchain_google_vertexai import ChatVertexAI, VertexAI  # noqa: F401
+
+from .anthropic_transport import (
+    _empty_message_error,
+    _get_anthropic_client as _create_anthropic_client,
+    _message_text,
+)
+from .gemini_tools import (  # noqa: F401
+    Gemini3ChatTextLLM as Gemini3ChatTextLLM,
+    _gemini_chat_text as _gemini_chat_text,
+    _gemini_tool_schema as _sanitize_gemini_tool_schema,
+    _invoke_gemini_structured_tool as _invoke_gemini_tool,
+    _strip_for_gemini as _strip_for_gemini,
+)
+from .llm_model_policy import (  # noqa: F401
+    ANTHROPIC_MODELS_ENABLED_DEFAULT as ANTHROPIC_MODELS_ENABLED_DEFAULT,
+    ANTHROPIC_MODELS_ENABLED_ENV as ANTHROPIC_MODELS_ENABLED_ENV,
+    CLAUDE_GOOGLE_SUBSTITUTES as CLAUDE_GOOGLE_SUBSTITUTES,
+    DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE as DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE,
+    DEFAULT_LOCATION as DEFAULT_LOCATION,
+    DEFAULT_MODEL as DEFAULT_MODEL,
+    GEMINI3_LOCATION as GEMINI3_LOCATION,
+    MIN_GENERATION_MAX_TOKENS as MIN_GENERATION_MAX_TOKENS,
+    _is_gemini3_model,
+    _resolve_generation_max_tokens,
+    _resolve_vertex_location,
+    _resolve_vertex_project,
+    anthropic_models_enabled as anthropic_models_enabled,
+    is_claude_model as is_claude_model,
+    resolve_effective_model as resolve_effective_model,
+)
+from .vertex_multimodal import (  # noqa: F401
+    _ensure_vertexai_initialized as _ensure_vertexai_initialized,
+    get_vertex_generative_model as get_vertex_generative_model,
+    invoke_vertex_multimodal_text as invoke_vertex_multimodal_text,
+    vertex_part_from_data as vertex_part_from_data,
+)
+
 
 logger = logging.getLogger(__name__)
 
-# Default model configuration
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
-DEFAULT_LOCATION = "us-central1"
-
-# Gemini 3.x models are served only from the global endpoint; regional
-# locations (including us-central1) return 404 for them.
-GEMINI3_LOCATION = "global"
-
-# --- Anthropic availability switch -------------------------------------------
-# Anthropic billing is exhausted, so claude-* selections are transparently
-# served by their Google counterparts instead of failing with a 400 "credit
-# balance is too low". None of the Claude transport was removed: set
-# ANTHROPIC_MODELS_ENABLED=1 (and restore ANTHROPIC_API_KEY) to route back.
-ANTHROPIC_MODELS_ENABLED_ENV = "ANTHROPIC_MODELS_ENABLED"
-ANTHROPIC_MODELS_ENABLED_DEFAULT = False
-
-# Substitutes are matched by role: the Opus-class writers map to Gemini's
-# deep-reasoning writer, Sonnet to the faster tier. Every value is already in
-# the writer allowlist (app/shared/writer_models.py).
-CLAUDE_GOOGLE_SUBSTITUTES = {
-    "claude-opus-4-8": "gemini-3.1-pro-preview",
-    "claude-opus-4-7": "gemini-3.1-pro-preview",
-    "claude-sonnet-5": "gemini-2.5-pro",
-}
-DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE = "gemini-3.1-pro-preview"
-
-_TRUTHY = {"1", "true", "yes", "on"}
-
-
-def anthropic_models_enabled() -> bool:
-    """Whether claude-* names may reach the Anthropic API."""
-    raw = os.getenv(ANTHROPIC_MODELS_ENABLED_ENV)
-    if raw is None or not raw.strip():
-        return ANTHROPIC_MODELS_ENABLED_DEFAULT
-    return raw.strip().lower() in _TRUTHY
-
-
-def is_claude_model(model_name: Optional[str]) -> bool:
-    return str(model_name or "").lower().startswith("claude")
-
-
-def resolve_effective_model(model_name: Optional[str]) -> Optional[str]:
-    """Map a requested model to the one that will actually serve the call.
-
-    Non-Claude names and (once re-funded) Claude names pass through unchanged.
-    """
-    if not is_claude_model(model_name) or anthropic_models_enabled():
-        return model_name
-
-    substitute = CLAUDE_GOOGLE_SUBSTITUTES.get(
-        str(model_name).strip().lower(), DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE
-    )
-    logger.info(
-        "Anthropic models are disabled (%s); serving '%s' with '%s'.",
-        ANTHROPIC_MODELS_ENABLED_ENV,
-        model_name,
-        substitute,
-    )
-    return substitute
-
-
-def _is_gemini3_model(model_name: str) -> bool:
-    return model_name.lower().startswith("gemini-3")
-
-
-# Free-text generation calls share one large response ceiling. Call sites may
-# describe a smaller expected response, but they must never accidentally starve
-# a writer or let model reasoning consume the space reserved for reader-facing
-# output. Structured tool calls keep their requested, schema-sized ceiling.
-# Providers bill actual generated tokens, not this ceiling.
-MIN_GENERATION_MAX_TOKENS = 64_000
-
-_vertexai_init_state: tuple[str, str] | None = None
-
-
-def _resolve_vertex_project(project: Optional[str] = None) -> str:
-    resolved_project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
-    if not resolved_project:
-        raise RuntimeError(
-            "Vertex AI not configured — GOOGLE_CLOUD_PROJECT is not set. "
-            "Set GOOGLE_CLOUD_PROJECT (and optionally GOOGLE_CLOUD_LOCATION) "
-            "once the new GCP project is ready."
-        )
-    return resolved_project
-
-
-def _resolve_vertex_location(location: Optional[str] = None) -> str:
-    return location or os.getenv("GOOGLE_CLOUD_LOCATION", DEFAULT_LOCATION)
-
 
 def _get_anthropic_client(*, model_name: str) -> Any:
-    api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError(
-            "ANTHROPIC_API_KEY is not set; cannot invoke Anthropic model "
-            f"'{model_name}'."
-        )
-
-    try:
-        import anthropic  # type: ignore
-    except ImportError as exc:
-        raise RuntimeError(
-            "anthropic SDK is not installed. Run `pip install -r requirements.txt`."
-        ) from exc
-
-    return anthropic.Anthropic(api_key=api_key)
-
-
-def _message_text(message: Any) -> str:
-    text_parts = [
-        block.text
-        for block in getattr(message, "content", []) or []
-        if getattr(block, "type", None) == "text"
-        and isinstance(getattr(block, "text", None), str)
-    ]
-    return "\n".join(text_parts).strip()
-
-
-def _resolve_generation_max_tokens(requested: int) -> int:
-    return max(requested, MIN_GENERATION_MAX_TOKENS)
-
-
-def _empty_message_error(message: Any) -> RuntimeError:
-    usage = getattr(message, "usage", None)
-    output_tokens = getattr(usage, "output_tokens", None)
-    block_types = [
-        str(getattr(block, "type", type(block).__name__))
-        for block in getattr(message, "content", []) or []
-    ]
-    return RuntimeError(
-        "Anthropic returned no text "
-        f"(stop_reason={getattr(message, 'stop_reason', None)!r}, "
-        f"output_tokens={output_tokens!r}, content_types={block_types!r})"
-    )
+    """Compatibility seam for tests and callers overriding Anthropic transport."""
+    return _create_anthropic_client(model_name=model_name)
 
 
 class ClaudeTextLLM:
@@ -170,69 +69,12 @@ class ClaudeTextLLM:
         with client.messages.stream(
             model=self.model_name,
             max_tokens=self.max_tokens,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{'role': 'user', 'content': prompt}],
         ) as stream:
             message = stream.get_final_message()
-
         text = _message_text(message)
         if not text:
             raise _empty_message_error(message)
-        return text
-
-
-def _gemini_chat_text(content: Any) -> str:
-    """Extract plain text from a ChatVertexAI response.
-
-    Gemini 3.x returns content as a list of parts (text parts carry a
-    `thought_signature` alongside the text); older models return a str.
-    """
-    if isinstance(content, str):
-        return content.strip()
-    text_parts = [
-        part.get("text")
-        for part in (content or [])
-        if isinstance(part, dict)
-        and part.get("type") == "text"
-        and isinstance(part.get("text"), str)
-    ]
-    return "\n".join(text_parts).strip()
-
-
-class Gemini3ChatTextLLM:
-    """ChatVertexAI wrapper exposing the same `.invoke(prompt) -> str` surface
-    as the LangChain VertexAI completion wrapper.
-
-    Gemini 3.x is unreachable through the legacy completion class: the model
-    only exists on the global endpoint and its parts-shaped responses fail the
-    completion parser. Temperature is accepted but not forwarded — Google
-    recommends leaving Gemini 3 at its default temperature.
-    """
-
-    def __init__(
-        self,
-        *,
-        model_name: str,
-        max_tokens: int,
-        project: str,
-    ) -> None:
-        self.model_name = model_name
-        self.max_tokens = max_tokens
-        self.project = project
-
-    def invoke(self, prompt: str) -> str:
-        llm = ChatVertexAI(
-            model_name=self.model_name,
-            max_tokens=self.max_tokens,
-            project=self.project,
-            location=GEMINI3_LOCATION,
-        )
-        message = llm.invoke(prompt)
-        text = _gemini_chat_text(getattr(message, "content", None))
-        if not text:
-            raise RuntimeError(
-                f"Gemini model '{self.model_name}' returned no text "
-                f"(response_metadata={getattr(message, 'response_metadata', None)!r})"
-            )
         return text
 
 
@@ -246,119 +88,43 @@ def invoke_anthropic_structured_tool(
     max_tokens: int = 4096,
 ) -> tuple[dict[str, Any], str]:
     """Force an Anthropic model to return a schema-shaped tool payload."""
-    if not model_name.lower().startswith("claude"):
+    if not model_name.lower().startswith('claude'):
         raise RuntimeError(
             f"Structured writer calls require an Anthropic model, got '{model_name}'."
         )
-
     client = _get_anthropic_client(model_name=model_name)
     message = client.messages.create(
         model=model_name,
         max_tokens=max_tokens,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{'role': 'user', 'content': prompt}],
         tools=[
             {
-                "name": tool_name,
-                "description": tool_description,
-                "input_schema": input_schema,
+                'name': tool_name,
+                'description': tool_description,
+                'input_schema': input_schema,
             }
         ],
-        tool_choice={"type": "tool", "name": tool_name},
+        tool_choice={'type': 'tool', 'name': tool_name},
     )
-
-    for block in getattr(message, "content", []) or []:
+    for block in getattr(message, 'content', []) or []:
         if (
-            getattr(block, "type", None) == "tool_use"
-            and getattr(block, "name", None) == tool_name
+            getattr(block, 'type', None) == 'tool_use'
+            and getattr(block, 'name', None) == tool_name
         ):
-            payload = getattr(block, "input", None)
+            payload = getattr(block, 'input', None)
             if isinstance(payload, dict):
-                resolved_model = getattr(message, "model", None) or model_name
-                return payload, resolved_model
-
-    raise RuntimeError("Anthropic structured writer returned no tool output")
-
-
-# Gemini's function-declaration schema is a subset of JSON Schema; keys such as
-# `additionalProperties` and `$schema` are rejected outright.
-_GEMINI_SCHEMA_KEYS = {
-    "type",
-    "description",
-    "enum",
-    "format",
-    "nullable",
-    "properties",
-    "required",
-    "items",
-}
-
-# Keywords Gemini cannot accept whose removal does not change which payloads
-# satisfy the schema (or only relaxes an anti-hallucination hint). These are
-# dropped silently. Everything else outside _GEMINI_SCHEMA_KEYS constrains the
-# accepted value space -- `anyOf`, `$ref`, `minimum`, `maxLength`, `const`,
-# `pattern` and friends -- so dropping one silently would degrade a schema with
-# no signal at all. Those are dropped too (Gemini would reject the call
-# otherwise) but reported loudly, so the author can decide whether to enforce
-# the constraint after the call instead.
-_GEMINI_BENIGN_DROPPED_KEYS = {
-    "$id",
-    "$schema",
-    "additionalProperties",
-    "examples",
-    "title",
-}
-
-
-def _strip_for_gemini(schema: Any, path: str, dropped: list[str]) -> Any:
-    """Drop rejected keywords, recording significant losses into ``dropped``."""
-    if isinstance(schema, list):
-        return [
-            _strip_for_gemini(item, f"{path}[{index}]", dropped)
-            for index, item in enumerate(schema)
-        ]
-    if not isinstance(schema, dict):
-        return schema
-
-    cleaned: dict[str, Any] = {}
-    for key, value in schema.items():
-        if key not in _GEMINI_SCHEMA_KEYS:
-            if key not in _GEMINI_BENIGN_DROPPED_KEYS:
-                dropped.append(f"{path}.{key}" if path else key)
-            continue
-        if key == "properties" and isinstance(value, dict):
-            base = f"{path}.properties" if path else "properties"
-            cleaned[key] = {
-                prop: _strip_for_gemini(sub, f"{base}.{prop}", dropped)
-                for prop, sub in value.items()
-            }
-        elif key == "items":
-            cleaned[key] = _strip_for_gemini(
-                value, f"{path}.items" if path else "items", dropped
-            )
-        else:
-            cleaned[key] = value
-    return cleaned
+                resolved_model = getattr(message, 'model', None) or model_name
+                return (payload, resolved_model)
+    raise RuntimeError('Anthropic structured writer returned no tool output')
 
 
 def _gemini_tool_schema(schema: Any, *, tool_name: str = "") -> Any:
-    """Recursively drop schema keywords Gemini's tool declarations reject.
-
-    Constraint-bearing keywords have to go as well, but they are logged rather
-    than discarded in silence -- an unvalidated payload is the caller's problem
-    to handle, and they cannot handle what they never hear about.
-    """
-    dropped: list[str] = []
-    cleaned = _strip_for_gemini(schema, "", dropped)
-    if dropped:
-        logger.warning(
-            "Gemini tool schema%s dropped %d constraint(s) it cannot express: "
-            "%s. The returned payload is NOT guaranteed to satisfy them -- "
-            "validate it after the call.",
-            f" for '{tool_name}'" if tool_name else "",
-            len(dropped),
-            ", ".join(sorted(dropped)),
-        )
-    return cleaned
+    """Sanitize a schema while logging lossy constraints on this facade."""
+    return _sanitize_gemini_tool_schema(
+        schema,
+        tool_name=tool_name,
+        logger_override=logger,
+    )
 
 
 def _invoke_gemini_structured_tool(
@@ -371,41 +137,14 @@ def _invoke_gemini_structured_tool(
     max_tokens: int,
     project: Optional[str] = None,
 ) -> tuple[dict[str, Any], str]:
-    """Gemini equivalent of the Anthropic forced-tool call."""
-    resolved_project = _resolve_vertex_project(project)
-    location = (
-        GEMINI3_LOCATION
-        if _is_gemini3_model(model_name)
-        else _resolve_vertex_location()
-    )
-
-    llm = ChatVertexAI(
+    return _invoke_gemini_tool(
+        prompt=prompt,
         model_name=model_name,
+        tool_name=tool_name,
+        tool_description=tool_description,
+        input_schema=input_schema,
         max_tokens=max_tokens,
-        project=resolved_project,
-        location=location,
-    )
-    bound = llm.bind_tools(
-        [
-            {
-                "name": tool_name,
-                "description": tool_description,
-                "parameters": _gemini_tool_schema(
-                    input_schema, tool_name=tool_name
-                ),
-            }
-        ],
-        tool_choice=tool_name,
-    )
-    message = bound.invoke(prompt)
-
-    for call in getattr(message, "tool_calls", []) or []:
-        if call.get("name") == tool_name and isinstance(call.get("args"), dict):
-            return call["args"], model_name
-
-    raise RuntimeError(
-        f"Gemini structured writer returned no '{tool_name}' tool call "
-        f"(response_metadata={getattr(message, 'response_metadata', None)!r})"
+        project=project,
     )
 
 
@@ -423,7 +162,6 @@ def invoke_structured_tool(
     ``model_name``. Callers get the same ``(payload, resolved_model)`` contract
     regardless of whether Anthropic is switched on."""
     effective_model = resolve_effective_model(model_name) or model_name
-
     if is_claude_model(effective_model):
         return invoke_anthropic_structured_tool(
             prompt=prompt,
@@ -433,7 +171,6 @@ def invoke_structured_tool(
             input_schema=input_schema,
             max_tokens=max_tokens,
         )
-
     return _invoke_gemini_structured_tool(
         prompt=prompt,
         model_name=effective_model,
@@ -451,7 +188,7 @@ def get_vertex_llm(
     model_name: Optional[str] = None,
     project: Optional[str] = None,
     location: Optional[str] = None,
-) -> "VertexAI | ClaudeTextLLM | Gemini3ChatTextLLM":
+) -> 'VertexAI | ClaudeTextLLM | Gemini3ChatTextLLM':
     """
     Create a configured LLM instance (Vertex AI, or Anthropic for claude-* models).
 
@@ -470,46 +207,27 @@ def get_vertex_llm(
         RuntimeError: If GOOGLE_CLOUD_PROJECT is not set and project not provided.
     """
     effective_max_tokens = _resolve_generation_max_tokens(max_tokens)
-
-    # Substitutes a Google model when Anthropic is switched off; otherwise a
-    # no-op. Runs before dispatch so claude-* never reaches the Anthropic branch.
     model_name = resolve_effective_model(model_name)
-
-    # Anthropic routing: claude-* models bypass Vertex entirely.
     if is_claude_model(model_name):
         logger.debug(
-            "Routing LLM call to Anthropic: "
-            f"model={model_name}, max_tokens={effective_max_tokens}"
+            f'Routing LLM call to Anthropic: model={model_name}, max_tokens={effective_max_tokens}'
         )
-        return ClaudeTextLLM(
-            model_name=model_name, max_tokens=effective_max_tokens
-        )
-
+        return ClaudeTextLLM(model_name=model_name, max_tokens=effective_max_tokens)
     resolved_project = _resolve_vertex_project(project)
-
-    # Gemini 3.x routing: global endpoint + chat API (see Gemini3ChatTextLLM).
-    if _is_gemini3_model(model_name or ""):
+    if _is_gemini3_model(model_name or ''):
         logger.debug(
-            "Routing LLM call to Gemini 3 chat path: "
-            f"model={model_name}, max_tokens={effective_max_tokens}"
+            f'Routing LLM call to Gemini 3 chat path: model={model_name}, max_tokens={effective_max_tokens}'
         )
         return Gemini3ChatTextLLM(
             model_name=model_name,
             max_tokens=effective_max_tokens,
             project=resolved_project,
         )
-
     resolved_location = _resolve_vertex_location(location)
-
-    # Resolve model
     resolved_model = model_name or DEFAULT_MODEL
-
     logger.debug(
-        f"Creating VertexAI LLM: model={resolved_model}, "
-        f"temperature={temperature}, max_tokens={effective_max_tokens}, "
-        f"project={resolved_project}, location={resolved_location}"
+        f'Creating VertexAI LLM: model={resolved_model}, temperature={temperature}, max_tokens={effective_max_tokens}, project={resolved_project}, location={resolved_location}'
     )
-
     return VertexAI(
         model_name=resolved_model,
         temperature=temperature,
@@ -517,54 +235,3 @@ def get_vertex_llm(
         project=resolved_project,
         location=resolved_location,
     )
-
-
-def _ensure_vertexai_initialized(*, project: str, location: str) -> None:
-    global _vertexai_init_state
-    state = (project, location)
-    if _vertexai_init_state == state:
-        return
-
-    import vertexai
-
-    vertexai.init(project=project, location=location)
-    _vertexai_init_state = state
-
-
-def get_vertex_generative_model(
-    *,
-    model_name: Optional[str] = None,
-    project: Optional[str] = None,
-    location: Optional[str] = None,
-) -> Any:
-    """Create a Vertex GenerativeModel for multimodal Gemini calls."""
-    resolved_project = _resolve_vertex_project(project)
-    resolved_location = _resolve_vertex_location(location)
-    _ensure_vertexai_initialized(project=resolved_project, location=resolved_location)
-
-    from vertexai.generative_models import GenerativeModel
-
-    return GenerativeModel(model_name or DEFAULT_MODEL)
-
-
-def vertex_part_from_data(*, data: bytes, mime_type: str) -> Any:
-    from vertexai.generative_models import Part
-
-    return Part.from_data(data=data, mime_type=mime_type)
-
-
-def invoke_vertex_multimodal_text(
-    parts: list[Any],
-    *,
-    model_name: Optional[str] = None,
-    project: Optional[str] = None,
-    location: Optional[str] = None,
-) -> str:
-    """Invoke Gemini multimodal content through the shared Vertex factory."""
-    model = get_vertex_generative_model(
-        model_name=model_name,
-        project=project,
-        location=location,
-    )
-    response = model.generate_content(parts)
-    return str(getattr(response, "text", "") or "").strip()
