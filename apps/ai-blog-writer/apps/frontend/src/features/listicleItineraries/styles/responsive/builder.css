@@ -1,0 +1,50 @@
+@media (max-width: 1100px) {
+  .stl-builder-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .stl-builder-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 900px) {
+  .stl-seo-input-wrap-featured .stl-seo-input-with-ai {
+    padding-right: 10.3rem;
+  }
+
+  .stl-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .stl-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .stl-hero {
+    flex-direction: column;
+  }
+
+  .stl-panel {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .stl-moment-library__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stl-picker-grid--items {
+    gap: 0.65rem;
+  }
+
+  .stl-picker-grid--items > .stl-picker-card,
+  .stl-picker-grid--items > .stl-picker-empty {
+    flex-basis: calc((100% - 0.65rem) / 2);
+  }
+
+  .stl-picker-grid--photos {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

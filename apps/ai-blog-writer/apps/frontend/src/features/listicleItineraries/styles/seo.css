@@ -1,0 +1,95 @@
+.stl-seo-panel .stl-panel-header {
+  margin-bottom: 0.7rem;
+}
+
+.stl-seo-stack {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.stl-seo-group {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid #dbe3f0;
+  border-radius: 12px;
+  padding: 0.95rem;
+  background: #f9fbff;
+}
+
+.stl-seo-group-og {
+  border-left: 4px solid #607cad;
+  background: linear-gradient(180deg, #f6f9ff 0%, #fdfefe 100%);
+}
+
+.stl-seo-group-twitter {
+  border-left: 4px solid #4d9bb8;
+  background: linear-gradient(180deg, #f3fbff 0%, #fcfeff 100%);
+}
+
+.stl-seo-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.stl-seo-group-copy {
+  display: grid;
+  gap: 0.26rem;
+  min-width: 0;
+}
+
+.stl-seo-group-header h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  color: #33435f;
+}
+
+.stl-seo-group-header p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--stl-muted);
+}
+
+.stl-seo-ai-btn {
+  min-height: auto;
+  padding: 0.26rem 0.56rem;
+  font-size: 0.74rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.stl-seo-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.stl-seo-input-with-ai {
+  width: 100%;
+  padding-right: 3.15rem;
+}
+
+.stl-seo-input-wrap-textarea .stl-seo-input-with-ai {
+  padding-right: 4rem;
+}
+
+.stl-seo-input-wrap-featured .stl-seo-input-with-ai {
+  padding-right: 11.8rem;
+}
+
+.stl-seo-ai-trigger-wrap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0.38rem;
+  display: inline-flex;
+  align-items: center;
+  z-index: 2;
+}
+
+.stl-seo-input-wrap-textarea .stl-seo-ai-trigger-wrap {
+  top: 0.38rem;
+  bottom: auto;
+  align-items: flex-start;
+}

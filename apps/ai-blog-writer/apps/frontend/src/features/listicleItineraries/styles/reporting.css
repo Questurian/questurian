@@ -1,0 +1,164 @@
+/* Autobuild Report modal (run-level inspect timeline) */
+.stl-inspect-modal {
+  width: min(900px, 95vw);
+  height: min(720px, 90vh);
+  display: flex;
+  flex-direction: column;
+}
+
+.stl-inspect-target {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.stl-inspect-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 16px;
+}
+
+.stl-inspect-empty {
+  color: #666;
+  font-style: italic;
+  padding: 24px 8px;
+  text-align: center;
+}
+
+.stl-inspect-run-summary {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #1b5e20;
+}
+
+.stl-inspect-run-summary--issues {
+  color: #9b1d2e;
+  font-weight: 600;
+}
+
+.stl-inspect-notes {
+  margin: 0 0 12px 0;
+  padding: 8px 12px 8px 28px;
+  border: 1px solid #f0d8a8;
+  border-radius: 6px;
+  background: #fdf6e3;
+  font-size: 13px;
+}
+
+.stl-inspect-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stl-inspect-step {
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.stl-inspect-step summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.stl-inspect-step summary::-webkit-details-marker {
+  display: none;
+}
+
+.stl-inspect-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #333;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.stl-inspect-step-name {
+  flex: 1 1 auto;
+  font-weight: 500;
+}
+
+.stl-inspect-step-duration {
+  font-size: 11px;
+  color: #777;
+}
+
+.stl-inspect-step-model {
+  font-size: 11px;
+  color: #555;
+  background: #ececec;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.stl-inspect-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stl-inspect-badge--ok {
+  background: #d8f3dc;
+  color: #1b5e20;
+}
+.stl-inspect-badge--failed {
+  background: #ffdde0;
+  color: #9b1d2e;
+}
+.stl-inspect-badge--warning {
+  background: #fdf0d5;
+  color: #8a5a00;
+}
+
+.stl-inspect-section {
+  padding: 0 12px 12px 12px;
+}
+
+.stl-inspect-section h4 {
+  margin: 12px 0 6px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #444;
+}
+
+.stl-inspect-pre {
+  background: #1e1e1e;
+  color: #f5f5f5;
+  padding: 10px 12px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.stl-inspect-pre--details {
+  background: #f5f5f5;
+  color: #222;
+}
+
+.stl-inspect-footer-note {
+  margin: 0;
+  font-size: 12px;
+  color: #777;
+}

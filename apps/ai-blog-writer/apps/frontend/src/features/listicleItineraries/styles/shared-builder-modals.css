@@ -1,0 +1,245 @@
+.stl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+
+.stl-modal {
+  width: min(920px, 100%);
+  max-height: 92vh;
+  overflow: auto;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid var(--stl-border);
+  padding: 1.2rem;
+  box-shadow: 0 24px 40px rgba(17, 24, 39, 0.18);
+}
+
+.stl-modal h3 {
+  margin-top: 0;
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
+
+.stl-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.stl-page .block-markdown-editor-shell {
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.stl-page .block-markdown-editor-shell:focus-within {
+  border-color: var(--stl-accent);
+  box-shadow: 0 0 0 3px rgba(47, 79, 143, 0.14);
+}
+
+.stl-page .block-markdown-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.42rem 0.62rem;
+  border-bottom: 1px solid var(--stl-border);
+  background: #f5f8ff;
+}
+
+.stl-page .block-markdown-toolbar-btn,
+.stl-page .block-markdown-link-btn,
+.stl-page .block-markdown-ai-btn {
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 8px;
+  padding: 0.3rem 0.52rem;
+  background: #fff;
+  color: #2d3748;
+  font-size: 0.78rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  cursor: pointer;
+}
+
+.stl-page .block-markdown-toolbar-btn:hover,
+.stl-page .block-markdown-link-btn:hover,
+.stl-page .block-markdown-ai-btn:hover {
+  background: #f6f8fb;
+}
+
+.stl-page .block-rich-editor {
+  border: 0;
+  border-radius: 0;
+  padding: 0.38rem 0.75rem 0.72rem;
+  background: transparent;
+  color: var(--stl-ink);
+  font-size: 0.92rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1.65;
+  min-height: 220px;
+}
+
+.stl-page .block-rich-editor:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.stl-page .stl-markdown-textarea {
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 10px;
+  padding: 0.72rem 0.75rem;
+  background: #fff;
+  color: var(--stl-ink);
+  font-size: 0.92rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1.65;
+  min-height: 220px;
+}
+
+.stl-page .block-rich-editor.is-empty::before {
+  color: #97a0af;
+}
+
+.stl-page .block-rich-editor * {
+  font-size: inherit;
+  font-family: inherit;
+  line-height: inherit;
+  font-synthesis: none;
+}
+
+.stl-page .block-rich-editor,
+.stl-page .block-rich-editor p,
+.stl-page .block-rich-editor div,
+.stl-page .block-rich-editor span,
+.stl-page .block-rich-editor ul,
+.stl-page .block-rich-editor ol,
+.stl-page .block-rich-editor li,
+.stl-page .block-rich-editor blockquote,
+.stl-page .block-rich-editor a,
+.stl-page .block-rich-editor code {
+  font-weight: 400 !important;
+}
+
+.stl-page .block-rich-editor p,
+.stl-page .block-rich-editor ul,
+.stl-page .block-rich-editor ol,
+.stl-page .block-rich-editor blockquote,
+.stl-page .block-rich-editor h1,
+.stl-page .block-rich-editor h2,
+.stl-page .block-rich-editor h3,
+.stl-page .block-rich-editor h4,
+.stl-page .block-rich-editor h5,
+.stl-page .block-rich-editor h6 {
+  margin: 0 0 0.7rem;
+}
+
+.stl-page .block-rich-editor h1,
+.stl-page .block-rich-editor h2,
+.stl-page .block-rich-editor h3,
+.stl-page .block-rich-editor h4,
+.stl-page .block-rich-editor h5,
+.stl-page .block-rich-editor h6 {
+  font-weight: 600 !important;
+}
+
+.stl-page .block-rich-editor strong,
+.stl-page .block-rich-editor b {
+  font-weight: 600 !important;
+}
+
+/* Firefox/contenteditable focus can visually embolden text; force stable body weight. */
+.stl-page .block-rich-editor:focus,
+.stl-page .block-rich-editor:focus p,
+.stl-page .block-rich-editor:focus div,
+.stl-page .block-rich-editor:focus span,
+.stl-page .block-rich-editor:focus li {
+  font-weight: 400 !important;
+}
+
+.stl-page .block-rich-editor:focus strong,
+.stl-page .block-rich-editor:focus b {
+  font-weight: 600 !important;
+}
+
+.stl-page .block-markdown-hint {
+  margin: 0;
+  padding: 0.42rem 0.75rem;
+  border-bottom: 1px solid var(--stl-border);
+  font-size: 0.8rem;
+  color: var(--stl-muted);
+}
+
+.stl-page .block-markdown-hint.error {
+  color: #7f2230;
+}
+
+.stl-page .block-markdown-link-popover,
+.stl-page .block-markdown-ai-popover {
+  border: 0;
+  border-bottom: 1px solid var(--stl-border);
+  border-radius: 0;
+  padding: 0.55rem 0.75rem;
+  background: #f9fbff;
+  margin: 0;
+}
+
+.stl-page .block-markdown-link-input,
+.stl-page .block-markdown-ai-input {
+  width: 100%;
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 8px;
+  padding: 0.42rem 0.55rem;
+  margin-bottom: 0.4rem;
+}
+
+.stl-page .block-markdown-ai-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.stl-page .block-markdown-ai-row .block-markdown-ai-input {
+  flex: 1;
+  min-width: 180px;
+  margin-bottom: 0;
+}
+
+.stl-page .block-markdown-ai-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stl-page .block-markdown-ai-btn.subtle {
+  border-color: var(--stl-border);
+  color: var(--stl-muted);
+}
+
+.stl-page .block-markdown-ai-btn.subtle:hover:not(:disabled) {
+  border-color: var(--stl-accent);
+  color: var(--stl-accent);
+}
+
+.stl-page .block-markdown-ai-context-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--stl-muted);
+}
+
+.stl-page .block-markdown-ai-context-toggle input {
+  accent-color: var(--stl-accent);
+}
