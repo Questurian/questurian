@@ -1,26 +1,16 @@
 import type { ComposeItineraryIntroRequest, ComposeItineraryIntroStop } from '../../../staging/api'
 import type {
   ItineraryBlockType,
-  ItineraryItemBlock,
   ListicleItineraryDraft,
   LocationOption,
   RelatedItemOption,
 } from '../../types'
-import { isManualItineraryBlockType } from '../../types'
+import { ITINERARY_BLOCK_CATEGORY_LABELS } from '../constants/builder-options.constants'
+import { getResolvedDayStops, resolveStopTitle } from '../utils/itineraryStopBlock.utils'
 import { getItineraryAiArticleTitle } from './ai-rewrite.service'
 import { buildArticleLocationLabel } from './ai-autowrite.service'
 
 const INTRO_TARGET_ID_SUFFIX = '_header_intro'
-
-const ITINERARY_BLOCK_CATEGORY_LABELS: Record<ItineraryBlockType, string> = {
-  'itinerary-dining': 'Dining',
-  'itinerary-accommodations': 'Accommodations',
-  'itinerary-where-staying': "Where You're Staying",
-  'itinerary-attractions': 'Attractions',
-  'itinerary-nightlife': 'Nightlife',
-  'itinerary-key-location': 'Key Location',
-  'itinerary-tour-agency': 'Tour Agency',
-}
 
 /**
  * Stable marker id for the intro auto-write in the builder's single
@@ -29,18 +19,6 @@ const ITINERARY_BLOCK_CATEGORY_LABELS: Record<ItineraryBlockType, string> = {
  */
 export function getItineraryIntroTargetId(draft: ListicleItineraryDraft): string {
   return `${draft.draftId}${INTRO_TARGET_ID_SUFFIX}`
-}
-
-function resolveStopTitle(
-  item: ItineraryItemBlock,
-  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
-): string {
-  if (isManualItineraryBlockType(item.blockType)) {
-    return item.title.trim() || item.operator.trim()
-  }
-  if (!item.item) return ''
-  const relatedOptions = relatedByBlockType[item.blockType] || []
-  return relatedOptions.find((entry) => entry.id === item.item)?.title?.trim() || ''
 }
 
 /**
@@ -58,9 +36,8 @@ export function getItineraryIntroComposableStops(
 
   draft.days.forEach((day, dayIndex) => {
     const dayLabel = `Day ${dayIndex + 1}`
-    ;[...day.whereStaying, ...day.items].forEach((item) => {
+    getResolvedDayStops(day, relatedByBlockType).forEach((item) => {
       const title = resolveStopTitle(item, relatedByBlockType)
-      if (!title) return
       stops.push({
         title,
         category: ITINERARY_BLOCK_CATEGORY_LABELS[item.blockType],

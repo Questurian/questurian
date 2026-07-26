@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest'
+import { buildItineraryComposeDayBlurbsRequest } from './compose-day-blurbs.service'
 import {
-  applyItineraryComposedDayBlurbs,
-  buildFailedDayBlurbComposeReport,
-  buildItineraryComposeDayBlurbsRequest,
   dayHasExistingBlurbs,
   getComposableDayIndexes,
   getItineraryDayBlurbComposeDisabledReason,
   getItineraryStopBlurbComposeDisabledReason,
   isDayBlurbsFullyComposed,
   itineraryStopBlurbWriteStrandsNeighbor,
-} from './compose-day-blurbs.service'
+} from './day-blurb-readiness.service'
+import {
+  applyItineraryComposedDayBlurbs,
+  buildFailedDayBlurbComposeReport,
+} from './day-blurb-results.service'
 import type {
   ItineraryBlockType,
   ItineraryItemBlock,
@@ -236,6 +238,44 @@ describe('day-blurb composer service', () => {
     expect(request.nextDayFirstStop).toBeUndefined()
   })
 
+  it('resolves a manual tour stop from its title before falling back to its operator', () => {
+    const draft = buildDraft({
+      dayCount: 1,
+      days: [{
+        id: 'day_1',
+        whereStaying: [],
+        items: [
+          buildItem({
+            id: 'tour-1',
+            blockType: 'itinerary-tour-agency',
+            title: '  Sunset Coast Tour  ',
+            operator: 'Fallback Operator',
+            selectionReason: 'coastal sunset route',
+          }),
+          buildItem({
+            id: 'tour-2',
+            blockType: 'itinerary-tour-agency',
+            operator: '  Lima Night Walks  ',
+            selectionReason: 'after-dark city route',
+          }),
+        ],
+      }],
+    })
+
+    const request = buildItineraryComposeDayBlurbsRequest({
+      draft,
+      dayIndex: 0,
+      relatedByBlockType: buildRelatedByBlockType(),
+      locations: buildLocations(),
+      modelName: 'claude-opus-4-8',
+    })
+
+    expect(request.stops.map(({ title, category }) => ({ title, category }))).toEqual([
+      { title: 'Sunset Coast Tour', category: 'Tour Agency' },
+      { title: 'Lima Night Walks', category: 'Tour Agency' },
+    ])
+  })
+
   it('applies only generated blurbs, only to the target day', () => {
     const response: ComposeDayBlurbsResponse = {
       model_used: 'claude-opus-4-8',
@@ -278,43 +318,37 @@ describe('day-blurb composer service', () => {
     it('is ready for a resolved stop with an angle and a reason under a locked intro', () => {
       const draft = buildDraft()
       expect(
-        getItineraryStopBlurbComposeDisabledReason(draft, draft.days[0].items[0], buildRelatedByBlockType()),
+        getItineraryStopBlurbComposeDisabledReason(draft.days[0].items[0], buildRelatedByBlockType()),
       ).toBeUndefined()
     })
 
-    it('gates on this stop\'s angle and reason, not intro lock or siblings', () => {
+    it('gates on this stop\'s angle and reason, not siblings', () => {
       const related = buildRelatedByBlockType()
-
-      const noIntro = buildDraft({ step2_in_update_mode: true })
-      expect(
-        getItineraryStopBlurbComposeDisabledReason(noIntro, noIntro.days[0].items[0], related),
-      ).toBeUndefined()
 
       const noAngle = buildDraft()
       noAngle.days[0].items[0].angle = null
       expect(
-        getItineraryStopBlurbComposeDisabledReason(noAngle, noAngle.days[0].items[0], related),
+        getItineraryStopBlurbComposeDisabledReason(noAngle.days[0].items[0], related),
       ).toBe('Select a blurb angle for "Mérito"')
 
       const noReason = buildDraft()
       noReason.days[0].items[0].selectionReason = ''
       expect(
-        getItineraryStopBlurbComposeDisabledReason(noReason, noReason.days[0].items[0], related),
+        getItineraryStopBlurbComposeDisabledReason(noReason.days[0].items[0], related),
       ).toBe('Add a "Why this pick" for "Mérito"')
 
       // A sibling missing its angle/reason does NOT block this stop (it rides as context).
       const siblingBroken = buildDraft()
       siblingBroken.days[0].whereStaying[0].selectionReason = ''
       expect(
-        getItineraryStopBlurbComposeDisabledReason(siblingBroken, siblingBroken.days[0].items[0], related),
+        getItineraryStopBlurbComposeDisabledReason(siblingBroken.days[0].items[0], related),
       ).toBeUndefined()
     })
 
     it('gates on resolving this stop', () => {
-      const draft = buildDraft()
       const unresolved = buildItem({ id: 'fresh', blockType: 'itinerary-attractions', item: null })
       expect(
-        getItineraryStopBlurbComposeDisabledReason(draft, unresolved, buildRelatedByBlockType()),
+        getItineraryStopBlurbComposeDisabledReason(unresolved, buildRelatedByBlockType()),
       ).toBe('Resolve this stop (pick or name it) before composing its blurb')
     })
   })

@@ -12,7 +12,8 @@ import type {
 import { resolveItineraryAngleForBlockType } from '../../types'
 import { buildArticleLocationLabel } from './ai-autowrite.service'
 import { getItineraryAiArticleTitle } from './ai-rewrite.service'
-import { ITINERARY_BLOCK_CATEGORY_LABELS, resolveStopTitle } from './compose-day-blurbs.service'
+import { ITINERARY_BLOCK_CATEGORY_LABELS } from '../constants/builder-options.constants'
+import { resolveStopTitle } from '../utils/itineraryStopBlock.utils'
 
 export type ComposeStopReasonParams = {
   draft: ListicleItineraryDraft

@@ -1,8 +1,33 @@
 import type {
   ItineraryBlockType,
+  ItineraryDaySlice,
   ItineraryItemBlock,
+  RelatedItemOption,
   TourAgencyKeyLocationRow,
 } from '../../types'
+import { isManualItineraryBlockType } from '../../types'
+
+export function resolveStopTitle(
+  item: ItineraryItemBlock,
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): string {
+  if (isManualItineraryBlockType(item.blockType)) {
+    return item.title.trim() || item.operator.trim()
+  }
+  if (!item.item) return ''
+  const relatedOptions = relatedByBlockType[item.blockType] || []
+  return relatedOptions.find((entry) => entry.id === item.item)?.title?.trim() || ''
+}
+
+/** Resolved stops in the same lodging-first order used by the article. */
+export function getResolvedDayStops(
+  day: ItineraryDaySlice,
+  relatedByBlockType: Record<ItineraryBlockType, RelatedItemOption[]>,
+): ItineraryItemBlock[] {
+  return [...day.whereStaying, ...day.items].filter((item) =>
+    Boolean(resolveStopTitle(item, relatedByBlockType)),
+  )
+}
 
 export function createKeyLocationRow(
   itemId: string,

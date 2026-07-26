@@ -21,6 +21,17 @@ export const BLOCK_TYPE_OPTIONS_STOPS = BLOCK_TYPE_OPTIONS.filter(
   (option) => option.value !== 'itinerary-where-staying',
 )
 
+/** Reader-facing category labels shared by itinerary composition requests. */
+export const ITINERARY_BLOCK_CATEGORY_LABELS: Record<ItineraryBlockType, string> = {
+  'itinerary-dining': 'Dining',
+  'itinerary-accommodations': 'Accommodations',
+  'itinerary-where-staying': "Where You're Staying",
+  'itinerary-attractions': 'Attractions',
+  'itinerary-nightlife': 'Nightlife',
+  'itinerary-key-location': 'Key Location',
+  'itinerary-tour-agency': 'Tour Agency',
+}
+
 export const EMPTY_RELATED_BY_BLOCK_TYPE: Record<ItineraryBlockType, RelatedItemOption[]> = {
   'itinerary-dining': [],
   'itinerary-accommodations': [],

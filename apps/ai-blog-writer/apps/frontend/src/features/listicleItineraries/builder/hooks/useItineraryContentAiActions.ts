@@ -11,17 +11,19 @@ import {
   buildItineraryGenerateListicleContentRequest,
   getItineraryAutoWriteTargetIds
 } from '../services/ai-autowrite.service'
+import { buildItineraryComposeDayBlurbsRequest } from '../services/compose-day-blurbs.service'
 import {
-  applyItineraryComposedDayBlurbs,
-  buildFailedDayBlurbComposeReport,
-  buildItineraryComposeDayBlurbsRequest,
   dayHasExistingBlurbs,
   getComposableDayIndexes,
   getItineraryDayBlurbComposeDisabledReason,
   getItineraryStopBlurbComposeDisabledReason,
-  itineraryStopBlurbWriteStrandsNeighbor,
-  resolveStopTitle
-} from '../services/compose-day-blurbs.service'
+  itineraryStopBlurbWriteStrandsNeighbor
+} from '../services/day-blurb-readiness.service'
+import {
+  applyItineraryComposedDayBlurbs,
+  buildFailedDayBlurbComposeReport
+} from '../services/day-blurb-results.service'
+import { resolveStopTitle } from '../utils/itineraryStopBlock.utils'
 import type { ComposeStopReasonResult } from '../services/compose-stop-reason.service'
 import { composeItineraryStopReason } from '../services/compose-stop-reason.service'
 import {
@@ -269,7 +271,6 @@ export function useItineraryContentAiActions({
       const { dayIndex, item } = found
 
       const disabledReason = getItineraryStopBlurbComposeDisabledReason(
-        draft,
         item,
         relatedByBlockType
       )
