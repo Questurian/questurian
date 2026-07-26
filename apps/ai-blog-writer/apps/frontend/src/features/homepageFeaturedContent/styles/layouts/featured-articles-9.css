@@ -1,0 +1,297 @@
+/* ── 9-Slot Editorial Layout ──────────────────────────────────── */
+
+.hf-l9 {
+  display: grid;
+  grid-template-columns: 1fr 1.8fr 1fr;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.hf-l9-left {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.hf-l9-center {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.hf-l9-right {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Card A (left column: slots 1 & 2) ─── */
+.hf-l9-card-a {
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: none;
+  padding: 0;
+  text-align: left;
+  transition: box-shadow 0.15s;
+}
+.hf-l9-card-a:hover {
+  box-shadow: 0 4px 16px var(--shadow-soft);
+}
+
+.hf-l9-card-a .hf-l9-thumb {
+  aspect-ratio: 16 / 9;
+  position: relative;
+  background: rgba(220, 218, 214, 0.35);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.hf-l9-card-a .hf-l9-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hf-l9-card-a .hf-l9-body {
+  padding: var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.hf-l9-card-a .hf-l9-title {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  color: var(--ink);
+}
+
+/* ── Hero card (slot 3, center top) ─── */
+.hf-l9-card-hero {
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: none;
+  padding: 0;
+  text-align: left;
+  transition: box-shadow 0.15s;
+}
+.hf-l9-card-hero:hover {
+  box-shadow: 0 6px 24px var(--shadow-soft);
+}
+
+.hf-l9-card-hero .hf-l9-thumb {
+  aspect-ratio: 3 / 2;
+  position: relative;
+  background: rgba(220, 218, 214, 0.35);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.hf-l9-card-hero .hf-l9-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hf-l9-card-hero .hf-l9-body {
+  padding: var(--space-3) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.hf-l9-card-hero .hf-l9-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--ink);
+}
+
+/* ── Horizontal card (slot 4, center bottom) ─── */
+.hf-l9-card-horiz {
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1fr 36%;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  text-align: left;
+  transition: opacity 0.15s;
+}
+.hf-l9-card-horiz:hover {
+  opacity: 0.75;
+}
+
+.hf-l9-card-horiz .hf-l9-thumb {
+  aspect-ratio: 4 / 3;
+  position: relative;
+  background: rgba(220, 218, 214, 0.35);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.hf-l9-card-horiz .hf-l9-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hf-l9-card-horiz .hf-l9-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.hf-l9-card-horiz .hf-l9-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+  color: var(--ink);
+}
+
+/* ── List cards (slots 5–9, right column) ─── */
+.hf-l9-card-list {
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  background: none;
+  text-align: left;
+  transition: opacity 0.15s;
+  width: 100%;
+}
+.hf-l9-right .hf-l9-card-list:first-child {
+  border-top: 1px solid var(--border);
+}
+.hf-l9-card-list:hover {
+  opacity: 0.75;
+}
+
+.hf-l9-card-list .hf-l9-thumb {
+  width: 72px;
+  height: 72px;
+  position: relative;
+  background: rgba(220, 218, 214, 0.35);
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.hf-l9-card-list .hf-l9-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hf-l9-card-list .hf-l9-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.hf-l9-card-list .hf-l9-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0;
+  color: var(--ink);
+}
+
+/* ── Shared slot number badge ─── */
+.hf-l9-num {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: rgba(30, 28, 24, 0.72);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  flex-shrink: 0;
+}
+
+.hf-l9-num-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hf-l9-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+}
+
+/* ── Empty / invalid placeholders ─── */
+.hf-l9-empty {
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+  padding: var(--space-4);
+  min-height: 80px;
+  width: 100%;
+  background: none;
+  text-align: center;
+}
+.hf-l9-empty:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.hf-l9-empty.invalid {
+  border-color: var(--error);
+  border-style: solid;
+  color: var(--error);
+}
+
+/* ── Mobile: single column stack ─── */
+@media (max-width: 720px) {
+  .hf-l9 {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+  .hf-l9-card-hero .hf-l9-title {
+    font-size: 1.2rem;
+  }
+  .hf-l9-card-horiz {
+    grid-template-columns: 1fr 100px;
+  }
+  .hf-l9-card-list {
+    grid-template-columns: 1fr 60px;
+  }
+  .hf-l9-card-list .hf-l9-thumb {
+    width: 60px;
+    height: 60px;
+  }
+}

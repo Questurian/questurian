@@ -1,0 +1,116 @@
+/* ── Responsive ───────────────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .hf-editor-grid {
+    grid-template-columns: 1fr;
+  }
+  .hf-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .hf-hero-badges {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .hf-slot-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .hf-location-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hf-questurian-maps-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .hf-neighborhood-grid {
+    grid-template-columns: 1fr;
+  }
+  .hf-hub-search-input {
+    width: 100%;
+  }
+}
+
+@media (max-width: 680px) {
+  .hf-panel-header {
+    flex-direction: column;
+  }
+  .hf-hub-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hf-hub-card-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .hf-hub-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hf-country-group-header,
+  .hf-city-cluster-header {
+    flex-direction: column;
+  }
+  .hf-country-group-badges,
+  .hf-city-cluster-badges {
+    justify-content: flex-start;
+  }
+  .hf-modal-city-group-header {
+    flex-direction: column;
+  }
+  .hf-modal-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hf-modal-row-meta {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .hf-cluster-panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hf-detail-header {
+    grid-template-columns: 1fr;
+    row-gap: var(--space-3);
+  }
+  .hf-detail-header-left,
+  .hf-detail-header-center,
+  .hf-detail-header-actions {
+    grid-column: 1;
+    justify-self: stretch;
+  }
+  .hf-detail-header-center {
+    display: flex;
+    justify-content: center;
+  }
+  .hf-detail-header-actions {
+    justify-content: flex-end;
+  }
+  .hf-search-row {
+    flex-direction: column;
+  }
+  .hf-slot {
+    grid-template-columns: 2rem 44px 1fr auto;
+  }
+  .hf-slot-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .hf-slot-grid {
+    grid-template-columns: 1fr;
+  }
+  .hf-article-grid.hf-article-grid--slots-4.hf-article-grid--4-across,
+  .hf-article-grid.hf-article-grid--slots-4.hf-article-grid--4-2x2,
+  .hf-article-grid.hf-article-grid--slots-8 {
+    grid-template-columns: 1fr;
+  }
+  .hf-location-grid {
+    grid-template-columns: 1fr;
+  }
+  .hf-questurian-maps-grid {
+    grid-template-columns: 1fr;
+  }
+}
