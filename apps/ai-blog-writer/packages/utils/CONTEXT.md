@@ -71,6 +71,14 @@ CSV → `list[dict]`.
 - Consumed by feature modules in `apps/backend` (`prompt2blog`, `youtube2blog`, `location_documents`, `editor_assist`).
 - No reverse dependency: utils does not know about features.
 
+## Module map
+
+- `llm_client.py` — stable provider-agnostic facade and dispatch seams.
+- `llm_model_policy.py` — provider enablement, model substitution, token floors, and Vertex location/project resolution.
+- `anthropic_transport.py` — Anthropic SDK creation and response parsing.
+- `gemini_tools.py` — Gemini 3 chat adapter, tool-schema transformation, and forced-tool calls.
+- `vertex_multimodal.py` — Vertex SDK initialization and multimodal generation.
+
 ## Domain Rules
 
 - All Vertex AI calls in the backend **must** route through `packages/utils` helpers. Features may not instantiate Vertex clients directly.
