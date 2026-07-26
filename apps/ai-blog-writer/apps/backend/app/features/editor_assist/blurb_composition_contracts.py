@@ -15,7 +15,8 @@ from .listicle_writer_contracts import (
     ListicleFieldType,
 )
 from .research_profile import ResearchProfile
-from .writer_brief import WriterBrief, WriterBriefTrace, run_writer_brief
+from .writer_brief import run_writer_brief
+from .writer_brief_contracts import WriterBrief, WriterBriefTrace
 
 CompositionStatus = Literal["generated", "error"]
 StepStatus = Literal["ok", "skipped", "failed"]

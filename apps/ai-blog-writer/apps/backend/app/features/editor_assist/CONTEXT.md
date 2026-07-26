@@ -54,6 +54,11 @@ _Avoid_: article prose, full SEO document
   prompt construction, response parsing, grounded execution, fallback policy,
   and batch concurrency live in cohesive adjacent `research_profile_*` modules.
   The facade preserves the grounded-invocation patch seam used by route tests.
+- `writer_brief.py` is a compatibility facade. Writer Brief contracts, angle
+  directive policy, curator prompt construction, response parsing, execution
+  fallbacks, and writer-facing rendering live in cohesive adjacent
+  `writer_brief_*` modules. The facade preserves the curator-invocation patch
+  seam used by route tests.
 - The `blurb_composition_*` family owns Listicle Content Generation path
   selection, retry policy, validation traces, and writer execution. New prompt
   modules must reuse that execution boundary rather than introduce another

@@ -17,7 +17,7 @@ from .research_profile import (
     ResearchProfile,
     ResearchProfileTrace,
 )
-from .writer_brief import MIN_SOURCE_FACTS, WriterBrief
+from .writer_brief_contracts import MIN_SOURCE_FACTS, WriterBrief
 
 
 @dataclass(frozen=True)

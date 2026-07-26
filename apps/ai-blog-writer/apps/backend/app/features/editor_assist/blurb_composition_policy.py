@@ -17,7 +17,7 @@ from .listicle_prompt_builders import (
 )
 from .listicle_writer_contracts import ListicleWriterTarget
 from .research_profile import ResearchProfile
-from .writer_brief import WriterBrief
+from .writer_brief_contracts import WriterBrief
 
 
 @dataclass(frozen=True)
