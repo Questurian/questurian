@@ -54,6 +54,13 @@ operations.
 | `stages/stage_3_quality_assessment.py` | Stage 3 quality prompt, LLM invocation, and fallback selection |
 | `stages/stage_3_quality_rewrite.py` | Stage 3 rewrite prompt, LLM invocation, anti-AI repair, and length safeguard |
 | `stages/stage_3_quality.py` | Stable thin Stage 3 quality facade |
+| `content/seo_metrics.py` | Pure keyword, heading, and paragraph measurements shared by SEO phases |
+| `quality/seo_brief.py` | Pure SEO brief normalization and heuristic fallback policy |
+| `stages/stage_seo_prompts.py` | SEO brief and article enrichment prompt policy |
+| `stages/stage_seo_brief.py` | SEO brief LLM invocation and fallback selection |
+| `stages/stage_seo_enrichment.py` | SEO rewrite prompt, LLM invocation, anti-AI repair, and keyword safeguards |
+| `quality/seo_assessment.py` | Pure deterministic SEO Quality Gate assessment |
+| `stages/stage_seo.py` | Stable thin SEO Stage facade |
 
 ## Dependency direction
 
