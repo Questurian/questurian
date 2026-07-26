@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --stl-bg: #f5f6f8;
+  --stl-surface: #ffffff;
+  --stl-ink: #151821;
+  --stl-muted: #5f6675;
+  --stl-border: #d9dee8;
+  --stl-border-strong: #c8cfdb;
+  --stl-accent: #2f4f8f;
+  --stl-shadow: 0 8px 20px rgba(14, 25, 43, 0.05);
+}

@@ -1,0 +1,26 @@
+/* Search */
+.stl-picker-modal__search {
+  padding: 0.8rem 1.2rem 0.6rem;
+  flex-shrink: 0;
+}
+
+.stl-picker-search-input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--stl-border-strong);
+  border-radius: 10px;
+  font-size: 0.92rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: #fff;
+  color: var(--stl-ink);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+  box-sizing: border-box;
+}
+
+.stl-picker-search-input:focus {
+  outline: none;
+  border-color: var(--stl-accent);
+  box-shadow: 0 0 0 3px rgba(47, 79, 143, 0.14);
+}
