@@ -35,6 +35,7 @@ utils_stub.invoke_vertex_multimodal_text = lambda *args, **kwargs: "stub text"
 sys.modules["utils"] = utils_stub
 
 import app.features.youtube2blog.routes as youtube2blog_routes
+from app.features.youtube2blog.api import testing as youtube2blog_testing
 import app.main as main_module
 
 
@@ -112,7 +113,7 @@ async def test_youtube_test_stage1_runtime_error_returns_502_with_cors(monkeypat
         raise RuntimeError("boom")
 
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_testing,
         "stage_1_clean_transcript",
         _raise_runtime,
     )
@@ -139,7 +140,7 @@ async def test_youtube_test_pipeline_runtime_error_returns_502_with_cors(monkeyp
         raise RuntimeError("boom")
 
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_testing,
         "stage_1_clean_transcript",
         _raise_runtime,
     )

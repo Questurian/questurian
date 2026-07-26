@@ -6,6 +6,11 @@ from fastapi.testclient import TestClient
 from shared import PipelineMeta, RawVideoRecord
 
 import app.features.youtube2blog.routes as youtube2blog_routes
+from app.features.youtube2blog.api import articles as youtube2blog_articles
+from app.features.youtube2blog.api import diagnostics as youtube2blog_diagnostics
+from app.features.youtube2blog.api import expansion as youtube2blog_expansion
+from app.features.youtube2blog.api import pipeline as youtube2blog_pipeline
+from app.features.youtube2blog.api import sync as youtube2blog_sync
 from app.features.youtube2blog.youtube_source import YouTubeVideoSource
 
 
@@ -39,12 +44,42 @@ def _sample_meta(source: str, notes: str | None = None) -> PipelineMeta:
     )
 
 
+def test_router_preserves_public_http_contract():
+    client = _build_client()
+
+    routes = {
+        (route.path, method)
+        for route in client.app.routes
+        if route.path.startswith("/youtube2blog")
+        for method in route.methods
+    }
+
+    assert routes == {
+        ("/youtube2blog/from-url", "POST"),
+        ("/youtube2blog/status/{run_id}", "GET"),
+        ("/youtube2blog/tones", "GET"),
+        ("/youtube2blog/result/{run_id}", "GET"),
+        ("/youtube2blog/debug/{run_id}", "GET"),
+        ("/youtube2blog/test-stage1", "POST"),
+        ("/youtube2blog/test", "POST"),
+        ("/youtube2blog/clear", "POST"),
+        ("/youtube2blog/articles", "GET"),
+        ("/youtube2blog/articles/{run_id}", "DELETE"),
+        ("/youtube2blog/articles/{run_id}/sync", "POST"),
+        ("/youtube2blog/articles/{run_id}/sync", "GET"),
+        ("/youtube2blog/{run_id}/expand/detect", "POST"),
+        ("/youtube2blog/{run_id}/expand", "POST"),
+        ("/youtube2blog/expand/{expand_job_id}/status", "GET"),
+        ("/youtube2blog/expand/{expand_job_id}/result", "GET"),
+    }
+
+
 def test_from_url_queues_single_run(monkeypatch):
     client = _build_client()
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "parse_youtube_video_url",
         lambda _url: YouTubeVideoSource(
             video_id="abc123DEF45",
@@ -52,7 +87,7 @@ def test_from_url_queues_single_run(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "extract_transcript_sync",
         lambda _video_id: {
             "status": "completed",
@@ -60,12 +95,14 @@ def test_from_url_queues_single_run(monkeypatch):
         },
     )
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "fetch_oembed_title",
         lambda _url: "Resolved Title",
     )
 
-    def fake_initialize_run(record: RawVideoRecord, source: str, notes: str | None = None):
+    def fake_initialize_run(
+        record: RawVideoRecord, source: str, notes: str | None = None
+    ):
         captured["record"] = record
         captured["source"] = source
         captured["notes"] = notes
@@ -77,8 +114,8 @@ def test_from_url_queues_single_run(monkeypatch):
         captured["process_kwargs"] = kwargs
         return "# done"
 
-    monkeypatch.setattr(youtube2blog_routes, "initialize_run", fake_initialize_run)
-    monkeypatch.setattr(youtube2blog_routes, "process_run", fake_process_run)
+    monkeypatch.setattr(youtube2blog_pipeline, "initialize_run", fake_initialize_run)
+    monkeypatch.setattr(youtube2blog_pipeline, "process_run", fake_process_run)
 
     response = client.post(
         "/youtube2blog/from-url",
@@ -123,7 +160,7 @@ def test_from_url_returns_422_when_transcript_unavailable(monkeypatch):
     client = _build_client()
 
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "parse_youtube_video_url",
         lambda _url: YouTubeVideoSource(
             video_id="abc123DEF45",
@@ -131,7 +168,7 @@ def test_from_url_returns_422_when_transcript_unavailable(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "extract_transcript_sync",
         lambda _video_id: {
             "status": "unavailable",
@@ -153,7 +190,7 @@ def test_from_url_uses_fallback_title_when_oembed_fails(monkeypatch):
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "parse_youtube_video_url",
         lambda _url: YouTubeVideoSource(
             video_id="abc123DEF45",
@@ -161,22 +198,24 @@ def test_from_url_uses_fallback_title_when_oembed_fails(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "extract_transcript_sync",
         lambda _video_id: {
             "status": "completed",
             "transcript": "Transcript body",
         },
     )
-    monkeypatch.setattr(youtube2blog_routes, "fetch_oembed_title", lambda _url: None)
+    monkeypatch.setattr(youtube2blog_pipeline, "fetch_oembed_title", lambda _url: None)
 
-    def fake_initialize_run(record: RawVideoRecord, source: str, notes: str | None = None):
+    def fake_initialize_run(
+        record: RawVideoRecord, source: str, notes: str | None = None
+    ):
         captured["record"] = record
         return _sample_meta(source=source, notes=notes)
 
-    monkeypatch.setattr(youtube2blog_routes, "initialize_run", fake_initialize_run)
+    monkeypatch.setattr(youtube2blog_pipeline, "initialize_run", fake_initialize_run)
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_pipeline,
         "process_run",
         # Title fallback only; run options are irrelevant here.
         lambda _record, _meta, **_kwargs: "# done",
@@ -203,7 +242,7 @@ def test_debug_includes_editorial_augmentation_stage(monkeypatch):
     client = _build_client()
 
     monkeypatch.setattr(
-        youtube2blog_routes,
+        youtube2blog_diagnostics,
         "read_status",
         lambda run_id: {
             "run_id": run_id,
@@ -224,11 +263,112 @@ def test_debug_includes_editorial_augmentation_stage(monkeypatch):
             }
         return None
 
-    monkeypatch.setattr(youtube2blog_routes, "read_stage_result", fake_read_stage_result)
-    monkeypatch.setattr(youtube2blog_routes, "read_output", lambda _run_id: None)
+    monkeypatch.setattr(
+        youtube2blog_diagnostics,
+        "read_stage_result",
+        fake_read_stage_result,
+    )
+    monkeypatch.setattr(
+        youtube2blog_diagnostics,
+        "read_output",
+        lambda _run_id: None,
+    )
 
     response = client.get("/youtube2blog/debug/run-123")
 
     assert response.status_code == 200
     payload = response.json()
     assert "stage_editorial_augmentation" in payload["stages"]
+
+
+def test_article_storage_and_sync_routes_delegate_to_owned_adapters(monkeypatch):
+    client = _build_client()
+    deleted = []
+    synced = []
+
+    monkeypatch.setattr(
+        youtube2blog_articles,
+        "get_all_completed_articles",
+        lambda: [{"run_id": "run-123"}],
+    )
+    monkeypatch.setattr(
+        youtube2blog_articles,
+        "read_status",
+        lambda run_id: {"run_id": run_id, "feature": "youtube2blog"},
+    )
+    monkeypatch.setattr(
+        youtube2blog_articles,
+        "cleanup_run",
+        lambda run_id: deleted.append(run_id),
+    )
+    monkeypatch.setattr(
+        youtube2blog_sync,
+        "mark_article_synced",
+        lambda run_id, payload_id: synced.append((run_id, payload_id)) or True,
+    )
+    monkeypatch.setattr(
+        youtube2blog_sync,
+        "get_article_sync_status",
+        lambda run_id: {"run_id": run_id, "synced_to_payload": True},
+    )
+
+    assert client.get("/youtube2blog/articles").json() == [{"run_id": "run-123"}]
+    assert client.delete("/youtube2blog/articles/run-123").status_code == 200
+    assert deleted == ["run-123"]
+
+    sync_response = client.post(
+        "/youtube2blog/articles/run-123/sync",
+        json={"payload_article_id": 42},
+    )
+    assert sync_response.status_code == 200
+    assert synced == [("run-123", 42)]
+    assert client.get("/youtube2blog/articles/run-123/sync").json() == {
+        "run_id": "run-123",
+        "synced_to_payload": True,
+    }
+
+
+def test_deep_expansion_routes_validate_and_queue_without_pipeline_coupling(
+    monkeypatch,
+):
+    client = _build_client()
+    queued = []
+
+    monkeypatch.setattr(
+        youtube2blog_expansion,
+        "uuid4",
+        lambda: "expand-job-123",
+    )
+    monkeypatch.setattr(
+        youtube2blog_expansion,
+        "run_deep_expand",
+        lambda *args: queued.append(args),
+    )
+
+    response = client.post(
+        "/youtube2blog/run-123/expand",
+        json={
+            "article": "Article body",
+            "article_type": "guide",
+            "title": "Title",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"expand_job_id": "expand-job-123"}
+    assert queued == [
+        (
+            "expand-job-123",
+            "Article body",
+            "guide",
+            "Title",
+            "gemini-2.5-flash-lite",
+            None,
+        )
+    ]
+
+    invalid_response = client.post(
+        "/youtube2blog/run-123/expand",
+        json={"article": "Article body", "model": "unsupported"},
+    )
+    assert invalid_response.status_code == 400
