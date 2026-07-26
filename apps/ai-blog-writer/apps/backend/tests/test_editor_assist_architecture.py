@@ -3,6 +3,8 @@ from pathlib import Path
 
 from fastapi import FastAPI
 
+import app.features.editor_assist.listicle_content as listicle_content
+import app.features.editor_assist.listicle_content_contracts as listicle_contracts
 from app.features.editor_assist.routes import router
 
 
@@ -177,6 +179,55 @@ def test_writer_brief_remains_a_thin_compatible_facade():
         "writer_brief_prompt",
         "writer_brief_rendering",
     }.issubset(imported_modules)
+
+
+def test_listicle_content_remains_a_thin_compatible_http_facade():
+    feature_path = Path(__file__).parents[1] / "app" / "features" / "editor_assist"
+    facade_path = feature_path / "listicle_content.py"
+    source = facade_path.read_text()
+    module = ast.parse(source)
+
+    top_level_defs = [
+        node
+        for node in module.body
+        if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    imported_modules = {
+        node.module
+        for node in module.body
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+
+    assert len(source.splitlines()) <= 120
+    assert [node.name for node in top_level_defs] == ["generate_listicle_content"]
+    assert {
+        "listicle_content_contracts",
+        "listicle_content_generation",
+        "listicle_guidelines",
+    }.issubset(imported_modules)
+
+
+def test_listicle_content_facade_preserves_http_contract_imports():
+    assert (
+        listicle_content.GenerateListicleContentRequest
+        is listicle_contracts.GenerateListicleContentRequest
+    )
+    assert (
+        listicle_content.GenerateListicleContentResponse
+        is listicle_contracts.GenerateListicleContentResponse
+    )
+    assert (
+        listicle_content.GenerateListicleTargetRequest
+        is listicle_contracts.GenerateListicleTargetRequest
+    )
+    assert (
+        listicle_content.GenerateListicleTargetResponse
+        is listicle_contracts.GenerateListicleTargetResponse
+    )
+    assert (
+        listicle_content.ListicleGuidelinesResponse
+        is listicle_contracts.ListicleGuidelinesResponse
+    )
 
 
 def test_editor_assist_internals_do_not_depend_on_listicle_writer_facade():
