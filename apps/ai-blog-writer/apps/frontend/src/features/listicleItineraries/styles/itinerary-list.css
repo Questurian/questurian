@@ -1,0 +1,79 @@
+.stl-empty {
+  border: 1px dashed var(--stl-border-strong);
+  border-radius: 10px;
+  padding: 1rem;
+  color: #515a69;
+}
+
+.stl-table-wrap {
+  overflow-x: auto;
+}
+
+.stl-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stl-table th,
+.stl-table td {
+  border-bottom: 1px solid #e8edf4;
+  text-align: left;
+  padding: 0.6rem;
+  font-size: 0.9rem;
+}
+
+.stl-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.47rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.stl-status + .stl-status {
+  margin-left: 0.35rem;
+}
+
+.stl-status-draft {
+  background: #eef2f7;
+  color: #4a5567;
+}
+
+.stl-status-published {
+  background: #edf6f0;
+  color: #3f6f53;
+}
+
+.stl-link {
+  color: #334a72;
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.stl-link-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--stl-accent, #2f6f4f);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.stl-link-button:hover {
+  text-decoration: underline;
+}
+
+.stl-table-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stl-btn-xs {
+  padding: 0.32rem 0.6rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+}

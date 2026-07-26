@@ -1,0 +1,20 @@
+.stl-stop-reason .stl-field-label-row span {
+  cursor: help;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.stl-stop-reason-input {
+  width: 100%;
+  resize: vertical;
+}
+.stl-stop-reason-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.stl-stop-reason-note {
+  font-size: 12px;
+  opacity: 0.75;
+}

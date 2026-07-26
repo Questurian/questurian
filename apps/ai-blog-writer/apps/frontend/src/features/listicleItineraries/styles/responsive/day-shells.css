@@ -1,0 +1,13 @@
+@media (max-width: 720px) {
+  .stl-day-shells__header,
+  .stl-shell-library-header,
+  .stl-shell-library-row {
+    display: block;
+  }
+
+  .stl-day-shells__header .stl-btn,
+  .stl-shell-library-header .stl-btn,
+  .stl-shell-library-row__actions {
+    margin-top: 10px;
+  }
+}
