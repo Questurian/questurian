@@ -94,6 +94,8 @@ def run_finalize_stage(
                 "brief_adherence": quality["brief_adherence_score"],
                 "seo": quality["seo_score"],
             },
+            # audience_match and tone_match come from the auditor and pass
+            # through; the measurable checks are recomputed on the final text.
             "constraint_checks": {
                 **quality_checks,
                 "target_word_count_met": final_checks["target_word_count_met"],
@@ -103,9 +105,8 @@ def run_finalize_stage(
                 "secondary_keywords_present": final_checks[
                     "secondary_keywords_present"
                 ],
-                "audience_match": final_checks["audience_match"],
-                "tone_match": final_checks["tone_match"],
             },
+            "secondary_keyword_coverage": final_checks["secondary_keyword_coverage"],
             "word_count_estimate": final_checks["word_count_estimate"],
             "repair_applied": state["repair_applied"],
             "editorial_augmentation_applied": augmentation["augmentation_applied"],

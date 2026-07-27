@@ -17,11 +17,6 @@ Return strict JSON only:
   "too_close_to_source": false,
   "word_count_estimate": 0,
   "constraint_checks": {{
-    "target_word_count_met": false,
-    "paragraph_length_met": false,
-    "cta_present": false,
-    "primary_keyword_present": false,
-    "secondary_keywords_present": false,
     "audience_match": false,
     "tone_match": false
   }},
@@ -37,6 +32,13 @@ Scoring rubric:
 Rules:
 - required_revisions must be specific and actionable.
 - Mark too_close_to_source=true when structure/phrasing is too similar to source.
+- Judge only audience_match and tone_match. Word count, paragraph length, CTA
+  and keyword presence are measured deterministically outside this prompt, so
+  do not report them.
+- audience_match: does the draft address the brief's audience at the right
+  level of assumed knowledge?
+- tone_match: does the prose sustain the brief's tone and voice?
+- Score honestly. A draft that merely avoids mistakes is a 7, not a 9.
 
 RAW SOURCES:
 {raw_sources}

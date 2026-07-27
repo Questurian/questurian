@@ -47,16 +47,23 @@ def _audit_rewrite(
         rewrite["improved_content"],
         state["writing_brief"],
     )
+    # The auditor supplies the semantic checks; everything measurable is
+    # computed here and wins. Non-boolean measurements are reported alongside
+    # the checks rather than inside them.
+    measurements = {"word_count_estimate", "secondary_keyword_coverage"}
     quality_checks = {
         **quality.get("constraint_checks", {}),
         **{
             key: value
             for key, value in computed_checks.items()
-            if key != "word_count_estimate"
+            if key not in measurements
         },
     }
     quality["constraint_checks"] = quality_checks
     quality["word_count_estimate"] = computed_checks["word_count_estimate"]
+    quality["secondary_keyword_coverage"] = computed_checks[
+        "secondary_keyword_coverage"
+    ]
     return quality, quality_checks, prompt, raw_response, parsed
 
 
