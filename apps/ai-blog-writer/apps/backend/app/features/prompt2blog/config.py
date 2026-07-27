@@ -38,6 +38,15 @@ PROMPT2BLOG_LENGTHS_DIR = PROMPT2BLOG_OPTIONS_DIR / "lengths"
 
 PROMPT2BLOG_BRAND_VOICES_DIR = PROMPT2BLOG_OPTIONS_DIR / "brand-voices"
 
+# Repair used to be a single unconditional pass whose result was never
+# re-gated. It is now a bounded loop back through the audit.
+P2B_REPAIR_MAX_ATTEMPTS = 2
+
+# Editorial augmentation may only add to a draft. If the returned content drops
+# below this share of the pre-augmentation word count, or loses section
+# headings, the stage is rolled back rather than shipped.
+P2B_AUGMENTATION_MIN_RETENTION_RATIO = 0.9
+
 PROMPT2BLOG_CREATIVITY_LEVELS = {"low", "medium", "high"}
 
 # creativity_level used to be rendered as the literal string "Creativity level:

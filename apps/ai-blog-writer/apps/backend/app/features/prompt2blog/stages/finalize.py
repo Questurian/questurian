@@ -111,6 +111,10 @@ def run_finalize_stage(
             "must_include_coverage": final_checks["must_include_coverage"],
             "word_count_estimate": final_checks["word_count_estimate"],
             "repair_applied": state["repair_applied"],
+            "repair_attempts": state.get("repair_attempts", 0),
+            "editorial_augmentation_rolled_back": state.get(
+                "augmentation_rolled_back", False
+            ),
             "editorial_augmentation_applied": augmentation["augmentation_applied"],
             "editorial_components_added": augmentation["components_added"],
             "editorial_augmentation_summary": augmentation["augmentation_summary"],

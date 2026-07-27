@@ -16,7 +16,12 @@ from .graph.runner import GraphNode, run_prompt2blog_stage_graph
 from .graph.state import Prompt2BlogGraphState
 from .models import PipelineV2RuntimeRequest, Prompt2BlogInputRequest
 from .quality import _extract_narrative_focus
-from .stages.audit_repair import run_quality_audit_stage, run_repair_stage
+from .graph.topology import build_prompt2blog_graph
+from .stages.audit_repair import (
+    run_quality_audit_stage,
+    run_quality_settle_stage,
+    run_repair_stage,
+)
 from .stages.augmentation import run_augmentation_stage
 from .stages.finalize import run_finalize_stage
 from .stages.guideline_coverage import run_coverage_stage, run_guideline_stage
@@ -75,6 +80,9 @@ def _initial_generation_state(
         "include_debug": request.include_debug,
         "enable_editorial_augmentation": request.enable_editorial_augmentation,
         "current_stage": "stage_guideline_fetch",
+        "repair_attempts": 0,
+        "repair_applied": False,
+        "augmentation_rolled_back": False,
         "trace": trace if trace is not None else [],
     }
 
@@ -101,6 +109,7 @@ def _generation_nodes(
         ("compose", run_compose_stage),
         ("quality_audit", run_quality_audit_stage),
         ("repair", run_repair_stage),
+        ("quality_settle", run_quality_settle_stage),
         ("editorial_augmentation", run_augmentation_stage),
         ("title", run_title_stage),
         ("finalize", run_finalize_stage),
@@ -122,6 +131,7 @@ def run_pipeline_v2(
             initial_state=initial_state,
             nodes=_generation_nodes(dependencies),
             recorder=dependencies.recorder,
+            build_graph=build_prompt2blog_graph,
         )
     except Exception as exc:
         logger.exception("Prompt2Blog pipeline-v2 failed", extra={"run_id": run_id})
@@ -169,6 +179,7 @@ def run_full_pipeline(
                 *_generation_nodes(dependencies),
             ],
             recorder=dependencies.recorder,
+            build_graph=build_prompt2blog_graph,
         )
     except Exception as exc:
         logger.exception("Prompt2Blog full run failed", extra={"run_id": run_id})

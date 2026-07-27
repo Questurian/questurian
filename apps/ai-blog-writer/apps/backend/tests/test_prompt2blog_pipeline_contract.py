@@ -8,6 +8,7 @@ import pytest
 
 from app.features.prompt2blog.config import (
     P2B_AUDIT_MODEL,
+    P2B_REPAIR_MAX_ATTEMPTS,
     PROMPT2BLOG_CREATIVITY_TEMPERATURES,
 )
 from app.features.prompt2blog.dependencies import PipelineDependencies
@@ -63,7 +64,13 @@ def _pipeline_fakes(
         "text_prompts": [],
         "calls": [],
     }
-    quality_score_iter = iter(quality_scores)
+    # The audit runs once per pass of the repair loop. Repeat the final score
+    # rather than exhausting, so tests assert on behaviour instead of on an
+    # exact call count.
+    pending_scores = list(quality_scores)
+
+    def next_quality_score() -> int:
+        return pending_scores.pop(0) if len(pending_scores) > 1 else pending_scores[0]
 
     def get_article_type(article_type_id: int) -> dict[str, Any]:
         return {
@@ -110,7 +117,7 @@ def _pipeline_fakes(
                 '{"improved_title": "Kyoto for First-Time Visitors"}',
             )
         if "quality auditor" in prompt:
-            score = next(quality_score_iter)
+            score = next_quality_score()
             return (
                 {
                     "overall_score": score,
@@ -227,13 +234,15 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
     run_pipeline_v2(run_id, _runtime_request(), dependencies)
 
     stage_names = [stage for _run_id, stage, _payload in recorded["stages"]]
+    # stage_repair is absent: the graph routes past it when the audit passes,
+    # rather than entering a node that no-ops internally.
     assert [stage for stage in stage_names if stage != "langgraph_trace"] == [
         "stage_guideline_fetch",
         "stage_coverage_check",
         "stage_supplement",
         "stage_compose",
         "stage_quality_audit",
-        "stage_repair",
+        "stage_quality_settle",
         "stage_editorial_augmentation",
         "stage_title",
         "stage_finalize",
@@ -269,11 +278,46 @@ def test_pipeline_contract_repairs_then_reaudits():
 
     repair_payload = _stage_payload(recorded, "stage_repair")["data"]
     assert repair_payload["repair_applied"] is True
+    assert repair_payload["attempt"] == 1
     assert repair_payload["rewrite"]["improved_title"] == (
         "A Practical First Visit to Kyoto"
     )
-    assert repair_payload["quality"]["overall_score"] == 9
+    # The graph re-audits the repaired draft; the stage no longer audits its
+    # own output into a result nothing routed on.
     assert sum("quality auditor" in prompt for prompt in recorded["json_prompts"]) == 2
+    settle = _stage_payload(recorded, "stage_quality_settle")["data"]
+    assert settle["repair_attempts"] == 1
+    assert settle["final_overall_score"] == 9
+    assert settle["reverted_to_earlier_draft"] is False
+
+
+def test_repair_loop_is_bounded_and_settles():
+    # A draft that never satisfies the auditor must not loop forever.
+    recorded, dependencies = _pipeline_fakes(quality_scores=[4])
+
+    run_pipeline_v2(f"run-repair-budget-{uuid4()}", _runtime_request(), dependencies)
+
+    settle = _stage_payload(recorded, "stage_quality_settle")["data"]
+    assert settle["repair_attempts"] == P2B_REPAIR_MAX_ATTEMPTS
+    assert recorded["statuses"][-1][1]["state"] == "completed"
+
+
+def test_settle_keeps_the_best_draft_when_repair_makes_it_worse():
+    # Compose scores 6 (repair triggers), the repaired draft scores 3.
+    recorded, dependencies = _pipeline_fakes(quality_scores=[6, 3])
+
+    run_pipeline_v2(f"run-repair-worse-{uuid4()}", _runtime_request(), dependencies)
+
+    settle = _stage_payload(recorded, "stage_quality_settle")["data"]
+    assert settle["last_overall_score"] == 3
+    assert settle["final_overall_score"] == 6
+    assert settle["reverted_to_earlier_draft"] is True
+
+    # The shipped article is the pre-repair compose draft, not the worse one.
+    artifact = recorded["artifacts"][0][1]
+    assert "Kyoto rewards travelers" in artifact["pipeline_v2"]["improved_article"][
+        "content"
+    ]
 
 
 def _model_for(recorded: dict[str, Any], marker: str) -> str | None:

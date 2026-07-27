@@ -9,6 +9,7 @@ from ..content.editorial_blocks import _sanitize_editorial_augmentation
 from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
+from ..policies import evaluate_augmentation
 from ..prompts.editorial import P2B_EDITORIAL_AUGMENTATION_PROMPT
 from ..support import _json
 
@@ -112,6 +113,35 @@ def run_augmentation_stage(
             skipped=True,
         )
 
+    # Augmentation is additive by contract. Its output used to replace the
+    # draft unconditionally, so a pass that dropped sections or truncated the
+    # article shipped unnoticed.
+    accepted, augmentation_diagnostics = evaluate_augmentation(
+        original_content=rewrite["improved_content"],
+        augmented_content=augmentation["augmented_content"],
+    )
+    rolled_back = augmentation["augmentation_applied"] and not accepted
+    if rolled_back:
+        logger.warning(
+            "Prompt2Blog editorial augmentation rolled back: %s",
+            augmentation_diagnostics,
+        )
+        augmentation = _sanitize_editorial_augmentation(
+            {},
+            fallback_content=rewrite["improved_content"],
+        )
+        _append_stage_trace(
+            state["trace"],
+            state["include_debug"],
+            stage=stage,
+            model_name=state["writing_model"],
+            output={
+                "rolled_back": True,
+                "reason": "Augmented content regressed against the draft.",
+                "checks": augmentation_diagnostics,
+            },
+        )
+
     rewrite = {**rewrite, "improved_content": augmentation["augmented_content"]}
     dependencies.recorder.record_stage(
         run_id,
@@ -120,6 +150,8 @@ def run_augmentation_stage(
             "editorial_augmentation": augmentation,
             "raw_response": raw_response,
             "skipped": not state["enable_editorial_augmentation"],
+            "rolled_back": rolled_back,
+            "retention_checks": augmentation_diagnostics,
         },
     )
     return {
@@ -127,4 +159,5 @@ def run_augmentation_stage(
         "rewrite": rewrite,
         "editorial_augmentation": augmentation,
         "editorial_augmentation_raw_response": raw_response,
+        "augmentation_rolled_back": rolled_back,
     }
