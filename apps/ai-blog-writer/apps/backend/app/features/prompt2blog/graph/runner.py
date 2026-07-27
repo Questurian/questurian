@@ -28,20 +28,28 @@ def run_prompt2blog_stage_graph(
     initial_state: Prompt2BlogGraphState,
     nodes: list[tuple[str, GraphNode]],
     recorder: RunRecorder,
+    build_graph: Callable[[dict[str, GraphNode]], Any] | None = None,
 ) -> Prompt2BlogGraphState:
-    """Compile and invoke a graph whose nodes are the real pipeline stages."""
+    """Compile and invoke a graph whose nodes are the real pipeline stages.
+
+    ``build_graph`` declares the topology. Without one the nodes are chained in
+    the order given, which remains useful for narrow tests.
+    """
     from langgraph.graph import END, START, StateGraph
 
-    builder = StateGraph(Prompt2BlogGraphState)
-    previous_node_name: str | None = None
-    for node_name, node_fn in nodes:
-        builder.add_node(node_name, node_fn)
-        builder.add_edge(
-            START if previous_node_name is None else previous_node_name, node_name
-        )
-        previous_node_name = node_name
-    if previous_node_name is not None:
-        builder.add_edge(previous_node_name, END)
+    if build_graph is not None:
+        builder = build_graph(dict(nodes))
+    else:
+        builder = StateGraph(Prompt2BlogGraphState)
+        previous_node_name: str | None = None
+        for node_name, node_fn in nodes:
+            builder.add_node(node_name, node_fn)
+            builder.add_edge(
+                START if previous_node_name is None else previous_node_name, node_name
+            )
+            previous_node_name = node_name
+        if previous_node_name is not None:
+            builder.add_edge(previous_node_name, END)
 
     trace_payload: dict[str, str] = {}
     try:

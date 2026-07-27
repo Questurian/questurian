@@ -9,11 +9,11 @@ from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
 from ..prompts.generation import SEO_SAFE_CONTENT_GENERATION_GUIDELINES
 from ..prompts.quality import P2B_QUALITY_AUDIT_PROMPT, P2B_REPAIR_PROMPT
+from ..policies import is_better_quality
 from ..quality import (
     _build_constraint_checks,
     _sanitize_quality,
     _sanitize_rewrite,
-    _should_run_repair,
 )
 from ..support import _json
 
@@ -78,128 +78,164 @@ def run_quality_audit_stage(
 ) -> dict[str, Any]:
     stage = "stage_quality_audit"
     run_id = state["run_id"]
+    attempt = state.get("repair_attempts", 0)
     dependencies.recorder.start_stage(run_id, stage)
 
+    rewrite = state["rewrite"]
     quality, checks, prompt, raw_response, parsed = _audit_rewrite(
         state,
         dependencies,
-        state["rewrite"],
+        rewrite,
     )
+
+    # Track the best draft seen across the repair loop so a repair pass that
+    # scores worse than the draft it replaced cannot ship.
+    updates: dict[str, Any] = {
+        "current_stage": stage,
+        "quality": quality,
+        "quality_checks": checks,
+    }
+    if is_better_quality(quality, state.get("best_quality")):
+        updates["best_rewrite"] = rewrite
+        updates["best_quality"] = quality
+        updates["best_quality_checks"] = checks
+
     dependencies.recorder.record_stage(
         run_id,
         stage,
-        {"quality": quality, "raw_response": raw_response},
+        {"quality": quality, "raw_response": raw_response, "attempt": attempt},
     )
     _append_stage_trace(
         state["trace"],
         state["include_debug"],
         stage=stage,
         model_name=state["audit_model"],
+        input_payload={"attempt": attempt},
         prompt=prompt,
         raw_response=raw_response,
         parsed=parsed,
         output=quality,
     )
-    return {
-        "current_stage": stage,
-        "quality": quality,
-        "quality_checks": checks,
-    }
+    return updates
 
 
 def run_repair_stage(
     state: Prompt2BlogGraphState,
     dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
+    """Rewrite the draft against the auditor's required revisions.
+
+    The graph decides whether this node runs and re-gates the result, so the
+    stage no longer owns the decision and no longer re-audits its own output.
+    """
     stage = "stage_repair"
     run_id = state["run_id"]
     guideline = state["guideline"]
     rewrite = state["rewrite"]
     quality = state["quality"]
-    quality_checks = state["quality_checks"]
+    attempt = state.get("repair_attempts", 0) + 1
     dependencies.recorder.start_stage(run_id, stage)
 
-    repair_applied = _should_run_repair(quality, quality_checks)
-    raw_response = ""
-    if repair_applied:
-        prompt = P2B_REPAIR_PROMPT.format(
-            raw_sources=state["raw_sources_text"],
-            cleaned_data=state["cleaned_data"],
-            previous_title=rewrite["improved_title"],
-            previous_content=rewrite["improved_content"],
-            required_revisions=_json(quality.get("required_revisions", [])),
-            article_type_name=guideline["name"],
-            guideline=guideline["guideline"] or "No guideline provided.",
-            title_guideline=guideline["title_guideline"]
-            or "No title guideline provided.",
-            writing_brief_json=_json(state["writing_brief"]),
-            seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
-            narrative_focus=state["narrative_focus"],
-            hard_constraints=state["hard_constraints"],
-        )
-        prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
-        # Repair rewrites the whole article, so it runs on the writer model.
-        # Routing it to the analysis model downgraded every repaired run.
-        parsed, raw_response = dependencies.llm.invoke_json(
-            prompt=prompt,
-            max_tokens=6144,
-            temperature=0.1,
-            model_name=state["writing_model"],
-        )
-        rewrite = _sanitize_rewrite(
-            parsed,
-            fallback_title=rewrite["improved_title"],
-            fallback_content=rewrite["improved_content"],
-        )
-        rewrite["improved_content"] = dependencies.llm.enforce_anti_ai(
-            rewrite["improved_content"],
-            model_name=state["writing_model"],
-            max_tokens=6144,
-            context="prompt2blog repair",
-        )
-        quality, quality_checks, _, quality_raw, _ = _audit_rewrite(
-            state,
-            dependencies,
-            rewrite,
-        )
-        quality["post_repair_raw_response"] = quality_raw
-        _append_stage_trace(
-            state["trace"],
-            state["include_debug"],
-            stage=stage,
-            model_name=state["writing_model"],
-            prompt=prompt,
-            raw_response=raw_response,
-            parsed=parsed,
-            output={"rewrite": rewrite, "quality_after_repair": quality},
-        )
-    else:
-        _append_stage_trace(
-            state["trace"],
-            state["include_debug"],
-            stage=stage,
-            model_name=state["model_name"],
-            output={
-                "skipped": True,
-                "reason": "Quality and constraint checks passed.",
-            },
-            skipped=True,
-        )
+    prompt = P2B_REPAIR_PROMPT.format(
+        raw_sources=state["raw_sources_text"],
+        cleaned_data=state["cleaned_data"],
+        previous_title=rewrite["improved_title"],
+        previous_content=rewrite["improved_content"],
+        required_revisions=_json(quality.get("required_revisions", [])),
+        article_type_name=guideline["name"],
+        guideline=guideline["guideline"] or "No guideline provided.",
+        title_guideline=guideline["title_guideline"] or "No title guideline provided.",
+        writing_brief_json=_json(state["writing_brief"]),
+        seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
+        narrative_focus=state["narrative_focus"],
+        hard_constraints=state["hard_constraints"],
+    )
+    prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
+    # Repair rewrites the whole article, so it runs on the writer model.
+    # Routing it to the analysis model downgraded every repaired run.
+    parsed, raw_response = dependencies.llm.invoke_json(
+        prompt=prompt,
+        max_tokens=6144,
+        temperature=0.1,
+        model_name=state["writing_model"],
+    )
+    repaired = _sanitize_rewrite(
+        parsed,
+        fallback_title=rewrite["improved_title"],
+        fallback_content=rewrite["improved_content"],
+    )
+    repaired["improved_content"] = dependencies.llm.enforce_anti_ai(
+        repaired["improved_content"],
+        model_name=state["writing_model"],
+        max_tokens=6144,
+        context="prompt2blog repair",
+    )
+    _append_stage_trace(
+        state["trace"],
+        state["include_debug"],
+        stage=stage,
+        model_name=state["writing_model"],
+        input_payload={"attempt": attempt},
+        prompt=prompt,
+        raw_response=raw_response,
+        parsed=parsed,
+        output={"rewrite": repaired},
+    )
 
     dependencies.recorder.record_stage(
         run_id,
         stage,
         {
-            "repair_applied": repair_applied,
-            "rewrite": rewrite,
-            "quality": quality,
+            "repair_applied": True,
+            "attempt": attempt,
+            "rewrite": repaired,
+            "required_revisions": quality.get("required_revisions", []),
             "raw_response": raw_response,
         },
     )
     return {
         "current_stage": stage,
-        "repair_applied": repair_applied,
-        "rewrite": rewrite,
-        "quality": quality,
-        "quality_checks": quality_checks,
+        "repair_applied": True,
+        "repair_attempts": attempt,
+        "rewrite": repaired,
+    }
+
+
+def run_quality_settle_stage(
+    state: Prompt2BlogGraphState,
+    dependencies: PipelineDependencies,
+) -> dict[str, Any]:
+    """Settle on the best-scoring draft produced during the repair loop.
+
+    Repair previously replaced the draft unconditionally, so a repair pass that
+    scored worse than the draft it replaced still shipped.
+    """
+    stage = "stage_quality_settle"
+    run_id = state["run_id"]
+    dependencies.recorder.start_stage(run_id, stage)
+
+    best_rewrite = state.get("best_rewrite") or state["rewrite"]
+    best_quality = state.get("best_quality") or state["quality"]
+    best_checks = state.get("best_quality_checks") or state["quality_checks"]
+    rolled_back = best_rewrite is not state["rewrite"]
+
+    settlement = {
+        "repair_attempts": state.get("repair_attempts", 0),
+        "repair_applied": state.get("repair_applied", False),
+        "reverted_to_earlier_draft": rolled_back,
+        "final_overall_score": best_quality.get("overall_score"),
+        "last_overall_score": state["quality"].get("overall_score"),
+    }
+    dependencies.recorder.record_stage(run_id, stage, settlement)
+    _append_stage_trace(
+        state["trace"],
+        state["include_debug"],
+        stage=stage,
+        output=settlement,
+    )
+    return {
+        "current_stage": stage,
+        "rewrite": best_rewrite,
+        "quality": best_quality,
+        "quality_checks": best_checks,
     }
