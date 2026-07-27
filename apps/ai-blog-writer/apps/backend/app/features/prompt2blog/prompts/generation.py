@@ -80,7 +80,7 @@ Rules:
 - Supplemental context may explain concepts mentioned in the source, but the final article cannot invent unsupported specifics.
 - If details are missing, use cautious phrasing and clearly mark uncertainty.
 - Follow STYLE DIRECTIVE exactly. Tone, length, and brand voice are requirements, not suggestions.
-- Respect writing brief audience and perspective.
+- Respect writing brief audience, destination context, and editorial angle.
 - Use clear logical transitions only where needed; avoid stock transition phrases.
 - Use `##` section headings.
 - Keep sections practical and actionable.
@@ -203,7 +203,7 @@ Hard rules:
 - Include one direct 40-60 word answer near the top.
 - Include a concise takeaway section near the end.
 - Follow STYLE DIRECTIVE exactly. Tone, length, and brand voice are requirements, not suggestions.
-- Respect brief perspective and audience.
+- Respect brief audience, destination context, and editorial angle.
 - Respect formatting brief (paragraph length and target word count).
 - Include CTA naturally near the end when provided.
 - SEO: place keywords naturally, never stuff.

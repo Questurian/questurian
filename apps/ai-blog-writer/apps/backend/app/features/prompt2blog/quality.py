@@ -35,8 +35,12 @@ def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
     goal = _safe_str(writing_brief.get("goal"))
     if goal:
         return goal
-    perspective = _safe_str(writing_brief.get("perspective"))
-    return perspective or "No additional narrative focus provided."
+    # `perspective` is still read so briefs posted to the runtime endpoint
+    # before the rename keep resolving.
+    destination = _safe_str(writing_brief.get("destination_context")) or _safe_str(
+        writing_brief.get("perspective")
+    )
+    return destination or "No additional narrative focus provided."
 
 
 # A brief asking for "flights to Lima" is satisfied by prose saying "flight to
