@@ -69,7 +69,15 @@ def _contains_phrase(text: str, phrase: str) -> bool:
 
 
 def _estimate_paragraph_sentence_average(content: str) -> float:
-    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", content) if p.strip()]
+    # Headings are not paragraphs. They used to be counted as one-sentence
+    # blocks, so every `##` dragged the average down and a well-sectioned
+    # article measured far shorter than it reads -- which is exactly the
+    # article the length profiles ask for.
+    paragraphs = [
+        block.strip()
+        for block in re.split(r"\n\s*\n", content)
+        if block.strip() and not block.lstrip().startswith("#")
+    ]
     if not paragraphs:
         return 0.0
 
@@ -117,7 +125,12 @@ def _build_constraint_checks(
     elif paragraph_length_pref.lower().startswith("medium"):
         paragraph_length_met = 2.5 <= avg_sentences <= 5.5
     elif paragraph_length_pref.lower().startswith("long"):
-        paragraph_length_met = avg_sentences >= 5.0
+        # Bounded on both sides. This used to be `>= 5.0`, which is unbounded
+        # above and turned the gate into a hard requirement for wall-of-text
+        # paragraphs -- against the long profile's own instruction to keep
+        # structure scannable. Length comes from more sections, not longer
+        # blocks, so an article that stays readable must not fail the check.
+        paragraph_length_met = 3.0 <= avg_sentences <= 6.5
 
     cta = _safe_str(writing_brief.get("call_to_action"))
     cta_present = _keyword_overlap_ratio(cta, combined) >= 0.35 if cta else True
