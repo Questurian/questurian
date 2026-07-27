@@ -11,6 +11,7 @@ class Prompt2BlogGraphState(TypedDict, total=False):
     request: PipelineV2RuntimeRequest
     model_name: str
     writing_model: str
+    audit_model: str
     cleaned_data: str
     raw_sources: list[str]
     raw_sources_text: str

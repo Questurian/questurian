@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from app.features.prompt2blog.config import P2B_AUDIT_MODEL
 from app.features.prompt2blog.dependencies import PipelineDependencies
 from app.features.prompt2blog.models import (
     PipelineV2RuntimeRequest,
@@ -57,6 +58,7 @@ def _pipeline_fakes(
         "artifacts": [],
         "json_prompts": [],
         "text_prompts": [],
+        "calls": [],
     }
     quality_score_iter = iter(quality_scores)
 
@@ -164,9 +166,15 @@ def _pipeline_fakes(
 
     class FakeLLM:
         def invoke_json(self, **kwargs: Any) -> tuple[dict[str, Any], str]:
+            recorded["calls"].append(
+                {"prompt": kwargs["prompt"], "model_name": kwargs.get("model_name")}
+            )
             return invoke_json(**kwargs)
 
         def invoke_text(self, **kwargs: Any) -> str:
+            recorded["calls"].append(
+                {"prompt": kwargs["prompt"], "model_name": kwargs.get("model_name")}
+            )
             return invoke_text(**kwargs)
 
         @staticmethod
@@ -255,6 +263,50 @@ def test_pipeline_contract_repairs_then_reaudits():
     )
     assert repair_payload["quality"]["overall_score"] == 9
     assert sum("quality auditor" in prompt for prompt in recorded["json_prompts"]) == 2
+
+
+def _model_for(recorded: dict[str, Any], marker: str) -> str | None:
+    return next(
+        call["model_name"] for call in recorded["calls"] if marker in call["prompt"]
+    )
+
+
+def test_writer_model_serves_compose_repair_and_title():
+    recorded, dependencies = _pipeline_fakes(quality_scores=[6, 9])
+
+    run_pipeline_v2(f"run-tiering-{uuid4()}", _runtime_request(), dependencies)
+
+    assert _model_for(recorded, "expert editor creating a publish-ready article") == (
+        "test-writer"
+    )
+    assert _model_for(recorded, "hard rewrite repair pass") == "test-writer"
+    assert _model_for(recorded, "headline editor") == "test-writer"
+
+
+def test_quality_audit_runs_on_the_audit_model_not_the_analysis_model():
+    recorded, dependencies = _pipeline_fakes(quality_scores=[9])
+
+    run_pipeline_v2(f"run-audit-model-{uuid4()}", _runtime_request(), dependencies)
+
+    assert _model_for(recorded, "quality auditor") == P2B_AUDIT_MODEL
+    assert _model_for(recorded, "quality auditor") != "test-model"
+
+
+def test_finalize_records_actual_stage_model_routing():
+    recorded, dependencies = _pipeline_fakes(quality_scores=[9])
+
+    run_pipeline_v2(f"run-overrides-{uuid4()}", _runtime_request(), dependencies)
+
+    overrides = recorded["artifacts"][0][1]["pipeline_v2"]["quality_review"][
+        "stage_model_overrides"
+    ]
+    assert overrides == {
+        "stage_compose": "test-writer",
+        "stage_editorial_augmentation": "test-writer",
+        "stage_repair": "test-writer",
+        "stage_title": "test-writer",
+        "stage_quality_audit": P2B_AUDIT_MODEL,
+    }
 
 
 def test_pipeline_contract_falls_back_when_augmentation_fails():

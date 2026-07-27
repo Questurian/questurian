@@ -10,6 +10,8 @@ from ..prompts.editorial import P2B_TITLE_PROMPT
 from ..support import _json
 
 
+# The title is the highest-leverage single string the pipeline emits, so it is
+# written by the writer model rather than the cheaper analysis model.
 def run_title_stage(
     state: Prompt2BlogGraphState,
     dependencies: PipelineDependencies,
@@ -30,7 +32,7 @@ def run_title_stage(
         prompt=prompt,
         max_tokens=512,
         temperature=0.1,
-        model_name=state["model_name"],
+        model_name=state["writing_model"],
     )
     final_title = _clean_title(raw_response) or rewrite["improved_title"]
     dependencies.recorder.record_stage(
@@ -42,7 +44,7 @@ def run_title_stage(
         state["trace"],
         state["include_debug"],
         stage=stage,
-        model_name=state["model_name"],
+        model_name=state["writing_model"],
         prompt=prompt,
         raw_response=raw_response,
         output={"final_title": final_title},
