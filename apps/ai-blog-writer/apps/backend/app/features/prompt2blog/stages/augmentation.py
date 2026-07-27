@@ -44,6 +44,7 @@ def run_augmentation_stage(
                 }
             ),
             narrative_focus=state["narrative_focus"],
+            style_directive=state["style_directive"],
         )
         prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
         try:
@@ -76,6 +77,7 @@ def run_augmentation_stage(
                         "name": guideline["name"],
                     },
                     "narrative_focus": state["narrative_focus"],
+                    "style_directive": state["style_directive"],
                 },
                 prompt=prompt,
                 raw_response=raw_response,
@@ -96,6 +98,7 @@ def run_augmentation_stage(
                         "name": guideline["name"],
                     },
                     "narrative_focus": state["narrative_focus"],
+                    "style_directive": state["style_directive"],
                 },
                 prompt=prompt,
                 error=str(exc),

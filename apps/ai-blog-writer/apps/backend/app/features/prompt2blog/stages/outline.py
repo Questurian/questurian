@@ -67,6 +67,7 @@ def run_outline_stage(
         or "No supplemental material generated.",
         writing_brief_json=_json(state["writing_brief"]),
         narrative_focus=state["narrative_focus"],
+        style_directive=state["style_directive"],
     )
 
     try:

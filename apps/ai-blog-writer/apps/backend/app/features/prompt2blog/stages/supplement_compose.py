@@ -52,6 +52,7 @@ def run_supplement_stage(
             ),
             writing_brief_json=_json(state["writing_brief"]),
             narrative_focus=state["narrative_focus"],
+            style_directive=state["style_directive"],
             hard_constraints=state["hard_constraints"],
         )
         prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
@@ -117,6 +118,7 @@ def run_compose_stage(
         writing_brief_json=_json(state["writing_brief"]),
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
         narrative_focus=state["narrative_focus"],
+        style_directive=state["style_directive"],
         hard_constraints=state["hard_constraints"],
         outline=state["outline_text"],
     )
@@ -151,6 +153,7 @@ def run_compose_stage(
         input_payload={
             "article_type": guideline,
             "narrative_focus": state["narrative_focus"],
+            "style_directive": state["style_directive"],
         },
         prompt=prompt,
         raw_response=raw_response,

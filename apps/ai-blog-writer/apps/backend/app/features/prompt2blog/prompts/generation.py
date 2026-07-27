@@ -60,6 +60,9 @@ TITLE GUIDELINE:
 WRITING BRIEF (JSON):
 {writing_brief_json}
 
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
+
 NARRATIVE FOCUS (OPTIONAL):
 {narrative_focus}
 """
@@ -76,7 +79,8 @@ Rules:
 - Do not invent specific facts, numbers, quotes, prices, names, or policies.
 - Supplemental context may explain concepts mentioned in the source, but the final article cannot invent unsupported specifics.
 - If details are missing, use cautious phrasing and clearly mark uncertainty.
-- Respect writing brief tone, audience, and perspective.
+- Follow STYLE DIRECTIVE exactly. Tone, length, and brand voice are requirements, not suggestions.
+- Respect writing brief audience and perspective.
 - Use clear logical transitions only where needed; avoid stock transition phrases.
 - Use `##` section headings.
 - Keep sections practical and actionable.
@@ -99,6 +103,9 @@ MISSING SECTIONS:
 
 WRITING BRIEF (JSON):
 {writing_brief_json}
+
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
 
 NARRATIVE FOCUS (OPTIONAL):
 {narrative_focus}
@@ -166,6 +173,9 @@ SUPPLEMENTAL MATERIAL (OPTIONAL):
 WRITING BRIEF (JSON):
 {writing_brief_json}
 
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
+
 NARRATIVE FOCUS (OPTIONAL):
 {narrative_focus}
 """
@@ -192,7 +202,8 @@ Hard rules:
 - Use at least 3 `##` headings.
 - Include one direct 40-60 word answer near the top.
 - Include a concise takeaway section near the end.
-- Respect brief voice/tone/perspective/audience.
+- Follow STYLE DIRECTIVE exactly. Tone, length, and brand voice are requirements, not suggestions.
+- Respect brief perspective and audience.
 - Respect formatting brief (paragraph length and target word count).
 - Include CTA naturally near the end when provided.
 - SEO: place keywords naturally, never stuff.
@@ -232,6 +243,9 @@ WRITING BRIEF (JSON):
 
 SEO-SAFE RULES:
 {seo_guideline}
+
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
 
 NARRATIVE FOCUS (OPTIONAL):
 {narrative_focus}

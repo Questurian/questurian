@@ -22,15 +22,6 @@ def _build_writing_brief_from_input(
     negative_instructions = _clean_string_list(request.negative_instructions)
 
     profile_lines = [
-        f"Tone profile ({_safe_str(tone.get('label'))}):",
-        _safe_str(tone.get("instructions")),
-        "",
-        f"Length profile ({_safe_str(length.get('label'))}):",
-        _safe_str(length.get("instructions")),
-        "",
-        f"Brand voice ({_safe_str(brand_voice.get('label'))}):",
-        _safe_str(brand_voice.get("instructions")),
-        "",
         f"Destination context: {_safe_str(request.destination_context)}",
         f"Audience intent: {_safe_str(request.target_reader)}",
         f"Creativity level: {creativity_level}",
@@ -39,6 +30,11 @@ def _build_writing_brief_from_input(
     # are hard requirements and get their own prompt block; folding them into
     # editorial_instructions buried them inside a field every prompt renders
     # under the header "NARRATIVE FOCUS (OPTIONAL)".
+    #
+    # The tone, length, and brand voice guides left for the same reason. They
+    # are style requirements, not optional colour, and now render as their own
+    # STYLE DIRECTIVE block built from option_context in the orchestrator.
+    # What stays here is genuine steering: context, intent, and creativity.
     if request.prompt_enhance:
         profile_lines.append(
             "\nPrompt enhancement enabled: prefer stronger transitions and clearer sections."

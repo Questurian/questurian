@@ -123,6 +123,9 @@ TITLE GUIDELINE:
 WRITING BRIEF (JSON):
 {writing_brief_json}
 
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
+
 SEO-SAFE RULES:
 {seo_guideline}
 """
@@ -182,6 +185,9 @@ WRITING BRIEF (JSON):
 
 SEO-SAFE RULES:
 {seo_guideline}
+
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
 
 NARRATIVE FOCUS (OPTIONAL):
 {narrative_focus}
