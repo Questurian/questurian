@@ -120,8 +120,14 @@ def run_finalize_stage(
             "editorial_augmentation_summary": augmentation["augmentation_summary"],
             "editorial_diagnostic": augmentation["diagnostic"],
             "coverage": state["coverage"],
+            "outline_accepted": state["outline_accepted"],
+            "outline_section_count": len(state["outline"].get("sections") or []),
+            "outline_unsupported_requests": state["outline"].get(
+                "unsupported_requests", []
+            ),
             "model_used": state["model_name"],
             "stage_model_overrides": {
+                "stage_outline": state["writing_model"],
                 "stage_compose": state["writing_model"],
                 "stage_editorial_augmentation": state["writing_model"],
                 "stage_repair": state["writing_model"],
@@ -158,6 +164,7 @@ def run_finalize_stage(
             "stages": {
                 "stage_guideline_fetch": guideline,
                 "stage_coverage_check": state["coverage"],
+                "stage_outline": state["outline"],
                 "stage_compose": rewrite,
                 "stage_quality_audit": quality,
                 "stage_editorial_augmentation": augmentation,

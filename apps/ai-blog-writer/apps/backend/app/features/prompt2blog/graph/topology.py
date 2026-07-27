@@ -16,6 +16,7 @@ GENERATION_NODES = (
     "guideline",
     "coverage",
     "supplement",
+    "outline",
     "compose",
     "quality_audit",
     "repair",
@@ -51,7 +52,8 @@ def build_prompt2blog_graph(nodes: dict[str, Any]) -> Any:
 
     builder.add_edge("guideline", "coverage")
     builder.add_edge("coverage", "supplement")
-    builder.add_edge("supplement", "compose")
+    builder.add_edge("supplement", "outline")
+    builder.add_edge("outline", "compose")
     builder.add_edge("compose", "quality_audit")
 
     # The audit either accepts the draft, spends another repair attempt, or

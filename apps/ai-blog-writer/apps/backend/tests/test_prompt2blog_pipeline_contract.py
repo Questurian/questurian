@@ -55,6 +55,7 @@ def _pipeline_fakes(
     *,
     quality_scores: list[int],
     augmentation_error: bool = False,
+    outline_error: bool = False,
 ) -> tuple[dict[str, Any], PipelineDependencies]:
     recorded: dict[str, Any] = {
         "statuses": [],
@@ -101,6 +102,39 @@ def _pipeline_fakes(
                     "missing_sections": [],
                 },
                 '{"coverage_sufficient": true}',
+            )
+        if "commissioning editor planning an article" in prompt:
+            if outline_error:
+                raise RuntimeError("outline unavailable")
+            return (
+                {
+                    "working_title": "Kyoto for First-Time Visitors",
+                    "direct_answer_focus": "How to plan a first Kyoto trip.",
+                    "sections": [
+                        {
+                            "heading": "Plan Your Visit",
+                            "purpose": "Set up timing and transport.",
+                            "source_support": "Source covers transport.",
+                            "target_words": 300,
+                        },
+                        {
+                            "heading": "Getting Around",
+                            "purpose": "Explain local transit.",
+                            "source_support": "Source covers transit.",
+                            "target_words": 300,
+                        },
+                        {
+                            "heading": "Where to Stay",
+                            "purpose": "Compare neighbourhoods.",
+                            "source_support": "Source covers lodging.",
+                            "target_words": 300,
+                        },
+                    ],
+                    "takeaway_focus": "Plan transport first.",
+                    "guideline_alignment": "Covers planning and logistics.",
+                    "unsupported_requests": [],
+                },
+                '{"working_title": "Kyoto for First-Time Visitors"}',
             )
         if "expert editor creating a publish-ready article" in prompt:
             return (
@@ -240,6 +274,7 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "stage_guideline_fetch",
         "stage_coverage_check",
         "stage_supplement",
+        "stage_outline",
         "stage_compose",
         "stage_quality_audit",
         "stage_quality_settle",
@@ -263,6 +298,7 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
     assert artifact["stages"].keys() == {
         "stage_guideline_fetch",
         "stage_coverage_check",
+        "stage_outline",
         "stage_compose",
         "stage_quality_audit",
         "stage_editorial_augmentation",
@@ -356,6 +392,7 @@ def test_finalize_records_actual_stage_model_routing():
         "stage_model_overrides"
     ]
     assert overrides == {
+        "stage_outline": "test-writer",
         "stage_compose": "test-writer",
         "stage_editorial_augmentation": "test-writer",
         "stage_repair": "test-writer",
@@ -404,6 +441,45 @@ def test_hard_constraints_reach_the_compose_prompt():
     assert "MUST INCLUDE" in compose_prompt
     assert "Mention visa on arrival" in compose_prompt
     assert "MUST AVOID" in compose_prompt
+
+
+def test_outline_plan_reaches_the_compose_prompt():
+    recorded, dependencies = _pipeline_fakes(quality_scores=[9])
+
+    run_pipeline_v2(f"run-outline-{uuid4()}", _runtime_request(), dependencies)
+
+    compose_prompt = next(
+        call["prompt"]
+        for call in recorded["calls"]
+        if "expert editor creating a publish-ready article" in call["prompt"]
+    )
+    assert "SECTION PLAN:" in compose_prompt
+    assert "1. Plan Your Visit (~300 words)" in compose_prompt
+
+    outline_payload = _stage_payload(recorded, "stage_outline")["data"]
+    assert outline_payload["accepted"] is True
+    assert len(outline_payload["outline"]["sections"]) == 3
+
+
+def test_outline_failure_degrades_instead_of_failing_the_run():
+    recorded, dependencies = _pipeline_fakes(
+        quality_scores=[9],
+        outline_error=True,
+    )
+
+    run_pipeline_v2(f"run-outline-fail-{uuid4()}", _runtime_request(), dependencies)
+
+    outline_payload = _stage_payload(recorded, "stage_outline")["data"]
+    assert outline_payload["accepted"] is False
+    assert outline_payload["outline"]["sections"] == []
+
+    compose_prompt = next(
+        call["prompt"]
+        for call in recorded["calls"]
+        if "expert editor creating a publish-ready article" in call["prompt"]
+    )
+    assert "No outline was produced" in compose_prompt
+    assert recorded["statuses"][-1][1]["state"] == "completed"
 
 
 def test_pipeline_contract_falls_back_when_augmentation_fails():
