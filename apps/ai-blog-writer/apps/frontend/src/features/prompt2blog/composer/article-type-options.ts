@@ -20,15 +20,18 @@ const ARTICLE_TYPE_GROUPS: Array<{ label: string; names: string[] }> = [
     names: [
       'Transportation Guide', 'Packing Guide', 'Visa & Entry Guide', 'Safety Guide',
       'Cultural Etiquette Guide', 'Checklist', 'Cost Breakdown', 'Resource List',
+      // Filters an audience out rather than serving one, so it sits with the
+      // other decision-support formats rather than under Editorial Formats.
+      'Disqualifiers',
     ],
   },
   {
     label: 'Editorial Formats',
     names: [
       'Explainer', 'Beginner\'s Guide', 'FAQ Article', 'How-to Guides', 'Comparison Article',
-      'Review', 'Myth-Busting Article', 'Feature Story', 'Travel Diary', 'In-depth Analysis',
-      'Opinion Piece', 'Interview', 'Case Study', 'News Article', 'Disqualifiers',
-      'Buyer\'s Guide', 'Survival Guide',
+      'Pros & Cons Breakdown', 'Review', 'Myth-Busting Article', 'Feature Story',
+      'Travel Diary', 'In-depth Analysis', 'Opinion Piece', 'Interview', 'Case Study',
+      'News Article', 'Buyer\'s Guide', 'Survival Guide',
     ],
   },
 ]

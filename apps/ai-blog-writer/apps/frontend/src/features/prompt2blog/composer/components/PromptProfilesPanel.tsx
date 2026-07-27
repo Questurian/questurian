@@ -57,8 +57,16 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
   </section>
 }
 
-function SelectField({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Array<{ id: string; label: string }>; onChange: (value: string) => void }) {
-  return <div className="p2b-field"><label htmlFor={id}>{label}</label><select id={id} className="p2b-select" value={value} onChange={event => onChange(event.target.value)}>{options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select></div>
+function SelectField({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Array<{ id: string; label: string; description?: string }>; onChange: (value: string) => void }) {
+  // The catalogs carry a description per option explaining when to pick it.
+  // Rendering only the label meant that routing was invisible at the point of
+  // choice, which is the only place it is any use.
+  const selected = options.find(option => option.id === value)
+  return <div className="p2b-field">
+    <label htmlFor={id}>{label}</label>
+    <select id={id} className="p2b-select" value={value} onChange={event => onChange(event.target.value)}>{options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
+    {selected?.description && <p className="p2b-field-hint is-selected">{selected.description}</p>}
+  </div>
 }
 
 function CheckboxField({ id, label, checked, onChange }: { id: string; label: string; checked: boolean; onChange: (checked: boolean) => void }) {
