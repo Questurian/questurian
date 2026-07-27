@@ -35,6 +35,11 @@ Rules:
 - Treat non-null writing brief fields as hard constraints.
 - If source support is weak for a required brief element, reflect that in missing_sections.
 - missing_sections must be concrete publishable section titles.
+- Treat HARD CONSTRAINTS as required coverage. If the sources cannot support a
+  must-include item, say so in missing_sections.
+
+HARD CONSTRAINTS:
+{hard_constraints}
 
 RAW SOURCES:
 {raw_sources}
@@ -75,6 +80,10 @@ Rules:
 - Use clear logical transitions only where needed; avoid stock transition phrases.
 - Use `##` section headings.
 - Keep sections practical and actionable.
+- Satisfy every item in HARD CONSTRAINTS. They are not stylistic preferences.
+
+HARD CONSTRAINTS:
+{hard_constraints}
 
 RAW SOURCES:
 {raw_sources}
@@ -122,6 +131,10 @@ Hard rules:
 - Include CTA naturally near the end when provided.
 - SEO: place keywords naturally, never stuff.
 - If required details are missing, explicitly mark them as not confirmed.
+- Satisfy every item in HARD CONSTRAINTS. They are not stylistic preferences.
+
+HARD CONSTRAINTS:
+{hard_constraints}
 
 RAW SOURCES:
 {raw_sources}

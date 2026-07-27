@@ -83,6 +83,32 @@ def _format_raw_sources(raw_sources: list[str]) -> str:
     return "\n\n---\n\n".join(cleaned)
 
 
+def _format_hard_constraints(writing_brief: dict[str, Any]) -> str:
+    """Render must-include and must-avoid items as an explicit requirement
+    block. These are hard constraints and must never be presented to a model
+    as optional narrative colour."""
+    must_include = _clean_string_list(_safe_dict(writing_brief).get("must_include") or [])
+    negative = _clean_string_list(
+        _safe_dict(writing_brief).get("negative_instructions") or []
+    )
+
+    sections: list[str] = []
+    if must_include:
+        sections.append(
+            "MUST INCLUDE - every item below has to appear in the article:\n"
+            + "\n".join(f"- {item}" for item in must_include)
+        )
+    if negative:
+        sections.append(
+            "MUST AVOID - none of the following may appear:\n"
+            + "\n".join(f"- {item}" for item in negative)
+        )
+
+    if not sections:
+        return "No hard constraints were supplied."
+    return "\n\n".join(sections)
+
+
 def _clean_string_list(items: list[str]) -> list[str]:
     cleaned: list[str] = []
     for item in items:

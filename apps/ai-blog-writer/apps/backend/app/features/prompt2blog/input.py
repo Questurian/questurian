@@ -35,22 +35,10 @@ def _build_writing_brief_from_input(
         f"Audience intent: {_safe_str(request.target_reader)}",
         f"Creativity level: {creativity_level}",
     ]
-    if must_include:
-        profile_lines.extend(
-            [
-                "",
-                "Must include:",
-                *[f"- {item}" for item in must_include],
-            ]
-        )
-    if negative_instructions:
-        profile_lines.extend(
-            [
-                "",
-                "Avoid:",
-                *[f"- {item}" for item in negative_instructions],
-            ]
-        )
+    # must_include and negative_instructions are deliberately absent here. They
+    # are hard requirements and get their own prompt block; folding them into
+    # editorial_instructions buried them inside a field every prompt renders
+    # under the header "NARRATIVE FOCUS (OPTIONAL)".
     if request.prompt_enhance:
         profile_lines.append(
             "\nPrompt enhancement enabled: prefer stronger transitions and clearer sections."
@@ -90,8 +78,9 @@ def _build_writing_brief_from_input(
         ).strip(),
         "must_include": must_include,
         "negative_instructions": negative_instructions,
-        "raw_input": {
-            "blobs": [{"content": source} for source in cleaned_sources],
-        },
     }
+    # The brief is serialized into every prompt. It used to carry the full
+    # cleaned sources under raw_input.blobs, so each call received the sources
+    # three times over: once as {raw_sources}, once as {cleaned_data} and again
+    # inside the brief JSON. Nothing read raw_input.
     return writing_brief

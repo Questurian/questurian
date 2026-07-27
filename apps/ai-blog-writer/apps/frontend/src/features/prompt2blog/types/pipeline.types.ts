@@ -174,8 +174,10 @@ export type Prompt2BlogPipelinePayload = {
       secondary_keywords_present: boolean
       audience_match: boolean
       tone_match: boolean
+      must_include_covered: boolean
     }
     secondary_keyword_coverage: number
+    must_include_coverage: number
     word_count_estimate: number
     repair_applied: boolean
     editorial_augmentation_applied: boolean

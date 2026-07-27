@@ -6,7 +6,10 @@ from uuid import uuid4
 
 import pytest
 
-from app.features.prompt2blog.config import P2B_AUDIT_MODEL
+from app.features.prompt2blog.config import (
+    P2B_AUDIT_MODEL,
+    PROMPT2BLOG_CREATIVITY_TEMPERATURES,
+)
 from app.features.prompt2blog.dependencies import PipelineDependencies
 from app.features.prompt2blog.models import (
     PipelineV2RuntimeRequest,
@@ -167,13 +170,21 @@ def _pipeline_fakes(
     class FakeLLM:
         def invoke_json(self, **kwargs: Any) -> tuple[dict[str, Any], str]:
             recorded["calls"].append(
-                {"prompt": kwargs["prompt"], "model_name": kwargs.get("model_name")}
+                {
+                    "prompt": kwargs["prompt"],
+                    "model_name": kwargs.get("model_name"),
+                    "temperature": kwargs.get("temperature"),
+                }
             )
             return invoke_json(**kwargs)
 
         def invoke_text(self, **kwargs: Any) -> str:
             recorded["calls"].append(
-                {"prompt": kwargs["prompt"], "model_name": kwargs.get("model_name")}
+                {
+                    "prompt": kwargs["prompt"],
+                    "model_name": kwargs.get("model_name"),
+                    "temperature": kwargs.get("temperature"),
+                }
             )
             return invoke_text(**kwargs)
 
@@ -307,6 +318,48 @@ def test_finalize_records_actual_stage_model_routing():
         "stage_title": "test-writer",
         "stage_quality_audit": P2B_AUDIT_MODEL,
     }
+
+
+def test_creativity_level_sets_the_compose_temperature():
+    compose_marker = "expert editor creating a publish-ready article"
+    temperatures = {}
+    for level in ("low", "high"):
+        recorded, dependencies = _pipeline_fakes(quality_scores=[9])
+        request = _runtime_request()
+        request.option_context["creativity_level"] = level
+        run_pipeline_v2(f"run-creativity-{level}-{uuid4()}", request, dependencies)
+        temperatures[level] = next(
+            call["temperature"]
+            for call in recorded["calls"]
+            if compose_marker in call["prompt"]
+        )
+
+    # The control used to be inert: it was rendered into an instructions blob
+    # while compose ran at a hardcoded 0.1 regardless.
+    assert temperatures["low"] == PROMPT2BLOG_CREATIVITY_TEMPERATURES["low"]
+    assert temperatures["high"] == PROMPT2BLOG_CREATIVITY_TEMPERATURES["high"]
+    assert temperatures["low"] < temperatures["high"]
+
+
+def test_hard_constraints_reach_the_compose_prompt():
+    # An uncovered must_include now fails a constraint check and triggers
+    # repair, so the audit runs twice.
+    recorded, dependencies = _pipeline_fakes(quality_scores=[9, 9])
+    request = _runtime_request()
+    request.writing_brief["must_include"] = ["Mention visa on arrival"]
+    request.writing_brief["negative_instructions"] = ["Never say hidden gem"]
+
+    run_pipeline_v2(f"run-hard-constraints-{uuid4()}", request, dependencies)
+
+    compose_prompt = next(
+        call["prompt"]
+        for call in recorded["calls"]
+        if "expert editor creating a publish-ready article" in call["prompt"]
+    )
+    assert "HARD CONSTRAINTS:" in compose_prompt
+    assert "MUST INCLUDE" in compose_prompt
+    assert "Mention visa on arrival" in compose_prompt
+    assert "MUST AVOID" in compose_prompt
 
 
 def test_pipeline_contract_falls_back_when_augmentation_fails():

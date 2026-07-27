@@ -80,6 +80,7 @@ def run_coverage_stage(
         title_guideline=guideline["title_guideline"] or "No title guideline provided.",
         writing_brief_json=_json(state["writing_brief"]),
         narrative_focus=state["narrative_focus"],
+        hard_constraints=state["hard_constraints"],
     )
     parsed, raw_response = dependencies.llm.invoke_json(
         prompt=prompt,

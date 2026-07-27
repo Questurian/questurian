@@ -15,6 +15,10 @@ from .support import (
 # Share of secondary keywords that must appear before the check passes.
 SECONDARY_KEYWORD_COVERAGE_THRESHOLD = 0.6
 
+# must_include items are hard requirements, so the bar is near-total. The
+# per-item test is fuzzy (an item is a phrase, not a keyword), hence not 1.0.
+MUST_INCLUDE_COVERAGE_THRESHOLD = 0.9
+
 # The audit rubric calls 7-8 "acceptable with edits" and <=6 "requires a hard
 # rewrite". Repair therefore fires below 7, not at or below it.
 REPAIR_SCORE_THRESHOLD = 7
@@ -140,11 +144,27 @@ def _build_constraint_checks(
         secondary_keyword_coverage >= SECONDARY_KEYWORD_COVERAGE_THRESHOLD
     )
 
+    # must_include items are user-stated hard requirements. Nothing used to
+    # verify them, so "must mention visa-on-arrival" was silently droppable.
+    must_include = [
+        _safe_str(item)
+        for item in (writing_brief.get("must_include") or [])
+        if _safe_str(item)
+    ]
+    must_include_coverage = 1.0
+    if must_include:
+        matched = sum(
+            1 for item in must_include if _keyword_overlap_ratio(item, combined) >= 0.6
+        )
+        must_include_coverage = matched / len(must_include)
+
     # audience_match and tone_match are deliberately absent. They are semantic
     # judgements and belong to the quality auditor; the token-overlap heuristic
     # that used to compute them here overrode the model on the two questions it
     # is actually good at. See _audit_rewrite.
     return {
+        "must_include_covered": must_include_coverage >= MUST_INCLUDE_COVERAGE_THRESHOLD,
+        "must_include_coverage": round(must_include_coverage, 3),
         "target_word_count_met": target_word_count_met,
         "paragraph_length_met": paragraph_length_met,
         "cta_present": cta_present,
@@ -268,6 +288,7 @@ def _should_run_repair(quality: dict[str, Any], checks: dict[str, Any]) -> bool:
         "cta_present",
         "primary_keyword_present",
         "secondary_keywords_present",
+        "must_include_covered",
     ):
         if not _safe_bool(checks.get(key), default=True):
             return True

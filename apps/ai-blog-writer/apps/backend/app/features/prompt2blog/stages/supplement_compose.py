@@ -52,12 +52,13 @@ def run_supplement_stage(
             ),
             writing_brief_json=_json(state["writing_brief"]),
             narrative_focus=state["narrative_focus"],
+            hard_constraints=state["hard_constraints"],
         )
         prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
         raw_response = dependencies.llm.invoke_text(
             prompt=prompt,
             max_tokens=4096,
-            temperature=0.2,
+            temperature=state["compose_temperature"],
             model_name=state["model_name"],
         )
         supplemental_content = dependencies.llm.enforce_anti_ai(
@@ -117,12 +118,13 @@ def run_compose_stage(
         writing_brief_json=_json(state["writing_brief"]),
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
         narrative_focus=state["narrative_focus"],
+        hard_constraints=state["hard_constraints"],
     )
     prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
     parsed, raw_response = dependencies.llm.invoke_json(
         prompt=prompt,
         max_tokens=6144,
-        temperature=0.1,
+        temperature=state["compose_temperature"],
         model_name=state["writing_model"],
     )
     rewrite = _sanitize_rewrite(
