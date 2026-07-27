@@ -109,6 +109,33 @@ def _format_hard_constraints(writing_brief: dict[str, Any]) -> str:
     return "\n\n".join(sections)
 
 
+def _format_style_directive(option_context: dict[str, Any]) -> str:
+    """Render the resolved tone, length, and brand voice guides as a required
+    style block. These used to travel inside ``editorial_instructions``, which
+    every prompt renders under the header "NARRATIVE FOCUS (OPTIONAL)" -- so the
+    whole tone guide reached the model labelled optional. Built from
+    ``option_context`` rather than the writing brief so the runtime-run path
+    gets the same directive as a full run."""
+    context = _safe_dict(option_context)
+
+    sections: list[str] = []
+    for key, heading in (
+        ("tone", "Tone"),
+        ("length", "Length"),
+        ("brand_voice", "Brand voice"),
+    ):
+        option = _safe_dict(context.get(key))
+        instructions = _safe_str(option.get("instructions"))
+        if not instructions:
+            continue
+        label = _safe_str(option.get("label")) or _safe_str(option.get("id"))
+        sections.append(f"{heading} profile ({label}):\n{instructions}")
+
+    if not sections:
+        return "No style profiles were resolved. Use clear, neutral editorial prose."
+    return "\n\n".join(sections)
+
+
 def _clean_string_list(items: list[str]) -> list[str]:
     cleaned: list[str] = []
     for item in items:

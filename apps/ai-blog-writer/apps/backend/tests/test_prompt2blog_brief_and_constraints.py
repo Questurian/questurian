@@ -10,7 +10,10 @@ from app.features.prompt2blog.quality import (
     _extract_narrative_focus,
     _should_run_repair,
 )
-from app.features.prompt2blog.support import _format_hard_constraints
+from app.features.prompt2blog.support import (
+    _format_hard_constraints,
+    _format_style_directive,
+)
 
 
 def _option_context() -> dict[str, Any]:
@@ -115,6 +118,52 @@ def test_creativity_level_reaches_the_brief_profile():
     assert PROMPT2BLOG_CREATIVITY_TEMPERATURES["high"] > (
         PROMPT2BLOG_CREATIVITY_TEMPERATURES["low"]
     )
+
+
+def test_style_profiles_are_not_folded_into_narrative_focus():
+    # Tone, length, and brand voice used to ride inside editorial_instructions,
+    # which every prompt renders under the header "NARRATIVE FOCUS (OPTIONAL)" --
+    # so the entire tone guide reached the model labelled optional.
+    focus = _extract_narrative_focus(_brief())
+
+    assert "Be direct." not in focus
+    assert "Balance depth." not in focus
+    assert "Stay globally minded." not in focus
+    # Genuine steering stays.
+    assert "Creativity level: high" in focus
+
+
+def test_style_directive_block_carries_every_resolved_profile():
+    rendered = _format_style_directive(_option_context())
+
+    assert "Tone profile (Practical):" in rendered
+    assert "Be direct." in rendered
+    assert "Length profile (Medium):" in rendered
+    assert "Balance depth." in rendered
+    assert "Brand voice profile (Questurian Default):" in rendered
+    assert "Stay globally minded." in rendered
+
+
+def test_style_directive_block_is_explicit_when_unresolved():
+    assert _format_style_directive({}).startswith("No style profiles were resolved")
+
+
+def test_every_generation_prompt_renders_the_style_directive():
+    # A prompt that omits the placeholder silently drops tone from that stage.
+    from app.features.prompt2blog.prompts import editorial, generation, quality
+
+    rendering = [
+        generation.P2B_COVERAGE_CHECK_PROMPT,
+        generation.P2B_SUPPLEMENT_PROMPT,
+        generation.P2B_OUTLINE_PROMPT,
+        generation.P2B_COMPOSE_PROMPT,
+        quality.P2B_QUALITY_AUDIT_PROMPT,
+        quality.P2B_REPAIR_PROMPT,
+        editorial.P2B_EDITORIAL_AUGMENTATION_PROMPT,
+    ]
+    for prompt in rendering:
+        assert "STYLE DIRECTIVE (REQUIRED):" in prompt
+        assert "{style_directive}" in prompt
 
 
 def test_call_to_action_flows_into_the_brief():

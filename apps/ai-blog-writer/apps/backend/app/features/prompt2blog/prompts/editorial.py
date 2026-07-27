@@ -105,6 +105,9 @@ ARTICLE CONTENT (MARKDOWN):
 ARTICLE TYPE (JSON):
 {article_type_json}
 
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
+
 NARRATIVE OR AUDIENCE FOCUS (OPTIONAL):
 {narrative_focus}
 """

@@ -33,6 +33,7 @@ from .stages.title import run_title_stage
 from .support import (
     _format_hard_constraints,
     _format_raw_sources,
+    _format_style_directive,
     _safe_dict,
     _safe_str,
 )
@@ -74,6 +75,7 @@ def _initial_generation_state(
         "writing_brief": writing_brief,
         "option_context": option_context,
         "narrative_focus": _extract_narrative_focus(writing_brief),
+        "style_directive": _format_style_directive(option_context),
         "hard_constraints": _format_hard_constraints(writing_brief),
         "compose_temperature": PROMPT2BLOG_CREATIVITY_TEMPERATURES.get(
             creativity_level,

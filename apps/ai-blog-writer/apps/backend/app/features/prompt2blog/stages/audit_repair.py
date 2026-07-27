@@ -36,6 +36,7 @@ def _audit_rewrite(
         writing_brief_json=_json(state["writing_brief"]),
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
         hard_constraints=state["hard_constraints"],
+        style_directive=state["style_directive"],
     )
     parsed, raw_response = dependencies.llm.invoke_json(
         prompt=prompt,
@@ -162,6 +163,7 @@ def run_repair_stage(
         writing_brief_json=_json(state["writing_brief"]),
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
         narrative_focus=state["narrative_focus"],
+        style_directive=state["style_directive"],
         hard_constraints=state["hard_constraints"],
     )
     prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
