@@ -187,6 +187,80 @@ describe('Prompt2BlogPage', () => {
     expect(modelSelect).toHaveValue(DEFAULT_PROMPT2BLOG_MODEL)
   })
 
+  it('keeps optional controls collapsed while core choices stay visible', async () => {
+    renderPage()
+
+    const advancedGenerationSummary = await screen.findByText('Advanced generation controls')
+    const advancedGeneration = advancedGenerationSummary.closest('details')
+    const advancedSeoSummary = screen.getByText('Advanced SEO controls')
+    const advancedSeo = advancedSeoSummary.closest('details')
+
+    expect(advancedGeneration).not.toHaveAttribute('open')
+    expect(advancedSeo).not.toHaveAttribute('open')
+    for (const label of [
+      'Tone',
+      'Length',
+      'Brand Voice',
+      'Primary Keyword',
+      'Must Include (one per line)',
+    ]) {
+      expect(screen.getByLabelText(label).closest('details')).toBeNull()
+    }
+    for (const label of [
+      'Base Draft Model',
+      'Writer Model',
+      'Creativity Level',
+      'Audience Profile (Optional)',
+      'Negative Instructions (one per line)',
+      'Prompt Enhance',
+      'Enable editorial augmentation',
+    ]) {
+      expect(screen.getByLabelText(label).closest('details')).toBe(advancedGeneration)
+    }
+    expect(
+      screen.getByLabelText('Secondary Keywords (comma-separated)').closest('details'),
+    ).toBe(advancedSeo)
+
+    fireEvent.click(advancedGenerationSummary)
+    fireEvent.click(advancedSeoSummary)
+
+    expect(advancedGeneration).toHaveAttribute('open')
+    expect(advancedSeo).toHaveAttribute('open')
+  })
+
+  it('preserves advanced values across disclosure toggles and clears them by section', async () => {
+    renderPage()
+
+    const advancedGenerationSummary = await screen.findByText('Advanced generation controls')
+    const advancedSeoSummary = screen.getByText('Advanced SEO controls')
+    const audienceProfile = screen.getByLabelText('Audience Profile (Optional)')
+    const secondaryKeywords = screen.getByLabelText('Secondary Keywords (comma-separated)')
+
+    fireEvent.click(advancedGenerationSummary)
+    fireEvent.change(audienceProfile, { target: { value: 'Budget-conscious families' } })
+    fireEvent.click(advancedGenerationSummary)
+    fireEvent.click(advancedGenerationSummary)
+
+    fireEvent.click(advancedSeoSummary)
+    fireEvent.change(secondaryKeywords, { target: { value: 'family hotels, free museums' } })
+    fireEvent.click(advancedSeoSummary)
+    fireEvent.click(advancedSeoSummary)
+
+    expect(audienceProfile).toHaveValue('Budget-conscious families')
+    expect(secondaryKeywords).toHaveValue('family hotels, free museums')
+
+    const promptProfilesPanel = screen.getByRole('heading', { name: 'Prompt Profiles' })
+      .closest('section')
+    const seoPanel = screen.getByRole('heading', { name: 'SEO + Constraints' })
+      .closest('section')
+
+    fireEvent.click(within(promptProfilesPanel!).getByRole('button', { name: 'Clear section' }))
+    fireEvent.click(within(seoPanel!).getByRole('button', { name: 'Clear section' }))
+
+    expect(audienceProfile).toHaveValue('')
+    expect(secondaryKeywords).toHaveValue('')
+  })
+
   it('sends the selected model in the run payload', async () => {
     renderPage()
 
