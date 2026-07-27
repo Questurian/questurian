@@ -14,6 +14,7 @@ from ..quality import (
     _build_constraint_checks,
     _sanitize_quality,
     _sanitize_rewrite,
+    unchecked_groundedness,
 )
 from ..support import _json
 
@@ -56,6 +57,7 @@ def _audit_rewrite(
         "secondary_keyword_coverage",
         "must_include_coverage",
     }
+    groundedness = state.get("groundedness") or unchecked_groundedness()
     quality_checks = {
         **quality.get("constraint_checks", {}),
         **{
@@ -63,12 +65,14 @@ def _audit_rewrite(
             for key, value in computed_checks.items()
             if key not in measurements
         },
+        "claims_grounded": groundedness["grounded"],
     }
     quality["constraint_checks"] = quality_checks
     quality["word_count_estimate"] = computed_checks["word_count_estimate"]
     quality["secondary_keyword_coverage"] = computed_checks[
         "secondary_keyword_coverage"
     ]
+    quality["groundedness"] = groundedness
     return quality, quality_checks, prompt, raw_response, parsed
 
 
@@ -136,12 +140,22 @@ def run_repair_stage(
     attempt = state.get("repair_attempts", 0) + 1
     dependencies.recorder.start_stage(run_id, stage)
 
+    # Unsupported claims are revisions in their own right. Without this the
+    # grounding check could fail the gate but never tell repair what to fix.
+    groundedness = state.get("groundedness") or unchecked_groundedness()
+    required_revisions = list(quality.get("required_revisions", []))
+    required_revisions.extend(
+        f"Remove or explicitly mark as unconfirmed: {claim['claim']} "
+        f"({claim['reason']})"
+        for claim in groundedness["unsupported_claims"]
+    )
+
     prompt = P2B_REPAIR_PROMPT.format(
         raw_sources=state["raw_sources_text"],
         cleaned_data=state["cleaned_data"],
         previous_title=rewrite["improved_title"],
         previous_content=rewrite["improved_content"],
-        required_revisions=_json(quality.get("required_revisions", [])),
+        required_revisions=_json(required_revisions),
         article_type_name=guideline["name"],
         guideline=guideline["guideline"] or "No guideline provided.",
         title_guideline=guideline["title_guideline"] or "No title guideline provided.",
@@ -189,7 +203,7 @@ def run_repair_stage(
             "repair_applied": True,
             "attempt": attempt,
             "rewrite": repaired,
-            "required_revisions": quality.get("required_revisions", []),
+            "required_revisions": required_revisions,
             "raw_response": raw_response,
         },
     )

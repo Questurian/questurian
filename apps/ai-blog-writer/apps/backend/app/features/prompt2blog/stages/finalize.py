@@ -23,23 +23,24 @@ def run_finalize_stage(
     dependencies.recorder.start_stage(run_id, stage)
 
     final_title = dependencies.normalize_dashes(state["final_title"])
-    final_content = dependencies.llm.enforce_anti_ai(
-        rewrite["improved_content"],
-        model_name=state["writing_model"],
-        max_tokens=6144,
-        context="prompt2blog finalize",
-    )
-    rewrite = {**rewrite, "improved_content": final_content}
+    # Compose, repair and augmentation each enforce the anti-AI rules on the
+    # prose they produce. Re-enforcing here re-validated already-enforced text
+    # and, because finalize runs after the quality audit, made an unaudited
+    # rewrite the last thing to touch the shipped article.
+    final_content = rewrite["improved_content"]
     final_markdown = _build_markdown(final_title, final_content)
     final_checks = _build_constraint_checks(
         final_title,
         final_content,
         state["writing_brief"],
     )
+    # An article carrying claims the sources do not support is not ready to
+    # stage, however well it scores on structure and keywords.
     pipeline_status = (
         "ready_for_staging"
         if final_checks["target_word_count_met"]
         and final_checks["primary_keyword_present"]
+        and state["groundedness"]["grounded"]
         else "needs_revision"
     )
     dependencies.recorder.record_stage(
@@ -120,6 +121,7 @@ def run_finalize_stage(
             "editorial_augmentation_summary": augmentation["augmentation_summary"],
             "editorial_diagnostic": augmentation["diagnostic"],
             "coverage": state["coverage"],
+            "groundedness": state["groundedness"],
             "outline_accepted": state["outline_accepted"],
             "outline_section_count": len(state["outline"].get("sections") or []),
             "outline_unsupported_requests": state["outline"].get(
@@ -165,6 +167,7 @@ def run_finalize_stage(
                 "stage_guideline_fetch": guideline,
                 "stage_coverage_check": state["coverage"],
                 "stage_outline": state["outline"],
+                "stage_groundedness": state["groundedness"],
                 "stage_compose": rewrite,
                 "stage_quality_audit": quality,
                 "stage_editorial_augmentation": augmentation,

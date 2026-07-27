@@ -61,12 +61,11 @@ def run_supplement_stage(
             temperature=state["compose_temperature"],
             model_name=state["model_name"],
         )
-        supplemental_content = dependencies.llm.enforce_anti_ai(
-            raw_response,
-            model_name=state["model_name"],
-            max_tokens=4096,
-            context="prompt2blog supplement",
-        )
+        # Supplemental sections are intermediate material: compose rewrites
+        # them into the article rather than pasting them, so enforcing voice
+        # rules on text that never ships verbatim is wasted work. Compose
+        # enforces the prose that does ship.
+        supplemental_content = raw_response
         _append_stage_trace(
             state["trace"],
             state["include_debug"],

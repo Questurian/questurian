@@ -275,6 +275,57 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _sanitize_groundedness(parsed: dict[str, Any]) -> dict[str, Any]:
+    """Normalise the grounding check.
+
+    The audit scored `too_close_to_source`, the plagiarism direction. Nothing
+    checked the opposite direction: claims in the draft that the sources do not
+    support. For travel content -- visa rules, prices, safety guidance -- that
+    is the more consequential failure.
+    """
+    claims_raw = parsed.get("unsupported_claims")
+    claims: list[dict[str, str]] = []
+    if isinstance(claims_raw, list):
+        for item in claims_raw:
+            record = _safe_dict(item)
+            claim = _safe_str(record.get("claim"))
+            if not claim:
+                continue
+            severity = _safe_str(record.get("severity")).lower()
+            claims.append(
+                {
+                    "claim": claim,
+                    "reason": _safe_str(record.get("reason")) or "Reason not stated.",
+                    "severity": "high" if severity == "high" else "low",
+                }
+            )
+
+    high_severity = [claim for claim in claims if claim["severity"] == "high"]
+    return {
+        "checked": True,
+        "grounded": not high_severity,
+        "assessment": _safe_str(parsed.get("assessment"))
+        or "Grounding assessment not provided.",
+        "unsupported_claims": claims,
+        "high_severity_count": len(high_severity),
+    }
+
+
+def unchecked_groundedness() -> dict[str, Any]:
+    """Result used when the grounding check could not run.
+
+    Treated as grounded so a checker outage degrades the signal rather than
+    blocking the run, but recorded as unchecked so it is visible.
+    """
+    return {
+        "checked": False,
+        "grounded": True,
+        "assessment": "Grounding check did not run.",
+        "unsupported_claims": [],
+        "high_severity_count": 0,
+    }
+
+
 def _should_run_repair(quality: dict[str, Any], checks: dict[str, Any]) -> bool:
     # Only trust the score when the auditor actually returned one.
     if _safe_bool(quality.get("audit_complete"), default=True):
@@ -289,6 +340,7 @@ def _should_run_repair(quality: dict[str, Any], checks: dict[str, Any]) -> bool:
         "primary_keyword_present",
         "secondary_keywords_present",
         "must_include_covered",
+        "claims_grounded",
     ):
         if not _safe_bool(checks.get(key), default=True):
             return True

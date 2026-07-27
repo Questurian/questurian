@@ -93,6 +93,7 @@ export const PROMPT2BLOG_PIPELINE_STAGES = [
   'stage_supplement',
   'stage_outline',
   'stage_compose',
+  'stage_groundedness',
   'stage_quality_audit',
   'stage_repair',
   'stage_quality_settle',
@@ -177,6 +178,18 @@ export type Prompt2BlogPipelinePayload = {
       audience_match: boolean
       tone_match: boolean
       must_include_covered: boolean
+      claims_grounded: boolean
+    }
+    groundedness: {
+      checked: boolean
+      grounded: boolean
+      assessment: string
+      unsupported_claims: Array<{
+        claim: string
+        reason: string
+        severity: 'high' | 'low'
+      }>
+      high_severity_count: number
     }
     secondary_keyword_coverage: number
     must_include_coverage: number
