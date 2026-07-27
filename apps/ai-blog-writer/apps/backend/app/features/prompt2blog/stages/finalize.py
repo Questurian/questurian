@@ -105,8 +105,10 @@ def run_finalize_stage(
                 "secondary_keywords_present": final_checks[
                     "secondary_keywords_present"
                 ],
+                "must_include_covered": final_checks["must_include_covered"],
             },
             "secondary_keyword_coverage": final_checks["secondary_keyword_coverage"],
+            "must_include_coverage": final_checks["must_include_coverage"],
             "word_count_estimate": final_checks["word_count_estimate"],
             "repair_applied": state["repair_applied"],
             "editorial_augmentation_applied": augmentation["augmentation_applied"],

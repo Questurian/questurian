@@ -4,7 +4,13 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
-from .config import DEFAULT_MODEL, P2B_AUDIT_MODEL, P2B_COMPOSE_MODEL
+from .config import (
+    DEFAULT_MODEL,
+    P2B_AUDIT_MODEL,
+    P2B_COMPOSE_MODEL,
+    PROMPT2BLOG_CREATIVITY_TEMPERATURES,
+    PROMPT2BLOG_DEFAULT_COMPOSE_TEMPERATURE,
+)
 from .dependencies import PipelineDependencies
 from .graph.runner import GraphNode, run_prompt2blog_stage_graph
 from .graph.state import Prompt2BlogGraphState
@@ -17,7 +23,12 @@ from .stages.guideline_coverage import run_coverage_stage, run_guideline_stage
 from .stages.preparation import prepare_full_pipeline_request
 from .stages.supplement_compose import run_compose_stage, run_supplement_stage
 from .stages.title import run_title_stage
-from .support import _format_raw_sources, _safe_dict, _safe_str
+from .support import (
+    _format_hard_constraints,
+    _format_raw_sources,
+    _safe_dict,
+    _safe_str,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +50,8 @@ def _initial_generation_state(
         _safe_str(source) for source in request.raw_sources if _safe_str(source)
     ]
     writing_brief = _safe_dict(request.writing_brief)
+    option_context = _safe_dict(request.option_context)
+    creativity_level = _safe_str(option_context.get("creativity_level")).lower()
     return {
         "run_id": run_id,
         "request": request,
@@ -52,8 +65,13 @@ def _initial_generation_state(
         "raw_sources": raw_sources,
         "raw_sources_text": _format_raw_sources(raw_sources),
         "writing_brief": writing_brief,
-        "option_context": _safe_dict(request.option_context),
+        "option_context": option_context,
         "narrative_focus": _extract_narrative_focus(writing_brief),
+        "hard_constraints": _format_hard_constraints(writing_brief),
+        "compose_temperature": PROMPT2BLOG_CREATIVITY_TEMPERATURES.get(
+            creativity_level,
+            PROMPT2BLOG_DEFAULT_COMPOSE_TEMPERATURE,
+        ),
         "include_debug": request.include_debug,
         "enable_editorial_augmentation": request.enable_editorial_augmentation,
         "current_stage": "stage_guideline_fetch",

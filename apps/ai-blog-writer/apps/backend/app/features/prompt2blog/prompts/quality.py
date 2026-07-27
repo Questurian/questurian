@@ -39,6 +39,10 @@ Rules:
   level of assumed knowledge?
 - tone_match: does the prose sustain the brief's tone and voice?
 - Score honestly. A draft that merely avoids mistakes is a 7, not a 9.
+- A violated hard constraint is a required_revision, not a stylistic note.
+
+HARD CONSTRAINTS:
+{hard_constraints}
 
 RAW SOURCES:
 {raw_sources}
@@ -89,6 +93,10 @@ Rules:
 - Keep complete article prose with clear `##` / `###` structure.
 - Preserve CTA and keyword requirements naturally.
 - If source support is missing, explicitly state uncertainty.
+- Satisfy every item in HARD CONSTRAINTS. They are not stylistic preferences.
+
+HARD CONSTRAINTS:
+{hard_constraints}
 
 RAW SOURCES:
 {raw_sources}

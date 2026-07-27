@@ -40,6 +40,14 @@ PROMPT2BLOG_BRAND_VOICES_DIR = PROMPT2BLOG_OPTIONS_DIR / "brand-voices"
 
 PROMPT2BLOG_CREATIVITY_LEVELS = {"low", "medium", "high"}
 
+# creativity_level used to be rendered as the literal string "Creativity level:
+# medium" inside an instructions blob while every prose call ran at a hardcoded
+# temperature, so the control did nothing. It now sets the sampling temperature
+# for the stages that actually write prose.
+PROMPT2BLOG_CREATIVITY_TEMPERATURES = {"low": 0.05, "medium": 0.2, "high": 0.45}
+
+PROMPT2BLOG_DEFAULT_COMPOSE_TEMPERATURE = PROMPT2BLOG_CREATIVITY_TEMPERATURES["medium"]
+
 PROMPT2BLOG_CLEANUP_MODE = "ai_always_aggressive_v1"
 
 PROMPT2BLOG_CLEANUP_CHUNKING_CHAR_THRESHOLD = 18_000

@@ -18,6 +18,8 @@ class Prompt2BlogGraphState(TypedDict, total=False):
     writing_brief: dict[str, Any]
     option_context: dict[str, Any]
     narrative_focus: str
+    hard_constraints: str
+    compose_temperature: float
     include_debug: bool
     enable_editorial_augmentation: bool
     current_stage: str

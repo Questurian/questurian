@@ -34,6 +34,7 @@ def _audit_rewrite(
         title_guideline=guideline["title_guideline"] or "No title guideline provided.",
         writing_brief_json=_json(state["writing_brief"]),
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
+        hard_constraints=state["hard_constraints"],
     )
     parsed, raw_response = dependencies.llm.invoke_json(
         prompt=prompt,
@@ -50,7 +51,11 @@ def _audit_rewrite(
     # The auditor supplies the semantic checks; everything measurable is
     # computed here and wins. Non-boolean measurements are reported alongside
     # the checks rather than inside them.
-    measurements = {"word_count_estimate", "secondary_keyword_coverage"}
+    measurements = {
+        "word_count_estimate",
+        "secondary_keyword_coverage",
+        "must_include_coverage",
+    }
     quality_checks = {
         **quality.get("constraint_checks", {}),
         **{
@@ -130,6 +135,7 @@ def run_repair_stage(
             writing_brief_json=_json(state["writing_brief"]),
             seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
             narrative_focus=state["narrative_focus"],
+            hard_constraints=state["hard_constraints"],
         )
         prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
         # Repair rewrites the whole article, so it runs on the writer model.
