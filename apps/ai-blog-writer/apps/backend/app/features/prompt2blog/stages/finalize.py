@@ -117,6 +117,9 @@ def run_finalize_stage(
             "stage_model_overrides": {
                 "stage_compose": state["writing_model"],
                 "stage_editorial_augmentation": state["writing_model"],
+                "stage_repair": state["writing_model"],
+                "stage_title": state["writing_model"],
+                "stage_quality_audit": state["audit_model"],
             },
         },
     }

@@ -39,7 +39,7 @@ def _audit_rewrite(
         prompt=prompt,
         max_tokens=1536,
         temperature=0.05,
-        model_name=state["model_name"],
+        model_name=state["audit_model"],
     )
     quality = _sanitize_quality(parsed)
     computed_checks = _build_constraint_checks(
@@ -82,7 +82,7 @@ def run_quality_audit_stage(
         state["trace"],
         state["include_debug"],
         stage=stage,
-        model_name=state["model_name"],
+        model_name=state["audit_model"],
         prompt=prompt,
         raw_response=raw_response,
         parsed=parsed,
@@ -125,11 +125,13 @@ def run_repair_stage(
             narrative_focus=state["narrative_focus"],
         )
         prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
+        # Repair rewrites the whole article, so it runs on the writer model.
+        # Routing it to the analysis model downgraded every repaired run.
         parsed, raw_response = dependencies.llm.invoke_json(
             prompt=prompt,
             max_tokens=6144,
             temperature=0.1,
-            model_name=state["model_name"],
+            model_name=state["writing_model"],
         )
         rewrite = _sanitize_rewrite(
             parsed,
@@ -138,7 +140,7 @@ def run_repair_stage(
         )
         rewrite["improved_content"] = dependencies.llm.enforce_anti_ai(
             rewrite["improved_content"],
-            model_name=state["model_name"],
+            model_name=state["writing_model"],
             max_tokens=6144,
             context="prompt2blog repair",
         )
@@ -152,7 +154,7 @@ def run_repair_stage(
             state["trace"],
             state["include_debug"],
             stage=stage,
-            model_name=state["model_name"],
+            model_name=state["writing_model"],
             prompt=prompt,
             raw_response=raw_response,
             parsed=parsed,
