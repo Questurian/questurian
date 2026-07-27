@@ -2,7 +2,7 @@
 id: no-fluff-field-guide
 label: No-Fluff Field Guide
 description: Direct, blunt, practical, and experience-informed.
-order: 5
+order: 3
 ---
 ## No-Fluff Field Guide Tone
 

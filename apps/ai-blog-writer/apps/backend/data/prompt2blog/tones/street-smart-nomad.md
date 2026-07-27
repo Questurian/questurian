@@ -2,7 +2,7 @@
 id: street-smart-nomad
 label: Street-Smart Nomad
 description: Realistic, cautionary, slightly blunt.
-order: 9
+order: 8
 ---
 ## Street-Smart Nomad Tone
 

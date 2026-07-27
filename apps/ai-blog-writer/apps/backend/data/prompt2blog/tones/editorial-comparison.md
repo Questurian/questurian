@@ -2,7 +2,7 @@
 id: editorial-comparison
 label: Editorial Comparison
 description: Analytical, balanced, and willing to take a clear stance.
-order: 6
+order: 5
 ---
 ## Editorial Comparison Tone
 
