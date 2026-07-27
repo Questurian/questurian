@@ -18,6 +18,7 @@ GENERATION_NODES = (
     "supplement",
     "outline",
     "compose",
+    "groundedness",
     "quality_audit",
     "repair",
     "quality_settle",
@@ -54,7 +55,10 @@ def build_prompt2blog_graph(nodes: dict[str, Any]) -> Any:
     builder.add_edge("coverage", "supplement")
     builder.add_edge("supplement", "outline")
     builder.add_edge("outline", "compose")
-    builder.add_edge("compose", "quality_audit")
+    # Grounding is checked before the audit and inside the loop, so a repaired
+    # draft is re-checked rather than trusted.
+    builder.add_edge("compose", "groundedness")
+    builder.add_edge("groundedness", "quality_audit")
 
     # The audit either accepts the draft, spends another repair attempt, or
     # runs out of budget. Repair loops back through the audit so a repaired
@@ -64,7 +68,7 @@ def build_prompt2blog_graph(nodes: dict[str, Any]) -> Any:
         route_quality_gate,
         {"repair": "repair", "settle": "quality_settle"},
     )
-    builder.add_edge("repair", "quality_audit")
+    builder.add_edge("repair", "groundedness")
 
     builder.add_edge("quality_settle", "editorial_augmentation")
     builder.add_edge("editorial_augmentation", "title")

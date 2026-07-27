@@ -56,6 +56,8 @@ def _pipeline_fakes(
     quality_scores: list[int],
     augmentation_error: bool = False,
     outline_error: bool = False,
+    unsupported_claims: list[dict[str, str]] | None = None,
+    groundedness_error: bool = False,
 ) -> tuple[dict[str, Any], PipelineDependencies]:
     recorded: dict[str, Any] = {
         "statuses": [],
@@ -149,6 +151,17 @@ def _pipeline_fakes(
                     "remaining_gaps": [],
                 },
                 '{"improved_title": "Kyoto for First-Time Visitors"}',
+            )
+        if "fact-grounding checker" in prompt:
+            if groundedness_error:
+                raise RuntimeError("grounding checker unavailable")
+            return (
+                {
+                    "grounded": not unsupported_claims,
+                    "assessment": "Checked against the source material.",
+                    "unsupported_claims": unsupported_claims or [],
+                },
+                '{"grounded": true}',
             )
         if "quality auditor" in prompt:
             score = next_quality_score()
@@ -276,6 +289,7 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "stage_supplement",
         "stage_outline",
         "stage_compose",
+        "stage_groundedness",
         "stage_quality_audit",
         "stage_quality_settle",
         "stage_editorial_augmentation",
@@ -299,6 +313,7 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "stage_guideline_fetch",
         "stage_coverage_check",
         "stage_outline",
+        "stage_groundedness",
         "stage_compose",
         "stage_quality_audit",
         "stage_editorial_augmentation",
@@ -479,6 +494,52 @@ def test_outline_failure_degrades_instead_of_failing_the_run():
         if "expert editor creating a publish-ready article" in call["prompt"]
     )
     assert "No outline was produced" in compose_prompt
+    assert recorded["statuses"][-1][1]["state"] == "completed"
+
+
+def test_unsupported_claims_trigger_repair_and_reach_the_repair_prompt():
+    recorded, dependencies = _pipeline_fakes(
+        quality_scores=[9],
+        unsupported_claims=[
+            {
+                "claim": "The reciprocity fee is $160.",
+                "reason": "No source states a fee.",
+                "severity": "high",
+            }
+        ],
+    )
+
+    run_pipeline_v2(f"run-grounding-{uuid4()}", _runtime_request(), dependencies)
+
+    # A well-scored draft still repairs when it carries an invented fact.
+    repair_payload = _stage_payload(recorded, "stage_repair")["data"]
+    assert any(
+        "reciprocity fee" in revision
+        for revision in repair_payload["required_revisions"]
+    )
+
+    repair_prompt = next(
+        call["prompt"]
+        for call in recorded["calls"]
+        if "hard rewrite repair pass" in call["prompt"]
+    )
+    assert "reciprocity fee" in repair_prompt
+
+    artifact = recorded["artifacts"][0][1]
+    assert artifact["pipeline_v2"]["pipeline_status"] == "needs_revision"
+
+
+def test_grounding_check_failure_does_not_fail_the_run():
+    recorded, dependencies = _pipeline_fakes(
+        quality_scores=[9],
+        groundedness_error=True,
+    )
+
+    run_pipeline_v2(f"run-grounding-fail-{uuid4()}", _runtime_request(), dependencies)
+
+    grounding = _stage_payload(recorded, "stage_groundedness")["data"]["groundedness"]
+    assert grounding["checked"] is False
+    assert grounding["grounded"] is True
     assert recorded["statuses"][-1][1]["state"] == "completed"
 
 
