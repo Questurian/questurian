@@ -18,7 +18,7 @@ function createPayload(overrides: Partial<Prompt2BlogRunRequest> = {}): Prompt2B
     creativity_level: 'medium',
     negative_instructions: [],
     include_debug: true,
-    enable_editorial_augmentation: true,
+    enable_editorial_augmentation: false,
     ...overrides,
   }
 }

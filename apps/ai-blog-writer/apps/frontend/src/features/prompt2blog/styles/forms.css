@@ -321,6 +321,16 @@
   gap: var(--space-3) var(--space-5);
 }
 
+.p2b-checkbox-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.p2b-checkbox-option .p2b-field-hint {
+  padding-left: 24px;
+}
+
 /* Raw Input Blobs */
 .p2b-blob-field {
   display: flex;

@@ -3,6 +3,7 @@ import {
   DEFAULT_PROMPT2BLOG_MODEL,
   DEFAULT_PROMPT2BLOG_WRITER_MODEL,
 } from '../constants/prompt2blog.constants'
+import { DEFAULT_COMPOSER_STATE } from './composer.storage'
 import type { P2BFormState } from './composer.types'
 import { buildPrompt2BlogPayload } from './prompt-payload'
 
@@ -24,7 +25,7 @@ function createState(overrides: Partial<P2BFormState> = {}): P2BFormState {
     mustInclude: '',
     creativityLevel: 'medium',
     negativeInstructions: '',
-    enableEditorialAugmentation: true,
+    enableEditorialAugmentation: false,
     blobs: [{ id: 1, content: 'Source material' }],
     ...overrides,
   }
@@ -71,5 +72,19 @@ describe('buildPrompt2BlogPayload', () => {
 
     expect(payload).not.toHaveProperty('audience_profile')
     expect(payload?.prompt_enhance).toBe(false)
+  })
+
+  it('keeps editorial extras off by default but preserves an explicit opt-in', () => {
+    const defaultPayload = buildPrompt2BlogPayload({
+      ...DEFAULT_COMPOSER_STATE,
+      articleTypeId: 7,
+      blobs: [{ id: 1, content: 'Source material' }],
+    })
+    const optedInPayload = buildPrompt2BlogPayload(
+      createState({ enableEditorialAugmentation: true }),
+    )
+
+    expect(defaultPayload?.enable_editorial_augmentation).toBe(false)
+    expect(optedInPayload?.enable_editorial_augmentation).toBe(true)
   })
 })

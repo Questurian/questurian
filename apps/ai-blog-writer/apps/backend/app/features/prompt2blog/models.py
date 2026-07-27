@@ -44,7 +44,7 @@ class PipelineV2RuntimeRequest(BaseModel):
     article_type_id: int
     option_context: dict[str, Any] = Field(default_factory=dict)
     include_debug: bool = True
-    enable_editorial_augmentation: bool = True
+    enable_editorial_augmentation: bool = False
     model_name: str | None = None
     writing_model: str | None = None
 
@@ -68,6 +68,6 @@ class Prompt2BlogInputRequest(BaseModel):
     creativity_level: str = "medium"
     negative_instructions: List[str] = Field(default_factory=list)
     include_debug: bool = True
-    enable_editorial_augmentation: bool = True
+    enable_editorial_augmentation: bool = False
     model_name: str | None = None
     writing_model: str | None = None
