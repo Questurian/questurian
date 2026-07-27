@@ -22,10 +22,8 @@ function createState(overrides: Partial<P2BFormState> = {}): P2BFormState {
     primaryKeyword: '',
     secondaryKeywords: '',
     mustInclude: '',
-    audienceProfile: '',
     creativityLevel: 'medium',
     negativeInstructions: '',
-    promptEnhance: true,
     enableEditorialAugmentation: true,
     blobs: [{ id: 1, content: 'Source material' }],
     ...overrides,
@@ -66,5 +64,12 @@ describe('buildPrompt2BlogPayload', () => {
 
     expect(payload?.angle).toBeUndefined()
     expect(payload?.call_to_action).toBeUndefined()
+  })
+
+  it('omits duplicate audience steering and disables generic prompt enhancement', () => {
+    const payload = buildPrompt2BlogPayload(createState())
+
+    expect(payload).not.toHaveProperty('audience_profile')
+    expect(payload?.prompt_enhance).toBe(false)
   })
 })

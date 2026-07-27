@@ -28,8 +28,8 @@ export function buildPrompt2BlogPayload(state: P2BFormState): Prompt2BlogRunRequ
     primary_keyword: state.primaryKeyword || undefined,
     secondary_keywords: splitCommaSeparated(state.secondaryKeywords),
     must_include: splitLineSeparated(state.mustInclude),
-    audience_profile: state.audienceProfile || undefined,
-    prompt_enhance: state.promptEnhance,
+    // Generic enhancement duplicates the explicit structure and style profiles.
+    prompt_enhance: false,
     creativity_level: state.creativityLevel,
     negative_instructions: splitLineSeparated(state.negativeInstructions),
     include_debug: true,
