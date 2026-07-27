@@ -64,15 +64,19 @@ export default function Prompt2BlogPage() {
       <main className="p2b-form-container">
         <form className="p2b-form" onSubmit={(event) => event.preventDefault()}>
           <CoreInputsPanel
+            angle={state.angle}
             articleGoal={state.articleGoal}
             articleTypeId={state.articleTypeId}
+            callToAction={state.callToAction}
             destinationContext={state.destinationContext}
             groupedOptions={composer.groupedArticleTypeOptions}
             quickPicks={composer.articleTypeQuickPicks}
             selectedArticleType={composer.selectedArticleType}
             targetReader={state.targetReader}
+            onAngleChange={value => composer.updateField('angle', value)}
             onArticleGoalChange={value => composer.updateField('articleGoal', value)}
             onArticleTypeChange={value => composer.updateField('articleTypeId', value)}
+            onCallToActionChange={value => composer.updateField('callToAction', value)}
             onClear={composer.clearCoreInputs}
             onDestinationContextChange={value => composer.updateField('destinationContext', value)}
             onTargetReaderChange={value => composer.updateField('targetReader', value)}

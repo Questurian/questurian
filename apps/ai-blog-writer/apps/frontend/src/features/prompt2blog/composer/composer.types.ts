@@ -10,6 +10,8 @@ export interface P2BFormState {
   articleGoal: string
   targetReader: string
   destinationContext: string
+  angle: string
+  callToAction: string
   modelName: Prompt2BlogModelName
   writingModel: Prompt2BlogWriterModel
   toneId: string

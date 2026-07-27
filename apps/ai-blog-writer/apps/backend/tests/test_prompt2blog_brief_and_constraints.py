@@ -166,6 +166,37 @@ def test_every_generation_prompt_renders_the_style_directive():
         assert "{style_directive}" in prompt
 
 
+def test_brief_keys_are_named_for_what_they_carry():
+    brief = _brief()
+
+    # `perspective` was fed destination_context. In a JSON brief "perspective"
+    # reads as point of view, so the model was handed a city under a POV key.
+    assert brief["destination_context"] == "Peru"
+    assert "perspective" not in brief
+    # `topic` duplicated `goal` verbatim, so one input filled two keys.
+    assert "topic" not in brief
+    assert brief["goal"] == "Explain Peru entry rules."
+
+
+def test_narrative_focus_still_resolves_a_pre_rename_brief():
+    # Callers can post a writing brief straight to the runtime endpoint.
+    legacy = {"perspective": "Kyoto, Japan"}
+
+    assert _extract_narrative_focus(legacy) == "Kyoto, Japan"
+
+
+def test_editorial_angle_leads_the_narrative_focus_when_supplied():
+    focus = _extract_narrative_focus(_brief(angle="Peru is the better first stop"))
+
+    assert focus.startswith("Editorial angle")
+    assert "Peru is the better first stop" in focus
+
+
+def test_brief_omits_the_angle_line_when_none_is_supplied():
+    assert "Editorial angle" not in _extract_narrative_focus(_brief())
+    assert _brief()["angle"] == ""
+
+
 def test_call_to_action_flows_into_the_brief():
     assert _brief(call_to_action="Compare transfer options")["call_to_action"] == (
         "Compare transfer options"

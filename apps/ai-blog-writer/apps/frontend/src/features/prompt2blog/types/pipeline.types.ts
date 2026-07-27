@@ -61,6 +61,7 @@ export type Prompt2BlogRunRequest = {
   article_goal: string
   target_reader: string
   destination_context: string
+  angle?: string
   tone_id: string
   length_id: string
   brand_voice_id?: string

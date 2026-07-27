@@ -21,7 +21,16 @@ def _build_writing_brief_from_input(
     must_include = _clean_string_list(request.must_include)
     negative_instructions = _clean_string_list(request.negative_instructions)
 
-    profile_lines = [
+    profile_lines = []
+    # The angle leads the block. Several tones -- editorial-comparison and
+    # practical-authority especially -- require the piece to take a stance, and
+    # until now the brief had nowhere to put one, so the model invented its own
+    # or defaulted to fake balance.
+    if request.angle:
+        profile_lines.append(
+            f"Editorial angle - the piece must argue this: {_safe_str(request.angle)}"
+        )
+    profile_lines += [
         f"Destination context: {_safe_str(request.destination_context)}",
         f"Audience intent: {_safe_str(request.target_reader)}",
         f"Creativity level: {creativity_level}",
@@ -50,10 +59,14 @@ def _build_writing_brief_from_input(
         target_word_count = 900
 
     writing_brief: dict[str, Any] = {
-        "topic": _safe_str(request.article_goal),
+        # `topic` used to duplicate `goal` verbatim, and `perspective` was fed
+        # destination_context -- in a JSON brief "perspective" reads as point of
+        # view, so the model was handed a city name under a POV key. Both keys
+        # are named for what they actually carry now.
         "goal": _safe_str(request.article_goal),
         "audience": _safe_str(request.target_reader),
-        "perspective": _safe_str(request.destination_context),
+        "destination_context": _safe_str(request.destination_context),
+        "angle": _safe_str(request.angle),
         "audience_profile": _safe_str(request.audience_profile),
         "voice": {
             "publication_style_reference": _safe_str(brand_voice.get("label")),

@@ -55,6 +55,7 @@ class Prompt2BlogInputRequest(BaseModel):
     article_goal: str
     target_reader: str
     destination_context: str
+    angle: str | None = None
     tone_id: str
     length_id: str
     brand_voice_id: str | None = None

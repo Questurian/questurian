@@ -18,6 +18,8 @@ export function buildPrompt2BlogPayload(state: P2BFormState): Prompt2BlogRunRequ
     article_goal: state.articleGoal,
     target_reader: state.targetReader,
     destination_context: state.destinationContext,
+    angle: state.angle || undefined,
+    call_to_action: state.callToAction || undefined,
     model_name: state.modelName,
     writing_model: state.writingModel,
     tone_id: state.toneId,

@@ -141,6 +141,8 @@ export function usePrompt2BlogComposer() {
       articleGoal: DEFAULT_COMPOSER_STATE.articleGoal,
       targetReader: DEFAULT_COMPOSER_STATE.targetReader,
       destinationContext: DEFAULT_COMPOSER_STATE.destinationContext,
+      angle: DEFAULT_COMPOSER_STATE.angle,
+      callToAction: DEFAULT_COMPOSER_STATE.callToAction,
     }))
   }, [])
 

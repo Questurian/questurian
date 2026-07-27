@@ -12,6 +12,8 @@ function createState(overrides: Partial<P2BFormState> = {}): P2BFormState {
     articleGoal: 'Help readers plan a trip.',
     targetReader: 'First-time visitors',
     destinationContext: 'Lisbon, Portugal',
+    angle: '',
+    callToAction: '',
     modelName: DEFAULT_PROMPT2BLOG_MODEL,
     writingModel: DEFAULT_PROMPT2BLOG_WRITER_MODEL,
     toneId: 'balanced',
@@ -42,5 +44,27 @@ describe('buildPrompt2BlogPayload', () => {
         source_material: ['Source material'],
       }),
     )
+  })
+
+  it('sends the editorial angle and call to action when supplied', () => {
+    const payload = buildPrompt2BlogPayload(
+      createState({ angle: 'Peru is the better first stop', callToAction: 'Compare fares' }),
+    )
+
+    expect(payload).toEqual(
+      expect.objectContaining({
+        angle: 'Peru is the better first stop',
+        call_to_action: 'Compare fares',
+      }),
+    )
+  })
+
+  it('omits the angle and call to action when left blank', () => {
+    // call_to_action is gated by the backend quality check, so an empty string
+    // would register as a constraint the article has to satisfy.
+    const payload = buildPrompt2BlogPayload(createState())
+
+    expect(payload?.angle).toBeUndefined()
+    expect(payload?.call_to_action).toBeUndefined()
   })
 })

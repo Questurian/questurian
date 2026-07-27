@@ -13,6 +13,8 @@ export const DEFAULT_COMPOSER_STATE: P2BFormState = {
   articleGoal: '',
   targetReader: '',
   destinationContext: '',
+  angle: '',
+  callToAction: '',
   modelName: DEFAULT_PROMPT2BLOG_MODEL,
   writingModel: DEFAULT_PROMPT2BLOG_WRITER_MODEL,
   toneId: '',
