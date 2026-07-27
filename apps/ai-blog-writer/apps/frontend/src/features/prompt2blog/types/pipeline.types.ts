@@ -91,6 +91,7 @@ export const PROMPT2BLOG_PIPELINE_STAGES = [
   'stage_guideline_fetch',
   'stage_coverage_check',
   'stage_supplement',
+  'stage_outline',
   'stage_compose',
   'stage_quality_audit',
   'stage_repair',

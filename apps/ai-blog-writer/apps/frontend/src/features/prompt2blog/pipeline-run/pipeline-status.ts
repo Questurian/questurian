@@ -15,6 +15,7 @@ export const PIPELINE_STAGE_LABELS: Record<Prompt2BlogPipelineStage, string> = {
   stage_guideline_fetch: 'Fetch article guidelines',
   stage_coverage_check: 'Check coverage against brief + guideline',
   stage_supplement: 'Generate supplemental sections (if needed)',
+  stage_outline: 'Plan article sections',
   stage_compose: 'Compose full draft',
   stage_quality_audit: 'Audit draft quality and constraints',
   stage_repair: 'Repair pass (if needed)',

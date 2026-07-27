@@ -25,6 +25,7 @@ from .stages.audit_repair import (
 from .stages.augmentation import run_augmentation_stage
 from .stages.finalize import run_finalize_stage
 from .stages.guideline_coverage import run_coverage_stage, run_guideline_stage
+from .stages.outline import run_outline_stage
 from .stages.preparation import prepare_full_pipeline_request
 from .stages.supplement_compose import run_compose_stage, run_supplement_stage
 from .stages.title import run_title_stage
@@ -106,6 +107,7 @@ def _generation_nodes(
         ("guideline", run_guideline_stage),
         ("coverage", run_coverage_stage),
         ("supplement", run_supplement_stage),
+        ("outline", run_outline_stage),
         ("compose", run_compose_stage),
         ("quality_audit", run_quality_audit_stage),
         ("repair", run_repair_stage),

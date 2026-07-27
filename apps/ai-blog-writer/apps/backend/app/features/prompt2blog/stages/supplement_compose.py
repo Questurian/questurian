@@ -119,6 +119,7 @@ def run_compose_stage(
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
         narrative_focus=state["narrative_focus"],
         hard_constraints=state["hard_constraints"],
+        outline=state["outline_text"],
     )
     prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
     parsed, raw_response = dependencies.llm.invoke_json(

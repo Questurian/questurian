@@ -27,6 +27,9 @@ class Prompt2BlogGraphState(TypedDict, total=False):
     guideline: dict[str, Any]
     coverage: dict[str, Any]
     supplemental_content: str
+    outline: dict[str, Any]
+    outline_accepted: bool
+    outline_text: str
     rewrite: dict[str, Any]
     quality: dict[str, Any]
     quality_checks: dict[str, Any]

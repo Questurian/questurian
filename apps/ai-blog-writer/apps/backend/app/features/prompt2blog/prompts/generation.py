@@ -104,6 +104,72 @@ NARRATIVE FOCUS (OPTIONAL):
 {narrative_focus}
 """
 
+P2B_OUTLINE_PROMPT = """You are a commissioning editor planning an article before it is written.
+
+Goal:
+Produce a section plan that satisfies the article-type guideline and the
+writing brief, using only what the source material can support.
+
+Return strict JSON only:
+{{
+  "working_title": "string",
+  "direct_answer_focus": "string",
+  "sections": [
+    {{
+      "heading": "string",
+      "purpose": "string",
+      "source_support": "string",
+      "target_words": 0
+    }}
+  ],
+  "takeaway_focus": "string",
+  "guideline_alignment": "string",
+  "unsupported_requests": ["string"]
+}}
+
+Rules:
+- Plan at least 3 and at most 12 sections.
+- Headings must be specific and distinct from one another. No generic
+  "Introduction" or "Conclusion" headings.
+- Every section needs source_support naming what in the material backs it.
+- If the guideline or brief asks for something the sources cannot support, list
+  it in unsupported_requests instead of planning a section that would need
+  invented detail.
+- target_words across all sections should total roughly the brief's target word
+  count.
+- guideline_alignment must explain in one or two sentences how this structure
+  satisfies the article-type guideline.
+- Plan the structure only. Do not write the article.
+
+ARTICLE TYPE:
+{article_type_name}
+{article_type_definition}
+
+GUIDELINE:
+{guideline}
+
+TITLE GUIDELINE:
+{title_guideline}
+
+TARGET WORD COUNT:
+{target_word_count}
+
+HARD CONSTRAINTS:
+{hard_constraints}
+
+CLEANED SOURCE MATERIAL:
+{cleaned_data}
+
+SUPPLEMENTAL MATERIAL (OPTIONAL):
+{supplemental_content}
+
+WRITING BRIEF (JSON):
+{writing_brief_json}
+
+NARRATIVE FOCUS (OPTIONAL):
+{narrative_focus}
+"""
+
 P2B_COMPOSE_PROMPT = """You are an expert editor creating a publish-ready article from source material.
 
 Goal:
@@ -132,6 +198,12 @@ Hard rules:
 - SEO: place keywords naturally, never stuff.
 - If required details are missing, explicitly mark them as not confirmed.
 - Satisfy every item in HARD CONSTRAINTS. They are not stylistic preferences.
+- Follow SECTION PLAN when one is provided: use its headings, in order, and
+  hold each section to roughly its word budget. Depart from it only where the
+  sources make a planned section unsupportable.
+
+SECTION PLAN:
+{outline}
 
 HARD CONSTRAINTS:
 {hard_constraints}
