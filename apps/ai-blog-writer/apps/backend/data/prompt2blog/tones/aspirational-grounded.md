@@ -2,7 +2,7 @@
 id: aspirational-grounded
 label: Aspirational but Grounded
 description: Inspiring destination/lifestyle voice without brochure language.
-order: 10
+order: 9
 ---
 ## Aspirational but Grounded Tone
 

@@ -2,7 +2,7 @@
 id: forbes-service-journalism
 label: Forbes-Style Service Journalism
 description: Polished, structured, neutral, and decisive.
-order: 8
+order: 4
 ---
 ## Forbes-Style Service Journalism Tone
 

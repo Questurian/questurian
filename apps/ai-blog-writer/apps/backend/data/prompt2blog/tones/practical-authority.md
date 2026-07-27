@@ -2,7 +2,7 @@
 id: practical-authority
 label: Practical Authority
 description: Clear, useful, confident, and low-fluff.
-order: 4
+order: 2
 ---
 ## Practical Authority Tone
 
