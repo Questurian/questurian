@@ -46,6 +46,20 @@ function renderPage() {
   )
 }
 
+// jsdom defines navigator.clipboard as a read-only accessor, so it has to be
+// redefined rather than assigned.
+function stubClipboard(writeText: ReturnType<typeof vi.fn>) {
+  const original = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText },
+  })
+  return () => {
+    if (original) Object.defineProperty(navigator, 'clipboard', original)
+    else Reflect.deleteProperty(navigator, 'clipboard')
+  }
+}
+
 function createStoredPipelineResult() {
   return {
     message: 'Prompt2Blog pipeline v2 queued',
@@ -109,8 +123,12 @@ function createStoredPipelineResult() {
 }
 
 describe('Prompt2BlogPage', () => {
+  let restoreClipboard: (() => void) | null = null
+
   afterEach(() => {
     cleanup()
+    restoreClipboard?.()
+    restoreClipboard = null
   })
 
   beforeEach(() => {
@@ -181,6 +199,225 @@ describe('Prompt2BlogPage', () => {
       stages: {},
       output: null,
     })
+  })
+
+  it('starts with an Easy Set Up block containing Title and Location fields', async () => {
+    renderPage()
+
+    const easySetupPanel = screen.getByRole('heading', { name: 'Easy Set Up' })
+      .closest('section')
+    const coreInputsPanel = screen.getByRole('heading', { name: 'Core Inputs' })
+      .closest('section')
+
+    expect(easySetupPanel).toBeInTheDocument()
+    expect(easySetupPanel?.compareDocumentPosition(coreInputsPanel!))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(within(easySetupPanel!).getByLabelText('Title')).toBeInTheDocument()
+    expect(within(easySetupPanel!).getByLabelText('Location')).toBeInTheDocument()
+    expect(within(easySetupPanel!).getByLabelText('Approved JSON')).toBeInTheDocument()
+    expect(within(easySetupPanel!).getAllByRole('textbox')).toHaveLength(3)
+    expect(within(easySetupPanel!).getByRole('button', { name: 'Confirm Setup' }))
+      .toBeDisabled()
+    expect(within(easySetupPanel!).queryByLabelText('Prompt')).not.toBeInTheDocument()
+  })
+
+  it('requires Title and Location before opening an editable prompt block', async () => {
+    renderPage()
+
+    // The prompt quotes the loaded option catalogs, so wait for them to arrive.
+    await screen.findByRole('option', { name: 'Destination Guide' })
+    const confirmSetup = screen.getByRole('button', { name: 'Confirm Setup' })
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'A weekend in Lisbon' },
+    })
+    expect(confirmSetup).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('Location'), {
+      target: { value: 'Lisbon, Portugal' },
+    })
+    expect(confirmSetup).toBeEnabled()
+    fireEvent.click(confirmSetup)
+
+    const prompt = screen.getByLabelText('Prompt')
+    expect((prompt as HTMLTextAreaElement).value).toContain(
+      'Working title: "A weekend in Lisbon"',
+    )
+    expect((prompt as HTMLTextAreaElement).value).toContain(
+      'Location: "Lisbon, Portugal"',
+    )
+    expect((prompt as HTMLTextAreaElement).value).toContain(
+      'One JSON object, nothing before or after it',
+    )
+    expect((prompt as HTMLTextAreaElement).value).toContain(
+      '- Destination Guide — Comprehensive overview of a place for trip planning.',
+    )
+    expect((prompt as HTMLTextAreaElement).value).toContain('- balanced (Balanced) [house default]')
+
+    fireEvent.change(prompt, {
+      target: { value: 'Edited prompt' },
+    })
+    expect(prompt).toHaveValue('Edited prompt')
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'Three days in Porto' },
+    })
+    expect(screen.queryByLabelText('Prompt')).not.toBeInTheDocument()
+  })
+
+  it('copies the generated Easy Set Up prompt to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    restoreClipboard = stubClipboard(writeText)
+
+    renderPage()
+    await screen.findByRole('option', { name: 'Destination Guide' })
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'A weekend in Lisbon' },
+    })
+    fireEvent.change(screen.getByLabelText('Location'), {
+      target: { value: 'Lisbon, Portugal' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Setup' }))
+
+    const promptValue = (screen.getByLabelText('Prompt') as HTMLTextAreaElement).value
+    fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }))
+
+    expect(writeText).toHaveBeenCalledWith(promptValue)
+    expect(await screen.findByRole('button', { name: 'Copied!' })).toBeInTheDocument()
+  })
+
+  it('reports a failed Easy Set Up prompt copy instead of doing nothing', async () => {
+    restoreClipboard = stubClipboard(vi.fn().mockRejectedValue(new Error('denied')))
+
+    renderPage()
+    await screen.findByRole('option', { name: 'Destination Guide' })
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'A weekend in Lisbon' },
+    })
+    fireEvent.change(screen.getByLabelText('Location'), {
+      target: { value: 'Lisbon, Portugal' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm Setup' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }))
+
+    expect(await screen.findByRole('button', { name: 'Copy failed' })).toBeInTheDocument()
+  })
+
+  it('fills the whole form from an approved JSON brief once it checks out', async () => {
+    renderPage()
+    await screen.findByRole('option', { name: 'Destination Guide' })
+
+    const approved = JSON.stringify({
+      title: 'A Weekend in Lisbon',
+      location: 'Lisbon, Portugal',
+      article_type: 'Itinerary Article',
+      article_goal: 'Plan two full days without wasted transit.',
+      target_reader: 'A first-time visitor with 48 hours.',
+      destination_context: 'Lisbon, Portugal, on the Tagus estuary.',
+      angle: 'Neighbourhood-first planning beats landmark ticking.',
+      call_to_action: 'Book the viewpoint slot before arriving.',
+      tone_id: 'balanced',
+      length_id: 'standard',
+      brand_voice_id: 'questurian',
+      creativity_level: 'high',
+      primary_keyword: 'weekend in lisbon',
+      secondary_keywords: ['lisbon itinerary', '48 hours in lisbon'],
+      must_include: ['Tram 28 crowding', 'Airport transfer costs'],
+      negative_instructions: ['No unsourced price claims'],
+      enable_editorial_augmentation: true,
+      source_material: ['RESEARCH NEEDED: current Carris fare'],
+      model_name: 'gemini-2.5-pro',
+      writing_model: 'gemini-2.5-flash',
+    })
+
+    fireEvent.change(screen.getByLabelText('Approved JSON'), { target: { value: approved } })
+    expect(screen.getByRole('button', { name: 'Apply to form' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Check JSON' }))
+
+    expect(screen.getByText('Every value matches the loaded options. Review and apply.'))
+      .toBeInTheDocument()
+    expect(screen.getByText('Itinerary Article (id 9)')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to form' }))
+
+    expect(screen.getByLabelText('Article Type')).toHaveValue('9')
+    expect(screen.getByLabelText('Article Goal')).toHaveValue('Plan two full days without wasted transit.')
+    expect(screen.getByLabelText('Target Reader')).toHaveValue('A first-time visitor with 48 hours.')
+    expect(screen.getByLabelText('Editorial Angle (Optional)'))
+      .toHaveValue('Neighbourhood-first planning beats landmark ticking.')
+    expect(screen.getByLabelText('Call to Action (Optional)'))
+      .toHaveValue('Book the viewpoint slot before arriving.')
+    expect(screen.getByLabelText('Tone')).toHaveValue('balanced')
+    expect(screen.getByLabelText('Creativity Level')).toHaveValue('high')
+    expect(screen.getByLabelText('Base Draft Model')).toHaveValue('gemini-2.5-pro')
+    expect(screen.getByLabelText('Writer Model')).toHaveValue('gemini-2.5-flash')
+    expect(screen.getByLabelText('Primary Keyword')).toHaveValue('weekend in lisbon')
+    expect(screen.getByLabelText('Secondary Keywords (comma-separated)'))
+      .toHaveValue('lisbon itinerary, 48 hours in lisbon')
+    expect(screen.getByLabelText('Must Include (one per line)'))
+      .toHaveValue('Tram 28 crowding\nAirport transfer costs')
+    expect(screen.getByLabelText('Negative Instructions (one per line)'))
+      .toHaveValue('No unsourced price claims')
+    expect(screen.getByLabelText('Add editorial extras')).toBeChecked()
+    expect(screen.getByLabelText('Title')).toHaveValue('A Weekend in Lisbon')
+    expect(screen.getByText('Applied 20 fields to the form below.')).toBeInTheDocument()
+  })
+
+  it('blocks applying a brief whose values are not in the loaded options', async () => {
+    renderPage()
+    await screen.findByRole('option', { name: 'Destination Guide' })
+
+    fireEvent.change(screen.getByLabelText('Approved JSON'), {
+      target: { value: '{"article_type": "Destination Guides"}' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Check JSON' }))
+
+    expect(screen.getByText(/nothing was applied/)).toBeInTheDocument()
+    expect(screen.getByText(/Closest match: "Destination Guide"/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Apply to form' })).toBeDisabled()
+    expect(screen.getByLabelText('Article Goal')).toHaveValue('')
+  })
+
+  it('retracts an approved check as soon as the pasted JSON is edited', async () => {
+    renderPage()
+    await screen.findByRole('option', { name: 'Destination Guide' })
+
+    const box = screen.getByLabelText('Approved JSON')
+    fireEvent.change(box, { target: { value: '{"article_type": "Destination Guides"}' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Check JSON' }))
+    expect(screen.getByText(/nothing was applied/)).toBeInTheDocument()
+
+    fireEvent.change(box, { target: { value: '{"article_type": "Destination Guide"}' } })
+
+    expect(screen.queryByText(/nothing was applied/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Apply to form' })).toBeDisabled()
+  })
+
+  it('preserves Easy Set Up values in the composer draft', async () => {
+    const { unmount } = renderPage()
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'A weekend in Lisbon' },
+    })
+    fireEvent.change(screen.getByLabelText('Location'), {
+      target: { value: 'Lisbon, Portugal' },
+    })
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem('p2b-form-draft') || '{}'))
+        .toEqual(expect.objectContaining({
+          easySetupLocation: 'Lisbon, Portugal',
+          easySetupTitle: 'A weekend in Lisbon',
+        }))
+    })
+
+    unmount()
+    renderPage()
+
+    expect(screen.getByLabelText('Title')).toHaveValue('A weekend in Lisbon')
+    expect(screen.getByLabelText('Location')).toHaveValue('Lisbon, Portugal')
   })
 
   it('defaults the base draft model selector to flash lite', async () => {

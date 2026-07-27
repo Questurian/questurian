@@ -6,6 +6,8 @@ export interface RawBlob {
 }
 
 export interface P2BFormState {
+  easySetupLocation: string
+  easySetupTitle: string
   articleTypeId: number | null
   articleGoal: string
   targetReader: string

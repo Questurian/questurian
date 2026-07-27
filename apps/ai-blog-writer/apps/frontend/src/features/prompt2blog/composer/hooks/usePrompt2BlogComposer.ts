@@ -37,6 +37,12 @@ export function usePrompt2BlogComposer() {
     setState(prev => ({ ...prev, [field]: value }))
   }, [])
 
+  // The Easy Set Up import lands as one patch so the whole form moves to the
+  // approved brief in a single state change.
+  const applyFields = useCallback((patch: Partial<P2BFormState>) => {
+    setState(prev => ({ ...prev, ...patch }))
+  }, [])
+
   useEffect(() => {
     saveComposerState(state)
   }, [state])
@@ -186,6 +192,7 @@ export function usePrompt2BlogComposer() {
   return {
     state,
     updateField,
+    applyFields,
     inputOptions,
     guidelinePreview,
     guidelineLoading,

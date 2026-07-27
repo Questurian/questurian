@@ -9,6 +9,8 @@ import { buildPrompt2BlogPayload } from './prompt-payload'
 
 function createState(overrides: Partial<P2BFormState> = {}): P2BFormState {
   return {
+    easySetupLocation: '',
+    easySetupTitle: '',
     articleTypeId: 7,
     articleGoal: 'Help readers plan a trip.',
     targetReader: 'First-time visitors',

@@ -10,6 +10,8 @@ export const COMPOSER_STORAGE_KEY = 'p2b-form-draft'
 const COMPOSER_STORAGE_VERSION = 2
 
 export const DEFAULT_COMPOSER_STATE: P2BFormState = {
+  easySetupLocation: '',
+  easySetupTitle: '',
   articleTypeId: null,
   articleGoal: '',
   targetReader: '',

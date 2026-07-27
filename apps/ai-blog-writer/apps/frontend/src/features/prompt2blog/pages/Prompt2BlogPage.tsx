@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { CleanupDetailsModal } from '../cleanup-details/CleanupDetailsModal'
 import { useCleanupDetailsModal } from '../cleanup-details/hooks/useCleanupDetailsModal'
 import { CoreInputsPanel } from '../composer/components/CoreInputsPanel'
+import { EasySetupPanel } from '../composer/components/EasySetupPanel'
 import { GuidelinePreviewPanel } from '../composer/components/GuidelinePreviewPanel'
 import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
 import { SeoConstraintsPanel } from '../composer/components/SeoConstraintsPanel'
@@ -63,6 +64,14 @@ export default function Prompt2BlogPage() {
 
       <main className="p2b-form-container">
         <form className="p2b-form" onSubmit={(event) => event.preventDefault()}>
+          <EasySetupPanel
+            inputOptions={composer.inputOptions}
+            location={state.easySetupLocation}
+            title={state.easySetupTitle}
+            onApply={composer.applyFields}
+            onLocationChange={value => composer.updateField('easySetupLocation', value)}
+            onTitleChange={value => composer.updateField('easySetupTitle', value)}
+          />
           <CoreInputsPanel
             angle={state.angle}
             articleGoal={state.articleGoal}

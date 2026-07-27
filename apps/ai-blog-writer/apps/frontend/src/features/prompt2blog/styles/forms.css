@@ -96,6 +96,13 @@
   font-size: 0.875rem;
 }
 
+.p2b-field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .p2b-field-row {
   display: grid;
   gap: var(--space-4);
@@ -456,6 +463,111 @@
 
 .p2b-copy-json-btn:active {
   transform: translateY(0);
+}
+
+/* Easy Set Up import review */
+.p2b-import-applied {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.p2b-import-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: white;
+}
+
+.p2b-import-report--blocked {
+  border-color: var(--error);
+  background: var(--error-soft);
+}
+
+.p2b-import-report-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--ink);
+}
+
+.p2b-import-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.p2b-import-list code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.p2b-import-list--corrections {
+  color: var(--muted);
+}
+
+.p2b-import-rows {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.p2b-import-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) 1fr;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.p2b-import-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.p2b-import-row dt {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.p2b-import-row dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.p2b-inline-copy-btn {
+  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: var(--p2b-accent);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.p2b-inline-copy-btn:hover {
+  border-color: var(--p2b-accent);
+  background: var(--p2b-accent-softer);
 }
 
 .p2b-clear-btn {
