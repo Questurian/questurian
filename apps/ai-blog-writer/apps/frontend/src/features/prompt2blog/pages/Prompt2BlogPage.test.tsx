@@ -210,13 +210,13 @@ describe('Prompt2BlogPage', () => {
       'Base Draft Model',
       'Writer Model',
       'Creativity Level',
-      'Audience Profile (Optional)',
       'Negative Instructions (one per line)',
-      'Prompt Enhance',
       'Enable editorial augmentation',
     ]) {
       expect(screen.getByLabelText(label).closest('details')).toBe(advancedGeneration)
     }
+    expect(screen.queryByLabelText('Audience Profile (Optional)')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Prompt Enhance')).not.toBeInTheDocument()
     expect(
       screen.getByLabelText('Secondary Keywords (comma-separated)').closest('details'),
     ).toBe(advancedSeo)
@@ -233,11 +233,11 @@ describe('Prompt2BlogPage', () => {
 
     const advancedGenerationSummary = await screen.findByText('Advanced generation controls')
     const advancedSeoSummary = screen.getByText('Advanced SEO controls')
-    const audienceProfile = screen.getByLabelText('Audience Profile (Optional)')
+    const negativeInstructions = screen.getByLabelText('Negative Instructions (one per line)')
     const secondaryKeywords = screen.getByLabelText('Secondary Keywords (comma-separated)')
 
     fireEvent.click(advancedGenerationSummary)
-    fireEvent.change(audienceProfile, { target: { value: 'Budget-conscious families' } })
+    fireEvent.change(negativeInstructions, { target: { value: 'Avoid generic praise' } })
     fireEvent.click(advancedGenerationSummary)
     fireEvent.click(advancedGenerationSummary)
 
@@ -246,7 +246,7 @@ describe('Prompt2BlogPage', () => {
     fireEvent.click(advancedSeoSummary)
     fireEvent.click(advancedSeoSummary)
 
-    expect(audienceProfile).toHaveValue('Budget-conscious families')
+    expect(negativeInstructions).toHaveValue('Avoid generic praise')
     expect(secondaryKeywords).toHaveValue('family hotels, free museums')
 
     const promptProfilesPanel = screen.getByRole('heading', { name: 'Prompt Profiles' })
@@ -257,7 +257,7 @@ describe('Prompt2BlogPage', () => {
     fireEvent.click(within(promptProfilesPanel!).getByRole('button', { name: 'Clear section' }))
     fireEvent.click(within(seoPanel!).getByRole('button', { name: 'Clear section' }))
 
-    expect(audienceProfile).toHaveValue('')
+    expect(negativeInstructions).toHaveValue('')
     expect(secondaryKeywords).toHaveValue('')
   })
 

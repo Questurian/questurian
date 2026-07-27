@@ -82,7 +82,6 @@ export default function Prompt2BlogPage() {
             onTargetReaderChange={value => composer.updateField('targetReader', value)}
           />
           <PromptProfilesPanel
-            audienceProfile={state.audienceProfile}
             brandVoiceId={state.brandVoiceId}
             creativityLevel={state.creativityLevel}
             enableEditorialAugmentation={state.enableEditorialAugmentation}
@@ -91,7 +90,6 @@ export default function Prompt2BlogPage() {
             modelName={state.modelName}
             writingModel={state.writingModel}
             negativeInstructions={state.negativeInstructions}
-            promptEnhance={state.promptEnhance}
             toneId={state.toneId}
             onChange={composer.updateField}
             onClear={composer.clearPromptProfiles}

@@ -20,10 +20,8 @@ export interface P2BFormState {
   primaryKeyword: string
   secondaryKeywords: string
   mustInclude: string
-  audienceProfile: string
   creativityLevel: 'low' | 'medium' | 'high'
   negativeInstructions: string
-  promptEnhance: boolean
   enableEditorialAugmentation: boolean
   blobs: RawBlob[]
 }

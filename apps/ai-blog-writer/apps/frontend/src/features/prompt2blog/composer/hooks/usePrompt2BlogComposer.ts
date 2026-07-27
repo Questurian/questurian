@@ -159,9 +159,7 @@ export function usePrompt2BlogComposer() {
         ? findDefaultOption(inputOptions.brand_voices)
         : DEFAULT_COMPOSER_STATE.brandVoiceId,
       creativityLevel: DEFAULT_COMPOSER_STATE.creativityLevel,
-      audienceProfile: DEFAULT_COMPOSER_STATE.audienceProfile,
       negativeInstructions: DEFAULT_COMPOSER_STATE.negativeInstructions,
-      promptEnhance: DEFAULT_COMPOSER_STATE.promptEnhance,
       enableEditorialAugmentation: DEFAULT_COMPOSER_STATE.enableEditorialAugmentation,
     }))
   }, [inputOptions])

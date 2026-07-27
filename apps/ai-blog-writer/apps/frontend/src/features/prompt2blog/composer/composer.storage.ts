@@ -23,10 +23,8 @@ export const DEFAULT_COMPOSER_STATE: P2BFormState = {
   primaryKeyword: '',
   secondaryKeywords: '',
   mustInclude: '',
-  audienceProfile: '',
   creativityLevel: 'medium',
   negativeInstructions: '',
-  promptEnhance: true,
   enableEditorialAugmentation: true,
   blobs: [{ id: 1, content: '' }],
 }
@@ -35,7 +33,28 @@ export function loadSavedComposerState(): P2BFormState {
   try {
     const raw = localStorage.getItem(COMPOSER_STORAGE_KEY)
     if (!raw) return DEFAULT_COMPOSER_STATE
-    const parsed = JSON.parse(raw) as Partial<P2BFormState>
+    const parsed = JSON.parse(raw) as Partial<P2BFormState> & {
+      audienceProfile?: unknown
+      promptEnhance?: unknown
+    }
+    // Fold removed audience detail into the remaining reader field before
+    // stripping legacy keys, so old drafts keep user-authored guidance.
+    const legacyAudienceProfile = typeof parsed.audienceProfile === 'string'
+      ? parsed.audienceProfile.trim()
+      : ''
+    const savedTargetReader = typeof parsed.targetReader === 'string'
+      ? parsed.targetReader.trim()
+      : ''
+    if (legacyAudienceProfile && !savedTargetReader) {
+      parsed.targetReader = legacyAudienceProfile
+    } else if (
+      legacyAudienceProfile
+      && savedTargetReader.toLocaleLowerCase() !== legacyAudienceProfile.toLocaleLowerCase()
+    ) {
+      parsed.targetReader = `${savedTargetReader} — ${legacyAudienceProfile}`
+    }
+    delete parsed.audienceProfile
+    delete parsed.promptEnhance
     return {
       ...DEFAULT_COMPOSER_STATE,
       ...parsed,

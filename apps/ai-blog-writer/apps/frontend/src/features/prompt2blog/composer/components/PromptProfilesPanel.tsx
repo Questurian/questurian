@@ -20,7 +20,6 @@ function resolveCreativityLevel(value: string): P2BFormState['creativityLevel'] 
 }
 
 interface PromptProfilesPanelProps {
-  audienceProfile: string
   brandVoiceId: string
   creativityLevel: 'low' | 'medium' | 'high'
   enableEditorialAugmentation: boolean
@@ -29,7 +28,6 @@ interface PromptProfilesPanelProps {
   modelName: Prompt2BlogModelName
   writingModel: Prompt2BlogWriterModel
   negativeInstructions: string
-  promptEnhance: boolean
   toneId: string
   onChange: <K extends keyof P2BFormState>(field: K, value: P2BFormState[K]) => void
   onClear: () => void
@@ -54,13 +52,9 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
             <div className="p2b-field"><label htmlFor="p2b-model">Base Draft Model</label><select id="p2b-model" className="p2b-select" value={props.modelName} onChange={event => props.onChange('modelName', resolvePrompt2BlogModelName(event.target.value))}>{PROMPT2BLOG_MODEL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
             <div className="p2b-field"><label htmlFor="p2b-writer-model">Writer Model</label><select id="p2b-writer-model" className="p2b-select" value={props.writingModel} onChange={event => props.onChange('writingModel', resolvePrompt2BlogWriterModel(event.target.value))}>{PROMPT2BLOG_WRITER_MODEL_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>
           </div>
-          <div className="p2b-field-row p2b-field-row--2">
-            <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', resolveCreativityLevel(event.target.value))}>{CREATIVITY_LEVELS.map(level => <option key={level} value={level}>{level[0].toUpperCase()}{level.slice(1)}</option>)}</select></div>
-            <div className="p2b-field"><label htmlFor="p2b-audience-profile">Audience Profile (Optional)</label><input id="p2b-audience-profile" type="text" className="p2b-input" value={props.audienceProfile} onChange={event => props.onChange('audienceProfile', event.target.value)} placeholder="Extra reader detail" /></div>
-          </div>
+          <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', resolveCreativityLevel(event.target.value))}>{CREATIVITY_LEVELS.map(level => <option key={level} value={level}>{level[0].toUpperCase()}{level.slice(1)}</option>)}</select></div>
           <div className="p2b-field"><label htmlFor="p2b-negative">Negative Instructions (one per line)</label><textarea id="p2b-negative" className="p2b-textarea" rows={3} value={props.negativeInstructions} onChange={event => props.onChange('negativeInstructions', event.target.value)} placeholder="What to avoid" /></div>
           <div className="p2b-checkbox-stack">
-            <CheckboxField id="p2b-prompt-enhance" label="Prompt Enhance" checked={props.promptEnhance} onChange={checked => props.onChange('promptEnhance', checked)} />
             <CheckboxField id="p2b-editorial-toggle" label="Enable editorial augmentation" checked={props.enableEditorialAugmentation} onChange={checked => props.onChange('enableEditorialAugmentation', checked)} />
           </div>
         </div>
