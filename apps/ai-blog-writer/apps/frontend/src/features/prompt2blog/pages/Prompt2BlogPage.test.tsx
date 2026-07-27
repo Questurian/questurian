@@ -5,6 +5,10 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as prompt2blogApi from '../api'
+import {
+  DEFAULT_COMPOSER_STATE,
+  saveComposerState,
+} from '../composer/composer.storage'
 import { DEFAULT_PROMPT2BLOG_MODEL } from '../constants/prompt2blog.constants'
 import Prompt2BlogPage from './Prompt2BlogPage'
 
@@ -187,6 +191,21 @@ describe('Prompt2BlogPage', () => {
     expect(modelSelect).toHaveValue(DEFAULT_PROMPT2BLOG_MODEL)
   })
 
+  it('keeps editorial extras off until the operator opts in', async () => {
+    renderPage()
+
+    const editorialExtras = await screen.findByLabelText('Add editorial extras')
+
+    expect(editorialExtras).not.toBeChecked()
+    expect(
+      screen.getByText('May add a useful pull quote, callout, FAQ, or takeaway box.'),
+    ).toBeInTheDocument()
+
+    fireEvent.click(editorialExtras)
+
+    expect(editorialExtras).toBeChecked()
+  })
+
   it('keeps optional controls collapsed while core choices stay visible', async () => {
     renderPage()
 
@@ -194,9 +213,12 @@ describe('Prompt2BlogPage', () => {
     const advancedGeneration = advancedGenerationSummary.closest('details')
     const advancedSeoSummary = screen.getByText('Advanced SEO controls')
     const advancedSeo = advancedSeoSummary.closest('details')
+    const optionalGuidanceSummary = screen.getByText('Optional editorial guidance')
+    const optionalGuidance = optionalGuidanceSummary.closest('details')
 
     expect(advancedGeneration).not.toHaveAttribute('open')
     expect(advancedSeo).not.toHaveAttribute('open')
+    expect(optionalGuidance).not.toHaveAttribute('open')
     for (const label of [
       'Tone',
       'Length',
@@ -211,7 +233,7 @@ describe('Prompt2BlogPage', () => {
       'Writer Model',
       'Creativity Level',
       'Negative Instructions (one per line)',
-      'Enable editorial augmentation',
+      'Add editorial extras',
     ]) {
       expect(screen.getByLabelText(label).closest('details')).toBe(advancedGeneration)
     }
@@ -220,12 +242,63 @@ describe('Prompt2BlogPage', () => {
     expect(
       screen.getByLabelText('Secondary Keywords (comma-separated)').closest('details'),
     ).toBe(advancedSeo)
+    expect(screen.getByLabelText('Editorial Angle (Optional)').closest('details')).toBe(
+      optionalGuidance,
+    )
+    expect(screen.getByLabelText('Call to Action (Optional)').closest('details')).toBe(
+      optionalGuidance,
+    )
 
     fireEvent.click(advancedGenerationSummary)
     fireEvent.click(advancedSeoSummary)
+    fireEvent.click(optionalGuidanceSummary)
 
     expect(advancedGeneration).toHaveAttribute('open')
     expect(advancedSeo).toHaveAttribute('open')
+    expect(optionalGuidance).toHaveAttribute('open')
+  })
+
+  it('opens optional editorial guidance when a saved draft uses it', async () => {
+    saveComposerState({
+      ...DEFAULT_COMPOSER_STATE,
+      angle: 'Peru is the better first stop',
+      callToAction: 'Compare fares',
+    })
+
+    renderPage()
+
+    const optionalGuidanceSummary = await screen.findByText('Optional editorial guidance')
+    const optionalGuidance = optionalGuidanceSummary.closest('details')
+
+    expect(optionalGuidance).toHaveAttribute('open')
+    expect(screen.getByLabelText('Editorial Angle (Optional)')).toHaveValue(
+      'Peru is the better first stop',
+    )
+    expect(screen.getByLabelText('Call to Action (Optional)')).toHaveValue('Compare fares')
+  })
+
+  it('preserves optional guidance across toggles and clears it with core inputs', async () => {
+    renderPage()
+
+    const optionalGuidanceSummary = await screen.findByText('Optional editorial guidance')
+    const angle = screen.getByLabelText('Editorial Angle (Optional)')
+    const callToAction = screen.getByLabelText('Call to Action (Optional)')
+
+    fireEvent.click(optionalGuidanceSummary)
+    fireEvent.change(angle, { target: { value: 'Peru is the better first stop' } })
+    fireEvent.change(callToAction, { target: { value: 'Compare fares' } })
+    fireEvent.click(optionalGuidanceSummary)
+    fireEvent.click(optionalGuidanceSummary)
+
+    expect(angle).toHaveValue('Peru is the better first stop')
+    expect(callToAction).toHaveValue('Compare fares')
+
+    const coreInputsPanel = screen.getByRole('heading', { name: 'Core Inputs' })
+      .closest('section')
+    fireEvent.click(within(coreInputsPanel!).getByRole('button', { name: 'Clear section' }))
+
+    expect(angle).toHaveValue('')
+    expect(callToAction).toHaveValue('')
   })
 
   it('preserves advanced values across disclosure toggles and clears them by section', async () => {
@@ -296,6 +369,7 @@ describe('Prompt2BlogPage', () => {
           model_name: 'gemini-2.5-pro',
           tone_id: 'balanced',
           length_id: 'standard',
+          enable_editorial_augmentation: false,
           source_material: ['Alfama is historic. Principe Real is calmer and more upscale.'],
         }),
       )

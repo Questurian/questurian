@@ -1,6 +1,11 @@
 /* @vitest-environment jsdom */
 import { beforeEach, describe, expect, it } from 'vitest'
-import { COMPOSER_STORAGE_KEY, loadSavedComposerState } from './composer.storage'
+import {
+  COMPOSER_STORAGE_KEY,
+  DEFAULT_COMPOSER_STATE,
+  loadSavedComposerState,
+  saveComposerState,
+} from './composer.storage'
 
 describe('loadSavedComposerState', () => {
   beforeEach(() => {
@@ -41,5 +46,35 @@ describe('loadSavedComposerState', () => {
     }))
 
     expect(loadSavedComposerState().targetReader).toBe('Budget-conscious families')
+  })
+
+  it('defaults editorial extras off for a new draft', () => {
+    expect(DEFAULT_COMPOSER_STATE.enableEditorialAugmentation).toBe(false)
+  })
+
+  it('turns off the old unversioned editorial-augmentation default', () => {
+    localStorage.setItem(COMPOSER_STORAGE_KEY, JSON.stringify({
+      enableEditorialAugmentation: true,
+    }))
+
+    expect(loadSavedComposerState().enableEditorialAugmentation).toBe(false)
+  })
+
+  it('preserves editorial augmentation after a user opts in', () => {
+    saveComposerState({
+      ...DEFAULT_COMPOSER_STATE,
+      enableEditorialAugmentation: true,
+    })
+
+    expect(loadSavedComposerState().enableEditorialAugmentation).toBe(true)
+  })
+
+  it('does not reinterpret a draft written by a newer storage version', () => {
+    localStorage.setItem(COMPOSER_STORAGE_KEY, JSON.stringify({
+      composerStorageVersion: 999,
+      enableEditorialAugmentation: true,
+    }))
+
+    expect(loadSavedComposerState().enableEditorialAugmentation).toBe(true)
   })
 })

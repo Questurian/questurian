@@ -11,6 +11,7 @@ from tests.prompt2blog_test_support import response_payload
 import app.features.prompt2blog.routes as prompt2blog_routes
 from app.core import read_status
 from app.features.prompt2blog.api import runs as runs_api
+from app.features.prompt2blog.models import PipelineV2RuntimeRequest
 
 pytest_plugins = ["tests.prompt2blog_test_fixtures"]
 
@@ -81,3 +82,22 @@ def test_input_request_rejects_legacy_payload_shape():
                 "writing_brief": {},
             }
         )
+
+
+def test_editorial_augmentation_is_opt_in_by_default():
+    request = prompt2blog_routes.Prompt2BlogInputRequest(
+        article_type_id=1,
+        source_material=["One source blob."],
+        article_goal="Generate a practical article.",
+        target_reader="General readers",
+        destination_context="Barcelona, Spain",
+        tone_id="practical",
+        length_id="medium",
+    )
+    runtime_request = PipelineV2RuntimeRequest(
+        cleaned_data="Cleaned source.",
+        article_type_id=1,
+    )
+
+    assert request.enable_editorial_augmentation is False
+    assert runtime_request.enable_editorial_augmentation is False

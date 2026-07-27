@@ -56,6 +56,7 @@ Structured Prompt2Blog run input now uses:
 - `tone_id`, `length_id` (required; loaded from `/prompt2blog/input-options`)
 - `brand_voice_id`, `primary_keyword`, `secondary_keywords`, `must_include`, `audience_profile`, `negative_instructions` (optional)
 - `prompt_enhance`, `creativity_level`, `include_debug`, `enable_editorial_augmentation`, `model_name` (optional controls)
+- `enable_editorial_augmentation` defaults to `false`; callers must opt in to editorial extras
 
 ### Editor Assist (`/editor-assist`)
 

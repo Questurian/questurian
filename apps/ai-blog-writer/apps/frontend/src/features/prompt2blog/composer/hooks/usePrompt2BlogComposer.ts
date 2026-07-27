@@ -10,6 +10,7 @@ import {
   COMPOSER_STORAGE_KEY,
   DEFAULT_COMPOSER_STATE,
   loadSavedComposerState,
+  saveComposerState,
 } from '../composer.storage'
 import type { P2BFormState } from '../composer.types'
 import { buildPrompt2BlogPayload } from '../prompt-payload'
@@ -37,7 +38,7 @@ export function usePrompt2BlogComposer() {
   }, [])
 
   useEffect(() => {
-    localStorage.setItem(COMPOSER_STORAGE_KEY, JSON.stringify(state))
+    saveComposerState(state)
   }, [state])
 
   useEffect(() => {
