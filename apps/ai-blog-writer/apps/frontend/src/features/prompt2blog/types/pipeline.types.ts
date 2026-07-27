@@ -66,6 +66,7 @@ export type Prompt2BlogRunRequest = {
   brand_voice_id?: string
   primary_keyword?: string
   secondary_keywords?: string[]
+  call_to_action?: string
   must_include?: string[]
   audience_profile?: string
   prompt_enhance?: boolean
@@ -174,6 +175,7 @@ export type Prompt2BlogPipelinePayload = {
       audience_match: boolean
       tone_match: boolean
     }
+    secondary_keyword_coverage: number
     word_count_estimate: number
     repair_applied: boolean
     editorial_augmentation_applied: boolean

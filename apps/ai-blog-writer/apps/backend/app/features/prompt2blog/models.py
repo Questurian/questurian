@@ -60,6 +60,7 @@ class Prompt2BlogInputRequest(BaseModel):
     brand_voice_id: str | None = None
     primary_keyword: str | None = None
     secondary_keywords: List[str] = Field(default_factory=list)
+    call_to_action: str | None = None
     must_include: List[str] = Field(default_factory=list)
     audience_profile: str | None = None
     prompt_enhance: bool = True

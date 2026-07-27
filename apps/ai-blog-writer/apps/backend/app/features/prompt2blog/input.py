@@ -80,7 +80,7 @@ def _build_writing_brief_from_input(
             "paragraph_length": paragraph_length,
             "target_word_count": target_word_count,
         },
-        "call_to_action": "",
+        "call_to_action": _safe_str(request.call_to_action),
         "seo": {
             "primary_keyword": _safe_str(request.primary_keyword),
             "secondary_keywords": secondary_keywords,

@@ -6,11 +6,22 @@ from typing import Any
 from .content.markdown import _clean_title
 from .support import (
     _safe_bool,
+    _safe_dict,
     _safe_int,
     _safe_str,
     _tokenize_words,
-    _normalize_text,
 )
+
+# Share of secondary keywords that must appear before the check passes.
+SECONDARY_KEYWORD_COVERAGE_THRESHOLD = 0.6
+
+# The audit rubric calls 7-8 "acceptable with edits" and <=6 "requires a hard
+# rewrite". Repair therefore fires below 7, not at or below it.
+REPAIR_SCORE_THRESHOLD = 7
+
+# Used when the auditor omitted a score. Neutral, and above the repair
+# threshold, so a gap in the response is never itself a repair trigger.
+NEUTRAL_QUALITY_SCORE = 7
 
 
 def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
@@ -24,12 +35,33 @@ def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
     return perspective or "No additional narrative focus provided."
 
 
+# A brief asking for "flights to Lima" is satisfied by prose saying "flight to
+# Lima". Raw substring matching failed those, which drove keyword checks false
+# and bought a full repair rewrite for a plural.
+def _canonical_tokens(value: str) -> list[str]:
+    tokens: list[str] = []
+    for token in _tokenize_words(value):
+        token = token.removesuffix("'s").rstrip("'")
+        if len(token) > 4 and token.endswith(("ses", "xes", "zes", "ches", "shes")):
+            token = token[:-2]
+        elif len(token) > 3 and token.endswith("s"):
+            token = token[:-1]
+        if token:
+            tokens.append(token)
+    return tokens
+
+
 def _contains_phrase(text: str, phrase: str) -> bool:
-    normalized_text = _normalize_text(text)
-    normalized_phrase = _normalize_text(phrase)
-    if not normalized_phrase:
+    phrase_tokens = _canonical_tokens(phrase)
+    if not phrase_tokens:
         return True
-    return normalized_phrase in normalized_text
+
+    text_tokens = _canonical_tokens(text)
+    window = len(phrase_tokens)
+    for start in range(len(text_tokens) - window + 1):
+        if text_tokens[start : start + window] == phrase_tokens:
+            return True
+    return False
 
 
 def _estimate_paragraph_sentence_average(content: str) -> float:
@@ -97,27 +129,28 @@ def _build_constraint_checks(
             _safe_str(item) for item in secondary_raw if _safe_str(item)
         ]
 
-    secondary_keywords_present = True
+    # Requiring every secondary keyword verbatim made the check fail on almost
+    # any realistic keyword set, and repair is told to satisfy it "naturally" --
+    # which is a direct instruction to keyword-stuff against the SEO guidance.
+    secondary_keyword_coverage = 1.0
     if secondary_keywords:
-        secondary_keywords_present = all(
-            _contains_phrase(combined, kw) for kw in secondary_keywords
-        )
-
-    audience = _safe_str(writing_brief.get("audience"))
-    tone = _safe_str((writing_brief.get("voice") or {}).get("tone"))
-    audience_match = (
-        _keyword_overlap_ratio(audience, combined) >= 0.2 if audience else True
+        matched = sum(1 for kw in secondary_keywords if _contains_phrase(combined, kw))
+        secondary_keyword_coverage = matched / len(secondary_keywords)
+    secondary_keywords_present = (
+        secondary_keyword_coverage >= SECONDARY_KEYWORD_COVERAGE_THRESHOLD
     )
-    tone_match = _keyword_overlap_ratio(tone, combined) >= 0.2 if tone else True
 
+    # audience_match and tone_match are deliberately absent. They are semantic
+    # judgements and belong to the quality auditor; the token-overlap heuristic
+    # that used to compute them here overrode the model on the two questions it
+    # is actually good at. See _audit_rewrite.
     return {
         "target_word_count_met": target_word_count_met,
         "paragraph_length_met": paragraph_length_met,
         "cta_present": cta_present,
         "primary_keyword_present": primary_keyword_present,
         "secondary_keywords_present": secondary_keywords_present,
-        "audience_match": audience_match,
-        "tone_match": tone_match,
+        "secondary_keyword_coverage": round(secondary_keyword_coverage, 3),
         "word_count_estimate": word_count,
     }
 
@@ -179,46 +212,36 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
             _safe_str(item) for item in required_revisions_raw if _safe_str(item)
         ]
 
-    checks_raw = parsed.get("constraint_checks")
-    checks = {}
-    if isinstance(checks_raw, dict):
-        checks = {
-            "target_word_count_met": _safe_bool(
-                checks_raw.get("target_word_count_met"), default=True
-            ),
-            "paragraph_length_met": _safe_bool(
-                checks_raw.get("paragraph_length_met"), default=True
-            ),
-            "cta_present": _safe_bool(checks_raw.get("cta_present"), default=True),
-            "primary_keyword_present": _safe_bool(
-                checks_raw.get("primary_keyword_present"), default=True
-            ),
-            "secondary_keywords_present": _safe_bool(
-                checks_raw.get("secondary_keywords_present"), default=True
-            ),
-            "audience_match": _safe_bool(
-                checks_raw.get("audience_match"), default=True
-            ),
-            "tone_match": _safe_bool(checks_raw.get("tone_match"), default=True),
-        }
+    # Only the semantic checks are read from the auditor. Word count, paragraph
+    # length, CTA and keyword presence are measured deterministically in
+    # _build_constraint_checks and overwrite anything the model claims, so the
+    # prompt no longer asks for them.
+    checks_raw = _safe_dict(parsed.get("constraint_checks"))
+    checks = {
+        "audience_match": _safe_bool(checks_raw.get("audience_match"), default=True),
+        "tone_match": _safe_bool(checks_raw.get("tone_match"), default=True),
+    }
+
+    # A missing or unparseable score used to default to 6, which sits below the
+    # repair threshold -- so a malformed audit response silently bought a full
+    # article rewrite. Absent scores now default to neutral and are reported as
+    # incomplete, and _should_run_repair ignores the score signal entirely when
+    # the audit did not actually produce one.
+    audit_complete = _safe_int(parsed.get("overall_score"), default=0) > 0
+
+    def _score(key: str) -> int:
+        return max(
+            1, min(10, _safe_int(parsed.get(key), default=NEUTRAL_QUALITY_SCORE))
+        )
 
     return {
-        "overall_score": max(
-            1, min(10, _safe_int(parsed.get("overall_score"), default=6))
-        ),
-        "guideline_coverage_score": max(
-            1, min(10, _safe_int(parsed.get("guideline_coverage_score"), default=6))
-        ),
-        "informativeness_score": max(
-            1, min(10, _safe_int(parsed.get("informativeness_score"), default=6))
-        ),
-        "originality_score": max(
-            1, min(10, _safe_int(parsed.get("originality_score"), default=6))
-        ),
-        "brief_adherence_score": max(
-            1, min(10, _safe_int(parsed.get("brief_adherence_score"), default=6))
-        ),
-        "seo_score": max(1, min(10, _safe_int(parsed.get("seo_score"), default=6))),
+        "audit_complete": audit_complete,
+        "overall_score": _score("overall_score"),
+        "guideline_coverage_score": _score("guideline_coverage_score"),
+        "informativeness_score": _score("informativeness_score"),
+        "originality_score": _score("originality_score"),
+        "brief_adherence_score": _score("brief_adherence_score"),
+        "seo_score": _score("seo_score"),
         "too_close_to_source": _safe_bool(
             parsed.get("too_close_to_source"), default=False
         ),
@@ -233,8 +256,10 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
 
 
 def _should_run_repair(quality: dict[str, Any], checks: dict[str, Any]) -> bool:
-    if quality.get("overall_score", 0) <= 7:
-        return True
+    # Only trust the score when the auditor actually returned one.
+    if _safe_bool(quality.get("audit_complete"), default=True):
+        if quality.get("overall_score", NEUTRAL_QUALITY_SCORE) < REPAIR_SCORE_THRESHOLD:
+            return True
     if _safe_bool(quality.get("too_close_to_source"), default=False):
         return True
 
