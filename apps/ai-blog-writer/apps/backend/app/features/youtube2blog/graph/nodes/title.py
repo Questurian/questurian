@@ -15,6 +15,7 @@ from ...quality.policies import evaluate_title_gate, is_better_title
 def build_title_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
     run_id = context.run_id
     _active_model = context.active_model
+    _tone_guidance = context.tone_guidance
     _write_running_status = context.start_stage
     _record_stage_result = context.record_stage
     _stage_ref = context.stage_ref
@@ -24,7 +25,11 @@ def build_title_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
         stage3_for_title = Stage3Output.model_validate(state["stage3_for_title"])
         gate_data = dict(state.get("stage_editorial_gate") or {})
         seo_source_stage = str(gate_data.get("seo_source_stage") or "stage_seo_enrich")
-        stage4 = stage_4_generate_title(stage3_for_title, model_name=_active_model)
+        stage4 = stage_4_generate_title(
+            stage3_for_title,
+            model_name=_active_model,
+            tone_guidance=_tone_guidance,
+        )
         input_refs = {
             "stage_editorial_augmentation": _stage_ref(
                 run_id,
@@ -106,6 +111,7 @@ def build_title_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
             stage3_for_title,
             feedback=feedback,
             model_name=_active_model,
+            tone_guidance=_tone_guidance,
         )
         stage_results = _record_stage_result(
             state,

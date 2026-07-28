@@ -65,6 +65,15 @@ Use this original title as a baseline and starting point. Preserve the core subj
 - The title should accurately reflect the key points of the article and avoid any hallucinations or inaccuracies.
 """
 
+TITLE_TONE_SUFFIX = """
+
+## Voice
+{tone_guidance}
+
+Apply this voice only where the title guideline leaves room. The guideline
+remains the primary constraint; never break it to match the voice.
+"""
+
 TITLE_RETRY_FEEDBACK_SUFFIX = """
 
 Previous attempt feedback:
@@ -192,6 +201,7 @@ def _generate_title_impl(
     mode: str,
     retry_feedback: str | None = None,
     model_name: str = Y2B_PRIMARY_MODEL,
+    tone_guidance: str | None = None,
 ) -> Stage4Output:
     if mode not in {"primary", "retry"}:
         raise ValueError(f"Unsupported title generation mode: {mode}")
@@ -219,6 +229,10 @@ def _generate_title_impl(
 
     prompt_template = TITLE_GENERATION_PROMPT
     input_variables = ["original_title", "article", "guideline"]
+    resolved_tone = (tone_guidance or "").strip()
+    if resolved_tone:
+        prompt_template += TITLE_TONE_SUFFIX
+        input_variables.append("tone_guidance")
     if mode == "retry":
         prompt_template += TITLE_RETRY_FEEDBACK_SUFFIX
         input_variables.append("feedback")
@@ -232,6 +246,8 @@ def _generate_title_impl(
         "article": stage3.final_article,
         "guideline": title_guideline,
     }
+    if resolved_tone:
+        prompt_kwargs["tone_guidance"] = resolved_tone
     if mode == "retry":
         prompt_kwargs["feedback"] = retry_feedback or "No additional feedback."
     full_prompt = prompt.format(**prompt_kwargs)
@@ -256,9 +272,19 @@ def _generate_title_impl(
     )
 
 
-def stage_4_generate_title(stage3: Stage3Output, *, model_name: str = Y2B_PRIMARY_MODEL) -> Stage4Output:
+def stage_4_generate_title(
+    stage3: Stage3Output,
+    *,
+    model_name: str = Y2B_PRIMARY_MODEL,
+    tone_guidance: str | None = None,
+) -> Stage4Output:
     """Primary title generation pass."""
-    return _generate_title_impl(stage3=stage3, mode="primary", model_name=model_name)
+    return _generate_title_impl(
+        stage3=stage3,
+        mode="primary",
+        model_name=model_name,
+        tone_guidance=tone_guidance,
+    )
 
 
 def stage_5_generate_title_retry(
@@ -266,6 +292,7 @@ def stage_5_generate_title_retry(
     *,
     feedback: str,
     model_name: str = Y2B_PRIMARY_MODEL,
+    tone_guidance: str | None = None,
 ) -> Stage4Output:
     """Retry title generation with explicit quality feedback."""
     return _generate_title_impl(
@@ -273,4 +300,5 @@ def stage_5_generate_title_retry(
         mode="retry",
         retry_feedback=feedback,
         model_name=model_name,
+        tone_guidance=tone_guidance,
     )
