@@ -113,20 +113,21 @@ def build_classification_nodes(context: YouTube2BlogNodeContext) -> dict[str, Gr
         _write_running_status("stage_3_guideline")
         forced_type = (state.get("forced_article_type") or "").strip()
         if forced_type:
-            # User pre-selected an article type — fetch its guideline from DB directly,
-            # bypassing stage_2 classification
-            guideline = stage_3_retrieve_guideline(forced_type)
+            # A forced type routes around stage_2 entirely, so there is no
+            # classification to read here and none to pay for upstream.
             article_type = forced_type
             source = "user_selected"
+            input_refs = {"stage_1": _stage_ref(run_id, "stage_1")}
         else:
             stage2 = Stage2Output.model_validate(state["stage2"])
-            guideline = stage_3_retrieve_guideline(stage2.classification)
             article_type = stage2.classification
             source = "auto_classified"
+            input_refs = {"stage_2": _stage_ref(run_id, "stage_2")}
+        guideline = stage_3_retrieve_guideline(article_type)
         stage_results = _record_stage_result(
             state,
             stage_name="stage_3_guideline",
-            input_refs={"stage_2": _stage_ref(run_id, "stage_2")},
+            input_refs=input_refs,
             data={
                 "article_type": article_type,
                 "guideline": guideline,
@@ -135,6 +136,7 @@ def build_classification_nodes(context: YouTube2BlogNodeContext) -> dict[str, Gr
             },
         )
         return {
+            "article_type": article_type,
             "stage3_guideline": guideline,
             "stage_results": stage_results,
         }

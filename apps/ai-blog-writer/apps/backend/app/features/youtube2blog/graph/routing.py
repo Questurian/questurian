@@ -4,7 +4,18 @@ from .state import YouTube2BlogGraphState
 
 
 def route_stage_1_gate(state: YouTube2BlogGraphState) -> str:
-    return str(state.get("stage1_gate_decision") or "pass")
+    """Send a clean transcript to classification, or straight past it.
+
+    A user-forced article type makes stage_2 dead work: its answer is
+    discarded by stage_3_guideline, but the run still pays for a
+    full-transcript classification call plus a possible retry, and its
+    confidence gate can still fail the run over a verdict nobody uses.
+    """
+    if str(state.get("stage1_gate_decision") or "pass") == "retry":
+        return "retry"
+    if str(state.get("forced_article_type") or "").strip():
+        return "skip_classification"
+    return "classify"
 
 
 def route_stage_2_gate(state: YouTube2BlogGraphState) -> str:

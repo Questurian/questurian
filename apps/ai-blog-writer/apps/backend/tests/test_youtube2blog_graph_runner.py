@@ -204,3 +204,56 @@ def test_graph_topology_executes_expected_branches(
 def test_graph_topology_rejects_incomplete_node_registry():
     with pytest.raises(ValueError, match="missing="):
         build_youtube2blog_graph({})
+
+
+def test_forced_article_type_routes_around_classification():
+    """A forced type makes stage_2 dead work: stage_3_guideline discards its
+    verdict, but the run still paid for a full-transcript classification call
+    and could still be killed by its confidence gate."""
+    nodes, visited = _topology_nodes(
+        supplement=False,
+        rollback=False,
+        augment=False,
+    )
+    result = (
+        build_youtube2blog_graph(nodes)
+        .compile()
+        .invoke({"forced_article_type": "Listicle"})
+    )
+
+    assert result["markdown"] == "# Complete"
+    assert "stage_3_guideline" in visited
+    assert "stage_2" not in visited
+    assert "stage_2_quality_gate" not in visited
+    assert "stage_2_retry" not in visited
+
+
+def test_auto_classification_still_runs_without_a_forced_type():
+    nodes, visited = _topology_nodes(
+        supplement=False,
+        rollback=False,
+        augment=False,
+    )
+    build_youtube2blog_graph(nodes).compile().invoke({"forced_article_type": "   "})
+
+    assert "stage_2" in visited
+    assert "stage_2_quality_gate" in visited
+
+
+def test_transcript_repair_still_wins_over_a_forced_type():
+    """A forced type must not let a failed transcript skip its repair loop."""
+    from app.features.youtube2blog.graph.routing import route_stage_1_gate
+
+    assert (
+        route_stage_1_gate(
+            {"stage1_gate_decision": "retry", "forced_article_type": "Listicle"}
+        )
+        == "retry"
+    )
+    assert (
+        route_stage_1_gate(
+            {"stage1_gate_decision": "pass", "forced_article_type": "Listicle"}
+        )
+        == "skip_classification"
+    )
+    assert route_stage_1_gate({"stage1_gate_decision": "pass"}) == "classify"

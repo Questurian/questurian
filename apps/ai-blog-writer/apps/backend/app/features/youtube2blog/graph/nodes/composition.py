@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from shared import Stage1Output, Stage2Output, Stage3Output
+from shared import Stage1Output, Stage3Output
 
 from app.features.youtube2blog.stages import (
     stage_3_assess_article_quality,
@@ -53,7 +53,7 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
     ) -> YouTube2BlogGraphState:
         _write_running_status("stage_3_supplement")
         stage1 = Stage1Output.model_validate(state["stage1"])
-        stage2 = Stage2Output.model_validate(state["stage2"])
+        article_type = str(state["article_type"])
         coverage = dict(state.get("stage3_coverage") or {})
         missing_sections_value = coverage.get("missing_sections")
         missing_sections = (
@@ -64,7 +64,7 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
         supplement = stage_3_generate_supplement(
             transcript=stage1.cleaned_transcript,
             missing_sections=missing_sections,
-            article_type=stage2.classification,
+            article_type=article_type,
             model_name=_active_model,
             tone_guidance=_tone_guidance,
         )
@@ -82,7 +82,7 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
     def stage_3_compose_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_3")
         stage1 = Stage1Output.model_validate(state["stage1"])
-        stage2 = Stage2Output.model_validate(state["stage2"])
+        article_type = str(state["article_type"])
         guideline = str(state.get("stage3_guideline") or "")
         coverage = dict(state.get("stage3_coverage") or {})
         supplement = dict(state.get("stage3_supplement") or {})
@@ -99,7 +99,7 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
             transcript=stage1.cleaned_transcript,
             supplemental=supplemental_content_or_none,
             guideline=guideline,
-            article_type=stage2.classification,
+            article_type=article_type,
             title=stage1.title,
             model_name=_active_model,
             writing_model=_writing_model,
@@ -109,7 +109,7 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
         stage3 = Stage3Output(
             video_id=stage1.video_id,
             title=stage1.title,
-            article_type=stage2.classification,
+            article_type=article_type,
             coverage_sufficient=bool(coverage.get("coverage_sufficient", False)),
             coverage_analysis=str(coverage.get("coverage_analysis") or ""),
             missing_sections=list(coverage.get("missing_sections") or []),
@@ -134,10 +134,11 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
 
         input_refs = {
             "stage_1": _stage_ref(run_id, "stage_1"),
-            "stage_2": _stage_ref(run_id, "stage_2"),
             "stage_3_guideline": _stage_ref(run_id, "stage_3_guideline"),
             "stage_3_coverage": _stage_ref(run_id, "stage_3_coverage"),
         }
+        if "stage2" in state:
+            input_refs["stage_2"] = _stage_ref(run_id, "stage_2")
         if supplemental_content_or_none:
             input_refs["stage_3_supplement"] = _stage_ref(run_id, "stage_3_supplement")
 
