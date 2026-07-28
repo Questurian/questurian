@@ -13,7 +13,7 @@ type UseAiRewriteParams = {
   }) => Promise<string>
   draftMarkdownRef: MutableRefObject<string>
   editorRef: MutableRefObject<HTMLDivElement | null>
-  applyValueWithHeadingGuard: (nextValue: string) => boolean
+  commitMarkdown: (nextMarkdown: string) => void
 }
 
 type UseAiRewriteResult = {
@@ -36,7 +36,7 @@ export function useAiRewrite({
   onAiRewrite,
   draftMarkdownRef,
   editorRef,
-  applyValueWithHeadingGuard,
+  commitMarkdown,
 }: UseAiRewriteParams): UseAiRewriteResult {
   const [isAiPromptOpen, setIsAiPromptOpen] = useState(false)
   const [aiPromptDraft, setAiPromptDraft] = useState('')
@@ -75,11 +75,7 @@ export function useAiRewrite({
         throw new Error('AI returned empty content.')
       }
 
-      const didApply = applyValueWithHeadingGuard(nextMarkdown)
-      if (!didApply) {
-        setIsAiPromptOpen(false)
-        return
-      }
+      commitMarkdown(nextMarkdown)
 
       const editor = editorRef.current
       if (editor) {
@@ -95,7 +91,7 @@ export function useAiRewrite({
     } finally {
       setIsAiRewriting(false)
     }
-  }, [aiPromptDraft, applyValueWithHeadingGuard, blockId, draftMarkdownRef, editorRef, includeWholeArticleContext, onAiRewrite])
+  }, [aiPromptDraft, blockId, commitMarkdown, draftMarkdownRef, editorRef, includeWholeArticleContext, onAiRewrite])
 
   const resetAiUi = useCallback(() => {
     setIsAiPromptOpen(false)

@@ -18,7 +18,6 @@ export type ToolbarAction = {
 export type MarkdownHeading = {
   level: number
   lineIndex: number
-  signature: string
 }
 
 export type MarkdownBlockEditorProps = {

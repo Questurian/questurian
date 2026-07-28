@@ -36,14 +36,11 @@ export function MarkdownBlockEditor({
   })
 
   const heading = useHeadingStructureGuard({
-    blockId,
     value,
     enforceHeadingStructure,
-    draftMarkdownRef: state.draftMarkdownRef,
-    commitMarkdown: state.commitMarkdown,
   })
 
-  const syncEditorToMarkdownRef = useRef<() => boolean>(() => true)
+  const syncEditorToMarkdownRef = useRef<() => void>(() => {})
 
   const selection = useEditorSelection({
     editorRef: state.editorRef,
@@ -55,7 +52,7 @@ export function MarkdownBlockEditor({
     onAiRewrite,
     draftMarkdownRef: state.draftMarkdownRef,
     editorRef: state.editorRef,
-    applyValueWithHeadingGuard: heading.applyValueWithHeadingGuard,
+    commitMarkdown: state.commitMarkdown,
   })
 
   const openAiRewritePrompt = useCallback(() => {
@@ -67,7 +64,7 @@ export function MarkdownBlockEditor({
   const toolbar = useToolbarCommands({
     editorRef: state.editorRef,
     draftMarkdownRef: state.draftMarkdownRef,
-    applyValueWithHeadingGuard: heading.applyValueWithHeadingGuard,
+    commitMarkdown: state.commitMarkdown,
     onOpenLinkPopover: selection.openLinkPopover,
     onAiRewrite: onAiRewrite ? openAiRewritePrompt : undefined,
     aiToolbarLabel,
@@ -76,7 +73,6 @@ export function MarkdownBlockEditor({
 
   syncEditorToMarkdownRef.current = toolbar.syncEditorToMarkdown
   resetTransientRef.current = () => {
-    heading.setHeadingRestrictionMessage(null)
     selection.resetSelectionUi()
     ai.resetAiUi()
   }
@@ -87,11 +83,7 @@ export function MarkdownBlockEditor({
         ref={state.setPlainTextareaRef}
         className={className}
         value={value}
-        onChange={(event) => {
-          const nextValue = event.target.value
-          heading.setHeadingRestrictionMessage(null)
-          state.commitMarkdown(nextValue)
-        }}
+        onChange={(event) => state.commitMarkdown(event.target.value)}
         onInput={(event) => resizeTextareaToContent(event.currentTarget)}
         rows={rows}
         placeholder={placeholder}
@@ -104,7 +96,12 @@ export function MarkdownBlockEditor({
     <div className="block-markdown-editor-shell">
       <EditorToolbar blockId={blockId} actions={toolbar.toolbarActions} onAction={toolbar.handleToolbarAction} />
 
-      {heading.headingStructureHint ? <p className="block-markdown-hint">{heading.headingStructureHint}</p> : null}
+      {/* One structure line: the warning supersedes the hint rather than stacking on it. */}
+      {heading.headingStructureWarning ? (
+        <p className="block-markdown-hint warning">{heading.headingStructureWarning}</p>
+      ) : heading.headingStructureHint ? (
+        <p className="block-markdown-hint">{heading.headingStructureHint}</p>
+      ) : null}
 
       <LinkPopover
         isOpen={selection.isLinkPopoverOpen}
@@ -134,9 +131,6 @@ export function MarkdownBlockEditor({
 
       {selection.linkPopoverError ? <p className="block-markdown-hint error">{selection.linkPopoverError}</p> : null}
       {ai.aiRewriteError ? <p className="block-markdown-hint error">{ai.aiRewriteError}</p> : null}
-      {heading.headingRestrictionMessage ? (
-        <p className="block-markdown-hint error">{heading.headingRestrictionMessage}</p>
-      ) : null}
 
       <RichContentEditable
         editorRef={state.editorRef}

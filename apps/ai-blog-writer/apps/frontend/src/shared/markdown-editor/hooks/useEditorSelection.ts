@@ -9,7 +9,7 @@ import {
 
 type UseEditorSelectionParams = {
   editorRef: MutableRefObject<HTMLDivElement | null>
-  syncEditorToMarkdownRef: MutableRefObject<() => boolean>
+  syncEditorToMarkdownRef: MutableRefObject<() => void>
 }
 
 type UseEditorSelectionResult = {
@@ -76,8 +76,7 @@ export function useEditorSelection({
     }
 
     document.execCommand('createLink', false, normalizedUrl)
-    const didApply = syncEditorToMarkdownRef.current()
-    if (!didApply) return
+    syncEditorToMarkdownRef.current()
 
     setLinkPopoverError(null)
     setIsLinkPopoverOpen(false)

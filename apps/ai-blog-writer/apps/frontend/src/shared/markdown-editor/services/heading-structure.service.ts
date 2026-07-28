@@ -12,47 +12,39 @@ function collectMarkdownHeadings(text: string): MarkdownHeading[] {
     .map((line, lineIndex) => {
       const level = getMarkdownHeadingLevel(line)
       if (level === null) return null
-      return {
-        level,
-        lineIndex,
-        signature: `${level}|${lineIndex}|${line.trim()}`,
-      }
+      return { level, lineIndex }
     })
     .filter((heading): heading is MarkdownHeading => heading !== null)
 }
 
+/** The level of the block's own first heading, which anchors its section. */
 export function getRootHeadingLevel(text: string): number | null {
   const firstHeading = collectMarkdownHeadings(text)[0]
   return firstHeading?.level ?? null
 }
 
-function getRestrictedHeadingViolations(text: string, rootHeadingLevel: number): MarkdownHeading[] {
-  const headings = collectMarkdownHeadings(text)
-  if (headings.length === 0) return []
-
-  return headings.filter((heading, index) => {
-    if (index === 0) {
-      return heading.level < rootHeadingLevel
-    }
-    return heading.level <= rootHeadingLevel
-  })
-}
-
-export function findNewHeadingViolation(
-  currentText: string,
-  nextText: string,
+/**
+ * Later headings at or above the block's anchor level.
+ *
+ * The stage splits articles into blocks on the anchor level, so a sibling
+ * heading buried inside a block will not get its own section downstream. That
+ * is worth telling the author about — it is not worth refusing their keystroke,
+ * so this only ever reports.
+ */
+export function findRestrictedHeadings(
+  text: string,
   rootHeadingLevel: number,
-): MarkdownHeading | null {
-  const currentViolations = getRestrictedHeadingViolations(currentText, rootHeadingLevel)
-  const nextViolations = getRestrictedHeadingViolations(nextText, rootHeadingLevel)
-  if (nextViolations.length <= currentViolations.length) return null
-
-  const currentSignatures = new Set(currentViolations.map((heading) => heading.signature))
-  return nextViolations.find((heading) => !currentSignatures.has(heading.signature)) ?? nextViolations[0] ?? null
+): MarkdownHeading[] {
+  return collectMarkdownHeadings(text).filter(
+    (heading, index) => index > 0 && heading.level <= rootHeadingLevel,
+  )
 }
 
-export function formatHeadingRestrictionMessage(rootHeadingLevel: number, violationHeadingLevel: number): string {
-  return `This block is anchored at H${rootHeadingLevel}. H${violationHeadingLevel} headings must be added as a new block, not inside this one.`
+export function formatHeadingStructureWarning(
+  rootHeadingLevel: number,
+  restrictedHeadingLevel: number,
+): string {
+  return `This block is anchored at H${rootHeadingLevel}, so the H${restrictedHeadingLevel} below it won't get its own section. Split it into a new block to give it one.`
 }
 
 export function buildHeadingStructureHint(rootHeadingLevel: number): string {
