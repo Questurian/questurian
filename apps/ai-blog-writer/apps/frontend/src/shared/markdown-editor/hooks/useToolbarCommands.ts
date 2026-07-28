@@ -4,8 +4,15 @@ import type { MutableRefObject } from 'react'
 import { BASE_TOOLBAR_ACTIONS } from '../constants/toolbar-actions.constants'
 import { editorElementToMarkdown } from '../richMarkdown'
 import { execEditorCommand } from '../services/editor-command.service'
+import { matchMarkdownInputRule } from '../services/markdown-input-rules.service'
 import type { ToolbarAction, ToolbarActionKey } from '../types'
-import { getActiveBlockTag } from '../utils/editor-dom.utils'
+import {
+  collapseSelectionTo,
+  getActiveBlockElement,
+  getActiveBlockTag,
+  getRangeFromBlockStartToCaret,
+  isCaretAtEndOfBlock,
+} from '../utils/editor-dom.utils'
 
 type UseToolbarCommandsParams = {
   editorRef: MutableRefObject<HTMLDivElement | null>
@@ -118,9 +125,87 @@ export function useToolbarCommands({
     [editorRef, onAiRewrite, onOpenLinkPopover, syncEditorToMarkdown, toggleBlockFormat],
   )
 
+  /**
+   * Turns markdown shorthand typed at the start of a block into real structure.
+   *
+   * Without this the editor had no path from typing to formatting at all: the
+   * markdown-to-HTML direction only ran on mount and on block switch, so `##
+   * Title` sat in a paragraph as literal text and only became a heading once
+   * the preview took over. Returns whether the space keypress was consumed.
+   */
+  const applyMarkdownInputRule = useCallback((): boolean => {
+    const editor = editorRef.current
+    if (!editor) return false
+
+    const block = getActiveBlockElement(editor)
+    // Inside a list item the same shorthand means "literal text", not "nest".
+    if (!block || block.tagName.toUpperCase() === 'LI') return false
+
+    const prefixRange = getRangeFromBlockStartToCaret(editor, block)
+    if (!prefixRange) return false
+
+    const rule = matchMarkdownInputRule(prefixRange.toString())
+    if (!rule) return false
+
+    prefixRange.deleteContents()
+    collapseSelectionTo(prefixRange, true)
+
+    switch (rule.type) {
+      case 'heading':
+        execEditorCommand('formatBlock', `h${rule.level}`)
+        break
+      case 'unordered-list':
+        execEditorCommand('insertUnorderedList')
+        break
+      case 'ordered-list':
+        execEditorCommand('insertOrderedList')
+        break
+      case 'blockquote':
+        execEditorCommand('formatBlock', 'blockquote')
+        break
+    }
+
+    return true
+  }, [editorRef])
+
+  /**
+   * Enter at the end of a heading should start body copy. Browsers clone the
+   * current block instead, so a heading begets another heading and the author
+   * has to notice and undo it every single time.
+   */
+  const exitHeadingOnEnter = useCallback((): boolean => {
+    const editor = editorRef.current
+    if (!editor) return false
+
+    const block = getActiveBlockElement(editor)
+    if (!block || !/^H[1-6]$/.test(block.tagName.toUpperCase())) return false
+    if (!isCaretAtEndOfBlock(editor, block)) return false
+
+    execEditorCommand('insertParagraph')
+    execEditorCommand('formatBlock', 'p')
+    return true
+  }, [editorRef])
+
   const handleEditorKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       const isMod = event.metaKey || event.ctrlKey
+
+      if (!isMod && event.key === ' ') {
+        if (applyMarkdownInputRule()) {
+          event.preventDefault()
+          syncEditorToMarkdown()
+        }
+        return
+      }
+
+      if (!isMod && event.key === 'Enter' && !event.shiftKey) {
+        if (exitHeadingOnEnter()) {
+          event.preventDefault()
+          syncEditorToMarkdown()
+        }
+        return
+      }
+
       if (!isMod) return
 
       const lowerKey = event.key.toLowerCase()
@@ -139,7 +224,7 @@ export function useToolbarCommands({
         handleToolbarAction('link')
       }
     },
-    [handleToolbarAction],
+    [applyMarkdownInputRule, exitHeadingOnEnter, handleToolbarAction, syncEditorToMarkdown],
   )
 
   return {
