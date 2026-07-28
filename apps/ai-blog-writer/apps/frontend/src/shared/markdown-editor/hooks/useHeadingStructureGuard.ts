@@ -1,87 +1,55 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { MutableRefObject } from 'react'
+import { useMemo } from 'react'
 import {
   buildHeadingStructureHint,
-  findNewHeadingViolation,
-  formatHeadingRestrictionMessage,
+  findRestrictedHeadings,
+  formatHeadingStructureWarning,
   getRootHeadingLevel,
 } from '../services/heading-structure.service'
 
 type UseHeadingStructureGuardParams = {
-  blockId: string
   value: string
   enforceHeadingStructure: boolean
-  draftMarkdownRef: MutableRefObject<string>
-  commitMarkdown: (nextMarkdown: string) => void
 }
 
 type UseHeadingStructureGuardResult = {
   headingStructureHint: string | null
-  headingRestrictionMessage: string | null
-  setHeadingRestrictionMessage: (value: string | null) => void
-  applyValueWithHeadingGuard: (nextValue: string) => boolean
+  headingStructureWarning: string | null
 }
 
+/**
+ * Advisory heading-structure state for the block being edited.
+ *
+ * This used to gate every commit: a keystroke that introduced a sibling heading
+ * was rejected, the editor's innerHTML was rebuilt from the last good draft and
+ * the caret was thrown to the end of the block. That silently ate the author's
+ * text — mid-paragraph edits reappeared at the bottom — and wiped the native
+ * undo stack on the way. It also swallowed AI rewrites whole.
+ *
+ * Structure is a suggestion, not an invariant, so it is now derived state:
+ * everything commits, and a violation only produces a message. Deriving the
+ * anchor level from the live value (rather than freezing it per block id) also
+ * keeps it honest after a split or an AI rewrite changes the first heading.
+ */
 export function useHeadingStructureGuard({
-  blockId,
   value,
   enforceHeadingStructure,
-  draftMarkdownRef,
-  commitMarkdown,
 }: UseHeadingStructureGuardParams): UseHeadingStructureGuardResult {
-  const lastInitializedBlockIdRef = useRef<string | null>(null)
-  const [rootHeadingLevel, setRootHeadingLevel] = useState<number | null>(() =>
-    enforceHeadingStructure ? getRootHeadingLevel(value) : null,
+  const rootHeadingLevel = useMemo(
+    () => (enforceHeadingStructure ? getRootHeadingLevel(value) : null),
+    [enforceHeadingStructure, value],
   )
-  const [headingRestrictionMessage, setHeadingRestrictionMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!enforceHeadingStructure) {
-      lastInitializedBlockIdRef.current = null
-      setRootHeadingLevel(null)
-      setHeadingRestrictionMessage(null)
-      return
-    }
-
-    if (lastInitializedBlockIdRef.current === blockId) return
-
-    lastInitializedBlockIdRef.current = blockId
-    setRootHeadingLevel(getRootHeadingLevel(value))
-    setHeadingRestrictionMessage(null)
-  }, [blockId, enforceHeadingStructure, value])
 
   const headingStructureHint = useMemo(() => {
-    if (!enforceHeadingStructure || rootHeadingLevel === null) return null
+    if (rootHeadingLevel === null) return null
     return buildHeadingStructureHint(rootHeadingLevel)
-  }, [enforceHeadingStructure, rootHeadingLevel])
+  }, [rootHeadingLevel])
 
-  const applyValueWithHeadingGuard = useCallback(
-    (nextValue: string): boolean => {
-      const previousValue = draftMarkdownRef.current
+  const headingStructureWarning = useMemo(() => {
+    if (rootHeadingLevel === null) return null
+    const [restricted] = findRestrictedHeadings(value, rootHeadingLevel)
+    if (!restricted) return null
+    return formatHeadingStructureWarning(rootHeadingLevel, restricted.level)
+  }, [rootHeadingLevel, value])
 
-      if (!enforceHeadingStructure || rootHeadingLevel === null) {
-        setHeadingRestrictionMessage(null)
-        commitMarkdown(nextValue)
-        return true
-      }
-
-      const violation = findNewHeadingViolation(previousValue, nextValue, rootHeadingLevel)
-      if (violation) {
-        setHeadingRestrictionMessage(formatHeadingRestrictionMessage(rootHeadingLevel, violation.level))
-        return false
-      }
-
-      setHeadingRestrictionMessage(null)
-      commitMarkdown(nextValue)
-      return true
-    },
-    [commitMarkdown, draftMarkdownRef, enforceHeadingStructure, rootHeadingLevel],
-  )
-
-  return {
-    headingStructureHint,
-    headingRestrictionMessage,
-    setHeadingRestrictionMessage,
-    applyValueWithHeadingGuard,
-  }
+  return { headingStructureHint, headingStructureWarning }
 }

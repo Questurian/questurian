@@ -2,15 +2,15 @@ import { useCallback, useMemo } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { MutableRefObject } from 'react'
 import { BASE_TOOLBAR_ACTIONS } from '../constants/toolbar-actions.constants'
-import { editorElementToMarkdown, markdownToEditorHtml } from '../richMarkdown'
+import { editorElementToMarkdown } from '../richMarkdown'
 import { execEditorCommand } from '../services/editor-command.service'
 import type { ToolbarAction, ToolbarActionKey } from '../types'
-import { getActiveBlockTag, placeCaretAtEnd } from '../utils/editor-dom.utils'
+import { getActiveBlockTag } from '../utils/editor-dom.utils'
 
 type UseToolbarCommandsParams = {
   editorRef: MutableRefObject<HTMLDivElement | null>
   draftMarkdownRef: MutableRefObject<string>
-  applyValueWithHeadingGuard: (nextValue: string) => boolean
+  commitMarkdown: (nextMarkdown: string) => void
   onAiRewrite?: () => void
   aiToolbarLabel?: string
   aiToolbarTitle?: string
@@ -19,7 +19,7 @@ type UseToolbarCommandsParams = {
 
 type UseToolbarCommandsResult = {
   toolbarActions: ToolbarAction[]
-  syncEditorToMarkdown: () => boolean
+  syncEditorToMarkdown: () => void
   handleToolbarAction: (key: ToolbarActionKey) => void
   handleEditorKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
 }
@@ -27,7 +27,7 @@ type UseToolbarCommandsResult = {
 export function useToolbarCommands({
   editorRef,
   draftMarkdownRef,
-  applyValueWithHeadingGuard,
+  commitMarkdown,
   onAiRewrite,
   aiToolbarLabel,
   aiToolbarTitle,
@@ -48,20 +48,15 @@ export function useToolbarCommands({
     ]
   }, [onAiRewrite, aiToolbarLabel, aiToolbarTitle])
 
-  const syncEditorToMarkdown = useCallback((): boolean => {
+  const syncEditorToMarkdown = useCallback((): void => {
     const editor = editorRef.current
-    if (!editor) return false
+    if (!editor) return
 
     const nextMarkdown = editorElementToMarkdown(editor)
-    if (nextMarkdown === draftMarkdownRef.current) return true
+    if (nextMarkdown === draftMarkdownRef.current) return
 
-    const didApply = applyValueWithHeadingGuard(nextMarkdown)
-    if (!didApply) {
-      editor.innerHTML = markdownToEditorHtml(draftMarkdownRef.current)
-      placeCaretAtEnd(editor)
-    }
-    return didApply
-  }, [applyValueWithHeadingGuard, draftMarkdownRef, editorRef])
+    commitMarkdown(nextMarkdown)
+  }, [commitMarkdown, draftMarkdownRef, editorRef])
 
   const toggleBlockFormat = useCallback(
     (tag: 'H2' | 'H3' | 'BLOCKQUOTE') => {

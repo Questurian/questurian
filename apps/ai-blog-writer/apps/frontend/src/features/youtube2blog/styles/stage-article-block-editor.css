@@ -368,6 +368,12 @@
   background: var(--error-soft);
 }
 
+/* Advisory, not a failure: structure warnings never block the edit. */
+.block-markdown-hint.warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
 .block-markdown-link-popover {
   display: flex;
   align-items: center;

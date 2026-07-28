@@ -193,6 +193,12 @@
   color: #7f2230;
 }
 
+/* Advisory, not a failure: structure warnings never block the edit. */
+.stl-page .block-markdown-hint.warning {
+  color: #8a5a00;
+  background: rgba(196, 128, 59, 0.08);
+}
+
 .stl-page .block-markdown-link-popover,
 .stl-page .block-markdown-ai-popover {
   border: 0;
