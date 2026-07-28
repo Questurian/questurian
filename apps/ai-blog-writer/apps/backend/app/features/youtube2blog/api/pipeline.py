@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 from shared import RawVideoRecord
@@ -59,7 +60,12 @@ async def start_from_youtube_url(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    transcript_result = extract_transcript_sync(source.video_id)
+    # Both of these do blocking network I/O. Called directly they stall the
+    # event loop for the whole fetch, freezing every other request.
+    transcript_result = await run_in_threadpool(
+        extract_transcript_sync,
+        source.video_id,
+    )
     if transcript_result.get("status") != "completed":
         detail = transcript_result.get("error") or "Transcript extraction failed."
         raise HTTPException(status_code=422, detail=detail)
@@ -68,9 +74,8 @@ async def start_from_youtube_url(
     if not isinstance(transcript, str) or not transcript.strip():
         raise HTTPException(status_code=422, detail="Transcript extraction failed.")
 
-    title = (
-        fetch_oembed_title(source.canonical_url) or f"YouTube Video {source.video_id}"
-    )
+    oembed_title = await run_in_threadpool(fetch_oembed_title, source.canonical_url)
+    title = oembed_title or f"YouTube Video {source.video_id}"
     now_iso = datetime.now(timezone.utc).isoformat()
 
     record = RawVideoRecord(
