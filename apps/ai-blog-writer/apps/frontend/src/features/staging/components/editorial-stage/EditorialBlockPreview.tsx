@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { EditorialBlock } from '../../types'
@@ -26,7 +27,7 @@ type EditorialBlockPreviewProps = {
   normalizedComponent: string
 }
 
-export function EditorialBlockPreview({
+function EditorialBlockPreviewComponent({
   block,
   normalizedComponent,
 }: EditorialBlockPreviewProps) {
@@ -119,3 +120,10 @@ export function EditorialBlockPreview({
     </p>
   )
 }
+
+/*
+ * Memoized for the same reason as ContentBlockPreview: editing a content block
+ * replaces the blocks array and re-renders the whole timeline, but the editorial
+ * blocks themselves are untouched, so their markdown should not be re-parsed.
+ */
+export const EditorialBlockPreview = memo(EditorialBlockPreviewComponent)
