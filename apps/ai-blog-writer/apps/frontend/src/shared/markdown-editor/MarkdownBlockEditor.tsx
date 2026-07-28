@@ -139,6 +139,7 @@ export function MarkdownBlockEditor({
         ariaLabel={ariaLabel}
         onInput={toolbar.syncEditorToMarkdown}
         onKeyDown={toolbar.handleEditorKeyDown}
+        onPaste={toolbar.handleEditorPaste}
       />
     </div>
   )

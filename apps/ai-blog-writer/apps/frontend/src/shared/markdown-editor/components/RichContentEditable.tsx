@@ -1,4 +1,7 @@
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
+import type {
+  ClipboardEvent as ReactClipboardEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+} from 'react'
 import type { MutableRefObject } from 'react'
 
 type RichContentEditableProps = {
@@ -8,6 +11,7 @@ type RichContentEditableProps = {
   ariaLabel?: string
   onInput: () => void
   onKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
+  onPaste: (event: ReactClipboardEvent<HTMLDivElement>) => void
 }
 
 export function RichContentEditable({
@@ -17,43 +21,31 @@ export function RichContentEditable({
   ariaLabel,
   onInput,
   onKeyDown,
+  onPaste,
 }: RichContentEditableProps) {
-  const normalizeInlineTypingState = () => {
-    const selection = window.getSelection()
-    if (!selection || !selection.isCollapsed) return
-
-    try {
-      if (document.queryCommandState('bold')) {
-        document.execCommand('bold')
-      }
-      if (document.queryCommandState('italic')) {
-        document.execCommand('italic')
-      }
-    } catch {
-      // Some browsers can throw for queryCommandState; ignore safely.
-    }
-  }
-
   return (
     <div
       ref={editorRef}
       className={`block-rich-editor ${isEditorEmpty ? 'is-empty' : ''}`}
       contentEditable
       role="textbox"
-      aria-label={ariaLabel}
+      aria-label={ariaLabel ?? 'Block content'}
       aria-multiline="true"
-      spellCheck={false}
+      /* Long-form prose: misspellings are worth flagging. autoCorrect and
+         autoCapitalize stay off — they fight the author over proper nouns. */
+      spellCheck
       autoCorrect="off"
       autoCapitalize="off"
       suppressContentEditableWarning
       data-placeholder={placeholder || 'Write your content...'}
+      /* Grammarly injects its own nodes into the contenteditable, which the
+         markdown serializer would walk and write back into the document. */
       data-gramm="false"
       data-gramm_editor="false"
       data-enable-grammarly="false"
       onInput={onInput}
       onKeyDown={onKeyDown}
-      onFocus={normalizeInlineTypingState}
-      onMouseUp={normalizeInlineTypingState}
+      onPaste={onPaste}
     />
   )
 }
