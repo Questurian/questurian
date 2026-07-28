@@ -1,5 +1,4 @@
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { useCallback, useRef } from 'react'
 import type { MediaAsset } from '../../api'
 import type { ContentBlock, EditorialBlock, StagedArticle } from '../../types'
 import type { EditorialPublishValidation } from '../../features/editorial-stage-article/editorial-markdown.service'
@@ -9,6 +8,7 @@ import { getMediaAssetAltText } from '../../features/editorial-stage-article/med
 import { MarkdownBlockEditor } from '../../../../shared/markdown-editor'
 import { isStagedArticleEditingLocked } from '../../utils/staged-article-sync'
 import { BlockActionZone } from './BlockActionZone'
+import { ContentBlockPreview } from './ContentBlockPreview'
 import { renderEditorialBlockCard } from './renderEditorialBlockCard'
 
 type EditorialTimelineListProps = {
@@ -150,6 +150,18 @@ export function EditorialTimelineList({
     removeImageAfterBlock,
   } = media
   const isEditingLocked = isStagedArticleEditingLocked(stagedArticle)
+
+  /*
+   * splitBlockAtHeader closes over the staged article, so it is a new function
+   * on every keystroke and would defeat ContentBlockPreview's memo. Hold the
+   * latest one in a ref behind a stable wrapper: the identity never changes, and
+   * a click always runs the current closure rather than a captured stale one.
+   */
+  const splitBlockAtHeaderRef = useRef(splitBlockAtHeader)
+  splitBlockAtHeaderRef.current = splitBlockAtHeader
+  const stableSplitBlockAtHeader = useCallback((blockId: string, lineIndex: number) => {
+    splitBlockAtHeaderRef.current(blockId, lineIndex)
+  }, [])
 
   return (
     <div className="stage-article-section">
@@ -652,57 +664,13 @@ export function EditorialTimelineList({
                     <p>{block.content}</p>
                   </div>
                 ) : (
-                  <div className="block-preview">
-                    {(() => {
-                      const splitPoints = findHeaderSplitPoints(block.content)
-                      if (splitPoints.length === 0 || isEditingLocked) {
-                        return (
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {block.content}
-                          </ReactMarkdown>
-                        )
-                      }
-
-                      const lines = block.content.split('\n')
-                      const segments: { content: string; splitLineIndex: number | null }[] = []
-                      let lastIndex = 0
-
-                      for (const point of splitPoints) {
-                        segments.push({
-                          content: lines.slice(lastIndex, point.lineIndex).join('\n'),
-                          splitLineIndex: point.lineIndex,
-                        })
-                        lastIndex = point.lineIndex
-                      }
-                      segments.push({
-                        content: lines.slice(lastIndex).join('\n'),
-                        splitLineIndex: null,
-                      })
-
-                      return segments.map((segment, index) => (
-                        <div key={index}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {segment.content}
-                          </ReactMarkdown>
-                          {segment.splitLineIndex !== null && (
-                            <div className="block-split-zone">
-                              <button
-                                type="button"
-                                className="block-split-btn"
-                                onClick={() => splitBlockAtHeader(block.id, segment.splitLineIndex!)}
-                                title="Split here"
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5"/>
-                                </svg>
-                                Split
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    })()}
-                  </div>
+                  <ContentBlockPreview
+                    blockId={block.id}
+                    content={block.content}
+                    isEditingLocked={isEditingLocked}
+                    findHeaderSplitPoints={findHeaderSplitPoints}
+                    onSplitAtLine={stableSplitBlockAtHeader}
+                  />
                 )}
               </div>
               {!isEditingLocked
