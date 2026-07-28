@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
@@ -72,6 +73,66 @@ def test_router_preserves_public_http_contract():
         ("/youtube2blog/expand/{expand_job_id}/status", "GET"),
         ("/youtube2blog/expand/{expand_job_id}/result", "GET"),
     }
+
+
+def test_from_url_keeps_blocking_fetches_off_the_event_loop(monkeypatch):
+    """Transcript extraction and the oEmbed title lookup are blocking network
+    I/O. Awaited on the event loop thread they stall every other request for
+    the length of the fetch, so both must be offloaded to a worker thread."""
+    client = _build_client()
+    ran_on_event_loop: dict[str, bool] = {}
+
+    def _on_event_loop_thread() -> bool:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return False
+        return True
+
+    def fake_extract_transcript(_video_id: str):
+        ran_on_event_loop["transcript"] = _on_event_loop_thread()
+        return {"status": "completed", "transcript": "Transcript body"}
+
+    def fake_fetch_oembed_title(_url: str):
+        ran_on_event_loop["oembed"] = _on_event_loop_thread()
+        return "Resolved Title"
+
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "parse_youtube_video_url",
+        lambda _url: YouTubeVideoSource(
+            video_id="abc123DEF45",
+            canonical_url="https://www.youtube.com/watch?v=abc123DEF45",
+        ),
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "extract_transcript_sync",
+        fake_extract_transcript,
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "fetch_oembed_title",
+        fake_fetch_oembed_title,
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "initialize_run",
+        lambda record, source, notes=None: _sample_meta(source=source, notes=notes),
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "process_run",
+        lambda record, meta, **kwargs: "# done",
+    )
+
+    response = client.post(
+        "/youtube2blog/from-url",
+        json={"url": "https://www.youtube.com/watch?v=abc123DEF45"},
+    )
+
+    assert response.status_code == 200
+    assert ran_on_event_loop == {"transcript": False, "oembed": False}
 
 
 def test_from_url_queues_single_run(monkeypatch):
