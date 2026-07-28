@@ -50,9 +50,12 @@ def build_editorial_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNo
     def stage_editorial_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_editorial_augmentation")
         stage3 = Stage3Output.model_validate(state["stage3_for_editorial"])
+        # Augmentation is additive decoration on a finished article. It already
+        # degrades to the un-augmented draft with `error` set; fail_fast turned
+        # that off and let a malformed callout response destroy the run.
         stage_editorial = stage_editorial_augmentation(
             stage3,
-            fail_fast=True,
+            fail_fast=False,
             model_name=_active_model,
             writing_model=_writing_model,
             tone_guidance=_tone_guidance,

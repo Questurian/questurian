@@ -75,15 +75,23 @@ def evaluate_transcript_gate(
         "maximum_retention_ratio": retention_ratio <= maximum_ratio,
     }
     passed = all(checks.values())
+    failed_checks = [name for name, ok in checks.items() if not ok]
     if passed:
-        decision = "pass"
+        decision, pass_mode = "pass", "strict"
     elif retry_count < Y2B_STAGE1_REPAIR_MAX_RETRIES:
-        decision = "retry"
+        decision, pass_mode = "retry", "retry_required"
+    elif checks["minimum_cleaned_chars"]:
+        # Retention ratios are compression heuristics, not correctness checks.
+        # Once the repair budget is spent, a transcript carrying real content
+        # is worth composing from; discarding the run helps nobody.
+        decision, pass_mode = "pass", "best_effort"
     else:
-        failed_checks = [name for name, ok in checks.items() if not ok]
+        # Below the absolute floor there is no article to write, only one to
+        # invent, so this stays a hard failure.
         raise RuntimeError(
-            "Stage 1 quality gate failed after retries; "
+            "Stage 1 produced too little usable transcript to compose from; "
             f"checks_failed={failed_checks}, cleaned_chars={cleaned_chars}, "
+            f"minimum_cleaned_chars={Y2B_STAGE1_MIN_CLEANED_CHARS}, "
             f"retention_ratio={retention_ratio:.3f}, "
             f"minimum_retention_ratio={minimum_ratio:.3f}, "
             f"maximum_retention_ratio={maximum_ratio:.3f}, "
@@ -92,6 +100,8 @@ def evaluate_transcript_gate(
     return decision, {
         "passed": passed,
         "decision": decision,
+        "pass_mode": pass_mode,
+        "checks_failed": failed_checks,
         "retry_count": retry_count,
         "max_retries": Y2B_STAGE1_REPAIR_MAX_RETRIES,
         "checks": checks,
@@ -116,18 +126,18 @@ def evaluate_classification_gate(
 ) -> tuple[str, dict[str, Any]]:
     passed = confidence >= Y2B_STAGE2_MIN_CONFIDENCE
     if passed:
-        decision = "pass"
+        decision, pass_mode = "pass", "strict"
     elif retry_count < Y2B_STAGE2_CLASSIFICATION_MAX_RETRIES:
-        decision = "retry"
+        decision, pass_mode = "retry", "retry_required"
     else:
-        raise RuntimeError(
-            "Stage 2 quality gate failed after retries; "
-            f"confidence={confidence:.3f}, threshold={Y2B_STAGE2_MIN_CONFIDENCE:.3f}, "
-            f"classification={classification!r}"
-        )
+        # An unconfident classification is still the model's best guess, and
+        # guideline retrieval already degrades to a generic brief when the type
+        # does not resolve. Killing the run here threw away a clean transcript.
+        decision, pass_mode = "pass", "low_confidence"
     return decision, {
         "passed": passed,
         "decision": decision,
+        "pass_mode": pass_mode,
         "retry_count": retry_count,
         "max_retries": Y2B_STAGE2_CLASSIFICATION_MAX_RETRIES,
         "metrics": {
@@ -173,12 +183,10 @@ def evaluate_article_quality_gate(
     elif not critical_failed:
         decision, pass_mode = "pass", "best_effort"
     else:
-        raise RuntimeError(
-            "Stage 3 quality gate failed after retries; "
-            f"score={overall_score:.2f}, "
-            f"threshold={Y2B_STAGE3_MIN_QUALITY_SCORE:.2f}, "
-            f"critical_failed={critical_failed}"
-        )
+        # The repair budget is spent and an article exists. Shipping a weak one
+        # with the failure recorded beats destroying a run that has already
+        # paid for composition, and the score travels in the gate payload.
+        decision, pass_mode = "pass", "critical_dimensions_unmet"
     return decision, {
         **assessment,
         "decision": decision,
@@ -262,18 +270,19 @@ def evaluate_title_gate(
     )
     passed = score >= Y2B_STAGE5_MIN_TITLE_SCORE and length_range_ok
     if passed:
-        decision = "pass"
+        decision, pass_mode = "pass", "strict"
     elif retry_count < Y2B_STAGE5_TITLE_MAX_RETRIES:
-        decision = "retry"
+        decision, pass_mode = "retry", "retry_required"
     else:
-        raise RuntimeError(
-            "Stage 5 quality gate failed after retries; "
-            f"score={score:.2f}, threshold={Y2B_STAGE5_MIN_TITLE_SCORE:.2f}, "
-            f"title={title!r}"
-        )
+        # This gate sat at the very end of the graph, so raising here destroyed
+        # a finished, SEO'd, editorially-augmented article over a title
+        # heuristic -- the most expensive possible moment to fail a run.
+        decision, pass_mode = "pass", "best_effort"
     return decision, {
         **evaluation,
         "decision": decision,
+        "passed": passed,
+        "pass_mode": pass_mode,
         "retry_count": retry_count,
         "max_retries": Y2B_STAGE5_TITLE_MAX_RETRIES,
         "score_threshold": Y2B_STAGE5_MIN_TITLE_SCORE,

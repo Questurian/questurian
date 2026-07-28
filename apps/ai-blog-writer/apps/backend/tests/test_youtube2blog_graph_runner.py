@@ -41,16 +41,35 @@ def test_transcript_gate_allows_long_form_retention_profile():
 
 
 @pytest.mark.parametrize("cleaned_chars", [1_500, 39_600])
-def test_transcript_gate_fails_after_long_form_retries(cleaned_chars):
-    with pytest.raises(RuntimeError, match="maximum_retention_ratio=0.980"):
+def test_transcript_gate_degrades_after_long_form_retries(cleaned_chars):
+    """Retention ratios are compression heuristics. With the repair budget
+    spent and real content in hand, the run continues rather than dying."""
+    decision, gate = evaluate_transcript_gate(
+        cleaned_chars=cleaned_chars,
+        original_chars=40_000,
+        retry_count=Y2B_STAGE1_REPAIR_MAX_RETRIES,
+    )
+    assert decision == "pass"
+    assert gate["pass_mode"] == "best_effort"
+    assert gate["passed"] is False
+    assert gate["checks_failed"]
+
+
+def test_transcript_gate_still_fails_with_nothing_to_compose_from():
+    """Below the absolute floor there is no article to write, only one to
+    invent, so this stays a hard failure."""
+    with pytest.raises(RuntimeError, match="too little usable transcript"):
         evaluate_transcript_gate(
-            cleaned_chars=cleaned_chars,
+            cleaned_chars=50,
             original_chars=40_000,
             retry_count=Y2B_STAGE1_REPAIR_MAX_RETRIES,
         )
 
 
-def test_classification_gate_retries_then_fails():
+def test_classification_gate_retries_then_accepts_the_best_guess():
+    """An unconfident classification is still the model's best guess, and
+    guideline retrieval degrades to a generic brief on its own. Raising here
+    threw away an already-cleaned transcript."""
     decision, gate = evaluate_classification_gate(
         confidence=0.5,
         classification="guide",
@@ -59,13 +78,17 @@ def test_classification_gate_retries_then_fails():
     )
     assert decision == "retry"
     assert gate["passed"] is False
-    with pytest.raises(RuntimeError, match="Stage 2 quality gate failed"):
-        evaluate_classification_gate(
-            confidence=0.5,
-            classification="guide",
-            reasoning="uncertain",
-            retry_count=1,
-        )
+
+    decision, gate = evaluate_classification_gate(
+        confidence=0.5,
+        classification="guide",
+        reasoning="uncertain",
+        retry_count=1,
+    )
+    assert decision == "pass"
+    assert gate["pass_mode"] == "low_confidence"
+    assert gate["passed"] is False
+    assert gate["classification"] == "guide"
 
 
 def test_article_quality_gate_preserves_near_pass_and_best_effort_modes():
@@ -257,3 +280,40 @@ def test_transcript_repair_still_wins_over_a_forced_type():
         == "skip_classification"
     )
     assert route_stage_1_gate({"stage1_gate_decision": "pass"}) == "classify"
+
+
+def test_article_quality_gate_ships_a_weak_article_rather_than_no_article():
+    """With the repair budget spent and an article in hand, a critical
+    dimension below threshold is recorded, not fatal -- composition has
+    already been paid for."""
+    decision, gate = evaluate_article_quality_gate(
+        {
+            "overall_quality_score": 4.0,
+            "dimension_scores": {
+                "clarity": 3.0,
+                "structure_coherence": 8.0,
+                "usefulness_actionability": 8.0,
+            },
+        },
+        retry_count=99,
+    )
+
+    assert decision == "pass"
+    assert gate["pass_mode"] == "critical_dimensions_unmet"
+    assert gate["critical_failed"] == ["clarity"]
+    assert gate["overall_quality_score"] == 4.0
+
+
+def test_title_gate_never_destroys_a_finished_article():
+    """Stage 5 sits at the very end of the graph, so raising there discarded a
+    finished, SEO'd, augmented article over a title heuristic."""
+    decision, gate = evaluate_title_gate(
+        {"score": 2.0, "checks": {"length_range": False}},
+        retry_count=99,
+        title="bad",
+    )
+
+    assert decision == "pass"
+    assert gate["pass_mode"] == "best_effort"
+    assert gate["passed"] is False
+    assert gate["title"] == "bad"
