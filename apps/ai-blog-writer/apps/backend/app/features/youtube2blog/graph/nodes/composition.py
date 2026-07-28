@@ -13,7 +13,7 @@ from app.features.youtube2blog.stages import (
 )
 from ..context import YouTube2BlogNodeContext
 from ..state import GraphNode, YouTube2BlogGraphState
-from ...quality.policies import evaluate_article_quality_gate
+from ...quality.policies import evaluate_article_quality_gate, is_better_article
 
 
 def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
@@ -160,22 +160,44 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
         stage3 = Stage3Output.model_validate(state["stage3"])
         retry_count = int(state.get("stage3_quality_retry_count", 0))
         assessment = stage_3_assess_article_quality(stage3=stage3, model_name=_active_model)
+
+        # Keep the best draft the loop has produced, not the most recent one.
+        best_quality = dict(state.get("stage3_best_quality") or {})
+        best_stage3 = dict(state.get("stage3_best") or {})
+        candidate_improved = is_better_article(assessment, best_quality or None)
+        if candidate_improved:
+            best_quality = assessment
+            best_stage3 = stage3.model_dump()
+
+        # Gate on what would actually ship. A rewrite worse than the draft it
+        # replaced must not spend another attempt chasing its own regression.
         decision, gate_data = evaluate_article_quality_gate(
-            assessment,
+            best_quality,
             retry_count=retry_count,
         )
+        gate_data["kept_earlier_draft"] = not candidate_improved
+        gate_data["candidate_overall_quality_score"] = assessment.get(
+            "overall_quality_score"
+        )
+
         stage_results = _record_stage_result(
             state,
             stage_name="stage_3_quality_gate",
             input_refs={"stage_3": _stage_ref(run_id, "stage_3")},
             data=gate_data,
         )
-        return {
+        updates: YouTube2BlogGraphState = {
+            "stage3_best": best_stage3,
+            "stage3_best_quality": best_quality,
             "stage3_quality_gate": gate_data,
             "stage3_quality_feedback": gate_data,
             "stage3_quality_gate_decision": decision,
             "stage_results": stage_results,
         }
+        if decision == "pass":
+            # Settle on the winner, which may be an earlier draft.
+            updates["stage3"] = best_stage3
+        return updates
 
     def stage_3_improve_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_3_improve")

@@ -21,6 +21,11 @@ class YouTube2BlogGraphState(TypedDict, total=False):
     stage3_coverage: dict[str, Any]
     stage3_supplement: dict[str, str]
     stage3: dict[str, Any]
+    # Highest-scoring draft seen across the improve loop, with the assessment
+    # that earned it. Without this a rewrite that scored worse than the draft
+    # it replaced still shipped.
+    stage3_best: dict[str, Any]
+    stage3_best_quality: dict[str, Any]
     stage3_quality_retry_count: int
     stage3_quality_gate: dict[str, Any]
     stage3_quality_feedback: dict[str, Any]
@@ -38,6 +43,8 @@ class YouTube2BlogGraphState(TypedDict, total=False):
     stage_editorial: dict[str, Any]
     stage3_for_title: dict[str, Any]
     stage4: dict[str, Any]
+    stage4_best: dict[str, Any]
+    stage5_best_evaluation: dict[str, Any]
     stage5_retry_count: int
     stage5_gate: dict[str, Any]
     stage5_gate_decision: str
