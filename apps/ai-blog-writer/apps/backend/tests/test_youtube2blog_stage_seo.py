@@ -379,3 +379,36 @@ def test_stage_seo_quality_accepts_balanced_enrichment():
     assert checks["no_keyword_stuffing"] is True
     assert checks["article_length_retained"] is True
     assert result["score"] >= 7.0
+
+
+def test_seo_enrichment_sends_the_whole_article_to_the_model():
+    """The article was clipped to 24,000 chars before being sent. The model
+    rewrote a fragment, the short result tripped the retention guard, and the
+    whole SEO branch rolled back having spent its calls for nothing."""
+    tail_marker = "FINAL PARAGRAPH MARKER"
+    original = "\n\n".join(
+        [
+            "# City Guide",
+            _repeat_sentence(
+                "Travelers can plan each neighborhood with realistic timing.",
+                700,
+            ),
+            "## Closing",
+            f"{tail_marker} closes the guide with practical advice.",
+        ]
+    )
+    assert len(original) > 24_000, "fixture must exceed the old truncation cap"
+
+    llm = _FakeLlm([original + "\n\nCity travel planning tips."])
+
+    result = enrichment.enrich_seo_article(
+        stage3=_stage3(original),
+        seo_brief={"focus_keyword": "city travel planning"},
+        mode="primary",
+        model_name="enrichment-model",
+        llm_factory=lambda **_kwargs: llm,
+        anti_ai_enforcer=lambda content, *, repair, context: content.strip(),
+    )
+
+    assert tail_marker in llm.prompts[0]
+    assert result["seo_article"].endswith("City travel planning tips.")

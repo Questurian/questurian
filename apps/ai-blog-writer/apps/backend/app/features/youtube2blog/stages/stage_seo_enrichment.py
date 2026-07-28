@@ -105,7 +105,11 @@ def enrich_seo_article(
         article_type=stage3.article_type,
         guideline=stage3.guideline_used[:8000],
         feedback=safe_text(feedback) if mode == "retry" else "N/A",
-        article=stage3.final_article[:24_000],
+        # Never truncate the article being rewritten. Clipping the input made
+        # the model rewrite a fragment, the short result tripped the retention
+        # guard below, and the whole SEO branch rolled back having spent its
+        # calls for nothing. The output token cap already bounds the response.
+        article=stage3.final_article,
     )
     if tone_guidance:
         full_prompt = f"{full_prompt}\n\n{tone_guidance.strip()}"
