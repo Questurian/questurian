@@ -48,17 +48,24 @@
   background: #f6f8fb;
 }
 
+/*
+ * The editor deliberately mirrors `.block-preview` type: body face, size and
+ * heading scale. Toggling Edit/Done swaps these two views over the same bytes,
+ * so any divergence reads as the content changing when it did not. The measure
+ * is left full-width on purpose — the editable area is also the click target.
+ */
 .stl-page .block-rich-editor {
   border: 0;
   border-radius: 0;
-  padding: 0.38rem 0.75rem 0.72rem;
+  padding: 0.75rem 1rem 1rem;
   background: transparent;
-  color: var(--stl-ink);
-  font-size: 0.92rem;
-  font-family: 'IBM Plex Sans', sans-serif;
+  color: var(--ink);
+  font-size: 1.0625rem;
+  font-family: var(--font-body);
   font-weight: 400;
   font-synthesis: none;
-  line-height: 1.65;
+  line-height: 1.86;
+  letter-spacing: 0.0025em;
   min-height: 220px;
 }
 
@@ -85,7 +92,13 @@
   color: #97a0af;
 }
 
-.stl-page .block-rich-editor * {
+/*
+ * Pasted markup carries its own tag defaults, so normalize the inline run back
+ * to body type. Headings are excluded: they own the block scale set below, and
+ * folding them into `inherit` is what used to make `## Title` look like a
+ * paragraph while editing.
+ */
+.stl-page .block-rich-editor *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
   font-size: inherit;
   font-family: inherit;
   line-height: inherit;
@@ -127,14 +140,8 @@
 .stl-page .block-rich-editor p,
 .stl-page .block-rich-editor ul,
 .stl-page .block-rich-editor ol,
-.stl-page .block-rich-editor blockquote,
-.stl-page .block-rich-editor h1,
-.stl-page .block-rich-editor h2,
-.stl-page .block-rich-editor h3,
-.stl-page .block-rich-editor h4,
-.stl-page .block-rich-editor h5,
-.stl-page .block-rich-editor h6 {
-  margin: 0 0 0.7rem;
+.stl-page .block-rich-editor blockquote {
+  margin: 0 0 1rem;
 }
 
 .stl-page .block-rich-editor h1,
@@ -143,7 +150,35 @@
 .stl-page .block-rich-editor h4,
 .stl-page .block-rich-editor h5,
 .stl-page .block-rich-editor h6 {
-  font-weight: 600 !important;
+  margin: 2rem 0 0.75rem;
+  font-family: var(--font-display);
+  font-weight: 700 !important;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.stl-page .block-rich-editor > :first-child {
+  margin-top: 0;
+}
+
+.stl-page .block-rich-editor h1 {
+  font-size: 2rem;
+}
+.stl-page .block-rich-editor h2 {
+  font-size: 1.72rem;
+}
+.stl-page .block-rich-editor h3 {
+  font-size: 1.4rem;
+}
+.stl-page .block-rich-editor h4 {
+  font-size: 1.18rem;
+}
+.stl-page .block-rich-editor h5 {
+  font-size: 1.02rem;
+}
+.stl-page .block-rich-editor h6 {
+  font-size: 0.875rem;
 }
 
 .stl-page .block-markdown-hint {
