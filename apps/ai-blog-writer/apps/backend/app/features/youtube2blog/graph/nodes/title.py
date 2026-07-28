@@ -9,7 +9,7 @@ from app.features.youtube2blog.stages import (
 )
 from ..context import YouTube2BlogNodeContext
 from ..state import GraphNode, YouTube2BlogGraphState
-from ...quality.policies import evaluate_title_gate
+from ...quality.policies import evaluate_title_gate, is_better_title
 
 
 def build_title_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
@@ -57,23 +57,42 @@ def build_title_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
             baseline_title=stage3_for_title.title,
         )
         retry_count = int(state.get("stage5_retry_count", 0))
+
+        # Keep the best title the loop has produced, not the most recent one.
+        best_evaluation = dict(state.get("stage5_best_evaluation") or {})
+        best_stage4 = dict(state.get("stage4_best") or {})
+        candidate_improved = is_better_title(evaluation, best_evaluation or None)
+        if candidate_improved:
+            best_evaluation = evaluation
+            best_stage4 = stage4.model_dump()
+
+        best_title = str(best_stage4.get("title") or stage4.title)
         decision, gate_data = evaluate_title_gate(
-            evaluation,
+            best_evaluation,
             retry_count=retry_count,
-            title=stage4.title,
+            title=best_title,
         )
+        gate_data["kept_earlier_title"] = not candidate_improved
+        gate_data["candidate_title"] = stage4.title
+
         stage_results = _record_stage_result(
             state,
             stage_name="stage_5_quality_gate",
             input_refs={"stage_4": _stage_ref(run_id, "stage_4")},
             data=gate_data,
         )
-        return {
+        updates: YouTube2BlogGraphState = {
+            "stage4_best": best_stage4,
+            "stage5_best_evaluation": best_evaluation,
             "stage5_gate": gate_data,
             "stage5_gate_decision": decision,
-            "stage5_feedback": str(evaluation.get("feedback") or ""),
+            "stage5_feedback": str(best_evaluation.get("feedback") or ""),
             "stage_results": stage_results,
         }
+        if decision == "pass":
+            # Settle on the winner, which may be an earlier title.
+            updates["stage4"] = best_stage4
+        return updates
 
     def stage_5_retry_node(state: YouTube2BlogGraphState) -> YouTube2BlogGraphState:
         _write_running_status("stage_5_retry")

@@ -149,6 +149,80 @@ def evaluate_classification_gate(
     }
 
 
+CRITICAL_QUALITY_DIMENSIONS = (
+    "clarity",
+    "structure_coherence",
+    "usefulness_actionability",
+)
+
+
+def article_quality_rank(assessment: dict[str, Any]) -> tuple[float, float]:
+    """Rank a draft for keep-best comparison.
+
+    Overall score first, then the weakest critical dimension as the tie-break:
+    between two drafts scoring the same overall, the one with no severely weak
+    dimension is the better article to ship.
+    """
+    raw_scores = assessment.get("dimension_scores")
+    dimension_scores = dict(raw_scores) if isinstance(raw_scores, dict) else {}
+
+    def _score(key: str) -> float:
+        try:
+            return float(dimension_scores.get(key, 0.0))
+        except (TypeError, ValueError):
+            return 0.0
+
+    try:
+        overall = float(assessment.get("overall_quality_score", 0.0))
+    except (TypeError, ValueError):
+        overall = 0.0
+    weakest_critical = min(
+        (_score(key) for key in CRITICAL_QUALITY_DIMENSIONS),
+        default=0.0,
+    )
+    return (overall, weakest_critical)
+
+
+def is_better_article(
+    candidate: dict[str, Any],
+    incumbent: dict[str, Any] | None,
+) -> bool:
+    """True when ``candidate`` should replace ``incumbent`` as the best draft.
+
+    stage_3_improve overwrote the draft unconditionally, so a rewrite that
+    scored worse than the draft it replaced still shipped -- and once the gate
+    degrades rather than raising, that regression ships silently.
+    """
+    if not incumbent:
+        return True
+    return article_quality_rank(candidate) > article_quality_rank(incumbent)
+
+
+def title_quality_rank(evaluation: dict[str, Any]) -> tuple[int, float]:
+    """Rank a title for keep-best comparison.
+
+    The length range is a hard requirement of the gate, so a title inside it
+    always outranks one outside it regardless of score.
+    """
+    checks = evaluation.get("checks")
+    checks_dict = dict(checks) if isinstance(checks, dict) else {}
+    try:
+        score = float(evaluation.get("score", 0.0))
+    except (TypeError, ValueError):
+        score = 0.0
+    return (1 if checks_dict.get("length_range") else 0, score)
+
+
+def is_better_title(
+    candidate: dict[str, Any],
+    incumbent: dict[str, Any] | None,
+) -> bool:
+    """True when ``candidate`` should replace ``incumbent`` as the best title."""
+    if not incumbent:
+        return True
+    return title_quality_rank(candidate) > title_quality_rank(incumbent)
+
+
 def evaluate_article_quality_gate(
     assessment: dict[str, Any],
     *,
@@ -157,11 +231,7 @@ def evaluate_article_quality_gate(
     raw_scores = assessment.get("dimension_scores")
     dimension_scores = dict(raw_scores) if isinstance(raw_scores, dict) else {}
     overall_score = float(assessment.get("overall_quality_score", 0.0))
-    critical_dimensions = (
-        "clarity",
-        "structure_coherence",
-        "usefulness_actionability",
-    )
+    critical_dimensions = CRITICAL_QUALITY_DIMENSIONS
     critical_failed = [
         key
         for key in critical_dimensions
