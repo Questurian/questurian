@@ -100,3 +100,26 @@ def test_seo_brief_stays_on_the_cheaper_base_model(monkeypatch):
     node({"stage3": _stage3().model_dump()})
 
     assert captured["model_name"] == BASE_MODEL
+
+
+def test_title_generation_receives_the_run_tone(monkeypatch):
+    """The title is the first line a reader sees and was the one writing stage
+    that ignored the run's tone entirely."""
+    from app.features.youtube2blog.graph.nodes import title as title_nodes
+
+    captured: dict[str, object] = {}
+
+    def spy(stage3, **kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(
+            model_dump=lambda: {"title": "A Title", "title_guideline_used": "g"},
+        )
+
+    context = _context()
+    context.tone_guidance = "Write in a dry, factual newswire voice."
+    monkeypatch.setattr(title_nodes, "stage_4_generate_title", spy)
+    node = title_nodes.build_title_nodes(context)["stage_4"]
+
+    node({"stage3_for_title": _stage3().model_dump(), "stage_editorial_gate": {}})
+
+    assert captured["tone_guidance"] == "Write in a dry, factual newswire voice."

@@ -129,6 +129,7 @@ def test_stage_5_gate_settles_on_the_best_title_not_the_last(monkeypatch):
     context = SimpleNamespace(
         run_id="run-1",
         active_model="base-model",
+        tone_guidance="",
         start_stage=lambda _stage: None,
         record_stage=lambda state, **_kwargs: dict(state.get("stage_results") or {}),
         stage_ref=lambda run_id, stage: f"data/runs/{run_id}/{stage}.json",
