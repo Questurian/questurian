@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import type { MediaAsset } from '../../../api'
 import type { StagedArticle } from '../../../types'
+import { createStagedId } from '../create-staged-id'
 import {
   removeMediaBlock,
   updateMediaGroupBlockCaption
@@ -19,7 +20,7 @@ type UseEditorialStageMediaBlockActionsParams = {
 }
 
 function createMediaBlockId() {
-  return `media_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  return createStagedId('media')
 }
 
 export function useEditorialStageMediaBlockActions({
