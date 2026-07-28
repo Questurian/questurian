@@ -49,7 +49,6 @@ operations.
 | `stages/stage_3_coverage.py` | Coverage Analysis prompt, invocation, and response parsing |
 | `stages/stage_3_supplement.py` | Missing-section supplementation and prose repair |
 | `stages/stage_3_composition.py` | Final article prompt, composition, and prose repair |
-| `stages/stage_3_pipeline.py` | Legacy sequential Stage 3 orchestration |
 | `stages/stage_3.py` | Stable thin Stage 3 facade and compatibility seams |
 | `stages/stage_3_quality_assessment.py` | Stage 3 quality prompt, LLM invocation, and fallback selection |
 | `stages/stage_3_quality_rewrite.py` | Stage 3 rewrite prompt, LLM invocation, anti-AI repair, and length safeguard |
