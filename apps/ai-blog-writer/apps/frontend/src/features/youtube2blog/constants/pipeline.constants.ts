@@ -58,8 +58,9 @@ export const PIPELINE_TIMELINE = [
   { key: 'stage_1', label: '1. Clean Transcript', optional: false },
   { key: 'stage_1_quality_gate', label: '2. Transcript Quality Gate', optional: false },
   { key: 'stage_1_repair', label: '2b. Transcript Repair (If Needed)', optional: true },
-  { key: 'stage_2', label: '3. Classify Article Type', optional: false },
-  { key: 'stage_2_quality_gate', label: '4. Classification Confidence Gate', optional: false },
+  // Skipped outright when the user forces an article type on the upload panel.
+  { key: 'stage_2', label: '3. Classify Article Type', optional: true },
+  { key: 'stage_2_quality_gate', label: '4. Classification Confidence Gate', optional: true },
   { key: 'stage_2_retry', label: '4b. Re-classify (If Needed)', optional: true },
   { key: 'stage_3_guideline', label: '5. Retrieve Guideline', optional: false },
   { key: 'stage_3_coverage', label: '6. Coverage Analysis', optional: false },

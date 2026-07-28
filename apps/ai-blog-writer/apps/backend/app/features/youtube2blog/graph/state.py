@@ -13,6 +13,10 @@ class YouTube2BlogGraphState(TypedDict, total=False):
     stage2: dict[str, Any]
     stage2_retry_count: int
     stage2_gate_decision: str
+    # The article type every downstream stage composes against. Resolved once by
+    # stage_3_guideline from either the user's forced type or stage_2's
+    # classification, so the two can never disagree.
+    article_type: str
     stage3_guideline: str
     stage3_coverage: dict[str, Any]
     stage3_supplement: dict[str, str]

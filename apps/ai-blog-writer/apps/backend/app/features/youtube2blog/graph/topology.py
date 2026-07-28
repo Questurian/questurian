@@ -63,7 +63,11 @@ def build_youtube2blog_graph(nodes: dict[str, GraphNode]) -> Any:
     builder.add_conditional_edges(
         "stage_1_quality_gate",
         route_stage_1_gate,
-        {"pass": "stage_2", "retry": "stage_1_repair"},
+        {
+            "classify": "stage_2",
+            "skip_classification": "stage_3_guideline",
+            "retry": "stage_1_repair",
+        },
     )
     builder.add_edge("stage_1_repair", "stage_1_quality_gate")
 
