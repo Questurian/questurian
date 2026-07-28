@@ -11,7 +11,6 @@ from app.features.youtube2blog.config import (
     Y2B_PRIMARY_MODEL,
     Y2B_STAGE3_MAX_OUTPUT_TOKENS,
 )
-from shared import Stage1Output, Stage2Output, Stage3Output
 from utils import get_vertex_llm
 
 from .stage_3_composition import compose_article
@@ -22,7 +21,6 @@ from .stage_3_guidelines import (
     normalize_guideline_key,
     retrieve_guideline,
 )
-from .stage_3_pipeline import compose_stage_3
 from .stage_3_supplement import gather_missing_info
 
 GENERAL_GUIDELINES_PATH = Path(__file__).resolve().parents[4] / "data" / "general.md"
@@ -196,23 +194,3 @@ def stage_3_compose_from_parts(
         "debug_composition_prompt": prompt,
         "debug_composition_response": response,
     }
-
-
-def stage_3_compose_article(
-    stage1: Stage1Output,
-    stage2: Stage2Output,
-    *,
-    tone_guidance: str | None = None,
-) -> Stage3Output:
-    """Run the original sequential Stage 3 workflow."""
-    return compose_stage_3(
-        stage1,
-        stage2,
-        tone_guidance=tone_guidance,
-        compose_model=Y2B_COMPOSE_MODEL,
-        make_llm=_stage3_llm,
-        retrieve_guideline=_retrieve_guideline,
-        check_coverage=_check_coverage,
-        gather_missing_info=_gather_missing_info,
-        compose_article=_compose_article,
-    )

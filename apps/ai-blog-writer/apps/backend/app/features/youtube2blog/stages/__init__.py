@@ -2,7 +2,6 @@
 from .stage_1 import stage_1_clean_transcript, stage_1_repair_transcript
 from .stage_2 import stage_2_classify_article_type
 from .stage_3 import (
-    stage_3_compose_article,
     stage_3_compose_from_parts,
     stage_3_coverage_check,
     stage_3_generate_supplement,
@@ -30,7 +29,6 @@ __all__ = [
     "stage_1_clean_transcript",
     "stage_1_repair_transcript",
     "stage_2_classify_article_type",
-    "stage_3_compose_article",
     "stage_3_retrieve_guideline",
     "stage_3_coverage_check",
     "stage_3_generate_supplement",
