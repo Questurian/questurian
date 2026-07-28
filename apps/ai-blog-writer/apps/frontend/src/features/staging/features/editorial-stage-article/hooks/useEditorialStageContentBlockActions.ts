@@ -1,5 +1,6 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { ContentBlock, StagedArticle } from '../../../types'
+import { createStagedId } from '../create-staged-id'
 import {
   findHeaderSplitPoints,
   insertContentBlock,
@@ -21,7 +22,7 @@ type UseEditorialStageContentBlockActionsParams = {
 }
 
 function createContentBlockId() {
-  return `block_${Date.now()}`
+  return createStagedId('block')
 }
 
 export function useEditorialStageContentBlockActions({

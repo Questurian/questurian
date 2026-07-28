@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { EditorialBlock, StagedArticle } from '../../../types'
 import type { SupportedEditorialComponent } from '../types'
+import { createStagedId } from '../create-staged-id'
 import { buildDefaultEditorialTemplate } from '../editorial-markdown.service'
 import {
   repairEditorialBlock,
@@ -20,7 +21,7 @@ type UseEditorialBlockActionsParams = {
 }
 
 function createEditorialBlockId() {
-  return `editorial_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  return createStagedId('editorial')
 }
 
 export function useEditorialBlockActions({
