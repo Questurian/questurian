@@ -28,6 +28,15 @@ Y2B_STAGE1_LONG_TRANSCRIPT_CHAR_THRESHOLD = 30_000
 Y2B_STAGE1_LONG_TRANSCRIPT_MIN_RETENTION_RATIO = 0.08
 Y2B_STAGE1_LONG_TRANSCRIPT_MAX_RETENTION_RATIO = 0.98
 Y2B_STAGE1_MAX_RETENTION_RATIO = 1.05
+
+# Character retention only measures compression when the cleaned text is in the
+# same script as the source. Stage 1 translates as it cleans, so a Japanese,
+# Thai or Korean transcript comes back in English with a completely different
+# character economy -- commonly 1.5-3x the character count for identical
+# content. Under the bands above that reads as "the model invented text" and
+# fails the gate, so non-Latin sources are measured against their own band.
+Y2B_STAGE1_TRANSLATED_MIN_RETENTION_RATIO = 0.10
+Y2B_STAGE1_TRANSLATED_MAX_RETENTION_RATIO = 6.00
 Y2B_STAGE1_CHUNKING_CHAR_THRESHOLD = 18_000
 Y2B_STAGE1_CHUNK_TARGET_CHARS = 12_000
 Y2B_LONGFORM_MAX_OUTPUT_TOKENS = 32_768

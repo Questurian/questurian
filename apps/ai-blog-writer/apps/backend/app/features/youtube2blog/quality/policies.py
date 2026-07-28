@@ -18,6 +18,8 @@ from ..config import (
     Y2B_STAGE1_MIN_CLEANED_CHARS,
     Y2B_STAGE1_MIN_RETENTION_RATIO,
     Y2B_STAGE1_REPAIR_MAX_RETRIES,
+    Y2B_STAGE1_TRANSLATED_MAX_RETENTION_RATIO,
+    Y2B_STAGE1_TRANSLATED_MIN_RETENTION_RATIO,
     Y2B_STAGE2_CLASSIFICATION_MAX_RETRIES,
     Y2B_STAGE2_MIN_CONFIDENCE,
     Y2B_STAGE3_MIN_CRITICAL_DIMENSION_SCORE,
@@ -29,7 +31,17 @@ from ..config import (
 )
 
 
-def transcript_retention_policy(original_chars: int) -> tuple[str, float, float]:
+def transcript_retention_policy(
+    original_chars: int,
+    *,
+    translated_source: bool = False,
+) -> tuple[str, float, float]:
+    if translated_source:
+        return (
+            "translated",
+            Y2B_STAGE1_TRANSLATED_MIN_RETENTION_RATIO,
+            Y2B_STAGE1_TRANSLATED_MAX_RETENTION_RATIO,
+        )
     if original_chars >= Y2B_STAGE1_LONG_TRANSCRIPT_CHAR_THRESHOLD:
         return (
             "long_form",
@@ -50,9 +62,11 @@ def evaluate_transcript_gate(
     cleaned_chars: int,
     original_chars: int,
     retry_count: int,
+    translated_source: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     profile, minimum_ratio, maximum_ratio = transcript_retention_policy(
-        original_chars
+        original_chars,
+        translated_source=translated_source,
     )
     retention_ratio = cleaned_chars / max(1, original_chars)
     checks = {
@@ -88,6 +102,7 @@ def evaluate_transcript_gate(
             "minimum_retention_ratio_threshold": round(minimum_ratio, 4),
             "maximum_retention_ratio_threshold": round(maximum_ratio, 4),
             "transcript_length_profile": profile,
+            "translated_source": translated_source,
         },
     }
 

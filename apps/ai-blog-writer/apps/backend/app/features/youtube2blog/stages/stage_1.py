@@ -5,10 +5,10 @@ Stage 1: Clean transcript text from the raw video record.
 from __future__ import annotations
 
 import logging
-import re
 
 from langchain_core.prompts import PromptTemplate
 
+from app.features.youtube2blog.content.script import is_non_latin_script
 from app.features.youtube2blog.config import (
     Y2B_PRIMARY_MODEL,
     Y2B_STAGE1_CHUNK_TARGET_CHARS,
@@ -106,38 +106,9 @@ Text:
 {text}"""
 
 
-# Scripts that cannot survive a successful translation to English. Latin-script
-# languages are deliberately not detected: every cleaning prompt already orders
-# a translation, and any heuristic strong enough to catch untranslated Spanish
-# would also fire on English text carrying loanwords or accented names.
-_NON_LATIN_SCRIPT_PATTERN = re.compile(
-    "["
-    "Ѐ-ӿ"  # Cyrillic
-    "֐-׿"  # Hebrew
-    "؀-ۿ"  # Arabic
-    "ऀ-ॿ"  # Devanagari
-    "฀-๿"  # Thai
-    "぀-ヿ"  # Hiragana and Katakana
-    "一-鿿"  # CJK unified ideographs
-    "가-힯"  # Hangul
-    "]"
-)
-
-# A stray quoted term in an otherwise English article should not buy a full
-# re-translation, so the trigger is a share of the text rather than any hit.
-# Genuinely untranslated text runs near 100% non-Latin; prose that merely names
-# a place or dish in its own script sits under 5%. 10% separates the two with
-# room for a partly-translated result to still be caught.
-_UNTRANSLATED_SCRIPT_RATIO = 0.10
-
-
 def _needs_english_enforcement(text: str) -> bool:
     """True when text still carries enough non-Latin script to look untranslated."""
-    dense = "".join(text.split())
-    if not dense:
-        return False
-    non_latin = len(_NON_LATIN_SCRIPT_PATTERN.findall(text))
-    return (non_latin / len(dense)) > _UNTRANSLATED_SCRIPT_RATIO
+    return is_non_latin_script(text)
 
 
 def _ensure_english(text: str, llm: object) -> str:

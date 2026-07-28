@@ -8,6 +8,7 @@ from app.features.youtube2blog.stages import (
 )
 from ..context import YouTube2BlogNodeContext
 from ..state import GraphNode, YouTube2BlogGraphState
+from ...content.script import is_non_latin_script
 from ...quality.policies import evaluate_transcript_gate
 
 
@@ -47,6 +48,7 @@ def build_transcript_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphN
             cleaned_chars=cleaned_chars,
             original_chars=original_chars,
             retry_count=retry_count,
+            translated_source=is_non_latin_script(record.transcript),
         )
         stage_results = _record_stage_result(
             state,
