@@ -16,6 +16,10 @@ from ..state import GraphNode, YouTube2BlogGraphState
 def build_seo_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
     run_id = context.run_id
     _active_model = context.active_model
+    # SEO enrichment rewrites the whole article, so it belongs on the writing
+    # model. Brief generation is structured keyword extraction and stays on the
+    # cheaper base model.
+    _writing_model = context.writing_model
     _tone_guidance = context.tone_guidance
     _write_running_status = context.start_stage
     _record_stage_result = context.record_stage
@@ -45,7 +49,7 @@ def build_seo_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
             stage3=stage3,
             seo_brief=seo_brief,
             mode="primary",
-            model_name=_active_model,
+            model_name=_writing_model,
             tone_guidance=_tone_guidance,
         )
 
@@ -126,7 +130,7 @@ def build_seo_nodes(context: YouTube2BlogNodeContext) -> dict[str, GraphNode]:
             seo_brief=seo_brief,
             mode="retry",
             feedback=feedback,
-            model_name=_active_model,
+            model_name=_writing_model,
             tone_guidance=_tone_guidance,
         )
         seo_article = str(

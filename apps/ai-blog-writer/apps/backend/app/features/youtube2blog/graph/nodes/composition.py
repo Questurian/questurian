@@ -243,7 +243,10 @@ def build_composition_nodes(context: YouTube2BlogNodeContext) -> dict[str, Graph
             rewrite_brief=list(targeted_feedback.get("rewrite_brief") or rewrite_brief),
             mode=mode,
             focus_dimensions=list(targeted_feedback.get("focus_dimensions") or []),
-            model_name=_active_model,
+            # A full rewrite of a draft composed on the writing model belongs on
+            # the writing model. Running it on the cheaper base model handed the
+            # pro composition to a weaker writer and shipped the result.
+            model_name=_writing_model,
             tone_guidance=_tone_guidance,
         )
 

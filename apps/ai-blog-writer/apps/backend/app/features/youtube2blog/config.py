@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-# Always-strong model policy for YouTube2Blog.
+# Base model for classification, coverage analysis, quality assessment and
+# other structured/judging work. Cheap by design -- it is not a writing model.
 Y2B_PRIMARY_MODEL = "gemini-2.5-flash-lite"
 VALID_Y2B_MODELS = {Y2B_PRIMARY_MODEL}
 
-# Stage-specific overrides: article composition and editorial augmentation are
-# the writing-quality stages, pinned to a stronger model than the run's base.
+# Stage-specific overrides: every stage that writes or rewrites the full
+# article body runs here rather than on the base model. That covers
+# composition, the Stage 3 quality rewrite, SEO enrichment and editorial
+# augmentation -- handing a draft composed here to a weaker rewriter threw
+# away the quality this model was chosen for.
 # Both were "claude-opus-4-8" until Anthropic billing ran out; restore those
 # values (and set ANTHROPIC_MODELS_ENABLED=1) once it is funded again.
 Y2B_COMPOSE_MODEL = "gemini-3.1-pro-preview"
