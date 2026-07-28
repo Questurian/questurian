@@ -97,3 +97,86 @@ def test_stage_1_clean_transcript_chunks_long_inputs(monkeypatch):
     assert output.cleaned_transcript == "\n\n".join(
         f"Cleaned chunk {index}" for index in range(1, len(prompts) + 1)
     )
+
+
+def test_stage_1_skips_english_enforcement_for_latin_output(monkeypatch):
+    """The cleaning prompts already order a translation, so re-sending a clean
+    English transcript through the model is a full output-token bill for a
+    byte-identical copy."""
+    enforcement_prompts: list[str] = []
+
+    class StubLLM:
+        def invoke(self, prompt: str) -> str:
+            if _is_translation_enforcement(prompt):
+                enforcement_prompts.append(prompt)
+                return _enforcement_input_text(prompt)
+            return "Cleaned transcript output."
+
+    monkeypatch.setattr(
+        stage_1_module,
+        "get_vertex_llm",
+        lambda **_kwargs: StubLLM(),
+    )
+
+    output = stage_1_clean_transcript(sample_record())
+
+    assert enforcement_prompts == []
+    assert output.cleaned_transcript == "Cleaned transcript output."
+
+
+def test_stage_1_enforces_english_when_translation_did_not_happen(monkeypatch):
+    """A cleaning pass that ignored the translation instruction leaves non-Latin
+    script behind, which is the one case worth paying the extra pass for."""
+    enforced: list[str] = []
+
+    class StubLLM:
+        def invoke(self, prompt: str) -> str:
+            if _is_translation_enforcement(prompt):
+                enforced.append(_enforcement_input_text(prompt))
+                return "Translated to English."
+            return "これは翻訳されていない書き起こしです。" * 5
+
+    monkeypatch.setattr(
+        stage_1_module,
+        "get_vertex_llm",
+        lambda **_kwargs: StubLLM(),
+    )
+
+    record = sample_record()
+    output = stage_1_clean_transcript(record)
+
+    assert len(enforced) == 1
+    assert output.cleaned_transcript == "Translated to English."
+
+
+def test_stage_1_translates_non_latin_titles_only(monkeypatch):
+    """An English title needs no round trip; a Japanese one still does."""
+
+    class StubLLM:
+        def invoke(self, prompt: str) -> str:
+            if _is_translation_enforcement(prompt):
+                return "Translated Title"
+            return "Cleaned transcript output."
+
+    monkeypatch.setattr(
+        stage_1_module,
+        "get_vertex_llm",
+        lambda **_kwargs: StubLLM(),
+    )
+
+    ascii_title = stage_1_clean_transcript(sample_record())
+    assert ascii_title.title == "Test Video"
+
+    record = sample_record()
+    japanese = record.model_copy(update={"title": "日本語のタイトル"})
+    assert stage_1_clean_transcript(japanese).title == "Translated Title"
+
+
+def test_needs_english_enforcement_ignores_incidental_foreign_terms():
+    """One quoted term in an English article must not buy a re-translation."""
+    english_with_loanword = (
+        "The restaurant is called 東京 and serves a tasting menu. " * 20
+    )
+
+    assert not stage_1_module._needs_english_enforcement(english_with_loanword)
+    assert stage_1_module._needs_english_enforcement("東京の美味しいレストランの話")

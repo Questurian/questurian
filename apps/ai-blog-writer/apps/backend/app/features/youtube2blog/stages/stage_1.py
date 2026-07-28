@@ -5,6 +5,7 @@ Stage 1: Clean transcript text from the raw video record.
 from __future__ import annotations
 
 import logging
+import re
 
 from langchain_core.prompts import PromptTemplate
 
@@ -105,10 +106,50 @@ Text:
 {text}"""
 
 
+# Scripts that cannot survive a successful translation to English. Latin-script
+# languages are deliberately not detected: every cleaning prompt already orders
+# a translation, and any heuristic strong enough to catch untranslated Spanish
+# would also fire on English text carrying loanwords or accented names.
+_NON_LATIN_SCRIPT_PATTERN = re.compile(
+    "["
+    "Ѐ-ӿ"  # Cyrillic
+    "֐-׿"  # Hebrew
+    "؀-ۿ"  # Arabic
+    "ऀ-ॿ"  # Devanagari
+    "฀-๿"  # Thai
+    "぀-ヿ"  # Hiragana and Katakana
+    "一-鿿"  # CJK unified ideographs
+    "가-힯"  # Hangul
+    "]"
+)
+
+# A stray quoted term in an otherwise English article should not buy a full
+# re-translation, so the trigger is a share of the text rather than any hit.
+# Genuinely untranslated text runs near 100% non-Latin; prose that merely names
+# a place or dish in its own script sits under 5%. 10% separates the two with
+# room for a partly-translated result to still be caught.
+_UNTRANSLATED_SCRIPT_RATIO = 0.10
+
+
+def _needs_english_enforcement(text: str) -> bool:
+    """True when text still carries enough non-Latin script to look untranslated."""
+    dense = "".join(text.split())
+    if not dense:
+        return False
+    non_latin = len(_NON_LATIN_SCRIPT_PATTERN.findall(text))
+    return (non_latin / len(dense)) > _UNTRANSLATED_SCRIPT_RATIO
+
+
 def _ensure_english(text: str, llm: object) -> str:
     """
-    Always run an idempotent English enforcement pass.
-    The LLM returns English text unchanged and translates anything else.
+    Repair a cleaning pass that failed to translate.
+
+    This used to run unconditionally on both the transcript and the title. The
+    transcript call re-emitted the entire cleaned transcript through the model
+    on every run -- the expensive output tokens -- to almost always receive a
+    byte-identical copy, because all three cleaning prompts already order a
+    translation to English. Callers now gate it on evidence the translation did
+    not happen.
     """
     logger.info("  Running English enforcement pass...")
     prompt = PromptTemplate(input_variables=["text"], template=TRANSLATION_ENFORCEMENT_PROMPT)
@@ -273,8 +314,11 @@ def _clean_transcript_impl(
         )
     logger.info("  Received response from Vertex AI")
 
-    cleaned_transcript = _ensure_english(cleaned_transcript, llm)
-    english_title = _ensure_english(record.title, llm)
+    if _needs_english_enforcement(cleaned_transcript):
+        cleaned_transcript = _ensure_english(cleaned_transcript, llm)
+    english_title = record.title
+    if _needs_english_enforcement(english_title):
+        english_title = _ensure_english(english_title, llm)
 
     output = Stage1Output(
         video_id=record.video_id,
