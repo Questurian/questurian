@@ -1,10 +1,14 @@
 import { useCallback, useMemo } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
+import type {
+  ClipboardEvent as ReactClipboardEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+} from 'react'
 import type { MutableRefObject } from 'react'
 import { BASE_TOOLBAR_ACTIONS } from '../constants/toolbar-actions.constants'
 import { editorElementToMarkdown } from '../richMarkdown'
 import { execEditorCommand } from '../services/editor-command.service'
 import { matchMarkdownInputRule } from '../services/markdown-input-rules.service'
+import { buildPasteInsertion } from '../services/paste.service'
 import type { ToolbarAction, ToolbarActionKey } from '../types'
 import {
   collapseSelectionTo,
@@ -29,6 +33,7 @@ type UseToolbarCommandsResult = {
   syncEditorToMarkdown: () => void
   handleToolbarAction: (key: ToolbarActionKey) => void
   handleEditorKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void
+  handleEditorPaste: (event: ReactClipboardEvent<HTMLDivElement>) => void
 }
 
 export function useToolbarCommands({
@@ -227,10 +232,33 @@ export function useToolbarCommands({
     [applyMarkdownInputRule, exitHeadingOnEnter, handleToolbarAction, syncEditorToMarkdown],
   )
 
+  /**
+   * Always intercepts. The clipboard's `text/html` flavour never reaches the
+   * document, so no amount of foreign markup can get in, and a paste that
+   * carries no text at all (an image, a file) inserts nothing rather than
+   * planting an <img> the markdown serializer would silently drop.
+   */
+  const handleEditorPaste = useCallback(
+    (event: ReactClipboardEvent<HTMLDivElement>) => {
+      event.preventDefault()
+
+      const insertion = buildPasteInsertion(event.clipboardData.getData('text/plain'))
+      if (!insertion) return
+
+      execEditorCommand(
+        insertion.kind === 'html' ? 'insertHTML' : 'insertText',
+        insertion.value,
+      )
+      syncEditorToMarkdown()
+    },
+    [syncEditorToMarkdown],
+  )
+
   return {
     toolbarActions,
     syncEditorToMarkdown,
     handleToolbarAction,
     handleEditorKeyDown,
+    handleEditorPaste,
   }
 }
