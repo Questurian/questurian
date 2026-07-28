@@ -75,6 +75,13 @@
   background: #f6f8fb;
 }
 
+.stl-page .block-markdown-toolbar-btn.is-active {
+  border-color: var(--stl-accent);
+  background: rgba(47, 79, 143, 0.12);
+  color: #1f3766;
+  font-weight: 600;
+}
+
 .stl-page .block-rich-editor {
   border: 0;
   border-radius: 0;

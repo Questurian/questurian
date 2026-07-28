@@ -3,6 +3,7 @@ import { AiRewritePopover } from './components/AiRewritePopover'
 import { EditorToolbar } from './components/EditorToolbar'
 import { LinkPopover } from './components/LinkPopover'
 import { RichContentEditable } from './components/RichContentEditable'
+import { useActiveFormat } from './hooks/useActiveFormat'
 import { useAiRewrite } from './hooks/useAiRewrite'
 import { useEditorSelection } from './hooks/useEditorSelection'
 import { useHeadingStructureGuard } from './hooks/useHeadingStructureGuard'
@@ -61,6 +62,8 @@ export function MarkdownBlockEditor({
     ai.openAiRewritePrompt()
   }, [ai, selection])
 
+  const format = useActiveFormat({ editorRef: state.editorRef })
+
   const toolbar = useToolbarCommands({
     editorRef: state.editorRef,
     draftMarkdownRef: state.draftMarkdownRef,
@@ -69,6 +72,7 @@ export function MarkdownBlockEditor({
     onAiRewrite: onAiRewrite ? openAiRewritePrompt : undefined,
     aiToolbarLabel,
     aiToolbarTitle,
+    onAfterCommand: format.refreshActiveFormat,
   })
 
   syncEditorToMarkdownRef.current = toolbar.syncEditorToMarkdown
@@ -94,7 +98,12 @@ export function MarkdownBlockEditor({
 
   return (
     <div className="block-markdown-editor-shell">
-      <EditorToolbar blockId={blockId} actions={toolbar.toolbarActions} onAction={toolbar.handleToolbarAction} />
+      <EditorToolbar
+        blockId={blockId}
+        actions={toolbar.toolbarActions}
+        activeKeys={format.activeToolbarKeys}
+        onAction={toolbar.handleToolbarAction}
+      />
 
       {/* One structure line: the warning supersedes the hint rather than stacking on it. */}
       {heading.headingStructureWarning ? (

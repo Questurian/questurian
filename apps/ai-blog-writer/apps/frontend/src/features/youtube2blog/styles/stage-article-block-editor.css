@@ -354,6 +354,12 @@
   background: var(--accent-soft);
 }
 
+.block-markdown-toolbar-btn.is-active {
+  color: white;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
 .block-markdown-hint {
   margin: 0;
   padding: var(--space-2) var(--space-4);

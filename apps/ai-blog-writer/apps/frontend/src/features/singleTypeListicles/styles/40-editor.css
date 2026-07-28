@@ -48,6 +48,13 @@
   background: #f6f8fb;
 }
 
+.stl-page .block-markdown-toolbar-btn.is-active {
+  border-color: var(--stl-accent);
+  background: rgba(47, 79, 143, 0.12);
+  color: #1f3766;
+  font-weight: 600;
+}
+
 /*
  * The editor deliberately mirrors `.block-preview` type: body face, size and
  * heading scale. Toggling Edit/Done swaps these two views over the same bytes,
