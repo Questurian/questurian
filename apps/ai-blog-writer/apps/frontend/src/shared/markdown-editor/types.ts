@@ -1,4 +1,5 @@
 export type ToolbarActionKey =
+  | 'paragraph'
   | 'h2'
   | 'h3'
   | 'bullets'
@@ -13,6 +14,8 @@ export type ToolbarAction = {
   key: ToolbarActionKey
   label: string
   title: string
+  /** Formatting toggles report pressed state; Link and AI just open a popover. */
+  isToggle?: boolean
 }
 
 export type MarkdownHeading = {

@@ -26,6 +26,9 @@ type UseToolbarCommandsParams = {
   aiToolbarLabel?: string
   aiToolbarTitle?: string
   onOpenLinkPopover: () => void
+  /** execCommand can change formatting without moving the caret, so the
+   *  toolbar's pressed state has to be re-read explicitly afterwards. */
+  onAfterCommand: () => void
 }
 
 type UseToolbarCommandsResult = {
@@ -44,6 +47,7 @@ export function useToolbarCommands({
   aiToolbarLabel,
   aiToolbarTitle,
   onOpenLinkPopover,
+  onAfterCommand,
 }: UseToolbarCommandsParams): UseToolbarCommandsResult {
   const toolbarActions = useMemo(() => {
     if (!onAiRewrite) {
@@ -79,9 +83,8 @@ export function useToolbarCommands({
       const activeTag = getActiveBlockTag(editor)
       const nextTag = activeTag === tag ? 'p' : tag.toLowerCase()
       execEditorCommand('formatBlock', nextTag)
-      syncEditorToMarkdown()
     },
-    [editorRef, syncEditorToMarkdown],
+    [editorRef],
   )
 
   const handleToolbarAction = useCallback(
@@ -101,15 +104,18 @@ export function useToolbarCommands({
 
       editor.focus()
       switch (key) {
+        case 'paragraph':
+          execEditorCommand('formatBlock', 'p')
+          break
         case 'h2':
           toggleBlockFormat('H2')
-          return
+          break
         case 'h3':
           toggleBlockFormat('H3')
-          return
+          break
         case 'quote':
           toggleBlockFormat('BLOCKQUOTE')
-          return
+          break
         case 'bold':
           execEditorCommand('bold')
           break
@@ -126,8 +132,9 @@ export function useToolbarCommands({
           break
       }
       syncEditorToMarkdown()
+      onAfterCommand()
     },
-    [editorRef, onAiRewrite, onOpenLinkPopover, syncEditorToMarkdown, toggleBlockFormat],
+    [editorRef, onAfterCommand, onAiRewrite, onOpenLinkPopover, syncEditorToMarkdown, toggleBlockFormat],
   )
 
   /**
@@ -199,6 +206,7 @@ export function useToolbarCommands({
         if (applyMarkdownInputRule()) {
           event.preventDefault()
           syncEditorToMarkdown()
+          onAfterCommand()
         }
         return
       }
@@ -207,6 +215,7 @@ export function useToolbarCommands({
         if (exitHeadingOnEnter()) {
           event.preventDefault()
           syncEditorToMarkdown()
+          onAfterCommand()
         }
         return
       }
@@ -229,7 +238,13 @@ export function useToolbarCommands({
         handleToolbarAction('link')
       }
     },
-    [applyMarkdownInputRule, exitHeadingOnEnter, handleToolbarAction, syncEditorToMarkdown],
+    [
+      applyMarkdownInputRule,
+      exitHeadingOnEnter,
+      handleToolbarAction,
+      onAfterCommand,
+      syncEditorToMarkdown,
+    ],
   )
 
   /**
