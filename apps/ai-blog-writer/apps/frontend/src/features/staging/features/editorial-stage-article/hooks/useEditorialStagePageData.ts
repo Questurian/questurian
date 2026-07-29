@@ -21,8 +21,11 @@ import {
   getAllStagedArticles,
   getStagedArticle,
   removeStagedArticle,
-  upsertStagedArticle,
 } from '../services/editorial-stage-storage.service'
+import {
+  createStagedArticleForRun,
+  findStagedArticleByRunId,
+} from '../services/staged-draft-creation.service'
 import {
   StagedDraftSaveQueue,
   type StagedDraftConflict,
@@ -216,7 +219,7 @@ export function useEditorialStagePageData({
           }
         } else if (urlRunId) {
           const allStaged = await getAllStagedArticles(storageKey)
-          const existing = allStaged.find((candidate) => candidate.runId === urlRunId) ?? null
+          const existing = findStagedArticleByRunId(allStaged, urlRunId)
           if (existing) {
             createSaveQueue(existing.updatedAt)
             const normalizedExisting = await normalizeLoadedArticle(existing)
@@ -231,69 +234,76 @@ export function useEditorialStagePageData({
               replace: true,
             })
           } else {
-            let markdown = urlContent
-            if (!markdown) {
-              const result = await fetchResult(urlRunId)
-              markdown = result.markdown || ''
-            }
-
-            if (!markdown.trim()) {
-              if (!isCancelled) {
-                setError('Unable to load article content for staging')
-              }
-              return
-            }
-
-            const extracted = extractEditorialBlocks(markdown)
-            const parsedDetails = parseMarkdownToBlocksDetailed(extracted.bodyMarkdown)
-            const blocks = parsedDetails.blocks
-            const editorialBlocks = attachEditorialBlocksToContentBlocks(
-              blocks,
-              parsedDetails.ranges,
-              extracted.editorialBlocks
-            )
-            const newStaged: StagedArticle = {
-              id: `staged_${Date.now()}`,
+            // Creation is deduplicated by run id: this effect can run twice for
+            // the same run (StrictMode, or a dependency change re-entering it
+            // mid-flight) and both passes miss the lookup above, which used to
+            // leave two identical drafts in Saved Articles.
+            const savedNewStaged = await createStagedArticleForRun({
+              storageKey,
               runId: urlRunId,
-              originalTitle: urlTitle,
-              originalContent: extracted.bodyMarkdown,
-              originalType: urlType,
-              title: urlTitle,
-              content: composeArticleMarkdown(blocks, editorialBlocks),
-              blocks,
-              editorialBlocks,
-              sharedNeighborhoods: [],
-              editorModelName: DEFAULT_EDITOR_MODEL_NAME,
-              step1_complete: false,
-              in_update_mode: false,
-              step2_complete: false,
-              step2_in_update_mode: false,
-              step3_complete: false,
-              step3_in_update_mode: false,
-              seoSection: createEmptySeoSection(),
-              syncBehavior,
-              lexicalConverted: false,
-              publishedToPayload: false,
-              payloadStatus: undefined,
-              payloadSlug: undefined,
-              payloadPublishedAt: undefined,
-              payloadUpdatedAt: undefined,
-              payloadAuthorName: undefined,
-              createdBy: userStampRef.current ?? undefined,
-              lastEditedBy: userStampRef.current ?? undefined,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }
+              buildDraft: async (stagedId) => {
+                let markdown = urlContent
+                if (!markdown) {
+                  const result = await fetchResult(urlRunId)
+                  markdown = result.markdown || ''
+                }
 
-            // Persist to the server before navigating so the ?stagedId link
+                if (!markdown.trim()) {
+                  throw new Error('Unable to load article content for staging')
+                }
+
+                const extracted = extractEditorialBlocks(markdown)
+                const parsedDetails = parseMarkdownToBlocksDetailed(extracted.bodyMarkdown)
+                const blocks = parsedDetails.blocks
+                const editorialBlocks = attachEditorialBlocksToContentBlocks(
+                  blocks,
+                  parsedDetails.ranges,
+                  extracted.editorialBlocks
+                )
+                const newStaged: StagedArticle = {
+                  id: stagedId,
+                  runId: urlRunId,
+                  originalTitle: urlTitle,
+                  originalContent: extracted.bodyMarkdown,
+                  originalType: urlType,
+                  title: urlTitle,
+                  content: composeArticleMarkdown(blocks, editorialBlocks),
+                  blocks,
+                  editorialBlocks,
+                  sharedNeighborhoods: [],
+                  editorModelName: DEFAULT_EDITOR_MODEL_NAME,
+                  step1_complete: false,
+                  in_update_mode: false,
+                  step2_complete: false,
+                  step2_in_update_mode: false,
+                  step3_complete: false,
+                  step3_in_update_mode: false,
+                  seoSection: createEmptySeoSection(),
+                  syncBehavior,
+                  lexicalConverted: false,
+                  publishedToPayload: false,
+                  payloadStatus: undefined,
+                  payloadSlug: undefined,
+                  payloadPublishedAt: undefined,
+                  payloadUpdatedAt: undefined,
+                  payloadAuthorName: undefined,
+                  createdBy: userStampRef.current ?? undefined,
+                  lastEditedBy: userStampRef.current ?? undefined,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+                return newStaged
+              },
+            })
+
+            // The draft is persisted before navigating so the ?stagedId link
             // resolves on the next load (avoids the "Article not found" race).
-            const savedNewStaged = await upsertStagedArticle(storageKey, newStaged)
             createSaveQueue(savedNewStaged.updatedAt)
 
             if (!isCancelled) {
-              setStagedArticle(newStaged)
+              setStagedArticle(savedNewStaged)
             }
-            navigate(`${stageArticlePath}?stagedId=${newStaged.id}`, {
+            navigate(`${stageArticlePath}?stagedId=${savedNewStaged.id}`, {
               replace: true,
             })
           }

@@ -51,6 +51,7 @@ describe('buildEasySetupPrompt', () => {
     expect(prompt).toContain('One JSON object, nothing before or after it')
     expect(prompt).not.toContain('Prompt2Blog')
     for (const field of [
+      'direction',
       'title',
       'location',
       'article_type',
@@ -75,6 +76,29 @@ describe('buildEasySetupPrompt', () => {
       expect(prompt).toContain(`"${field}"`)
     }
     expect(prompt).toContain('RESEARCH NEEDED:')
+  })
+
+  it('asks for the direction before anything else and makes it drive the brief', () => {
+    const prompt = buildEasySetupPrompt('A weekend in Lisbon', 'Lisbon, Portugal', createInputOptions())
+
+    const schemaStart = prompt.indexOf('{\n  "direction"')
+    expect(schemaStart).toBeGreaterThan(-1)
+    expect(prompt.indexOf('"title"')).toBeGreaterThan(schemaStart)
+    expect(prompt).toContain('1. Decide the direction.')
+    expect(prompt).toContain('2. Derive what must be settled.')
+    expect(prompt).toContain('3. Research against that list.')
+  })
+
+  it('sets a source quality bar instead of accepting bare links', () => {
+    const prompt = buildEasySetupPrompt('A weekend in Lisbon', 'Lisbon, Portugal', createInputOptions())
+
+    expect(prompt).toContain('5 to 8 sources')
+    expect(prompt).toContain('Primary and official')
+    expect(prompt).toContain('SEO listicle farms')
+    expect(prompt).toContain('Never silently pick one.')
+    expect(prompt).toContain('self-contained research note')
+    expect(prompt).toContain('Do not fabricate citations.')
+    expect(prompt).toContain('No must_include item may go unsourced.')
   })
 
   it('lists the loaded option catalogs so every choice comes from a known value', () => {

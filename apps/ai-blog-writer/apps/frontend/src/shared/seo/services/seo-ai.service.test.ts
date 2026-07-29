@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { SeoSection } from '../types'
-import { applySeoAiPatch, parseSeoAiPatch } from './seo-ai.service'
+import {
+  applySeoAiPatch,
+  parseSeoAiPatch,
+  seoAiPatchCoversTarget,
+} from './seo-ai.service'
 
 function buildSeoSection(overrides: Partial<SeoSection> = {}): SeoSection {
   return {
@@ -67,6 +71,65 @@ describe('applySeoAiPatch og:url protection', () => {
     const next = applySeoAiPatch(buildSeoSection(), patch, 'openGraphUrl')
 
     expect(next.openGraph.url).toBe(buildSeoSection().openGraph.url)
+  })
+})
+
+describe('structuredData patches', () => {
+  const JSON_LD = {
+    '@context': 'https://schema.org',
+    '@graph': [{ '@type': 'BlogPosting', headline: 'Two Days in Lima' }],
+  }
+
+  it('accepts JSON-LD delivered as a JSON string', () => {
+    const patch = parseSeoAiPatch(JSON.stringify({ structuredData: JSON.stringify(JSON_LD) }))
+
+    expect(patch.structuredData).toBeDefined()
+    expect(JSON.parse(patch.structuredData!)).toEqual(JSON_LD)
+    expect(seoAiPatchCoversTarget(patch, 'structuredData')).toBe(true)
+  })
+
+  it('accepts JSON-LD delivered as an object', () => {
+    const patch = parseSeoAiPatch(JSON.stringify({ structuredData: JSON_LD }))
+
+    expect(JSON.parse(patch.structuredData!)).toEqual(JSON_LD)
+  })
+
+  // Gemini used to return `{}` here because the tool schema declared an object
+  // with no properties. Serializing that would have written a literal "{}"
+  // into the field and reported success.
+  it('treats an empty object as no structured data at all', () => {
+    const patch = parseSeoAiPatch(JSON.stringify({ structuredData: {} }))
+
+    expect(patch.structuredData).toBeUndefined()
+    expect(seoAiPatchCoversTarget(patch, 'structuredData')).toBe(false)
+  })
+
+  it('leaves the existing value in place when the patch covers nothing', () => {
+    const current = buildSeoSection({ structuredData: '{"@type":"BlogPosting"}' })
+    const patch = parseSeoAiPatch(JSON.stringify({ structuredData: {} }))
+
+    expect(applySeoAiPatch(current, patch, 'structuredData').structuredData)
+      .toBe(current.structuredData)
+  })
+})
+
+describe('seoAiPatchCoversTarget', () => {
+  it('is false when the model answered a different field than the one requested', () => {
+    const patch = parseSeoAiPatch(JSON.stringify({ twitterCard: { card: 'summary' } }))
+
+    expect(seoAiPatchCoversTarget(patch, 'structuredData')).toBe(false)
+    expect(seoAiPatchCoversTarget(patch, 'seoTitle')).toBe(false)
+    expect(seoAiPatchCoversTarget(patch, 'twitterCardCard')).toBe(true)
+  })
+
+  it('is true for "all" as long as one field landed', () => {
+    const patch = parseSeoAiPatch(JSON.stringify({ seoTitle: 'Two Days in Lima' }))
+
+    expect(seoAiPatchCoversTarget(patch, 'all')).toBe(true)
+  })
+
+  it('is false for "all" when nothing landed', () => {
+    expect(seoAiPatchCoversTarget(parseSeoAiPatch('{}'), 'all')).toBe(false)
   })
 })
 

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  clearRunState,
   loadSavedRunState,
-  RUN_STORAGE_KEY,
+  saveRunState,
 } from '../pipeline-run.storage'
 import type {
   PersistedRunState,
@@ -19,11 +20,11 @@ export function usePersistedPipelineRunState() {
 
   useEffect(() => {
     const persistedState: PersistedRunState = { sourceStep, pipelineRunId, pipelineResult }
-    localStorage.setItem(RUN_STORAGE_KEY, JSON.stringify(persistedState))
+    saveRunState(persistedState)
   }, [sourceStep, pipelineRunId, pipelineResult])
 
   const clearPersistedRunState = () => {
-    localStorage.removeItem(RUN_STORAGE_KEY)
+    clearRunState()
   }
 
   return {

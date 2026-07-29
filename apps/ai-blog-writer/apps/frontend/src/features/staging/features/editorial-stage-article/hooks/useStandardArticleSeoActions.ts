@@ -8,7 +8,9 @@ import type { SeoSection } from '../../../../../shared/seo/types'
 import {
   applySeoAiPatch,
   buildSeoAiSeed,
+  getSeoAiTargetLabel,
   parseSeoAiPatch,
+  seoAiPatchCoversTarget,
   type SeoAiTarget,
 } from '../../../../../shared/seo/services/seo-ai.service'
 import { resolveEditorAssistModelName } from '../../../api'
@@ -78,8 +80,14 @@ export function useStandardArticleSeoActions({
       }
 
       const seoPatch = parseSeoAiPatch(JSON.stringify(response.seo_patch))
+      if (!seoAiPatchCoversTarget(seoPatch, target)) {
+        throw new Error(
+          `AI returned no usable ${getSeoAiTargetLabel(target)}. Nothing was changed — try again.`,
+        )
+      }
+
       updateSeoSection((current) => applySeoAiPatch(current, seoPatch, target))
-      setLocalResult(`Updated ${target === 'all' ? 'SEO metadata' : target} with AI.`)
+      setLocalResult(`Updated ${getSeoAiTargetLabel(target)} with AI.`)
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : 'Failed to generate SEO with AI.')
     } finally {

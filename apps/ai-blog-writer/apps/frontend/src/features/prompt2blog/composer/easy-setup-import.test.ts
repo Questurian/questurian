@@ -28,6 +28,8 @@ function createInputOptions(): Prompt2BlogInputOptionsResponse {
 
 function createApprovedJson(overrides: Record<string, unknown> = {}) {
   return JSON.stringify({
+    direction: 'This is a routing piece, not a highlights reel. The reader has 48 hours and '
+      + 'loses most of them to transit. It argues for two neighbourhood-anchored days.',
     title: 'A Weekend in Lisbon',
     location: 'Lisbon, Portugal',
     article_type: 'Destination Guide',
@@ -81,6 +83,56 @@ describe('reviewEasySetupJson', () => {
       blobs: [{ id: 1, content: 'RESEARCH NEEDED: current Carris fare' }],
     })
     expect(review.rows).toContainEqual({ field: 'Article Type', value: 'Destination Guide (id 7)' })
+  })
+
+  it('surfaces the direction for review without pushing it into the form', () => {
+    const review = reviewEasySetupJson(createApprovedJson(), createInputOptions())
+
+    expect(review.direction).toContain('routing piece, not a highlights reel')
+    expect(review.patch).not.toHaveProperty('direction')
+  })
+
+  it('shows the direction even when a later field fails review', () => {
+    const review = reviewEasySetupJson(
+      createApprovedJson({ tone_id: 'chatty' }),
+      createInputOptions(),
+    )
+
+    expect(review.patch).toBeNull()
+    expect(review.direction).toContain('routing piece, not a highlights reel')
+  })
+
+  it('refuses a brief that never committed to a direction', () => {
+    const parsed = JSON.parse(createApprovedJson()) as Record<string, unknown>
+    delete parsed.direction
+
+    const review = reviewEasySetupJson(JSON.stringify(parsed), createInputOptions())
+
+    expect(review.patch).toBeNull()
+    expect(review.direction).toBeNull()
+    expect(review.issues).toContainEqual({
+      field: 'direction',
+      message: 'Missing from the pasted JSON.',
+    })
+  })
+
+  it('counts thin and unresearched source blocks so weak material is visible', () => {
+    const review = reviewEasySetupJson(
+      createApprovedJson({
+        source_material: [
+          'https://carris.pt/fares',
+          'RESEARCH NEEDED: current Carris fare',
+          `Carris official fare page, checked 2026-07-29. ${'Single-journey tickets. '.repeat(20)}`,
+        ],
+      }),
+      createInputOptions(),
+    )
+
+    expect(review.issues).toEqual([])
+    expect(review.rows).toContainEqual({
+      field: 'Source Material',
+      value: '3 blocks · 1 still to research · 1 thin',
+    })
   })
 
   it('reads the object out of a fenced, chatty reply', () => {

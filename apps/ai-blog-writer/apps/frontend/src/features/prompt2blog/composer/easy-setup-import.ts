@@ -24,10 +24,17 @@ export interface EasySetupImportReview {
   issues: EasySetupImportMessage[]
   corrections: EasySetupImportMessage[]
   rows: EasySetupImportRow[]
+  /**
+   * The editorial direction the model committed to before filling anything
+   * else. No form field carries it — it reaches the article through the fields
+   * it shaped — so it is surfaced in full for the human to judge the brief by.
+   */
+  direction: string | null
   patch: Partial<P2BFormState> | null
 }
 
 const EXPECTED_KEYS = [
+  'direction',
   'title',
   'location',
   'article_type',
@@ -185,6 +192,25 @@ function suggestKey(unknownKey: string, candidates: string[]): string | null {
   return best.distance <= tolerance ? best.candidate : null
 }
 
+/**
+ * A source block is the article's whole factual substrate — it is cleaned and
+ * merged before the writer sees it, so a bare link or a one-line citation
+ * contributes nothing. Counting the thin blocks makes that visible at review
+ * time rather than after a run has produced a vague article.
+ */
+const THIN_SOURCE_LENGTH = 200
+
+function describeSourceMaterial(sources: string[]): string {
+  const parts = [`${sources.length} block${sources.length === 1 ? '' : 's'}`]
+  const pending = sources.filter(source => /^research needed:/i.test(source.trim())).length
+  const thin = sources.filter(
+    source => !/^research needed:/i.test(source.trim()) && source.trim().length < THIN_SOURCE_LENGTH,
+  ).length
+  if (pending) parts.push(`${pending} still to research`)
+  if (thin) parts.push(`${thin} thin`)
+  return parts.join(' · ')
+}
+
 function truncate(value: string): string {
   const collapsed = value.replace(/\s+/g, ' ').trim()
   if (collapsed.length <= SUMMARY_VALUE_LENGTH) return collapsed
@@ -198,7 +224,8 @@ export function reviewEasySetupJson(
   const issues: EasySetupImportMessage[] = []
   const corrections: EasySetupImportMessage[] = []
   const rows: EasySetupImportRow[] = []
-  const empty = (): EasySetupImportReview => ({ issues, corrections, rows, patch: null })
+  let direction: string | null = null
+  const empty = (): EasySetupImportReview => ({ issues, corrections, rows, direction, patch: null })
 
   if (!inputOptions?.article_types.length) {
     issues.push({
@@ -375,6 +402,10 @@ export function reviewEasySetupJson(
     return aliases
   }
 
+  // Read first so the direction is shown even when a later field fails review:
+  // seeing what the model decided is what tells you whether to fix the JSON or
+  // rerun the prompt.
+  direction = readString('direction')
   const title = readString('title')
   const location = readString('location')
   const articleTypeName = readAllowed(
@@ -430,6 +461,7 @@ export function reviewEasySetupJson(
   // also what proves to the compiler that a clean review has complete values.
   if (
     issues.length
+    || direction === null
     || title === null
     || location === null
     || !articleType
@@ -502,10 +534,10 @@ export function reviewEasySetupJson(
     { field: 'Must Include', value: countLabel(mustInclude, 'item') },
     { field: 'Negative Instructions', value: countLabel(negativeInstructions, 'item') },
     { field: 'Editorial Extras', value: enableEditorialAugmentation ? 'On' : 'Off' },
-    { field: 'Source Material', value: countLabel(sourceMaterial, 'block') },
+    { field: 'Source Material', value: describeSourceMaterial(sourceMaterial) },
     { field: 'Base Draft Model', value: modelName },
     { field: 'Writer Model', value: writingModel },
   )
 
-  return { issues, corrections, rows, patch }
+  return { issues, corrections, rows, direction, patch }
 }

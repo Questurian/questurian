@@ -58,3 +58,14 @@ def test_generate_seo_metadata_empty_patch_is_502():
     )
 
     assert response.status_code == 502
+
+
+def test_structured_data_is_declared_as_a_json_string():
+    """Gemini tool declarations can only fill properties the schema names, so a
+    free-form ``{"type": "object"}`` has no fields to write and always comes
+    back as ``{}``. The JSON-LD has to travel as a serialized string."""
+    structured_data = seo_metadata.SEO_PATCH_INPUT_SCHEMA["properties"][
+        "structuredData"
+    ]
+
+    assert structured_data["type"] == "string"

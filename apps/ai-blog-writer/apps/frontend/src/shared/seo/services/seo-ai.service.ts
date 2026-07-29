@@ -31,7 +31,7 @@ export type SeoAiTarget =
   | 'robotsIndex'
   | 'robotsFollow'
 
-type SeoAiPatch = {
+export type SeoAiPatch = {
   seoTitle?: string
   metaDescription?: string
   openGraph?: {
@@ -228,12 +228,18 @@ const isValidAbsoluteUrl = (value: string): boolean => {
 
 const extractJsonPayload = extractJsonObjectFromAiResponse
 
+// An object that sanitizes down to `{}` is not structured data, it is the
+// model declining to produce any. Serializing it would overwrite the field
+// with a literal "{}" and report success.
+const serializeStructuredDataRecord = (value: unknown): string | undefined => {
+  const sanitized = asRecord(sanitizeStructuredDataValue(value))
+  if (!sanitized || Object.keys(sanitized).length === 0) return undefined
+  return JSON.stringify(sanitized, null, 2)
+}
+
 function normalizeStructuredData(value: unknown): string | undefined {
   if (asRecord(value)) {
-    const sanitized = sanitizeStructuredDataValue(value)
-    const sanitizedRecord = asRecord(sanitized)
-    if (!sanitizedRecord) return undefined
-    return JSON.stringify(sanitizedRecord, null, 2)
+    return serializeStructuredDataRecord(value)
   }
 
   if (typeof value !== 'string') return undefined
@@ -242,16 +248,40 @@ function normalizeStructuredData(value: unknown): string | undefined {
   if (!trimmed) return undefined
 
   try {
-    const parsed = JSON.parse(trimmed)
-    const record = asRecord(parsed)
+    const record = asRecord(JSON.parse(trimmed))
     if (!record) return undefined
-    const sanitized = sanitizeStructuredDataValue(record)
-    const sanitizedRecord = asRecord(sanitized)
-    if (!sanitizedRecord) return undefined
-    return JSON.stringify(sanitizedRecord, null, 2)
+    return serializeStructuredDataRecord(record)
   } catch {
     return undefined
   }
+}
+
+const patchValueForField = (patch: SeoAiPatch, field: SeoFieldKey): unknown => {
+  switch (field) {
+    case 'seoTitle': return patch.seoTitle
+    case 'metaDescription': return patch.metaDescription
+    case 'openGraphTitle': return patch.openGraph?.title
+    case 'openGraphDescription': return patch.openGraph?.description
+    case 'openGraphUrl': return patch.openGraph?.url
+    case 'twitterCardCard': return patch.twitterCard?.card
+    case 'twitterCardTitle': return patch.twitterCard?.title
+    case 'twitterCardDescription': return patch.twitterCard?.description
+    case 'structuredData': return patch.structuredData
+    case 'robotsIndex': return patch.robots?.index
+    case 'robotsFollow': return patch.robots?.follow
+  }
+}
+
+/**
+ * Whether the patch actually carries a value for the target that was asked
+ * for. `applySeoAiPatch` falls back to the current value field by field, so
+ * without this check a patch that touched nothing is indistinguishable from a
+ * successful edit.
+ */
+export function seoAiPatchCoversTarget(patch: SeoAiPatch, target: SeoAiTarget): boolean {
+  return TARGET_FIELDS[target].some(
+    (field) => patchValueForField(patch, field) !== undefined,
+  )
 }
 
 export function getSeoAiTargetLabel(target: SeoAiTarget): string {

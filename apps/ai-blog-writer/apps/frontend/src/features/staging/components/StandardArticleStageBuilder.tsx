@@ -106,7 +106,7 @@ export function StandardArticleStageBuilder({
   })
   const expansion = useStandardArticleExpansion(stagedArticle, actions.setStageArticle)
 
-  useStandardArticleStructuredData({
+  const structuredData = useStandardArticleStructuredData({
     stagedArticle,
     seoSection: derived.seoSection,
     selectedLocationLabel: derived.selectedLocationLabel,
@@ -221,6 +221,8 @@ export function StandardArticleStageBuilder({
                 onUploadOgImageFile={seo.uploadOgImageFile}
                 isUploadingOgImage={seo.isUploadingOgImage}
                 onAutoFillOgUrl={permalink.autoFillOgUrl}
+                onRegenerateStructuredData={structuredData.regenerateFromTemplate}
+                canRegenerateStructuredData={structuredData.canRegenerateFromTemplate}
                 title="SEO & Sync"
               />
             ) : null}

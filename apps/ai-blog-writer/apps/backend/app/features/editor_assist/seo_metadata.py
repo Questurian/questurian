@@ -59,9 +59,19 @@ SEO_PATCH_INPUT_SCHEMA: dict[str, Any] = {
                 "description": {"type": "string"},
             },
         },
+        # Declared as a string, not an object, on purpose. Gemini tool
+        # declarations only let a model fill properties the schema names, so a
+        # free-form `{"type": "object"}` with no properties has no fields to
+        # write and always comes back as `{}`. A JSON string carries arbitrary
+        # JSON-LD through intact; clients already parse this field either way.
         "structuredData": {
-            "type": "object",
-            "description": "JSON-LD object. Only when structured data is requested.",
+            "type": "string",
+            "description": (
+                "JSON-LD document serialized as a JSON string, e.g. "
+                '"{\\"@context\\":\\"https://schema.org\\",\\"@graph\\":[...]}". '
+                "Must parse as a JSON object. Only when structured data is "
+                "requested."
+            ),
         },
         "robots": {
             "type": "object",

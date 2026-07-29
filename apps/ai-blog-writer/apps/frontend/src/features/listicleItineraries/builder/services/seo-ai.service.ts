@@ -3,6 +3,7 @@ import {
   buildSeoAiSeed,
   getSeoAiTargetLabel,
   parseSeoAiPatch,
+  seoAiPatchCoversTarget,
   type SeoAiTarget,
 } from '../../../../shared/seo/services/seo-ai.service'
 
@@ -176,6 +177,7 @@ export {
   buildSeoAiSeed,
   getSeoAiTargetLabel,
   parseSeoAiPatch,
+  seoAiPatchCoversTarget,
 }
 
 export type { SeoAiTarget }

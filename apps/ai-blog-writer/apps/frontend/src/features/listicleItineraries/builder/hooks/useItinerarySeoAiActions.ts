@@ -12,6 +12,7 @@ import {
   buildSeoAiSeed,
   getSeoAiTargetLabel,
   parseSeoAiPatch,
+  seoAiPatchCoversTarget,
   type SeoAiTarget
 } from '../services/seo-ai.service'
 import type { ItineraryBuilderAiActionsParams } from './itineraryBuilderAiActions.types'
@@ -78,6 +79,17 @@ export function useItinerarySeoAiActions({
         }
 
         const seoPatch = parseSeoAiPatch(JSON.stringify(response.seo_patch))
+        // The "all" target below drops structuredData on purpose (the template
+        // owns it), so it cannot count towards this patch having done anything.
+        const appliedPatch = target === 'all'
+          ? { ...seoPatch, structuredData: undefined }
+          : seoPatch
+        if (!seoAiPatchCoversTarget(appliedPatch, target)) {
+          throw new Error(
+            `AI returned no usable ${getSeoAiTargetLabel(target)}. Nothing was changed — try again.`
+          )
+        }
+
         setDraft((current) => {
           if (!current) return current
           const patchedSeo = applySeoAiPatch(

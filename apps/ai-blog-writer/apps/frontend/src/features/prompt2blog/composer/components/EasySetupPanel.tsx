@@ -190,6 +190,12 @@ export function EasySetupPanel({
             Applied {appliedCount} fields to the form below.
           </p>
         )}
+        {review?.direction && (
+          <div className="p2b-import-direction">
+            <span className="p2b-import-direction-label">Direction</span>
+            <p>{review.direction}</p>
+          </div>
+        )}
         {review !== null && review.issues.length > 0 && (
           <div className="p2b-import-report p2b-import-report--blocked">
             <p className="p2b-import-report-title">

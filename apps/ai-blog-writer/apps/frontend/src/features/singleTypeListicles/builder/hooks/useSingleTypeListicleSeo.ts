@@ -17,6 +17,7 @@ import {
   buildSeoAiSeed,
   getSeoAiTargetLabel,
   parseSeoAiPatch,
+  seoAiPatchCoversTarget,
 } from '../services/seo-ai.service'
 import type { SeoAiTarget } from '../services/seo-ai.service'
 import { validateOgSocialImageFile } from '../services/seo-social-image-upload.service'
@@ -88,6 +89,12 @@ export function useSingleTypeListicleSeo({
       }
 
       const seoPatch = parseSeoAiPatch(JSON.stringify(response.seo_patch))
+      if (!seoAiPatchCoversTarget(seoPatch, target)) {
+        throw new Error(
+          `AI returned no usable ${getSeoAiTargetLabel(target)}. Nothing was changed — try again.`,
+        )
+      }
+
       setDraft((current) => {
         if (!current) return current
         return {

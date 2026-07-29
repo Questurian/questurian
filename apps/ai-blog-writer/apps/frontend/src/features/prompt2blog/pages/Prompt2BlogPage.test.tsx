@@ -310,6 +310,7 @@ describe('Prompt2BlogPage', () => {
     await screen.findByRole('option', { name: 'Destination Guide' })
 
     const approved = JSON.stringify({
+      direction: 'A routing piece for a reader who loses their weekend to transit.',
       title: 'A Weekend in Lisbon',
       location: 'Lisbon, Portugal',
       article_type: 'Itinerary Article',
@@ -340,6 +341,8 @@ describe('Prompt2BlogPage', () => {
     expect(screen.getByText('Every value matches the loaded options. Review and apply.'))
       .toBeInTheDocument()
     expect(screen.getByText('Itinerary Article (id 9)')).toBeInTheDocument()
+    expect(screen.getByText('A routing piece for a reader who loses their weekend to transit.'))
+      .toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Apply to form' }))
 
