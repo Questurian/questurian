@@ -32,9 +32,9 @@ A buyer’s guide helps readers understand **what matters when choosing between 
 - **Comparisons or competitor snapshots:** Short comparisons to alternative solutions or approaches can increase trust as long as they remain neutral.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
-- The transcript only lists product features without explaining **why those features matter** or how to evaluate them.
+- The source material only lists product features without explaining **why those features matter** or how to evaluate them.
     
 - No clear problem definition or context is provided; readers wouldn’t know whether the guide addresses their needs.
     

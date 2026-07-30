@@ -34,9 +34,9 @@ A cost breakdown article **transparently details prices or budgets** so readers 
 - **Market trends:** Briefly mention how economic factors, supply shortages or technological advances might affect costs now or in the future.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
-- The transcript provides only a lump sum cost without breaking down components.
+- The source material provides only a lump sum cost without breaking down components.
     
 - Major cost drivers are unexplained; readers can’t tell why prices are high or low.
     

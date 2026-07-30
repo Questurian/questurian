@@ -39,13 +39,13 @@
 - **Profiles of luxury travel advisors or services** – Explain how experts handle details, including documentation, insurance and pre‑travel checklists.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - There is no mention of high‑end accommodations, premium transport or exclusive experiences; the content reads like a general travel guide.
     
 - Personalization, themes or unique amenities are absent; travellers would not know how luxury differs from standard travel.
     
-- No booking or planning advice is offered; the transcript ignores early reservations or concierge services.
+- No booking or planning advice is offered; the source material ignores early reservations or concierge services.
     
 - Sustainability and community impact are not considered, making the article feel one‑dimensional.
 

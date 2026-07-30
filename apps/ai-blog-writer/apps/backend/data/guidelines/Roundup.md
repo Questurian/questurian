@@ -42,9 +42,9 @@ A roundup is a **curated overview of multiple options** within a product or serv
 - **Data or testing notes:** Explain how products were tested or what resources were consulted (user forums, customer reviews, professional ratings).
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
-- The transcript only mentions one or two options, leaving no room for comparison.
+- The source material only mentions one or two options, leaving no room for comparison.
     
 - Selection criteria are not explained; readers can’t tell why these products were chosen or what differentiates them.
     

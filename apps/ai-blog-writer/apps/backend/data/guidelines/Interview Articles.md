@@ -11,7 +11,7 @@
 
 - **Introduction and context:** An interview article must introduce the interviewee, explaining their background and relevance. Provide context about why the conversation is worth reading and what the reader will gain.
     
-- **Organised themes:** Rather than dumping a transcript, the article should be segmented by themes or subjects discussed. This helps readers follow the narrative and find the parts most relevant to them.
+- **Organised themes:** Rather than dumping the source material, the article should be segmented by themes or subjects discussed. This helps readers follow the narrative and find the parts most relevant to them.
     
 - **Clear Q&A or narrative:** Present questions and answers in a manner that preserves clarity. This can be a direct Q&A format or a paraphrased narrative interspersed with quotes.
     
@@ -37,9 +37,9 @@
 - **Humour and personality:** Brafton encourages starting with a hook and using a conversational tone; sprinkling in personality and anecdotes can make the piece more engaging.
 
 
-**Signs the Transcript Is Insufficient**
+**Signs the Source Material Is Insufficient**
 
-- **Lack of interview structure:** If the transcript is a monologue or a scattered conversation without identifiable questions and answers, it may be hard to craft an interview article.
+- **Lack of interview structure:** If the source material is a monologue or a scattered conversation without identifiable questions and answers, it may be hard to craft an interview article.
     
 - **Superficial answers:** Short, non‑substantive responses yield little to write about. If the interviewee doesn't elaborate, there may not be enough material to explore.
     

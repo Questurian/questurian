@@ -18,7 +18,7 @@
     
 - **Planning and navigation skills.** It should cover how to research neighbourhoods, choose safe accommodation and navigate transport systems alone; many guides emphasise that solo travellers should prioritize convenience over saving a few dollars and use taxis or rideshare when appropriate.
     
-- **Cultural awareness and etiquette.** The transcript should mention respecting local customs, dressing appropriately and being sensitive to local norms; this helps solo travellers avoid unwanted attention.
+- **Cultural awareness and etiquette.** The source material should mention respecting local customs, dressing appropriately and being sensitive to local norms; this helps solo travellers avoid unwanted attention.
     
 - **Self‑care and confidence.** Include tips on managing loneliness, connecting with other travellers, knowing when to share travel plans with friends/family, and being mindful of social media posts.
 
@@ -32,11 +32,11 @@
 - Ideas for meeting locals or joining group tours to balance independence and social experiences.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Safety advice is superficial or absent; no mention of common risks, anti‑theft gear, or situational awareness.
     
-- The transcript focuses only on a destination without addressing solo‑specific needs (e.g., how to meet people or get around alone).
+- The source material focuses only on a destination without addressing solo‑specific needs (e.g., how to meet people or get around alone).
     
 - Essential gear like adapters, power banks, emergency contacts or first‑aid supplies is missing.
     
@@ -49,4 +49,4 @@
     
 - Tone can range from inspirational to practical, but must remain grounded and non‑patronizing. Humour or personality is welcome if it doesn't undermine safety advice.
     
-- Writers may prioritise certain gear or strategies based on the transcript's focus (urban vs. rural travel, budget vs. luxury), but should always convey core safety and preparedness themes.
+- Writers may prioritise certain gear or strategies based on the source material's focus (urban vs. rural travel, budget vs. luxury), but should always convey core safety and preparedness themes.

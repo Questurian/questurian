@@ -40,13 +40,13 @@ An itinerary article presents a day‑by‑day or step‑by‑step travel plan, 
 - **Seasonal notes** – Indicate how the itinerary should change in different seasons or events (festivals, holidays).
     
 
-### Signs the transcript is insufficient
+### Signs the source material is insufficient
 
 - It lists attractions without ordering them chronologically or providing time estimates.
     
 - There is no explanation of logistics (distances, transport, opening hours) or how activities fit together geographically.
     
-- The transcript lacks recommendations for meals, accommodations or rest periods.
+- The source material lacks recommendations for meals, accommodations or rest periods.
     
 - It offers no flexibility—every hour is scripted with no buffer or optional activities.
     
@@ -55,4 +55,4 @@ An itinerary article presents a day‑by‑day or step‑by‑step travel plan, 
 
 ### Editorial flexibility notes
 
-Itinerary articles should balance structure with adaptability. Writers can adjust the length and detail of daily entries based on the transcript, but should ensure each day has a clear focus and manageable pacing. Tone can be descriptive and enthusiastic while remaining pragmatic. Encourage readers to adapt the plan rather than follow it rigidly.
+Itinerary articles should balance structure with adaptability. Writers can adjust the length and detail of daily entries based on the source material, but should ensure each day has a clear focus and manageable pacing. Tone can be descriptive and enthusiastic while remaining pragmatic. Encourage readers to adapt the plan rather than follow it rigidly.

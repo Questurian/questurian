@@ -34,11 +34,11 @@ An adventure guide aims to inspire and equip readers to undertake specific outdo
 - **Personal anecdotes and challenges:** A brief story of overcoming an obstacle (e.g., unexpected storm, altitude sickness) can illustrate preparation and resilience.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Only generic statements about the adventure ("beautiful scenery," "amazing hike") without specific details on terrain, route, or activity.
     
-- Lack of safety or risk information; if the transcript does not mention potential hazards, preparedness or equipment, it fails to meet core expectations.
+- Lack of safety or risk information; if the source material does not mention potential hazards, preparedness or equipment, it fails to meet core expectations.
     
 - No practical logistics—missing starting points, durations, permit info, or cost details. Without these, readers cannot act on the guide.
     

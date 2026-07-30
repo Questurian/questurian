@@ -40,9 +40,9 @@ A “best of” article curates the **top recommendations** in a category. Reade
 - **Quotes or anecdotes:** Use brief quotes from experts or users for colour.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
-- The transcript doesn’t cover enough distinct items or only lists names without context.
+- The source material doesn’t cover enough distinct items or only lists names without context.
     
 - No criteria or rationale for ranking; the “best” claims are unsubstantiated.
     

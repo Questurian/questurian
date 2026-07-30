@@ -9,11 +9,11 @@
 
 **Core Content Expectations**
 
-- **Defined goal:** The transcript should make the objective explicit (what the reader will achieve and why it's valuable). Without a clear end‑point, a process becomes meaningless.
+- **Defined goal:** The source material should make the objective explicit (what the reader will achieve and why it's valuable). Without a clear end‑point, a process becomes meaningless.
     
 - **Audience awareness:** Good guides consider who the instructions are for and adapt explanations accordingly. Indeed's editorial team notes that understanding the target audience – age, background and prior knowledge – influences language and the complexity of steps.
     
-- **Step‑by‑step process:** The core of a how‑to guide is a sequence of actions ordered logically. Each step should contain **only one task**, and the transcript should distinguish one step from the next. Clarity is essential; if multiple actions are lumped together, the process becomes confusing.
+- **Step‑by‑step process:** The core of a how‑to guide is a sequence of actions ordered logically. Each step should contain **only one task**, and the source material should distinguish one step from the next. Clarity is essential; if multiple actions are lumped together, the process becomes confusing.
     
 - **Actionable instructions:** Steps must be stated with clear verbs and direct, active language. Describing what to click or do in the imperative helps the reader follow along. Vague directions ("do some research") should be replaced with specific tasks ("access online resources such as search engines and training videos to conduct research").
     
@@ -35,15 +35,15 @@
 - **Related safety or ethical considerations:** For tasks involving risks, include warnings and best‑practice guidelines.
 
 
-**Signs the Transcript Is Insufficient**
+**Signs the Source Material Is Insufficient**
 
-- **Missing or incomplete steps:** If the transcript mentions a desired outcome without outlining the process, the guide cannot be built. Similarly, if steps are described vaguely ("just fix it") or large leaps are implied, the transcript lacks needed detail.
+- **Missing or incomplete steps:** If the source material mentions a desired outcome without outlining the process, the guide cannot be built. Similarly, if steps are described vaguely ("just fix it") or large leaps are implied, the source material lacks needed detail.
     
 - **No audience context or prerequisites:** A guide that assumes prior knowledge without stating prerequisites, or uses jargon inappropriate for beginners, will not succeed.
     
 - **Lack of outcome verification:** If there's no way for the reader to check success or troubleshoot problems, the guide may leave readers stuck.
     
-- **Excessive repetition or filler:** A transcript that meanders without moving through the process will require significant editing to create a coherent guide.
+- **Excessive repetition or filler:** Source material that meanders without moving through the process will require significant editing to create a coherent guide.
 
 
 **Editorial Flexibility Notes**

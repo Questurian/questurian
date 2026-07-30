@@ -33,7 +33,7 @@
 - Creative metaphors or literary devices to heighten the prose.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Flat description of events without sensory or emotional depth.
     
@@ -50,7 +50,7 @@
 
 - Embrace individuality: voice and structure can vary widely; the goal is authenticity and engagement.
     
-- The pace can shift—linger on one scene or flit through several—depending on transcript richness.
+- The pace can shift—linger on one scene or flit through several—depending on source material richness.
     
 - Balance inspiration with accuracy; creative embellishment should stay grounded in real observations.
     

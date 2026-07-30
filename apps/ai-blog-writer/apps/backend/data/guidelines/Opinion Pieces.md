@@ -37,13 +37,13 @@
 - **Multimedia elements:** In digital formats, embedded videos or audio clips can enhance persuasion.
 
 
-**Signs the Transcript Is Insufficient**
+**Signs the Source Material Is Insufficient**
 
-- **No clear thesis or stance:** If the transcript meanders without taking a position, there is no backbone for an opinion piece.
+- **No clear thesis or stance:** If the source material meanders without taking a position, there is no backbone for an opinion piece.
     
 - **Lack of evidence or reasoning:** Unsupported assertions or purely emotional rhetoric will weaken credibility.
     
-- **Absence of personal voice:** If the transcript is written like a news report, lacking personal perspective, the piece will feel generic.
+- **Absence of personal voice:** If the source material is written like a news report, lacking personal perspective, the piece will feel generic.
     
 - **No call to action or conclusion:** A rant without resolution or guidance will leave readers unsatisfied.
 

@@ -38,9 +38,9 @@ A review evaluates a single product, service or place in depth to help readers d
 - **Discussion of sustainability or ethics:** If relevant, include information on environmental impact, labour practices or social considerations.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
-- The transcript lacks first‑hand observations—no descriptions of how the product performs, feels or fits into daily life.
+- The source material lacks first‑hand observations—no descriptions of how the product performs, feels or fits into daily life.
     
 - No quantitative data or metrics are presented; performance claims are vague.
     

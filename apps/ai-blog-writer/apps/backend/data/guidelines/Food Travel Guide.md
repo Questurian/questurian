@@ -30,11 +30,11 @@ A food travel guide exists to transport readers into the culinary heart of a des
 - **Sustainability and ethics:** Address responsible tourism by suggesting eco‑friendly eateries, fair‑trade markets or cultural sensitivity (e.g., proper tipping, respectful photography).
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Only a list of dishes or restaurants without descriptive context or narrative—readers need more than names and must know why each dish matters.
     
-- Lack of sensory detail; if the transcript never describes flavors, textures, aromas or ambiance, the article will feel flat.
+- Lack of sensory detail; if the source material never describes flavors, textures, aromas or ambiance, the article will feel flat.
     
 - Missing cultural or historical context; without explaining why the food is important locally, the guide becomes superficial.
     
@@ -42,7 +42,7 @@ A food travel guide exists to transport readers into the culinary heart of a des
     
 - Overuse of travel clichés (e.g., "mouth‑watering", "hidden gem") without unique descriptions.
     
-- Transcript is repetitive or filler (e.g., long asides unrelated to food) that do not advance the culinary narrative.
+- Source material is repetitive or filler (e.g., long asides unrelated to food) that do not advance the culinary narrative.
     
 
 ### Editorial Flexibility Notes

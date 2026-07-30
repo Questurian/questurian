@@ -26,7 +26,7 @@ A beginner’s guide introduces a subject to readers who have little or no prior
 - **Links to further resources:** Point readers to reputable tutorials, books, or websites for continued learning. If external research is incorporated, clearly cite it.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Missing explanations of basic terms or processes; jargon or acronyms are used without definition.
     

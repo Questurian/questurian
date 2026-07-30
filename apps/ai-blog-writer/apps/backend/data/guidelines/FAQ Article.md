@@ -26,7 +26,7 @@ A FAQ article compiles short, direct answers to common questions about a single 
 - **Contextual notes:** Where needed, add brief contextual statements explaining why a question arises (e.g., after a software update or feature change).
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Few or no questions posed; conversation lacks clear Q&A structure or repeated inquiries.
     
@@ -34,7 +34,7 @@ A FAQ article compiles short, direct answers to common questions about a single 
     
 - The order of questions feels random, causing confusion.
     
-- The transcript repeats the same question without adding new information, indicating a lack of variety in inquiries.
+- The source material repeats the same question without adding new information, indicating a lack of variety in inquiries.
     
 - No references to sources or further reading when the topic clearly demands more depth.
     

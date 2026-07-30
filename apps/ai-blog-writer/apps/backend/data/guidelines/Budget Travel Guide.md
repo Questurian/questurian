@@ -33,7 +33,7 @@
 - **Personal anecdotes** – Share your own money‑saving wins or mistakes to add authenticity.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - It lacks specific numbers or price ranges; readers can't gauge what things cost.
     
