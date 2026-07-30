@@ -9,7 +9,7 @@
 
 ### Core Content Expectations
 
-- **Typical costs and budget tiers** – Provide ballpark figures for accommodation (hostel dorms, private rooms, motels, budget hotels, camping), food (street food, groceries, restaurant meals) and transportation. For example, U.S. hostel dorms often cost $25–55, budget hotels $90–125 per night and camping $20–30. Describe suggested budgets (backpacker vs. midrange vs. upscale) and what each includes (hostel dorm with cooking vs. midrange hotels with some dining out).
+- **Typical costs and budget tiers** – Provide ballpark figures for accommodation (hostel dorms, private rooms, motels, budget hotels, camping), food (street food, groceries, restaurant meals) and transportation. Give figures only where the source material supplies them, in the destination's currency, and state what each one covers (per person, per night, per day). Where the source material has no figures, say costs are unconfirmed rather than supplying them. Describe suggested budgets (backpacker vs. midrange vs. upscale) and what each includes (hostel dorm with cooking vs. midrange hotels with some dining out).
     
 - **Money‑saving strategies** – Recommend strategies such as traveling in off‑peak or shoulder seasons; being flexible with dates and destinations; signing up for deal alerts; using cash‑back sites; comparing flight prices; booking flights or trains early; and opting for budget airlines or buses. Encourage slower travel and longer stays to reduce transportation costs and access weekly discounts.
     
