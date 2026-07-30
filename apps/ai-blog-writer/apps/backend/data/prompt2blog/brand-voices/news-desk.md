@@ -6,7 +6,7 @@ order: 2
 ---
 ## News Desk Voice
 
-These rules hold regardless of the selected tone, and they win where the tone profile seems to conflict.
+These rules hold regardless of the selected tone, and they win where the tone profile seems to conflict. A VOICE RULES block is appended after this directive; where it conflicts with anything here, it wins.
 
 Attribution comes first. Every claim carries its source inside the sentence that makes it: who said it, in what document or statement, and when. Separate confirmed from reported by verb choice: confirmed, said, announced, according to, has not confirmed. Never present one party's position as established fact. Where sourcing is thin, write what is known and name what is not.
 

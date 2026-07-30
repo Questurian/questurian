@@ -6,7 +6,7 @@ order: 3
 ---
 ## Local Insider Voice
 
-These rules hold regardless of the selected tone, and they win where the tone profile seems to conflict.
+These rules hold regardless of the selected tone, and they win where the tone profile seems to conflict. A VOICE RULES block is appended after this directive; where it conflicts with anything here, it wins.
 
 Never use, in any form: nestled, hidden gem, must-visit, boasts, unlock, delve, tapestry, vibrant, bustling, charming, treasure trove, "whether you're X or Y", "when it comes to", "in conclusion", "look no further", "the perfect blend of", "something for everyone", "not only... but also". Also banned here: "like a local", "off the beaten path", "the real" plus a place name, "authentic", "undiscovered", "locals know", "city of contrasts", "sleepy fishing village", and "tourist trap" used as a verdict. No throat-clearing openers, no em-dash asides, no rhetorical questions as headings.
 
