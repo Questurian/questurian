@@ -16,7 +16,7 @@
         
     - If referencing a list of locations, indicate the purpose (“5 Destinations to Skip in 2026 for Sustainable Travel”).
         
-    - Limit the title to ~60–70 characters; longer explanations can go in the sub‑headline.
+    - Limit the title to under 60 characters; longer explanations can go in the sub‑headline.
         
     - Use title case and avoid abbreviations or slang.
         
@@ -88,7 +88,7 @@
         
     - Are any claims in the title supported by verified facts within the article?
         
-    - Is the title within 60–70 characters and easily scannable?
+    - Is the title under 60 characters and easily scannable?
         
     - Does the title uphold editorial standards of honesty, accuracy and integrity?
         

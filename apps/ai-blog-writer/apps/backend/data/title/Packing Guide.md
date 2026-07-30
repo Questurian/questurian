@@ -20,7 +20,7 @@
         
     - Use parentheses or brackets to add clarifying details or benefits (e.g., “carry‑on only,” “weather‑proof gear”).
         
-    - Keep the title concise (under 12–15 words) and make sure it stands alone.
+    - Keep the title concise (roughly 8–10 words) and make sure it stands alone.
         
     - Use sentence case; capitalize only the first word and proper nouns.
         

@@ -10,7 +10,7 @@
         
     - Avoid beginning with “How to”; instead, weave the “how” element into the action (“Plan a Budget Trip in 5 Steps”).
         
-    - Keep titles short—ideally fewer than 10–12 words—and summarise the guide’s scope in one sentence.
+    - Keep titles short—ideally 8–10 words—and summarise the guide’s scope in one sentence.
         
     - Use the active voice and avoid gerunds (“planning,” “organizing”); choose verbs in imperative form.
         
@@ -94,7 +94,7 @@
     
     - Does the title state the subject and action clearly without starting with “How to”?
         
-    - Is it concise (≤10–12 words) and free of filler?
+    - Is it concise (8–10 words) and free of filler?
         
     - Are active verbs in imperative form used instead of gerunds?
         

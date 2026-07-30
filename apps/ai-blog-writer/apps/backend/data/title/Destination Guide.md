@@ -14,7 +14,7 @@
         
     - Include numeric hooks where appropriate (e.g., “10 Best Things to Do…”), but avoid using numbers for the sake of clickbait.
         
-    - Keep titles under ~60–65 characters to ensure they display fully in search results.
+    - Keep titles under 60 characters to ensure they display fully in search results.
         
     - Use title case (capitalising main words); omit unnecessary articles and punctuation per headline style conventions.
         
@@ -82,7 +82,7 @@
         
     - Are strong, specific verbs used instead of vague descriptors?
         
-    - Is the length appropriate for search display (≤65 characters)?
+    - Is the length appropriate for search display (under 60 characters)?
         
     - Have you avoided clickbait and sensationalism while still offering a compelling hook?
         

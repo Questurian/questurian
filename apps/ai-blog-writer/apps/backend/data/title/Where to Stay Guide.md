@@ -12,7 +12,7 @@
         
     - Incorporate categories (e.g., “Family, Budget & Luxury”) when the article segments recommendations; use commas or a colon for separation.
         
-    - Keep the headline within 70–90 characters and roughly eight to ten words for readability.
+    - Keep the headline under 60 characters and roughly 8–10 words for readability.
         
     - Front‑load the destination and key terms (“Stay,” “Best Areas”) for SEO.
         

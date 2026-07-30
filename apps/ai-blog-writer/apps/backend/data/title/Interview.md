@@ -10,7 +10,7 @@
         
     - State the core topic or insight gained from the conversation; use a colon or dash to separate subject from theme.
         
-    - Keep titles succinct (about 8–12 words) while conveying the promise of the discussion.
+    - Keep titles succinct (about 8–10 words) while conveying the promise of the discussion.
         
     - Use present tense and active verbs like “discusses,” “reveals,” or “shares.”
         

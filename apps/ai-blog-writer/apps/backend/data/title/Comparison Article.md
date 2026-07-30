@@ -14,7 +14,7 @@
         
     - Maintain parity between the compared items; don’t favour one with adjectives in the title.
         
-    - Limit the title to around 60–70 characters; ensure both names are fully visible in search results.
+    - Limit the title to under 60 characters; ensure both names are fully visible in search results.
         
     - Avoid adding unnecessary modifiers that obscure the comparison.
         
@@ -98,7 +98,7 @@
         
     - Have you included the main decision factor or context to guide the reader?
         
-    - Is the title concise (around 60–70 characters) and scannable?
+    - Is the title concise (under 60 characters) and scannable?
         
     - Does it reflect how users search for comparison information (e.g., “X vs Y”)?
         

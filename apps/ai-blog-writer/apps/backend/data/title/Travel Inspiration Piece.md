@@ -10,7 +10,7 @@
         
     - Use numbers, if appropriate, to structure the content (“7 Epic Road Trips”) but avoid inflated lists that promise more than delivered.
         
-    - Front‑load important keywords and keep titles within 70–90 characters.
+    - Front‑load important keywords and keep titles under 60 characters.
         
     - Use adjectives sparingly; choose specific, evocative words over generic clichés.
         
@@ -100,7 +100,7 @@
     
     - Does the title evoke curiosity and inspiration while clearly indicating the destination or theme?
         
-    - Is the headline concise and within ~90 characters, with keywords front‑loaded?
+    - Is the headline concise and under 60 characters, with keywords front‑loaded?
         
     - Have you avoided clichés and hyperbolic adjectives?
         

@@ -16,7 +16,7 @@
         
     - Avoid excessive modifiers; let the inherent story provide the intrigue.
         
-    - Keep titles under 12 words; shorten by removing unnecessary articles and conjunctions.
+    - Keep titles to roughly 8–10 words; shorten by removing unnecessary articles and conjunctions.
         
     - Use present tense to convey immediacy and relevance.
         

@@ -12,7 +12,7 @@
         
     - Use “Step‑by‑Step” or “Everything You Need to Know” to promise thoroughness when justified.
         
-    - Keep titles concise (70–90 characters) and front‑load keywords such as the country name and “Visa”.
+    - Keep titles concise (under 60 characters) and front‑load keywords such as the country name and “Visa”.
         
     - Use numerals for years, fees or step counts; abbreviate months when mentioning deadlines.
         
@@ -102,7 +102,7 @@
     
     - Does the title clearly state the country and the focus on visa or entry rules?
         
-    - Is the headline concise and within ~90 characters, with key terms front‑loaded?
+    - Is the headline concise and under 60 characters, with key terms front‑loaded?
         
     - Does it avoid unnecessary articles, conjunctions and verbs, adhering to downstyle?
         

@@ -10,7 +10,7 @@
         
     - Use a subtitle or secondary phrase to highlight the focus on respect, customs, or travel tips (“Respectful Travel in [Place]”).
         
-    - Keep the title under about 70 characters to ensure full display in search results.
+    - Keep the title under 60 characters to ensure full display in search results.
         
     - Use descriptive adjectives such as “Essential,” “Respectful,” “Comprehensive,” or “Insider” to indicate value.
         
@@ -98,7 +98,7 @@
         
     - Is the tone respectful, free of stereotypes and sensationalism?
         
-    - Is the title concise (under 70 characters) and informative?
+    - Is the title concise (under 60 characters) and informative?
         
     - Have you included a subtitle or phrase that highlights respect or key customs?
         

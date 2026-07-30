@@ -12,7 +12,7 @@
         
     - Clearly state the subject and the analytical angle; a colon or dash can separate the main topic from the specific focus (e.g., “Climate Policy: Assessing the Impact on Urban Economies”).
         
-    - Keep titles concise—ideally within 50–60 characters but long enough to be specific.
+    - Keep titles concise—ideally under 60 characters but long enough to be specific.
         
     - Use present tense and active voice for relevance and immediacy.
         
@@ -76,7 +76,7 @@
         
     - Are the main keywords or topic front‑loaded for SEO and clarity?
         
-    - Is the title within 50–60 characters and free of jargon or acronyms?
+    - Is the title under 60 characters and free of jargon or acronyms?
         
     - Does it avoid clickbait, puns and overpromising?
         

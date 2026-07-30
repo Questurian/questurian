@@ -16,7 +16,7 @@ Readers are adventurous yet cautious, often seeking self‑discovery, independen
     
 - Use adjectives that emphasise personal growth and confidence (e.g., “empowering,” “stress‑free,” “safe”).
     
-- Keep within approximately 11 words or 65 characters; include numerals when listing tips.
+- Keep within approximately 8–10 words or under 60 characters; include numerals when listing tips.
     
 - Use active, positive voice; avoid negative phrasing and filler articles.
     

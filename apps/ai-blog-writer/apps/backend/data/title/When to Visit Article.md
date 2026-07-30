@@ -12,7 +12,7 @@
         
     - If relevant, include the year or range (e.g., “in 2026”) to indicate updated information; avoid unnecessary dates if content is evergreen.
         
-    - Keep titles concise, ideally within eight to ten words and under 90 characters.
+    - Keep titles concise, ideally within 8–10 words and under 60 characters.
         
     - Use numerals for months or seasons when summarizing (“Spring vs. Fall”) and abbreviate months where space is tight.
         
@@ -102,7 +102,7 @@
     
     - Does the title explicitly state it’s about timing for a specific destination?
         
-    - Is the headline concise (under ~90 characters) with primary keywords front‑loaded?
+    - Is the headline concise (under 60 characters) with primary keywords front‑loaded?
         
     - Have you included relevant seasonal descriptors or events to provide context?
         

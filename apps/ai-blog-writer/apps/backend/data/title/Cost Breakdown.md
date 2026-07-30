@@ -8,7 +8,7 @@
     
     - Mirror the core cost question people type into search engines (“How Much Does [X] Cost?”).
         
-    - Keep the title under about 70 characters so it isn’t truncated on search results.
+    - Keep the title under 60 characters so it isn’t truncated on search results.
         
     - Start with the exact query, then use a colon or dash to add context (“Factors, Considerations & Examples”).
         
@@ -92,7 +92,7 @@
     
     - Does the title mirror the exact cost question searchers ask (“How much does X cost?”)?
         
-    - Is the title under 70 characters and free of unnecessary filler?
+    - Is the title under 60 characters and free of unnecessary filler?
         
     - Have you added a succinct secondary phrase to preview the article’s scope (factors, examples)?
         

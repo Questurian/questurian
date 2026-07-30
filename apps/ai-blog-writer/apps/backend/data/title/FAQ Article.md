@@ -14,7 +14,7 @@
         
     - When the article addresses a specific number of questions, include that number only if it is meaningful (“Top 10 FAQs About…”). Avoid arbitrarily adding numbers to fabricate curiosity.
         
-    - Keep titles concise and scannable (~60–65 characters); avoid overcrowding with keywords.
+    - Keep titles concise and scannable (under 60 characters); avoid overcrowding with keywords.
         
     - Use capitalisation consistently and avoid unnecessary punctuation.
         
@@ -84,7 +84,7 @@
         
     - Are keywords integrated naturally and appropriately for search engines?
         
-    - Is the length concise and readable (≤65 characters)?
+    - Is the length concise and readable (under 60 characters)?
         
     - Have you avoided unnecessary numbers or exaggerated claims?
         

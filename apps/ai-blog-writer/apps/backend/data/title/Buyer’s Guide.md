@@ -20,7 +20,7 @@
         
     - Highlight important differentiators (“Affordable,” “Premium,” “Eco‑Friendly”) only when the article specifically compares based on those attributes.
         
-    - Keep titles between 8–14 words; avoid extraneous adjectives or industry jargon.
+    - Keep titles between 8–10 words; avoid extraneous adjectives or industry jargon.
         
     - Include the publication year when products evolve rapidly (technology, vehicles) to emphasise currency.
         
@@ -130,7 +130,7 @@
         
     - Are there no clichés, clickbait terms or vague promises?
         
-    - Is the length appropriate for SEO and social sharing (8–14 words)?
+    - Is the length appropriate for SEO and social sharing (8–10 words)?
         
     - Has the title been reviewed by editors, SEO specialists and compliance/legal teams as needed?
         

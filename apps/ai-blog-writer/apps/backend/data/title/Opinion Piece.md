@@ -16,7 +16,7 @@
         
     - Use a colon to add context or clarify the argument when beneficial; capitalize the first word after the colon.
         
-    - Keep the headline concise (8–14 words) and ensure it stands alone on social feeds.
+    - Keep the headline concise (8–10 words) and ensure it stands alone on social feeds.
         
     - Use sentence case; capitalize only the first word and proper nouns.
         

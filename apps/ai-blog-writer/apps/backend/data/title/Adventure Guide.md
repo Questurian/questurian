@@ -16,7 +16,7 @@
         
     - Include a clear subject (mountain, trail, island, region) and what makes it noteworthy, such as difficulty level, unique features or cultural context.
         
-    - Keep titles concise (8–14 words) and in title case; capitalize only the first word and proper nouns.
+    - Keep titles concise (8–10 words) and in title case; capitalize only the first word and proper nouns.
         
     - Use active voice for immediacy and clarity.
         
