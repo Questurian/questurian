@@ -55,5 +55,3 @@
 - The structure need not be linear; thematic grouping or reverse‑chronological order can work if it enhances clarity.
     
 - Writers should feel free to adjust question order, combine related answers or omit irrelevant exchanges to improve flow, provided quotes remain accurate.
-    
-- Tone may range from formal to conversational depending on the publication and subject. Keeping a conversational tone and letting personality shine can engage readers.

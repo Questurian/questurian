@@ -46,6 +46,4 @@
 
 - Writers should adapt destination examples to suit the source material's focus, but should always highlight age‑appropriate considerations.
     
-- Tone can be conversational and empathetic, acknowledging the chaos of family travel while offering constructive solutions.
-    
-- Personal anecdotes or humor about traveling with kids can enliven the narrative, but avoid judgmental language about parenting styles.
+- Avoid judgmental language about parenting styles.

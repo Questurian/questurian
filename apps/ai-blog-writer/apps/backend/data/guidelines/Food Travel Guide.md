@@ -47,9 +47,9 @@ A food travel guide exists to transport readers into the culinary heart of a des
 
 ### Editorial Flexibility Notes
 
-- Writers have freedom in structure—chronological journey, thematic sections (street food, fine dining), or focusing on a single dish's story. The article should not follow a rigid template but must still cover the core content.
+- Writers have freedom in structure—chronological journey, thematic sections (street food, fine dining), or focusing on a single dish's story. The article must still cover the core content.
     
-- Tone can range from personal memoir to objective guide; it should be engaging and accurate. Avoid listicles that feel promotional or formulaic.
+- The piece should be engaging and accurate. Avoid listicles that feel promotional or formulaic.
     
 - Creativity in narrative openings (anecdote, sensory hook, cultural observation) is encouraged, provided the piece remains informative and respectful.
     

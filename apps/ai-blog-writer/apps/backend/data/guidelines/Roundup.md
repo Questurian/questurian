@@ -57,4 +57,4 @@ A roundup is a **curated overview of multiple options** within a product or serv
 
 ### Editorial Flexibility Notes
 
-Roundups can range from **short lists of three to five items** to long curated guides. The writer can choose to rank entries, group them by themes or simply present them in alphabetical order. Tone may be informal and conversational or more formal depending on the publication. Including multimedia, expert quotes or charts can increase engagement. Creativity in angles—such as focusing on unexpected criteria or including contrarian picks—helps roundups stand out, but writers must always provide clear reasons for inclusion.
+The writer can choose to rank entries, group them by themes or simply present them in alphabetical order. Including multimedia, expert quotes or charts can increase engagement. Creativity in angles—such as focusing on unexpected criteria or including contrarian picks—helps roundups stand out, but writers must always provide clear reasons for inclusion.

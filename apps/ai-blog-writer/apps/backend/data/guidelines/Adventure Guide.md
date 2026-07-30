@@ -51,9 +51,9 @@ An adventure guide aims to inspire and equip readers to undertake specific outdo
 
 ### Editorial Flexibility Notes
 
-- Structure can vary: chronological narrative of the trip, segmented sections by preparation, activity and aftermath, or a thematic approach. Writers need not follow a strict formula as long as they deliver core details.
+- Structure can vary: chronological narrative of the trip, segmented sections by preparation, activity and aftermath, or a thematic approach.
     
-- Tone may range from authoritative guide to immersive storytelling. Writers can use first‑person to convey emotion or third‑person for a more journalistic feel. Regardless, clarity and accuracy are paramount.
+- Clarity and accuracy are paramount.
     
 - The level of technicality should suit the target audience. Beginners appreciate accessible explanations, while seasoned adventurers may desire more technical detail. Writers can choose their angle but must signal the intended audience.
     

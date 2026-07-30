@@ -47,6 +47,6 @@
 
 - Avoid formulaic lists; allow the narrative to flow around personal experience and expertise.
     
-- Tone can range from inspirational to practical, but must remain grounded and non‑patronizing. Humour or personality is welcome if it doesn't undermine safety advice.
+- Tone must remain grounded and non‑patronizing.
     
 - Writers may prioritise certain gear or strategies based on the source material's focus (urban vs. rural travel, budget vs. luxury), but should always convey core safety and preparedness themes.

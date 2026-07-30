@@ -43,4 +43,4 @@ Destination guides provide a comprehensive overview of a place—ranging from to
 
 ### Editorial flexibility notes
 
-Destination guides allow room for creative voice: some may be more narrative and experiential, while others are service‑oriented. Writers should adapt depth based on source material richness and intended audience—family travelers may need different details than adventure seekers. Ensure clarity by using consistent headings and avoid overloading readers with exhaustive lists; prioritize quality recommendations and provide links for deeper research.
+Ensure clarity by using consistent headings and avoid overloading readers with exhaustive lists; prioritize quality recommendations and provide links for deeper research.

@@ -43,8 +43,6 @@ Comparison articles help readers evaluate multiple options—products, services,
 
 ### Editorial Flexibility Notes
 
-- Writers may choose either point‑by‑point or block structure; they may also employ hybrid approaches that mix both.
-    
-- The tone should be neutral and informative, though injecting personality or humor is acceptable if it doesn’t compromise objectivity.
+- The tone should be neutral and informative.
     
 - The conclusion can either declare a “winner” or emphasize that the best choice depends on individual needs. Both approaches are acceptable provided reasoning is transparent.

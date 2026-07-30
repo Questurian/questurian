@@ -37,4 +37,4 @@ A checklist article provides readers with a clear, scannable list of tasks or it
 
 ### Editorial flexibility notes
 
-Checklist articles should remain concise and straightforward. Writers may vary the number of categories and depth of annotations depending on the source material. Personal anecdotes can be included briefly in the introduction but should not overwhelm the list. Structure should remain reader‑friendly with plenty of white space and clear headings to aid scanning.
+Checklist articles should remain concise and straightforward. Structure should remain reader‑friendly with plenty of white space and clear headings to aid scanning.

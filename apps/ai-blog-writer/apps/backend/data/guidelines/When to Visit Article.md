@@ -44,6 +44,6 @@
 
 ### Editorial Flexibility Notes
 
-- Writers may present the information chronologically (month by month) or by season. They can focus more on events or weather depending on destination. A conversational tone or storytelling style is acceptable as long as factual accuracy is maintained.
+- Writers may present the information chronologically (month by month) or by season. They can focus more on events or weather depending on destination.
     
 - Depth of detail should correspond to the complexity of the destination's climate. Avoid generic filler; highlight the most meaningful timing considerations.

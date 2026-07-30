@@ -47,4 +47,4 @@ A feature story tells a **compelling narrative** about people, trends or issues.
 
 ### Editorial Flexibility Notes
 
-Feature stories allow significant creative freedom. Writers may choose among various structures (kebab, accordion, pyramid, etc.) to suit the material. Language can be more descriptive and literary than in straight news. The tone may range from contemplative to humorous depending on the subject. However, accuracy and fairness are paramount; creative flourishes should not distort facts. Because features are narrative‑driven, pacing and rhythm can vary — avoid imposing a rigid template.
+Writers may choose among various structures (kebab, accordion, pyramid, etc.) to suit the material. Language can be more descriptive and literary than in straight news. However, accuracy and fairness are paramount; creative flourishes should not distort facts.

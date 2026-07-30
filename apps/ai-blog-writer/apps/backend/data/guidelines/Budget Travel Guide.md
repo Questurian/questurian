@@ -48,4 +48,4 @@
 
 - Writers may adapt cost examples to the region and currency, but should always provide concrete figures or ranges. Lists, narrative paragraphs or hybrid structures are all acceptable as long as information is clear and comprehensive.
     
-- Tone can be friendly and encouraging; humor and personal stories can make budgeting advice more engaging. The key is to maintain accuracy and avoid promising unrealistic savings.
+- Maintain accuracy and avoid promising unrealistic savings.

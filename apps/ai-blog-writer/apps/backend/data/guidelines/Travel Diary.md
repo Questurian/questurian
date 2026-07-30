@@ -44,7 +44,7 @@
 
 ### Editorial Flexibility Notes
 
-- Tone can range from humorous to introspective. Writers may choose a strictly chronological structure or group experiences thematically (e.g., food experiences, misadventures), as long as the narrative arc remains clear.
+- Writers may choose a strictly chronological structure or group experiences thematically (e.g., food experiences, misadventures), as long as the narrative arc remains clear.
     
 - Creative literary devices (metaphor, flashbacks, suspense) are welcome when they enhance rather than confuse the story.
     

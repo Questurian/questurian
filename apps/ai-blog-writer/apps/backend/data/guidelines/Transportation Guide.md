@@ -48,10 +48,8 @@
 
 ### Editorial Flexibility Notes
 
-- Order sections logically (e.g., public transit first, then alternatives), but feel free to adjust depending on the source material's strengths.
+- Order sections logically (e.g., public transit first, then alternatives).
     
-- Use a clear, instructive tone but avoid sounding like a technical manual; analogies or personal experiences can help.
-    
-- Allow for variation in depth: some modes may merit more detail if they are distinctive or confusing.
+- Use a clear, instructive tone but avoid sounding like a technical manual; analogies can help.
     
 - Avoid overloading with numbers; integrate statistics sparingly for context.

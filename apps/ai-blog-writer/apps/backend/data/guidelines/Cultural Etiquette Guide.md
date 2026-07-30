@@ -50,8 +50,6 @@
 
 - Maintain a respectful, curious tone; avoid stereotyping.
     
-- Organize content by theme or scenario rather than rigid sections; adapt to the source material's strengths.
+- Organize content by theme or scenario rather than rigid sections.
     
 - Use inclusive language that invites readers to learn rather than scold them for ignorance.
-    
-- Storytelling or personal anecdotes can illustrate customs effectively if they remain respectful and accurate.

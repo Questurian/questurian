@@ -50,7 +50,7 @@
 
 - Encourage an inviting, secret‑sharing tone; avoid elitism.
     
-- The number of gems can vary, but each should receive enough detail to intrigue readers.
+- Each gem should receive enough detail to intrigue readers.
     
 - Structure may be list‑based or narrative; choose what suits the material.
     

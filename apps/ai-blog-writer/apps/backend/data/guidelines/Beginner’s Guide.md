@@ -41,8 +41,8 @@ A beginner’s guide introduces a subject to readers who have little or no prior
 
 ### Editorial Flexibility Notes
 
-- Tone can range from friendly and conversational to more formal, depending on the audience, but should always be encouraging and non‑patronizing.
+- Tone should always be encouraging and non‑patronizing.
     
-- Structure does not need to follow a rigid template; narrative storytelling, Q&A format or step‑by‑step lists are all acceptable if they support clarity.
+- Narrative storytelling, Q&A format or step‑by‑step lists are all acceptable if they support clarity.
     
-- Writers may incorporate personal anecdotes or analogies to engage readers, provided they serve the instructional purpose.
+- Writers may incorporate analogies to engage readers, provided they serve the instructional purpose.
