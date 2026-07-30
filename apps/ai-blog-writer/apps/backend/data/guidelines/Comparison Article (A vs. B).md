@@ -23,7 +23,7 @@ Comparison articles help readers evaluate multiple options—products, services,
     
 - **User scenarios or case studies:** Illustrate how different users might experience each option, which helps readers envision their own use case.
     
-- **Visual aids:** Tables or charts comparing features side‑by‑side can enhance comprehension.
+- **Comparison tables:** A table comparing features side‑by‑side can enhance comprehension.
     
 - **Expert or user quotes:** Credible testimonials can add nuance to the evaluation, provided sources are cited.
     

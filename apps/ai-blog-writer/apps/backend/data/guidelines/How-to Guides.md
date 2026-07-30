@@ -26,7 +26,7 @@
 
 **Optional Enhancing Elements**
 
-- **Visuals and examples:** Screenshots, diagrams or brief anecdotes make abstract instructions concrete. ClickHelp's tutorial recommends incorporating visuals to improve comprehension, and Indeed notes that examples help readers connect instructions to real situations.
+- **Examples:** Brief anecdotes make abstract instructions concrete. Indeed notes that examples help readers connect instructions to real situations.
     
 - **Background context:** A short explanation of why the task matters can motivate readers and provide perspective.
     

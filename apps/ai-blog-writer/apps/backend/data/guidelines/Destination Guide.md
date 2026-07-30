@@ -19,7 +19,7 @@ Destination guides provide a comprehensive overview of a place—ranging from to
 
 ### Optional enhancing elements
 
-- **Maps and itineraries** – Embed a simple map or suggest sample routes to help readers visualize where things are located.
+- **Sample itineraries** – Suggest sample routes to help readers visualize where things are located.
     
 - **Historical or cultural background** – Brief history or context about the destination's development, traditions or local customs.
     
@@ -43,4 +43,4 @@ Destination guides provide a comprehensive overview of a place—ranging from to
 
 ### Editorial flexibility notes
 
-Ensure clarity by using consistent headings and avoid overloading readers with exhaustive lists; prioritize quality recommendations and provide links for deeper research.
+Ensure clarity by using consistent headings and avoid overloading readers with exhaustive lists; prioritize quality recommendations.

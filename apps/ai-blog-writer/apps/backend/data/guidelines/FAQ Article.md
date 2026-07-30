@@ -8,13 +8,13 @@ A FAQ article compiles short, direct answers to common questions about a single 
 
 - **List of relevant questions:** Identify the most frequently asked questions through user feedback, support tickets or community forums.
     
-- **Concise answers:** Provide clear, to‑the‑point responses. If a question requires extensive detail, link to a more comprehensive resource instead of overloading the answer.
+- **Concise answers:** Provide clear, to‑the‑point responses.
     
 - **Logical organization:** Arrange questions in a sequence that makes sense—group by theme or move from general to specific.
     
 - **Descriptive headings:** Use the questions themselves as section headings (usually H2). This helps users scan and find relevant information quickly.
     
-- **Links to further reading:** Where appropriate, include links to in‑depth articles, documentation or external sources for readers seeking more detail.
+- **Further reading:** Where appropriate, cite in‑depth articles, documentation or external sources for readers seeking more detail.
     
 
 ### Optional Enhancing Elements

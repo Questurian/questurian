@@ -19,11 +19,9 @@ A beginner’s guide introduces a subject to readers who have little or no prior
 
 - **Analogies and real‑world examples:** These make abstract concepts relatable and help beginners grasp ideas more easily.
     
-- **Visuals and diagrams:** Charts, screenshots or simple diagrams can clarify complex information.
-    
 - **Common pitfalls:** Briefly mention frequent mistakes beginners make and how to avoid them.
     
-- **Links to further resources:** Point readers to reputable tutorials, books, or websites for continued learning. If external research is incorporated, clearly cite it.
+- **Further resources:** Point readers to reputable tutorials, books, or websites for continued learning. If external research is incorporated, clearly cite it.
     
 
 ### Signs the Source Material Is Insufficient

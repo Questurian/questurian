@@ -131,8 +131,8 @@ When relevant, include:
 - embassy or consular support
 - insurance considerations
 - helpful local phrases for getting assistance
-- official maps, evacuation routes, or hazard zones
-- visual markers readers can use to identify legitimate services
+- evacuation routes or hazard zones
+- identifying features readers can use to recognise legitimate services
 
 ## Minimum Standard
 

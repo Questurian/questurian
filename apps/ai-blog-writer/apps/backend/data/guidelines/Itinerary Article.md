@@ -14,9 +14,9 @@ An itinerary article presents a day‑by‑day or step‑by‑step travel plan, 
         
     - **Timing and pacing** – Indicate approximate time blocks (morning/afternoon/evening) or durations to help readers understand how long activities may take.
         
-    - **Geographic logic** – Cluster activities by location to minimize transit time, using maps or grouping neighborhoods.
+    - **Geographic logic** – Cluster activities by location to minimize transit time, grouping neighborhoods.
         
-    - **Logistical details** – Provide essential information such as opening hours, required reservations, transit tips, admission costs and addresses. Including flight numbers, hotel addresses or map links can be valuable.
+    - **Logistical details** – Provide essential information such as opening hours, required reservations, transit tips, admission costs and addresses. Including flight numbers or hotel addresses can be valuable.
         
     - **Meals and breaks** – Suggest where to eat or relax, reflecting local cuisine or notable cafes.
         
@@ -29,8 +29,6 @@ An itinerary article presents a day‑by‑day or step‑by‑step travel plan, 
 
 ### Optional enhancing elements
 
-- **Maps and calendar visuals** – A visual schedule or map illustrating the route enhances comprehension.
-    
 - **Variation suggestions** – Offer alternatives (e.g., swap a museum for a hike) for different travelers or weather.
     
 - **Budget and packing tips** – Briefly note estimated daily costs and any special items to pack for the itinerary.

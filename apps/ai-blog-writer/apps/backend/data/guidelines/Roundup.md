@@ -35,7 +35,7 @@ A roundup is a **curated overview of multiple options** within a product or serv
     
 - **Keyword and search context:** Briefly note why the topic matters or what search trends reveal about reader interest.
     
-- **Visuals and tables:** Provide quick‑reference tables summarising key specs or ratings, or include photos of the products.
+- **Tables:** Provide quick‑reference tables summarising key specs or ratings.
     
 - **Buyer’s tips:** Offer advice on how to choose among the options or what to watch out for.
     
@@ -57,4 +57,4 @@ A roundup is a **curated overview of multiple options** within a product or serv
 
 ### Editorial Flexibility Notes
 
-The writer can choose to rank entries, group them by themes or simply present them in alphabetical order. Including multimedia, expert quotes or charts can increase engagement. Creativity in angles—such as focusing on unexpected criteria or including contrarian picks—helps roundups stand out, but writers must always provide clear reasons for inclusion.
+The writer can choose to rank entries, group them by themes or simply present them in alphabetical order. Including expert quotes can increase engagement. Creativity in angles—such as focusing on unexpected criteria or including contrarian picks—helps roundups stand out, but writers must always provide clear reasons for inclusion.

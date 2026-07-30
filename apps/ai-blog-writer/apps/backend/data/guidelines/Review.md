@@ -10,7 +10,7 @@ A review evaluates a single product, service or place in depth to help readers d
     
 2. **User‑centric evaluation:** Assess the product from the reader’s point of view, showing that you understand typical use cases and decision criteria.
     
-3. **Demonstrate expertise:** Explain why you are qualified to review this item—through professional experience or extensive research—and provide evidence such as photos, audio clips or links that show real‑world testing.
+3. **Demonstrate expertise:** Explain why you are qualified to review this item—through professional experience or extensive research.
     
 4. **Quantitative measurements:** Share data on how the product measures up in key performance categories (e.g., battery life, sound quality, comfort). Use numbers, ratings or benchmarks.
     
@@ -24,13 +24,11 @@ A review evaluates a single product, service or place in depth to help readers d
     
 9. **Decision factors and recommendation:** Highlight the most important factors for the reader’s decision (e.g., fuel economy and safety in a car review) and conclude with a clear verdict or recommendation. If recommending the product as “best overall” or “best for a use case,” explain why and provide evidence.
     
-10. **Resource links and purchasing options:** Include links to additional resources and, if appropriate, multiple sellers so readers can explore further.
+10. **Purchasing options:** Mention, if appropriate, multiple sellers so readers can explore further.
     
 
 ### Optional Enhancing Elements
 
-- **Visuals and multimedia:** Original photos, charts, unboxing videos or audio samples that bring the experience to life.
-    
 - **User anecdotes:** Short stories or quotes from real users can provide additional perspectives and social proof.
     
 - **Comparison tables:** Summaries of how the product stacks up against competitors on key metrics.
@@ -53,4 +51,4 @@ A review evaluates a single product, service or place in depth to help readers d
 
 ### Editorial Flexibility Notes
 
-Reviews can be structured with or without formal section headings, but they **must remain transparent and honest**. Affiliate links are acceptable, but the writer should disclose them and maintain independence. Multimedia elements and rating scales are optional, but the core analysis should not be reduced to a score; readers should understand the reasons behind the rating. Writers can focus on aspects most relevant to their audience but should always give enough context for informed decision‑making.
+Reviews can be structured with or without formal section headings, but they **must remain transparent and honest**. Affiliate links are acceptable, but the writer should disclose them and maintain independence. Rating scales are optional, but the core analysis should not be reduced to a score; readers should understand the reasons behind the rating. Writers can focus on aspects most relevant to their audience but should always give enough context for informed decision‑making.

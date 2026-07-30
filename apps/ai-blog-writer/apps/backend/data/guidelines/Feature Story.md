@@ -21,13 +21,11 @@ A feature story tells a **compelling narrative** about people, trends or issues.
 
 ### Optional Enhancing Elements
 
-- **Data visualizations or research findings** that support the theme.
+- **Research findings** that support the theme.
     
 - **Historical background** to show how the issue evolved.
     
-- **Sidebars or profiles** of additional characters.
-    
-- **Multimedia**, such as photos or audio snippets, to immerse readers.
+- **Profiles** of additional characters.
     
 - **Foreshadowing or literary techniques** to heighten narrative tension.
 

@@ -19,9 +19,7 @@ A checklist article provides readers with a clear, scannable list of tasks or it
 
 - **Tips or recommendations** – Offer short tips for selecting or using items (e.g., choose neutral‑colored clothes for versatility, pack a portable charger).
     
-- **Visual aids** – A printable table or simple infographic summarizing the checklist can enhance usability.
-    
-- **Links to related resources** – Provide internal links to deeper articles (e.g., a guide to money belts or medications) when appropriate.
+- **Summary table** – A table summarizing the checklist can enhance usability.
     
 
 ### Signs the source material is insufficient

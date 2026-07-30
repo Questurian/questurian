@@ -23,9 +23,7 @@ A survival guide delivers practical advice and critical information to help read
 
 - **Real‑world examples or anecdotes** – Short stories about successful or failed survival attempts can illustrate the importance of preparation and make advice memorable.
     
-- **Illustrations or diagrams** – Visual aids showing how to tie knots, build shelters or read a compass can enhance comprehension.
-    
-- **Additional resources** – Links to more detailed manuals, courses or safety organizations.
+- **Additional resources** – References to more detailed manuals, courses or safety organizations.
     
 - **Seasonal or regional variations** – Customizing gear lists and advice for specific climates or environments (e.g., desert vs. alpine) enriches the guide.
     
@@ -43,4 +41,4 @@ A survival guide delivers practical advice and critical information to help read
 
 ### Editorial flexibility notes
 
-Survival guides should be pragmatic and safety‑focused. Balance brevity with completeness: key instructions must be clear, but additional commentary can be placed in sidebars or optional sections.
+Survival guides should be pragmatic and safety‑focused. Balance brevity with completeness: key instructions must be clear, but additional commentary can be placed in optional sections.

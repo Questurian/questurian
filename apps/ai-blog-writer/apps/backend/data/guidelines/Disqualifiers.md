@@ -24,8 +24,6 @@
 
 **Optional Enhancing Elements**
 
-- **Interactive checklists or self‑assessment:** A yes/no questionnaire can help readers quickly determine fit.
-    
 - **Expert or user quotes:** Hearing from someone who faced a misfit scenario lends authenticity.
     
 - **Transparency about motives:** Explaining why you are disqualifying readers (to save their time, to uphold ethical standards, etc.) strengthens trust.

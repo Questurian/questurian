@@ -24,7 +24,7 @@
 
 ### Optional Enhancing Elements
 
-- **Climate charts or tables** – Simple visuals summarising temperature, rainfall and daylight hours by month can aid planning.
+- **Climate tables** – A simple table summarising temperature, rainfall and daylight hours by month can aid planning.
     
 - **Sample itineraries** – Suggest season‑specific activities or itineraries (e.g., winter skiing vs. summer festivals).
     

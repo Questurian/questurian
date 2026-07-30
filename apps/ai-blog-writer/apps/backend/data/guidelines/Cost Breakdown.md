@@ -25,7 +25,7 @@ A cost breakdown article **transparently details prices or budgets** so readers 
 
 ### Optional Enhancing Elements
 
-- **Visual aids:** Use tables, charts or diagrams to make numbers easier to digest. Visuals help clarify how different components contribute to the total.
+- **Tables:** Use tables to make numbers easier to digest. Tables help clarify how different components contribute to the total.
     
 - **Case studies or examples:** Include a short vignette demonstrating how the costs play out in a real situation.
     
@@ -49,4 +49,4 @@ A cost breakdown article **transparently details prices or budgets** so readers 
 
 ### Editorial Flexibility Notes
 
-Writers may choose a narrative or tabular format. The level of granularity depends on the complexity of the purchase—high‑stakes purchases warrant more detail. Clarity and honesty are non‑negotiable. Writers can incorporate expert quotes to illustrate cost considerations. Creative visualisations (e.g., pie charts) are welcome as long as they support rather than replace thorough explanation.
+Writers may choose a narrative or tabular format. The level of granularity depends on the complexity of the purchase—high‑stakes purchases warrant more detail. Clarity and honesty are non‑negotiable. Writers can incorporate expert quotes to illustrate cost considerations.
