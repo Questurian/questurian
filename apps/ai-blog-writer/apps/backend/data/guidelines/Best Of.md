@@ -31,11 +31,7 @@ A “best of” article curates the **top recommendations** in a category. Reade
 
 ### Optional Enhancing Elements
 
-- **Data visualisations:** Use charts or infographics to illustrate rankings or scoring.
-    
 - **Historical or cultural context:** Briefly mention how trends have evolved or why certain items are popular now.
-    
-- **Mini‑reviews:** Link to full reviews for readers who want deeper analysis.
     
 - **Quotes or anecdotes:** Use brief quotes from experts or users for colour.
     

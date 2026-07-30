@@ -29,7 +29,7 @@ An adventure guide aims to inspire and equip readers to undertake specific outdo
     
 - **Environmental stewardship and sustainability:** Explain conservation efforts, trail maintenance programs or how tourism supports local economies. Encourage readers to minimize environmental impact.
     
-- **Gear reviews or packing lists:** A sidebar with recommended gear brands, packing checklist or budget ranges can be useful for readers planning their own trips.
+- **Gear reviews or packing lists:** Recommended gear brands, a packing checklist or budget ranges can be useful for readers planning their own trips.
     
 - **Personal anecdotes and challenges:** A brief story of overcoming an obstacle (e.g., unexpected storm, altitude sickness) can illustrate preparation and resilience.
     
@@ -57,6 +57,6 @@ An adventure guide aims to inspire and equip readers to undertake specific outdo
     
 - The level of technicality should suit the target audience. Beginners appreciate accessible explanations, while seasoned adventurers may desire more technical detail. Writers can choose their angle but must signal the intended audience.
     
-- Creativity is encouraged—integrate quotes, sidebars, maps or multimedia. However, avoid hyperbole and clichés; unique descriptions and candid observations will differentiate the piece.
+- Creativity is encouraged—integrate quotes. However, avoid hyperbole and clichés; unique descriptions and candid observations will differentiate the piece.
     
 - Always prioritize safety and sustainability. Articles should inspire readers to explore responsibly and respect local communities and environments.

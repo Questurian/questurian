@@ -24,8 +24,6 @@
 
 - Tips for reducing luggage weight (e.g., wearing bulkiest items, laundry options).
     
-- Digital checklists or printable templates.
-    
 - Fashion capsules or sample outfits to illustrate mix‑and‑match principles.
     
 - Environmental considerations such as avoiding disposable plastics and packing reusable bags or utensils.

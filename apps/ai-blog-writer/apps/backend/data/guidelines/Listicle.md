@@ -23,10 +23,6 @@ A listicle presents **information in a list‑based format**, making it easy to 
 
 - **Relevant statistics, examples or anecdotes** to illustrate each item.
     
-- **Links to additional resources** for deeper reading.
-    
-- **Images or icons** associated with each item to aid visual scanning.
-    
 - **Sections within long lists**, breaking a long list into thematic sub‑lists to improve readability.
     
 - **SEO keywords** to increase discoverability.

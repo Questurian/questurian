@@ -28,11 +28,9 @@
 
 - **Scene‑setting details:** Describe the interview setting or the interviewee's demeanor to create atmosphere.
     
-- **Contextual sidebars:** Brief explanations of references made by the interviewee can help readers unfamiliar with certain topics.
+- **Contextual explanations:** Brief explanations of references made by the interviewee can help readers unfamiliar with certain topics.
     
 - **Narrator's reflection:** The interviewer may weave in reflections or connect interviewee remarks to broader themes.
-    
-- **Multimedia:** Audio clips or video snippets of the interview can enrich digital articles.
     
 - **Humour and personality:** Brafton encourages starting with a hook and using a conversational tone; sprinkling in personality and anecdotes can make the piece more engaging.
 

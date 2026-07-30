@@ -23,9 +23,7 @@ Myth‑busting articles confront and correct common misconceptions or misinforma
     
 - **Case studies and examples:** Provide real‑world examples where the myth has caused harm or confusion, and show how correct information improves outcomes.
     
-- **Visual aids:** Charts or infographics can illustrate data that counters myths and aid comprehension.
-    
-- **Additional resources:** Link to studies, expert statements, or institutional reports for readers who want deeper evidence.
+- **Additional resources:** Cite studies, expert statements, or institutional reports for readers who want deeper evidence.
     
 
 ### Signs the Source Material Is Insufficient

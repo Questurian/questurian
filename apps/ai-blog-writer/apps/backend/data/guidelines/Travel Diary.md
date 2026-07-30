@@ -28,7 +28,7 @@
     
 - **Practical tips** – Offer incidental advice (e.g., best time to visit a landmark, where to find authentic food) when it naturally fits into the story.
     
-- **Photos or ephemera references** – Mention items collected along the way (ticket stubs, brochures, receipts) to add authenticity and evoke memories.
+- **Ephemera references** – Mention items collected along the way (ticket stubs, brochures, receipts) to add authenticity and evoke memories.
 
 
 ### Signs the Source Material Is Insufficient

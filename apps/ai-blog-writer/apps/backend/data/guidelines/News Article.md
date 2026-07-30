@@ -27,11 +27,7 @@ A news article exists to **report timely events or announcements succinctly and 
     
 - **Multiple viewpoints**, including comments from different stakeholders, to provide balance.
     
-- **Visuals** such as charts, timelines or photos to illustrate the event.
-    
-- **Sidebar or box** providing background information or related resources.
-    
-- **Links to original documents or sources**, where appropriate.
+- **References to original documents or sources**, where appropriate.
 
 
 ### Signs the Source material Is Insufficient

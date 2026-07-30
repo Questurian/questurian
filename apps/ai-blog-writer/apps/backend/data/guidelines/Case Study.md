@@ -19,7 +19,7 @@ A case study demonstrates **how a specific problem was solved**, typically for b
 
 ### Optional Enhancing Elements
 
-- **Visuals or tables** that summarise key metrics or before‑and‑after comparisons.
+- **Tables** that summarise key metrics or before‑and‑after comparisons.
     
 - **Quotes from stakeholders** (client, team members, customers) to humanize the story and provide social proof.
     

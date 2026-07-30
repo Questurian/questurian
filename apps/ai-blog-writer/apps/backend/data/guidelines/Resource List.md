@@ -14,7 +14,7 @@ Resource lists curate tools, websites, services or references on a specific topi
     
 - **Consistent formatting** – Use bullets or numbered entries with uniform presentation. Consistency helps readers compare options quickly.
     
-- **Links or references** – Provide direct links (where appropriate) so readers can easily access each resource. Ensure the titles accurately reflect the linked content and avoid misleading clickbait.
+- **References** – Name each resource clearly so readers can find it. Ensure the titles accurately reflect the resource and avoid misleading clickbait.
     
 
 ### Optional enhancing elements
@@ -22,8 +22,6 @@ Resource lists curate tools, websites, services or references on a specific topi
 - **Evaluative commentary** – Briefly note pros and cons or situations for which a resource is best suited.
     
 - **Comparison highlights** – For similar resources, mention distinguishing features (e.g., cost, regional focus, user friendliness).
-    
-- **Multimedia embeds** – Screenshots, logos or icons can increase visual interest but should not clutter the list.
     
 - **Supplementary tips** – Offer advice on how to choose among the resources or combine them effectively.
     
@@ -41,4 +39,4 @@ Resource lists curate tools, websites, services or references on a specific topi
 
 ### Editorial flexibility notes
 
-Avoid overt bias. Longer lists should keep descriptions brief and may link to deeper articles for extra details. Maintain readability with short paragraphs and ensure the title accurately reflects the list's scope.
+Avoid overt bias. Longer lists should keep descriptions brief. Maintain readability with short paragraphs and ensure the title accurately reflects the list's scope.

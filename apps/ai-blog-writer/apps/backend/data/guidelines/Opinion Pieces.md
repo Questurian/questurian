@@ -31,10 +31,6 @@
 - **Anecdotes and storytelling:** Vivid examples help readers remember arguments.
     
 - **Humour or irony:** When appropriate, a light touch can make serious points more digestible.
-    
-- **Data visualisations or sidebars:** Charts or brief call‑out boxes can illustrate key statistics or quotes.
-    
-- **Multimedia elements:** In digital formats, embedded videos or audio clips can enhance persuasion.
 
 
 **Signs the Source Material Is Insufficient**

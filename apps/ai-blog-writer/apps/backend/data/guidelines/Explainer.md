@@ -17,8 +17,6 @@ Explainers **break down complex topics or news events into clear, accessible lan
 - **Use of Evidence and Expert Insight.** Incorporate data, research and quotes from subject‑matter experts to support explanations.
     
 - **Structure for Readability.** Divide the article into bite‑sized sections with clear sub‑headings; question‑based sub‑heds are common.
-    
-- **Visual Aids.** Charts, diagrams, timelines or other graphics can clarify the explanation.
 
 
 ### Optional Enhancing Elements
@@ -27,9 +25,7 @@ Explainers **break down complex topics or news events into clear, accessible lan
     
 - **FAQs or myth‑busting sections** that address common misconceptions.
     
-- **Interactive elements**, such as embedded calculators or quizzes.
-    
-- **Links to further reading** or authoritative sources for readers who want deeper detail.
+- **Authoritative sources** for readers who want deeper detail.
     
 - **Case examples or anecdotes** that illustrate how the concept applies in real life.
 
@@ -49,4 +45,4 @@ Explainers **break down complex topics or news events into clear, accessible lan
 
 ### Editorial Flexibility Notes
 
-Some explainers use chronological narratives, while others adopt Q&A or thematic structures. Writers should choose the structure that best helps readers grasp the material. Headings and sub‑heds often take the form of questions. The focus should be on clarity and reader comprehension. When appropriate, incorporate multimedia, data visualization and interactive components to enrich the explanation
+Some explainers use chronological narratives, while others adopt Q&A or thematic structures. Writers should choose the structure that best helps readers grasp the material. Headings and sub‑heds often take the form of questions. The focus should be on clarity and reader comprehension.

@@ -27,7 +27,7 @@ A buyer’s guide helps readers understand **what matters when choosing between 
 
 - **Market and trend context:** Briefly describe industry trends or recent innovations that shape buyer expectations.
     
-- **Glossaries, templates or sidebars:** Supplemental tools (like checklists or glossaries) can sit in sidebars or appendices to keep the main narrative lean.
+- **Glossaries or templates:** Supplemental tools (like checklists or glossaries) can sit in appendices to keep the main narrative lean.
     
 - **Comparisons or competitor snapshots:** Short comparisons to alternative solutions or approaches can increase trust as long as they remain neutral.
     
@@ -47,4 +47,4 @@ A buyer’s guide helps readers understand **what matters when choosing between 
 
 ### Editorial Flexibility Notes
 
-A buyer’s guide can be **agnostic** or **product‑specific**. The narrative must always be **educational, neutral and helpful**. Long guides should be broken up with design elements, sidebars or linked companion pieces. Creativity in presentation is welcome as long as the essential questions are answered.
+A buyer’s guide can be **agnostic** or **product‑specific**. The narrative must always be **educational, neutral and helpful**. Creativity in presentation is welcome as long as the essential questions are answered.
