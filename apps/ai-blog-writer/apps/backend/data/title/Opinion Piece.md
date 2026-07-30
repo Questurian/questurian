@@ -1,14 +1,14 @@
 ## Opinion Piece
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     Titles for opinion pieces should clearly communicate the author’s argument or perspective and invite readers into a thoughtful commentary. They signal that the content is subjective and designed to persuade or provoke reflection.
     
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     Readers expect a strong viewpoint backed by reasoning; they are open to new perspectives but want to know the author’s stance before clicking.
     
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - State the central argument or thesis up front using a strong verb or directive.
         
@@ -26,7 +26,7 @@
         
     - Use active voice; avoid forms of “to be” unless essential.
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Pose a provocative or thought‑provoking question that reflects the article’s main argument.
         
@@ -44,7 +44,7 @@
         
     - Make the reader feel included by highlighting shared values or concerns.
         
-- **Style, tone, and formatting rules (5–8 bullet points)**
+- **Style, tone, and formatting rules**
     
     - Adopt a persuasive yet respectful tone; avoid inflammatory or derogatory language.
         
@@ -62,7 +62,7 @@
         
     - Steer clear of hyperbolic superlatives unless supported by evidence.
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Why” / “How”
         
@@ -94,7 +94,7 @@
         
     - “To the editor” (if used for letters)
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Clickbait phrases (“You won’t believe,” “Shocking truth”).
         
@@ -116,7 +116,7 @@
         
     - Sensational adjectives (“amazing,” “crazy”) not suitable for serious commentary.
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Does the headline state or clearly imply the author’s position?
         

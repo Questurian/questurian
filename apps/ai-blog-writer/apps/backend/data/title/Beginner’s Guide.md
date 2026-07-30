@@ -1,16 +1,16 @@
 ## Beginner’s Guide
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     - Reassure novices that the article offers clear, step‑by‑step information and demystifies a topic they may find intimidating.
         
     - Signal that the content is foundational and avoids jargon, while being thorough and reliable.
         
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     - Readers are likely uncertain, eager to learn, and seeking trusted guidance that simplifies complex topics without dumbing them down.
         
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Begin with “Beginner’s Guide to…,” “How to…,” “Step‑by‑Step Guide,” or similar format to set expectations.
         
@@ -28,7 +28,7 @@
         
     - Ensure the main keyword (topic) appears near the front for SEO.
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Empathize with the novice’s challenges; include phrases like “First‑Time,” “No Experience Needed,” or “From Scratch” to highlight accessibility.
         
@@ -46,7 +46,7 @@
         
     - Offer reassurance about common fears (“…Without Breaking the Bank,” “…Without Fear of Failure”).
         
-- **Style, tone and formatting rules (5–8 bullet points)**
+- **Style, tone and formatting rules**
     
     - Maintain a supportive, instructive tone; avoid condescension or inside jokes.
         
@@ -64,7 +64,7 @@
         
     - Test multiple versions to optimise for different channels (search vs. social).
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Beginner’s Guide,” “How to,” “Step‑by‑Step,” “First‑Time”
         
@@ -86,7 +86,7 @@
         
     - “Step‑by‑Step Instructions”
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Over‑promising mastery or expertise (“Master Investing Overnight”).
         
@@ -106,7 +106,7 @@
         
     - Titles that bury the main topic at the end of the line.
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Does the title clearly signal that it is for beginners and state the subject?
         

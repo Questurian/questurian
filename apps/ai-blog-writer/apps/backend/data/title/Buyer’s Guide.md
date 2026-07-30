@@ -1,16 +1,16 @@
 ## Buyer’s Guide
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     - Communicate that the article helps readers make informed purchasing decisions by comparing options, explaining features and providing expert recommendations.
         
     - Establish trust through transparency about methodology and any commercial relationships, ensuring the guide serves the reader rather than sales.
         
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     - Readers are researching products or services, seeking unbiased insights, value considerations and potential pitfalls before making a purchase.
         
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Lead with the product category or problem to be solved (“Best Noise‑Cancelling Headphones,” “Electric Car Buyer’s Guide”), followed by context such as year or target user (“2026,” “for Commuters”).
         
@@ -28,7 +28,7 @@
         
     - For series with affiliate links, the headline should not include promotional calls-to-action (“Buy Now”) but may use objective descriptors (“Best Budget,” “Top Performance”).
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Emphasize the problem the guide solves (“Quietest Headphones for Open Offices”) to resonate with readers’ needs.
         
@@ -46,7 +46,7 @@
         
     - Where appropriate, mention whether products were tested in-house or curated from research; transparency builds trust.
         
-- **Style, tone and formatting rules (5–8 bullet points)**
+- **Style, tone and formatting rules**
     
     - Adopt an objective, informative tone; avoid overt sales language or personal bias.
         
@@ -64,7 +64,7 @@
         
     - Collaborate with legal or compliance teams when necessary to ensure compliance with advertising and disclosure regulations.
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Buyer’s Guide,” “Shopping Guide,” “Ultimate Guide,” “Complete Guide”
         
@@ -94,7 +94,7 @@
         
     - “Specifications,” “Specs,” “Features”
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Promotional phrases (“Buy Now,” “Limited Time Offer,” “Act Fast”) that belong in ads, not editorial titles.
         
@@ -116,7 +116,7 @@
         
     - Terms like “One Weird Trick” or “Life Hack” that signal clickbait.
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Does the title clearly state the product category, scope and target audience or year?
         
