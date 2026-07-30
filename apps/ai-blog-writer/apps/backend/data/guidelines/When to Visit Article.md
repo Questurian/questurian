@@ -13,7 +13,7 @@
     
 - **Pros and cons of each season** – Explain advantages and drawbacks: comfortable temperatures, festivals and natural phenomena vs. crowds, accommodation costs and availability. Highlight shoulder season benefits such as lower prices and manageable crowds.
     
-- **Monthly or regional variations** – Provide month‑by‑month or regional notes when conditions vary widely (e.g., cherry blossom season in Japan draws huge crowds and requires early booking; wildflowers bloom in Greece's shoulder season; many U.S. national parks have optimal months for wildlife, hiking or cooler temperatures).
+- **Monthly or regional variations** – Provide month‑by‑month or regional notes when conditions vary widely. Name the destination's own peak events, bloom or wildlife windows and booking pressure from the source material; do not import another destination's seasonal pattern.
     
 - **Special events and festivals** – Mention major events, holidays or wildlife migrations that can influence travel timing. Advise readers to book early for popular events or avoid them if seeking quiet.
     

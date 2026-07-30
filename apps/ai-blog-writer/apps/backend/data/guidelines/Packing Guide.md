@@ -13,7 +13,7 @@
     
 - **Categories of essentials.** Expect at minimum: clothing (mix‑and‑match layers, neutral colours, quick‑dry materials), toiletries, electronics (chargers, adapters, power bank) and travel documents. Packing lists like SmarterTravel's highlight customizing the categories and using checklists.
     
-- **Luggage strategy.** Discuss the benefits of carry‑on‑only travel, using a 35–40 L backpack plus daypack and packing cubes. Stress not overpacking; only pack items used regularly and opt for versatile, quality gear.
+- **Luggage strategy.** Discuss the benefits of carry‑on‑only travel, stating a bag capacity in litres only when the source material or the trip profile supports it, plus daypack and packing cubes. Stress not overpacking; only pack items used regularly and opt for versatile, quality gear.
     
 - **Activity‑specific gear.** The source material should cover specialized gear for adventure activities—cycling, kayaking, hiking or skiing—and emphasize safety equipment like helmets, hydration packs, bug spray and headlamps.
     
