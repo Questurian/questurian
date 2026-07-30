@@ -16,7 +16,7 @@ Readers are scanning for specific resources and expect quick, trustworthy recomm
     
 - Avoid generic labels; make titles independently meaningful and descriptive.
     
-- Keep within roughly 11 words or 65 characters to optimise visibility and sharing.
+- Keep within roughly 8–10 words or under 60 characters to optimise visibility and sharing.
     
 - Use strong verbs or adjectives that convey value and usefulness.
     

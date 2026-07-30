@@ -12,7 +12,7 @@
         
     - Use concise descriptors separated by colons or em dashes to organise multiple elements (e.g., “Lisbon Digital Nomad Guide: Visas, Coworking & Cost of Living”).
         
-    - Limit length to ~60–70 characters; trim secondary details rather than the core promise.
+    - Limit length to under 60 characters; trim secondary details rather than the core promise.
         
     - Use active verbs where possible (“Work Remotely in…,” “Live and Work in…”).
         
@@ -84,7 +84,7 @@
         
     - Are keywords integrated naturally and without stuffing?
         
-    - Is the length within ~70 characters and easily scannable?
+    - Is the length under 60 characters and easily scannable?
         
     - Does the title avoid sensationalism and misrepresentation?
         

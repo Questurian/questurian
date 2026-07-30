@@ -12,7 +12,7 @@
         
     - Highlight the main benefit or result using a hard number where possible.
         
-    - Use a clear, concise structure such as “Client/Industry – Result – Method,” keeping it under roughly 70–80 characters.
+    - Use a clear, concise structure such as “Client/Industry – Result – Method,” keeping it under 60 characters.
         
     - Consider a subtitle to provide extra detail if the main title is short.
         
@@ -92,7 +92,7 @@
         
     - Is the result expressed with a specific number or clear benefit?
         
-    - Is the title free of clickbait and hype and under roughly 70–80 characters?
+    - Is the title free of clickbait and hype and under 60 characters?
         
     - Have you used active, plain language and avoided jargon?
         

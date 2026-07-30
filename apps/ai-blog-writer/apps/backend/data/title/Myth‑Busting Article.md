@@ -114,7 +114,7 @@
     
     - Confirm the headline communicates the correct information rather than the myth.
         
-    - Ensure it is concise (ideally under 12 words) and uses active voice.
+    - Ensure it is concise (ideally 8–10 words) and uses active voice.
         
     - Check that it can stand alone on social media or search results and clearly conveys the topic and benefit.
         

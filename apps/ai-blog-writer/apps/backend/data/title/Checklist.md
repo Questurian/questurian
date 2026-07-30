@@ -14,7 +14,7 @@
         
     - Mention the specific topic or context (e.g., “travel packing,” “product launch”) so users know what the list covers.
         
-    - Keep the title under about 60–70 characters to remain scannable on search and social feeds.
+    - Keep the title under 60 characters to remain scannable on search and social feeds.
         
     - Place the number toward the beginning along with the keyword when it feels natural.
         
@@ -102,7 +102,7 @@
         
     - Have you included a strong descriptor and the specific subject of the list?
         
-    - Is the title concise, within 60–70 characters, and free of filler words?
+    - Is the title concise, under 60 characters, and free of filler words?
         
     - Does it promise a concrete benefit or outcome without clickbait?
         

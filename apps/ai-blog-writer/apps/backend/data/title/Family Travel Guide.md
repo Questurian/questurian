@@ -12,7 +12,7 @@
         
     - Use numerals for lists (e.g., “7 Kid‑Friendly Beaches in…”), which improve clarity and SEO.
         
-    - Keep titles under 10–12 words; summarise the benefit in one concise sentence.
+    - Keep titles to roughly 8–10 words; summarise the benefit in one concise sentence.
         
     - Use present tense and active voice; avoid forms of “to be”.
         
@@ -48,7 +48,7 @@
         
     - Do not start titles with “How to” or “Everything you need” – lead with the topic and value.
         
-    - Keep titles within 60–70 characters to ensure full display in search and social feeds.
+    - Keep titles under 60 characters to ensure full display in search and social feeds.
         
     - Ensure the title accurately reflects the article’s content and matches any on‑site categorisation or series naming.
         
@@ -94,7 +94,7 @@
         
     - Are age‑specific or family descriptors included?
         
-    - Is the title under 12 words and free of filler words?
+    - Is the title within roughly 8–10 words and free of filler words?
         
     - Are useful keywords (destination, activity) front‑loaded?
         

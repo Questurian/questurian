@@ -12,7 +12,7 @@
         
     - Highlight unique selling points such as private experiences, five‑star resorts or hidden gems.
         
-    - Keep titles within 8–12 words, balancing elegance with clarity; avoid cumbersome phrasing.
+    - Keep titles within 8–10 words, balancing elegance with clarity; avoid cumbersome phrasing.
         
     - Front‑load luxury descriptors and key keywords for SEO and immediate impact.
         
@@ -78,7 +78,7 @@
         
     - Have you used elegant, varied descriptors rather than repeating “luxury”?
         
-    - Is the length within 8–12 words and free of clutter?
+    - Is the length within 8–10 words and free of clutter?
         
     - Does it highlight a unique selling point (e.g., private, bespoke, five‑star)?
         

@@ -18,7 +18,7 @@
         
     - Include distinguishing criteria when relevant (e.g., “Editors’ Choice,” “Readers’ Picks,” “Sustainable”).
         
-    - Keep titles concise (8–12 words) and in title case; avoid unnecessary adjectives or puns.
+    - Keep titles concise (8–10 words) and in title case; avoid unnecessary adjectives or puns.
         
     - Use active voice and clear nouns; avoid ambiguous categories (“Best Things”) in favor of specifics (“Best Hikes,” “Best Vegan Restaurants”).
         

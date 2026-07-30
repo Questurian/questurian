@@ -56,7 +56,7 @@
         
     - Avoid clickbait phrases or exaggerated claims.
         
-    - Keep the headline under 8–12 words when possible to maintain punch.
+    - Keep the headline to roughly 8–10 words when possible to maintain punch.
         
 - **Preferred words and phrases**
     

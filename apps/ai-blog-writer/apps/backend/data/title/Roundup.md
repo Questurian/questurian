@@ -18,7 +18,7 @@ Readers are looking for a quick overview of current news, trends or opportunitie
     
 - Use strong descriptors (“top,” “notable,” “essential”) to communicate why the items matter.
     
-- Keep the headline concise and scannable (≈11 words/65 characters).
+- Keep the headline concise and scannable (roughly 8–10 words/under 60 characters).
     
 - Separate clauses with a colon or dash if needed; avoid clutter.
     

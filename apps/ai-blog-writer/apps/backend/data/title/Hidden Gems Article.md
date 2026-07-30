@@ -12,7 +12,7 @@
         
     - Use numbers to promise a concise list or “few” to suggest a curated selection; ensure the count matches the article.
         
-    - Keep titles concise (under 12 words) and free of filler words.
+    - Keep titles concise (roughly 8–10 words) and free of filler words.
         
     - Use present tense and strong verbs (discover, explore, uncover); avoid gerunds and passive constructions.
         

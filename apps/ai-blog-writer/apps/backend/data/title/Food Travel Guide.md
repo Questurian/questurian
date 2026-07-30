@@ -12,7 +12,7 @@
         
     - Use numbers when highlighting lists of eateries or dishes; avoid combining a number with a trigger word like “why” or “how”.
         
-    - Keep titles concise (10–12 words) and descriptive; summarise the promise in one sentence.
+    - Keep titles concise (8–10 words) and descriptive; summarise the promise in one sentence.
         
     - Use present tense and avoid gerunds (no “eating” or “discovering”); choose active voice.
         
@@ -98,7 +98,7 @@
         
     - Are active verbs and present tense employed?
         
-    - Is the title concise (<12 words) and free of filler?
+    - Is the title concise (8–10 words) and free of filler?
         
     - Does it choose either a number or a question/trigger word but not both?
         

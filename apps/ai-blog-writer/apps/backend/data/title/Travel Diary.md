@@ -12,7 +12,7 @@
         
     - Highlight what makes the narrative unique – a quest, a personal connection, a challenge overcome.
         
-    - Keep the title within 70–90 characters; ensure the main subject appears early.
+    - Keep the title under 60 characters; ensure the main subject appears early.
         
     - Avoid starting with a verb; instead, include the storyteller or context (“My Solo Trek across…” or implied subject).
         
@@ -102,7 +102,7 @@
     
     - Does the title convey both destination and narrative theme?
         
-    - Is the headline concise and under ~90 characters with a clear subject?
+    - Is the headline concise and under 60 characters with a clear subject?
         
     - Have you used active verbs and avoided starting with a verb?
         

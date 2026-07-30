@@ -14,7 +14,7 @@
         
     - Keep titles straightforward; avoid multi‑layered wordplay that obscures meaning.
         
-    - Limit length to ~60–70 characters to ensure readability and SEO friendliness.
+    - Limit length to under 60 characters to ensure readability and SEO friendliness.
         
     - Use present tense and active voice to convey immediacy.
         

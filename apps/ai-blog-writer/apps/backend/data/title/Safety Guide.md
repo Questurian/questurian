@@ -18,7 +18,7 @@ Readers may feel anxious about risks and are seeking reliable, authoritative gui
     
 - Use plain language and familiar words.
     
-- Maintain conciseness (≈11 words/65 characters) and make the title meaningful without the article.
+- Maintain conciseness (roughly 8–10 words/under 60 characters) and make the title meaningful without the article.
     
 - Use active voice and positive statements; avoid negative phrasing.
     

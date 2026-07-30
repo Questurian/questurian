@@ -20,7 +20,7 @@
         
     - Use active verbs and concise phrasing; avoid leading with modifiers that delay the subject.
         
-    - Limit length to about 8–12 words to maintain readability.
+    - Limit length to about 8–10 words to maintain readability.
         
     - Include a key benefit (“…Without Stress,” “…That Saves Money”) only if the article truly provides that benefit.
         

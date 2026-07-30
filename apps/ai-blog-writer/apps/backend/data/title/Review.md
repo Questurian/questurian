@@ -16,7 +16,7 @@ Readers want a trustworthy evaluation to help decide whether a product, service 
     
 - Integrate a key takeaway or angle that hints at the verdict without overselling.
     
-- Keep the title around 11 words or 65 characters for optimal visibility.
+- Keep the title within roughly 8–10 words or under 60 characters for optimal visibility.
     
 - Use active voice and present tense; avoid filler articles.
     

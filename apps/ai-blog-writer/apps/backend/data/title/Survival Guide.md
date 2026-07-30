@@ -10,9 +10,9 @@
         
     - Use service‑oriented formats such as “How to…,” “X Essential Tips for…,” or “Guide to…” to indicate actionable content.
         
-    - Front‑load important keywords (e.g., destination, hazard) within the first 70 characters to aid clarity and SEO.
+    - Front‑load important keywords (e.g., destination, hazard) within the first five words to aid clarity and SEO.
         
-    - Keep titles concise (generally under eight words or ~70 characters) so they are not truncated and remain easy to scan.
+    - Keep titles concise (generally 8–10 words or under 60 characters) so they are not truncated and remain easy to scan.
         
     - Use numerals and abbreviations where appropriate for brevity.
         
@@ -100,7 +100,7 @@
     
     - Does the title clearly state the subject and the survival challenge or hazard?
         
-    - Is the wording concise (under ~70 characters) and free of unnecessary articles or conjunctions?
+    - Is the wording concise (under 60 characters) and free of unnecessary articles or conjunctions?
         
     - Does the headline include a strong, active verb and avoid starting with a verb?
         

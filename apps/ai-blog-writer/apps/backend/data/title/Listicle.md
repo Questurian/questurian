@@ -10,7 +10,7 @@
         
     - Follow with the subject and qualifier, stating what’s being listed and who it’s for (“10 Best Hikes for Beginners”).
         
-    - Use concise language; keep titles within 8–12 words to ensure readability.
+    - Use concise language; keep titles within 8–10 words to ensure readability.
         
     - Include the primary keyword early for SEO and clarity.
         

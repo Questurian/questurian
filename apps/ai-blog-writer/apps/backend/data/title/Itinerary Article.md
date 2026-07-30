@@ -14,7 +14,7 @@
         
     - Front‑load the destination and primary keywords for SEO purposes.
         
-    - Keep titles under 12–15 words to maintain clarity and avoid truncation.
+    - Keep titles to roughly 8–10 words to maintain clarity and avoid truncation.
         
     - Ensure the title can stand alone and accurately reflect the itinerary’s scope and style.
         

@@ -12,7 +12,7 @@
         
     - Use “How to…” or “Guide to…” constructions for specific transportation topics (e.g., “How to Travel Italy by Train”).
         
-    - Keep the title around 70–90 characters and roughly eight words for readability and SEO.
+    - Keep the title under 60 characters and roughly 8–10 words for readability and SEO.
         
     - Front‑load destination names and key transport terms so searchers immediately understand relevance.
         
@@ -104,7 +104,7 @@
         
     - Are the primary modes or themes clearly and concisely listed?
         
-    - Is the headline under ~70–90 characters and free of filler words?
+    - Is the headline under 60 characters and free of filler words?
         
     - Does it contain a subject and active verb or clear descriptor, avoiding leading with a verb?
         
