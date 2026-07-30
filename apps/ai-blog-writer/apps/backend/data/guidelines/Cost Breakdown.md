@@ -50,19 +50,3 @@ A cost breakdown article **transparently details prices or budgets** so readers 
 ### Editorial Flexibility Notes
 
 Writers may choose a narrative or tabular format. The level of granularity depends on the complexity of the purchase—high‑stakes purchases warrant more detail. Tone can range from utilitarian to conversational, but clarity and honesty are non‑negotiable. Writers can incorporate personal anecdotes or expert quotes to illustrate cost considerations. Creative visualisations (e.g., pie charts) are welcome as long as they support rather than replace thorough explanation.
-
----
-
-These guidelines are intended to enable a later AI stage to judge whether a transcript contains enough information to produce a high‑quality article. They emphasise **completeness, clarity and reader value** over mechanical word counts or rigid templates. An article may deviate from these suggestions, but it should never omit the core informational elements that allow readers to make informed decisions.
-## General Notes 
-
-- **Reader focus:** Regardless of article type, content must be tailored to the target audience’s knowledge level and interests. Avoid jargon, or define it when unavoidable.
-    
-- **Evidence and citations:** Whenever factual claims are made, they should be supported by credible sources. Linking to primary studies, reputable news sites or official documents enhances trust.
-    
-- **Narrative flow:** Each article should have a clear beginning, middle and end. Even FAQ and pros/cons lists benefit from short introductions and conclusions to frame the content.
-    
-- **Avoid redundancy:** Ensure that points are not repeated without adding new information. Repetition can indicate that the transcript lacks sufficient detail and may need enrichment.
-    
-
-These guidelines provide qualitative standards rather than rigid templates, enabling writers and AI systems to craft varied yet high‑quality articles across different formats. Use them to assess whether a transcript contains the necessary material or requires supplementation through research or additional context.
