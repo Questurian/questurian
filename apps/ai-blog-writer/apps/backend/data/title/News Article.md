@@ -1,14 +1,14 @@
 ## News Article
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     News headlines should succinctly convey the most important facts about an event or announcement and entice readers to learn more. They set expectations for timely, accurate reporting.
     
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     Readers scan headlines for quick updates and expect clarity, timeliness and impartiality.
     
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Summarize who and what happened, and include where or when if essential.
         
@@ -26,7 +26,7 @@
         
     - Ensure consistency in headline style across the publication; avoid mixing verb‑driven headlines with simple labels.
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Highlight the most newsworthy element or impact of the story (e.g., scale, consequences, novelty).
         
@@ -42,7 +42,7 @@
         
     - For breaking news, emphasize immediacy (“now,” “today,” “new”).
         
-- **Style, tone, and formatting rules (5–8 bullet points)**
+- **Style, tone, and formatting rules**
     
     - Maintain an objective, unbiased tone; avoid opinion or speculation in news headlines.
         
@@ -58,7 +58,7 @@
         
     - Keep the headline under 8–12 words when possible to maintain punch.
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Announces”
         
@@ -90,7 +90,7 @@
         
     - “Votes to”
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Articles (“a,” “an,” “the”).
         
@@ -112,7 +112,7 @@
         
     - Ambiguous headlines that could apply to multiple stories.
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Verify that the headline reflects the key facts—who, what, where, and sometimes when.
         

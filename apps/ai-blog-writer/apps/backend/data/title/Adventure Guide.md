@@ -1,16 +1,16 @@
 ## Adventure Guide
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     - Inspire readers to explore and convey the essence of an adventurous experience while clearly signalling location, activity and unique appeal. Titles should be service‑oriented, promising practical guidance without exaggeration or clickbait.
         
     - Establish credibility and trust by accurately reflecting the content and avoiding over‑statement or misleading cause‑and‑effect claims.
         
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     - Readers are curious, thrill‑seeking travellers looking for authentic experiences and practical information on activities, logistics and safety.
         
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Start with a dynamic verb or adjective (“Hiking,” “Discover,” “Breathtaking”) and immediately mention the destination or activity to ground the reader.
         
@@ -26,7 +26,7 @@
         
     - Place important keywords toward the beginning for SEO, but do not sacrifice readability or accuracy.
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Highlight what’s unique or extraordinary about the experience (e.g., “glacier‑fed lakes,” “ancient ruins”) to spark curiosity while maintaining clarity.
         
@@ -40,7 +40,7 @@
         
     - When the guide involves potential risk, be transparent about difficulty and safety considerations; avoid glamorizing danger or implying guaranteed outcomes.
         
-- **Style, tone and formatting rules (5–8 bullet points)**
+- **Style, tone and formatting rules**
     
     - Use an authoritative yet inviting tone—adventurous but grounded in expertise.
         
@@ -56,7 +56,7 @@
         
     - Write multiple headline options and test them with editors or analytics tools when possible.
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Hiking,” “Trekking,” “Road‑tripping,” “Cycling”
         
@@ -78,7 +78,7 @@
         
     - Location modifiers: “Pacific Northwest,” “Andes,” “Highlands,” “Desert”
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Clickbait phrases (“secret,” “you won’t believe,” “shocking”).
         
@@ -98,7 +98,7 @@
         
     - Unnecessary jargon or abbreviations; avoid “NP” for National Park unless widely known.
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Does the title accurately reflect the article content and avoid exaggeration?
         

@@ -1,14 +1,14 @@
 ## Packing Guide
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     Titles for packing guides should make it clear that the article delivers practical checklists or instructions tailored to a destination or occasion. They promise completeness and ease for readers preparing for a trip.
     
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     Readers are planning a trip and want a reliable, easy‑to‑follow list of what to bring; they seek convenience and assurance that nothing essential will be forgotten.
     
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Include “packing list,” “packing guide,” “what to pack” or similar phrase so the intent is obvious.
         
@@ -26,7 +26,7 @@
         
     - Avoid articles and forms of “to be” to keep the headline tight.
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Emphasize the benefit of being prepared (“essential items,” “save space,” “no stress”).
         
@@ -44,7 +44,7 @@
         
     - Consider including a targeted audience (“for first‑time travelers,” “for business trips”).
         
-- **Style, tone, and formatting rules (5–8 bullet points)**
+- **Style, tone, and formatting rules**
     
     - Use a friendly, helpful tone that reassures readers.
         
@@ -62,7 +62,7 @@
         
     - Use parentheses or brackets to clarify specifics (e.g., “(+ downloadable checklist)”).
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Packing list”
         
@@ -94,7 +94,7 @@
         
     - “Step‑by‑step”
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Vague titles (“Packing list”) without specifying destination or context.
         
@@ -116,7 +116,7 @@
         
     - Redundant phrases (“packing list list”).
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Does the title clearly indicate that the article is a packing guide or list?
         

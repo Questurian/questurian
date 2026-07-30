@@ -1,16 +1,16 @@
 ## Best Of
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     - Communicate that the article is a curated and authoritative ranking or roundup of top options within a category, timeframe or geography.
         
     - Convey transparency and neutrality by avoiding commercial bias and clearly reflecting the criteria used.
         
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     - Readers expect an impartial, well‑researched list to help them choose among the best options, whether for products, destinations, restaurants or experiences.
         
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Begin with a superlative or numerical indicator (“10 Best…,” “Top Picks for…”), combined with the category and location or timeframe.
         
@@ -28,7 +28,7 @@
         
     - Do not imply exclusivity or completeness unless the article justifies it (“Our Complete List…” should deliver completeness).
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Emphasize what sets the list apart—unique criteria, expert judging, insider knowledge—to build trust and authority.
         
@@ -46,7 +46,7 @@
         
     - Do not tease with withheld information (“You Won’t Guess What’s #1”)—such gimmicks are clickbait.
         
-- **Style, tone and formatting rules (5–8 bullet points)**
+- **Style, tone and formatting rules**
     
     - Adopt a confident, authoritative tone that reflects rigorous research rather than personal preference.
         
@@ -64,7 +64,7 @@
         
     - Create alternative headlines for social channels that fit character limits without losing essential information.
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Best,” “Top,” “Top Picks,” “Top [Number]”
         
@@ -86,7 +86,7 @@
         
     - “Sustainable,” “Eco‑Friendly,” “Women‑Owned” (when relevant)
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Misleading superlatives (“World’s Greatest”) without supporting evidence.
         
@@ -106,7 +106,7 @@
         
     - Clichés like “Ultimate List” unless truly comprehensive.
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Does the title clearly state the scope, category and, if applicable, timeframe?
         

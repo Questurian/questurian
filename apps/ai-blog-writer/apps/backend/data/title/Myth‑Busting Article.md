@@ -1,14 +1,14 @@
 ## Myth‑Busting Article
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     Titles for myth‑busting pieces should quickly signal that the article will correct a misconception and deliver trustworthy information. The focus is on revealing the truth rather than sensationalizing or repeating false claims.
     
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     Readers are curious but may hold misconceptions; they want clear facts and reassurance from credible sources.
     
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Begin with the correct fact or conclusion; avoid leading with the myth itself because repeating falsehoods can reinforce them.
         
@@ -26,7 +26,7 @@
         
     - Ensure the title answers the reader’s question “Why should I read this?”.
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Use an “against popular belief” angle to allude to a widely held assumption and flip it with an opposing fact.
         
@@ -42,7 +42,7 @@
         
     - Highlight benefits or consequences (“why it matters” or “what you should know”) to create urgency.
         
-- **Style, tone, and formatting rules (5–8 bullet points)**
+- **Style, tone, and formatting rules**
     
     - Maintain a neutral, authoritative tone; avoid sensational adjectives and clickbait language.
         
@@ -58,7 +58,7 @@
         
     - Include keywords that align with the topic for searchability.
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Fact check”
         
@@ -90,7 +90,7 @@
         
     - “Clarifying”
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - Repeating the myth in full or using quotes of misinformation.
         
@@ -110,7 +110,7 @@
         
     - Passive constructions (“It is said that…”).
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Confirm the headline communicates the correct information rather than the myth.
         

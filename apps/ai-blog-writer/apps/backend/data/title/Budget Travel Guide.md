@@ -1,16 +1,16 @@
 ## Budget Travel Guide
 
-- **Purpose of titles (1–2 lines)**
+- **Purpose of titles**
     
     - Signal that the article offers practical, money‑saving tips for traveling to a destination or type of trip without sacrificing quality or experience.
         
     - Attract value‑conscious readers who want to explore affordably while maintaining transparency about costs.
         
-- **Audience mindset (1 line)**
+- **Audience mindset**
     
     - Readers are cost‑sensitive travellers seeking trustworthy advice on how to maximize experience while minimizing expenses.
         
-- **Title structure rules (5–8 bullet points)**
+- **Title structure rules**
     
     - Start with keywords that combine destination or type (“Paris,” “Island Hopping,” “Road Trip”) with budget focus (“on $50 a Day,” “For Under $500”).
         
@@ -28,7 +28,7 @@
         
     - Place the main keywords at the beginning to improve search visibility.
         
-- **Hook and angle strategy (5–8 bullet points)**
+- **Hook and angle strategy**
     
     - Promise tangible benefits such as “Save Money,” “Spend Less,” “Free Attractions,” while providing enough context to avoid clickbait.
         
@@ -46,7 +46,7 @@
         
     - Clarify whether prices are per person, per day, or total trip to avoid misunderstanding.
         
-- **Style, tone and formatting rules (5–8 bullet points)**
+- **Style, tone and formatting rules**
     
     - Use a friendly, resourceful tone that emphasizes possibility and practicality.
         
@@ -64,7 +64,7 @@
         
     - Test alternative headlines for different distribution channels and adjust accordingly.
         
-- **Preferred words and phrases (8–15 bullet points)**
+- **Preferred words and phrases**
     
     - “Budget‑Friendly,” “Affordable,” “Low‑Cost,” “Cost‑Effective”
         
@@ -88,7 +88,7 @@
         
     - “Guide,” “Plan,” “Itinerary”
         
-- **Words and patterns to avoid (8–15 bullet points)**
+- **Words and patterns to avoid**
     
     - “Cheap” used pejoratively; opt for positive terms like “affordable” or “value.”
         
@@ -110,7 +110,7 @@
         
     - Jargon or abbreviations not commonly understood by an international audience.
         
-- **Final quality checklist (6–10 bullet points)**
+- **Final quality checklist**
     
     - Does the title clearly convey that the guide is budget‑focused and name the destination or theme?
         
