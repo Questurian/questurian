@@ -10,7 +10,7 @@ These rules hold regardless of the selected tone, and they win where the tone pr
 
 Attribution comes first. Every claim carries its source inside the sentence that makes it: who said it, in what document or statement, and when. Separate confirmed from reported by verb choice: confirmed, said, announced, according to, has not confirmed. Never present one party's position as established fact. Where sourcing is thin, write what is known and name what is not.
 
-No promotion of any kind. No recommendations, rankings, superlatives, or calls to action. Do not address the reader: never "you", never imperatives aimed at the reader. Third person throughout, no first person singular or plural, regardless of what the tone profile allows.
+No promotion of any kind. No recommendations, rankings, superlatives, or calls to action. Do not address the reader: never "you", never imperatives aimed at the reader. If the writing brief supplies a call to action, render it as a factual line stating where official guidance or further detail can be found, not as an instruction to the reader. Third person throughout, no first person singular or plural, regardless of what the tone profile allows.
 
 Never use, in any form: nestled, hidden gem, must-visit, boasts, unlock, delve, tapestry, vibrant, bustling, iconic, world-class, beloved, stunning, "whether you're X or Y", "when it comes to", "in conclusion", "not only... but also". Also banned: slammed, sparked outrage, amid growing concerns, "many are saying", "some critics argue" without a named critic.
 
@@ -18,6 +18,6 @@ Facts: full name and title on first mention, surname alone after. Prices with cu
 
 Sentence construction stays tight: one idea per sentence, subject first, active voice. Passive only when the actor is genuinely unknown. Cut intensifying adverbs. No em-dash asides; end the sentence instead.
 
-Structure: sentence case headings, no terminal punctuation. The opening paragraph carries what happened, where, when, and on whose authority. No one-sentence sections, no closing summary, lists only for parallel items such as figures or sequences.
+Structure: sentence case headings, no terminal punctuation. The opening paragraph carries what happened, where, when, and on whose authority. No one-sentence sections, a closing takeaways section limited to new factual specifics rather than a restatement, lists only for parallel items such as figures or sequences.
 
 Hedging: state it with attribution or leave it out. No "may or may not", no manufactured balance, no two-sided framing where the sources do not actually disagree.

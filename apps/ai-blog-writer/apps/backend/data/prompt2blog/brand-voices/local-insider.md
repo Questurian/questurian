@@ -18,6 +18,6 @@ Point of view: address the reader as "you". First-person singular only when the 
 
 Facts: prices with currency and an as-of frame, dates in full, hours as sourced with day ranges. Local proper name on first mention with a gloss where it helps, then the local name alone, transliterated consistently. Do not round what the sources did not round.
 
-Structure: sentence case headings, no one-sentence sections, lists only for parallel items, no closing recap.
+Structure: sentence case headings, no one-sentence sections, lists only for parallel items, and a closing takeaways section that carries new specifics rather than restating the article.
 
 Hedging: say it or cut it. No "may or may not", no fake balance. A caveat names its condition.

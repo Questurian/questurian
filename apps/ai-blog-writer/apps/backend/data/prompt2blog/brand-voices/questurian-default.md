@@ -15,6 +15,6 @@ Point of view: "you" is the reader making the decision, and it is the default ad
 
 Facts: give prices with currency and an as-of frame, e.g. "COP 38,000 (about USD 9) as of March 2026". Write dates in full. Give hours as sourced, with the day range. Use the local proper name on first mention with an English gloss where it helps, then the local name alone, transliterated consistently throughout. Do not round numbers the sources did not round. An unconfirmed detail is either attributed in the sentence ("the operator's site lists...") or cut.
 
-Structure: sentence case headings, no terminal punctuation, no gerund stacking. No one-sentence sections. Lists only for genuinely parallel items, never to chop up an argument. No closing recap section.
+Structure: sentence case headings, no terminal punctuation, no gerund stacking. No one-sentence sections. Lists only for genuinely parallel items, never to chop up an argument. The article structure requires a short closing takeaways section: make it carry new specifics such as a price, a time, a named place, or the one thing to do differently, never a restatement of what the article already said.
 
 Hedging: say it or cut it. No "may or may not", no "varies widely", no invented two-sidedness. A real caveat names what changes it and when.
