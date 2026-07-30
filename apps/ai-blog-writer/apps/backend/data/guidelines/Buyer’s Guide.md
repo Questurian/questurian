@@ -48,18 +48,3 @@ A buyer’s guide helps readers understand **what matters when choosing between 
 ### Editorial Flexibility Notes
 
 Writers don’t need to rigidly follow the exact order of the sections above. They can combine or expand sections depending on the complexity of the category or the audience’s sophistication. A buyer’s guide can be **agnostic** or **product‑specific**. Tone may vary from formal to conversational, but the narrative must always be **educational, neutral and helpful**. Long guides should be broken up with design elements, sidebars or linked companion pieces. Creativity in presentation is welcome as long as the essential questions are answered.
-
----
-
-## General Notes 
-
-- **Reader focus:** Regardless of article type, content must be tailored to the target audience’s knowledge level and interests. Avoid jargon, or define it when unavoidable.
-    
-- **Evidence and citations:** Whenever factual claims are made, they should be supported by credible sources. Linking to primary studies, reputable news sites or official documents enhances trust.
-    
-- **Narrative flow:** Each article should have a clear beginning, middle and end. Even FAQ and pros/cons lists benefit from short introductions and conclusions to frame the content.
-    
-- **Avoid redundancy:** Ensure that points are not repeated without adding new information. Repetition can indicate that the transcript lacks sufficient detail and may need enrichment.
-    
-
-These guidelines provide qualitative standards rather than rigid templates, enabling writers and AI systems to craft varied yet high‑quality articles across different formats. Use them to assess whether a transcript contains the necessary material or requires supplementation through research or additional context.

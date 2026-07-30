@@ -54,17 +54,3 @@ A review evaluates a single product, service or place in depth to help readers d
 ### Editorial Flexibility Notes
 
 Reviews can vary in tone—from conversational to technical—and may include humour or personal anecdotes. They can be structured with or without formal section headings, but they **must remain transparent and honest**. Affiliate links are acceptable, but the writer should disclose them and maintain independence. Multimedia elements and rating scales are optional, but the core analysis should not be reduced to a score; readers should understand the reasons behind the rating. Writers can focus on aspects most relevant to their audience but should always give enough context for informed decision‑making.
-
----
-## General Notes 
-
-- **Reader focus:** Regardless of article type, content must be tailored to the target audience’s knowledge level and interests. Avoid jargon, or define it when unavoidable.
-    
-- **Evidence and citations:** Whenever factual claims are made, they should be supported by credible sources. Linking to primary studies, reputable news sites or official documents enhances trust.
-    
-- **Narrative flow:** Each article should have a clear beginning, middle and end. Even FAQ and pros/cons lists benefit from short introductions and conclusions to frame the content.
-    
-- **Avoid redundancy:** Ensure that points are not repeated without adding new information. Repetition can indicate that the transcript lacks sufficient detail and may need enrichment.
-    
-
-These guidelines provide qualitative standards rather than rigid templates, enabling writers and AI systems to craft varied yet high‑quality articles across different formats. Use them to assess whether a transcript contains the necessary material or requires supplementation through research or additional context.
