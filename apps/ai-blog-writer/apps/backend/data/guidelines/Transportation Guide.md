@@ -33,7 +33,7 @@
 - Visual descriptions of stations or vehicles to help readers recognize them.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Mentions only one or two transport types without detail on how to use them.
     
@@ -48,7 +48,7 @@
 
 ### Editorial Flexibility Notes
 
-- Order sections logically (e.g., public transit first, then alternatives), but feel free to adjust depending on the transcript's strengths.
+- Order sections logically (e.g., public transit first, then alternatives), but feel free to adjust depending on the source material's strengths.
     
 - Use a clear, instructive tone but avoid sounding like a technical manual; analogies or personal experiences can help.
     

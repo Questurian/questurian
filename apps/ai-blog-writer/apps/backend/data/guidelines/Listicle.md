@@ -32,7 +32,7 @@ A listicle presents **information in a list‑based format**, making it easy to 
 - **SEO keywords** to increase discoverability.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source material Is Insufficient
 
 - The subject doesn't break into discrete points; information is continuous or narrative.
     
@@ -42,7 +42,7 @@ A listicle presents **information in a list‑based format**, making it easy to 
     
 - Too few items to justify a list or too many items with scant detail for each.
     
-- Missing introduction or conclusion; the transcript is just a bulleted list without context.
+- Missing introduction or conclusion; the source material is just a bulleted list without context.
 
 
 ### Editorial Flexibility Notes

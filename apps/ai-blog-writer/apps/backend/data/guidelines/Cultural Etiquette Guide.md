@@ -33,7 +33,7 @@
 - Tips on simple language phrases or courtesy words.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Only a few superficial do's and don'ts without context or examples.
     
@@ -50,7 +50,7 @@
 
 - Maintain a respectful, curious tone; avoid stereotyping.
     
-- Organize content by theme or scenario rather than rigid sections; adapt to the transcript's strengths.
+- Organize content by theme or scenario rather than rigid sections; adapt to the source material's strengths.
     
 - Use inclusive language that invites readers to learn rather than scold them for ignorance.
     

@@ -31,7 +31,7 @@
 - Suggestions for documenting memories (shared photo albums, travel scrapbooks).
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - It lacks consideration of different age groups' needs and instead treats children generically.
     
@@ -44,7 +44,7 @@
 
 ### Editorial Flexibility Notes
 
-- Writers should adapt destination examples to suit the transcript's focus, but should always highlight age‑appropriate considerations.
+- Writers should adapt destination examples to suit the source material's focus, but should always highlight age‑appropriate considerations.
     
 - Tone can be conversational and empathetic, acknowledging the chaos of family travel while offering constructive solutions.
     

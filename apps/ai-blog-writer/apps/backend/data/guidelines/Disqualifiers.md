@@ -33,15 +33,15 @@
 - **Contextual data:** Market statistics or industry benchmarks can illustrate why certain thresholds matter (e.g., average costs, typical time investments).
 
 
-**Signs the Transcript Is Insufficient**
+**Signs the Source Material Is Insufficient**
 
-- **No disqualifying criteria:** If the transcript only praises or describes an option without exploring who should avoid it, there is nothing to build a disqualifier article from.
+- **No disqualifying criteria:** If the source material only praises or describes an option without exploring who should avoid it, there is nothing to build a disqualifier article from.
     
 - **Vague or generic warnings:** Statements like "it's not for everyone" without specifics fail to inform. Concrete reasons must be provided.
     
 - **Lack of reasoning:** Simply listing disqualifiers without explaining the consequences or trade‑offs leaves readers with unsupported assertions.
     
-- **One‑sided negativity:** If the transcript is entirely negative without acknowledging appropriate use cases, it risks sounding like a rant rather than a helpful filter.
+- **One‑sided negativity:** If the source material is entirely negative without acknowledging appropriate use cases, it risks sounding like a rant rather than a helpful filter.
 
 
 **Editorial Flexibility Notes**

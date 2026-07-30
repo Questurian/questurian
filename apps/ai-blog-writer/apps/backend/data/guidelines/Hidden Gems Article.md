@@ -33,7 +33,7 @@
 - Comparisons with more popular attractions to highlight differences.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Vague mentions of "cool spots" without names, locations, or descriptive detail.
     

@@ -28,9 +28,9 @@ Resource lists curate tools, websites, services or references on a specific topi
 - **Supplementary tips** – Offer advice on how to choose among the resources or combine them effectively.
     
 
-### Signs the transcript is insufficient
+### Signs the source material is insufficient
 
-- The transcript lists names without describing what they do, leaving readers unable to evaluate them.
+- The source material lists names without describing what they do, leaving readers unable to evaluate them.
     
 - Items are unrelated or do not fit a clear theme, suggesting poor curation.
     

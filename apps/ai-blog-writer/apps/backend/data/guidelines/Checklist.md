@@ -24,17 +24,17 @@ A checklist article provides readers with a clear, scannable list of tasks or it
 - **Links to related resources** – Provide internal links to deeper articles (e.g., a guide to money belts or medications) when appropriate.
     
 
-### Signs the transcript is insufficient
+### Signs the source material is insufficient
 
-- The transcript lists items without context or organization, making it unclear what scenario the checklist is for.
+- The source material lists items without context or organization, making it unclear what scenario the checklist is for.
     
 - Categories are missing or too vague (e.g., grouping all "gear" together without distinguishing documents, clothing or toiletries).
     
 - There are no notes explaining why certain items matter, so readers cannot gauge importance.
     
-- The transcript includes only a handful of items with no obvious structure or appears incomplete.
+- The source material includes only a handful of items with no obvious structure or appears incomplete.
     
 
 ### Editorial flexibility notes
 
-Checklist articles should remain concise and straightforward. Writers may vary the number of categories and depth of annotations depending on the transcript. Personal anecdotes can be included briefly in the introduction but should not overwhelm the list. Structure should remain reader‑friendly with plenty of white space and clear headings to aid scanning.
+Checklist articles should remain concise and straightforward. Writers may vary the number of categories and depth of annotations depending on the source material. Personal anecdotes can be included briefly in the introduction but should not overwhelm the list. Structure should remain reader‑friendly with plenty of white space and clear headings to aid scanning.

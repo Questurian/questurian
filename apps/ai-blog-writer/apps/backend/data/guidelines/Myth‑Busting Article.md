@@ -28,7 +28,7 @@ Myth‑busting articles confront and correct common misconceptions or misinforma
 - **Additional resources:** Link to studies, expert statements, or institutional reports for readers who want deeper evidence.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Myths are only mentioned in passing without clear statements of what people believe.
     
@@ -36,7 +36,7 @@ Myth‑busting articles confront and correct common misconceptions or misinforma
     
 - The explanation does not address why the misconception exists or fails to clarify the error.
     
-- The transcript dwells on repeating the myth but never reinforces the correct information, risking the “familiarity effect.”
+- The source material dwells on repeating the myth but never reinforces the correct information, risking the “familiarity effect.”
     
 - Lacks consideration of audience perspective or fails to acknowledge why the myth persists.
     

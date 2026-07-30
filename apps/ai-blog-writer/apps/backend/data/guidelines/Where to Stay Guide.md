@@ -87,9 +87,9 @@ Each neighborhood profile must include at least one concrete, verifiable detail 
 - **No neighborhood the writer can't substantiate.** If there's no personal experience, no local source, and no cited reporting behind a recommendation, it shouldn't be in the guide.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
-- The transcript lists accommodation names without describing neighborhoods or explaining why they're suitable.
+- The source material lists accommodation names without describing neighborhoods or explaining why they're suitable.
 
 - No information about location, amenities, service quality, or price ranges; the guide can't differentiate between lodging types.
 

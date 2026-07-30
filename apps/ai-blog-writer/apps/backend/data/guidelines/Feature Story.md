@@ -32,7 +32,7 @@ A feature story tells a **compelling narrative** about people, trends or issues.
 - **Foreshadowing or literary techniques** to heighten narrative tension.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source material Is Insufficient
 
 - Lacks a **central character or anecdote**; only general statements are present.
     
@@ -42,7 +42,7 @@ A feature story tells a **compelling narrative** about people, trends or issues.
     
 - No quotes from sources; narrative feels flat or unsupported.
     
-- The transcript is purely informational (e.g., a lecture) without narrative elements.
+- The source material is purely informational (e.g., a lecture) without narrative elements.
 
 
 ### Editorial Flexibility Notes

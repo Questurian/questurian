@@ -34,11 +34,11 @@ Explainers **break down complex topics or news events into clear, accessible lan
 - **Case examples or anecdotes** that illustrate how the concept applies in real life.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source material Is Insufficient
 
 - The topic is mentioned but not defined; no clear explanation of what it is or why it matters.
     
-- The transcript only lists facts without addressing how or why.
+- The source material only lists facts without addressing how or why.
     
 - Absence of background information; readers cannot place the topic in context.
     

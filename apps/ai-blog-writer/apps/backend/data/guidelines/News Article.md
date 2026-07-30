@@ -34,7 +34,7 @@ A news article exists to **report timely events or announcements succinctly and 
 - **Links to original documents or sources**, where appropriate.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source material Is Insufficient
 
 - Missing one or more of the five Ws or lacking a clear sequence of events.
     

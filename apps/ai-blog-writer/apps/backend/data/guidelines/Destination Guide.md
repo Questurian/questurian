@@ -30,11 +30,11 @@ Destination guides provide a comprehensive overview of a place—ranging from to
 - **Seasonal variations** – Advice on how experiences differ by season, including festivals or weather‑specific activities.
     
 
-### Signs the transcript is insufficient
+### Signs the source material is insufficient
 
 - Critical sections (transport, attractions, accommodations, costs, safety or cultural context) are missing or shallow.
     
-- The transcript lists attractions without explaining what makes them special.
+- The source material lists attractions without explaining what makes them special.
     
 - Practical details (e.g., how to reach the destination, average costs, best times to visit) are absent, making the guide less actionable.
     
@@ -43,4 +43,4 @@ Destination guides provide a comprehensive overview of a place—ranging from to
 
 ### Editorial flexibility notes
 
-Destination guides allow room for creative voice: some may be more narrative and experiential, while others are service‑oriented. Writers should adapt depth based on transcript richness and intended audience—family travelers may need different details than adventure seekers. Ensure clarity by using consistent headings and avoid overloading readers with exhaustive lists; prioritize quality recommendations and provide links for deeper research.
+Destination guides allow room for creative voice: some may be more narrative and experiential, while others are service‑oriented. Writers should adapt depth based on source material richness and intended audience—family travelers may need different details than adventure seekers. Ensure clarity by using consistent headings and avoid overloading readers with exhaustive lists; prioritize quality recommendations and provide links for deeper research.

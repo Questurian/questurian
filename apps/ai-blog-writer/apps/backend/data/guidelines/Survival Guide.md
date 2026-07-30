@@ -30,11 +30,11 @@ A survival guide delivers practical advice and critical information to help read
 - **Seasonal or regional variations** – Customizing gear lists and advice for specific climates or environments (e.g., desert vs. alpine) enriches the guide.
     
 
-### Signs the transcript is insufficient
+### Signs the source material is insufficient
 
 - It lacks coverage of the essential systems or gear categories, leaving obvious safety gaps.
     
-- Instructions are vague or missing; the transcript names tools but does not explain their use.
+- Instructions are vague or missing; the source material names tools but does not explain their use.
     
 - There is no discussion of risk factors, hazards or emergency procedures.
     

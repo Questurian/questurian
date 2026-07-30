@@ -31,7 +31,7 @@
 - Regional comparisons (e.g., cost and processing time differences between European and Caribbean visas).
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - It lacks mention of visa types, entry requirements or region‑specific documentation.
     

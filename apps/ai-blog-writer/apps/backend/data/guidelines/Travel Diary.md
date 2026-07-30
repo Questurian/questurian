@@ -31,9 +31,9 @@
 - **Photos or ephemera references** – Mention items collected along the way (ticket stubs, brochures, receipts) to add authenticity and evoke memories.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
-- The transcript lacks a clear beginning, middle and end; events are jumbled or missing major segments of the trip.
+- The source material lacks a clear beginning, middle and end; events are jumbled or missing major segments of the trip.
     
 - There is little or no sensory description; everything is described generically ("I went there") without details of sights, sounds or smells.
     

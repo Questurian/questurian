@@ -30,7 +30,7 @@ A case study demonstrates **how a specific problem was solved**, typically for b
 - **Call to action** if the case study is intended for marketing purposes (e.g., how readers can achieve similar results).
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source material Is Insufficient
 
 - No clear description of the initial problem or why it matters.
     

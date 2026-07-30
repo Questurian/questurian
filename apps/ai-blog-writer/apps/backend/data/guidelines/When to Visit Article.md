@@ -33,13 +33,13 @@
 - **Local insights** – Include quotes or tips from locals about seasonal nuances.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - It fails to mention seasons or weather variations; the article states only that the destination can be visited "any time" without explaining differences.
     
 - There is no discussion of crowd levels, costs or events; readers can't make informed decisions.
     
-- The transcript includes inaccurate or vague timing references without specific months or seasons.
+- The source material includes inaccurate or vague timing references without specific months or seasons.
 
 
 ### Editorial Flexibility Notes

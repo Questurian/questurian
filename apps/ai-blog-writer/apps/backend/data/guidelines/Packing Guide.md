@@ -9,13 +9,13 @@
 
 ### Core Content Expectations
 
-- **Destination‑specific considerations.** The transcript should emphasize researching climate (e.g., reversed seasons in the Southern Hemisphere or rainy seasons) and cultural norms to inform clothing choices.
+- **Destination‑specific considerations.** The source material should emphasize researching climate (e.g., reversed seasons in the Southern Hemisphere or rainy seasons) and cultural norms to inform clothing choices.
     
 - **Categories of essentials.** Expect at minimum: clothing (mix‑and‑match layers, neutral colours, quick‑dry materials), toiletries, electronics (chargers, adapters, power bank) and travel documents. Packing lists like SmarterTravel's highlight customizing the categories and using checklists.
     
 - **Luggage strategy.** Discuss the benefits of carry‑on‑only travel, using a 35–40 L backpack plus daypack and packing cubes. Stress not overpacking; only pack items used regularly and opt for versatile, quality gear.
     
-- **Activity‑specific gear.** The transcript should cover specialized gear for adventure activities—cycling, kayaking, hiking or skiing—and emphasize safety equipment like helmets, hydration packs, bug spray and headlamps.
+- **Activity‑specific gear.** The source material should cover specialized gear for adventure activities—cycling, kayaking, hiking or skiing—and emphasize safety equipment like helmets, hydration packs, bug spray and headlamps.
     
 - **Health and safety items.** Mention first‑aid kits, medications, sun protection and bug repellant.
 
@@ -31,7 +31,7 @@
 - Environmental considerations such as avoiding disposable plastics and packing reusable bags or utensils.
 
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - It presents only a short, generic list without context (no mention of climate, activities or trip length).
     

@@ -28,7 +28,7 @@ Comparison articles help readers evaluate multiple options—products, services,
 - **Expert or user quotes:** Credible testimonials can add nuance to the evaluation, provided sources are cited.
     
 
-### Signs the Transcript Is Insufficient
+### Signs the Source Material Is Insufficient
 
 - Does not clearly state the two (or more) items being compared or confuses them with unrelated items.
     
