@@ -57,19 +57,21 @@ The guide should follow the reader's actual decision flow: **Where** should I st
 Each neighborhood profile must include at least one concrete, verifiable detail that a generic AI-written or scraped guide wouldn't have — a specific street, a named café or market as a landmark, a local quirk (e.g., "the 7 a.m. bell from San Giorgio will wake you if you stay east of the canal"). Recommendations should be grounded in personal experience, local sources, or cited reporting — not vague impressions.
 
 
-### Required Editorial Components
+### Required Coverage
 
-- **key_takeaways_box** – Mandatory. Place near the top. Use it as an at-a-glance traveler-type → neighborhood matchup so decision-shoppers get value without scrolling.
+Write each of these into the article body as prose, a short list, or a table.
 
-- **in_the_know_box** – Mandatory. This is the natural home for local tips and cultural context: tipping norms, check-in customs, unique lodging experiences (ryokan etiquette, riad layouts), local regulations (short-term rental rules, tourist taxes), or neighborhood quirks.
+- **An at-a-glance matchup near the top.** A traveler-type → neighborhood pairing, so decision-shoppers get value without scrolling. A compact table suits this well.
 
-- **faq_block** – Mandatory. Short Q&A covering the most common traveler-type questions: "Best area for families?" "Best for nightlife?" "Where to stay without a car?" "Is X neighborhood safe at night?"
+- **A local-knowledge section.** Tipping norms, check-in customs, unique lodging experiences (ryokan etiquette, riad layouts), local regulations (short-term rental rules, tourist taxes), and neighborhood quirks.
 
-### Optional Editorial Components
+- **A traveler-question Q&A.** Short answers to the questions readers actually arrive with: "Best area for families?" "Best for nightlife?" "Where to stay without a car?" "Is X neighborhood safe at night?"
 
-- **highlight_callout** – Use for a standout property, a seasonal warning, or a specific booking window worth flagging. Don't force it — manufactured emphasis weakens the guide.
+### Optional Emphasis
 
-- **pull_quote** – Only use when there's a genuinely quotable line from a local, the writer's experience, or a traveler — not a fabricated or filler quote.
+- **A standout flag.** Worth calling out: a standout property, a seasonal warning, or a specific booking window. Don't force it — manufactured emphasis weakens the guide.
+
+- **A quoted line.** Only when the source material contains a genuinely quotable line — never a fabricated or filler quote.
 
 
 ### What NOT to Do
