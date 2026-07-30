@@ -49,4 +49,4 @@ Explainers **break down complex topics or news events into clear, accessible lan
 
 ### Editorial Flexibility Notes
 
-Explainers can vary widely in tone and format. Some use chronological narratives, while others adopt Q&A or thematic structures. Writers should choose the structure that best helps readers grasp the material and may incorporate storytelling techniques or humor to maintain interest. Though headings and sub‑heds often take the form of questions, it is not a strict requirement. The focus should be on clarity and reader comprehension rather than following a rigid formula. When appropriate, incorporate multimedia, data visualization and interactive components to enrich the explanation
+Some explainers use chronological narratives, while others adopt Q&A or thematic structures. Writers should choose the structure that best helps readers grasp the material. Headings and sub‑heds often take the form of questions. The focus should be on clarity and reader comprehension. When appropriate, incorporate multimedia, data visualization and interactive components to enrich the explanation

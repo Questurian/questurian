@@ -49,4 +49,4 @@ A cost breakdown article **transparently details prices or budgets** so readers 
 
 ### Editorial Flexibility Notes
 
-Writers may choose a narrative or tabular format. The level of granularity depends on the complexity of the purchase—high‑stakes purchases warrant more detail. Tone can range from utilitarian to conversational, but clarity and honesty are non‑negotiable. Writers can incorporate personal anecdotes or expert quotes to illustrate cost considerations. Creative visualisations (e.g., pie charts) are welcome as long as they support rather than replace thorough explanation.
+Writers may choose a narrative or tabular format. The level of granularity depends on the complexity of the purchase—high‑stakes purchases warrant more detail. Clarity and honesty are non‑negotiable. Writers can incorporate expert quotes to illustrate cost considerations. Creative visualisations (e.g., pie charts) are welcome as long as they support rather than replace thorough explanation.

@@ -54,4 +54,4 @@
 
 - Luxury guides can vary widely depending on destination and traveller interests (adventure, wellness, culinary, cultural). Writers can focus deeply on a single destination or compare multiple high‑end experiences.
     
-- The tone should be aspirational but grounded—highlighting exclusivity without appearing overly promotional. Storytelling and first‑hand perspectives can add warmth, but factual accuracy and depth must remain paramount.
+- The tone should be aspirational but grounded—highlighting exclusivity without appearing overly promotional. Factual accuracy and depth must remain paramount.

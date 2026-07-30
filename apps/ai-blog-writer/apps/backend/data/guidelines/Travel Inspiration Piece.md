@@ -48,10 +48,6 @@
 
 ### Editorial Flexibility Notes
 
-- Embrace individuality: voice and structure can vary widely; the goal is authenticity and engagement.
-    
-- The pace can shift—linger on one scene or flit through several—depending on source material richness.
-    
 - Balance inspiration with accuracy; creative embellishment should stay grounded in real observations.
     
 - Avoid cliché and generic praise; seek fresh angles even in well‑known places.

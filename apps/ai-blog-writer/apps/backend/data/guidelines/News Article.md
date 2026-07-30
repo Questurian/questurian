@@ -49,4 +49,4 @@ A news article exists to **report timely events or announcements succinctly and 
 
 ### Editorial Flexibility Notes
 
-News articles commonly follow the inverted‑pyramid structure, but they need not be formulaic. Some stories may benefit from a **martini glass** or chronological approach for events that unfold over time. Writers have creative licence in crafting leads and headlines — they can use puns or quotes for flair as long as they remain accurate. Paragraphs should stay short to aid readability, but the narrative flow can vary. Balance concision with completeness; avoid unnecessary repetition or filler.
+News articles commonly follow the inverted‑pyramid structure. Some stories may benefit from a **martini glass** or chronological approach for events that unfold over time. Paragraphs should stay short to aid readability. Balance concision with completeness; avoid unnecessary repetition or filler.

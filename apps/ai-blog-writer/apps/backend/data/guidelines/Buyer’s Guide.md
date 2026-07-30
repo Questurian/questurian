@@ -47,4 +47,4 @@ A buyer’s guide helps readers understand **what matters when choosing between 
 
 ### Editorial Flexibility Notes
 
-Writers don’t need to rigidly follow the exact order of the sections above. They can combine or expand sections depending on the complexity of the category or the audience’s sophistication. A buyer’s guide can be **agnostic** or **product‑specific**. Tone may vary from formal to conversational, but the narrative must always be **educational, neutral and helpful**. Long guides should be broken up with design elements, sidebars or linked companion pieces. Creativity in presentation is welcome as long as the essential questions are answered.
+A buyer’s guide can be **agnostic** or **product‑specific**. The narrative must always be **educational, neutral and helpful**. Long guides should be broken up with design elements, sidebars or linked companion pieces. Creativity in presentation is welcome as long as the essential questions are answered.

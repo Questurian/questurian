@@ -106,9 +106,7 @@ Each neighborhood profile must include at least one concrete, verifiable detail 
 
 - Writers can prioritize neighborhoods differently based on the destination's character (e.g., leading with budget areas for backpacker-heavy destinations, upscale districts for luxury-focused content). Recommendations should still remain well-rounded across traveler types even when the emphasis shifts.
 
-- The structure doesn't have to follow a strict list. Creative organization (e.g., grouping by themes like "historic districts," "beachfront areas," or "where locals actually live") is encouraged when it helps readers decide.
-
-- Personal experience and anecdote are welcome and strengthen the guide — as long as they support rather than replace the core coverage.
+- Creative organization (e.g., grouping by themes like "historic districts," "beachfront areas," or "where locals actually live") is encouraged when it helps readers decide.
 
 
 ### Example: Neighborhood Profile — Weak vs. Strong

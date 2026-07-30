@@ -55,4 +55,4 @@ An itinerary article presents a day‑by‑day or step‑by‑step travel plan, 
 
 ### Editorial flexibility notes
 
-Itinerary articles should balance structure with adaptability. Writers can adjust the length and detail of daily entries based on the source material, but should ensure each day has a clear focus and manageable pacing. Tone can be descriptive and enthusiastic while remaining pragmatic. Encourage readers to adapt the plan rather than follow it rigidly.
+Itinerary articles should balance structure with adaptability. Ensure each day has a clear focus and manageable pacing. Encourage readers to adapt the plan rather than follow it rigidly.

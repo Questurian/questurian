@@ -45,4 +45,4 @@ A case study demonstrates **how a specific problem was solved**, typically for b
 
 ### Editorial Flexibility Notes
 
-Case studies benefit from clarity and focus but can be tailored to the audience. The PARI (Problem, Action, Result, Impact) framework is one approach; the more detailed blueprint from TimelyText suggests additional sections. Writers may adjust the order or emphasis depending on the most compelling element (for instance, leading with a striking result to hook readers). Tone can range from conversational to formal; include enough story to engage readers but avoid turning the piece into a sales pitch.
+Case studies benefit from clarity and focus but can be tailored to the audience. The PARI (Problem, Action, Result, Impact) framework is one approach; the more detailed blueprint from TimelyText suggests additional sections. Writers may adjust the order or emphasis depending on the most compelling element (for instance, leading with a striking result to hook readers). Include enough story to engage readers but avoid turning the piece into a sales pitch.

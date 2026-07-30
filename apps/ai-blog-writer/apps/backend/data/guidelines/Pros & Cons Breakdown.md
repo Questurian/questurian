@@ -26,4 +26,4 @@ A pros and cons breakdown helps readers evaluate an option quickly by presenting
 
 ### Editorial flexibility notes
 
-Tone can be neutral-explanatory or practical-analytical. Maintain symmetry between strengths and weaknesses and avoid sales-like framing.
+Maintain symmetry between strengths and weaknesses and avoid sales-like framing.

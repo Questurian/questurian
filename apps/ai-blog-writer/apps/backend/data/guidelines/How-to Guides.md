@@ -48,8 +48,6 @@
 
 **Editorial Flexibility Notes**
 
-- While the basic sequence of instruction is essential, **tone and presentation can vary**. Narratives, personal anecdotes or humour are acceptable as long as they don't obscure the steps. Writers may invert steps, present high‑level overviews before details, or group related micro‑steps for clarity.
-    
-- **Word count should not dictate quality.** Focus on completeness and reader comprehension rather than length. If the process is simple, a short guide is acceptable.
+- Writers may invert steps, present high‑level overviews before details, or group related micro‑steps for clarity.
     
 - Creative flourishes (metaphors, analogies) can be used when they help demystify a task. However, avoid tangents that distract from the reader's goal or mislead about the complexity of the process.

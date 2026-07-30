@@ -47,4 +47,4 @@ A listicle presents **information in a list‑based format**, making it easy to 
 
 ### Editorial Flexibility Notes
 
-Listicles can vary greatly in length and tone. While some listicles are lighthearted, others can be in‑depth and research‑driven. Writers may intersperse **longer explanatory passages** or narrative elements within or between items, or group items under sub‑headers for longer lists. Avoid rigidly sticking to a set number of items; include as many as needed to cover the topic adequately. Titles can use curiosity gaps to attract readers, but they should remain accurate and avoid sensationalism.
+Writers may intersperse **longer explanatory passages** or narrative elements within or between items, or group items under sub‑headers for longer lists. Titles can use curiosity gaps to attract readers, but they should remain accurate and avoid sensationalism.

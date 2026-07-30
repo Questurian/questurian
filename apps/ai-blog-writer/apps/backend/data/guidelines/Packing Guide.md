@@ -46,6 +46,6 @@
 
 - Writers should adapt the list to the trip type (city break, safari, ski holiday, etc.).
     
-- Tone can be either concise or narrative; ensure the focus remains on practicality rather than fashion commentary.
+- Ensure the focus remains on practicality rather than fashion commentary.
     
-- Encourage creative organization methods or personal hacks, but avoid over‑prescribing exact quantities.
+- Encourage creative organization methods or personal hacks.

@@ -55,4 +55,4 @@ A “best of” article curates the **top recommendations** in a category. Reade
 
 ### Editorial Flexibility Notes
 
-Writers can decide whether to **rank** items or present them as unranked favourites. The number of picks can vary (Top 5, Top 10, Top 15, etc.), and the tone may range from playful to earnest. Creativity in angles—such as focusing on niche subcategories or blending humour with analysis—is encouraged. However, the list must still provide clear value: justify each choice and avoid filler entries. Freshness matters; revisit and update “best of” lists regularly to stay relevant.
+Writers can decide whether to **rank** items or present them as unranked favourites. Creativity in angles—such as focusing on niche subcategories—is encouraged. However, the list must still provide clear value: justify each choice and avoid filler entries. Freshness matters; revisit and update “best of” lists regularly to stay relevant.

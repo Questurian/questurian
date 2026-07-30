@@ -41,4 +41,4 @@ Resource lists curate tools, websites, services or references on a specific topi
 
 ### Editorial flexibility notes
 
-Resource lists benefit from a personable tone; writers can inject light commentary or personal experiences but should avoid overt bias. The number of resources can vary—shorter lists may allow more detailed annotations, whereas longer lists should keep descriptions brief and may link to deeper articles for extra details. Maintain readability with short paragraphs and ensure the title accurately reflects the list's scope.
+Avoid overt bias. Longer lists should keep descriptions brief and may link to deeper articles for extra details. Maintain readability with short paragraphs and ensure the title accurately reflects the list's scope.

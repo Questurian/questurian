@@ -46,8 +46,6 @@
 
 **Editorial Flexibility Notes**
 
-- The tone can vary from candid and conversational to analytical. Some disqualifier pieces may take a humorous approach ("You’re a night owl? This 5 AM boot camp probably isn't for you"), while others may be serious if stakes are high (e.g., medical or financial advice).
-    
-- Writers should feel free to structure the article around scenarios, FAQs or myth‑busting formats rather than a simple list. The key is clarity and honesty, not adherence to a rigid template.
+- Writers should feel free to structure the article around scenarios, FAQs or myth‑busting formats rather than a simple list. The key is clarity and honesty.
     
 - Don't be afraid to admit nuance. If certain factors could be mitigated (e.g., cost with discounts), mention that rather than making absolute statements.

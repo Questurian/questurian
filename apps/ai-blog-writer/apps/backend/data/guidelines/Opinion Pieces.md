@@ -52,6 +52,6 @@
 
 - While the structure (hook, thesis, body, conclusion) is common, writers may experiment with narrative forms, such as **chronological stories**, dialogues or letters, as long as they maintain clarity and persuasive focus.
     
-- Tone can range from earnest to satirical, but **avoid jargon** and use short sentences. Creative language is encouraged if it serves clarity and engagement.
+- **Avoid jargon** and use short sentences. Creative language is encouraged if it serves clarity and engagement.
     
 - Writers may incorporate opposing voices directly (through quotes or imagined interlocutors) to enrich the debate. There is no requirement to balance arguments equally, but fairness and acknowledgment of complexity build trust.

@@ -43,4 +43,4 @@ A survival guide delivers practical advice and critical information to help read
 
 ### Editorial flexibility notes
 
-While survival guides should be pragmatic and safety‑focused, writers can adapt the tone (e.g., serious or approachable) depending on the audience. Balance brevity with completeness: key instructions must be clear, but additional commentary can be placed in sidebars or optional sections. Personal experiences can be included but should support, not replace, reliable guidance.
+Survival guides should be pragmatic and safety‑focused. Balance brevity with completeness: key instructions must be clear, but additional commentary can be placed in sidebars or optional sections.

@@ -41,8 +41,6 @@ A FAQ article compiles short, direct answers to common questions about a single 
 
 ### Editorial Flexibility Notes
 
-- Tone should be succinct and neutral; however, slight warmth or humor can be added if it matches the brand voice and aids readability.
-    
-- The number of questions can vary widely. There’s no need to force a specific count—include as many as are genuinely useful.
+- Tone should be succinct and neutral.
     
 - Writers may choose to group questions by theme or chronology; both are acceptable if the logic is clear to readers
