@@ -72,6 +72,14 @@ export default buildConfig({
   }),
   sharp: sharp as any,
   onInit: async () => {
+    // Refuse to serve production traffic with development URL defaults, which
+    // would otherwise silently emit localhost OAuth redirects, Stripe return
+    // URLs and password-reset links. Checked here rather than at module load so
+    // `next build` (which runs with NODE_ENV=production) is unaffected. No-op
+    // outside production.
+    const { assertProductionConfig } = await import('./shared/config/assert-production-config')
+    assertProductionConfig()
+
     // Better Auth owns `visitor_auth_*`; Payload owns CMS collections. Keep this
     // idempotent guard so fresh or partially migrated dev DBs still have auth DDL.
     const { ensureVisitorAuthSchema } = await import(
