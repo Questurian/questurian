@@ -267,8 +267,8 @@ describe('runEditorialStagePublishWorkflow', () => {
       publishedAt: '2026-03-02T00:00:00.000Z',
       updatedAt: '2026-03-02T00:00:00.000Z',
       author: {
-        firstName: 'Jane',
-        lastName: 'Doe'
+        slug: 'jane-doe',
+        displayName: 'Jane Doe'
       }
     } as const
     const updateArticle = vi.fn().mockResolvedValue(publishedArticle)

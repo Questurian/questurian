@@ -165,10 +165,10 @@ _Avoid_: account, customer, member
 Role-derived Membership entitlement for a Staff identity.
 _Avoid_: Stripe subscription, manual subscription status
 
-### Author profile
+### Author
 
-The public presentation (display name, bio, avatar, slug, author page) of a Staff identity; not a separate record or role.
-_Avoid_: author account, author role, guest author
+The public authorship record (display name, bio, avatar, expertise, social links, slug, author page) that carries a byline. Its own collection, optionally linked to a Staff identity, and valid without one.
+_Avoid_: author account, author role, author profile (retired 2026-08: authorship is no longer a view of the Staff identity)
 
 ### Visitor account
 
@@ -236,7 +236,8 @@ _Avoid_: public auth, visitor auth
 - **`PerfectForTag.applicableTypes`** scopes a tag to one or more of dining/attractions/nightlife/accommodations.
 - A **Visitor account** may have an active **Membership entitlement**.
 - A **Staff identity** may have a **Staff grant**, but it is not exposed through public account APIs.
-- A **Staff identity** has at most one **Author profile**; an Author profile never exists without a Staff identity.
+- A **Staff identity** has at most one **Author**; an **Author** may exist with no Staff identity at all, and that is a fully valid, renderable state (ADR-0007).
+- A **Staff identity** has a lifecycle **status** of `active` or `disabled`. Disabling, not deleting, is how a person is offboarded: a disabled identity cannot sign in and holds no access, while its **Author**, bylines and author page are untouched.
 - A **Visitor account** has exactly one **Visitor profile**.
 - A **Staff identity** is separate from a **Visitor account**.
 - A **Staff identity** enters through a **Staff entry point**, not a **Visitor entry point**.
@@ -298,9 +299,10 @@ _Avoid_: public auth, visitor auth
 - New public uploads enter through a MediaSet creation/selection workflow. Direct `MediaAsset` uploads are reserved for internal profile images, inline article body images (until placement-aware serving is needed), migration tooling, and external non-first-class images.
 - Editorial body images may remain direct `MediaAsset` references until they need variant-aware serving.
 - For synced location content, **LM owns variant file generation**; Questura owns variant attachment validation, MediaPlacement requirements, and public serving.
-- Any Staff identity may have an Author profile, regardless of role. Role governs editorial capability; the Author profile governs public presentation. (Resolved 2026-07: the editor-only public-profile gate contradicted writers receiving bylines on published articles.)
-- **Byline implies visibility**: an Author page is publicly visible iff its Staff identity has at least one published editorial item. There is no separate opt-in flag; the legacy `isPublic` checkbox is retired, not left as a dead control.
-- A Staff identity edits its own Author profile presentation (names, display name, bio, expertise, social links, avatar). The author-page slug is admin-controlled: it auto-generates once and never changes without an admin, because author URLs are public and un-redirected.
+- Any Staff identity may have an Author, regardless of role. Role governs editorial capability; the Author governs public presentation. (Resolved 2026-07: the editor-only public-profile gate contradicted writers receiving bylines on published articles.)
+- **Byline implies visibility**: an Author page is publicly visible iff that Author has at least one published editorial item. There is no separate opt-in flag; the legacy `isPublic` checkbox is retired, not left as a dead control. Visibility follows the Author, not the Staff identity, so a departed writer's page stays up.
+- A Staff identity edits only the Author linked to its own account (display name, bio, expertise, social links, avatar). The author-page slug is admin-controlled: it auto-generates once and never changes without an admin, because author URLs are public and un-redirected.
+- Deleting an Author is admin-only and is refused while any byline still points at it; deleting the Staff identity instead leaves the Author in place with no link.
 
 ## Naming Conventions
 
@@ -333,7 +335,6 @@ See `docs/adr/` for current ADRs.
 
 ## Open Questions
 
-- Staff offboarding is unmodeled: a Staff identity can only be deleted (admin-only), which would orphan required `author` relationships on published editorial content. A deactivated state that blocks login but preserves bylines has been discussed and deferred (2026-07).
 - Long-form article body comes in as LexicalJSON from AI Blog Writer — what is the contract? Today it's implicit.
 - `homepage-featured-content` is one of the largest feature folders; should it have its own CONTEXT.md? See suggestion in the meta-root.
 - Should the LM-side variant-generation responsibilities be documented in a parallel ADR (LM-side mirror of 0001)?

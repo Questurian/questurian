@@ -13,11 +13,14 @@ import type { TourAgencyKeyLocationSource, TourAgencyPriceTier } from './tourAge
 import type { SeoTwitterCardType } from './seo'
 import type { PayloadRichText, PolymorphicRelatedItemValue } from './common'
 
+/**
+ * The byline, served from Payload's Authors collection (ADR-0007). Authorship
+ * is no longer the staff account, so there are no name parts or email here.
+ */
 export type PayloadItineraryAuthor = {
   id?: number
-  firstName?: string | null
-  lastName?: string | null
-  email?: string | null
+  slug?: string | null
+  displayName?: string | null
 }
 
 export type PayloadItineraryDoc = {

@@ -19,13 +19,11 @@ const toHumanName = (value: string | undefined): string | undefined => {
 const toAuthorName = (value: PayloadItineraryDoc['author']): string | undefined => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
 
-  const firstName = toHumanName(typeof value.firstName === 'string' ? value.firstName : undefined)
-  const lastName = toHumanName(typeof value.lastName === 'string' ? value.lastName : undefined)
-  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
+  // Taken verbatim: an Author's `displayName` is authored text, not a machine
+  // name to re-case. `toHumanName` still tidies the configured fallback.
+  const displayName = typeof value.displayName === 'string' ? value.displayName.trim() : ''
 
-  if (fullName) return fullName
-
-  return firstName || lastName
+  return displayName || undefined
 }
 
 export function buildPayloadItineraryMetadataPatch(input: {

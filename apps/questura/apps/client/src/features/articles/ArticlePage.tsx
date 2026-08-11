@@ -55,7 +55,7 @@ function StandardArticleHeader({ article }: { article: Article }) {
   const { title, author, publishedAt, updatedAt, seoSection, location } = article
   const description = seoSection?.metaDescription
   const label = formatLocationLabel(location)
-  const displayName = author?.publicProfile?.displayName
+  const displayName = author?.displayName
   const dateLine = formatArticleDate(publishedAt ?? updatedAt)
 
   return (

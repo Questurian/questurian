@@ -12,9 +12,7 @@ import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 function getAuthorLabel(article: FeaturedArticleTeaser): string {
-  const name = article.author?.name
-  const fullName = [article.author?.firstName, article.author?.lastName].filter(Boolean).join(' ')
-  return name || fullName || 'Questurian'
+  return article.author?.name || 'Questurian'
 }
 
 function useArticleImageStatus(imageUrl: string | null) {

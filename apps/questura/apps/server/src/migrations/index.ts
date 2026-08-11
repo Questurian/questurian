@@ -20,6 +20,7 @@ import * as migration_20260723_180417_add_itinerary_moment_options from './20260
 import * as migration_20260724_171322_add_stripe_webhook_events from './20260724_171322_add_stripe_webhook_events'
 import * as migration_20260811_000000_add_users_status from './20260811_000000_add_users_status'
 import * as migration_20260811_010000_add_authors from './20260811_010000_add_authors'
+import * as migration_20260811_020000_repoint_bylines_to_authors from './20260811_020000_repoint_bylines_to_authors'
 
 export const migrations = [
   {
@@ -131,5 +132,10 @@ export const migrations = [
     up: migration_20260811_010000_add_authors.up,
     down: migration_20260811_010000_add_authors.down,
     name: '20260811_010000_add_authors',
+  },
+  {
+    up: migration_20260811_020000_repoint_bylines_to_authors.up,
+    down: migration_20260811_020000_repoint_bylines_to_authors.down,
+    name: '20260811_020000_repoint_bylines_to_authors',
   },
 ]

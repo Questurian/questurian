@@ -89,15 +89,16 @@ export type ContentBlock =
   | HighlightCalloutBlock
   | FaqBlock
 
+/**
+ * The byline, as served from the Authors collection (ADR-0007). Authorship is
+ * no longer a view of the staff account, so there are no name parts and no
+ * nested public profile -- an author is a display name, a slug and an avatar.
+ */
 export type ArticleAuthor = {
   id: number
   slug?: string | null
-  firstName: string
-  lastName: string
-  publicProfile: {
-    displayName: string
-    avatar: string | null
-  }
+  displayName: string
+  avatar?: string | null
 }
 
 export type SeoSection = {

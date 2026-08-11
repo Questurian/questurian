@@ -51,12 +51,12 @@ function extractAuthorPreview(doc: PayloadDocLike): HomepageFeaturedCandidate['a
   const author = doc.author
   if (!isRecord(author)) return null
 
-  const first = typeof author.firstName === 'string' ? author.firstName.trim() : ''
-  const last = typeof author.lastName === 'string' ? author.lastName.trim() : ''
-  const name = [first, last].filter(Boolean).join(' ')
-
-  const email = typeof author.email === 'string' ? author.email.trim() : ''
-  const displayName = name || email || null
+  // The byline is an Authors doc (ADR-0007), which carries one authored
+  // `displayName` instead of the account's name parts and email fallback.
+  const displayName =
+    typeof author.displayName === 'string' && author.displayName.trim()
+      ? author.displayName.trim()
+      : null
 
   const slug = typeof author.slug === 'string' && author.slug.trim() ? author.slug.trim() : null
 
@@ -64,8 +64,6 @@ function extractAuthorPreview(doc: PayloadDocLike): HomepageFeaturedCandidate['a
     id: normalizeNumericId(author.id),
     slug,
     name: displayName,
-    firstName: first || null,
-    lastName: last || null,
   }
 }
 

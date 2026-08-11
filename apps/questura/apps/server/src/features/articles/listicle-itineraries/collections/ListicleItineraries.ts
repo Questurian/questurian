@@ -36,6 +36,7 @@ import {
   articleType,
 } from './fields'
 import { sanitizeListicleItineraryIncomingIds } from './sanitizeListicleClientIds'
+import { ensureAuthorIdForUser, findAuthorIdForUser } from '@/features/authors/lib/author-for-user'
 import {
   type ComputedItineraryBlock,
   validateListicleItineraryBlockRows,
@@ -95,16 +96,21 @@ export const ListicleItineraries: CollectionConfig = {
         req.user?.role === 'writer'
       )
     },
-    update: ({ req }) => {
+    update: async ({ req }) => {
       const user = req.user
       if (!user) return false
 
       if (user.role === 'admin' || user.role === 'editor') return true
 
       if (user.role === 'writer') {
+        // Bylines point at Authors, so scope on the writer's Author record
+        // rather than their account id (ADR-0007).
+        const authorId = await findAuthorIdForUser(req, user.id)
+        if (authorId === null) return false
+
         return {
           author: {
-            equals: user.id,
+            equals: authorId,
           },
         }
       }
@@ -160,7 +166,8 @@ export const ListicleItineraries: CollectionConfig = {
       },
       async ({ data, req, operation }) => {
         if (operation === 'create' && req.user?.id) {
-          data.author = req.user.id
+          // The byline is an Author, not the account that typed it (ADR-0007).
+          data.author = await ensureAuthorIdForUser(req, req.user.id)
         }
 
         if (data?.status === 'published' && !data?.publishedAt) {
