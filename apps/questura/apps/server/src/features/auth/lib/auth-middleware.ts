@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import type { AuthMiddlewareOptions, AuthResult } from '../types'
 import type { User } from '@/payload-types'
+import { isDisabledStaff } from './staff-status'
 
 function isStaffRole(role: User['role']): role is 'admin' | 'editor' | 'writer' {
   return role === 'admin' || role === 'editor' || role === 'writer'
@@ -38,6 +39,18 @@ export async function authenticateRequest(
       return {
         user: null,
         error: 'Staff account required',
+        status: 403,
+      }
+    }
+
+    // A disabled account keeps its row and its role but holds no access
+    // (ADR-0007). Session revocation already denies the token, so reaching here
+    // means the row was disabled without going through the collection —
+    // refuse anyway rather than trusting one layer.
+    if (isDisabledStaff(user)) {
+      return {
+        user: null,
+        error: 'This account has been disabled',
         status: 403,
       }
     }
