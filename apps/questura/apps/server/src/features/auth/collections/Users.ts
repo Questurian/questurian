@@ -81,13 +81,12 @@ export const Users: CollectionConfig = {
             return req.user?.role === 'admin'
           }
         },
-        // ROLES ARE PERMANENT - No transfers or changes allowed
-        // Once assigned, a role cannot be changed. This prevents:
-        // - Accidental Admin promotion
-        // - Editors gaining frontend access as admin
-        // - Role mutations after creation
-        //
-        // Exception: Allow Writer → Editor promotion (one-time upgrade)
+        // Roles move in both directions between `writer` and `editor`, so a
+        // person can be stepped down without their row being destroyed
+        // (ADR-0007). `admin` is deliberately not reachable by update: an admin
+        // can be demoted, but no update may grant admin, so a hijacked admin
+        // session cannot quietly mint a second one. Creating an admin is still
+        // an explicit create.
         update: async ({ req, id, data }) => {
           const user = req.user
 
@@ -97,29 +96,12 @@ export const Users: CollectionConfig = {
           // Payload types allow undefined here; reject invalid requests early
           if (id === undefined || id === null) return false
 
-          // Admins cannot change their own role
+          // Admins cannot change their own role. This is also what keeps the
+          // last admin in place: demoting an admin requires a second admin.
           if (user?.id === id) return false
 
           const requestedRole = data?.role
-          if (requestedRole !== 'editor') return false
-
-          // Allow Writer → Editor promotion only
-          try {
-            const targetUser = await req.payload.findByID({
-              collection: 'users',
-              id,
-              depth: 0,
-            })
-            // Allow Writer to be promoted to Editor (one-time)
-            if (targetUser?.role === 'writer') {
-              return true
-            }
-          } catch (error) {
-            return false
-          }
-
-          // NO other role changes - all roles are permanent and final
-          return false
+          return requestedRole === 'editor' || requestedRole === 'writer'
         },
       },
       options: [
@@ -129,7 +111,37 @@ export const Users: CollectionConfig = {
       ],
       admin: {
         position: 'sidebar',
-        description: 'User role - assigned once at creation and cannot be changed. Exception: Writers can be promoted to Editor by admins. All other roles are permanent.',
+        description:
+          'User role. Admins may move a person between Writer and Editor in either direction. Admin cannot be granted by editing an existing account, and nobody may change their own role.',
+      },
+    },
+
+    // Account lifecycle. Disabling, not deleting, is how a person leaves:
+    // the row, the author slug and every relationship pointing at it survive.
+    {
+      name: 'status',
+      type: 'select',
+      required: true,
+      defaultValue: 'active',
+      hasMany: false,
+      options: [
+        { label: 'Active', value: 'active' },
+        { label: 'Disabled', value: 'disabled' },
+      ],
+      access: {
+        // Admin-only, and never your own account — the same safeguard the role
+        // field uses to keep a lone admin from locking themselves out.
+        update: ({ req, id }) => {
+          const user = req.user
+          if (user?.role !== 'admin') return false
+          if (id === undefined || id === null) return false
+          return user.id !== id
+        },
+      },
+      admin: {
+        position: 'sidebar',
+        description:
+          'Disabled accounts cannot sign in, hold no access, and have their live sessions revoked immediately. Their author page and bylines are unaffected.',
       },
     },
 

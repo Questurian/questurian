@@ -1,10 +1,15 @@
 import type { AccessArgs } from 'payload'
 import { isAdmin } from '../../access/isAdmin'
 import { isBootstrapRequestAuthorized } from '../../lib/bootstrap-token'
+import { isDisabledStaff } from '../../lib/staff-status'
 
 /**
  * Collection-level access control for Users
  * Defines who can create, read, update, delete users
+ *
+ * Every branch below refuses a disabled account (ADR-0007). Payload's JWT
+ * strategy re-reads the user row on each request, so `req.user.status` is the
+ * committed value, not whatever was true when the token was minted.
  */
 export const collectionAccess = {
   /**
@@ -12,7 +17,11 @@ export const collectionAccess = {
    * Editors and Writers can view the collection but only in read-only mode
    */
   admin: ({ req: { user } }: AccessArgs) =>
-    Boolean(user && (user.role === 'admin' || user.role === 'editor' || user.role === 'writer')),
+    Boolean(
+      user &&
+        !isDisabledStaff(user) &&
+        (user.role === 'admin' || user.role === 'editor' || user.role === 'writer')
+    ),
 
   /**
    * Staff creation only.
@@ -23,7 +32,7 @@ export const collectionAccess = {
    * BetterAuth, not Payload Users.
    */
   create: async ({ req, data }: AccessArgs) => {
-    if (req.user) return req.user.role === 'admin'
+    if (req.user) return req.user.role === 'admin' && !isDisabledStaff(req.user)
 
     // Checked before the count so an unauthorised caller cannot use this
     // endpoint to probe whether the instance has been bootstrapped yet.
@@ -53,6 +62,7 @@ export const collectionAccess = {
   read: ({ req }: AccessArgs) => {
     const user = req.user
     if (!user) return false // Unauthenticated can't read
+    if (isDisabledStaff(user)) return false // Disabled accounts hold no access
     if (user.role === 'admin') return true // Admins read all
     
     // Editors and Writers can read, but only their own record
@@ -72,6 +82,7 @@ export const collectionAccess = {
   update: ({ req, id }: AccessArgs) => {
     const user = req.user
     if (!user) return false // Unauthenticated can't update
+    if (isDisabledStaff(user)) return false // Disabled accounts hold no access
     if (user.role === 'admin') return true // Admins update all
     
     // Editors and Writers can only update their own record

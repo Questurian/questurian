@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { collectionAccess } from './collectionLevel'
 
-function createReq(user: { role: string } | null, totalDocs = 0, bootstrapToken?: string) {
+function createReq(
+  user: { role: string; id?: number; status?: string } | null,
+  totalDocs = 0,
+  bootstrapToken?: string,
+) {
   return {
     user,
     headers: {
@@ -70,6 +74,46 @@ describe('Users collection access', () => {
       await expect(collectionAccess.create({ req: writerReq } as any)).resolves.toBe(false)
       expect(editorReq.payload.count).not.toHaveBeenCalled()
       expect(writerReq.payload.count).not.toHaveBeenCalled()
+    })
+  })
+
+  // ADR-0007: a disabled account keeps its row and its role but holds no
+  // access. Payload re-reads the user row on every request, so these checks see
+  // the committed status rather than whatever the token was minted with.
+  describe('disabled accounts', () => {
+    const disabledAdmin = { id: 1, role: 'admin', status: 'disabled' }
+
+    it('refuses admin-panel entry', () => {
+      expect(collectionAccess.admin({ req: createReq(disabledAdmin) } as any)).toBe(false)
+      for (const role of ['editor', 'writer']) {
+        expect(
+          collectionAccess.admin({ req: createReq({ id: 2, role, status: 'disabled' }) } as any),
+        ).toBe(false)
+      }
+    })
+
+    it('refuses create, read, update and delete', async () => {
+      await expect(
+        collectionAccess.create({ req: createReq(disabledAdmin, 1) } as any),
+      ).resolves.toBe(false)
+      expect(collectionAccess.read({ req: createReq(disabledAdmin) } as any)).toBe(false)
+      expect(collectionAccess.update({ req: createReq(disabledAdmin), id: 1 } as any)).toBe(false)
+      expect(collectionAccess.delete({ req: createReq(disabledAdmin) } as any)).toBe(false)
+    })
+
+    it('refuses a disabled editor the self-read they would otherwise get', () => {
+      const req = createReq({ id: 2, role: 'editor', status: 'disabled' })
+
+      expect(collectionAccess.read({ req } as any)).toBe(false)
+      expect(collectionAccess.update({ req, id: 2 } as any)).toBe(false)
+    })
+
+    it('still admits active accounts', () => {
+      const activeEditor = createReq({ id: 2, role: 'editor', status: 'active' })
+
+      expect(collectionAccess.admin({ req: activeEditor } as any)).toBe(true)
+      expect(collectionAccess.read({ req: activeEditor } as any)).toEqual({ id: { equals: 2 } })
+      expect(collectionAccess.update({ req: activeEditor, id: 2 } as any)).toBe(true)
     })
   })
 })
