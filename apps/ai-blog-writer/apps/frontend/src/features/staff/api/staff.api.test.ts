@@ -2,12 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   avatarUrl,
+  changeStaffRole,
   createStaffUser,
   fetchEmailLogs,
   fetchStaffUser,
   fetchStaffUsers,
-  promoteWriterToEditor,
   requestPasswordSetEmail,
+  setStaffStatus,
   updateStaffUser,
   uploadAvatarAsset,
 } from './staff.api'
@@ -171,13 +172,55 @@ describe('staff.api', () => {
       jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'editor' } }),
     )
 
-    const updated = await promoteWriterToEditor(5, 'token-1')
+    const updated = await changeStaffRole(5, 'editor', 'token-1')
 
     expect(updated.role).toBe('editor')
     const [url, init] = fetchMock.mock.calls[0]
     expect(String(url)).toContain('/api/users/5')
     expect(init.method).toBe('PATCH')
     expect(JSON.parse(init.body)).toEqual({ role: 'editor' })
+  })
+
+  it('demotes an editor back to writer through the same patch', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'writer' } }),
+    )
+
+    const updated = await changeStaffRole(5, 'writer', 'token-1')
+
+    expect(updated.role).toBe('writer')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ role: 'writer' })
+  })
+
+  it('disables and re-enables an account via status patch', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'writer', status: 'disabled' } }),
+    )
+
+    const disabled = await setStaffStatus(5, 'disabled', 'token-1')
+
+    expect(disabled.status).toBe('disabled')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/users/5')
+    expect(init.method).toBe('PATCH')
+    expect(JSON.parse(init.body)).toEqual({ status: 'disabled' })
+
+    fetchMock.mockResolvedValue(
+      jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'writer', status: 'active' } }),
+    )
+
+    const reenabled = await setStaffStatus(5, 'active', 'token-1')
+
+    expect(reenabled.status).toBe('active')
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ status: 'active' })
+  })
+
+  it('throws when a status patch comes back without a document', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({}))
+
+    await expect(setStaffStatus(5, 'disabled', 'token-1')).rejects.toThrow(
+      'Payload returned no updated user document.',
+    )
   })
 
   it('resolves avatar URLs from doc url, filename, or not at all', () => {

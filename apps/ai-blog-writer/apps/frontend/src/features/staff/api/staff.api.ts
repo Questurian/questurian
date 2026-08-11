@@ -1,6 +1,13 @@
 import { PAYLOAD_API_URL } from '../../../shared/api/client/config'
 import { payloadMutation, payloadRequest } from '../../../shared/api/client/http'
-import type { AvatarAsset, EmailLog, StaffUser, StaffUserPatch } from '../types'
+import type {
+  AssignableStaffRole,
+  AvatarAsset,
+  EmailLog,
+  StaffStatus,
+  StaffUser,
+  StaffUserPatch,
+} from '../types'
 
 export async function fetchStaffUser(id: number | string, token: string): Promise<StaffUser> {
   // depth=1 populates the avatar upload relationship for preview
@@ -101,12 +108,36 @@ export async function fetchEmailLogs(token: string, limit = 50): Promise<EmailLo
   return response.docs ?? []
 }
 
-/** The only legal role change: admin promotes a writer to editor. */
-export async function promoteWriterToEditor(
+/**
+ * Moves an account between writer and editor (ADR-0007). The server allows
+ * this in both directions but never grants `admin` by update, and refuses a
+ * change to your own account.
+ */
+export async function changeStaffRole(
   id: number | string,
+  role: AssignableStaffRole,
   token: string,
 ): Promise<StaffUser> {
-  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { role: 'editor' }, token)) as {
+  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { role }, token)) as {
+    doc?: StaffUser
+  }
+  if (!response.doc) {
+    throw new Error('Payload returned no updated user document.')
+  }
+  return response.doc
+}
+
+/**
+ * Offboarding without destroying the record (ADR-0007). Disabling revokes the
+ * member's live sessions and bars sign-in, while their author page and every
+ * byline pointing at them keep working.
+ */
+export async function setStaffStatus(
+  id: number | string,
+  status: StaffStatus,
+  token: string,
+): Promise<StaffUser> {
+  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { status }, token)) as {
     doc?: StaffUser
   }
   if (!response.doc) {
