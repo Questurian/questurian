@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { isAdminFieldLevel } from '@/features/auth/collections/access'
 import { isDisabledStaff } from '@/features/auth/lib/staff-status'
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { revalidateAuthorAfterChange } from '@/features/public-revalidation/revalidate-client'
 import { authorSlugHook } from './hooks/authorSlug'
 import { authorSocialLinks } from './fields/socialLinks'
@@ -32,8 +33,12 @@ export const Authors: CollectionConfig = {
   access: {
     // Public reads go through /api/public/authors/[slug], which overrides
     // access. Direct collection reads stay staff-only, matching Users.
-    read: ({ req: { user } }) => Boolean(user) && !isDisabledStaff(user),
-    create: ({ req: { user }, data }) => {
+    read: ({ req }) => {
+      const user = staffUser(req.user)
+      return Boolean(user) && !isDisabledStaff(user)
+    },
+    create: ({ req, data }) => {
+      const user = staffUser(req.user)
       if (!user || isDisabledStaff(user)) return false
       if (user.role === 'admin') return true
       // Staff may bring their own author record into existence -- someone who
@@ -42,7 +47,8 @@ export const Authors: CollectionConfig = {
       // here because field access cannot reject a create it never sees.
       return data?.user === user.id
     },
-    update: ({ req: { user } }) => {
+    update: ({ req }) => {
+      const user = staffUser(req.user)
       if (!user || isDisabledStaff(user)) return false
       if (user.role === 'admin') return true
       // Everyone else may edit only the author record linked to their account.
@@ -50,8 +56,10 @@ export const Authors: CollectionConfig = {
     },
     // Deleting an author record is what actually destroys a byline, so it is
     // narrower than disabling the person: admins only.
-    delete: ({ req: { user } }) =>
-      Boolean(user) && !isDisabledStaff(user) && user?.role === 'admin',
+    delete: ({ req }) => {
+      const user = staffUser(req.user)
+      return Boolean(user) && !isDisabledStaff(user) && user?.role === 'admin'
+    },
   },
   hooks: {
     beforeChange: [authorSlugHook],

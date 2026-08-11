@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
 
 import { findAuthorIdForUser } from '@/features/authors/lib/author-for-user'
@@ -13,9 +14,9 @@ export const singleTypeListicleAccess: CollectionConfig['access'] = {
     }
 
     if (
-      req.user.role === 'admin'
-      || req.user.role === 'editor'
-      || req.user.role === 'writer'
+      staffUser(req.user)?.role === 'admin'
+      || staffUser(req.user)?.role === 'editor'
+      || staffUser(req.user)?.role === 'writer'
     ) {
       return true
     }
@@ -23,12 +24,12 @@ export const singleTypeListicleAccess: CollectionConfig['access'] = {
     return false
   },
   create: ({ req }) => (
-    req.user?.role === 'editor'
-    || req.user?.role === 'admin'
-    || req.user?.role === 'writer'
+    staffUser(req.user)?.role === 'editor'
+    || staffUser(req.user)?.role === 'admin'
+    || staffUser(req.user)?.role === 'writer'
   ),
   update: async ({ req }) => {
-    const user = req.user
+    const user = staffUser(req.user)
     if (!user) return false
 
     if (user.role === 'admin' || user.role === 'editor') return true
@@ -49,5 +50,8 @@ export const singleTypeListicleAccess: CollectionConfig['access'] = {
 
     return false
   },
-  delete: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
+  delete: ({ req }) => {
+    const role = staffUser(req.user)?.role
+    return role === 'admin' || role === 'editor'
+  },
 }

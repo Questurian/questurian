@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { AccessArgs } from 'payload'
 import { isAdmin } from '../../access/isAdmin'
 import { isBootstrapRequestAuthorized } from '../../lib/bootstrap-token'
@@ -16,12 +17,14 @@ export const collectionAccess = {
    * Only admins can fully access Users collection
    * Editors and Writers can view the collection but only in read-only mode
    */
-  admin: ({ req: { user } }: AccessArgs) =>
-    Boolean(
+  admin: ({ req }: AccessArgs) => {
+    const user = staffUser(req.user)
+    return Boolean(
       user &&
         !isDisabledStaff(user) &&
         (user.role === 'admin' || user.role === 'editor' || user.role === 'writer')
-    ),
+    )
+  },
 
   /**
    * Staff creation only.
@@ -32,7 +35,10 @@ export const collectionAccess = {
    * BetterAuth, not Payload Users.
    */
   create: async ({ req, data }: AccessArgs) => {
-    if (req.user) return req.user.role === 'admin' && !isDisabledStaff(req.user)
+    if (req.user) {
+      const user = staffUser(req.user)
+      return user?.role === 'admin' && !isDisabledStaff(user)
+    }
 
     // Checked before the count so an unauthorised caller cannot use this
     // endpoint to probe whether the instance has been bootstrapped yet.
@@ -60,7 +66,7 @@ export const collectionAccess = {
    * Returns a filtered query for editors/writers to automatically show only their own record in list view
    */
   read: ({ req }: AccessArgs) => {
-    const user = req.user
+    const user = staffUser(req.user)
     if (!user) return false // Unauthenticated can't read
     if (isDisabledStaff(user)) return false // Disabled accounts hold no access
     if (user.role === 'admin') return true // Admins read all
@@ -80,7 +86,7 @@ export const collectionAccess = {
    * Admins can update all; editors and writers can only update their own profile
    */
   update: ({ req, id }: AccessArgs) => {
-    const user = req.user
+    const user = staffUser(req.user)
     if (!user) return false // Unauthenticated can't update
     if (isDisabledStaff(user)) return false // Disabled accounts hold no access
     if (user.role === 'admin') return true // Admins update all

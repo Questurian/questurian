@@ -3,6 +3,7 @@
  * Content management for blog articles with standard headers and flexible content blocks
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 import {
   syncSharedNeighborhoodsField,
@@ -65,9 +66,9 @@ export const Articles: CollectionConfig = {
       
       // Admins, Editors, and Writers can read all articles
       if (
-        req.user.role === 'admin' ||
-        req.user.role === 'editor' ||
-        req.user.role === 'writer'
+        staffUser(req.user)?.role === 'admin' ||
+        staffUser(req.user)?.role === 'editor' ||
+        staffUser(req.user)?.role === 'writer'
       ) {
         return true
       }
@@ -77,13 +78,13 @@ export const Articles: CollectionConfig = {
     create: ({ req }) => {
       // Editors, admins, and writers can create
       return (
-        req.user?.role === 'editor' ||
-        req.user?.role === 'admin' ||
-        req.user?.role === 'writer'
+        staffUser(req.user)?.role === 'editor' ||
+        staffUser(req.user)?.role === 'admin' ||
+        staffUser(req.user)?.role === 'writer'
       )
     },
     update: async ({ req, id }) => {
-      const user = req.user
+      const user = staffUser(req.user)
       if (!user) return false
 
       // Editors and admins can update all articles
@@ -116,7 +117,8 @@ export const Articles: CollectionConfig = {
     },
     delete: ({ req }) => {
       // Editors and admins can delete all articles
-      return req.user?.role === 'admin' || req.user?.role === 'editor'
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
     },
   },
   fields: [

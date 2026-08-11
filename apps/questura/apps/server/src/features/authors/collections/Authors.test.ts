@@ -54,7 +54,7 @@ describe('Authors access', () => {
   })
 
   it('refuses everything to a disabled account', () => {
-    const req = { user: { id: 1, role: 'admin', status: 'disabled' } }
+    const req = { user: { id: 1, collection: 'users', role: 'admin', status: 'disabled' } }
 
     for (const operation of ['read', 'create', 'update', 'delete']) {
       expect(access[operation]({ req })).toBe(false)
@@ -62,7 +62,7 @@ describe('Authors access', () => {
   })
 
   it('lets an admin manage every author', () => {
-    const req = { user: { id: 1, role: 'admin', status: 'active' } }
+    const req = { user: { id: 1, collection: 'users', role: 'admin', status: 'active' } }
 
     expect(access.read({ req })).toBe(true)
     expect(access.create({ req })).toBe(true)
@@ -71,13 +71,13 @@ describe('Authors access', () => {
   })
 
   it('scopes a non-admin to the author record linked to their own account', () => {
-    const req = { user: { id: 5, role: 'writer', status: 'active' } }
+    const req = { user: { id: 5, collection: 'users', role: 'writer', status: 'active' } }
 
     expect(access.update({ req })).toEqual({ user: { equals: 5 } })
   })
 
   it('never lets a non-admin create or delete an author', () => {
-    const req = { req: { user: { id: 5, role: 'editor', status: 'active' } } }
+    const req = { req: { user: { id: 5, collection: 'users', role: 'editor', status: 'active' } } }
 
     expect(access.create(req)).toBe(false)
     // Deleting is what actually destroys a byline, so it stays admin-only.

@@ -3,6 +3,7 @@
  * Access control utilities for places collections
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { Access } from 'payload'
 
 /**
@@ -18,12 +19,13 @@ export const placesReadAccess: Access = ({ req }) => {
  * Editor/Admin access for create and update
  */
 export const placesWriteAccess: Access = ({ req }) => {
-  return req.user?.role === 'editor' || req.user?.role === 'admin'
+  const role = staffUser(req.user)?.role
+  return role === 'editor' || role === 'admin'
 }
 
 /**
  * Admin-only access for delete
  */
 export const placesDeleteAccess: Access = ({ req }) => {
-  return req.user?.role === 'admin'
+  return staffUser(req.user)?.role === 'admin'
 }

@@ -3,6 +3,7 @@
  * Travel data collection for affiliate products and services
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 
 export const AffiliateProducts: CollectionConfig = {
@@ -18,12 +19,16 @@ export const AffiliateProducts: CollectionConfig = {
       if (!req.user) return { status: { equals: 'published' } }
       return true
     },
-    create: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
+    create: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
+    },
     update: ({ req }) => {
       // Editors and admins can update all affiliate products
-      return req.user?.role === 'admin' || req.user?.role === 'editor'
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
     },
-    delete: ({ req }) => req.user?.role === 'admin',
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
   fields: [
     {
@@ -94,8 +99,12 @@ export const AffiliateProducts: CollectionConfig = {
   hooks: {
     beforeChange: [
       async ({ data, req, operation }) => {
-        if (operation === 'create' && req.user) {
-          data.createdBy = req.user.id
+        // Only a human is credited. A machine caller authenticates as a
+        // service account (ADR-0006), whose id would otherwise be written into
+        // a `users` relationship and point at an unrelated person.
+        const author = staffUser(req.user)
+        if (operation === 'create' && author) {
+          data.createdBy = author.id
         }
 
         return data

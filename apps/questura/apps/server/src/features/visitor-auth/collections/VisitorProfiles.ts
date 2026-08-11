@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
 
 export const VisitorProfiles: CollectionConfig = {
@@ -13,10 +14,16 @@ export const VisitorProfiles: CollectionConfig = {
     description: 'Public-site profile, membership, and Stripe linkage for BetterAuth visitors.',
   },
   access: {
-    read: ({ req }) => Boolean(req.user && (req.user.role === 'admin' || req.user.role === 'editor')),
-    create: ({ req }) => Boolean(req.user && req.user.role === 'admin'),
-    update: ({ req }) => Boolean(req.user && (req.user.role === 'admin' || req.user.role === 'editor')),
-    delete: ({ req }) => Boolean(req.user && req.user.role === 'admin'),
+    read: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return Boolean(req.user && (role === 'admin' || role === 'editor'))
+    },
+    create: ({ req }) => Boolean(req.user && staffUser(req.user)?.role === 'admin'),
+    update: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return Boolean(req.user && (role === 'admin' || role === 'editor'))
+    },
+    delete: ({ req }) => Boolean(req.user && staffUser(req.user)?.role === 'admin'),
   },
   fields: [
     {

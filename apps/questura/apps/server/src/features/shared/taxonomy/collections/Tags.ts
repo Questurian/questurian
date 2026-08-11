@@ -3,6 +3,7 @@
  * Tags for detailed article classification (travel themes, topics, etc.)
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 
 export const Tags: CollectionConfig = {
@@ -19,9 +20,15 @@ export const Tags: CollectionConfig = {
   },
   access: {
     read: () => true, // Public read access
-    create: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
-    update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
-    delete: ({ req }) => req.user?.role === 'admin',
+    create: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
+    },
+    update: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
+    },
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
   fields: [
     {
@@ -106,8 +113,12 @@ export const Tags: CollectionConfig = {
     beforeChange: [
       async ({ data, req, operation }) => {
         // Set createdBy on creation
-        if (operation === 'create' && req.user) {
-          data.createdBy = req.user.id
+        // Only a human is credited. A machine caller authenticates as a
+        // service account (ADR-0006), whose id would otherwise be written into
+        // a `users` relationship and point at an unrelated person.
+        const author = staffUser(req.user)
+        if (operation === 'create' && author) {
+          data.createdBy = author.id
         }
 
         // Auto-generate slug from name (tags use name as slug since they're already kebab-case)

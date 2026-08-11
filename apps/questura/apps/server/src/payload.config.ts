@@ -10,6 +10,7 @@ import sharp from 'sharp'
 
 import { Users } from './features/auth/collections/Users'
 import { Authors } from './features/authors/collections/Authors'
+import { ServiceAccounts } from './features/auth/collections/ServiceAccounts'
 import { EmailLogs } from './features/emails/collections/EmailLogs'
 import { MediaAsset } from './features/media/collections/MediaAsset'
 import { MediaSet } from './features/media/collections/MediaSet'
@@ -49,7 +50,7 @@ export default buildConfig({
   serverURL: APP_URLS.backendLocal,
   cors: APP_CONFIG.CORS_ORIGINS,
   csrf: APP_CONFIG.CORS_ORIGINS,
-  collections: [Users, Authors, EmailLogs, VisitorProfiles, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages, StripeWebhookEvents],
+  collections: [Users, ServiceAccounts, Authors, EmailLogs, VisitorProfiles, MediaAsset, MediaSet, Articles, SingleTypeListicles, ListicleItineraries, ArticleRedirects, Locations, Categories, Tags, Accommodations, Dining, Attractions, Tours, Nightlife, KeyLocations, AffiliateProducts, InstagramPosts, PerfectForTags, Currencies, LocationHomepages, StripeWebhookEvents],
   globals: [MainHomepage],
   editor: lexicalEditor(),
   secret: APP_CONFIG.payloadSecret,
