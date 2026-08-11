@@ -1,6 +1,7 @@
 import { CollectionConfig } from 'payload'
 import { collectionAccess } from './access/collectionLevel'
 import { isAdminFieldLevel } from './access/fieldLevel'
+import { isBootstrapRequestAuthorized } from '../lib/bootstrap-token'
 import { userCollectionHooks } from './hooks'
 import { basicFields, profileFields } from './fields'
 
@@ -57,8 +58,11 @@ export const Users: CollectionConfig = {
       required: true,
       saveToJWT: true,
       access: {
-        // First user must be admin (no choice), subsequent users follow normal rules
-        create: async ({ req }) => {
+        // First user must be admin (no choice), subsequent users follow normal rules.
+        // This is a second, independent bootstrap gate: collection-level access
+        // guards the create itself, this one guards the `role` field on it, and
+        // both must agree or an unauthenticated caller could still set a role.
+        create: async ({ req, data }) => {
           try {
             // Check if this is the first user being created (database is empty)
             const result = await req.payload.count({
@@ -66,8 +70,9 @@ export const Users: CollectionConfig = {
             })
             const userCount = result.totalDocs
 
-            // If no users exist, allow first user creation (will be forced to admin)
-            if (userCount === 0) return true
+            // If no users exist, allow first user creation (will be forced to
+            // admin) — but only for a caller holding the bootstrap token.
+            if (userCount === 0) return isBootstrapRequestAuthorized({ req, data })
 
             // Normal case: only admins can create users with roles
             return req.user?.role === 'admin'

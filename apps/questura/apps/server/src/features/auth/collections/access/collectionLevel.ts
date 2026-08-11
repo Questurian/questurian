@@ -1,5 +1,6 @@
 import type { AccessArgs } from 'payload'
 import { isAdmin } from '../../access/isAdmin'
+import { isBootstrapRequestAuthorized } from '../../lib/bootstrap-token'
 
 /**
  * Collection-level access control for Users
@@ -17,11 +18,16 @@ export const collectionAccess = {
    * Staff creation only.
    *
    * The only unauthenticated create path is first-user bootstrap for fresh
-   * environments. Public Visitor signup is owned by BetterAuth, not Payload
-   * Users.
+   * environments, and it additionally requires the bootstrap token — an empty
+   * collection alone is not authorisation. Public Visitor signup is owned by
+   * BetterAuth, not Payload Users.
    */
-  create: async ({ req }: AccessArgs) => {
+  create: async ({ req, data }: AccessArgs) => {
     if (req.user) return req.user.role === 'admin'
+
+    // Checked before the count so an unauthorised caller cannot use this
+    // endpoint to probe whether the instance has been bootstrapped yet.
+    if (!isBootstrapRequestAuthorized({ req, data })) return false
 
     try {
       const existingUsersCount = await req.payload.count({
