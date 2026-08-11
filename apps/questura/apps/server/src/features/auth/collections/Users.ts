@@ -1,20 +1,21 @@
 import { CollectionConfig } from 'payload'
 import { collectionAccess } from './access/collectionLevel'
-import { isAdminFieldLevel } from './access/fieldLevel'
 import { isBootstrapRequestAuthorized } from '../lib/bootstrap-token'
 import { userCollectionHooks } from './hooks'
-import { basicFields, profileFields } from './fields'
+import { basicFields } from './fields'
 
 /**
  * Users Collection - Main entry point assembling all modular components
  *
  * Structure:
  * - Role (sidebar) - Critical field for access control
- * - Tabs: Basic Info, Activity, Public Profile
+ * - Tabs: Basic Info, Activity
  *
  * Field organization by concern:
  * - basicFields: Email, firstName, lastName
- * - profileFields: Public profile visible to website visitors (editor-only)
+ *
+ * Public authorship is NOT here: it lives on the Authors collection
+ * (ADR-0007), so a byline outlives the account.
  *
  * Access control:
  * - Collection-level access in ./access/collectionLevel.ts
@@ -145,24 +146,6 @@ export const Users: CollectionConfig = {
       },
     },
 
-    // Public author-page URL: /authors/<slug>
-    {
-      name: 'slug',
-      type: 'text',
-      unique: true,
-      index: true,
-      access: {
-        // Author URLs are public and un-redirected once a slug changes, so
-        // only admins may rename a slug. Auto-generation via the beforeChange
-        // hook is unaffected (hook-set values bypass field access).
-        update: isAdminFieldLevel,
-      },
-      admin: {
-        position: 'sidebar',
-        description:
-          'URL slug for the public author page (/authors/<slug>). Auto-generated from the display name if left empty. Admin-only: changing it breaks inbound author URLs.',
-      },
-    },
 
     // Main content organized in tabs
     {
@@ -192,13 +175,6 @@ export const Users: CollectionConfig = {
               },
             },
           ],
-        },
-        {
-          // Any Staff identity may have an Author profile, regardless of role
-          // (writers receive bylines on published articles). Visibility of the
-          // public author page is derived from published work, not a flag.
-          label: 'Public Profile',
-          fields: profileFields,
         },
       ],
     },

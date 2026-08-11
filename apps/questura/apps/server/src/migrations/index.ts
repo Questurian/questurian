@@ -21,6 +21,7 @@ import * as migration_20260724_171322_add_stripe_webhook_events from './20260724
 import * as migration_20260811_000000_add_users_status from './20260811_000000_add_users_status'
 import * as migration_20260811_010000_add_authors from './20260811_010000_add_authors'
 import * as migration_20260811_020000_repoint_bylines_to_authors from './20260811_020000_repoint_bylines_to_authors'
+import * as migration_20260811_030000_retire_users_public_profile from './20260811_030000_retire_users_public_profile'
 
 export const migrations = [
   {
@@ -137,5 +138,10 @@ export const migrations = [
     up: migration_20260811_020000_repoint_bylines_to_authors.up,
     down: migration_20260811_020000_repoint_bylines_to_authors.down,
     name: '20260811_020000_repoint_bylines_to_authors',
+  },
+  {
+    up: migration_20260811_030000_retire_users_public_profile.up,
+    down: migration_20260811_030000_retire_users_public_profile.down,
+    name: '20260811_030000_retire_users_public_profile',
   },
 ]

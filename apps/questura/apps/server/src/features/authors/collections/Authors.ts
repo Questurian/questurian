@@ -33,8 +33,15 @@ export const Authors: CollectionConfig = {
     // Public reads go through /api/public/authors/[slug], which overrides
     // access. Direct collection reads stay staff-only, matching Users.
     read: ({ req: { user } }) => Boolean(user) && !isDisabledStaff(user),
-    create: ({ req: { user } }) =>
-      Boolean(user) && !isDisabledStaff(user) && user?.role === 'admin',
+    create: ({ req: { user }, data }) => {
+      if (!user || isDisabledStaff(user)) return false
+      if (user.role === 'admin') return true
+      // Staff may bring their own author record into existence -- someone who
+      // has not published yet has none, and that must not block them editing
+      // how they will appear. Only their own: the linked account is checked
+      // here because field access cannot reject a create it never sees.
+      return data?.user === user.id
+    },
     update: ({ req: { user } }) => {
       if (!user || isDisabledStaff(user)) return false
       if (user.role === 'admin') return true

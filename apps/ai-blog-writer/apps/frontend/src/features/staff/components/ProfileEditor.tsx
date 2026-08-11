@@ -1,8 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../../auth'
-import { avatarUrl, fetchStaffUser, updateStaffUser, uploadAvatarAsset } from '../api/staff.api'
-import type { SocialLinks, StaffUser, StaffUserPatch } from '../types'
+import {
+  avatarUrl,
+  createAuthorForUser,
+  fetchAuthorForUser,
+  fetchStaffUser,
+  updateAuthor,
+  updateStaffUser,
+  uploadAvatarAsset,
+} from '../api/staff.api'
+import type { Author, AuthorPatch, SocialLinks, StaffUserPatch } from '../types'
 
 type ProfileFormState = {
   firstName: string
@@ -35,16 +43,24 @@ type ProfileEditorProps = {
   variant: 'self' | 'admin'
 }
 
-function formStateFromUser(user: StaffUser): ProfileFormState {
+/**
+ * The form spans two records: names belong to the staff account, everything
+ * else to the Author (ADR-0007). `author` is null for someone who has never
+ * published -- a normal state, filled in on first save.
+ */
+function formStateFromRecords(
+  user: { firstName?: string | null; lastName?: string | null },
+  author: Author | null,
+): ProfileFormState {
   return {
     firstName: user.firstName ?? '',
     lastName: user.lastName ?? '',
-    displayName: user.publicProfile?.displayName ?? '',
-    bio: user.publicProfile?.bio ?? '',
-    slug: user.slug ?? '',
-    expertise: (user.publicProfile?.expertise ?? []).map((entry) => entry.area),
+    displayName: author?.displayName ?? '',
+    bio: author?.bio ?? '',
+    slug: author?.slug ?? '',
+    expertise: (author?.expertise ?? []).map((entry) => entry.area),
     socialLinks: Object.fromEntries(
-      SOCIAL_FIELDS.map(({ key }) => [key, user.publicProfile?.socialLinks?.[key] ?? '']),
+      SOCIAL_FIELDS.map(({ key }) => [key, author?.socialLinks?.[key] ?? '']),
     ) as ProfileFormState['socialLinks'],
   }
 }
@@ -63,13 +79,19 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
 
   const profileQuery = useQuery({
     queryKey: ['staff', 'profile', String(userId)],
-    queryFn: () => fetchStaffUser(userId, token as string),
+    queryFn: async () => {
+      const [user, author] = await Promise.all([
+        fetchStaffUser(userId, token as string),
+        fetchAuthorForUser(userId, token as string),
+      ])
+      return { user, author }
+    },
     enabled: Boolean(token),
   })
 
   useEffect(() => {
     if (profileQuery.data && form === null) {
-      setForm(formStateFromUser(profileQuery.data))
+      setForm(formStateFromRecords(profileQuery.data.user, profileQuery.data.author))
     }
   }, [profileQuery.data, form])
 
@@ -93,37 +115,51 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
   })
 
   const saveProfile = useMutation({
-    mutationFn: (state: ProfileFormState) => {
-      const patch: StaffUserPatch = {
+    mutationFn: async (state: ProfileFormState) => {
+      const userPatch: StaffUserPatch = {
         firstName: state.firstName.trim(),
         lastName: state.lastName.trim(),
-        publicProfile: {
-          ...(pendingAvatarId !== null ? { avatar: pendingAvatarId } : {}),
-          displayName: state.displayName.trim(),
-          bio: state.bio.trim(),
-          expertise: state.expertise
-            .map((area) => area.trim())
-            .filter(Boolean)
-            .map((area) => ({ area })),
-          socialLinks: Object.fromEntries(
-            SOCIAL_FIELDS.map(({ key }) => [key, state.socialLinks[key].trim() || null]),
-          ) as SocialLinks,
-        },
       }
+
+      const authorPatch: AuthorPatch = {
+        ...(pendingAvatarId !== null ? { avatar: pendingAvatarId } : {}),
+        displayName: state.displayName.trim(),
+        bio: state.bio.trim(),
+        expertise: state.expertise
+          .map((area) => area.trim())
+          .filter(Boolean)
+          .map((area) => ({ area })),
+        socialLinks: Object.fromEntries(
+          SOCIAL_FIELDS.map(({ key }) => [key, state.socialLinks[key].trim() || null]),
+        ) as SocialLinks,
+      }
+
       // Slug renames are admin-only (Payload field access enforces this too).
       // An unchanged or cleared slug is omitted so the field is never blanked.
+      const existingAuthor = profileQuery.data?.author ?? null
       const nextSlug = state.slug.trim()
-      if (variant === 'admin' && nextSlug && nextSlug !== (profileQuery.data?.slug ?? '')) {
-        patch.slug = nextSlug
+      if (variant === 'admin' && nextSlug && nextSlug !== (existingAuthor?.slug ?? '')) {
+        authorPatch.slug = nextSlug
       }
-      return updateStaffUser(userId, patch, token as string)
+
+      // Names and authorship are two records now, so this is two writes. The
+      // account goes first: it is the one that must not be lost if the second
+      // fails, and an author record can always be re-saved.
+      const [user, author] = [
+        await updateStaffUser(userId, userPatch, token as string),
+        existingAuthor
+          ? await updateAuthor(existingAuthor.id, authorPatch, token as string)
+          : await createAuthorForUser(userId, authorPatch, token as string),
+      ]
+
+      return { user, author }
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(['staff', 'profile', String(userId)], updated)
       if (variant === 'admin') {
         void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
       }
-      setForm(formStateFromUser(updated))
+      setForm(formStateFromRecords(updated.user, updated.author))
       setPendingAvatarId(null)
       setPendingAvatarPreview(null)
       setStatusMessage('Profile saved.')
@@ -135,7 +171,7 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
     },
   })
 
-  if (profileQuery.isLoading || form === null) {
+  if (profileQuery.isLoading || form === null || !profileQuery.data) {
     if (profileQuery.isError) {
       return (
         <p className="staff-error">
@@ -146,8 +182,9 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
     return <p className="staff-muted">Loading profile…</p>
   }
 
-  const profile = profileQuery.data as StaffUser
-  const currentAvatar = pendingAvatarPreview ?? avatarUrl(profile.publicProfile?.avatar)
+  const profile = profileQuery.data.user
+  const author = profileQuery.data.author
+  const currentAvatar = pendingAvatarPreview ?? avatarUrl(author?.avatar)
 
   function update<K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev))
@@ -263,9 +300,9 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
               inbound author URLs; there are no redirects.
             </p>
           </>
-        ) : profile.slug ? (
+        ) : author?.slug ? (
           <p className="staff-hint">
-            Author page: <code>/authors/{profile.slug}</code> — the URL is managed by admins.
+            Author page: <code>/authors/{author.slug}</code> — the URL is managed by admins.
           </p>
         ) : (
           <p className="staff-hint">Your author URL is generated the first time your profile is saved.</p>

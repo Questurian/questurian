@@ -3,12 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   avatarUrl,
   changeStaffRole,
+  createAuthorForUser,
+  fetchAuthorForUser,
   createStaffUser,
   fetchEmailLogs,
   fetchStaffUser,
   fetchStaffUsers,
   requestPasswordSetEmail,
   setStaffStatus,
+  updateAuthor,
   updateStaffUser,
   uploadAvatarAsset,
 } from './staff.api'
@@ -34,14 +37,16 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
 }
 
 describe('staff.api', () => {
-  it('fetches the staff user with depth=1 and auth header', async () => {
+  // depth=0: the account carries no relationships worth populating now that
+  // authorship (and its avatar) live on the author record.
+  it('fetches the staff user with auth header', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ id: 3, email: 'w@questurian.com', role: 'writer' }))
 
     const user = await fetchStaffUser(3, 'token-1')
 
     expect(user.id).toBe(3)
     const [url, init] = fetchMock.mock.calls[0]
-    expect(String(url)).toContain('/api/users/3?depth=1')
+    expect(String(url)).toContain('/api/users/3?depth=0')
     expect(init.headers.Authorization).toBe('Bearer token-1')
   })
 
@@ -57,14 +62,48 @@ describe('staff.api', () => {
     expect(JSON.parse(init.body)).toEqual({ firstName: 'Ana' })
   })
 
-  it('passes admin slug renames through the user patch', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ doc: { id: 3, email: 'w@questurian.com', role: 'writer', slug: 'ana-writes' } }))
+  // The slug is authorship, so it is patched on the author record, not the
+  // account (ADR-0007).
+  it('passes admin slug renames through the author patch', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ doc: { id: 9, displayName: 'Ana Writes', slug: 'ana-writes' } }),
+    )
 
-    const user = await updateStaffUser(3, { slug: 'ana-writes' }, 'token-1')
+    const author = await updateAuthor(9, { slug: 'ana-writes' }, 'token-1')
 
-    expect(user.slug).toBe('ana-writes')
-    const [, init] = fetchMock.mock.calls[0]
+    expect(author.slug).toBe('ana-writes')
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/authors/9')
     expect(JSON.parse(init.body)).toEqual({ slug: 'ana-writes' })
+  })
+
+  it('looks an author up by the account it is linked to', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [{ id: 9, displayName: 'Ana Writes' }] }))
+
+    const author = await fetchAuthorForUser(3, 'token-1')
+
+    expect(author?.id).toBe(9)
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/authors?where[user][equals]=3')
+  })
+
+  it('reports no author rather than failing when an account has none yet', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+
+    await expect(fetchAuthorForUser(3, 'token-1')).resolves.toBeNull()
+  })
+
+  it('creates an author linked to the account on first save', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ doc: { id: 9, displayName: 'Ana Writes', user: 3 } }),
+    )
+
+    const author = await createAuthorForUser(3, { displayName: 'Ana Writes' }, 'token-1')
+
+    expect(author.id).toBe(9)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/authors')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body)).toEqual({ displayName: 'Ana Writes', user: 3 })
   })
 
   it('throws when update returns no doc', async () => {
