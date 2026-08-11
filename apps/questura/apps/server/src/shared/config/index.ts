@@ -1,16 +1,48 @@
 import { APP_URLS } from './urls'
 
 // Centralized application configuration
-const corsOrigins = [
-  process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  'http://localhost:4000',
-  'http://localhost:3000', // Ensure localhost:3000 is always included for local dev
+
+const isProductionEnv = process.env.NODE_ENV === 'production'
+
+/**
+ * Local development origins.
+ *
+ * This one array feeds Payload `cors`, Payload `csrf` AND Better Auth
+ * `trustedOrigins` (which gates OAuth `callbackURL` validation), so a localhost
+ * entry surviving into production would widen all three at once. They are
+ * therefore included only outside production; production must supply its real
+ * origins through the env vars below.
+ */
+const DEV_ORIGINS = [
+  'http://localhost:3000',
   'http://localhost:3002',
   'http://localhost:3003',
   'http://localhost:3004',
-  ...(process.env.NEXT_PUBLIC_FRONTEND_URL ? [process.env.NEXT_PUBLIC_FRONTEND_URL] : []), // For deployed frontend on Vercel, etc.
-  ...(process.env.CORS_ALLOWED_ORIGINS ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim()) : []), // Additional origins from env (e.g., "https://www.questurian.com,https://questurian.com")
-] as string[]
+  'http://localhost:4000',
+]
+
+/**
+ * An `Origin` header never carries a trailing slash, so an entry like
+ * `http://localhost:3000/` silently never matches. Normalize rather than rely
+ * on every env var being written without one.
+ */
+function normalizeOrigin(value: string): string {
+  return value.trim().replace(/\/+$/, '')
+}
+
+const configuredOrigins = [
+  process.env.NEXT_PUBLIC_APP_URL,
+  // For a deployed frontend on Vercel, etc.
+  process.env.NEXT_PUBLIC_FRONTEND_URL,
+  // Additional origins, e.g. "https://www.questurian.com,https://questurian.com"
+  ...(process.env.CORS_ALLOWED_ORIGINS?.split(',') ?? []),
+]
+  .filter((origin): origin is string => Boolean(origin && origin.trim()))
+  .map(normalizeOrigin)
+
+const corsOrigins = Array.from(
+  new Set([...configuredOrigins, ...(isProductionEnv ? [] : DEV_ORIGINS)])
+) as string[]
 
 export const APP_CONFIG = {
   // CORS Configuration - includes frontend and backend URLs
