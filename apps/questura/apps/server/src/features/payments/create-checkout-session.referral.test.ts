@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   findVisitorProfileByAuthUserId: vi.fn(),
   updateVisitorProfileByAuthUserId: vi.fn(),
   stripeCustomerCreate: vi.fn(),
+  stripeCustomerList: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
 }))
 
@@ -21,6 +22,7 @@ vi.mock('@/payments/lib/stripe', () => ({
   stripe: {
     customers: {
       create: mocks.stripeCustomerCreate,
+      list: mocks.stripeCustomerList,
     },
     checkout: {
       sessions: {
@@ -65,6 +67,7 @@ describe('create checkout session referral ID validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    mocks.stripeCustomerList.mockResolvedValue({ data: [] })
     mocks.requireVisitorPrincipal.mockResolvedValue({
       result: { authenticated: true },
       principal: {

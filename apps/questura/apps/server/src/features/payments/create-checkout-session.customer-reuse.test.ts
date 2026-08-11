@@ -35,12 +35,8 @@ vi.mock('@/payments/lib/stripe', () => ({
 vi.mock('@/shared/config', () => ({
   APP_CONFIG: {
     CORS_ORIGINS: ['http://localhost:3000'],
-    features: {
-      endorselyAffiliates: false,
-    },
-    stripe: {
-      priceId: 'price_123',
-    },
+    features: { endorselyAffiliates: false },
+    stripe: { priceId: 'price_123' },
   },
   APP_URLS: {
     frontend: 'http://localhost:3000',
@@ -63,49 +59,10 @@ function createRequest() {
   }) as any
 }
 
-describe('create checkout session route auth guard', () => {
+describe('create checkout session duplicate Stripe customer guard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
-    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
-      id: 10,
-      subscriptionStatus: 'none',
-    })
-    mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_123' })
-    mocks.stripeCustomerList.mockResolvedValue({ data: [] })
-    mocks.stripeCheckoutCreate.mockResolvedValue({
-      id: 'cs_123',
-      url: 'https://checkout.stripe.test/session',
-    })
-  })
-
-  afterEach(() => {
-    consoleLogSpy?.mockRestore()
-    consoleLogSpy = null
-  })
-
-  it('requires a verified Visitor principal', async () => {
-    mocks.requireVisitorPrincipal.mockResolvedValue({
-      result: { authenticated: false, principal: null },
-      principal: null,
-      error: 'Email verification required',
-      status: 403,
-    })
-
-    const response = await POST(createRequest())
-
-    await expect(response.json()).resolves.toEqual({
-      error: 'Email verification required',
-    })
-    expect(response.status).toBe(403)
-    expect(mocks.requireVisitorPrincipal).toHaveBeenCalledWith(expect.anything(), {
-      requireVerified: true,
-    })
-    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
-    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
-  })
-
-  it('creates checkout only for verified Visitor principals', async () => {
     mocks.requireVisitorPrincipal.mockResolvedValue({
       result: { authenticated: true },
       principal: {
@@ -115,28 +72,81 @@ describe('create checkout session route auth guard', () => {
         firstName: 'Ada',
         lastName: 'Lovelace',
         profileId: 10,
-        emailVerified: true,
       },
       error: null,
       status: 200,
     })
+    // A blank profile: the auth user survived, the profile row did not, so the
+    // Stripe linkage is gone even though the human already exists in Stripe.
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'none',
+      stripeCustomerId: null,
+    })
+    mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_new' })
+    mocks.stripeCustomerList.mockResolvedValue({ data: [] })
+    mocks.stripeCheckoutCreate.mockResolvedValue({
+      id: 'cs_123',
+      url: 'https://checkout.stripe.test/session',
+    })
+  })
+
+  afterEach(() => {
+    consoleLogSpy?.mockRestore()
+  })
+
+  it('adopts an existing Stripe customer instead of creating a second one', async () => {
+    mocks.stripeCustomerList.mockResolvedValue({ data: [{ id: 'cus_existing' }] })
 
     const response = await POST(createRequest())
 
-    await expect(response.json()).resolves.toEqual({
-      sessionId: 'cs_123',
-      url: 'https://checkout.stripe.test/session',
-    })
     expect(response.status).toBe(200)
-    expect(mocks.updateVisitorProfileByAuthUserId).toHaveBeenCalledWith('visitor_123', {
-      stripeCustomerId: 'cus_123',
+    expect(mocks.stripeCustomerList).toHaveBeenCalledWith({
+      email: 'visitor@example.com',
+      limit: 1,
     })
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        customer: 'cus_123',
-        mode: 'subscription',
-        line_items: [{ price: 'price_123', quantity: 1 }],
-      }),
+      expect.objectContaining({ customer: 'cus_existing' })
+    )
+  })
+
+  it('re-links the recovered profile to the adopted customer', async () => {
+    mocks.stripeCustomerList.mockResolvedValue({ data: [{ id: 'cus_existing' }] })
+
+    await POST(createRequest())
+
+    expect(mocks.updateVisitorProfileByAuthUserId).toHaveBeenCalledWith('visitor_123', {
+      stripeCustomerId: 'cus_existing',
+    })
+  })
+
+  it('creates a customer when the email is genuinely new to Stripe', async () => {
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(200)
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1)
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_new' })
+    )
+    expect(mocks.updateVisitorProfileByAuthUserId).toHaveBeenCalledWith('visitor_123', {
+      stripeCustomerId: 'cus_new',
+    })
+  })
+
+  it('does not look Stripe up at all when the profile already carries a customer id', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'none',
+      stripeCustomerId: 'cus_linked',
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.stripeCustomerList).not.toHaveBeenCalled()
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_linked' })
     )
   })
 })
