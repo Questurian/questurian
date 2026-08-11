@@ -15,7 +15,7 @@ export class PayloadEntriesClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const params = new URLSearchParams({
       "where[title][equals]": title,
       limit: "1",
@@ -31,7 +31,7 @@ export class PayloadEntriesClient {
     const response = await fetch(`${apiUrl}/api/${collection}?${params.toString()}`, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
     });
 
@@ -65,7 +65,7 @@ export class PayloadEntriesClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     console.log("[Payload] Fetch entry by ID", {
@@ -77,7 +77,7 @@ export class PayloadEntriesClient {
     const response = await fetch(`${apiUrl}/api/${collection}/${docId}`, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
     });
 
@@ -125,7 +125,7 @@ export class PayloadEntriesClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     console.log("[Payload] Create entry", {
@@ -145,7 +145,7 @@ export class PayloadEntriesClient {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify(data),
     });
@@ -195,7 +195,7 @@ export class PayloadEntriesClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     console.log("[Payload] Update entry", {
@@ -215,7 +215,7 @@ export class PayloadEntriesClient {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify(data),
     });

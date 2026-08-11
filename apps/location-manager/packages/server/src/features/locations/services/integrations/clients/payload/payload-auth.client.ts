@@ -23,6 +23,11 @@ export class PayloadAuthClient {
     return this.apiUrl;
   }
 
+  async authHeader(): Promise<{ Authorization: string }> {
+    const token = await this.ensureAuthenticated();
+    return { Authorization: `JWT ${token}` };
+  }
+
   async authenticate(): Promise<string> {
     if (!this.isConfigured()) {
       throw new ServiceUnavailableError("Payload CMS");

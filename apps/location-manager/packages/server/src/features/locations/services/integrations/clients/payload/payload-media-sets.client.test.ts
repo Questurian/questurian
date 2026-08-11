@@ -52,7 +52,7 @@ describe("PayloadMediaSetsClient", () => {
 
     const client = new PayloadMediaSetsClient({
       isConfigured: () => true,
-      ensureAuthenticated: async () => "test-token",
+      authHeader: async () => ({ Authorization: "JWT test-token" }),
       getApiUrl: () => "https://payload.example.com",
     } as never);
 
@@ -92,7 +92,7 @@ describe("PayloadMediaSetsClient", () => {
 
     const client = new PayloadMediaSetsClient({
       isConfigured: () => true,
-      ensureAuthenticated: async () => "test-token",
+      authHeader: async () => ({ Authorization: "JWT test-token" }),
       getApiUrl: () => "https://payload.example.com",
     } as never);
 
