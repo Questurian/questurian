@@ -1,4 +1,4 @@
-export type MembershipSource = 'stripe' | 'staff_grant' | null
+export type MembershipSource = 'stripe' | null
 
 export type MembershipFields = {
   subscriptionStatus?: string | null
@@ -12,11 +12,6 @@ export type VisitorMembership = {
   status: string
   expiresAt: string | null
   cancelAtPeriodEnd: boolean
-}
-
-export type StaffMembership = {
-  active: boolean
-  source: MembershipSource
 }
 
 function hasActiveStripeMembership(profile: MembershipFields | null | undefined): boolean {
@@ -43,12 +38,4 @@ export function deriveVisitorMembership(profile: MembershipFields | null | undef
     expiresAt: profile?.membershipExpiration ?? null,
     cancelAtPeriodEnd: Boolean(profile?.cancelAtPeriodEnd),
   }
-}
-
-export function deriveStaffMembership(role: 'admin' | 'editor' | 'writer' | undefined): StaffMembership {
-  if (role === 'admin' || role === 'editor') {
-    return { active: true, source: 'staff_grant' }
-  }
-
-  return { active: false, source: null }
 }

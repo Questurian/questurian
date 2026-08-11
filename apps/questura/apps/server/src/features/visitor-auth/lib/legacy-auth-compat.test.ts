@@ -14,12 +14,7 @@ vi.mock('./better-auth', () => ({
   },
 }))
 
-import {
-  accountCheckFromLookup,
-  assertValidEmail,
-  checkVisitorAccount,
-  legacyUserFromPrincipal,
-} from './legacy-auth-compat'
+import { accountCheckFromLookup, assertValidEmail, checkVisitorAccount } from './legacy-auth-compat'
 
 describe('Legacy auth compatibility', () => {
   beforeEach(() => {
@@ -98,33 +93,5 @@ describe('Legacy auth compatibility', () => {
   it('normalizes and validates email input', () => {
     expect(assertValidEmail(' ADA@Example.COM ')).toBe('ada@example.com')
     expect(() => assertValidEmail('not-an-email')).toThrow('Please enter a valid email address')
-  })
-
-  it('maps Visitor principal to legacy user fields', () => {
-    expect(legacyUserFromPrincipal({
-      kind: 'visitor',
-      id: 'visitor_1',
-      email: 'ada@example.com',
-      emailVerified: false,
-      hasLocalPassword: true,
-      hasGoogleOAuth: false,
-      authProvider: 'local',
-      profileId: 12,
-      firstName: 'Ada',
-      lastName: 'Lovelace',
-      membership: {
-        active: false,
-        source: null,
-        status: 'none',
-        expiresAt: null,
-        cancelAtPeriodEnd: false,
-      },
-    })).toMatchObject({
-      kind: 'visitor',
-      subscriptionStatus: 'none',
-      membershipStatusSummary: 'none',
-      membershipExpiration: null,
-      cancelAtPeriodEnd: false,
-    })
   })
 })

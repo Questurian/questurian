@@ -1,14 +1,9 @@
-import { getPayload } from 'payload'
-
-import config from '@/payload.config'
 import { getVisitorAuthMethods } from './account-query'
 import type { AuthProvider } from './account-query'
 import { visitorAuth } from './better-auth'
-import { deriveStaffMembership, deriveVisitorMembership } from './membership-entitlement'
+import { deriveVisitorMembership } from './membership-entitlement'
 import type { MembershipSource } from './membership-entitlement'
 import { ensureVisitorProfileForAuthUser, findVisitorProfileByAuthUserId } from './visitor-profile'
-
-type StaffRole = 'admin' | 'editor' | 'writer'
 
 export type VisitorPrincipal = {
   kind: 'visitor'
@@ -30,34 +25,20 @@ export type VisitorPrincipal = {
   }
 }
 
-export type StaffPrincipal = {
-  kind: 'staff'
-  id: string | number
-  email: string
-  role: StaffRole
-  membership: {
-    active: boolean
-    source: MembershipSource
-  }
-}
+/**
+ * Per ADR-0004 the public current-principal view covers Visitor auth only; Payload Staff auth is
+ * deliberately ignored here so a browser logged into Payload admin does not become logged into the
+ * public client.
+ */
+export type CurrentPrincipal = VisitorPrincipal
 
-export type CurrentPrincipal = VisitorPrincipal | StaffPrincipal
-
-type PrincipalResult<T extends CurrentPrincipal> =
-  | { authenticated: true; principal: T }
+export type VisitorPrincipalResult =
+  | { authenticated: true; principal: VisitorPrincipal }
   | { authenticated: false; principal: null }
 
-export type CurrentPrincipalResult = PrincipalResult<CurrentPrincipal>
-export type VisitorPrincipalResult = PrincipalResult<VisitorPrincipal>
-export type StaffPrincipalResult = PrincipalResult<StaffPrincipal>
+export type CurrentPrincipalResult = VisitorPrincipalResult
 
-const STAFF_ROLES = ['admin', 'editor', 'writer'] as const
-
-function isStaffRole(role: unknown): role is StaffRole {
-  return typeof role === 'string' && STAFF_ROLES.includes(role as StaffRole)
-}
-
-function unauthenticated<T extends CurrentPrincipal>(): PrincipalResult<T> {
+function unauthenticated(): VisitorPrincipalResult {
   return {
     authenticated: false,
     principal: null,
@@ -93,24 +74,6 @@ async function resolveVisitorPrincipal(headers: Headers): Promise<VisitorPrincip
   return null
 }
 
-async function resolveStaffPrincipal(headers: Headers): Promise<StaffPrincipal | null> {
-  const payload = await getPayload({ config })
-  const staffAuth = await payload.auth({ headers })
-  const staff = staffAuth.user
-
-  if (!staff || !isStaffRole(staff.role)) {
-    return null
-  }
-
-  return {
-    kind: 'staff',
-    id: staff.id,
-    email: staff.email,
-    role: staff.role,
-    membership: deriveStaffMembership(staff.role),
-  }
-}
-
 export async function getCurrentPrincipal(headers: Headers): Promise<VisitorPrincipalResult> {
   const visitor = await resolveVisitorPrincipal(headers)
 
@@ -119,17 +82,6 @@ export async function getCurrentPrincipal(headers: Headers): Promise<VisitorPrin
   return {
     authenticated: true,
     principal: visitor,
-  }
-}
-
-export async function getStaffPrincipal(headers: Headers): Promise<StaffPrincipalResult> {
-  const staff = await resolveStaffPrincipal(headers)
-
-  if (!staff) return unauthenticated()
-
-  return {
-    authenticated: true,
-    principal: staff,
   }
 }
 
@@ -146,15 +98,6 @@ export async function requireVisitorPrincipal(headers: Headers, options: { requi
   const current = await requireCurrentPrincipal(headers)
   if (current.error || !current.principal) return current
 
-  if (current.principal.kind !== 'visitor') {
-    return {
-      result: current.result,
-      principal: null,
-      error: 'Visitor account required',
-      status: 403 as const,
-    }
-  }
-
   if (options.requireVerified && !current.principal.emailVerified) {
     return {
       result: current.result,
@@ -167,30 +110,6 @@ export async function requireVisitorPrincipal(headers: Headers, options: { requi
   return {
     result: current.result,
     principal: current.principal,
-    error: null,
-    status: 200 as const,
-  }
-}
-
-export async function requireStaffPrincipal(headers: Headers, roles: Array<'admin' | 'editor' | 'writer'>) {
-  const result = await getStaffPrincipal(headers)
-  if (!result.authenticated || !result.principal) {
-    return { result, principal: null, error: 'Authentication required', status: 401 as const }
-  }
-
-  const role = result.principal.role
-  if (!role || !roles.includes(role)) {
-    return {
-      result,
-      principal: null,
-      error: `Access denied. Required roles: ${roles.join(', ')}`,
-      status: 403 as const,
-    }
-  }
-
-  return {
-    result,
-    principal: result.principal,
     error: null,
     status: 200 as const,
   }

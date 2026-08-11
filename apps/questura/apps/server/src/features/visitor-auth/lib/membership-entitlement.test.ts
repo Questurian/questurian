@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { deriveStaffMembership, deriveVisitorMembership } from './membership-entitlement'
+import { deriveVisitorMembership } from './membership-entitlement'
 
 const FUTURE = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 const PAST = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -72,18 +72,5 @@ describe('deriveVisitorMembership', () => {
     expect(deriveVisitorMembership({ subscriptionStatus: 'none', cancelAtPeriodEnd: null }).cancelAtPeriodEnd).toBe(
       false
     )
-  })
-})
-
-describe('deriveStaffMembership', () => {
-  it.each([
-    ['admin', true],
-    ['editor', true],
-  ] as const)('grants a staff membership to %s', (role, active) => {
-    expect(deriveStaffMembership(role)).toEqual({ active, source: 'staff_grant' })
-  })
-
-  it.each(['writer', undefined] as const)('does not grant a staff membership to %s', (role) => {
-    expect(deriveStaffMembership(role)).toEqual({ active: false, source: null })
   })
 })

@@ -1,4 +1,4 @@
-export type MembershipSource = 'stripe' | 'staff_grant' | null;
+export type MembershipSource = 'stripe' | null;
 
 export type VisitorPrincipal = {
   kind: 'visitor';
@@ -20,18 +20,11 @@ export type VisitorPrincipal = {
   };
 };
 
-export type StaffPrincipal = {
-  kind: 'staff';
-  id: string | number;
-  email: string;
-  role: 'admin' | 'editor' | 'writer';
-  membership: {
-    active: boolean;
-    source: MembershipSource;
-  };
-};
-
-export type CurrentPrincipal = VisitorPrincipal | StaffPrincipal;
+/**
+ * Per ADR-0004 `/api/me` serves Visitor auth only; Payload Staff auth is ignored there, so a staff
+ * principal never reaches this client.
+ */
+export type CurrentPrincipal = VisitorPrincipal;
 
 export type CurrentPrincipalResponse = {
   authenticated: boolean;

@@ -1,6 +1,5 @@
 import { findVisitorAccountByEmail } from './account-query'
 import type { AuthProvider, VisitorAccountLookup } from './account-query'
-import type { CurrentPrincipal } from './current-principal'
 import { normalizeEmail } from './staff-email-guard'
 
 export type LegacyAccountCheckResult = {
@@ -66,28 +65,6 @@ export function accountCheckFromLookup(lookup: VisitorAccountLookup): LegacyAcco
 export async function checkVisitorAccount(email: unknown): Promise<LegacyAccountCheckResult> {
   const normalized = assertValidEmail(email)
   return accountCheckFromLookup(await findVisitorAccountByEmail(normalized))
-}
-
-export function legacyUserFromPrincipal(principal: CurrentPrincipal | null) {
-  if (!principal) return null
-
-  if (principal.kind === 'staff') {
-    return {
-      ...principal,
-      membershipStatusSummary: principal.membership.active ? 'active' : 'none',
-      subscriptionStatus: principal.membership.active ? 'active' : 'none',
-    }
-  }
-
-  return {
-    ...principal,
-    membershipStatusSummary: principal.membership.active
-      ? 'active'
-      : principal.membership.status,
-    subscriptionStatus: principal.membership.status,
-    membershipExpiration: principal.membership.expiresAt,
-    cancelAtPeriodEnd: principal.membership.cancelAtPeriodEnd,
-  }
 }
 
 export async function parseJsonResponse(response: Response) {
