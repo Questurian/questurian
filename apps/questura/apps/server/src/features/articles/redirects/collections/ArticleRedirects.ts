@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
 import {
   revalidateArticleRedirectAfterChange,
@@ -19,9 +20,15 @@ export const ArticleRedirects: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
-    update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
-    delete: ({ req }) => req.user?.role === 'admin',
+    create: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
+    },
+    update: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
+    },
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
   fields: [
     {

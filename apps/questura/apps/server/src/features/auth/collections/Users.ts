@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 import { collectionAccess } from './access/collectionLevel'
 import { isBootstrapRequestAuthorized } from '../lib/bootstrap-token'
@@ -76,10 +77,10 @@ export const Users: CollectionConfig = {
             if (userCount === 0) return isBootstrapRequestAuthorized({ req, data })
 
             // Normal case: only admins can create users with roles
-            return req.user?.role === 'admin'
+            return staffUser(req.user)?.role === 'admin'
           } catch (error) {
             // If we can't count, use conservative approach (only admins)
-            return req.user?.role === 'admin'
+            return staffUser(req.user)?.role === 'admin'
           }
         },
         // Roles move in both directions between `writer` and `editor`, so a
@@ -89,7 +90,7 @@ export const Users: CollectionConfig = {
         // session cannot quietly mint a second one. Creating an admin is still
         // an explicit create.
         update: async ({ req, id, data }) => {
-          const user = req.user
+          const user = staffUser(req.user)
 
           // Only admins can attempt role changes
           if (user?.role !== 'admin') return false
@@ -133,7 +134,7 @@ export const Users: CollectionConfig = {
         // Admin-only, and never your own account — the same safeguard the role
         // field uses to keep a lone admin from locking themselves out.
         update: ({ req, id }) => {
-          const user = req.user
+          const user = staffUser(req.user)
           if (user?.role !== 'admin') return false
           if (id === undefined || id === null) return false
           return user.id !== id

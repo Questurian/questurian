@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
 
 const REGION_OPTIONS = [
@@ -103,9 +104,15 @@ export const Currencies: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
-    update: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
-    delete: ({ req }) => req.user?.role === 'admin',
+    create: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
+    },
+    update: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
+    },
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
   fields: [
     {

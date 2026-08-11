@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
 
 import {
@@ -25,9 +26,18 @@ export const LocationHomepages: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
-    update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
-    delete: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
+    create: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
+    },
+    update: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
+    },
+    delete: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
+    },
   },
   fields: [
     {

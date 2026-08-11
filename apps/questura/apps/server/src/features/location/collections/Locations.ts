@@ -4,6 +4,7 @@
  * Managed by admins via the API or admin UI.
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
 import { beforeValidateLocation } from '../hooks/beforeValidateLocation'
 import { ensureParentLocation } from '../hooks/ensureParentLocation'
@@ -29,9 +30,9 @@ export const Locations: CollectionConfig = {
 
   access: {
     read: () => true,
-    create: ({ req }) => req.user?.role === 'admin',
-    update: ({ req }) => req.user?.role === 'admin',
-    delete: ({ req }) => req.user?.role === 'admin',
+    create: ({ req }) => staffUser(req.user)?.role === 'admin',
+    update: ({ req }) => staffUser(req.user)?.role === 'admin',
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
 
   fields: locationFields,

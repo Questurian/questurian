@@ -3,6 +3,7 @@
  * Lookup table for place categories (Dining, Accommodations, Nightlife, Attractions)
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 
 export const PlaceCategories: CollectionConfig = {
@@ -15,9 +16,9 @@ export const PlaceCategories: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: ({ req }) => req.user?.role === 'admin',
-    update: ({ req }) => req.user?.role === 'admin',
-    delete: ({ req }) => req.user?.role === 'admin',
+    create: ({ req }) => staffUser(req.user)?.role === 'admin',
+    update: ({ req }) => staffUser(req.user)?.role === 'admin',
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
   fields: [
     {

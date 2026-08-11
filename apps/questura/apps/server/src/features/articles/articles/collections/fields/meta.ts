@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { Field } from 'payload'
 import { validateSlugAgainstReserved } from '@/shared/lib/reservedSlugs'
 
@@ -24,13 +25,13 @@ export const status: Field = {
   defaultValue: 'draft',
   access: {
     create: ({ req, data }) => {
-      if (req.user?.role === 'writer') {
+      if (staffUser(req.user)?.role === 'writer') {
         return data?.status !== 'published'
       }
       return true
     },
     update: ({ req, data }) => {
-      if (req.user?.role === 'writer') {
+      if (staffUser(req.user)?.role === 'writer') {
         return data?.status !== 'published'
       }
       return true
@@ -49,7 +50,10 @@ export const author: Field = {
   relationTo: 'authors',
   required: true,
   access: {
-    update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',
+    update: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
+    },
   },
   admin: {
     description: 'Article author (auto-set to current user on creation)',

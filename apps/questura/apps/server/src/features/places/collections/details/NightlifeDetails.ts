@@ -3,6 +3,7 @@
  * Category-specific details for nightlife places (clubs, lounges, venues, etc.)
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 
 export const nightlifeTypeOptions = [
@@ -27,9 +28,15 @@ export const NightlifeDetails: CollectionConfig = {
   },
   access: {
     read: () => true,
-    create: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
-    update: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
-    delete: ({ req }) => req.user?.role === 'admin',
+    create: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
+    },
+    update: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
+    },
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
   fields: [
     {

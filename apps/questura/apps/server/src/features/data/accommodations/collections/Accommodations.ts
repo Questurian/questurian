@@ -3,6 +3,7 @@
  * Travel data collection for hotels, hostels, resorts, and other lodging options
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
@@ -34,15 +35,17 @@ export const Accommodations: CollectionConfig = {
     },
     create: ({ req }) => {
       // Only editors and admins can create
-      return req.user?.role === 'editor' || req.user?.role === 'admin'
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
     },
     update: ({ req }) => {
       // Editors and admins can update all accommodations
-      return req.user?.role === 'admin' || req.user?.role === 'editor'
+      const role = staffUser(req.user)?.role
+      return role === 'admin' || role === 'editor'
     },
     delete: ({ req }) => {
       // Only admins can delete
-      return req.user?.role === 'admin'
+      return staffUser(req.user)?.role === 'admin'
     },
   },
   fields: [
@@ -492,8 +495,12 @@ export const Accommodations: CollectionConfig = {
     beforeValidate: [syncLocationFields()],
     beforeChange: [
       async ({ data, req, operation }) => {
-        if (operation === 'create' && req.user) {
-          data.createdBy = req.user.id
+        // Only a human is credited. A machine caller authenticates as a
+        // service account (ADR-0006), whose id would otherwise be written into
+        // a `users` relationship and point at an unrelated person.
+        const author = staffUser(req.user)
+        if (operation === 'create' && author) {
+          data.createdBy = author.id
         }
 
         return data

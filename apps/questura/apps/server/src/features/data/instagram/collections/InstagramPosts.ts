@@ -4,6 +4,7 @@
  * Can be reused across multiple travel data collections
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import { CollectionConfig } from 'payload'
 
 export const InstagramPosts: CollectionConfig = {
@@ -23,14 +24,17 @@ export const InstagramPosts: CollectionConfig = {
       if (!req.user) return { status: { equals: 'published' } }
       return true
     },
-    create: ({ req }) => req.user?.role === 'editor' || req.user?.role === 'admin',
+    create: ({ req }) => {
+      const role = staffUser(req.user)?.role
+      return role === 'editor' || role === 'admin'
+    },
     update: ({ req, data }: any) => {
       if (!req.user) return false
-      if (req.user.role === 'admin') return true
-      if (req.user.role === 'editor') return data?.createdBy === req.user.id
+      if (staffUser(req.user)?.role === 'admin') return true
+      if (staffUser(req.user)?.role === 'editor') return data?.createdBy === req.user.id
       return false
     },
-    delete: ({ req }) => req.user?.role === 'admin',
+    delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },
   fields: [
     {

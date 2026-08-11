@@ -8,7 +8,9 @@ function createReq(
   bootstrapToken?: string,
 ) {
   return {
-    user,
+    // Payload always stamps the collection on an authenticated principal, and
+    // `staffUser` reads it to tell a person from a machine (ADR-0006).
+    user: user ? { collection: 'users', ...user } : user,
     headers: {
       get: (name: string) =>
         name === 'x-bootstrap-token' ? (bootstrapToken ?? null) : null,

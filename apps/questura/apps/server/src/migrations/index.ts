@@ -22,6 +22,7 @@ import * as migration_20260811_000000_add_users_status from './20260811_000000_a
 import * as migration_20260811_010000_add_authors from './20260811_010000_add_authors'
 import * as migration_20260811_020000_repoint_bylines_to_authors from './20260811_020000_repoint_bylines_to_authors'
 import * as migration_20260811_030000_retire_users_public_profile from './20260811_030000_retire_users_public_profile'
+import * as migration_20260811_040000_add_service_accounts from './20260811_040000_add_service_accounts'
 
 export const migrations = [
   {
@@ -143,5 +144,10 @@ export const migrations = [
     up: migration_20260811_030000_retire_users_public_profile.up,
     down: migration_20260811_030000_retire_users_public_profile.down,
     name: '20260811_030000_retire_users_public_profile',
+  },
+  {
+    up: migration_20260811_040000_add_service_accounts.up,
+    down: migration_20260811_040000_add_service_accounts.down,
+    name: '20260811_040000_add_service_accounts',
   },
 ]

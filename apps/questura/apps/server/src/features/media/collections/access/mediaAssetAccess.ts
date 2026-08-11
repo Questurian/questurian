@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
 
 export const mediaAssetAccess: CollectionConfig['access'] = {
@@ -6,17 +7,19 @@ export const mediaAssetAccess: CollectionConfig['access'] = {
     if (!req.user) return true
 
     // Admins, Editors, and Writers can see everything
-    if (req.user.role === 'admin' || req.user.role === 'editor' || req.user.role === 'writer')
+    const role = staffUser(req.user)?.role
+    if (role === 'admin' || role === 'editor' || role === 'writer')
       return true
 
     return false
   },
   create: ({ req }) => {
     // Editors, admins, and writers can upload
-    return req.user?.role === 'editor' || req.user?.role === 'admin' || req.user?.role === 'writer'
+    const role = staffUser(req.user)?.role
+    return role === 'editor' || role === 'admin' || role === 'writer'
   },
   update: ({ req }) => {
-    const user = req.user
+    const user = staffUser(req.user)
     if (!user) return false
 
     // Admins and editors can update all
@@ -34,7 +37,7 @@ export const mediaAssetAccess: CollectionConfig['access'] = {
     return false
   },
   delete: ({ req }) => {
-    const user = req.user
+    const user = staffUser(req.user)
     if (!user) return false
 
     // Admins and editors can delete all

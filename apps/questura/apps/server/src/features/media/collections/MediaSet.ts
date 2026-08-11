@@ -2,6 +2,7 @@
  * MediaSet Collection - groups related media variants into a single API object
  */
 
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig, Field } from 'payload'
 import { createLocationRefField } from '@/shared/location/server/fields'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
@@ -61,24 +62,25 @@ export const MediaSet: CollectionConfig = {
     read: ({ req }) => {
       if (!req.user) return true
       if (
-        req.user.role === 'admin' ||
-        req.user.role === 'editor' ||
-        req.user.role === 'writer'
+        staffUser(req.user)?.role === 'admin' ||
+        staffUser(req.user)?.role === 'editor' ||
+        staffUser(req.user)?.role === 'writer'
       )
         return true
       return false
     },
     create: ({ req }) => {
       return (
-        req.user?.role === 'editor' ||
-        req.user?.role === 'admin' ||
-        req.user?.role === 'writer'
+        staffUser(req.user)?.role === 'editor' ||
+        staffUser(req.user)?.role === 'admin' ||
+        staffUser(req.user)?.role === 'writer'
       )
     },
     update: ({ req }) => {
       if (!req.user) return false
-      if (req.user.role === 'admin' || req.user.role === 'editor') return true
-      if (req.user.role === 'writer') {
+      const role = staffUser(req.user)?.role
+      if (role === 'admin' || role === 'editor') return true
+      if (staffUser(req.user)?.role === 'writer') {
         return {
           createdBy: {
             equals: req.user.id,
@@ -89,8 +91,9 @@ export const MediaSet: CollectionConfig = {
     },
     delete: ({ req }) => {
       if (!req.user) return false
-      if (req.user.role === 'admin' || req.user.role === 'editor') return true
-      if (req.user.role === 'writer') {
+      const role = staffUser(req.user)?.role
+      if (role === 'admin' || role === 'editor') return true
+      if (staffUser(req.user)?.role === 'writer') {
         return {
           createdBy: {
             equals: req.user.id,
@@ -106,8 +109,12 @@ export const MediaSet: CollectionConfig = {
       ({ data, req, operation, originalDoc }) => {
         if (!data) return data
 
-        if (operation === 'create' && req.user) {
-          data.createdBy = req.user.id
+        // Only a human is credited. A machine caller authenticates as a
+        // service account (ADR-0006), whose id would otherwise be written into
+        // a `users` relationship and point at an unrelated person.
+        const author = staffUser(req.user)
+        if (operation === 'create' && author) {
+          data.createdBy = author.id
         }
 
         const dataVariants = (data.variants as Record<string, unknown> | undefined) ?? undefined

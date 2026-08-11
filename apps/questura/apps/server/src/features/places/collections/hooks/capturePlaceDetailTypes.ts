@@ -1,3 +1,4 @@
+import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionBeforeChangeHook } from 'payload'
 
 export const capturePlaceDetailTypes: CollectionBeforeChangeHook = ({
@@ -7,7 +8,7 @@ export const capturePlaceDetailTypes: CollectionBeforeChangeHook = ({
   context,
 }) => {
   if (operation === 'create' && req.user) {
-    data.createdBy = req.user.id
+    data.createdBy = staffUser(req.user)?.id
   }
 
   context.detailTypes = {

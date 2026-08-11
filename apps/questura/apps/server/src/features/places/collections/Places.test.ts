@@ -9,6 +9,20 @@ describe('Places collection decomposition', () => {
     expect(Places.hooks?.afterChange).toContain(syncPlaceDetails)
   })
 
+  // ADR-0006: a machine caller authenticates as a service account, whose id
+  // would otherwise land in a `users` relationship and credit an unrelated
+  // person for the record.
+  it('does not credit a service account as the creator', async () => {
+    const result = await capturePlaceDetailTypes({
+      data: { diningType: 'restaurant' },
+      operation: 'create',
+      req: { user: { id: 17, collection: 'service-accounts' } },
+      context: {},
+    } as never)
+
+    expect((result as { createdBy?: unknown }).createdBy).toBeUndefined()
+  })
+
   it('captures detail types and the creator before persistence', async () => {
     const context: Record<string, unknown> = {}
     const data = {
@@ -21,7 +35,7 @@ describe('Places collection decomposition', () => {
     const result = await capturePlaceDetailTypes({
       data,
       operation: 'create',
-      req: { user: { id: 17 } },
+      req: { user: { id: 17, collection: 'users' } },
       context,
     } as never)
 
