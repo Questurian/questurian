@@ -1,0 +1,113 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+async function load(env: Record<string, string>) {
+  vi.resetModules()
+  for (const [key, value] of Object.entries(env)) {
+    vi.stubEnv(key, value)
+  }
+  return import('./assert-production-config')
+}
+
+const VALID_PRODUCTION_ENV = {
+  NODE_ENV: 'production',
+  NEXT_PUBLIC_APP_URL: 'https://questurian.com',
+  BACKEND_URL_LOCAL: 'https://api.questurian.com',
+  CORS_ALLOWED_ORIGINS: 'https://questurian.com',
+}
+
+describe('production config assertion', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', '')
+    vi.stubEnv('NEXT_PUBLIC_FRONTEND_URL', '')
+    vi.stubEnv('BACKEND_URL_LOCAL', '')
+    vi.stubEnv('CORS_ALLOWED_ORIGINS', '')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+  })
+
+  it('is a no-op outside production, even with nothing configured', async () => {
+    const { assertProductionConfig, collectProductionConfigProblems } = await load({
+      NODE_ENV: 'development',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
+    expect(() => assertProductionConfig()).not.toThrow()
+  })
+
+  it('passes on a correctly configured production environment', async () => {
+    const { assertProductionConfig, collectProductionConfigProblems } =
+      await load(VALID_PRODUCTION_ENV)
+
+    expect(collectProductionConfigProblems()).toEqual([])
+    expect(() => assertProductionConfig()).not.toThrow()
+  })
+
+  it('rejects a production boot with no app url', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      NEXT_PUBLIC_APP_URL: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('NEXT_PUBLIC_APP_URL is not set')
+  })
+
+  it('rejects a production boot with no backend url', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      BACKEND_URL_LOCAL: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('BACKEND_URL_LOCAL is not set')
+  })
+
+  it.each([
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'https://localhost:3000',
+  ])('rejects %s as a production app url', async (url) => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      NEXT_PUBLIC_APP_URL: url,
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('points at localhost')
+  })
+
+  it('rejects an empty CORS origin list in production', async () => {
+    const { collectProductionConfigProblems } = await load({
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_APP_URL: '',
+      BACKEND_URL_LOCAL: 'https://api.questurian.com',
+      CORS_ALLOWED_ORIGINS: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('No CORS origins configured')
+  })
+
+  it('reports every problem at once rather than one per boot', async () => {
+    const { collectProductionConfigProblems } = await load({
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_APP_URL: '',
+      BACKEND_URL_LOCAL: '',
+      CORS_ALLOWED_ORIGINS: '',
+    })
+
+    expect(collectProductionConfigProblems().length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('throws a message naming each problem', async () => {
+    const { assertProductionConfig } = await load({
+      NODE_ENV: 'production',
+      NEXT_PUBLIC_APP_URL: '',
+      BACKEND_URL_LOCAL: '',
+      CORS_ALLOWED_ORIGINS: '',
+    })
+
+    expect(() => assertProductionConfig()).toThrow(/Refusing to boot/)
+    expect(() => assertProductionConfig()).toThrow(/NEXT_PUBLIC_APP_URL/)
+    expect(() => assertProductionConfig()).toThrow(/BACKEND_URL_LOCAL/)
+  })
+})
