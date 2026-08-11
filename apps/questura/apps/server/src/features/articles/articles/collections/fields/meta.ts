@@ -44,7 +44,9 @@ export const status: Field = {
 export const author: Field = {
   name: 'author',
   type: 'relationship',
-  relationTo: 'users',
+  // Public authorship lives on Authors, not on the staff account (ADR-0007),
+  // so a byline survives the author's account being disabled or deleted.
+  relationTo: 'authors',
   required: true,
   access: {
     update: ({ req }) => req.user?.role === 'admin' || req.user?.role === 'editor',

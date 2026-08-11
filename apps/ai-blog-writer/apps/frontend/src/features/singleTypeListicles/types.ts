@@ -214,11 +214,14 @@ export type SingleTypeListicleDraft = PayloadSyncStateFields & {
   updatedAt: string
 }
 
+/**
+ * The byline, served from Payload's Authors collection (ADR-0007). Authorship
+ * is no longer the staff account, so there are no name parts or email here.
+ */
 export type PayloadListicleAuthor = {
   id?: number
-  firstName?: string | null
-  lastName?: string | null
-  email?: string | null
+  slug?: string | null
+  displayName?: string | null
 }
 
 export type PayloadListicleDoc = {

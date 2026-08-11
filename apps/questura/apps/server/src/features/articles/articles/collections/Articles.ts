@@ -16,6 +16,7 @@ import {
   assertCanUnpublishHomepageFeaturedContent,
 } from '../../shared/lib/referenceLocks'
 import { handleCanonicalPathChange } from '../lib/handleCanonicalPathChange'
+import { ensureAuthorIdForUser, findAuthorIdForUser } from '@/features/authors/lib/author-for-user'
 import {
   step1Complete,
   inUpdateMode,
@@ -81,20 +82,25 @@ export const Articles: CollectionConfig = {
         req.user?.role === 'writer'
       )
     },
-    update: ({ req, id }) => {
+    update: async ({ req, id }) => {
       const user = req.user
       if (!user) return false
 
       // Editors and admins can update all articles
       if (user.role === 'admin' || user.role === 'editor') return true
 
-      // Writers can only update their own articles
+      // Writers can only update their own articles. Bylines point at Authors,
+      // so scope on the writer's Author record rather than their account id
+      // (ADR-0007). No record means no articles of their own.
       if (user.role === 'writer') {
+        const authorId = await findAuthorIdForUser(req, user.id)
+        if (authorId === null) return false
+
         return {
           and: [
             {
               author: {
-                equals: user.id,
+                equals: authorId,
               },
             },
             {
@@ -157,9 +163,10 @@ export const Articles: CollectionConfig = {
         return data
       },
       async ({ data, req, operation, originalDoc }) => {
-        // Set author on creation
+        // Set author on creation. The byline is an Author record, not the
+        // account that typed it (ADR-0007).
         if (operation === 'create' && req.user?.id) {
-          data.author = req.user.id
+          data.author = await ensureAuthorIdForUser(req, req.user.id)
         }
 
         // Set publishedAt when publishing

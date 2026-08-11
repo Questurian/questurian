@@ -56,9 +56,8 @@ export type FeaturedArticleTeaser = {
   author: {
     id: number | null
     slug?: string | null
+    /** The author's display name; name parts stayed with the staff account. */
     name: string | null
-    firstName: string | null
-    lastName: string | null
   } | null
   category: {
     id: number | null

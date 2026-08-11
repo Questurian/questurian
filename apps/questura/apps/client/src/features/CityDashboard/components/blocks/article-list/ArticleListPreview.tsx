@@ -20,9 +20,7 @@ function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
 }
 
 function getAuthorLabel(article: FeaturedArticleTeaser): string {
-  const name = article.author?.name
-  const fullName = [article.author?.firstName, article.author?.lastName].filter(Boolean).join(' ')
-  return name || fullName || 'Questurian'
+  return article.author?.name || 'Questurian'
 }
 
 function getArticleKey(article: FeaturedArticleTeaser, index: number): string {

@@ -22,15 +22,13 @@ describe('public author route', () => {
     const payload = {
       count: vi.fn().mockResolvedValue({ totalDocs: 1 }),
       find: vi.fn(({ collection, depth }: { collection: string; depth: number }) => {
-        if (collection === 'users') {
+        if (collection === 'authors') {
           return Promise.resolve({
             docs: [
               {
                 id: 7,
                 slug: 'featured-author',
-                firstName: 'Featured',
-                lastName: 'Author',
-                publicProfile: {},
+                displayName: 'Featured Author',
               },
             ],
           })

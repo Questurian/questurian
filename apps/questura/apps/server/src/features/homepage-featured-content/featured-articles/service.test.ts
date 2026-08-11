@@ -309,9 +309,8 @@ describe('homepage featured content service', () => {
       },
       author: {
         id: 7,
-        firstName: 'Ana',
-        lastName: 'Rivera',
-        email: 'ana@example.com',
+        slug: 'ana-rivera',
+        displayName: 'Ana Rivera',
       },
       category: {
         id: 3,
@@ -332,9 +331,8 @@ describe('homepage featured content service', () => {
       authorLabel: 'Ana Rivera',
       author: {
         id: 7,
+        slug: 'ana-rivera',
         name: 'Ana Rivera',
-        firstName: 'Ana',
-        lastName: 'Rivera',
       },
       category: {
         id: 3,

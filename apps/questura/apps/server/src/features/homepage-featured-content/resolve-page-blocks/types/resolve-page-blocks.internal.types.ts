@@ -13,9 +13,8 @@ export type ApiCuratedBlock = {
 export type PublicPreviewPerson = {
   id: number | null
   slug: string | null
+  /** The author's display name. Name parts left with the staff account (ADR-0007). */
   name: string | null
-  firstName: string | null
-  lastName: string | null
 }
 
 export type PublicPreviewCategory = {

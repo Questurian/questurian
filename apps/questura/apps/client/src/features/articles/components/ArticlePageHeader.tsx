@@ -21,7 +21,7 @@ function AuthorBlock({
   author: ArticleAuthor
   publishedLine?: string | null
 }): JSX.Element {
-  const displayName = author.publicProfile.displayName
+  const displayName = author.displayName
 
   return (
     <div className="mx-auto flex w-full min-w-0 max-w-[44ch] flex-col items-center gap-1.5 text-center">

@@ -33,8 +33,10 @@ export function revalidateArticleCollection(
   return { afterChange, afterDelete }
 }
 
-// Author profile edits (names, bio, avatar, social links, slug renames) must
+// Author edits (display name, bio, avatar, social links, slug renames) must
 // refresh the public author page; both old and new slug URLs are covered.
+// Runs on Authors rather than Users since ADR-0007 moved the public profile
+// there -- editing a staff account no longer changes what the page renders.
 export const revalidateAuthorAfterChange: CollectionAfterChangeHook = async ({
   doc,
   previousDoc,
@@ -45,7 +47,7 @@ export const revalidateAuthorAfterChange: CollectionAfterChangeHook = async ({
       authorTarget(previousDoc as AnyDoc | undefined),
       authorTarget(doc as AnyDoc | undefined),
     ),
-    `users:${operation}`,
+    `authors:${operation}`,
   )
 }
 

@@ -2,6 +2,7 @@ import type { CollectionConfig } from 'payload'
 
 import { isAdminFieldLevel } from '@/features/auth/collections/access'
 import { isDisabledStaff } from '@/features/auth/lib/staff-status'
+import { revalidateAuthorAfterChange } from '@/features/public-revalidation/revalidate-client'
 import { authorSlugHook } from './hooks/authorSlug'
 import { authorSocialLinks } from './fields/socialLinks'
 
@@ -47,6 +48,8 @@ export const Authors: CollectionConfig = {
   },
   hooks: {
     beforeChange: [authorSlugHook],
+    // Edits here are exactly what the public author page renders
+    afterChange: [revalidateAuthorAfterChange],
   },
   fields: [
     {

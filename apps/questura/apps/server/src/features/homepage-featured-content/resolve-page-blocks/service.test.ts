@@ -59,9 +59,6 @@ describe('formatPublicLocationHomepageDoc', () => {
                 id: 7,
                 slug: 'ana-rivera',
                 name: 'Ana Rivera',
-                firstName: 'Ana',
-                lastName: 'Rivera',
-                email: 'ana@example.com',
               },
               authorLabel: 'Ana Rivera',
               category: {
@@ -92,8 +89,6 @@ describe('formatPublicLocationHomepageDoc', () => {
                 id: 7,
                 slug: 'ana-rivera',
                 name: 'Ana Rivera',
-                firstName: 'Ana',
-                lastName: 'Rivera',
               },
               category: {
                 id: 3,

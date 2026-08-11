@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
-import type { User } from '@/payload-types'
+import type { Author } from '@/payload-types'
 import { DEFAULT_LANG, isSupportedLang } from '@/shared/i18n/languageField'
 import { serializeIndexItem, type IndexItem } from '@/features/articles/public/indexItem'
 import { TYPE_TO_COLLECTION, type ArticleTypeKey } from '@/features/articles/public/scope'
@@ -35,45 +35,62 @@ export async function GET(
     const payload = await getPayload({ config })
 
     const bySlug = await payload.find({
-      collection: 'users',
+      collection: 'authors',
       where: { slug: { equals: slug } },
       limit: 1,
       depth: 0,
       overrideAccess: true,
     })
-    let user: User | null = bySlug.docs[0] ?? null
+    let author: Author | null = bySlug.docs[0] ?? null
 
-    if (!user && isNumericId) {
-      try {
-        user = await payload.findByID({
-          collection: 'users',
-          id: Number(slug),
-          depth: 0,
-          overrideAccess: true,
-        })
-      } catch {
-        user = null
+    if (!author && isNumericId) {
+      // Legacy /authors/<id> URLs were minted from *user* ids, before ADR-0007
+      // moved authorship onto its own collection. Resolve them that way first
+      // so an old link keeps pointing at the same person; reading the number as
+      // an author id instead would silently serve a different author. The
+      // client 301s either form to the canonical slug.
+      const byLegacyUserId = await payload.find({
+        collection: 'authors',
+        where: { user: { equals: Number(slug) } },
+        limit: 1,
+        depth: 0,
+        overrideAccess: true,
+      })
+      author = byLegacyUserId.docs[0] ?? null
+
+      if (!author) {
+        try {
+          author = await payload.findByID({
+            collection: 'authors',
+            id: Number(slug),
+            depth: 0,
+            overrideAccess: true,
+          })
+        } catch {
+          author = null
+        }
       }
     }
 
-    if (!user) {
+    if (!author) {
       return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
     }
 
-    // Byline implies visibility: staff without published work have no public
-    // author page, so they are not enumerable through this route.
-    const isVisible = await hasPublishedAuthorContent(payload, user.id, ARTICLE_TYPES)
+    // Byline implies visibility: an author without published work has no public
+    // page, so they are not enumerable through this route. This is unchanged by
+    // the split -- an author with no staff account is still visible if their
+    // work is published, which is the point of keeping the record.
+    const isVisible = await hasPublishedAuthorContent(payload, author.id, ARTICLE_TYPES)
     if (!isVisible) {
       return NextResponse.json({ message: 'Author not found.' }, { status: 404 })
     }
 
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
-    const displayName = user.publicProfile?.displayName || fullName || null
-    const bio = user.publicProfile?.bio || null
+    const displayName = author.displayName || null
+    const bio = author.bio || null
 
     // depth is 0, so the avatar relation is an id; resolve it to a CDN URL.
     let avatar: { url: string; alt: string | null } | null = null
-    const avatarId = user.publicProfile?.avatar
+    const avatarId = author.avatar
     if (typeof avatarId === 'number') {
       try {
         const asset = await payload.findByID({
@@ -89,14 +106,14 @@ export async function GET(
       }
     }
     const socialLinks = {
-      instagram: user.publicProfile?.socialLinks?.instagram || null,
-      twitter: user.publicProfile?.socialLinks?.twitter || null,
-      facebook: user.publicProfile?.socialLinks?.facebook || null,
-      linkedin: user.publicProfile?.socialLinks?.linkedin || null,
-      reddit: user.publicProfile?.socialLinks?.reddit || null,
-      youtube: user.publicProfile?.socialLinks?.youtube || null,
-      patreon: user.publicProfile?.socialLinks?.patreon || null,
-      website: user.publicProfile?.socialLinks?.website || null,
+      instagram: author.socialLinks?.instagram || null,
+      twitter: author.socialLinks?.twitter || null,
+      facebook: author.socialLinks?.facebook || null,
+      linkedin: author.socialLinks?.linkedin || null,
+      reddit: author.socialLinks?.reddit || null,
+      youtube: author.socialLinks?.youtube || null,
+      patreon: author.socialLinks?.patreon || null,
+      website: author.socialLinks?.website || null,
     }
 
     const results = await Promise.all(
@@ -105,7 +122,7 @@ export async function GET(
           collection: TYPE_TO_COLLECTION[type],
           where: {
             and: [
-              { author: { equals: user.id } },
+              { author: { equals: author.id } },
               { status: { equals: 'published' } },
               { language: { equals: lang } },
             ],
@@ -125,8 +142,8 @@ export async function GET(
       .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''))
 
     return NextResponse.json({
-      id: user.id,
-      slug: user.slug ?? null,
+      id: author.id,
+      slug: author.slug ?? null,
       displayName,
       bio,
       avatar,

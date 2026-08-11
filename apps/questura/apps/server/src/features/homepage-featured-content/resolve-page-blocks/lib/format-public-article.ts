@@ -14,23 +14,20 @@ export function formatPublicAuthor(
 ): PublicPreviewPerson | null {
   if (!isRecord(value)) {
     const name = stringOrNull(fallbackName)
-    return name ? { id: null, slug: null, name, firstName: null, lastName: null } : null
+    return name ? { id: null, slug: null, name } : null
   }
 
-  const firstName = stringOrNull(value.firstName)
-  const lastName = stringOrNull(value.lastName)
-  const derivedName = [firstName, lastName].filter(Boolean).join(' ')
-  const name = stringOrNull(value.name) ?? (derivedName || null)
+  // Accepts either the already-flattened preview (`name`) or a raw Authors doc
+  // (`displayName`); the byline no longer carries account name parts.
+  const name = stringOrNull(value.name) ?? stringOrNull(value.displayName)
 
   const author = {
     id: normalizeNumericId(value.id),
     slug: stringOrNull(value.slug),
     name,
-    firstName,
-    lastName,
   }
 
-  return author.id !== null || author.name || author.firstName || author.lastName ? author : null
+  return author.id !== null || author.name ? author : null
 }
 
 export function formatPublicCategory(value: unknown): PublicPreviewCategory | null {

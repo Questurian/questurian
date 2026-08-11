@@ -5,7 +5,6 @@ import type {
   CollectionBeforeOperationHook,
   CollectionBeforeValidateHook,
 } from 'payload'
-import { revalidateAuthorAfterChange } from '@/features/public-revalidation/revalidate-client'
 import { revokeSessionsOnDisableHook } from './afterChange/revokeSessionsOnDisable'
 import { beforeChangeHooks } from './beforeChange'
 import { beforeLoginHooks } from './beforeLogin'
@@ -25,13 +24,9 @@ export const userCollectionHooks = {
   // Disabled accounts are refused a token — runs after the password check,
   // before the token is signed
   beforeLogin: beforeLoginHooks as CollectionBeforeLoginHook[],
-  // Session revocation is ordered first: it is the security-carrying half of
-  // disabling an account, and revalidation is best-effort cache maintenance
-  afterChange: [
-    revokeSessionsOnDisableHook,
-    // Profile edits refresh the cached public author page
-    revalidateAuthorAfterChange,
-  ] as CollectionAfterChangeHook[],
+  // Author-page revalidation moved to the Authors collection with the public
+  // profile itself (ADR-0007); editing an account no longer changes the page.
+  afterChange: [revokeSessionsOnDisableHook] as CollectionAfterChangeHook[],
   // Invite / password-set emails land in the email-logs delivery log
   afterForgotPassword: [logPasswordSetEmail],
 }
