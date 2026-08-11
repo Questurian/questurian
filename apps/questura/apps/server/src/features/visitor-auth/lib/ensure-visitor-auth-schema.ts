@@ -13,11 +13,13 @@ import { APP_CONFIG } from '@/shared/config'
  * and mirrors the committed migration
  * `src/migrations/20260529000000_better_auth_visitor_tables.ts`.
  *
- * After ensuring the schema, it also removes orphaned `visitor_profiles` rows
+ * After ensuring the schema, it *reports* orphaned `visitor_profiles` rows
  * (profiles whose `auth_user_id` no longer maps to a `visitor_auth_users` row),
- * which can arise precisely because the auth tables above were dropped and
- * recreated empty while the Payload-owned profile table persisted. It never
- * alters the auth tables' data.
+ * which can arise because the auth tables above were dropped and recreated
+ * empty while the Payload-owned profile table persisted.
+ *
+ * This function never writes to `visitor_profiles` and never alters the auth
+ * tables' data. See the sweep block below for why reporting replaced deletion.
  */
 export async function ensureVisitorAuthSchema(): Promise<void> {
   if (!APP_CONFIG.database.uri) {
@@ -110,25 +112,54 @@ export async function ensureVisitorAuthSchema(): Promise<void> {
       ON "visitor_auth_verifications" ("identifier");
     `)
 
-    // Sweep orphaned visitor profiles. `visitor_profiles` is Payload-owned and
-    // survives across boots, whereas the Better Auth `visitor_auth_*` tables may
-    // be dropped/recreated empty after a Payload push (see comment above). A
-    // profile is only ever created *after* its auth user exists, so any profile
-    // whose `auth_user_id` no longer maps to a `visitor_auth_users` row is a
-    // dangling record that breaks the sign-in account check. Remove them so the
-    // email-existence check stays consistent with the auth source of truth.
-    await pool.query(`
-      DO $$
-      BEGIN
-        IF to_regclass('public.visitor_profiles') IS NOT NULL THEN
-          DELETE FROM "visitor_profiles" vp
-          WHERE vp."auth_user_id" IS NOT NULL
-            AND NOT EXISTS (
-              SELECT 1 FROM "visitor_auth_users" u WHERE u."id" = vp."auth_user_id"
-            );
-        END IF;
-      END $$;
+    // Report — never delete — orphaned visitor profiles.
+    //
+    // This block used to `DELETE` these rows on every boot, justified as keeping
+    // the sign-in email-existence check consistent with the auth source of
+    // truth. That justification does not hold: the account check
+    // (`findVisitorAccountByEmail`) resolves entirely against Better Auth's
+    // `visitor_auth_users` and never reads `visitor_profiles`. Orphans are inert
+    // — `authUserId` is unique and lookups are keyed on it, so a stale row can
+    // never be matched by a live session, and `email` is not unique, so it
+    // cannot collide with a re-registered visitor's new profile.
+    //
+    // The rows, however, are not cheap: `visitor_profiles` holds the Stripe
+    // linkage (`stripe_customer_id`, `stripe_subscription_id`,
+    // `membership_expiration`). Deleting them on boot means a restore-ordering
+    // mistake, a lagging replica, or a wrong `DATABASE_URI` silently destroys
+    // billing linkage with no FK, no soft-delete, no audit and no row-count
+    // guard. Reporting keeps the diagnostic without the loss; reconciliation is
+    // a deliberate, reviewable operation, not a boot side effect.
+    const { rows: profileTableRows } = await pool.query<{ present: boolean }>(`
+      SELECT to_regclass('public.visitor_profiles') IS NOT NULL AS present;
     `)
+
+    if (profileTableRows[0]?.present) {
+      const { rows: orphanRows } = await pool.query<{
+        orphan_count: string
+        sample_ids: string[] | null
+      }>(`
+        SELECT
+          COUNT(*)::text AS orphan_count,
+          (ARRAY_AGG(vp."id"::text ORDER BY vp."id"))[1:20] AS sample_ids
+        FROM "visitor_profiles" vp
+        WHERE vp."auth_user_id" IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM "visitor_auth_users" u WHERE u."id" = vp."auth_user_id"
+          );
+      `)
+
+      const orphanCount = Number(orphanRows[0]?.orphan_count ?? '0')
+
+      if (orphanCount > 0) {
+        console.warn(
+          `[visitor-auth] ${orphanCount} orphaned visitor_profiles row(s) detected ` +
+            `(auth_user_id with no matching visitor_auth_users row). These rows are ` +
+            `retained: they may carry Stripe billing linkage. Sample ids: ` +
+            `${(orphanRows[0]?.sample_ids ?? []).join(', ')}`
+        )
+      }
+    }
   } finally {
     await pool.end()
   }
