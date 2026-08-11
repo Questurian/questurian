@@ -22,7 +22,7 @@ export class PayloadMediaClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
 
     const formData = new FormData();
     const blob = new Blob([fileBuffer], { type: this.getMimeType(filename) });
@@ -80,7 +80,7 @@ export class PayloadMediaClient {
     const response = await fetch(`${apiUrl}/api/media-assets`, {
       method: "POST",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: formData,
     });
@@ -117,14 +117,14 @@ export class PayloadMediaClient {
       throw new Error(`Invalid locationRef for media asset update: ${locationRef}`);
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     const response = await fetch(`${apiUrl}/api/media-assets/${mediaAssetId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify({
         locationRef: parsedLocationRef,
@@ -148,14 +148,14 @@ export class PayloadMediaClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     const response = await fetch(`${apiUrl}/api/media-assets/${mediaAssetId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify({
         mediaSet: null,

@@ -19,7 +19,7 @@ export class PayloadLocationsClient {
       return null;
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const params = new URLSearchParams({
       "where[locationKey][equals]": locationKey,
     });
@@ -33,7 +33,7 @@ export class PayloadLocationsClient {
     const response = await fetch(`${apiUrl}/api/locations?${params.toString()}`, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
     });
 
@@ -65,7 +65,7 @@ export class PayloadLocationsClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     console.log("[Payload] Create location", data);
@@ -74,7 +74,7 @@ export class PayloadLocationsClient {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify(data),
     });

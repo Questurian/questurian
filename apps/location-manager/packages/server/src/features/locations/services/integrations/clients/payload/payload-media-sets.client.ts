@@ -95,7 +95,7 @@ export class PayloadMediaSetsClient {
       return null;
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const params = new URLSearchParams({
       "where[externalRef][equals]": externalRef,
       limit: "1",
@@ -110,7 +110,7 @@ export class PayloadMediaSetsClient {
     const response = await fetch(`${apiUrl}/api/media-sets?${params.toString()}`, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
     });
 
@@ -143,7 +143,7 @@ export class PayloadMediaSetsClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     console.log("[Payload] Create media-set", {
@@ -156,7 +156,7 @@ export class PayloadMediaSetsClient {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify(data),
     });
@@ -197,14 +197,14 @@ export class PayloadMediaSetsClient {
       throw new Error(`Invalid locationRef for media-set update: ${locationRef}`);
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     const response = await fetch(`${apiUrl}/api/media-sets/${mediaSetId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify({
         locationRef: parsedLocationRef,
@@ -228,13 +228,13 @@ export class PayloadMediaSetsClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     const response = await fetch(`${apiUrl}/api/media-sets/${mediaSetId}?depth=0`, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
     });
 
@@ -276,7 +276,7 @@ export class PayloadMediaSetsClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
     const trimmedQuery = params.query?.trim() ?? "";
     const ids = Array.from(new Set((params.ids ?? []).map((id) => id.trim()).filter(Boolean)));
@@ -307,7 +307,7 @@ export class PayloadMediaSetsClient {
     const response = await fetch(url, {
       method: "GET",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
     });
 
@@ -387,7 +387,7 @@ export class PayloadMediaSetsClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     const formData = new FormData();
@@ -408,7 +408,7 @@ export class PayloadMediaSetsClient {
     const response = await fetch(url, {
       method: "POST",
       headers: {
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: formData,
     });

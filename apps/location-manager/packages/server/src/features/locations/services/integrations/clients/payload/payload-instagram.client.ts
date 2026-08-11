@@ -14,14 +14,14 @@ export class PayloadInstagramClient {
       throw new ServiceUnavailableError("Payload CMS");
     }
 
-    const token = await this.authClient.ensureAuthenticated();
+    const authHeader = await this.authClient.authHeader();
     const apiUrl = this.authClient.getApiUrl();
 
     const response = await fetch(`${apiUrl}/api/instagram-posts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token}`,
+        ...authHeader,
       },
       body: JSON.stringify(data),
     });
