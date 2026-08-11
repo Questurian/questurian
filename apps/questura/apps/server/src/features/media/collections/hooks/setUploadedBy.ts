@@ -1,10 +1,13 @@
 import type { CollectionBeforeChangeHook } from 'payload'
+import { staffUser } from '@/features/auth/lib/staff-user'
 
 export const setUploadedBy: CollectionBeforeChangeHook = ({ req, operation, data }) => {
-  if (operation === 'create' && req.user && data) {
-    data.uploadedBy = req.user.id
+  const uploader = staffUser(req.user)
+
+  if (operation === 'create' && uploader && data) {
+    data.uploadedBy = uploader.id
     if (!data.user) {
-      data.user = req.user.id
+      data.user = uploader.id
     }
   }
 
