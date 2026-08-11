@@ -5,12 +5,13 @@ import { useAuth, usePermissions } from '../../auth'
 import {
   changeStaffRole,
   createStaffUser,
+  fetchAuthors,
   fetchEmailLogs,
   fetchStaffUsers,
   requestPasswordSetEmail,
   setStaffStatus,
 } from '../api/staff.api'
-import type { AssignableStaffRole, EmailLog, StaffStatus, StaffUser } from '../types'
+import type { AssignableStaffRole, Author, EmailLog, StaffStatus, StaffUser } from '../types'
 
 type CreateFormState = {
   email: string
@@ -26,9 +27,19 @@ const EMPTY_CREATE_FORM: CreateFormState = {
   role: 'writer',
 }
 
-function staffDisplayName(user: StaffUser): string {
+function staffDisplayName(user: StaffUser, author: Author | undefined): string {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
-  return user.publicProfile?.displayName || fullName || '—'
+  return author?.displayName || fullName || '—'
+}
+
+/** Authors keyed by the account they are linked to; unlinked ones are not staff. */
+function authorsByUserId(authors: Author[]): Map<number, Author> {
+  const byUser = new Map<number, Author>()
+  for (const author of authors) {
+    const userId = typeof author.user === 'object' ? author.user?.id : author.user
+    if (typeof userId === 'number') byUser.set(userId, author)
+  }
+  return byUser
 }
 
 /** Absent status means the row predates the column, which backfilled to active. */
@@ -81,6 +92,12 @@ export default function StaffPage() {
   const staffQuery = useQuery({
     queryKey: ['staff', 'list'],
     queryFn: () => fetchStaffUsers(token as string),
+    enabled: Boolean(token) && canManageUsers,
+  })
+
+  const authorsQuery = useQuery({
+    queryKey: ['staff', 'authors'],
+    queryFn: () => fetchAuthors(token as string),
     enabled: Boolean(token) && canManageUsers,
   })
 
@@ -190,6 +207,7 @@ export default function StaffPage() {
   }
 
   const staff = staffQuery.data ?? []
+  const authorByUserId = authorsByUserId(authorsQuery.data ?? [])
   const emailLogs = emailLogsQuery.data ?? []
   const lastInviteByEmail = latestInviteByRecipient(emailLogs)
   // The server refuses role and status changes to your own account, so those
@@ -301,7 +319,7 @@ export default function StaffPage() {
                     className={staffStatus(member) === 'disabled' ? 'staff-row--disabled' : undefined}
                   >
                     <td>{member.email}</td>
-                    <td>{staffDisplayName(member)}</td>
+                    <td>{staffDisplayName(member, authorByUserId.get(member.id))}</td>
                     <td>
                       <span className={`staff-role staff-role--${member.role}`}>{member.role}</span>
                     </td>
@@ -310,7 +328,12 @@ export default function StaffPage() {
                         {staffStatus(member) === 'disabled' ? 'Disabled' : 'Active'}
                       </span>
                     </td>
-                    <td>{member.slug ? <code>/authors/{member.slug}</code> : '—'}</td>
+                    <td>
+                      {(() => {
+                        const slug = authorByUserId.get(member.id)?.slug
+                        return slug ? <code>/authors/{slug}</code> : '—'
+                      })()}
+                    </td>
                     <td className="staff-invite-cell">
                       {(() => {
                         const lastInvite = lastInviteByEmail.get(member.email)

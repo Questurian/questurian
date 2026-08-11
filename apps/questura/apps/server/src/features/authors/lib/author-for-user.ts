@@ -47,22 +47,16 @@ export async function ensureAuthorIdForUser(
   })
   if (!user) return null
 
+  // The account holds no authorship to copy across (ADR-0007), so the record
+  // starts from the person's name and they fill in the rest.
   const displayName =
-    user.publicProfile?.displayName?.trim() ||
-    [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
-    user.email
+    [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || user.email
 
   const created = await req.payload.create({
     collection: 'authors',
     data: {
       user: user.id,
       displayName,
-      // The account's existing public profile comes across so a first article
-      // does not publish under an empty author page.
-      bio: user.publicProfile?.bio ?? undefined,
-      avatar:
-        typeof user.publicProfile?.avatar === 'number' ? user.publicProfile.avatar : undefined,
-      socialLinks: user.publicProfile?.socialLinks ?? undefined,
     },
     overrideAccess: true,
     req,

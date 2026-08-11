@@ -32,9 +32,17 @@ export type SocialLinks = {
   website?: string | null
 }
 
-export type PublicProfile = {
+/**
+ * The public authorship record (ADR-0007). Its own collection, linked to a
+ * staff account by `user` -- and valid with that link absent, which is what
+ * lets a byline outlive the account.
+ */
+export type Author = {
+  id: number
+  slug?: string | null
+  user?: number | { id: number } | null
+  displayName: string
   avatar?: AvatarAsset | number | null
-  displayName?: string | null
   bio?: string | null
   expertise?: ExpertiseEntry[] | null
   socialLinks?: SocialLinks | null
@@ -48,10 +56,8 @@ export type StaffUser = {
   status?: StaffStatus | null
   firstName?: string | null
   lastName?: string | null
-  slug?: string | null
   createdAt?: string
   updatedAt?: string
-  publicProfile?: PublicProfile | null
 }
 
 export type EmailLogStatus = 'sent' | 'failed'
@@ -67,16 +73,20 @@ export type EmailLog = {
   createdAt: string
 }
 
+/** The account half of the profile form: who the person is, not how they appear. */
 export type StaffUserPatch = {
   firstName?: string
   lastName?: string
+}
+
+/** The authorship half: how the person appears on the public site. */
+export type AuthorPatch = {
   /** Admin-only: Payload field access rejects slug changes from non-admins. */
   slug?: string
-  publicProfile?: {
-    avatar?: number | null
-    displayName?: string
-    bio?: string
-    expertise?: { area: string }[]
-    socialLinks?: SocialLinks
-  }
+  user?: number
+  displayName?: string
+  avatar?: number | null
+  bio?: string
+  expertise?: { area: string }[]
+  socialLinks?: SocialLinks
 }

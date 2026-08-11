@@ -2,6 +2,8 @@ import { PAYLOAD_API_URL } from '../../../shared/api/client/config'
 import { payloadMutation, payloadRequest } from '../../../shared/api/client/http'
 import type {
   AssignableStaffRole,
+  Author,
+  AuthorPatch,
   AvatarAsset,
   EmailLog,
   StaffStatus,
@@ -10,8 +12,65 @@ import type {
 } from '../types'
 
 export async function fetchStaffUser(id: number | string, token: string): Promise<StaffUser> {
+  return payloadRequest(`/api/users/${id}?depth=0`, token)
+}
+
+/**
+ * The Author record linked to a staff account, or null when they have none
+ * yet (ADR-0007). Someone who has never published has no author record, and
+ * that is a normal state rather than an error -- the profile editor creates
+ * one on first save.
+ */
+export async function fetchAuthorForUser(
+  userId: number | string,
+  token: string,
+): Promise<Author | null> {
   // depth=1 populates the avatar upload relationship for preview
-  return payloadRequest(`/api/users/${id}?depth=1`, token)
+  const response = (await payloadRequest(
+    `/api/authors?where[user][equals]=${userId}&limit=1&depth=1`,
+    token,
+  )) as { docs?: Author[] }
+  return response.docs?.[0] ?? null
+}
+
+/** Every author, for joining onto the staff table by linked account. */
+export async function fetchAuthors(token: string): Promise<Author[]> {
+  const response = (await payloadRequest(
+    '/api/authors?limit=200&sort=displayName&depth=0',
+    token,
+  )) as { docs?: Author[] }
+  return response.docs ?? []
+}
+
+export async function createAuthorForUser(
+  userId: number | string,
+  patch: AuthorPatch,
+  token: string,
+): Promise<Author> {
+  const response = (await payloadMutation(
+    '/api/authors',
+    'POST',
+    { ...patch, user: Number(userId) },
+    token,
+  )) as { doc?: Author }
+  if (!response.doc) {
+    throw new Error('Payload returned no created author document.')
+  }
+  return response.doc
+}
+
+export async function updateAuthor(
+  id: number | string,
+  patch: AuthorPatch,
+  token: string,
+): Promise<Author> {
+  const response = (await payloadMutation(`/api/authors/${id}`, 'PATCH', patch, token)) as {
+    doc?: Author
+  }
+  if (!response.doc) {
+    throw new Error('Payload returned no updated author document.')
+  }
+  return response.doc
 }
 
 export async function updateStaffUser(

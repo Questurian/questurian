@@ -1,13 +1,9 @@
 import type { CollectionBeforeChangeHook } from 'payload'
 import { firstUserPromotionHook } from './firstUserPromotion'
-import { authorSlugHook } from './authorSlug'
 
 /**
  * All beforeChange hooks for Users collection
  * Note: Field-specific hooks (subscriptionStatus, membershipExpiration, cancelAtPeriodEnd)
  * are defined inline in their respective field modules for co-location and clarity
  */
-export const beforeChangeHooks: CollectionBeforeChangeHook[] = [
-  firstUserPromotionHook,
-  authorSlugHook,
-]
+export const beforeChangeHooks: CollectionBeforeChangeHook[] = [firstUserPromotionHook]
