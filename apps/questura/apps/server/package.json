@@ -17,6 +17,7 @@
     "db:migrate:down": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:down",
     "db:migrate:status": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
     "backfill:rankings": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/backfill-rankings-created-by.ts",
+    "reconcile:stripe-profiles": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/reconcile-stripe-visitor-profiles.ts",
     "inventory:tour-agency": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/inventory-tour-agency-stops.ts",
     "migrate:media-sets": "bun scripts/finish-media-set-migration.ts",
     "migrate:nightlife-contract-v2": "bun scripts/migrate-nightlife-contract-v2.ts",
