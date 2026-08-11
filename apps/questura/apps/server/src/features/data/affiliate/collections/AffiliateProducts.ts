@@ -4,6 +4,7 @@
  */
 
 import { staffUser } from '@/features/auth/lib/staff-user'
+import { serviceAccountHasCollectionGrant } from '@/features/auth/lib/service-account-grants'
 import { CollectionConfig } from 'payload'
 
 export const AffiliateProducts: CollectionConfig = {
@@ -17,7 +18,10 @@ export const AffiliateProducts: CollectionConfig = {
   access: {
     read: ({ req }) => {
       if (!req.user) return { status: { equals: 'published' } }
-      return true
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'affiliate-products', 'read') ||
+        Boolean(staffUser(req.user))
+      )
     },
     create: ({ req }) => {
       const role = staffUser(req.user)?.role

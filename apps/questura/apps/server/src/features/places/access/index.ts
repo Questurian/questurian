@@ -12,7 +12,7 @@ import type { Access } from 'payload'
  */
 export const placesReadAccess: Access = ({ req }) => {
   if (!req.user) return { status: { equals: 'published' } }
-  return true
+  return Boolean(staffUser(req.user))
 }
 
 /**

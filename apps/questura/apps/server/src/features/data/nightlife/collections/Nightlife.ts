@@ -4,6 +4,7 @@
  */
 
 import { staffUser } from '@/features/auth/lib/staff-user'
+import { serviceAccountHasCollectionGrant } from '@/features/auth/lib/service-account-grants'
 import { CollectionConfig } from 'payload'
 import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
@@ -20,16 +21,27 @@ export const Nightlife: CollectionConfig = {
   access: {
     read: ({ req }) => {
       if (!req.user) return { status: { equals: 'published' } }
-      return true
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'nightlife', 'read') ||
+        Boolean(staffUser(req.user))
+      )
     },
     create: ({ req }) => {
       const role = staffUser(req.user)?.role
-      return role === 'editor' || role === 'admin'
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'nightlife', 'create') ||
+        role === 'editor' ||
+        role === 'admin'
+      )
     },
     update: ({ req }) => {
       // Editors and admins can update all nightlife items
       const role = staffUser(req.user)?.role
-      return role === 'admin' || role === 'editor'
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'nightlife', 'update') ||
+        role === 'admin' ||
+        role === 'editor'
+      )
     },
     delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },

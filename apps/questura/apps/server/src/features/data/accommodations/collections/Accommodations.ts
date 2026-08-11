@@ -4,6 +4,7 @@
  */
 
 import { staffUser } from '@/features/auth/lib/staff-user'
+import { serviceAccountHasCollectionGrant } from '@/features/auth/lib/service-account-grants'
 import { CollectionConfig } from 'payload'
 import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
@@ -30,18 +31,29 @@ export const Accommodations: CollectionConfig = {
           },
         }
       }
-      // Authenticated users can read all
-      return true
+      // Human staff and explicitly granted machines can read all.
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'accommodations', 'read') ||
+        Boolean(staffUser(req.user))
+      )
     },
     create: ({ req }) => {
       // Only editors and admins can create
       const role = staffUser(req.user)?.role
-      return role === 'editor' || role === 'admin'
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'accommodations', 'create') ||
+        role === 'editor' ||
+        role === 'admin'
+      )
     },
     update: ({ req }) => {
       // Editors and admins can update all accommodations
       const role = staffUser(req.user)?.role
-      return role === 'admin' || role === 'editor'
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'accommodations', 'update') ||
+        role === 'admin' ||
+        role === 'editor'
+      )
     },
     delete: ({ req }) => {
       // Only admins can delete
