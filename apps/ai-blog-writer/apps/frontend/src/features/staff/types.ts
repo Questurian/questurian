@@ -1,5 +1,14 @@
 export type StaffRole = 'admin' | 'editor' | 'writer'
 
+/**
+ * Account lifecycle (ADR-0007). A `disabled` member is inactive, not absent:
+ * they still hold a row, an author slug and their bylines, but cannot sign in.
+ */
+export type StaffStatus = 'active' | 'disabled'
+
+/** The roles an admin may move an existing account between, in either direction. */
+export type AssignableStaffRole = Extract<StaffRole, 'editor' | 'writer'>
+
 export type AvatarAsset = {
   id: number
   url?: string | null
@@ -35,6 +44,8 @@ export type StaffUser = {
   id: number
   email: string
   role: StaffRole
+  /** Absent on rows read back from a server predating the status column. */
+  status?: StaffStatus | null
   firstName?: string | null
   lastName?: string | null
   slug?: string | null

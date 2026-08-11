@@ -340,10 +340,42 @@
   color: var(--ink-light);
 }
 
+.staff-status {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  padding: 2px var(--space-3);
+}
+
+.staff-status--active {
+  background: var(--sage-soft);
+  color: var(--sage);
+}
+
+.staff-status--disabled {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+/*
+ * Offboarded, not gone: recede the row's own text, but leave the badges and
+ * buttons alone. Done with colour rather than opacity, which would composite
+ * over the whole subtree and take the status badge and actions down with it.
+ */
+.staff-row--disabled td {
+  color: var(--muted);
+}
+
 .staff-actions-cell {
   display: flex;
   gap: var(--space-2);
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.staff-button-danger {
+  color: var(--error);
 }
 
 .staff-button-link {

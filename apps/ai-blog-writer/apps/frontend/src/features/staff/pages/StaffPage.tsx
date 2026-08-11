@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth, usePermissions } from '../../auth'
 import {
+  changeStaffRole,
   createStaffUser,
   fetchEmailLogs,
   fetchStaffUsers,
-  promoteWriterToEditor,
   requestPasswordSetEmail,
+  setStaffStatus,
 } from '../api/staff.api'
-import type { EmailLog, StaffUser } from '../types'
+import type { AssignableStaffRole, EmailLog, StaffStatus, StaffUser } from '../types'
 
 type CreateFormState = {
   email: string
@@ -28,6 +29,19 @@ const EMPTY_CREATE_FORM: CreateFormState = {
 function staffDisplayName(user: StaffUser): string {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ')
   return user.publicProfile?.displayName || fullName || '—'
+}
+
+/** Absent status means the row predates the column, which backfilled to active. */
+function staffStatus(user: StaffUser): StaffStatus {
+  return user.status === 'disabled' ? 'disabled' : 'active'
+}
+
+/** The role this account would move to, or null when it is not ours to change. */
+function roleToggleTarget(user: StaffUser): AssignableStaffRole | null {
+  if (user.role === 'writer') return 'editor'
+  if (user.role === 'editor') return 'writer'
+  // Admins are stepped down in the Payload admin panel, not from here.
+  return null
 }
 
 /** The forgot-password email doubles as the staff invite (ADR-0023). */
@@ -56,7 +70,7 @@ function latestInviteByRecipient(logs: EmailLog[]): Map<string, EmailLog> {
 }
 
 export default function StaffPage() {
-  const { token } = useAuth()
+  const { token, user: currentUser } = useAuth()
   const { canManageUsers, isLoading: permissionsLoading } = usePermissions()
   const queryClient = useQueryClient()
 
@@ -121,12 +135,31 @@ export default function StaffPage() {
     },
   })
 
-  const promote = useMutation({
-    mutationFn: (user: StaffUser) => promoteWriterToEditor(user.id, token as string),
+  const changeRole = useMutation({
+    mutationFn: ({ user, role }: { user: StaffUser; role: AssignableStaffRole }) =>
+      changeStaffRole(user.id, role, token as string),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
       setErrorMessage(null)
-      setStatusMessage(`${updated.email} is now an editor.`)
+      setStatusMessage(`${updated.email} is now ${updated.role === 'editor' ? 'an' : 'a'} ${updated.role}.`)
+    },
+    onError: (error: Error) => {
+      setStatusMessage(null)
+      setErrorMessage(error.message)
+    },
+  })
+
+  const changeStatus = useMutation({
+    mutationFn: ({ user, status }: { user: StaffUser; status: StaffStatus }) =>
+      setStaffStatus(user.id, status, token as string),
+    onSuccess: (updated) => {
+      void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
+      setErrorMessage(null)
+      setStatusMessage(
+        staffStatus(updated) === 'disabled'
+          ? `${updated.email} is disabled. Their sessions were revoked; their author page and bylines are unaffected.`
+          : `${updated.email} is active again and can sign in.`,
+      )
     },
     onError: (error: Error) => {
       setStatusMessage(null)
@@ -159,14 +192,19 @@ export default function StaffPage() {
   const staff = staffQuery.data ?? []
   const emailLogs = emailLogsQuery.data ?? []
   const lastInviteByEmail = latestInviteByRecipient(emailLogs)
+  // The server refuses role and status changes to your own account, so those
+  // actions are hidden rather than offered and then rejected.
+  const isSelf = (member: StaffUser) => String(member.id) === String(currentUser?.id)
 
   return (
     <div className="staff-page staff-page-wide">
       <header className="staff-page-header">
         <h1>Staff</h1>
         <p className="staff-muted">
-          Create writer and editor accounts, promote writers, and edit any staff member's author
-          profile. Admin accounts and offboarding are handled in the Payload admin panel.
+          Create writer and editor accounts, move people between those roles, disable accounts when
+          someone leaves, and edit any staff member's author profile. Disabling — not deleting — is
+          how a person is offboarded: their author page and bylines survive it. Admin accounts are
+          still handled in the Payload admin panel.
         </p>
       </header>
 
@@ -250,6 +288,7 @@ export default function StaffPage() {
                   <th>Email</th>
                   <th>Name</th>
                   <th>Role</th>
+                  <th>Status</th>
                   <th>Author page</th>
                   <th>Last invite</th>
                   <th aria-label="Actions" />
@@ -257,11 +296,19 @@ export default function StaffPage() {
               </thead>
               <tbody>
                 {staff.map((member) => (
-                  <tr key={member.id}>
+                  <tr
+                    key={member.id}
+                    className={staffStatus(member) === 'disabled' ? 'staff-row--disabled' : undefined}
+                  >
                     <td>{member.email}</td>
                     <td>{staffDisplayName(member)}</td>
                     <td>
                       <span className={`staff-role staff-role--${member.role}`}>{member.role}</span>
+                    </td>
+                    <td>
+                      <span className={`staff-status staff-status--${staffStatus(member)}`}>
+                        {staffStatus(member) === 'disabled' ? 'Disabled' : 'Active'}
+                      </span>
                     </td>
                     <td>{member.slug ? <code>/authors/{member.slug}</code> : '—'}</td>
                     <td className="staff-invite-cell">
@@ -296,21 +343,49 @@ export default function StaffPage() {
                       >
                         Resend invite
                       </button>
-                      {member.role === 'writer' ? (
-                        <button
-                          type="button"
-                          className="staff-button-secondary"
-                          disabled={promote.isPending}
-                          onClick={() => {
-                            const confirmed = window.confirm(
-                              `Promote ${member.email} to editor? Roles are permanent — this cannot be undone.`,
-                            )
-                            if (confirmed) promote.mutate(member)
-                          }}
-                        >
-                          Promote to editor
-                        </button>
-                      ) : null}
+                      {(() => {
+                        if (isSelf(member)) return null
+                        const target = roleToggleTarget(member)
+                        if (!target) return null
+                        const verb = target === 'editor' ? 'Promote' : 'Demote'
+                        return (
+                          <button
+                            type="button"
+                            className="staff-button-secondary"
+                            disabled={changeRole.isPending}
+                            onClick={() => {
+                              const confirmed = window.confirm(
+                                `${verb} ${member.email} to ${target}? This can be changed back.`,
+                              )
+                              if (confirmed) changeRole.mutate({ user: member, role: target })
+                            }}
+                          >
+                            {verb} to {target}
+                          </button>
+                        )
+                      })()}
+                      {(() => {
+                        if (isSelf(member)) return null
+                        const disabled = staffStatus(member) === 'disabled'
+                        const next: StaffStatus = disabled ? 'active' : 'disabled'
+                        return (
+                          <button
+                            type="button"
+                            className="staff-button-secondary staff-button-danger"
+                            disabled={changeStatus.isPending}
+                            onClick={() => {
+                              const confirmed = window.confirm(
+                                disabled
+                                  ? `Re-enable ${member.email}? They will be able to sign in again.`
+                                  : `Disable ${member.email}? They are signed out immediately and cannot sign back in. Their author page and bylines are unaffected, and this can be undone.`,
+                              )
+                              if (confirmed) changeStatus.mutate({ user: member, status: next })
+                            }}
+                          >
+                            {disabled ? 'Re-enable' : 'Disable'}
+                          </button>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ))}
