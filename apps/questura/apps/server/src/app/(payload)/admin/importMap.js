@@ -34,6 +34,7 @@ import { default as default_862520890ca0122f1e3baa9bb63831a1 } from 'src/feature
 import { default as default_c90814eca9314677fb6b2ff5230d1804 } from 'src/features/articles/listicle-itineraries/components/field-components/TourDurationSliderField.tsx'
 import { default as default_ea3c86191e6591892c46d34d0d8e1556 } from 'src/features/media/components/MediaSetPreview.tsx'
 import { default as default_c633d405ce31378e38cad4d5550baee0 } from 'src/features/data/instagram/components/InstagramPostPreview.tsx'
+import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 export const importMap = {
   "src/shared/location/LocationPickerField.tsx#default": default_e59457fc37a0f292448054b7f4fc838c,
@@ -71,5 +72,6 @@ export const importMap = {
   "src/features/articles/listicle-itineraries/components/layout/Step1Wrapper.tsx#default": default_862520890ca0122f1e3baa9bb63831a1,
   "src/features/articles/listicle-itineraries/components/field-components/TourDurationSliderField.tsx#default": default_c90814eca9314677fb6b2ff5230d1804,
   "src/features/media/components/MediaSetPreview.tsx#default": default_ea3c86191e6591892c46d34d0d8e1556,
-  "src/features/data/instagram/components/InstagramPostPreview.tsx#default": default_c633d405ce31378e38cad4d5550baee0
+  "src/features/data/instagram/components/InstagramPostPreview.tsx#default": default_c633d405ce31378e38cad4d5550baee0,
+  "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

@@ -10,6 +10,7 @@ import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { redisSecondaryStorage } from './redis-secondary-storage'
 import { auditVisitorAuthSecurityEvent } from './security-audit'
 import { isStaffEmail, normalizeEmail } from './staff-email-guard'
+import { getVisitorPasswordError } from './visitor-password-guard'
 import { ensureVisitorProfileForAuthUser, splitDisplayName, updateVisitorProfileByAuthUserId } from './visitor-profile'
 
 const databaseUrl = APP_CONFIG.database.uri
@@ -169,6 +170,16 @@ export const visitorAuth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      // Password strength, enforced server-side against the shared rule in
+      // `shared/lib/password-strength`. `minPasswordLength` below only sets a
+      // length floor; the character-class requirements the sign-up UI shows
+      // were checked in the browser only, so a direct API call bypassed them.
+      // Payload's staff half enforces the same module via a beforeValidate hook.
+      const passwordError = getVisitorPasswordError(ctx.path, ctx.body)
+      if (passwordError) {
+        throw new APIError('BAD_REQUEST', { message: passwordError })
+      }
+
       if (ctx.path === '/change-email') {
         const accounts = await visitorAuth.api.listUserAccounts({ headers: ctx.headers })
         if (accounts.some((account) => account.providerId === 'google')) {
