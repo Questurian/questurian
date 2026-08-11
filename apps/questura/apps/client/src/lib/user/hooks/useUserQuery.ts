@@ -9,9 +9,6 @@ function principalToUser(response: CurrentPrincipalResponse): User | null {
   if (!response.authenticated || !response.principal) return null;
 
   const principal = response.principal;
-  if (principal.kind === 'staff') {
-    return null;
-  }
 
   return {
     ...principal,

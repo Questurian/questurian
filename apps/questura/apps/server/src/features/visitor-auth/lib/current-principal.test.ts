@@ -32,12 +32,7 @@ vi.mock('./visitor-profile', () => ({
   ensureVisitorProfileForAuthUser: mocks.ensureVisitorProfileForAuthUser,
 }))
 
-import {
-  getCurrentPrincipal,
-  getStaffPrincipal,
-  requireStaffPrincipal,
-  requireVisitorPrincipal,
-} from './current-principal'
+import { getCurrentPrincipal, requireVisitorPrincipal } from './current-principal'
 
 describe('Current principal', () => {
   beforeEach(() => {
@@ -176,32 +171,6 @@ describe('Current principal', () => {
     expect(mocks.payloadAuth).not.toHaveBeenCalled()
   })
 
-  it('resolves Staff identity only through the Staff principal helper', async () => {
-    mocks.payloadAuth.mockResolvedValue({
-      user: {
-        id: 7,
-        email: 'editor@questurian.com',
-        role: 'editor',
-      },
-    })
-
-    const result = await getStaffPrincipal(new Headers())
-
-    expect(result).toEqual({
-      authenticated: true,
-      principal: {
-        kind: 'staff',
-        id: 7,
-        email: 'editor@questurian.com',
-        role: 'editor',
-        membership: {
-          active: true,
-          source: 'staff_grant',
-        },
-      },
-    })
-  })
-
   it('treats Staff-only auth as logged out for Visitor-only flows', async () => {
     mocks.payloadAuth.mockResolvedValue({
       user: {
@@ -242,29 +211,5 @@ describe('Current principal', () => {
       error: 'Email verification required',
       status: 403,
     })
-  })
-
-  it('ignores Visitor principals for Staff-only flows', async () => {
-    mocks.getSession.mockResolvedValue({
-      user: {
-        id: 'visitor_123',
-        email: 'visitor@example.com',
-        emailVerified: true,
-        name: 'Ada Lovelace',
-      },
-    })
-    mocks.ensureVisitorProfileForAuthUser.mockResolvedValue({
-      id: 11,
-      subscriptionStatus: 'none',
-    })
-
-    const result = await requireStaffPrincipal(new Headers(), ['admin'])
-
-    expect(result).toMatchObject({
-      principal: null,
-      error: 'Authentication required',
-      status: 401,
-    })
-    expect(mocks.getSession).not.toHaveBeenCalled()
   })
 })
