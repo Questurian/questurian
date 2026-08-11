@@ -1,4 +1,5 @@
 import { staffUser } from '@/features/auth/lib/staff-user'
+import { serviceAccountHasCollectionGrant } from '@/features/auth/lib/service-account-grants'
 import type { CollectionConfig } from 'payload'
 
 export const mediaAssetAccess: CollectionConfig['access'] = {
@@ -8,7 +9,12 @@ export const mediaAssetAccess: CollectionConfig['access'] = {
 
     // Admins, Editors, and Writers can see everything
     const role = staffUser(req.user)?.role
-    if (role === 'admin' || role === 'editor' || role === 'writer')
+    if (
+      serviceAccountHasCollectionGrant(req.user, 'media-assets', 'read') ||
+      role === 'admin' ||
+      role === 'editor' ||
+      role === 'writer'
+    )
       return true
 
     return false
@@ -16,9 +22,16 @@ export const mediaAssetAccess: CollectionConfig['access'] = {
   create: ({ req }) => {
     // Editors, admins, and writers can upload
     const role = staffUser(req.user)?.role
-    return role === 'editor' || role === 'admin' || role === 'writer'
+    return (
+      serviceAccountHasCollectionGrant(req.user, 'media-assets', 'create') ||
+      role === 'editor' ||
+      role === 'admin' ||
+      role === 'writer'
+    )
   },
   update: ({ req }) => {
+    if (serviceAccountHasCollectionGrant(req.user, 'media-assets', 'update')) return true
+
     const user = staffUser(req.user)
     if (!user) return false
 

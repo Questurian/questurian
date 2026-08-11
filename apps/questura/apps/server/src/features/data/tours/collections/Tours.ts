@@ -1,4 +1,5 @@
 import { staffUser } from '@/features/auth/lib/staff-user'
+import { serviceAccountHasCollectionGrant } from '@/features/auth/lib/service-account-grants'
 import { CollectionConfig } from 'payload'
 
 const urlValidationMessage = 'Enter a valid absolute URL, for example https://example.com/tour.'
@@ -28,15 +29,26 @@ export const Tours: CollectionConfig = {
   access: {
     read: ({ req }) => {
       if (!req.user) return { status: { equals: 'published' } }
-      return true
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'tours', 'read') ||
+        Boolean(staffUser(req.user))
+      )
     },
     create: ({ req }) => {
       const role = staffUser(req.user)?.role
-      return role === 'editor' || role === 'admin'
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'tours', 'create') ||
+        role === 'editor' ||
+        role === 'admin'
+      )
     },
     update: ({ req }) => {
       const role = staffUser(req.user)?.role
-      return role === 'admin' || role === 'editor'
+      return (
+        serviceAccountHasCollectionGrant(req.user, 'tours', 'update') ||
+        role === 'admin' ||
+        role === 'editor'
+      )
     },
     delete: ({ req }) => staffUser(req.user)?.role === 'admin',
   },

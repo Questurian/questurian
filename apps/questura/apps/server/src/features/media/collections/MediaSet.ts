@@ -3,6 +3,7 @@
  */
 
 import { staffUser } from '@/features/auth/lib/staff-user'
+import { serviceAccountHasCollectionGrant } from '@/features/auth/lib/service-account-grants'
 import type { CollectionConfig, Field } from 'payload'
 import { createLocationRefField } from '@/shared/location/server/fields'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
@@ -62,6 +63,7 @@ export const MediaSet: CollectionConfig = {
     read: ({ req }) => {
       if (!req.user) return true
       if (
+        serviceAccountHasCollectionGrant(req.user, 'media-sets', 'read') ||
         staffUser(req.user)?.role === 'admin' ||
         staffUser(req.user)?.role === 'editor' ||
         staffUser(req.user)?.role === 'writer'
@@ -71,6 +73,7 @@ export const MediaSet: CollectionConfig = {
     },
     create: ({ req }) => {
       return (
+        serviceAccountHasCollectionGrant(req.user, 'media-sets', 'create') ||
         staffUser(req.user)?.role === 'editor' ||
         staffUser(req.user)?.role === 'admin' ||
         staffUser(req.user)?.role === 'writer'
@@ -78,6 +81,7 @@ export const MediaSet: CollectionConfig = {
     },
     update: ({ req }) => {
       if (!req.user) return false
+      if (serviceAccountHasCollectionGrant(req.user, 'media-sets', 'update')) return true
       const role = staffUser(req.user)?.role
       if (role === 'admin' || role === 'editor') return true
       if (staffUser(req.user)?.role === 'writer') {
