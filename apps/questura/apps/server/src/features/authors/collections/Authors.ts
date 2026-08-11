@@ -1,0 +1,127 @@
+import type { CollectionConfig } from 'payload'
+
+import { isAdminFieldLevel } from '@/features/auth/collections/access'
+import { isDisabledStaff } from '@/features/auth/lib/staff-status'
+import { authorSlugHook } from './hooks/authorSlug'
+import { authorSocialLinks } from './fields/socialLinks'
+
+/**
+ * Public authorship, separated from the staff account that happens to hold it
+ * (ADR-0007).
+ *
+ * The `user` relationship is nullable on purpose, and that is the load-bearing
+ * part of this collection: an author record with no linked account is a valid,
+ * fully renderable state. Published work therefore keeps its byline and its
+ * author page whether the person is disabled, deleted, or never had a staff
+ * account at all. Do not make it required.
+ */
+export const Authors: CollectionConfig = {
+  slug: 'authors',
+  labels: {
+    singular: 'Author',
+    plural: 'Authors',
+  },
+  admin: {
+    useAsTitle: 'displayName',
+    defaultColumns: ['displayName', 'slug', 'user', 'updatedAt'],
+    group: 'Core',
+    description:
+      'Public author identity: the byline and the /authors/<slug> page. Outlives the staff account it is linked to.',
+  },
+  access: {
+    // Public reads go through /api/public/authors/[slug], which overrides
+    // access. Direct collection reads stay staff-only, matching Users.
+    read: ({ req: { user } }) => Boolean(user) && !isDisabledStaff(user),
+    create: ({ req: { user } }) =>
+      Boolean(user) && !isDisabledStaff(user) && user?.role === 'admin',
+    update: ({ req: { user } }) => {
+      if (!user || isDisabledStaff(user)) return false
+      if (user.role === 'admin') return true
+      // Everyone else may edit only the author record linked to their account.
+      return { user: { equals: user.id } }
+    },
+    // Deleting an author record is what actually destroys a byline, so it is
+    // narrower than disabling the person: admins only.
+    delete: ({ req: { user } }) =>
+      Boolean(user) && !isDisabledStaff(user) && user?.role === 'admin',
+  },
+  hooks: {
+    beforeChange: [authorSlugHook],
+  },
+  fields: [
+    {
+      name: 'slug',
+      type: 'text',
+      unique: true,
+      index: true,
+      access: {
+        // Author URLs are public and un-redirected once a slug changes, so
+        // only admins may rename one. Hook-set values bypass field access, so
+        // auto-generation is unaffected.
+        update: isAdminFieldLevel,
+      },
+      admin: {
+        position: 'sidebar',
+        description:
+          'URL slug for the public author page (/authors/<slug>). Auto-generated from the display name if left empty. Admin-only: changing it breaks inbound author URLs.',
+      },
+    },
+    {
+      name: 'user',
+      type: 'relationship',
+      relationTo: 'users',
+      required: false,
+      unique: true,
+      index: true,
+      access: {
+        update: isAdminFieldLevel,
+      },
+      admin: {
+        position: 'sidebar',
+        description:
+          'The staff account that writes as this author, if there still is one. Deliberately optional: an author with no account keeps their page and their bylines.',
+      },
+    },
+    {
+      name: 'displayName',
+      type: 'text',
+      required: true,
+      admin: {
+        description: 'Name shown to website visitors on bylines and the author page.',
+      },
+    },
+    {
+      name: 'avatar',
+      type: 'upload',
+      relationTo: 'media-assets',
+      admin: {
+        description: 'Profile picture displayed on the author page.',
+      },
+    },
+    {
+      name: 'bio',
+      type: 'textarea',
+      admin: {
+        description: 'Author biography displayed on the author page.',
+      },
+    },
+    {
+      name: 'expertise',
+      type: 'array',
+      admin: {
+        description: 'Areas of travel expertise (e.g., "Southeast Asia", "Budget Travel")',
+      },
+      fields: [
+        {
+          name: 'area',
+          type: 'text',
+          required: true,
+          admin: {
+            description: 'Specific area of travel expertise',
+          },
+        },
+      ],
+    },
+    authorSocialLinks,
+  ],
+}
