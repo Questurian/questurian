@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   LOCATION_MANAGER_SERVICE_ACCOUNT,
+  serviceAccountHasCapability,
   serviceAccountHasCollectionGrant,
   type ServiceAccountCollectionOperation,
 } from './service-account-grants'
@@ -71,5 +72,23 @@ describe('service-account collection grants', () => {
       false,
     )
     expect(serviceAccountHasCollectionGrant(humanAdmin as never, 'locations', 'create')).toBe(false)
+  })
+})
+
+describe('service-account route capabilities', () => {
+  it('grants Location Manager source-media assembly', () => {
+    expect(serviceAccountHasCapability(locationManager as never, 'media-sets:from-source')).toBe(
+      true,
+    )
+  })
+
+  it('defaults other machines and human staff to no route capabilities', () => {
+    const unknownMachine = { ...locationManager, name: 'Unknown integration' }
+    const humanAdmin = { id: 2, collection: 'users', role: 'admin', status: 'active' }
+
+    expect(serviceAccountHasCapability(unknownMachine as never, 'media-sets:from-source')).toBe(
+      false,
+    )
+    expect(serviceAccountHasCapability(humanAdmin as never, 'media-sets:from-source')).toBe(false)
   })
 })
