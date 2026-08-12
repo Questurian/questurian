@@ -14,6 +14,7 @@ const VALID_PRODUCTION_ENV = {
   BACKEND_URL_LOCAL: 'https://api.questurian.com',
   CORS_ALLOWED_ORIGINS: 'https://questurian.com',
   REDIS_URL: 'redis://cache.internal:6379',
+  PAYLOAD_COOKIE_DOMAIN: 'questurian.com',
 }
 
 describe('production config assertion', () => {
@@ -23,6 +24,7 @@ describe('production config assertion', () => {
     vi.stubEnv('BACKEND_URL_LOCAL', '')
     vi.stubEnv('CORS_ALLOWED_ORIGINS', '')
     vi.stubEnv('REDIS_URL', '')
+    vi.stubEnv('PAYLOAD_COOKIE_DOMAIN', '')
   })
 
   afterEach(() => {
@@ -96,6 +98,41 @@ describe('production config assertion', () => {
     })
 
     expect(collectProductionConfigProblems().join('\n')).toContain('REDIS_URL is not set')
+  })
+
+  it('rejects a production boot with no session cookie domain decision', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      PAYLOAD_COOKIE_DOMAIN: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain(
+      'PAYLOAD_COOKIE_DOMAIN is not set'
+    )
+  })
+
+  it('accepts a deliberate host-only deployment', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      PAYLOAD_COOKIE_DOMAIN: 'host-only',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
+  })
+
+  it.each([
+    ['https://questurian.com', 'not a URL'],
+    ['questurian.com:4000', 'port'],
+    ['localhost', 'single-label'],
+  ])('rejects %s as a session cookie domain', async (domain, expected) => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      PAYLOAD_COOKIE_DOMAIN: domain,
+    })
+
+    const problems = collectProductionConfigProblems().join('\n')
+    expect(problems).toContain('PAYLOAD_COOKIE_DOMAIN')
+    expect(problems).toContain(expected)
   })
 
   it('reports every problem at once rather than one per boot', async () => {

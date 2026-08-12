@@ -1,4 +1,5 @@
 import { APP_CONFIG } from './index'
+import { HOST_ONLY_COOKIE_DOMAIN, validateCookieDomain } from './session-cookie'
 
 /**
  * Fail fast on a production boot that is still carrying development defaults.
@@ -71,6 +72,26 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
       'REDIS_URL is not set — the shared rate limiters have no cross-instance ' +
         'counter and refuse to count in production.'
     )
+  }
+
+  // The staff session cookie is host-only unless a `Domain` is set, and the AI
+  // Blog Writer runs on a different host from Payload. Getting this wrong does
+  // not fail loudly — the browser simply never sends `payload-token` to the
+  // writer, and every staff-authenticated call there returns 401 with nothing
+  // in the logs to explain it. Requiring the decision at boot makes a
+  // same-origin deployment state itself rather than look like an oversight.
+  const rawCookieDomain = process.env.PAYLOAD_COOKIE_DOMAIN?.trim() ?? ''
+
+  if (!rawCookieDomain) {
+    problems.push(
+      'PAYLOAD_COOKIE_DOMAIN is not set — the staff session cookie would be ' +
+        "host-only, so it is never sent to the AI Blog Writer's own hosts. Set the " +
+        `registrable domain (e.g. questurian.com), or ${HOST_ONLY_COOKIE_DOMAIN} if ` +
+        'every caller really is served from this host.'
+    )
+  } else if (rawCookieDomain.toLowerCase() !== HOST_ONLY_COOKIE_DOMAIN) {
+    const problem = validateCookieDomain(rawCookieDomain)
+    if (problem) problems.push(`PAYLOAD_COOKIE_DOMAIN ${problem}`)
   }
 
   return problems

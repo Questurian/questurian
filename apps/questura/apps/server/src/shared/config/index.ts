@@ -1,4 +1,5 @@
 import { APP_URLS } from './urls'
+import { readCookieDomain, resolveSessionCookieConfig } from './session-cookie'
 
 // Centralized application configuration
 
@@ -50,6 +51,13 @@ export const APP_CONFIG = {
 
   // Security & Authentication
   payloadSecret: process.env.PAYLOAD_SECRET || '',
+
+  // Scope of the Payload staff session cookie. See ./session-cookie.ts for why
+  // the `Domain` has to widen to the registrable domain in production.
+  sessionCookie: resolveSessionCookieConfig({
+    isProduction: isProductionEnv,
+    domain: readCookieDomain(process.env.PAYLOAD_COOKIE_DOMAIN),
+  }),
 
   // Google OAuth Configuration (the redirect URI is built where the provider
   // is configured, in visitor-auth/lib/better-auth.ts)

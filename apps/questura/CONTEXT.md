@@ -262,6 +262,9 @@ _Avoid_: public auth, visitor auth
 - Production Visitor auth rate limiting is Redis-backed; database-backed limits are local/spike-only.
 - `REDIS_URL` is required to boot in production. Every rate limiter — Visitor auth, Staff credential endpoints, and the account-existence check — counts through one shared fixed-window counter that needs Redis to hold a single budget across instances; the in-memory fallback multiplies the effective limit by instance count and is barred from production.
 - A rate limiter with no usable counter denies rather than allows, and logs the reason so a counter outage is distinguishable from real traffic.
+- `PAYLOAD_COOKIE_DOMAIN` is required to boot in production. **Operator tools** run on sibling subdomains of the registrable domain, and a host-only `payload-token` is never sent to them, so **Staff auth** there fails as an unexplained 401. A genuinely same-origin deployment sets `host-only` to say so; an unset variable is an oversight, not a default.
+- Staff and **Operator tool** hosts are siblings under one registrable domain, so the Staff session stays same-site and `payload-token` stays `SameSite=Lax`. Cross-site hosting would force `SameSite=None`, which Safari and Brave block outright.
+- Widening the `payload-token` `Domain` widens which hosts *carry* the cookie, not which can read it — it stays `httpOnly`. Payload `csrf` decides whether a carried cookie is honoured.
 - Unverified email/password Visitor accounts may sign in and browse free public content.
 - Checkout, paid content, and sensitive account changes require a verified Visitor account.
 - Google OAuth Visitor accounts satisfy verification when Google reports a verified email.

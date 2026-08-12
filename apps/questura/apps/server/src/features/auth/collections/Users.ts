@@ -1,4 +1,5 @@
 import { staffUser } from '@/features/auth/lib/staff-user'
+import { APP_CONFIG } from '@/shared/config'
 import { CollectionConfig } from 'payload'
 import { collectionAccess } from './access/collectionLevel'
 import { isBootstrapRequestAuthorized } from '../lib/bootstrap-token'
@@ -35,6 +36,9 @@ export const Users: CollectionConfig = {
     // Disable login lockouts
     lockTime: 0,
     maxLoginAttempts: 0,
+    // Widens `payload-token` past this host so the AI Blog Writer, which is a
+    // sibling subdomain, receives it. See shared/config/session-cookie.ts.
+    cookies: APP_CONFIG.sessionCookie,
   },
   admin: {
     useAsTitle: 'email',
