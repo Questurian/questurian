@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AuthContextValue, AuthState } from './auth-context';
 import { EXPIRY_BUFFER_MS } from './auth.constants';
 import { hasActiveSession } from './auth-state';
-import { clearStoredAuth, persistAuth, readStoredAuth } from './auth-storage';
+import { getLiveAuthState, setLiveAuthState } from './auth-session-store';
 import {
   checkPayloadHealth,
   hydratePayloadSession,
@@ -12,18 +12,15 @@ import {
 } from './payload-auth-client';
 
 export function useAuthSessionState(): AuthContextValue {
-  const [authState, setAuthState] = useState<AuthState | null>(() => readStoredAuth());
+  const [authState, setAuthState] = useState<AuthState | null>(() => getLiveAuthState());
   const [isRestoringSession, setIsRestoringSession] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const applyAuthState = useCallback((nextState: AuthState | null) => {
-    if (nextState) {
-      persistAuth(nextState);
-    } else {
-      clearStoredAuth();
-    }
-
+    // `apiFetch` reads the token from outside the component tree, so the store
+    // has to be updated synchronously rather than waiting for a re-render.
+    setLiveAuthState(nextState);
     setAuthState(nextState);
   }, []);
 
@@ -31,10 +28,12 @@ export function useAuthSessionState(): AuthContextValue {
     let isCancelled = false;
 
     const hydrateAuth = async () => {
-      const storedAuth = readStoredAuth();
-      // Always revalidate against the server so role changes made in Payload
-      // (e.g. writer -> editor promotion) take effect without a re-login.
-      const nextState = await hydratePayloadSession(storedAuth);
+      // After a reload there is nothing in memory, and the httpOnly
+      // `payload-token` cookie is the only thing that can restore the session.
+      // On a remount within the same page the live state serves as a fallback.
+      // Either way this revalidates against the server, so role changes made in
+      // Payload (e.g. writer -> editor promotion) apply without a re-login.
+      const nextState = await hydratePayloadSession(getLiveAuthState());
 
       if (isCancelled) {
         return;
@@ -83,11 +82,10 @@ export function useAuthSessionState(): AuthContextValue {
   }, [applyAuthState]);
 
   const logout = useCallback(() => {
-    const token = authState?.token ?? null;
     applyAuthState(null);
     setIsRestoringSession(false);
-    logoutPayloadUser(token);
-  }, [applyAuthState, authState?.token]);
+    logoutPayloadUser();
+  }, [applyAuthState]);
 
   useEffect(() => {
     if (!authState?.token || !authState?.expiresAt) {

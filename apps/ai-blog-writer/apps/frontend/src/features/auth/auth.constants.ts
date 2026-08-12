@@ -1,4 +1,9 @@
-export const AUTH_STORAGE_KEY = 'payload_auth';
+/**
+ * The key this app used to persist the whole auth state under, Staff JWT
+ * included. Retained only so `purgeLegacyStoredAuth` can delete what earlier
+ * builds left on disk; nothing writes it any more.
+ */
+export const LEGACY_AUTH_STORAGE_KEY = 'payload_auth';
 export const DEFAULT_PAYLOAD_URL = 'http://localhost:4000';
 export const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || DEFAULT_PAYLOAD_URL;
 export const EXPIRY_BUFFER_MS = 5 * 60 * 1000;

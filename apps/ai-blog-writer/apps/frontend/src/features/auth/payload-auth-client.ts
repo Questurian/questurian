@@ -174,13 +174,25 @@ export async function loginPayloadUser(email: string, password: string): Promise
   }
 }
 
-export function logoutPayloadUser(token: string | null): void {
+/**
+ * Ends the Payload session.
+ *
+ * Deliberately sends no `Authorization` header. Payload clears the cookie only
+ * on a 2xx, and `extractJWT` uses the *first* token it finds — so a Bearer that
+ * has already expired is extracted, fails to verify, leaves `req.user` null and
+ * makes `logoutOperation` throw. The cookie would then survive a "successful"
+ * logout, and since the cookie is now the only thing that restores a session,
+ * the next page load would silently sign the operator back in.
+ *
+ * The cookie is what has to be cleared, so the cookie is what identifies the
+ * request.
+ */
+export function logoutPayloadUser(): void {
   for (const request of LOGOUT_ENDPOINTS) {
     void fetch(`${PAYLOAD_API_URL}${request.endpoint}`, {
       method: request.method,
       mode: 'cors',
       credentials: 'include',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     }).catch(() => {
       // Local logout should not depend on backend route availability.
     });

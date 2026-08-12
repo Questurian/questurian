@@ -1,10 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RequireAuth from './RequireAuth';
 import { AuthProvider } from './AuthProvider';
 import { useAuth } from './useAuth';
+import { getLiveAuthState, purgeLegacyStoredAuth, setLiveAuthState } from './auth-session-store';
+import { LEGACY_AUTH_STORAGE_KEY } from './auth.constants';
 
 function toBase64Url(value: string): string {
   return btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -48,11 +50,13 @@ function renderProtectedApp() {
 }
 
 function AuthHarness() {
-  const { login, logout, isRestoringSession } = useAuth();
+  const { login, logout, isRestoringSession, user } = useAuth();
 
   return (
     <div>
       <span>{isRestoringSession ? 'restoring' : 'ready'}</span>
+      <span data-testid="role">{user?.role ?? 'none'}</span>
+      <span data-testid="email">{user?.email ?? 'none'}</span>
       <button type="button" onClick={() => void login('writer@example.com', 'secret')}>
         login
       </button>
@@ -64,12 +68,17 @@ function AuthHarness() {
 }
 
 describe('AuthProvider', () => {
+  beforeEach(() => {
+    setLiveAuthState(null);
+  });
+
   afterEach(() => {
+    setLiveAuthState(null);
     localStorage.clear();
     vi.unstubAllGlobals();
   });
 
-  it('waits for session restoration before redirecting to login and persists the refreshed auth state', async () => {
+  it('waits for session restoration before redirecting to login', async () => {
     const token = createToken(Date.now() + 60 * 60 * 1000);
     let resolveRestore: ((response: Response) => void) | null = null;
 
@@ -113,7 +122,7 @@ describe('AuthProvider', () => {
     });
 
     expect(screen.queryByText('login page')).not.toBeInTheDocument();
-    expect(localStorage.getItem('payload_auth')).toContain('writer@example.com');
+    expect(getLiveAuthState()?.user.email).toBe('writer@example.com');
   });
 
   it('uses Payload users endpoints for staff restore, login, and logout', async () => {
@@ -156,13 +165,13 @@ describe('AuthProvider', () => {
     await userEvent.click(screen.getByRole('button', { name: 'login' }));
 
     await waitFor(() => {
-      expect(localStorage.getItem('payload_auth')).toContain('writer@example.com');
+      expect(screen.getByTestId('email')).toHaveTextContent('writer@example.com');
     });
 
     await userEvent.click(screen.getByRole('button', { name: 'logout' }));
 
     await waitFor(() => {
-      expect(localStorage.getItem('payload_auth')).toBeNull();
+      expect(getLiveAuthState()).toBeNull();
     });
 
     const calledUrls = fetchMock.mock.calls.map(([input]) => String(input));
@@ -174,9 +183,9 @@ describe('AuthProvider', () => {
     expect(calledUrls.some((url) => url.includes('/api/auth/'))).toBe(false);
   });
 
-  it('refreshes a stale stored role from /api/users/me on hydrate', async () => {
+  it('refreshes a stale role from /api/users/me on hydrate', async () => {
     const token = createToken(Date.now() + 60 * 60 * 1000);
-    localStorage.setItem('payload_auth', JSON.stringify({
+    setLiveAuthState({
       token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       user: {
@@ -184,7 +193,7 @@ describe('AuthProvider', () => {
         email: 'writer@example.com',
         role: 'writer',
       },
-    }));
+    });
 
     vi.stubGlobal(
       'fetch',
@@ -210,19 +219,22 @@ describe('AuthProvider', () => {
       }),
     );
 
-    renderProtectedApp();
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>,
+    );
 
     await waitFor(() => {
-      expect(screen.getByText('protected page')).toBeInTheDocument();
+      expect(screen.getByTestId('role')).toHaveTextContent('editor');
     });
 
-    const persisted = JSON.parse(localStorage.getItem('payload_auth') ?? '{}');
-    expect(persisted.user.role).toBe('editor');
+    expect(getLiveAuthState()?.user.role).toBe('editor');
   });
 
-  it('logs out when the stored token is rejected by /me and refresh fails', async () => {
+  it('logs out when the session is rejected by /me and refresh fails', async () => {
     const token = createToken(Date.now() + 60 * 60 * 1000);
-    localStorage.setItem('payload_auth', JSON.stringify({
+    setLiveAuthState({
       token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       user: {
@@ -230,7 +242,7 @@ describe('AuthProvider', () => {
         email: 'writer@example.com',
         role: 'writer',
       },
-    }));
+    });
 
     vi.stubGlobal(
       'fetch',
@@ -260,6 +272,192 @@ describe('AuthProvider', () => {
       expect(screen.getByText('login page')).toBeInTheDocument();
     });
 
-    expect(localStorage.getItem('payload_auth')).toBeNull();
+    expect(getLiveAuthState()).toBeNull();
+  });
+});
+
+/**
+ * The point of the change: an XSS that reads `localStorage` finds no Staff
+ * credential, and a reload restores the session from the httpOnly cookie
+ * instead of from disk.
+ */
+describe('the Staff token never reaches disk', () => {
+  beforeEach(() => {
+    setLiveAuthState(null);
+  });
+
+  afterEach(() => {
+    setLiveAuthState(null);
+    localStorage.clear();
+    vi.unstubAllGlobals();
+  });
+
+  it('writes nothing to localStorage on login', async () => {
+    const token = createToken(Date.now() + 60 * 60 * 1000);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+
+        if (url.endsWith('/api/users/login')) {
+          return Promise.resolve(jsonResponse({
+            token,
+            user: { id: 17, email: 'writer@example.com', role: 'writer' },
+          }));
+        }
+
+        if (url.endsWith('/api/health')) {
+          return Promise.resolve(jsonResponse({ ok: true }));
+        }
+
+        return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+      }),
+    );
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('ready');
+    await userEvent.click(screen.getByRole('button', { name: 'login' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('email')).toHaveTextContent('writer@example.com');
+    });
+
+    expect(localStorage.length).toBe(0);
+    // Belt and braces: the token must not appear under any key.
+    expect(JSON.stringify(localStorage)).not.toContain(token);
+  });
+
+  it('restores the session from the cookie alone, without writing it back to disk', async () => {
+    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/api/users/me')) {
+        return Promise.resolve(jsonResponse({
+          token,
+          user: { id: 17, email: 'writer@example.com', role: 'editor' },
+        }));
+      }
+
+      if (url.endsWith('/api/health')) {
+        return Promise.resolve(jsonResponse({ ok: true }));
+      }
+
+      return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Nothing in memory and nothing on disk — a fresh page load.
+    renderProtectedApp();
+
+    await waitFor(() => {
+      expect(screen.getByText('protected page')).toBeInTheDocument();
+    });
+
+    const meCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/api/users/me'));
+    const init = meCall?.[1] as RequestInit | undefined;
+
+    // The cookie is the only credential available, so it has to be sent...
+    expect(init?.credentials).toBe('include');
+    // ...and no Authorization header can have been derived from storage.
+    expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+    // The restored session lands in memory and nowhere else. This is the half
+    // that fails without the change: the old code wrote it straight back out.
+    expect(getLiveAuthState()?.token).toBe(token);
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('shows a restoring state rather than a blank screen while the cookie is checked', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+
+        if (url.endsWith('/api/users/me')) {
+          // Never resolves: hold the app in the restore window.
+          return new Promise<Response>(() => {});
+        }
+
+        if (url.endsWith('/api/health')) {
+          return Promise.resolve(jsonResponse({ ok: true }));
+        }
+
+        return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+      }),
+    );
+
+    // Every reload now takes this path, where a stored session used to skip it.
+    renderProtectedApp();
+
+    expect(await screen.findByText('Restoring session')).toBeInTheDocument();
+    expect(screen.queryByText('login page')).not.toBeInTheDocument();
+  });
+
+  it('logs out on the cookie, not on a token that may already be expired', async () => {
+    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/api/users/login')) {
+        return Promise.resolve(jsonResponse({
+          token,
+          user: { id: 17, email: 'writer@example.com', role: 'writer' },
+        }));
+      }
+
+      if (url.endsWith('/api/users/logout') || url.endsWith('/api/health')) {
+        return Promise.resolve(jsonResponse({ ok: true }));
+      }
+
+      return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('ready');
+    await userEvent.click(screen.getByRole('button', { name: 'login' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('email')).toHaveTextContent('writer@example.com');
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'logout' }));
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) =>
+        String(input).endsWith('/api/users/logout'))).toBe(true);
+    });
+
+    const logoutCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/api/users/logout'));
+    const init = logoutCall?.[1] as RequestInit | undefined;
+
+    // Payload clears the cookie only on a 2xx, and `extractJWT` uses the first
+    // token it finds. An expired Bearer would be extracted, fail to verify and
+    // leave the cookie alive — which now silently restores the session on the
+    // next load.
+    expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+    expect(init?.credentials).toBe('include');
+  });
+
+  it('purges a token left on disk by an earlier build', () => {
+    localStorage.setItem(LEGACY_AUTH_STORAGE_KEY, JSON.stringify({ token: 'stale' }));
+
+    purgeLegacyStoredAuth();
+
+    expect(localStorage.getItem(LEGACY_AUTH_STORAGE_KEY)).toBeNull();
   });
 });
