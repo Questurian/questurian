@@ -42,15 +42,16 @@ for rel_path in ("packages/shared/src", "packages/utils/src"):
 
 from app.api import router  # noqa: E402
 from app.core import fail_stale_runs  # noqa: E402
+from app.core.staff_auth import staff_auth_required  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
 
 def _configure_error_file_logging() -> Path:
     """Persist backend errors that would otherwise exist only in terminal scrollback."""
-    log_path = Path(os.getenv(
-        "ABW_ERROR_LOG_PATH", ROOT / "logs/backend-errors.log"
-    )).expanduser()
+    log_path = Path(
+        os.getenv("ABW_ERROR_LOG_PATH", ROOT / "logs/backend-errors.log")
+    ).expanduser()
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
     root_logger = logging.getLogger()
@@ -66,9 +67,9 @@ def _configure_error_file_logging() -> Path:
         encoding="utf-8",
     )
     handler.setLevel(logging.ERROR)
-    handler.setFormatter(logging.Formatter(
-        "%(asctime)s %(levelname)s %(name)s %(message)s"
-    ))
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+    )
     handler._abw_error_log_path = resolved_path  # type: ignore[attr-defined]
     root_logger.addHandler(handler)
     return log_path
@@ -96,13 +97,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         )
         raise _cors_config_error
 
+    if not staff_auth_required():
+        logger.warning(
+            "ABW_REQUIRE_STAFF_AUTH is disabled; costly and destructive "
+            "routes are not protected by verified staff sessions"
+        )
+
     # Pipelines run as in-process background tasks; runs left in-flight by
     # a previous process can never progress, so fail them at boot.
     stale_count = fail_stale_runs()
     if stale_count:
-        logger.warning(
-            "Marked %d stale run(s) as failed after restart", stale_count
-        )
+        logger.warning("Marked %d stale run(s) as failed after restart", stale_count)
     yield
 
 

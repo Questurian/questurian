@@ -34,12 +34,20 @@ async def get_article_type_guideline_preview(article_type_id: int):
     return await _options_api.get_article_type_guideline_preview(article_type_id)
 
 
-async def start_pipeline_v2(request: Prompt2BlogInputRequest, background_tasks):
-    return await _runs_api.start_pipeline_v2(request, background_tasks)
+async def start_pipeline_v2(
+    request: Prompt2BlogInputRequest,
+    background_tasks,
+    staff_user=None,
+):
+    return await _runs_api.start_pipeline_v2(request, background_tasks, staff_user)
 
 
-async def start_full_run(request: Prompt2BlogInputRequest, background_tasks):
-    return await _runs_api.start_full_run(request, background_tasks)
+async def start_full_run(
+    request: Prompt2BlogInputRequest,
+    background_tasks,
+    staff_user=None,
+):
+    return await _runs_api.start_full_run(request, background_tasks, staff_user)
 
 
 async def get_status(run_id: str):
@@ -58,8 +66,8 @@ async def get_articles():
     return await _articles_api.get_articles()
 
 
-async def delete_article(run_id: str):
-    return await _articles_api.delete_article(run_id)
+async def delete_article(run_id: str, staff_user=None):
+    return await _articles_api.delete_article(run_id, staff_user)
 
 
 async def mark_article_as_synced(run_id: str, request: dict):

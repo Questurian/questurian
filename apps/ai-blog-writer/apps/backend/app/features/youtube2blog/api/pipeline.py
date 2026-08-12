@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from shared import RawVideoRecord
 from app.core import read_output, read_stage_result, read_status
-from app.core.staff_auth import require_staff
+from app.core.staff_auth import require_staff, staff_user_id
 from app.shared.tone_profiles import load_tone_profiles, resolve_tone_profile
 from app.shared.writer_models import resolve_writer_model
 
@@ -39,10 +39,11 @@ def _read_langgraph_trace(run_id: str) -> dict[str, str]:
     return trace_payload
 
 
-@router.post("/from-url", dependencies=[Depends(require_staff)])
+@router.post("/from-url")
 async def start_from_youtube_url(
     request: YouTubeUrlRequest,
     background_tasks: BackgroundTasks,
+    staff_user=Depends(require_staff),
 ) -> JSONResponse:
     """Queue a YouTube2Blog run directly from a YouTube video URL."""
     require_valid_model(request.model)
@@ -94,6 +95,7 @@ async def start_from_youtube_url(
         record,
         source="youtube-url",
         notes=f"url:{source.canonical_url}",
+        owner_staff_id=staff_user_id(staff_user),
     )
     background_tasks.add_task(
         process_run,

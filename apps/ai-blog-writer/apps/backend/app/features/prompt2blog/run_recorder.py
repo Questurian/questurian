@@ -27,6 +27,20 @@ class RunRecorder:
         repr=False,
     )
 
+    def queue(self, run_id: str, owner_staff_id: str | None = None) -> None:
+        self.status_writer(
+            run_id,
+            {
+                "run_id": run_id,
+                "state": "running",
+                "stage": "queued",
+                "error": None,
+                "updated_at": self.clock(),
+            },
+            feature=FEATURE_NAME,
+            owner_staff_id=owner_staff_id,
+        )
+
     def start_stage(self, run_id: str, stage: str) -> None:
         self.active_stages[run_id] = stage
         self.status_writer(

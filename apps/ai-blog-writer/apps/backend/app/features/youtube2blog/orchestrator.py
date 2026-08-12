@@ -14,10 +14,14 @@ def initialize_run(
     source: str,
     notes: str | None = None,
     *,
+    owner_staff_id: str | None = None,
     recorder: RunRecorder | None = None,
 ) -> PipelineMeta:
     """Initialize a new Run and persist Stage 0."""
-    return (recorder or RunRecorder()).initialize(record, source, notes)
+    run_recorder = recorder or RunRecorder()
+    if owner_staff_id is None:
+        return run_recorder.initialize(record, source, notes)
+    return run_recorder.initialize(record, source, notes, owner_staff_id=owner_staff_id)
 
 
 def process_run(

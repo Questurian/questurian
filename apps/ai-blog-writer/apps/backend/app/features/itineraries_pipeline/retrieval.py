@@ -14,7 +14,7 @@ from typing import Any, Iterable
 
 import httpx
 
-from app.features.images.payload_client import _resolve_payload_api_url
+from app.core.payload_api import resolve_payload_api_url
 
 from .schemas import Candidate, Category
 
@@ -27,7 +27,9 @@ POOL_LIMIT = 100
 REQUEST_TIMEOUT_SECONDS = 20.0
 
 
-def _location_where(location_key: str, shared_neighborhoods: list[int]) -> dict[str, str]:
+def _location_where(
+    location_key: str, shared_neighborhoods: list[int]
+) -> dict[str, str]:
     """Scope a query to the itinerary's location.
 
     Data collections only expose the composite `location` key (`country|city|
@@ -36,7 +38,9 @@ def _location_where(location_key: str, shared_neighborhoods: list[int]) -> dict[
     exactly; otherwise we prefix-match the location key with `like`.
     """
     if shared_neighborhoods:
-        return {"where[locationRef][in]": ",".join(str(i) for i in shared_neighborhoods)}
+        return {
+            "where[locationRef][in]": ",".join(str(i) for i in shared_neighborhoods)
+        }
 
     parts = [p.strip() for p in location_key.split("|") if p.strip()]
     if not parts:
@@ -121,7 +125,9 @@ def _normalize(doc: dict[str, Any], category: Category) -> Candidate | None:
 
     price_level = _as_int_price(doc.get("priceLevel"))
     tags: list[str]
-    type_text: str | None = doc.get("type") if isinstance(doc.get("type"), str) else None
+    type_text: str | None = (
+        doc.get("type") if isinstance(doc.get("type"), str) else None
+    )
 
     if category == "dining":
         tags = _collect_tags(doc.get("cuisines"), doc.get("idealFor"), doc.get("type"))
@@ -140,7 +146,9 @@ def _normalize(doc: dict[str, Any], category: Category) -> Candidate | None:
             type_text = attraction_type
     else:  # nightlife
         if price_level is None:
-            price_level = _price_tier_to_int(_get(doc, "nightlifeDetails", "core", "priceTier"))
+            price_level = _price_tier_to_int(
+                _get(doc, "nightlifeDetails", "core", "priceTier")
+            )
         tags = _collect_tags(
             _get(doc, "nightlifeDetails", "core", "music"),
             _get(doc, "nightlifeDetails", "core", "idealFor"),
@@ -180,7 +188,7 @@ async def fetch_candidates(
     jwt_token: str,
 ) -> list[Candidate]:
     """Fetch and normalize one category's candidate pool, scoped to location."""
-    base_url = _resolve_payload_api_url().rstrip("/")
+    base_url = resolve_payload_api_url().rstrip("/")
     params: dict[str, str] = {
         "limit": str(POOL_LIMIT),
         "depth": "0",
@@ -191,7 +199,9 @@ async def fetch_candidates(
 
     try:
         async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS) as client:
-            response = await client.get(f"{base_url}/api/{category}", params=params, headers=headers)
+            response = await client.get(
+                f"{base_url}/api/{category}", params=params, headers=headers
+            )
             response.raise_for_status()
             docs = response.json().get("docs", [])
     except httpx.HTTPError as exc:

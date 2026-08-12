@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core import cleanup_run, read_status
-from app.core.staff_auth import require_staff
+from app.core.staff_auth import authorize_article_deletion, require_staff
+from app.core.storage import read_run_owner
 
 from ..config import FEATURE_NAME
 from ..storage import (
@@ -20,13 +21,20 @@ async def get_articles() -> JSONResponse:
     return JSONResponse(get_all_completed_articles())
 
 
-@router.delete("/articles/{run_id}", dependencies=[Depends(require_staff)])
-async def delete_article(run_id: str) -> JSONResponse:
+@router.delete("/articles/{run_id}")
+async def delete_article(
+    run_id: str,
+    staff_user=Depends(require_staff),
+) -> JSONResponse:
     """Delete a Prompt2Blog run and all stored data."""
     status = read_status(run_id)
     if not status or status.get("feature") != FEATURE_NAME:
         raise HTTPException(status_code=404, detail="Article not found")
 
+    authorize_article_deletion(
+        staff_user=staff_user,
+        owner_staff_id=read_run_owner(run_id),
+    )
     cleanup_run(run_id)
     return JSONResponse({"message": "Article deleted", "run_id": run_id})
 

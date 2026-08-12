@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.core.staff_auth import require_staff
 
 from ..classification import _classify_cleaned_material
 from ..config import DEFAULT_MODEL
@@ -15,7 +17,11 @@ from ..support import _safe_str
 router = APIRouter()
 
 
-@router.post("/synthesize", response_model=SynthesizeResponse)
+@router.post(
+    "/synthesize",
+    response_model=SynthesizeResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
     """Take raw source blobs and return a synthesized overview."""
     try:
@@ -34,7 +40,11 @@ async def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
         raise HTTPException(status_code=500, detail=f"Synthesis failed: {exc}") from exc
 
 
-@router.post("/classify", response_model=ClassifyResponse)
+@router.post(
+    "/classify",
+    response_model=ClassifyResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def classify_article_type(req: ClassifyRequest) -> ClassifyResponse:
     """Given cleaned data and article types, return best matched type."""
     try:

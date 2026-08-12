@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
-from app.core.staff_auth import require_staff
+from app.core.staff_auth import require_staff, staff_user_id
 from app.shared.tone_profiles import resolve_tone_profile
 from app.shared.writer_models import resolve_writer_model
 
@@ -21,10 +21,11 @@ def get_pipeline_dependencies() -> PipelineDependencies:
     return PipelineDependencies()
 
 
-@router.post("/pipeline-v2", dependencies=[Depends(require_staff)])
+@router.post("/pipeline-v2")
 async def pipeline_v2(
     request: PipelineV2Request,
     dependencies: PipelineDependencies = Depends(get_pipeline_dependencies),
+    staff_user=Depends(require_staff),
 ) -> JSONResponse:
     try:
         resolve_writer_model(request.writing_model)
@@ -33,10 +34,12 @@ async def pipeline_v2(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     try:
-        return await run_url2blog_pipeline_graph(
+        response = await run_url2blog_pipeline_graph(
             request=request,
             dependencies=dependencies,
+            owner_staff_id=staff_user_id(staff_user),
         )
+        return response
     except HTTPException:
         raise
     except Exception as exc:

@@ -16,18 +16,20 @@ def _clear_flag(monkeypatch):
     monkeypatch.delenv("ABW_API_KEY", raising=False)
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def isolated_db(tmp_path, monkeypatch):
-    """Point the database at tmp_path.
+    """Point every test in this module at a temporary database.
 
     Routes exercised through the real app run their real handlers, and some of
-    them delete rows. Without this the suite clears the developer's own
+    them delete rows. Automatic isolation prevents a new route test from
+    clearing the developer's own
     pipeline.db. Mirrors the isolation in test_database_concurrency.py.
     """
     import app.core.database as database
 
     monkeypatch.setattr(database, "DATA_DIR", tmp_path)
     monkeypatch.setattr(database, "DB_PATH", tmp_path / "pipeline.db")
+    database.ensure_core_tables()
     return tmp_path / "pipeline.db"
 
 
@@ -62,6 +64,43 @@ def test_flag_rejects_other_values(monkeypatch, value):
 )
 def test_extract_bearer_token(header, expected):
     assert staff_auth.extract_bearer_token(header) == expected
+
+
+def test_run_owner_survives_later_status_updates(isolated_db):
+    from app.core.storage import read_run_owner, write_status
+
+    write_status(
+        "owned-run",
+        {"state": "running", "stage": "queued", "updated_at": "2026-08-11"},
+        feature="prompt2blog",
+        owner_staff_id="7",
+    )
+    write_status(
+        "owned-run",
+        {"state": "completed", "stage": "complete", "updated_at": "2026-08-12"},
+        feature="prompt2blog",
+        owner_staff_id="8",
+    )
+
+    assert read_run_owner("owned-run") == "7"
+
+
+def test_later_status_update_cannot_claim_unowned_run(isolated_db):
+    from app.core.storage import read_run_owner, write_status
+
+    write_status(
+        "legacy-run",
+        {"state": "running", "stage": "queued", "updated_at": "2026-08-11"},
+        feature="url2blog",
+    )
+    write_status(
+        "legacy-run",
+        {"state": "completed", "stage": "complete", "updated_at": "2026-08-12"},
+        feature="url2blog",
+        owner_staff_id="7",
+    )
+
+    assert read_run_owner("legacy-run") is None
 
 
 @pytest.mark.asyncio
@@ -143,6 +182,63 @@ async def test_accepts_a_session_payload_recognizes(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_editor_guard_rejects_writer():
+    with pytest.raises(HTTPException) as excinfo:
+        await staff_auth.require_editor(
+            staff_user={"id": 7, "email": "writer@example.com", "role": "writer"}
+        )
+
+    assert excinfo.value.status_code == 403
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("role", ["editor", "admin"])
+async def test_editor_guard_accepts_editor_and_admin(role):
+    user = {"id": 7, "email": f"{role}@example.com", "role": role}
+
+    assert await staff_auth.require_editor(staff_user=user) == user
+
+
+def test_article_delete_guard_rejects_writer_who_does_not_own_run():
+    with pytest.raises(HTTPException) as excinfo:
+        staff_auth.authorize_article_deletion(
+            staff_user={"id": 7, "role": "writer"},
+            owner_staff_id="8",
+        )
+
+    assert excinfo.value.status_code == 403
+
+
+def test_article_delete_guard_rejects_writer_for_unowned_run():
+    with pytest.raises(HTTPException) as excinfo:
+        staff_auth.authorize_article_deletion(
+            staff_user={"id": 7, "role": "writer"},
+            owner_staff_id=None,
+        )
+
+    assert excinfo.value.status_code == 403
+
+
+def test_article_delete_guard_accepts_writer_who_owns_run():
+    staff_auth.authorize_article_deletion(
+        staff_user={"id": 7, "role": "writer"},
+        owner_staff_id="7",
+    )
+
+
+@pytest.mark.parametrize("role", ["editor", "admin"])
+def test_article_delete_guard_accepts_editor_and_admin_for_other_run(role):
+    staff_auth.authorize_article_deletion(
+        staff_user={"id": 7, "role": role},
+        owner_staff_id="8",
+    )
+
+
+def test_article_delete_guard_is_open_when_flag_is_off():
+    staff_auth.authorize_article_deletion(staff_user=None, owner_staff_id=None)
+
+
+@pytest.mark.asyncio
 async def test_rejects_a_session_payload_does_not_recognize(monkeypatch):
     monkeypatch.setenv(staff_auth.STAFF_AUTH_FLAG, "true")
 
@@ -220,6 +316,288 @@ async def test_guarded_route_rejects_anonymous_requests_when_enabled(monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_clear_route_rejects_writer_when_enabled(monkeypatch, isolated_db):
+    _mock_payload_user(
+        monkeypatch,
+        {"id": 7, "email": "writer@example.com", "role": "writer"},
+    )
+
+    async with _app_client() as client:
+        response = await client.post(
+            "/youtube2blog/clear",
+            headers={"Authorization": "Bearer writer-token"},
+        )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_clear_route_accepts_editor_when_enabled(monkeypatch, isolated_db):
+    _mock_payload_user(
+        monkeypatch,
+        {"id": 8, "email": "editor@example.com", "role": "editor"},
+    )
+
+    async with _app_client() as client:
+        response = await client.post(
+            "/youtube2blog/clear",
+            headers={"Authorization": "Bearer editor-token"},
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "feature,path",
+    [
+        ("youtube2blog", "/youtube2blog/articles/other-run"),
+        ("prompt2blog", "/prompt2blog/articles/other-run"),
+        ("url2blog", "/url2blog/articles/other-run"),
+    ],
+)
+async def test_article_delete_routes_reject_non_owner_writer(
+    monkeypatch, isolated_db, feature, path
+):
+    from app.core.storage import write_status
+
+    write_status(
+        "other-run",
+        {"state": "completed", "stage": "complete", "updated_at": "2026-08-11"},
+        feature=feature,
+        owner_staff_id="8",
+    )
+    _mock_payload_user(
+        monkeypatch,
+        {"id": 7, "email": "writer@example.com", "role": "writer"},
+    )
+
+    async with _app_client() as client:
+        response = await client.delete(
+            path,
+            headers={"Authorization": "Bearer writer-token"},
+        )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "feature,path",
+    [
+        ("youtube2blog", "/youtube2blog/articles/owned-run"),
+        ("prompt2blog", "/prompt2blog/articles/owned-run"),
+        ("url2blog", "/url2blog/articles/owned-run"),
+    ],
+)
+async def test_article_delete_routes_accept_owner_writer(
+    monkeypatch, isolated_db, feature, path
+):
+    from app.core.storage import write_status
+
+    write_status(
+        "owned-run",
+        {"state": "completed", "stage": "complete", "updated_at": "2026-08-11"},
+        feature=feature,
+        owner_staff_id="7",
+    )
+    _mock_payload_user(
+        monkeypatch,
+        {"id": 7, "email": "writer@example.com", "role": "writer"},
+    )
+
+    async with _app_client() as client:
+        response = await client.delete(
+            path,
+            headers={"Authorization": "Bearer writer-token"},
+        )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_exported_delete_handlers_remain_directly_callable(isolated_db):
+    from app.core.storage import write_status
+    from app.features.prompt2blog.routes import delete_article as delete_prompt_article
+    from app.features.url2blog.api.articles import delete_article as delete_url_article
+    from app.features.youtube2blog.routes import delete_article as delete_youtube_article
+
+    handlers = (
+        ("youtube2blog", delete_youtube_article),
+        ("prompt2blog", delete_prompt_article),
+        ("url2blog", delete_url_article),
+    )
+    for feature, handler in handlers:
+        run_id = f"direct-{feature}"
+        write_status(
+            run_id,
+            {"state": "completed", "stage": "complete", "updated_at": "2026-08-11"},
+            feature=feature,
+        )
+
+        response = await handler(run_id)
+
+        assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_prompt2blog_start_records_run_owner(monkeypatch, isolated_db):
+    from app.core.storage import read_run_owner
+    from app.features.prompt2blog.api import runs as prompt2blog_runs
+
+    _mock_payload_user(
+        monkeypatch,
+        {"id": 7, "email": "writer@example.com", "role": "writer"},
+    )
+    monkeypatch.setattr(prompt2blog_runs, "run_full_pipeline", lambda *_args: None)
+
+    async with _app_client() as client:
+        response = await client.post(
+            "/prompt2blog/run",
+            headers={"Authorization": "Bearer writer-token"},
+            json={
+                "article_type_id": 1,
+                "source_material": ["Source material"],
+                "article_goal": "Write a useful guide",
+                "target_reader": "Travelers",
+                "destination_context": "Barcelona, Spain",
+                "tone_id": "practical",
+                "length_id": "medium",
+            },
+        )
+
+    assert response.status_code == 200
+    assert read_run_owner(response.json()["run_id"]) == "7"
+
+
+@pytest.mark.asyncio
+async def test_youtube2blog_start_records_run_owner(monkeypatch, isolated_db):
+    from app.core.storage import read_run_owner
+    from app.features.youtube2blog.api import pipeline as youtube2blog_pipeline
+    from app.features.youtube2blog.youtube_source import YouTubeVideoSource
+
+    _mock_payload_user(
+        monkeypatch,
+        {"id": 7, "email": "writer@example.com", "role": "writer"},
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "parse_youtube_video_url",
+        lambda _url: YouTubeVideoSource(
+            video_id="abc123DEF45",
+            canonical_url="https://www.youtube.com/watch?v=abc123DEF45",
+        ),
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "extract_transcript_sync",
+        lambda _video_id: {"status": "completed", "transcript": "Transcript"},
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline,
+        "fetch_oembed_title",
+        lambda _url: "Video title",
+    )
+    monkeypatch.setattr(
+        youtube2blog_pipeline, "process_run", lambda *_args, **_kwargs: None
+    )
+
+    async with _app_client() as client:
+        response = await client.post(
+            "/youtube2blog/from-url",
+            headers={"Authorization": "Bearer writer-token"},
+            json={"url": "https://www.youtube.com/watch?v=abc123DEF45"},
+        )
+
+    assert response.status_code == 200
+    assert read_run_owner(response.json()["run_id"]) == "7"
+
+
+@pytest.mark.asyncio
+async def test_url2blog_start_records_run_owner(monkeypatch, isolated_db):
+    from fastapi.responses import JSONResponse
+
+    from app.core.storage import read_run_owner
+    from app.features.url2blog.api import generation as url2blog_generation
+    from app.features.url2blog.run_recorder import RunRecorder
+
+    async def fake_pipeline(*, request, dependencies, owner_staff_id):
+        recorder = RunRecorder(clock=lambda: "2026-08-11")
+        recorder.mark_running(
+            "url-owned-run", "pipeline_v2", owner_staff_id=owner_staff_id
+        )
+        recorder.mark_completed("url-owned-run")
+        return JSONResponse({"run_id": "url-owned-run"})
+
+    _mock_payload_user(
+        monkeypatch,
+        {"id": 7, "email": "writer@example.com", "role": "writer"},
+    )
+    monkeypatch.setattr(
+        url2blog_generation,
+        "run_url2blog_pipeline_graph",
+        fake_pipeline,
+    )
+
+    async with _app_client() as client:
+        response = await client.post(
+            "/url2blog/pipeline-v2",
+            headers={"Authorization": "Bearer writer-token"},
+            json={"url": "https://example.com/source"},
+        )
+
+    assert response.status_code == 200
+    assert read_run_owner(response.json()["run_id"]) == "7"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "method,path",
+    [
+        ("POST", "/itineraries-pipeline/generate"),
+        ("POST", "/itineraries-pipeline/generate-titles"),
+        ("POST", "/images/flux-edit"),
+        ("POST", "/prompt2blog/synthesize"),
+        ("POST", "/prompt2blog/classify"),
+        ("POST", "/youtube2blog/test"),
+        ("POST", "/youtube2blog/test-stage1"),
+        ("DELETE", "/article-types/1"),
+        ("DELETE", "/itineraries-pipeline/day-shells/custom-shell"),
+        ("DELETE", "/staged-drafts/draft-1?storageKey=prompt2blog"),
+        ("DELETE", "/staged-drafts?storageKey=prompt2blog"),
+        ("POST", "/images/generate-alt-text"),
+        ("POST", "/images/describe-scene"),
+        ("POST", "/images/build-edit-prompt"),
+        ("POST", "/images/describe-subject"),
+        ("POST", "/images/build-insert-prompt"),
+        ("POST", "/images/generate-alt-text-from-url"),
+        ("POST", "/editor-assist/generate-title"),
+        ("POST", "/editor-assist/rewrite-block"),
+        ("POST", "/editor-assist/compose-itinerary-brief"),
+        ("POST", "/editor-assist/compose-itinerary-intro"),
+        ("POST", "/editor-assist/compose-itinerary-day-blurbs"),
+        ("POST", "/editor-assist/compose-itinerary-stop-reason"),
+        ("POST", "/editor-assist/generate-listicle-content"),
+        ("POST", "/editor-assist/generate-seo-metadata"),
+    ],
+)
+async def test_costly_and_destructive_routes_reject_invalid_staff_session(
+    monkeypatch, method, path
+):
+    _mock_payload_user(monkeypatch, None)
+
+    async with _app_client() as client:
+        response = await client.request(
+            method,
+            path,
+            headers={"Authorization": "Bearer invalid-token"},
+        )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid or expired session"
+
+
+@pytest.mark.asyncio
 async def test_guarded_route_is_open_when_flag_is_off(monkeypatch, isolated_db):
     """The default must not change existing behavior.
 
@@ -261,3 +639,12 @@ def _stub_transport(monkeypatch, handler) -> None:
         return real_client(*args, **kwargs)
 
     monkeypatch.setattr(staff_auth.httpx, "AsyncClient", build)
+
+
+def _mock_payload_user(monkeypatch, user) -> None:
+    monkeypatch.setenv(staff_auth.STAFF_AUTH_FLAG, "true")
+
+    async def fake_user(token, url):
+        return user
+
+    monkeypatch.setattr(staff_auth, "fetch_payload_user", fake_user)

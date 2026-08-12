@@ -7,6 +7,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.core.staff_auth import require_staff
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 from app.shared.text import enforce_anti_ai_tells_markdown
 from app.shared.writer_invocation import WriterModelError
@@ -185,7 +186,11 @@ def _generate_title_impl(
     return GenerateTitleResponse(title=title)
 
 
-@router.post("/generate-title", response_model=GenerateTitleResponse)
+@router.post(
+    "/generate-title",
+    response_model=GenerateTitleResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def generate_title(
     request: GenerateTitleRequest,
     dependencies: Annotated[
@@ -286,7 +291,11 @@ def _rewrite_block_impl(
     )
 
 
-@router.post("/rewrite-block", response_model=RewriteBlockResponse)
+@router.post(
+    "/rewrite-block",
+    response_model=RewriteBlockResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def rewrite_block(
     request: RewriteBlockRequest,
     dependencies: Annotated[

@@ -8,16 +8,15 @@ from app.core import (
     read_output,
     read_stage_result,
     read_status,
-    write_stage_result,
-    write_status,
 )
-from app.core.staff_auth import require_staff
+from app.core.staff_auth import require_staff, staff_user_id
 from app.shared.writer_models import resolve_writer_model
 
 from ..config import DEFAULT_MODEL, FEATURE_NAME
 from ..models import Prompt2BlogInputRequest
-from ..observability import _now_iso, _read_langgraph_trace
+from ..observability import _read_langgraph_trace
 from ..orchestrator import run_full_pipeline
+from ..run_recorder import RunRecorder
 from ..support import _clean_string_list, _safe_str
 
 router = APIRouter()
@@ -64,87 +63,61 @@ def _validate_prompt2blog_input_request(request: Prompt2BlogInputRequest) -> Non
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.post("/pipeline-v2", dependencies=[Depends(require_staff)])
+@router.post("/pipeline-v2")
 async def start_pipeline_v2(
     request: Prompt2BlogInputRequest,
     background_tasks: BackgroundTasks,
+    staff_user=Depends(require_staff),
 ) -> JSONResponse:
     """Start Prompt2Blog pipeline-v2 from structured source input."""
     _validate_prompt2blog_input_request(request)
     run_id = str(uuid4())
+    recorder = RunRecorder()
 
-    write_status(
-        run_id,
-        {
-            "run_id": run_id,
-            "state": "running",
-            "stage": "queued",
-            "error": None,
-            "updated_at": _now_iso(),
-        },
-        feature=FEATURE_NAME,
-    )
-    write_stage_result(
+    recorder.queue(run_id, staff_user_id(staff_user))
+    recorder.record_stage(
         run_id,
         "pipeline_input",
         {
-            "created_at": _now_iso(),
-            "data": {
-                "article_type_id": request.article_type_id,
-                "source_material_count": len(
-                    _clean_string_list(request.source_material)
-                ),
-                "tone_id": _safe_str(request.tone_id),
-                "length_id": _safe_str(request.length_id),
-                "brand_voice_id": _safe_str(request.brand_voice_id),
-                "include_debug": request.include_debug,
-                "enable_editorial_augmentation": request.enable_editorial_augmentation,
-                "model_name": request.model_name or DEFAULT_MODEL,
-            },
+            "article_type_id": request.article_type_id,
+            "source_material_count": len(_clean_string_list(request.source_material)),
+            "tone_id": _safe_str(request.tone_id),
+            "length_id": _safe_str(request.length_id),
+            "brand_voice_id": _safe_str(request.brand_voice_id),
+            "include_debug": request.include_debug,
+            "enable_editorial_augmentation": request.enable_editorial_augmentation,
+            "model_name": request.model_name or DEFAULT_MODEL,
         },
     )
     background_tasks.add_task(_run_full_pipeline_background, run_id, request)
     return JSONResponse({"message": "Prompt2Blog pipeline v2 queued", "run_id": run_id})
 
 
-@router.post("/run", dependencies=[Depends(require_staff)])
+@router.post("/run")
 async def start_full_run(
     request: Prompt2BlogInputRequest,
     background_tasks: BackgroundTasks,
+    staff_user=Depends(require_staff),
 ) -> JSONResponse:
     """Start one-click Prompt2Blog run from source material through final article."""
     _validate_prompt2blog_input_request(request)
     run_id = str(uuid4())
+    recorder = RunRecorder()
 
-    write_status(
-        run_id,
-        {
-            "run_id": run_id,
-            "state": "running",
-            "stage": "queued",
-            "error": None,
-            "updated_at": _now_iso(),
-        },
-        feature=FEATURE_NAME,
-    )
-    write_stage_result(
+    recorder.queue(run_id, staff_user_id(staff_user))
+    recorder.record_stage(
         run_id,
         "pipeline_input",
         {
-            "created_at": _now_iso(),
-            "data": {
-                "mode": "structured_v2",
-                "article_type_id": request.article_type_id,
-                "source_material_count": len(
-                    _clean_string_list(request.source_material)
-                ),
-                "tone_id": _safe_str(request.tone_id),
-                "length_id": _safe_str(request.length_id),
-                "brand_voice_id": _safe_str(request.brand_voice_id),
-                "include_debug": request.include_debug,
-                "enable_editorial_augmentation": request.enable_editorial_augmentation,
-                "model_name": request.model_name or DEFAULT_MODEL,
-            },
+            "mode": "structured_v2",
+            "article_type_id": request.article_type_id,
+            "source_material_count": len(_clean_string_list(request.source_material)),
+            "tone_id": _safe_str(request.tone_id),
+            "length_id": _safe_str(request.length_id),
+            "brand_voice_id": _safe_str(request.brand_voice_id),
+            "include_debug": request.include_debug,
+            "enable_editorial_augmentation": request.enable_editorial_augmentation,
+            "model_name": request.model_name or DEFAULT_MODEL,
         },
     )
     background_tasks.add_task(_run_full_pipeline_background, run_id, request)

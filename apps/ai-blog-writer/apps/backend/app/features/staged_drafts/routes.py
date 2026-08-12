@@ -8,8 +8,10 @@ matching the frontend's per-feature storage namespaces.
 
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
+
+from app.core.staff_auth import require_staff
 
 from .storage import (
     StagedDraftConflict,
@@ -32,7 +34,9 @@ def _require_storage_key(storage_key: str) -> str:
 
 
 @router.get("")
-async def list_drafts(storage_key: str = Query(..., alias="storageKey")) -> JSONResponse:
+async def list_drafts(
+    storage_key: str = Query(..., alias="storageKey")
+) -> JSONResponse:
     """List all staged drafts for a storage key, newest first."""
     key = _require_storage_key(storage_key)
     return JSONResponse({"drafts": list_staged_drafts(key)})
@@ -72,7 +76,9 @@ async def put_draft(
         saved = upsert_staged_draft(key, draft_id, body)
         return JSONResponse(saved)
     try:
-        saved = update_staged_draft_if_unmodified(key, draft_id, body, expected_updated_at)
+        saved = update_staged_draft_if_unmodified(
+            key, draft_id, body, expected_updated_at
+        )
     except StagedDraftConflict as exc:
         return JSONResponse(
             status_code=409,
@@ -84,7 +90,7 @@ async def put_draft(
     return JSONResponse(saved)
 
 
-@router.delete("/{draft_id}", status_code=204)
+@router.delete("/{draft_id}", status_code=204, dependencies=[Depends(require_staff)])
 async def delete_draft(
     draft_id: str, storage_key: str = Query(..., alias="storageKey")
 ) -> None:
@@ -93,7 +99,7 @@ async def delete_draft(
     delete_staged_draft(key, draft_id)
 
 
-@router.delete("", status_code=204)
+@router.delete("", status_code=204, dependencies=[Depends(require_staff)])
 async def clear_drafts(storage_key: str = Query(..., alias="storageKey")) -> None:
     """Delete all staged drafts for a storage key."""
     key = _require_storage_key(storage_key)

@@ -34,10 +34,11 @@ def test_initialize_run_delegates_to_recorder():
     expected = _sample_meta()
 
     class Recorder:
-        def initialize(self, record_arg, source, notes):
+        def initialize(self, record_arg, source, notes, owner_staff_id=None):
             assert record_arg is record
             assert source == "youtube-url"
             assert notes == "notes"
+            assert owner_staff_id is None
             return expected
 
     assert (

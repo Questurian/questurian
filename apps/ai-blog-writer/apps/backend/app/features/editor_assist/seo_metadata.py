@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.core.staff_auth import require_staff
 from app.shared.writer_invocation import WriterModelError
 
 from .contracts import (
@@ -121,14 +122,10 @@ def _generate_seo_metadata_impl(
         raise HTTPException(status_code=400, detail="seed is required")
 
     model_used = (
-        (request.model_name or SEO_STRUCTURED_DEFAULT_MODEL).strip()
-        or SEO_STRUCTURED_DEFAULT_MODEL
-    )
+        request.model_name or SEO_STRUCTURED_DEFAULT_MODEL
+    ).strip() or SEO_STRUCTURED_DEFAULT_MODEL
 
-    llm_prompt = (
-        f"{prompt}\n\n"
-        f"Article title (reference only):\n{article_title}\n\n"
-    )
+    llm_prompt = f"{prompt}\n\n" f"Article title (reference only):\n{article_title}\n\n"
     if article_context:
         llm_prompt += (
             "Full article context (reference only, source of truth for facts):\n"
@@ -176,7 +173,11 @@ def _generate_seo_metadata_impl(
     )
 
 
-@router.post("/generate-seo-metadata", response_model=GenerateSeoMetadataResponse)
+@router.post(
+    "/generate-seo-metadata",
+    response_model=GenerateSeoMetadataResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def generate_seo_metadata(
     request: GenerateSeoMetadataRequest,
     dependencies: Annotated[

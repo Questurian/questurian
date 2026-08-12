@@ -5,12 +5,13 @@ from typing import Optional
 
 import httpx
 
-from .image_processor import ImageVariantType, ProcessedVariant
-from .payload_config import (  # noqa: F401
+from app.core.payload_api import (  # noqa: F401
     DEFAULT_PAYLOAD_API_URL,
-    _resolve_payload_api_url,
     _running_in_docker,
+    resolve_payload_api_url,
 )
+
+from .image_processor import ImageVariantType, ProcessedVariant
 from .payload_deletion import _PayloadDeletion
 from .payload_documents import (  # noqa: F401
     PayloadMediaAssetDoc,
@@ -29,6 +30,9 @@ from .payload_uploads import _PayloadUploads
 
 
 logger = logging.getLogger("images.payload")
+
+# Compatibility for callers/tests importing the historical private name.
+_resolve_payload_api_url = resolve_payload_api_url
 
 
 class PayloadClient(

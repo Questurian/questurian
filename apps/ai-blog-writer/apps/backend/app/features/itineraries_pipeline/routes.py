@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from app.core.staff_auth import require_staff
 from app.shared.writer_invocation import invoke_writer_model
 
 from .day_shells import BUILT_IN_DAY_SHELL_IDS
@@ -48,8 +49,14 @@ def _safe_text(value: Any) -> str:
     return ""
 
 
-@router.post("/generate-titles", response_model=GenerateItineraryTitlesResponse)
-async def generate_itinerary_titles(request: GenerateItineraryTitlesRequest) -> GenerateItineraryTitlesResponse:
+@router.post(
+    "/generate-titles",
+    response_model=GenerateItineraryTitlesResponse,
+    dependencies=[Depends(require_staff)],
+)
+async def generate_itinerary_titles(
+    request: GenerateItineraryTitlesRequest,
+) -> GenerateItineraryTitlesResponse:
     """Run the full itineraries title prompt through the writer-model router.
 
     Defaults to Claude; ``claude*`` model names route to Anthropic and any Gemini
@@ -95,9 +102,13 @@ async def list_day_shells() -> DayShellLibraryResponse:
 @router.post("/day-shells", response_model=DayShell)
 async def create_day_shell(shell: DayShell) -> DayShell:
     if shell.id in BUILT_IN_DAY_SHELL_IDS:
-        raise HTTPException(status_code=409, detail="Shell id collides with a built-in Day Shell")
+        raise HTTPException(
+            status_code=409, detail="Shell id collides with a built-in Day Shell"
+        )
     if get_library_shell(shell.id) is not None:
-        raise HTTPException(status_code=409, detail="A library shell with this id already exists")
+        raise HTTPException(
+            status_code=409, detail="A library shell with this id already exists"
+        )
     return save_library_shell(shell)
 
 
@@ -112,17 +123,25 @@ async def update_day_shell(shell_id: str, shell: DayShell) -> DayShell:
     return save_library_shell(shell)
 
 
-@router.delete("/day-shells/{shell_id}")
+@router.delete("/day-shells/{shell_id}", dependencies=[Depends(require_staff)])
 async def remove_day_shell(shell_id: str) -> dict[str, bool]:
     if shell_id in BUILT_IN_DAY_SHELL_IDS:
-        raise HTTPException(status_code=409, detail="Built-in Day Shells cannot be deleted")
+        raise HTTPException(
+            status_code=409, detail="Built-in Day Shells cannot be deleted"
+        )
     if not delete_library_shell(shell_id):
         raise HTTPException(status_code=404, detail="Library shell not found")
     return {"deleted": True}
 
 
-@router.post("/generate", response_model=GenerateItineraryResponse)
-async def generate_itinerary(request: GenerateItineraryRequest) -> GenerateItineraryResponse:
+@router.post(
+    "/generate",
+    response_model=GenerateItineraryResponse,
+    dependencies=[Depends(require_staff)],
+)
+async def generate_itinerary(
+    request: GenerateItineraryRequest,
+) -> GenerateItineraryResponse:
     """Itinerary Autobuild: fill an itinerary's day slots from the brief.
 
     Reads candidate records from Payload with the operator's JWT, scores and
@@ -133,4 +152,6 @@ async def generate_itinerary(request: GenerateItineraryRequest) -> GenerateItine
         return await run_itinerary_pipeline(request)
     except Exception as exc:  # noqa: BLE001
         logger.exception("Itinerary Autobuild failed: %s", exc)
-        raise HTTPException(status_code=502, detail="Itinerary generation failed") from exc
+        raise HTTPException(
+            status_code=502, detail="Itinerary generation failed"
+        ) from exc

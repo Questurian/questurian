@@ -20,8 +20,9 @@ def _disable_markdown_long_stages_by_default(monkeypatch):
 
 
 def test_pipeline_v2_uses_langgraph_runner(client, monkeypatch):
-    async def _fake_graph_runner(*, request, dependencies):
+    async def _fake_graph_runner(*, request, dependencies, owner_staff_id):
         del request, dependencies
+        assert owner_staff_id is None
         return JSONResponse({"message": "langgraph path"})
 
     monkeypatch.setattr(

@@ -4,6 +4,7 @@ Core database utilities for SQLite connection management.
 Single file database: data/pipeline.db
 All features share this database but have their own tables.
 """
+
 import sqlite3
 from contextlib import contextmanager
 from typing import Generator
@@ -62,6 +63,7 @@ def ensure_core_tables() -> None:
                 status TEXT NOT NULL,
                 stage TEXT NOT NULL,
                 error TEXT,
+                owner_staff_id TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -119,13 +121,11 @@ def ensure_core_tables() -> None:
                 "ALTER TABLE runs ADD COLUMN feature TEXT NOT NULL "
                 "DEFAULT 'youtube2blog'"
             )
+        if "owner_staff_id" not in columns:
+            conn.execute("ALTER TABLE runs ADD COLUMN owner_staff_id TEXT")
 
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_runs_feature ON runs(feature);"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);"
-        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_feature ON runs(feature);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);")
 
 
 # Initialize core tables on module load

@@ -1,8 +1,10 @@
 """AI image text helper routes."""
 
 import httpx
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
+
+from app.core.staff_auth import require_staff
 
 from ..alt_text_generator import generate_alt_text
 from ..edit_prompt_builder import build_edit_prompt
@@ -11,7 +13,7 @@ from ..scene_describer import generate_scene_description
 from ..subject_describer import generate_subject_description
 from ..shared import _raise_http_error, _read_upload_file, logger
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_staff)])
 
 
 @router.post("/generate-alt-text")

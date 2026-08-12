@@ -17,14 +17,15 @@ import os
 from typing import Any, Optional
 
 import httpx
-from fastapi import Header, HTTPException
+from fastapi import Depends, Header, HTTPException
 
-from app.features.images.payload_config import _resolve_payload_api_url
+from app.core.payload_api import resolve_payload_api_url
 
 logger = logging.getLogger(__name__)
 
 STAFF_AUTH_FLAG = "ABW_REQUIRE_STAFF_AUTH"
 PAYLOAD_ME_TIMEOUT_SECONDS = 10.0
+EDITOR_ROLES = {"admin", "editor"}
 
 
 def staff_auth_required() -> bool:
@@ -50,7 +51,9 @@ def extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
     return token.strip() or None
 
 
-async def fetch_payload_user(token: str, payload_api_url: str) -> Optional[dict[str, Any]]:
+async def fetch_payload_user(
+    token: str, payload_api_url: str
+) -> Optional[dict[str, Any]]:
     """Resolve a session token to a Payload user, or None if it is not valid."""
     try:
         async with httpx.AsyncClient(timeout=PAYLOAD_ME_TIMEOUT_SECONDS) as client:
@@ -103,8 +106,66 @@ async def require_staff(
     # rest of the Payload integration keeps working. The helper always yields
     # a URL, so an unreachable Payload surfaces as 503 from the call below
     # rather than as a separate "misconfigured" branch.
-    user = await fetch_payload_user(token, _resolve_payload_api_url())
+    user = await fetch_payload_user(token, resolve_payload_api_url())
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
 
     return user
+
+
+async def require_editor(
+    staff_user: Optional[dict[str, Any]] = Depends(require_staff),
+) -> Optional[dict[str, Any]]:
+    """Require an editor or admin when staff-auth enforcement is enabled."""
+    if staff_user is None:
+        return None
+
+    if staff_user.get("role") not in EDITOR_ROLES:
+        raise HTTPException(
+            status_code=403,
+            detail="Editor or admin role required",
+        )
+
+    return staff_user
+
+
+def staff_user_id(staff_user: Optional[dict[str, Any]]) -> Optional[str]:
+    """Normalize Payload's numeric-or-string staff ID for local ownership."""
+    if staff_user is None:
+        return None
+
+    raw_id = staff_user.get("id")
+    if isinstance(raw_id, bool) or not isinstance(raw_id, (int, str)):
+        return None
+
+    normalized = str(raw_id).strip()
+    return normalized or None
+
+
+def authorize_article_deletion(
+    *,
+    staff_user: Any,
+    owner_staff_id: Optional[str],
+) -> None:
+    """Allow editors globally and writers only for runs they created."""
+    if not isinstance(staff_user, dict):
+        # Enforcement flag is off; preserve existing behavior.
+        if not staff_auth_required():
+            return
+        raise HTTPException(status_code=401, detail="Valid staff session required")
+
+    if staff_user.get("role") in EDITOR_ROLES:
+        return
+
+    requester_id = staff_user_id(staff_user)
+    if (
+        staff_user.get("role") == "writer"
+        and requester_id is not None
+        and owner_staff_id == requester_id
+    ):
+        return
+
+    raise HTTPException(
+        status_code=403,
+        detail="Only the run owner, an editor, or an admin may delete this article",
+    )

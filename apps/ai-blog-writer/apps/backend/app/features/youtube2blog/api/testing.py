@@ -1,9 +1,11 @@
 """Development-only pipeline probe routes."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from shared import RawVideoRecord
+
+from app.core.staff_auth import require_staff
 
 from ..stages import stage_1_clean_transcript
 
@@ -58,7 +60,7 @@ def _run_stage1_probe(*, success_message: str, error_detail: str) -> JSONRespons
     )
 
 
-@router.post("/test-stage1")
+@router.post("/test-stage1", dependencies=[Depends(require_staff)])
 async def test_stage1() -> JSONResponse:
     """Test Stage 1 only (requires AI)."""
     return _run_stage1_probe(
@@ -67,7 +69,7 @@ async def test_stage1() -> JSONResponse:
     )
 
 
-@router.post("/test")
+@router.post("/test", dependencies=[Depends(require_staff)])
 async def test_pipeline() -> JSONResponse:
     """Test endpoint that runs Stage 1 with a hardcoded test record."""
     return _run_stage1_probe(

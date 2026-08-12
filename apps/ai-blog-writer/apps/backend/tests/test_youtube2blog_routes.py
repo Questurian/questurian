@@ -118,7 +118,9 @@ def test_from_url_keeps_blocking_fetches_off_the_event_loop(monkeypatch):
     monkeypatch.setattr(
         youtube2blog_pipeline,
         "initialize_run",
-        lambda record, source, notes=None: _sample_meta(source=source, notes=notes),
+        lambda record, source, notes=None, owner_staff_id=None: _sample_meta(
+            source=source, notes=notes
+        ),
     )
     monkeypatch.setattr(
         youtube2blog_pipeline,
@@ -162,11 +164,15 @@ def test_from_url_queues_single_run(monkeypatch):
     )
 
     def fake_initialize_run(
-        record: RawVideoRecord, source: str, notes: str | None = None
+        record: RawVideoRecord,
+        source: str,
+        notes: str | None = None,
+        owner_staff_id: str | None = None,
     ):
         captured["record"] = record
         captured["source"] = source
         captured["notes"] = notes
+        captured["owner_staff_id"] = owner_staff_id
         return _sample_meta(source=source, notes=notes)
 
     def fake_process_run(record: RawVideoRecord, meta: PipelineMeta, **kwargs):
@@ -197,6 +203,7 @@ def test_from_url_queues_single_run(monkeypatch):
     assert record.transcript_status == "completed"
     assert captured["source"] == "youtube-url"
     assert str(captured["notes"]).startswith("url:https://www.youtube.com/watch?v=")
+    assert captured["owner_staff_id"] is None
     assert captured["process_meta"] is not None
     # A body carrying only `url` must queue the run with every option unset,
     # so the pipeline falls back to its configured defaults.
@@ -269,9 +276,13 @@ def test_from_url_uses_fallback_title_when_oembed_fails(monkeypatch):
     monkeypatch.setattr(youtube2blog_pipeline, "fetch_oembed_title", lambda _url: None)
 
     def fake_initialize_run(
-        record: RawVideoRecord, source: str, notes: str | None = None
+        record: RawVideoRecord,
+        source: str,
+        notes: str | None = None,
+        owner_staff_id: str | None = None,
     ):
         captured["record"] = record
+        assert owner_staff_id is None
         return _sample_meta(source=source, notes=notes)
 
     monkeypatch.setattr(youtube2blog_pipeline, "initialize_run", fake_initialize_run)

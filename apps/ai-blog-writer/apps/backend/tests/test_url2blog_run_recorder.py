@@ -53,3 +53,20 @@ def test_mark_failed_preserves_original_failure_when_storage_is_unavailable() ->
     )
 
     recorder.mark_failed("run-12345", RuntimeError("pipeline failed"))
+
+
+def test_mark_running_records_verified_owner_once() -> None:
+    statuses = []
+    recorder = RunRecorder(
+        status_writer=lambda run_id, payload, **kwargs: statuses.append(
+            (run_id, payload, kwargs)
+        ),
+        clock=lambda: "2026-08-11T12:00:00",
+    )
+
+    recorder.mark_running("run-12345", "queued", owner_staff_id="7")
+
+    assert statuses[0][2] == {
+        "feature": "url2blog",
+        "owner_staff_id": "7",
+    }

@@ -77,6 +77,7 @@ async def run_url2blog_pipeline_graph(
     *,
     request: Any,
     dependencies: PipelineDependencies | None = None,
+    owner_staff_id: str | None = None,
 ) -> JSONResponse:
     dependencies = dependencies or PipelineDependencies()
     run_id = _resolve_run_id(request)
@@ -91,7 +92,14 @@ async def run_url2blog_pipeline_graph(
         "recovered_parse_failures": 0,
         "failures_by_stage": {},
     }
-    dependencies.recorder.mark_running(run_id, "queued")
+    if owner_staff_id is None:
+        dependencies.recorder.mark_running(run_id, "queued")
+    else:
+        dependencies.recorder.mark_running(
+            run_id,
+            "queued",
+            owner_staff_id=owner_staff_id,
+        )
 
     response_holder: dict[str, JSONResponse | None] = {"response": None}
     node_context = Url2BlogNodeContext(

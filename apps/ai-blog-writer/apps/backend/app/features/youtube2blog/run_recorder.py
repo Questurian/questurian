@@ -44,6 +44,7 @@ class RunRecorder:
         record: RawVideoRecord,
         source: str,
         notes: str | None = None,
+        owner_staff_id: str | None = None,
     ) -> PipelineMeta:
         run_id = str(uuid4())
         meta = PipelineMeta(
@@ -62,7 +63,12 @@ class RunRecorder:
             data=stage0.model_dump(),
         )
         self.stage_writer(run_id, "stage_0", result.model_dump())
-        self._write_status(run_id, "stage_0", "pending")
+        self._write_status(
+            run_id,
+            "stage_0",
+            "pending",
+            owner_staff_id=owner_staff_id,
+        )
         return meta
 
     def start_stage(self, run_id: str, stage: str) -> None:
@@ -113,8 +119,7 @@ class RunRecorder:
             run_id=run_id,
             meta=meta,
             stages={
-                key: StageResult.model_validate(value)
-                for key, value in payload.items()
+                key: StageResult.model_validate(value) for key, value in payload.items()
             },
             markdown_path=f"db:outputs:{run_id}",
         )
@@ -136,7 +141,11 @@ class RunRecorder:
         state: str,
         *,
         error: str | None = None,
+        owner_staff_id: str | None = None,
     ) -> None:
+        kwargs: dict[str, str] = {"feature": FEATURE_NAME}
+        if owner_staff_id is not None:
+            kwargs["owner_staff_id"] = owner_staff_id
         self.status_writer(
             run_id,
             {
@@ -146,5 +155,5 @@ class RunRecorder:
                 "updated_at": self.clock().isoformat(),
                 "error": error,
             },
-            feature=FEATURE_NAME,
+            **kwargs,
         )

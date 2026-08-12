@@ -3,8 +3,10 @@
 import re
 from typing import List, Optional
 
-from fastapi import APIRouter, File, Form, Header, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, UploadFile
 from fastapi.responses import Response
+
+from app.core.staff_auth import require_staff
 
 from ..bfl_client import BflApiError, BflClient
 from ..shared import (
@@ -23,7 +25,7 @@ from ..shared import (
 router = APIRouter()
 
 
-@router.post("/flux-edit")
+@router.post("/flux-edit", dependencies=[Depends(require_staff)])
 async def flux_edit_image(
     prompt: str = Form(..., description="Exact prompt text to send to FLUX.2"),
     reference_image: UploadFile = File(

@@ -88,6 +88,10 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 
 - All Vertex AI calls go through `packages/utils` helpers such as `get_vertex_llm`, `invoke_vertex_multimodal_text`, and `invoke_google_grounded_text`. Features do not import Vertex SDKs directly.
 - `run_id` is generated server-side at run start; clients never invent one.
+- With `ABW_REQUIRE_STAFF_AUTH=true`, article-producing runs record the verified
+  Payload Staff User id as `owner_staff_id`. Writers may delete only their own
+  runs; editors/admins may delete any run. Unowned runs are editor/admin-only.
+  See ADR 0027.
 - A Quality Gate failure must trigger at least one repair attempt before the run is marked `failed`.
 - StageResult writes are idempotent, last-wins upserts keyed by `run_id + stage`: re-running a stage (e.g. a LangGraph resume) replaces its stored payload rather than appending. Payload shapes are intentionally feature-specific — `StageResult.data` is untyped (`Dict[str, object]`) and the storage adapter does not validate against `Stage[N]Output`.
 - `ArticleType` rows are mutable from admin tooling but should not be deleted while runs reference them.

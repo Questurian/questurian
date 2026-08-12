@@ -35,7 +35,16 @@ class RunRecorder:
     status_reader: Callable[[str], dict[str, Any] | None] = read_status
     clock: Callable[[], str] = _now_iso
 
-    def mark_running(self, run_id: str, stage: str) -> None:
+    def mark_running(
+        self,
+        run_id: str,
+        stage: str,
+        *,
+        owner_staff_id: str | None = None,
+    ) -> None:
+        kwargs: dict[str, str] = {"feature": FEATURE_NAME}
+        if owner_staff_id is not None:
+            kwargs["owner_staff_id"] = owner_staff_id
         self.status_writer(
             run_id,
             {
@@ -45,7 +54,7 @@ class RunRecorder:
                 "error": None,
                 "updated_at": self.clock(),
             },
-            feature=FEATURE_NAME,
+            **kwargs,
         )
 
     def record_stage(self, run_id: str, stage: str, data: dict[str, Any]) -> None:

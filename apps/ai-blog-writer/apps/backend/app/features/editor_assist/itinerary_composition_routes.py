@@ -5,6 +5,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.staff_auth import require_staff
+
 from .dependencies import EditorAssistDependencies, get_editor_assist_dependencies
 from .itinerary_brief import _compose_itinerary_brief_impl
 from .itinerary_composition_contracts import (
@@ -25,7 +27,11 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/compose-itinerary-brief", response_model=ComposeItineraryBriefResponse)
+@router.post(
+    "/compose-itinerary-brief",
+    response_model=ComposeItineraryBriefResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def compose_itinerary_brief(
     request: ComposeItineraryBriefRequest,
     dependencies: Annotated[
@@ -47,7 +53,11 @@ async def compose_itinerary_brief(
         ) from exc
 
 
-@router.post("/compose-itinerary-intro", response_model=ComposeItineraryIntroResponse)
+@router.post(
+    "/compose-itinerary-intro",
+    response_model=ComposeItineraryIntroResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def compose_itinerary_intro(
     request: ComposeItineraryIntroRequest,
     dependencies: Annotated[
@@ -69,7 +79,11 @@ async def compose_itinerary_intro(
         ) from exc
 
 
-@router.post("/compose-itinerary-day-blurbs", response_model=ComposeDayBlurbsResponse)
+@router.post(
+    "/compose-itinerary-day-blurbs",
+    response_model=ComposeDayBlurbsResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def compose_itinerary_day_blurbs(
     request: ComposeDayBlurbsRequest,
     dependencies: Annotated[
@@ -93,7 +107,11 @@ async def compose_itinerary_day_blurbs(
         ) from exc
 
 
-@router.post("/compose-itinerary-stop-reason", response_model=ComposeStopReasonResponse)
+@router.post(
+    "/compose-itinerary-stop-reason",
+    response_model=ComposeStopReasonResponse,
+    dependencies=[Depends(require_staff)],
+)
 async def compose_itinerary_stop_reason(
     request: ComposeStopReasonRequest,
     dependencies: Annotated[

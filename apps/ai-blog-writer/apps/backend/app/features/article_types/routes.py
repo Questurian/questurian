@@ -1,12 +1,14 @@
 """
 Shared article types API routes.
 """
+
 import sqlite3
 import re
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
+from app.core.staff_auth import require_staff
 from app.core import (
     delete_article_type,
     get_article_type_by_id,
@@ -208,7 +210,7 @@ async def update_article_type(article_type_id: int, request: dict) -> JSONRespon
         ) from exc
 
 
-@router.delete("/{article_type_id}")
+@router.delete("/{article_type_id}", dependencies=[Depends(require_staff)])
 async def delete_article_type_endpoint(article_type_id: int) -> JSONResponse:
     """Delete an article type by ID."""
     try:

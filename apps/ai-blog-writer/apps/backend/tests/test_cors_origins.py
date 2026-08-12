@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import app.main as main_module
@@ -21,6 +23,32 @@ async def test_lifespan_starts_normally_when_cors_config_valid(monkeypatch):
 
     async with main_module.lifespan(main_module.app):
         pass
+
+
+@pytest.mark.asyncio
+async def test_lifespan_warns_when_staff_auth_is_disabled(monkeypatch, caplog):
+    monkeypatch.setattr(main_module, "_cors_config_error", None)
+    monkeypatch.setattr(main_module, "fail_stale_runs", lambda: 0)
+    monkeypatch.delenv("ABW_REQUIRE_STAFF_AUTH", raising=False)
+
+    with caplog.at_level(logging.WARNING, logger=main_module.__name__):
+        async with main_module.lifespan(main_module.app):
+            pass
+
+    assert "ABW_REQUIRE_STAFF_AUTH is disabled" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_lifespan_does_not_warn_when_staff_auth_is_enabled(monkeypatch, caplog):
+    monkeypatch.setattr(main_module, "_cors_config_error", None)
+    monkeypatch.setattr(main_module, "fail_stale_runs", lambda: 0)
+    monkeypatch.setenv("ABW_REQUIRE_STAFF_AUTH", "true")
+
+    with caplog.at_level(logging.WARNING, logger=main_module.__name__):
+        async with main_module.lifespan(main_module.app):
+            pass
+
+    assert "ABW_REQUIRE_STAFF_AUTH is disabled" not in caplog.text
 
 
 def test_rejected_config_fails_closed_instead_of_raising_at_import():
@@ -102,15 +130,16 @@ def test_whitespace_only_api_key_treated_as_unset():
 def test_explicit_none_denies_all_origins_with_api_key():
     """An instance with no browser client must be able to say so, rather than
     being forced to invent a dummy origin to satisfy the guard."""
-    assert main_module.resolve_cors_origins(
-        api_key="secret-key", raw_origins="none"
-    ) == []
+    assert (
+        main_module.resolve_cors_origins(api_key="secret-key", raw_origins="none") == []
+    )
 
 
 def test_explicit_none_is_case_insensitive():
-    assert main_module.resolve_cors_origins(
-        api_key="secret-key", raw_origins="  NONE  "
-    ) == []
+    assert (
+        main_module.resolve_cors_origins(api_key="secret-key", raw_origins="  NONE  ")
+        == []
+    )
 
 
 def test_explicit_none_denies_all_origins_without_api_key():

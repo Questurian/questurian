@@ -5,6 +5,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.core.staff_auth import require_staff
+
 from .angle_assignment import ListicleAngle as AssignmentAngle
 from .contracts import ListTone
 from .critical_fields import CriticalFieldsResult
@@ -41,7 +43,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.post(
-    "/generate-listicle-content", response_model=GenerateListicleContentResponse
+    "/generate-listicle-content",
+    response_model=GenerateListicleContentResponse,
+    dependencies=[Depends(require_staff)],
 )
 async def generate_listicle_content(
     request: GenerateListicleContentRequest,
