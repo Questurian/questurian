@@ -13,12 +13,20 @@ import { getArticleLocationScope } from '../locationScope/scope'
  * These clients grew independently and disagreed: some passed
  * `credentials: 'include'`, some passed `'omit'`, and some named no option at
  * all — which means `'same-origin'`, and Payload is never the same origin as
- * this app. They all worked anyway, because each one carries a `Bearer` header
- * read out of `localStorage`. That header is the thing being removed, so the
- * cookie has to be a real alternative on every path first.
+ * this app. None of it showed, because each one also carries an
+ * `Authorization: Bearer` header.
  *
- * Assert on the option rather than on any one call site, so a new Payload
- * client that forgets it is caught here.
+ * The cookie is *not* a fallback today, and that is worth being exact about:
+ * Payload's `extractJWT` returns the first token it finds in `jwtOrder`
+ * (`JWT`, `Bearer`, `cookie`) and `JWTAuthentication` verifies only that one.
+ * A present-but-invalid Bearer fails outright rather than falling through to
+ * the cookie. So while the header is sent these calls behave exactly as
+ * before — the change is consistency, and it is what makes eventually dropping
+ * the header a one-line change rather than an eight-file one.
+ *
+ * Every Payload client in the app is listed below, including the four that
+ * were already correct, so the set is checkable by reading rather than by
+ * remembering.
  */
 
 const fetchMock = vi.fn()
@@ -101,6 +109,44 @@ describe('Payload clients send the session cookie', () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [{ id: 1 }] }))
 
     await getArticleLocationScope({ locationKey: 'lima', token: 'token' })
+
+    expect(lastCredentials()).toBe('include')
+  })
+
+  it('staging articles', async () => {
+    const { fetchPayloadArticles } = await import('../../features/staging/api/articles/articles.api')
+
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+    await fetchPayloadArticles('token')
+
+    expect(lastCredentials()).toBe('include')
+  })
+
+  it('access permissions', async () => {
+    const { fetchAccessPermissions } = await import('../../features/auth/permissions-client')
+
+    fetchMock.mockResolvedValue(jsonResponse({}))
+    await fetchAccessPermissions('token')
+
+    expect(lastCredentials()).toBe('include')
+  })
+
+  it('homepage featured content', async () => {
+    const { mainHomepageRequest } = await import(
+      '../../features/homepageFeaturedContent/mainHomepage/request')
+
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+    await mainHomepageRequest('/api/pages', 'token')
+
+    expect(lastCredentials()).toBe('include')
+  })
+
+  it('location homepages', async () => {
+    const { locationHomepageRequest } = await import(
+      '../../features/homepageFeaturedContent/locationHomepages/request')
+
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+    await locationHomepageRequest('/api/pages', 'token')
 
     expect(lastCredentials()).toBe('include')
   })

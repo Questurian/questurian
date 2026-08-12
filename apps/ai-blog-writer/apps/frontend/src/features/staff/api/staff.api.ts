@@ -151,6 +151,11 @@ export async function createStaffUser(
  * went to a mailbox that didn't exist yet.
  */
 export async function requestPasswordSetEmail(email: string): Promise<void> {
+  // The one call here that passes no token. It now carries the caller's session
+  // cookie anyway, via the shared client. Harmless: Payload's `forgotPassword`
+  // never reads `req.user`, and questura throttles it on IP plus email, not on
+  // identity — so an authenticated caller gets the same bucket as an anonymous
+  // one.
   await payloadMutation('/api/users/forgot-password', 'POST', { email })
 }
 
