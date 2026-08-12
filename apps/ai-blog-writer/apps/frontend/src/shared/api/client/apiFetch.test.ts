@@ -54,3 +54,74 @@ describe('apiFetch', () => {
     expect(response.status).toBe(418)
   })
 })
+
+describe('apiFetch with VITE_ABW_API_KEY configured', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  function withKey(key = 'secret-key'): void {
+    vi.stubEnv('VITE_ABW_API_KEY', key)
+  }
+
+  function headersOf(spy: ReturnType<typeof vi.fn>): Headers {
+    const [, init] = spy.mock.calls[0] as [string, RequestInit]
+    return new Headers(init.headers)
+  }
+
+  it('attaches the X-API-Key header', async () => {
+    withKey()
+    const spy = mockFetch()
+
+    await apiFetch('/youtube2blog/tones')
+
+    expect(headersOf(spy).get('X-API-Key')).toBe('secret-key')
+  })
+
+  it('preserves headers the call site already set', async () => {
+    withKey()
+    const spy = mockFetch()
+
+    await apiFetch('/images/upload-variants', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer staff-token' },
+    })
+
+    const headers = headersOf(spy)
+    expect(headers.get('Authorization')).toBe('Bearer staff-token')
+    expect(headers.get('X-API-Key')).toBe('secret-key')
+  })
+
+  it('does not add Content-Type to multipart requests', async () => {
+    withKey()
+    const spy = mockFetch()
+    const body = new FormData()
+    body.append('file', new Blob(['x']), 'x.png')
+
+    await apiFetch('/images/upload', { method: 'POST', body })
+
+    expect(headersOf(spy).get('Content-Type')).toBeNull()
+  })
+
+  it('preserves the rest of init', async () => {
+    withKey()
+    const spy = mockFetch()
+    const signal = new AbortController().signal
+
+    await apiFetch('/youtube2blog/from-url', { method: 'POST', body: 'x', signal })
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit]
+    expect(init.method).toBe('POST')
+    expect(init.body).toBe('x')
+    expect(init.signal).toBe(signal)
+  })
+
+  it('treats a whitespace-only key as unset', async () => {
+    withKey('   ')
+    const spy = mockFetch()
+
+    await apiFetch('/health')
+
+    expect(spy).toHaveBeenCalledWith(`${API_BASE_URL}/health`, undefined)
+  })
+})
