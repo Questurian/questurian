@@ -2,7 +2,10 @@
 
 import logging
 
-from .auth import _extract_bearer_token as _extract_bearer_token  # noqa: F401
+from .auth import (  # noqa: F401
+    _extract_bearer_token as _extract_bearer_token,
+    require_image_token as require_image_token,
+)
 from .errors import (  # noqa: F401
     _build_error_detail as _build_error_detail,
     _raise_http_error as _raise_http_error,

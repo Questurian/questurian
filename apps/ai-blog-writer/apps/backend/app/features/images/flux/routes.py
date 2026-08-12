@@ -3,14 +3,13 @@
 import re
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, Header, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from fastapi.responses import Response
 
 from app.core.staff_auth import require_staff
 
 from ..bfl_client import BflApiError, BflClient
 from ..shared import (
-    _extract_bearer_token,
     _raise_http_error,
     _read_additional_reference_images,
     _read_upload_file,
@@ -20,6 +19,7 @@ from ..shared import (
     _validate_flux_prompt,
     _validate_flux_safety_tolerance,
     logger,
+    require_image_token,
 )
 
 router = APIRouter()
@@ -60,10 +60,9 @@ async def flux_edit_image(
         None,
         description="Optional generation seed for reproducibility",
     ),
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ) -> Response:
     """Proxy a FLUX.2 edit request with optional multi-reference inputs."""
-    _extract_bearer_token(authorization)
     valid_prompt = _validate_flux_prompt(prompt)
     valid_model_id = _validate_flux_model_id(model_id)
     valid_width, valid_height = _validate_flux_dimensions(width, height)

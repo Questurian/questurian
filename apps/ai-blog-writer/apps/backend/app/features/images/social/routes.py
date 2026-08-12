@@ -4,7 +4,7 @@ import re
 import time
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from ..image_processor import ImageVariantType, VARIANT_SPECS, process_single_variant
@@ -12,7 +12,6 @@ from ..payload_client import PayloadClient, PayloadUploadError
 from ..schemas import GenerateSocialImageRequest
 from ..shared import (
     _download_media_asset_file,
-    _extract_bearer_token,
     _raise_http_error,
     _read_upload_file,
     _select_social_source_asset,
@@ -22,6 +21,7 @@ from ..shared import (
     _validate_photographer_credit,
     _wait_for_bunny_original_url,
     logger,
+    require_image_token,
 )
 
 router = APIRouter()
@@ -30,7 +30,7 @@ router = APIRouter()
 @router.post("/generate-social-image")
 async def generate_social_image(
     request: GenerateSocialImageRequest,
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ) -> JSONResponse:
     """
     Regenerate the open_graph (1200x630) variant from the featured image.
@@ -42,7 +42,6 @@ async def generate_social_image(
 
     Returns the generated asset bunny_original_url for strict SEO social image usage.
     """
-    jwt_token = _extract_bearer_token(authorization)
     featured_asset_id = request.featuredAssetId
     featured_media_set_id = request.featuredMediaSetId
     if featured_media_set_id is not None:
@@ -204,7 +203,7 @@ async def upload_social_image(
         ...,
         description="Payload location id to attach to uploaded image",
     ),
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ) -> JSONResponse:
     """
     Upload one social image for OG/Twitter usage only.
@@ -212,7 +211,6 @@ async def upload_social_image(
     This endpoint processes the source into a single open_graph (1200x630) variant
     and uploads it directly without creating/updating a media set.
     """
-    jwt_token = _extract_bearer_token(authorization)
     valid_location_ref = _validate_location_ref(location_ref)
     valid_photographer_credit = _validate_photographer_credit(photographer_credit)
     valid_alt_text = _validate_alt_text(alt_text)

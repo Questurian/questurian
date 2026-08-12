@@ -5,18 +5,18 @@ import json
 import time
 from typing import Optional
 
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse, Response
 
 from ..image_processor import ImageVariantType, ProcessedVariant
 from ..payload_client import PayloadClient, PayloadUploadError
 from ..shared import (
-    _extract_bearer_token,
     _raise_http_error,
     _status_from_payload_error,
     _validate_location_ref,
     _validate_photographer_credit,
     logger,
+    require_image_token,
 )
 from .cleanup import (  # noqa: F401
     _find_hanging_composites as _find_hanging_composites,
@@ -84,10 +84,9 @@ async def _upload_variant_with_retry(
 
 
 async def _prepare(
-    request: CompositeRequest, authorization: Optional[str]
-) -> tuple[str, Optional[int], str, list[SourceImage], list[str]]:
+    request: CompositeRequest, jwt_token: str
+) -> tuple[Optional[int], str, list[SourceImage], list[str]]:
     _validate_request_shape(request)
-    jwt_token = _extract_bearer_token(authorization)
     location_ref = _validate_location_ref(request.locationRef)
     photographer_credit = _validate_photographer_credit(
         request.photographerCredit or 'Questurian Composite'
@@ -98,15 +97,15 @@ async def _prepare(
         jwt_token=jwt_token,
         source_ids=[source.mediaSetId for source in request.sources],
     )
-    return (jwt_token, location_ref, photographer_credit, sources, _warnings(sources))
+    return (location_ref, photographer_credit, sources, _warnings(sources))
 
 
 @router.post('/preview')
 async def preview_composite(
-    request: CompositeRequest, authorization: Optional[str] = Header(None)
+    request: CompositeRequest, jwt_token: str = Depends(require_image_token)
 ) -> Response:
     try:
-        _, _, _, sources, warnings = await _prepare(request, authorization)
+        _, _, sources, warnings = await _prepare(request, jwt_token)
     except PayloadUploadError as exc:
         logger.exception('Payload error during /images/composites/preview')
         _raise_http_error(
@@ -131,11 +130,11 @@ async def preview_composite(
 
 @router.post('/create')
 async def create_composite(
-    request: CompositeRequest, authorization: Optional[str] = Header(None)
+    request: CompositeRequest, jwt_token: str = Depends(require_image_token)
 ) -> JSONResponse:
     try:
-        jwt_token, location_ref, photographer_credit, sources, warnings = (
-            await _prepare(request, authorization)
+        location_ref, photographer_credit, sources, warnings = await _prepare(
+            request, jwt_token
         )
     except PayloadUploadError as exc:
         logger.exception('Payload error during /images/composites/create prepare')
@@ -200,10 +199,9 @@ async def create_composite(
 
 @router.get('/hanging')
 async def list_hanging_composites(
-    authorization: Optional[str] = Header(None), min_age_minutes: float = 5.0
+    jwt_token: str = Depends(require_image_token), min_age_minutes: float = 5.0
 ) -> JSONResponse:
     """List composite MediaSets left incomplete by a failed upload."""
-    jwt_token = _extract_bearer_token(authorization)
     client = PayloadClient(jwt_token)
     try:
         hanging = await _find_hanging_composites(
@@ -223,14 +221,13 @@ async def list_hanging_composites(
 
 @router.post('/cleanup')
 async def cleanup_hanging_composites(
-    request: HangingCleanupRequest, authorization: Optional[str] = Header(None)
+    request: HangingCleanupRequest, jwt_token: str = Depends(require_image_token)
 ) -> JSONResponse:
     """Delete the given hanging composite MediaSets and their variant assets.
 
     Only sets that are genuinely hanging (composite-prefixed and below the full
     variant count) are removed — a guard against deleting a healthy MediaSet.
     """
-    jwt_token = _extract_bearer_token(authorization)
     client = PayloadClient(jwt_token)
     try:
         hanging = await _find_hanging_composites(client=client, min_age_minutes=0.0)

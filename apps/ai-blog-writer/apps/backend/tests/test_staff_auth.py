@@ -2,6 +2,7 @@ import httpx
 import pytest
 
 from app.core import staff_auth
+from app.core.staff_token import resolve_staff_token
 from fastapi import HTTPException
 
 
@@ -107,7 +108,7 @@ def test_later_status_update_cannot_claim_unowned_run(isolated_db):
 async def test_passes_through_when_flag_is_off():
     """With the flag off nothing is checked, so existing deployments and local
     development are untouched."""
-    assert await staff_auth.require_staff(authorization=None) is None
+    assert await staff_auth.require_staff(token=None) is None
 
 
 @pytest.mark.asyncio
@@ -115,17 +116,31 @@ async def test_rejects_missing_token_when_enabled(monkeypatch):
     monkeypatch.setenv(staff_auth.STAFF_AUTH_FLAG, "true")
 
     with pytest.raises(HTTPException) as excinfo:
-        await staff_auth.require_staff(authorization=None)
+        await staff_auth.require_staff(token=None)
 
     assert excinfo.value.status_code == 401
 
 
 @pytest.mark.asyncio
 async def test_rejects_non_bearer_scheme_when_enabled(monkeypatch):
+    """A non-Bearer scheme yields no token, and no token is a 401.
+
+    The scheme check itself now lives in `staff_token.resolve_staff_token`;
+    this pins that its "no credential" answer still reaches the caller as 401
+    rather than being mistaken for the flag being off.
+    """
     monkeypatch.setenv(staff_auth.STAFF_AUTH_FLAG, "true")
 
+    token = resolve_staff_token(
+        authorization="JWT abc",
+        cookie_token=None,
+        method="POST",
+        origin=None,
+        allowed_origins=["https://abw.questurian.com"],
+    )
+
     with pytest.raises(HTTPException) as excinfo:
-        await staff_auth.require_staff(authorization="JWT abc")
+        await staff_auth.require_staff(token=token)
 
     assert excinfo.value.status_code == 401
 
@@ -144,7 +159,7 @@ async def test_falls_back_to_the_shared_payload_url_default(monkeypatch):
 
     monkeypatch.setattr(staff_auth, "fetch_payload_user", fake_user)
 
-    await staff_auth.require_staff(authorization="Bearer abc")
+    await staff_auth.require_staff(token="abc")
 
     assert seen["url"] == "http://localhost:4000"
 
@@ -161,7 +176,7 @@ async def test_uses_the_configured_payload_url_when_set(monkeypatch):
 
     monkeypatch.setattr(staff_auth, "fetch_payload_user", fake_user)
 
-    await staff_auth.require_staff(authorization="Bearer abc")
+    await staff_auth.require_staff(token="abc")
 
     assert seen["url"] == "http://payload.internal:4000"
 
@@ -176,7 +191,7 @@ async def test_accepts_a_session_payload_recognizes(monkeypatch):
 
     monkeypatch.setattr(staff_auth, "fetch_payload_user", fake_user)
 
-    user = await staff_auth.require_staff(authorization="Bearer abc")
+    user = await staff_auth.require_staff(token="abc")
 
     assert user["email"] == "staff@example.com"
 
@@ -248,7 +263,7 @@ async def test_rejects_a_session_payload_does_not_recognize(monkeypatch):
     monkeypatch.setattr(staff_auth, "fetch_payload_user", fake_user)
 
     with pytest.raises(HTTPException) as excinfo:
-        await staff_auth.require_staff(authorization="Bearer abc")
+        await staff_auth.require_staff(token="abc")
 
     assert excinfo.value.status_code == 401
 
