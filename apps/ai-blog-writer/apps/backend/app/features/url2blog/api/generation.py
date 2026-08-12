@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
+from app.core.staff_auth import require_staff
 from app.shared.tone_profiles import resolve_tone_profile
 from app.shared.writer_models import resolve_writer_model
 
@@ -20,7 +21,7 @@ def get_pipeline_dependencies() -> PipelineDependencies:
     return PipelineDependencies()
 
 
-@router.post("/pipeline-v2")
+@router.post("/pipeline-v2", dependencies=[Depends(require_staff)])
 async def pipeline_v2(
     request: PipelineV2Request,
     dependencies: PipelineDependencies = Depends(get_pipeline_dependencies),
