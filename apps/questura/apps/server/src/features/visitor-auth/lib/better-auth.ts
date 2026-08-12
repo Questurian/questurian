@@ -7,11 +7,11 @@ import { Pool } from 'pg'
 import config from '@/payload.config'
 import { sendPasswordResetLinkEmail, sendVisitorEmailVerificationLinkEmail } from '@/emails'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
+import { normalizeEmail } from '@/shared/lib/normalize-email'
 import { redisSecondaryStorage } from './redis-secondary-storage'
-import { auditVisitorAuthSecurityEvent } from './security-audit'
-import { isStaffEmail, normalizeEmail } from './staff-email-guard'
 import { getVisitorPasswordError } from './visitor-password-guard'
 import { ensureVisitorProfileForAuthUser, splitDisplayName, updateVisitorProfileByAuthUserId } from './visitor-profile'
+import { rejectStaffEmailForVisitorAuth } from './visitor-staff-email-boundary'
 
 const databaseUrl = APP_CONFIG.database.uri
 
@@ -36,16 +36,7 @@ const googleProvider =
           redirectURI: `${APP_URLS.backend}/api/visitor-auth/callback/google`,
           mapProfileToUser: async (profile: { email?: string; email_verified?: boolean }) => {
             const email = normalizeEmail(profile.email)
-            if (await isStaffEmail(email)) {
-              auditVisitorAuthSecurityEvent({
-                type: 'visitor_auth_staff_email_blocked',
-                email,
-                path: '/callback/google',
-              })
-              throw new APIError('FORBIDDEN', {
-                message: 'Please use the staff login.',
-              })
-            }
+            await rejectStaffEmailForVisitorAuth({ path: '/callback/google', email })
 
             return {
               email,
@@ -189,24 +180,7 @@ export const visitorAuth = betterAuth({
         }
       }
 
-      if (
-        ctx.path === '/sign-up/email' ||
-        ctx.path === '/sign-in/social' ||
-        ctx.path === '/link-social' ||
-        ctx.path === '/change-email'
-      ) {
-        const email = normalizeEmail(ctx.path === '/change-email' ? ctx.body?.newEmail : ctx.body?.email)
-        if (email && (await isStaffEmail(email))) {
-          auditVisitorAuthSecurityEvent({
-            type: 'visitor_auth_staff_email_blocked',
-            email,
-            path: ctx.path,
-          })
-          throw new APIError('FORBIDDEN', {
-            message: 'Please use the staff login.',
-          })
-        }
-      }
+      await rejectStaffEmailForVisitorAuth({ path: ctx.path, body: ctx.body })
     }),
     after: createAuthMiddleware(async (ctx) => {
       if (!ctx.path.startsWith('/sign-up') && !ctx.path.startsWith('/callback')) {

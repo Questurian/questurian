@@ -252,6 +252,7 @@ _Avoid_: public auth, visitor auth
 - Payload `Users.role = "user"` is legacy and removed before launch.
 - `VisitorProfiles` is the Visitor profile collection.
 - Staff email addresses cannot become Visitor accounts.
+- Staff write paths reject email addresses already owned by Visitor accounts.
 - Staff email blocking uses both known staff-domain checks and Payload `Users` lookup.
 - Visitor auth flows avoid account-discovery responses except where a user has explicitly submitted a create/update action.
 - Visitor auth uses a single email-first entry flow: a visitor enters an email, then Questura determines whether to continue an existing Visitor account sign-in or create a new Visitor account.
