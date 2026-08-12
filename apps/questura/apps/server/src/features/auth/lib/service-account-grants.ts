@@ -37,7 +37,7 @@ const SERVICE_ACCOUNT_GRANTS: Record<string, ServiceAccountGrants> = {
   },
 }
 
-function serviceAccount(user: PayloadRequest['user']): ServiceAccount | null {
+function asServiceAccount(user: PayloadRequest['user']): ServiceAccount | null {
   if (!user || user.collection !== 'service-accounts') return null
   return user as ServiceAccount
 }
@@ -53,7 +53,7 @@ export function serviceAccountHasCollectionGrant(
   collection: CollectionSlug,
   operation: ServiceAccountCollectionOperation,
 ): boolean {
-  const account = serviceAccount(user)
+  const account = asServiceAccount(user)
   if (!account) return false
 
   return SERVICE_ACCOUNT_GRANTS[account.name]?.collections[collection]?.includes(operation) ?? false
@@ -63,7 +63,7 @@ export function serviceAccountHasCapability(
   user: PayloadRequest['user'],
   capability: ServiceAccountCapability,
 ): boolean {
-  const account = serviceAccount(user)
+  const account = asServiceAccount(user)
   if (!account) return false
 
   return SERVICE_ACCOUNT_GRANTS[account.name]?.capabilities.includes(capability) ?? false
