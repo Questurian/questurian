@@ -32,9 +32,12 @@ export async function checkSetPasswordRateLimit(
   let counter
   try {
     counter = await incrementCounter(ipKey, WINDOW_SECONDS)
-  } catch {
+  } catch (error) {
     // No usable counter backend: deny rather than leave a credential-setting
-    // route unbounded.
+    // route unbounded. Logged because the route renders this as an ordinary
+    // "too many attempts" message, so without a log a counter outage leaves no
+    // trace at all.
+    console.error('[visitor-auth] set-password rate limit unavailable; denying', error)
     return { allowed: false, retryAfterSeconds: WINDOW_SECONDS }
   }
 

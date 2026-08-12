@@ -29,14 +29,17 @@ const ALLOWED_ORIGIN = 'http://localhost:3000'
 function request({
   body = { newPassword: 'Str0ng!Passw0rd' },
   origin,
+  cookie,
   ip = '192.0.2.1',
 }: {
   body?: unknown
   origin?: string
+  cookie?: string
   ip?: string
 } = {}): NextRequest {
   const headers = new Headers({ 'x-forwarded-for': ip })
   if (origin) headers.set('origin', origin)
+  if (cookie) headers.set('cookie', cookie)
 
   return {
     headers,
@@ -92,7 +95,24 @@ describe('POST /api/account/set-password', () => {
       expect(setPassword).not.toHaveBeenCalled()
     })
 
-    it('allows a request that carries no Origin at all', async () => {
+    it('rejects the literal "null" origin a sandboxed iframe sends', async () => {
+      const response = await POST(request({ origin: 'null' }))
+
+      expect(response.status).toBe(403)
+      expect(setPassword).not.toHaveBeenCalled()
+    })
+
+    // Better Auth's own `validateOrigin` forbids a missing Origin whenever a
+    // Cookie is present; a browser always sends one on a POST, so an absent
+    // Origin alongside a session cookie is not a shape to trust.
+    it('rejects a cookie-bearing request with no Origin at all', async () => {
+      const response = await POST(request({ cookie: 'questura_visitor.session_token=abc' }))
+
+      expect(response.status).toBe(403)
+      expect(setPassword).not.toHaveBeenCalled()
+    })
+
+    it('allows a cookieless request with no Origin, which no browser produces', async () => {
       const response = await POST(request())
 
       expect(response.status).toBe(200)

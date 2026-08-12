@@ -16,12 +16,13 @@ import { getCorsHeaders, handleCorsOptions, isAllowedOrigin } from '@/shared/uti
  *
  * - `onRequestRateLimit`, hence `checkSetPasswordRateLimit` below.
  * - `originCheckMiddleware`, hence the explicit origin check below.
- * - the path-keyed `hooks.before` middleware. `setPassword` is a *pathless*
- *   endpoint (`createAuthEndpoint({...})` with no path string), so `ctx.path` is
- *   `undefined` inside the hook and `getVisitorPasswordError` never matched its
- *   `/set-password` entry. Strength is therefore enforced here, against the same
- *   `shared/lib/password-strength` rule, before delegating. Better Auth's own
- *   check is a length floor only.
+ * - the path-keyed `hooks.before` middleware — in effect. `setPassword` is a
+ *   *pathless* endpoint (`createAuthEndpoint({...})` with no path string), and
+ *   better-call resolves a middleware's path to `"/"` when the endpoint has
+ *   none, so `getVisitorPasswordError` is asked about `"/"` and never matched
+ *   its `/set-password` entry. Strength is therefore enforced here, against the
+ *   same `shared/lib/password-strength` rule, before delegating. Better Auth's
+ *   own check is a length floor only.
  *
  * Everything else stays Better Auth's: it requires a live session, and refuses
  * outright once a credential password exists, so this cannot overwrite one.
@@ -29,10 +30,14 @@ import { getCorsHeaders, handleCorsOptions, isAllowedOrigin } from '@/shared/uti
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
 
-  // The session cookie is SameSite=Lax, so a cross-site POST arrives without
-  // it. This closes the same-site-but-untrusted case the router would have.
+  // Better Auth's own `validateOrigin` treats a missing or literal-"null"
+  // Origin as forbidden whenever a Cookie is present, so match that rather than
+  // only rejecting a named-but-untrusted origin. (The session cookie is
+  // SameSite=Lax, so a genuinely cross-site POST arrives without it; this
+  // closes the same-site-but-untrusted case the router would have handled.)
   const origin = req.headers.get('origin')
-  if (origin && !isAllowedOrigin(origin)) {
+  const carriesCookie = Boolean(req.headers.get('cookie'))
+  if (carriesCookie ? !origin || !isAllowedOrigin(origin) : origin && !isAllowedOrigin(origin)) {
     return NextResponse.json({ error: 'Origin not allowed.' }, { status: 403, headers: corsHeaders })
   }
 
