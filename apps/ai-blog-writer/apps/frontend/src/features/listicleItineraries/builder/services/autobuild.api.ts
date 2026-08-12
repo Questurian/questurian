@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../../../shared/api/client/config'
+import { apiFetch } from '../../../../shared/api/client/apiFetch'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type { DayShellTemplate, ItineraryBlockType, ShellSlotDaypart } from '../../types'
 
@@ -80,7 +80,7 @@ export type GenerateItineraryParams = {
 
 /** Call the ABW backend's Itinerary Autobuild pipeline (slots only). */
 export async function generateItinerary(params: GenerateItineraryParams): Promise<AutobuildResponse> {
-  const response = await fetch(`${API_BASE_URL}/itineraries-pipeline/generate`, {
+  const response = await apiFetch('/itineraries-pipeline/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

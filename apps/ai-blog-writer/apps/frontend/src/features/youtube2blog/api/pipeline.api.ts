@@ -1,6 +1,7 @@
 import type { ResultResponse, StatusResponse, UploadResponse } from '@shared/types'
 import type { ToneProfile } from '../../../shared/api/ai/models'
-import { API_BASE_URL, FEATURE_PREFIX } from '../constants/api.constants'
+import { apiFetch } from '../../../shared/api/client/apiFetch'
+import { FEATURE_PREFIX } from '../constants/api.constants'
 import { STAGE_ORDER } from '../constants/pipeline.constants'
 import type { DebugResponse } from '../types/pipeline.types'
 import { resolveErrorMessage } from './request-error'
@@ -29,7 +30,7 @@ export async function startFromYoutubeUrl(
   writingModel?: string,
   toneId?: string,
 ): Promise<UploadResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/from-url`, {
+  const response = await apiFetch(`${FEATURE_PREFIX}/from-url`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -51,7 +52,7 @@ export async function startFromYoutubeUrl(
 }
 
 export async function fetchStatus(runId: string): Promise<StatusResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/status/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/status/${runId}`)
 
   if (!response.ok) {
     throw new Error('Status fetch failed')
@@ -61,7 +62,7 @@ export async function fetchStatus(runId: string): Promise<StatusResponse> {
 }
 
 export async function fetchToneProfiles(): Promise<ToneProfile[]> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/tones`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/tones`)
 
   if (!response.ok) {
     throw new Error('Tone profile fetch failed')
@@ -72,7 +73,7 @@ export async function fetchToneProfiles(): Promise<ToneProfile[]> {
 }
 
 export async function fetchResult(runId: string): Promise<ResultResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/result/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/result/${runId}`)
 
   if (!response.ok) {
     throw new Error('Result fetch failed')
@@ -81,15 +82,11 @@ export async function fetchResult(runId: string): Promise<ResultResponse> {
   return response.json()
 }
 
-export function resultDownloadUrl(runId: string): string {
-  return `${API_BASE_URL}${FEATURE_PREFIX}/result/${runId}?format=md`
-}
-
 export async function clearDatabase(): Promise<{
   message: string
   deleted_runs: number
 }> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/clear`, {
+  const response = await apiFetch(`${FEATURE_PREFIX}/clear`, {
     method: 'POST',
   })
 
@@ -101,7 +98,7 @@ export async function clearDatabase(): Promise<{
 }
 
 export async function fetchDebug(runId: string): Promise<DebugResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/debug/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/debug/${runId}`)
 
   if (!response.ok) {
     throw new Error('Debug fetch failed')

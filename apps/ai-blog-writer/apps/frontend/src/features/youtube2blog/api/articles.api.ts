@@ -1,9 +1,10 @@
-import { API_BASE_URL, FEATURE_PREFIX } from '../constants/api.constants'
+import { apiFetch } from '../../../shared/api/client/apiFetch'
+import { FEATURE_PREFIX } from '../constants/api.constants'
 import type { SavedArticle } from '../types/articles.types'
 import { resolveErrorMessage } from './request-error'
 
 export async function fetchArticles(): Promise<SavedArticle[]> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/articles`)
 
   if (!response.ok) {
     throw new Error('Failed to fetch articles')
@@ -13,7 +14,7 @@ export async function fetchArticles(): Promise<SavedArticle[]> {
 }
 
 export async function deleteArticle(runId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/articles/${runId}`, {
+  const response = await apiFetch(`${FEATURE_PREFIX}/articles/${runId}`, {
     method: 'DELETE',
   })
 

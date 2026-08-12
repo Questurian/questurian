@@ -1,8 +1,6 @@
 import { CLAUDE_MODELS_ENABLED } from '../../../shared/api/ai/models'
 import type { Prompt2BlogModelName, Prompt2BlogWriterModel } from '../types/pipeline.types'
 
-export { API_BASE_URL } from '../../../shared/api/client/config'
-
 export const FEATURE_PREFIX = '/prompt2blog'
 
 export const DEFAULT_PROMPT2BLOG_MODEL: Prompt2BlogModelName = 'gemini-2.5-flash-lite'

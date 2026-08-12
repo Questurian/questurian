@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../constants/prompt2blog.constants'
+import { apiFetch } from '../../../shared/api/client/apiFetch'
 import { parseError } from '../../../shared/api/errors/parse-error'
 import type {
   ArticleTypeGuidelines,
@@ -6,7 +6,7 @@ import type {
 } from '../types/article-types.types'
 
 export async function fetchArticleTypes(): Promise<ArticleTypeOption[]> {
-  const response = await fetch(`${API_BASE_URL}/article-types/name-definitions`)
+  const response = await apiFetch('/article-types/name-definitions')
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch article types')
@@ -18,7 +18,7 @@ export async function fetchArticleTypes(): Promise<ArticleTypeOption[]> {
 export async function fetchArticleTypeGuidelinesById(
   articleTypeId: number,
 ): Promise<ArticleTypeGuidelines> {
-  const response = await fetch(`${API_BASE_URL}/article-types/${articleTypeId}/guidelines`)
+  const response = await apiFetch(`/article-types/${articleTypeId}/guidelines`)
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch article guidelines')

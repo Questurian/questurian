@@ -1,8 +1,9 @@
 import type { ArticleType } from '@shared/types'
-import { API_BASE_URL, ARTICLE_TYPES_PREFIX } from '../constants/api.constants'
+import { apiFetch } from '../../../shared/api/client/apiFetch'
+import { ARTICLE_TYPES_PREFIX } from '../constants/api.constants'
 
 export async function fetchArticleTypes(): Promise<ArticleType[]> {
-  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}`)
+  const response = await apiFetch(ARTICLE_TYPES_PREFIX)
 
   if (!response.ok) {
     throw new Error('Failed to fetch article types')
@@ -12,7 +13,7 @@ export async function fetchArticleTypes(): Promise<ArticleType[]> {
 }
 
 export async function createArticleType(name: string, definition: string): Promise<ArticleType> {
-  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}`, {
+  const response = await apiFetch(ARTICLE_TYPES_PREFIX, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -32,7 +33,7 @@ export async function updateArticleType(
   name: string,
   definition: string,
 ): Promise<ArticleType> {
-  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}/${id}`, {
+  const response = await apiFetch(`${ARTICLE_TYPES_PREFIX}/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -48,7 +49,7 @@ export async function updateArticleType(
 }
 
 export async function deleteArticleType(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}${ARTICLE_TYPES_PREFIX}/${id}`, {
+  const response = await apiFetch(`${ARTICLE_TYPES_PREFIX}/${id}`, {
     method: 'DELETE',
   })
 

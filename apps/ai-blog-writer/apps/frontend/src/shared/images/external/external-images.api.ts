@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../api/client/config'
+import { apiFetch } from '../../api/client/apiFetch'
 import { parseErrorResponse } from '../../api/client/error-parser'
 import {
   buildExternalFallbackFileName,
@@ -35,8 +35,8 @@ export async function searchPexelsImages(
     queryParams.append('orientation', params.orientation)
   }
 
-  const response = await fetch(
-    `${API_BASE_URL}/images/pexels/search?${queryParams.toString()}`,
+  const response = await apiFetch(
+    `/images/pexels/search?${queryParams.toString()}`,
   )
 
   if (!response.ok) {
@@ -68,8 +68,8 @@ export async function searchUnsplashImages(
     queryParams.append('orientation', params.orientation)
   }
 
-  const response = await fetch(
-    `${API_BASE_URL}/images/unsplash/search?${queryParams.toString()}`,
+  const response = await apiFetch(
+    `/images/unsplash/search?${queryParams.toString()}`,
   )
 
   if (!response.ok) {
@@ -100,7 +100,7 @@ export async function importExternalImage(
     formData.append('photo_id', String(input.photoId))
   }
 
-  const response = await fetch(`${API_BASE_URL}/images/import-external`, {
+  const response = await apiFetch('/images/import-external', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -132,8 +132,8 @@ export async function fetchExternalImageSource(
     queryParams.append('photo_id', String(input.photoId))
   }
 
-  const response = await fetch(
-    `${API_BASE_URL}/images/external-source?${queryParams.toString()}`,
+  const response = await apiFetch(
+    `/images/external-source?${queryParams.toString()}`,
     {
       method: 'GET',
       headers: {

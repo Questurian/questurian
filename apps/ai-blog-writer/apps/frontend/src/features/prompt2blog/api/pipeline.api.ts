@@ -1,4 +1,5 @@
-import { API_BASE_URL, FEATURE_PREFIX } from '../constants/prompt2blog.constants'
+import { apiFetch } from '../../../shared/api/client/apiFetch'
+import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
 import { parseError } from '../../../shared/api/errors/parse-error'
 import type {
   Prompt2BlogDebugResponse,
@@ -38,7 +39,7 @@ export function normalizePrompt2BlogStatusResponse(
 export async function startPrompt2BlogRun(
   payload: Prompt2BlogRunRequest,
 ): Promise<Prompt2BlogRunResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/run`, {
+  const response = await apiFetch(`${FEATURE_PREFIX}/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -52,7 +53,7 @@ export async function startPrompt2BlogRun(
 }
 
 export async function getPrompt2BlogInputOptions(): Promise<Prompt2BlogInputOptionsResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/input-options`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/input-options`)
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch Prompt2Blog input options')
@@ -64,8 +65,8 @@ export async function getPrompt2BlogInputOptions(): Promise<Prompt2BlogInputOpti
 export async function getPrompt2BlogGuidelinePreview(
   articleTypeId: number,
 ): Promise<Prompt2BlogGuidelinePreviewResponse> {
-  const response = await fetch(
-    `${API_BASE_URL}${FEATURE_PREFIX}/article-types/${articleTypeId}/guideline-preview`,
+  const response = await apiFetch(
+    `${FEATURE_PREFIX}/article-types/${articleTypeId}/guideline-preview`,
   )
 
   if (!response.ok) {
@@ -76,7 +77,7 @@ export async function getPrompt2BlogGuidelinePreview(
 }
 
 export async function getPrompt2BlogStatus(runId: string): Promise<Prompt2BlogStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/status/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/status/${runId}`)
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch Prompt2Blog run status')
@@ -86,7 +87,7 @@ export async function getPrompt2BlogStatus(runId: string): Promise<Prompt2BlogSt
 }
 
 export async function getPrompt2BlogResult(runId: string): Promise<Prompt2BlogResultResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/result/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/result/${runId}`)
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch Prompt2Blog run result')
@@ -107,7 +108,7 @@ export async function fetchResult(runId: string): Promise<Prompt2BlogResultRespo
 }
 
 export async function getPrompt2BlogDebug(runId: string): Promise<Prompt2BlogDebugResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/debug/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/debug/${runId}`)
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch Prompt2Blog debug output')

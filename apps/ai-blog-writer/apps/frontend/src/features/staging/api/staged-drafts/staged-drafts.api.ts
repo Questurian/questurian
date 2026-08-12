@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../../../shared/api/client/config'
+import { apiFetch } from '../../../../shared/api/client/apiFetch'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type { StagedArticle } from '../../types'
 
@@ -9,7 +9,7 @@ import type { StagedArticle } from '../../types'
  * previous localStorage-only storage that made links non-portable.
  */
 
-const STAGED_DRAFTS_URL = `${API_BASE_URL}/staged-drafts`
+const STAGED_DRAFTS_URL = '/staged-drafts'
 
 function draftsEndpoint(storageKey: string, draftId?: string): string {
   const base = draftId
@@ -38,7 +38,7 @@ export type PutStagedDraftOptions = {
 }
 
 export async function fetchStagedDrafts(storageKey: string): Promise<StagedArticle[]> {
-  const response = await fetch(draftsEndpoint(storageKey))
+  const response = await apiFetch(draftsEndpoint(storageKey))
   if (!response.ok) {
     const message = await parseErrorResponse(response, `Failed to load staged drafts: ${response.status}`, { detail: 'Unknown error' })
     throw new Error(message)
@@ -51,7 +51,7 @@ export async function fetchStagedDraft(
   storageKey: string,
   draftId: string,
 ): Promise<StagedArticle | null> {
-  const response = await fetch(draftsEndpoint(storageKey, draftId))
+  const response = await apiFetch(draftsEndpoint(storageKey, draftId))
   if (response.status === 404) {
     return null
   }
@@ -71,7 +71,7 @@ export async function putStagedDraft(
   if (options?.expectedUpdatedAt) {
     endpoint += `&expectedUpdatedAt=${encodeURIComponent(options.expectedUpdatedAt)}`
   }
-  const response = await fetch(endpoint, {
+  const response = await apiFetch(endpoint, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(draft),
@@ -88,7 +88,7 @@ export async function putStagedDraft(
 }
 
 export async function deleteStagedDraft(storageKey: string, draftId: string): Promise<void> {
-  const response = await fetch(draftsEndpoint(storageKey, draftId), { method: 'DELETE' })
+  const response = await apiFetch(draftsEndpoint(storageKey, draftId), { method: 'DELETE' })
   if (!response.ok && response.status !== 404) {
     const message = await parseErrorResponse(response, `Failed to delete staged draft: ${response.status}`, { detail: 'Unknown error' })
     throw new Error(message)
@@ -96,7 +96,7 @@ export async function deleteStagedDraft(storageKey: string, draftId: string): Pr
 }
 
 export async function clearStagedDrafts(storageKey: string): Promise<void> {
-  const response = await fetch(draftsEndpoint(storageKey), { method: 'DELETE' })
+  const response = await apiFetch(draftsEndpoint(storageKey), { method: 'DELETE' })
   if (!response.ok) {
     const message = await parseErrorResponse(response, `Failed to clear staged drafts: ${response.status}`, { detail: 'Unknown error' })
     throw new Error(message)

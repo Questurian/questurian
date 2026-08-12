@@ -1,4 +1,5 @@
-import { API_BASE_URL, PAYLOAD_API_URL } from '../../../../shared/api/client/config'
+import { PAYLOAD_API_URL } from '../../../../shared/api/client/config'
+import { apiFetch } from '../../../../shared/api/client/apiFetch'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type { CreateArticlePayload, PayloadArticleDoc } from './articles.types'
 
@@ -117,8 +118,8 @@ export async function markArticleSynced(
   runId: string,
   payloadArticleId: number,
 ): Promise<{ message: string; run_id: string; payload_article_id: number }> {
-  const response = await fetch(
-    `${API_BASE_URL}${featurePrefix}/articles/${runId}/sync`,
+  const response = await apiFetch(
+    `${featurePrefix}/articles/${runId}/sync`,
     {
       method: 'POST',
       headers: {
@@ -144,7 +145,7 @@ export async function getArticleSyncStatus(
   payload_article_id: number | null
   synced_at: string | null
 }> {
-  const response = await fetch(`${API_BASE_URL}${featurePrefix}/articles/${runId}/sync`)
+  const response = await apiFetch(`${featurePrefix}/articles/${runId}/sync`)
 
   if (!response.ok) {
     throw new Error(`Failed to get sync status: ${response.status}`)

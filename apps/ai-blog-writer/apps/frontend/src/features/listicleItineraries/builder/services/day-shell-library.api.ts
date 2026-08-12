@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../../../shared/api/client/config'
+import { apiFetch } from '../../../../shared/api/client/apiFetch'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 import type { DayShellSlot, DayShellTemplate } from '../../types'
 
@@ -70,14 +70,14 @@ async function requireOk(response: Response, fallback: string): Promise<void> {
 
 /** List the Day Shell Library (Custom Day Shells; built-ins are frontend constants). */
 export async function listLibraryDayShells(): Promise<DayShellTemplate[]> {
-  const response = await fetch(`${API_BASE_URL}/itineraries-pipeline/day-shells`)
+  const response = await apiFetch('/itineraries-pipeline/day-shells')
   await requireOk(response, 'Failed to load the day shell library')
   const payload: { shells: ApiDayShell[] } = await response.json()
   return payload.shells.map(fromApiShell)
 }
 
 export async function createLibraryDayShell(shell: DayShellTemplate): Promise<DayShellTemplate> {
-  const response = await fetch(`${API_BASE_URL}/itineraries-pipeline/day-shells`, {
+  const response = await apiFetch('/itineraries-pipeline/day-shells', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toApiShell(shell)),
@@ -87,7 +87,7 @@ export async function createLibraryDayShell(shell: DayShellTemplate): Promise<Da
 }
 
 export async function updateLibraryDayShell(shell: DayShellTemplate): Promise<DayShellTemplate> {
-  const response = await fetch(`${API_BASE_URL}/itineraries-pipeline/day-shells/${encodeURIComponent(shell.id)}`, {
+  const response = await apiFetch(`/itineraries-pipeline/day-shells/${encodeURIComponent(shell.id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(toApiShell(shell)),
@@ -97,7 +97,7 @@ export async function updateLibraryDayShell(shell: DayShellTemplate): Promise<Da
 }
 
 export async function deleteLibraryDayShell(shellId: string): Promise<void> {
-  const response = await fetch(`${API_BASE_URL}/itineraries-pipeline/day-shells/${encodeURIComponent(shellId)}`, {
+  const response = await apiFetch(`/itineraries-pipeline/day-shells/${encodeURIComponent(shellId)}`, {
     method: 'DELETE',
   })
   await requireOk(response, 'Failed to delete the layout')

@@ -1,4 +1,5 @@
-import { API_BASE_URL, FEATURE_PREFIX } from '../constants/api.constants'
+import { apiFetch } from '../../../shared/api/client/apiFetch'
+import { FEATURE_PREFIX } from '../constants/api.constants'
 import type {
   ExpandResultResponse,
   ExpandStatusResponse,
@@ -12,7 +13,7 @@ export async function detectArticleListicle(
   title: string,
   model?: string,
 ): Promise<ListicleDetectionResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/${runId}/expand/detect`, {
+  const response = await apiFetch(`${FEATURE_PREFIX}/${runId}/expand/detect`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ article, title, ...(model ? { model } : {}) }),
@@ -33,7 +34,7 @@ export async function startArticleExpansion(
   model?: string,
   rewriteItems?: string[],
 ): Promise<{ expand_job_id: string }> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/${runId}/expand`, {
+  const response = await apiFetch(`${FEATURE_PREFIX}/${runId}/expand`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -53,7 +54,7 @@ export async function startArticleExpansion(
 }
 
 export async function fetchExpandStatus(expandJobId: string): Promise<ExpandStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/expand/${expandJobId}/status`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/expand/${expandJobId}/status`)
 
   if (!response.ok) {
     throw new Error('Expansion status fetch failed')
@@ -63,7 +64,7 @@ export async function fetchExpandStatus(expandJobId: string): Promise<ExpandStat
 }
 
 export async function fetchExpandResult(expandJobId: string): Promise<ExpandResultResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/expand/${expandJobId}/result`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/expand/${expandJobId}/result`)
 
   if (!response.ok) {
     throw new Error('Expansion result fetch failed')
