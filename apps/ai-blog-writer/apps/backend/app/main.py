@@ -103,12 +103,37 @@ def _read_bool_env(key: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def resolve_cors_origins(api_key: str, raw_origins: str) -> list[str]:
+    """Resolve the CORS allow-list, refusing a wildcard on deployed instances.
+
+    A configured ABW_API_KEY is the signal that this instance is reachable
+    beyond localhost. Wildcard CORS there is incoherent: it forces
+    `allow_credentials=False`, and the X-API-Key header makes every request
+    preflighted, so any page could probe the API. Fail fast at startup
+    instead of serving an open origin policy.
+
+    With no key configured (local development) the open default is kept.
+    """
+    origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
+    if not api_key.strip():
+        return origins or ["*"]
+
+    if not origins or "*" in origins:
+        raise ValueError(
+            "ABW_ALLOWED_ORIGINS must list explicit origins when ABW_API_KEY "
+            "is set; wildcard CORS is not allowed on a deployed instance."
+        )
+
+    return origins
+
+
 def _allowed_origins() -> list[str]:
     """Comma-separated ABW_ALLOWED_ORIGINS, or wildcard when unset."""
-    raw = os.getenv("ABW_ALLOWED_ORIGINS", "").strip()
-    if not raw:
-        return ["*"]
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return resolve_cors_origins(
+        api_key=os.getenv("ABW_API_KEY", ""),
+        raw_origins=os.getenv("ABW_ALLOWED_ORIGINS", ""),
+    )
 
 
 @app.middleware("http")
