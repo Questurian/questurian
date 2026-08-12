@@ -1,20 +1,31 @@
 import { PAYLOAD_API_URL } from './config'
 
-export async function payloadRequest(endpoint: string, token?: string) {
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
+/**
+ * Requests to Payload.
+ *
+ * The caller is identified by the httpOnly `payload-token` cookie, which
+ * `credentials: 'include'` sends and which no script can read. These used to
+ * take a `token` and set `Authorization: Bearer`, which meant a privileged
+ * Staff JWT had to be readable by JavaScript to reach Payload at all.
+ *
+ * Passing a token here would be worse than redundant: `extractJWT` returns the
+ * *first* credential it finds in `jwtOrder` (JWT, Bearer, cookie) and verifies
+ * only that one, so a stale header shadows a perfectly good cookie and fails
+ * the request.
+ *
+ * Payload gates *cookie* auth on its `csrf` allowlist, not its `cors` list —
+ * this app's origin has to appear in `CORS_ALLOWED_ORIGINS` on the server, or
+ * these come back 401 with nothing else to explain it.
+ */
+export async function payloadRequest(endpoint: string) {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     method: 'GET',
     mode: 'cors',
     cache: 'no-store',
     credentials: 'include',
-    headers,
+    headers: {
+      Accept: 'application/json',
+    },
   })
 
   if (!response.ok) {
@@ -28,22 +39,15 @@ export async function payloadMutation(
   endpoint: string,
   method: 'POST' | 'PATCH' | 'DELETE',
   body?: unknown,
-  token?: string,
 ) {
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json',
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     method,
     mode: 'cors',
     credentials: 'include',
-    headers,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 

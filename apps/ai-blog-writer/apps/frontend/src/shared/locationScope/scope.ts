@@ -69,7 +69,6 @@ async function payloadRequest<T>(endpoint: string, token: string): Promise<T> {
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
   })
 

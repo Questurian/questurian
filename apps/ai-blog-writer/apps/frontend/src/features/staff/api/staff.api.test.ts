@@ -39,7 +39,7 @@ function jsonResponse(body: unknown, ok = true, status = 200) {
 describe('staff.api', () => {
   // depth=0: the account carries no relationships worth populating now that
   // authorship (and its avatar) live on the author record.
-  it('fetches the staff user with auth header', async () => {
+  it('fetches the staff user with the session cookie, not a header', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ id: 3, email: 'w@questurian.com', role: 'writer' }))
 
     const user = await fetchStaffUser(3, 'token-1')
@@ -47,7 +47,8 @@ describe('staff.api', () => {
     expect(user.id).toBe(3)
     const [url, init] = fetchMock.mock.calls[0]
     expect(String(url)).toContain('/api/users/3?depth=0')
-    expect(init.headers.Authorization).toBe('Bearer token-1')
+    expect(new Headers(init.headers).get('Authorization')).toBeNull()
+    expect(init.credentials).toBe('include')
   })
 
   it('updates the staff user and unwraps the doc', async () => {
@@ -122,7 +123,8 @@ describe('staff.api', () => {
     expect(String(url)).toContain('/api/media-assets')
     expect(init.method).toBe('POST')
     expect(init.body).toBeInstanceOf(FormData)
-    expect(init.headers.Authorization).toBe('Bearer token-1')
+    expect(new Headers(init.headers).get('Authorization')).toBeNull()
+    expect(init.credentials).toBe('include')
   })
 
   it('surfaces upload failures with status and body', async () => {
@@ -173,10 +175,10 @@ describe('staff.api', () => {
     const [url, init] = fetchMock.mock.calls[0]
     expect(String(url)).toContain('/api/users/forgot-password')
     expect(JSON.parse(init.body)).toEqual({ email: 'new@questurian.com' })
-    expect(init.headers.Authorization).toBeUndefined()
+    expect(new Headers(init.headers).get('Authorization')).toBeNull()
   })
 
-  it('fetches recent email logs newest-first with auth', async () => {
+  it('fetches recent email logs newest-first on the session cookie', async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({
         docs: [
@@ -197,7 +199,8 @@ describe('staff.api', () => {
     expect(logs[0].emailType).toBe('password-set-link')
     const [url, init] = fetchMock.mock.calls[0]
     expect(String(url)).toContain('/api/email-logs?limit=50&sort=-createdAt')
-    expect(init.headers.Authorization).toBe('Bearer token-1')
+    expect(new Headers(init.headers).get('Authorization')).toBeNull()
+    expect(init.credentials).toBe('include')
   })
 
   it('returns an empty log list when the collection has no docs', async () => {

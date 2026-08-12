@@ -20,7 +20,6 @@ async function payloadRequest<T>(endpoint: string, token: string, init?: Request
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
       ...(init?.headers || {}),
     },
   })

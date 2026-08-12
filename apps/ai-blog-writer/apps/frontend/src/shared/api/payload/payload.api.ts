@@ -21,7 +21,7 @@ export async function fetchLocations(
     const queryParams = new URLSearchParams()
     queryParams.append('limit', String(limit))
     queryParams.append('page', String(params.page))
-    return payloadRequest(`/api/locations?${queryParams.toString()}`, token)
+    return payloadRequest(`/api/locations?${queryParams.toString()}`)
   }
 
   const allDocs: Location[] = []
@@ -36,7 +36,6 @@ export async function fetchLocations(
 
     const response = (await payloadRequest(
       `/api/locations?${queryParams.toString()}`,
-      token,
     )) as { docs: Location[]; totalDocs: number; totalPages: number }
 
     allDocs.push(...(response.docs || []))
@@ -55,7 +54,7 @@ export async function fetchArticleCategories(
   const queryParams = new URLSearchParams()
   queryParams.append('limit', String(params?.limit || 100))
   if (params?.status) queryParams.append('where[status][equals]', params.status)
-  return payloadRequest(`/api/article-categories?${queryParams.toString()}`, token)
+  return payloadRequest(`/api/article-categories?${queryParams.toString()}`)
 }
 
 export async function fetchArticleTags(
@@ -65,7 +64,7 @@ export async function fetchArticleTags(
   const queryParams = new URLSearchParams()
   queryParams.append('limit', String(params?.limit || 100))
   if (params?.status) queryParams.append('where[status][equals]', params.status)
-  return payloadRequest(`/api/article-tags?${queryParams.toString()}`, token)
+  return payloadRequest(`/api/article-tags?${queryParams.toString()}`)
 }
 
 export async function fetchMediaAssets(
@@ -105,7 +104,7 @@ export async function fetchMediaAssets(
     }
     return queryParams.toString()
   }
-  return payloadRequest(`/api/media-assets?${buildQuery(params?.page || 1)}`, token)
+  return payloadRequest(`/api/media-assets?${buildQuery(params?.page || 1)}`)
 }
 
 export async function fetchMediaSets(
@@ -138,7 +137,7 @@ export async function fetchMediaSets(
     queryParams.append('where[title][like]', params.search)
   }
 
-  return payloadRequest(`/api/media-sets?${queryParams.toString()}`, token)
+  return payloadRequest(`/api/media-sets?${queryParams.toString()}`)
 }
 
 export async function fetchAuditMediaSets(
@@ -156,7 +155,7 @@ export async function fetchAuditMediaSets(
   queryParams.append('where[or][2][location][exists]', 'false')
   queryParams.append('where[or][3][title][exists]', 'false')
 
-  return payloadRequest(`/api/media-sets?${queryParams.toString()}`, token)
+  return payloadRequest(`/api/media-sets?${queryParams.toString()}`)
 }
 
 export async function fetchOrphanMediaAssets(
@@ -170,7 +169,7 @@ export async function fetchOrphanMediaAssets(
   queryParams.append('sort', '-createdAt')
   queryParams.append('where[mediaSet][exists]', 'false')
 
-  return payloadRequest(`/api/media-assets?${queryParams.toString()}`, token)
+  return payloadRequest(`/api/media-assets?${queryParams.toString()}`)
 }
 
 export async function updateMediaSet(
@@ -178,7 +177,7 @@ export async function updateMediaSet(
   patch: MediaSetPatch,
   token?: string,
 ): Promise<{ doc: MediaSet }> {
-  return payloadMutation(`/api/media-sets/${id}`, 'PATCH', patch, token)
+  return payloadMutation(`/api/media-sets/${id}`, 'PATCH', patch)
 }
 
 export async function updateMediaAsset(
@@ -186,5 +185,5 @@ export async function updateMediaAsset(
   patch: Partial<Pick<MediaAsset, 'alt_text' | 'photographer_credit' | 'location' | 'location_finalized' | 'tags'>>,
   token?: string,
 ): Promise<{ doc: MediaAsset }> {
-  return payloadMutation(`/api/media-assets/${id}`, 'PATCH', patch, token)
+  return payloadMutation(`/api/media-assets/${id}`, 'PATCH', patch)
 }
