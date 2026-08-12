@@ -9,6 +9,26 @@ from fastapi import HTTPException
 def _clear_flag(monkeypatch):
     monkeypatch.delenv(staff_auth.STAFF_AUTH_FLAG, raising=False)
     monkeypatch.setenv("PAYLOAD_API_URL", "http://payload.test")
+    # `import app.main` runs _load_local_env_file(), which setdefaults whatever
+    # is in apps/backend/.env. A key there would make require_api_key short
+    # circuit with 401 before routing, so the app-level tests below would pass
+    # for the wrong reason without ever reaching require_staff.
+    monkeypatch.delenv("ABW_API_KEY", raising=False)
+
+
+@pytest.fixture
+def isolated_db(tmp_path, monkeypatch):
+    """Point the database at tmp_path.
+
+    Routes exercised through the real app run their real handlers, and some of
+    them delete rows. Without this the suite clears the developer's own
+    pipeline.db. Mirrors the isolation in test_database_concurrency.py.
+    """
+    import app.core.database as database
+
+    monkeypatch.setattr(database, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(database, "DB_PATH", tmp_path / "pipeline.db")
+    return tmp_path / "pipeline.db"
 
 
 def test_disabled_by_default():
@@ -72,15 +92,39 @@ async def test_rejects_non_bearer_scheme_when_enabled(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_refuses_when_enabled_but_payload_url_missing(monkeypatch):
-    """Enforcement demanded but impossible must refuse, never silently serve."""
+async def test_falls_back_to_the_shared_payload_url_default(monkeypatch):
+    """Resolution must match every other Payload caller, so a deployment that
+    relies on the localhost default keeps working here too."""
     monkeypatch.setenv(staff_auth.STAFF_AUTH_FLAG, "true")
     monkeypatch.delenv("PAYLOAD_API_URL", raising=False)
+    seen = {}
 
-    with pytest.raises(HTTPException) as excinfo:
-        await staff_auth.require_staff(authorization="Bearer abc")
+    async def fake_user(token, url):
+        seen["url"] = url
+        return {"id": 1}
 
-    assert excinfo.value.status_code == 503
+    monkeypatch.setattr(staff_auth, "fetch_payload_user", fake_user)
+
+    await staff_auth.require_staff(authorization="Bearer abc")
+
+    assert seen["url"] == "http://localhost:4000"
+
+
+@pytest.mark.asyncio
+async def test_uses_the_configured_payload_url_when_set(monkeypatch):
+    monkeypatch.setenv(staff_auth.STAFF_AUTH_FLAG, "true")
+    monkeypatch.setenv("PAYLOAD_API_URL", "http://payload.internal:4000")
+    seen = {}
+
+    async def fake_user(token, url):
+        seen["url"] = url
+        return {"id": 1}
+
+    monkeypatch.setattr(staff_auth, "fetch_payload_user", fake_user)
+
+    await staff_auth.require_staff(authorization="Bearer abc")
+
+    assert seen["url"] == "http://payload.internal:4000"
 
 
 @pytest.mark.asyncio
@@ -176,8 +220,11 @@ async def test_guarded_route_rejects_anonymous_requests_when_enabled(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_guarded_route_is_open_when_flag_is_off(monkeypatch):
-    """The default must not change existing behavior."""
+async def test_guarded_route_is_open_when_flag_is_off(monkeypatch, isolated_db):
+    """The default must not change existing behavior.
+
+    This one reaches the real handler, which deletes rows — hence isolated_db.
+    """
     monkeypatch.delenv(staff_auth.STAFF_AUTH_FLAG, raising=False)
 
     async with _app_client() as client:

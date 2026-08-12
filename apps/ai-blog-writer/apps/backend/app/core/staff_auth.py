@@ -19,6 +19,8 @@ from typing import Any, Optional
 import httpx
 from fastapi import Header, HTTPException
 
+from app.features.images.payload_config import _resolve_payload_api_url
+
 logger = logging.getLogger(__name__)
 
 STAFF_AUTH_FLAG = "ABW_REQUIRE_STAFF_AUTH"
@@ -95,21 +97,13 @@ async def require_staff(
             detail="Authorization header with a Bearer token is required",
         )
 
-    payload_api_url = os.getenv("PAYLOAD_API_URL", "").strip()
-    if not payload_api_url:
-        # Enforcement was demanded but cannot be performed. Refusing is the
-        # only safe reading: the alternative silently serves the very routes
-        # the operator asked to protect.
-        logger.error(
-            "%s is enabled but PAYLOAD_API_URL is not set; refusing the request",
-            STAFF_AUTH_FLAG,
-        )
-        raise HTTPException(
-            status_code=503,
-            detail="Session verification is misconfigured",
-        )
-
-    user = await fetch_payload_user(token, payload_api_url)
+    # Resolve through the same helper every other Payload caller uses, so a
+    # deployment relying on its localhost default (image upload, media sets
+    # and alt-text all work that way) does not start failing here while the
+    # rest of the Payload integration keeps working. The helper always yields
+    # a URL, so an unreachable Payload surfaces as 503 from the call below
+    # rather than as a separate "misconfigured" branch.
+    user = await fetch_payload_user(token, _resolve_payload_api_url())
     if user is None:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
 
