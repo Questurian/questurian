@@ -1,7 +1,7 @@
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
-import { normalizeEmail } from './staff-email-guard'
+import { normalizeEmail } from '@/shared/lib/normalize-email'
 
 type BetterAuthUser = {
   id: string

@@ -14,7 +14,8 @@ vi.mock('@/payload.config', () => ({
   default: {},
 }))
 
-import { isStaffEmail, normalizeEmail } from './staff-email-guard'
+import { normalizeEmail } from '@/shared/lib/normalize-email'
+import { isStaffEmail } from './staff-email-guard'
 
 describe('staff email guard', () => {
   beforeEach(() => {

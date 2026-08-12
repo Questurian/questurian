@@ -1,12 +1,9 @@
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { normalizeEmail } from '@/shared/lib/normalize-email'
 
 const STAFF_EMAIL_DOMAIN = '@questurian.com'
-
-export function normalizeEmail(email: unknown): string {
-  return typeof email === 'string' ? email.trim().toLowerCase() : ''
-}
 
 /**
  * Whether an address belongs to Staff, and is therefore barred from Visitor

@@ -1,6 +1,6 @@
 import { findVisitorAccountByEmail } from './account-query'
 import type { AuthProvider, VisitorAccountLookup } from './account-query'
-import { normalizeEmail } from './staff-email-guard'
+import { normalizeEmail } from '@/shared/lib/normalize-email'
 
 export type LegacyAccountCheckResult = {
   exists: boolean

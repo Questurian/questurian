@@ -32,6 +32,8 @@ BetterAuth launch parity includes public email/password signup and login, Google
 
 Staff email blocking uses both a known staff-domain fast path and a Payload `Users` lookup. The domain check handles obvious staff attempts early; the Payload lookup protects staff identities using custom domains, contractor addresses, or future non-`@questurian.com` emails.
 
+Application guards check email ownership in both directions. Visitor signup, social sign-in/linking, and email changes refuse addresses owned by Staff; Staff creation and changed Staff emails refuse addresses already owned by BetterAuth Visitor accounts. Email/password sign-in remains entirely inside BetterAuth's credential verifier so Staff ownership cannot be inferred from response shape or timing. Unchanged Staff-email writes skip the Visitor lookup so a legacy collision does not block unrelated account maintenance. Disabled Staff identities continue to reserve their addresses. These checks provide early, useful errors, but do not close a simultaneous cross-surface creation race. Phase 4 remains incomplete until a following database constraint makes normalized email ownership atomic.
+
 Visitor account linking requires matching provider and email/password email addresses. Different-email linking is not allowed because it creates ambiguous ownership and recovery boundaries.
 
 A Visitor must explicitly unlink Google before changing their email address. Email change is blocked while Google remains linked so a provider identity cannot silently diverge from the Visitor account email.
