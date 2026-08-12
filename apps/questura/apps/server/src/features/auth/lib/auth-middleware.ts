@@ -3,8 +3,10 @@ import { getPayload } from 'payload'
 
 import config from '@/payload.config'
 import type { AuthMiddlewareOptions, AuthResult } from '../types'
-import type { User } from '@/payload-types'
+import type { ServiceAccount, User } from '@/payload-types'
 import { isDisabledStaff } from './staff-status'
+import { serviceAccountHasCapability } from './service-account-grants'
+import { staffUser } from './staff-user'
 
 function isStaffRole(role: User['role']): role is 'admin' | 'editor' | 'writer' {
   return role === 'admin' || role === 'editor' || role === 'writer'
@@ -21,7 +23,7 @@ export async function authenticateRequest(
   try {
     const payload = await getPayload({ config })
     const authResult = await payload.auth({ headers: req.headers })
-    const user = authResult.user as User | null
+    const user = authResult.user as User | ServiceAccount | null
 
     if (!user) {
       if (options.requireAuth) {
@@ -35,7 +37,23 @@ export async function authenticateRequest(
       return { user: null, error: null, status: 200 }
     }
 
-    if (!isStaffRole(user.role)) {
+    if (user.collection === 'service-accounts') {
+      if (
+        options.serviceAccountCapability &&
+        serviceAccountHasCapability(user, options.serviceAccountCapability)
+      ) {
+        return { user, error: null, status: 200 }
+      }
+
+      return {
+        user: null,
+        error: 'Service account access denied',
+        status: 403,
+      }
+    }
+
+    const staff = staffUser(user)
+    if (!staff || !isStaffRole(staff.role)) {
       return {
         user: null,
         error: 'Staff account required',
@@ -47,7 +65,7 @@ export async function authenticateRequest(
     // (ADR-0007). Session revocation already denies the token, so reaching here
     // means the row was disabled without going through the collection —
     // refuse anyway rather than trusting one layer.
-    if (isDisabledStaff(user)) {
+    if (isDisabledStaff(staff)) {
       return {
         user: null,
         error: 'This account has been disabled',
@@ -55,7 +73,7 @@ export async function authenticateRequest(
       }
     }
 
-    if (options.allowedRoles?.length && !options.allowedRoles.includes(user.role)) {
+    if (options.allowedRoles?.length && !options.allowedRoles.includes(staff.role)) {
       return {
         user: null,
         error: `Access denied. Required roles: ${options.allowedRoles.join(', ')}`,
@@ -64,7 +82,7 @@ export async function authenticateRequest(
     }
 
     return {
-      user,
+      user: staff,
       error: null,
       status: 200,
     }

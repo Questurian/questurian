@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
     const authResult = await authenticateRequest(req, {
       requireAuth: true,
       allowedRoles: ['admin', 'editor', 'writer'],
+      serviceAccountCapability: 'media-sets:from-source',
     })
     if (authResult.error) {
       return NextResponse.json(
