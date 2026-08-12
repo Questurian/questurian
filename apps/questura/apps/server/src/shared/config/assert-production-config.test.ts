@@ -13,6 +13,7 @@ const VALID_PRODUCTION_ENV = {
   NEXT_PUBLIC_APP_URL: 'https://questurian.com',
   BACKEND_URL_LOCAL: 'https://api.questurian.com',
   CORS_ALLOWED_ORIGINS: 'https://questurian.com',
+  REDIS_URL: 'redis://cache.internal:6379',
 }
 
 describe('production config assertion', () => {
@@ -21,6 +22,7 @@ describe('production config assertion', () => {
     vi.stubEnv('NEXT_PUBLIC_FRONTEND_URL', '')
     vi.stubEnv('BACKEND_URL_LOCAL', '')
     vi.stubEnv('CORS_ALLOWED_ORIGINS', '')
+    vi.stubEnv('REDIS_URL', '')
   })
 
   afterEach(() => {
@@ -85,6 +87,15 @@ describe('production config assertion', () => {
     })
 
     expect(collectProductionConfigProblems().join('\n')).toContain('No CORS origins configured')
+  })
+
+  it('rejects a production boot with no shared rate-limit backend', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      REDIS_URL: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('REDIS_URL is not set')
   })
 
   it('reports every problem at once rather than one per boot', async () => {

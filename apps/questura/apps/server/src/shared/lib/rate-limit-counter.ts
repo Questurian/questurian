@@ -6,14 +6,35 @@ import { redisSecondaryStorage } from '@/features/visitor-auth/lib/redis-seconda
 /**
  * The fixed-window counter shared by every rate limiter in the app.
  *
- * Redis-backed when `REDIS_URL` is configured, with an in-memory fallback
- * otherwise. The fallback is per-process: with several instances and no Redis
- * the effective limit multiplies by instance count, so production is expected
- * to configure Redis (Better Auth already refuses to boot in production
- * without it).
+ * Redis-backed when `REDIS_URL` is configured. Without it the counter falls back
+ * to per-process memory, which is only ever correct for a single process: with
+ * several instances the effective limit multiplies by instance count, so ten
+ * Staff logins a minute becomes ten *per instance*. That fallback is therefore
+ * barred from production — `incrementCounter` throws rather than silently
+ * granting a larger budget, and `assertProductionConfig` catches the missing
+ * variable at boot so the throw is a backstop rather than the first symptom.
+ *
+ * Better Auth's own limiter refuses to boot in production without `REDIS_URL`,
+ * but that check lives in the Better Auth module: a process that never imports
+ * it (a worker, a script, a route that only touches the Payload half) used to
+ * reach these counters with memory counting silently in place.
  */
 
 export type CounterResult = { count: number; ttlSeconds: number }
+
+/**
+ * Thrown when no shared counter backend is available and memory counting would
+ * be unsafe. Callers must treat this as a denial, never as an allowance.
+ */
+export class RateLimitBackendUnavailableError extends Error {
+  constructor() {
+    super(
+      'REDIS_URL is not configured. Refusing to rate limit from per-process memory ' +
+        'in production, where the effective limit would multiply by instance count.'
+    )
+    this.name = 'RateLimitBackendUnavailableError'
+  }
+}
 
 type LocalCounter = {
   count: number
@@ -62,6 +83,10 @@ export async function incrementCounter(
 ): Promise<CounterResult> {
   if (APP_CONFIG.redis.url) {
     return redisSecondaryStorage.incrementWithExpiry(key, windowSeconds)
+  }
+
+  if (APP_CONFIG.isProduction) {
+    throw new RateLimitBackendUnavailableError()
   }
 
   return incrementLocalCounter(key, windowSeconds)

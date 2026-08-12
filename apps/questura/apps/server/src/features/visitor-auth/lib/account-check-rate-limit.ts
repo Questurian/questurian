@@ -4,6 +4,7 @@ import {
   getClientIp,
   hashIdentifier,
   incrementCounter,
+  type CounterResult,
 } from '@/shared/lib/rate-limit-counter'
 
 const WINDOW_SECONDS = 60
@@ -21,10 +22,19 @@ export async function checkAccountCheckRateLimit(
   const ipKey = `visitor-auth:rate-limit:account-check:ip:${hashIdentifier(getClientIp(req.headers))}`
   const emailKey = `visitor-auth:rate-limit:account-check:email:${hashIdentifier(normalizedEmail)}`
 
-  const [ipCounter, emailCounter] = await Promise.all([
-    incrementCounter(ipKey, WINDOW_SECONDS),
-    incrementCounter(emailKey, WINDOW_SECONDS),
-  ])
+  let ipCounter: CounterResult
+  let emailCounter: CounterResult
+
+  try {
+    ;[ipCounter, emailCounter] = await Promise.all([
+      incrementCounter(ipKey, WINDOW_SECONDS),
+      incrementCounter(emailKey, WINDOW_SECONDS),
+    ])
+  } catch {
+    // This route answers "does an account exist for this email?". With no
+    // counter there is nothing bounding enumeration, so deny.
+    return { allowed: false, retryAfterSeconds: WINDOW_SECONDS }
+  }
 
   const retryAfterSeconds = Math.max(
     ipCounter.count > MAX_REQUESTS_PER_IP ? ipCounter.ttlSeconds : 0,
