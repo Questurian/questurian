@@ -1,2 +1,3 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4003'
+export { API_BASE_URL } from '../../../shared/api/client/config'
+
 export const FEATURE_PREFIX = '/url2blog'
