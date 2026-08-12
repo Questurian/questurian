@@ -105,7 +105,7 @@ export async function getPayloadMediaSets(c: Context) {
 
 /**
  * GET /api/payload/test-connection
- * Test connection to Payload CMS by attempting authentication
+ * Test the configured Payload credential and its required sync permission.
  */
 export async function getTestConnection(c: Context) {
   try {
@@ -116,7 +116,7 @@ export async function getTestConnection(c: Context) {
       });
     }
 
-    await payloadApi.authenticate();
+    await payloadApi.testConnection();
 
     return c.json({
       connected: true,
