@@ -4,6 +4,8 @@ Questura will treat Visitor auth and Staff auth as separate auth surfaces. Bette
 
 VisitorProfiles remains a Payload collection because Staff identities need admin/support visibility into Visitor account membership and Stripe state. BetterAuth tables remain separate auth infrastructure and are not used as Staff-facing support records.
 
+VisitorProfiles is durable product and billing identity. It cannot be deleted independently while its BetterAuth Visitor account survives: session-driven profile recreation would otherwise replace membership and Stripe linkage with blank defaults. Independent profile deletion remains unsupported until account erasure coordinates BetterAuth, Stripe, and VisitorProfiles together.
+
 BetterAuth database tables are managed through committed Questura Server SQL migrations, not Payload `push`. Payload `push` remains scoped to Payload collections; BetterAuth schema changes are deployed deterministically as auth-infrastructure migrations.
 
 This chooses a more explicit boundary over the simpler Payload-only model because public-user scale and OAuth/signup behavior should evolve without widening the CMS admin attack surface. It also avoids making BetterAuth responsible for Payload admin access unless that integration is later proven necessary and maintainable.

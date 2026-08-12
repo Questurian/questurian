@@ -1,5 +1,6 @@
 import { staffUser } from '@/features/auth/lib/staff-user'
 import type { CollectionConfig } from 'payload'
+import { preventVisitorProfileDelete } from './hooks/preventDelete'
 
 export const VisitorProfiles: CollectionConfig = {
   slug: 'visitor-profiles',
@@ -23,7 +24,15 @@ export const VisitorProfiles: CollectionConfig = {
       const role = staffUser(req.user)?.role
       return Boolean(req.user && (role === 'admin' || role === 'editor'))
     },
-    delete: ({ req }) => Boolean(req.user && staffUser(req.user)?.role === 'admin'),
+    // A profile carries membership and Stripe linkage. It cannot be deleted
+    // independently from its BetterAuth Visitor account without silently
+    // losing that state on the next session-driven profile recreation.
+    delete: () => false,
+  },
+  hooks: {
+    // Access control is bypassable by trusted Local API calls. Preserve the
+    // invariant there too; future erasure must be one coordinated workflow.
+    beforeDelete: [preventVisitorProfileDelete],
   },
   fields: [
     {

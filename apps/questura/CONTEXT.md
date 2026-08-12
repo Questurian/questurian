@@ -239,6 +239,7 @@ _Avoid_: public auth, visitor auth
 - A **Staff identity** has at most one **Author**; an **Author** may exist with no Staff identity at all, and that is a fully valid, renderable state (ADR-0007).
 - A **Staff identity** has a lifecycle **status** of `active` or `disabled`. Disabling, not deleting, is how a person is offboarded: a disabled identity cannot sign in and holds no access, while its **Author**, bylines and author page are untouched.
 - A **Visitor account** has exactly one **Visitor profile**.
+- A **Visitor profile** is durable membership and billing identity. Independent deletion is unsupported until an erasure workflow can coordinate BetterAuth, Stripe, and profile data.
 - A **Staff identity** is separate from a **Visitor account**.
 - A **Staff identity** enters through a **Staff entry point**, not a **Visitor entry point**.
 - An **Operator tool** authenticates Staff identities through a **Staff entry point**.
