@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../shared/api/client/config'
+import { apiFetch } from '../../shared/api/client/apiFetch'
 import { parseErrorResponse } from '../../shared/api/client/error-parser'
 
 export type GenerateItineraryTitlesResponse = {
@@ -10,7 +10,7 @@ export async function generateItineraryTitles(params: {
   prompt: string
   modelName?: string | null
 }): Promise<GenerateItineraryTitlesResponse> {
-  const response = await fetch(`${API_BASE_URL}/itineraries-pipeline/generate-titles`, {
+  const response = await apiFetch('/itineraries-pipeline/generate-titles', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

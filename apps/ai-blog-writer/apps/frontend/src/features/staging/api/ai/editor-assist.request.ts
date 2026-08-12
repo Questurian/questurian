@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../../../../shared/api/client/config'
+import { apiFetch } from '../../../../shared/api/client/apiFetch'
 import { parseErrorResponse } from '../../../../shared/api/client/error-parser'
 
 type EditorAssistRequestOptions = {
@@ -11,7 +11,7 @@ export async function requestEditorAssist<TResponse>(
   path: string,
   { method = 'POST', body, errorMessage }: EditorAssistRequestOptions
 ): Promise<TResponse> {
-  const response = await fetch(`${API_BASE_URL}/editor-assist/${path}`, {
+  const response = await apiFetch(`/editor-assist/${path}`, {
     method,
     headers: {
       'Content-Type': 'application/json'

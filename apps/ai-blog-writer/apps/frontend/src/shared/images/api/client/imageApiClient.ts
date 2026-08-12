@@ -1,4 +1,5 @@
 import { API_BASE_URL as API_URL } from '../../../api/client/config';
+import { apiFetch } from '../../../api/client/apiFetch';
 
 export { API_URL };
 
@@ -14,7 +15,7 @@ export async function postFormData(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  return fetch(`${API_URL}${path}`, {
+  return apiFetch(path, {
     method: 'POST',
     headers,
     body: formData,
@@ -36,7 +37,7 @@ export async function postJson<TBody extends Record<string, unknown>>(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  return fetch(`${API_URL}${path}`, {
+  return apiFetch(path, {
     method: 'POST',
     headers,
     body: JSON.stringify(body),

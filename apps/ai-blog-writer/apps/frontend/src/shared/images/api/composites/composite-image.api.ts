@@ -1,4 +1,4 @@
-import { API_URL } from '../client/imageApiClient'
+import { apiFetch } from '../../../api/client/apiFetch'
 
 export type CompositeImageLayout = 'two-up' | 'four-up'
 
@@ -43,7 +43,7 @@ export async function previewCompositeImage(
   request: CompositeImageRequest,
   token: string,
 ): Promise<{ blob: Blob; warnings: string[] }> {
-  const response = await fetch(`${API_URL}/images/composites/preview`, {
+  const response = await apiFetch('/images/composites/preview', {
     method: 'POST',
     headers: {
       Accept: 'image/webp',
@@ -86,7 +86,7 @@ export type CleanupCompositesResponse = {
 }
 
 export async function fetchHangingComposites(token: string): Promise<HangingCompositesResponse> {
-  const response = await fetch(`${API_URL}/images/composites/hanging`, {
+  const response = await apiFetch('/images/composites/hanging', {
     method: 'GET',
     headers: {
       Accept: 'application/json',
@@ -103,7 +103,7 @@ export async function cleanupHangingComposites(
   mediaSetIds: number[],
   token: string,
 ): Promise<CleanupCompositesResponse> {
-  const response = await fetch(`${API_URL}/images/composites/cleanup`, {
+  const response = await apiFetch('/images/composites/cleanup', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -122,7 +122,7 @@ export async function createCompositeImage(
   request: CompositeImageRequest,
   token: string,
 ): Promise<CompositeImageCreateResponse> {
-  const response = await fetch(`${API_URL}/images/composites/create`, {
+  const response = await apiFetch('/images/composites/create', {
     method: 'POST',
     headers: {
       Accept: 'application/json',

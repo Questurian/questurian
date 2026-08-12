@@ -1,4 +1,5 @@
-import { API_BASE_URL, FEATURE_PREFIX } from '../constants/url2blog.constants'
+import { apiFetch } from '../../../shared/api/client/apiFetch'
+import { FEATURE_PREFIX } from '../constants/url2blog.constants'
 import type { ArticleType } from '@shared/types'
 import type { ToneProfile } from '../../../shared/api/ai/models'
 import type {
@@ -38,7 +39,7 @@ function normalizeUrl2BlogStatusResponse(
 export async function runUrl2BlogPipelineV2(
   payload: Url2BlogPipelineV2Request,
 ): Promise<Url2BlogPipelineV2Response> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/pipeline-v2`, {
+  const response = await apiFetch(`${FEATURE_PREFIX}/pipeline-v2`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -54,7 +55,7 @@ export async function runUrl2BlogPipelineV2(
 }
 
 export async function fetchToneProfiles(): Promise<ToneProfile[]> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/tones`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/tones`)
   if (!response.ok) {
     throw new Error(await resolveErrorMessage(response, 'URL2Blog tone fetch failed'))
   }
@@ -63,7 +64,7 @@ export async function fetchToneProfiles(): Promise<ToneProfile[]> {
 }
 
 export async function fetchArticleTypes(): Promise<ArticleType[]> {
-  const response = await fetch(`${API_BASE_URL}/article-types`)
+  const response = await apiFetch('/article-types')
   if (!response.ok) {
     throw new Error(await resolveErrorMessage(response, 'Article type fetch failed'))
   }
@@ -74,7 +75,7 @@ export async function fetchStatus(
   runId: string,
   options: { allowNotFound?: boolean } = {},
 ): Promise<Url2BlogStatusResponse | null> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/status/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/status/${runId}`)
 
   if (response.status === 404) {
     if (options.allowNotFound) {
@@ -94,7 +95,7 @@ export async function fetchStatus(
 }
 
 export async function fetchLatestStatus(): Promise<Url2BlogStatusResponse | null> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/status-latest`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/status-latest`)
   if (response.status === 404) {
     return null
   }
@@ -105,7 +106,7 @@ export async function fetchLatestStatus(): Promise<Url2BlogStatusResponse | null
 }
 
 export async function fetchRunDebug(runId: string): Promise<Url2BlogDebugRunResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/debug/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/debug/${runId}`)
   if (!response.ok) {
     throw new Error(await resolveErrorMessage(response, 'URL2Blog run debug fetch failed'))
   }
@@ -113,7 +114,7 @@ export async function fetchRunDebug(runId: string): Promise<Url2BlogDebugRunResp
 }
 
 export async function fetchResult(runId: string): Promise<Url2BlogResultResponse> {
-  const response = await fetch(`${API_BASE_URL}${FEATURE_PREFIX}/result/${runId}`)
+  const response = await apiFetch(`${FEATURE_PREFIX}/result/${runId}`)
   if (!response.ok) {
     throw new Error('Result fetch failed')
   }
