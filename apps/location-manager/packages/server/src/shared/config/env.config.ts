@@ -1,3 +1,28 @@
+export function assertPayloadConfig({
+  apiUrl,
+  apiKey,
+  nodeEnv,
+}: {
+  apiUrl: string;
+  apiKey: string;
+  nodeEnv: string;
+}): void {
+  const missing = [
+    !apiUrl ? "PAYLOAD_API_URL" : null,
+    !apiKey ? "PAYLOAD_API_KEY" : null,
+  ].filter((value): value is string => Boolean(value));
+  const isPartiallyConfigured = Boolean(apiUrl || apiKey);
+
+  if (
+    missing.length > 0 &&
+    (nodeEnv === "production" || isPartiallyConfigured)
+  ) {
+    throw new Error(
+      `Missing required Payload configuration: ${missing.join(", ")}`,
+    );
+  }
+}
+
 export class EnvConfig {
   private static instance: EnvConfig;
 
@@ -10,8 +35,7 @@ export class EnvConfig {
   readonly SERPAPI_KEY: string;
   readonly FOURSQUARE_API_KEY: string;
   readonly PAYLOAD_API_URL: string;
-  readonly PAYLOAD_SERVICE_EMAIL: string;
-  readonly PAYLOAD_SERVICE_PASSWORD: string;
+  readonly PAYLOAD_API_KEY: string;
   readonly ALT_TEXT_API_URL: string;
   readonly PORT: number;
   readonly NODE_ENV: string;
@@ -26,8 +50,7 @@ export class EnvConfig {
     this.SERPAPI_KEY = process.env.SERPAPI_KEY || "";
     this.FOURSQUARE_API_KEY = process.env.FOURSQUARE_API_KEY || "";
     this.PAYLOAD_API_URL = process.env.PAYLOAD_API_URL || "";
-    this.PAYLOAD_SERVICE_EMAIL = process.env.PAYLOAD_SERVICE_EMAIL || "";
-    this.PAYLOAD_SERVICE_PASSWORD = process.env.PAYLOAD_SERVICE_PASSWORD || "";
+    this.PAYLOAD_API_KEY = process.env.PAYLOAD_API_KEY || "";
     this.ALT_TEXT_API_URL = process.env.ALT_TEXT_API_URL || "http://localhost:8642";
     this.PORT = Number(process.env.PORT || 4317);
     this.NODE_ENV = process.env.NODE_ENV || "development";
@@ -44,6 +67,12 @@ export class EnvConfig {
 
   private validate(): void {
     const warnings: string[] = [];
+
+    assertPayloadConfig({
+      apiUrl: this.PAYLOAD_API_URL,
+      apiKey: this.PAYLOAD_API_KEY,
+      nodeEnv: this.NODE_ENV,
+    });
 
     if (!this.GOOGLE_MAPS_API_KEY) {
       warnings.push("GOOGLE_MAPS_API_KEY not set - geocoding disabled");
@@ -77,7 +106,7 @@ export class EnvConfig {
       warnings.push("FOURSQUARE_API_KEY not set - Foursquare accommodations enrichment disabled");
     }
 
-    if (!this.PAYLOAD_API_URL || !this.PAYLOAD_SERVICE_EMAIL || !this.PAYLOAD_SERVICE_PASSWORD) {
+    if (!this.PAYLOAD_API_URL || !this.PAYLOAD_API_KEY) {
       warnings.push("Payload CMS not configured - sync to Payload disabled");
     }
 
@@ -123,7 +152,7 @@ export class EnvConfig {
   }
 
   isPayloadConfigured(): boolean {
-    return !!(this.PAYLOAD_API_URL && this.PAYLOAD_SERVICE_EMAIL && this.PAYLOAD_SERVICE_PASSWORD);
+    return !!(this.PAYLOAD_API_URL && this.PAYLOAD_API_KEY);
   }
 
   get altTextApiUrl(): string {

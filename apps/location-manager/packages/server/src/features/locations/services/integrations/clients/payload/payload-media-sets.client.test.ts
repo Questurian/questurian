@@ -8,11 +8,58 @@ afterEach(() => {
 });
 
 describe("PayloadMediaSetsClient", () => {
+  test("leaves multipart Content-Type to fetch for from-source uploads", async () => {
+    globalThis.fetch = (async (
+      _input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      expect(init?.headers).toEqual({
+        Authorization: "service-accounts API-Key test-key",
+      });
+      expect(init?.body).toBeInstanceOf(FormData);
+
+      return new Response(
+        JSON.stringify({
+          mediaSetId: 10,
+          sourceAssetId: 11,
+          variantAssetIds: { thumbnail: 12 },
+        }),
+        { status: 201 },
+      );
+    }) as unknown as typeof fetch;
+
+    const client = new PayloadMediaSetsClient({
+      isConfigured: () => true,
+      authHeader: async () => ({
+        Authorization: "service-accounts API-Key test-key",
+      }),
+      getApiUrl: () => "https://payload.example.com",
+    } as never);
+
+    await expect(
+      client.createMediaSetFromSource(
+        {
+          buffer: Buffer.from("image"),
+          mimetype: "image/jpeg",
+          filename: "lima.jpg",
+        },
+        { title: "Lima skyline" },
+      ),
+    ).resolves.toEqual({
+      mediaSetId: 10,
+      sourceAssetId: 11,
+      variantAssetIds: { thumbnail: 12 },
+    });
+  });
+
   test("normalizes numeric Payload ids to strings for location-manager updates", async () => {
-    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
       expect(String(input)).toContain("/api/media-sets?");
       expect(init?.headers).toEqual({
-        Authorization: "JWT test-token",
+        Authorization: "service-accounts API-Key test-key",
       });
 
       return new Response(
@@ -46,13 +93,15 @@ describe("PayloadMediaSetsClient", () => {
         {
           status: 200,
           headers: { "content-type": "application/json" },
-        }
+        },
       );
     }) as unknown as typeof fetch;
 
     const client = new PayloadMediaSetsClient({
       isConfigured: () => true,
-      authHeader: async () => ({ Authorization: "JWT test-token" }),
+      authHeader: async () => ({
+        Authorization: "service-accounts API-Key test-key",
+      }),
       getApiUrl: () => "https://payload.example.com",
     } as never);
 
@@ -64,7 +113,9 @@ describe("PayloadMediaSetsClient", () => {
     expect(result.docs[0]?.id).toBe("42");
     expect(result.docs[0]?.status).toBe("usable");
     expect(result.docs[0]?.locationRef).toBe("11");
-    expect(result.docs[0]?.previewUrl).toBe("https://payload.example.com/media/museum-square.webp");
+    expect(result.docs[0]?.previewUrl).toBe(
+      "https://payload.example.com/media/museum-square.webp",
+    );
   });
 
   test("accepts legacy complete status during media-set status migration", async () => {
@@ -87,12 +138,14 @@ describe("PayloadMediaSetsClient", () => {
         {
           status: 200,
           headers: { "content-type": "application/json" },
-        }
+        },
       )) as unknown as typeof fetch;
 
     const client = new PayloadMediaSetsClient({
       isConfigured: () => true,
-      authHeader: async () => ({ Authorization: "JWT test-token" }),
+      authHeader: async () => ({
+        Authorization: "service-accounts API-Key test-key",
+      }),
       getApiUrl: () => "https://payload.example.com",
     } as never);
 

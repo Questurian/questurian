@@ -10,41 +10,28 @@ afterEach(() => {
 
 describe("PayloadAuthClient", () => {
   test("builds the Payload authorization header", async () => {
-    globalThis.fetch = (async () =>
-      new Response(
-        JSON.stringify({
-          token: "test-token",
-          exp: Math.floor(Date.now() / 1000) + 3600,
-        }),
-        { status: 200 }
-      )) as unknown as typeof fetch;
+    globalThis.fetch = (async () => {
+      throw new Error("authHeader must not perform a login request");
+    }) as unknown as typeof fetch;
 
     const client = new PayloadAuthClient({
       PAYLOAD_API_URL: "https://payload.example.com",
-      PAYLOAD_SERVICE_EMAIL: "service@example.com",
-      PAYLOAD_SERVICE_PASSWORD: "secret",
+      PAYLOAD_API_KEY: "test-key",
     } as EnvConfig);
 
     await expect(client.authHeader()).resolves.toEqual({
-      Authorization: "JWT test-token",
+      Authorization: "service-accounts API-Key test-key",
     });
   });
 
   test("verifies the credential has Location Manager access", async () => {
     const requests: Array<{ url: string; init?: RequestInit }> = [];
-    globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    globalThis.fetch = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
       const url = String(input);
       requests.push({ url, init });
-
-      if (url.endsWith("/api/users/login")) {
-        return new Response(
-          JSON.stringify({
-            token: "test-token",
-            exp: Math.floor(Date.now() / 1000) + 3600,
-          }),
-          { status: 200 }
-        );
-      }
 
       return new Response(
         JSON.stringify({
@@ -52,56 +39,57 @@ describe("PayloadAuthClient", () => {
             locations: { create: true },
           },
         }),
-        { status: 200 }
+        { status: 200 },
       );
     }) as unknown as typeof fetch;
 
     const client = new PayloadAuthClient({
       PAYLOAD_API_URL: "https://payload.example.com",
-      PAYLOAD_SERVICE_EMAIL: "service@example.com",
-      PAYLOAD_SERVICE_PASSWORD: "secret",
+      PAYLOAD_API_KEY: "test-key",
     } as EnvConfig);
 
     await expect(client.testConnection()).resolves.toBeUndefined();
-    expect(requests[1]).toEqual({
-      url: "https://payload.example.com/api/access",
-      init: {
-        method: "GET",
-        headers: { Authorization: "JWT test-token" },
+    expect(requests).toEqual([
+      {
+        url: "https://payload.example.com/api/access",
+        init: {
+          method: "GET",
+          headers: { Authorization: "service-accounts API-Key test-key" },
+        },
       },
-    });
+    ]);
   });
 
   test("rejects an anonymous or underprivileged access response", async () => {
-    globalThis.fetch = (async (input: string | URL | Request) => {
-      if (String(input).endsWith("/api/users/login")) {
-        return new Response(
-          JSON.stringify({
-            token: "invalid-or-underprivileged-token",
-            exp: Math.floor(Date.now() / 1000) + 3600,
-          }),
-          { status: 200 }
-        );
-      }
-
-      return new Response(
+    globalThis.fetch = (async () =>
+      new Response(
         JSON.stringify({
           collections: {
             locations: { read: true },
           },
         }),
-        { status: 200 }
-      );
-    }) as unknown as typeof fetch;
+        { status: 200 },
+      )) as unknown as typeof fetch;
 
     const client = new PayloadAuthClient({
       PAYLOAD_API_URL: "https://payload.example.com",
-      PAYLOAD_SERVICE_EMAIL: "service@example.com",
-      PAYLOAD_SERVICE_PASSWORD: "secret",
+      PAYLOAD_API_KEY: "test-key",
     } as EnvConfig);
 
     await expect(client.testConnection()).rejects.toThrow(
-      "Payload credential lacks required locations:create access"
+      "Payload credential lacks required locations:create access",
+    );
+  });
+
+  test("fails before building a header when the API key is absent", async () => {
+    const client = new PayloadAuthClient({
+      PAYLOAD_API_URL: "https://payload.example.com",
+      PAYLOAD_API_KEY: "",
+    } as EnvConfig);
+
+    expect(client.isConfigured()).toBe(false);
+    await expect(client.authHeader()).rejects.toThrow(
+      "Payload CMS is not configured or unavailable",
     );
   });
 });
