@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { apiFetch } from './apiFetch'
+import { resetApiAuthTokenProvider, setApiAuthTokenProvider } from './auth-token'
 import { API_BASE_URL } from './config'
 
 afterEach(() => {
   vi.restoreAllMocks()
+  resetApiAuthTokenProvider()
 })
 
 function mockFetch(): ReturnType<typeof vi.fn> {
@@ -123,5 +125,79 @@ describe('apiFetch with VITE_ABW_API_KEY configured', () => {
     await apiFetch('/health')
 
     expect(spy).toHaveBeenCalledWith(`${API_BASE_URL}/health`, undefined)
+  })
+})
+
+describe('apiFetch with a staff session', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  function headersOf(spy: ReturnType<typeof vi.fn>): Headers {
+    const [, init] = spy.mock.calls[0] as [string, RequestInit]
+    return new Headers(init.headers)
+  }
+
+  it('attaches the session token as a Bearer credential', async () => {
+    setApiAuthTokenProvider(() => 'staff-token')
+    const spy = mockFetch()
+
+    await apiFetch('/youtube2blog/from-url', { method: 'POST' })
+
+    expect(headersOf(spy).get('Authorization')).toBe('Bearer staff-token')
+  })
+
+  it('does not override a token the call site set itself', async () => {
+    setApiAuthTokenProvider(() => 'ambient-token')
+    const spy = mockFetch()
+
+    await apiFetch('/images/upload', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer explicit-token' },
+    })
+
+    expect(headersOf(spy).get('Authorization')).toBe('Bearer explicit-token')
+  })
+
+  it('sends both credentials when a key is configured too', async () => {
+    vi.stubEnv('VITE_ABW_API_KEY', 'secret-key')
+    setApiAuthTokenProvider(() => 'staff-token')
+    const spy = mockFetch()
+
+    await apiFetch('/prompt2blog/run', { method: 'POST' })
+
+    const headers = headersOf(spy)
+    expect(headers.get('X-API-Key')).toBe('secret-key')
+    expect(headers.get('Authorization')).toBe('Bearer staff-token')
+  })
+
+  it('passes through untouched when there is no session', async () => {
+    const spy = mockFetch()
+
+    await apiFetch('/youtube2blog/tones')
+
+    expect(spy).toHaveBeenCalledWith(`${API_BASE_URL}/youtube2blog/tones`, undefined)
+  })
+
+  it('does not add Content-Type to multipart requests', async () => {
+    setApiAuthTokenProvider(() => 'staff-token')
+    const spy = mockFetch()
+    const body = new FormData()
+    body.append('file', new Blob(['x']), 'x.png')
+
+    await apiFetch('/images/upload', { method: 'POST', body })
+
+    expect(headersOf(spy).get('Content-Type')).toBeNull()
+  })
+
+  it('sends nothing when the provider throws', async () => {
+    setApiAuthTokenProvider(() => {
+      throw new Error('storage unavailable')
+    })
+    const spy = mockFetch()
+
+    await apiFetch('/youtube2blog/tones')
+
+    expect(spy).toHaveBeenCalledWith(`${API_BASE_URL}/youtube2blog/tones`, undefined)
   })
 })
