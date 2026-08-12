@@ -115,7 +115,7 @@ export function useExternalImageImport({
       const fileNamePrefix = buildImageFileNamePrefix(fileNameTitle, externalRef)
 
       try {
-        const source = await fetchExternalImageSource({ sourceUrl, provider, photoId: photo.id }, token)
+        const source = await fetchExternalImageSource({ sourceUrl, provider, photoId: photo.id })
         const file = new File([source.blob], source.fileName, {
           type: source.contentType || source.blob.type || 'image/jpeg',
         })

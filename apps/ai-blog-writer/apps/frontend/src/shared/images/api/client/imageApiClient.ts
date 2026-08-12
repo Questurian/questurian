@@ -3,21 +3,23 @@ import { apiFetch } from '../../../api/client/apiFetch';
 
 export { API_URL };
 
+/**
+ * Requests to the AI Blog Writer backend's image routes.
+ *
+ * These used to take the caller's Payload JWT and send it as
+ * `Authorization: Bearer`, because the backend forwards it to Payload so that
+ * uploads are created as the acting Staff user. The backend now takes that same
+ * JWT from the httpOnly `payload-token` cookie instead, which `apiFetch` sends
+ * on every request — so there is nothing for a caller to hold or pass.
+ */
+
 export async function postFormData(
   path: string,
   formData: FormData,
-  token?: string,
   signal?: AbortSignal,
 ): Promise<Response> {
-  const headers: Record<string, string> = {};
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
   return apiFetch(path, {
     method: 'POST',
-    headers,
     body: formData,
     signal,
   });
@@ -26,20 +28,13 @@ export async function postFormData(
 export async function postJson<TBody extends Record<string, unknown>>(
   path: string,
   body: TBody,
-  token?: string
 ): Promise<Response> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
   return apiFetch(path, {
     method: 'POST',
-    headers,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
     body: JSON.stringify(body),
   });
 }

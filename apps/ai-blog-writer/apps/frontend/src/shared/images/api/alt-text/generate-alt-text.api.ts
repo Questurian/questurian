@@ -23,7 +23,7 @@ export async function generateAltTextApi({
       formData.append('narrative_focus', narrativeFocus.trim());
     }
 
-    const response = await postFormData('/images/generate-alt-text', formData, undefined, controller.signal);
+    const response = await postFormData('/images/generate-alt-text', formData, controller.signal);
 
     if (!response.ok) {
       const message = await parseErrorMessage(response, 'Alt text generation failed');

@@ -41,14 +41,12 @@ async function parseCompositeError(response: Response, fallback: string): Promis
 
 export async function previewCompositeImage(
   request: CompositeImageRequest,
-  token: string,
 ): Promise<{ blob: Blob; warnings: string[] }> {
   const response = await apiFetch('/images/composites/preview', {
     method: 'POST',
     headers: {
       Accept: 'image/webp',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(request),
   })
@@ -85,12 +83,11 @@ export type CleanupCompositesResponse = {
   deletedCount: number
 }
 
-export async function fetchHangingComposites(token: string): Promise<HangingCompositesResponse> {
+export async function fetchHangingComposites(): Promise<HangingCompositesResponse> {
   const response = await apiFetch('/images/composites/hanging', {
     method: 'GET',
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
     },
   })
   if (!response.ok) {
@@ -101,14 +98,12 @@ export async function fetchHangingComposites(token: string): Promise<HangingComp
 
 export async function cleanupHangingComposites(
   mediaSetIds: number[],
-  token: string,
 ): Promise<CleanupCompositesResponse> {
   const response = await apiFetch('/images/composites/cleanup', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ mediaSetIds }),
   })
@@ -120,14 +115,12 @@ export async function cleanupHangingComposites(
 
 export async function createCompositeImage(
   request: CompositeImageRequest,
-  token: string,
 ): Promise<CompositeImageCreateResponse> {
   const response = await apiFetch('/images/composites/create', {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(request),
   })

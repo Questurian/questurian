@@ -73,7 +73,7 @@ export async function fluxEditApi({
   }
 
   try {
-    const response = await postFormData('/images/flux-edit', formData, token);
+    const response = await postFormData('/images/flux-edit', formData);
 
     if (!response.ok) {
       const message = await parseErrorMessage(response, 'Failed to generate image with FLUX.2');

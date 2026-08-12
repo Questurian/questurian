@@ -89,7 +89,7 @@ export async function uploadVariantsApi({
   });
 
   try {
-    const response = await postFormData('/images/upload-variants', formData, token);
+    const response = await postFormData('/images/upload-variants', formData);
 
     onProgress?.({
       status: 'processing',

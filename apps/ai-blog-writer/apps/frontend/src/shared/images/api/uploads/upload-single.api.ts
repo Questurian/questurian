@@ -41,7 +41,7 @@ export async function uploadSingleApi({
       message: 'Uploading to server...',
     });
 
-    const response = await postFormData('/images/upload', formData, token);
+    const response = await postFormData('/images/upload', formData);
 
     onProgress?.({
       status: 'processing',

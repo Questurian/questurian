@@ -106,7 +106,7 @@ export function CompositeImageModal({
     resetPreview()
     setIsPreviewing(true)
     try {
-      const result = await previewCompositeImage(request, token)
+      const result = await previewCompositeImage(request)
       setPreviewUrl(URL.createObjectURL(result.blob))
       setWarnings(result.warnings)
     } catch (err) {
@@ -120,7 +120,7 @@ export function CompositeImageModal({
     setIsCreating(true)
     setError(null)
     try {
-      const response = await createCompositeImage(request, token)
+      const response = await createCompositeImage(request)
       onCreated?.(response)
       onClose()
     } catch (err) {

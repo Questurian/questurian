@@ -13,12 +13,12 @@ function HangingCompositesPanel({ token }: Props) {
   const queryClient = useQueryClient()
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['hanging-composites'],
-    queryFn: () => fetchHangingComposites(token),
+    queryFn: () => fetchHangingComposites(),
     enabled: !!token,
   })
 
   const cleanup = useMutation({
-    mutationFn: (mediaSetIds: number[]) => cleanupHangingComposites(mediaSetIds, token),
+    mutationFn: (mediaSetIds: number[]) => cleanupHangingComposites(mediaSetIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hanging-composites'] })
       queryClient.invalidateQueries({ queryKey: ['media-library'] })
