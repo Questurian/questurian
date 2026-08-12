@@ -3,6 +3,16 @@ import { APP_CONFIG } from '@/shared/config'
 
 const ALLOWED_ORIGINS = APP_CONFIG.CORS_ORIGINS
 
+/**
+ * Whether an `Origin` header names one of this deployment's own origins.
+ *
+ * CORS alone only stops a cross-origin caller *reading* the response; a route
+ * that changes state on a cookie session needs to reject the request itself.
+ */
+export function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGINS.includes(origin)
+}
+
 export function getCorsHeaders(req: NextRequest): Record<string, string> {
   const origin = req.headers.get('origin')
 
@@ -14,7 +24,7 @@ export function getCorsHeaders(req: NextRequest): Record<string, string> {
 
   // Only reflect origins on the allowlist; disallowed origins get no
   // Access-Control-Allow-Origin header at all (the browser then blocks them).
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+  if (origin && isAllowedOrigin(origin)) {
     headers['Access-Control-Allow-Origin'] = origin
     headers['Access-Control-Allow-Credentials'] = 'true'
   }

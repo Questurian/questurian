@@ -42,4 +42,16 @@ describe('visitor password guard', () => {
       'Password is required.'
     )
   })
+
+  // Better Auth builds `setPassword` with `createAuthEndpoint({...})` and no
+  // path string, so `endpoint.path` — and therefore `ctx.path` in the
+  // `hooks.before` middleware — is `undefined`. This guard is path-keyed, so it
+  // cannot see that call. `app/api/account/set-password/route.ts` runs the same
+  // strength rule itself for exactly this reason; the `/set-password` entry
+  // below stays only in case Better Auth ever gives the endpoint a path.
+  it('cannot match a pathless endpoint, which is why set-password is checked at its route', () => {
+    expect(
+      getVisitorPasswordError(undefined as unknown as string, { newPassword: 'weak' })
+    ).toBeNull()
+  })
 })
