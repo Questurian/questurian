@@ -60,8 +60,8 @@ export class PayloadApiClient {
     return this.authClient.isConfigured();
   }
 
-  async authenticate(): Promise<string> {
-    return await this.authClient.authenticate();
+  async testConnection(): Promise<void> {
+    await this.authClient.testConnection();
   }
 
   async uploadImage(

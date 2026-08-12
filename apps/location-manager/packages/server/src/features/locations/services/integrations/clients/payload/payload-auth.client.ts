@@ -28,6 +28,24 @@ export class PayloadAuthClient {
     return { Authorization: `JWT ${token}` };
   }
 
+  async testConnection(): Promise<void> {
+    const response = await fetch(`${this.apiUrl}/api/access`, {
+      method: "GET",
+      headers: await this.authHeader(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Payload access check failed (${response.status})`);
+    }
+
+    const permissions = (await response.json()) as {
+      collections?: { locations?: { create?: true } };
+    };
+    if (permissions.collections?.locations?.create !== true) {
+      throw new Error("Payload credential lacks required locations:create access");
+    }
+  }
+
   async authenticate(): Promise<string> {
     if (!this.isConfigured()) {
       throw new ServiceUnavailableError("Payload CMS");
