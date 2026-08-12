@@ -65,6 +65,7 @@ function buildScopeWhere(parts: string[]): URLSearchParams {
 
 async function payloadRequest<T>(endpoint: string, token: string): Promise<T> {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
+    credentials: 'include',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',

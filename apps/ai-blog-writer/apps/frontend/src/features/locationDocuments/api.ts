@@ -28,6 +28,7 @@ async function payloadRequest<T>(
   try {
     const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
       ...init,
+      credentials: 'include',
       signal: controller.signal,
       headers: {
         Accept: 'application/json',

@@ -100,7 +100,7 @@ export async function uploadAvatarAsset(file: File, token: string): Promise<Avat
   const response = await fetch(`${PAYLOAD_API_URL}/api/media-assets`, {
     method: 'POST',
     mode: 'cors',
-    credentials: 'omit',
+    credentials: 'include',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   })

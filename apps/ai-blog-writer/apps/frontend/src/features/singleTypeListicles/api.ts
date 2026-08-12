@@ -16,6 +16,7 @@ const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhos
 async function payloadRequest<T>(endpoint: string, token: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     ...init,
+    credentials: 'include',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
