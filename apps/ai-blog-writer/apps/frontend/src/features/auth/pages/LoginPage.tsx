@@ -22,7 +22,7 @@ export default function LoginPage() {
         <div className="login-card">
           <div className="login-header">
             <h1>Restoring session</h1>
-            <p>Checking your saved AI Blog Writer login…</p>
+            <p>Checking your AI Blog Writer login…</p>
           </div>
         </div>
       </div>

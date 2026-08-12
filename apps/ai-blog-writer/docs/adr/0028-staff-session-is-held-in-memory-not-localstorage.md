@@ -14,10 +14,19 @@ current token, so the cookie alone is sufficient to rebuild the session.
 Bootstrap deletes anything an earlier build left under the old key, because the
 code that would have cleared it on logout is the code being removed.
 
+Logout sends no `Authorization` header. Payload clears the cookie only on a
+2xx, and `extractJWT` uses the *first* token it finds — an already-expired
+Bearer is extracted, fails to verify, and leaves the cookie alive. Since the
+cookie is now the only thing that restores a session, that would sign the
+operator back in on the next load. The cookie is what has to be cleared, so the
+cookie is what identifies the request.
+
 Every authenticated Payload client sends `credentials: 'include'`. They
 previously disagreed — some `'include'`, some `'omit'`, some unset (meaning
-`'same-origin'`, and Payload is never same-origin with this app) — which did not
-matter while every call also carried a Bearer header.
+`'same-origin'`, and Payload is never same-origin with this app). That is
+consistency, **not** a fallback: while a Bearer header is present the cookie is
+never consulted, for the reason above. Its value is that dropping the header
+later is a one-line change rather than an eight-file one.
 
 ## What this does and does not achieve
 
@@ -27,19 +36,24 @@ page.
 
 It does not yet make the token unreadable by JavaScript. The FastAPI backend
 identifies callers from an `Authorization: Bearer` header
-(`app/core/staff_auth.py`), and the image routes forward that same JWT to
-Payload to create media as the acting Staff user
-(`app/features/images/payload_client.py`). While that is the contract, the
-frontend has to hold a token in memory to send it.
+(`apps/backend/app/core/staff_auth.py`), and the image routes forward that same
+JWT to Payload to create media as the acting Staff user
+(`apps/backend/app/features/images/payload_client.py`). While that is the
+contract, the frontend has to hold a token in memory to send it.
 
 ## Consequences
 
-- Payload's cookie must reach this app's origin, so the ABW origin has to stay
-  in Payload's `cors`/`csrf` allowlist. It is already there, or these calls
-  would fail CORS today: Payload emits `Access-Control-Allow-Origin` only on an
-  exact allowlist match, never `*`.
+- Cookie *authentication* is gated by Payload's `csrf` list, not its `cors`
+  list: `extractJWT` discards the cookie when `Origin` is absent from
+  `payload.config.csrf`. Those happen to be the same list here — `payload.config.ts`
+  feeds both from `APP_CONFIG.CORS_ORIGINS` — so an origin allowlisted for CORS
+  is also trusted for the cookie. If they are ever split, this breaks silently
+  as a 401.
 - Every page load now costs one `/api/users/me` round trip before protected
-  routes render. `RequireAuth` already waits on `isRestoringSession`.
+  routes render, up to 8s before the fallback request. `RequireAuth` already
+  waited on `isRestoringSession`, but it rendered `null`: a path only logged-out
+  visitors reached before is now the normal reload path, so it shows the same
+  "Restoring session" card `LoginPage` uses instead of a blank screen.
 - If Payload is unreachable at load, the operator is treated as logged out
   rather than resuming on a stale stored token. That is the correct reading of
   "we cannot confirm this session".

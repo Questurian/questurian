@@ -333,7 +333,7 @@ describe('the Staff token never reaches disk', () => {
     expect(JSON.stringify(localStorage)).not.toContain(token);
   });
 
-  it('restores the session from the cookie alone, with no stored token to fall back on', async () => {
+  it('restores the session from the cookie alone, without writing it back to disk', async () => {
     const token = createToken(Date.now() + 60 * 60 * 1000);
     const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
@@ -369,6 +369,88 @@ describe('the Staff token never reaches disk', () => {
     expect(init?.credentials).toBe('include');
     // ...and no Authorization header can have been derived from storage.
     expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+    // The restored session lands in memory and nowhere else. This is the half
+    // that fails without the change: the old code wrote it straight back out.
+    expect(getLiveAuthState()?.token).toBe(token);
+    expect(localStorage.length).toBe(0);
+  });
+
+  it('shows a restoring state rather than a blank screen while the cookie is checked', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+
+        if (url.endsWith('/api/users/me')) {
+          // Never resolves: hold the app in the restore window.
+          return new Promise<Response>(() => {});
+        }
+
+        if (url.endsWith('/api/health')) {
+          return Promise.resolve(jsonResponse({ ok: true }));
+        }
+
+        return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+      }),
+    );
+
+    // Every reload now takes this path, where a stored session used to skip it.
+    renderProtectedApp();
+
+    expect(await screen.findByText('Restoring session')).toBeInTheDocument();
+    expect(screen.queryByText('login page')).not.toBeInTheDocument();
+  });
+
+  it('logs out on the cookie, not on a token that may already be expired', async () => {
+    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.endsWith('/api/users/login')) {
+        return Promise.resolve(jsonResponse({
+          token,
+          user: { id: 17, email: 'writer@example.com', role: 'writer' },
+        }));
+      }
+
+      if (url.endsWith('/api/users/logout') || url.endsWith('/api/health')) {
+        return Promise.resolve(jsonResponse({ ok: true }));
+      }
+
+      return Promise.resolve(jsonResponse({ message: 'not found' }, 404));
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(
+      <AuthProvider>
+        <AuthHarness />
+      </AuthProvider>,
+    );
+
+    await screen.findByText('ready');
+    await userEvent.click(screen.getByRole('button', { name: 'login' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('email')).toHaveTextContent('writer@example.com');
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'logout' }));
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) =>
+        String(input).endsWith('/api/users/logout'))).toBe(true);
+    });
+
+    const logoutCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/api/users/logout'));
+    const init = logoutCall?.[1] as RequestInit | undefined;
+
+    // Payload clears the cookie only on a 2xx, and `extractJWT` uses the first
+    // token it finds. An expired Bearer would be extracted, fail to verify and
+    // leave the cookie alive — which now silently restores the session on the
+    // next load.
+    expect(new Headers(init?.headers).has('Authorization')).toBe(false);
+    expect(init?.credentials).toBe('include');
   });
 
   it('purges a token left on disk by an earlier build', () => {

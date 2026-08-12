@@ -82,11 +82,10 @@ export function useAuthSessionState(): AuthContextValue {
   }, [applyAuthState]);
 
   const logout = useCallback(() => {
-    const token = authState?.token ?? null;
     applyAuthState(null);
     setIsRestoringSession(false);
-    logoutPayloadUser(token);
-  }, [applyAuthState, authState?.token]);
+    logoutPayloadUser();
+  }, [applyAuthState]);
 
   useEffect(() => {
     if (!authState?.token || !authState?.expiresAt) {
