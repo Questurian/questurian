@@ -9,7 +9,7 @@ import {
   SESSION_RENEW_REQUESTS,
   SESSION_RESTORE_TIMEOUT_MS,
 } from './auth.constants';
-import { hasActiveSession, normalizeAuthState } from './auth-state';
+import { normalizeAuthState } from './auth-state';
 
 export type PayloadHealthResult = {
   isConnected: boolean;
@@ -27,20 +27,21 @@ async function requestSession(
     const timeoutId = window.setTimeout(() => controller.abort(), SESSION_RESTORE_TIMEOUT_MS);
 
     try {
-      const headers: Record<string, string> = {
-        Accept: 'application/json',
-      };
-
-      if (fallbackAuth?.token && hasActiveSession(fallbackAuth.token, fallbackAuth.expiresAt)) {
-        headers.Authorization = `Bearer ${fallbackAuth.token}`;
-      }
-
+      // No `Authorization` header, for the same reason `logoutPayloadUser`
+      // sends none: `extractJWT` returns the *first* token it finds in
+      // `jwtOrder` (JWT, Bearer, cookie) and verifies only that one. A stale
+      // in-memory token would therefore be extracted, fail to verify, and take
+      // the request down *even though the cookie beside it is still valid* —
+      // turning a renewable session into a forced logout. The cookie is the
+      // credential; letting anything shadow it is how it stops being one.
       const response = await fetch(`${PAYLOAD_API_URL}${request.endpoint}`, {
         method: request.method,
         mode: 'cors',
         cache: 'no-store',
         credentials: 'include',
-        headers,
+        headers: {
+          Accept: 'application/json',
+        },
         signal: controller.signal,
       });
 

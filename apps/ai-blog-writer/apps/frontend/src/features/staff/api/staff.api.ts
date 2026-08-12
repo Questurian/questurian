@@ -12,7 +12,7 @@ import type {
 } from '../types'
 
 export async function fetchStaffUser(id: number | string, token: string): Promise<StaffUser> {
-  return payloadRequest(`/api/users/${id}?depth=0`, token)
+  return payloadRequest(`/api/users/${id}?depth=0`)
 }
 
 /**
@@ -28,7 +28,6 @@ export async function fetchAuthorForUser(
   // depth=1 populates the avatar upload relationship for preview
   const response = (await payloadRequest(
     `/api/authors?where[user][equals]=${userId}&limit=1&depth=1`,
-    token,
   )) as { docs?: Author[] }
   return response.docs?.[0] ?? null
 }
@@ -37,7 +36,6 @@ export async function fetchAuthorForUser(
 export async function fetchAuthors(token: string): Promise<Author[]> {
   const response = (await payloadRequest(
     '/api/authors?limit=200&sort=displayName&depth=0',
-    token,
   )) as { docs?: Author[] }
   return response.docs ?? []
 }
@@ -51,7 +49,6 @@ export async function createAuthorForUser(
     '/api/authors',
     'POST',
     { ...patch, user: Number(userId) },
-    token,
   )) as { doc?: Author }
   if (!response.doc) {
     throw new Error('Payload returned no created author document.')
@@ -64,7 +61,7 @@ export async function updateAuthor(
   patch: AuthorPatch,
   token: string,
 ): Promise<Author> {
-  const response = (await payloadMutation(`/api/authors/${id}`, 'PATCH', patch, token)) as {
+  const response = (await payloadMutation(`/api/authors/${id}`, 'PATCH', patch)) as {
     doc?: Author
   }
   if (!response.doc) {
@@ -78,7 +75,7 @@ export async function updateStaffUser(
   patch: StaffUserPatch,
   token: string,
 ): Promise<StaffUser> {
-  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', patch, token)) as {
+  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', patch)) as {
     doc?: StaffUser
   }
   if (!response.doc) {
@@ -101,7 +98,7 @@ export async function uploadAvatarAsset(file: File, token: string): Promise<Avat
     method: 'POST',
     mode: 'cors',
     credentials: 'include',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { },
     body: formData,
   })
 
@@ -118,7 +115,7 @@ export async function uploadAvatarAsset(file: File, token: string): Promise<Avat
 }
 
 export async function fetchStaffUsers(token: string): Promise<StaffUser[]> {
-  const response = (await payloadRequest('/api/users?limit=200&sort=email&depth=0', token)) as {
+  const response = (await payloadRequest('/api/users?limit=200&sort=email&depth=0')) as {
     docs?: StaffUser[]
   }
   return response.docs ?? []
@@ -137,7 +134,6 @@ export async function createStaffUser(
     '/api/users',
     'POST',
     { ...input, password: generateDiscardedPassword() },
-    token,
   )) as { doc?: StaffUser }
   if (!response.doc) {
     throw new Error('Payload returned no created user document.')
@@ -167,7 +163,6 @@ export async function requestPasswordSetEmail(email: string): Promise<void> {
 export async function fetchEmailLogs(token: string, limit = 50): Promise<EmailLog[]> {
   const response = (await payloadRequest(
     `/api/email-logs?limit=${limit}&sort=-createdAt&depth=0`,
-    token,
   )) as { docs?: EmailLog[] }
   return response.docs ?? []
 }
@@ -182,7 +177,7 @@ export async function changeStaffRole(
   role: AssignableStaffRole,
   token: string,
 ): Promise<StaffUser> {
-  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { role }, token)) as {
+  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { role })) as {
     doc?: StaffUser
   }
   if (!response.doc) {
@@ -201,7 +196,7 @@ export async function setStaffStatus(
   status: StaffStatus,
   token: string,
 ): Promise<StaffUser> {
-  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { status }, token)) as {
+  const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { status })) as {
     doc?: StaffUser
   }
   if (!response.doc) {

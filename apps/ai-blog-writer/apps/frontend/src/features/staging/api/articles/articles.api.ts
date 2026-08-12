@@ -21,7 +21,6 @@ export async function createArticle(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(article),
   })
@@ -47,7 +46,6 @@ export async function updateArticle(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(article),
   })
@@ -71,7 +69,6 @@ export async function getArticleById(
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
     },
   })
 
@@ -96,7 +93,6 @@ export async function fetchPayloadArticles(token: string): Promise<PayloadArticl
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${token}`,
     },
   })
 

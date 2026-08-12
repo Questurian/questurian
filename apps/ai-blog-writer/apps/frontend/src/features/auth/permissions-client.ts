@@ -31,7 +31,6 @@ export async function fetchAccessPermissions(token: string): Promise<AccessResul
       credentials: 'include',
       headers: {
         Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       signal: controller.signal,
     });
