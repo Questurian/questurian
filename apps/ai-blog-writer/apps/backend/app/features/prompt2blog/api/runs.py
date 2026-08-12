@@ -1,7 +1,7 @@
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core import (
@@ -11,6 +11,7 @@ from app.core import (
     write_stage_result,
     write_status,
 )
+from app.core.staff_auth import require_staff
 from app.shared.writer_models import resolve_writer_model
 
 from ..config import DEFAULT_MODEL, FEATURE_NAME
@@ -63,7 +64,7 @@ def _validate_prompt2blog_input_request(request: Prompt2BlogInputRequest) -> Non
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.post("/pipeline-v2")
+@router.post("/pipeline-v2", dependencies=[Depends(require_staff)])
 async def start_pipeline_v2(
     request: Prompt2BlogInputRequest,
     background_tasks: BackgroundTasks,
@@ -106,7 +107,7 @@ async def start_pipeline_v2(
     return JSONResponse({"message": "Prompt2Blog pipeline v2 queued", "run_id": run_id})
 
 
-@router.post("/run")
+@router.post("/run", dependencies=[Depends(require_staff)])
 async def start_full_run(
     request: Prompt2BlogInputRequest,
     background_tasks: BackgroundTasks,

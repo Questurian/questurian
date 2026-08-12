@@ -2,10 +2,11 @@
 
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core import read_stage_result, read_status
+from app.core.staff_auth import require_staff
 
 from ..config import Y2B_PRIMARY_MODEL
 from ..models import DeepExpandRequest, ListicleDetectRequest
@@ -15,7 +16,7 @@ from .validation import require_valid_model
 router = APIRouter()
 
 
-@router.post("/{run_id}/expand/detect")
+@router.post("/{run_id}/expand/detect", dependencies=[Depends(require_staff)])
 async def detect_article_listicle(
     run_id: str,
     request: ListicleDetectRequest,
@@ -30,7 +31,7 @@ async def detect_article_listicle(
     return JSONResponse(result)
 
 
-@router.post("/{run_id}/expand")
+@router.post("/{run_id}/expand", dependencies=[Depends(require_staff)])
 async def start_deep_expand(
     run_id: str,
     request: DeepExpandRequest,

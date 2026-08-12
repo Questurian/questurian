@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core import cleanup_run, read_status
+from app.core.staff_auth import require_staff
 
 from ..config import FEATURE_NAME
 from ..storage import (
@@ -19,7 +20,7 @@ async def get_articles() -> JSONResponse:
     return JSONResponse(get_all_completed_articles())
 
 
-@router.delete("/articles/{run_id}")
+@router.delete("/articles/{run_id}", dependencies=[Depends(require_staff)])
 async def delete_article(run_id: str) -> JSONResponse:
     """Delete a Prompt2Blog run and all stored data."""
     status = read_status(run_id)
