@@ -2,10 +2,54 @@ import { APIError } from 'better-auth/api'
 import { NextRequest, NextResponse } from 'next/server'
 
 import { visitorAuth } from '@/features/visitor-auth/lib/better-auth'
-import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { checkSetPasswordRateLimit } from '@/features/visitor-auth/lib/set-password-rate-limit'
+import { getPasswordStrengthError } from '@/shared/lib/password-strength'
+import { getCorsHeaders, handleCorsOptions, isAllowedOrigin } from '@/shared/utils/cors'
 
+/**
+ * Server adapter for Better Auth's `setPassword`, which the browser client does
+ * not expose (ADR-0004). It is the only way an OAuth-only visitor can add a
+ * password, and it is deliberately not a duplicate of anything.
+ *
+ * Calling `visitorAuth.api.setPassword` skips `visitorAuth.handler`, and with it
+ * three protections the router applies to every real Better Auth path:
+ *
+ * - `onRequestRateLimit`, hence `checkSetPasswordRateLimit` below.
+ * - `originCheckMiddleware`, hence the explicit origin check below.
+ * - the path-keyed `hooks.before` middleware — in effect. `setPassword` is a
+ *   *pathless* endpoint (`createAuthEndpoint({...})` with no path string), and
+ *   better-call resolves a middleware's path to `"/"` when the endpoint has
+ *   none, so `getVisitorPasswordError` is asked about `"/"` and never matched
+ *   its `/set-password` entry. Strength is therefore enforced here, against the
+ *   same `shared/lib/password-strength` rule, before delegating. Better Auth's
+ *   own check is a length floor only.
+ *
+ * Everything else stays Better Auth's: it requires a live session, and refuses
+ * outright once a credential password exists, so this cannot overwrite one.
+ */
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
+
+  // Better Auth's own `validateOrigin` treats a missing or literal-"null"
+  // Origin as forbidden whenever a Cookie is present, so match that rather than
+  // only rejecting a named-but-untrusted origin. (The session cookie is
+  // SameSite=Lax, so a genuinely cross-site POST arrives without it; this
+  // closes the same-site-but-untrusted case the router would have handled.)
+  const origin = req.headers.get('origin')
+  const carriesCookie = Boolean(req.headers.get('cookie'))
+  if (carriesCookie ? !origin || !isAllowedOrigin(origin) : origin && !isAllowedOrigin(origin)) {
+    return NextResponse.json({ error: 'Origin not allowed.' }, { status: 403, headers: corsHeaders })
+  }
+
+  const rateLimit = await checkSetPasswordRateLimit(req.headers)
+  if (!rateLimit.allowed) {
+    const response = NextResponse.json(
+      { error: 'Too many attempts. Please try again shortly.' },
+      { status: 429, headers: corsHeaders }
+    )
+    response.headers.set('Retry-After', String(rateLimit.retryAfterSeconds))
+    return response
+  }
 
   try {
     const body = await req.json() as { newPassword?: unknown }
@@ -14,6 +58,11 @@ export async function POST(req: NextRequest) {
         { error: 'A new password is required.' },
         { status: 400, headers: corsHeaders }
       )
+    }
+
+    const strengthError = getPasswordStrengthError(body.newPassword)
+    if (strengthError) {
+      return NextResponse.json({ error: strengthError }, { status: 400, headers: corsHeaders })
     }
 
     const result = await visitorAuth.api.setPassword({

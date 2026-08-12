@@ -17,6 +17,7 @@ export default defineConfig({
     include: [
       'src/shared/**/*.test.ts',
       'src/features/**/*.test.ts',
+      'src/app/**/*.test.ts',
     ],
   },
 })
