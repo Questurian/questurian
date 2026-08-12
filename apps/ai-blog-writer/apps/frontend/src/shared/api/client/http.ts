@@ -13,7 +13,7 @@ export async function payloadRequest(endpoint: string, token?: string) {
     method: 'GET',
     mode: 'cors',
     cache: 'no-store',
-    credentials: 'omit',
+    credentials: 'include',
     headers,
   })
 
@@ -42,7 +42,7 @@ export async function payloadMutation(
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     method,
     mode: 'cors',
-    credentials: 'omit',
+    credentials: 'include',
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })

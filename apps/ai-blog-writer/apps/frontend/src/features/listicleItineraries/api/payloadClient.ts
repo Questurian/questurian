@@ -61,6 +61,7 @@ export async function payloadRequest<T>(
 ): Promise<T> {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     ...init,
+    credentials: 'include',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
