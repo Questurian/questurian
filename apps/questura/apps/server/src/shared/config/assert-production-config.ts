@@ -60,6 +60,19 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     problems.push(`Localhost origins configured in production: ${localhostOrigins.join(', ')}.`)
   }
 
+  // Every rate limiter in the app counts through `shared/lib/rate-limit-counter`,
+  // which needs Redis to hold one budget across instances. Better Auth throws on
+  // the same variable, but only in a process that imports it; this covers the
+  // Staff credential limits and the account-existence check too. Without it
+  // those limiters now fail closed, so a missing variable takes auth down —
+  // better caught here, at boot, than by the first locked-out operator.
+  if (!APP_CONFIG.redis.url) {
+    problems.push(
+      'REDIS_URL is not set — the shared rate limiters have no cross-instance ' +
+        'counter and refuse to count in production.'
+    )
+  }
+
   return problems
 }
 

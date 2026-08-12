@@ -2,6 +2,7 @@ import {
   getClientIp,
   hashIdentifier,
   incrementCounter,
+  type CounterResult,
 } from '@/shared/lib/rate-limit-counter'
 
 /**
@@ -63,7 +64,23 @@ export async function checkStaffAuthRateLimit({
     counters.push(incrementCounter(emailKey, WINDOW_SECONDS))
   }
 
-  const [ipCounter, emailCounter] = await Promise.all(counters)
+  let ipCounter: CounterResult
+  let emailCounter: CounterResult | undefined
+
+  try {
+    ;[ipCounter, emailCounter] = await Promise.all(counters)
+  } catch (error) {
+    // No usable counter means no way to tell an attacker from an operator, and
+    // these are the credential endpoints. Deny rather than wave everything
+    // through; a Redis outage already failed these requests, just as a 500.
+    //
+    // But a 500 was also the *signal*. The caller turns this into an ordinary
+    // "Too many attempts" message, which is exactly what an operator — or the
+    // Location Manager service identity — would see during a counter outage,
+    // so the reason has to be logged or it disappears entirely.
+    console.error(`[staff-auth] ${scope} rate limit unavailable; denying`, error)
+    return { allowed: false, retryAfterSeconds: WINDOW_SECONDS }
+  }
 
   const retryAfterSeconds = Math.max(
     ipCounter.count > limits.perIp ? ipCounter.ttlSeconds : 0,

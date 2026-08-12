@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   STAFF_FORGOT_PASSWORD_LIMITS,
@@ -103,6 +103,64 @@ describe('staff auth rate limiting', () => {
         allowed: true,
       })
     }
+  })
+})
+
+describe('when the shared counter backend is unavailable', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.resetModules()
+    vi.restoreAllMocks()
+  })
+
+  async function attemptInProductionWithoutRedis(scope: 'login' | 'forgot-password') {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('REDIS_URL', '')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const module = await import('./lib/staff-auth-rate-limit')
+
+    return module.checkStaffAuthRateLimit({
+      scope,
+      headers: headers('198.51.100.9'),
+      email: 'admin@questurian.com',
+      limits: scope === 'login' ? module.STAFF_LOGIN_LIMITS : module.STAFF_FORGOT_PASSWORD_LIMITS,
+    })
+  }
+
+  // Production without Redis makes the counter throw rather than count in
+  // per-process memory. The credential endpoints must read that as a denial:
+  // an unthrottled `/api/users/login` is the password oracle this limiter exists
+  // to close, so an unusable counter cannot mean "allow".
+  it.each(['login', 'forgot-password'] as const)('denies %s rather than allowing it', async (scope) => {
+    await expect(attemptInProductionWithoutRedis(scope)).resolves.toEqual({
+      allowed: false,
+      retryAfterSeconds: 60,
+    })
+  })
+
+  // The caller renders this denial as an ordinary "Too many attempts" message,
+  // which is what an operator — or the Location Manager service identity —
+  // would see during a counter outage. Without a log there is no signal at all.
+  it('logs the reason rather than passing a counter outage off as a flood', async () => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('REDIS_URL', '')
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const module = await import('./lib/staff-auth-rate-limit')
+    await module.checkStaffAuthRateLimit({
+      scope: 'login',
+      headers: headers('198.51.100.10'),
+      email: 'admin@questurian.com',
+      limits: module.STAFF_LOGIN_LIMITS,
+    })
+
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining('rate limit unavailable'),
+      expect.any(Error)
+    )
   })
 })
 
