@@ -260,6 +260,8 @@ _Avoid_: public auth, visitor auth
 - Visitor auth UI does not present separate sign-in and sign-up paths for email/password entry.
 - Visitor auth endpoints are abuse-sensitive surfaces and require rate limiting, bot protection, and audit logging.
 - Production Visitor auth rate limiting is Redis-backed; database-backed limits are local/spike-only.
+- `REDIS_URL` is required to boot in production. Every rate limiter — Visitor auth, Staff credential endpoints, and the account-existence check — counts through one shared fixed-window counter that needs Redis to hold a single budget across instances; the in-memory fallback multiplies the effective limit by instance count and is barred from production.
+- A rate limiter with no usable counter denies rather than allows, and logs the reason so a counter outage is distinguishable from real traffic.
 - Unverified email/password Visitor accounts may sign in and browse free public content.
 - Checkout, paid content, and sensitive account changes require a verified Visitor account.
 - Google OAuth Visitor accounts satisfy verification when Google reports a verified email.

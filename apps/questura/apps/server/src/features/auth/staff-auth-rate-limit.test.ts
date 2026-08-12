@@ -110,12 +110,14 @@ describe('when the shared counter backend is unavailable', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     vi.resetModules()
+    vi.restoreAllMocks()
   })
 
   async function attemptInProductionWithoutRedis(scope: 'login' | 'forgot-password') {
     vi.resetModules()
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('REDIS_URL', '')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
 
     const module = await import('./lib/staff-auth-rate-limit')
 
@@ -136,6 +138,29 @@ describe('when the shared counter backend is unavailable', () => {
       allowed: false,
       retryAfterSeconds: 60,
     })
+  })
+
+  // The caller renders this denial as an ordinary "Too many attempts" message,
+  // which is what an operator — or the Location Manager service identity —
+  // would see during a counter outage. Without a log there is no signal at all.
+  it('logs the reason rather than passing a counter outage off as a flood', async () => {
+    vi.resetModules()
+    vi.stubEnv('NODE_ENV', 'production')
+    vi.stubEnv('REDIS_URL', '')
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    const module = await import('./lib/staff-auth-rate-limit')
+    await module.checkStaffAuthRateLimit({
+      scope: 'login',
+      headers: headers('198.51.100.10'),
+      email: 'admin@questurian.com',
+      limits: module.STAFF_LOGIN_LIMITS,
+    })
+
+    expect(errorLog).toHaveBeenCalledWith(
+      expect.stringContaining('rate limit unavailable'),
+      expect.any(Error)
+    )
   })
 })
 

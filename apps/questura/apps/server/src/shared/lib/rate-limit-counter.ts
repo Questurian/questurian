@@ -15,9 +15,12 @@ import { redisSecondaryStorage } from '@/features/visitor-auth/lib/redis-seconda
  * variable at boot so the throw is a backstop rather than the first symptom.
  *
  * Better Auth's own limiter refuses to boot in production without `REDIS_URL`,
- * but that check lives in the Better Auth module: a process that never imports
- * it (a worker, a script, a route that only touches the Payload half) used to
- * reach these counters with memory counting silently in place.
+ * but that check lives in the Better Auth module and only fires in a process
+ * that imports it. The visitor account-check route does import it transitively
+ * and was therefore already covered; the Staff credential limits are not on
+ * that path and used to reach these counters with memory counting silently in
+ * place. `assertProductionConfig` now makes the requirement independent of
+ * which modules a given process happens to load.
  */
 
 export type CounterResult = { count: number; ttlSeconds: number }
