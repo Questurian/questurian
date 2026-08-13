@@ -40,6 +40,31 @@ export type SessionCookieConfig = {
   secure: boolean
 }
 
+/**
+ * Browsers refuse a `Domain` that is a public suffix (RFC 6265 §5.3 step 5),
+ * because it would hand one tenant's cookie to every other tenant. The full
+ * Public Suffix List is a dependency and a moving target; this covers the
+ * multi-label suffixes this project can plausibly be deployed behind, where the
+ * mistake is easy to make and its symptom — a cookie the browser silently drops
+ * — is indistinguishable from the 401 this module exists to prevent. A
+ * single-label suffix like `com` is already rejected as a single-label host.
+ */
+const SHARED_PUBLIC_SUFFIXES = new Set([
+  'trycloudflare.com',
+  'cfargotunnel.com',
+  'pages.dev',
+  'workers.dev',
+  'vercel.app',
+  'netlify.app',
+  'github.io',
+  'herokuapp.com',
+  'ngrok.io',
+  'ngrok-free.app',
+  'co.uk',
+  'com.au',
+  'com.br',
+])
+
 function normalizeHost(value: string): string {
   return value.trim().toLowerCase().replace(/\.$/, '')
 }
@@ -62,13 +87,15 @@ function domainMatches(host: string, domain: string): boolean {
  * ship a cookie no browser will store.
  *
  * `requiredHostnames` are the hosts this deployment expects to receive the
- * staff cookie — Payload's own host plus every configured browser origin.
- * Checking only Payload's host is not enough: `Domain=cms.questurian.com` on a
- * Payload served from `cms.questurian.com` is self-consistent and still fails
- * to reach `www`, `abw` or `abw-api`, which is exactly the silent 401 this
- * variable exists to prevent. Widening the cookie is only correct when it
- * actually covers every host that needs it, so all of them are checked and the
- * uncovered ones are named.
+ * staff cookie: Payload's own host plus the operator hosts named by
+ * `PAYLOAD_COOKIE_REQUIRED_HOSTS`. Checking only Payload's host is not enough —
+ * `Domain=cms.questurian.com` on a Payload served from `cms.questurian.com` is
+ * self-consistent and still reaches no sibling, which is exactly the silent 401
+ * this variable exists to prevent. The list is deliberately its own variable
+ * rather than `CORS_ORIGINS`: an allowed browser origin (a preview deployment,
+ * a partner site) is not necessarily a host that should hold a staff session,
+ * and no `Domain` can span two registrable domains, so deriving the list from
+ * CORS would make a legitimate origin unbootable.
  */
 export function validateCookieDomain(
   domain: string,
@@ -103,6 +130,11 @@ export function validateCookieDomain(
   }
 
   const normalizedDomain = normalizeHost(withoutLeadingDot)
+
+  if (SHARED_PUBLIC_SUFFIXES.has(normalizedDomain)) {
+    return `is a shared public suffix; browsers refuse to store a cookie scoped to it (${domain}).`
+  }
+
   const uncovered = Array.from(
     new Set(requiredHostnames.map(normalizeHost).filter(Boolean))
   ).filter((host) => !domainMatches(host, normalizedDomain))
@@ -115,6 +147,23 @@ export function validateCookieDomain(
   }
 
   return null
+}
+
+/**
+ * The operator hosts that must receive the staff session, as a comma-separated
+ * list of bare hostnames. Stated explicitly because Payload cannot infer them:
+ * `abw-api.questurian.com` reads `payload-token` server-side and never appears
+ * as a browser origin anywhere in this app's configuration.
+ */
+export function readRequiredCookieHosts(raw: string | undefined): string[] {
+  return Array.from(
+    new Set(
+      (raw ?? '')
+        .split(',')
+        .map((host) => normalizeHost(host))
+        .filter(Boolean)
+    )
+  )
 }
 
 export function readCookieDomain(raw: string | undefined): string | undefined {

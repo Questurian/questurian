@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   HOST_ONLY_COOKIE_DOMAIN,
   readCookieDomain,
+  readRequiredCookieHosts,
   resolveSessionCookieConfig,
   validateCookieDomain,
 } from './session-cookie'
@@ -24,6 +25,19 @@ describe('session cookie domain parsing', () => {
 
   it('keeps a leading dot, which RFC 6265 ignores', () => {
     expect(readCookieDomain('.questurian.com')).toBe('.questurian.com')
+  })
+})
+
+describe('required staff cookie hosts', () => {
+  it('reads a comma-separated list, normalized and de-duplicated', () => {
+    expect(
+      readRequiredCookieHosts(' CMS.questurian.com , www.questurian.com,cms.questurian.com. ')
+    ).toEqual(['cms.questurian.com', 'www.questurian.com'])
+  })
+
+  it('reads an unset or empty list as no required hosts', () => {
+    expect(readRequiredCookieHosts(undefined)).toEqual([])
+    expect(readRequiredCookieHosts(' , ,')).toEqual([])
   })
 })
 
@@ -85,8 +99,15 @@ describe('session cookie domain validation', () => {
     expect(problem).toContain('www.questurian.com')
     expect(problem).toContain('abw.questurian.com')
     expect(problem).toContain('abw-api.questurian.com')
-    expect(problem).not.toContain('cms.questurian.com,')
+    expect(problem).not.toContain('cms.questurian.com')
   })
+
+  it.each(['vercel.app', 'pages.dev', 'trycloudflare.com', 'co.uk'])(
+    'rejects %s, a public suffix browsers refuse to store',
+    (domain) => {
+      expect(validateCookieDomain(domain, [`app.${domain}`])).toContain('public suffix')
+    }
+  )
 
   it('rejects a domain that covers only some required hosts', () => {
     expect(validateCookieDomain('abw.questurian.com', OPERATOR_HOSTS)).toContain(

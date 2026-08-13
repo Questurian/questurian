@@ -15,6 +15,7 @@ const VALID_PRODUCTION_ENV = {
   CORS_ALLOWED_ORIGINS: 'https://questurian.com',
   REDIS_URL: 'redis://cache.internal:6379',
   PAYLOAD_COOKIE_DOMAIN: 'questurian.com',
+  PAYLOAD_COOKIE_REQUIRED_HOSTS: 'api.questurian.com,questurian.com',
 }
 
 describe('production config assertion', () => {
@@ -25,6 +26,7 @@ describe('production config assertion', () => {
     vi.stubEnv('CORS_ALLOWED_ORIGINS', '')
     vi.stubEnv('REDIS_URL', '')
     vi.stubEnv('PAYLOAD_COOKIE_DOMAIN', '')
+    vi.stubEnv('PAYLOAD_COOKIE_REQUIRED_HOSTS', '')
   })
 
   afterEach(() => {
@@ -151,6 +153,7 @@ describe('production config assertion', () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,
       BACKEND_URL_LOCAL: 'https://cms.questurian.com',
+      PAYLOAD_COOKIE_REQUIRED_HOSTS: 'cms.questurian.com',
       PAYLOAD_COOKIE_DOMAIN: 'staging.questurian.com',
     })
 
@@ -165,7 +168,8 @@ describe('production config assertion', () => {
       ...VALID_PRODUCTION_ENV,
       BACKEND_URL_LOCAL: 'https://cms.questurian.com',
       NEXT_PUBLIC_APP_URL: 'https://www.questurian.com',
-      CORS_ALLOWED_ORIGINS: 'https://www.questurian.com,https://abw.questurian.com',
+      PAYLOAD_COOKIE_REQUIRED_HOSTS:
+        'www.questurian.com,abw.questurian.com,abw-api.questurian.com',
       PAYLOAD_COOKIE_DOMAIN: 'cms.questurian.com',
     })
 
@@ -175,32 +179,43 @@ describe('production config assertion', () => {
     expect(problems).toContain('abw.questurian.com')
   })
 
-  it('accepts the registrable domain that covers every configured origin', async () => {
+  it('accepts the registrable domain that reaches every required host', async () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,
       BACKEND_URL_LOCAL: 'https://cms.questurian.com',
       NEXT_PUBLIC_APP_URL: 'https://www.questurian.com',
-      CORS_ALLOWED_ORIGINS:
-        'https://www.questurian.com,https://abw.questurian.com,https://abw-api.questurian.com',
+      PAYLOAD_COOKIE_REQUIRED_HOSTS:
+        'www.questurian.com,abw.questurian.com,abw-api.questurian.com',
       PAYLOAD_COOKIE_DOMAIN: 'questurian.com',
     })
 
     expect(collectProductionConfigProblems()).toEqual([])
   })
 
-  // A localhost origin in production is already its own problem; it must not
-  // also turn into a confusing second complaint about the cookie domain.
-  it('reports a localhost origin once, not twice', async () => {
+  it('rejects a widened cookie with no stated list of hosts that need it', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      PAYLOAD_COOKIE_REQUIRED_HOSTS: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain(
+      'PAYLOAD_COOKIE_REQUIRED_HOSTS is not set'
+    )
+  })
+
+  // A browser origin is not automatically a host that should hold a staff
+  // session, and no Domain can span two registrable domains — deriving the
+  // required hosts from CORS would make a legitimate origin unbootable.
+  it('accepts a CORS origin on another registrable domain', async () => {
     const { collectProductionConfigProblems } = await load({
       ...VALID_PRODUCTION_ENV,
       BACKEND_URL_LOCAL: 'https://cms.questurian.com',
-      CORS_ALLOWED_ORIGINS: 'https://www.questurian.com,http://localhost:3000',
+      CORS_ALLOWED_ORIGINS: 'https://www.questurian.com,https://questura-preview.vercel.app',
+      PAYLOAD_COOKIE_REQUIRED_HOSTS: 'www.questurian.com,abw.questurian.com',
       PAYLOAD_COOKIE_DOMAIN: 'questurian.com',
     })
 
-    const problems = collectProductionConfigProblems()
-    expect(problems).toHaveLength(1)
-    expect(problems[0]).toContain('Localhost origins configured in production')
+    expect(collectProductionConfigProblems()).toEqual([])
   })
 
   it('reports every problem at once rather than one per boot', async () => {

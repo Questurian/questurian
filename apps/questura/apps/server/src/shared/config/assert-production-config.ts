@@ -1,5 +1,9 @@
 import { APP_CONFIG } from './index'
-import { HOST_ONLY_COOKIE_DOMAIN, validateCookieDomain } from './session-cookie'
+import {
+  HOST_ONLY_COOKIE_DOMAIN,
+  readRequiredCookieHosts,
+  validateCookieDomain,
+} from './session-cookie'
 
 /**
  * Fail fast on a production boot that is still carrying development defaults.
@@ -99,27 +103,33 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
         'every caller really is served from this host.'
     )
   } else if (rawCookieDomain.toLowerCase() !== HOST_ONLY_COOKIE_DOMAIN) {
-    // Every host that talks to Payload with this cookie has to be covered by
-    // it, not just Payload's own host: `cms.questurian.com` domain-matches a
-    // Payload on `cms.questurian.com` while reaching none of its siblings.
-    // `CORS_ORIGINS` is the deployment's own list of trusted browser origins —
-    // it already feeds Payload `cors`/`csrf` and Better Auth `trustedOrigins`
-    // — so it is the configuration that states which hosts those are, rather
-    // than a second list to keep in sync. Localhost entries are reported by
-    // the check above; excluding them here keeps one mistake to one message.
-    const requiredHostnames = [process.env.BACKEND_URL_LOCAL, ...APP_CONFIG.CORS_ORIGINS]
-      .filter((value): value is string => Boolean(value && value.trim()))
-      .filter((value) => !isLocalhost(value))
-      .flatMap((value) => {
-        try {
-          return [new URL(value).hostname]
-        } catch {
-          // Malformed entries are reported separately; keep aggregating.
-          return []
-        }
-      })
+    // A cookie domain that only covers Payload's own host boots cleanly and
+    // still reaches no sibling, so the hosts that need the session are named
+    // explicitly and checked. Payload's own host is always one of them.
+    const requiredHosts = readRequiredCookieHosts(process.env.PAYLOAD_COOKIE_REQUIRED_HOSTS)
 
-    const problem = validateCookieDomain(rawCookieDomain, requiredHostnames)
+    let backendHostname: string | undefined
+    try {
+      backendHostname = process.env.BACKEND_URL_LOCAL
+        ? new URL(process.env.BACKEND_URL_LOCAL).hostname
+        : undefined
+    } catch {
+      // The required-URL check reports this separately; keep aggregating errors.
+    }
+
+    if (requiredHosts.length === 0) {
+      problems.push(
+        'PAYLOAD_COOKIE_REQUIRED_HOSTS is not set — list every host that must ' +
+          'receive the staff session (e.g. cms.questurian.com,www.questurian.com,' +
+          'abw.questurian.com,abw-api.questurian.com) so a cookie domain that ' +
+          'reaches none of them cannot boot.'
+      )
+    }
+
+    const problem = validateCookieDomain(rawCookieDomain, [
+      ...(backendHostname ? [backendHostname] : []),
+      ...requiredHosts,
+    ])
     if (problem) problems.push(`PAYLOAD_COOKIE_DOMAIN ${problem}`)
   }
 

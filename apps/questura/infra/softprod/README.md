@@ -99,6 +99,23 @@ Stage host config before release adoption:
 ~/questura/app/apps/questura/infra/softprod/stage-host-config.sh
 ```
 
+`~/questura/config/server.env` must carry the staff session cookie decision
+before a release built from this commit is deployed, or the server refuses to
+boot:
+
+```
+PAYLOAD_COOKIE_DOMAIN=questurian.com
+PAYLOAD_COOKIE_REQUIRED_HOSTS=cms.questurian.com,www.questurian.com,abw.questurian.com,abw-api.questurian.com
+```
+
+`PAYLOAD_COOKIE_DOMAIN=host-only` is the explicit alternative for a deployment
+whose callers all share Payload's host; it needs no required-host list. Adding
+these keys ahead of the deployment is safe — an older release ignores them.
+Operators signed in before the change keep a host-only `payload-token` on
+`cms` alongside the new domain-scoped one; the older cookie is sent first and
+logging out cannot expire it, so their previous session survives until it
+expires on its own (2h). Signing out and back in after the deploy avoids it.
+
 This migrates existing app env files into mode-0600 canonical config, extracts
 the existing Compose password into a mode-0600 `.env` without printing it,
 installs sanitized Compose/Tunnel config, and renders validated units under
