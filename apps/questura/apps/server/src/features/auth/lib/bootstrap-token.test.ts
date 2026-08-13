@@ -34,14 +34,16 @@ describe('bootstrap token', () => {
       expect(isBootstrapRequestAuthorized({ req: reqWithHeader(null) })).toBe(true)
     })
 
-    it('refuses bootstrap in production and explains how to enable it', async () => {
+    it('refuses every production bootstrap but explains how to enable it once', async () => {
       const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
       const { isBootstrapRequestAuthorized } = await load({ NODE_ENV: 'production' })
 
       expect(isBootstrapRequestAuthorized({ req: reqWithHeader(null) })).toBe(false)
+      expect(isBootstrapRequestAuthorized({ req: reqWithHeader(null) })).toBe(false)
       expect(consoleError).toHaveBeenCalledWith(
         expect.stringContaining('BOOTSTRAP_ADMIN_TOKEN is not set')
       )
+      expect(consoleError).toHaveBeenCalledTimes(1)
     })
   })
 

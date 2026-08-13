@@ -36,6 +36,7 @@ import { APP_CONFIG } from '@/shared/config'
 export const BOOTSTRAP_TOKEN_HEADER = 'x-bootstrap-token'
 
 const BOOTSTRAP_TOKEN_ENV_VAR = 'BOOTSTRAP_ADMIN_TOKEN'
+let missingProductionTokenReported = false
 
 type HeaderReader = { get?: (name: string) => string | null | undefined }
 
@@ -83,11 +84,14 @@ export function isBootstrapRequestAuthorized(args: BootstrapAccessArgs): boolean
   if (!expected) {
     if (!APP_CONFIG.isProduction) return true
 
-    console.error(
-      `Refusing unauthenticated first-user bootstrap: ${BOOTSTRAP_TOKEN_ENV_VAR} is not set. ` +
-        `Set it to a random secret, create the first admin with an ` +
-        `\`${BOOTSTRAP_TOKEN_HEADER}\` header carrying that value, then unset it.`
-    )
+    if (!missingProductionTokenReported) {
+      missingProductionTokenReported = true
+      console.error(
+        `Refusing unauthenticated first-user bootstrap: ${BOOTSTRAP_TOKEN_ENV_VAR} is not set. ` +
+          `Set it to a random secret, create the first admin with an ` +
+          `\`${BOOTSTRAP_TOKEN_HEADER}\` header carrying that value, then unset it.`
+      )
+    }
     return false
   }
 

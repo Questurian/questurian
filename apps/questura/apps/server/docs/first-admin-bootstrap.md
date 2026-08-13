@@ -54,7 +54,7 @@ that cannot set headers; it is not a stored field.
 | Environment | `BOOTSTRAP_ADMIN_TOKEN` | First-user create |
 |---|---|---|
 | Production | set | Allowed only with a matching token |
-| Production | unset | **Refused**, with an explanatory server log |
+| Production | unset | **Refused**, with one explanatory log per server process |
 | Development | set | Enforced, exactly as production — use this to rehearse |
 | Development | unset | Allowed, unchanged from before this guard existed |
 
