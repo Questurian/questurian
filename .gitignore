@@ -59,7 +59,8 @@ agents.md
 CLAUDE.md
 claude.md
 .claude/settings.local.json
-!AGENTS.md
+!/AGENTS.md
+!/CLAUDE.md
 
 # Generated cross-tool skill adapters. Canonical, reviewed skills live in
 # .agents; Claude's checked-in links point back to that single source.
