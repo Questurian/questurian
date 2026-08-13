@@ -54,6 +54,29 @@ describe('session cookie domain validation', () => {
   it('rejects an IP address', () => {
     expect(validateCookieDomain('127.0.0.1')).toContain('IP address')
   })
+
+  it.each(['-questurian.com', 'questurian-.com', 'questurian..com', 'questurian.com.'])(
+    'rejects invalid hostname labels in %s',
+    (domain) => {
+      expect(validateCookieDomain(domain)).toContain('valid hostname labels')
+    }
+  )
+
+  it.each(['questurian.com', '.questurian.com', 'cms.questurian.com'])(
+    'accepts %s when Payload runs on cms.questurian.com',
+    (domain) => {
+      expect(validateCookieDomain(domain, 'cms.questurian.com')).toBeNull()
+    }
+  )
+
+  it.each(['staging.questurian.com', 'example.com'])(
+    'rejects %s when Payload runs on cms.questurian.com',
+    (domain) => {
+      expect(validateCookieDomain(domain, 'cms.questurian.com')).toContain(
+        'does not domain-match'
+      )
+    }
+  )
 })
 
 describe('session cookie config', () => {

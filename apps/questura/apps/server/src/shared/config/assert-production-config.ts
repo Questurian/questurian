@@ -43,6 +43,15 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     if (isLocalhost(value)) {
       problems.push(`${name} points at localhost (${value}).`)
     }
+
+    try {
+      const url = new URL(value)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        problems.push(`${name} must use http or https (${value}).`)
+      }
+    } catch {
+      problems.push(`${name} is not a valid URL (${value}).`)
+    }
   }
 
   // `CORS_ORIGINS` feeds Payload `cors`, Payload `csrf` and Better Auth
@@ -90,7 +99,15 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
         'every caller really is served from this host.'
     )
   } else if (rawCookieDomain.toLowerCase() !== HOST_ONLY_COOKIE_DOMAIN) {
-    const problem = validateCookieDomain(rawCookieDomain)
+    let backendHostname: string | undefined
+    try {
+      backendHostname = process.env.BACKEND_URL_LOCAL
+        ? new URL(process.env.BACKEND_URL_LOCAL).hostname
+        : undefined
+    } catch {
+      // The required-URL check reports this separately; keep aggregating errors.
+    }
+    const problem = validateCookieDomain(rawCookieDomain, backendHostname)
     if (problem) problems.push(`PAYLOAD_COOKIE_DOMAIN ${problem}`)
   }
 

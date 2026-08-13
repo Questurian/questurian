@@ -67,6 +67,18 @@ describe('production config assertion', () => {
     expect(collectProductionConfigProblems().join('\n')).toContain('BACKEND_URL_LOCAL is not set')
   })
 
+  it.each(['not-a-url', 'ftp://cms.questurian.com'])(
+    'rejects malformed or unsupported production URL %s',
+    async (url) => {
+      const { collectProductionConfigProblems } = await load({
+        ...VALID_PRODUCTION_ENV,
+        BACKEND_URL_LOCAL: url,
+      })
+
+      expect(collectProductionConfigProblems().join('\n')).toMatch(/not a valid URL|must use http/)
+    }
+  )
+
   it.each([
     'http://localhost:3000',
     'http://127.0.0.1:3000',
@@ -133,6 +145,18 @@ describe('production config assertion', () => {
     const problems = collectProductionConfigProblems().join('\n')
     expect(problems).toContain('PAYLOAD_COOKIE_DOMAIN')
     expect(problems).toContain(expected)
+  })
+
+  it('rejects a cookie domain that the Payload host cannot set', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      BACKEND_URL_LOCAL: 'https://cms.questurian.com',
+      PAYLOAD_COOKIE_DOMAIN: 'staging.questurian.com',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain(
+      'does not domain-match the Payload host (cms.questurian.com)'
+    )
   })
 
   it('reports every problem at once rather than one per boot', async () => {

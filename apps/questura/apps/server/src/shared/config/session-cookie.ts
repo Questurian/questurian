@@ -16,9 +16,12 @@
  *
  * The widening is deliberate and not free: a cookie scoped to `questurian.com`
  * is attached to requests for every host under it, including the public client
- * frontend, which has no use for it. It stays `httpOnly`, so no page can read
- * it; the cost is that more hosts can *carry* it. Payload's `csrf` allowlist,
- * not the cookie scope, is what decides whether a carried cookie is honoured.
+ * frontend, which has no use for it. `httpOnly` prevents browser JavaScript
+ * from reading it, but every receiving server can read it and sibling hosts can
+ * overwrite a parent-domain cookie. Every host under this boundary must
+ * therefore be operated as trusted infrastructure. Payload's `csrf` allowlist
+ * separately decides which browser origins may use the cookie against Payload;
+ * it does not remove the wider server-side trust boundary.
  *
  * Ports do not scope cookies. Local development stays host-only and still works
  * across `localhost:4000`, `localhost:5173` and `localhost:8000`.
@@ -46,7 +49,10 @@ export type SessionCookieConfig = {
  * browsers refuse as a cookie `Domain` anyway — better to fail at boot than to
  * ship a cookie no browser will store.
  */
-export function validateCookieDomain(domain: string): string | null {
+export function validateCookieDomain(
+  domain: string,
+  cookieOriginHostname?: string
+): string | null {
   if (domain.includes('://')) return `must be a bare host, not a URL (${domain}).`
   if (domain.includes('/')) return `must not contain a path (${domain}).`
   if (domain.includes(':')) return `must not contain a port (${domain}).`
@@ -59,6 +65,32 @@ export function validateCookieDomain(domain: string): string | null {
 
   if (/^\d+(\.\d+)*$/.test(withoutLeadingDot)) {
     return `must be a domain name, not an IP address (${domain}).`
+  }
+
+  if (
+    withoutLeadingDot.length > 253 ||
+    withoutLeadingDot
+      .split('.')
+      .some(
+        (label) =>
+          label.length === 0 ||
+          label.length > 63 ||
+          !/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i.test(label)
+      )
+  ) {
+    return `must contain valid hostname labels (${domain}).`
+  }
+
+  if (cookieOriginHostname) {
+    const normalizedDomain = withoutLeadingDot.toLowerCase()
+    const normalizedOrigin = cookieOriginHostname.toLowerCase().replace(/\.$/, '')
+    const domainMatchesOrigin =
+      normalizedOrigin === normalizedDomain ||
+      normalizedOrigin.endsWith(`.${normalizedDomain}`)
+
+    if (!domainMatchesOrigin) {
+      return `does not domain-match the Payload host (${cookieOriginHostname}).`
+    }
   }
 
   return null
