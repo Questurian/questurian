@@ -1,0 +1,17 @@
+[Unit]
+Description=Run Questura passive health monitor every five minutes
+Documentation=https://github.com/Questurian/questurian
+
+[Timer]
+# The app units start at boot; two minutes gives the server, client, and tunnel
+# time to answer before the first pass, so a normal restart is not reported as
+# an outage.
+OnBootSec=2min
+OnCalendar=*:0/5
+RandomizedDelaySec=30s
+AccuracySec=30s
+Persistent=true
+Unit=questura-healthcheck.service
+
+[Install]
+WantedBy=timers.target

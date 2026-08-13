@@ -32,7 +32,7 @@
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int && pnpm run test:deploy && pnpm run test:softprod",
     "test:deploy": "node --test scripts/deploy/*.test.mjs",
-    "test:softprod": "bash ../../infra/softprod/deploy.test.sh && bash ../../infra/softprod/release-lib.test.sh && bash ../../infra/softprod/stage-host-config.test.sh && bash ../../infra/softprod/prepare-host-release.test.sh && bash ../../infra/softprod/adopt-host-release.test.sh",
+    "test:softprod": "bash ../../infra/softprod/deploy.test.sh && bash ../../infra/softprod/release-lib.test.sh && bash ../../infra/softprod/stage-host-config.test.sh && bash ../../infra/softprod/prepare-host-release.test.sh && bash ../../infra/softprod/adopt-host-release.test.sh && bash ../../infra/softprod/healthcheck.test.sh",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.ts"
   },
   "dependencies": {

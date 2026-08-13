@@ -70,10 +70,15 @@ cmp "$EXPECTED_COMPOSE_ENV" "$DEPLOY_ROOT/infra/.env"
 [[ $(stat -c '%a' "$DEPLOY_ROOT/config/server.env" 2>/dev/null || stat -f '%Lp' "$DEPLOY_ROOT/config/server.env") == 600 ]]
 grep -q "ExecStart=$FAKE_BIN/pnpm exec next start -H 127.0.0.1 -p 4000" "$DEPLOY_ROOT/infra/systemd/questura-server.service"
 grep -q "ExecStart=$FAKE_BIN/cloudflared" "$DEPLOY_ROOT/infra/systemd/questura-tunnel.service"
+grep -q 'ExecStart=/usr/bin/env bash %h/questura/app/apps/questura/infra/softprod/healthcheck.sh' "$DEPLOY_ROOT/infra/systemd/questura-healthcheck.service"
+grep -q '^OnBootSec=2min$' "$DEPLOY_ROOT/infra/systemd/questura-healthcheck.timer"
+grep -q '^OnCalendar=\*:0/5$' "$DEPLOY_ROOT/infra/systemd/questura-healthcheck.timer"
+grep -q '^Persistent=true$' "$DEPLOY_ROOT/infra/systemd/questura-healthcheck.timer"
 ! rg -q '@(NODE_BIN_DIR|PNPM_BIN|CLOUDFLARED_BIN)@' "$DEPLOY_ROOT/infra/systemd"
 grep -q 'docker|.*config --quiet' "$LOG"
 grep -q 'cloudflared|.*tunnel ingress validate' "$LOG"
 grep -q 'systemd-analyze|--user verify' "$LOG"
+grep -q 'systemd-analyze|.*questura-healthcheck.service.*questura-healthcheck.timer' "$LOG"
 ! grep -Fq "$FAKE_COMPOSE_PASSWORD" "$TEST_ROOT/install.out" "$TEST_ROOT/install.err"
 
 # Idempotent rerun keeps secrets quiet and creates another recoverable backup.

@@ -172,6 +172,56 @@ The prepared release must match the commit containing the adoption script. If
 preparation ran before that commit was checked out, rerun preparation first; it
 will safely reuse completed work where certification still matches.
 
+## Passive monitoring
+
+`healthcheck.sh` verifies the adopted host every five minutes — and two minutes
+after boot, once the app units have had time to answer — without changing it. The check requires aligned, valid `current-server` and `current-client`
+release metadata, then verifies that exact commit through all four local and
+public `/api/health` endpoints. The server endpoint performs a real Payload
+database query. It also requires the server, client, and tunnel user units to be
+active; validates canonical Compose config; and checks the stable Postgres and
+Redis containers for the `infra` project, expected service labels, running
+state, and healthy Docker health checks.
+
+Results go to journald under `questura-healthcheck`. Failures are aggregated and
+sanitized: app response bodies, Compose output, and environment values are
+never logged. The monitor never restarts a unit, changes a release link, runs a
+migration, or writes to Postgres or Redis. If a deploy holds `deploy.lock`, or
+the paired release changes while checks run, that pass logs `SKIP` and exits
+successfully; the monitor probes but never holds the deployment lock.
+
+`stage-host-config.sh` renders the monitor service and timer alongside the app
+units, but does not install or enable them. After immutable-release adoption is
+complete and all three app units are healthy:
+
+```bash
+mkdir -p ~/.config/systemd/user ~/questura/backups/health-monitor
+cp -a ~/.config/systemd/user/questura-healthcheck.service \
+  ~/.config/systemd/user/questura-healthcheck.timer \
+  ~/questura/backups/health-monitor/ 2>/dev/null || true
+install -m 0644 ~/questura/infra/systemd/questura-healthcheck.service \
+  ~/.config/systemd/user/questura-healthcheck.service
+install -m 0644 ~/questura/infra/systemd/questura-healthcheck.timer \
+  ~/.config/systemd/user/questura-healthcheck.timer
+systemd-analyze --user verify \
+  ~/.config/systemd/user/questura-healthcheck.service \
+  ~/.config/systemd/user/questura-healthcheck.timer
+systemctl --user daemon-reload
+systemctl --user start questura-healthcheck.service
+journalctl --user -u questura-healthcheck.service -n 100 --no-pager
+systemctl --user enable --now questura-healthcheck.timer
+systemctl --user list-timers questura-healthcheck.timer
+```
+
+Enable the timer only after the manual service run exits successfully. To undo
+adoption, disable the timer, restore or remove only these two user-unit files,
+then run `systemctl --user daemon-reload`.
+
+This is diagnostics, not alerting. Journald records failures, but does not
+notify anyone, and an on-host monitor cannot report laptop power, sleep, or
+total network failure. External uptime/heartbeat alerting remains separate
+follow-up work.
+
 ## Validation
 
 Migration-preflight and deploy-runner regression tests are part of the server
