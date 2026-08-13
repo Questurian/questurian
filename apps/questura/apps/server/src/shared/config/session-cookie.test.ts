@@ -62,21 +62,51 @@ describe('session cookie domain validation', () => {
     }
   )
 
-  it.each(['questurian.com', '.questurian.com', 'cms.questurian.com'])(
-    'accepts %s when Payload runs on cms.questurian.com',
+  const OPERATOR_HOSTS = [
+    'cms.questurian.com',
+    'www.questurian.com',
+    'abw.questurian.com',
+    'abw-api.questurian.com',
+  ]
+
+  it.each(['questurian.com', '.questurian.com'])(
+    'accepts %s, which reaches every operator host',
     (domain) => {
-      expect(validateCookieDomain(domain, 'cms.questurian.com')).toBeNull()
+      expect(validateCookieDomain(domain, OPERATOR_HOSTS)).toBeNull()
     }
   )
 
-  it.each(['staging.questurian.com', 'example.com'])(
-    'rejects %s when Payload runs on cms.questurian.com',
-    (domain) => {
-      expect(validateCookieDomain(domain, 'cms.questurian.com')).toContain(
-        'does not domain-match'
-      )
-    }
-  )
+  // The bug this replaced: a domain equal to Payload's own host is
+  // self-consistent and still never reaches a sibling, so staff auth on the AI
+  // Blog Writer fails as an unexplained 401.
+  it('rejects the Payload host itself and names the hosts left out', () => {
+    const problem = validateCookieDomain('cms.questurian.com', OPERATOR_HOSTS)
+
+    expect(problem).toContain('www.questurian.com')
+    expect(problem).toContain('abw.questurian.com')
+    expect(problem).toContain('abw-api.questurian.com')
+    expect(problem).not.toContain('cms.questurian.com,')
+  })
+
+  it('rejects a domain that covers only some required hosts', () => {
+    expect(validateCookieDomain('abw.questurian.com', OPERATOR_HOSTS)).toContain(
+      'cms.questurian.com'
+    )
+  })
+
+  it('accepts a domain equal to a host that is a parent of the others', () => {
+    expect(
+      validateCookieDomain('cms.questurian.com', ['cms.questurian.com', 'abw.cms.questurian.com'])
+    ).toBeNull()
+  })
+
+  it('rejects an unrelated registrable domain', () => {
+    expect(validateCookieDomain('example.com', OPERATOR_HOSTS)).toContain('cms.questurian.com')
+  })
+
+  it('ignores case and a trailing root dot in required hosts', () => {
+    expect(validateCookieDomain('questurian.com', ['CMS.Questurian.com.'])).toBeNull()
+  })
 })
 
 describe('session cookie config', () => {

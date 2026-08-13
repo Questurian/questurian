@@ -154,9 +154,53 @@ describe('production config assertion', () => {
       PAYLOAD_COOKIE_DOMAIN: 'staging.questurian.com',
     })
 
-    expect(collectProductionConfigProblems().join('\n')).toContain(
-      'does not domain-match the Payload host (cms.questurian.com)'
-    )
+    expect(collectProductionConfigProblems().join('\n')).toContain('cms.questurian.com')
+  })
+
+  // The real deployment: Payload on cms, staff UI on www, the AI Blog Writer
+  // on abw/abw-api. Scoping the cookie to Payload's own host boots cleanly and
+  // leaves every sibling with no cookie at all.
+  it('rejects scoping the cookie to the Payload host while siblings need it', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      BACKEND_URL_LOCAL: 'https://cms.questurian.com',
+      NEXT_PUBLIC_APP_URL: 'https://www.questurian.com',
+      CORS_ALLOWED_ORIGINS: 'https://www.questurian.com,https://abw.questurian.com',
+      PAYLOAD_COOKIE_DOMAIN: 'cms.questurian.com',
+    })
+
+    const problems = collectProductionConfigProblems().join('\n')
+    expect(problems).toContain('PAYLOAD_COOKIE_DOMAIN')
+    expect(problems).toContain('www.questurian.com')
+    expect(problems).toContain('abw.questurian.com')
+  })
+
+  it('accepts the registrable domain that covers every configured origin', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      BACKEND_URL_LOCAL: 'https://cms.questurian.com',
+      NEXT_PUBLIC_APP_URL: 'https://www.questurian.com',
+      CORS_ALLOWED_ORIGINS:
+        'https://www.questurian.com,https://abw.questurian.com,https://abw-api.questurian.com',
+      PAYLOAD_COOKIE_DOMAIN: 'questurian.com',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
+  })
+
+  // A localhost origin in production is already its own problem; it must not
+  // also turn into a confusing second complaint about the cookie domain.
+  it('reports a localhost origin once, not twice', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      BACKEND_URL_LOCAL: 'https://cms.questurian.com',
+      CORS_ALLOWED_ORIGINS: 'https://www.questurian.com,http://localhost:3000',
+      PAYLOAD_COOKIE_DOMAIN: 'questurian.com',
+    })
+
+    const problems = collectProductionConfigProblems()
+    expect(problems).toHaveLength(1)
+    expect(problems[0]).toContain('Localhost origins configured in production')
   })
 
   it('reports every problem at once rather than one per boot', async () => {

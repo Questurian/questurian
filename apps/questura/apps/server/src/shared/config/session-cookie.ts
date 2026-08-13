@@ -40,6 +40,18 @@ export type SessionCookieConfig = {
   secure: boolean
 }
 
+function normalizeHost(value: string): string {
+  return value.trim().toLowerCase().replace(/\.$/, '')
+}
+
+/**
+ * RFC 6265 §5.1.3 domain-matching: a cookie scoped to `questurian.com` is sent
+ * to `questurian.com` and to anything under it, and to nothing else.
+ */
+function domainMatches(host: string, domain: string): boolean {
+  return host === domain || host.endsWith(`.${domain}`)
+}
+
 /**
  * A `Domain` attribute is a bare host: no scheme, no port, no path. A leading
  * dot is legal and ignored (RFC 6265 §5.2.3), so both `questurian.com` and
@@ -48,10 +60,19 @@ export type SessionCookieConfig = {
  * The dot requirement rejects `localhost` and other single-label hosts, which
  * browsers refuse as a cookie `Domain` anyway — better to fail at boot than to
  * ship a cookie no browser will store.
+ *
+ * `requiredHostnames` are the hosts this deployment expects to receive the
+ * staff cookie — Payload's own host plus every configured browser origin.
+ * Checking only Payload's host is not enough: `Domain=cms.questurian.com` on a
+ * Payload served from `cms.questurian.com` is self-consistent and still fails
+ * to reach `www`, `abw` or `abw-api`, which is exactly the silent 401 this
+ * variable exists to prevent. Widening the cookie is only correct when it
+ * actually covers every host that needs it, so all of them are checked and the
+ * uncovered ones are named.
  */
 export function validateCookieDomain(
   domain: string,
-  cookieOriginHostname?: string
+  requiredHostnames: readonly string[] = []
 ): string | null {
   if (domain.includes('://')) return `must be a bare host, not a URL (${domain}).`
   if (domain.includes('/')) return `must not contain a path (${domain}).`
@@ -81,16 +102,16 @@ export function validateCookieDomain(
     return `must contain valid hostname labels (${domain}).`
   }
 
-  if (cookieOriginHostname) {
-    const normalizedDomain = withoutLeadingDot.toLowerCase()
-    const normalizedOrigin = cookieOriginHostname.toLowerCase().replace(/\.$/, '')
-    const domainMatchesOrigin =
-      normalizedOrigin === normalizedDomain ||
-      normalizedOrigin.endsWith(`.${normalizedDomain}`)
+  const normalizedDomain = normalizeHost(withoutLeadingDot)
+  const uncovered = Array.from(
+    new Set(requiredHostnames.map(normalizeHost).filter(Boolean))
+  ).filter((host) => !domainMatches(host, normalizedDomain))
 
-    if (!domainMatchesOrigin) {
-      return `does not domain-match the Payload host (${cookieOriginHostname}).`
-    }
+  if (uncovered.length > 0) {
+    return (
+      `is not sent to every host that needs the staff session ` +
+      `(${uncovered.join(', ')}); those hosts would see no cookie and answer 401.`
+    )
   }
 
   return null
