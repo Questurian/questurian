@@ -6,6 +6,11 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig: NextConfig = {
   // Frontend calls backend directly at NEXT_PUBLIC_BACKEND_URL
   // No API proxy needed - cookies work natively on same domain (localhost or questurian.com)
+  // Keep ISR output in memory so production traffic cannot mutate immutable
+  // commit-addressed release artifacts under .next/server/{app,pages}.
+  experimental: {
+    isrFlushToDisk: false,
+  },
 };
 
 export default withNextIntl(nextConfig);
