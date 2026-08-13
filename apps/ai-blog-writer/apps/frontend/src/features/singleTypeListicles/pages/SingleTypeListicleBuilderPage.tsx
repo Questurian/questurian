@@ -195,7 +195,7 @@ export default function SingleTypeListicleBuilderPage() {
               isIntroAiGenerating={aiWriting.isIntroAiGenerating}
               introAiQueueCount={aiWriting.introAiQueueCount}
               introAiStatus={aiWriting.introAiStatus}
-              introAiDisabledReason={aiWriting.introAiDisabledReason}
+              introAiDisabledReason={aiWriting.introAiDisabledReason ?? undefined}
               onIntroInspect={() => aiWriting.openInspect(aiWriting.introTargetId, 'Intro')}
               introHasInspectableSteps={Boolean(
                 aiWriting.stepsByTargetId[aiWriting.introTargetId]?.length,

@@ -7,7 +7,8 @@ import HomepageDraftPublishSummary from './HomepageDraftPublishSummary'
 import MainHomepageBlockRenderer from './MainHomepageBlockRenderer'
 import PublishedHomepagePreview from './PublishedHomepagePreview'
 import './homepageFeaturedContent.css'
-import { homepageBlockEditorIdentity, type PageBlockResponse } from './pageBlocks'
+import { mainHomepageBlockKey } from './mainHomepageBlockKey'
+import { type PageBlockResponse } from './pageBlocks'
 import { useMainHomepageEditor } from './useMainHomepageEditor'
 
 function usedKeysOutsideBlock(
@@ -189,7 +190,7 @@ export default function MainHomepagePage() {
             >
               {(block: PageBlockResponse, blockIndex: number) => (
                 <MainHomepageBlockRenderer
-                  key={homepageBlockEditorIdentity(block).join(':')}
+                  key={mainHomepageBlockKey(block)}
                   block={block}
                   blockIndex={blockIndex}
                   canManage={canManage}
