@@ -132,7 +132,7 @@ PY
   chmod 0644 "$destination"
 }
 
-for template in "$HOST_SOURCE/systemd"/*.service.in; do
+for template in "$HOST_SOURCE/systemd"/*.service.in "$HOST_SOURCE/systemd"/*.timer.in; do
   unit_name=$(basename -- "$template" .in)
   render_unit "$template" "$stage_directory/infra/systemd/$unit_name"
 done
@@ -169,7 +169,9 @@ PY
 "$CLOUDFLARED_BIN" \
   --config "$stage_directory/infra/tunnel-config.yml" \
   tunnel ingress validate
-systemd-analyze --user verify "$stage_directory/infra/systemd"/*.service
+systemd-analyze --user verify \
+  "$stage_directory/infra/systemd"/*.service \
+  "$stage_directory/infra/systemd"/*.timer
 
 for pair in \
   "$stage_directory/config/server.env:$CONFIG_ROOT/server.env" \
@@ -201,7 +203,7 @@ install -m 0600 "$stage_directory/config/client.env" "$CONFIG_ROOT/client.env"
 install -m 0600 "$stage_directory/infra/.env" "$INFRA_ROOT/.env"
 install -m 0644 "$stage_directory/infra/compose.yml" "$INFRA_ROOT/compose.yml"
 install -m 0644 "$stage_directory/infra/tunnel-config.yml" "$INFRA_ROOT/tunnel-config.yml"
-for unit in "$stage_directory/infra/systemd"/*.service; do
+for unit in "$stage_directory/infra/systemd"/*.service "$stage_directory/infra/systemd"/*.timer; do
   install -m 0644 "$unit" "$RENDERED_ROOT/$(basename -- "$unit")"
 done
 

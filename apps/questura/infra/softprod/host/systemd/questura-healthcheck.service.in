@@ -1,0 +1,12 @@
+[Unit]
+Description=Questura passive health monitor (soft production)
+Documentation=https://github.com/Questurian/questurian
+After=network-online.target questura-server.service questura-client.service questura-tunnel.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/env bash %h/questura/app/apps/questura/infra/softprod/healthcheck.sh
+TimeoutStartSec=90
+SyslogIdentifier=questura-healthcheck
