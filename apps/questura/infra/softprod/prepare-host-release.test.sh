@@ -5,6 +5,11 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 TEST_ROOT=$(mktemp -d)
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
 
+# Production preparation exports these before running the suite. Keep this
+# fixture bound to its temporary host even under that inherited environment.
+export QUESTURA_RELEASES_ROOT="$TEST_ROOT/inherited-releases-root"
+export QUESTURA_RELEASE_SHA=ffffffffffffffffffffffffffffffffffffffff
+
 REPO="$TEST_ROOT/repo"
 DEPLOY_ROOT="$TEST_ROOT/host"
 CONFIG_ROOT="$DEPLOY_ROOT/config"
@@ -50,6 +55,7 @@ run_prepare() {
     PATH="$FAKE_BIN:$PATH" \
     NVM_DIR="$TEST_ROOT/no-nvm" \
     QUESTURA_DEPLOY_ROOT="$DEPLOY_ROOT" \
+    QUESTURA_RELEASES_ROOT="$DEPLOY_ROOT/releases" \
     QUESTURA_CONFIG_ROOT="$CONFIG_ROOT" \
     PREPARE_TEST_LOG="$LOG" \
     FAIL_MIGRATE="${FAIL_MIGRATE:-0}" \
