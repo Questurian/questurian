@@ -17,9 +17,10 @@ import os
 from typing import Any, Optional
 
 import httpx
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, HTTPException
 
 from app.core.payload_api import resolve_payload_api_url
+from app.core.staff_token import extract_bearer_token, staff_token
 
 logger = logging.getLogger(__name__)
 
@@ -39,16 +40,18 @@ def staff_auth_required() -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def extract_bearer_token(authorization: Optional[str]) -> Optional[str]:
-    """Pull the token out of an `Authorization: Bearer <token>` header."""
-    if not authorization:
-        return None
-
-    scheme, _, token = authorization.partition(" ")
-    if scheme.strip().lower() != "bearer":
-        return None
-
-    return token.strip() or None
+# Re-exported: this was defined here before the cookie became a second source
+# of the same token, and callers and tests still import it from this module.
+__all__ = [
+    "STAFF_AUTH_FLAG",
+    "authorize_article_deletion",
+    "extract_bearer_token",
+    "fetch_payload_user",
+    "require_editor",
+    "require_staff",
+    "staff_auth_required",
+    "staff_user_id",
+]
 
 
 async def fetch_payload_user(
@@ -83,21 +86,27 @@ async def fetch_payload_user(
 
 
 async def require_staff(
-    authorization: Optional[str] = Header(default=None),
+    token: Optional[str] = Depends(staff_token),
 ) -> Optional[dict[str, Any]]:
     """FastAPI dependency requiring a valid Payload staff session.
 
     Returns the user so routes can log or authorize further. Returns None when
     the flag is off, in which case nothing is checked.
+
+    The token may arrive as an `Authorization: Bearer` header or as the
+    `payload-token` session cookie; `app.core.staff_token` decides which is
+    acceptable and enforces the origin check the cookie needs.
     """
     if not staff_auth_required():
         return None
 
-    token = extract_bearer_token(authorization)
     if not token:
         raise HTTPException(
             status_code=401,
-            detail="Authorization header with a Bearer token is required",
+            detail=(
+                "A staff session is required: send the payload-token cookie or "
+                "an Authorization: Bearer header"
+            ),
         )
 
     # Resolve through the same helper every other Payload caller uses, so a

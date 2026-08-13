@@ -80,9 +80,17 @@ ERROR_LOG_PATH = _configure_error_file_logging()
 # Paths reachable without an API key when ABW_API_KEY is set.
 AUTH_EXEMPT_PATHS = {"/health"}
 API_KEY_HEADER = "X-API-Key"
-# Explicit ABW_ALLOWED_ORIGINS value meaning "this instance has no browser
-# client", as distinct from the variable being forgotten.
-CORS_DENY_ALL = "none"
+
+# The origin allowlist lives in app.core.cors so that request authentication can
+# read it without importing this module. Re-exported here because that is where
+# it used to live. `CORS_DENY_ALL` is the explicit ABW_ALLOWED_ORIGINS value
+# meaning "this instance has no browser client", as distinct from the variable
+# being forgotten.
+from app.core.cors import (  # noqa: E402,F401
+    CORS_DENY_ALL as CORS_DENY_ALL,
+    resolve_cors_config as resolve_cors_config,
+    resolve_cors_origins as resolve_cors_origins,
+)
 
 
 @asynccontextmanager
@@ -121,55 +129,6 @@ def _read_bool_env(key: str, default: bool = False) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def resolve_cors_origins(api_key: str, raw_origins: str) -> list[str]:
-    """Resolve the CORS allow-list, refusing a wildcard on deployed instances.
-
-    A configured ABW_API_KEY is the signal that this instance is reachable
-    beyond localhost. Wildcard CORS there is incoherent: it forces
-    `allow_credentials=False`, and the X-API-Key header makes every request
-    preflighted, so any page could probe the API. Refuse to start instead of
-    serving an open origin policy.
-
-    An instance with no browser client at all (server-to-server, or a frontend
-    served same-origin behind a proxy) sets ABW_ALLOWED_ORIGINS=none to say so
-    explicitly. That is a deny-all list, not an oversight.
-
-    With no key configured (local development) the historical behavior is
-    kept exactly: wildcard when the variable is unset, otherwise whatever
-    parses out of it.
-    """
-    raw = raw_origins.strip()
-
-    if raw.lower() == CORS_DENY_ALL:
-        return []
-
-    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
-
-    if not api_key.strip():
-        # Emptiness is judged on the raw string, not the parsed list, so a
-        # malformed value like "," keeps denying all origins rather than
-        # silently widening to a wildcard.
-        return ["*"] if not raw else origins
-
-    if not origins or "*" in origins:
-        raise ValueError(
-            "ABW_ALLOWED_ORIGINS must list explicit origins when ABW_API_KEY "
-            "is set; wildcard CORS is not allowed on a deployed instance. "
-            f"Set ABW_ALLOWED_ORIGINS={CORS_DENY_ALL} if this instance has no "
-            "browser client."
-        )
-
-    return origins
-
-
-def _allowed_origins() -> list[str]:
-    """Read the CORS policy from the environment. See resolve_cors_origins."""
-    return resolve_cors_origins(
-        api_key=os.getenv("ABW_API_KEY", ""),
-        raw_origins=os.getenv("ABW_ALLOWED_ORIGINS", ""),
-    )
-
-
 @app.middleware("http")
 async def require_api_key(request: Request, call_next):
     """Reject requests without the configured API key.
@@ -195,21 +154,6 @@ async def require_api_key(request: Request, call_next):
         )
 
     return await call_next(request)
-
-
-def resolve_cors_config(
-    api_key: str, raw_origins: str
-) -> tuple[list[str], ValueError | None]:
-    """Pair the resolved origins with any rejection, without raising.
-
-    A rejected policy yields a deny-all list so the middleware fails closed,
-    plus the error for `lifespan` to refuse the boot with. Import stays safe
-    either way.
-    """
-    try:
-        return resolve_cors_origins(api_key, raw_origins), None
-    except ValueError as exc:
-        return [], exc
 
 
 _cors_origins, _cors_config_error = resolve_cors_config(

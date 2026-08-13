@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 
 from ..image_processor import ImageVariantType, ProcessedVariant, process_image_variants
@@ -14,7 +14,6 @@ from ..shared import (
     VARIANT_DIMENSIONS,
     _derive_external_filename,
     _download_external_image,
-    _extract_bearer_token,
     _normalize_tag_name,
     _parse_tag_ids,
     _raise_http_error,
@@ -26,6 +25,7 @@ from ..shared import (
     _validate_photographer_credit,
     _validate_variant_types,
     logger,
+    require_image_token,
 )
 
 router = APIRouter()
@@ -34,10 +34,9 @@ router = APIRouter()
 @router.post("/tags/resolve")
 async def resolve_tags(
     request: ResolveTagsRequest,
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ):
     """Find or create tags by name. Returns IDs for all provided names."""
-    jwt_token = _extract_bearer_token(authorization)
     client = PayloadClient(jwt_token)
 
     results = []
@@ -70,7 +69,7 @@ async def upload_image(
         ...,
         description="Payload location id to attach to uploaded images",
     ),
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ) -> JSONResponse:
     """
     Upload an image and process it into all required variants server-side.
@@ -82,7 +81,6 @@ async def upload_image(
     3. Uploaded to Payload CMS as media-assets
     4. Linked in a new MediaSet
     """
-    jwt_token = _extract_bearer_token(authorization)
     valid_location_ref = _validate_location_ref(location_ref)
     valid_photographer_credit = _validate_photographer_credit(photographer_credit)
     content = await _read_upload_file(file, step="validate_file")
@@ -172,10 +170,9 @@ async def import_external_image(
         None,
         description="Provider photo identifier for filename stability",
     ),
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ) -> JSONResponse:
     """Import an external provider image and upload processed variants to Payload."""
-    jwt_token = _extract_bearer_token(authorization)
     valid_location_ref = _validate_location_ref(location_ref)
     valid_photographer_credit = _validate_photographer_credit(photographer_credit)
     valid_provider = _validate_external_provider(provider)
@@ -267,10 +264,9 @@ async def fetch_external_image_source(
     source_url: str,
     provider: str,
     photo_id: Optional[str] = None,
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ) -> Response:
     """Download a validated external image and return raw bytes for client-side cropping."""
-    _extract_bearer_token(authorization)
     valid_provider = _validate_external_provider(provider)
     valid_source_url = _validate_external_source_url(source_url, valid_provider)
     original_filename = _derive_external_filename(
@@ -317,7 +313,7 @@ async def upload_image_variants(
         None,
         description="JSON-encoded list of integer tag IDs, e.g. '[1,2,3]'",
     ),
-    authorization: Optional[str] = Header(None),
+    jwt_token: str = Depends(require_image_token),
 ) -> JSONResponse:
     """
     Upload pre-processed image variants (client-side cropped) to Payload CMS.
@@ -326,7 +322,6 @@ async def upload_image_variants(
     1. Uploads each to Payload CMS as media-assets
     2. Creates or reuses a MediaSet linking all variants
     """
-    jwt_token = _extract_bearer_token(authorization)
     valid_location_ref = _validate_location_ref(location_ref)
     valid_photographer_credit = _validate_photographer_credit(photographer_credit)
     tag_ids = _parse_tag_ids(tags)
