@@ -1,4 +1,9 @@
 import { APP_CONFIG } from './index'
+import {
+  HOST_ONLY_COOKIE_DOMAIN,
+  readRequiredCookieHosts,
+  validateCookieDomain,
+} from './session-cookie'
 
 /**
  * Fail fast on a production boot that is still carrying development defaults.
@@ -42,6 +47,15 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     if (isLocalhost(value)) {
       problems.push(`${name} points at localhost (${value}).`)
     }
+
+    try {
+      const url = new URL(value)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        problems.push(`${name} must use http or https (${value}).`)
+      }
+    } catch {
+      problems.push(`${name} is not a valid URL (${value}).`)
+    }
   }
 
   // `CORS_ORIGINS` feeds Payload `cors`, Payload `csrf` and Better Auth
@@ -71,6 +85,52 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
       'REDIS_URL is not set — the shared rate limiters have no cross-instance ' +
         'counter and refuse to count in production.'
     )
+  }
+
+  // The staff session cookie is host-only unless a `Domain` is set, and the AI
+  // Blog Writer runs on a different host from Payload. Getting this wrong does
+  // not fail loudly — the browser simply never sends `payload-token` to the
+  // writer, and every staff-authenticated call there returns 401 with nothing
+  // in the logs to explain it. Requiring the decision at boot makes a
+  // same-origin deployment state itself rather than look like an oversight.
+  const rawCookieDomain = process.env.PAYLOAD_COOKIE_DOMAIN?.trim() ?? ''
+
+  if (!rawCookieDomain) {
+    problems.push(
+      'PAYLOAD_COOKIE_DOMAIN is not set — the staff session cookie would be ' +
+        "host-only, so it is never sent to the AI Blog Writer's own hosts. Set the " +
+        `registrable domain (e.g. questurian.com), or ${HOST_ONLY_COOKIE_DOMAIN} if ` +
+        'every caller really is served from this host.'
+    )
+  } else if (rawCookieDomain.toLowerCase() !== HOST_ONLY_COOKIE_DOMAIN) {
+    // A cookie domain that only covers Payload's own host boots cleanly and
+    // still reaches no sibling, so the hosts that need the session are named
+    // explicitly and checked. Payload's own host is always one of them.
+    const requiredHosts = readRequiredCookieHosts(process.env.PAYLOAD_COOKIE_REQUIRED_HOSTS)
+
+    let backendHostname: string | undefined
+    try {
+      backendHostname = process.env.BACKEND_URL_LOCAL
+        ? new URL(process.env.BACKEND_URL_LOCAL).hostname
+        : undefined
+    } catch {
+      // The required-URL check reports this separately; keep aggregating errors.
+    }
+
+    if (requiredHosts.length === 0) {
+      problems.push(
+        'PAYLOAD_COOKIE_REQUIRED_HOSTS is not set — list every host that must ' +
+          'receive the staff session (e.g. cms.questurian.com,www.questurian.com,' +
+          'abw.questurian.com,abw-api.questurian.com) so a cookie domain that ' +
+          'reaches none of them cannot boot.'
+      )
+    }
+
+    const problem = validateCookieDomain(rawCookieDomain, [
+      ...(backendHostname ? [backendHostname] : []),
+      ...requiredHosts,
+    ])
+    if (problem) problems.push(`PAYLOAD_COOKIE_DOMAIN ${problem}`)
   }
 
   return problems
