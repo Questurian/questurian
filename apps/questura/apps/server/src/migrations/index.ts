@@ -24,6 +24,7 @@ import * as migration_20260811_020000_repoint_bylines_to_authors from './2026081
 import * as migration_20260811_030000_retire_users_public_profile from './20260811_030000_retire_users_public_profile'
 import * as migration_20260811_040000_add_service_accounts from './20260811_040000_add_service_accounts'
 import * as migration_20260812_080000_enforce_identity_email_ownership from './20260812_080000_enforce_identity_email_ownership'
+import * as migration_20260813_000000_add_service_accounts_preferences_rel from './20260813_000000_add_service_accounts_preferences_rel'
 
 export const migrations = [
   {
@@ -155,5 +156,10 @@ export const migrations = [
     up: migration_20260812_080000_enforce_identity_email_ownership.up,
     down: migration_20260812_080000_enforce_identity_email_ownership.down,
     name: '20260812_080000_enforce_identity_email_ownership',
+  },
+  {
+    up: migration_20260813_000000_add_service_accounts_preferences_rel.up,
+    down: migration_20260813_000000_add_service_accounts_preferences_rel.down,
+    name: '20260813_000000_add_service_accounts_preferences_rel',
   },
 ]
