@@ -168,6 +168,14 @@ new_fixture() {
     '"$(dirname "$0")/adopt-test-maybe-fail" "$line" || exit $?' \
     'case "$url" in *4000*|*cms.questurian.com*) component=server ;; *) component=client ;; esac' \
     'read -r release < "$ADOPT_TEST_STATE/$component-release"' \
+    'if [[ ${LEGACY_BASELINE_MODE:-0} == 1 && $release == legacy-* ]]; then' \
+    '  if [[ ${DOWN_COMPONENT:-} == "$component" ]]; then exit 7; fi' \
+    '  if [[ $url == */api/health ]]; then' \
+    '    if [[ $component == client ]]; then exit 22; fi' \
+    '    printf "%s\n" "{\"status\":\"healthy\"}"; exit 0' \
+    '  fi' \
+    '  exit 0' \
+    'fi' \
     'if [[ -n ${HEALTH_MISMATCH_MATCH:-} && $url == *"$HEALTH_MISMATCH_MATCH"* && $release == "$ADOPT_TEST_TARGET_SHA" && ! -e $ADOPT_TEST_STATE/health-mismatch-fired ]]; then' \
     '  : > "$ADOPT_TEST_STATE/health-mismatch-fired"; release=wrong-release' \
     'fi' \
@@ -211,6 +219,8 @@ run_adopt() {
     ROLLBACK_FAIL_OCCURRENCE="${ROLLBACK_FAIL_OCCURRENCE:-1}" \
     ROLLBACK_FAIL_STATUS="${ROLLBACK_FAIL_STATUS:-42}" \
     HEALTH_MISMATCH_MATCH="${HEALTH_MISMATCH_MATCH:-}" \
+    LEGACY_BASELINE_MODE="${LEGACY_BASELINE_MODE:-0}" \
+    DOWN_COMPONENT="${DOWN_COMPONENT:-}" \
     SIGNAL_MATCH="${SIGNAL_MATCH:-}" \
     SIGNAL_NAME="${SIGNAL_NAME:-TERM}" \
     "$REPO/apps/questura/infra/softprod/adopt-host-release.sh"
@@ -385,6 +395,37 @@ TRIGGER_MATCH='restart questura-server' \
 assert_status 50 "$code"
 grep -q 'CRITICAL: initial release adoption rollback is incomplete' "$CASE_ROOT/err"
 assert_restored
+
+# The deployment actually being adopted predates release-aware health: its
+# server omits `releaseSha` and its client answers `/api/health` with a 404.
+new_fixture legacy-baseline
+LEGACY_BASELINE_MODE=1 run_adopt > "$CASE_ROOT/out" 2> "$CASE_ROOT/err"
+grep -q "Adopted initial immutable release $SHA" "$CASE_ROOT/out"
+grep -q 'captured local client baseline (legacy, no release health)' "$CASE_ROOT/err"
+grep -qxF 'curl|http://127.0.0.1:3000/' "$LOG"
+[[ $(readlink "$DEPLOY_ROOT/current-server") == "$RELEASE/apps/questura/apps/server" ]]
+[[ $(readlink "$DEPLOY_ROOT/current-client") == "$RELEASE/apps/questura/apps/client" ]]
+# The adopted release still has to prove the exact SHA on all four endpoints.
+grep -qF "curl|https://www.questurian.com/api/health" "$LOG"
+BACKUP=$(find "$DEPLOY_ROOT/backups/host-adoption" -mindepth 1 -maxdepth 1 -type d -print -quit)
+grep -qxF 'BASELINE_CLIENT_PUBLIC=legacy' "$BACKUP/manifest"
+
+# Rolling back to a legacy baseline proves the restored services serve again.
+new_fixture legacy-rollback
+code=0
+LEGACY_BASELINE_MODE=1 TRIGGER_MATCH='restart questura-client' TRIGGER_STATUS=52 \
+  run_adopt > "$CASE_ROOT/out" 2> "$CASE_ROOT/err" || code=$?
+assert_status 52 "$code"
+assert_restored
+grep -q 'restored public client serving (legacy baseline)' "$CASE_ROOT/out"
+
+# A service that is genuinely down is never mistaken for an old build.
+new_fixture legacy-down
+code=0
+LEGACY_BASELINE_MODE=1 DOWN_COMPONENT=client run_adopt > "$CASE_ROOT/out" 2> "$CASE_ROOT/err" || code=$?
+assert_status 1 "$code"
+grep -q 'local client baseline is not serving' "$CASE_ROOT/err"
+assert_no_mutation
 
 # Adoption must consume prepared artifacts only.
 if rg -n '(pnpm (install|build)|db:migrate|docker compose|prepare_server_release|complete_client_release)' "$SCRIPT_DIR/adopt-host-release.sh"; then

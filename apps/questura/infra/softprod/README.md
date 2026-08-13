@@ -132,6 +132,14 @@ wrapper. Server and client must report the exact release locally and publicly;
 the same checks run again after restarting Cloudflare Tunnel. Installed units
 switch app and tunnel logging to journald.
 
+The deployment being adopted predates release-aware health, so its baseline is
+captured leniently: an endpoint that reports a healthy `releaseSha` is recorded
+exactly, and one that does not — a server without the field, or a client whose
+`/api/health` route does not exist yet — is recorded as `legacy` only if it is
+still serving (the client's own root answers with a redirect, which counts).
+A service that is genuinely down fails the preflight instead. Verification of
+the adopted release is unaffected and still demands the exact SHA everywhere.
+
 Any install, restart, health, interrupt, or termination failure restores exact
 legacy unit/wrapper bytes and modes, reloads and restarts those services,
 rechecks their captured baseline health, and removes only adoption's unchanged
