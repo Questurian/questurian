@@ -2,14 +2,13 @@ import { mainHomepageRequest } from './request'
 import type { MainHomepageResponse } from './types'
 
 export async function fetchMainHomepage(
-  token: string,
   signal?: AbortSignal,
 ): Promise<MainHomepageResponse> {
-  return mainHomepageRequest('/api/homepage-featured-content', token, { signal })
+  return mainHomepageRequest('/api/homepage-featured-content', { signal })
 }
 
-export async function publishMainHomepage(token: string): Promise<MainHomepageResponse> {
-  return mainHomepageRequest('/api/homepage-featured-content/publish', token, {
+export async function publishMainHomepage(): Promise<MainHomepageResponse> {
+  return mainHomepageRequest('/api/homepage-featured-content/publish', {
     method: 'POST',
   })
 }

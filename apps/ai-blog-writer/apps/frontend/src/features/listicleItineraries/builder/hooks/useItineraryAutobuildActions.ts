@@ -17,11 +17,10 @@ import type { ItineraryBuilderAiActionsParams } from './itineraryBuilderAiAction
 
 type Params = Pick<
   ItineraryBuilderAiActionsParams,
-  'token' | 'draft' | 'setDraft' | 'locations' | 'onError' | 'setResult'
+  'draft' | 'setDraft' | 'locations' | 'onError' | 'setResult'
 >
 
 export function useItineraryAutobuildActions({
-  token,
   draft,
   setDraft,
   locations,
@@ -125,10 +124,6 @@ export function useItineraryAutobuildActions({
     }
     const brief = (draft.generationBrief || '').trim()
     if (!brief) return
-    if (!token) {
-      onError('You must be signed in to generate an itinerary.')
-      return
-    }
     const hasExistingStops = draft.days.some(
       (day) => day.items.length > 0 || day.whereStaying.length > 0
     )
@@ -152,8 +147,7 @@ export function useItineraryAutobuildActions({
         title: draft.title.trim(),
         brief,
         dayCount: draft.dayCount,
-        payloadToken: token,
-        sharedNeighborhoods: draft.sharedNeighborhoods,
+                sharedNeighborhoods: draft.sharedNeighborhoods,
         dayShells: draft.days.map((day, dayIndex) => ({
           dayIndex,
           shell: getDayShellTemplate(
@@ -190,7 +184,7 @@ export function useItineraryAutobuildActions({
     } finally {
       setIsGeneratingItinerary(false)
     }
-  }, [draft, token, onError, setDraft, setResult])
+  }, [draft, onError, setDraft, setResult])
 
   const handleAutoFillOgUrl = useCallback(() => {
     if (!draft) return

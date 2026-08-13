@@ -19,7 +19,7 @@ import {
   locationRowIdsEqual
 } from '../locationSelectGroups'
 
-export function useItineraryTitlePipeline(token?: string | null) {
+export function useItineraryTitlePipeline() {
   const [locationId, setLocationId] = useState<number | null>(null)
   const [dayCount, setDayCount] = useState(1)
   const [itineraryType, setItineraryType] = useState<ItineraryPipelineTypeId>(
@@ -75,12 +75,11 @@ export function useItineraryTitlePipeline(token?: string | null) {
   }, [dayCount, selectedLocation, selectedTypeOption, typeMarkdown])
 
   useEffect(() => {
-    if (!token) return
 
     let cancelled = false
     setLocationsLoading(true)
     setLocationsError(null)
-    fetchLocations(token)
+    fetchLocations()
       .then((docs) => {
         if (!cancelled) setLocations(docs)
       })
@@ -98,7 +97,7 @@ export function useItineraryTitlePipeline(token?: string | null) {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [])
 
   useEffect(() => {
     setPipelineResult(null)
@@ -141,7 +140,6 @@ export function useItineraryTitlePipeline(token?: string | null) {
   }
 
   return {
-    token,
     locationId,
     setLocationId,
     dayCount,

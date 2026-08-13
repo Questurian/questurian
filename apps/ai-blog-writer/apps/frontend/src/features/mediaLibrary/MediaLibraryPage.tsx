@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useAuth } from '../auth'
 import { BrowseTab } from './components/BrowseTab'
 import { AuditTab } from './components/AuditTab'
 import { OrphansTab } from './components/OrphansTab'
@@ -19,9 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export function MediaLibraryPage() {
   const [activeTab, setActiveTab] = useState<Tab>('browse')
-  const { token } = useAuth()
 
-  if (!token) return <div className="ml-error-full">Not authenticated</div>
 
   return (
     <div className="ml-page">
@@ -44,11 +41,11 @@ export function MediaLibraryPage() {
       </div>
 
       <div className="ml-tab-content">
-        {activeTab === 'browse' && <BrowseTab token={token} />}
-        {activeTab === 'audit' && <AuditTab token={token} />}
-        {activeTab === 'orphans' && <OrphansTab token={token} />}
-        {activeTab === 'upload' && <UploadTab token={token} />}
-        {activeTab === 'composite' && <CompositeTab token={token} />}
+        {activeTab === 'browse' && <BrowseTab />}
+        {activeTab === 'audit' && <AuditTab />}
+        {activeTab === 'orphans' && <OrphansTab />}
+        {activeTab === 'upload' && <UploadTab />}
+        {activeTab === 'composite' && <CompositeTab />}
       </div>
     </div>
   )

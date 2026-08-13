@@ -7,7 +7,6 @@ type UploadSingleParams = {
   externalRef: string;
   altText: string;
   locationRef: number;
-  token: string;
   photographerCredit: string;
   onProgress?: (progress: UploadProgress) => void;
 };
@@ -17,7 +16,6 @@ export async function uploadSingleApi({
   externalRef,
   altText,
   locationRef,
-  token,
   photographerCredit,
   onProgress,
 }: UploadSingleParams): Promise<UploadImageResponse> {

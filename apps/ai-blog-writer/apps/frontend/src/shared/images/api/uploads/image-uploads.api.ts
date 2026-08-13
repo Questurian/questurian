@@ -13,7 +13,6 @@ export async function uploadImageVariants(
   externalRef: string,
   altText: string,
   locationRef: number | undefined,
-  token: string,
   photographerCredit: string,
   onProgress?: (progress: UploadProgress) => void,
   tags?: number[]
@@ -23,7 +22,6 @@ export async function uploadImageVariants(
     externalRef,
     altText,
     locationRef,
-    token,
     photographerCredit,
     onProgress,
     tags
@@ -35,7 +33,6 @@ export async function uploadImage(
   externalRef: string,
   altText: string,
   locationRef: number,
-  token: string,
   photographerCredit: string,
   onProgress?: (progress: UploadProgress) => void
 ): Promise<UploadImageResponse> {
@@ -44,7 +41,6 @@ export async function uploadImage(
     externalRef,
     altText,
     locationRef,
-    token,
     photographerCredit,
     onProgress
   })

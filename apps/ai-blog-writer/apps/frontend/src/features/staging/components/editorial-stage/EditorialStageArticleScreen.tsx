@@ -12,14 +12,12 @@ import { EditorialTimelineList } from './EditorialTimelineList'
 import { FeaturedImageModal } from './FeaturedImageModal'
 
 type EditorialStageArticleScreenProps = EditorialStageArticlePageProps & {
-  token: string | null | undefined
 }
 
 export function EditorialStageArticleScreen({
   storageKey,
   routes,
   api,
-  token,
 }: EditorialStageArticleScreenProps) {
   const {
     status,
@@ -32,7 +30,6 @@ export function EditorialStageArticleScreen({
     storageKey,
     routes,
     api,
-    token,
   })
 
   const [isExpansionModalOpen, setIsExpansionModalOpen] = useState(false)

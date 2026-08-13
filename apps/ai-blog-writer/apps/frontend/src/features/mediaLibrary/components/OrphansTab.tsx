@@ -2,11 +2,10 @@ import { useState } from 'react'
 import type { MediaAsset } from '../../../shared/api/payload/payload.types'
 import { useOrphanMediaAssets } from '../hooks/useMediaSets'
 
-type Props = { token: string }
 
-export function OrphansTab({ token }: Props) {
+export function OrphansTab() {
   const [page, setPage] = useState(1)
-  const { data, isLoading, isError } = useOrphanMediaAssets(token, page)
+  const { data, isLoading, isError } = useOrphanMediaAssets(page)
 
   const assets: MediaAsset[] = data?.docs ?? []
   const totalPages = data?.totalPages ?? 1

@@ -11,7 +11,7 @@ import type {
   StaffUserPatch,
 } from '../types'
 
-export async function fetchStaffUser(id: number | string, token: string): Promise<StaffUser> {
+export async function fetchStaffUser(id: number | string): Promise<StaffUser> {
   return payloadRequest(`/api/users/${id}?depth=0`)
 }
 
@@ -23,7 +23,6 @@ export async function fetchStaffUser(id: number | string, token: string): Promis
  */
 export async function fetchAuthorForUser(
   userId: number | string,
-  token: string,
 ): Promise<Author | null> {
   // depth=1 populates the avatar upload relationship for preview
   const response = (await payloadRequest(
@@ -33,7 +32,7 @@ export async function fetchAuthorForUser(
 }
 
 /** Every author, for joining onto the staff table by linked account. */
-export async function fetchAuthors(token: string): Promise<Author[]> {
+export async function fetchAuthors(): Promise<Author[]> {
   const response = (await payloadRequest(
     '/api/authors?limit=200&sort=displayName&depth=0',
   )) as { docs?: Author[] }
@@ -43,7 +42,6 @@ export async function fetchAuthors(token: string): Promise<Author[]> {
 export async function createAuthorForUser(
   userId: number | string,
   patch: AuthorPatch,
-  token: string,
 ): Promise<Author> {
   const response = (await payloadMutation(
     '/api/authors',
@@ -59,7 +57,6 @@ export async function createAuthorForUser(
 export async function updateAuthor(
   id: number | string,
   patch: AuthorPatch,
-  token: string,
 ): Promise<Author> {
   const response = (await payloadMutation(`/api/authors/${id}`, 'PATCH', patch)) as {
     doc?: Author
@@ -73,7 +70,6 @@ export async function updateAuthor(
 export async function updateStaffUser(
   id: number | string,
   patch: StaffUserPatch,
-  token: string,
 ): Promise<StaffUser> {
   const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', patch)) as {
     doc?: StaffUser
@@ -89,7 +85,7 @@ export async function updateStaffUser(
  * explicitly reserve direct media-asset uploads for internal profile images,
  * so this does not go through the MediaSet workflow.
  */
-export async function uploadAvatarAsset(file: File, token: string): Promise<AvatarAsset> {
+export async function uploadAvatarAsset(file: File): Promise<AvatarAsset> {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('_payload', JSON.stringify({ alt_text: 'Author profile avatar' }))
@@ -114,7 +110,7 @@ export async function uploadAvatarAsset(file: File, token: string): Promise<Avat
   return data.doc
 }
 
-export async function fetchStaffUsers(token: string): Promise<StaffUser[]> {
+export async function fetchStaffUsers(): Promise<StaffUser[]> {
   const response = (await payloadRequest('/api/users?limit=200&sort=email&depth=0')) as {
     docs?: StaffUser[]
   }
@@ -128,7 +124,6 @@ export async function fetchStaffUsers(token: string): Promise<StaffUser[]> {
  */
 export async function createStaffUser(
   input: { email: string; firstName: string; lastName: string; role: 'writer' | 'editor' },
-  token: string,
 ): Promise<StaffUser> {
   const response = (await payloadMutation(
     '/api/users',
@@ -147,8 +142,8 @@ export async function createStaffUser(
  * went to a mailbox that didn't exist yet.
  */
 export async function requestPasswordSetEmail(email: string): Promise<void> {
-  // The one call here that passes no token. It now carries the caller's session
-  // cookie anyway, via the shared client. Harmless: Payload's `forgotPassword`
+  // Unauthenticated by design, yet it still carries the caller's session
+  // cookie via the shared client. Harmless: Payload's `forgotPassword`
   // never reads `req.user`, and questura throttles it on IP plus email, not on
   // identity — so an authenticated caller gets the same bucket as an anonymous
   // one.
@@ -160,7 +155,7 @@ export async function requestPasswordSetEmail(email: string): Promise<void> {
  * written by questura's email tracking; an empty result may just mean tracking
  * is disabled (EMAIL_TRACKING=false).
  */
-export async function fetchEmailLogs(token: string, limit = 50): Promise<EmailLog[]> {
+export async function fetchEmailLogs(limit = 50): Promise<EmailLog[]> {
   const response = (await payloadRequest(
     `/api/email-logs?limit=${limit}&sort=-createdAt&depth=0`,
   )) as { docs?: EmailLog[] }
@@ -175,7 +170,6 @@ export async function fetchEmailLogs(token: string, limit = 50): Promise<EmailLo
 export async function changeStaffRole(
   id: number | string,
   role: AssignableStaffRole,
-  token: string,
 ): Promise<StaffUser> {
   const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { role })) as {
     doc?: StaffUser
@@ -194,7 +188,6 @@ export async function changeStaffRole(
 export async function setStaffStatus(
   id: number | string,
   status: StaffStatus,
-  token: string,
 ): Promise<StaffUser> {
   const response = (await payloadMutation(`/api/users/${id}`, 'PATCH', { status })) as {
     doc?: StaffUser

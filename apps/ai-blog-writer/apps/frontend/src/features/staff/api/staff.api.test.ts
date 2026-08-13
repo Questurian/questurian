@@ -42,7 +42,7 @@ describe('staff.api', () => {
   it('fetches the staff user with the session cookie, not a header', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ id: 3, email: 'w@questurian.com', role: 'writer' }))
 
-    const user = await fetchStaffUser(3, 'token-1')
+    const user = await fetchStaffUser(3)
 
     expect(user.id).toBe(3)
     const [url, init] = fetchMock.mock.calls[0]
@@ -54,7 +54,7 @@ describe('staff.api', () => {
   it('updates the staff user and unwraps the doc', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ doc: { id: 3, email: 'w@questurian.com', role: 'writer', firstName: 'Ana' } }))
 
-    const user = await updateStaffUser(3, { firstName: 'Ana' }, 'token-1')
+    const user = await updateStaffUser(3, { firstName: 'Ana' })
 
     expect(user.firstName).toBe('Ana')
     const [url, init] = fetchMock.mock.calls[0]
@@ -70,7 +70,7 @@ describe('staff.api', () => {
       jsonResponse({ doc: { id: 9, displayName: 'Ana Writes', slug: 'ana-writes' } }),
     )
 
-    const author = await updateAuthor(9, { slug: 'ana-writes' }, 'token-1')
+    const author = await updateAuthor(9, { slug: 'ana-writes' })
 
     expect(author.slug).toBe('ana-writes')
     const [url, init] = fetchMock.mock.calls[0]
@@ -81,7 +81,7 @@ describe('staff.api', () => {
   it('looks an author up by the account it is linked to', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [{ id: 9, displayName: 'Ana Writes' }] }))
 
-    const author = await fetchAuthorForUser(3, 'token-1')
+    const author = await fetchAuthorForUser(3)
 
     expect(author?.id).toBe(9)
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/authors?where[user][equals]=3')
@@ -90,7 +90,7 @@ describe('staff.api', () => {
   it('reports no author rather than failing when an account has none yet', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
 
-    await expect(fetchAuthorForUser(3, 'token-1')).resolves.toBeNull()
+    await expect(fetchAuthorForUser(3)).resolves.toBeNull()
   })
 
   it('creates an author linked to the account on first save', async () => {
@@ -98,7 +98,7 @@ describe('staff.api', () => {
       jsonResponse({ doc: { id: 9, displayName: 'Ana Writes', user: 3 } }),
     )
 
-    const author = await createAuthorForUser(3, { displayName: 'Ana Writes' }, 'token-1')
+    const author = await createAuthorForUser(3, { displayName: 'Ana Writes' })
 
     expect(author.id).toBe(9)
     const [url, init] = fetchMock.mock.calls[0]
@@ -110,13 +110,13 @@ describe('staff.api', () => {
   it('throws when update returns no doc', async () => {
     fetchMock.mockResolvedValue(jsonResponse({}))
 
-    await expect(updateStaffUser(3, {}, 'token-1')).rejects.toThrow('no updated user document')
+    await expect(updateStaffUser(3, {})).rejects.toThrow('no updated user document')
   })
 
   it('uploads an avatar as multipart form data', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ doc: { id: 9, url: 'https://cdn/avatar.jpg' } }))
 
-    const asset = await uploadAvatarAsset(new File(['x'], 'a.jpg', { type: 'image/jpeg' }), 'token-1')
+    const asset = await uploadAvatarAsset(new File(['x'], 'a.jpg', { type: 'image/jpeg' }))
 
     expect(asset.id).toBe(9)
     const [url, init] = fetchMock.mock.calls[0]
@@ -131,7 +131,7 @@ describe('staff.api', () => {
     fetchMock.mockResolvedValue(jsonResponse({ errors: [{ message: 'nope' }] }, false, 403))
 
     await expect(
-      uploadAvatarAsset(new File(['x'], 'a.jpg', { type: 'image/jpeg' }), 'token-1'),
+      uploadAvatarAsset(new File(['x'], 'a.jpg', { type: 'image/jpeg' })),
     ).rejects.toThrow('Avatar upload failed: 403')
   })
 
@@ -140,7 +140,7 @@ describe('staff.api', () => {
       jsonResponse({ docs: [{ id: 1, email: 'a@questurian.com', role: 'admin' }] }),
     )
 
-    const users = await fetchStaffUsers('token-1')
+    const users = await fetchStaffUsers()
 
     expect(users).toHaveLength(1)
     const [url] = fetchMock.mock.calls[0]
@@ -154,7 +154,6 @@ describe('staff.api', () => {
 
     const created = await createStaffUser(
       { email: 'new@questurian.com', firstName: 'New', lastName: 'Writer', role: 'writer' },
-      'token-1',
     )
 
     expect(created.id).toBe(5)
@@ -193,7 +192,7 @@ describe('staff.api', () => {
       }),
     )
 
-    const logs = await fetchEmailLogs('token-1')
+    const logs = await fetchEmailLogs()
 
     expect(logs).toHaveLength(1)
     expect(logs[0].emailType).toBe('password-set-link')
@@ -206,7 +205,7 @@ describe('staff.api', () => {
   it('returns an empty log list when the collection has no docs', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
 
-    expect(await fetchEmailLogs('token-1')).toEqual([])
+    expect(await fetchEmailLogs()).toEqual([])
   })
 
   it('promotes a writer to editor via role patch', async () => {
@@ -214,7 +213,7 @@ describe('staff.api', () => {
       jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'editor' } }),
     )
 
-    const updated = await changeStaffRole(5, 'editor', 'token-1')
+    const updated = await changeStaffRole(5, 'editor')
 
     expect(updated.role).toBe('editor')
     const [url, init] = fetchMock.mock.calls[0]
@@ -228,7 +227,7 @@ describe('staff.api', () => {
       jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'writer' } }),
     )
 
-    const updated = await changeStaffRole(5, 'writer', 'token-1')
+    const updated = await changeStaffRole(5, 'writer')
 
     expect(updated.role).toBe('writer')
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ role: 'writer' })
@@ -239,7 +238,7 @@ describe('staff.api', () => {
       jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'writer', status: 'disabled' } }),
     )
 
-    const disabled = await setStaffStatus(5, 'disabled', 'token-1')
+    const disabled = await setStaffStatus(5, 'disabled')
 
     expect(disabled.status).toBe('disabled')
     const [url, init] = fetchMock.mock.calls[0]
@@ -251,7 +250,7 @@ describe('staff.api', () => {
       jsonResponse({ doc: { id: 5, email: 'new@questurian.com', role: 'writer', status: 'active' } }),
     )
 
-    const reenabled = await setStaffStatus(5, 'active', 'token-1')
+    const reenabled = await setStaffStatus(5, 'active')
 
     expect(reenabled.status).toBe('active')
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ status: 'active' })
@@ -260,7 +259,7 @@ describe('staff.api', () => {
   it('throws when a status patch comes back without a document', async () => {
     fetchMock.mockResolvedValue(jsonResponse({}))
 
-    await expect(setStaffStatus(5, 'disabled', 'token-1')).rejects.toThrow(
+    await expect(setStaffStatus(5, 'disabled')).rejects.toThrow(
       'Payload returned no updated user document.',
     )
   })

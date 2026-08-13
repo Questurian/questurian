@@ -48,7 +48,6 @@ export type ImagePickerResult =
 
 export type ImagePickerProps = {
   isOpen: boolean
-  token?: string
   /** Required for uploads/imports; when null those tabs show a notice. */
   locationRef: number | null
   /** Reactive filter that drives the Payload fetch. */

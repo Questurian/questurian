@@ -56,7 +56,6 @@ function formatPayloadHttpError(body: unknown, status: number): string {
 
 export async function payloadRequest<T>(
   endpoint: string,
-  token: string,
   init?: RequestInit
 ): Promise<T> {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {

@@ -42,13 +42,11 @@ function getReferencedBlockAssetIds(blocks: StagedArticle['blocks'] | undefined)
 }
 
 type UseEditorialStageMediaParams = {
-  token: string | null | undefined
   stagedArticle: StagedArticle | null
   locations: Location[]
   mediaAssets: MediaAsset[]
   mergeMediaAssetsIntoState: (assets: MediaAsset[]) => void
   fetchMediaAssets: (
-    token?: string,
     params?: {
       limit?: number
       page?: number
@@ -66,7 +64,6 @@ type UseEditorialStageMediaParams = {
       provider: ExternalImageProvider
       photoId?: string | number
     },
-    token: string
   ) => Promise<{
     blob: Blob
     fileName: string
@@ -109,7 +106,6 @@ type UseEditorialStageMediaParams = {
  * loaded yet. The params keep the full shape the sub-hooks consume.
  */
 export function useEditorialStageMedia({
-  token,
   stagedArticle,
   mediaAssets,
   mergeMediaAssetsIntoState,
@@ -121,7 +117,6 @@ export function useEditorialStageMedia({
   const resetExternalImportState = useCallback(() => {}, [])
 
   const block = useEditorialStageBlockMedia({
-    token,
     mediaAssets,
     fetchMediaAssets,
     searchPexelsImages,
@@ -133,7 +128,7 @@ export function useEditorialStageMedia({
 
   // Backfill assets referenced by blocks but missing from the loaded media page.
   useEffect(() => {
-    if (!token || !stagedArticle?.blocks.length) return
+    if (!stagedArticle?.blocks.length) return
 
     const loadedAssetIds = new Set(mediaAssets.map((asset) => asset.id))
     const missingBlockAssetIds = getReferencedBlockAssetIds(stagedArticle.blocks).filter(
@@ -148,7 +143,7 @@ export function useEditorialStageMedia({
       const responses = await Promise.all(
         missingBlockAssetIds.map(async (assetId) => {
           try {
-            return await fetchMediaAssets(token, {
+            return await fetchMediaAssets({
               limit: 1,
               id: assetId,
             })
@@ -173,7 +168,6 @@ export function useEditorialStageMedia({
       isCancelled = true
     }
   }, [
-    token,
     stagedArticle?.blocks,
     mediaAssets,
     fetchMediaAssets,
@@ -183,7 +177,7 @@ export function useEditorialStageMedia({
 
   // Backfill the featured asset if it isn't already loaded.
   useEffect(() => {
-    if (!token || !stagedArticle?.featuredImageId) return
+    if (!stagedArticle?.featuredImageId) return
 
     const featuredAssetId = Number(stagedArticle.featuredImageId)
     if (!Number.isFinite(featuredAssetId) || featuredAssetId <= 0) return
@@ -193,7 +187,7 @@ export function useEditorialStageMedia({
 
     const hydrateFeaturedAsset = async () => {
       try {
-        const response = await fetchMediaAssets(token, {
+        const response = await fetchMediaAssets({
           limit: 1,
           id: featuredAssetId,
         })
@@ -211,7 +205,6 @@ export function useEditorialStageMedia({
       isCancelled = true
     }
   }, [
-    token,
     stagedArticle?.featuredImageId,
     mediaAssets,
     fetchMediaAssets,

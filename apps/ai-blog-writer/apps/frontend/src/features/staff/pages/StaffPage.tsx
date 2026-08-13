@@ -81,7 +81,7 @@ function latestInviteByRecipient(logs: EmailLog[]): Map<string, EmailLog> {
 }
 
 export default function StaffPage() {
-  const { token, user: currentUser } = useAuth()
+  const { user: currentUser } = useAuth()
   const { canManageUsers, isLoading: permissionsLoading } = usePermissions()
   const queryClient = useQueryClient()
 
@@ -91,20 +91,20 @@ export default function StaffPage() {
 
   const staffQuery = useQuery({
     queryKey: ['staff', 'list'],
-    queryFn: () => fetchStaffUsers(token as string),
-    enabled: Boolean(token) && canManageUsers,
+    queryFn: () => fetchStaffUsers(),
+    enabled: Boolean() && canManageUsers,
   })
 
   const authorsQuery = useQuery({
     queryKey: ['staff', 'authors'],
-    queryFn: () => fetchAuthors(token as string),
-    enabled: Boolean(token) && canManageUsers,
+    queryFn: () => fetchAuthors(),
+    enabled: Boolean() && canManageUsers,
   })
 
   const emailLogsQuery = useQuery({
     queryKey: ['staff', 'email-logs'],
-    queryFn: () => fetchEmailLogs(token as string),
-    enabled: Boolean(token) && canManageUsers,
+    queryFn: () => fetchEmailLogs(),
+    enabled: Boolean() && canManageUsers,
   })
 
   const inviteStaff = useMutation({
@@ -116,7 +116,6 @@ export default function StaffPage() {
           lastName: input.lastName.trim(),
           role: input.role,
         },
-        token as string,
       )
       // Invite-style onboarding: the random creation password is discarded;
       // the hire sets their own through this email.
@@ -154,7 +153,7 @@ export default function StaffPage() {
 
   const changeRole = useMutation({
     mutationFn: ({ user, role }: { user: StaffUser; role: AssignableStaffRole }) =>
-      changeStaffRole(user.id, role, token as string),
+      changeStaffRole(user.id, role),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
       setErrorMessage(null)
@@ -168,7 +167,7 @@ export default function StaffPage() {
 
   const changeStatus = useMutation({
     mutationFn: ({ user, status }: { user: StaffUser; status: StaffStatus }) =>
-      setStaffStatus(user.id, status, token as string),
+      setStaffStatus(user.id, status),
     onSuccess: (updated) => {
       void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
       setErrorMessage(null)

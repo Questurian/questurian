@@ -23,7 +23,6 @@ type BuilderStopsPanelProps = {
   draft: ListicleItineraryDraft
   /** Index of the day tab being edited (0-based). */
   activeDayIndex: number
-  token: string | null
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
   instagramPosts: InstagramPostOption[]
@@ -66,7 +65,6 @@ type BuilderStopsPanelProps = {
 export function BuilderStopsPanel({
   draft,
   activeDayIndex,
-  token,
   locationRef,
   mediaAssets,
   instagramPosts,
@@ -94,7 +92,6 @@ export function BuilderStopsPanel({
   onSaveStep3,
   onCancelStep3Update
 }: BuilderStopsPanelProps) {
-  const resolvedToken = token ?? ''
   const dayDraft = useMemo(() => {
     const day = draft.days[activeDayIndex] ?? draft.days[0]
     return (
@@ -138,7 +135,6 @@ export function BuilderStopsPanel({
     [dayDraft.whereStaying, dayDraft.items]
   )
   const fetchedManualImageAssets = useManualStopImageAssets({
-    token: resolvedToken,
     items: allStep3Items,
     mediaAssets
   })
@@ -338,7 +334,7 @@ export function BuilderStopsPanel({
               showHeading={
                 idx === 0 || step3Rows[idx - 1].section !== row.section
               }
-              token={resolvedToken}
+             
               locationRef={locationRef}
               mediaAssets={mediaAssets}
               instagramPosts={instagramPosts}

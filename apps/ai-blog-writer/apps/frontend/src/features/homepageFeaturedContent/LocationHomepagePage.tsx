@@ -19,8 +19,8 @@ import {
 export default function LocationHomepagePage() {
   const { id } = useParams<{ id: string }>()
   const numericId = Number(id)
-  const { token } = useAuth()
   const { canManagePublished: canManage } = usePermissions()
+  const { user } = useAuth()
 
   const {
     homepageQuery,
@@ -41,7 +41,7 @@ export default function LocationHomepagePage() {
     handleConfirmAddBlock,
     deleteError,
     invalidateHomepage,
-  } = useLocationHomepageEditor(numericId, token, canManage)
+  } = useLocationHomepageEditor(numericId, canManage, user?.id)
 
   if (!canManage) {
     return (
@@ -203,7 +203,6 @@ export default function LocationHomepagePage() {
                 block={block}
                 blockIndex={idx}
                 homepageId={numericId}
-                token={token}
                 canManage={canManage}
                 locationGridChildLevel={locationGridChildLevel}
                 convertTargets={convertEmptyFeaturedArticlesTargets}

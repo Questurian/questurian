@@ -6,7 +6,6 @@ type FluxEditParams = {
   prompt: string;
   referenceImage: File;
   additionalReferenceImages?: File[];
-  token: string;
   modelId?: string;
   width?: number;
   height?: number;
@@ -34,7 +33,6 @@ export async function fluxEditApi({
   prompt,
   referenceImage,
   additionalReferenceImages = [],
-  token,
   modelId,
   width,
   height,

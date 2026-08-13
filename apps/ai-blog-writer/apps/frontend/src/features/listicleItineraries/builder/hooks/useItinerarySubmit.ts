@@ -42,7 +42,6 @@ import {
 } from '../validators/step.validators'
 
 type UseItinerarySubmitParams = {
-  token?: string | null
   draft: ListicleItineraryDraft | null
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
   selectedLocationRefId: number | null
@@ -177,7 +176,6 @@ async function itineraryItemToPayloadBlock(params: {
 }
 
 export function useItinerarySubmit({
-  token,
   draft,
   setDraft,
   selectedLocationRefId,
@@ -191,8 +189,7 @@ export function useItinerarySubmit({
   const [isSaving, setIsSaving] = useState(false)
 
   async function submit(targetStatus: 'draft' | 'published') {
-    if (!token || !draft) return
-    const authToken = token
+    if (!draft) return
 
     onError('')
     setResult(null)
@@ -351,8 +348,8 @@ export function useItinerarySubmit({
       stripNestedRowIdsFromItineraryDays(body.itineraryDays)
 
       let doc = draft.payloadId
-        ? await updateItinerary(draft.payloadId, body, authToken)
-        : await createItinerary(body, authToken)
+        ? await updateItinerary(draft.payloadId, body)
+        : await createItinerary(body)
 
       if (targetStatus === 'published') {
         const publishedStructuredData = serializeStructuredDataTemplate(
@@ -385,7 +382,6 @@ export function useItinerarySubmit({
                 structuredData: publishedStructuredData
               })
             },
-            authToken
           )
         }
       }

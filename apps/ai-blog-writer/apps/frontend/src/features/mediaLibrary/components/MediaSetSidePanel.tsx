@@ -10,7 +10,6 @@ import { generateAltTextFromUrl } from '../api/mediaLibraryApi'
 type Props = {
   mediaSet: MediaSet
   health: MediaSetHealth
-  token: string
   onSave: (patch: MediaSetPatch) => Promise<void>
   onClose: () => void
 }
@@ -28,7 +27,7 @@ function getSourceUrl(ms: MediaSet): string | null {
   return null
 }
 
-export function MediaSetSidePanel({ mediaSet, health, token, onSave, onClose }: Props) {
+export function MediaSetSidePanel({ mediaSet, health, onSave, onClose }: Props) {
   const [form, setForm] = useState<MediaSetPatch>({
     title: mediaSet.title ?? '',
     alt_text: mediaSet.alt_text ?? '',
@@ -45,14 +44,12 @@ export function MediaSetSidePanel({ mediaSet, health, token, onSave, onClose }: 
 
   const { data: tagsData } = useQuery({
     queryKey: ['article-tags'],
-    queryFn: () => fetchArticleTags(token, { limit: 200 }),
-    enabled: !!token,
+    queryFn: () => fetchArticleTags({ limit: 200 }),
   })
 
   const { data: locationsData } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => fetchLocations(token),
-    enabled: !!token,
+    queryFn: () => fetchLocations(),
   })
 
   const tags: ArticleTag[] = tagsData?.docs ?? []
@@ -100,7 +97,7 @@ export function MediaSetSidePanel({ mediaSet, health, token, onSave, onClose }: 
     if (!url) return
     setAltGen({ status: 'generating', text: '' })
     try {
-      const text = await generateAltTextFromUrl(url, token)
+      const text = await generateAltTextFromUrl(url)
       setForm((f) => ({ ...f, alt_text: text }))
       setAltGen({ status: 'done', text })
     } catch (err) {

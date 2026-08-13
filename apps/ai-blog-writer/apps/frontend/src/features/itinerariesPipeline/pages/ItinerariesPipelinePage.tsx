@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../auth'
 import { ItineraryTitlePipelinePanel } from '../components/ItineraryTitlePipelinePanel'
 import { useItineraryTitlePipeline } from '../hooks/useItineraryTitlePipeline'
 import '../itineraries-pipeline.css'
@@ -10,9 +9,8 @@ import '../../prompt2blog/styles.css'
 type ItinerariesPipelineTabId = 'pipeline' | 'main'
 
 export default function ItinerariesPipelinePage() {
-  const { token } = useAuth()
   const [activeTab, setActiveTab] = useState<ItinerariesPipelineTabId>('main')
-  const pipeline = useItineraryTitlePipeline(token)
+  const pipeline = useItineraryTitlePipeline()
 
   return (
     <div className="stl-page ip-pipeline">

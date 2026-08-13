@@ -18,7 +18,6 @@ import {
 } from '../../../../shared/payloadSync/draftPayloadSync'
 
 type UseBuilderBootstrapParams = {
-  token?: string | null
   payloadIdParam: string | null
   draftIdParam: string | null
   setSearchParams: SetURLSearchParams
@@ -102,7 +101,6 @@ function mergeLocalIntoPayloadDraft(
 }
 
 export function useBuilderBootstrap({
-  token,
   payloadIdParam,
   draftIdParam,
   setSearchParams,
@@ -113,7 +111,6 @@ export function useBuilderBootstrap({
     Awaited<ReturnType<typeof fetchListicleById>>,
     AuxData
   >({
-    token,
     payloadIdParam,
     draftIdParam,
     setSearchParams,
@@ -128,10 +125,10 @@ export function useBuilderBootstrap({
       },
       saveDraft,
     },
-    loadAuxData: async (authToken) => {
+    loadAuxData: async () => {
       const [locationDocs, mediaDocs] = await Promise.all([
-        fetchLocations(authToken),
-        fetchMediaAssets(authToken),
+        fetchLocations(),
+        fetchMediaAssets(),
       ])
       return { locations: locationDocs, mediaAssets: mediaDocs }
     },

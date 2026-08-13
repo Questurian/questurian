@@ -12,7 +12,8 @@ type Props<T extends string> = {
   ariaLabel: string
   value: T
   options: Option<T>[]
-  disabled: boolean
+  /** Optional; callers that never disable this control may omit it. */
+  disabled?: boolean
   dirty: boolean
   isPending: boolean
   error: unknown
@@ -28,7 +29,7 @@ export default function HomepageBlockLayoutSection<T extends string>({
   ariaLabel,
   value,
   options,
-  disabled,
+  disabled = false,
   dirty,
   isPending,
   error,

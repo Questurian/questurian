@@ -8,7 +8,7 @@ import { FLUX_MODEL_OPTIONS } from './fluxModelOptions'
 const MAX_IMAGES = 8 // 1 primary + 7 additional (API limit)
 
 export default function BatchImageRecreationPage() {
-  const { token } = useAuth()
+  const { isAuthenticated } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -87,7 +87,7 @@ export default function BatchImageRecreationPage() {
   }, [])
 
   const handleGenerate = useCallback(async () => {
-    if (!token || referenceImages.length === 0 || !prompt.trim() || isGenerating) return
+    if (!isAuthenticated || referenceImages.length === 0 || !prompt.trim() || isGenerating) return
     setIsGenerating(true)
     setError(null)
     if (result) {
@@ -98,7 +98,6 @@ export default function BatchImageRecreationPage() {
       const response = await generateFluxEditedImage(
         prompt.trim(),
         referenceImages[0],
-        token,
         {
           additionalReferenceImages: referenceImages.slice(1),
           modelId,
@@ -110,9 +109,9 @@ export default function BatchImageRecreationPage() {
     } finally {
       setIsGenerating(false)
     }
-  }, [token, referenceImages, prompt, modelId, isGenerating, result])
+  }, [isAuthenticated, referenceImages, prompt, modelId, isGenerating, result])
 
-  const canGenerate = referenceImages.length > 0 && prompt.trim().length > 0 && !isGenerating && Boolean(token)
+  const canGenerate = referenceImages.length > 0 && prompt.trim().length > 0 && !isGenerating && isAuthenticated
   const atLimit = referenceImages.length >= MAX_IMAGES
 
   return (

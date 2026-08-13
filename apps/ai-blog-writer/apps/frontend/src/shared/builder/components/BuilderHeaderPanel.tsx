@@ -25,7 +25,6 @@ type DraftLike = {
 
 export type BuilderHeaderPanelProps<TDraft extends DraftLike> = {
   draft: TDraft
-  token: string | null
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<HeaderShape>) => void
@@ -53,7 +52,6 @@ export type BuilderHeaderPanelProps<TDraft extends DraftLike> = {
 
 export function BuilderHeaderPanel<TDraft extends DraftLike>({
   draft,
-  token,
   locationRef,
   mediaAssets,
   updateHeader,
@@ -73,7 +71,6 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
   introLabelRowExtraClassName,
   introActionsExtraClassName,
 }: BuilderHeaderPanelProps<TDraft>) {
-  const resolvedToken = token ?? ''
   const [pickerOpen, setPickerOpen] = useState(false)
   const [fetchedFeaturedAsset, setFetchedFeaturedAsset] = useState<MediaAssetOption | null>(null)
   const [fetchedFeaturedMediaSet, setFetchedFeaturedMediaSet] = useState<MediaSet | null>(null)
@@ -99,7 +96,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
   )
 
   useEffect(() => {
-    if (!featuredImageId || selectedFeaturedAsset || !resolvedToken) {
+    if (!featuredImageId || selectedFeaturedAsset) {
       setFetchedFeaturedAsset(null)
       return
     }
@@ -108,7 +105,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
 
     const loadSelectedAsset = async () => {
       try {
-        const response = await fetchPayloadMediaAssets(resolvedToken, {
+        const response = await fetchPayloadMediaAssets({
           id: featuredImageId,
           limit: 1,
         })
@@ -138,10 +135,10 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
     return () => {
       cancelled = true
     }
-  }, [featuredImageId, selectedFeaturedAsset, resolvedToken])
+  }, [featuredImageId, selectedFeaturedAsset])
 
   useEffect(() => {
-    if (!featuredMediaSetId || !resolvedToken) {
+    if (!featuredMediaSetId) {
       setFetchedFeaturedMediaSet(null)
       return
     }
@@ -150,7 +147,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
 
     const loadSelectedMediaSet = async () => {
       try {
-        const response = await fetchMediaSets(resolvedToken, {
+        const response = await fetchMediaSets({
           id: featuredMediaSetId,
           limit: 1,
         })
@@ -166,7 +163,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
     return () => {
       cancelled = true
     }
-  }, [featuredMediaSetId, resolvedToken])
+  }, [featuredMediaSetId])
 
   const featuredAsset = selectedFeaturedAsset || fetchedFeaturedAsset
   const featuredMediaSetPreviewUrl = fetchedFeaturedMediaSet ? resolveMediaSetPreviewUrl(fetchedFeaturedMediaSet) : undefined
@@ -275,7 +272,7 @@ export function BuilderHeaderPanel<TDraft extends DraftLike>({
       <FeaturedImagePicker
         isOpen={pickerOpen}
         selectedId={featuredMediaSetId}
-        token={resolvedToken}
+       
         locationRef={locationRef}
         payloadSourceMode="mediaSets"
         payloadVariant="wide"

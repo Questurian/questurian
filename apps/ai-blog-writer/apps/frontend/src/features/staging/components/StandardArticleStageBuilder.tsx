@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useAuth, usePermissions } from '../../auth'
+import { usePermissions } from '../../auth'
 import { SeoEditorPanel } from '../../../shared/seo/components/SeoEditorPanel'
 import type { SeoSection } from '../../../shared/seo/types'
 import { createEmptySeoSection } from '../../../shared/seo/services/seo-section.service'
@@ -44,7 +44,6 @@ export function StandardArticleStageBuilder({
   syncBehavior = 'draft-sync',
   backToStageLabel = 'Back to Stage List',
 }: StandardArticleStageBuilderProps) {
-  const { token } = useAuth()
   const { canManagePublished, role } = usePermissions()
   const [localError, setLocalError] = useState<string | null>(null)
   const [localResult, setLocalResult] = useState<string | null>(null)
@@ -54,7 +53,6 @@ export function StandardArticleStageBuilder({
     routes,
     syncBehavior,
     api,
-    token,
   })
   const {
     status,
@@ -95,7 +93,6 @@ export function StandardArticleStageBuilder({
   })
   const seo = useStandardArticleSeoActions({
     api,
-    token,
     stagedArticle,
     featureLabel,
     selectedLocationLabel: derived.selectedLocationLabel,

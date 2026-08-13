@@ -24,7 +24,6 @@ export type EditorialPublishLifecycle = {
 }
 
 export type EditorialStagePublishWorkflowParams = {
-  token: string
   sourceFeature: string
   targetStatus: EditorialPublishTargetStatus
   stagedArticle: StagedArticle
@@ -40,12 +39,10 @@ export type EditorialStagePublishWorkflowParams = {
   }>
   createArticle: (
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   updateArticle?: (
     id: number,
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   markArticleSynced: (
     runId: string,

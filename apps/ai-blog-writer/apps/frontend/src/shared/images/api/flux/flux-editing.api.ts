@@ -16,13 +16,11 @@ export type FluxEditOptions = {
 export async function generateFluxEditedImage(
   prompt: string,
   referenceImage: File,
-  token: string,
   options?: FluxEditOptions
 ): Promise<FluxEditImageResponse> {
   return fluxEditApi({
     prompt,
     referenceImage,
-    token,
     ...options
   })
 }

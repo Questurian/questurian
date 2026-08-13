@@ -27,7 +27,6 @@ import {
 } from '../services/structured-data-template.service'
 
 type UseSingleTypeListicleSeoParams = {
-  token?: string | null
   draft: SingleTypeListicleDraft | null
   relatedItems: RelatedItemOption[]
   selectedLocationRefId: number | null
@@ -37,7 +36,6 @@ type UseSingleTypeListicleSeoParams = {
 }
 
 export function useSingleTypeListicleSeo({
-  token,
   draft,
   relatedItems,
   selectedLocationRefId,
@@ -123,10 +121,6 @@ export function useSingleTypeListicleSeo({
       onError('Select a featured image in Step 2 before generating social image URLs.')
       return
     }
-    if (!token) {
-      onError('You must be logged in to generate social image URLs.')
-      return
-    }
 
     onError('')
     setResult(null)
@@ -137,7 +131,6 @@ export function useSingleTypeListicleSeo({
         featuredMediaSetId
           ? { featuredMediaSetId }
           : { featuredAssetId: featuredAssetId as number },
-        token,
       )
       const bunnyUrl = response.generatedImageUrl.trim()
       if (!bunnyUrl) {
@@ -161,7 +154,7 @@ export function useSingleTypeListicleSeo({
     } finally {
       setIsGeneratingSeoImage(false)
     }
-  }, [draft, onError, setDraft, setResult, token])
+  }, [draft, onError, setDraft, setResult])
 
   const uploadOgImageFile = useCallback(async (file: File): Promise<void> => {
     if (!draft) return
@@ -170,11 +163,6 @@ export function useSingleTypeListicleSeo({
     if (fileIssue) {
       onError(fileIssue)
       throw new Error(fileIssue)
-    }
-    if (!token) {
-      const message = 'You must be logged in to upload social image URLs.'
-      onError(message)
-      throw new Error(message)
     }
 
     const locationRef = selectedLocationRefId ?? draft.locationRef
@@ -194,7 +182,6 @@ export function useSingleTypeListicleSeo({
         file,
         `Social share image for ${articleTitle}`,
         locationRef,
-        token,
         'Questurian Creative',
       )
       const bunnyUrl = response.generatedImageUrl.trim()
@@ -221,7 +208,7 @@ export function useSingleTypeListicleSeo({
     } finally {
       setIsUploadingOgImage(false)
     }
-  }, [draft, onError, selectedLocationRefId, setDraft, setResult, token])
+  }, [draft, onError, selectedLocationRefId, setDraft, setResult])
 
   return {
     generateSeo,

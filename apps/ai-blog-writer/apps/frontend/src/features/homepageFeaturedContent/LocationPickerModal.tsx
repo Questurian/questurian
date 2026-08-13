@@ -2,20 +2,17 @@ import { LocationPickerResults } from './location-picker/LocationPickerResults'
 import { useLocationPicker } from './location-picker/useLocationPicker'
 
 type LocationPickerModalProps = {
-  token: string
   existingLocationIds: number[]
   onSelect: (locationId: number) => Promise<void>
   onClose: () => void
 }
 
 export function LocationPickerModal({
-  token,
   existingLocationIds,
   onSelect,
   onClose,
 }: LocationPickerModalProps) {
   const picker = useLocationPicker({
-    token,
     existingLocationIds,
     onSelect,
     onClose,

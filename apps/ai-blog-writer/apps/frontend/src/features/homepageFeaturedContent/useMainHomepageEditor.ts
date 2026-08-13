@@ -19,16 +19,18 @@ import {
 import type { CuratedHomepageBlockType, PageBlockResponse } from './pageBlocks'
 
 export function useMainHomepageEditor(
-  token: string | null | undefined,
   canManage: boolean,
+  operatorId?: string,
 ) {
   const queryClient = useQueryClient()
-  const homepageQueryKey = ['main-homepage', token]
+  // Keyed by operator: the QueryClient outlives a logout, so an unkeyed cache
+  // would hand the next operator the previous one's data until a refetch lands.
+  const homepageQueryKey = ['main-homepage', operatorId ?? 'anonymous']
 
   const homepageQuery = useQuery({
     queryKey: homepageQueryKey,
-    queryFn: ({ signal }) => fetchMainHomepage(token!, signal),
-    enabled: Boolean(token && canManage),
+    queryFn: ({ signal }) => fetchMainHomepage(signal),
+    enabled: Boolean(canManage),
   })
 
   const [showAddBlock, setShowAddBlock] = useState(false)
@@ -69,7 +71,6 @@ export function useMainHomepageEditor(
       sectionHeading?: string | null
       sectionSubheading?: string | null
     }) => addMainHomepageBlock(
-      token!,
       blockType,
       slotCount,
       sectionHeading,
@@ -83,7 +84,7 @@ export function useMainHomepageEditor(
 
   const deleteBlockMutation = useMutation({
     mutationFn: ({ blockId }: { blockId: string }) =>
-      deleteMainHomepageBlock(token!, blockId),
+      deleteMainHomepageBlock(blockId),
     onMutate: async ({ blockId }) => {
       setDeletingBlockId(blockId)
       await queryClient.cancelQueries({ queryKey: homepageQueryKey })
@@ -106,7 +107,7 @@ export function useMainHomepageEditor(
 
   const reorderBlocksMutation = useMutation({
     mutationFn: (orderedBlockIds: string[]) =>
-      reorderMainHomepageBlocks(token!, orderedBlockIds),
+      reorderMainHomepageBlocks(orderedBlockIds),
     onMutate: async (orderedBlockIds) => {
       await queryClient.cancelQueries({ queryKey: homepageQueryKey })
       const previousHomepage =
@@ -129,7 +130,7 @@ export function useMainHomepageEditor(
   })
 
   const publishMutation = useMutation({
-    mutationFn: () => publishMainHomepage(token!),
+    mutationFn: () => publishMainHomepage(),
     onSuccess: (result) => {
       queryClient.setQueryData<MainHomepageResponse>(homepageQueryKey, result)
       queryClient.invalidateQueries({ queryKey: homepageQueryKey })
@@ -138,7 +139,6 @@ export function useMainHomepageEditor(
 
   async function handleConvertBlock(
     block: PageBlockResponse,
-    currentToken: string,
     blockType: CuratedHomepageBlockType,
     slotCount: number,
   ) {
@@ -157,7 +157,6 @@ export function useMainHomepageEditor(
 
     try {
       const result = await convertMainHomepageFeaturedArticlesBlock(
-        currentToken,
         block.id,
         blockType,
         slotCount,

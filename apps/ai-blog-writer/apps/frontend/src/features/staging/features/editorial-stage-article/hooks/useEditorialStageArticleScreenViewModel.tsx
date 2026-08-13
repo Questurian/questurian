@@ -11,26 +11,22 @@ import { useEditorialStageArticleWorkspace } from './useEditorialStageArticleWor
 import { useEditorialStageLoadedArticleViews } from './useEditorialStageLoadedArticleViews'
 
 type UseEditorialStageArticleScreenViewModelParams = EditorialStageArticlePageProps & {
-  token: string | null | undefined
 }
 
 export function useEditorialStageArticleScreenViewModel({
   storageKey,
   routes,
   api,
-  token,
   syncBehavior,
 }: UseEditorialStageArticleScreenViewModelParams): EditorialStageArticleScreenViewModel {
   const workspace = useEditorialStageArticleWorkspace({
     storageKey,
     routes,
     api,
-    token,
     syncBehavior,
   })
-  const media = useEditorialStageArticleMediaController({ token, api, workspace })
+  const media = useEditorialStageArticleMediaController({ api, workspace })
   const publishing = useEditorialStageArticlePublishing({
-    token,
     routes,
     api,
     workspace,
@@ -54,7 +50,6 @@ export function useEditorialStageArticleScreenViewModel({
   const loadedViews = useEditorialStageLoadedArticleViews({
     stagedArticle: workspace.page.stagedArticle ?? EMPTY_STAGED_ARTICLE,
     stagePath: routes.stagePath,
-    token,
     workspace,
     media,
     publishing,

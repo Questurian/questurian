@@ -101,7 +101,6 @@ function buildWorkflowParams(
   const events: string[] = []
 
   return {
-    token: 'token',
     sourceFeature: 'url2blog',
     targetStatus: 'draft',
     stagedArticle: buildStagedArticle(),
@@ -184,7 +183,6 @@ describe('runEditorialStagePublishWorkflow', () => {
         sourceRunId: 'run-1',
         headerSection: { featuredImage: 99 }
       }),
-      'token'
     )
     expect(params.markArticleSynced).toHaveBeenCalledWith('run-1', 42)
     expect(params.updateStagedArticle).toHaveBeenCalledWith(

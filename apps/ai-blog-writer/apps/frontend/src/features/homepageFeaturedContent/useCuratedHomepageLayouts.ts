@@ -16,8 +16,7 @@ import type {
 
 function usePersistedLayoutDraft<T extends string>(
   savedValue: T,
-  token: string | null,
-  save: ((token: string, value: T) => Promise<void>) | undefined,
+  save: ((value: T) => Promise<void>) | undefined,
 ) {
   const [draft, setDraft] = useState(savedValue)
 
@@ -27,8 +26,8 @@ function usePersistedLayoutDraft<T extends string>(
 
   const mutation = useMutation({
     mutationFn: async (value: T) => {
-      if (!token || !save) return
-      await save(token, value)
+      if (!save) return
+      await save(value)
     },
   })
 
@@ -43,27 +42,24 @@ function usePersistedLayoutDraft<T extends string>(
 
 type Params = {
   block: ArticleCuratedHomepageBlockResponse
-  token: string | null
-  saveSlot3Layout?: (token: string, value: FeaturedArticlesSlot3Layout) => Promise<void>
-  saveSlot4Layout?: (token: string, value: FeaturedArticlesSlot4Layout) => Promise<void>
-  saveSlot5Layout?: (token: string, value: FeaturedArticlesSlot5Layout) => Promise<void>
-  saveArticleGridFourLayout?: (token: string, value: ArticleGridFourLayout) => Promise<void>
+  saveSlot3Layout?: (value: FeaturedArticlesSlot3Layout) => Promise<void>
+  saveSlot4Layout?: (value: FeaturedArticlesSlot4Layout) => Promise<void>
+  saveSlot5Layout?: (value: FeaturedArticlesSlot5Layout) => Promise<void>
+  saveArticleGridFourLayout?: (value: ArticleGridFourLayout) => Promise<void>
 }
 
 export function useCuratedHomepageLayouts({
   block,
-  token,
   saveSlot3Layout,
   saveSlot4Layout,
   saveSlot5Layout,
   saveArticleGridFourLayout,
 }: Params) {
-  const slot3 = usePersistedLayoutDraft(slot3LayoutForBlock(block), token, saveSlot3Layout)
-  const slot4 = usePersistedLayoutDraft(slot4LayoutForBlock(block), token, saveSlot4Layout)
-  const slot5 = usePersistedLayoutDraft(slot5LayoutForBlock(block), token, saveSlot5Layout)
+  const slot3 = usePersistedLayoutDraft(slot3LayoutForBlock(block), saveSlot3Layout)
+  const slot4 = usePersistedLayoutDraft(slot4LayoutForBlock(block), saveSlot4Layout)
+  const slot5 = usePersistedLayoutDraft(slot5LayoutForBlock(block), saveSlot5Layout)
   const articleGridFour = usePersistedLayoutDraft(
     articleGridFourLayoutForBlock(block),
-    token,
     saveArticleGridFourLayout,
   )
 

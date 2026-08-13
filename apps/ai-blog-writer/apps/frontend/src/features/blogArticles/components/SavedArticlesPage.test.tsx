@@ -122,7 +122,7 @@ describe('SavedArticlesPage', () => {
       buildDraftUrl: (stagedId) => `/testblog/stage-article?stagedId=${stagedId}`,
     }
 
-    mockUseAuth.mockReturnValue({ token: 'token-1' })
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, user: { id: '1', email: 'w@questurian.com' } })
     mockGetAllStagedArticles.mockReturnValue([
       makeDraft({ id: 'draft-local' }),
     ])
@@ -147,7 +147,7 @@ describe('SavedArticlesPage', () => {
     // Payload Documents come straight from Payload, combined across features,
     // and edit through the dedicated Payload article editor.
     await waitFor(() => expect(screen.getByText('Payload Documents (1)')).toBeTruthy())
-    expect(mockFetchPayloadArticles).toHaveBeenCalledWith('token-1')
+    expect(mockFetchPayloadArticles).toHaveBeenCalledWith()
     expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe(
       '/payload-articles/stage-article?payloadId=44',
     )

@@ -43,45 +43,43 @@ describe('useImagePickerData', () => {
     mockFetchAssets.mockResolvedValue(page([asset(1), asset(2)]))
 
     const { result } = renderHook(() =>
-      useImagePickerData({ isOpen: true, token: 't', query: baseQuery, search: '', selectedId: null }),
+      useImagePickerData({ isOpen: true, query: baseQuery, search: '', selectedId: null }),
     )
 
     await waitFor(() => expect(result.current.assets).toHaveLength(2))
-    expect(mockFetchAssets).toHaveBeenCalledWith(
-      't',
-      expect.objectContaining({ page: 1, mimeType: 'image/' }),
+    expect(mockFetchAssets).toHaveBeenCalledWith(expect.objectContaining({ page: 1, mimeType: 'image/' }),
     )
   })
 
   it('does not fetch while closed', () => {
     renderHook(() =>
-      useImagePickerData({ isOpen: false, token: 't', query: baseQuery, search: '', selectedId: null }),
+      useImagePickerData({ isOpen: false, query: baseQuery, search: '', selectedId: null }),
     )
     expect(mockFetchAssets).not.toHaveBeenCalled()
   })
 
   it('hydrates the selected asset when it is off the current page', async () => {
-    mockFetchAssets.mockImplementation(async (_token, params) => {
+    mockFetchAssets.mockImplementation(async (params) => {
       if (params?.id === 99) return page([asset(99)])
       return page([asset(1), asset(2)])
     })
 
     const { result } = renderHook(() =>
-      useImagePickerData({ isOpen: true, token: 't', query: baseQuery, search: '', selectedId: 99 }),
+      useImagePickerData({ isOpen: true, query: baseQuery, search: '', selectedId: 99 }),
     )
 
     await waitFor(() => expect(result.current.assets.some((a) => a.id === 99)).toBe(true))
-    expect(mockFetchAssets).toHaveBeenCalledWith('t', expect.objectContaining({ limit: 1, id: 99 }))
+    expect(mockFetchAssets).toHaveBeenCalledWith(expect.objectContaining({ limit: 1, id: 99 }))
   })
 
   it('dedups assets across load-more pages', async () => {
-    mockFetchAssets.mockImplementation(async (_token, params) => {
+    mockFetchAssets.mockImplementation(async (params) => {
       if (params?.page === 2) return page([asset(2), asset(3)], 2)
       return page([asset(1), asset(2)], 2)
     })
 
     const { result } = renderHook(() =>
-      useImagePickerData({ isOpen: true, token: 't', query: baseQuery, search: '', selectedId: null }),
+      useImagePickerData({ isOpen: true, query: baseQuery, search: '', selectedId: null }),
     )
 
     await waitFor(() => expect(result.current.assets).toHaveLength(2))
@@ -98,7 +96,6 @@ describe('useImagePickerData', () => {
     const { result } = renderHook(() =>
       useImagePickerData({
         isOpen: true,
-        token: 't',
         query: { browseUnit: 'assets', requireMediaSet: true },
         search: '',
         selectedId: null,
@@ -109,13 +106,13 @@ describe('useImagePickerData', () => {
   })
 
   it('resets and refetches when the query variant changes', async () => {
-    mockFetchAssets.mockImplementation(async (_token, params) =>
+    mockFetchAssets.mockImplementation(async (params) =>
       page([params?.variant === 'wide' ? asset(10, { variant: 'wide' }) : asset(1)]),
     )
 
     const { result, rerender } = renderHook(
       ({ query }: { query: ImagePickerQuery }) =>
-        useImagePickerData({ isOpen: true, token: 't', query, search: '', selectedId: null }),
+        useImagePickerData({ isOpen: true, query, search: '', selectedId: null }),
       { initialProps: { query: { browseUnit: 'assets', variant: 'editorial' } as ImagePickerQuery } },
     )
 
@@ -130,11 +127,11 @@ describe('useImagePickerData', () => {
     mockFetchAssets.mockResolvedValue(page([asset(1)]))
 
     renderHook(() =>
-      useImagePickerData({ isOpen: true, token: 't', query: baseQuery, search: '  cafe  ', selectedId: null }),
+      useImagePickerData({ isOpen: true, query: baseQuery, search: '  cafe  ', selectedId: null }),
     )
 
     await waitFor(() =>
-      expect(mockFetchAssets).toHaveBeenCalledWith('t', expect.objectContaining({ search: 'cafe' })),
+      expect(mockFetchAssets).toHaveBeenCalledWith(expect.objectContaining({ search: 'cafe' })),
     )
   })
 
@@ -148,7 +145,6 @@ describe('useImagePickerData', () => {
     const { result } = renderHook(() =>
       useImagePickerData({
         isOpen: true,
-        token: 't',
         query: { browseUnit: 'mediaSets' },
         search: '',
         selectedId: null,

@@ -35,7 +35,6 @@ export function useHomepageFeaturedSlots(
   options: UseHomepageFeaturedSlotsOptions
 ): UseHomepageFeaturedSlotsResult {
   const {
-    token,
     canManage,
     selection,
     saveSelection,
@@ -77,7 +76,6 @@ export function useHomepageFeaturedSlots(
     setCollectionFilter,
     setCandidatePage
   } = useHomepageFeaturedCandidates({
-    token,
     canManage,
     fetchCandidates,
     selectionQueryKey,
@@ -93,7 +91,6 @@ export function useHomepageFeaturedSlots(
   }, [repairSlotCount, slots.length])
 
   const { saveMutation, saveNotification } = useHomepageFeaturedSaveMutation({
-    token,
     saveSelection,
     slotCountRef: currentSaveSlotCountRef,
     onSuccess: applySelection,
@@ -118,7 +115,6 @@ export function useHomepageFeaturedSlots(
     savedInvalidItems.length > 0 &&
     saveItems.length === repairSlotCount
   const saveDisabled =
-    !token ||
     (!hasAllSlotsFilled && !hasRepairableStaleSlots) ||
     hasDuplicateSlots(slots) ||
     saveMutation.isPending ||

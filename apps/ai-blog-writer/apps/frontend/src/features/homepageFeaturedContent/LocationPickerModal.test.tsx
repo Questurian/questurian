@@ -16,7 +16,6 @@ function renderModal() {
   return render(
     <QueryClientProvider client={queryClient}>
       <LocationPickerModal
-        token="test-token"
         existingLocationIds={[]}
         onSelect={vi.fn().mockResolvedValue(undefined)}
         onClose={vi.fn()}

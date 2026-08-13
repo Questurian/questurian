@@ -7,7 +7,6 @@ type UploadSocialImageParams = {
   altText: string;
   photographerCredit: string;
   locationRef: number;
-  token: string;
 };
 
 export async function uploadSocialImageApi({
@@ -15,7 +14,6 @@ export async function uploadSocialImageApi({
   altText,
   photographerCredit,
   locationRef,
-  token,
 }: UploadSocialImageParams): Promise<UploadSocialImageResponse> {
   try {
     const formData = new FormData();

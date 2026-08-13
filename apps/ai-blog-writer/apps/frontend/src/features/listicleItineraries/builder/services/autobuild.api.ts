@@ -69,8 +69,6 @@ export type GenerateItineraryParams = {
   title: string
   brief: string
   dayCount: number
-  /** Operator JWT — the backend reads Payload with it (never writes). */
-  payloadToken: string
   sharedNeighborhoods?: number[]
   dayShells: Array<{ dayIndex: number; shell: DayShellTemplate }>
   modelName?: string | null
@@ -88,7 +86,6 @@ export async function generateItinerary(params: GenerateItineraryParams): Promis
       title: params.title,
       brief: params.brief,
       day_count: params.dayCount,
-      payload_jwt: params.payloadToken,
       shared_neighborhoods: params.sharedNeighborhoods ?? [],
       day_shells: params.dayShells.map(({ dayIndex, shell }) => ({
         day_index: dayIndex,

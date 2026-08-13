@@ -19,15 +19,13 @@ export type CandidateParams = {
 }
 
 export type UseHomepageFeaturedSlotsOptions = {
-  token: string | null
   canManage: boolean
   selection: HomepageFeaturedSelection
   saveSelection: (
-    token: string,
     items: HomepageFeaturedItemRef[],
     slotCount?: number,
   ) => Promise<HomepageFeaturedSelection>
-  fetchCandidates: (token: string, params: CandidateParams) => Promise<HomepageFeaturedCandidatesResponse>
+  fetchCandidates: (params: CandidateParams) => Promise<HomepageFeaturedCandidatesResponse>
   selectionQueryKey: unknown[]
   /** When set, candidate search stays on this collection (e.g. Questurian Maps → single-type listicles). */
   lockedCollectionFilter?: HomepageFeaturedCollection

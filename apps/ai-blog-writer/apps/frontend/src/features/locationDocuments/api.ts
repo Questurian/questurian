@@ -19,7 +19,6 @@ const PAYLOAD_REQUEST_TIMEOUT_MS = 12000
 
 async function payloadRequest<T>(
   endpoint: string,
-  token: string,
   init?: RequestInit,
 ): Promise<T> {
   const controller = new AbortController()
@@ -111,7 +110,6 @@ function appendIndexFilters(params: URLSearchParams, filters: LocationIndexFilte
 }
 
 export async function fetchLocationsIndex(
-  token: string,
   filters: LocationIndexFilters = {},
 ): Promise<LocationIndexRow[]> {
   const docs: LocationIndexRow[] = []
@@ -142,7 +140,6 @@ export async function fetchLocationsIndex(
 
     const response = await payloadRequest<PayloadListResponse<LocationIndexRow>>(
       `/api/locations?${params.toString()}`,
-      token,
     )
     docs.push(...(response.docs || []))
     totalPages = response.totalPages || 1
@@ -154,25 +151,23 @@ export async function fetchLocationsIndex(
 
 export async function fetchLocationById(
   id: number,
-  token: string,
 ): Promise<PayloadLocationDoc> {
-  const response = await payloadRequest<unknown>(`/api/locations/${id}?depth=0`, token)
+  const response = await payloadRequest<unknown>(`/api/locations/${id}?depth=0`)
   return parsePayloadLocationDocResponse(response, 'Fetch location')
 }
 
 export async function updateLocation(
   id: number,
   body: PayloadLocationBody,
-  token: string,
 ): Promise<PayloadLocationDoc> {
-  const response = await payloadRequest<unknown>(`/api/locations/${id}`, token, {
+  const response = await payloadRequest<unknown>(`/api/locations/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   })
   return parsePayloadLocationDocResponse(response, 'Update location')
 }
 
-export async function fetchMediaSetOptions(token: string): Promise<MediaSetOption[]> {
+export async function fetchMediaSetOptions(): Promise<MediaSetOption[]> {
   const docs: MediaSetOption[] = []
   let page = 1
   let totalPages = 1
@@ -187,7 +182,6 @@ export async function fetchMediaSetOptions(token: string): Promise<MediaSetOptio
 
     const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(
       `/api/media-sets?${params.toString()}`,
-      token,
     )
     docs.push(...(response.docs || []))
     totalPages = response.totalPages || 1
@@ -198,7 +192,6 @@ export async function fetchMediaSetOptions(token: string): Promise<MediaSetOptio
 }
 
 export async function fetchMediaSetLibrary(
-  token: string,
   params: {
     /** Page size when listing all sets (default 200). Ignored when `id` is set. */
     limit?: number
@@ -213,7 +206,6 @@ export async function fetchMediaSetLibrary(
     query.set('where[id][equals]', String(params.id))
     const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(
       `/api/media-sets?${query.toString()}`,
-      token,
     )
     return response.docs || []
   }
@@ -232,7 +224,6 @@ export async function fetchMediaSetLibrary(
 
     const response = await payloadRequest<PayloadListResponse<MediaSetOption>>(
       `/api/media-sets?${query.toString()}`,
-      token,
     )
     docs.push(...(response.docs || []))
     totalPages = response.totalPages || 1

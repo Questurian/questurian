@@ -6,7 +6,6 @@ import type { ListicleItineraryDraft, MediaAssetOption } from '../../types'
 
 type BuilderHeaderPanelProps = {
   draft: ListicleItineraryDraft
-  token: string | null
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<ListicleItineraryDraft['header']>) => void
@@ -27,7 +26,6 @@ type BuilderHeaderPanelProps = {
 
 export function BuilderHeaderPanel({
   draft,
-  token,
   locationRef,
   mediaAssets,
   updateHeader,
@@ -49,7 +47,6 @@ export function BuilderHeaderPanel({
     <>
       <SharedBuilderHeaderPanel
         draft={draft}
-        token={token}
         locationRef={locationRef}
         mediaAssets={mediaAssets}
         updateHeader={updateHeader}
@@ -66,7 +63,6 @@ export function BuilderHeaderPanel({
             type="button"
             className="stl-btn stl-btn-secondary"
             onClick={() => setCompositeOpen(true)}
-            disabled={!token}
           >
             Create composite
           </button>
@@ -99,10 +95,9 @@ export function BuilderHeaderPanel({
           </>
         )}
       />
-      {token ? (
+      {(
         <CompositeImageModal
           isOpen={compositeOpen}
-          token={token}
           locationRef={locationRef}
           defaultTitle={`Composite: ${draft.title.trim() || 'Itinerary header'}`}
           onCreated={(response) => {
@@ -113,7 +108,7 @@ export function BuilderHeaderPanel({
           }}
           onClose={() => setCompositeOpen(false)}
         />
-      ) : null}
+      )}
     </>
   )
 }

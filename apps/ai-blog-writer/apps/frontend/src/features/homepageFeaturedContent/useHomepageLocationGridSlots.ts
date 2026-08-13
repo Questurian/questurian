@@ -32,7 +32,6 @@ export function useHomepageLocationGridSlots(
   options: UseHomepageLocationGridSlotsOptions
 ): UseHomepageLocationGridSlotsResult {
   const {
-    token,
     canManage,
     selection,
     saveSelection,
@@ -68,7 +67,6 @@ export function useHomepageLocationGridSlots(
     setSearchValue,
     setCandidatePage
   } = useHomepageLocationGridCandidates({
-    token,
     canManage,
     fetchCandidates,
     selectionQueryKey,
@@ -83,7 +81,6 @@ export function useHomepageLocationGridSlots(
   }, [slots.length])
 
   const saveMutation = useHomepageLocationGridSaveMutation({
-    token,
     saveSelection,
     slotCountRef: currentSaveSlotCountRef,
     onSuccess: (selection) => {
@@ -103,7 +100,6 @@ export function useHomepageLocationGridSlots(
   const hasAllSlotsFilled = slots.every((item) => item !== null)
   const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false
   const saveDisabled =
-    !token ||
     !hasAllSlotsFilled ||
     hasDuplicateSlots(slots) ||
     saveMutation.isPending ||

@@ -17,16 +17,13 @@ export type HotelGridCandidateParams = {
 }
 
 export type UseHomepageHotelGridSlotsOptions = {
-  token: string | null
   canManage: boolean
   selection: HomepageHotelGridSelection
   saveSelection: (
-    token: string,
     items: HomepageHotelGridItemRef[],
     slotCount?: number
   ) => Promise<HomepageHotelGridSelection>
   fetchCandidates: (
-    token: string,
     params: HotelGridCandidateParams
   ) => Promise<HomepageHotelGridCandidatesResponse>
   selectionQueryKey: unknown[]
