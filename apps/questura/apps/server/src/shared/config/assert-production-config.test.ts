@@ -16,6 +16,8 @@ const VALID_PRODUCTION_ENV = {
   REDIS_URL: 'redis://cache.internal:6379',
   PAYLOAD_COOKIE_DOMAIN: 'questurian.com',
   PAYLOAD_COOKIE_REQUIRED_HOSTS: 'api.questurian.com,questurian.com',
+  PAYLOAD_SECRET: 'p'.repeat(32),
+  BETTER_AUTH_SECRET: 'b'.repeat(48),
 }
 
 describe('production config assertion', () => {
@@ -27,6 +29,8 @@ describe('production config assertion', () => {
     vi.stubEnv('REDIS_URL', '')
     vi.stubEnv('PAYLOAD_COOKIE_DOMAIN', '')
     vi.stubEnv('PAYLOAD_COOKIE_REQUIRED_HOSTS', '')
+    vi.stubEnv('PAYLOAD_SECRET', '')
+    vi.stubEnv('BETTER_AUTH_SECRET', '')
   })
 
   afterEach(() => {
@@ -112,6 +116,88 @@ describe('production config assertion', () => {
     })
 
     expect(collectProductionConfigProblems().join('\n')).toContain('REDIS_URL is not set')
+  })
+
+  it.each(['PAYLOAD_SECRET', 'BETTER_AUTH_SECRET'])(
+    'rejects a production boot with no %s',
+    async (name) => {
+      const { collectProductionConfigProblems } = await load({
+        ...VALID_PRODUCTION_ENV,
+        [name]: '',
+      })
+
+      expect(collectProductionConfigProblems().join('\n')).toContain(`${name} is not set`)
+    }
+  )
+
+  it.each(['PAYLOAD_SECRET', 'BETTER_AUTH_SECRET'])(
+    'rejects a 31-character %s',
+    async (name) => {
+      const { collectProductionConfigProblems } = await load({
+        ...VALID_PRODUCTION_ENV,
+        [name]: 's'.repeat(31),
+      })
+
+      expect(collectProductionConfigProblems().join('\n')).toContain(
+        `${name} is shorter than the 32-character minimum`
+      )
+    }
+  )
+
+  it.each(['PAYLOAD_SECRET', 'BETTER_AUTH_SECRET'])('accepts a 32-character %s', async (name) => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      [name]: 's'.repeat(32),
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
+  })
+
+  // Whitespace is not entropy — a padded short secret must not pass the floor.
+  it('rejects a whitespace-padded short secret', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      PAYLOAD_SECRET: `  ${'s'.repeat(24)}          `,
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('PAYLOAD_SECRET is shorter')
+  })
+
+  // Better Auth falls back to PAYLOAD_SECRET when BETTER_AUTH_SECRET is unset.
+  // A long PAYLOAD_SECRET must not satisfy the check for the missing one.
+  it('does not let PAYLOAD_SECRET stand in for BETTER_AUTH_SECRET', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      PAYLOAD_SECRET: 'p'.repeat(64),
+      BETTER_AUTH_SECRET: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('BETTER_AUTH_SECRET is not set')
+  })
+
+  // Boot errors reach logs and process supervisors, so a rejection must never
+  // carry the secret itself — nor a length or prefix that narrows a guess.
+  it('never puts a secret value in the thrown message', async () => {
+    const shortSecret = 'correct-horse-battery-x'
+    const { assertProductionConfig } = await load({
+      ...VALID_PRODUCTION_ENV,
+      PAYLOAD_SECRET: shortSecret,
+      BETTER_AUTH_SECRET: 'staple-tribune-nonsense-value',
+    })
+
+    let message = ''
+    try {
+      assertProductionConfig()
+    } catch (error) {
+      message = (error as Error).message
+    }
+
+    expect(message).toContain('PAYLOAD_SECRET')
+    expect(message).toContain('BETTER_AUTH_SECRET')
+    expect(message).not.toContain(shortSecret)
+    expect(message).not.toContain('correct-horse')
+    expect(message).not.toContain('staple-tribune')
+    expect(message).not.toContain(String(shortSecret.length))
   })
 
   it('rejects a production boot with no session cookie domain decision', async () => {

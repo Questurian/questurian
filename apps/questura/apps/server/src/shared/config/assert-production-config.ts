@@ -24,6 +24,8 @@ import {
 
 type ConfigProblem = string
 
+const MIN_SECRET_LENGTH = 32
+
 function isLocalhost(url: string): boolean {
   return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?/i.test(url)
 }
@@ -85,6 +87,50 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
       'REDIS_URL is not set — the shared rate limiters have no cross-instance ' +
         'counter and refuse to count in production.'
     )
+  }
+
+  // `PAYLOAD_SECRET` signs the staff session JWT *and* encrypts service-account
+  // API keys, including the HMAC index they are looked up by. `BETTER_AUTH_SECRET`
+  // carries every visitor session. Both are checked here because neither failure
+  // is visible at boot: a missing value does not stop Payload or Better Auth from
+  // starting, it just derives keys from whatever it was handed. The two are
+  // checked separately on purpose — `better-auth.ts` falls back to
+  // `PAYLOAD_SECRET` when `BETTER_AUTH_SECRET` is unset, which silently collapses
+  // staff and visitor sessions onto one secret and makes either rotation break
+  // both. Requiring the variable in its own right keeps that fallback a
+  // development convenience.
+  //
+  // The 32-character floor is the repo's stated policy, not a cryptographic
+  // boundary — Payload derives a fixed-size key from any non-empty string.
+  // Diagnostics name the variable and nothing else: no value, no length, no
+  // prefix, no hash. Boot errors reach logs and process supervisors.
+  const requiredSecrets: Array<{ name: string; value: string | undefined; role: string }> = [
+    {
+      name: 'PAYLOAD_SECRET',
+      value: process.env.PAYLOAD_SECRET,
+      role: 'signs staff sessions and encrypts service-account API keys',
+    },
+    {
+      name: 'BETTER_AUTH_SECRET',
+      value: process.env.BETTER_AUTH_SECRET,
+      role: 'signs visitor sessions',
+    },
+  ]
+
+  for (const { name, value, role } of requiredSecrets) {
+    const secret = value?.trim() ?? ''
+
+    if (!secret) {
+      problems.push(`${name} is not set — it ${role}.`)
+      continue
+    }
+
+    if (secret.length < MIN_SECRET_LENGTH) {
+      problems.push(
+        `${name} is shorter than the ${MIN_SECRET_LENGTH}-character minimum — it ${role}. ` +
+          'Rotating it invalidates the sessions it signs, so change it in a maintenance window.'
+      )
+    }
   }
 
   // The staff session cookie is host-only unless a `Domain` is set, and the AI
