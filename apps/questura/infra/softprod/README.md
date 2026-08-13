@@ -62,18 +62,18 @@ pnpm db:migrate
 
 There is no bypass or `--force` switch in automated deployment.
 
-## First install
+## Wrapper reinstall
 
-Install the wrapper. Installer preserves any existing copy under
-`~/questura/backups/deploy/`:
+After initial release adoption, reinstall the stable wrapper if needed. Installer
+preserves any existing copy under `~/questura/backups/deploy/`:
 
 ```bash
 ~/questura/app/apps/questura/infra/softprod/install-deploy-wrapper.sh
 ```
 
-Deploy requires release-based host units and aligned `current-*` pointers.
-Install/adopt those through host-bootstrap tooling before replacing current
-wrapper. Until then, existing host deploy path remains unchanged.
+Normal deploy requires release-based host units and aligned `current-*`
+pointers. Fresh legacy-host migration uses the staged adoption flow below;
+adoption backs up and replaces the wrapper transactionally.
 
 ## Versioned host configuration
 
@@ -115,6 +115,33 @@ Preparation builds, tests, and certifies server/client artifacts from exact Git
 SHA; checks and applies forward-only migrations; leaves services, units, and
 `current-*` links untouched. A failed migration never builds client. Partial
 published releases remain safe to inspect/retry.
+
+Adopt the prepared release only after preparation succeeds at the checkout's
+current `HEAD`:
+
+```bash
+~/questura/app/apps/questura/infra/softprod/adopt-host-release.sh
+```
+
+Adoption is initial-only: all `current-*` and `previous-*` paths must be absent.
+It takes the shared deploy lock, re-certifies the paired release for exact
+`HEAD`, validates staged/live user units and service state, then backs up live
+units and the legacy wrapper under `~/questura/backups/host-adoption/`. It
+atomically installs both release pointers, versioned units, and the stable
+wrapper. Server and client must report the exact release locally and publicly;
+the same checks run again after restarting Cloudflare Tunnel. Installed units
+switch app and tunnel logging to journald.
+
+Any install, restart, health, interrupt, or termination failure restores exact
+legacy unit/wrapper bytes and modes, reloads and restarts those services,
+rechecks their captured baseline health, and removes only adoption's unchanged
+initial links. An incomplete rollback prints `CRITICAL` with its retained backup
+path. Adoption never builds artifacts, installs dependencies, runs Compose, or
+migrates the database.
+
+The prepared release must match the commit containing the adoption script. If
+preparation ran before that commit was checked out, rerun preparation first; it
+will safely reuse completed work where certification still matches.
 
 ## Validation
 
