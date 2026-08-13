@@ -1,0 +1,7 @@
+.agents/skills/connect-recommend/** -whitespace
+.agents/skills/stripe-apps/** -whitespace
+.agents/skills/stripe-best-practices/** -whitespace
+.agents/skills/stripe-directory/** -whitespace
+.agents/skills/stripe-docs/** -whitespace
+.agents/skills/stripe-projects/** -whitespace
+.agents/skills/upgrade-stripe/** -whitespace
