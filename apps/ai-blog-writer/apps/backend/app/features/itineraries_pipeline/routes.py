@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff
+from app.core.staff_token import staff_token
 from app.shared.writer_invocation import invoke_writer_model
 
 from .day_shells import BUILT_IN_DAY_SHELL_IDS
@@ -141,13 +142,30 @@ async def remove_day_shell(shell_id: str) -> dict[str, bool]:
 )
 async def generate_itinerary(
     request: GenerateItineraryRequest,
+    session_token: str | None = Depends(staff_token),
 ) -> GenerateItineraryResponse:
     """Itinerary Autobuild: fill an itinerary's day slots from the brief.
 
     Reads candidate records from Payload with the operator's JWT, scores and
     selects them, orders each day, and returns the plan (slots + reasons only —
     no blurbs/images). The frontend persists the result.
+
+    The JWT comes from the session cookie unless the body supplied one. The
+    frontend stopped sending it once the Staff credential left JavaScript, and
+    the cookie carries the same token, so the Payload reads are unaffected.
+    `require_staff` still decides whether the caller may be here at all.
     """
+    payload_jwt = request.payload_jwt or session_token
+    if not payload_jwt:
+        raise HTTPException(
+            status_code=401,
+            detail=(
+                "Reading Payload candidates needs the operator's session: send "
+                "the payload-token cookie or payload_jwt in the body"
+            ),
+        )
+    request = request.model_copy(update={"payload_jwt": payload_jwt})
+
     try:
         return await run_itinerary_pipeline(request)
     except Exception as exc:  # noqa: BLE001
