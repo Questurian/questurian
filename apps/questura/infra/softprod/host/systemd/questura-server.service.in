@@ -1,0 +1,22 @@
+[Unit]
+Description=Questura Payload CMS (soft production)
+Documentation=https://github.com/Questurian/questurian
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/questura/current-server
+Environment=PATH=@NODE_BIN_DIR@:/usr/local/bin:/usr/bin:/bin
+Environment=NODE_ENV=production
+Environment=NODE_OPTIONS=--no-deprecation
+EnvironmentFile=%h/questura/config/server.env
+EnvironmentFile=%h/questura/current-server/.env.release
+ExecStart=@PNPM_BIN@ exec next start -H 127.0.0.1 -p 4000
+Restart=always
+RestartSec=5
+TimeoutStartSec=180
+SyslogIdentifier=questura-server
+
+[Install]
+WantedBy=default.target

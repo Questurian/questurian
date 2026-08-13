@@ -75,6 +75,24 @@ Deploy requires release-based host units and aligned `current-*` pointers.
 Install/adopt those through host-bootstrap tooling before replacing current
 wrapper. Until then, existing host deploy path remains unchanged.
 
+## Versioned host configuration
+
+`host/` is canonical source for soft-production Compose, Cloudflare Tunnel,
+and user-systemd configuration. Unit templates deliberately use
+`current-server`/`current-client`, exact release metadata, and journald; they do
+not append unbounded files under `~/questura/logs`. Both Next services bind
+only to `127.0.0.1`; Cloudflare Tunnel remains their sole public path.
+
+Compose must be installed at `~/questura/infra/compose.yml` with a mode-0600
+adjacent `.env`. Its project name and explicit volumes preserve existing
+`infra_questura-pgdata` and `infra_questura-redisdata`; do not run a renamed
+copy with a different project name. Tunnel credentials remain outside Git at
+`~/.cloudflared/c8f86728-8dcd-4d3e-9d2e-e84d06661416.json`.
+
+Files in this PR are inert templates. Host-bootstrap tooling renders binary
+paths, validates release/config prerequisites, backs up live files, then
+installs them in a later reviewed change.
+
 ## Validation
 
 Migration-preflight and deploy-runner regression tests are part of the server
