@@ -66,8 +66,8 @@ cmp "$APP_ROOT/apps/questura/apps/client/.env.production.local" "$DEPLOY_ROOT/co
 cmp "$SCRIPT_DIR/host/compose.yml" "$DEPLOY_ROOT/infra/compose.yml"
 cmp "$SCRIPT_DIR/host/tunnel-config.yml" "$DEPLOY_ROOT/infra/tunnel-config.yml"
 cmp "$EXPECTED_COMPOSE_ENV" "$DEPLOY_ROOT/infra/.env"
-[[ $(stat -f '%Lp' "$DEPLOY_ROOT/infra/.env" 2>/dev/null || stat -c '%a' "$DEPLOY_ROOT/infra/.env") == 600 ]]
-[[ $(stat -f '%Lp' "$DEPLOY_ROOT/config/server.env" 2>/dev/null || stat -c '%a' "$DEPLOY_ROOT/config/server.env") == 600 ]]
+[[ $(stat -c '%a' "$DEPLOY_ROOT/infra/.env" 2>/dev/null || stat -f '%Lp' "$DEPLOY_ROOT/infra/.env") == 600 ]]
+[[ $(stat -c '%a' "$DEPLOY_ROOT/config/server.env" 2>/dev/null || stat -f '%Lp' "$DEPLOY_ROOT/config/server.env") == 600 ]]
 grep -q "ExecStart=$FAKE_BIN/pnpm exec next start -H 127.0.0.1 -p 4000" "$DEPLOY_ROOT/infra/systemd/questura-server.service"
 grep -q "ExecStart=$FAKE_BIN/cloudflared" "$DEPLOY_ROOT/infra/systemd/questura-tunnel.service"
 ! rg -q '@(NODE_BIN_DIR|PNPM_BIN|CLOUDFLARED_BIN)@' "$DEPLOY_ROOT/infra/systemd"

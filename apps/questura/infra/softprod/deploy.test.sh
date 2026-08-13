@@ -6,6 +6,11 @@ CLIENT_CONFIG="$SCRIPT_DIR/../../apps/client/next.config.ts"
 TEST_ROOT=$(mktemp -d)
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
 
+# Production preparation exports these before running the suite. Keep the
+# fixture hermetic instead of accidentally targeting the real release root.
+export QUESTURA_RELEASES_ROOT="$TEST_ROOT/inherited-releases-root"
+export QUESTURA_RELEASE_SHA=ffffffffffffffffffffffffffffffffffffffff
+
 REPO="$TEST_ROOT/repo"
 FAKE_BIN="$TEST_ROOT/bin"
 DEPLOY_ROOT="$TEST_ROOT/host"
@@ -89,6 +94,7 @@ run_deploy() {
     PATH="$FAKE_BIN:$PATH" \
     NVM_DIR="$TEST_ROOT/no-nvm" \
     QUESTURA_DEPLOY_ROOT="$DEPLOY_ROOT" \
+    QUESTURA_RELEASES_ROOT="$DEPLOY_ROOT/releases" \
     QUESTURA_CONFIG_ROOT="$CONFIG_ROOT" \
     QUESTURA_HEALTH_ATTEMPTS=1 \
     QUESTURA_HEALTH_SLEEP_SECONDS=0 \
@@ -413,6 +419,7 @@ env \
   PATH="$FAKE_BIN:$PATH" \
   NVM_DIR="$TEST_ROOT/no-nvm" \
   QUESTURA_DEPLOY_ROOT="$DEPLOY_ROOT" \
+  QUESTURA_RELEASES_ROOT="$DEPLOY_ROOT/releases" \
   QUESTURA_CONFIG_ROOT="$CONFIG_ROOT" \
   QUESTURA_HEALTH_ATTEMPTS=1 \
   QUESTURA_HEALTH_SLEEP_SECONDS=0 \
@@ -430,6 +437,6 @@ QUESTURA_DEPLOY_ROOT="$INSTALL_ROOT" \
   "$SCRIPT_DIR/install-deploy-wrapper.sh" > "$TEST_ROOT/install.out"
 cmp "$SCRIPT_DIR/host-deploy-wrapper.sh" "$INSTALL_ROOT/deploy.sh"
 [[ $(find "$INSTALL_ROOT/backups/deploy" -type f | wc -l | tr -d ' ') == 1 ]]
-[[ $(stat -f '%Lp' "$INSTALL_ROOT/deploy.sh" 2>/dev/null || stat -c '%a' "$INSTALL_ROOT/deploy.sh") == 755 ]]
+[[ $(stat -c '%a' "$INSTALL_ROOT/deploy.sh" 2>/dev/null || stat -f '%Lp' "$INSTALL_ROOT/deploy.sh") == 755 ]]
 
 echo 'deploy sequencing tests passed'
