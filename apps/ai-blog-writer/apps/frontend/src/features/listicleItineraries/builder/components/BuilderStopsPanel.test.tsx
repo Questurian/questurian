@@ -256,7 +256,6 @@ function Harness({
     <BuilderStopsPanel
       draft={draft}
       activeDayIndex={0}
-      token={null}
       locationRef={1}
       mediaAssets={[]}
       instagramPosts={[]}

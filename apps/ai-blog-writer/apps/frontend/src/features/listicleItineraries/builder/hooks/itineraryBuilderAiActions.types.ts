@@ -15,7 +15,6 @@ export type StopComposeChoice = {
 }
 
 export type ItineraryBuilderAiActionsParams = {
-  token?: string | null
   draft: ListicleItineraryDraft | null
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
   locations: LocationOption[]

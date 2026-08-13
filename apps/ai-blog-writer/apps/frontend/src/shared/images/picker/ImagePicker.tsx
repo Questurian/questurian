@@ -18,7 +18,6 @@ export type { ImagePickerProps } from './imagePicker.types'
 export function ImagePicker(props: ImagePickerProps) {
   const {
     isOpen,
-    token,
     locationRef,
     query,
     selection = { mode: 'single' },
@@ -77,7 +76,6 @@ export function ImagePicker(props: ImagePickerProps) {
         {controller.activeTab === 'upload' && (
           <UploadImagePanel
             locationRef={locationRef}
-            token={token}
             uploadIdentity={controller.uploadIdentity}
             onComplete={controller.handleUploadComplete}
             onCancel={() => controller.switchTab('payload')}

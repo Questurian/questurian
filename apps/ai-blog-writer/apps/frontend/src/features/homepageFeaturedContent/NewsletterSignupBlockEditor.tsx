@@ -8,7 +8,6 @@ import { HOMEPAGE_PAGE_BLOCK_CONFIG, type NewsletterSignupBlockResponse } from '
 export default function NewsletterSignupBlockEditor({
   block,
   blockIndex,
-  token,
   onDeleteBlock,
   isDeletingBlock,
   deleteError,
@@ -17,12 +16,11 @@ export default function NewsletterSignupBlockEditor({
 }: {
   block: NewsletterSignupBlockResponse
   blockIndex: number
-  token: string | null
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
   deleteError: string | null
-  saveSectionHeading: (token: string, value: string | null) => Promise<void>
-  saveSectionSubheading: (token: string, value: string | null) => Promise<void>
+  saveSectionHeading: (value: string | null) => Promise<void>
+  saveSectionSubheading: (value: string | null) => Promise<void>
 }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG['newsletter-signup']
@@ -45,7 +43,6 @@ export default function NewsletterSignupBlockEditor({
             className="hf-btn-icon hf-block-settings-gear"
             title="Section title and subheading for this block"
             aria-label="Block settings"
-            disabled={!token}
             onClick={() => setSettingsOpen(true)}
           >
             ⚙
@@ -72,7 +69,6 @@ export default function NewsletterSignupBlockEditor({
         </p>
         <HomepageBlockSectionTextFields
           blockId={block.id}
-          token={token}
           sectionHeading={block.sectionHeading}
           sectionSubheading={block.sectionSubheading}
           settingsOpen={settingsOpen}

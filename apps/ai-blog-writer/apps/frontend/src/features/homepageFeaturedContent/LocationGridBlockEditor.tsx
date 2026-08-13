@@ -37,36 +37,29 @@ function getInvalidMessage(count: number): string {
 type Props = {
   block: LocationGridBlockResponse
   blockIndex: number
-  token: string | null
   canManage: boolean
   childLevel: HomepageLocationGridLevel
   selectionQueryKey: unknown[]
   saveSelection: (
-    token: string,
     items: HomepageLocationGridItemRef[],
     slotCount?: number
   ) => Promise<HomepageLocationGridSelection>
   fetchCandidates: (
-    token: string,
     params: LocationGridCandidateParams
   ) => Promise<HomepageLocationGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
   saveLocationGridSectionHeading?: (
-    token: string,
     value: string | null
   ) => Promise<void>
   saveLocationGridSectionSubheading?: (
-    token: string,
     value: string | null
   ) => Promise<void>
   saveLocationGridMediaAspect?: (
-    token: string,
     value: LocationGridMediaAspect
   ) => Promise<void>
   /** When the grid has no saved locations, user may switch block type (section title kept). */
   convertBlockTargets?: CuratedHomepageBlockType[]
   onConvertEmptyBlock?: (
-    token: string,
     blockType: CuratedHomepageBlockType,
     slotCount: number
   ) => Promise<void>
@@ -78,7 +71,6 @@ type Props = {
 export default function LocationGridBlockEditor({
   block,
   blockIndex,
-  token,
   canManage,
   childLevel,
   selectionQueryKey,
@@ -109,13 +101,12 @@ export default function LocationGridBlockEditor({
 
   const mediaAspectMutation = useMutation({
     mutationFn: async (value: LocationGridMediaAspect) => {
-      if (!token || !saveLocationGridMediaAspect) return
-      await saveLocationGridMediaAspect(token, value)
+      if (!saveLocationGridMediaAspect) return
+      await saveLocationGridMediaAspect(value)
     }
   })
 
   const slotEditorState = useHomepageLocationGridSlots({
-    token,
     canManage,
     selection: block.selection,
     saveSelection,
@@ -198,7 +189,7 @@ export default function LocationGridBlockEditor({
   const saveNeedsAllSlots =
     hasUnsavedChanges &&
     !hasAllSlotsFilled &&
-    Boolean(token) &&
+    Boolean() &&
     !saveMutation.isPending
 
   return (
@@ -219,7 +210,6 @@ export default function LocationGridBlockEditor({
             className="hf-btn-icon hf-block-settings-gear"
             title="Block settings — save, delete, section title"
             aria-label="Block settings"
-            disabled={!token}
             onClick={() => setSettingsOpen(true)}
           >
             ⚙
@@ -264,7 +254,6 @@ export default function LocationGridBlockEditor({
         </p>
         <HomepageBlockSectionTextFields
           blockId={block.id}
-          token={token}
           sectionHeading={block.sectionHeading}
           sectionSubheading={block.sectionSubheading}
           settingsOpen={settingsOpen}
@@ -279,7 +268,7 @@ export default function LocationGridBlockEditor({
           savedSlotCount={block.selection.totalSlots}
           slots={slots}
           invalidSlots={savedInvalidItems.map((item) => item.slot)}
-          disabled={!token || saveMutation.isPending}
+          disabled={saveMutation.isPending}
           isPending={saveMutation.isPending}
           onResize={handleResizeSlotCount}
         />
@@ -303,7 +292,7 @@ export default function LocationGridBlockEditor({
                     name={`hf-lg-aspect-${block.id}`}
                     checked={mediaAspectDraft === aspect}
                     onChange={() => setMediaAspectDraft(aspect)}
-                    disabled={!token || mediaAspectMutation.isPending}
+                    disabled={mediaAspectMutation.isPending}
                   />
                   <span>
                     {aspect === 'rectangle'
@@ -319,9 +308,7 @@ export default function LocationGridBlockEditor({
               <button
                 type="button"
                 className="hf-btn-ghost"
-                disabled={
-                  !token || !mediaAspectDirty || mediaAspectMutation.isPending
-                }
+                disabled={!mediaAspectDirty || mediaAspectMutation.isPending}
                 onClick={() => setMediaAspectDraft(savedMediaAspect)}
               >
                 Reset
@@ -329,9 +316,7 @@ export default function LocationGridBlockEditor({
               <button
                 type="button"
                 className="hf-btn-primary"
-                disabled={
-                  !token || !mediaAspectDirty || mediaAspectMutation.isPending
-                }
+                disabled={!mediaAspectDirty || mediaAspectMutation.isPending}
                 onClick={() => mediaAspectMutation.mutate(mediaAspectDraft)}
               >
                 {mediaAspectMutation.isPending ? 'Saving…' : 'Save shape'}
@@ -369,12 +354,11 @@ export default function LocationGridBlockEditor({
           blockId={block.id}
           currentBlockType={block.blockType}
           currentSlotCount={block.selection.totalSlots}
-          token={token}
           convertTargetOptions={convertTargetOptions}
           canConvert={canConvertEmptyBlock}
-          onConvert={async (tok, blockType, slotCount) => {
+          onConvert={async (blockType, slotCount) => {
             if (!onConvertEmptyBlock) return
-            await onConvertEmptyBlock(tok, blockType, slotCount)
+            await onConvertEmptyBlock(blockType, slotCount)
           }}
           onConverted={() => setSettingsOpen(false)}
         />

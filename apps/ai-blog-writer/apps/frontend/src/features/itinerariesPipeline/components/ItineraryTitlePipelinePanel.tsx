@@ -12,7 +12,6 @@ type Props = {
 
 export function ItineraryTitlePipelinePanel({ pipeline }: Props) {
   const {
-    token,
     locationId,
     setLocationId,
     dayCount,
@@ -112,7 +111,7 @@ export function ItineraryTitlePipelinePanel({ pipeline }: Props) {
               id="itineraries-pipeline-location"
               name="location"
               value={locationId ?? ''}
-              disabled={!token || locationsLoading || Boolean(locationsError)}
+              disabled={locationsLoading || Boolean(locationsError)}
               onChange={(event) => {
                 const raw = event.target.value
                 setLocationId(raw ? Number(raw) : null)

@@ -24,7 +24,6 @@ function usedKeysOutsideBlock(
 }
 
 export default function MainHomepagePage() {
-  const { token } = useAuth()
   const { canManagePublished: canManage } = usePermissions()
   const {
     homepageQuery,
@@ -43,7 +42,7 @@ export default function MainHomepagePage() {
     handleConfirmAddBlock,
     deleteError,
     invalidateHomepage,
-  } = useMainHomepageEditor(token, canManage)
+  } = useMainHomepageEditor(canManage)
 
   if (!canManage) {
     return (
@@ -192,7 +191,6 @@ export default function MainHomepagePage() {
                   key={homepageBlockEditorIdentity(block).join(':')}
                   block={block}
                   blockIndex={blockIndex}
-                  token={token}
                   canManage={canManage}
                   externalUsedKeys={usedKeysOutsideBlock(pageBlockSlotKeys, block.id)}
                   onSlotsChange={handleSlotsChange}

@@ -46,7 +46,6 @@ function getInvalidMessage(
 export default function HotelGridBlockEditor({
   block,
   blockIndex,
-  token,
   canManage,
   selectionQueryKey,
   saveSelection,
@@ -61,30 +60,24 @@ export default function HotelGridBlockEditor({
 }: {
   block: HotelOrAttractionGridBlockResponse
   blockIndex: number
-  token: string | null
   canManage: boolean
   selectionQueryKey: unknown[]
   saveSelection: (
-    token: string,
     items: HomepageHotelGridItemRef[],
     slotCount?: number
   ) => Promise<HomepageHotelGridSelection>
   fetchCandidates: (
-    token: string,
     params: HotelGridCandidateParams
   ) => Promise<HomepageHotelGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
   saveHotelGridSectionHeading?: (
-    token: string,
     value: string | null
   ) => Promise<void>
   saveHotelGridSectionSubheading?: (
-    token: string,
     value: string | null
   ) => Promise<void>
   convertBlockTargets?: CuratedHomepageBlockType[]
   onConvertEmptyBlock?: (
-    token: string,
     blockType: CuratedHomepageBlockType,
     slotCount: number
   ) => Promise<void>
@@ -97,7 +90,6 @@ export default function HotelGridBlockEditor({
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const slotEditorState = useHomepageHotelGridSlots({
-    token,
     canManage,
     selection: block.selection,
     saveSelection,
@@ -193,7 +185,6 @@ export default function HotelGridBlockEditor({
             className="hf-btn-icon hf-block-settings-gear"
             title="Block settings — section title, change type when empty"
             aria-label="Block settings"
-            disabled={!token}
             onClick={() => setSettingsOpen(true)}
           >
             ⚙
@@ -230,7 +221,6 @@ export default function HotelGridBlockEditor({
         </p>
         <HomepageBlockSectionTextFields
           blockId={block.id}
-          token={token}
           sectionHeading={block.sectionHeading}
           sectionSubheading={block.sectionSubheading}
           settingsOpen={settingsOpen}
@@ -244,7 +234,7 @@ export default function HotelGridBlockEditor({
           savedSlotCount={block.selection.totalSlots}
           slots={slots}
           invalidSlots={savedInvalidItems.map((item) => item.slot)}
-          disabled={!token || saveMutation.isPending}
+          disabled={saveMutation.isPending}
           isPending={saveMutation.isPending}
           onResize={handleResizeSlotCount}
         />
@@ -252,12 +242,11 @@ export default function HotelGridBlockEditor({
           blockId={block.id}
           currentBlockType={block.blockType}
           currentSlotCount={block.selection.totalSlots}
-          token={token}
           convertTargetOptions={convertTargetOptions}
           canConvert={canConvertEmptyBlock}
-          onConvert={async (tok, blockType, slotCount) => {
+          onConvert={async (blockType, slotCount) => {
             if (!onConvertEmptyBlock) return
-            await onConvertEmptyBlock(tok, blockType, slotCount)
+            await onConvertEmptyBlock(blockType, slotCount)
           }}
           onConverted={() => setSettingsOpen(false)}
         />

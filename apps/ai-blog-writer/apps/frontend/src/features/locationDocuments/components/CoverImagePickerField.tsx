@@ -7,7 +7,6 @@ import { formatMediaSetLabel, resolveMediaSetPreviewUrl } from '../utils'
 type CoverImagePickerFieldProps = {
   field: RelationshipFieldDefinition
   value: number | null
-  token: string | null
   locationRef: number | null
   mediaSets: MediaSetOption[]
   onValueChange: (value: number | null) => void
@@ -21,7 +20,6 @@ type CoverImagePickerFieldProps = {
 export function CoverImagePickerField({
   field,
   value,
-  token,
   locationRef,
   mediaSets,
   onValueChange,
@@ -36,7 +34,7 @@ export function CoverImagePickerField({
   )
 
   useEffect(() => {
-    if (!value || !token) {
+    if (!value) {
       setSelectedMediaSet(null)
       setIsLoadingSelected(false)
       return
@@ -47,7 +45,7 @@ export function CoverImagePickerField({
 
     const loadSelectedMediaSet = async () => {
       try {
-        const docs = await fetchMediaSetLibrary(token, { id: value })
+        const docs = await fetchMediaSetLibrary({ id: value })
         if (!cancelled) {
           setSelectedMediaSet(docs[0] || null)
         }
@@ -67,7 +65,7 @@ export function CoverImagePickerField({
     return () => {
       cancelled = true
     }
-  }, [token, value])
+  }, [value])
 
   const handlePickerSelect = (result: ImagePickerResult) => {
     const rawId =
@@ -100,7 +98,6 @@ export function CoverImagePickerField({
             type="button"
             className="ldb-cover-image-preview__button"
             onClick={() => setIsPickerOpen(true)}
-            disabled={!token}
           >
             {selectedPreviewUrl ? (
               <img
@@ -120,7 +117,7 @@ export function CoverImagePickerField({
           </button>
 
           <div className="ldb-cover-image-actions">
-            <button type="button" className="ldb-ghost-btn" onClick={() => setIsPickerOpen(true)} disabled={!token}>
+            <button type="button" className="ldb-ghost-btn" onClick={() => setIsPickerOpen(true)}>
               Change Cover Image
             </button>
             <button type="button" className="ldb-danger-link" onClick={() => onValueChange(null)}>
@@ -133,7 +130,6 @@ export function CoverImagePickerField({
           type="button"
           className="ldb-picker-trigger"
           onClick={() => setIsPickerOpen(true)}
-          disabled={!token}
         >
           <span className="ldb-picker-trigger__preview">
             <span className="ldb-picker-trigger__label ldb-picker-trigger__label--placeholder">
@@ -144,10 +140,9 @@ export function CoverImagePickerField({
         </button>
       )}
 
-      {token ? (
+      {(
         <ImagePicker
           isOpen={isPickerOpen}
-          token={token}
           locationRef={locationRef}
           selectedId={value}
           query={{ browseUnit: 'mediaSets', requirementLabel: field.label }}
@@ -159,7 +154,7 @@ export function CoverImagePickerField({
           onSelect={handlePickerSelect}
           onClose={() => setIsPickerOpen(false)}
         />
-      ) : null}
+      )}
     </div>
   )
 }

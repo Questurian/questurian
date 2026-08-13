@@ -5,7 +5,6 @@ import type { ItineraryBlockType, LocationOption, RelatedItemOption } from '../.
 import { BLOCK_TYPE_OPTIONS, EMPTY_RELATED_BY_BLOCK_TYPE } from '../constants/builder-options.constants'
 
 type UseRelatedItemsParams = {
-  token?: string | null
   location?: string
   sharedNeighborhoods?: number[]
   locations: LocationOption[]
@@ -18,7 +17,6 @@ type UseRelatedItemsResult = {
 }
 
 export function useRelatedItems({
-  token,
   location,
   sharedNeighborhoods,
   locations,
@@ -28,12 +26,12 @@ export function useRelatedItems({
   const [relatedByBlockType, setRelatedByBlockType] = useState<Record<ItineraryBlockType, RelatedItemOption[]>>(EMPTY_RELATED_BY_BLOCK_TYPE)
 
   useEffect(() => {
-    if (!token || !location) {
+    if (!location) {
       setRelatedByBlockType(EMPTY_RELATED_BY_BLOCK_TYPE)
       return
     }
 
-    const authToken = token
+    const authToken = undefined
     const primaryLocation = location
     const exactNeighborhoods = sharedNeighborhoods
 
@@ -44,12 +42,11 @@ export function useRelatedItems({
       locationKey: primaryLocation,
       sharedNeighborhoods: exactNeighborhoods,
       locations,
-      token: authToken,
     })
       .then((scope) => {
         if (cancelled) return []
         return Promise.all(BLOCK_TYPE_OPTIONS.map(async (option) => (
-          [option.value, await fetchRelatedItems(option.value, primaryLocation, authToken, scope)] as const
+          [option.value, await fetchRelatedItems(option.value, primaryLocation, scope)] as const
         )))
       })
       .then((docsByType) => {
@@ -72,7 +69,7 @@ export function useRelatedItems({
     return () => {
       cancelled = true
     }
-  }, [token, location, sharedNeighborhoods, locations, onError])
+  }, [location, sharedNeighborhoods, locations, onError])
 
   return {
     isLoadingRelated,

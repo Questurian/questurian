@@ -16,16 +16,13 @@ export type LocationGridCandidateParams = {
 }
 
 export type UseHomepageLocationGridSlotsOptions = {
-  token: string | null
   canManage: boolean
   selection: HomepageLocationGridSelection
   saveSelection: (
-    token: string,
     items: HomepageLocationGridItemRef[],
     slotCount?: number
   ) => Promise<HomepageLocationGridSelection>
   fetchCandidates: (
-    token: string,
     params: LocationGridCandidateParams
   ) => Promise<HomepageLocationGridCandidatesResponse>
   selectionQueryKey: unknown[]

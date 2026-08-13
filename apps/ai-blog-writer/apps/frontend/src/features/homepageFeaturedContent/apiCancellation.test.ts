@@ -41,7 +41,7 @@ describe('homepage featured API cancellation', () => {
     const getRequestSignal = mockAbortableFetch()
     const queryAbortController = new AbortController()
 
-    const request = fetchMainHomepage('token', queryAbortController.signal)
+    const request = fetchMainHomepage(queryAbortController.signal)
 
     await vi.waitFor(() => expect(getRequestSignal()).toBeDefined())
     queryAbortController.abort()
@@ -54,7 +54,7 @@ describe('homepage featured API cancellation', () => {
     const getRequestSignal = mockAbortableFetch()
     const queryAbortController = new AbortController()
 
-    const request = fetchLocationHomepage('token', 1, queryAbortController.signal)
+    const request = fetchLocationHomepage(1, queryAbortController.signal)
 
     await vi.waitFor(() => expect(getRequestSignal()).toBeDefined())
     queryAbortController.abort()

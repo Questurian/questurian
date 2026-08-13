@@ -5,7 +5,6 @@ export interface ImageUploadProps {
   externalRef: string
   fileNamePrefix?: string
   locationRef: number
-  token: string
   initialAltText?: string
   initialPhotographerCredit?: string
   onComplete: (result: UploadImageResponse) => void

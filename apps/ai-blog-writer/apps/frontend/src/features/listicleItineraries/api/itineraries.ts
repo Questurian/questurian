@@ -42,7 +42,6 @@ function relatedCollectionForBlockType(
 }
 
 export async function fetchItineraries(
-  token: string
 ): Promise<PayloadListResponse<PayloadItineraryDoc>> {
   const params = new URLSearchParams()
   params.set('depth', '0')
@@ -53,29 +52,25 @@ export async function fetchItineraries(
     params.set(`select[${field}]`, 'true')
   }
 
-  return payloadRequest(`/api/listicle-itineraries?${params.toString()}`, token)
+  return payloadRequest(`/api/listicle-itineraries?${params.toString()}`)
 }
 
 export async function fetchItineraryById(
   id: number,
-  token: string
 ): Promise<PayloadItineraryDoc> {
   return payloadRequest<PayloadItineraryDoc>(
     `/api/listicle-itineraries/${id}`,
-    token
   )
 }
 
 export async function createItinerary(
   body: Record<string, unknown>,
-  token: string
 ): Promise<PayloadItineraryDoc> {
   const safeBody = Object.fromEntries(
     Object.entries(body).filter(([key]) => key !== 'id')
   )
   const response = await payloadRequest<{ doc: PayloadItineraryDoc }>(
     `/api/listicle-itineraries`,
-    token,
     {
       method: 'POST',
       body: JSON.stringify(safeBody)
@@ -87,11 +82,9 @@ export async function createItinerary(
 export async function updateItinerary(
   id: number,
   body: Record<string, unknown>,
-  token: string
 ): Promise<PayloadItineraryDoc> {
   const response = await payloadRequest<{ doc: PayloadItineraryDoc }>(
     `/api/listicle-itineraries/${id}`,
-    token,
     {
       method: 'PATCH',
       body: JSON.stringify(body)
@@ -100,7 +93,7 @@ export async function updateItinerary(
   return response.doc
 }
 
-export async function fetchLocations(token: string): Promise<LocationOption[]> {
+export async function fetchLocations(): Promise<LocationOption[]> {
   const allDocs: LocationOption[] = []
   let page = 1
   let totalPages = 1
@@ -108,7 +101,6 @@ export async function fetchLocations(token: string): Promise<LocationOption[]> {
   while (page <= totalPages) {
     const response = await payloadRequest<PayloadListResponse<LocationOption>>(
       `/api/locations?limit=200&page=${page}&depth=0`,
-      token
     )
 
     allDocs.push(...(response.docs || []))
@@ -120,7 +112,6 @@ export async function fetchLocations(token: string): Promise<LocationOption[]> {
 }
 
 export async function fetchMediaAssets(
-  token: string,
   params?: { id?: number }
 ): Promise<MediaAssetOption[]> {
   const queryParams = new URLSearchParams()
@@ -132,13 +123,11 @@ export async function fetchMediaAssets(
 
   const response = await payloadRequest<PayloadListResponse<MediaAssetOption>>(
     `/api/media-assets?${queryParams.toString()}`,
-    token
   )
   return response.docs || []
 }
 
 export async function fetchInstagramPosts(
-  token: string,
   params?: { id?: number }
 ): Promise<InstagramPostOption[]> {
   const queryParams = new URLSearchParams()
@@ -151,7 +140,7 @@ export async function fetchInstagramPosts(
 
   const response = await payloadRequest<
     PayloadListResponse<InstagramPostOption>
-  >(`/api/instagram-posts?${queryParams.toString()}`, token)
+  >(`/api/instagram-posts?${queryParams.toString()}`)
 
   return response.docs || []
 }
@@ -159,7 +148,6 @@ export async function fetchInstagramPosts(
 export async function fetchRelatedItems(
   blockType: ItineraryBlockType,
   locationKey: string,
-  token: string,
   scope?: LocationScope
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForBlockType(blockType)
@@ -173,13 +161,12 @@ export async function fetchRelatedItems(
 
   if (locationKey) {
     const resolvedScope =
-      scope || (await getArticleLocationScope({ locationKey, token }))
+      scope || (await getArticleLocationScope({ locationKey }))
     appendScopedLocationWhere(params, resolvedScope)
   }
 
   const response = await payloadRequest<PayloadListResponse<RelatedItemOption>>(
     `/api/${collection}?${params.toString()}`,
-    token
   )
 
   return normalizeRelatedItems(response.docs || [])

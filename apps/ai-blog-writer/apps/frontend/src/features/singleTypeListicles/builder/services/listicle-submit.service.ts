@@ -19,7 +19,6 @@ export type SubmitListicleParams = {
   selectedLocationRefId: number | null
   targetStatus: 'draft' | 'published'
   relatedItems: RelatedItemOption[]
-  token: string
 }
 
 export async function submitListicle({
@@ -27,7 +26,6 @@ export async function submitListicle({
   selectedLocationRefId,
   targetStatus,
   relatedItems,
-  token,
 }: SubmitListicleParams): Promise<{ doc: PayloadListicleDoc; nextDraft: SingleTypeListicleDraft; resultMessage: string }> {
   const submitIssue = validateSubmit(draft, selectedLocationRefId, targetStatus, relatedItems)
   if (submitIssue) throw new Error(submitIssue)
@@ -118,8 +116,8 @@ export async function submitListicle({
   }
 
   let doc = draft.payloadId
-    ? await updateListicle(draft.payloadId, body, token)
-    : await createListicle(body, token)
+    ? await updateListicle(draft.payloadId, body)
+    : await createListicle(body)
 
   if (targetStatus === 'published') {
     const publishedStructuredData = serializeStructuredDataTemplate(
@@ -145,7 +143,7 @@ export async function submitListicle({
           ...seoSectionForSubmit,
           structuredData: publishedStructuredData,
         }),
-      }, token)
+      })
     }
   }
 

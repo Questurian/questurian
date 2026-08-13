@@ -10,15 +10,14 @@ import {
 import { PAYLOAD_ARTICLES_STORAGE_KEY } from '../constants'
 
 export default function PayloadArticlesPage() {
-  const { token } = useAuth()
+  const { user } = useAuth()
   const { localDrafts, discardLocalDraft, clearAllLocalDrafts } = useLocalStagedDrafts(
     PAYLOAD_ARTICLES_STORAGE_KEY,
   )
 
   const payloadDocsQuery = useQuery({
-    queryKey: ['payload-articles', token || 'no-token'],
-    enabled: Boolean(token),
-    queryFn: () => fetchPayloadArticles(token as string),
+    queryKey: ['payload-articles', user?.id ?? 'anonymous'],
+    queryFn: () => fetchPayloadArticles(),
   })
   const payloadDocs = payloadDocsQuery.data ?? []
 
@@ -61,7 +60,7 @@ export default function PayloadArticlesPage() {
               ? (payloadDocsQuery.error instanceof Error ? payloadDocsQuery.error.message : 'Unknown error')
               : null
           }
-          hasToken={Boolean(token)}
+          isSignedIn={Boolean()}
         />
       </main>
     </div>

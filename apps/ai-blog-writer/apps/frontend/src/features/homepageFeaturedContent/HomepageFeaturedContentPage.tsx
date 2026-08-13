@@ -18,28 +18,28 @@ import { buildHomepageGroups } from './locationHomepageList.utils'
 const EMPTY_LOCATION_HOMEPAGES: LocationHomepageListItem[] = []
 
 export default function HomepageFeaturedContentPage() {
-  const { token } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const queryClient = useQueryClient()
   const { canManagePublished: canManage } = usePermissions()
 
   const [editingCountryKey, setEditingCountryKey] = useState<string | null>(null)
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
 
-  const listQueryKey = ['location-homepages-list', token]
+  const listQueryKey = ['location-homepages-list', user?.id ?? 'anonymous']
 
   const listQuery = useQuery({
     queryKey: listQueryKey,
-    queryFn: () => fetchLocationHomepagesList(token!),
-    enabled: Boolean(token && canManage),
+    queryFn: () => fetchLocationHomepagesList(),
+    enabled: isAuthenticated && canManage,
   })
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id }: { id: number }) => toggleLocationHomepage(token!, id),
+    mutationFn: ({ id }: { id: number }) => toggleLocationHomepage(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: listQueryKey }),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: ({ id }: { id: number }) => deleteLocationHomepage(token!, id),
+    mutationFn: ({ id }: { id: number }) => deleteLocationHomepage(id),
     onSuccess: () => {
       setDeleteTargetId(null)
       queryClient.invalidateQueries({ queryKey: listQueryKey })

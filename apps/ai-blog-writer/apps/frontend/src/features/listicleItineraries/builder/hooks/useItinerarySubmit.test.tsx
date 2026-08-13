@@ -135,7 +135,6 @@ describe('useItinerarySubmit', () => {
       )
 
       return useItinerarySubmit({
-        token: 'test-token',
         draft,
         setDraft,
         selectedLocationRefId: 1,

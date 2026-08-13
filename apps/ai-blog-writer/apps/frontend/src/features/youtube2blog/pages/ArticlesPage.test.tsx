@@ -104,7 +104,7 @@ describe('YouTube2Blog ArticlesPage', () => {
   })
 
   it('shows local drafts and payload statuses with local overlay', async () => {
-    mockUseAuth.mockReturnValue({ token: 'token-1' })
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, user: { id: '1', email: 'w@questurian.com' } })
     mockGetAllStagedArticles.mockReturnValue([
       makeDraft({ id: 'local-only', runId: 'run-local', title: 'Only Local' }),
       makeDraft({ id: 'local-linked', runId: 'run-1', payloadArticleId: 101, title: 'Linked Local Draft' }),
@@ -156,7 +156,7 @@ describe('YouTube2Blog ArticlesPage', () => {
   })
 
   it('shows empty states when no data exists', async () => {
-    mockUseAuth.mockReturnValue({ token: 'token-1' })
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, user: { id: '1', email: 'w@questurian.com' } })
     mockGetAllStagedArticles.mockReturnValue([])
     mockFetchArticles.mockResolvedValue([])
     mockFetchPayloadArticles.mockResolvedValue([])

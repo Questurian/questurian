@@ -31,11 +31,9 @@ export type EditorModelName = EditorBlockRewriteModelName
 
 export type EditorialStageArticleApi = {
   fetchLocations: (
-    token?: string,
     params?: { limit?: number; page?: number }
   ) => Promise<{ docs: Location[]; totalDocs: number; totalPages: number }>
   fetchMediaAssets: (
-    token?: string,
     params?: {
       limit?: number
       page?: number
@@ -49,7 +47,6 @@ export type EditorialStageArticleApi = {
   ) => Promise<{ docs: MediaAsset[]; totalDocs: number; totalPages: number }>
   createArticle: (
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   convertMarkdownToLexical: (markdown: string) => Promise<{
     success: boolean
@@ -64,11 +61,9 @@ export type EditorialStageArticleApi = {
   updateArticle?: (
     id: number,
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   getArticleById?: (
     id: number,
-    token: string
   ) => Promise<PayloadArticleDoc>
   getArticleSyncStatus?: (runId: string) => Promise<{
     synced_to_payload: boolean
@@ -105,7 +100,6 @@ export type EditorialStageArticleApi = {
       locationRef: number
       photoId?: string | number
     },
-    token: string
   ) => Promise<UploadImageResponse>
   fetchExternalImageSource: (
     input: {
@@ -113,7 +107,6 @@ export type EditorialStageArticleApi = {
       provider: ExternalImageProvider
       photoId?: string | number
     },
-    token: string
   ) => Promise<{
     blob: Blob
     fileName: string

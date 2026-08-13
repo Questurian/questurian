@@ -36,7 +36,6 @@ export type UseImageUploadFlowResult = {
 export function useImageUploadFlow({
   externalRef,
   locationRef,
-  token,
   initialAltText = '',
   initialPhotographerCredit = '',
   onComplete,
@@ -98,7 +97,6 @@ export function useImageUploadFlow({
         externalRef,
         altText,
         locationRef,
-        token,
         photographerCredit,
         onProgress: setProgress,
       })
@@ -111,7 +109,7 @@ export function useImageUploadFlow({
       })
       setStage(selectedFile ? 'metadata' : 'select')
     }
-  }, [altText, externalRef, locationRef, onComplete, photographerCredit, selectedFile, token])
+  }, [altText, externalRef, locationRef, onComplete, photographerCredit, selectedFile])
 
   const handleDrop = useCallback((event: DragEvent) => {
     event.preventDefault()

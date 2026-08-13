@@ -9,7 +9,7 @@ import type { UseHomepageHotelGridSlotsOptions } from './homepageHotelGridSlots.
 
 type UseHomepageHotelGridSaveMutationOptions = Pick<
   UseHomepageHotelGridSlotsOptions,
-  'token' | 'saveSelection'
+  'saveSelection'
 > & {
   slotCountRef: MutableRefObject<number>
   onSuccess: (selection: HomepageHotelGridSelection) => void
@@ -17,7 +17,6 @@ type UseHomepageHotelGridSaveMutationOptions = Pick<
 }
 
 export function useHomepageHotelGridSaveMutation({
-  token,
   saveSelection,
   slotCountRef,
   onSuccess,
@@ -25,7 +24,7 @@ export function useHomepageHotelGridSaveMutation({
 }: UseHomepageHotelGridSaveMutationOptions) {
   return useMutation({
     mutationFn: (items: HomepageHotelGridItemRef[]) =>
-      saveSelection(token!, items, slotCountRef.current),
+      saveSelection(items, slotCountRef.current),
     onSuccess,
     onError
   })

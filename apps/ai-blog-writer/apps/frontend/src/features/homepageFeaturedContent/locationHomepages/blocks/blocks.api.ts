@@ -8,7 +8,6 @@ import type {
 } from '../types'
 
 export async function updateLocationHomepageBlock(
-  token: string,
   id: number,
   blockId: string,
   items: HomepageBlockSaveItem[],
@@ -17,7 +16,7 @@ export async function updateLocationHomepageBlock(
   const body: Record<string, unknown> = { blockId, items }
   if (typeof slotCount === 'number') body.slotCount = slotCount
 
-  return locationHomepageRequest(`/api/location-homepages/${id}`, token, {
+  return locationHomepageRequest(`/api/location-homepages/${id}`, {
     method: 'PUT',
     body: JSON.stringify(body)
   })
@@ -25,7 +24,6 @@ export async function updateLocationHomepageBlock(
 
 /** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
 export async function convertLocationHomepageFeaturedArticlesBlock(
-  token: string,
   homepageId: number,
   blockId: string,
   blockType: string,
@@ -33,7 +31,6 @@ export async function convertLocationHomepageFeaturedArticlesBlock(
 ): Promise<ConvertLocationHomepageBlockResponse> {
   return locationHomepageRequest(
     `/api/location-homepages/${homepageId}/blocks/convert?response=lean`,
-    token,
     {
       method: 'POST',
       body: JSON.stringify({ blockId, blockType, slotCount })
@@ -42,7 +39,6 @@ export async function convertLocationHomepageFeaturedArticlesBlock(
 }
 
 export async function addLocationHomepageBlock(
-  token: string,
   id: number,
   blockType: string,
   slotCount: number,
@@ -58,7 +54,6 @@ export async function addLocationHomepageBlock(
   }
   return locationHomepageRequest(
     `/api/location-homepages/${id}/blocks`,
-    token,
     {
       method: 'POST',
       body: JSON.stringify(body)
@@ -67,13 +62,11 @@ export async function addLocationHomepageBlock(
 }
 
 export async function deleteLocationHomepageBlock(
-  token: string,
   id: number,
   blockId: string
 ): Promise<DeleteLocationHomepageBlockResponse> {
   return locationHomepageRequest(
     `/api/location-homepages/${id}/blocks?response=lean`,
-    token,
     {
       method: 'DELETE',
       body: JSON.stringify({ blockId })
@@ -82,13 +75,11 @@ export async function deleteLocationHomepageBlock(
 }
 
 export async function reorderLocationHomepageBlocks(
-  token: string,
   id: number,
   orderedBlockIds: string[]
 ): Promise<ReorderLocationHomepageBlocksResponse> {
   return locationHomepageRequest(
     `/api/location-homepages/${id}/blocks?response=lean`,
-    token,
     {
       method: 'PATCH',
       body: JSON.stringify({ orderedBlockIds })

@@ -14,7 +14,7 @@ export type PayloadDocumentsTableProps = {
   buildDraftUrl: (stagedId: string) => string
   isLoading: boolean
   loadErrorMessage: string | null
-  hasToken: boolean
+  isSignedIn: boolean
 }
 
 function findLocalDraftForPayloadDoc(
@@ -33,7 +33,7 @@ export function PayloadDocumentsTable({
   buildDraftUrl,
   isLoading,
   loadErrorMessage,
-  hasToken,
+  isSignedIn,
 }: PayloadDocumentsTableProps) {
   return (
     <section className="stl-panel">
@@ -41,7 +41,7 @@ export function PayloadDocumentsTable({
         <h2>Payload Documents ({docs.length})</h2>
       </div>
       <div className="panel-body">
-        {!hasToken ? (
+        {!isSignedIn ? (
           <div className="stl-empty">
             <p>Sign in to load articles from Payload.</p>
           </div>

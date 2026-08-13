@@ -20,7 +20,7 @@ describe('articles api', () => {
       }),
     })
 
-    await expect(getArticleById(39, 'token-1')).resolves.toMatchObject({
+    await expect(getArticleById(39)).resolves.toMatchObject({
       id: 39,
       title: 'Payload Article',
     })
@@ -37,7 +37,7 @@ describe('articles api', () => {
       }),
     })
 
-    await expect(getArticleById(40, 'token-1')).resolves.toMatchObject({
+    await expect(getArticleById(40)).resolves.toMatchObject({
       id: 40,
       title: 'Wrapped Article',
     })

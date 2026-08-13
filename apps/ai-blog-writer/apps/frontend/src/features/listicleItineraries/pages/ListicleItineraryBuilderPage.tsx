@@ -41,7 +41,6 @@ import { StopBlurbComposeChoiceModal } from '../builder/components/StopBlurbComp
 import '../styles.css'
 const schemaPublisherConfig = getItinerarySchemaPublisherConfig()
 export default function ListicleItineraryBuilderPage() {
-  const { token } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -70,7 +69,6 @@ export default function ListicleItineraryBuilderPage() {
     mediaAssets,
     instagramPosts,
   } = useBuilderBootstrap({
-    token,
     payloadIdParam,
     draftIdParam,
     setSearchParams,
@@ -85,7 +83,6 @@ export default function ListicleItineraryBuilderPage() {
     saveLocalDraft,
     revertToPayloadVersion,
   } = useItineraryDraftSyncState({
-    token,
     draft,
     setDraft,
     isLoading,
@@ -103,7 +100,6 @@ export default function ListicleItineraryBuilderPage() {
   }, [draft, activeDayIndex])
 
   const { isLoadingRelated, relatedByBlockType } = useRelatedItems({
-    token,
     location: draft?.location,
     sharedNeighborhoods: draft?.sharedNeighborhoods,
     locations,
@@ -127,7 +123,6 @@ export default function ListicleItineraryBuilderPage() {
   })
 
   const { isSaving, submit } = useItinerarySubmit({
-    token,
     draft,
     setDraft,
     selectedLocationRefId: actions.selectedLocationRefId,
@@ -182,7 +177,6 @@ export default function ListicleItineraryBuilderPage() {
   }, [canonicalStructuredData, draft, isStep4Ready, isSynced, setDraft])
 
   const aiActions = useItineraryBuilderAiActions({
-    token,
     draft,
     setDraft,
     locations,
@@ -271,7 +265,7 @@ export default function ListicleItineraryBuilderPage() {
           {(isStep1LockedView || isSynced) ? (
             <BuilderHeaderPanel
               draft={draft}
-              token={token ?? null}
+             
               locationRef={actions.selectedLocationRefId}
               mediaAssets={mediaAssets}
               updateHeader={actions.updateHeader}
@@ -306,7 +300,7 @@ export default function ListicleItineraryBuilderPage() {
               <BuilderStopsPanel
                 draft={draft}
                 activeDayIndex={activeDayIndex}
-                token={token ?? null}
+               
                 locationRef={actions.selectedLocationRefId}
                 mediaAssets={mediaAssets}
                 instagramPosts={instagramPosts}

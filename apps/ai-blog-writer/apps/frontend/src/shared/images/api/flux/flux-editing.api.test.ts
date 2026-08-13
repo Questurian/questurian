@@ -29,7 +29,7 @@ describe('Flux editing public API', () => {
     vi.mocked(fluxEditApi).mockResolvedValue(response)
 
     await expect(
-      generateFluxEditedImage('Recreate this scene', referenceImage, 'token', {
+      generateFluxEditedImage('Recreate this scene', referenceImage, {
         additionalReferenceImages: [additionalReferenceImage],
         modelId: 'flux-2-pro',
         width: 1200,
@@ -43,7 +43,6 @@ describe('Flux editing public API', () => {
     expect(fluxEditApi).toHaveBeenCalledWith({
       prompt: 'Recreate this scene',
       referenceImage,
-      token: 'token',
       additionalReferenceImages: [additionalReferenceImage],
       modelId: 'flux-2-pro',
       width: 1200,

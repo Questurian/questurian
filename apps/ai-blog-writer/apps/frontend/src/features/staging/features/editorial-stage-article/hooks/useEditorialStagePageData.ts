@@ -44,7 +44,6 @@ type UseEditorialStagePageDataParams = {
   storageKey: string
   stageArticlePath: string
   stagePath: string
-  token: string | null | undefined
   syncBehavior?: 'finalize' | 'draft-sync'
   api: Pick<EditorialStageArticleApi, 'fetchResult' | 'fetchLocations' | 'fetchMediaAssets' | 'getArticleSyncStatus' | 'getArticleById'>
 }
@@ -53,7 +52,6 @@ export function useEditorialStagePageData({
   storageKey,
   stageArticlePath,
   stagePath,
-  token,
   syncBehavior = 'finalize',
   api,
 }: UseEditorialStagePageDataParams) {
@@ -149,9 +147,9 @@ export function useEditorialStagePageData({
 
     let payloadMetadataPatch: Partial<StagedArticle> = {}
 
-    if (existing.payloadArticleId && token && getArticleById) {
+    if (existing.payloadArticleId && getArticleById) {
       try {
-        const payloadDoc = await getArticleById(existing.payloadArticleId, token)
+        const payloadDoc = await getArticleById(existing.payloadArticleId)
         payloadMetadataPatch = buildPayloadArticleMetadataPatch({
           doc: payloadDoc,
           fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
@@ -180,7 +178,7 @@ export function useEditorialStagePageData({
         missingBaselineIsUnsynced: true,
       },
     )
-  }, [fetchResult, getArticleById, schemaPublisherConfig.defaultAuthorName, syncBehavior, token])
+  }, [fetchResult, getArticleById, schemaPublisherConfig.defaultAuthorName, syncBehavior])
 
   useEffect(() => {
     if (!urlRunId && !stagedId) return
@@ -345,8 +343,8 @@ export function useEditorialStagePageData({
         if (isCancelled || !syncStatus.synced_to_payload || !syncStatus.payload_article_id) return
 
         const payloadMetadataPatch: Partial<StagedArticle> = (
-          token && getArticleById
-            ? await getArticleById(syncStatus.payload_article_id, token)
+          getArticleById
+            ? await getArticleById(syncStatus.payload_article_id)
               .then((payloadDoc) => buildPayloadArticleMetadataPatch({
                 doc: payloadDoc,
                 fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
@@ -396,22 +394,17 @@ export function useEditorialStagePageData({
     return () => {
       isCancelled = true
     }
-  }, [getArticleById, getArticleSyncStatus, schemaPublisherConfig.defaultAuthorName, stagedArticle?.runId, storageKey, token])
+  }, [getArticleById, getArticleSyncStatus, schemaPublisherConfig.defaultAuthorName, stagedArticle?.runId, storageKey])
 
   useEffect(() => {
-    if (!token) {
-      setIsLoading(false)
-      setError('Authentication required to load locations and media assets. Please sign in again.')
-      return
-    }
 
     const loadData = async () => {
       try {
         setIsLoading(true)
         setError(null)
         const [locationsRes, mediaRes] = await Promise.all([
-          fetchLocations(token, { limit: 200 }),
-          fetchMediaAssets(token, { limit: MEDIA_ASSET_PAGE_LIMIT, page: 1, mimeType: 'image/' }),
+          fetchLocations({ limit: 200 }),
+          fetchMediaAssets({ limit: MEDIA_ASSET_PAGE_LIMIT, page: 1, mimeType: 'image/' }),
         ])
 
         setLocations(locationsRes.docs || [])
@@ -424,7 +417,7 @@ export function useEditorialStagePageData({
     }
 
     void loadData()
-  }, [token, fetchLocations, fetchMediaAssets])
+  }, [fetchLocations, fetchMediaAssets])
 
   const updateStagedArticle = useCallback((updates: Partial<StagedArticle>) => {
     setStagedArticle((previous) => {

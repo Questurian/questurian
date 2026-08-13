@@ -10,9 +10,8 @@ import '../../prompt2blog/styles.css'
 type ItinerariesPipelineTabId = 'pipeline' | 'main'
 
 export default function ItinerariesPipelinePage() {
-  const { token } = useAuth()
   const [activeTab, setActiveTab] = useState<ItinerariesPipelineTabId>('main')
-  const pipeline = useItineraryTitlePipeline(token)
+  const pipeline = useItineraryTitlePipeline()
 
   return (
     <div className="stl-page ip-pipeline">

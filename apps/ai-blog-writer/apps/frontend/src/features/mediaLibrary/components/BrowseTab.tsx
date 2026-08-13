@@ -17,20 +17,18 @@ const EMPTY_FILTERS: BrowseFilters = {
   missingField: '',
 }
 
-type Props = { token: string }
 
-export function BrowseTab({ token }: Props) {
+export function BrowseTab() {
   const [filters, setFilters] = useState<BrowseFilters>(EMPTY_FILTERS)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<MediaSet | null>(null)
 
-  const { data, isLoading, isError } = useBrowseMediaSets(token, filters, page)
-  const updateMutation = useUpdateMediaSet(token)
+  const { data, isLoading, isError } = useBrowseMediaSets(filters, page)
+  const updateMutation = useUpdateMediaSet()
 
   const { data: locationsData } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => fetchLocations(token),
-    enabled: !!token,
+    queryFn: () => fetchLocations(),
   })
   const locations = locationsData?.docs ?? []
 
@@ -116,7 +114,6 @@ export function BrowseTab({ token }: Props) {
         <MediaSetSidePanel
           mediaSet={selected}
           health={computeHealth(selected)}
-          token={token}
           onSave={handleSave}
           onClose={() => setSelected(null)}
         />

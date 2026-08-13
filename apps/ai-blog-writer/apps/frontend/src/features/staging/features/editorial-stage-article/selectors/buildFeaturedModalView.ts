@@ -9,7 +9,6 @@ type BuildFeaturedModalViewInput = {
   stagedArticle: StagedArticle
   featuredImageRequirementLabel: string
   selectedLocation?: Location
-  token?: string
   updateStagedArticle: (updates: Partial<StagedArticle>) => void
   setShowImageModal: Dispatch<SetStateAction<boolean>>
 }
@@ -19,8 +18,7 @@ export function buildFeaturedModalView(input: BuildFeaturedModalViewInput): Feat
     show: input.showImageModal,
     publishedToPayload: isStagedArticleEditingLocked(input.stagedArticle),
     onClose: () => input.setShowImageModal(false),
-    token: input.token,
-    locationRef: input.selectedLocation?.id ?? null,
+        locationRef: input.selectedLocation?.id ?? null,
     selectedFeaturedImageId: input.stagedArticle.featuredImageId ?? null,
     requirementLabel: input.featuredImageRequirementLabel,
     onSelectAssetId: (assetId: number) => input.updateStagedArticle({ featuredImageId: assetId }),

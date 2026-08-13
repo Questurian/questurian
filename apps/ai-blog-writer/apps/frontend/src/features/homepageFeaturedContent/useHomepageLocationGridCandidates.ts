@@ -7,13 +7,12 @@ const CANDIDATE_PAGE_SIZE = 24
 
 type UseHomepageLocationGridCandidatesOptions = Pick<
   UseHomepageLocationGridSlotsOptions,
-  'token' | 'canManage' | 'fetchCandidates' | 'selectionQueryKey'
+  'canManage' | 'fetchCandidates' | 'selectionQueryKey'
 > & {
   pickerSlotIndex: number | null
 }
 
 export function useHomepageLocationGridCandidates({
-  token,
   canManage,
   fetchCandidates,
   selectionQueryKey,
@@ -35,12 +34,12 @@ export function useHomepageLocationGridCandidates({
       candidatePage
     ],
     queryFn: () =>
-      fetchCandidates(token!, {
+      fetchCandidates({
         query: deferredSearchValue || undefined,
         page: candidatePage,
         limit: CANDIDATE_PAGE_SIZE
       }),
-    enabled: Boolean(token && canManage && pickerSlotIndex !== null),
+    enabled: Boolean(canManage && pickerSlotIndex !== null),
     placeholderData: (previousData) => previousData
   })
 

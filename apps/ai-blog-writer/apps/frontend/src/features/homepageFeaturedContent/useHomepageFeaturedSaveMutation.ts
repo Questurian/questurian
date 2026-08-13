@@ -13,7 +13,7 @@ import type {
 
 type UseHomepageFeaturedSaveMutationOptions = Pick<
   UseHomepageFeaturedSlotsOptions,
-  'token' | 'saveSelection'
+  'saveSelection'
 > & {
   slotCountRef: MutableRefObject<number>
   onSuccess: (selection: HomepageFeaturedSelection) => void
@@ -21,7 +21,6 @@ type UseHomepageFeaturedSaveMutationOptions = Pick<
 }
 
 export function useHomepageFeaturedSaveMutation({
-  token,
   saveSelection,
   slotCountRef,
   onSuccess,
@@ -32,7 +31,7 @@ export function useHomepageFeaturedSaveMutation({
 
   const saveMutation = useMutation({
     mutationFn: (items: HomepageFeaturedItemRef[]) =>
-      saveSelection(token!, items, slotCountRef.current),
+      saveSelection(items, slotCountRef.current),
     onSuccess: (selection) => {
       onSuccess(selection)
       onResultMessage('Homepage featured content saved.')

@@ -23,7 +23,6 @@ import type { EditorialStageArticlePublishing } from './useEditorialStageArticle
 type UseEditorialStageLoadedArticleViewsParams = {
   stagedArticle: StagedArticle
   stagePath: string
-  token: string | null | undefined
   workspace: EditorialStageArticleWorkspace
   media: EditorialStageArticleMediaController
   publishing: EditorialStageArticlePublishing
@@ -43,7 +42,6 @@ export function useEditorialStageLoadedArticleViews(
   const {
     stagedArticle,
     stagePath,
-    token,
     workspace,
     media,
     publishing,
@@ -58,7 +56,6 @@ export function useEditorialStageLoadedArticleViews(
     ...publishing,
     stagedArticle,
     stagePath,
-    token,
     editorialPublishAnalysis: workspace.editorialPublishAnalysis,
     setPublishResult: workspace.setPublishResult,
     openImagePickerTarget: workspace.uiState.pickers.openImageTarget,
@@ -191,7 +188,6 @@ export function useEditorialStageLoadedArticleViews(
     stagedArticle: params.stagedArticle,
     featuredImageRequirementLabel,
     selectedLocation,
-    token: params.token || undefined,
     updateStagedArticle: params.updateStagedArticle,
     setShowImageModal: params.setShowImageModalTracked,
   })
@@ -200,7 +196,6 @@ export function useEditorialStageLoadedArticleViews(
     stagedArticle: params.stagedArticle,
     blockImageModal: params.blockImageModal,
     closeBlockImageModal: params.closeBlockImageModalTracked,
-    token: params.token || undefined,
     selectedLocation,
     singleImageRequirementLabel,
     imgPairRequirementLabel,

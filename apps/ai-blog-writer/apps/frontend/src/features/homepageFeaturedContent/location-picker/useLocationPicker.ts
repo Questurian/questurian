@@ -7,14 +7,12 @@ import {
 } from './location-groups'
 
 type UseLocationPickerOptions = {
-  token: string
   existingLocationIds: number[]
   onSelect: (locationId: number) => Promise<void>
   onClose: () => void
 }
 
 export function useLocationPicker({
-  token,
   existingLocationIds,
   onSelect,
   onClose,
@@ -23,13 +21,13 @@ export function useLocationPicker({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const cityQuery = useQuery({
-    queryKey: ['locations-city', token],
-    queryFn: () => fetchLocationsIndex(token, { level: 'city' }),
+    queryKey: ['locations-city'],
+    queryFn: () => fetchLocationsIndex({ level: 'city' }),
     staleTime: 60_000,
   })
   const neighborhoodQuery = useQuery({
-    queryKey: ['locations-neighborhood', token],
-    queryFn: () => fetchLocationsIndex(token, { level: 'neighborhood' }),
+    queryKey: ['locations-neighborhood'],
+    queryFn: () => fetchLocationsIndex({ level: 'neighborhood' }),
     staleTime: 60_000,
   })
 

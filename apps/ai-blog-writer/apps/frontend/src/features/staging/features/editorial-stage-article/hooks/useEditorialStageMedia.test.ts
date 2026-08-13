@@ -66,7 +66,7 @@ function buildStagedArticle(): StagedArticle {
 
 describe('useEditorialStageMedia', () => {
   it('hydrates referenced block image assets that are missing from the initial media page', async () => {
-    const fetchMediaAssets = vi.fn(async (_token?: string, params?: { id?: number }) => {
+    const fetchMediaAssets = vi.fn(async (params?: { id?: number }) => {
       const assetId = params?.id
 
       return {
@@ -92,7 +92,6 @@ describe('useEditorialStageMedia', () => {
       }, [])
 
       return useEditorialStageMedia({
-        token: 'token',
         stagedArticle: buildStagedArticle(),
         locations: [],
         mediaAssets,
@@ -115,7 +114,7 @@ describe('useEditorialStageMedia', () => {
     await waitFor(() => {
       const requestedIds = Array.from(new Set(
         fetchMediaAssets.mock.calls
-          .map(([, params]) => params?.id)
+          .map(([params]) => params?.id)
           .filter((assetId): assetId is number => typeof assetId === 'number')
       )).sort((left, right) => left - right)
 

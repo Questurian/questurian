@@ -38,7 +38,6 @@ describe('image upload public API', () => {
         'featured-upload',
         'A waterfront skyline',
         undefined,
-        'token',
         'Photographer',
         onProgress,
         [3, 5]
@@ -50,7 +49,6 @@ describe('image upload public API', () => {
       externalRef: 'featured-upload',
       altText: 'A waterfront skyline',
       locationRef: undefined,
-      token: 'token',
       photographerCredit: 'Photographer',
       onProgress,
       tags: [3, 5]
@@ -74,7 +72,6 @@ describe('image upload public API', () => {
         'original-upload',
         'A mountain trail',
         12,
-        'token',
         'Photographer',
         onProgress
       )
@@ -85,7 +82,6 @@ describe('image upload public API', () => {
       externalRef: 'original-upload',
       altText: 'A mountain trail',
       locationRef: 12,
-      token: 'token',
       photographerCredit: 'Photographer',
       onProgress
     })

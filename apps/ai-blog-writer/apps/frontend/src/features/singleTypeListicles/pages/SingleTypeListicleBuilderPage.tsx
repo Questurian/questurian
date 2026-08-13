@@ -25,7 +25,6 @@ import { saveDraft } from '../storage'
 import '../styles.css'
 
 export default function SingleTypeListicleBuilderPage() {
-  const { token } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [error, setError] = useState<string | null>(null)
@@ -44,7 +43,6 @@ export default function SingleTypeListicleBuilderPage() {
     locations,
     mediaAssets,
   } = useBuilderBootstrap({
-    token,
     payloadIdParam,
     draftIdParam,
     setSearchParams,
@@ -63,7 +61,6 @@ export default function SingleTypeListicleBuilderPage() {
     initializeMissingBaselineAsSynced: true,
   })
   const { relatedItems, isLoadingRelated } = useRelatedItems({
-    token,
     draft,
     locations,
     onError,
@@ -94,7 +91,6 @@ export default function SingleTypeListicleBuilderPage() {
     onError,
   })
   const seo = useSingleTypeListicleSeo({
-    token,
     draft,
     relatedItems,
     selectedLocationRefId: actions.selectedLocationRefId,
@@ -103,7 +99,6 @@ export default function SingleTypeListicleBuilderPage() {
     setResult,
   })
   const { isSaving, submit } = useListicleSubmit({
-    token,
     draft,
     relatedItems,
     selectedLocationRefId: actions.selectedLocationRefId,
@@ -194,7 +189,6 @@ export default function SingleTypeListicleBuilderPage() {
           {(isStep1Locked || isSynced) ? (
             <BuilderHeaderPanel
               draft={draft}
-              token={token}
               locationRef={actions.selectedLocationRefId ?? draft.locationRef}
               mediaAssets={mediaAssets}
               updateHeader={actions.updateHeader}

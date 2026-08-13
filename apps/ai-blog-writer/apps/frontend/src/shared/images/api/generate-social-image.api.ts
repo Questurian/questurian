@@ -5,13 +5,11 @@ import { normalizeRequestError, parseErrorMessage } from './errors/image-api-err
 type GenerateSocialImageParams = {
   featuredAssetId?: number;
   featuredMediaSetId?: number;
-  token: string;
 };
 
 export async function generateSocialImageApi({
   featuredAssetId,
   featuredMediaSetId,
-  token,
 }: GenerateSocialImageParams): Promise<GenerateSocialImageResponse> {
   try {
     const response = await postJson(

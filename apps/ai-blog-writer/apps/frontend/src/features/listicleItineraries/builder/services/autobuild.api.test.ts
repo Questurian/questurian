@@ -20,7 +20,6 @@ describe('generateItinerary', () => {
       title: 'One Perfect Day in Lima',
       brief: 'coffee, culture, tasting night',
       dayCount: 1,
-      payloadToken: 'token',
       dayShells: [
         {
           dayIndex: 0,
@@ -86,7 +85,6 @@ describe('generateItinerary', () => {
       title: 'One Perfect Day in Lima',
       brief: 'coffee, culture, tasting night',
       dayCount: 1,
-      payloadToken: 'token',
       includeLodging: false,
       dayShells: [
         {

@@ -7,7 +7,6 @@ import { HealthScore } from './HealthScore'
 import { MediaSetSidePanel } from './MediaSetSidePanel'
 import { generateAltTextFromUrl } from '../api/mediaLibraryApi'
 
-type Props = { token: string }
 
 function getSourceUrl(ms: MediaSet): string | null {
   if (ms.source && typeof ms.source === 'object' && ms.source.url) return ms.source.url
@@ -20,15 +19,15 @@ function getSourceUrl(ms: MediaSet): string | null {
   return null
 }
 
-export function AuditTab({ token }: Props) {
+export function AuditTab() {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<MediaSet | null>(null)
   const [checkedIds, setCheckedIds] = useState<Set<number>>(new Set())
   const [bulkGenerating, setBulkGenerating] = useState(false)
   const [bulkProgress, setBulkProgress] = useState('')
 
-  const { data, isLoading, isError, refetch } = useAuditMediaSets(token, page)
-  const updateMutation = useUpdateMediaSet(token)
+  const { data, isLoading, isError, refetch } = useAuditMediaSets(page)
+  const updateMutation = useUpdateMediaSet()
 
   const mediaSets = data?.docs ?? []
   const totalPages = data?.totalPages ?? 1
@@ -75,7 +74,7 @@ export function AuditTab({ token }: Props) {
       if (!url) { done++; continue }
       try {
         setBulkProgress(`Generating ${done + 1} of ${targets.length}…`)
-        const text = await generateAltTextFromUrl(url, token)
+        const text = await generateAltTextFromUrl(url)
         await updateMutation.mutateAsync({ id: ms.id, patch: { alt_text: text } })
       } catch {
         // skip failures silently; they'll remain in audit
@@ -203,7 +202,6 @@ export function AuditTab({ token }: Props) {
         <MediaSetSidePanel
           mediaSet={selected}
           health={computeHealth(selected)}
-          token={token}
           onSave={handleSave}
           onClose={() => setSelected(null)}
         />

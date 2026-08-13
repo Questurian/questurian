@@ -35,7 +35,6 @@ describe('useHomepageFeaturedSlots', () => {
     const { result, rerender } = renderHook(
       () =>
         useHomepageFeaturedSlots({
-          token: 'test-token',
           canManage: true,
           selection,
           saveSelection: vi.fn(),

@@ -43,14 +43,13 @@ function renderBootstrap(options: {
   draftIdParam?: string | null
   payloadIdParam?: string | null
   setSearchParams?: ReturnType<typeof vi.fn>
-  fetchPayloadDoc?: (id: number, token: string) => Promise<{ id: number; title: string }>
+  fetchPayloadDoc?: (id: number) => Promise<{ id: number; title: string }>
   strict?: boolean
 }) {
   const setSearchParams = options.setSearchParams ?? vi.fn()
   const result = renderHook(
     () =>
       useBuilderBootstrap<TestDraft, { id: number; title: string }, TestAux>({
-        token: 'test-token',
         payloadIdParam: options.payloadIdParam ?? null,
         draftIdParam: options.draftIdParam ?? null,
         setSearchParams: setSearchParams as never,

@@ -8,7 +8,6 @@ const CANDIDATE_PAGE_SIZE = 24
 
 type UseHomepageFeaturedCandidatesOptions = Pick<
   UseHomepageFeaturedSlotsOptions,
-  | 'token'
   | 'canManage'
   | 'fetchCandidates'
   | 'selectionQueryKey'
@@ -18,7 +17,6 @@ type UseHomepageFeaturedCandidatesOptions = Pick<
 }
 
 export function useHomepageFeaturedCandidates({
-  token,
   canManage,
   fetchCandidates,
   selectionQueryKey,
@@ -46,13 +44,13 @@ export function useHomepageFeaturedCandidates({
       candidatePage
     ],
     queryFn: () =>
-      fetchCandidates(token!, {
+      fetchCandidates({
         type: effectiveCollectionFilter,
         query: deferredSearchValue || undefined,
         page: candidatePage,
         limit: CANDIDATE_PAGE_SIZE
       }),
-    enabled: Boolean(token && canManage && pickerSlotIndex !== null),
+    enabled: Boolean(canManage && pickerSlotIndex !== null),
     placeholderData: (previousData) => previousData
   })
 

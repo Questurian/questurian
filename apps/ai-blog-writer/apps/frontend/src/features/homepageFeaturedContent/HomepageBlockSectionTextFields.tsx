@@ -6,19 +6,17 @@ const SECTION_SUBHEADING_MAX_LEN = 200
 
 type Props = {
   blockId: string
-  token: string | null
   /** Saved values from the server (react to block identity + refetch). */
   sectionHeading: string | null | undefined
   sectionSubheading: string | null | undefined
   /** When the modal opens, focus the heading field. */
   settingsOpen: boolean
-  saveSectionHeading?: (token: string, value: string | null) => Promise<void>
-  saveSectionSubheading?: (token: string, value: string | null) => Promise<void>
+  saveSectionHeading?: (value: string | null) => Promise<void>
+  saveSectionSubheading?: (value: string | null) => Promise<void>
 }
 
 export default function HomepageBlockSectionTextFields({
   blockId,
-  token,
   sectionHeading,
   sectionSubheading,
   settingsOpen,
@@ -50,15 +48,15 @@ export default function HomepageBlockSectionTextFields({
 
   const headingMutation = useMutation({
     mutationFn: async (value: string | null) => {
-      if (!token || !saveSectionHeading) return
-      await saveSectionHeading(token, value)
+      if (!saveSectionHeading) return
+      await saveSectionHeading(value)
     },
   })
 
   const subMutation = useMutation({
     mutationFn: async (value: string | null) => {
-      if (!token || !saveSectionSubheading) return
-      await saveSectionSubheading(token, value)
+      if (!saveSectionSubheading) return
+      await saveSectionSubheading(value)
     },
   })
 
@@ -84,14 +82,14 @@ export default function HomepageBlockSectionTextFields({
         placeholder="e.g. Featured reporting"
         value={headingDraft}
         onChange={(e) => setHeadingDraft(e.target.value)}
-        disabled={!token || headingMutation.isPending}
+        disabled={headingMutation.isPending}
         autoComplete="off"
       />
       <div className="hf-block-section-heading-row">
         <button
           type="button"
           className="hf-btn-ghost"
-          disabled={!token || !headingDirty || headingMutation.isPending}
+          disabled={!headingDirty || headingMutation.isPending}
           onClick={() => setHeadingDraft(savedHeading)}
         >
           Reset
@@ -99,7 +97,7 @@ export default function HomepageBlockSectionTextFields({
         <button
           type="button"
           className="hf-btn-primary"
-          disabled={!token || !headingDirty || headingMutation.isPending}
+          disabled={!headingDirty || headingMutation.isPending}
           onClick={() => headingMutation.mutate(headingTrimmed === '' ? null : headingTrimmed)}
         >
           {headingMutation.isPending ? 'Saving…' : 'Save title'}
@@ -130,14 +128,14 @@ export default function HomepageBlockSectionTextFields({
             placeholder="e.g. Fresh picks from our editors this week"
             value={subDraft}
             onChange={(e) => setSubDraft(e.target.value)}
-            disabled={!token || subMutation.isPending}
+            disabled={subMutation.isPending}
             autoComplete="off"
           />
           <div className="hf-block-section-heading-row">
             <button
               type="button"
               className="hf-btn-ghost"
-              disabled={!token || !subDirty || subMutation.isPending}
+              disabled={!subDirty || subMutation.isPending}
               onClick={() => setSubDraft(savedSub)}
             >
               Reset
@@ -145,7 +143,7 @@ export default function HomepageBlockSectionTextFields({
             <button
               type="button"
               className="hf-btn-primary"
-              disabled={!token || !subDirty || subMutation.isPending}
+              disabled={!subDirty || subMutation.isPending}
               onClick={() => subMutation.mutate(subTrimmed === '' ? null : subTrimmed)}
             >
               {subMutation.isPending ? 'Saving…' : 'Save subheading'}

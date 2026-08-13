@@ -11,7 +11,6 @@ type UploadPreparedVariantsParams = {
   externalRef: string;
   altText: string;
   locationRef: number;
-  token: string;
   photographerCredit: string;
   onProgress: (progress: UploadProgress) => void;
 };
@@ -34,7 +33,6 @@ export async function uploadPreparedVariants({
   externalRef,
   altText,
   locationRef,
-  token,
   photographerCredit,
   onProgress,
 }: UploadPreparedVariantsParams): Promise<UploadImageResponse> {
@@ -43,7 +41,6 @@ export async function uploadPreparedVariants({
     externalRef,
     altText,
     locationRef,
-    token,
     photographerCredit,
     onProgress,
   );

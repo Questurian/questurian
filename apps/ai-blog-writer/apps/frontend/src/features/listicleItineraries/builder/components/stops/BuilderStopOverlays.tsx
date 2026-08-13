@@ -27,7 +27,6 @@ type Props = {
   item: ItineraryItemBlock
   section: 'whereStaying' | 'stops'
   localIndex: number
-  token: string
   locationRef: number | null
   instagramPosts: InstagramPostOption[]
   relatedOptions: RelatedItemOption[]
@@ -57,7 +56,6 @@ export function BuilderStopOverlays(props: Props) {
     item,
     section,
     localIndex,
-    token: resolvedToken,
     locationRef,
     instagramPosts,
     relatedOptions,
@@ -215,7 +213,7 @@ export function BuilderStopOverlays(props: Props) {
       <FeaturedImagePicker
         isOpen={imagePickerItemId === item.id}
         selectedId={item.image}
-        token={resolvedToken}
+       
         locationRef={locationRef}
         payloadSourceMode="mediaSets"
         requireMediaSet={false}

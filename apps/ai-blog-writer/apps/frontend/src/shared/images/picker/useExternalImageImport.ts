@@ -34,7 +34,6 @@ export type ExternalCropDraft = {
 }
 
 type UseExternalImageImportParams = {
-  token?: string
   /** Required to upload into Payload; when null, prepare/confirm refuse with a notice. */
   locationRef: number | null
   /** Stable prefix for the generated external ref, e.g. 'featured-image-picker'. */
@@ -71,7 +70,6 @@ const DEFAULT_LOCATION_REQUIRED = 'Set a location before importing images into P
  * single selection or push it into the multi-select buffer (ADR 0020).
  */
 export function useExternalImageImport({
-  token,
   locationRef,
   externalRefBase,
   fileNameTitle,
@@ -96,10 +94,6 @@ export function useExternalImageImport({
     async (photo: ExternalImagePhoto, provider: ExternalImageProvider) => {
       if (locationRef === null) {
         setError(locationRequiredMessage)
-        return
-      }
-      if (!token) {
-        setError('Please sign in again before importing images.')
         return
       }
 
@@ -137,7 +131,7 @@ export function useExternalImageImport({
         setImportingId(null)
       }
     },
-    [locationRef, token, externalRefBase, fileNameTitle, altContextLabel, locationRequiredMessage],
+    [locationRef, externalRefBase, fileNameTitle, altContextLabel, locationRequiredMessage],
   )
 
   const updateDraft = useCallback(
@@ -154,10 +148,6 @@ export function useExternalImageImport({
         setError(locationRequiredMessage)
         return null
       }
-      if (!token) {
-        setError('Please sign in again before importing images.')
-        return null
-      }
       if (!cropDraft.photographerCredit.trim()) {
         setError('Photographer credit is required before importing.')
         return null
@@ -171,7 +161,6 @@ export function useExternalImageImport({
           cropDraft.externalRef,
           cropDraft.altText,
           locationRef,
-          token,
           cropDraft.photographerCredit,
           (progress) => setUploadProgress(progress),
         )
@@ -185,7 +174,7 @@ export function useExternalImageImport({
         setIsUploading(false)
       }
     },
-    [cropDraft, locationRef, token, locationRequiredMessage, reset],
+    [cropDraft, locationRef, locationRequiredMessage, reset],
   )
 
   return {

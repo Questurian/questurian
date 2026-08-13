@@ -12,7 +12,6 @@ function unwrapPayloadDoc<T>(result: T | { doc?: T }): T {
 
 export async function createArticle(
   article: CreateArticlePayload,
-  token: string,
 ): Promise<PayloadArticleDoc> {
   const response = await fetch(`${PAYLOAD_API_URL}/api/articles`, {
     method: 'POST',
@@ -37,7 +36,6 @@ export async function createArticle(
 export async function updateArticle(
   id: number,
   article: CreateArticlePayload,
-  token: string,
 ): Promise<PayloadArticleDoc> {
   const response = await fetch(`${PAYLOAD_API_URL}/api/articles/${id}`, {
     method: 'PATCH',
@@ -61,7 +59,6 @@ export async function updateArticle(
 
 export async function getArticleById(
   id: number,
-  token: string,
 ): Promise<PayloadArticleDoc> {
   const response = await fetch(`${PAYLOAD_API_URL}/api/articles/${id}?depth=1`, {
     method: 'GET',
@@ -81,7 +78,7 @@ export async function getArticleById(
   return unwrapPayloadDoc<PayloadArticleDoc>(result)
 }
 
-export async function fetchPayloadArticles(token: string): Promise<PayloadArticleDoc[]> {
+export async function fetchPayloadArticles(): Promise<PayloadArticleDoc[]> {
   const query = new URLSearchParams({
     limit: '200',
     depth: '0',
