@@ -8,25 +8,27 @@ import { payloadRequest as itineraryPayloadRequest } from '../../features/listic
 import { getArticleLocationScope } from '../locationScope/scope'
 
 /**
- * Every authenticated call to Payload must send the session cookie.
+ * Every authenticated call to Payload sends the session cookie, and nothing
+ * else.
  *
- * These clients grew independently and disagreed: some passed
- * `credentials: 'include'`, some passed `'omit'`, and some named no option at
- * all — which means `'same-origin'`, and Payload is never the same origin as
- * this app. None of it showed, because each one also carries an
- * `Authorization: Bearer` header.
+ * These clients grew independently and disagreed about `credentials`; that was
+ * unified first, while each one still carried an `Authorization: Bearer`
+ * header. The header is now gone, which is what makes the cookie the actual
+ * credential rather than a redundant second one.
  *
- * The cookie is *not* a fallback today, and that is worth being exact about:
- * Payload's `extractJWT` returns the first token it finds in `jwtOrder`
- * (`JWT`, `Bearer`, `cookie`) and `JWTAuthentication` verifies only that one.
- * A present-but-invalid Bearer fails outright rather than falling through to
- * the cookie. So while the header is sent these calls behave exactly as
- * before — the change is consistency, and it is what makes eventually dropping
- * the header a one-line change rather than an eight-file one.
+ * Both halves are asserted per client, because dropping the header is only
+ * safe where the cookie is genuinely being sent. A client that lost the header
+ * but kept `credentials: 'same-origin'` would authenticate as nobody.
  *
- * Every Payload client in the app is listed below, including the four that
- * were already correct, so the set is checkable by reading rather than by
- * remembering.
+ * Sending both would be worse than redundant. Payload's `extractJWT` returns
+ * the *first* credential it finds in `jwtOrder` (`JWT`, `Bearer`, `cookie`)
+ * and `JWTAuthentication` verifies only that one — so a stale header shadows a
+ * valid cookie and fails the request outright rather than falling through.
+ * That is not hypothetical: it is exactly the bug `logoutPayloadUser` already
+ * had to work around, and the one `requestSession` had until this change.
+ *
+ * Every Payload client in the app is listed below, so the set is checkable by
+ * reading rather than by remembering.
  */
 
 const fetchMock = vi.fn()
@@ -40,10 +42,23 @@ function jsonResponse(body: unknown = { docs: [] }): Response {
   } as Response
 }
 
-function lastCredentials(): RequestCredentials | undefined {
+function lastInit(): RequestInit | undefined {
   const calls = fetchMock.mock.calls
-  const init = calls[calls.length - 1]?.[1] as RequestInit | undefined
-  return init?.credentials
+  return calls[calls.length - 1]?.[1] as RequestInit | undefined
+}
+
+function lastCredentials(): RequestCredentials | undefined {
+  return lastInit()?.credentials
+}
+
+function lastAuthorization(): string | null {
+  return new Headers(lastInit()?.headers).get('Authorization')
+}
+
+/** The cookie is sent, and no header is there to shadow it. */
+function expectCookieIsTheOnlyCredential(): void {
+  expect(lastCredentials()).toBe('include')
+  expect(lastAuthorization()).toBeNull()
 }
 
 describe('Payload clients send the session cookie', () => {
@@ -58,15 +73,15 @@ describe('Payload clients send the session cookie', () => {
   })
 
   it('shared payloadRequest', async () => {
-    await payloadRequest('/api/articles', 'token')
+    await payloadRequest('/api/articles')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('shared payloadMutation', async () => {
-    await payloadMutation('/api/articles/1', 'PATCH', { title: 'x' }, 'token')
+    await payloadMutation('/api/articles/1', 'PATCH', { title: 'x' })
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('staff avatar upload', async () => {
@@ -74,7 +89,7 @@ describe('Payload clients send the session cookie', () => {
 
     await uploadAvatarAsset(new File(['x'], 'a.png'), 'token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('staff list', async () => {
@@ -82,7 +97,7 @@ describe('Payload clients send the session cookie', () => {
 
     await fetchStaffUsers('token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('location documents', async () => {
@@ -90,19 +105,19 @@ describe('Payload clients send the session cookie', () => {
 
     await fetchMediaSetOptions('token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('single-type listicles', async () => {
     await fetchListicles('token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('listicle itineraries', async () => {
     await itineraryPayloadRequest('/api/itineraries', 'token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('location scope', async () => {
@@ -110,7 +125,7 @@ describe('Payload clients send the session cookie', () => {
 
     await getArticleLocationScope({ locationKey: 'lima', token: 'token' })
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('staging articles', async () => {
@@ -119,7 +134,7 @@ describe('Payload clients send the session cookie', () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
     await fetchPayloadArticles('token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('access permissions', async () => {
@@ -128,7 +143,7 @@ describe('Payload clients send the session cookie', () => {
     fetchMock.mockResolvedValue(jsonResponse({}))
     await fetchAccessPermissions('token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('homepage featured content', async () => {
@@ -138,7 +153,7 @@ describe('Payload clients send the session cookie', () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
     await mainHomepageRequest('/api/pages', 'token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
   })
 
   it('location homepages', async () => {
@@ -148,7 +163,22 @@ describe('Payload clients send the session cookie', () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
     await locationHomepageRequest('/api/pages', 'token')
 
-    expect(lastCredentials()).toBe('include')
+    expectCookieIsTheOnlyCredential()
+  })
+
+  it('session hydrate and renew', async () => {
+    const { hydratePayloadSession } = await import('../../features/auth/payload-auth-client')
+
+    fetchMock.mockResolvedValue(jsonResponse({ user: { id: 1, email: 'a@b.c' }, exp: 9e12 }))
+    await hydratePayloadSession({
+      token: 'stale-token',
+      expiresAt: Date.now() + 60_000,
+      user: { id: '1', email: 'a@b.c' },
+    })
+
+    // The stale in-memory token must not be offered even when one exists:
+    // `extractJWT` would take it in preference to the live cookie.
+    expectCookieIsTheOnlyCredential()
   })
 
   it('leaves the unauthenticated health check uncredentialed', async () => {
