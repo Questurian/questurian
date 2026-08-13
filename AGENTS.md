@@ -2,6 +2,7 @@
 
 - Always use caveman skill to save tokens.
 - Do not enable Payload `push: true` for Questura server.
+- The Linux laptop serving the live domains is a **temporary live-like test environment**, not the production platform; production will be serverless once the site is proven there. Do not propose work whose value dies with that machine (uptime alerting, hosting extra services on it). See `apps/questura/infra/softprod/README.md`.
 - When editing Payload collections or fields under `apps/questura/apps/server/src`, treat it as a database schema change:
   1. Run `pnpm db:migrate:create <descriptive-name> > /tmp/questura-migrate-create.log 2>&1` from `apps/questura/apps/server`.
   2. Do not paste full migration output or full migration diffs into chat. Report only `git diff --stat`, `git diff --numstat`, destructive-SQL search results, and targeted lines for the intended field/table.
