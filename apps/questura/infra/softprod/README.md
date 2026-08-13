@@ -105,6 +105,17 @@ installs sanitized Compose/Tunnel config, and renders validated units under
 `~/questura/infra/systemd`. It backs up prior files and never changes active
 unit files or service state. Any differing canonical app config fails closed.
 
+Prepare first immutable release after config staging:
+
+```bash
+~/questura/app/apps/questura/infra/softprod/prepare-host-release.sh
+```
+
+Preparation builds, tests, and certifies server/client artifacts from exact Git
+SHA; checks and applies forward-only migrations; leaves services, units, and
+`current-*` links untouched. A failed migration never builds client. Partial
+published releases remain safe to inspect/retry.
+
 ## Validation
 
 Migration-preflight and deploy-runner regression tests are part of the server
