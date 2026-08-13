@@ -25,6 +25,14 @@ stage=initialization
 
 UNITS=(questura-server questura-client questura-tunnel)
 
+LEGACY_BASELINE=legacy
+# A client old enough to lack `/api/health` still answers its own root, so that
+# is the only signal shared by both the legacy and the adopted client. The
+# health URLs themselves come from release-lib.sh, so a baseline is captured
+# from exactly the endpoints `verify_component` later verifies.
+CLIENT_LOCAL_ROOT='http://127.0.0.1:3000/'
+CLIENT_PUBLIC_ROOT='https://www.questurian.com/'
+
 export QUESTURA_RELEASES_ROOT="$RELEASES_ROOT"
 # shellcheck source=release-lib.sh
 . "$SCRIPT_DIR/release-lib.sh"
@@ -102,23 +110,120 @@ print(value)
 '
 }
 
-capture_health_sha() {
+healthy_status() {
+  python3 -c '
+import json
+import sys
+try:
+    body = json.load(sys.stdin)
+except (json.JSONDecodeError, UnicodeDecodeError):
+    raise SystemExit(1)
+raise SystemExit(0 if isinstance(body, dict) and body.get("status") == "healthy" else 1)
+'
+}
+
+adoption_endpoint_answers() {
+  # No `--location`, so any 2xx or 3xx counts as answered and a 4xx, 5xx or
+  # transport failure does not. Used only where no body contract exists — the
+  # legacy client has no `/api/health` route, so its own root is the only
+  # signal it shares with the adopted client. On a public URL this is
+  # origin-blind: an edge redirect would answer with the origin down. Output is
+  # discarded because callers read this function's *status*, while their own
+  # value travels on stdout.
+  curl --fail --silent --show-error --max-time 10 --output /dev/null "$1" >/dev/null 2>&1
+}
+
+adoption_endpoint_is_target() {
+  local body
+  body=$(curl --fail --silent --show-error --max-time 10 "$1" 2>/dev/null || true)
+  [[ $(healthy_release_sha <<< "$body" || true) == "$TARGET_SHA" ]]
+}
+
+# The deployment being adopted is the one that predates release-aware health:
+# its server omits `releaseSha` and its client has no `/api/health` route at
+# all. Demanding a release SHA from it would make adoption impossible on the
+# only host that can ever need it. A pre-adoption endpoint therefore records
+# either its exact release or `legacy`, and `legacy` still has to prove the
+# service is answering, so a real outage is never mistaken for an old build.
+# Post-adoption verification is untouched and still requires the exact SHA.
+#
+# `legacy_probe` is `body` where a JSON health contract already exists — the
+# legacy server still reports `status`, and its route answers 503 when the
+# database is down, so that is a strictly stronger signal than a status code —
+# and `answers` where none does.
+capture_baseline() {
   local label=$1
-  local url=$2
+  local health_url=$2
+  local legacy_probe=$3
+  local answers_url=$4
   local attempt body release
 
+  # This runs inside a command substitution. Rollback belongs to the parent
+  # shell, which turns a non-zero return into its own `report_failure`.
+  trap - ERR INT TERM
+
   for attempt in $(seq 1 "$SOFTPROD_HEALTH_ATTEMPTS"); do
-    body=$(curl --fail --silent --show-error --max-time 10 "$url" 2>/dev/null || true)
+    body=$(curl --fail --silent --show-error --max-time 10 "$health_url" 2>/dev/null || true)
     release=$(healthy_release_sha <<< "$body" || true)
-    if [[ -n $release ]]; then
+    # An exact baseline has to be a commit. `unknown` is what the health route
+    # emits with no release env var, and `legacy` is this script's own
+    # sentinel — neither may be mistaken for a release to restore to.
+    if [[ $release =~ ^[0-9a-f]{40}$ ]]; then
       echo "    captured $label baseline" >&2
       printf '%s\n' "$release"
+      return 0
+    fi
+    if [[ $legacy_probe == body ]]; then
+      if healthy_status <<< "$body"; then
+        echo "    captured $label baseline (legacy, no release health)" >&2
+        printf '%s\n' "$LEGACY_BASELINE"
+        return 0
+      fi
+    elif adoption_endpoint_answers "$answers_url"; then
+      echo "    captured $label baseline (legacy, no release health)" >&2
+      printf '%s\n' "$LEGACY_BASELINE"
       return 0
     fi
     sleep "$SOFTPROD_HEALTH_SLEEP_SECONDS"
   done
 
-  echo "ERROR: $label baseline is not healthy: $url" >&2
+  echo "ERROR: $label baseline is not serving: $health_url" >&2
+  return 1
+}
+
+wait_for_baseline() {
+  local label=$1
+  local health_url=$2
+  local legacy_probe=$3
+  local answers_url=$4
+  local expected=$5
+  local attempt restored
+
+  if [[ $expected != "$LEGACY_BASELINE" ]]; then
+    wait_for_release_health "$label" "$health_url" "$expected"
+    return
+  fi
+
+  for attempt in $(seq 1 "$SOFTPROD_HEALTH_ATTEMPTS"); do
+    restored=0
+    if [[ $legacy_probe == body ]]; then
+      if healthy_status <<< "$(curl --fail --silent --show-error --max-time 10 "$health_url" 2>/dev/null || true)"; then
+        restored=1
+      fi
+    elif adoption_endpoint_answers "$answers_url"; then
+      restored=1
+    fi
+    # The adopted service answers too, so "answering" alone would call a failed
+    # restore a success. The restored service is the legacy one, which cannot
+    # report the release being adopted.
+    if ((restored == 1)) && ! adoption_endpoint_is_target "$health_url"; then
+      echo "    $label serving (legacy baseline)"
+      return 0
+    fi
+    sleep "$SOFTPROD_HEALTH_SLEEP_SECONDS"
+  done
+
+  echo "ERROR: $label did not return to its legacy baseline: $health_url" >&2
   return 1
 }
 
@@ -193,10 +298,14 @@ rollback_adoption() {
     fi
   done
 
-  wait_for_release_health "restored local server" "http://127.0.0.1:4000/api/health" "$BASELINE_SERVER_LOCAL" || failed=1
-  wait_for_release_health "restored public server" "https://cms.questurian.com/api/health" "$BASELINE_SERVER_PUBLIC" || failed=1
-  wait_for_release_health "restored local client" "http://127.0.0.1:3000/api/health" "$BASELINE_CLIENT_LOCAL" || failed=1
-  wait_for_release_health "restored public client" "https://www.questurian.com/api/health" "$BASELINE_CLIENT_PUBLIC" || failed=1
+  wait_for_baseline "restored local server" \
+    "$SOFTPROD_SERVER_LOCAL_HEALTH" body '' "$BASELINE_SERVER_LOCAL" || failed=1
+  wait_for_baseline "restored public server" \
+    "$SOFTPROD_SERVER_PUBLIC_HEALTH" body '' "$BASELINE_SERVER_PUBLIC" || failed=1
+  wait_for_baseline "restored local client" \
+    "$SOFTPROD_CLIENT_LOCAL_HEALTH" answers "$CLIENT_LOCAL_ROOT" "$BASELINE_CLIENT_LOCAL" || failed=1
+  wait_for_baseline "restored public client" \
+    "$SOFTPROD_CLIENT_PUBLIC_HEALTH" answers "$CLIENT_PUBLIC_ROOT" "$BASELINE_CLIENT_PUBLIC" || failed=1
 
   for unit in "${UNITS[@]}"; do
     if ! require_service_state "$unit"; then failed=1; fi
@@ -286,10 +395,14 @@ systemd-analyze --user verify "${STAGED_UNIT_PATHS[@]}"
 for unit in "${UNITS[@]}"; do require_service_state "$unit"; done
 
 stage="baseline health capture"
-BASELINE_SERVER_LOCAL=$(capture_health_sha "local server" "http://127.0.0.1:4000/api/health") || report_failure "$?"
-BASELINE_SERVER_PUBLIC=$(capture_health_sha "public server" "https://cms.questurian.com/api/health") || report_failure "$?"
-BASELINE_CLIENT_LOCAL=$(capture_health_sha "local client" "http://127.0.0.1:3000/api/health") || report_failure "$?"
-BASELINE_CLIENT_PUBLIC=$(capture_health_sha "public client" "https://www.questurian.com/api/health") || report_failure "$?"
+BASELINE_SERVER_LOCAL=$(capture_baseline "local server" \
+  "$SOFTPROD_SERVER_LOCAL_HEALTH" body '') || report_failure "$?"
+BASELINE_SERVER_PUBLIC=$(capture_baseline "public server" \
+  "$SOFTPROD_SERVER_PUBLIC_HEALTH" body '') || report_failure "$?"
+BASELINE_CLIENT_LOCAL=$(capture_baseline "local client" \
+  "$SOFTPROD_CLIENT_LOCAL_HEALTH" answers "$CLIENT_LOCAL_ROOT") || report_failure "$?"
+BASELINE_CLIENT_PUBLIC=$(capture_baseline "public client" \
+  "$SOFTPROD_CLIENT_PUBLIC_HEALTH" answers "$CLIENT_PUBLIC_ROOT") || report_failure "$?"
 
 stage="host backup"
 mkdir -p "$DEPLOY_ROOT/backups/host-adoption"

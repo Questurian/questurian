@@ -163,11 +163,24 @@ new_fixture() {
   printf '%s\n' \
     '#!/usr/bin/env bash' \
     'url=${!#}' \
+    'output=' \
+    'for ((i = 1; i <= $#; i++)); do' \
+    '  if [[ ${!i} == --output ]]; then next=$((i + 1)); output=${!next}; fi' \
+    'done' \
     'line="curl|$url"' \
     'printf "%s\\n" "$line" >> "$ADOPT_TEST_LOG"' \
+    'if [[ -n $output ]]; then exec > "$output"; fi' \
     '"$(dirname "$0")/adopt-test-maybe-fail" "$line" || exit $?' \
     'case "$url" in *4000*|*cms.questurian.com*) component=server ;; *) component=client ;; esac' \
     'read -r release < "$ADOPT_TEST_STATE/$component-release"' \
+    'if [[ ${LEGACY_BASELINE_MODE:-0} == 1 && $release == legacy-* ]]; then' \
+    '  if [[ ${DOWN_COMPONENT:-} == "$component" ]]; then exit 7; fi' \
+    '  if [[ $url == */api/health ]]; then' \
+    '    if [[ $component == client ]]; then exit 22; fi' \
+    '    printf "%s\n" "{\"status\":\"healthy\"}"; exit 0' \
+    '  fi' \
+    '  exit 0' \
+    'fi' \
     'if [[ -n ${HEALTH_MISMATCH_MATCH:-} && $url == *"$HEALTH_MISMATCH_MATCH"* && $release == "$ADOPT_TEST_TARGET_SHA" && ! -e $ADOPT_TEST_STATE/health-mismatch-fired ]]; then' \
     '  : > "$ADOPT_TEST_STATE/health-mismatch-fired"; release=wrong-release' \
     'fi' \
@@ -211,6 +224,8 @@ run_adopt() {
     ROLLBACK_FAIL_OCCURRENCE="${ROLLBACK_FAIL_OCCURRENCE:-1}" \
     ROLLBACK_FAIL_STATUS="${ROLLBACK_FAIL_STATUS:-42}" \
     HEALTH_MISMATCH_MATCH="${HEALTH_MISMATCH_MATCH:-}" \
+    LEGACY_BASELINE_MODE="${LEGACY_BASELINE_MODE:-0}" \
+    DOWN_COMPONENT="${DOWN_COMPONENT:-}" \
     SIGNAL_MATCH="${SIGNAL_MATCH:-}" \
     SIGNAL_NAME="${SIGNAL_NAME:-TERM}" \
     "$REPO/apps/questura/infra/softprod/adopt-host-release.sh"
@@ -385,6 +400,61 @@ TRIGGER_MATCH='restart questura-server' \
 assert_status 50 "$code"
 grep -q 'CRITICAL: initial release adoption rollback is incomplete' "$CASE_ROOT/err"
 assert_restored
+
+# The deployment actually being adopted predates release-aware health: its
+# server omits `releaseSha` and its client answers `/api/health` with a 404.
+new_fixture legacy-baseline
+LEGACY_BASELINE_MODE=1 run_adopt > "$CASE_ROOT/out" 2> "$CASE_ROOT/err"
+grep -q "Adopted initial immutable release $SHA" "$CASE_ROOT/out"
+grep -q 'captured local server baseline (legacy, no release health)' "$CASE_ROOT/err"
+grep -q 'captured local client baseline (legacy, no release health)' "$CASE_ROOT/err"
+grep -qxF 'curl|http://127.0.0.1:3000/' "$LOG"
+[[ $(readlink "$DEPLOY_ROOT/current-server") == "$RELEASE/apps/questura/apps/server" ]]
+[[ $(readlink "$DEPLOY_ROOT/current-client") == "$RELEASE/apps/questura/apps/client" ]]
+BACKUP=$(find "$DEPLOY_ROOT/backups/host-adoption" -mindepth 1 -maxdepth 1 -type d -print -quit)
+for endpoint in SERVER_LOCAL SERVER_PUBLIC CLIENT_LOCAL CLIENT_PUBLIC; do
+  grep -qxF "BASELINE_$endpoint=legacy" "$BACKUP/manifest"
+done
+# A legacy baseline must not soften what the adopted release has to prove.
+for endpoint in 'local server' 'public server' 'local client' 'public client'; do
+  grep -qF "$endpoint healthy at ${SHA:0:12}" "$CASE_ROOT/out"
+done
+
+# Rolling back to a legacy baseline proves the restored services are the legacy
+# ones, and must not report the rollback as incomplete.
+new_fixture legacy-rollback
+code=0
+LEGACY_BASELINE_MODE=1 TRIGGER_MATCH='restart questura-client' TRIGGER_STATUS=52 \
+  run_adopt > "$CASE_ROOT/out" 2> "$CASE_ROOT/err" || code=$?
+assert_status 52 "$code"
+assert_restored
+! grep -q 'rollback is incomplete' "$CASE_ROOT/err"
+for endpoint in 'local server' 'public server' 'local client' 'public client'; do
+  grep -qF "restored $endpoint serving (legacy baseline)" "$CASE_ROOT/out"
+done
+
+# A service that is genuinely down is never mistaken for an old build, and the
+# preflight failure is reported once.
+for down in client server; do
+  new_fixture "legacy-down-$down"
+  code=0
+  LEGACY_BASELINE_MODE=1 DOWN_COMPONENT="$down" run_adopt > "$CASE_ROOT/out" 2> "$CASE_ROOT/err" || code=$?
+  assert_status 1 "$code"
+  grep -q "local $down baseline is not serving" "$CASE_ROOT/err"
+  [[ $(grep -c 'adoption failed during baseline health capture' "$CASE_ROOT/err") == 1 ]]
+  assert_no_mutation
+done
+
+# `unknown` is what the health route reports with no release env var, and
+# `legacy` is this script's own sentinel: neither is a release to restore to.
+for fake_sha in unknown legacy; do
+  new_fixture "baseline-not-a-sha-$fake_sha"
+  printf '%s\n' "$fake_sha" > "$STATE/server-release"
+  printf '%s\n' "$fake_sha" > "$STATE/client-release"
+  run_adopt > "$CASE_ROOT/out" 2> "$CASE_ROOT/err"
+  BACKUP=$(find "$DEPLOY_ROOT/backups/host-adoption" -mindepth 1 -maxdepth 1 -type d -print -quit)
+  grep -qxF 'BASELINE_SERVER_LOCAL=legacy' "$BACKUP/manifest"
+done
 
 # Adoption must consume prepared artifacts only.
 if rg -n '(pnpm (install|build)|db:migrate|docker compose|prepare_server_release|complete_client_release)' "$SCRIPT_DIR/adopt-host-release.sh"; then
