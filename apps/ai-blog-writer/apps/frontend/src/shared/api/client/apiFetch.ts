@@ -1,4 +1,3 @@
-import { apiAuthToken } from './auth-token'
 import { abwApiKey, API_BASE_URL } from './config'
 
 const API_KEY_HEADER = 'X-API-Key'
@@ -9,34 +8,47 @@ const API_KEY_HEADER = 'X-API-Key'
  * Call sites pass a path relative to the backend root (`/youtube2blog/tones`,
  * `/images/upload`) rather than building the base URL themselves. Routing all
  * backend traffic through one function means request-wide concerns — the
- * `X-API-Key` header, and anything after it — have exactly one place to live.
+ * `X-API-Key` header, credential mode, and anything after them — have exactly
+ * one place to live.
  *
  * Requests to Payload and to the converter service are deliberately NOT routed
  * here: they are different origins with different credentials, and must not
  * receive backend headers.
  *
- * Two headers are attached when available, and nothing else:
+ * ## Who the caller is
  *
- * - `X-API-Key` from `VITE_ABW_API_KEY`, satisfying the backend's coarse
- *   `ABW_API_KEY` gate. Not a secret; see `abwApiKey`.
- * - `Authorization: Bearer <staff token>` from the registered auth provider,
- *   which is what actually identifies the caller. Never overrides a token the
- *   call site set itself.
+ * `credentials: 'include'`, always. The caller is identified by the httpOnly
+ * `payload-token` cookie Payload set at login, which the browser attaches on
+ * its own — the backend reads it as caller identity (`app/core/staff_token.py`).
+ * This used to be an `Authorization: Bearer` header read from the in-memory
+ * session store, which meant a privileged Staff JWT had to be readable by
+ * JavaScript for every backend call. It no longer is.
+ *
+ * `'include'` rather than `'same-origin'` because the backend never is
+ * same-origin with this app: it is a sibling subdomain in production and a
+ * different port in development.
+ *
+ * Two things have to be true at the backend for the cookie to count, and both
+ * fail closed rather than silently degrading:
+ *
+ * - `ABW_ALLOWED_ORIGINS` must list this app's exact origin. A wildcard forces
+ *   `allow_credentials=False`, so the browser withholds the cookie, and the
+ *   backend refuses cookie auth under a wildcard anyway. Local development has
+ *   to pin it (`http://localhost:3003`, this app's dev port) — see
+ *   `apps/backend/.env.example`.
+ * - The `payload-token` cookie's `Domain` must cover this host, which is what
+ *   `PAYLOAD_COOKIE_DOMAIN` configures on the Payload side.
+ *
+ * A call site may still set `Authorization` itself and it is never overridden.
+ * The image routes do that, passing a token explicitly; that path is what PR D
+ * removes.
  *
  * `Content-Type` is deliberately never set: the multipart call sites omit it
  * so the browser can generate the boundary.
- *
- * With neither configured this is a transparent pass-through and `init` is
- * forwarded byte-identical, so local development is unaffected.
  */
 export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   const url = `${API_BASE_URL}${path}`
   const key = abwApiKey()
-  const token = apiAuthToken()
-
-  if (!key && !token) {
-    return fetch(url, init)
-  }
 
   // `Headers` normalizes the three shapes `HeadersInit` allows, so an existing
   // Authorization header survives regardless of how the call site wrote it.
@@ -46,11 +58,5 @@ export function apiFetch(path: string, init?: RequestInit): Promise<Response> {
     headers.set(API_KEY_HEADER, key)
   }
 
-  // Never override a token the call site chose deliberately — the image routes
-  // pass an explicit one, and it may differ from the ambient session.
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`)
-  }
-
-  return fetch(url, { ...init, headers })
+  return fetch(url, { ...init, credentials: 'include', headers })
 }
