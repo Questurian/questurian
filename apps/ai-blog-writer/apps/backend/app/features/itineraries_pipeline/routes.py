@@ -153,6 +153,7 @@ async def generate_itinerary(
     The JWT comes from the session cookie unless the body supplied one. The
     frontend stopped sending it once the Staff credential left JavaScript, and
     the cookie carries the same token, so the Payload reads are unaffected.
+    `require_staff` still decides whether the caller may be here at all.
     """
     payload_jwt = request.payload_jwt or session_token
     if not payload_jwt:

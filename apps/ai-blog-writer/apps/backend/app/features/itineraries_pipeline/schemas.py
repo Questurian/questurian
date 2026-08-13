@@ -78,8 +78,10 @@ class GenerateItineraryRequest(BaseModel):
     The JWT is optional in the body because the frontend no longer has one to
     send: the operator's credential is an httpOnly cookie it cannot read. The
     route fills this in from that cookie (`app.core.staff_token`), which carries
-    the same JWT. A body-supplied value still wins, so non-browser callers and
-    older frontend builds keep working.
+    the same JWT. A body-supplied value still wins, so older frontend builds
+    keep working. It does not exempt anyone from staff auth: with
+    ABW_REQUIRE_STAFF_AUTH on, `require_staff` rejects a caller with no cookie
+    or bearer header before this field is ever read.
     """
 
     location: str = Field(
