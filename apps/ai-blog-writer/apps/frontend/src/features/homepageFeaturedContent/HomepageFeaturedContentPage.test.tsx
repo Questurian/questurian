@@ -8,7 +8,6 @@ import { AuthContext, type AuthContextValue } from '../auth'
 
 function createAuthValue(role: string): AuthContextValue {
   return {
-    token: 'test-token',
     expiresAt: Date.now() + 60_000,
     user: {
       id: 'user-1',

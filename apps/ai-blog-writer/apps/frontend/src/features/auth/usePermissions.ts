@@ -12,14 +12,20 @@ export type Permissions = {
 };
 
 // Shared across all consumers so six components on one page trigger a single
-// /api/access request per token.
+// /api/access request per signed-in operator.
+//
+// Keyed by Staff id rather than by token: the credential is now an httpOnly
+// cookie this code cannot read, and the identity is what the answer actually
+// depends on. A session renewal used to mint a new token and therefore a new
+// cache key, silently re-fetching; keying on identity means the entry survives
+// renewal, which is the correct lifetime for "what may this person do".
 const accessCache = new Map<string, Promise<AccessResult | null>>();
 
-function getAccessForToken(token: string): Promise<AccessResult | null> {
-  let cached = accessCache.get(token);
+function getAccessForStaff(staffId: string): Promise<AccessResult | null> {
+  let cached = accessCache.get(staffId);
   if (!cached) {
-    cached = fetchAccessPermissions(token);
-    accessCache.set(token, cached);
+    cached = fetchAccessPermissions();
+    accessCache.set(staffId, cached);
   }
   return cached;
 }
@@ -33,12 +39,12 @@ function roleAllowsManagePublished(role: string | undefined | null): boolean {
 }
 
 export function usePermissions(): Permissions {
-  const { token, user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [access, setAccess] = useState<AccessResult | null>(null);
-  const [isLoading, setIsLoading] = useState(Boolean(token));
+  const [isLoading, setIsLoading] = useState(isAuthenticated);
 
   useEffect(() => {
-    if (!token) {
+    if (!isAuthenticated || !user) {
       setAccess(null);
       setIsLoading(false);
       return;
@@ -47,7 +53,7 @@ export function usePermissions(): Permissions {
     let isCancelled = false;
     setIsLoading(true);
 
-    void getAccessForToken(token).then((result) => {
+    void getAccessForStaff(user.id).then((result) => {
       if (isCancelled) {
         return;
       }
@@ -58,7 +64,7 @@ export function usePermissions(): Permissions {
     return () => {
       isCancelled = true;
     };
-  }, [token]);
+  }, [isAuthenticated, user]);
 
   return useMemo(() => {
     const articlesUpdate = access?.collections?.articles?.update;

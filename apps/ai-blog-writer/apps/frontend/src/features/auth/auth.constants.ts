@@ -7,7 +7,6 @@ export const LEGACY_AUTH_STORAGE_KEY = 'payload_auth';
 export const DEFAULT_PAYLOAD_URL = 'http://localhost:4000';
 export const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || DEFAULT_PAYLOAD_URL;
 export const EXPIRY_BUFFER_MS = 5 * 60 * 1000;
-export const SESSION_DURATION_FALLBACK_MS = 7 * 24 * 60 * 60 * 1000;
 export const REVALIDATION_TIMEOUT_MS = 5000;
 export const LOGIN_TIMEOUT_MS = 10000;
 export const SESSION_RESTORE_TIMEOUT_MS = 8000;

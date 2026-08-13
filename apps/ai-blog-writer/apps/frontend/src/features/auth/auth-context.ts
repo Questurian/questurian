@@ -8,14 +8,21 @@ export interface User {
   lastName?: string;
 }
 
+/**
+ * The live Staff session as this app knows it.
+ *
+ * Deliberately holds no token. The credential is the httpOnly `payload-token`
+ * cookie, which no script can read; what the app needs is only who the
+ * operator is and when the session lapses. `expiresAt` comes from the `exp`
+ * every Payload session endpoint returns (`login`, `refresh-token`, `me`), not
+ * from decoding a JWT this app no longer has.
+ */
 export interface AuthState {
-  token: string;
   expiresAt: number;
   user: User;
 }
 
 export interface AuthContextValue {
-  token: string | null;
   expiresAt: number | null;
   user: User | null;
   isAuthenticated: boolean;

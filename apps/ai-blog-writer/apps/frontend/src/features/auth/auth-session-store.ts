@@ -10,16 +10,18 @@ import { hasActiveSession } from './auth-state';
  * token out of it with one line, and the token outlived the tab, the window and
  * the browser restart.
  *
- * Nothing is written to disk now. A reload starts with no session and
- * rehydrates from the httpOnly `payload-token` cookie Payload already sets on
- * login (`/api/users/me` returns the user *and* the current token, so the
- * cookie is sufficient to restore a session). The token still exists in JS
- * while the page is open — the FastAPI backend reads it from an
- * `Authorization` header, and that is a separate change — but it is no longer
- * sitting at rest behind a well-known key.
+ * Nothing is written to disk now, and there is no longer a token to write. The
+ * credential is the httpOnly `payload-token` cookie; what this holds is who
+ * the operator is and when the session lapses. A reload starts empty and
+ * rehydrates from that cookie via `/api/users/me`.
  *
- * Module scope rather than React state because `apiFetch` needs to read it from
- * outside the component tree; `useAuthSessionState` is the only writer.
+ * That is the whole point of the change: an XSS payload has nothing to read
+ * here. It can still *act* as the operator while the page is open — the cookie
+ * rides along on any request it makes — but it cannot extract a credential and
+ * use it elsewhere, later.
+ *
+ * Module scope rather than React state because it is read from outside the
+ * component tree; `useAuthSessionState` is the only writer.
  */
 
 let liveAuthState: AuthState | null = null;
@@ -33,7 +35,7 @@ export function getLiveAuthState(): AuthState | null {
     return null;
   }
 
-  if (!hasActiveSession(liveAuthState.token, liveAuthState.expiresAt)) {
+  if (!hasActiveSession(liveAuthState.expiresAt)) {
     liveAuthState = null;
     return null;
   }

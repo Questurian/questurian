@@ -19,7 +19,7 @@ export type AccessResult = {
   >;
 };
 
-export async function fetchAccessPermissions(token: string): Promise<AccessResult | null> {
+export async function fetchAccessPermissions(): Promise<AccessResult | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REVALIDATION_TIMEOUT_MS);
 
