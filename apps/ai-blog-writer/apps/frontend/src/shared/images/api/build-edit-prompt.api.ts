@@ -23,7 +23,7 @@ export async function buildEditPromptApi({
     formData.append('scene_description', sceneDescription);
     formData.append('change_request', changeRequest);
 
-    const response = await postFormData('/images/build-edit-prompt', formData, undefined, controller.signal);
+    const response = await postFormData('/images/build-edit-prompt', formData, controller.signal);
 
     if (!response.ok) {
       const message = await parseErrorMessage(response, 'Edit prompt build failed');

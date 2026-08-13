@@ -24,7 +24,7 @@ export async function uploadSocialImageApi({
     formData.append('photographer_credit', photographerCredit.trim());
     formData.append('location_ref', String(locationRef));
 
-    const response = await postFormData('/images/upload-social-image', formData, token);
+    const response = await postFormData('/images/upload-social-image', formData);
 
     if (!response.ok) {
       const message = await parseErrorMessage(response, 'Failed to upload social image');

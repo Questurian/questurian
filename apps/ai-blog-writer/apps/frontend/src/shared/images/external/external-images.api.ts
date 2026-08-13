@@ -82,7 +82,6 @@ export async function searchUnsplashImages(
 
 export async function importExternalImage(
   input: ImportExternalImageRequest,
-  token: string,
 ): Promise<ImportExternalImageResponse> {
   const normalizedSourceUrl = input.sourceUrl.trim()
   if (!normalizedSourceUrl) {
@@ -103,7 +102,6 @@ export async function importExternalImage(
   const response = await apiFetch('/images/import-external', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
     },
     body: formData,
   })
@@ -118,7 +116,6 @@ export async function importExternalImage(
 
 export async function fetchExternalImageSource(
   input: FetchExternalImageSourceRequest,
-  token: string,
 ): Promise<FetchExternalImageSourceResponse> {
   const normalizedSourceUrl = input.sourceUrl.trim()
   if (!normalizedSourceUrl) {
@@ -137,7 +134,6 @@ export async function fetchExternalImageSource(
     {
       method: 'GET',
       headers: {
-        Authorization: `Bearer ${token}`,
       },
     },
   )

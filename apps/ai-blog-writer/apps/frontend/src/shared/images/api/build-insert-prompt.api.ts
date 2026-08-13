@@ -36,7 +36,7 @@ export async function buildInsertPromptApi({
       formData.append('insert_descriptions', insert.description);
     });
 
-    const response = await postFormData('/images/build-insert-prompt', formData, undefined, controller.signal);
+    const response = await postFormData('/images/build-insert-prompt', formData, controller.signal);
 
     if (!response.ok) {
       const message = await parseErrorMessage(response, 'Insert prompt build failed');

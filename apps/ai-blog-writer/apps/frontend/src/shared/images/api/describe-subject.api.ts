@@ -11,7 +11,7 @@ export async function describeSubjectApi(file: File): Promise<string> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await postFormData('/images/describe-subject', formData, undefined, controller.signal);
+    const response = await postFormData('/images/describe-subject', formData, controller.signal);
 
     if (!response.ok) {
       const message = await parseErrorMessage(response, 'Subject description failed');

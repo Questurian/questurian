@@ -2,7 +2,6 @@ import { apiFetch } from '../../../shared/api/client/apiFetch'
 
 export async function generateAltTextFromUrl(
   imageUrl: string,
-  token: string,
   narrativeFocus?: string,
 ): Promise<string> {
   const formData = new FormData()
@@ -13,7 +12,6 @@ export async function generateAltTextFromUrl(
 
   const response = await apiFetch('/images/generate-alt-text-from-url', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
     body: formData,
   })
 

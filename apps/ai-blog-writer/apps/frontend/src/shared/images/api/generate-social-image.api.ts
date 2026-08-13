@@ -17,7 +17,6 @@ export async function generateSocialImageApi({
     const response = await postJson(
       '/images/generate-social-image',
       { featuredAssetId, featuredMediaSetId },
-      token,
     );
 
     if (!response.ok) {
