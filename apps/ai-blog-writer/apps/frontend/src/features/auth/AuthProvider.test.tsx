@@ -8,16 +8,13 @@ import { useAuth } from './useAuth';
 import { getLiveAuthState, purgeLegacyStoredAuth, setLiveAuthState } from './auth-session-store';
 import { LEGACY_AUTH_STORAGE_KEY } from './auth.constants';
 
-function toBase64Url(value: string): string {
-  return btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
-}
-
-function createToken(expiresAtMs: number): string {
-  return [
-    toBase64Url(JSON.stringify({ alg: 'HS256', typ: 'JWT' })),
-    toBase64Url(JSON.stringify({ exp: Math.floor(expiresAtMs / 1000) })),
-    'signature',
-  ].join('.');
+/**
+ * Payload reports session expiry as `exp` (seconds) on login, refresh-token and
+ * me. The app reads that field; it no longer decodes a JWT, because it no longer
+ * has one. Mocked responses therefore carry `exp`, not a token.
+ */
+function expSeconds(expiresAtMs: number): number {
+  return Math.floor(expiresAtMs / 1000);
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -79,7 +76,7 @@ describe('AuthProvider', () => {
   });
 
   it('waits for session restoration before redirecting to login', async () => {
-    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const exp = expSeconds(Date.now() + 60 * 60 * 1000);
     let resolveRestore: ((response: Response) => void) | null = null;
 
     vi.stubGlobal(
@@ -109,7 +106,7 @@ describe('AuthProvider', () => {
     const completeRestore = resolveRestore as ((response: Response) => void) | null;
     completeRestore?.(
       jsonResponse({
-        token,
+        exp,
         user: {
           id: 17,
           email: 'writer@example.com',
@@ -126,7 +123,7 @@ describe('AuthProvider', () => {
   });
 
   it('uses Payload users endpoints for staff restore, login, and logout', async () => {
-    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const exp = expSeconds(Date.now() + 60 * 60 * 1000);
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
 
@@ -136,7 +133,7 @@ describe('AuthProvider', () => {
 
       if (url.endsWith('/api/users/login')) {
         return Promise.resolve(jsonResponse({
-          token,
+          exp,
           user: {
             id: 17,
             email: 'writer@example.com',
@@ -184,9 +181,8 @@ describe('AuthProvider', () => {
   });
 
   it('refreshes a stale role from /api/users/me on hydrate', async () => {
-    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const exp = expSeconds(Date.now() + 60 * 60 * 1000);
     setLiveAuthState({
-      token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       user: {
         id: '17',
@@ -202,7 +198,7 @@ describe('AuthProvider', () => {
 
         if (url.endsWith('/api/users/me')) {
           return Promise.resolve(jsonResponse({
-            token,
+            exp,
             user: {
               id: 17,
               email: 'writer@example.com',
@@ -233,9 +229,7 @@ describe('AuthProvider', () => {
   });
 
   it('logs out when the session is rejected by /me and refresh fails', async () => {
-    const token = createToken(Date.now() + 60 * 60 * 1000);
     setLiveAuthState({
-      token,
       expiresAt: Date.now() + 60 * 60 * 1000,
       user: {
         id: '17',
@@ -281,7 +275,7 @@ describe('AuthProvider', () => {
  * credential, and a reload restores the session from the httpOnly cookie
  * instead of from disk.
  */
-describe('the Staff token never reaches disk', () => {
+describe('the Staff token exists nowhere in JavaScript', () => {
   beforeEach(() => {
     setLiveAuthState(null);
   });
@@ -293,7 +287,7 @@ describe('the Staff token never reaches disk', () => {
   });
 
   it('writes nothing to localStorage on login', async () => {
-    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const exp = expSeconds(Date.now() + 60 * 60 * 1000);
 
     vi.stubGlobal(
       'fetch',
@@ -302,7 +296,7 @@ describe('the Staff token never reaches disk', () => {
 
         if (url.endsWith('/api/users/login')) {
           return Promise.resolve(jsonResponse({
-            token,
+            exp,
             user: { id: 17, email: 'writer@example.com', role: 'writer' },
           }));
         }
@@ -329,18 +323,19 @@ describe('the Staff token never reaches disk', () => {
     });
 
     expect(localStorage.length).toBe(0);
-    // Belt and braces: the token must not appear under any key.
-    expect(JSON.stringify(localStorage)).not.toContain(token);
+    // Stronger than "not on disk": the in-memory session has no token field at
+    // all, so there is no credential for an XSS payload to read from anywhere.
+    expect(getLiveAuthState()).not.toHaveProperty('token');
   });
 
   it('restores the session from the cookie alone, without writing it back to disk', async () => {
-    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const exp = expSeconds(Date.now() + 60 * 60 * 1000);
     const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
 
       if (url.endsWith('/api/users/me')) {
         return Promise.resolve(jsonResponse({
-          token,
+          exp,
           user: { id: 17, email: 'writer@example.com', role: 'editor' },
         }));
       }
@@ -369,9 +364,10 @@ describe('the Staff token never reaches disk', () => {
     expect(init?.credentials).toBe('include');
     // ...and no Authorization header can have been derived from storage.
     expect(new Headers(init?.headers).has('Authorization')).toBe(false);
-    // The restored session lands in memory and nowhere else. This is the half
-    // that fails without the change: the old code wrote it straight back out.
-    expect(getLiveAuthState()?.token).toBe(token);
+    // The restored session lands in memory and nowhere else — and carries no
+    // token at all, which is the point: there is nothing left to exfiltrate.
+    expect(getLiveAuthState()?.user.email).toBe('writer@example.com');
+    expect(getLiveAuthState()).not.toHaveProperty('token');
     expect(localStorage.length).toBe(0);
   });
 
@@ -402,13 +398,13 @@ describe('the Staff token never reaches disk', () => {
   });
 
   it('logs out on the cookie, not on a token that may already be expired', async () => {
-    const token = createToken(Date.now() + 60 * 60 * 1000);
+    const exp = expSeconds(Date.now() + 60 * 60 * 1000);
     const fetchMock = vi.fn((input: RequestInfo | URL, _init?: RequestInit) => {
       const url = String(input);
 
       if (url.endsWith('/api/users/login')) {
         return Promise.resolve(jsonResponse({
-          token,
+          exp,
           user: { id: 17, email: 'writer@example.com', role: 'writer' },
         }));
       }

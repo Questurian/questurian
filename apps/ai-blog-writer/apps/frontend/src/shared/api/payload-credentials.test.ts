@@ -141,7 +141,7 @@ describe('Payload clients send the session cookie', () => {
     const { fetchAccessPermissions } = await import('../../features/auth/permissions-client')
 
     fetchMock.mockResolvedValue(jsonResponse({}))
-    await fetchAccessPermissions('stale-token')
+    await fetchAccessPermissions()
 
     expectCookieIsTheOnlyCredential()
   })
@@ -171,7 +171,6 @@ describe('Payload clients send the session cookie', () => {
 
     fetchMock.mockResolvedValue(jsonResponse({ user: { id: 1, email: 'a@b.c' }, exp: 9e12 }))
     await hydratePayloadSession({
-      token: 'stale-token',
       expiresAt: Date.now() + 60_000,
       user: { id: '1', email: 'a@b.c' },
     })

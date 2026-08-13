@@ -1,11 +1,7 @@
 import type { AuthState } from './auth-context';
-import { SESSION_DURATION_FALLBACK_MS } from './auth.constants';
 
-export function hasActiveSession(
-  token: string | null | undefined,
-  expiresAt: number | null | undefined,
-): boolean {
-  if (!token || !expiresAt) {
+export function hasActiveSession(expiresAt: number | null | undefined): boolean {
+  if (!expiresAt) {
     return false;
   }
 
@@ -24,34 +20,25 @@ export function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-export function decodeTokenExpiry(token: string): number | null {
-  try {
-    const [, base64Url] = token.split('.');
-    if (!base64Url) {
-      return null;
-    }
-
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
-        .join(''),
-    );
-    const decoded = JSON.parse(jsonPayload) as { exp?: unknown };
-    const exp = readNumber(decoded.exp);
-
-    return exp ? exp * 1000 : null;
-  } catch {
-    return null;
-  }
-}
-
+/**
+ * When the session lapses, according to the server.
+ *
+ * Every Payload session endpoint returns `exp` — `loginOperation`,
+ * `refreshOperation` and `meOperation` all set it — so this does not need the
+ * token, which is the point: the app no longer has one to decode.
+ *
+ * Returns null when the server named no expiry, and the caller treats that as
+ * "no session". The previous code decoded the JWT and, failing that, invented
+ * seven days. That was already wrong — `payload-token` lives two hours — and
+ * without a token to decode it would now be the *common* path rather than the
+ * unreachable one. A session whose end is unknown is not a session worth
+ * holding: the cookie will be rejected at that point anyway, so guessing long
+ * only delays the discovery.
+ */
 export function resolveExpiresAt(
   source: Record<string, unknown>,
-  token: string,
   fallbackExpiresAt?: number | null,
-): number {
+): number | null {
   const numericExpiresAt = readNumber(source.expiresAt);
   if (numericExpiresAt) {
     return numericExpiresAt;
@@ -70,16 +57,11 @@ export function resolveExpiresAt(
     }
   }
 
-  const tokenExpiry = decodeTokenExpiry(token);
-  if (tokenExpiry) {
-    return tokenExpiry;
-  }
-
   if (fallbackExpiresAt && fallbackExpiresAt > Date.now()) {
     return fallbackExpiresAt;
   }
 
-  return Date.now() + SESSION_DURATION_FALLBACK_MS;
+  return null;
 }
 
 export function normalizeAuthState(
@@ -99,19 +81,8 @@ export function normalizeAuthState(
     return null;
   }
 
-  const token =
-    readString(response.token)
-    || readString(response.refreshedToken)
-    || readString(response.accessToken)
-    || readString(response.jwt)
-    || (fallbackAuth && hasActiveSession(fallbackAuth.token, fallbackAuth.expiresAt) ? fallbackAuth.token : null);
-
-  if (!token) {
-    return null;
-  }
-
-  const expiresAt = resolveExpiresAt(response, token, fallbackAuth?.expiresAt ?? null);
-  if (!hasActiveSession(token, expiresAt)) {
+  const expiresAt = resolveExpiresAt(response, fallbackAuth?.expiresAt ?? null);
+  if (!hasActiveSession(expiresAt)) {
     return null;
   }
 
@@ -121,8 +92,7 @@ export function normalizeAuthState(
   }
 
   return {
-    token,
-    expiresAt,
+    expiresAt: expiresAt as number,
     user: {
       id: String(userSource.id ?? fallbackAuth?.user.id ?? ''),
       email,

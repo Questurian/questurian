@@ -10,12 +10,11 @@ vi.mock('./permissions-client');
 const mockUseAuth = vi.mocked(useAuth);
 const mockFetchAccess = vi.mocked(fetchAccessPermissions);
 
-function stubAuth(role: string | undefined, token: string | null = 'token-1') {
+function stubAuth(role: string | undefined, isSignedIn = true) {
   mockUseAuth.mockReturnValue({
-    token,
-    expiresAt: Date.now() + 60_000,
-    user: token ? { id: '1', email: 'user@example.com', role } : null,
-    isAuthenticated: Boolean(token),
+    expiresAt: isSignedIn ? Date.now() + 60_000 : null,
+    user: isSignedIn ? { id: '1', email: 'user@example.com', role } : null,
+    isAuthenticated: isSignedIn,
     isRestoringSession: false,
     isConnected: true,
     connectionError: null,
@@ -68,7 +67,7 @@ describe('usePermissions', () => {
   });
 
   it('denies everything without a token', async () => {
-    stubAuth(undefined, null);
+    stubAuth(undefined, false);
 
     const { result } = renderHook(() => usePermissions());
 
