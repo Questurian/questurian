@@ -26,8 +26,8 @@ env:
   PYTHON_VERSION: '3.13'
 
 jobs:
-  questura-deploy-scripts:
-    name: Questura deploy scripts
+  questura-softprod:
+    name: Questura softprod scripts
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -42,12 +42,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      # Pure shell + node stdlib; deliberately no `pnpm install`.
+      # Pure shell; deliberately no `pnpm install`. (test:deploy looks like it
+      # belongs here too, but check-pending-migrations.mjs imports dotenv, so it
+      # runs in the job that installs.)
       - name: Softprod shell suites
         run: pnpm --dir apps/questura/apps/server run test:softprod
-
-      - name: Migration guard tests
-        run: pnpm --dir apps/questura/apps/server run test:deploy
 
   questura-server:
     name: Questura server tests
@@ -64,6 +63,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --filter @questura/server...
+
+      - name: Migration guard tests
+        run: pnpm --dir apps/questura/apps/server run test:deploy
 
       - name: Unit tests
         run: pnpm --dir apps/questura/apps/server run test:int
