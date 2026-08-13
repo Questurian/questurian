@@ -93,6 +93,18 @@ Files in this PR are inert templates. Host-bootstrap tooling renders binary
 paths, validates release/config prerequisites, backs up live files, then
 installs them in a later reviewed change.
 
+Stage host config before release adoption:
+
+```bash
+~/questura/app/apps/questura/infra/softprod/stage-host-config.sh
+```
+
+This migrates existing app env files into mode-0600 canonical config, extracts
+the existing Compose password into a mode-0600 `.env` without printing it,
+installs sanitized Compose/Tunnel config, and renders validated units under
+`~/questura/infra/systemd`. It backs up prior files and never changes active
+unit files or service state. Any differing canonical app config fails closed.
+
 ## Validation
 
 Migration-preflight and deploy-runner regression tests are part of the server
