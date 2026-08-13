@@ -1,5 +1,43 @@
 # Questura soft-production deployment
 
+## What this environment is, and what it is not
+
+This Linux laptop serves the live domains, but it is **not the production
+platform**. It exists for one reason: some things cannot be proven anywhere
+else. Stripe has to reach a real webhook URL, OAuth has to redirect to a real
+origin, and cookies only behave like cookies over real HTTPS on real
+subdomains. A localhost stack cannot exercise any of that honestly.
+
+So this is a **live-like test environment that happens to be publicly
+reachable**. The only transactions on it are the owner's own tests. It is not
+serving customers, and nobody but the owner depends on it being up.
+
+**It has an expiry date.** Once the site is proven end to end here, this
+machine is switched off and production moves to a serverless deployment. That
+is the plan of record, not a vague intention.
+
+Two consequences worth stating plainly, because they have already caused
+wasted work:
+
+- **Do not build things whose value dies with this machine.** Uptime alerting
+  is the clearest example: a laptop that is deliberately slept, closed and
+  eventually retired will page you constantly for events that are not
+  incidents. This was proposed and rejected on 2026-08-13, correctly. The same
+  reasoning applies to hosting additional services here for convenience.
+- **Do build things that travel with the repository.** The production config
+  assertions at boot, the `/api/health` endpoints that report an exact release
+  SHA, secret hygiene, CI, and the Stripe configuration all keep their value
+  in a serverless environment. The machinery in *this folder* — immutable
+  release directories, `current-*` symlinks, user systemd units, the passive
+  healthcheck timer — does not. It is correct for this host and is not an
+  argument for keeping this host.
+
+Nothing here commits the project to systemd-and-symlinks as a production
+deployment model. It is the cheapest safe way to run a real environment on
+hardware that is already paid for.
+
+## Deploying
+
 `host-deploy-wrapper.sh` is installed as `~/questura/deploy.sh` on the Linux
 laptop. It serializes deploys, resets the dedicated deployment checkout to
 `origin/main`, then executes the freshly fetched `deploy.sh` from this folder.
