@@ -69,3 +69,23 @@ test command. Run the shell suite alone with:
 ```bash
 pnpm --dir apps/questura/apps/server test:softprod
 ```
+
+## Code rollback
+
+`release-lib.sh` activates server and client releases by atomically replacing
+their `current-*` symlinks. A component restart must report both `healthy` and
+the exact target commit from its local and public `/api/health` endpoints. On
+failure, activation restores the prior symlink, restarts it, and checks it too.
+
+After release-based host units are installed, swap current and previous code:
+
+```bash
+~/questura/app/apps/questura/infra/softprod/rollback.sh all
+```
+
+`all` rolls back client first, then server. If client rollback fails, server
+stays untouched while restoration of the original client is attempted. If
+server rollback fails, client is reconciled with whichever release the server
+actually retained. Rollback first requires both current pointers and both
+`previous-*` pointers to identify matching commits, and never runs a Payload
+`down()` migration; database schema stays forward-only.
