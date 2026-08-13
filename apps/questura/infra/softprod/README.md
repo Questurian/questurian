@@ -10,16 +10,30 @@ Normal deploy:
 ssh linux-laptop '~/questura/deploy.sh'
 ```
 
+Deployment publishes an immutable snapshot at `~/questura/releases/<full-sha>`.
+Only tracked files from that exact commit enter the snapshot; host secrets stay
+in `~/questura/config/{server,client}.env` and are linked into the release.
 Deployment order is intentional:
 
-1. Install dependencies from the committed lockfile.
-2. Build, test, and lint the server.
-3. Inspect pending migration `up()` bodies and block risky SQL by default.
-4. Run migrations and prove none remain pending.
-5. Restart the server and verify its DB-backed health endpoint locally and
-   through Cloudflare.
-6. Build the client while the server is publicly reachable, restart it, and
-   verify the public site.
+1. Require aligned `current-server` and `current-client` release pointers.
+2. Extract the exact Git commit into private staging; link explicit config.
+3. Install locked dependencies; build, test, and lint the server off-line.
+4. Atomically publish the server-ready release.
+5. Inspect migration `up()` bodies, migrate forward, and prove none remain.
+6. Activate server; require its exact commit locally and through Cloudflare.
+7. Build client against that server, activate it, then require the same exact
+   commit from both client endpoints.
+
+Failure before publication removes staging without touching live links. Any
+failure after server activation but before client activation restores original
+client/server links and their paired rollback history. `SIGINT` and `SIGTERM`
+use the same cleanup path. Published partial releases remain for safe retry.
+Config and artifact fingerprints reject drift, corruption, or build-time config
+races when a commit is reused; runtime dependencies are certified too. Next ISR
+disk writes are disabled so regenerated pages cannot mutate certified release
+artifacts; image/fetch caches under `.next/cache` remain runtime-owned. Make a
+new commit for intentional config changes. Database schema is never migrated
+backward.
 
 ## Reviewed migrations
 
@@ -57,9 +71,9 @@ Install the wrapper. Installer preserves any existing copy under
 ~/questura/app/apps/questura/infra/softprod/install-deploy-wrapper.sh
 ```
 
-This baseline still builds inside deployment checkout. Do not install it alone
-on soft production; adopt it together with atomic-release units from follow-up
-PR so a failed build cannot damage live `.next` files.
+Deploy requires release-based host units and aligned `current-*` pointers.
+Install/adopt those through host-bootstrap tooling before replacing current
+wrapper. Until then, existing host deploy path remains unchanged.
 
 ## Validation
 
