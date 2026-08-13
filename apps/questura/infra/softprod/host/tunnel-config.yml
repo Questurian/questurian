@@ -1,0 +1,15 @@
+# Questura soft-production tunnel. Keep separate from other host tunnels.
+tunnel: c8f86728-8dcd-4d3e-9d2e-e84d06661416
+credentials-file: /home/webdev/.cloudflared/c8f86728-8dcd-4d3e-9d2e-e84d06661416.json
+
+originRequest:
+  connectTimeout: 30s
+
+ingress:
+  - hostname: cms.questurian.com
+    service: http://localhost:4000
+  - hostname: www.questurian.com
+    service: http://localhost:3000
+  - hostname: questurian.com
+    service: http://localhost:3000
+  - service: http_status:404

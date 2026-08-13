@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflare Tunnel for Questura (cms + www)
+Documentation=https://github.com/Questurian/questurian
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=@CLOUDFLARED_BIN@ --no-autoupdate --config %h/questura/infra/tunnel-config.yml tunnel run
+Restart=always
+RestartSec=5
+SyslogIdentifier=questura-tunnel
+
+[Install]
+WantedBy=default.target

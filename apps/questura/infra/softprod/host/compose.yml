@@ -1,0 +1,44 @@
+# Questura soft-production data services. Install at ~/questura/infra/compose.yml.
+# Keep project name and explicit volume names stable: existing production data
+# lives in infra_questura-{pgdata,redisdata}.
+name: infra
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: questura-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: questura
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the adjacent .env file}
+      POSTGRES_DB: questura
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - questura-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U questura -d questura"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: questura-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - questura-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  questura-pgdata:
+    name: infra_questura-pgdata
+  questura-redisdata:
+    name: infra_questura-redisdata
