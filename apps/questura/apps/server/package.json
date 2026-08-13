@@ -31,6 +31,7 @@
     "clear:test": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/clear-test-collections.ts",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int",
+    "test:deploy": "node --test scripts/deploy/*.test.mjs",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.ts"
   },
   "dependencies": {
