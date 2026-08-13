@@ -14,7 +14,7 @@ import { ItineraryTitlePipelineButton } from './ItineraryTitlePipelineButton'
 type ItineraryBasicsFieldsProps = {
   draft: ListicleItineraryDraft
   locations: LocationOption[]
-  selectedPrimaryLocation: LocationOption | undefined
+  selectedPrimaryLocation: LocationOption | null | undefined
   isSetupLocked: boolean
   isSynced: boolean
   aiTitleDisabledReason?: string

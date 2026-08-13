@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { payloadRequest, payloadMutation } from './client/http'
-import { fetchStaffUsers, uploadAvatarAsset } from '../../features/staff/api/staff.api'
-import { fetchMediaSetOptions } from '../../features/locationDocuments/api'
-import { fetchListicles } from '../../features/singleTypeListicles/api'
-import { payloadRequest as itineraryPayloadRequest } from '../../features/listicleItineraries/api/payloadClient'
-import { getArticleLocationScope } from '../locationScope/scope'
+import { payloadRequest, payloadMutation } from '../shared/api/client/http'
+import { fetchStaffUsers, uploadAvatarAsset } from '../features/staff/api/staff.api'
+import { fetchMediaSetOptions } from '../features/locationDocuments/api'
+import { fetchListicles } from '../features/singleTypeListicles/api'
+import { payloadRequest as itineraryPayloadRequest } from '../features/listicleItineraries/api/payloadClient'
+import { getArticleLocationScope } from '../shared/locationScope/scope'
 
 /**
  * Every authenticated call to Payload sends the session cookie, and nothing
@@ -129,7 +129,7 @@ describe('Payload clients send the session cookie', () => {
   })
 
   it('staging articles', async () => {
-    const { fetchPayloadArticles } = await import('../../features/staging/api/articles/articles.api')
+    const { fetchPayloadArticles } = await import('../features/staging/api/articles/articles.api')
 
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
     await fetchPayloadArticles()
@@ -138,7 +138,7 @@ describe('Payload clients send the session cookie', () => {
   })
 
   it('access permissions', async () => {
-    const { fetchAccessPermissions } = await import('../../features/auth/permissions-client')
+    const { fetchAccessPermissions } = await import('../features/auth/permissions-client')
 
     fetchMock.mockResolvedValue(jsonResponse({}))
     await fetchAccessPermissions()
@@ -148,7 +148,7 @@ describe('Payload clients send the session cookie', () => {
 
   it('homepage featured content', async () => {
     const { mainHomepageRequest } = await import(
-      '../../features/homepageFeaturedContent/mainHomepage/request')
+      '../features/homepageFeaturedContent/mainHomepage/request')
 
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
     await mainHomepageRequest('/api/pages')
@@ -158,7 +158,7 @@ describe('Payload clients send the session cookie', () => {
 
   it('location homepages', async () => {
     const { locationHomepageRequest } = await import(
-      '../../features/homepageFeaturedContent/locationHomepages/request')
+      '../features/homepageFeaturedContent/locationHomepages/request')
 
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
     await locationHomepageRequest('/api/pages')
@@ -167,7 +167,7 @@ describe('Payload clients send the session cookie', () => {
   })
 
   it('session hydrate and renew', async () => {
-    const { hydratePayloadSession } = await import('../../features/auth/payload-auth-client')
+    const { hydratePayloadSession } = await import('../features/auth/payload-auth-client')
 
     fetchMock.mockResolvedValue(jsonResponse({ user: { id: 1, email: 'a@b.c' }, exp: 9e12 }))
     await hydratePayloadSession({
@@ -181,7 +181,7 @@ describe('Payload clients send the session cookie', () => {
   })
 
   it('leaves the unauthenticated health check uncredentialed', async () => {
-    const { checkPayloadHealth } = await import('../../features/auth/payload-auth-client')
+    const { checkPayloadHealth } = await import('../features/auth/payload-auth-client')
 
     fetchMock.mockResolvedValue({ ok: true, status: 200 } as Response)
     await checkPayloadHealth()

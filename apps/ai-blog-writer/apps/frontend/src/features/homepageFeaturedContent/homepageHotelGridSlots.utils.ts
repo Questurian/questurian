@@ -8,7 +8,7 @@ import type { HotelGridSlotValue } from './homepageHotelGridSlots.types'
 export function mapHotelSelectionToSlots(
   selection: HomepageHotelGridSelection
 ): HotelGridSlotValue[] {
-  const slots = Array.from<HotelGridSlotValue>(
+  const slots: HotelGridSlotValue[] = Array.from(
     { length: selection.totalSlots },
     () => null
   )

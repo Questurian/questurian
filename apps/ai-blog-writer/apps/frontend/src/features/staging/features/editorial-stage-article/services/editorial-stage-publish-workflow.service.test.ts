@@ -248,7 +248,7 @@ describe('runEditorialStagePublishWorkflow', () => {
 
     await runEditorialStagePublishWorkflow(params)
 
-    expect(events.at(-1)).toBe(
+    expect(events[events.length - 1]).toBe(
       'success:Saved draft article #42 (local run record missing, sync status not recorded)'
     )
     expect(params.updateStagedArticle).toHaveBeenCalledOnce()
@@ -292,6 +292,6 @@ describe('runEditorialStagePublishWorkflow', () => {
     expect(JSON.stringify(secondPayload.seoSection?.structuredData)).toContain(
       '"name":"Jane Doe"'
     )
-    expect(events.at(-1)).toBe('success:Published article #42')
+    expect(events[events.length - 1]).toBe('success:Published article #42')
   })
 })

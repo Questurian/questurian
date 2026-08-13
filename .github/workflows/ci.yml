@@ -1,0 +1,146 @@
+name: CI
+
+# Machine-shaped guarantee for what was previously gated by hand: every PR runs
+# the suites that were run manually before merging, plus the two checks that a
+# green test run does not give you (typecheck and lint).
+#
+# Jobs are split so a failure names the thing that broke rather than "CI".
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Satisfies apps/questura/apps/server engines (^18.20.2 || >=20.9.0). pnpm
+  # comes from the root package.json "packageManager" field.
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  questura-softprod:
+    name: Questura softprod scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Two of the softprod suites assert on script contents with ripgrep.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Pure shell; deliberately no `pnpm install`. (test:deploy looks like it
+      # belongs here too, but check-pending-migrations.mjs imports dotenv, so it
+      # runs in the job that installs.)
+      - name: Softprod shell suites
+        run: pnpm --dir apps/questura/apps/server run test:softprod
+
+  questura-server:
+    name: Questura server tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questura/server...
+
+      - name: Migration guard tests
+        run: pnpm --dir apps/questura/apps/server run test:deploy
+
+      - name: Unit tests
+        run: pnpm --dir apps/questura/apps/server run test:int
+
+  writer-web:
+    name: Writer frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/ai-blog-writer
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter @questurian/ai-blog-writer
+
+      # Cheapest checks first, so an obvious break fails fast.
+      - name: Module boundaries
+        run: node apps/frontend/scripts/check-boundaries.cjs
+
+      - name: Lint
+        run: ./node_modules/.bin/eslint apps/frontend/src --ext .ts,.tsx
+
+      # A green test run does not imply the branch typechecks on its own; that
+      # is exactly the gap this gate exists to close.
+      - name: Typecheck
+        run: ./node_modules/.bin/tsc -p apps/frontend/tsconfig.json --noEmit
+
+      - name: Tests
+        run: ./node_modules/.bin/vitest run --config apps/frontend/vite.config.ts
+
+  writer-api:
+    name: Writer backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: python -m pip install --upgrade uv
+
+      - name: Cache uv downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('apps/ai-blog-writer/apps/backend/requirements*.txt') }}
+          restore-keys: |
+            uv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: Install dependencies
+        working-directory: apps/ai-blog-writer
+        run: |
+          uv venv --python "$(command -v python)" --allow-existing .venv
+          uv pip install --python .venv/bin/python \
+            -r apps/backend/requirements.txt \
+            -r apps/backend/requirements-dev.txt
+
+      - name: Tests
+        working-directory: apps/ai-blog-writer/apps/backend
+        # tests/conftest.py already redirects DATA_DIR to a temp dir before any
+        # app module is imported. This is the second lock on the same door: the
+        # backend writes pipeline.db under DATA_DIR, and a suite that reached a
+        # real data directory once cost real data. (Step-level env because the
+        # runner context is not available in job-level env.)
+        env:
+          DATA_DIR: ${{ runner.temp }}/abw-test-data
+        run: ../../.venv/bin/python -m pytest tests/ -q
