@@ -6,6 +6,14 @@ SOFTPROD_RELEASES=${QUESTURA_RELEASES_ROOT:-"$SOFTPROD_ROOT/releases"}
 SOFTPROD_HEALTH_ATTEMPTS=${QUESTURA_HEALTH_ATTEMPTS:-30}
 SOFTPROD_HEALTH_SLEEP_SECONDS=${QUESTURA_HEALTH_SLEEP_SECONDS:-3}
 
+# The four endpoints that decide whether a release is live. Named here so that
+# a pre-adoption baseline and post-deploy verification cannot drift apart and
+# start describing different endpoints.
+SOFTPROD_SERVER_LOCAL_HEALTH='http://127.0.0.1:4000/api/health'
+SOFTPROD_SERVER_PUBLIC_HEALTH='https://cms.questurian.com/api/health'
+SOFTPROD_CLIENT_LOCAL_HEALTH='http://127.0.0.1:3000/api/health'
+SOFTPROD_CLIENT_PUBLIC_HEALTH='https://www.questurian.com/api/health'
+
 canonical_path() {
   python3 - "$1" <<'PY'
 import os
@@ -152,12 +160,12 @@ verify_component() {
 
   case "$component" in
     server)
-      wait_for_release_health "local server" "http://127.0.0.1:4000/api/health" "$expected_sha" &&
-        wait_for_release_health "public server" "https://cms.questurian.com/api/health" "$expected_sha"
+      wait_for_release_health "local server" "$SOFTPROD_SERVER_LOCAL_HEALTH" "$expected_sha" &&
+        wait_for_release_health "public server" "$SOFTPROD_SERVER_PUBLIC_HEALTH" "$expected_sha"
       ;;
     client)
-      wait_for_release_health "local client" "http://127.0.0.1:3000/api/health" "$expected_sha" &&
-        wait_for_release_health "public client" "https://www.questurian.com/api/health" "$expected_sha"
+      wait_for_release_health "local client" "$SOFTPROD_CLIENT_LOCAL_HEALTH" "$expected_sha" &&
+        wait_for_release_health "public client" "$SOFTPROD_CLIENT_PUBLIC_HEALTH" "$expected_sha"
       ;;
     *) echo "ERROR: unknown component: $component" >&2; return 1 ;;
   esac
