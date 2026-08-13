@@ -181,7 +181,6 @@ const FocalPointPickerField = (_props: FocalPointFieldProps) => {
             overflow: 'hidden',
           }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             id="focal-point-picker-image"
             ref={imageRef}
