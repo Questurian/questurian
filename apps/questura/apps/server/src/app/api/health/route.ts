@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV || 'development',
+      releaseSha: process.env.QUESTURA_RELEASE_SHA || 'unknown',
       version: process.env.npm_package_version || 'unknown',
       database: {
         status: 'connected',
@@ -54,6 +55,7 @@ export async function GET(req: NextRequest) {
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development',
+        releaseSha: process.env.QUESTURA_RELEASE_SHA || 'unknown',
         error: error instanceof Error ? error.message : 'Unknown error',
         database: {
           status: 'disconnected',
