@@ -21,9 +21,9 @@ def _composite_request_body() -> dict:
     }
 
 
-async def _fake_prepare_ok(request, authorization):
+async def _fake_prepare_ok(request, jwt_token):
     """Bypass source download/render machinery for composite route tests."""
-    return "jwt-token", 42, "Questurian Composite", [], []
+    return 42, "Questurian Composite", [], []
 
 
 def test_create_composite_rolls_back_on_partial_failure(monkeypatch):
