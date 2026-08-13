@@ -20,9 +20,12 @@ import type { CuratedHomepageBlockType, PageBlockResponse } from './pageBlocks'
 
 export function useMainHomepageEditor(
   canManage: boolean,
+  operatorId?: string,
 ) {
   const queryClient = useQueryClient()
-  const homepageQueryKey = ['main-homepage']
+  // Keyed by operator: the QueryClient outlives a logout, so an unkeyed cache
+  // would hand the next operator the previous one's data until a refetch lands.
+  const homepageQueryKey = ['main-homepage', operatorId ?? 'anonymous']
 
   const homepageQuery = useQuery({
     queryKey: homepageQueryKey,

@@ -24,7 +24,6 @@ export function useRelatedItems({ draft, locations, onError }: UseRelatedItemsPa
       return
     }
 
-    const authToken = undefined
     const listicleType = draft.listicleType
     const locationKey = draft.location
     const sharedNeighborhoods = draft.sharedNeighborhoods

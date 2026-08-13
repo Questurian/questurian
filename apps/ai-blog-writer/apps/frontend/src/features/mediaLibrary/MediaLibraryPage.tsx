@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useAuth } from '../auth'
 import { BrowseTab } from './components/BrowseTab'
 import { AuditTab } from './components/AuditTab'
 import { OrphansTab } from './components/OrphansTab'

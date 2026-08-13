@@ -25,6 +25,7 @@ function usedKeysOutsideBlock(
 
 export default function MainHomepagePage() {
   const { canManagePublished: canManage } = usePermissions()
+  const { user } = useAuth()
   const {
     homepageQuery,
     publishMutation,
@@ -42,7 +43,7 @@ export default function MainHomepagePage() {
     handleConfirmAddBlock,
     deleteError,
     invalidateHomepage,
-  } = useMainHomepageEditor(canManage)
+  } = useMainHomepageEditor(canManage, user?.id)
 
   if (!canManage) {
     return (

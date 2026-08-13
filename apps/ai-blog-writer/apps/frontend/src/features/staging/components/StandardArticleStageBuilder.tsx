@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useAuth, usePermissions } from '../../auth'
+import { usePermissions } from '../../auth'
 import { SeoEditorPanel } from '../../../shared/seo/components/SeoEditorPanel'
 import type { SeoSection } from '../../../shared/seo/types'
 import { createEmptySeoSection } from '../../../shared/seo/services/seo-section.service'

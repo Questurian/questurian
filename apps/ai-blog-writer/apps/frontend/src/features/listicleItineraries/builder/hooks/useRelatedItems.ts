@@ -31,7 +31,6 @@ export function useRelatedItems({
       return
     }
 
-    const authToken = undefined
     const primaryLocation = location
     const exactNeighborhoods = sharedNeighborhoods
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import payloadLogoUrl from '../../../assets/payload-logo.svg?url'
-import { useAuth } from '../../auth'
 import {
   fetchLocationById,
   fetchMediaSetOptions,

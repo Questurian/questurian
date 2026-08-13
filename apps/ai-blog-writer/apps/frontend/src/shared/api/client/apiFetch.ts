@@ -39,9 +39,8 @@ const API_KEY_HEADER = 'X-API-Key'
  * - The `payload-token` cookie's `Domain` must cover this host, which is what
  *   `PAYLOAD_COOKIE_DOMAIN` configures on the Payload side.
  *
- * A call site may still set `Authorization` itself and it is never overridden.
- * The image routes do that, passing a token explicitly; that path is what PR D
- * removes.
+ * A call site may still set `Authorization` itself and it is never overridden,
+ * but nothing in this app does any more: the cookie is the only credential.
  *
  * `Content-Type` is deliberately never set: the multipart call sites omit it
  * so the browser can generate the boundary.

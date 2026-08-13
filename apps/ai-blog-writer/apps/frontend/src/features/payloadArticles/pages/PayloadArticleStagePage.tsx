@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../auth'
 import {
   EDITOR_ASSIST_MODEL_OPTIONS,
   type EditorAssistModelName,

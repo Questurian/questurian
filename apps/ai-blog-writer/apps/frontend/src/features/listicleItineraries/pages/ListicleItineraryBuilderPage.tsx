@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../auth'
 import { BuilderHeaderPanel } from '../builder/components/BuilderHeaderPanel'
 import { BuilderDayTabs } from '../builder/components/BuilderDayTabs'
 import { BuilderHero } from '../../../shared/builder/components/BuilderHero'

@@ -33,7 +33,6 @@ export function useListicleSubmit({
 
   async function submit(targetStatus: 'draft' | 'published') {
     if (!draft) return
-    const authToken = undefined
 
     onError('')
     onResult(null)

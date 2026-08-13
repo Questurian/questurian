@@ -20,6 +20,7 @@ export default function LocationHomepagePage() {
   const { id } = useParams<{ id: string }>()
   const numericId = Number(id)
   const { canManagePublished: canManage } = usePermissions()
+  const { user } = useAuth()
 
   const {
     homepageQuery,
@@ -40,7 +41,7 @@ export default function LocationHomepagePage() {
     handleConfirmAddBlock,
     deleteError,
     invalidateHomepage,
-  } = useLocationHomepageEditor(numericId, canManage)
+  } = useLocationHomepageEditor(numericId, canManage, user?.id)
 
   if (!canManage) {
     return (

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../auth'
 import { BuilderHero } from '../../../shared/builder/components/BuilderHero'
 import { useBuilderAutosave } from '../../../shared/builder/hooks/useBuilderAutosave'
 import { useDraftPayloadSyncState } from '../../../shared/payloadSync/useDraftPayloadSyncState'

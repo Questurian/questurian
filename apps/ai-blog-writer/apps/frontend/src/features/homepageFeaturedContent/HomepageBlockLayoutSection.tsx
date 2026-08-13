@@ -12,7 +12,7 @@ type Props<T extends string> = {
   ariaLabel: string
   value: T
   options: Option<T>[]
-  /** Optional: the only caller's gate was the always-true Staff token. */
+  /** Optional; callers that never disable this control may omit it. */
   disabled?: boolean
   dirty: boolean
   isPending: boolean

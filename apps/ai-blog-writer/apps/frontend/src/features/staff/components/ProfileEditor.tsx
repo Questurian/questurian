@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '../../auth'
 import {
   avatarUrl,
   createAuthorForUser,

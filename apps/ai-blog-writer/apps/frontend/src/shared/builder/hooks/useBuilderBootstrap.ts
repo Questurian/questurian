@@ -56,7 +56,6 @@ export function useBuilderBootstrap<
   const [auxData, setAuxData] = useState<TAuxData>(initialAuxData)
 
   useEffect(() => {
-    const authToken = undefined
     let cancelled = false
 
     async function load() {

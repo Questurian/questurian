@@ -27,9 +27,15 @@ import type { CuratedHomepageBlockType, PageBlockResponse } from './pageBlocks'
  * refetch. `pageBlockSlotKeys` tracks which article slots each block has taken
  * so editors can exclude each other's picks.
  */
-export function useLocationHomepageEditor(numericId: number, canManage: boolean) {
+export function useLocationHomepageEditor(
+  numericId: number,
+  canManage: boolean,
+  operatorId?: string,
+) {
   const queryClient = useQueryClient()
-  const homepageQueryKey = ['location-homepage', numericId]
+  // Keyed by operator for the same reason as the main homepage: the
+  // QueryClient outlives a logout.
+  const homepageQueryKey = ['location-homepage', numericId, operatorId ?? 'anonymous']
 
   const homepageQuery = useQuery({
     queryKey: homepageQueryKey,

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../../auth'
 import { ItineraryTitlePipelinePanel } from '../components/ItineraryTitlePipelinePanel'
 import { useItineraryTitlePipeline } from '../hooks/useItineraryTitlePipeline'
 import '../itineraries-pipeline.css'
