@@ -70,10 +70,16 @@ class DayShellSelection(BaseModel):
 
 
 class GenerateItineraryRequest(BaseModel):
-    """Inputs from Step 1 of the builder plus the operator's Payload JWT.
+    """Inputs from Step 1 of the builder.
 
     `payload_jwt` is used only to read candidate records over Payload REST; the
     backend never writes. `brief` is the Generation Brief (core creative input).
+
+    The JWT is optional in the body because the frontend no longer has one to
+    send: the operator's credential is an httpOnly cookie it cannot read. The
+    route fills this in from that cookie (`app.core.staff_token`), which carries
+    the same JWT. A body-supplied value still wins, so non-browser callers and
+    older frontend builds keep working.
     """
 
     location: str = Field(
@@ -87,7 +93,7 @@ class GenerateItineraryRequest(BaseModel):
         ..., min_length=1, max_length=MAX_BRIEF_CHARS, description="Generation Brief"
     )
     day_count: int = Field(..., ge=MIN_DAYS, le=MAX_DAYS)
-    payload_jwt: str = Field(..., min_length=1)
+    payload_jwt: str | None = Field(default=None, min_length=1)
     shared_neighborhoods: list[int] = Field(default_factory=list)
     day_shells: list[DayShellSelection] = Field(..., min_length=1)
     model_name: str | None = Field(default=None, max_length=120)
