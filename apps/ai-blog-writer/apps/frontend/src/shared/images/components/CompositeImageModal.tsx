@@ -12,7 +12,6 @@ import './composite-image.css'
 
 type CompositeImageModalProps = {
   isOpen: boolean
-  token: string
   locationRef: number | null
   defaultTitle?: string
   onCreated?: (response: CompositeImageCreateResponse) => void
@@ -33,7 +32,6 @@ function slotLabels(layout: CompositeImageLayout): string[] {
 
 export function CompositeImageModal({
   isOpen,
-  token,
   locationRef,
   defaultTitle = 'Composite image',
   onCreated,
@@ -226,7 +224,6 @@ export function CompositeImageModal({
 
         <ImagePicker
           isOpen={pickerOpen}
-          token={token}
           locationRef={locationRef}
           query={{
             browseUnit: 'mediaSets',

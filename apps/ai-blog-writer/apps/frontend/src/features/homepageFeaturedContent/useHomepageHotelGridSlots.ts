@@ -27,7 +27,6 @@ export function useHomepageHotelGridSlots(
   options: UseHomepageHotelGridSlotsOptions
 ): UseHomepageHotelGridSlotsResult {
   const {
-    token,
     canManage,
     selection,
     saveSelection,
@@ -60,7 +59,6 @@ export function useHomepageHotelGridSlots(
   } as ReturnType<typeof useQuery<HomepageHotelGridSelection>>
 
   const candidateState = useHomepageHotelGridCandidates({
-    token,
     canManage,
     fetchCandidates,
     selectionQueryKey,
@@ -75,7 +73,6 @@ export function useHomepageHotelGridSlots(
   }, [slots.length])
 
   const saveMutation = useHomepageHotelGridSaveMutation({
-    token,
     saveSelection,
     slotCountRef: currentSaveSlotCountRef,
     onSuccess: (nextSelection) => {
@@ -93,7 +90,6 @@ export function useHomepageHotelGridSlots(
 
   const hasUnsavedChanges = !areHotelSlotListsEqual(draftSlots, savedSlots)
   const saveDisabled =
-    !token ||
     slots.some((item) => item === null) ||
     saveMutation.isPending ||
     !hasUnsavedChanges

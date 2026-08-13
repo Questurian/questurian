@@ -9,7 +9,6 @@ import type {
 } from './payload.types'
 
 export async function fetchLocations(
-  token?: string,
   params?: {
     limit?: number
     page?: number
@@ -48,7 +47,6 @@ export async function fetchLocations(
 }
 
 export async function fetchArticleCategories(
-  token?: string,
   params?: { limit?: number; status?: string },
 ): Promise<{ docs: ArticleCategory[]; totalDocs: number }> {
   const queryParams = new URLSearchParams()
@@ -58,7 +56,6 @@ export async function fetchArticleCategories(
 }
 
 export async function fetchArticleTags(
-  token?: string,
   params?: { limit?: number; status?: string },
 ): Promise<{ docs: ArticleTag[]; totalDocs: number }> {
   const queryParams = new URLSearchParams()
@@ -68,7 +65,6 @@ export async function fetchArticleTags(
 }
 
 export async function fetchMediaAssets(
-  token?: string,
   params?: {
     limit?: number
     page?: number
@@ -108,7 +104,6 @@ export async function fetchMediaAssets(
 }
 
 export async function fetchMediaSets(
-  token?: string,
   params?: {
     limit?: number
     page?: number
@@ -141,7 +136,6 @@ export async function fetchMediaSets(
 }
 
 export async function fetchAuditMediaSets(
-  token?: string,
   params?: { limit?: number; page?: number },
 ): Promise<{ docs: MediaSet[]; totalDocs: number; totalPages: number }> {
   const queryParams = new URLSearchParams()
@@ -159,7 +153,6 @@ export async function fetchAuditMediaSets(
 }
 
 export async function fetchOrphanMediaAssets(
-  token?: string,
   params?: { limit?: number; page?: number },
 ): Promise<{ docs: MediaAsset[]; totalDocs: number; totalPages: number }> {
   const queryParams = new URLSearchParams()
@@ -175,7 +168,6 @@ export async function fetchOrphanMediaAssets(
 export async function updateMediaSet(
   id: number,
   patch: MediaSetPatch,
-  token?: string,
 ): Promise<{ doc: MediaSet }> {
   return payloadMutation(`/api/media-sets/${id}`, 'PATCH', patch)
 }
@@ -183,7 +175,6 @@ export async function updateMediaSet(
 export async function updateMediaAsset(
   id: number,
   patch: Partial<Pick<MediaAsset, 'alt_text' | 'photographer_credit' | 'location' | 'location_finalized' | 'tags'>>,
-  token?: string,
 ): Promise<{ doc: MediaAsset }> {
   return payloadMutation(`/api/media-assets/${id}`, 'PATCH', patch)
 }

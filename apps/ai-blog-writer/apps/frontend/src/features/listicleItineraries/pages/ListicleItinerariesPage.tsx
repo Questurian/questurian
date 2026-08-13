@@ -20,7 +20,6 @@ function formatDate(value?: string): string {
 }
 
 export default function ListicleItinerariesPage() {
-  const { token } = useAuth()
   const [itineraries, setItineraries] = useState<PayloadItineraryDoc[]>([])
   const [localDrafts, setLocalDrafts] = useState(() => listDrafts())
   const [isLoading, setIsLoading] = useState(true)
@@ -48,13 +47,12 @@ export default function ListicleItinerariesPage() {
   }, [])
 
   useEffect(() => {
-    if (!token) return
 
     let cancelled = false
     setIsLoading(true)
     setError(null)
 
-    fetchItineraries(token)
+    fetchItineraries()
       .then((response) => {
         if (cancelled) return
         setItineraries(response.docs || [])
@@ -71,7 +69,7 @@ export default function ListicleItinerariesPage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [])
 
   const rows = useMemo(() => {
     const localChangesByPayloadId = new Map(

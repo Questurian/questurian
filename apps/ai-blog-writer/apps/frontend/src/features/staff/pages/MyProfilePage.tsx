@@ -2,9 +2,9 @@ import { useAuth } from '../../auth'
 import ProfileEditor from '../components/ProfileEditor'
 
 export default function MyProfilePage() {
-  const { user: authUser, token } = useAuth()
+  const { user: authUser } = useAuth()
 
-  if (!authUser?.id || !token) return null
+  if (!authUser?.id) return null
 
   return (
     <div className="staff-page">

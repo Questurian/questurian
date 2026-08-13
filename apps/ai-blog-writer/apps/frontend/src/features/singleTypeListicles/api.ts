@@ -13,7 +13,7 @@ import type {
 
 const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
 
-async function payloadRequest<T>(endpoint: string, token: string, init?: RequestInit): Promise<T> {
+async function payloadRequest<T>(endpoint: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     ...init,
     credentials: 'include',
@@ -58,16 +58,16 @@ export function getBlockTypeForListicleType(type: ListicleType) {
   }
 }
 
-export async function fetchListicles(token: string): Promise<PayloadListResponse<PayloadListicleDoc>> {
-  return payloadRequest(`/api/single-type-listicles?limit=100&sort=-updatedAt`, token)
+export async function fetchListicles(): Promise<PayloadListResponse<PayloadListicleDoc>> {
+  return payloadRequest(`/api/single-type-listicles?limit=100&sort=-updatedAt`)
 }
 
-export async function fetchListicleById(id: number, token: string): Promise<PayloadListicleDoc> {
-  return payloadRequest<PayloadListicleDoc>(`/api/single-type-listicles/${id}`, token)
+export async function fetchListicleById(id: number): Promise<PayloadListicleDoc> {
+  return payloadRequest<PayloadListicleDoc>(`/api/single-type-listicles/${id}`)
 }
 
-export async function createListicle(body: Record<string, unknown>, token: string): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles`, token, {
+export async function createListicle(body: Record<string, unknown>): Promise<PayloadListicleDoc> {
+  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles`, {
     method: 'POST',
     body: JSON.stringify(body),
   })
@@ -77,16 +77,15 @@ export async function createListicle(body: Record<string, unknown>, token: strin
 export async function updateListicle(
   id: number,
   body: Record<string, unknown>,
-  token: string,
 ): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles/${id}`, token, {
+  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(body),
   })
   return response.doc
 }
 
-export async function fetchLocations(token: string): Promise<LocationOption[]> {
+export async function fetchLocations(): Promise<LocationOption[]> {
   const allDocs: LocationOption[] = []
   let page = 1
   let totalPages = 1
@@ -94,7 +93,6 @@ export async function fetchLocations(token: string): Promise<LocationOption[]> {
   while (page <= totalPages) {
     const response = await payloadRequest<PayloadListResponse<LocationOption>>(
       `/api/locations?limit=200&page=${page}&depth=0`,
-      token,
     )
     allDocs.push(...(response.docs || []))
     totalPages = response.totalPages || 1
@@ -104,10 +102,9 @@ export async function fetchLocations(token: string): Promise<LocationOption[]> {
   return allDocs
 }
 
-export async function fetchMediaAssets(token: string): Promise<MediaAssetOption[]> {
+export async function fetchMediaAssets(): Promise<MediaAssetOption[]> {
   const response = await payloadRequest<PayloadListResponse<MediaAssetOption>>(
     `/api/media-assets?limit=200&where[mimeType][like]=image/`,
-    token,
   )
   return response.docs || []
 }
@@ -115,7 +112,6 @@ export async function fetchMediaAssets(token: string): Promise<MediaAssetOption[
 export async function fetchRelatedItems(
   listicleType: ListicleType,
   locationKey: string,
-  token: string,
   scope?: LocationScope,
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForType(listicleType)
@@ -124,13 +120,12 @@ export async function fetchRelatedItems(
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
   if (locationKey) {
-    const resolvedScope = scope || (await getArticleLocationScope({ locationKey, token }))
+    const resolvedScope = scope || (await getArticleLocationScope({ locationKey }))
     appendScopedLocationWhere(params, resolvedScope)
   }
 
   const response = await payloadRequest<PayloadListResponse<RelatedItemOption>>(
     `/api/${collection}?${params.toString()}`,
-    token,
   )
 
   return normalizeRelatedItems(response.docs || [])

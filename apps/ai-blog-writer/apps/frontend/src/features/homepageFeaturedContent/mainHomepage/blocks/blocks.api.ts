@@ -8,7 +8,6 @@ import type {
 } from '../types'
 
 export async function updateMainHomepageBlock(
-  token: string,
   blockId: string,
   items: HomepageBlockSaveItem[],
   slotCount?: number,
@@ -16,7 +15,7 @@ export async function updateMainHomepageBlock(
   const body: Record<string, unknown> = { blockId, items }
   if (typeof slotCount === 'number') body.slotCount = slotCount
 
-  return mainHomepageRequest('/api/homepage-featured-content', token, {
+  return mainHomepageRequest('/api/homepage-featured-content', {
     method: 'PUT',
     body: JSON.stringify(body),
   })
@@ -24,19 +23,17 @@ export async function updateMainHomepageBlock(
 
 /** When a Featured Articles block has no saved items, switch it to another block type; keeps section title. */
 export async function convertMainHomepageFeaturedArticlesBlock(
-  token: string,
   blockId: string,
   blockType: string,
   slotCount: number,
 ): Promise<ConvertHomepageBlockResponse> {
-  return mainHomepageRequest('/api/homepage-featured-content/blocks/convert?response=lean', token, {
+  return mainHomepageRequest('/api/homepage-featured-content/blocks/convert?response=lean', {
     method: 'POST',
     body: JSON.stringify({ blockId, blockType, slotCount }),
   })
 }
 
 export async function addMainHomepageBlock(
-  token: string,
   blockType: string,
   slotCount: number,
   sectionHeading?: string | null,
@@ -49,27 +46,25 @@ export async function addMainHomepageBlock(
   if (typeof sectionSubheading === 'string' && sectionSubheading.trim()) {
     body.sectionSubheading = sectionSubheading.trim()
   }
-  return mainHomepageRequest('/api/homepage-featured-content/blocks', token, {
+  return mainHomepageRequest('/api/homepage-featured-content/blocks', {
     method: 'POST',
     body: JSON.stringify(body),
   })
 }
 
 export async function deleteMainHomepageBlock(
-  token: string,
   blockId: string,
 ): Promise<DeleteHomepageBlockResponse> {
-  return mainHomepageRequest('/api/homepage-featured-content/blocks?response=lean', token, {
+  return mainHomepageRequest('/api/homepage-featured-content/blocks?response=lean', {
     method: 'DELETE',
     body: JSON.stringify({ blockId }),
   })
 }
 
 export async function reorderMainHomepageBlocks(
-  token: string,
   orderedBlockIds: string[],
 ): Promise<ReorderHomepageBlocksResponse> {
-  return mainHomepageRequest('/api/homepage-featured-content/blocks?response=lean', token, {
+  return mainHomepageRequest('/api/homepage-featured-content/blocks?response=lean', {
     method: 'PATCH',
     body: JSON.stringify({ orderedBlockIds }),
   })

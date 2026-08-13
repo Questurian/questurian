@@ -44,7 +44,6 @@ export function StandardArticleStageBuilder({
   syncBehavior = 'draft-sync',
   backToStageLabel = 'Back to Stage List',
 }: StandardArticleStageBuilderProps) {
-  const { token } = useAuth()
   const { canManagePublished, role } = usePermissions()
   const [localError, setLocalError] = useState<string | null>(null)
   const [localResult, setLocalResult] = useState<string | null>(null)
@@ -54,7 +53,6 @@ export function StandardArticleStageBuilder({
     routes,
     syncBehavior,
     api,
-    token,
   })
   const {
     status,
@@ -95,7 +93,6 @@ export function StandardArticleStageBuilder({
   })
   const seo = useStandardArticleSeoActions({
     api,
-    token,
     stagedArticle,
     featureLabel,
     selectedLocationLabel: derived.selectedLocationLabel,

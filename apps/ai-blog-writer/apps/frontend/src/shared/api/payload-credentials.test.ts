@@ -87,7 +87,7 @@ describe('Payload clients send the session cookie', () => {
   it('staff avatar upload', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ doc: { id: 1, filename: 'a.png' } }))
 
-    await uploadAvatarAsset(new File(['x'], 'a.png'), 'token')
+    await uploadAvatarAsset(new File(['x'], 'a.png'))
 
     expectCookieIsTheOnlyCredential()
   })
@@ -95,7 +95,7 @@ describe('Payload clients send the session cookie', () => {
   it('staff list', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
 
-    await fetchStaffUsers('token')
+    await fetchStaffUsers()
 
     expectCookieIsTheOnlyCredential()
   })
@@ -103,19 +103,19 @@ describe('Payload clients send the session cookie', () => {
   it('location documents', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
 
-    await fetchMediaSetOptions('token')
+    await fetchMediaSetOptions()
 
     expectCookieIsTheOnlyCredential()
   })
 
   it('single-type listicles', async () => {
-    await fetchListicles('token')
+    await fetchListicles()
 
     expectCookieIsTheOnlyCredential()
   })
 
   it('listicle itineraries', async () => {
-    await itineraryPayloadRequest('/api/itineraries', 'token')
+    await itineraryPayloadRequest('/api/itineraries')
 
     expectCookieIsTheOnlyCredential()
   })
@@ -123,7 +123,7 @@ describe('Payload clients send the session cookie', () => {
   it('location scope', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ docs: [{ id: 1 }] }))
 
-    await getArticleLocationScope({ locationKey: 'lima', token: 'token' })
+    await getArticleLocationScope({ locationKey: 'lima' })
 
     expectCookieIsTheOnlyCredential()
   })
@@ -132,7 +132,7 @@ describe('Payload clients send the session cookie', () => {
     const { fetchPayloadArticles } = await import('../../features/staging/api/articles/articles.api')
 
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
-    await fetchPayloadArticles('token')
+    await fetchPayloadArticles()
 
     expectCookieIsTheOnlyCredential()
   })
@@ -141,7 +141,7 @@ describe('Payload clients send the session cookie', () => {
     const { fetchAccessPermissions } = await import('../../features/auth/permissions-client')
 
     fetchMock.mockResolvedValue(jsonResponse({}))
-    await fetchAccessPermissions('token')
+    await fetchAccessPermissions()
 
     expectCookieIsTheOnlyCredential()
   })
@@ -151,7 +151,7 @@ describe('Payload clients send the session cookie', () => {
       '../../features/homepageFeaturedContent/mainHomepage/request')
 
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
-    await mainHomepageRequest('/api/pages', 'token')
+    await mainHomepageRequest('/api/pages')
 
     expectCookieIsTheOnlyCredential()
   })
@@ -161,7 +161,7 @@ describe('Payload clients send the session cookie', () => {
       '../../features/homepageFeaturedContent/locationHomepages/request')
 
     fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
-    await locationHomepageRequest('/api/pages', 'token')
+    await locationHomepageRequest('/api/pages')
 
     expectCookieIsTheOnlyCredential()
   })
@@ -171,13 +171,12 @@ describe('Payload clients send the session cookie', () => {
 
     fetchMock.mockResolvedValue(jsonResponse({ user: { id: 1, email: 'a@b.c' }, exp: 9e12 }))
     await hydratePayloadSession({
-      token: 'stale-token',
       expiresAt: Date.now() + 60_000,
       user: { id: '1', email: 'a@b.c' },
     })
 
-    // The stale in-memory token must not be offered even when one exists:
-    // `extractJWT` would take it in preference to the live cookie.
+    // Nothing in memory can shadow the cookie any more — there is no token to
+    // offer. `extractJWT` would have taken a stale one in preference to it.
     expectCookieIsTheOnlyCredential()
   })
 

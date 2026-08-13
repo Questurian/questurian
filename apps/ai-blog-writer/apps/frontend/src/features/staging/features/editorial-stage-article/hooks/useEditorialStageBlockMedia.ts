@@ -30,10 +30,8 @@ import { searchExternalPhotos } from '../services/editorial-stage-image-search.s
 const BLOCK_PAYLOAD_PAGE_LIMIT = 60
 
 type UseEditorialStageBlockMediaParams = {
-  token: string | null | undefined
   mediaAssets: MediaAsset[]
   fetchMediaAssets: (
-    token?: string,
     params?: {
       limit?: number
       page?: number
@@ -66,7 +64,6 @@ type UseEditorialStageBlockMediaParams = {
 }
 
 export function useEditorialStageBlockMedia({
-  token,
   mediaAssets,
   fetchMediaAssets,
   searchPexelsImages,
@@ -172,13 +169,13 @@ export function useEditorialStageBlockMedia({
     }
   ) => {
     const request = buildPayloadRequestParams()
-    if (!token || !blockImageModal || !request) return
+    if (!blockImageModal || !request) return
 
     setIsLoadingImgBlockAssets(true)
     setImgBlockAssetsError(null)
 
     try {
-      const response = await fetchMediaAssets(token, {
+      const response = await fetchMediaAssets({
         ...request,
         page,
       })
@@ -231,11 +228,10 @@ export function useEditorialStageBlockMedia({
     buildPayloadRequestParams,
     fetchMediaAssets,
     replaceImgBlockAssets,
-    token,
   ])
 
   const reloadImgBlockAssets = useCallback(async () => {
-    if (!blockImageModal || !token) return
+    if (!blockImageModal) return
 
     const selectedSeedAssets = mediaAssetsRef.current.filter((asset) =>
       selectedImgBlockAssetIdsRef.current.includes(asset.id)
@@ -245,10 +241,10 @@ export function useEditorialStageBlockMedia({
       totalPages: 1,
     })
     await fetchImgBlockPayloadPage(1, { reset: true })
-  }, [blockImageModal, fetchImgBlockPayloadPage, replaceImgBlockAssets, token])
+  }, [blockImageModal, fetchImgBlockPayloadPage, replaceImgBlockAssets])
 
   const loadMoreImgBlockAssets = useCallback(async () => {
-    if (!blockImageModal || !token) return
+    if (!blockImageModal) return
     if (isLoadingImgBlockAssets) return
     if (imgBlockPayloadPage >= imgBlockPayloadTotalPages && imgBlockPayloadPage > 0) return
 
@@ -260,7 +256,6 @@ export function useEditorialStageBlockMedia({
     imgBlockPayloadPage,
     imgBlockPayloadTotalPages,
     isLoadingImgBlockAssets,
-    token,
   ])
 
   const closeBlockImageModal = useCallback(() => {
@@ -337,17 +332,9 @@ export function useEditorialStageBlockMedia({
     if (!blockImageModal) return
     if (blockImageSource !== 'payload') return
 
-    if (!token) {
-      replaceImgBlockAssets([], {
-        page: 0,
-        totalPages: 1,
-      })
-      setSelectedImgBlockAssetIds([])
-      return
-    }
 
     void reloadImgBlockAssets()
-  }, [blockImageSource, blockPayloadRequestKey, reloadImgBlockAssets, replaceImgBlockAssets, token, blockImageModal])
+  }, [blockImageSource, blockPayloadRequestKey, reloadImgBlockAssets, replaceImgBlockAssets, blockImageModal])
 
   useEffect(() => {
     if (blockImageSource === 'payload') return

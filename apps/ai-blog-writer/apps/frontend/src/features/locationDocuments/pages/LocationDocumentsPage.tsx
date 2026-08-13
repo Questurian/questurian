@@ -61,7 +61,6 @@ function getLinkedDraftStatus(draft: LocationDocumentDraft): {
 }
 
 export default function LocationDocumentsPage() {
-  const { token } = useAuth()
   const [payloadRows, setPayloadRows] = useState<LocationIndexRow[]>([])
   const [localDrafts, setLocalDrafts] = useState<LocationDocumentDraft[]>(() => listDrafts())
   const [searchQuery, setSearchQuery] = useState('')
@@ -88,13 +87,12 @@ export default function LocationDocumentsPage() {
   }, [])
 
   useEffect(() => {
-    if (!token) return
 
     let cancelled = false
     setIsLoading(true)
     setError(null)
 
-    fetchLocationsIndex(token)
+    fetchLocationsIndex()
       .then((rows) => {
         if (cancelled) return
         setPayloadRows(rows)
@@ -111,7 +109,7 @@ export default function LocationDocumentsPage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [])
 
   const sortedDrafts = useMemo(() => {
     return [...localDrafts].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())

@@ -10,7 +10,6 @@ import { payloadDocToDraft } from '../mappers/itinerary-draft.mapper'
 import { buildItineraryDraftComparableShape } from '../utils/itinerary-draft-sync-signature'
 
 type UseItineraryDraftSyncStateParams = {
-  token?: string | null
   draft: ListicleItineraryDraft | null
   setDraft: Dispatch<SetStateAction<ListicleItineraryDraft | null>>
   isLoading: boolean
@@ -21,7 +20,6 @@ type UseItineraryDraftSyncStateParams = {
 }
 
 export function useItineraryDraftSyncState({
-  token,
   draft,
   setDraft,
   isLoading,
@@ -60,10 +58,6 @@ export function useItineraryDraftSyncState({
 
   const revertToPayloadVersion = useCallback(async (): Promise<void> => {
     if (!draft?.payloadId) return
-    if (!token) {
-      onError('You must be logged in to reload from Payload.')
-      return
-    }
 
     const isPublishedPayload = draft.payloadStatus === 'published' || draft.status === 'published'
     const confirmed = window.confirm(
@@ -78,7 +72,7 @@ export function useItineraryDraftSyncState({
     setIsRevertingToPayload(true)
 
     try {
-      const doc = await fetchItineraryById(draft.payloadId, token)
+      const doc = await fetchItineraryById(draft.payloadId)
       const nextDraft = payloadDocToDraft(doc, draft.draftId)
       nextDraft.editorModelName = draft.editorModelName
       // Reverting reloads the doc but doesn't resync Payload, so the media
@@ -93,7 +87,7 @@ export function useItineraryDraftSyncState({
     } finally {
       setIsRevertingToPayload(false)
     }
-  }, [draft, onError, setDraft, setResult, token])
+  }, [draft, onError, setDraft, setResult])
 
   return {
     hasUnsyncedPayloadChanges,

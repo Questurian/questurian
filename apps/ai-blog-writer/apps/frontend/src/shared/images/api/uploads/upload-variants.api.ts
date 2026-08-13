@@ -8,7 +8,6 @@ type UploadVariantsParams = {
   externalRef: string;
   altText: string;
   locationRef?: number;
-  token: string;
   photographerCredit: string;
   onProgress?: (progress: UploadProgress) => void;
   tags?: number[];
@@ -52,7 +51,6 @@ export async function uploadVariantsApi({
   externalRef,
   altText,
   locationRef,
-  token,
   photographerCredit,
   onProgress,
   tags,

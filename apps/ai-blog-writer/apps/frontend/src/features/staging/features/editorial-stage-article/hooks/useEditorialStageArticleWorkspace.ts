@@ -17,7 +17,6 @@ import { useEditorialStagePageData } from './useEditorialStagePageData'
 import { useEditorialStageTimeline } from './useEditorialStageTimeline'
 
 type UseEditorialStageArticleWorkspaceParams = EditorialStageArticlePageProps & {
-  token: string | null | undefined
 }
 
 function useSetPublishResult(
@@ -34,7 +33,6 @@ export function useEditorialStageArticleWorkspace({
   storageKey,
   routes,
   api,
-  token,
   syncBehavior,
 }: UseEditorialStageArticleWorkspaceParams) {
   const [uiState, dispatchUi] = useReducer(
@@ -48,7 +46,6 @@ export function useEditorialStageArticleWorkspace({
     storageKey,
     stageArticlePath: routes.stageArticlePath,
     stagePath: routes.stagePath,
-    token,
     syncBehavior,
     api: {
       fetchResult: api.fetchResult,

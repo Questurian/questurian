@@ -18,7 +18,6 @@ import type {
 } from './editorial-stage-publish-validation.service'
 
 type PersistEditorialStageArticleParams = {
-  token: string
   sourceFeature: string
   targetStatus: EditorialPublishTargetStatus
   stagedArticle: StagedArticle
@@ -28,12 +27,10 @@ type PersistEditorialStageArticleParams = {
   publisherConfig: SchemaPublisherConfig
   createArticle: (
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   updateArticle?: (
     id: number,
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   markArticleSynced: (
     runId: string,
@@ -96,9 +93,8 @@ async function persistPayloadArticle(
       ? await input.updateArticle(
           input.stagedArticle.payloadArticleId,
           payload,
-          input.token
         )
-      : await input.createArticle(payload, input.token)
+      : await input.createArticle(payload)
   let seoSection = input.seoSection
 
   if (input.targetStatus !== 'published' || !input.updateArticle) {
@@ -120,7 +116,6 @@ async function persistPayloadArticle(
         ...payload,
         seoSection: buildSeoPayload(publishedSeoSection)
       },
-      input.token
     )
   }
 

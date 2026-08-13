@@ -25,7 +25,6 @@ function isGenericPayloadError(value: string): boolean {
 }
 
 export default function SingleTypeListiclesPage() {
-  const { token } = useAuth()
   const [listicles, setListicles] = useState<PayloadListicleDoc[]>([])
   const [localDrafts, setLocalDrafts] = useState(() => listDrafts())
   const [isLoading, setIsLoading] = useState(true)
@@ -53,13 +52,12 @@ export default function SingleTypeListiclesPage() {
   }, [])
 
   useEffect(() => {
-    if (!token) return
 
     let cancelled = false
     setIsLoading(true)
     setError(null)
 
-    fetchListicles(token)
+    fetchListicles()
       .then((response) => {
         if (cancelled) return
         setListicles(response.docs || [])
@@ -76,7 +74,7 @@ export default function SingleTypeListiclesPage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [])
 
   const rows = useMemo(() => {
     return listicles.map((doc) => ({

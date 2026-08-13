@@ -66,7 +66,6 @@ function formStateFromRecords(
 }
 
 export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
-  const { token } = useAuth()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -81,12 +80,12 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
     queryKey: ['staff', 'profile', String(userId)],
     queryFn: async () => {
       const [user, author] = await Promise.all([
-        fetchStaffUser(userId, token as string),
-        fetchAuthorForUser(userId, token as string),
+        fetchStaffUser(userId),
+        fetchAuthorForUser(userId),
       ])
       return { user, author }
     },
-    enabled: Boolean(token),
+    enabled: Boolean(),
   })
 
   useEffect(() => {
@@ -105,7 +104,7 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
   }, [userId])
 
   const avatarUpload = useMutation({
-    mutationFn: (file: File) => uploadAvatarAsset(file, token as string),
+    mutationFn: (file: File) => uploadAvatarAsset(file),
     onSuccess: (asset) => {
       setPendingAvatarId(asset.id)
       setPendingAvatarPreview(avatarUrl(asset))
@@ -146,10 +145,10 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
       // account goes first: it is the one that must not be lost if the second
       // fails, and an author record can always be re-saved.
       const [user, author] = [
-        await updateStaffUser(userId, userPatch, token as string),
+        await updateStaffUser(userId, userPatch),
         existingAuthor
-          ? await updateAuthor(existingAuthor.id, authorPatch, token as string)
-          : await createAuthorForUser(userId, authorPatch, token as string),
+          ? await updateAuthor(existingAuthor.id, authorPatch)
+          : await createAuthorForUser(userId, authorPatch),
       ]
 
       return { user, author }

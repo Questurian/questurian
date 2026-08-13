@@ -9,7 +9,7 @@ import type { UseHomepageLocationGridSlotsOptions } from './homepageLocationGrid
 
 type UseHomepageLocationGridSaveMutationOptions = Pick<
   UseHomepageLocationGridSlotsOptions,
-  'token' | 'saveSelection'
+  'saveSelection'
 > & {
   slotCountRef: MutableRefObject<number>
   onSuccess: (selection: HomepageLocationGridSelection) => void
@@ -17,7 +17,6 @@ type UseHomepageLocationGridSaveMutationOptions = Pick<
 }
 
 export function useHomepageLocationGridSaveMutation({
-  token,
   saveSelection,
   slotCountRef,
   onSuccess,
@@ -25,7 +24,7 @@ export function useHomepageLocationGridSaveMutation({
 }: UseHomepageLocationGridSaveMutationOptions) {
   return useMutation({
     mutationFn: (items: HomepageLocationGridItemRef[]) =>
-      saveSelection(token!, items, slotCountRef.current),
+      saveSelection(items, slotCountRef.current),
     onSuccess,
     onError
   })

@@ -4,7 +4,6 @@ import { AiJobButtonContent } from './AiJobButtonContent'
 
 type BuilderHeaderPanelProps = {
   draft: SingleTypeListicleDraft
-  token: string | null
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
   updateHeader: (next: Partial<SingleTypeListicleDraft['header']>) => void
@@ -25,7 +24,6 @@ type BuilderHeaderPanelProps = {
 
 export function BuilderHeaderPanel({
   draft,
-  token,
   locationRef,
   mediaAssets,
   updateHeader,
@@ -56,7 +54,6 @@ export function BuilderHeaderPanel({
   return (
     <SharedBuilderHeaderPanel
       draft={draft}
-      token={token}
       locationRef={locationRef}
       mediaAssets={mediaAssets}
       updateHeader={updateHeader}

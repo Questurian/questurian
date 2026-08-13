@@ -9,7 +9,6 @@ type FeaturedImageModalProps = {
   show: boolean
   publishedToPayload: boolean
   onClose: () => void
-  token?: string
   locationRef: number | null
   selectedFeaturedImageId: number | null
   requirementLabel: string
@@ -25,7 +24,6 @@ export function FeaturedImageModal({
   show,
   publishedToPayload,
   onClose,
-  token,
   locationRef,
   selectedFeaturedImageId,
   requirementLabel,
@@ -46,7 +44,6 @@ export function FeaturedImageModal({
   return (
     <ImagePicker
       isOpen={show && !publishedToPayload}
-      token={token}
       locationRef={locationRef}
       selectedId={selectedFeaturedImageId}
       query={{

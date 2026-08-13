@@ -27,28 +27,24 @@ import type {
 type Props = {
   block: ArticleCuratedHomepageBlockResponse
   blockIndex: number
-  token: string | null
   canManage: boolean
   selectionQueryKey: unknown[]
   saveSelection: (
-    token: string,
     items: HomepageFeaturedItemRef[],
     slotCount?: number,
   ) => Promise<HomepageFeaturedSelection>
-  saveSectionHeading?: (token: string, value: string | null) => Promise<void>
-  saveSectionSubheading?: (token: string, value: string | null) => Promise<void>
-  saveSlot3Layout?: (token: string, value: FeaturedArticlesSlot3Layout) => Promise<void>
-  saveSlot4Layout?: (token: string, value: FeaturedArticlesSlot4Layout) => Promise<void>
-  saveSlot5Layout?: (token: string, value: FeaturedArticlesSlot5Layout) => Promise<void>
-  saveArticleGridFourLayout?: (token: string, value: ArticleGridFourLayout) => Promise<void>
+  saveSectionHeading?: (value: string | null) => Promise<void>
+  saveSectionSubheading?: (value: string | null) => Promise<void>
+  saveSlot3Layout?: (value: FeaturedArticlesSlot3Layout) => Promise<void>
+  saveSlot4Layout?: (value: FeaturedArticlesSlot4Layout) => Promise<void>
+  saveSlot5Layout?: (value: FeaturedArticlesSlot5Layout) => Promise<void>
+  saveArticleGridFourLayout?: (value: ArticleGridFourLayout) => Promise<void>
   convertEmptyFeaturedArticlesTargets?: CuratedHomepageBlockType[]
   onConvertEmptyFeaturedArticlesBlock?: (
-    token: string,
     blockType: CuratedHomepageBlockType,
     slotCount: number,
   ) => Promise<void>
   fetchCandidates: (
-    token: string,
     params: CandidateParams,
   ) => Promise<HomepageFeaturedCandidatesResponse>
   onDeleteBlock: (blockId: string) => void
@@ -61,7 +57,6 @@ type Props = {
 export default function CuratedHomepageBlockEditor({
   block,
   blockIndex,
-  token,
   canManage,
   selectionQueryKey,
   saveSelection,
@@ -84,14 +79,12 @@ export default function CuratedHomepageBlockEditor({
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
   const layouts = useCuratedHomepageLayouts({
     block,
-    token,
     saveSlot3Layout,
     saveSlot4Layout,
     saveSlot5Layout,
     saveArticleGridFourLayout,
   })
   const slotEditorState = useHomepageFeaturedSlots({
-    token,
     canManage,
     selection: block.selection,
     saveSelection,
@@ -147,7 +140,6 @@ export default function CuratedHomepageBlockEditor({
             className="hf-btn-icon hf-block-settings-gear"
             title="Block settings — save, delete, section title"
             aria-label="Block settings"
-            disabled={!token}
             onClick={() => setSettingsOpen(true)}
           >
             ⚙
@@ -160,7 +152,6 @@ export default function CuratedHomepageBlockEditor({
       <CuratedHomepageBlockSettings
         block={block}
         blockIndex={blockIndex}
-        token={token}
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         layoutState={layouts}

@@ -23,7 +23,6 @@ const OCCASIONAL_CARD_TITLES = [
 
 function createAuthValue(role = 'admin'): AuthContextValue {
   return {
-    token: 'landing-token',
     expiresAt: Date.now() + 60_000,
     user: {
       id: 'user-1',

@@ -11,7 +11,6 @@ import {
 import { useImageUploadFlow } from '../../../shared/images/hooks/useImageUploadFlow'
 import '../../../shared/images/components/upload-primitives/upload-primitives.css'
 
-type Props = { token: string }
 
 function buildExternalRef(filename: string): string {
   return filename
@@ -20,13 +19,12 @@ function buildExternalRef(filename: string): string {
     .toLowerCase()
 }
 
-export function UploadTab({ token }: Props) {
+export function UploadTab() {
   const [locationRef, setLocationRef] = useState<number | null>(null)
 
   const { data: locationsData } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => fetchLocations(token),
-    enabled: !!token,
+    queryFn: () => fetchLocations(),
   })
   const locations = locationsData?.docs ?? []
 
@@ -63,7 +61,6 @@ export function UploadTab({ token }: Props) {
   } = useImageUploadFlow({
     externalRef,
     locationRef: locationRef ?? 0,
-    token,
     onComplete: () => {
       setLocationRef(null)
     },

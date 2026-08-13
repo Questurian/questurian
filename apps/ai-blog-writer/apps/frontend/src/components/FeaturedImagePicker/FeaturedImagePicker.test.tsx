@@ -32,7 +32,6 @@ describe('FeaturedImagePicker (adapter over ImagePicker)', () => {
       <FeaturedImagePicker
         isOpen
         selectedId={7}
-        token="t"
         locationRef={10}
         payloadSourceMode="mediaSets"
         payloadVariant="wide"
@@ -53,7 +52,7 @@ describe('FeaturedImagePicker (adapter over ImagePicker)', () => {
   it('emits the asset id when an asset is selected', () => {
     const onSelect = vi.fn()
     render(
-      <FeaturedImagePicker isOpen selectedId={null} token="t" locationRef={10} onSelect={onSelect} onClose={vi.fn()} />,
+      <FeaturedImagePicker isOpen selectedId={null} locationRef={10} onSelect={onSelect} onClose={vi.fn()} />,
     )
 
     captured.props?.onSelect({ kind: 'assets', assets: [{ id: 42 } as MediaAsset] })
@@ -66,7 +65,6 @@ describe('FeaturedImagePicker (adapter over ImagePicker)', () => {
       <FeaturedImagePicker
         isOpen
         selectedId={null}
-        token="t"
         locationRef={10}
         payloadSourceMode="mediaSets"
         onSelect={onSelect}
@@ -85,7 +83,6 @@ describe('FeaturedImagePicker (adapter over ImagePicker)', () => {
       <FeaturedImagePicker
         isOpen
         selectedId={null}
-        token="t"
         locationRef={10}
         payloadVariant="wide"
         onSelect={onSelect}

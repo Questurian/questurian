@@ -18,7 +18,6 @@ import { useProviderImageSearch } from './useProviderImageSearch'
 
 export function useImagePickerController({
   isOpen,
-  token,
   locationRef,
   query,
   selection = { mode: 'single' },
@@ -40,11 +39,10 @@ export function useImagePickerController({
     buildUploadIdentity(uploadExternalRefBase, uploadFileNameTitle),
   )
   const buffer = useImagePickerSelectionBuffer(requiredCount)
-  const data = useImagePickerData({ isOpen, token, query, search, selectedId })
+  const data = useImagePickerData({ isOpen, query, search, selectedId })
   const unsplash = useProviderImageSearch<UnsplashPhoto>(searchUnsplashImages)
   const pexels = useProviderImageSearch<PexelsPhoto>(searchPexelsImages)
   const importer = useExternalImageImport({
-    token,
     locationRef,
     externalRefBase: importExternalRefBase ?? uploadExternalRefBase,
     fileNameTitle: importFileNameTitle ?? uploadFileNameTitle,
@@ -132,9 +130,9 @@ export function useImagePickerController({
     }
 
     const assetId = pickUploadedAssetId(response, query.variant ?? undefined)
-    if (assetId === null || !token) return
+    if (assetId === null) return
     try {
-      const result = await fetchMediaAssets(token, { limit: 1, id: assetId })
+      const result = await fetchMediaAssets({ limit: 1, id: assetId })
       buffer.addToBuffer(assetId, result.docs[0] ?? null, 'rolling')
     } catch {
       // Import succeeded but resolution failed; the asset remains in Payload.

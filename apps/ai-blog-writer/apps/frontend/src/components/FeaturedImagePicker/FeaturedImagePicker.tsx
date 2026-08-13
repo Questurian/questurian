@@ -9,7 +9,6 @@ import type { MediaAsset } from '../../shared/api/payload/payload.types'
 type FeaturedImagePickerProps = {
   isOpen: boolean
   selectedId: number | null
-  token: string
   locationRef: number | null
   payloadSourceMode?: 'assets' | 'mediaSets'
   payloadVariant?: MediaAsset['variant']
@@ -32,7 +31,6 @@ type FeaturedImagePickerProps = {
 export function FeaturedImagePicker({
   isOpen,
   selectedId,
-  token,
   locationRef,
   payloadSourceMode = 'assets',
   payloadVariant,
@@ -73,7 +71,6 @@ export function FeaturedImagePicker({
   return (
     <ImagePicker
       isOpen={isOpen}
-      token={token}
       locationRef={locationRef}
       selectedId={selectedId}
       query={{ browseUnit: payloadSourceMode, variant: payloadVariant, requireMediaSet }}

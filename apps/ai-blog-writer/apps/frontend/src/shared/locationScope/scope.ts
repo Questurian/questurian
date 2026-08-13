@@ -63,7 +63,7 @@ function buildScopeWhere(parts: string[]): URLSearchParams {
   return params
 }
 
-async function payloadRequest<T>(endpoint: string, token: string): Promise<T> {
+async function payloadRequest<T>(endpoint: string): Promise<T> {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     credentials: 'include',
     headers: {
@@ -80,7 +80,7 @@ async function payloadRequest<T>(endpoint: string, token: string): Promise<T> {
   return response.json()
 }
 
-async function getLocationScopeForKey(locationKey: string, token: string): Promise<LocationScope> {
+async function getLocationScopeForKey(locationKey: string): Promise<LocationScope> {
   const normalized = normalizeLocationKey(locationKey)
   const parts = getEffectiveScopeParts(normalized)
   const effectiveLocation = parts.join('|')
@@ -112,7 +112,7 @@ async function getLocationScopeForKey(locationKey: string, token: string): Promi
     params.set('page', String(page))
     params.set('depth', '0')
 
-    const response = await payloadRequest<LocationListResponse>(`/api/locations?${params.toString()}`, token)
+    const response = await payloadRequest<LocationListResponse>(`/api/locations?${params.toString()}`)
 
     for (const doc of response.docs || []) {
       const normalizedLocationKey = normalizeLocationKey(doc.locationKey || '')
@@ -158,14 +158,13 @@ export async function getArticleLocationScope(input: {
   locationKey: string
   sharedNeighborhoods?: number[]
   locations?: Array<Pick<LocationDoc, 'id' | 'locationKey'>>
-  token: string
 }): Promise<LocationScope> {
   const exactNeighborhoodScope = buildExactNeighborhoodScope(input.sharedNeighborhoods, input.locations)
   if (exactNeighborhoodScope) {
     return exactNeighborhoodScope
   }
 
-  return getLocationScopeForKey(input.locationKey, input.token)
+  return getLocationScopeForKey(input.locationKey)
 }
 
 export function isLocationWithinArticleScope(input: {

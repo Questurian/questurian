@@ -9,21 +9,20 @@ export type BuilderBootstrapStorage<TDraft extends { draftId: string }> = {
 }
 
 export type BuilderBootstrapParams<TDraft extends { draftId: string }, TPayloadDoc, TAuxData> = {
-  token: string | null | undefined
   payloadIdParam: string | null
   draftIdParam: string | null
   setSearchParams: SetURLSearchParams
   onError: (message: string) => void
   storage: BuilderBootstrapStorage<TDraft>
-  loadAuxData: (token: string) => Promise<TAuxData>
-  fetchPayloadDoc: (id: number, token: string) => Promise<TPayloadDoc>
+  loadAuxData: () => Promise<TAuxData>
+  fetchPayloadDoc: (id: number) => Promise<TPayloadDoc>
   payloadDocToDraft: (doc: TPayloadDoc, existingDraftId?: string) => TDraft
   /** Optional. Apply local-draft preserved fields (e.g. markdown) onto a payload-loaded draft. */
   mergeLocalIntoPayloadDraft?: (payloadDraft: TDraft, localDraft: TDraft) => TDraft
   /** Optional. Normalize/repair a draft right before it is set. */
   normalizeDraft?: (draft: TDraft) => TDraft
   /** Optional. Refine aux data after the draft is known (e.g. backfill missing related IDs). */
-  enrichAuxData?: (draft: TDraft, token: string, aux: TAuxData) => Promise<TAuxData>
+  enrichAuxData?: (draft: TDraft, aux: TAuxData) => Promise<TAuxData>
   initialAuxData: TAuxData
 }
 
@@ -39,7 +38,6 @@ export function useBuilderBootstrap<
   TPayloadDoc,
   TAuxData,
 >({
-  token,
   payloadIdParam,
   draftIdParam,
   setSearchParams,
@@ -58,8 +56,7 @@ export function useBuilderBootstrap<
   const [auxData, setAuxData] = useState<TAuxData>(initialAuxData)
 
   useEffect(() => {
-    if (!token) return
-    const authToken = token
+    const authToken = undefined
     let cancelled = false
 
     async function load() {
@@ -67,14 +64,14 @@ export function useBuilderBootstrap<
       onError('')
 
       try {
-        const baseAux = await loadAuxData(authToken)
+        const baseAux = await loadAuxData()
         if (cancelled) return
 
         let nextDraft: TDraft
 
         const payloadId = payloadIdParam ? Number(payloadIdParam) : null
         if (payloadId && Number.isFinite(payloadId)) {
-          const doc = await fetchPayloadDoc(payloadId, authToken)
+          const doc = await fetchPayloadDoc(payloadId)
           if (cancelled) return
           const localDraft = storage.findDraftByPayloadId(payloadId)
           let payloadDraft = payloadDocToDraft(doc, localDraft?.draftId)
@@ -120,7 +117,7 @@ export function useBuilderBootstrap<
         }
 
         const finalAux = enrichAuxData
-          ? await enrichAuxData(nextDraft, authToken, baseAux)
+          ? await enrichAuxData(nextDraft, baseAux)
           : baseAux
 
         if (cancelled) return
@@ -141,7 +138,7 @@ export function useBuilderBootstrap<
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, payloadIdParam, draftIdParam])
+  }, [payloadIdParam, draftIdParam])
 
   return { draft, setDraft, isLoading, auxData }
 }

@@ -9,12 +9,10 @@ type Props = {
   currentBlockType: CuratedHomepageBlockType
   /** Saved slot count for this block (`selection.totalSlots`). */
   currentSlotCount: number
-  token: string | null
   /** Allowed types in the dropdown, including {@link currentBlockType} for empty resize. */
   convertTargetOptions: CuratedHomepageBlockType[]
   canConvert: boolean
   onConvert: (
-    token: string,
     blockType: CuratedHomepageBlockType,
     slotCount: number,
   ) => Promise<void>
@@ -25,7 +23,6 @@ export default function HomepageBlockConvertSection({
   blockId,
   currentBlockType,
   currentSlotCount,
-  token,
   convertTargetOptions,
   canConvert,
   onConvert,
@@ -75,8 +72,7 @@ export default function HomepageBlockConvertSection({
       blockType: CuratedHomepageBlockType
       slotCount: number
     }) => {
-      if (!token) return
-      await onConvert(token, blockType, slotCount)
+      await onConvert(blockType, slotCount)
     },
     onSuccess: () => {
       onConverted?.()
@@ -100,7 +96,7 @@ export default function HomepageBlockConvertSection({
     convertTargetType === currentBlockType && normalizedChosen === currentSlotCount
 
   function handleConvert() {
-    if (!canConvert || !token || isNoOp) return
+    if (!canConvert || isNoOp) return
     convertMutation.mutate({ blockType: convertTargetType, slotCount: normalizedChosen })
   }
 
@@ -172,7 +168,7 @@ export default function HomepageBlockConvertSection({
         <button
           type="button"
           className="hf-btn-primary"
-          disabled={!token || convertMutation.isPending || isNoOp}
+          disabled={convertMutation.isPending || isNoOp}
           onClick={handleConvert}
         >
           {actionLabel}

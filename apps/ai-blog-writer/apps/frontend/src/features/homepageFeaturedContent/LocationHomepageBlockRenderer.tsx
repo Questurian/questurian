@@ -39,7 +39,6 @@ export type LocationHomepageBlockRendererProps = {
   block: PageBlockResponse
   blockIndex: number
   homepageId: number
-  token: string | null
   canManage: boolean
   locationGridChildLevel: 'neighborhood' | null
   convertTargets: CuratedHomepageBlockType[]
@@ -51,7 +50,6 @@ export type LocationHomepageBlockRendererProps = {
   deleteError: string | null
   onConvertBlock: (
     block: PageBlockResponse,
-    currentToken: string,
     blockType: CuratedHomepageBlockType,
     slotCount: number,
   ) => Promise<void>
@@ -67,7 +65,6 @@ export default function LocationHomepageBlockRenderer({
   block,
   blockIndex: idx,
   homepageId: numericId,
-  token,
   canManage,
   locationGridChildLevel,
   convertTargets,
@@ -89,7 +86,6 @@ export default function LocationHomepageBlockRenderer({
       <CuratedHomepageBlockEditor
         block={block}
         blockIndex={idx}
-        token={token}
         canManage={canManage}
         onDeleteBlock={onDeleteBlock}
         isDeletingBlock={isDeletingBlockFor(block.id)}
@@ -98,11 +94,9 @@ export default function LocationHomepageBlockRenderer({
           'location-homepage-block',
           numericId,
           ...homepageBlockEditorIdentity(block),
-          token,
         ]}
-        saveSelection={async (currentToken, items, slotCount) => {
+        saveSelection={async (items, slotCount) => {
           const updated = await updateLocationHomepageBlock(
-            currentToken,
             numericId,
             block.id,
             items,
@@ -116,64 +110,63 @@ export default function LocationHomepageBlockRenderer({
           invalidateHomepage()
           return updatedBlock.selection
         }}
-        fetchCandidates={(currentToken, params) =>
+        fetchCandidates={(params) =>
           block.blockType === 'questurian-maps'
-            ? fetchLocationHomepageCandidates(currentToken, numericId, {
+            ? fetchLocationHomepageCandidates(numericId, {
                 ...params,
                 type: 'single-type-listicles',
               })
             : block.blockType === 'where-to-eat-drink'
-              ? fetchLocationHomepageWhereToEatDrinkCandidates(currentToken, numericId, params)
+              ? fetchLocationHomepageWhereToEatDrinkCandidates(numericId, params)
               : block.blockType === 'things-to-do-listicles'
-                ? fetchLocationHomepageThingsToDoListicleCandidates(currentToken, numericId, params)
+                ? fetchLocationHomepageThingsToDoListicleCandidates(numericId, params)
                 : fetchLocationHomepageCandidates(
-                  currentToken,
                   numericId,
-                  params as Parameters<typeof fetchLocationHomepageCandidates>[2],
+                  params as Parameters<typeof fetchLocationHomepageCandidates>[1],
                 )}
-        saveSectionHeading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
+        saveSectionHeading={async (value) => {
+          await updateLocationHomepageFeaturedSectionHeading(numericId, block.id, value)
           invalidateHomepage()
         }}
-        saveSectionSubheading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
+        saveSectionSubheading={async (value) => {
+          await updateLocationHomepageFeaturedSectionSubheading(numericId, block.id, value)
           invalidateHomepage()
         }}
         saveSlot3Layout={
           block.blockType === 'featured-articles' && block.selection.totalSlots === 3
-            ? async (currentToken, value) => {
-                await updateLocationHomepageFeaturedSlot3Layout(currentToken, numericId, block.id, value)
+            ? async (value) => {
+                await updateLocationHomepageFeaturedSlot3Layout(numericId, block.id, value)
                 invalidateHomepage()
               }
             : undefined
         }
         saveSlot4Layout={
           block.blockType === 'featured-articles' && block.selection.totalSlots === 4
-            ? async (currentToken, value) => {
-                await updateLocationHomepageFeaturedSlot4Layout(currentToken, numericId, block.id, value)
+            ? async (value) => {
+                await updateLocationHomepageFeaturedSlot4Layout(numericId, block.id, value)
                 invalidateHomepage()
               }
             : undefined
         }
         saveSlot5Layout={
           block.blockType === 'featured-articles' && block.selection.totalSlots === 5
-            ? async (currentToken, value) => {
-                await updateLocationHomepageFeaturedSlot5Layout(currentToken, numericId, block.id, value)
+            ? async (value) => {
+                await updateLocationHomepageFeaturedSlot5Layout(numericId, block.id, value)
                 invalidateHomepage()
               }
             : undefined
         }
         saveArticleGridFourLayout={
           block.blockType === 'article-grid' && block.selection.totalSlots === 4
-            ? async (currentToken, value) => {
-                await updateLocationHomepageArticleGridFourLayout(currentToken, numericId, block.id, value)
+            ? async (value) => {
+                await updateLocationHomepageArticleGridFourLayout(numericId, block.id, value)
                 invalidateHomepage()
               }
             : undefined
         }
         convertEmptyFeaturedArticlesTargets={convertTargets}
-        onConvertEmptyFeaturedArticlesBlock={async (currentToken, blockType, slotCount) => {
-          await onConvertBlock(block, currentToken, blockType, slotCount)
+        onConvertEmptyFeaturedArticlesBlock={async (blockType, slotCount) => {
+          await onConvertBlock(block, blockType, slotCount)
         }}
         externalUsedKeys={externalUsedKeys}
         onSlotsChange={onSlotsChange}
@@ -186,7 +179,6 @@ export default function LocationHomepageBlockRenderer({
       <LocationGridBlockEditor
         block={block}
         blockIndex={idx}
-        token={token}
         canManage={canManage}
         onDeleteBlock={onDeleteBlock}
         isDeletingBlock={isDeletingBlockFor(block.id)}
@@ -196,10 +188,9 @@ export default function LocationHomepageBlockRenderer({
           'location-homepage-location-grid',
           numericId,
           ...homepageBlockEditorIdentity(block),
-          token,
         ]}
-        saveSelection={async (currentToken, items, slotCount) => {
-          const updated = await updateLocationHomepageBlock(currentToken, numericId, block.id, items, slotCount)
+        saveSelection={async (items, slotCount) => {
+          const updated = await updateLocationHomepageBlock(numericId, block.id, items, slotCount)
           const updatedBlock = updated.pageBlocks.find(
             (candidate): candidate is LocationGridBlockResponse =>
               candidate.id === block.id && candidate.blockType === block.blockType,
@@ -208,23 +199,23 @@ export default function LocationHomepageBlockRenderer({
           invalidateHomepage()
           return updatedBlock.selection
         }}
-        fetchCandidates={(currentToken, params) =>
-          fetchLocationHomepageLocationGridCandidates(currentToken, numericId, params)}
-        saveLocationGridSectionHeading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
+        fetchCandidates={(params) =>
+          fetchLocationHomepageLocationGridCandidates(numericId, params)}
+        saveLocationGridSectionHeading={async (value) => {
+          await updateLocationHomepageFeaturedSectionHeading(numericId, block.id, value)
           invalidateHomepage()
         }}
-        saveLocationGridSectionSubheading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
+        saveLocationGridSectionSubheading={async (value) => {
+          await updateLocationHomepageFeaturedSectionSubheading(numericId, block.id, value)
           invalidateHomepage()
         }}
-        saveLocationGridMediaAspect={async (currentToken, value) => {
-          await updateLocationHomepageLocationGridMediaAspect(currentToken, numericId, block.id, value)
+        saveLocationGridMediaAspect={async (value) => {
+          await updateLocationHomepageLocationGridMediaAspect(numericId, block.id, value)
           invalidateHomepage()
         }}
         convertBlockTargets={convertTargets}
-        onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-          await onConvertBlock(block, currentToken, blockType, slotCount)
+        onConvertEmptyBlock={async (blockType, slotCount) => {
+          await onConvertBlock(block, blockType, slotCount)
         }}
       />
     )
@@ -235,16 +226,15 @@ export default function LocationHomepageBlockRenderer({
       <NewsletterSignupBlockEditor
         block={block}
         blockIndex={idx}
-        token={token}
         onDeleteBlock={onDeleteBlock}
         isDeletingBlock={isDeletingBlockFor(block.id)}
         deleteError={deleteErrorFor(block.id)}
-        saveSectionHeading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, block.id, value)
+        saveSectionHeading={async (value) => {
+          await updateLocationHomepageFeaturedSectionHeading(numericId, block.id, value)
           invalidateHomepage()
         }}
-        saveSectionSubheading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, block.id, value)
+        saveSectionSubheading={async (value) => {
+          await updateLocationHomepageFeaturedSectionSubheading(numericId, block.id, value)
           invalidateHomepage()
         }}
       />
@@ -257,7 +247,6 @@ export default function LocationHomepageBlockRenderer({
       <HotelGridBlockEditor
         block={gridBlock}
         blockIndex={idx}
-        token={token}
         canManage={canManage}
         onDeleteBlock={onDeleteBlock}
         isDeletingBlock={isDeletingBlockFor(gridBlock.id)}
@@ -266,10 +255,9 @@ export default function LocationHomepageBlockRenderer({
           'location-homepage-hotel-grid',
           numericId,
           ...homepageBlockEditorIdentity(gridBlock),
-          token,
         ]}
-        saveSelection={async (currentToken, items, slotCount) => {
-          const updated = await updateLocationHomepageBlock(currentToken, numericId, gridBlock.id, items, slotCount)
+        saveSelection={async (items, slotCount) => {
+          const updated = await updateLocationHomepageBlock(numericId, gridBlock.id, items, slotCount)
           const updatedBlock = updated.pageBlocks.find(
             (candidate): candidate is HotelOrAttractionGridBlockResponse =>
               candidate.id === gridBlock.id && candidate.blockType === gridBlock.blockType,
@@ -278,26 +266,25 @@ export default function LocationHomepageBlockRenderer({
           invalidateHomepage()
           return updatedBlock.selection
         }}
-        fetchCandidates={(currentToken, params) =>
+        fetchCandidates={(params) =>
           gridBlock.blockType === 'things-to-do-attractions'
             ? fetchLocationHomepageThingsToDoAttractionCandidates(
-              currentToken,
               numericId,
               params,
             )
             : gridBlock.blockType === 'tour-grid'
-              ? fetchLocationHomepageTourGridCandidates(currentToken, numericId, params)
-              : fetchLocationHomepageHotelGridCandidates(currentToken, numericId, params)}
+              ? fetchLocationHomepageTourGridCandidates(numericId, params)
+              : fetchLocationHomepageHotelGridCandidates(numericId, params)}
         convertBlockTargets={convertTargets}
-        onConvertEmptyBlock={async (currentToken, blockType, slotCount) => {
-          await onConvertBlock(gridBlock, currentToken, blockType, slotCount)
+        onConvertEmptyBlock={async (blockType, slotCount) => {
+          await onConvertBlock(gridBlock, blockType, slotCount)
         }}
-        saveHotelGridSectionHeading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionHeading(currentToken, numericId, gridBlock.id, value)
+        saveHotelGridSectionHeading={async (value) => {
+          await updateLocationHomepageFeaturedSectionHeading(numericId, gridBlock.id, value)
           invalidateHomepage()
         }}
-        saveHotelGridSectionSubheading={async (currentToken, value) => {
-          await updateLocationHomepageFeaturedSectionSubheading(currentToken, numericId, gridBlock.id, value)
+        saveHotelGridSectionSubheading={async (value) => {
+          await updateLocationHomepageFeaturedSectionSubheading(numericId, gridBlock.id, value)
           invalidateHomepage()
         }}
       />

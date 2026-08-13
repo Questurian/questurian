@@ -61,7 +61,6 @@ type Step3Row = {
 type BuilderStopRowProps = {
   row: Step3Row
   showHeading: boolean
-  token: string
   locationRef: number | null
   mediaAssets: MediaAssetOption[]
   instagramPosts: InstagramPostOption[]
@@ -94,7 +93,6 @@ type BuilderStopRowProps = {
 export function BuilderStopRow({
   row,
   showHeading,
-  token: resolvedToken,
   locationRef,
   mediaAssets,
   instagramPosts,
@@ -408,7 +406,7 @@ export function BuilderStopRow({
           item={item}
           section={section}
           localIndex={localIndex}
-          token={resolvedToken}
+         
           locationRef={locationRef}
           instagramPosts={instagramPosts}
           relatedOptions={relatedOptions}

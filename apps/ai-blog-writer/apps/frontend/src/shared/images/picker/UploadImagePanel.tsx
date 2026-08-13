@@ -3,7 +3,6 @@ import type { UploadImageResponse } from '../api/contracts/image-api.contracts'
 
 type UploadImagePanelProps = {
   locationRef: number | null
-  token?: string
   uploadIdentity: { externalRef: string; fileNamePrefix: string }
   onComplete: (response: UploadImageResponse) => void
   onCancel: () => void
@@ -11,7 +10,6 @@ type UploadImagePanelProps = {
 
 export function UploadImagePanel({
   locationRef,
-  token,
   uploadIdentity,
   onComplete,
   onCancel,
@@ -28,7 +26,7 @@ export function UploadImagePanel({
           externalRef={uploadIdentity.externalRef}
           fileNamePrefix={uploadIdentity.fileNamePrefix}
           locationRef={locationRef}
-          token={token ?? ''}
+         
           onComplete={onComplete}
           onCancel={onCancel}
         />

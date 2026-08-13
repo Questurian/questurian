@@ -13,23 +13,20 @@ export type FeaturedSocialImageRef =
 
 export async function generateSocialImageFromFeatured(
   ref: FeaturedSocialImageRef,
-  token: string
 ): Promise<GenerateSocialImageResponse> {
-  return generateSocialImageApi({ ...ref, token })
+  return generateSocialImageApi({ ...ref })
 }
 
 export async function uploadSocialImage(
   file: File,
   altText: string,
   locationRef: number,
-  token: string,
   photographerCredit: string
 ): Promise<UploadSocialImageResponse> {
   return uploadSocialImageApi({
     file,
     altText,
     locationRef,
-    token,
     photographerCredit
   })
 }

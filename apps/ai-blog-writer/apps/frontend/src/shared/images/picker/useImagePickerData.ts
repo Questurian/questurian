@@ -8,7 +8,6 @@ const PAGE_SIZE = 48
 
 type UseImagePickerDataParams = {
   isOpen: boolean
-  token?: string
   query: ImagePickerQuery
   /** Trimmed by the hook; drives server-side whole-library search. */
   search: string
@@ -50,7 +49,6 @@ function dedupMediaSets(prev: MediaSet[], next: MediaSet[]): MediaSet[] {
  */
 export function useImagePickerData({
   isOpen,
-  token,
   query,
   search,
   selectedId,
@@ -84,7 +82,7 @@ export function useImagePickerData({
 
       try {
         if (browseUnit === 'mediaSets') {
-          const res = await fetchMediaSets(token, {
+          const res = await fetchMediaSets({
             limit: PAGE_SIZE,
             page: targetPage,
             search: trimmedSearch || undefined,
@@ -94,7 +92,7 @@ export function useImagePickerData({
           setRawAssets([])
           setTotalPages(Math.max(res.totalPages || 1, 1))
         } else {
-          const res = await fetchMediaAssets(token, {
+          const res = await fetchMediaAssets({
             limit: PAGE_SIZE,
             page: targetPage,
             mimeType: 'image/',
@@ -117,7 +115,7 @@ export function useImagePickerData({
         if (seq === requestSeq.current) setIsLoading(false)
       }
     },
-    [isOpen, token, browseUnit, variant, exactWidth, exactHeight, minWidth, minHeight, trimmedSearch],
+    [isOpen, browseUnit, variant, exactWidth, exactHeight, minWidth, minHeight, trimmedSearch],
   )
 
   // Reset + load page 1 whenever the picker opens or the query/search changes.
@@ -136,7 +134,7 @@ export function useImagePickerData({
     void loadPage(1, 'replace')
     // loadPage already depends on every reset input; resetKey keeps the intent explicit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resetKey, isOpen, token])
+  }, [resetKey, isOpen])
 
   const hasMore = page < totalPages
 
@@ -153,7 +151,7 @@ export function useImagePickerData({
 
   // Hydrate the selected entity if it isn't on a loaded page, so it stays visible/selected.
   useEffect(() => {
-    if (!isOpen || selectedId === null || !token) return
+    if (!isOpen || selectedId === null) return
 
     const present =
       browseUnit === 'mediaSets'
@@ -165,7 +163,7 @@ export function useImagePickerData({
     const hydrate = async () => {
       try {
         if (browseUnit === 'mediaSets') {
-          const res = await fetchMediaSets(token, { limit: 1, id: selectedId })
+          const res = await fetchMediaSets({ limit: 1, id: selectedId })
           const doc = res.docs[0]
           if (!cancelled && doc) {
             setMediaSets((prev) =>
@@ -173,7 +171,7 @@ export function useImagePickerData({
             )
           }
         } else {
-          const res = await fetchMediaAssets(token, { limit: 1, id: selectedId })
+          const res = await fetchMediaAssets({ limit: 1, id: selectedId })
           const doc = res.docs[0]
           if (!cancelled && doc) {
             setRawAssets((prev) => (prev.some((a) => a.id === doc.id) ? prev : [doc, ...prev]))
@@ -188,7 +186,7 @@ export function useImagePickerData({
     return () => {
       cancelled = true
     }
-  }, [isOpen, selectedId, browseUnit, token, rawAssets, mediaSets])
+  }, [isOpen, selectedId, browseUnit, rawAssets, mediaSets])
 
   const assets = useMemo(
     () => (requireMediaSet ? filterAssetsWithMediaSet(rawAssets) : rawAssets),

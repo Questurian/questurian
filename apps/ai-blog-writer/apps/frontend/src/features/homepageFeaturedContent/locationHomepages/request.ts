@@ -5,7 +5,6 @@ const LOCATION_HOMEPAGE_REQUEST_TIMEOUT_MS = 12000
 
 export async function locationHomepageRequest<T>(
   endpoint: string,
-  token: string,
   init?: RequestInit
 ): Promise<T> {
   const controller = new AbortController()

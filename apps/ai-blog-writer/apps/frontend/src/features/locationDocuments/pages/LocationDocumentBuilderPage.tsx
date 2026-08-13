@@ -53,7 +53,6 @@ function normalizeDraftForEdit(draft: LocationDocumentDraft): LocationDocumentDr
 }
 
 export default function LocationDocumentBuilderPage() {
-  const { token } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [draft, setDraft] = useState<LocationDocumentDraft | null>(null)
   const [mediaSets, setMediaSets] = useState<Awaited<ReturnType<typeof fetchMediaSetOptions>>>([])
@@ -69,10 +68,6 @@ export default function LocationDocumentBuilderPage() {
   const payloadId = payloadIdParam ? Number(payloadIdParam) : NaN
 
   useEffect(() => {
-    if (!token) {
-      setIsLoading(false)
-      return
-    }
 
     let cancelled = false
     setIsLoading(true)
@@ -107,7 +102,7 @@ export default function LocationDocumentBuilderPage() {
             return
           }
 
-          const payloadDoc = await fetchLocationById(payloadId, token)
+          const payloadDoc = await fetchLocationById(payloadId)
           if (cancelled) return
           setDraft(normalizeDraftForEdit(buildDraftFromPayloadDoc(payloadDoc)))
           return
@@ -131,15 +126,14 @@ export default function LocationDocumentBuilderPage() {
     return () => {
       cancelled = true
     }
-  }, [draftIdParam, payloadId, setSearchParams, token])
+  }, [draftIdParam, payloadId, setSearchParams])
 
   useEffect(() => {
-    if (!token) return
 
     let cancelled = false
     setOptionsError(null)
 
-    fetchMediaSetOptions(token)
+    fetchMediaSetOptions()
       .then((options) => {
         if (!cancelled) setMediaSets(options)
       })
@@ -153,7 +147,7 @@ export default function LocationDocumentBuilderPage() {
     return () => {
       cancelled = true
     }
-  }, [token])
+  }, [])
 
   useBuilderAutosave(draft, saveDraft, 1200)
 
@@ -201,7 +195,7 @@ export default function LocationDocumentBuilderPage() {
   }, [draft])
 
   const handleSubmit = useCallback(async () => {
-    if (!token || !draft) return
+    if (!draft) return
 
     setIsSaving(true)
     setError(null)
@@ -215,7 +209,7 @@ export default function LocationDocumentBuilderPage() {
       }
 
       const payloadBody = buildPayloadLocationBody(draft)
-      const savedDoc = await updateLocation(draft.payloadId, payloadBody, token)
+      const savedDoc = await updateLocation(draft.payloadId, payloadBody)
       const syncedDraft = markDraftAsPayloadSynced(
         {
           ...buildDraftFromPayloadDoc(savedDoc),
@@ -236,17 +230,8 @@ export default function LocationDocumentBuilderPage() {
     } finally {
       setIsSaving(false)
     }
-  }, [draft, setSearchParams, token])
+  }, [draft, setSearchParams])
 
-  if (!token) {
-    return (
-      <div className="ldb-page">
-        <section className="ldb-panel">
-          <p className="ldb-placeholder">Sign in to edit Payload location images.</p>
-        </section>
-      </div>
-    )
-  }
 
   if (isLoading) {
     return (
@@ -381,7 +366,6 @@ export default function LocationDocumentBuilderPage() {
         <CoverImagePickerField
           field={COVER_IMAGE_FIELD}
           value={draft.coverImage}
-          token={token}
           locationRef={draft.payloadId ?? null}
           mediaSets={mediaSets}
           onValueChange={updateCoverImage}

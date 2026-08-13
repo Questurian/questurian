@@ -11,7 +11,6 @@ type BuildBlockModalViewInput = {
   }
   blockImageModal: BlockImageModalState | null
   closeBlockImageModal: () => void
-  token?: string
   selectedLocation?: Location
   singleImageRequirementLabel: string
   imgPairRequirementLabel: string
@@ -38,8 +37,7 @@ export function buildBlockModalView(input: BuildBlockModalViewInput): BlockModal
     blockImageModal: input.blockImageModal,
     publishedToPayload: isStagedArticleEditingLocked(input.stagedArticle),
     onClose: input.closeBlockImageModal,
-    token: input.token,
-    locationRef: input.selectedLocation?.id ?? null,
+        locationRef: input.selectedLocation?.id ?? null,
     singleImageRequirementLabel: input.singleImageRequirementLabel,
     imgPairRequirementLabel: input.imgPairRequirementLabel,
     imgTrioRequirementLabel: input.imgTrioRequirementLabel,

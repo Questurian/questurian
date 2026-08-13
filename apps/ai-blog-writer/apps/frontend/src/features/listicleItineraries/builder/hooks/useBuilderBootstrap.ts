@@ -24,7 +24,6 @@ import {
 } from '../../../../shared/payloadSync/draftPayloadSync'
 
 type UseBuilderBootstrapParams = {
-  token?: string | null
   payloadIdParam: string | null
   draftIdParam: string | null
   setSearchParams: SetURLSearchParams
@@ -162,7 +161,6 @@ export function mergeLocalIntoPayloadDraft(
 }
 
 export function useBuilderBootstrap({
-  token,
   payloadIdParam,
   draftIdParam,
   setSearchParams,
@@ -173,7 +171,6 @@ export function useBuilderBootstrap({
     Awaited<ReturnType<typeof fetchItineraryById>>,
     AuxData
   >({
-    token,
     payloadIdParam,
     draftIdParam,
     setSearchParams,
@@ -184,11 +181,11 @@ export function useBuilderBootstrap({
       createEmptyDraft,
       saveDraft,
     },
-    loadAuxData: async (authToken) => {
+    loadAuxData: async () => {
       const [locationDocs, mediaDocs, instagramDocs] = await Promise.all([
-        fetchLocations(authToken),
-        fetchMediaAssets(authToken),
-        fetchInstagramPosts(authToken),
+        fetchLocations(),
+        fetchMediaAssets(),
+        fetchInstagramPosts(),
       ])
       return { locations: locationDocs, mediaAssets: mediaDocs, instagramPosts: instagramDocs }
     },
@@ -196,17 +193,17 @@ export function useBuilderBootstrap({
     payloadDocToDraft,
     mergeLocalIntoPayloadDraft,
     normalizeDraft: normalizeDraftModelName,
-    enrichAuxData: async (nextDraft, authToken, aux) => {
+    enrichAuxData: async (nextDraft, aux) => {
       const missingMediaIds = collectMissingMediaAssetIds(nextDraft, aux.mediaAssets)
       const missingInstagramIds = collectMissingInstagramPostIds(nextDraft, aux.instagramPosts)
 
       const [missingMediaDocs, missingInstagramDocs] = await Promise.all([
         Promise.all(missingMediaIds.map(async (id) => {
-          const docs = await fetchMediaAssets(authToken, { id })
+          const docs = await fetchMediaAssets({ id })
           return docs[0] || null
         })),
         Promise.all(missingInstagramIds.map(async (id) => {
-          const docs = await fetchInstagramPosts(authToken, { id })
+          const docs = await fetchInstagramPosts({ id })
           return docs[0] || null
         })),
       ])

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AuthContextValue, AuthState } from './auth-context';
 import { EXPIRY_BUFFER_MS } from './auth.constants';
 import { hasActiveSession } from './auth-state';
+import { clearPermissionsCache } from './usePermissions';
 import { getLiveAuthState, setLiveAuthState } from './auth-session-store';
 import {
   checkPayloadHealth,
@@ -18,8 +19,8 @@ export function useAuthSessionState(): AuthContextValue {
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const applyAuthState = useCallback((nextState: AuthState | null) => {
-    // `apiFetch` reads the token from outside the component tree, so the store
-    // has to be updated synchronously rather than waiting for a re-render.
+    // The store is read from outside the component tree, so it is updated
+    // synchronously rather than waiting for a re-render.
     setLiveAuthState(nextState);
     setAuthState(nextState);
   }, []);
@@ -84,21 +85,41 @@ export function useAuthSessionState(): AuthContextValue {
   const logout = useCallback(() => {
     applyAuthState(null);
     setIsRestoringSession(false);
+    // The access cache is module-scoped and keyed by Staff id, so it outlives
+    // both the component tree and a session renewal. Without this, signing out
+    // and signing in as someone else on the same page load would serve the
+    // previous operator's permissions. `clearPermissionsCache` was exported but
+    // never called from app code — flagged as pre-existing on PR #221, and now
+    // load-bearing because the cache no longer turns over with the token.
+    clearPermissionsCache();
     logoutPayloadUser();
   }, [applyAuthState]);
 
   useEffect(() => {
-    if (!authState?.token || !authState?.expiresAt) {
+    if (!authState?.expiresAt) {
       return;
     }
+
+    // The hydrate effect above has always had this guard; the renewal effect
+    // did not, which was a real bug rather than an asymmetry: logging out
+    // while `/api/users/refresh-token` was in flight applied the renewed
+    // session on top of the logout and signed the operator back in, in both
+    // the UI and the module store. Flagged as pre-existing on PR #221 and
+    // fixed here because this effect is being rewritten anyway.
+    let isCancelled = false;
 
     const remainingMs = authState.expiresAt - EXPIRY_BUFFER_MS - Date.now();
     const refreshSession = async () => {
       setIsRestoringSession(true);
       const restoredState = await renewPayloadSession(authState);
+
+      if (isCancelled) {
+        return;
+      }
+
       if (restoredState) {
         applyAuthState(restoredState);
-      } else if (!hasActiveSession(authState.token, authState.expiresAt)) {
+      } else if (!hasActiveSession(authState.expiresAt)) {
         applyAuthState(null);
       }
       setIsRestoringSession(false);
@@ -106,24 +127,27 @@ export function useAuthSessionState(): AuthContextValue {
 
     if (remainingMs <= 0) {
       void refreshSession();
-      return;
+      return () => {
+        isCancelled = true;
+      };
     }
 
     const timeoutId = window.setTimeout(() => {
       void refreshSession();
     }, remainingMs);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
   }, [applyAuthState, authState]);
 
   return useMemo(() => {
-    const token = authState?.token ?? null;
     const expiresAt = authState?.expiresAt ?? null;
     const user = authState?.user ?? null;
-    const isAuthenticated = hasActiveSession(token, expiresAt);
+    const isAuthenticated = hasActiveSession(expiresAt);
 
     return {
-      token,
       expiresAt,
       user,
       isAuthenticated,

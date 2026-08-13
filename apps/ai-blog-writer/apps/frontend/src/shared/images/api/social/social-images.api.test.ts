@@ -33,11 +33,10 @@ describe('social image public API', () => {
     vi.mocked(generateSocialImageApi).mockResolvedValue(response)
 
     await expect(
-      generateSocialImageFromFeatured({ featuredMediaSetId: 17 }, 'token')
+      generateSocialImageFromFeatured({ featuredMediaSetId: 17 })
     ).resolves.toBe(response)
     expect(generateSocialImageApi).toHaveBeenCalledWith({
       featuredMediaSetId: 17,
-      token: 'token'
     })
   })
 
@@ -55,13 +54,12 @@ describe('social image public API', () => {
     vi.mocked(uploadSocialImageApi).mockResolvedValue(response)
 
     await expect(
-      uploadSocialImage(file, 'Social preview', 3, 'token', 'Photographer')
+      uploadSocialImage(file, 'Social preview', 3, 'Photographer')
     ).resolves.toBe(response)
     expect(uploadSocialImageApi).toHaveBeenCalledWith({
       file,
       altText: 'Social preview',
       locationRef: 3,
-      token: 'token',
       photographerCredit: 'Photographer'
     })
   })

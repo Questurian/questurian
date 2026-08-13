@@ -10,7 +10,6 @@ import type { MainHomepageResponse } from './api'
 
 function createAuthValue(): AuthContextValue {
   return {
-    token: 'test-token',
     expiresAt: Date.now() + 60_000,
     user: {
       id: 'user-1',

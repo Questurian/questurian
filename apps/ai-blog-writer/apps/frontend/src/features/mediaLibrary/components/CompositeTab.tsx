@@ -7,14 +7,12 @@ import {
   fetchHangingComposites,
 } from '../../../shared/images/api/composites/composite-image.api'
 
-type Props = { token: string }
 
-function HangingCompositesPanel({ token }: Props) {
+function HangingCompositesPanel() {
   const queryClient = useQueryClient()
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['hanging-composites'],
     queryFn: () => fetchHangingComposites(),
-    enabled: !!token,
   })
 
   const cleanup = useMutation({
@@ -111,15 +109,14 @@ function HangingCompositesPanel({ token }: Props) {
   )
 }
 
-export function CompositeTab({ token }: Props) {
+export function CompositeTab() {
   const [locationRef, setLocationRef] = useState<number | null>(null)
   const [open, setOpen] = useState(false)
   const [result, setResult] = useState<string | null>(null)
 
   const { data: locationsData } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => fetchLocations(token),
-    enabled: !!token,
+    queryFn: () => fetchLocations(),
   })
   const locations = locationsData?.docs ?? []
 
@@ -152,12 +149,11 @@ export function CompositeTab({ token }: Props) {
 
         {result && <p className="ml-upload-success">{result}</p>}
 
-        <HangingCompositesPanel token={token} />
+        <HangingCompositesPanel />
       </div>
 
       <CompositeImageModal
         isOpen={open}
-        token={token}
         locationRef={locationRef}
         defaultTitle="Composite image"
         onCreated={(response) => setResult(`MediaSet #${response.mediaSetId} created.`)}

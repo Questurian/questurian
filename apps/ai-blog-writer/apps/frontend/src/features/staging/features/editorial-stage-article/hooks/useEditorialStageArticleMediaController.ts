@@ -10,18 +10,15 @@ import type { EditorialStageArticleWorkspace } from './useEditorialStageArticleW
 import { useEditorialStageMedia } from './useEditorialStageMedia'
 
 type UseEditorialStageArticleMediaControllerParams = {
-  token: string | null | undefined
   api: EditorialStageArticleApi
   workspace: EditorialStageArticleWorkspace
 }
 
 export function useEditorialStageArticleMediaController({
-  token,
   api,
   workspace,
 }: UseEditorialStageArticleMediaControllerParams) {
   const media = useEditorialStageMedia({
-    token,
     stagedArticle: workspace.page.stagedArticle,
     locations: workspace.page.locations,
     mediaAssets: workspace.page.mediaAssets,

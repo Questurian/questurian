@@ -16,7 +16,6 @@ import type { TimelineItem } from '../workflow.service'
 import { useEditorialStagePublishUi } from './useEditorialStagePublishUi'
 
 type UseEditorialStagePublishWorkflowParams = {
-  token: string | null | undefined
   sourceFeature: string
   stagedArticle: StagedArticle | null
   locations: Location[]
@@ -30,12 +29,10 @@ type UseEditorialStagePublishWorkflowParams = {
   }>
   createArticle: (
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   updateArticle?: (
     id: number,
     payload: CreateArticlePayload,
-    token: string
   ) => Promise<PayloadArticleDoc>
   markArticleSynced: (
     runId: string,
@@ -52,7 +49,6 @@ type UseEditorialStagePublishWorkflowParams = {
 }
 
 export function useEditorialStagePublishWorkflow({
-  token,
   sourceFeature,
   stagedArticle,
   locations,
@@ -108,18 +104,17 @@ export function useEditorialStagePublishWorkflow({
 
   const handlePublish = useCallback(
     async (targetStatus: EditorialPublishTargetStatus) => {
-      if (!token || !stagedArticle) return
+      if (!stagedArticle) return
 
       await runEditorialStagePublishWorkflow({
         ...workflow,
-        token,
         targetStatus,
         stagedArticle,
         publisherConfig,
         lifecycle: publishUi.lifecycle
       })
     },
-    [publisherConfig, publishUi.lifecycle, stagedArticle, token, workflow]
+    [publisherConfig, publishUi.lifecycle, stagedArticle, workflow]
   )
 
   return {

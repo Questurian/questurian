@@ -37,7 +37,6 @@ describe('uploadVariantsApi validation', () => {
         externalRef: 'featured-upload',
         altText: 'Alt text',
         locationRef: 1,
-        token: 'token',
         photographerCredit: 'Credit',
       })
     ).rejects.toThrow('Exactly 7 crop variants are required before upload.');
@@ -57,7 +56,6 @@ describe('uploadVariantsApi validation', () => {
         externalRef: 'featured-upload',
         altText: 'Alt text',
         locationRef: 1,
-        token: 'token',
         photographerCredit: 'Credit',
       })
     ).rejects.toThrow('Duplicate: wide.');

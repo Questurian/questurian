@@ -17,7 +17,7 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
   config: SavedArticlesPageConfig<TArticle>
 }) {
   const queryClient = useQueryClient()
-  const { token } = useAuth()
+  const { isAuthenticated, user } = useAuth()
 
   const { localDrafts, discardLocalDraft, clearAllLocalDrafts } = useLocalStagedDrafts(config.storageKey)
   const [generatedDeleteTarget, setGeneratedDeleteTarget] = useState<TArticle | null>(null)
@@ -33,9 +33,9 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
   // not by the backend's local sync bookkeeping — one combined list across all
   // blog-writer pipelines.
   const payloadDocsQuery = useQuery({
-    queryKey: ['payload-articles', token || 'no-token'],
-    enabled: Boolean(token),
-    queryFn: () => fetchPayloadArticles(token as string),
+    queryKey: ['payload-articles', user?.id ?? 'anonymous'],
+    enabled: isAuthenticated,
+    queryFn: () => fetchPayloadArticles(),
   })
   const payloadDocs = payloadDocsQuery.data ?? EMPTY_ARTICLES
 
@@ -141,7 +141,7 @@ export default function SavedArticlesPage<TArticle extends SavedBlogArticle>({
             ? (payloadDocsQuery.error instanceof Error ? payloadDocsQuery.error.message : 'Unknown error')
             : null
         }
-        hasToken={Boolean(token)}
+        isSignedIn={isAuthenticated}
       />
 
       <GeneratedArticlesTable

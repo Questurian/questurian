@@ -61,12 +61,11 @@ const rewriteBlockWithAssistModel: Parameters<typeof StandardArticleStageBuilder
     })
 
 function PayloadArticleImport({ payloadId }: { payloadId: number }) {
-  const { token } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!token || !Number.isFinite(payloadId) || payloadId <= 0) return
+    if (!Number.isFinite(payloadId) || payloadId <= 0) return
     let isCancelled = false
 
     const importArticle = async () => {
@@ -80,7 +79,7 @@ function PayloadArticleImport({ payloadId }: { payloadId: number }) {
           return
         }
 
-        const doc = await getArticleById(payloadId, token) as PayloadArticleDetail
+        const doc = await getArticleById(payloadId) as PayloadArticleDetail
         const stagedArticle = await buildStagedArticleFromPayloadDoc({
           doc,
           convertLexicalToMarkdown,
@@ -98,14 +97,12 @@ function PayloadArticleImport({ payloadId }: { payloadId: number }) {
     return () => {
       isCancelled = true
     }
-  }, [token, payloadId, navigate])
+  }, [payloadId, navigate])
 
   return (
     <div className="stl-page">
       <section className="stl-panel">
-        {!token ? (
-          <p className="stl-placeholder">Sign in to edit Payload articles.</p>
-        ) : error ? (
+        {error ? (
           <>
             <p className="stl-error">Failed to load article #{payloadId} from Payload: {error}</p>
             <Link to={PAYLOAD_ARTICLES_PATH} className="stl-link">Back to Payload Articles</Link>

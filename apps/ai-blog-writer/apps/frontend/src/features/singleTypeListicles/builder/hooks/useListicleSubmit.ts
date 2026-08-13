@@ -6,7 +6,6 @@ import type { RelatedItemOption, SingleTypeListicleDraft } from '../../types'
 import { submitListicle } from '../services/listicle-submit.service'
 
 type UseListicleSubmitParams = {
-  token?: string | null
   draft: SingleTypeListicleDraft | null
   relatedItems: RelatedItemOption[]
   selectedLocationRefId: number | null
@@ -22,7 +21,6 @@ type UseListicleSubmitResult = {
 }
 
 export function useListicleSubmit({
-  token,
   draft,
   relatedItems,
   selectedLocationRefId,
@@ -34,8 +32,8 @@ export function useListicleSubmit({
   const [isSaving, setIsSaving] = useState(false)
 
   async function submit(targetStatus: 'draft' | 'published') {
-    if (!token || !draft) return
-    const authToken = token
+    if (!draft) return
+    const authToken = undefined
 
     onError('')
     onResult(null)
@@ -47,7 +45,6 @@ export function useListicleSubmit({
         selectedLocationRefId,
         targetStatus,
         relatedItems,
-        token: authToken,
       })
 
       setDraft(nextDraft)

@@ -15,12 +15,11 @@ import type { UseHomepageFeaturedSlotsResult } from './useHomepageFeaturedSlots'
 type Props = {
   block: ArticleCuratedHomepageBlockResponse
   blockIndex: number
-  token: string | null
   isOpen: boolean
   onClose: () => void
   layoutState: CuratedHomepageLayoutsState
-  saveSectionHeading?: (token: string, value: string | null) => Promise<void>
-  saveSectionSubheading?: (token: string, value: string | null) => Promise<void>
+  saveSectionHeading?: (value: string | null) => Promise<void>
+  saveSectionSubheading?: (value: string | null) => Promise<void>
   enableSlot3Layout: boolean
   enableSlot4Layout: boolean
   enableSlot5Layout: boolean
@@ -29,7 +28,6 @@ type Props = {
   convertTargets: CuratedHomepageBlockType[]
   canConvert: boolean
   onConvert?: (
-    token: string,
     blockType: CuratedHomepageBlockType,
     slotCount: number,
   ) => Promise<void>
@@ -41,7 +39,6 @@ type Props = {
 export default function CuratedHomepageBlockSettings({
   block,
   blockIndex,
-  token,
   isOpen,
   onClose,
   layoutState,
@@ -100,7 +97,6 @@ export default function CuratedHomepageBlockSettings({
       </p>
       <HomepageBlockSectionTextFields
         blockId={block.id}
-        token={token}
         sectionHeading={block.sectionHeading}
         sectionSubheading={block.sectionSubheading}
         settingsOpen={isOpen}
@@ -114,7 +110,7 @@ export default function CuratedHomepageBlockSettings({
         savedSlotCount={block.selection.totalSlots}
         slots={slots}
         invalidSlots={savedInvalidItems.map((item) => item.slot)}
-        disabled={!token || saveMutation.isPending}
+        disabled={saveMutation.isPending}
         isPending={saveMutation.isPending}
         onResize={handleResizeSlotCount}
       />
@@ -130,7 +126,6 @@ export default function CuratedHomepageBlockSettings({
             { value: 'hero-left', label: 'Hero left — two stacked on the right' },
             { value: 'featured-center', label: 'Three columns — large feature in the center' },
           ]}
-          disabled={!token}
           dirty={layoutState.slot3.dirty}
           isPending={layoutState.slot3.mutation.isPending}
           error={layoutState.slot3.mutation.error}
@@ -151,7 +146,6 @@ export default function CuratedHomepageBlockSettings({
             { value: 'sidebar-stack', label: 'Hero column + stacked sidebar (default)' },
             { value: 'one-over-three', label: 'Lead row: text + image, then three columns' },
           ]}
-          disabled={!token}
           dirty={layoutState.slot4.dirty}
           isPending={layoutState.slot4.mutation.isPending}
           error={layoutState.slot4.mutation.error}
@@ -172,7 +166,6 @@ export default function CuratedHomepageBlockSettings({
             { value: 'card-grid', label: 'Card grid (default)' },
             { value: 'hero-sidebar', label: 'Magazine — hero + sidebar stack' },
           ]}
-          disabled={!token}
           dirty={layoutState.slot5.dirty}
           isPending={layoutState.slot5.mutation.isPending}
           error={layoutState.slot5.mutation.error}
@@ -193,7 +186,6 @@ export default function CuratedHomepageBlockSettings({
             { value: 'four-across', label: 'One row × four — wide images' },
             { value: 'two-by-two', label: '2×2 grid — square images' },
           ]}
-          disabled={!token}
           dirty={layoutState.articleGridFour.dirty}
           isPending={layoutState.articleGridFour.mutation.isPending}
           error={layoutState.articleGridFour.mutation.error}
@@ -218,12 +210,11 @@ export default function CuratedHomepageBlockSettings({
         blockId={block.id}
         currentBlockType={block.blockType}
         currentSlotCount={block.selection.totalSlots}
-        token={token}
         convertTargetOptions={convertTargets}
         canConvert={canConvert}
-        onConvert={async (currentToken, blockType, slotCount) => {
+        onConvert={async (blockType, slotCount) => {
           if (!onConvert) return
-          await onConvert(currentToken, blockType, slotCount)
+          await onConvert(blockType, slotCount)
         }}
         onConverted={onClose}
       />

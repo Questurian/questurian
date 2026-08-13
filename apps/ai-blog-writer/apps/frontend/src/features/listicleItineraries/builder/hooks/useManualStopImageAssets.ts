@@ -5,18 +5,15 @@ import type { ItineraryItemBlock, MediaAssetOption } from '../../types'
 import { isManualItineraryBlockType } from '../../types'
 
 export function useManualStopImageAssets({
-  token,
   items,
   mediaAssets,
 }: {
-  token: string
   items: ItineraryItemBlock[]
   mediaAssets: MediaAssetOption[]
 }): Record<number, MediaAssetOption> {
   const [fetchedManualImageAssets, setFetchedManualImageAssets] = useState<Record<number, MediaAssetOption>>({})
 
   const missingManualImageIds = useMemo(() => {
-    if (!token) return []
 
     const loadedIds = new Set<number>([
       ...mediaAssets.map((asset) => asset.id),
@@ -29,10 +26,10 @@ export function useManualStopImageAssets({
         .map((item) => item.image)
         .filter((imageId): imageId is number => typeof imageId === 'number' && !loadedIds.has(imageId)),
     ))
-  }, [fetchedManualImageAssets, items, mediaAssets, token])
+  }, [fetchedManualImageAssets, items, mediaAssets])
 
   useEffect(() => {
-    if (!token || missingManualImageIds.length === 0) return
+    if (missingManualImageIds.length === 0) return
 
     let cancelled = false
 
@@ -40,7 +37,7 @@ export function useManualStopImageAssets({
       const responses = await Promise.all(
         missingManualImageIds.map(async (imageId) => {
           try {
-            const response = await fetchPayloadMediaAssets(token, {
+            const response = await fetchPayloadMediaAssets({
               id: imageId,
               limit: 1,
             })
@@ -81,7 +78,7 @@ export function useManualStopImageAssets({
     return () => {
       cancelled = true
     }
-  }, [missingManualImageIds, token])
+  }, [missingManualImageIds])
 
   return fetchedManualImageAssets
 }

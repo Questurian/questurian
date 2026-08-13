@@ -23,7 +23,6 @@ import type { EditorialStageArticleApi } from '../types'
 
 type UseStandardArticleSeoActionsParams = {
   api: EditorialStageArticleApi
-  token?: string | null
   stagedArticle?: StagedArticle
   featureLabel: string
   selectedLocationLabel: string
@@ -37,7 +36,6 @@ type UseStandardArticleSeoActionsParams = {
 
 export function useStandardArticleSeoActions({
   api,
-  token,
   stagedArticle,
   featureLabel,
   selectedLocationLabel,
@@ -104,7 +102,7 @@ export function useStandardArticleSeoActions({
   ])
 
   const generateImageFromFeatured = useCallback(async () => {
-    if (!token || !stagedArticle?.featuredImageId) {
+    if (!stagedArticle?.featuredImageId) {
       setLocalError('Select a featured image before generating an OG image.')
       return
     }
@@ -115,7 +113,6 @@ export function useStandardArticleSeoActions({
     try {
       const response = await generateSocialImageFromFeatured(
         { featuredAssetId: stagedArticle.featuredImageId },
-        token,
       )
       const socialImageUrl = response.generatedImageUrl.trim()
       if (!socialImageUrl) {
@@ -132,10 +129,10 @@ export function useStandardArticleSeoActions({
     } finally {
       setIsGeneratingSeoImage(false)
     }
-  }, [setLocalError, setLocalResult, stagedArticle?.featuredImageId, token, updateSeoSection])
+  }, [setLocalError, setLocalResult, stagedArticle?.featuredImageId, updateSeoSection])
 
   const uploadOgImageFile = useCallback(async (file: File) => {
-    if (!token || !stagedArticle?.locationId) {
+    if (!stagedArticle?.locationId) {
       throw new Error('Select a location before uploading an OG image.')
     }
 
@@ -147,7 +144,6 @@ export function useStandardArticleSeoActions({
         file,
         stagedArticle.title.trim() || `${featureLabel} social image`,
         stagedArticle.locationId,
-        token,
         '',
       )
       const socialImageUrl = response.generatedImageUrl.trim()
@@ -173,7 +169,6 @@ export function useStandardArticleSeoActions({
     setLocalResult,
     stagedArticle?.locationId,
     stagedArticle?.title,
-    token,
     updateSeoSection,
   ])
 

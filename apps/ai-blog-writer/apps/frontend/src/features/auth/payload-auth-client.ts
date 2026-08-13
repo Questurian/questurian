@@ -4,7 +4,6 @@ import {
   LOGOUT_ENDPOINTS,
   PAYLOAD_API_URL,
   REVALIDATION_TIMEOUT_MS,
-  SESSION_DURATION_FALLBACK_MS,
   SESSION_HYDRATE_REQUESTS,
   SESSION_RENEW_REQUESTS,
   SESSION_RESTORE_TIMEOUT_MS,
@@ -151,9 +150,11 @@ export async function loginPayloadUser(email: string, password: string): Promise
       throw new Error(message);
     }
 
+    // Only the email is carried in: Payload's login response names the `exp`
+    // and the user itself, and inventing a fallback expiry here would mean
+    // holding a session the server never agreed to.
     const nextState = normalizeAuthState(await response.json(), {
-      token: '',
-      expiresAt: Date.now() + SESSION_DURATION_FALLBACK_MS,
+      expiresAt: 0,
       user: {
         id: '',
         email,
@@ -161,7 +162,7 @@ export async function loginPayloadUser(email: string, password: string): Promise
     });
 
     if (!nextState) {
-      throw new Error('Login failed - no token received');
+      throw new Error('Login failed - the server returned no usable session');
     }
 
     return nextState;

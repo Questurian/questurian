@@ -27,7 +27,6 @@ type BlockImageModalProps = {
   blockImageModal: BlockImageModalState | null
   publishedToPayload: boolean
   onClose: () => void
-  token?: string
   locationRef: number | null
   singleImageRequirementLabel: string
   imgPairRequirementLabel: string
@@ -62,7 +61,6 @@ export function BlockImageModal({
   blockImageModal,
   publishedToPayload,
   onClose,
-  token,
   locationRef,
   singleImageRequirementLabel,
   imgPairRequirementLabel,
@@ -167,7 +165,6 @@ export function BlockImageModal({
   return (
     <ImagePicker
       isOpen={Boolean(blockImageModal.show) && !publishedToPayload}
-      token={token}
       locationRef={locationRef}
       query={query}
       selection={selection}

@@ -19,7 +19,6 @@ import type { ItineraryBuilderAiActionsParams } from './itineraryBuilderAiAction
 
 type Params = Pick<
   ItineraryBuilderAiActionsParams,
-  | 'token'
   | 'draft'
   | 'setDraft'
   | 'canonicalStructuredData'
@@ -28,7 +27,6 @@ type Params = Pick<
 >
 
 export function useItinerarySeoAiActions({
-  token,
   draft,
   setDraft,
   canonicalStructuredData,
@@ -157,10 +155,6 @@ export function useItinerarySeoAiActions({
       return
     }
 
-    if (!token) {
-      onError('You must be logged in to generate social image URLs.')
-      return
-    }
 
     onError('')
     setResult(null)
@@ -171,7 +165,6 @@ export function useItinerarySeoAiActions({
         featuredMediaSetId
           ? { featuredMediaSetId }
           : { featuredAssetId: featuredAssetId as number },
-        token
       )
       const bunnyUrl = response.generatedImageUrl.trim()
       if (!bunnyUrl) {
@@ -208,7 +201,7 @@ export function useItinerarySeoAiActions({
     } finally {
       setIsGeneratingSeoImage(false)
     }
-  }, [draft, onError, setDraft, setResult, token])
+  }, [draft, onError, setDraft, setResult])
 
   return {
     isGeneratingSeoTarget,

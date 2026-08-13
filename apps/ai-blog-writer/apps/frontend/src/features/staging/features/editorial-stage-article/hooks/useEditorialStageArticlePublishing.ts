@@ -5,7 +5,6 @@ import type { EditorialStageArticleWorkspace } from './useEditorialStageArticleW
 import { useEditorialStagePublishWorkflow } from './useEditorialStagePublishWorkflow'
 
 type UseEditorialStageArticlePublishingParams = {
-  token: string | null | undefined
   routes: EditorialStageRoutes
   api: EditorialStageArticleApi
   workspace: EditorialStageArticleWorkspace
@@ -13,14 +12,12 @@ type UseEditorialStageArticlePublishingParams = {
 }
 
 export function useEditorialStageArticlePublishing({
-  token,
   routes,
   api,
   workspace,
   media,
 }: UseEditorialStageArticlePublishingParams) {
   const publishWorkflow = useEditorialStagePublishWorkflow({
-    token,
     // Route prefixes double as feature keys ('/url2blog/stage-article' -> 'url2blog'),
     // matching the backend API prefixes for each blog-writer pipeline.
     sourceFeature: routes.stageArticlePath.split('/')[1] ?? '',

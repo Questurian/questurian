@@ -12,7 +12,7 @@ describe('listicleItineraries api', () => {
 
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(fetchItineraries('token-123')).resolves.toEqual({
+    await expect(fetchItineraries()).resolves.toEqual({
       docs: [{ id: 7, title: 'One Day in Lima', location: 'peru|lima', status: 'draft' }],
     })
 
@@ -49,7 +49,7 @@ describe('listicleItineraries api', () => {
 
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(fetchLocations('token-123')).resolves.toEqual([
+    await expect(fetchLocations()).resolves.toEqual([
       { id: 1, locationKey: 'peru|lima' },
       { id: 2, locationKey: 'peru|cusco' },
     ])

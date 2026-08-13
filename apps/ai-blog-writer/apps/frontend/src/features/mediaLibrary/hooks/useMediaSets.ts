@@ -7,39 +7,35 @@ import {
 import type { BrowseFilters } from '../types'
 
 export function useBrowseMediaSets(
-  token: string | undefined,
   filters: BrowseFilters,
   page: number,
 ) {
   return useQuery({
     queryKey: ['media-library', 'browse', filters, page],
     queryFn: () =>
-      fetchMediaSets(token, {
+      fetchMediaSets({
         limit: 24,
         page,
         search: filters.search || undefined,
         status: filters.status || undefined,
         locationId: filters.locationId ?? undefined,
       }),
-    enabled: !!token,
     placeholderData: (prev) => prev,
   })
 }
 
-export function useAuditMediaSets(token: string | undefined, page: number) {
+export function useAuditMediaSets(page: number) {
   return useQuery({
     queryKey: ['media-library', 'audit', page],
-    queryFn: () => fetchAuditMediaSets(token, { limit: 50, page }),
-    enabled: !!token,
+    queryFn: () => fetchAuditMediaSets({ limit: 50, page }),
     placeholderData: (prev) => prev,
   })
 }
 
-export function useOrphanMediaAssets(token: string | undefined, page: number) {
+export function useOrphanMediaAssets(page: number) {
   return useQuery({
     queryKey: ['media-library', 'orphans', page],
-    queryFn: () => fetchOrphanMediaAssets(token, { limit: 50, page }),
-    enabled: !!token,
+    queryFn: () => fetchOrphanMediaAssets({ limit: 50, page }),
     placeholderData: (prev) => prev,
   })
 }
