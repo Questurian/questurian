@@ -229,7 +229,6 @@ describe('AuthProvider', () => {
   });
 
   it('logs out when the session is rejected by /me and refresh fails', async () => {
-    const exp = expSeconds(Date.now() + 60 * 60 * 1000);
     setLiveAuthState({
       expiresAt: Date.now() + 60 * 60 * 1000,
       user: {

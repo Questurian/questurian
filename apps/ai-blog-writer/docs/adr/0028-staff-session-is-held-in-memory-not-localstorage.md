@@ -58,7 +58,7 @@ finished.
 
 ## Finished: the token is gone from JavaScript
 
-Settled 2026-08-12 and completed in PRs #222-227. The deployment topology that
+Settled 2026-08-12 and completed in PRs #222-226, #246, #247 and #248. The deployment topology that
 had blocked this is: every service is a sibling subdomain of one registrable
 domain — `www` and `cms` deployed, `abw` and `abw-api` behind a Cloudflare
 Tunnel. Siblings of one registrable domain are *same-site*, so `SameSite=Lax`
@@ -98,8 +98,10 @@ user rather than a service account.
   mismatch this ADR previously flagged.
 - **The `!token` guards were dead, not translated.** Every component holding
   one renders only inside `RequireAuth`, which returns `<Navigate>` when
-  `!isAuthenticated` — and `isAuthenticated` used to require a truthy token. All
-  74 were unreachable and were deleted.
+  `!isAuthenticated` — and `isAuthenticated` used to require a truthy token.
+  Every one of them was therefore unreachable, and all were deleted rather than
+  rewritten as `!isAuthenticated`. `/login` is the only route outside that tree
+  and held none.
 - **The permissions access cache is keyed by Staff id**, not by token. It used
   to re-fetch on every renewal because renewal minted a new key. It is now
   cleared on logout, which it never was.

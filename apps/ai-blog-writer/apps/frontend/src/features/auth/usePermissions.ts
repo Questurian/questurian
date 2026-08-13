@@ -40,11 +40,15 @@ function roleAllowsManagePublished(role: string | undefined | null): boolean {
 
 export function usePermissions(): Permissions {
   const { user, isAuthenticated } = useAuth();
+  // The id, not the object: `user` is a fresh identity on every session
+  // renewal, and depending on it would re-run this effect and flip `isLoading`
+  // for a render in every consumer for no change in who is signed in.
+  const staffId = user?.id;
   const [access, setAccess] = useState<AccessResult | null>(null);
   const [isLoading, setIsLoading] = useState(isAuthenticated);
 
   useEffect(() => {
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !staffId) {
       setAccess(null);
       setIsLoading(false);
       return;
@@ -53,7 +57,7 @@ export function usePermissions(): Permissions {
     let isCancelled = false;
     setIsLoading(true);
 
-    void getAccessForStaff(user.id).then((result) => {
+    void getAccessForStaff(staffId).then((result) => {
       if (isCancelled) {
         return;
       }
@@ -64,7 +68,7 @@ export function usePermissions(): Permissions {
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, staffId]);
 
   return useMemo(() => {
     const articlesUpdate = access?.collections?.articles?.update;

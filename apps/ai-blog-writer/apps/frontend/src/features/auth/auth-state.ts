@@ -25,7 +25,7 @@ export function readNumber(value: unknown): number | null {
  *
  * Every Payload session endpoint returns `exp` — `loginOperation`,
  * `refreshOperation` and `meOperation` all set it — so this does not need the
- * which is the point: the app no longer has one to decode.
+ * token, which is the point: the app no longer has one to decode.
  *
  * Returns null when the server named no expiry, and the caller treats that as
  * "no session". The previous code decoded the JWT and, failing that, invented
