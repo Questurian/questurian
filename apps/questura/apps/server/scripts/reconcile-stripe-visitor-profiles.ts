@@ -6,7 +6,7 @@
  * `ensureVisitorAuthSchema` used to DELETE orphaned `visitor_profiles` rows on
  * every boot, and admins can hard-delete a profile by hand. Those rows hold the
  * only copy of the Stripe linkage (`stripeCustomerId`, `stripeSubscriptionId`,
- * `subscriptionStatus`, `membershipExpiration`). Hardening the sweep stops the
+ * `subscriptionStatus`, `paidThroughAt`). Hardening the sweep stops the
  * bleeding but recovers nothing already lost.
  *
  * Stripe is the durable source of truth for customer and subscription state, so
@@ -45,7 +45,7 @@ import { getPayload } from 'payload'
 import Stripe from 'stripe'
 
 import config from '../src/payload.config'
-import { mapStripeStatusToInternal } from '../src/features/payments/lib/payment-service'
+import { deriveSubscriptionState } from '../src/features/payments/lib/subscription-state'
 
 type PlannedUpdate = {
   profileId: string | number
@@ -65,11 +65,6 @@ function parseLimit(): number | null {
 
 function normalizeEmail(email: string | null | undefined): string {
   return (email ?? '').trim().toLowerCase()
-}
-
-function toIso(seconds: number | null | undefined): string | null {
-  if (!seconds) return null
-  return new Date(seconds * 1000).toISOString()
 }
 
 async function main() {
@@ -136,6 +131,9 @@ async function main() {
       customer: customer.id,
       status: 'all',
       limit: 1,
+      // The dunning grace is derived from Stripe's own next retry time, which
+      // lives on the invoice.
+      expand: ['data.latest_invoice'],
     })
     const subscription = subscriptions.data[0] ?? null
 
@@ -167,29 +165,32 @@ async function main() {
     }
 
     if (subscription) {
-      // Reuse the webhook's own mapper rather than restating it, so a
-      // reconciliation run and a live webhook cannot disagree about what a
-      // Stripe status means here.
-      const status = mapStripeStatusToInternal(subscription.status)
-      const renewsAt = toIso(
-        (subscription as unknown as { current_period_end?: number }).current_period_end
-      )
-      const cancelAtPeriodEnd = Boolean(subscription.cancel_at_period_end)
+      // Reuse the webhook's own derivation rather than restating it, so a
+      // reconciliation run and a live resync cannot disagree about what a
+      // Stripe subscription means. This previously read `current_period_end`
+      // off the subscription root, which the SDK's API version does not
+      // populate, and restated the paid-access rule by hand.
+      const invoice = subscription.latest_invoice
+      const state = deriveSubscriptionState(subscription, {
+        previousDunningGraceUntil: profile.dunningGraceUntil,
+        nextPaymentAttempt:
+          invoice && typeof invoice !== 'string' ? (invoice.next_payment_attempt ?? null) : null,
+      })
 
       if (profile.stripeSubscriptionId !== subscription.id) {
         desired.stripeSubscriptionId = subscription.id
       }
-      if (profile.subscriptionStatus !== status) {
-        desired.subscriptionStatus = status
+      if (profile.subscriptionStatus !== state.subscriptionStatus) {
+        desired.subscriptionStatus = state.subscriptionStatus
       }
-      if (Boolean(profile.cancelAtPeriodEnd) !== cancelAtPeriodEnd) {
-        desired.cancelAtPeriodEnd = cancelAtPeriodEnd
+      if (Boolean(profile.cancelAtPeriodEnd) !== state.cancelAtPeriodEnd) {
+        desired.cancelAtPeriodEnd = state.cancelAtPeriodEnd
       }
-      // Paid access runs to period end only while the subscription is still
-      // active -- the same condition `handleSubscriptionUpdated` applies.
-      const membershipExpiration = cancelAtPeriodEnd && status === 'active' ? renewsAt : null
-      if ((profile.membershipExpiration ?? null) !== membershipExpiration) {
-        desired.membershipExpiration = membershipExpiration
+      if ((profile.paidThroughAt ?? null) !== state.paidThroughAt) {
+        desired.paidThroughAt = state.paidThroughAt
+      }
+      if ((profile.dunningGraceUntil ?? null) !== state.dunningGraceUntil) {
+        desired.dunningGraceUntil = state.dunningGraceUntil
       }
     }
 
