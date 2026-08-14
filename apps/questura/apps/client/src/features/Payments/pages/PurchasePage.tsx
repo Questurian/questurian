@@ -8,17 +8,19 @@ import { isServiceUnavailableError, post } from '@/lib/api';
 import MembershipGuard from '../components/MembershipGuard';
 import { useMembership } from '../hooks/useMembership';
 import { useCreateCheckoutSessionMutation } from '../hooks/useSubscriptionMutations';
+import { formatPlanPrice, useMembershipPlan, type PlanId } from '../hooks/useMembershipPlan';
 import { queryKeys } from '@/lib/react-query';
 
 interface PurchasePageProps {
   planName?: string;
-  amount: number;
+  /** Which Stripe price to sell. The amount comes from Stripe, never from here. */
+  plan?: PlanId;
   planDescription?: string;
 }
 
 export default function PurchasePage({
   planName = "Monthly Plan",
-  amount = 10,
+  plan = 'monthly',
   planDescription = "All premium features"
 }: PurchasePageProps) {
   const { user, loading, isAuthenticated } = useAuth();
@@ -26,6 +28,8 @@ export default function PurchasePage({
   const { hasValidMembership } = useMembership(user);
 
   const checkoutMutation = useCreateCheckoutSessionMutation();
+  const { plan: pricing, isLoading: pricingLoading, isUnavailable: pricingUnavailable } = useMembershipPlan(plan);
+  const priceLabel = pricing ? formatPlanPrice(pricing) : null;
   const [verificationEmailStatus, setVerificationEmailStatus] = useState<string | null>(null);
   const [sendingVerificationEmail, setSendingVerificationEmail] = useState(false);
   const [authFormState, setAuthFormState] = useState<{ isSignUp: boolean; showPasswordStep: boolean }>({
@@ -46,7 +50,7 @@ export default function PurchasePage({
   }
 
   const handleSubscribe = () => {
-    checkoutMutation.mutate({});
+    checkoutMutation.mutate({ plan });
   };
 
   const handleAuthSuccess = async () => {
@@ -96,7 +100,7 @@ export default function PurchasePage({
                 {planName}
               </h2>
               <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                ${amount}/month
+                {priceLabel ?? (pricingLoading ? 'Loading price…' : 'Price unavailable')}
               </p>
               <p className="text-blue-700 dark:text-blue-300 text-sm">
                 {planDescription}
@@ -153,10 +157,14 @@ export default function PurchasePage({
 
               <button
                 onClick={handleSubscribe}
-                disabled={checkoutMutation.isPending}
+                disabled={checkoutMutation.isPending || pricingLoading || pricingUnavailable}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
               >
-                {checkoutMutation.isPending ? 'Creating session...' : `Subscribe Now - $${amount}/month`}
+                {checkoutMutation.isPending
+                  ? 'Creating session...'
+                  : priceLabel
+                    ? `Subscribe Now - ${priceLabel}`
+                    : 'Subscribe Now'}
               </button>
 
               {!user?.emailVerified && (

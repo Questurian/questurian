@@ -3,6 +3,7 @@ import { stripe } from '@/payments/lib/stripe'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
+import { isPlanId, priceIdForPlan, type PlanId } from '@/payments/lib/membership-plans'
 import {
   findVisitorProfileByAuthUserId,
   updateVisitorProfileByAuthUserId,
@@ -55,15 +56,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 3. Parse request body for affiliate referral ID (if feature enabled)
+    // 3. Parse the request body once: it carries the chosen plan, and the
+    // affiliate referral when that feature is on. Reading it only for referrals
+    // would silently drop the plan whenever the flag is off.
+    let body: { plan?: unknown; referralId?: unknown } = {}
+    try {
+      body = await req.json()
+    } catch {
+      // Body is optional; defaults below apply.
+    }
+
+    const plan: PlanId = isPlanId(body?.plan) ? body.plan : 'monthly'
+    const priceId = priceIdForPlan(plan)
+
+    if (!priceId) {
+      return NextResponse.json(
+        { error: 'That plan is not available right now.' },
+        { status: 400, headers: corsHeaders }
+      )
+    }
+
     let referralId: string | null = null
     if (APP_CONFIG.features.endorselyAffiliates) {
-      try {
-        const body = await req.json()
-        referralId = sanitizeReferralId(body?.referralId)
-      } catch {
-        // Body is optional, continue without it
-      }
+      referralId = sanitizeReferralId(body?.referralId)
 
       // Log affiliate conversion for debugging
       if (referralId) {
@@ -133,13 +148,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 7. Create checkout session for subscription
-    console.log('Creating checkout session with price ID:', APP_CONFIG.stripe.priceId)
+    console.log('Creating checkout session', { plan, priceId })
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'subscription', // KEY: subscription mode, not payment
       line_items: [{
-        price: APP_CONFIG.stripe.priceId, // Your recurring price ID
+        price: priceId,
         quantity: 1
       }],
       success_url: APP_URLS.frontendUrl('/subscription/success?session_id={CHECKOUT_SESSION_ID}'),

@@ -57,11 +57,13 @@ export async function createPortalSessionRequest(): Promise<string | null> {
 }
 
 export async function createCheckoutSessionRequest(
-  referralId: string | null
+  referralId: string | null,
+  plan: 'monthly' | 'yearly' = 'monthly'
 ): Promise<CheckoutSessionResponse> {
   try {
     return await post<CheckoutSessionResponse>('/api/payments/create-checkout-session', {
       referralId: referralId || null,
+      plan,
     });
   } catch (error) {
     throw mapSubscriptionError(error);

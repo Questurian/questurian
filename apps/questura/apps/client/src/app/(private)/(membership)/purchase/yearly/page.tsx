@@ -4,7 +4,7 @@ export default function PurchaseYearly() {
   return (
     <PurchasePage
       planName="Annual Plan"
-      amount={79.99}
+      plan="yearly"
       planDescription="Billed once a year • All features included"
     />
   );

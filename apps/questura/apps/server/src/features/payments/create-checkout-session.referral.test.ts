@@ -40,6 +40,8 @@ vi.mock('@/shared/config', () => ({
     },
     stripe: {
       priceId: 'price_123',
+      monthlyPriceId: 'price_123',
+      yearlyPriceId: 'price_yearly_123',
     },
   },
   APP_URLS: {

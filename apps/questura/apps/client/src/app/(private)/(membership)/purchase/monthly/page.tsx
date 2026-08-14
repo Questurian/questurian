@@ -2,9 +2,9 @@ import PurchasePage from '@/features/Payments/pages/PurchasePage';
 
 export default function PurchaseMonthly() {
   return (
-    <PurchasePage 
+    <PurchasePage
       planName="Monthly Plan"
-      amount={12.99}
+      plan="monthly"
       planDescription="All features included"
     />
   );

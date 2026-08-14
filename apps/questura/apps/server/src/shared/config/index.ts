@@ -70,7 +70,12 @@ export const APP_CONFIG = {
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    // One price per billing interval. `STRIPE_PRICE_ID` is the pre-plan name and
+    // is kept as the monthly fallback so a host missing the new vars still sells
+    // the monthly plan rather than failing checkout outright.
     priceId: process.env.STRIPE_PRICE_ID || '',
+    monthlyPriceId: process.env.STRIPE_PRICE_ID_MONTHLY || process.env.STRIPE_PRICE_ID || '',
+    yearlyPriceId: process.env.STRIPE_PRICE_ID_YEARLY || '',
     publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
     portalReturnUrl: process.env.STRIPE_PORTAL_RETURN_URL || '', // Optional: Custom return URL for Customer Portal
   },

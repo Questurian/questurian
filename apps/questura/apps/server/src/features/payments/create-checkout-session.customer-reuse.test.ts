@@ -36,7 +36,7 @@ vi.mock('@/shared/config', () => ({
   APP_CONFIG: {
     CORS_ORIGINS: ['http://localhost:3000'],
     features: { endorselyAffiliates: false },
-    stripe: { priceId: 'price_123' },
+    stripe: { priceId: 'price_123', monthlyPriceId: 'price_123', yearlyPriceId: 'price_yearly_123' },
   },
   APP_URLS: {
     frontend: 'http://localhost:3000',
