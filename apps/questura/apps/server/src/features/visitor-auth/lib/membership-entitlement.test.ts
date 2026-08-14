@@ -6,41 +6,74 @@ const FUTURE = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 const PAST = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
 describe('deriveVisitorMembership', () => {
-  it('treats an active subscription as an entitled Stripe membership', () => {
-    expect(deriveVisitorMembership({ subscriptionStatus: 'active' })).toEqual({
+  it('entitles a visitor whose paid period has not ended', () => {
+    expect(deriveVisitorMembership({ subscriptionStatus: 'active', paidThroughAt: FUTURE })).toEqual({
       active: true,
       source: 'stripe',
       status: 'active',
-      expiresAt: null,
+      expiresAt: FUTURE,
+      graceUntil: null,
       cancelAtPeriodEnd: false,
     })
   })
 
   it.each([
+    ['active', FUTURE, true],
+    ['active', PAST, false],
+    ['active', null, false],
     ['cancelled', FUTURE, true],
     ['cancelled', PAST, false],
     ['cancelled', null, false],
     ['none', FUTURE, true],
     ['none', PAST, false],
     ['none', null, false],
-  ])('status %s with expiration %s → active: %s', (subscriptionStatus, membershipExpiration, active) => {
-    const membership = deriveVisitorMembership({ subscriptionStatus, membershipExpiration })
+  ])('status %s paid through %s -> active: %s', (subscriptionStatus, paidThroughAt, active) => {
+    const membership = deriveVisitorMembership({ subscriptionStatus, paidThroughAt })
 
     expect(membership.active).toBe(active)
     expect(membership.source).toBe(active ? 'stripe' : null)
     expect(membership.status).toBe(subscriptionStatus)
-    expect(membership.expiresAt).toBe(membershipExpiration)
+    expect(membership.expiresAt).toBe(paidThroughAt)
   })
 
-  it('treats past_due as not entitled, even with a future expiration', () => {
+  it('status alone never grants entitlement', () => {
+    // The regression this guards: `subscriptionStatus === 'active'` used to
+    // short-circuit to entitled, so a stale enum could outlive paid time.
+    expect(deriveVisitorMembership({ subscriptionStatus: 'active' }).active).toBe(false)
+  })
+
+  it('keeps a past_due visitor entitled while the dunning grace runs', () => {
+    // The P0 bug: one failed charge revoked access immediately, even though
+    // Stripe was still retrying the card.
     const membership = deriveVisitorMembership({
       subscriptionStatus: 'past_due',
-      membershipExpiration: FUTURE,
+      paidThroughAt: PAST,
+      dunningGraceUntil: FUTURE,
+    })
+
+    expect(membership.active).toBe(true)
+    expect(membership.source).toBe('stripe')
+    expect(membership.graceUntil).toBe(FUTURE)
+  })
+
+  it('drops a past_due visitor once the grace expires', () => {
+    const membership = deriveVisitorMembership({
+      subscriptionStatus: 'past_due',
+      paidThroughAt: PAST,
+      dunningGraceUntil: PAST,
     })
 
     expect(membership.active).toBe(false)
-    expect(membership.source).toBe(null)
-    expect(membership.status).toBe('past_due')
+  })
+
+  it('does not entitle a past_due visitor with no grace at all', () => {
+    expect(
+      deriveVisitorMembership({ subscriptionStatus: 'past_due', paidThroughAt: PAST }).active
+    ).toBe(false)
+  })
+
+  it('ignores a malformed date rather than granting access', () => {
+    expect(deriveVisitorMembership({ paidThroughAt: 'not-a-date' }).active).toBe(false)
   })
 
   it.each([null, undefined])('treats a missing profile (%s) as not entitled', (profile) => {
@@ -49,6 +82,7 @@ describe('deriveVisitorMembership', () => {
       source: null,
       status: 'none',
       expiresAt: null,
+      graceUntil: null,
       cancelAtPeriodEnd: false,
     })
   })
@@ -64,7 +98,7 @@ describe('deriveVisitorMembership', () => {
     const membership = deriveVisitorMembership({
       subscriptionStatus: 'active',
       cancelAtPeriodEnd: true,
-      membershipExpiration: FUTURE,
+      paidThroughAt: FUTURE,
     })
 
     expect(membership.active).toBe(true)

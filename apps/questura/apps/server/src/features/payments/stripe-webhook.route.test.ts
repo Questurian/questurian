@@ -12,6 +12,14 @@ const mocks = vi.hoisted(() => ({
   findVisitorProfileByStripeCustomerId: vi.fn(),
   payloadFind: vi.fn(),
   payloadCreate: vi.fn(),
+  resyncSubscription: vi.fn(),
+}))
+
+// Subscription state is written by resync alone (ADR-0008); these tests assert
+// that each event reaches it, and subscription-state.test.ts covers what it
+// then derives, against payloads Stripe actually sent.
+vi.mock('@/payments/lib/subscription-resync', () => ({
+  resyncSubscription: mocks.resyncSubscription,
 }))
 
 vi.mock('@/payments/lib/stripe', () => ({
@@ -103,6 +111,7 @@ describe('Stripe webhook route', () => {
     mocks.payloadFind.mockResolvedValue({ totalDocs: 0, docs: [] })
     mocks.payloadCreate.mockResolvedValue({})
     mocks.updateUserSubscription.mockResolvedValue(true)
+    mocks.resyncSubscription.mockResolvedValue({ profileId: 10, state: null, transitions: [] })
     mocks.getSubscriptionProductName.mockResolvedValue('Premium Membership')
     mocks.findVisitorProfileByStripeCustomerId.mockResolvedValue({
       id: 10,
@@ -136,7 +145,7 @@ describe('Stripe webhook route', () => {
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toEqual({ error: 'Invalid signature' })
-    expect(mocks.updateUserSubscription).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
   })
 
   it('skips duplicate deliveries of an already-processed event', async () => {
@@ -146,7 +155,7 @@ describe('Stripe webhook route', () => {
     const response = await POST(createRequest())
 
     await expect(response.json()).resolves.toEqual({ received: true, duplicate: true })
-    expect(mocks.updateUserSubscription).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
     expect(mocks.payloadCreate).not.toHaveBeenCalled()
   })
 
@@ -159,7 +168,7 @@ describe('Stripe webhook route', () => {
     const response = await POST(createRequest())
 
     await expect(response.json()).resolves.toEqual({ received: true, stale: true })
-    expect(mocks.updateUserSubscription).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
     // Recorded so retries of the stale event are also skipped
     expect(mocks.payloadCreate).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ eventId: 'evt_1' }) }),
@@ -270,167 +279,73 @@ describe('Stripe webhook route', () => {
     )
   })
 
-  it('prefers the webhook period end over the Stripe API on subscription created', async () => {
+  it('resyncs from Stripe on subscription created rather than trusting the payload', async () => {
+    // The payload carries a full subscription object and is deliberately
+    // ignored: it renders at the endpoint's API version, not the SDK's.
     givenEvent('customer.subscription.created', {
       id: 'sub_1',
       customer: 'cus_1',
       status: 'active',
       current_period_end: FUTURE_TS,
     })
-    // The confirmation-email path also fetches details; give the API a
-    // different date to prove the renewal date came from the webhook payload.
-    mocks.getStripeSubscriptionDetails.mockResolvedValue({
-      currentPeriodEnd: new Date((FUTURE_TS + 999) * 1000),
-    })
 
     await POST(createRequest())
 
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      stripeSubscriptionId: 'sub_1',
-      subscriptionStatus: 'active',
-      subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString(),
-    })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 
-  it('falls back to the Stripe API when the webhook payload has no period end', async () => {
-    givenEvent('customer.subscription.created', {
-      id: 'sub_1',
-      customer: 'cus_1',
-      status: 'active',
-    })
-    mocks.getStripeSubscriptionDetails.mockResolvedValue({
-      currentPeriodEnd: new Date(FUTURE_TS * 1000),
-    })
-
-    await POST(createRequest())
-
-    expect(mocks.getStripeSubscriptionDetails).toHaveBeenCalledWith('sub_1')
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
-      'cus_1',
-      expect.objectContaining({ subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString() }),
-    )
-  })
-
-  it('sets membershipExpiration when the subscription is cancelled at period end', async () => {
+  it('resyncs on subscription updated', async () => {
     givenEvent('customer.subscription.updated', {
       id: 'sub_1',
       customer: 'cus_1',
       status: 'active',
       cancel_at_period_end: true,
-      current_period_end: FUTURE_TS,
     })
 
     await POST(createRequest())
 
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      stripeSubscriptionId: 'sub_1',
-      subscriptionStatus: 'active',
-      subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString(),
-      cancelAtPeriodEnd: true,
-      membershipExpiration: new Date(FUTURE_TS * 1000).toISOString(),
-    })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 
-  it('clears membershipExpiration when the subscription is renewing normally', async () => {
-    givenEvent('customer.subscription.updated', {
-      id: 'sub_1',
-      customer: 'cus_1',
-      status: 'active',
-      cancel_at_period_end: false,
-      current_period_end: FUTURE_TS,
-    })
+  it('resyncs on subscription deleted instead of reading a root period end', async () => {
+    // The old handler read `current_period_end` off the subscription root,
+    // which the SDK's API version does not populate.
+    givenEvent('customer.subscription.deleted', { id: 'sub_1', customer: 'cus_1' })
 
     await POST(createRequest())
 
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
-      'cus_1',
-      expect.objectContaining({ cancelAtPeriodEnd: false, membershipExpiration: null }),
-    )
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 
-  it('honors the paid period when a deleted subscription has time remaining', async () => {
-    givenEvent('customer.subscription.deleted', {
-      id: 'sub_1',
-      customer: 'cus_1',
-      current_period_end: FUTURE_TS,
-    })
-
-    await POST(createRequest())
-
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      subscriptionStatus: 'cancelled',
-      membershipExpiration: new Date(FUTURE_TS * 1000).toISOString(),
-      subscriptionRenewsAt: null,
-      cancelAtPeriodEnd: false,
-    })
-    expect(mocks.sendSubscriptionCancelledEmail).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ wasImmediate: false }),
-    )
-  })
-
-  it('revokes immediately when a deleted subscription period already ended', async () => {
-    givenEvent('customer.subscription.deleted', {
-      id: 'sub_1',
-      customer: 'cus_1',
-      current_period_end: PAST_TS,
-    })
-
-    await POST(createRequest())
-
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
-      'cus_1',
-      expect.objectContaining({ subscriptionStatus: 'cancelled', membershipExpiration: null }),
-    )
-    expect(mocks.sendSubscriptionCancelledEmail).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ wasImmediate: true }),
-    )
-  })
-
-  it('updates the renewal date on subscription_cycle invoice payments', async () => {
+  it('resyncs on successful invoice payments', async () => {
     givenEvent('invoice.payment_succeeded', {
       id: 'in_1',
       customer: 'cus_1',
       subscription: 'sub_1',
       billing_reason: 'subscription_cycle',
     })
-    mocks.getStripeSubscriptionDetails.mockResolvedValue({
-      currentPeriodEnd: new Date(FUTURE_TS * 1000),
-    })
 
     await POST(createRequest())
 
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString(),
-    })
-    expect(mocks.sendMembershipConfirmationEmail).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 
   it('fetches a successful invoice when its webhook omits the subscription', async () => {
-    givenEvent('invoice.payment_succeeded', {
-      id: 'in_success_fallback',
-      customer: 'cus_1',
-      billing_reason: 'subscription_cycle',
-    })
+    givenEvent('invoice.payment_succeeded', { id: 'in_1', customer: 'cus_1' })
     mocks.invoiceRetrieve.mockResolvedValue({
-      id: 'in_success_fallback',
-      subscription: 'sub_from_api',
-    })
-    mocks.getStripeSubscriptionDetails.mockResolvedValue({
-      currentPeriodEnd: new Date(FUTURE_TS * 1000),
+      id: 'in_1',
+      parent: { subscription_details: { subscription: 'sub_1' } },
     })
 
     await POST(createRequest())
 
-    expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_success_fallback')
-    expect(mocks.getStripeSubscriptionDetails).toHaveBeenCalledWith('sub_from_api')
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString(),
-    })
+    expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_1')
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 
-  it('marks the subscription past_due on failed invoice payments', async () => {
+  it('resyncs on failed invoice payments rather than writing past_due itself', async () => {
+    // Writing past_due here was the P0 bug: it revoked a paying visitor's
+    // access on the first decline. The subscription object now decides.
     givenEvent('invoice.payment_failed', {
       id: 'in_1',
       customer: 'cus_1',
@@ -439,27 +354,27 @@ describe('Stripe webhook route', () => {
 
     await POST(createRequest())
 
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      subscriptionStatus: 'past_due',
-    })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    expect(mocks.updateUserSubscription).not.toHaveBeenCalled()
   })
 
   it('fetches a failed invoice when its webhook omits the subscription', async () => {
-    givenEvent('invoice.payment_failed', {
-      id: 'in_failed_fallback',
-      customer: 'cus_1',
-    })
-    mocks.invoiceRetrieve.mockResolvedValue({
-      id: 'in_failed_fallback',
-      subscription: 'sub_from_api',
-    })
+    givenEvent('invoice.payment_failed', { id: 'in_1', customer: 'cus_1' })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
 
     await POST(createRequest())
 
-    expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_failed_fallback')
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      subscriptionStatus: 'past_due',
-    })
+    expect(mocks.invoiceRetrieve).toHaveBeenCalledWith('in_1')
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  it('ignores an invoice with no subscription at all', async () => {
+    givenEvent('invoice.payment_succeeded', { id: 'in_1', customer: 'cus_1' })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1' })
+
+    await POST(createRequest())
+
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
   })
 
   it('acknowledges unhandled event types and records them for idempotency', async () => {
@@ -468,7 +383,7 @@ describe('Stripe webhook route', () => {
     const response = await POST(createRequest())
 
     await expect(response.json()).resolves.toEqual({ received: true })
-    expect(mocks.updateUserSubscription).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
     expect(mocks.payloadCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ eventId: 'evt_1', eventType: 'customer.updated' }),
@@ -477,12 +392,8 @@ describe('Stripe webhook route', () => {
   })
 
   it('returns 500 and does not record the event when a handler fails', async () => {
-    givenEvent('customer.subscription.deleted', {
-      id: 'sub_1',
-      customer: 'cus_1',
-      current_period_end: FUTURE_TS,
-    })
-    mocks.updateUserSubscription.mockRejectedValue(new Error('db down'))
+    givenEvent('customer.subscription.deleted', { id: 'sub_1', customer: 'cus_1' })
+    mocks.resyncSubscription.mockRejectedValue(new Error('db down'))
 
     const response = await POST(createRequest())
 

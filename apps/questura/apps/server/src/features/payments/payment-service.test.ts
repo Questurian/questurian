@@ -8,6 +8,13 @@ const mocks = vi.hoisted(() => ({
   findVisitorProfileByAuthUserId: vi.fn(),
   findVisitorProfileByStripeCustomerId: vi.fn(),
   payloadUpdate: vi.fn(),
+  resyncSubscription: vi.fn(),
+}))
+
+// cancel/reactivate call Stripe then hand the write to resync, so these tests
+// assert delegation rather than re-checking what resync derives.
+vi.mock('@/payments/lib/subscription-resync', () => ({
+  resyncSubscription: mocks.resyncSubscription,
 }))
 
 vi.mock('@/payments/lib/stripe', () => ({
@@ -74,6 +81,12 @@ beforeEach(() => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined),
   ]
   mocks.payloadUpdate.mockResolvedValue({})
+  // clearAllMocks keeps implementations, so a rejection set by one test would
+  // otherwise leak into the next.
+  mocks.stripeSubscriptionUpdate.mockReset()
+  mocks.stripeSubscriptionUpdate.mockResolvedValue({ id: 'sub_1' })
+  mocks.resyncSubscription.mockReset()
+  mocks.resyncSubscription.mockResolvedValue({ profileId: 10, state: null, transitions: [] })
   // getSubscriptionProductName path (expand items.data.price.product)
   mocks.stripeSubscriptionRetrieve.mockResolvedValue({
     items: { data: [{ price: { product: { name: 'Premium Membership' } } }] },
@@ -148,63 +161,115 @@ describe('cancelUserSubscription', () => {
   it('fails when the visitor profile does not exist', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(null)
 
-    await expect(cancelUserSubscription('user_1')).resolves.toEqual({
+    await expect(cancelUserSubscription('auth_1')).resolves.toEqual({
       success: false,
       message: 'Visitor profile not found',
-    })
-  })
-
-  it('fails when there is no active subscription', async () => {
-    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
-      ...activeProfile,
-      subscriptionStatus: 'cancelled',
-    })
-
-    await expect(cancelUserSubscription('user_1')).resolves.toEqual({
-      success: false,
-      message: 'No active subscription found',
     })
     expect(mocks.stripeSubscriptionUpdate).not.toHaveBeenCalled()
   })
 
-  it('cancels at period end, stores the expiration, and emails the visitor', async () => {
-    mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
-    mocks.stripeSubscriptionUpdate.mockResolvedValue(subscriptionWithItemPeriodEnd(FUTURE_TS))
+  it('fails when the profile has no subscription at all', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      ...activeProfile,
+      stripeSubscriptionId: null,
+    })
 
-    const result = await cancelUserSubscription('user_1')
+    await expect(cancelUserSubscription('auth_1')).resolves.toEqual({
+      success: false,
+      message: 'No subscription found',
+    })
+  })
 
+  it('lets a visitor in dunning cancel, which the old active-only guard refused', async () => {
+    // Someone being retried is the person most likely to want out; requiring a
+    // local `active` status turned them away (ADR-0008).
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      ...activeProfile,
+      subscriptionStatus: 'past_due',
+    })
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'past_due',
+      cancel_at_period_end: false,
+    })
+    mocks.resyncSubscription.mockResolvedValue({
+      profileId: 10,
+      state: { paidThroughAt: new Date(FUTURE_TS * 1000).toISOString() },
+      transitions: [],
+    })
+
+    const result = await cancelUserSubscription('auth_1')
+
+    expect(result.success).toBe(true)
     expect(mocks.stripeSubscriptionUpdate).toHaveBeenCalledWith('sub_1', {
       cancel_at_period_end: true,
     })
-    expect(mocks.payloadUpdate).toHaveBeenCalledWith({
-      collection: 'visitor-profiles',
-      id: 10,
-      data: {
-        cancelAtPeriodEnd: true,
-        membershipExpiration: new Date(FUTURE_TS * 1000).toISOString(),
-      },
-    })
-    expect(mocks.sendSubscriptionCancelledEmail).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ email: 'visitor@example.com', wasImmediate: false }),
-    )
-    expect(result.success).toBe(true)
-    expect(result.membershipExpiresAt).toBe(new Date(FUTURE_TS * 1000).toISOString())
   })
 
-  it('still succeeds when the cancellation email fails', async () => {
+  it('refuses when Stripe reports the subscription already gone', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
-    mocks.stripeSubscriptionUpdate.mockResolvedValue(subscriptionWithItemPeriodEnd(FUTURE_TS))
-    mocks.sendSubscriptionCancelledEmail.mockRejectedValue(new Error('email down'))
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'canceled',
+      cancel_at_period_end: false,
+    })
 
-    await expect(cancelUserSubscription('user_1')).resolves.toMatchObject({ success: true })
+    await expect(cancelUserSubscription('auth_1')).resolves.toEqual({
+      success: false,
+      message: 'This subscription can no longer be cancelled.',
+    })
+    expect(mocks.stripeSubscriptionUpdate).not.toHaveBeenCalled()
+  })
+
+  it('refuses a second cancellation of an already-cancelling subscription', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: true,
+    })
+
+    await expect(cancelUserSubscription('auth_1')).resolves.toEqual({
+      success: false,
+      message: 'Subscription is already scheduled to cancel.',
+    })
+    expect(mocks.stripeSubscriptionUpdate).not.toHaveBeenCalled()
+  })
+
+  it('delegates the write to resync and reports the date resync derived', async () => {
+    const endsAt = new Date(FUTURE_TS * 1000).toISOString()
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: false,
+    })
+    mocks.resyncSubscription.mockResolvedValue({
+      profileId: 10,
+      state: { paidThroughAt: endsAt },
+      transitions: [],
+    })
+
+    const result = await cancelUserSubscription('auth_1')
+
+    expect(result.success).toBe(true)
+    expect(result.membershipExpiresAt).toBe(endsAt)
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    // The endpoint no longer writes state or emails directly; resync owns both.
+    expect(mocks.payloadUpdate).not.toHaveBeenCalled()
+    expect(mocks.sendSubscriptionCancelledEmail).not.toHaveBeenCalled()
   })
 
   it('fails cleanly when Stripe rejects the cancellation', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: false,
+    })
     mocks.stripeSubscriptionUpdate.mockRejectedValue(new Error('stripe down'))
 
-    await expect(cancelUserSubscription('user_1')).resolves.toEqual({
+    await expect(cancelUserSubscription('auth_1')).resolves.toEqual({
       success: false,
       message: 'Failed to cancel subscription',
     })
@@ -215,7 +280,7 @@ describe('reactivateUserSubscription', () => {
   it('fails when the visitor profile does not exist', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(null)
 
-    await expect(reactivateUserSubscription('user_1')).resolves.toEqual({
+    await expect(reactivateUserSubscription('auth_1')).resolves.toEqual({
       success: false,
       message: 'Visitor profile not found',
     })
@@ -227,58 +292,85 @@ describe('reactivateUserSubscription', () => {
       stripeSubscriptionId: null,
     })
 
-    const result = await reactivateUserSubscription('user_1')
-    expect(result.success).toBe(false)
-    expect(result.message).toContain('cannot be reactivated')
+    await expect(reactivateUserSubscription('auth_1')).resolves.toEqual({
+      success: false,
+      message:
+        'Subscription has expired and cannot be reactivated. Please create a new subscription.',
+    })
   })
 
   it('rejects reactivation when the subscription is already active and not cancelling', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: false,
+    })
 
-    await expect(reactivateUserSubscription('user_1')).resolves.toEqual({
+    await expect(reactivateUserSubscription('auth_1')).resolves.toEqual({
       success: false,
       message: 'Subscription is already active',
     })
     expect(mocks.stripeSubscriptionUpdate).not.toHaveBeenCalled()
   })
 
-  it('clears the cancellation flag and restores the renewal date', async () => {
+  it('refuses to reactivate a subscription Stripe has already ended', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'canceled',
+      cancel_at_period_end: false,
+    })
+
+    await expect(reactivateUserSubscription('auth_1')).resolves.toEqual({
+      success: false,
+      message: 'Subscription cannot be reactivated. Please create a new subscription.',
+    })
+  })
+
+  it('clears the cancellation flag and reports the date resync derived', async () => {
+    const renewsAt = new Date(FUTURE_TS * 1000).toISOString()
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
       ...activeProfile,
       cancelAtPeriodEnd: true,
     })
-    mocks.stripeSubscriptionUpdate.mockResolvedValue(subscriptionWithItemPeriodEnd(FUTURE_TS))
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: true,
+    })
+    mocks.resyncSubscription.mockResolvedValue({
+      profileId: 10,
+      state: { paidThroughAt: renewsAt },
+      transitions: [],
+    })
 
-    const result = await reactivateUserSubscription('user_1')
+    const result = await reactivateUserSubscription('auth_1')
 
+    expect(result.success).toBe(true)
+    expect(result.renewsAt).toBe(renewsAt)
     expect(mocks.stripeSubscriptionUpdate).toHaveBeenCalledWith('sub_1', {
       cancel_at_period_end: false,
     })
-    expect(mocks.payloadUpdate).toHaveBeenCalledWith({
-      collection: 'visitor-profiles',
-      id: 10,
-      data: {
-        cancelAtPeriodEnd: false,
-        membershipExpiration: null,
-        subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString(),
-      },
-    })
-    expect(mocks.sendSubscriptionReactivatedEmail).toHaveBeenCalled()
-    expect(result.success).toBe(true)
-    expect(result.renewsAt).toBe(new Date(FUTURE_TS * 1000).toISOString())
+    expect(mocks.payloadUpdate).not.toHaveBeenCalled()
+    expect(mocks.sendSubscriptionReactivatedEmail).not.toHaveBeenCalled()
   })
 
-  it('fails when Stripe returns no renewal date', async () => {
+  it('fails cleanly when Stripe rejects the reactivation', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
       ...activeProfile,
       cancelAtPeriodEnd: true,
     })
-    mocks.stripeSubscriptionUpdate.mockResolvedValue(subscriptionWithItemPeriodEnd(null))
-
-    await expect(reactivateUserSubscription('user_1')).resolves.toEqual({
-      success: false,
-      message: 'Failed to get renewal date from Stripe',
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'active',
+      cancel_at_period_end: true,
     })
-    expect(mocks.payloadUpdate).not.toHaveBeenCalled()
+    mocks.stripeSubscriptionUpdate.mockRejectedValue(new Error('stripe down'))
+
+    await expect(reactivateUserSubscription('auth_1')).resolves.toEqual({
+      success: false,
+      message: 'Failed to reactivate subscription',
+    })
   })
 })

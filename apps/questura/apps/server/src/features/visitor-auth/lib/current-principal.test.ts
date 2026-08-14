@@ -57,11 +57,14 @@ describe('Current principal', () => {
       { providerId: 'credential' },
       { providerId: 'google' },
     ])
+    const paidThroughAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
       id: 10,
       firstName: 'Ada',
       lastName: 'Lovelace',
       subscriptionStatus: 'active',
+      paidThroughAt,
       cancelAtPeriodEnd: false,
     })
 
@@ -84,7 +87,8 @@ describe('Current principal', () => {
           active: true,
           source: 'stripe',
           status: 'active',
-          expiresAt: null,
+          expiresAt: paidThroughAt,
+          graceUntil: null,
           cancelAtPeriodEnd: false,
         },
       },
