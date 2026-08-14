@@ -6,6 +6,7 @@ export interface UserSubscriptionUpdate {
   cancelAtPeriodEnd?: boolean
   firstName?: string
   lastName?: string
+  billingEmail?: string
   affiliateReferralId?: string
   affiliateReferredAt?: string
 }

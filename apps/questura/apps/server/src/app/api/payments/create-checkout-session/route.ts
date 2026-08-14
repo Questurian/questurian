@@ -28,7 +28,13 @@ export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
 
   try {
-    const authResult = await requireVisitorPrincipal(req.headers, { requireVerified: true })
+    // Deliberately not requiring a verified email. Verification before checkout
+    // costs the sale at peak intent for a rare failure (a mistyped signup
+    // address). Stripe collects and confirms its own email during checkout, and
+    // `checkout.session.completed` records it as `billingEmail` whenever it
+    // differs from the account address — so a typo stays recoverable without
+    // blocking anyone.
+    const authResult = await requireVisitorPrincipal(req.headers)
 
     if (authResult.error) {
       return NextResponse.json(

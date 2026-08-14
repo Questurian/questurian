@@ -219,6 +219,57 @@ describe('Stripe webhook route', () => {
     )
   })
 
+  it('records the Stripe billing email when it differs from the account email', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_1',
+      customer: 'cus_1',
+      subscription: 'sub_1',
+      customer_details: { email: 'grace@real-inbox.example' },
+    })
+    mocks.getStripeSubscriptionDetails.mockResolvedValue({
+      currentPeriodEnd: new Date(FUTURE_TS * 1000),
+    })
+    mocks.findVisitorProfileByStripeCustomerId.mockResolvedValue({
+      id: 10,
+      email: 'typo@gmial.example',
+      firstName: 'Grace',
+      lastName: 'Hopper',
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
+      'cus_1',
+      expect.objectContaining({ billingEmail: 'grace@real-inbox.example' }),
+    )
+  })
+
+  it('does not record a billing email that matches the account email', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_1',
+      customer: 'cus_1',
+      subscription: 'sub_1',
+      // Same address, different casing and padding: not a mismatch.
+      customer_details: { email: '  Visitor@Example.com ' },
+    })
+    mocks.getStripeSubscriptionDetails.mockResolvedValue({
+      currentPeriodEnd: new Date(FUTURE_TS * 1000),
+    })
+    mocks.findVisitorProfileByStripeCustomerId.mockResolvedValue({
+      id: 10,
+      email: 'visitor@example.com',
+      firstName: 'Grace',
+      lastName: 'Hopper',
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
+      'cus_1',
+      expect.not.objectContaining({ billingEmail: expect.anything() }),
+    )
+  })
+
   it('prefers the webhook period end over the Stripe API on subscription created', async () => {
     givenEvent('customer.subscription.created', {
       id: 'sub_1',

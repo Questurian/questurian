@@ -56,6 +56,16 @@ export const VisitorProfiles: CollectionConfig = {
       },
     },
     {
+      name: 'billingEmail',
+      type: 'email',
+      index: true,
+      admin: {
+        readOnly: true,
+        description:
+          'Email Stripe collected at checkout, recorded only when it differs from the account email. Checkout does not require a verified address, so this is the fallback contact when the signup address was mistyped.',
+      },
+    },
+    {
       type: 'row',
       fields: [
         {

@@ -84,28 +84,53 @@ describe('create checkout session route auth guard', () => {
     consoleLogSpy = null
   })
 
-  it('requires a verified Visitor principal', async () => {
+  it('rejects an unauthenticated request', async () => {
     mocks.requireVisitorPrincipal.mockResolvedValue({
       result: { authenticated: false, principal: null },
       principal: null,
-      error: 'Email verification required',
-      status: 403,
+      error: 'Authentication required',
+      status: 401,
     })
 
     const response = await POST(createRequest())
 
     await expect(response.json()).resolves.toEqual({
-      error: 'Email verification required',
+      error: 'Authentication required',
     })
-    expect(response.status).toBe(403)
-    expect(mocks.requireVisitorPrincipal).toHaveBeenCalledWith(expect.anything(), {
-      requireVerified: true,
-    })
+    expect(response.status).toBe(401)
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
   })
 
-  it('creates checkout only for verified Visitor principals', async () => {
+  it('does not require a verified email to start checkout', async () => {
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      result: { authenticated: true },
+      principal: {
+        kind: 'visitor',
+        id: 'visitor_123',
+        email: 'visitor@example.com',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        profileId: 10,
+        emailVerified: false,
+      },
+      error: null,
+      status: 200,
+    })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(200)
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalled()
+    // The gate is gone at the call site, not just satisfied by the mock: the
+    // route must not ask for verification at all.
+    expect(mocks.requireVisitorPrincipal).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ requireVerified: true })
+    )
+  })
+
+  it('creates checkout for an authenticated Visitor principal', async () => {
     mocks.requireVisitorPrincipal.mockResolvedValue({
       result: { authenticated: true },
       principal: {
