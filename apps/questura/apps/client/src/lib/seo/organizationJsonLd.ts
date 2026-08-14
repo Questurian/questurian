@@ -1,5 +1,6 @@
-const PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000'
+import { getPublicBaseUrl } from './publicBaseUrl'
+
+const PUBLIC_BASE_URL = getPublicBaseUrl()
 
 /**
  * Official Questura social profiles for the Organization `sameAs` links.

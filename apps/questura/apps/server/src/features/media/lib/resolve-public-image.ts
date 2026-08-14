@@ -82,10 +82,40 @@ const numberOrNull = (value: unknown): number | null => {
   return null
 }
 
+const backendOriginForPublicUrls = (): string | null => {
+  const value = process.env.BACKEND_URL_LOCAL || process.env.NEXT_PUBLIC_BACKEND_URL
+  if (!value) return null
+
+  try {
+    const url = new URL(value)
+    return url.hostname === 'localhost' || url.hostname === '127.0.0.1' ? null : url.origin
+  } catch {
+    return null
+  }
+}
+
+const normalizePublicAssetUrl = (value: string): string => {
+  try {
+    const url = new URL(value)
+    const isLocalBackend =
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === '4000'
+    const publicBackendOrigin = backendOriginForPublicUrls()
+
+    if (isLocalBackend && publicBackendOrigin) {
+      return `${publicBackendOrigin}${url.pathname}${url.search}${url.hash}`
+    }
+  } catch {
+    // Relative paths and malformed historical data should pass through unchanged.
+  }
+
+  return value
+}
+
 const assetUrl = (asset: MediaAssetLike, status: PublicImageStatus): string | null => {
   const canonicalUrl = textOrNull(asset.url)
-  if (canonicalUrl) return canonicalUrl
-  return status === 'legacy_fallback' ? textOrNull(asset.bunny_original_url) : null
+  if (canonicalUrl) return normalizePublicAssetUrl(canonicalUrl)
+  const fallbackUrl = status === 'legacy_fallback' ? textOrNull(asset.bunny_original_url) : null
+  return fallbackUrl ? normalizePublicAssetUrl(fallbackUrl) : null
 }
 
 const assetToPublicImage = (

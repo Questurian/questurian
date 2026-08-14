@@ -4,9 +4,9 @@ import { fetchArticleByCanonicalPath } from './fetchArticleByCanonicalPath'
 import type { ArticleScope, ArticleTypeKey } from './articleScope'
 import { articleHrefForScope } from './articleScope'
 import { DEFAULT_LOCALE } from '@/lib/i18n/locales'
+import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
 
-const PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000'
+const PUBLIC_BASE_URL = getPublicBaseUrl()
 
 type ArticleLikeDoc = {
   title?: string

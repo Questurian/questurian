@@ -1,5 +1,6 @@
-const PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000'
+import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
+
+const PUBLIC_BASE_URL = getPublicBaseUrl()
 
 function humanizeSegment(segment: string): string {
   return segment

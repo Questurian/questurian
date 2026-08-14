@@ -1,7 +1,7 @@
 import type { MetadataRoute } from 'next'
+import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
 
-const PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL ?? 'http://localhost:3000'
+const PUBLIC_BASE_URL = getPublicBaseUrl()
 
 export default function robots(): MetadataRoute.Robots {
   const base = PUBLIC_BASE_URL.replace(/\/+$/, '')

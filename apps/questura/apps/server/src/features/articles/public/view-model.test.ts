@@ -144,4 +144,30 @@ describe('resolveArticleFeaturedImage', () => {
     expect(disabled.status).toBe('missing')
     expect(disabled.url).toBeNull()
   })
+
+  it('rewrites historical localhost media URLs to the configured public backend origin', () => {
+    const originalBackendUrl = process.env.BACKEND_URL_LOCAL
+    process.env.BACKEND_URL_LOCAL = 'https://cms.questurian.com'
+
+    try {
+      const image = resolveArticleFeaturedImage(
+        {
+          headerSection: {
+            featuredMediaSet: {
+              variants: {
+                thumbnail: {
+                  url: 'http://localhost:4000/api/media-assets/file/stale.webp',
+                },
+              },
+            },
+          },
+        },
+        { placement: 'card' },
+      )
+
+      expect(image.url).toBe('https://cms.questurian.com/api/media-assets/file/stale.webp')
+    } finally {
+      process.env.BACKEND_URL_LOCAL = originalBackendUrl
+    }
+  })
 })
