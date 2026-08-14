@@ -1,5 +1,16 @@
 import type { CollectionAfterChangeHook, PayloadRequest } from 'payload'
 
+type DynamicPayload = {
+  find: (options: Record<string, unknown>) => Promise<{ docs: Record<string, unknown>[] }>
+  update: (options: Record<string, unknown>) => Promise<unknown>
+  create: (options: Record<string, unknown>) => Promise<unknown>
+  delete: (options: Record<string, unknown>) => Promise<unknown>
+}
+
+function dynamicPayload(req: PayloadRequest): DynamicPayload {
+  return req.payload as unknown as DynamicPayload
+}
+
 type DetailTypeField =
   | 'diningType'
   | 'accommodationType'
@@ -33,8 +44,8 @@ const extractRelationshipIds = (values: unknown): Array<string | number> => {
 async function fetchCategories(req: PayloadRequest, ids: Array<string | number>) {
   if (ids.length === 0) return []
 
-  const result = await req.payload.find({
-    collection: 'place-categories' as never,
+  const result = await dynamicPayload(req).find({
+    collection: 'place-categories',
     where: { id: { in: ids } },
     depth: 0,
   })
@@ -48,23 +59,23 @@ async function upsertDetailRecord(params: {
   typeValue: string | undefined
 }) {
   const { req, placeId, config, typeValue } = params
-  const existing = await req.payload.find({
-    collection: config.collection as never,
+  const existing = await dynamicPayload(req).find({
+    collection: config.collection,
     where: { place: { equals: placeId } },
     depth: 0,
   })
 
   if (existing.docs.length > 0) {
     if (typeValue !== undefined) {
-      await req.payload.update({
-        collection: config.collection as never,
+      await dynamicPayload(req).update({
+        collection: config.collection,
         id: existing.docs[0].id,
         data: { type: typeValue || null },
       })
     }
   } else if (typeValue) {
-    await req.payload.create({
-      collection: config.collection as never,
+    await dynamicPayload(req).create({
+      collection: config.collection,
       data: {
         place: placeId,
         type: typeValue,
@@ -87,8 +98,8 @@ async function deleteRemovedDetailRecords(params: {
     if (!config) continue
 
     try {
-      await req.payload.delete({
-        collection: config.collection as never,
+      await dynamicPayload(req).delete({
+        collection: config.collection,
         where: { place: { equals: placeId } },
       })
     } catch {

@@ -6,8 +6,8 @@ export async function triggerClientRevalidation(
   target: RevalidationTarget,
   reason: string,
 ): Promise<void> {
-  const tags = unique(target.tags)
-  const paths = unique(target.paths)
+  const tags = unique(target.tags ?? [])
+  const paths = unique(target.paths ?? [])
   if (tags.length === 0 && paths.length === 0) return
 
   const baseUrl = clientBaseUrl()

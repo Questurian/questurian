@@ -1,4 +1,4 @@
-import type { Block, RelationshipField } from 'payload'
+import type { Block, Field, RelationshipField } from 'payload'
 
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
@@ -58,7 +58,7 @@ export function createReferenceGridBlock(config: ReferenceGridBlockConfig): Bloc
         admin: {
           description: config.itemsDescription,
         },
-      },
+      } as Field,
     ],
   }
 }

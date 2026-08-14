@@ -201,7 +201,7 @@ const CAPTURED_EVENT_TYPES = new Set([
 ])
 
 function relatesToSubscription(event: Stripe.Event, subscriptionId: string): boolean {
-  const object = event.data.object as Record<string, unknown>
+  const object = event.data.object as unknown as Record<string, unknown>
 
   if (object.object === 'subscription') {
     return object.id === subscriptionId

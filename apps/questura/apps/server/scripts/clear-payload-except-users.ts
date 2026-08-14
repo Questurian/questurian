@@ -81,7 +81,7 @@ async function main() {
 
   const allCollections = (resolvedConfig.collections ?? [])
     .map((collection) => collection.slug)
-    .filter((slug): slug is string => typeof slug === 'string')
+    .filter((slug) => typeof slug === 'string')
 
   const targetCollections = allCollections.filter((slug) => !preservedCollections.has(slug))
 

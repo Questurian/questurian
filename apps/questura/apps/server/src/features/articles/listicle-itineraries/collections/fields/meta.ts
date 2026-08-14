@@ -8,7 +8,7 @@ export const slug: Field = {
   unique: true,
   index: true,
   required: true,
-  validate: (value) => validateSlugAgainstReserved(value),
+  validate: (value: unknown) => validateSlugAgainstReserved(value),
   admin: {
     description: 'URL-friendly slug (e.g. medellin-digital-nomad-guide-2026)',
   },

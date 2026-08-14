@@ -5,7 +5,7 @@
 
 import { staffUser } from '@/features/auth/lib/staff-user'
 import { serviceAccountHasCollectionGrant } from '@/features/auth/lib/service-account-grants'
-import { CollectionConfig } from 'payload'
+import type { CollectionConfig, Field } from 'payload'
 import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
@@ -286,7 +286,7 @@ export const Accommodations: CollectionConfig = {
                   ],
                 },
               ],
-            },
+            } as Field,
           ],
         },
         {

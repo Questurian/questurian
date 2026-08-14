@@ -178,7 +178,6 @@ async function printStartupInfo() {
   console.log('')
   console.log('  Utilities:')
   console.log('    pnpm lint             Run ESLint')
-  console.log('    pnpm backfill:rankings')
   console.log('')
   console.log('═'.repeat(60))
   console.log('')

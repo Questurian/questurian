@@ -63,13 +63,19 @@ export const seo: Field = {
                   name: 'imageUrl',
                   label: 'og:image',
                   type: 'text',
-                  validate: (value) => (isValidAbsoluteUrl(value) ? true : urlValidationMessage),
+                  validate: (value: unknown) =>
+                    isValidAbsoluteUrl(typeof value === 'string' ? value : undefined)
+                      ? true
+                      : urlValidationMessage,
                 },
                 {
                   name: 'url',
                   label: 'og:url',
                   type: 'text',
-                  validate: (value) => (isValidAbsoluteUrl(value) ? true : urlValidationMessage),
+                  validate: (value: unknown) =>
+                    isValidAbsoluteUrl(typeof value === 'string' ? value : undefined)
+                      ? true
+                      : urlValidationMessage,
                 },
               ],
             },
@@ -102,7 +108,10 @@ export const seo: Field = {
                   name: 'imageUrl',
                   label: 'twitter:image',
                   type: 'text',
-                  validate: (value) => (isValidAbsoluteUrl(value) ? true : urlValidationMessage),
+                  validate: (value: unknown) =>
+                    isValidAbsoluteUrl(typeof value === 'string' ? value : undefined)
+                      ? true
+                      : urlValidationMessage,
                 },
               ],
             },

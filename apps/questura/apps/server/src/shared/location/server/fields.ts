@@ -28,14 +28,15 @@ export const createSharedNeighborhoodsField = (): Field => ({
     const locationKey = typeof data?.location === 'string' ? data.location.trim() : ''
 
     if (!isCityLocationSelection(data)) {
-      return {
+      const allNeighborhoods: Where = {
         level: {
           equals: 'neighborhood',
         },
-      } satisfies Where
+      }
+      return allNeighborhoods
     }
 
-    return {
+    const cityNeighborhoods: Where = {
       and: [
         {
           level: {
@@ -48,7 +49,8 @@ export const createSharedNeighborhoodsField = (): Field => ({
           },
         },
       ],
-    } satisfies Where
+    }
+    return cityNeighborhoods
   },
   admin: {
     condition: isCityLocationSelection,

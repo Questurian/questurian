@@ -1,4 +1,4 @@
-import type { HomepageTourInvalidReason, HomepageTourItemRef } from './tour-grid.types'
+import type { HomepageTourItemRef } from './tour-grid.types'
 
 export type { PayloadFindWhere } from '@/shared/utils/payload-types'
 
@@ -16,5 +16,5 @@ export type TourDocLike = {
 export type ParsedTourSlot = {
   slot: number
   ref: HomepageTourItemRef | null
-  reason: HomepageTourInvalidReason | null
+  reason: 'invalid_reference' | null
 }

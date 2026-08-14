@@ -20,6 +20,8 @@ const RATE_PROVIDER_OPTIONS = [
   { label: 'Frankfurter (Legacy)', value: 'frankfurter' },
 ] as const
 
+type CurrencyRegion = (typeof REGION_OPTIONS)[number]['value']
+
 const trimText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '')
 
 const normalizeUsedInRows = (value: unknown) => {
@@ -33,13 +35,13 @@ const normalizeUsedInRows = (value: unknown) => {
     .filter((row): row is { country: string } => Boolean(row))
 }
 
-const normalizeRegionValues = (value: unknown) => {
+const normalizeRegionValues = (value: unknown): CurrencyRegion[] => {
   if (!Array.isArray(value)) return []
 
-  const allowedValues = new Set(REGION_OPTIONS.map((option) => option.value))
+  const allowedValues = new Set<CurrencyRegion>(REGION_OPTIONS.map((option) => option.value))
   return [...new Set(
-    value.filter((item): item is string => (
-      typeof item === 'string' && allowedValues.has(item)
+    value.filter((item): item is CurrencyRegion => (
+      typeof item === 'string' && allowedValues.has(item as CurrencyRegion)
     )),
   )]
 }

@@ -1,4 +1,4 @@
-import type { HomepageHotelInvalidReason, HomepageHotelItemRef } from '../../types'
+import type { HomepageHotelItemRef } from '../../types'
 
 export type { PayloadFindWhere } from '@/shared/utils/payload-types'
 
@@ -17,5 +17,5 @@ export type AttractionDocLike = {
 export type ParsedAttractionSlot = {
   slot: number
   ref: HomepageHotelItemRef | null
-  reason: HomepageHotelInvalidReason | null
+  reason: 'invalid_reference' | null
 }

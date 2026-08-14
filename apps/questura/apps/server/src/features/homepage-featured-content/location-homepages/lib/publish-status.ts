@@ -127,6 +127,11 @@ export function snapshotDraftBlocksForPublish(blocks: unknown): unknown[] {
 
 export type BlockPublishStatus = 'live' | 'modified' | 'unpublished'
 export type BlockValidationStatus = 'publishable' | 'blocked'
+export type ResolvedPageBlockWithPublishStatus = ResolvedPageBlock & {
+  publishStatus: BlockPublishStatus
+  validationStatus: BlockValidationStatus
+  publishBlockers: string[]
+}
 
 /** Stable, order-independent serialization for content comparison (ignores volatile keys). */
 function canonicalize(value: unknown): unknown {
@@ -160,7 +165,7 @@ export function augmentBlocksWithPublishStatus(
   resolvedDraft: ResolvedPageBlock[],
   rawDraft: RawBlock[],
   rawPublished: RawBlock[],
-): ResolvedPageBlock[] {
+): ResolvedPageBlockWithPublishStatus[] {
   const publishedByKey = new Map<string, RawBlock>()
   for (const published of rawPublished) {
     const key = text((published as Record<string, unknown>).sourceBlockKey)
