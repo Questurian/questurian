@@ -115,28 +115,12 @@ export const VisitorProfiles: CollectionConfig = {
       ],
     },
     {
-      type: 'row',
-      fields: [
-        {
-          name: 'subscriptionRenewsAt',
-          type: 'date',
-          admin: {
-            description: 'Superseded by paidThroughAt; retained until the follow-up migration drops it.',
-          },
-        },
-        {
-          name: 'membershipExpiration',
-          type: 'date',
-          admin: {
-            description: 'Superseded by paidThroughAt; retained until the follow-up migration drops it.',
-          },
-        },
-        {
-          name: 'cancelAtPeriodEnd',
-          type: 'checkbox',
-          defaultValue: false,
-        },
-      ],
+      name: 'cancelAtPeriodEnd',
+      type: 'checkbox',
+      defaultValue: false,
+      admin: {
+        description: 'Whether the subscription stops at the paid-through date instead of renewing.',
+      },
     },
     {
       type: 'collapsible',
