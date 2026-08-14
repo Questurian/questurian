@@ -52,12 +52,30 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
   // visitor profile doesn't already have a name (don't clobber a name the user
   // set themselves in settings/account).
   const billingName = session.customer_details?.name?.trim()
-  if (billingName) {
+  const billingEmail = session.customer_details?.email?.trim()
+
+  if (billingName || billingEmail) {
     const profile = await findVisitorProfileByStripeCustomerId(customerId)
-    if (profile && !profile.firstName && !profile.lastName) {
+
+    if (billingName && profile && !profile.firstName && !profile.lastName) {
       const { firstName, lastName } = splitDisplayName(billingName)
       updateData.firstName = firstName
       updateData.lastName = lastName
+    }
+
+    // Checkout no longer requires a verified email, so the account address may
+    // be mistyped. Stripe's address is confirmed by the payment, which makes it
+    // the better fallback contact — but only worth storing when the two differ.
+    // Compare case-insensitively so casing alone doesn't flag a mismatch.
+    if (billingEmail && profile) {
+      const accountEmail = typeof profile.email === 'string' ? profile.email.trim() : ''
+      if (accountEmail.toLowerCase() !== billingEmail.toLowerCase()) {
+        updateData.billingEmail = billingEmail
+        logger.warn('Checkout billing email differs from account email', {
+          subscriptionId,
+          profileId: profile.id,
+        })
+      }
     }
   }
 

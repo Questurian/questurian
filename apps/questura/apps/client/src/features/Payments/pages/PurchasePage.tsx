@@ -46,9 +46,6 @@ export default function PurchasePage({
   }
 
   const handleSubscribe = () => {
-    if (!user?.emailVerified) {
-      return;
-    }
     checkoutMutation.mutate({});
   };
 
@@ -154,10 +151,18 @@ export default function PurchasePage({
                 </div>
               ) : null}
 
-              {!user?.emailVerified ? (
-                <div className="space-y-3 text-center">
+              <button
+                onClick={handleSubscribe}
+                disabled={checkoutMutation.isPending}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+              >
+                {checkoutMutation.isPending ? 'Creating session...' : `Subscribe Now - $${amount}/month`}
+              </button>
+
+              {!user?.emailVerified && (
+                <div className="mt-4 space-y-2 text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Verify your email before starting checkout.
+                    Your email isn&apos;t verified yet. You can subscribe now and verify later.
                   </p>
                   <button
                     type="button"
@@ -173,14 +178,6 @@ export default function PurchasePage({
                     </p>
                   )}
                 </div>
-              ) : (
-                <button
-                  onClick={handleSubscribe}
-                  disabled={checkoutMutation.isPending}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-                >
-                  {checkoutMutation.isPending ? 'Creating session...' : `Subscribe Now - $${amount}/month`}
-                </button>
               )}
             </div>
           )}
