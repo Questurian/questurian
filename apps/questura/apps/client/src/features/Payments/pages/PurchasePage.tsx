@@ -8,7 +8,7 @@ import { isServiceUnavailableError, post } from '@/lib/api';
 import MembershipGuard from '../components/MembershipGuard';
 import { useMembership } from '../hooks/useMembership';
 import { useCreateCheckoutSessionMutation } from '../hooks/useSubscriptionMutations';
-import { formatPlanPrice, useMembershipPlan, type PlanId } from '../hooks/useMembershipPlan';
+import { formatPlanPrice, getPlanSaving, useMembershipPlan, type PlanId } from '../hooks/useMembershipPlan';
 import { queryKeys } from '@/lib/react-query';
 
 interface PurchasePageProps {
@@ -30,6 +30,7 @@ export default function PurchasePage({
   const checkoutMutation = useCreateCheckoutSessionMutation();
   const { plan: pricing, isLoading: pricingLoading, isUnavailable: pricingUnavailable } = useMembershipPlan(plan);
   const priceLabel = pricing ? formatPlanPrice(pricing) : null;
+  const saving = pricing ? getPlanSaving(pricing) : null;
   const [verificationEmailStatus, setVerificationEmailStatus] = useState<string | null>(null);
   const [sendingVerificationEmail, setSendingVerificationEmail] = useState(false);
   const [authFormState, setAuthFormState] = useState<{ isSignUp: boolean; showPasswordStep: boolean }>({
@@ -100,8 +101,18 @@ export default function PurchasePage({
                 {planName}
               </h2>
               <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                {saving ? (
+                  <span className="mr-2 text-lg font-normal text-blue-700/70 line-through dark:text-blue-300/70">
+                    {saving.compareAt}
+                  </span>
+                ) : null}
                 {priceLabel ?? (pricingLoading ? 'Loading price…' : 'Price unavailable')}
               </p>
+              {saving ? (
+                <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                  Save {saving.saved} ({saving.percentOff}% off)
+                </p>
+              ) : null}
               <p className="text-blue-700 dark:text-blue-300 text-sm">
                 {planDescription}
               </p>

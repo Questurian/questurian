@@ -24,6 +24,17 @@ export type MembershipPlan = {
   interval: string
   intervalCount: number
   productName: string | null
+  /**
+   * Optional "was" price in minor units, from `compare_at_amount` metadata on
+   * the Stripe price. Presentation only -- never charged.
+   *
+   * A permanently-applied coupon would be the other way to show a saving, and
+   * is the wrong tool: Checkout accepts only one discount per session, so a
+   * standing sale coupon would consume the slot that real promotion codes need,
+   * and any failure to apply it would overcharge the customer by the full
+   * difference.
+   */
+  compareAtAmount: number | null
 }
 
 export function priceIdForPlan(plan: PlanId): string {
@@ -49,6 +60,10 @@ async function fetchPlan(plan: PlanId): Promise<MembershipPlan | null> {
       return null
     }
 
+    const compareAtRaw = Number.parseInt(price.metadata?.compare_at_amount ?? '', 10)
+    const compareAtAmount =
+      Number.isFinite(compareAtRaw) && compareAtRaw > (price.unit_amount ?? 0) ? compareAtRaw : null
+
     const product = price.product
     const productName =
       product && typeof product !== 'string' && !('deleted' in product && product.deleted)
@@ -63,6 +78,7 @@ async function fetchPlan(plan: PlanId): Promise<MembershipPlan | null> {
       interval: price.recurring.interval,
       intervalCount: price.recurring.interval_count,
       productName,
+      compareAtAmount,
     }
   } catch (error) {
     logger.error('Could not resolve membership plan from Stripe', {

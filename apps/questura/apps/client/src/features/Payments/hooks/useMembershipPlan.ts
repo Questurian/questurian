@@ -22,15 +22,21 @@ export type MembershipPlan = {
   interval: string;
   intervalCount: number;
   productName: string | null;
+  /** Optional "was" price in minor units. Presentation only; never charged. */
+  compareAtAmount: number | null;
 };
 
-function formatAmount(plan: MembershipPlan): string {
+function formatMinorUnits(minorUnits: number, currency: string): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: plan.currency.toUpperCase(),
+    currency: currency.toUpperCase(),
     // Whole amounts read better without trailing zeros on a pricing page.
-    minimumFractionDigits: plan.amount % 100 === 0 ? 0 : 2,
-  }).format(plan.amount / 100);
+    minimumFractionDigits: minorUnits % 100 === 0 ? 0 : 2,
+  }).format(minorUnits / 100);
+}
+
+function formatAmount(plan: MembershipPlan): string {
+  return formatMinorUnits(plan.amount, plan.currency);
 }
 
 /** "month", or "3 months" when Stripe is billing in multiples. */
@@ -42,6 +48,31 @@ function formatInterval(plan: MembershipPlan): string {
 
 export function formatPlanPrice(plan: MembershipPlan): string {
   return `${formatAmount(plan)}/${formatInterval(plan)}`;
+}
+
+export type PlanSaving = {
+  compareAt: string;
+  saved: string;
+  percentOff: number;
+};
+
+/**
+ * The saving a plan advertises, or null when it advertises none.
+ *
+ * Derived from the same Stripe price the checkout charges, so the crossed-out
+ * figure cannot drift away from the real one the way the old hardcoded prices
+ * did.
+ */
+export function getPlanSaving(plan: MembershipPlan): PlanSaving | null {
+  if (!plan.compareAtAmount || plan.compareAtAmount <= plan.amount) return null;
+
+  const savedMinorUnits = plan.compareAtAmount - plan.amount;
+
+  return {
+    compareAt: formatMinorUnits(plan.compareAtAmount, plan.currency),
+    saved: formatMinorUnits(savedMinorUnits, plan.currency),
+    percentOff: Math.round((savedMinorUnits / plan.compareAtAmount) * 100),
+  };
 }
 
 export function useMembershipPlan(planId: PlanId) {
