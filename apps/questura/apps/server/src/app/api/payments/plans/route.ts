@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { getMembershipPlans } from '@/payments/lib/membership-plans'
+import { logger } from '@/shared/utils/logger'
+
+/**
+ * What the membership actually costs, straight from Stripe.
+ *
+ * Public and unauthenticated on purpose: a visitor has to see the price before
+ * deciding to sign in, and prices are already public information. It exposes
+ * only what a pricing page needs -- no keys, no customer data.
+ */
+export async function GET(req: NextRequest) {
+  const corsHeaders = getCorsHeaders(req)
+
+  try {
+    const plans = await getMembershipPlans()
+
+    return NextResponse.json({ plans }, { headers: corsHeaders })
+  } catch (error) {
+    logger.error('Error resolving membership plans', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+
+    return NextResponse.json(
+      { error: 'Failed to load membership plans' },
+      { status: 500, headers: corsHeaders }
+    )
+  }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return handleCorsOptions(req)
+}

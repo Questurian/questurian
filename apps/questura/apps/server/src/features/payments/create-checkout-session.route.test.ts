@@ -40,6 +40,8 @@ vi.mock('@/shared/config', () => ({
     },
     stripe: {
       priceId: 'price_123',
+      monthlyPriceId: 'price_123',
+      yearlyPriceId: 'price_yearly_123',
     },
   },
   APP_URLS: {
@@ -52,14 +54,14 @@ import { POST } from '@/app/api/payments/create-checkout-session/route'
 
 let consoleLogSpy: ReturnType<typeof vi.spyOn> | null = null
 
-function createRequest() {
+function createRequest(body: Record<string, unknown> = {}) {
   return new Request('http://localhost:4000/api/payments/create-checkout-session', {
     method: 'POST',
     headers: {
       origin: 'http://localhost:3000',
       'content-type': 'application/json',
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify(body),
   }) as any
 }
 
@@ -162,6 +164,50 @@ describe('create checkout session route auth guard', () => {
         mode: 'subscription',
         line_items: [{ price: 'price_123', quantity: 1 }],
       }),
+    )
+  })
+
+  it('charges the monthly price when no plan is given', async () => {
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ line_items: [{ price: 'price_123', quantity: 1 }] }),
+    )
+  })
+
+  it('charges the yearly price when the yearly plan is chosen', async () => {
+    // The regression this guards: both purchase pages hit one endpoint that
+    // always used a single monthly price, so the "Annual Plan" billed monthly.
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+
+    await POST(createRequest({ plan: 'yearly' }))
+
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ line_items: [{ price: 'price_yearly_123', quantity: 1 }] }),
+    )
+  })
+
+  it('falls back to monthly rather than trusting an unknown plan value', async () => {
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+
+    await POST(createRequest({ plan: 'lifetime-free' }))
+
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ line_items: [{ price: 'price_123', quantity: 1 }] }),
     )
   })
 })

@@ -74,7 +74,7 @@ export function useCreateCheckoutSessionMutation() {
   return useMutation<CheckoutSessionResponse, unknown, CreateCheckoutSessionVariables | undefined>({
     mutationFn: async (variables) => {
       const referralId = resolveCheckoutReferralId(variables);
-      return createCheckoutSessionRequest(referralId);
+      return createCheckoutSessionRequest(referralId, variables?.plan ?? 'monthly');
     },
     onSuccess: (data) => {
       invalidateUserAfterCheckout(queryClient);
