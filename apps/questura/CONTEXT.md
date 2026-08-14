@@ -190,6 +190,26 @@ _Avoid_: identity, account
 Reason a Membership entitlement exists, either `stripe` or `staff_grant`; public account APIs expose only Visitor `stripe` entitlements.
 _Avoid_: subscription status, role
 
+### Paid-through date
+
+The end of the last billing period a Visitor account actually paid for; it never advances on an unpaid period.
+_Avoid_: membership expiration, renewal date, next billing date, current period end
+
+### Subscription status
+
+Mirror of the billing provider's own lifecycle state for a Visitor account's subscription, kept for display and reconciliation only.
+_Avoid_: membership status, entitlement, access state
+
+### Dunning
+
+The billing provider's retry window after a renewal charge fails, during which the subscription still exists and may recover.
+_Avoid_: expired, lapsed, cancelled
+
+### Dunning grace
+
+A bounded extension of paid access granted while Dunning runs, so a recoverable payment failure does not read as the end of a Membership.
+_Avoid_: free period, trial, extension
+
 ### Staff entry point
 
 Login path intended for Staff identities before they reach Payload/admin/editorial surfaces.
@@ -235,6 +255,10 @@ _Avoid_: public auth, visitor auth
 - A **Tour** belongs to one Location.
 - **`PerfectForTag.applicableTypes`** scopes a tag to one or more of dining/attractions/nightlife/accommodations.
 - A **Visitor account** may have an active **Membership entitlement**.
+- A `stripe` **Membership entitlement** is active while either the **Paid-through date** or a **Dunning grace** is still in the future; **Subscription status** never grants or revokes access on its own.
+- A **Paid-through date** advances only when a billing period is paid, so it never covers a period the visitor has not paid for.
+- **Dunning** does not end a **Membership entitlement**; access ends when both the **Paid-through date** and any **Dunning grace** have passed.
+- A **Dunning grace** is bounded and explicit, so unpaid access can never extend silently for a whole billing period.
 - A **Staff identity** may have a **Staff grant**, but it is not exposed through public account APIs.
 - A **Staff identity** has at most one **Author**; an **Author** may exist with no Staff identity at all, and that is a fully valid, renderable state (ADR-0007).
 - A **Staff identity** has a lifecycle **status** of `active` or `disabled`. Disabling, not deleting, is how a person is offboarded: a disabled identity cannot sign in and holds no access, while its **Author**, bylines and author page are untouched.
