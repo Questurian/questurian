@@ -10,11 +10,18 @@ function isAssetPath(pathname: string): boolean {
   return /\.[a-zA-Z0-9]+$/.test(pathname)
 }
 
-function stripTrailingSlash(url: URL): URL | null {
+function redirectToRelativeLocation(location: string, status = 307): NextResponse {
+  return new NextResponse(null, {
+    status,
+    headers: {
+      Location: location,
+    },
+  })
+}
+
+function stripTrailingSlash(url: URL): string | null {
   if (url.pathname === '/' || !url.pathname.endsWith('/')) return null
-  const next = new URL(url.toString())
-  next.pathname = url.pathname.replace(/\/+$/, '')
-  return next
+  return `${url.pathname.replace(/\/+$/, '')}${url.search}`
 }
 
 function handleHomeGeoRedirect(request: NextRequest): NextResponse | null {
@@ -32,7 +39,7 @@ function handleHomeGeoRedirect(request: NextRequest): NextResponse | null {
     const cityId = parsed.cityId
     const country = parsed.country
     if (cityId && country) {
-      return NextResponse.redirect(new URL(`/${country}/${cityId}`, request.url))
+      return redirectToRelativeLocation(`/${country}/${cityId}`)
     }
   } catch {
     // Invalid cookie, fall through
@@ -49,7 +56,7 @@ export function middleware(request: NextRequest) {
 
   const stripped = stripTrailingSlash(request.nextUrl)
   if (stripped) {
-    return NextResponse.redirect(stripped, 301)
+    return redirectToRelativeLocation(stripped, 301)
   }
 
   const homeRedirect = handleHomeGeoRedirect(request)
