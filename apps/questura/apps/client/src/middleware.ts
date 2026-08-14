@@ -10,13 +10,25 @@ function isAssetPath(pathname: string): boolean {
   return /\.[a-zA-Z0-9]+$/.test(pathname)
 }
 
-function redirectToRelativeLocation(location: string, status = 307): NextResponse {
-  return new NextResponse(null, {
-    status,
-    headers: {
-      Location: location,
-    },
-  })
+const PUBLIC_FRONTEND_URL =
+  process.env.NEXT_PUBLIC_FRONTEND_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  'https://www.questurian.com'
+
+function getPublicOrigin(request: NextRequest): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const host = forwardedHost || request.headers.get('host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https'
+
+  if (host && !host.startsWith('localhost') && !host.startsWith('127.0.0.1')) {
+    return `${forwardedProto}://${host}`
+  }
+
+  return PUBLIC_FRONTEND_URL.replace(/\/+$/, '')
+}
+
+function redirectToPublicLocation(request: NextRequest, location: string, status = 307): NextResponse {
+  return NextResponse.redirect(new URL(location, getPublicOrigin(request)), status)
 }
 
 function stripTrailingSlash(url: URL): string | null {
@@ -39,7 +51,7 @@ function handleHomeGeoRedirect(request: NextRequest): NextResponse | null {
     const cityId = parsed.cityId
     const country = parsed.country
     if (cityId && country) {
-      return redirectToRelativeLocation(`/${country}/${cityId}`)
+      return redirectToPublicLocation(request, `/${country}/${cityId}`)
     }
   } catch {
     // Invalid cookie, fall through
@@ -56,7 +68,7 @@ export function middleware(request: NextRequest) {
 
   const stripped = stripTrailingSlash(request.nextUrl)
   if (stripped) {
-    return redirectToRelativeLocation(stripped, 301)
+    return redirectToPublicLocation(request, stripped, 301)
   }
 
   const homeRedirect = handleHomeGeoRedirect(request)
