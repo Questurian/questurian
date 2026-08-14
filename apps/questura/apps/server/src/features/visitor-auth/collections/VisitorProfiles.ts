@@ -133,9 +133,15 @@ export const VisitorProfiles: CollectionConfig = {
           type: 'row',
           fields: [
             {
+              // One customer, one profile. Subscription webhooks resolve a
+              // profile from the customer id alone, so a second profile holding
+              // the same id makes that lookup a coin toss: someone else's
+              // payment could grant, or revoke, this visitor's membership.
+              // The database is the only place that can refuse the second row.
               name: 'stripeCustomerId',
               type: 'text',
               index: true,
+              unique: true,
             },
             {
               name: 'stripeSubscriptionId',

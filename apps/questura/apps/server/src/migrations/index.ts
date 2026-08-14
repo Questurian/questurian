@@ -28,6 +28,7 @@ import * as migration_20260813_000000_add_service_accounts_preferences_rel from 
 import * as migration_20260813_010000_add_visitor_profile_billing_email from './20260813_010000_add_visitor_profile_billing_email'
 import * as migration_20260814_010000_add_visitor_profile_paid_through from './20260814_010000_add_visitor_profile_paid_through'
 import * as migration_20260814_020000_drop_legacy_membership_columns from './20260814_020000_drop_legacy_membership_columns'
+import * as migration_20260814_030000_unique_visitor_profile_stripe_customer_id from './20260814_030000_unique_visitor_profile_stripe_customer_id'
 
 export const migrations = [
   {
@@ -179,5 +180,10 @@ export const migrations = [
     up: migration_20260814_020000_drop_legacy_membership_columns.up,
     down: migration_20260814_020000_drop_legacy_membership_columns.down,
     name: '20260814_020000_drop_legacy_membership_columns',
+  },
+  {
+    up: migration_20260814_030000_unique_visitor_profile_stripe_customer_id.up,
+    down: migration_20260814_030000_unique_visitor_profile_stripe_customer_id.down,
+    name: '20260814_030000_unique_visitor_profile_stripe_customer_id',
   },
 ]
