@@ -26,6 +26,7 @@ import * as migration_20260811_040000_add_service_accounts from './20260811_0400
 import * as migration_20260812_080000_enforce_identity_email_ownership from './20260812_080000_enforce_identity_email_ownership'
 import * as migration_20260813_000000_add_service_accounts_preferences_rel from './20260813_000000_add_service_accounts_preferences_rel'
 import * as migration_20260813_010000_add_visitor_profile_billing_email from './20260813_010000_add_visitor_profile_billing_email'
+import * as migration_20260814_010000_add_visitor_profile_paid_through from './20260814_010000_add_visitor_profile_paid_through'
 
 export const migrations = [
   {
@@ -167,5 +168,10 @@ export const migrations = [
     up: migration_20260813_010000_add_visitor_profile_billing_email.up,
     down: migration_20260813_010000_add_visitor_profile_billing_email.down,
     name: '20260813_010000_add_visitor_profile_billing_email',
+  },
+  {
+    up: migration_20260814_010000_add_visitor_profile_paid_through.up,
+    down: migration_20260814_010000_add_visitor_profile_paid_through.down,
+    name: '20260814_010000_add_visitor_profile_paid_through',
   },
 ]
