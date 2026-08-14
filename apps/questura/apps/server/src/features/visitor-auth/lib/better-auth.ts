@@ -6,6 +6,7 @@ import { Pool } from 'pg'
 
 import config from '@/payload.config'
 import { sendPasswordResetLinkEmail, sendVisitorEmailVerificationLinkEmail } from '@/emails'
+import { syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { normalizeEmail } from '@/shared/lib/normalize-email'
 import { redisSecondaryStorage } from './redis-secondary-storage'
@@ -130,9 +131,17 @@ export const visitorAuth = betterAuth({
       }
     },
     afterEmailVerification: async (user) => {
-      await updateVisitorProfileByAuthUserId(user.id, {
-        email: normalizeEmail(user.email),
-      })
+      const email = normalizeEmail(user.email)
+      const profile = await updateVisitorProfileByAuthUserId(user.id, { email })
+
+      // This is also where an email *change* lands, and Stripe never learns of
+      // one on its own: a customer's address is written at creation and left
+      // there. Leaving it stale strands the old address on a live customer,
+      // where the next person to register it could be mistaken for its owner.
+      await syncStripeCustomerEmail(
+        typeof profile?.stripeCustomerId === 'string' ? profile.stripeCustomerId : null,
+        email
+      )
     },
   },
   socialProviders: googleProvider,

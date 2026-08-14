@@ -85,6 +85,7 @@ describe('create checkout session duplicate Stripe customer guard', () => {
     })
     mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_new' })
     mocks.stripeCustomerList.mockResolvedValue({ data: [] })
+    mocks.updateVisitorProfileByAuthUserId.mockResolvedValue({ id: 10 })
     mocks.stripeCheckoutCreate.mockResolvedValue({
       id: 'cs_123',
       url: 'https://checkout.stripe.test/session',
@@ -95,15 +96,17 @@ describe('create checkout session duplicate Stripe customer guard', () => {
     consoleLogSpy?.mockRestore()
   })
 
-  it('adopts an existing Stripe customer instead of creating a second one', async () => {
-    mocks.stripeCustomerList.mockResolvedValue({ data: [{ id: 'cus_existing' }] })
+  it('recovers a customer this visitor owns instead of creating a second one', async () => {
+    mocks.stripeCustomerList.mockResolvedValue({
+      data: [{ id: 'cus_existing', metadata: { visitorAuthUserId: 'visitor_123' } }],
+    })
 
     const response = await POST(createRequest())
 
     expect(response.status).toBe(200)
     expect(mocks.stripeCustomerList).toHaveBeenCalledWith({
       email: 'visitor@example.com',
-      limit: 1,
+      limit: 10,
     })
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
@@ -111,14 +114,96 @@ describe('create checkout session duplicate Stripe customer guard', () => {
     )
   })
 
-  it('re-links the recovered profile to the adopted customer', async () => {
-    mocks.stripeCustomerList.mockResolvedValue({ data: [{ id: 'cus_existing' }] })
+  it('re-links the recovered profile to the recovered customer', async () => {
+    mocks.stripeCustomerList.mockResolvedValue({
+      data: [{ id: 'cus_existing', metadata: { visitorAuthUserId: 'visitor_123' } }],
+    })
 
     await POST(createRequest())
 
     expect(mocks.updateVisitorProfileByAuthUserId).toHaveBeenCalledWith('visitor_123', {
       stripeCustomerId: 'cus_existing',
     })
+  })
+
+  // The address is not the person. A Stripe customer's email is frozen at
+  // creation, so an address a visitor has since changed away from stays on
+  // their customer and is free for the next signup to register.
+  it('never takes over a customer belonging to a different visitor', async () => {
+    mocks.stripeCustomerList.mockResolvedValue({
+      data: [{ id: 'cus_someone_else', metadata: { visitorAuthUserId: 'visitor_999' } }],
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1)
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_new' })
+    )
+    expect(mocks.updateVisitorProfileByAuthUserId).toHaveBeenCalledWith('visitor_123', {
+      stripeCustomerId: 'cus_new',
+    })
+  })
+
+  // Customers created by hand in the Dashboard, or imported, carry no ownership
+  // metadata. Unclaimed is not the same as ours.
+  it('never takes over an unattributed customer', async () => {
+    mocks.stripeCustomerList.mockResolvedValue({
+      data: [{ id: 'cus_legacy', metadata: {} }, { id: 'cus_legacy_2' }],
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1)
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_new' })
+    )
+  })
+
+  // Duplicates share the address, so the visitor's own customer is not
+  // necessarily the newest one Stripe returns.
+  it('picks its own customer out of a same-email crowd', async () => {
+    mocks.stripeCustomerList.mockResolvedValue({
+      data: [
+        { id: 'cus_newest_stranger', metadata: { visitorAuthUserId: 'visitor_999' } },
+        { id: 'cus_legacy' },
+        { id: 'cus_mine', metadata: { visitorAuthUserId: 'visitor_123' } },
+      ],
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_mine' })
+    )
+  })
+
+  it('stamps ownership metadata on every customer it creates', async () => {
+    await POST(createRequest())
+
+    expect(mocks.stripeCustomerCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'visitor@example.com',
+        metadata: { visitorAuthUserId: 'visitor_123', visitorProfileId: '10' },
+      })
+    )
+  })
+
+  // Without a profile row nothing stores the linkage, so the charge that
+  // follows would land on a customer no profile points at.
+  it('shouts when the linkage cannot be persisted', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    mocks.updateVisitorProfileByAuthUserId.mockResolvedValue(null)
+
+    await POST(createRequest())
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Could not link Stripe customer'),
+      expect.objectContaining({ visitorAuthUserId: 'visitor_123' })
+    )
+
+    consoleErrorSpy.mockRestore()
   })
 
   it('creates a customer when the email is genuinely new to Stripe', async () => {

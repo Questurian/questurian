@@ -70,6 +70,7 @@ describe('create checkout session referral ID validation', () => {
     vi.clearAllMocks()
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     mocks.stripeCustomerList.mockResolvedValue({ data: [] })
+    mocks.updateVisitorProfileByAuthUserId.mockResolvedValue({ id: 10 })
     mocks.requireVisitorPrincipal.mockResolvedValue({
       result: { authenticated: true },
       principal: {
