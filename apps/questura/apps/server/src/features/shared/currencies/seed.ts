@@ -263,7 +263,7 @@ export const seedCurrencies = async (payload: Payload) => {
       regions: currency.regions,
       usedIn: currency.usedIn.map((country) => ({ country })),
       notes: currency.notes ?? '',
-      status: 'active',
+      status: 'active' as const,
     }
 
     if (existing.docs[0]) {

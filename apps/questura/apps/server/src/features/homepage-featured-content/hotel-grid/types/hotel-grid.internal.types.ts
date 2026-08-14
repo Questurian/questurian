@@ -1,4 +1,4 @@
-import type { HomepageHotelInvalidReason, HomepageHotelItemRef } from './hotel-grid.types'
+import type { HomepageHotelItemRef } from './hotel-grid.types'
 
 export type { PayloadFindWhere } from '@/shared/utils/payload-types'
 
@@ -17,5 +17,5 @@ export type AccommodationDocLike = {
 export type ParsedHotelSlot = {
   slot: number
   ref: HomepageHotelItemRef | null
-  reason: HomepageHotelInvalidReason | null
+  reason: 'invalid_reference' | null
 }

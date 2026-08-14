@@ -21,10 +21,10 @@ try {
     depth: 0,
     overrideAccess: true,
   })
-  const categoryByName = new Map<string, number | string>()
+  const categoryByName = new Map<string, number>()
   if (newsCat.docs[0]) {
     const doc = newsCat.docs[0] as unknown as { id: number | string }
-    categoryByName.set('News', doc.id)
+    categoryByName.set('News', Number(doc.id))
   }
 
   for (const ec of ENSURE_CATEGORY) {

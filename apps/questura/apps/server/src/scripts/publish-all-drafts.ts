@@ -35,7 +35,7 @@ const payload = await getPayload({ config })
 
 try {
   console.log('\n=== Ensuring categories exist ===')
-  const categoryIdByName = new Map<string, number | string>()
+  const categoryIdByName = new Map<string, number>()
   for (const name of CATEGORIES) {
     const existing = await payload.find({
       collection: 'article-categories',
@@ -46,7 +46,7 @@ try {
     })
     if (existing.docs.length > 0) {
       const doc = existing.docs[0] as unknown as { id: number | string; slug?: string }
-      categoryIdByName.set(name, doc.id)
+      categoryIdByName.set(name, Number(doc.id))
       console.log(`  - ${name} ok (id=${doc.id}, slug=${doc.slug})`)
     } else {
       const created = (await payload.create({
@@ -54,7 +54,7 @@ try {
         data: { name, status: 'active', usageCount: 0 },
         overrideAccess: true,
       })) as unknown as { id: number | string; slug?: string }
-      categoryIdByName.set(name, created.id)
+      categoryIdByName.set(name, Number(created.id))
       console.log(`  ✓ Created ${name} (id=${created.id}, slug=${created.slug})`)
     }
   }

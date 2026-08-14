@@ -60,7 +60,7 @@ function buildTourAgencyItem(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function buildData(itemOverrides: Record<string, unknown> = {}) {
+function buildData(itemOverrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     title: 'One Day Cusco Itinerary',
     location: 'peru|cusco',

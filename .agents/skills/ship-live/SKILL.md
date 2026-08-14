@@ -98,6 +98,32 @@ reporting each stage as it completes. Stop only on the exceptions below.
 3. **Payload schema check** — if the diff touches
    `apps/questura/apps/server/src` collections or fields, stop and follow the
    migration procedure in `AGENTS.md` before committing. Do not improvise.
+   First classify the diff:
+   - type-only changes, test fixtures, and validation callback annotations are
+     not database schema changes.
+   - admin-only metadata changes usually do not require a migration, but still
+     verify with the repo deploy preflight.
+   - storage-shape changes (fields added/removed, relationship storage shape,
+     collection registration, indexes, required/default DB-backed fields) need
+     the migration path.
+
+   Questura's recent migration system is intentionally hand-written. Generated
+   Payload migrations are helper output, not the source of truth. The strongest
+   local gates are `pnpm test:deploy`, `pnpm db:migrate:status`, and the pending
+   migration checks in deploy.
+
+   Watch for stale Payload snapshot drift: if `src/migrations/*.json` is older
+   than later hand-written `.ts` migrations, `payload migrate:create` may prompt
+   about unrelated old tables (for example create-vs-rename questions). Do not
+   answer those prompts automatically, do not create no-op snapshot migrations
+   automatically, and do not treat that as current work. Stop, explain snapshot
+   drift, run the existing deploy preflight checks, and proceed only if they say
+   no pending migration.
+
+   Code-first / migration-second splits are normal here. Field declaration
+   removals may ship separately from destructive column drops. Destructive SQL
+   is manual path only: backup, critical row counts, exact `up()` review,
+   explicit approval, then apply. Rollback restores code only, never data.
 4. **Commit** — inferred message: imperative subject, body explaining *why*.
    Never add AI attribution trailers.
 5. **Push + PR** — `git push -u origin HEAD`, then `gh pr create` with a body
@@ -164,6 +190,12 @@ Name the stage, quote the error lines only (never the whole log — it stays at
   record row counts for `locations`, `articles`, `media_assets`, `media_sets`,
   `users`, `visitor_profiles`, `visitor_auth_*`, review every pending `up()`
   body, get explicit approval, run the batch, redeploy.
+- The Mac's local database is stale scratch, not migration truth. Use it only
+  for tooling checks. Live row counts and migration status come from the
+  `linux-laptop` host.
+- The deploy wrapper stages a private copy and runs build, tests, lint, and
+  migration preflight before swapping live code. If it fails before publication,
+  say live was not touched instead of offering a pointless rollback.
 - **Rollback restores code, never data.** Say it out loud whenever a deploy
   carries a migration.
 - **The host runs live Stripe** (`rk_live`/`pk_live`, real money, no test cards).

@@ -15,7 +15,8 @@ export type AddOnGoogleButtonProps = {
    */
   variant?: AddOnGoogleButtonVariant
   label?: string
-} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>
+  popover?: '' | 'auto' | 'manual'
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'popover'>
 
 function GoogleG({ size = 18 }: { size?: number }): JSX.Element {
   return (

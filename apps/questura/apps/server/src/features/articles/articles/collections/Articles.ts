@@ -4,7 +4,7 @@
  */
 
 import { staffUser } from '@/features/auth/lib/staff-user'
-import { CollectionConfig } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
 import {
   syncSharedNeighborhoodsField,
   validateSharedNeighborhoodSelection,
@@ -97,7 +97,7 @@ export const Articles: CollectionConfig = {
         const authorId = await findAuthorIdForUser(req, user.id)
         if (authorId === null) return false
 
-        return {
+        const draftOwnArticles: Where = {
           and: [
             {
               author: {
@@ -111,6 +111,7 @@ export const Articles: CollectionConfig = {
             },
           ],
         }
+        return draftOwnArticles
       }
 
       return false

@@ -16,7 +16,6 @@
     "db:migrate:create": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:create",
     "db:migrate:down": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:down",
     "db:migrate:status": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
-    "backfill:rankings": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/backfill-rankings-created-by.ts",
     "reconcile:stripe-profiles": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/reconcile-stripe-visitor-profiles.ts",
     "capture:membership-fixtures": "bun scripts/capture-membership-fixtures.ts",
     "inventory:tour-agency": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/inventory-tour-agency-stops.ts",
@@ -34,7 +33,8 @@
     "test": "pnpm run test:int && pnpm run test:deploy && pnpm run test:softprod",
     "test:deploy": "node --test scripts/deploy/*.test.mjs",
     "test:softprod": "bash ../../infra/softprod/deploy.test.sh && bash ../../infra/softprod/release-lib.test.sh && bash ../../infra/softprod/stage-host-config.test.sh && bash ../../infra/softprod/prepare-host-release.test.sh && bash ../../infra/softprod/adopt-host-release.test.sh && bash ../../infra/softprod/healthcheck.test.sh",
-    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.ts"
+    "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@payloadcms/db-postgres": "3.79.1",
