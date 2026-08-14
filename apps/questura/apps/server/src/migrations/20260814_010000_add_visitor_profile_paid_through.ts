@@ -17,10 +17,19 @@ import { MigrateDownArgs, MigrateUpArgs, sql } from '@payloadcms/db-postgres'
  * when a period is actually paid, and `dunning_grace_until` carries the bounded
  * extension that keeps a recoverable visitor reading during retries.
  *
- * The backfill takes whichever of the two legacy columns holds a value.
- * `membership_expiration` wins when both are set: it is only ever written for a
- * subscription that is ending, which is the more conservative of the two.
- * `dunning_grace_until` is intentionally left NULL -- no existing row can be
+ * Deliberately DDL-only, with no backfill. The deploy preflight blocks any
+ * `UPDATE` as a data rewrite, and that guard is worth keeping: migrations add
+ * shape, and populating rows is a separate, reviewable act.
+ *
+ * `paid_through_at` is instead populated by
+ * `scripts/reconcile-stripe-visitor-profiles.ts`, which derives it from Stripe
+ * rather than copying a legacy column. That is better provenance anyway --
+ * `membership_expiration` and `subscription_renews_at` are themselves written
+ * by the code path this change exists to replace, so trusting them would carry
+ * any drift forward. Run the reconcile script right after deploying: until it
+ * runs, a subscribed profile has no paid-through date and is not entitled.
+ *
+ * `dunning_grace_until` needs no backfill at all -- no existing row can be
  * mid-dunning, because the old code revoked instead of granting grace.
  *
  * Both columns are nullable and additive; the legacy columns are left in place
@@ -34,11 +43,6 @@ export async function up({ db }: MigrateUpArgs): Promise<void> {
 
       ALTER TABLE "visitor_profiles"
         ADD COLUMN IF NOT EXISTS "dunning_grace_until" timestamp(3) with time zone;
-
-      UPDATE "visitor_profiles"
-        SET "paid_through_at" = COALESCE("membership_expiration", "subscription_renews_at")
-        WHERE "paid_through_at" IS NULL
-          AND COALESCE("membership_expiration", "subscription_renews_at") IS NOT NULL;
 
       CREATE INDEX IF NOT EXISTS "visitor_profiles_paid_through_at_idx"
         ON "visitor_profiles" USING btree ("paid_through_at");
