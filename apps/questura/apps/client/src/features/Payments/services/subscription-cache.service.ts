@@ -35,6 +35,9 @@ export function rollbackUserMutation(
   }
 }
 
-export function invalidateUserAfterCheckout(queryClient: QueryClient): void {
+export function invalidateUser(queryClient: QueryClient): void {
   queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
 }
+
+/** @deprecated Use {@link invalidateUser}; kept for the checkout call site's readability. */
+export const invalidateUserAfterCheckout = invalidateUser;

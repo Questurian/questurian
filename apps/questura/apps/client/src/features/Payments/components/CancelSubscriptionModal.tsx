@@ -37,7 +37,8 @@ export function CancelSubscriptionModal({
 
         <div className="bg-[#fff3e0] border border-[#ffe0b2] rounded-sm p-3.5 mb-6">
           <p className="text-[0.84rem] text-[#e65100] leading-[1.55]">
-            <strong>Note:</strong> This action cannot be undone. You&apos;ll need to subscribe again to regain premium access.
+            <strong>Note:</strong> You can resume your membership at any time before it ends, and
+            nothing further will be charged in the meantime.
           </p>
         </div>
 

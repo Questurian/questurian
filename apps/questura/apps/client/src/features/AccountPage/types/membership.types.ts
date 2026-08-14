@@ -4,7 +4,15 @@ export interface MembershipSectionProps {
   user: User | null;
 }
 
-export type MembershipType = 'free' | 'active' | 'expiring' | 'expired' | 'cancelled' | 'inactive';
+export type MembershipType =
+  | 'free'
+  | 'active'
+  | 'expiring'
+  | 'expired'
+  | 'cancelled'
+  | 'inactive'
+  /** Renewal charge failed; Stripe is retrying and access is still covered. */
+  | 'payment_issue';
 
 export interface MembershipState {
   type: MembershipType;
