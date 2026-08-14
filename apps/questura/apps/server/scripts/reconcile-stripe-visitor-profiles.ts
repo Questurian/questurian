@@ -19,7 +19,8 @@
  *               `stripeCustomerId`. Repairable here.
  *   DRIFTED     Linked profile whose subscription state disagrees with Stripe.
  *               Repairable here.
- *   ORPHANED    A Stripe customer with a subscription and no profile at all.
+ *   ORPHANED    A Stripe customer with a LIVE subscription and no profile at
+ *               all -- someone is paying and has no account to grant it to.
  *               This is the signature of a destroyed profile. NOT repairable
  *               here: recreating a profile needs an auth user to key on, and
  *               `authUserId` is not derivable from Stripe. Reported for hand
@@ -62,6 +63,18 @@ function parseLimit(): number | null {
   const value = Number(process.argv[index + 1])
   return Number.isFinite(value) && value > 0 ? value : null
 }
+
+/**
+ * Subscription states that still grant, or could still grant, paid access.
+ * Anything else is a closed record rather than something to reconcile.
+ */
+const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+  'incomplete',
+])
 
 function normalizeEmail(email: string | null | undefined): string {
   return (email ?? '').trim().toLowerCase()
@@ -107,6 +120,7 @@ async function main() {
   // ---- Walk Stripe customers ----------------------------------------------
   const updates: PlannedUpdate[] = []
   const orphaned: Array<{ customerId: string; email: string; status: string }> = []
+  let historicalOrphans = 0
   const duplicates = new Map<string, string[]>()
   const seenEmails = new Map<string, string[]>()
 
@@ -142,7 +156,15 @@ async function main() {
 
     if (!linked && candidates.length === 0) {
       if (subscription) {
-        orphaned.push({ customerId: customer.id, email, status: subscription.status })
+        // Only a subscription that could still grant access is a problem. A
+        // customer whose subscription ended and whose profile is gone is
+        // history: there is nothing to repair and nothing to grant, so warning
+        // about it every run trains people to ignore the warning.
+        if (LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
+          orphaned.push({ customerId: customer.id, email, status: subscription.status })
+        } else {
+          historicalOrphans += 1
+        }
       }
       continue
     }
@@ -213,7 +235,12 @@ async function main() {
   console.log(`RELINKABLE : ${relinkable.length}`)
   console.log(`DRIFTED    : ${drifted.length}`)
   console.log(`ORPHANED   : ${orphaned.length}`)
-  console.log(`DUPLICATE  : ${duplicates.size}\n`)
+  console.log(`DUPLICATE  : ${duplicates.size}`)
+  if (historicalOrphans > 0) {
+    // Counted, not warned about: closed records with no profile need no action.
+    console.log(`(${historicalOrphans} ended subscription(s) with no profile — historical, no action)`)
+  }
+  console.log('')
 
   for (const update of updates) {
     console.log(`  [${update.reason}] profile ${update.profileId} <${update.email}>`)

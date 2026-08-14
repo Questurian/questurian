@@ -45,10 +45,12 @@ export async function GET(req: NextRequest) {
         currentPeriodEnd: subscriptionDetails.currentPeriodEnd,
         currentPeriodStart: subscriptionDetails.currentPeriodStart,
         cancelAtPeriodEnd: subscriptionDetails.cancelAtPeriodEnd,
-        // Include user's internal subscription status
+        // Include the mirrored state this server holds. One date carries both
+        // meanings: when access ends if the subscription is cancelling, when
+        // the next charge falls due if it is not (ADR-0008).
         internalStatus: profile.subscriptionStatus,
-        renewsAt: profile.subscriptionRenewsAt,
-        membershipExpiration: profile.membershipExpiration
+        paidThroughAt: profile.paidThroughAt,
+        dunningGraceUntil: profile.dunningGraceUntil
       },
       { headers: corsHeaders }
     )
