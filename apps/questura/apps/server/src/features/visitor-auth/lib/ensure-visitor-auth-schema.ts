@@ -124,8 +124,8 @@ export async function ensureVisitorAuthSchema(): Promise<void> {
     // cannot collide with a re-registered visitor's new profile.
     //
     // The rows, however, are not cheap: `visitor_profiles` holds the Stripe
-    // linkage (`stripe_customer_id`, `stripe_subscription_id`,
-    // `membership_expiration`). Deleting them on boot means a restore-ordering
+    // linkage (`stripe_customer_id`, `stripe_subscription_id`) and the paid
+    // entitlement (`paid_through_at`). Deleting them on boot means a restore-ordering
     // mistake, a lagging replica, or a wrong `DATABASE_URI` silently destroys
     // billing linkage with no FK, no soft-delete, no audit and no row-count
     // guard. Reporting keeps the diagnostic without the loss; reconciliation is

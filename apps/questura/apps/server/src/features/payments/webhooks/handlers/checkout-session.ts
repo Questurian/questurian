@@ -1,5 +1,5 @@
 import type Stripe from 'stripe'
-import { updateUserSubscription, getStripeSubscriptionDetails } from '@/payments/lib/payment-service'
+import { updateUserSubscription } from '@/payments/lib/payment-service'
 import type { UserSubscriptionUpdate } from '@/payments/types'
 import { APP_CONFIG } from '@/shared/config'
 import { findVisitorProfileByStripeCustomerId, splitDisplayName } from '@/features/visitor-auth/lib/visitor-profile'
@@ -23,19 +23,14 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
     return
   }
 
-  // Get subscription details to capture renewal date
-  const subscriptionDetails = await getStripeSubscriptionDetails(subscriptionId)
-  const subscriptionRenewsAt = subscriptionDetails?.currentPeriodEnd?.toISOString() || null
-
-  if (!subscriptionRenewsAt) {
-    logger.warn('Could not determine renewal date for subscription', { subscriptionId })
-  }
-
-  // Extract affiliate referral ID from metadata if present (and feature enabled)
+  // No date is captured here. Checkout only links the subscription and marks it
+  // active; `paidThroughAt` is written by the subscription resync, which is the
+  // single writer of subscription state and derives the date from an invoice
+  // that has actually been paid rather than from `current_period_end`
+  // (ADR-0008).
   const updateData: UserSubscriptionUpdate = {
     stripeSubscriptionId: subscriptionId,
-    subscriptionStatus: 'active',
-    subscriptionRenewsAt
+    subscriptionStatus: 'active'
   }
 
   if (APP_CONFIG.features.endorselyAffiliates) {

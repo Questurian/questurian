@@ -182,6 +182,7 @@ describe('Stripe webhook route', () => {
       subscription: 'sub_1',
       customer_details: { name: 'Grace Hopper' },
     })
+    // Needed by the confirmation email, not by the profile write
     mocks.getStripeSubscriptionDetails.mockResolvedValue({
       currentPeriodEnd: new Date(FUTURE_TS * 1000),
     })
@@ -189,10 +190,12 @@ describe('Stripe webhook route', () => {
     const response = await POST(createRequest())
 
     await expect(response.json()).resolves.toEqual({ received: true })
+    // Exact match, not objectContaining: checkout links the subscription and
+    // nothing else. Any date it wrote would be `current_period_end`, which
+    // ADR-0008 rejects as an entitlement date.
     expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
       stripeSubscriptionId: 'sub_1',
       subscriptionStatus: 'active',
-      subscriptionRenewsAt: new Date(FUTURE_TS * 1000).toISOString(),
     })
     expect(mocks.sendMembershipConfirmationEmail).toHaveBeenCalledWith(
       expect.anything(),
