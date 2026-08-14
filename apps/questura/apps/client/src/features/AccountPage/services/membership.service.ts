@@ -91,6 +91,27 @@ export function getMembershipState(user: User | null): MembershipState {
         showReactivateButton: false,
       };
 
+    // A failed renewal is a payment problem, not the end of a membership.
+    // This case was missing entirely, so a visitor being retried by Stripe fell
+    // through to "Free Member" with an Upgrade button -- and could buy a second
+    // subscription while still holding the first.
+    case 'past_due': {
+      const graceEnds = user.dunningGraceUntil ? new Date(user.dunningGraceUntil) : null;
+      const stillCovered = Boolean(graceEnds && graceEnds > now);
+
+      return {
+        type: stillCovered ? 'payment_issue' : 'expired',
+        label: stillCovered ? 'Premium - Payment Issue' : 'Membership Expired',
+        badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
+        description: stillCovered
+          ? `We could not take your last payment. Your access continues until ${graceEnds!.toLocaleDateString()} while we retry — update your payment method to keep it.`
+          : 'We could not take your last payment and your premium access has ended. Update your payment method to restore it.',
+        showCancelButton: stillCovered,
+        showUpgradeButton: !stillCovered,
+        showReactivateButton: false,
+      };
+    }
+
     case 'canceled':
     case 'cancelled':
       if (isExpired) {
@@ -112,8 +133,12 @@ export function getMembershipState(user: User | null): MembershipState {
           badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
           description: `Your membership was cancelled but remains active until ${expirationDate.toLocaleDateString()}.`,
           showCancelButton: false,
-          showUpgradeButton: false,
-          showReactivateButton: true,
+          // Not reactivatable: this status means Stripe has already deleted the
+          // subscription, so the endpoint can only refuse. Resuming before the
+          // end date is offered by the `expiring` state above, while the
+          // subscription still exists.
+          showUpgradeButton: true,
+          showReactivateButton: false,
         };
       }
 

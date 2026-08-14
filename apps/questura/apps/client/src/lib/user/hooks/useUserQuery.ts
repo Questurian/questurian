@@ -9,13 +9,19 @@ function principalToUser(response: CurrentPrincipalResponse): User | null {
   if (!response.authenticated || !response.principal) return null;
 
   const principal = response.principal;
+  const { cancelAtPeriodEnd, expiresAt } = principal.membership;
 
   return {
     ...principal,
     membershipStatusSummary: principal.membership.active ? 'active' : principal.membership.status,
     subscriptionStatus: principal.membership.status,
-    membershipExpiration: principal.membership.expiresAt,
-    cancelAtPeriodEnd: principal.membership.cancelAtPeriodEnd,
+    // One server value, two meanings, resolved here: the paid-through date is
+    // when access ends if the subscription is cancelling, and when the next
+    // charge falls due if it is not.
+    membershipExpiration: cancelAtPeriodEnd ? expiresAt : null,
+    subscriptionRenewsAt: cancelAtPeriodEnd ? null : expiresAt,
+    dunningGraceUntil: principal.membership.graceUntil,
+    cancelAtPeriodEnd,
   };
 }
 

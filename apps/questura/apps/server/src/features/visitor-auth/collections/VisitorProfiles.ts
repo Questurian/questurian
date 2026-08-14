@@ -97,14 +97,38 @@ export const VisitorProfiles: CollectionConfig = {
       type: 'row',
       fields: [
         {
+          name: 'paidThroughAt',
+          type: 'date',
+          admin: {
+            description:
+              'End of the last billing period actually paid for. Never advances on an unpaid period, so it is not the same as Stripe current_period_end, which moves at renewal before the charge clears.',
+          },
+        },
+        {
+          name: 'dunningGraceUntil',
+          type: 'date',
+          admin: {
+            description:
+              'Bounded extension of access while Stripe retries a failed renewal. Set when the subscription enters past_due, cleared on recovery.',
+          },
+        },
+      ],
+    },
+    {
+      type: 'row',
+      fields: [
+        {
           name: 'subscriptionRenewsAt',
           type: 'date',
+          admin: {
+            description: 'Superseded by paidThroughAt; retained until the follow-up migration drops it.',
+          },
         },
         {
           name: 'membershipExpiration',
           type: 'date',
           admin: {
-            description: 'When paid access ends for a cancelled subscription with remaining paid time.',
+            description: 'Superseded by paidThroughAt; retained until the follow-up migration drops it.',
           },
         },
         {

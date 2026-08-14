@@ -15,7 +15,10 @@ export type VisitorPrincipal = {
     active: boolean;
     source: MembershipSource;
     status: string;
+    /** End of the last period actually paid for. Not necessarily when access ends. */
     expiresAt: string | null;
+    /** Bounded extension while Stripe retries a failed renewal; null otherwise. */
+    graceUntil: string | null;
     cancelAtPeriodEnd: boolean;
   };
 };
@@ -42,6 +45,7 @@ type LegacyUserFields = {
   subscriptionStatus?: string;
   subscriptionRenewsAt?: string | null;
   membershipExpiration?: string | null;
+  dunningGraceUntil?: string | null;
   cancelAtPeriodEnd?: boolean;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;

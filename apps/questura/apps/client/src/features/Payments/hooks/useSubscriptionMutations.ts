@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { resolveCheckoutReferralId } from '../services/checkout-referral.service';
 import {
+  invalidateUser,
   invalidateUserAfterCheckout,
   applyCancelAtPeriodEndOptimisticUpdate,
   rollbackUserMutation,
@@ -35,6 +36,11 @@ export function useCancelSubscriptionMutation() {
     onError: (_error, _variables, context) => {
       rollbackUserMutation(queryClient, context);
     },
+    // The optimistic patch flips one flag; the server also moves the dates the
+    // account page renders. Without this the panel keeps showing stale ones.
+    onSettled: () => {
+      invalidateUser(queryClient);
+    },
   });
 }
 
@@ -46,6 +52,9 @@ export function useRenewSubscriptionMutation() {
     onMutate: async () => applyCancelAtPeriodEndOptimisticUpdate(queryClient, false),
     onError: (_error, _variables, context) => {
       rollbackUserMutation(queryClient, context);
+    },
+    onSettled: () => {
+      invalidateUser(queryClient);
     },
   });
 }

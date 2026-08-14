@@ -59,7 +59,9 @@ export function MembershipSection({ user }: MembershipSectionProps) {
         onConfirm={vm.handleCancelSubscription}
         onClose={vm.handleCloseModal}
         isLoading={vm.isCancelling}
-        membershipExpiration={user?.membershipExpiration}
+        // Before cancelling, the paid-through date is the renewal date; the
+        // modal needs it either way to say when access actually stops.
+        membershipExpiration={user?.membershipExpiration ?? user?.subscriptionRenewsAt}
       />
     </div>
   );

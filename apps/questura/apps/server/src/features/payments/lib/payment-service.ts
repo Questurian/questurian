@@ -1,14 +1,27 @@
 import { getPayload } from 'payload'
+import type Stripe from 'stripe'
 import config from '@/payload.config'
 import { logger } from '@/shared/utils/logger'
 import { stripe } from './stripe'
-import { sendSubscriptionCancelledEmail, sendSubscriptionReactivatedEmail } from '@/emails'
-import { convertStripeTimestamp, getSubscriptionProductName } from './payment-helpers'
+import { convertStripeTimestamp } from './payment-helpers'
 import type { StripeSubscriptionExpanded, UserSubscriptionUpdate } from '../types'
+import { resyncSubscription } from './subscription-resync'
 import {
   findVisitorProfileByAuthUserId,
   findVisitorProfileByStripeCustomerId,
 } from '@/features/visitor-auth/lib/visitor-profile'
+
+/**
+ * Stripe states in which a subscription is still live enough to cancel or
+ * reactivate. `past_due` is deliberately included: a visitor being dunned is
+ * the one most likely to want out, and the old `active`-only guard refused them.
+ */
+const CANCELLABLE_STRIPE_STATUSES = new Set<Stripe.Subscription.Status>([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+])
 
 /**
  * Stripe returns current_period_end/start on the first subscription item,
@@ -106,62 +119,49 @@ export async function cancelUserSubscription(authUserId: string): Promise<{
   membershipExpiresAt?: string
 }> {
   try {
-    const payload = await getPayload({ config })
-
     const profile = await findVisitorProfileByAuthUserId(authUserId)
 
     if (!profile) {
       return { success: false, message: 'Visitor profile not found' }
     }
 
-    if (!profile.stripeSubscriptionId || profile.subscriptionStatus !== 'active') {
-      return { success: false, message: 'No active subscription found' }
+    if (!profile.stripeSubscriptionId) {
+      return { success: false, message: 'No subscription found' }
     }
 
-    const cancelledSubscription = await stripe.subscriptions.update(profile.stripeSubscriptionId, {
-      cancel_at_period_end: true
-    }) as unknown as StripeSubscriptionExpanded
+    // Eligibility is Stripe's to judge, not the mirrored enum's. Requiring a
+    // local `active` status locked visitors in dunning out of cancelling, which
+    // is exactly when someone most wants to stop the retries (ADR-0008).
+    const current = await stripe.subscriptions.retrieve(profile.stripeSubscriptionId)
 
-    // Calculate when membership will actually expire
-    const membershipExpiresAt = getCurrentPeriodEnd(cancelledSubscription)
+    if (!CANCELLABLE_STRIPE_STATUSES.has(current.status)) {
+      return { success: false, message: 'This subscription can no longer be cancelled.' }
+    }
 
-    await payload.update({
-      collection: 'visitor-profiles',
-      id: profile.id,
-      data: {
-        cancelAtPeriodEnd: true,
-        membershipExpiration: membershipExpiresAt ? membershipExpiresAt.toISOString() : null
-      }
+    if (current.cancel_at_period_end) {
+      return { success: false, message: 'Subscription is already scheduled to cancel.' }
+    }
+
+    await stripe.subscriptions.update(profile.stripeSubscriptionId, {
+      cancel_at_period_end: true,
     })
+
+    // Writing state is resync's job; this returns what resync actually wrote so
+    // the response is derived truth rather than a local guess.
+    const { state } = await resyncSubscription(profile.stripeSubscriptionId)
+    const endsAt = state?.paidThroughAt ?? null
 
     logger.info('Cancelled subscription', {
       subscriptionId: profile.stripeSubscriptionId,
-      expiresAt: membershipExpiresAt?.toISOString() ?? null,
+      endsAt,
     })
-
-    const subscriptionType = await getSubscriptionProductName(profile.stripeSubscriptionId)
-
-    // Send cancellation email
-    try {
-      await sendSubscriptionCancelledEmail(payload, {
-        email: profile.email,
-        firstName: profile.firstName ?? undefined,
-        lastName: profile.lastName ?? undefined,
-        subscriptionType,
-        membershipExpiresAt: membershipExpiresAt || undefined,
-        wasImmediate: false // User-initiated cancellations honor paid period
-      })
-    } catch (error) {
-      logger.error('Failed to send cancellation email', {
-        error: error instanceof Error ? error.message : String(error),
-      })
-      // Don't fail the cancellation if email fails
-    }
 
     return {
       success: true,
-      message: membershipExpiresAt ? `Subscription cancelled. Access will continue until ${membershipExpiresAt.toLocaleDateString()}` : 'Subscription cancelled',
-      membershipExpiresAt: membershipExpiresAt ? membershipExpiresAt.toISOString() : undefined
+      message: endsAt
+        ? `Subscription cancelled. Access will continue until ${new Date(endsAt).toLocaleDateString()}`
+        : 'Subscription cancelled',
+      membershipExpiresAt: endsAt ?? undefined,
     }
 
   } catch (error) {
@@ -182,8 +182,6 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
   renewsAt?: string
 }> {
   try {
-    const payload = await getPayload({ config })
-
     const profile = await findVisitorProfileByAuthUserId(authUserId)
 
     if (!profile) {
@@ -197,72 +195,36 @@ export async function reactivateUserSubscription(authUserId: string): Promise<{
       }
     }
 
-    // Check if subscription is actually cancelled
-    if (!profile.cancelAtPeriodEnd) {
-      // If subscription is active and not cancelled, no need to reactivate
-      if (profile.subscriptionStatus === 'active') {
+    const current = await stripe.subscriptions.retrieve(profile.stripeSubscriptionId)
+
+    if (!current.cancel_at_period_end) {
+      if (CANCELLABLE_STRIPE_STATUSES.has(current.status)) {
         return { success: false, message: 'Subscription is already active' }
       }
-      // If subscription is in another state (cancelled, past_due), it can't be reactivated
       return {
         success: false,
         message: 'Subscription cannot be reactivated. Please create a new subscription.'
       }
     }
 
-    // Remove the cancellation flag in Stripe
-    const updatedSubscription = await stripe.subscriptions.update(profile.stripeSubscriptionId, {
-      cancel_at_period_end: false
-    }) as unknown as StripeSubscriptionExpanded
-
-    // Get the new renewal date
-    const renewsAt = getCurrentPeriodEnd(updatedSubscription)
-
-    if (!renewsAt) {
-      return {
-        success: false,
-        message: 'Failed to get renewal date from Stripe'
-      }
-    }
-
-    // Update user record to reflect reactivation
-    await payload.update({
-      collection: 'visitor-profiles',
-      id: profile.id,
-      data: {
-        cancelAtPeriodEnd: false,
-        membershipExpiration: null, // Clear expiration since subscription will renew
-        subscriptionRenewsAt: renewsAt.toISOString()
-      }
+    await stripe.subscriptions.update(profile.stripeSubscriptionId, {
+      cancel_at_period_end: false,
     })
+
+    const { state } = await resyncSubscription(profile.stripeSubscriptionId)
+    const renewsAt = state?.paidThroughAt ?? null
 
     logger.info('Reactivated subscription', {
       subscriptionId: profile.stripeSubscriptionId,
-      renewsAt: renewsAt.toISOString(),
+      renewsAt,
     })
-
-    const subscriptionType = await getSubscriptionProductName(profile.stripeSubscriptionId)
-
-    // Send reactivation confirmation email
-    try {
-      await sendSubscriptionReactivatedEmail(payload, {
-        email: profile.email,
-        firstName: profile.firstName ?? undefined,
-        lastName: profile.lastName ?? undefined,
-        subscriptionType,
-        renewsAt
-      })
-    } catch (error) {
-      logger.error('Failed to send reactivation email', {
-        error: error instanceof Error ? error.message : String(error),
-      })
-      // Don't fail the reactivation if email fails
-    }
 
     return {
       success: true,
-      message: `Subscription reactivated. Will renew on ${renewsAt.toLocaleDateString()}`,
-      renewsAt: renewsAt.toISOString()
+      message: renewsAt
+        ? `Subscription reactivated. Will renew on ${new Date(renewsAt).toLocaleDateString()}`
+        : 'Subscription reactivated',
+      renewsAt: renewsAt ?? undefined,
     }
 
   } catch (error) {
