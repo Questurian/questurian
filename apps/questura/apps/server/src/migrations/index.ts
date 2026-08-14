@@ -27,6 +27,7 @@ import * as migration_20260812_080000_enforce_identity_email_ownership from './2
 import * as migration_20260813_000000_add_service_accounts_preferences_rel from './20260813_000000_add_service_accounts_preferences_rel'
 import * as migration_20260813_010000_add_visitor_profile_billing_email from './20260813_010000_add_visitor_profile_billing_email'
 import * as migration_20260814_010000_add_visitor_profile_paid_through from './20260814_010000_add_visitor_profile_paid_through'
+import * as migration_20260814_020000_drop_legacy_membership_columns from './20260814_020000_drop_legacy_membership_columns'
 
 export const migrations = [
   {
@@ -173,5 +174,10 @@ export const migrations = [
     up: migration_20260814_010000_add_visitor_profile_paid_through.up,
     down: migration_20260814_010000_add_visitor_profile_paid_through.down,
     name: '20260814_010000_add_visitor_profile_paid_through',
+  },
+  {
+    up: migration_20260814_020000_drop_legacy_membership_columns.up,
+    down: migration_20260814_020000_drop_legacy_membership_columns.down,
+    name: '20260814_020000_drop_legacy_membership_columns',
   },
 ]
