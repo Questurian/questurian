@@ -1,3 +1,5 @@
+import type { GateState } from '@/features/articles/lib/gate'
+
 export type MediaAsset = {
   id: number
   url: string
@@ -138,6 +140,8 @@ export type Article = {
   }
   contentBlocks: ContentBlock[]
   seoSection?: SeoSection
+  /** Access tier and lock state, always sent by the public routes (ADR-0009). */
+  gate?: GateState
 }
 
 export {
