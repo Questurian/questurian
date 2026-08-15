@@ -639,4 +639,56 @@ describe('Stripe webhook route', () => {
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_old')
     expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_new')
   })
+
+  it('keeps the paid subscription when an older one was abandoned at 3DS', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_3',
+      customer: 'cus_1',
+      subscription: 'sub_paid',
+    })
+    mocks.subscriptionList.mockResolvedValue({
+      data: [
+        { id: 'sub_abandoned', status: 'incomplete', created: 100, latest_invoice: 'in_abandoned' },
+        { id: 'sub_paid', status: 'active', created: 200, latest_invoice: 'in_paid' },
+      ],
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_abandoned')
+    expect(mocks.subscriptionCancel).not.toHaveBeenCalledWith('sub_paid')
+    // Nothing was ever collected on an incomplete subscription.
+    expect(mocks.refundCreate).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_paid')
+  })
+
+  it('resyncs the surviving subscription when a failed delivery is retried', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_4',
+      customer: 'cus_1',
+      subscription: 'sub_new',
+    })
+    mocks.subscriptionList.mockResolvedValueOnce({
+      data: [
+        { id: 'sub_old', status: 'active', created: 100, latest_invoice: 'in_old' },
+        { id: 'sub_new', status: 'active', created: 200, latest_invoice: 'in_new' },
+      ],
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_new', payment_intent: 'pi_new' })
+    mocks.resyncSubscription.mockRejectedValueOnce(new Error('Stripe unavailable'))
+
+    const failed = await POST(createRequest())
+    expect(failed.status).toBe(500)
+
+    // Stripe retries. The extras this handler already cancelled are no longer
+    // billable, so the session's own subscription is the cancelled, refunded one.
+    mocks.subscriptionList.mockResolvedValue({
+      data: [{ id: 'sub_old', status: 'active', created: 100, latest_invoice: 'in_old' }],
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.resyncSubscription).toHaveBeenLastCalledWith('sub_old')
+    expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_new')
+  })
 })

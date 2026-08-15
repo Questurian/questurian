@@ -123,6 +123,49 @@ const BILLABLE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   'incomplete',
 ])
 
+/**
+ * How much a status is worth when only one subscription may survive. Lower
+ * wins. Collected money outranks money Stripe is still chasing, which outranks
+ * a Checkout that never confirmed at all.
+ */
+const KEEP_PRIORITY_BY_STATUS: Partial<Record<Stripe.Subscription.Status, number>> = {
+  active: 0,
+  trialing: 0,
+  past_due: 1,
+  unpaid: 1,
+  incomplete: 2,
+}
+
+const LOWEST_KEEP_PRIORITY = 3
+
+/**
+ * Pick the one subscription a customer keeps when several are billable.
+ *
+ * Age alone is the wrong tiebreak. A visitor who abandons 3DS leaves an
+ * `incomplete` subscription sitting on the customer for ~23 hours, so their
+ * successful retry that same day is always the *newer* of the two. Keeping the
+ * older one there cancels and refunds the subscription that actually paid, then
+ * derives entitlement from one that never collected — the visitor pays, is
+ * refunded, and gets nothing.
+ *
+ * Paid-ness is therefore ranked first and `created` only breaks ties, which is
+ * what the genuine duplicate case (two Checkouts both confirming) needs.
+ */
+export function selectSubscriptionToKeep(
+  billable: Stripe.Subscription[]
+): Stripe.Subscription | null {
+  return billable.reduce<Stripe.Subscription | null>((best, subscription) => {
+    if (!best) return subscription
+
+    const candidate = KEEP_PRIORITY_BY_STATUS[subscription.status] ?? LOWEST_KEEP_PRIORITY
+    const incumbent = KEEP_PRIORITY_BY_STATUS[best.status] ?? LOWEST_KEEP_PRIORITY
+
+    if (candidate !== incumbent) return candidate < incumbent ? subscription : best
+
+    return subscription.created < best.created ? subscription : best
+  }, null)
+}
+
 async function listCustomerSubscriptions(customerId: string): Promise<Stripe.Subscription[]> {
   const listed = await stripe.subscriptions.list({
     customer: customerId,
