@@ -4,6 +4,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { DEFAULT_LANG, isSupportedLang } from '@/shared/i18n/languageField'
 import { serializeArticleByCollection } from '@/features/articles/public/serializeArticleBlocks'
+import { gatePublicArticle } from '@/features/articles/public/gatePublicArticle'
 
 function badRequest(message: string) {
   return NextResponse.json({ message }, { status: 400 })
@@ -43,6 +44,7 @@ export async function GET(req: NextRequest) {
 
     const article = result.docs[0] as unknown as Record<string, unknown>
     await serializeArticleByCollection('articles', article, payload)
+    gatePublicArticle('articles', article)
 
     return NextResponse.json(article)
   } catch (error) {

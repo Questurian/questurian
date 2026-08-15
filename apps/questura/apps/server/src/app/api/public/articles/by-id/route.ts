@@ -7,6 +7,7 @@ import {
   serializeArticleByCollection,
   type ArticleCollectionSlug,
 } from '@/features/articles/public/serializeArticleBlocks'
+import { gatePublicArticle } from '@/features/articles/public/gatePublicArticle'
 import {
   isArticleScopeKind,
   isArticleTypeKey,
@@ -86,6 +87,7 @@ export async function GET(req: NextRequest) {
     }
 
     await serializeArticleByCollection(collection, article, payload)
+    gatePublicArticle(collection, article)
 
     return NextResponse.json(article)
   } catch (error) {
