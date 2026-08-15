@@ -66,6 +66,33 @@
   pointer-events: none;
 }
 
+/*
+ * Globe PNG loads after the inline SVG routes. Keep the whole stage hidden
+ * until the image is decoded, then slide globe + routes up together.
+ */
+.join-hero-visual-stage {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translate3d(0, 80px, 0);
+}
+
+.join-hero-visual-stage.is-ready {
+  animation: join-hero-visual-enter 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes join-hero-visual-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 80px, 0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .join-hero-globe-image {
   position: absolute;
   top: 100px;
@@ -514,6 +541,15 @@
   .join-route-exhaust,
   .join-hub-halo {
     animation: none;
+  }
+
+  .join-hero-visual-stage {
+    transform: none;
+  }
+
+  .join-hero-visual-stage.is-ready {
+    animation: none;
+    opacity: 1;
   }
 
   .join-ticker-track {
