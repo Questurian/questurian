@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   invoiceRetrieve: vi.fn(),
   chargeRetrieve: vi.fn(),
   subscriptionUpdate: vi.fn(),
+  subscriptionList: vi.fn(),
+  subscriptionCancel: vi.fn(),
+  refundCreate: vi.fn(),
   updateUserSubscription: vi.fn(),
   getStripeSubscriptionDetails: vi.fn(),
   getSubscriptionProductName: vi.fn(),
@@ -44,7 +47,12 @@ vi.mock('@/payments/lib/stripe', () => ({
     webhooks: { constructEvent: mocks.constructEvent },
     invoices: { retrieve: mocks.invoiceRetrieve },
     charges: { retrieve: mocks.chargeRetrieve },
-    subscriptions: { update: mocks.subscriptionUpdate },
+    subscriptions: {
+      update: mocks.subscriptionUpdate,
+      list: mocks.subscriptionList,
+      cancel: mocks.subscriptionCancel,
+    },
+    refunds: { create: mocks.refundCreate },
   },
 }))
 
@@ -139,6 +147,9 @@ describe('Stripe webhook route', () => {
     mocks.updateUserSubscription.mockResolvedValue(true)
     mocks.resyncSubscription.mockResolvedValue({ profileId: 10, state: null, transitions: [] })
     mocks.subscriptionUpdate.mockResolvedValue({})
+    mocks.subscriptionList.mockResolvedValue({ data: [] })
+    mocks.subscriptionCancel.mockResolvedValue({})
+    mocks.refundCreate.mockResolvedValue({})
     mocks.getSubscriptionProductName.mockResolvedValue('Premium Membership')
     mocks.findVisitorProfileByStripeCustomerId.mockResolvedValue({
       id: 10,
@@ -599,5 +610,33 @@ describe('Stripe webhook route', () => {
 
     expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
     expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+  })
+
+  it('cancels and refunds a newer duplicate subscription, then resyncs the oldest', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_2',
+      customer: 'cus_1',
+      subscription: 'sub_new',
+    })
+    mocks.subscriptionList.mockResolvedValue({
+      data: [
+        { id: 'sub_old', status: 'active', created: 100, latest_invoice: 'in_old' },
+        { id: 'sub_new', status: 'active', created: 200, latest_invoice: 'in_new' },
+      ],
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_new',
+      payment_intent: 'pi_new',
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.refundCreate).toHaveBeenCalledWith(
+      { payment_intent: 'pi_new' },
+      { idempotencyKey: 'dup-sub-refund-sub_new' },
+    )
+    expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_new')
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_old')
+    expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_new')
   })
 })
