@@ -50,6 +50,9 @@ const DAY_MS = 24 * 60 * 60 * 1000
  * Stripe statuses where the *current* period has not been paid for. In these
  * states the subscription's period has already rolled forward optimistically,
  * so its end date describes time the visitor has not bought.
+ *
+ * `canceled` is deliberately absent: it means both endings at once and has to
+ * be decided per subscription — see `canceledPeriodWasPaid`.
  */
 const UNPAID_CURRENT_PERIOD = new Set<Stripe.Subscription.Status>([
   'past_due',
@@ -119,6 +122,55 @@ function getPeriod(subscription: Stripe.Subscription): { start: Date | null; end
 }
 
 /**
+ * Whether the invoice Stripe last raised on this subscription was collected.
+ *
+ * `null` means the answer is unavailable rather than negative: `latest_invoice`
+ * is an id unless the caller expanded it, and a missing expansion must not be
+ * read as a failed payment.
+ */
+function latestInvoiceWasPaid(subscription: Stripe.Subscription): boolean | null {
+  const invoice = subscription.latest_invoice
+
+  if (!invoice || typeof invoice === 'string') return null
+
+  const { status, paid } = invoice as Stripe.Invoice & { paid?: boolean }
+
+  if (status) return status === 'paid'
+  if (typeof paid === 'boolean') return paid
+
+  return null
+}
+
+/**
+ * Whether a cancelled subscription's current period was ever bought.
+ *
+ * `canceled` covers two opposite endings. A visitor who cancels at period end
+ * has paid for the period they are sitting in, and Stripe ends the subscription
+ * exactly when that period expires. Dunning ends the other way round: the
+ * renewal advanced the period first, the charge never cleared, Stripe retried
+ * for weeks and then cancelled — mid-period, on time nobody paid for. Reading
+ * `current_period_end` there hands out the remainder free, about nine days on a
+ * monthly plan and most of a year on an annual one.
+ *
+ * The invoice is the direct evidence, and the resync path expands it. Where it
+ * is absent, `ended_at` still separates the two shapes: a cancel-at-period-end
+ * lands on the period boundary, a dunning cancel lands before it. With neither
+ * signal the period is treated as paid, so silence never revokes access.
+ */
+function canceledPeriodWasPaid(
+  subscription: Stripe.Subscription,
+  periodEnd: Date | null
+): boolean {
+  const invoicePaid = latestInvoiceWasPaid(subscription)
+  if (invoicePaid !== null) return invoicePaid
+
+  const endedAt = convertStripeTimestamp(subscription.ended_at ?? null)
+  if (!endedAt || !periodEnd) return true
+
+  return endedAt.getTime() >= periodEnd.getTime()
+}
+
+/**
  * The end of the last period the visitor actually paid for.
  *
  * Stripe advances the period at the renewal moment, before the charge clears,
@@ -129,7 +181,13 @@ function getPeriod(subscription: Stripe.Subscription): { start: Date | null; end
 function resolvePaidThrough(subscription: Stripe.Subscription): Date | null {
   const { start, end } = getPeriod(subscription)
 
-  return UNPAID_CURRENT_PERIOD.has(subscription.status) ? start : end
+  if (UNPAID_CURRENT_PERIOD.has(subscription.status)) return start
+
+  if (subscription.status === 'canceled') {
+    return canceledPeriodWasPaid(subscription, end) ? end : start
+  }
+
+  return end
 }
 
 /**

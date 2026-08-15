@@ -153,11 +153,70 @@ describe('deriveSubscriptionState', () => {
   it('honours the paid period on a deleted subscription', () => {
     const deleted = firstWhere((s) => s.status === 'canceled')
 
+    // This fixture is the *voluntary* ending: cancel at period end, so Stripe
+    // stopped the subscription exactly when the paid period ran out. Asserting
+    // that keeps the test honest — it is not evidence about a dunning cancel,
+    // which ends mid-period and is covered below.
+    expect(deleted.ended_at! * 1000).toEqual(new Date(periodOf(deleted).end).getTime())
+
     // The old handler read current_period_end off the subscription root, which
     // the SDK's API version does not populate, so this silently became null.
     expect(deriveSubscriptionState(deleted)).toMatchObject({
       subscriptionStatus: 'cancelled',
       paidThroughAt: periodOf(deleted).end,
+    })
+  })
+
+  describe('a subscription Stripe cancelled after dunning', () => {
+    /**
+     * The renewal advanced the period, the charge never cleared, Stripe retried
+     * for three weeks and then cancelled. `current_period_end` is still in the
+     * future here, and it describes time nobody paid for.
+     */
+    function dunningCancelled(overrides: Partial<Stripe.Subscription> = {}) {
+      const pastDue = firstWhere((s) => s.status === 'past_due')
+      const period = periodOf(pastDue)
+      const endedAt = new Date(new Date(period.start).getTime() + 21 * 24 * 60 * 60 * 1000)
+
+      expect(endedAt.getTime()).toBeLessThan(new Date(period.end).getTime())
+
+      return {
+        subscription: {
+          ...pastDue,
+          status: 'canceled',
+          ended_at: Math.floor(endedAt.getTime() / 1000),
+          ...overrides,
+        } as Stripe.Subscription,
+        period,
+      }
+    }
+
+    it('stops paid access at the last collected period when the invoice never paid', () => {
+      const { subscription, period } = dunningCancelled({
+        latest_invoice: { id: 'in_dunning', status: 'open' } as unknown as Stripe.Invoice,
+      })
+
+      expect(deriveSubscriptionState(subscription)).toMatchObject({
+        subscriptionStatus: 'cancelled',
+        paidThroughAt: period.start,
+      })
+    })
+
+    it('falls back to ended_at when latest_invoice was not expanded', () => {
+      const { subscription, period } = dunningCancelled()
+
+      expect(typeof subscription.latest_invoice).toBe('string')
+      expect(deriveSubscriptionState(subscription).paidThroughAt).toEqual(period.start)
+    })
+
+    it('keeps the period end when the final invoice was actually paid', () => {
+      // Same mid-period ending, opposite money: an immediate cancellation on a
+      // period the visitor already bought must not claw back the rest of it.
+      const { subscription, period } = dunningCancelled({
+        latest_invoice: { id: 'in_paid', status: 'paid' } as unknown as Stripe.Invoice,
+      })
+
+      expect(deriveSubscriptionState(subscription).paidThroughAt).toEqual(period.end)
     })
   })
 
