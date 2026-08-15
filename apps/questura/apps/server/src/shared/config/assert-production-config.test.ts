@@ -18,6 +18,9 @@ const VALID_PRODUCTION_ENV = {
   PAYLOAD_COOKIE_REQUIRED_HOSTS: 'api.questurian.com,questurian.com',
   PAYLOAD_SECRET: 'p'.repeat(32),
   BETTER_AUTH_SECRET: 'b'.repeat(48),
+  STRIPE_SECRET_KEY: 'sk_test_placeholder_not_a_real_key',
+  STRIPE_WEBHOOK_SECRET: 'whsec_placeholder_not_a_real_secret',
+  STRIPE_PRICE_ID: 'price_monthly_placeholder',
 }
 
 describe('production config assertion', () => {
@@ -31,6 +34,10 @@ describe('production config assertion', () => {
     vi.stubEnv('PAYLOAD_COOKIE_REQUIRED_HOSTS', '')
     vi.stubEnv('PAYLOAD_SECRET', '')
     vi.stubEnv('BETTER_AUTH_SECRET', '')
+    vi.stubEnv('STRIPE_SECRET_KEY', '')
+    vi.stubEnv('STRIPE_WEBHOOK_SECRET', '')
+    vi.stubEnv('STRIPE_PRICE_ID', '')
+    vi.stubEnv('STRIPE_PRICE_ID_MONTHLY', '')
   })
 
   afterEach(() => {
@@ -175,14 +182,50 @@ describe('production config assertion', () => {
     expect(collectProductionConfigProblems().join('\n')).toContain('BETTER_AUTH_SECRET is not set')
   })
 
+  it.each(['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'])(
+    'rejects a production boot with no %s',
+    async (name) => {
+      const { collectProductionConfigProblems } = await load({
+        ...VALID_PRODUCTION_ENV,
+        [name]: '',
+      })
+
+      expect(collectProductionConfigProblems().join('\n')).toContain(`${name} is not set`)
+    }
+  )
+
+  it('rejects a production boot with no monthly Stripe price id', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      STRIPE_PRICE_ID: '',
+      STRIPE_PRICE_ID_MONTHLY: '',
+    })
+
+    expect(collectProductionConfigProblems().join('\n')).toContain('STRIPE_PRICE_ID')
+  })
+
+  it('accepts STRIPE_PRICE_ID_MONTHLY when STRIPE_PRICE_ID is unset', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      STRIPE_PRICE_ID: '',
+      STRIPE_PRICE_ID_MONTHLY: 'price_monthly_from_new_var',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([])
+  })
+
   // Boot errors reach logs and process supervisors, so a rejection must never
   // carry the secret itself — nor a length or prefix that narrows a guess.
   it('never puts a secret value in the thrown message', async () => {
     const shortSecret = 'correct-horse-battery-x'
+    const stripeSecret = 'sk_live_this-must-not-appear-in-logs'
+    const webhookSecret = 'whsec_this-must-not-appear-either'
     const { assertProductionConfig } = await load({
       ...VALID_PRODUCTION_ENV,
       PAYLOAD_SECRET: shortSecret,
       BETTER_AUTH_SECRET: 'staple-tribune-nonsense-value',
+      STRIPE_SECRET_KEY: stripeSecret,
+      STRIPE_WEBHOOK_SECRET: webhookSecret,
     })
 
     let message = ''
@@ -198,6 +241,10 @@ describe('production config assertion', () => {
     expect(message).not.toContain('correct-horse')
     expect(message).not.toContain('staple-tribune')
     expect(message).not.toContain(String(shortSecret.length))
+    expect(message).not.toContain(stripeSecret)
+    expect(message).not.toContain(webhookSecret)
+    expect(message).not.toContain('sk_live_')
+    expect(message).not.toContain('whsec_this')
   })
 
   it('rejects a production boot with no session cookie domain decision', async () => {
