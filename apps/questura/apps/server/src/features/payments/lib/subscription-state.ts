@@ -14,6 +14,14 @@ import { mapStripeStatusToInternal } from './payment-service'
  */
 export const DUNNING_GRACE_DAYS = 5
 
+/**
+ * Written onto the Stripe subscription when a charge is fully refunded or
+ * disputed. Resync reads this so a later `customer.subscription.deleted`
+ * cannot restore `paidThroughAt` from the unpaid period end.
+ */
+export const ACCESS_REVOKED_METADATA_KEY = 'access_revoked'
+export const ACCESS_REVOKED_METADATA_VALUE = 'true'
+
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
@@ -133,6 +141,16 @@ export function deriveSubscriptionState(
   context: DeriveContext = {}
 ): DerivedSubscriptionState {
   const subscriptionStatus = mapStripeStatusToInternal(subscription.status)
+
+  if (subscription.metadata?.[ACCESS_REVOKED_METADATA_KEY] === ACCESS_REVOKED_METADATA_VALUE) {
+    return {
+      subscriptionStatus,
+      cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
+      paidThroughAt: null,
+      dunningGraceUntil: null,
+    }
+  }
+
   const paidThrough = resolvePaidThrough(subscription)
 
   return {

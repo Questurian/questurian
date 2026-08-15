@@ -18,6 +18,11 @@ import {
   handleInvoicePaymentSucceeded,
   handleInvoicePaymentFailed,
 } from '@/payments/webhooks/handlers/invoice-payment'
+import {
+  handleChargeRefunded,
+  handleDisputeCreated,
+  handleDisputeClosed,
+} from '@/payments/webhooks/handlers/charge-revocation'
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -114,6 +119,18 @@ export async function POST(req: NextRequest) {
 
         case 'invoice.payment_failed':
           await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
+          break
+
+        case 'charge.refunded':
+          await handleChargeRefunded(event.data.object as Stripe.Charge)
+          break
+
+        case 'charge.dispute.created':
+          await handleDisputeCreated(event.data.object as Stripe.Dispute)
+          break
+
+        case 'charge.dispute.closed':
+          await handleDisputeClosed(event.data.object as Stripe.Dispute)
           break
 
         default:
