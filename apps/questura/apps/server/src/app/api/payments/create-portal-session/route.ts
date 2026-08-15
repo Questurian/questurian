@@ -5,6 +5,7 @@ import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/sh
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
 import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
+import { logger } from '@/shared/utils/logger'
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
       return_url: returnUrl // Where user returns after managing billing
     })
 
-    console.log('Created Customer Portal session:', session.id)
+    logger.info('Created Customer Portal session')
 
     // 4. Return the portal URL to redirect the user
     return NextResponse.json(
@@ -54,7 +55,9 @@ export async function POST(req: NextRequest) {
     )
 
   } catch (error) {
-    console.error('Error creating Customer Portal session:', error)
+    logger.error('Error creating Customer Portal session', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to create billing portal session' },
       { status: 500, headers: corsHeaders }
