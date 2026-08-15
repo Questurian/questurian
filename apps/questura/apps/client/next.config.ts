@@ -11,6 +11,22 @@ const nextConfig: NextConfig = {
   experimental: {
     isrFlushToDisk: false,
   },
+  async headers() {
+    return [
+      {
+        // Join hero globe derivatives are width-versioned filenames
+        // (questurian-globe-1650.webp); new artwork gets new names, so the
+        // bytes at a given URL never change.
+        source: "/images/join/:file(.*\\.webp)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);
