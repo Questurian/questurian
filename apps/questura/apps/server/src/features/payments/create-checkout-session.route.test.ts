@@ -75,6 +75,7 @@ describe('create checkout session route auth guard', () => {
     })
     mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_123' })
     mocks.stripeCustomerList.mockResolvedValue({ data: [] })
+    mocks.updateVisitorProfileByAuthUserId.mockResolvedValue({ id: 10 })
     mocks.stripeCheckoutCreate.mockResolvedValue({
       id: 'cs_123',
       url: 'https://checkout.stripe.test/session',

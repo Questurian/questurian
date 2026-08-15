@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/payments/lib/stripe'
+import { resolveStripeCustomerForVisitor } from '@/payments/lib/customer-linkage'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
@@ -90,40 +91,35 @@ export async function POST(req: NextRequest) {
     let stripeCustomerId = profile?.stripeCustomerId ?? null
 
     if (!stripeCustomerId) {
-      // The profile carries no Stripe linkage, but that does not mean this human
-      // is new to Stripe. A `visitor-profiles` row can be hard-deleted by an
-      // admin, or lost, while the Better Auth user lives on; the next `/api/me`
-      // silently recreates a blank profile without `stripeCustomerId`. Creating
-      // unconditionally here would then bill the same person through a second
-      // Stripe customer, splitting their billing history and leaving the
-      // original subscription orphaned. Adopt an existing customer first.
-      const existing = await stripe.customers.list({ email: visitor.email, limit: 1 })
-      const adopted = existing.data[0]
+      const resolved = await resolveStripeCustomerForVisitor({
+        email: visitor.email,
+        visitorAuthUserId,
+        visitorProfileId: visitor.profileId,
+        name:
+          visitor.firstName && visitor.lastName
+            ? `${visitor.firstName} ${visitor.lastName}`
+            : visitor.email,
+      })
 
-      if (adopted) {
-        stripeCustomerId = adopted.id
-        console.log('Adopted existing Stripe customer by email:', stripeCustomerId)
+      stripeCustomerId = resolved.customerId
+      console.log(
+        resolved.created
+          ? 'Created Stripe customer:'
+          : 'Recovered this visitor\'s existing Stripe customer:',
+        stripeCustomerId
+      )
 
-        // Re-link the profile so the lookup above succeeds next time.
-        await updateVisitorProfileByAuthUserId(visitorAuthUserId, { stripeCustomerId })
-      } else {
-        console.log('Creating new Stripe customer for visitor:', visitorAuthUserId)
+      // Re-link the profile so the lookup above succeeds next time. A missing
+      // profile row means nothing stores the linkage, and the payment that
+      // follows would land on a customer no profile points at — worth shouting
+      // about, since only the logs can connect the charge back to the visitor.
+      const linked = await updateVisitorProfileByAuthUserId(visitorAuthUserId, { stripeCustomerId })
 
-        const customer = await stripe.customers.create({
-          email: visitor.email,
-          name: visitor.firstName && visitor.lastName ? `${visitor.firstName} ${visitor.lastName}` : visitor.email,
-          metadata: {
-            visitorAuthUserId,
-            visitorProfileId: String(visitor.profileId ?? ''),
-          }
-        })
-
-        stripeCustomerId = customer.id
-        console.log('Created Stripe customer:', stripeCustomerId)
-
-        await updateVisitorProfileByAuthUserId(visitorAuthUserId, { stripeCustomerId })
-
-        console.log('Updated VisitorProfile with stripeCustomerId')
+      if (!linked) {
+        console.error(
+          'Could not link Stripe customer to a visitor profile; no profile row for auth user',
+          { visitorAuthUserId, stripeCustomerId }
+        )
       }
     } else {
       console.log('Using existing Stripe customer:', stripeCustomerId)
