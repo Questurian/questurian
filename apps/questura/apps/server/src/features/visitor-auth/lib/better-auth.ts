@@ -92,6 +92,22 @@ export const visitorAuth = betterAuth({
     // default is doing security work and is easy to switch off by accident.
     accountLinking: {
       enabled: true,
+      // Linking is explicit only. Signing in with Google will never attach
+      // itself to an account that already exists under that address; the
+      // visitor signs in the way that account was made and connects Google from
+      // their account page, which goes through `link-social` and is unaffected
+      // by this flag.
+      //
+      // `requireLocalEmailVerified` already refused to link onto an *unverified*
+      // local account, which closed the obvious version of this. What it could
+      // not close is that `sendOnSignUp` mails a genuine verification link to
+      // whatever address was registered — so someone who signs up as a stranger
+      // gets that stranger to do the verifying for them, and inherits the
+      // account, its billing portal and its subscription the moment the real
+      // owner tries Google. Implicit linking is the only thing that turns
+      // "someone typed your address" into "someone is in your account", and it
+      // buys one saved click.
+      disableImplicitLinking: true,
       trustedProviders: ['google'],
       allowDifferentEmails: false,
     },
