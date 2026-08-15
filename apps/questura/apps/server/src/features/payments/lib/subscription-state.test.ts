@@ -160,4 +160,32 @@ describe('deriveSubscriptionState', () => {
       paidThroughAt: periodOf(deleted).end,
     })
   })
+
+  it('does not open dunning grace for an incomplete subscription that never paid', () => {
+    const incomplete = {
+      ...firstWhere((s) => s.status === 'active'),
+      status: 'incomplete',
+    } as Stripe.Subscription
+    const now = new Date('2026-09-15T13:10:00.000Z')
+
+    const derived = deriveSubscriptionState(incomplete, { now })
+
+    expect(derived.subscriptionStatus).toBe('past_due')
+    expect(derived.dunningGraceUntil).toBeNull()
+    expect(derived.paidThroughAt).toEqual(periodOf(incomplete).start)
+  })
+
+  it('still opens dunning grace for unpaid, which is a failed collection after a real period', () => {
+    const unpaid = {
+      ...firstWhere((s) => s.status === 'past_due'),
+      status: 'unpaid',
+    } as Stripe.Subscription
+    const now = new Date('2026-09-15T13:10:00.000Z')
+
+    const derived = deriveSubscriptionState(unpaid, { now })
+
+    expect(derived.dunningGraceUntil).toEqual(
+      new Date(now.getTime() + DUNNING_GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
+    )
+  })
 })
