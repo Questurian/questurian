@@ -77,9 +77,22 @@ export const visitorAuth = betterAuth({
     modelName: 'visitor_auth_accounts',
     encryptOAuthTokens: true,
     storeStateStrategy: 'database',
+    // `trustedProviders` is only ever compared against an OAuth provider id
+    // (Better Auth checks it in the OAuth callback, the implicit-link path and
+    // `linkAccount`), so listing `email-password` here did nothing — it read
+    // like a decision to trust password accounts for linking while having no
+    // effect at all.
+    //
+    // What actually protects this surface is `requireLocalEmailVerified`, which
+    // defaults to true: signing in with Google cannot implicitly link onto an
+    // existing local account whose address was never verified. That is what
+    // stops someone registering a stranger's address with a password and
+    // waiting to inherit the session — and the subscription — they later create
+    // with Google. Left at its default deliberately; stated here because the
+    // default is doing security work and is easy to switch off by accident.
     accountLinking: {
       enabled: true,
-      trustedProviders: ['google', 'email-password'],
+      trustedProviders: ['google'],
       allowDifferentEmails: false,
     },
   },
