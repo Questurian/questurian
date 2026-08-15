@@ -6,6 +6,7 @@ import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/sh
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { isPlanId, priceIdForPlan, type PlanId } from '@/payments/lib/membership-plans'
 import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
+import { safeReturnPath } from '@/payments/lib/safe-return-path'
 import {
   findVisitorProfileByAuthUserId,
   updateVisitorProfileByAuthUserId,
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
     // 3. Parse the request body once: it carries the chosen plan, and the
     // affiliate referral when that feature is on. Reading it only for referrals
     // would silently drop the plan whenever the flag is off.
-    let body: { plan?: unknown; referralId?: unknown } = {}
+    let body: { plan?: unknown; referralId?: unknown; returnTo?: unknown } = {}
     try {
       body = await req.json()
     } catch {
@@ -78,6 +79,11 @@ export async function POST(req: NextRequest) {
 
     const plan: PlanId = isPlanId(body?.plan) ? body.plan : 'monthly'
     const priceId = priceIdForPlan(plan)
+
+    // Where to send the buyer once the success page has confirmed entitlement.
+    // Attacker-controlled by definition and destined for a URL Stripe redirects
+    // a browser to, so it is validated here rather than trusted from the client.
+    const returnTo = safeReturnPath(body?.returnTo)
 
     if (!priceId) {
       return NextResponse.json(
@@ -163,7 +169,9 @@ export async function POST(req: NextRequest) {
         price: priceId,
         quantity: 1
       }],
-      success_url: APP_URLS.frontendUrl('/subscription/success?session_id={CHECKOUT_SESSION_ID}'),
+      success_url: APP_URLS.frontendUrl(
+        `/subscription/success?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(returnTo)}`,
+      ),
       cancel_url: APP_URLS.frontendUrl('/subscription/cancel'),
       metadata,
       allow_promotion_codes: true, // Optional: allow discount codes
