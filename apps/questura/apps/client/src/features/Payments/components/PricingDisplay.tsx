@@ -86,16 +86,7 @@ export default function PricingDisplay() {
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
       {/* ── Hero ── */}
-      <section className="join-hero" aria-labelledby="join-hero-title">
-        <JoinHeroVisual />
-
-        <div className="join-hero-copy">
-          <h1 id="join-hero-title" className="join-hero-title">
-            <span>Know more.</span>{' '}
-            <em>Travel better.</em>
-          </h1>
-        </div>
-      </section>
+      <JoinHeroVisual />
 
       {/* ── Departures-board ticker ── */}
       <div
