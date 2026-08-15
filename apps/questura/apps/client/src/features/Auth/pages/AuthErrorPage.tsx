@@ -20,6 +20,12 @@ function AuthErrorContent() {
         case 'account_exists':
           setError('An account with this email already exists. Please sign in with your existing credentials.');
           break;
+        // Google will not attach itself to an account that already exists under
+        // the same address. Without this case the visitor gets the generic
+        // "try again" and loops, because trying again does the same thing.
+        case 'account_not_linked':
+          setError('This email already has an account. Sign in the way you created it, then connect Google from your account settings.');
+          break;
         case 'oauth_cancelled':
           setError('Google sign-in was cancelled. Please try again.');
           break;
