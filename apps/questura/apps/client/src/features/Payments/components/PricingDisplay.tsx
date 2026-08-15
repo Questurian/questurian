@@ -1,5 +1,15 @@
+'use client';
+
 import Link from 'next/link';
 import JoinHeroVisual from './JoinHeroVisual';
+import {
+  formatPerMonthEquivalent,
+  formatPlanAmount,
+  formatPlanInterval,
+  getAnnualSaving,
+  useMembershipPlans,
+  type MembershipPlan,
+} from '../hooks/useMembershipPlan';
 
 const tickerItems = [
   'Neighborhood deep-dives',
@@ -34,13 +44,9 @@ const unlocks = [
   },
 ];
 
-const faqs = [
-  {
-    question: 'What’s the difference between the plans?',
-    answer:
-      'Nothing but the billing. Both plans unlock every article, itinerary, and expert we publish. Annual simply costs about half as much per month.',
-  },
-];
+const PLAN_DIFFERENCE_QUESTION = 'What’s the difference between the plans?';
+const PLAN_DIFFERENCE_ANSWER =
+  'Nothing but the billing. Both plans unlock every article, itinerary, and expert we publish.';
 
 function PlanArrowLink({ href, label }: { href: string; label: string }) {
   return (
@@ -82,7 +88,132 @@ function PlanArrowLink({ href, label }: { href: string; label: string }) {
   );
 }
 
+/**
+ * The annual card, priced from Stripe.
+ *
+ * Every figure here — the price, the crossed-out "full price", the discount
+ * badge, the per-month equivalent — is derived from the two prices the checkout
+ * charges. This page used to hardcode $79.99 / $155.88 / $6.67 / "Save 49%"
+ * against a real price of $0.50 a month, which is the drift /purchase was fixed
+ * for. See `useMembershipPlan`.
+ */
+function AnnualPlanCard({
+  plan,
+  monthly,
+}: {
+  plan: MembershipPlan;
+  monthly: MembershipPlan | null;
+}) {
+  const saving = getAnnualSaving(plan, monthly);
+  const perMonth = formatPerMonthEquivalent(plan);
+
+  return (
+    <div
+      className="
+        join-plan-card join-plan-card--annual
+        relative flex flex-col overflow-hidden
+        bg-[#FAF7F2] text-[#1A1A1A]
+        shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
+        768:order-last
+      "
+    >
+      <div className="flex flex-1 flex-col p-8 480:p-10">
+        <div className="flex items-start justify-between gap-4">
+          <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#3451C7]">
+            Annual · Most popular
+          </p>
+          {saving ? (
+            <p
+              className="
+                shrink-0 rounded-sm bg-[#3B5BDB] px-2 py-1 font-mono
+                text-[0.6rem] font-bold uppercase tracking-[0.14em]
+                text-white
+              "
+            >
+              Save {saving.percentOff}%
+            </p>
+          ) : null}
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-baseline gap-x-3">
+          {saving ? (
+            <span className="text-[0.95rem] text-[#1A1A1A]/45 line-through">
+              <span className="sr-only">Full price at the monthly rate: </span>
+              {saving.compareAt}
+            </span>
+          ) : null}
+          <span className="font-display text-[2.6rem] leading-none 768:text-[3rem]">
+            {formatPlanAmount(plan)}
+          </span>
+          <span className="text-[0.9rem] text-[#6b6a68]">
+            /{formatPlanInterval(plan)}
+          </span>
+        </div>
+        {perMonth ? (
+          <p className="mt-2.5 text-[0.86rem] font-medium text-[#9DACF2]">
+            {perMonth} a month
+          </p>
+        ) : null}
+
+        <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#4f4e4b]">
+          The complete Questurian library, billed once a year. Every article and
+          itinerary we publish, for one yearly payment.
+        </p>
+
+        <PlanArrowLink href="/purchase/yearly" label="Continue with Annual" />
+      </div>
+    </div>
+  );
+}
+
+function MonthlyPlanCard({ plan }: { plan: MembershipPlan }) {
+  return (
+    <div
+      className="
+        join-plan-card
+        relative flex flex-col
+        bg-[#FAF7F2] p-8
+        shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
+        480:p-10
+      "
+    >
+      <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#8a857c]">
+        Monthly
+      </p>
+
+      <div className="mt-6 flex items-baseline gap-x-3">
+        <span className="font-display text-[2.6rem] leading-none text-[#1A1A1A] 768:text-[3rem]">
+          {formatPlanAmount(plan)}
+        </span>
+        <span className="text-[0.9rem] text-[#6b6a68]">
+          /{formatPlanInterval(plan)}
+        </span>
+      </div>
+      <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#4f4e4b]">
+        The same full access to every article and itinerary from all of our
+        travel experts, billed month to month.
+      </p>
+
+      <PlanArrowLink href="/purchase/monthly" label="Continue with Monthly" />
+    </div>
+  );
+}
+
 export default function PricingDisplay() {
+  const { monthly, yearly, isLoading } = useMembershipPlans();
+
+  const annualPerMonth = yearly ? formatPerMonthEquivalent(yearly) : null;
+  const hasBothPlans = Boolean(monthly && yearly);
+
+  // No plan means nothing is purchasable, so the page says so instead of
+  // advertising a number the checkout would not honour.
+  const hasAnyPlan = Boolean(monthly || yearly);
+
+  // Only meaningful while there is more than one plan to choose between.
+  const faqs = hasBothPlans
+    ? [{ question: PLAN_DIFFERENCE_QUESTION, answer: PLAN_DIFFERENCE_ANSWER }]
+    : [];
+
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
       {/* ── Hero ── */}
@@ -121,7 +252,7 @@ export default function PricingDisplay() {
       >
         <div className="mb-8 text-center 768:mb-10">
           <h2 className="font-display text-[2rem] font-semibold leading-tight text-[#1A1A1A] 768:text-[2.4rem]">
-            Choose your plan.
+            {hasBothPlans ? 'Choose your plan.' : 'Become a member.'}
           </h2>
           <p className="mt-2 text-[0.9rem] text-[#6f6a62]">
             You can{' '}
@@ -131,96 +262,39 @@ export default function PricingDisplay() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 items-stretch gap-6 768:grid-cols-[1fr_1.12fr] 768:gap-8">
-          {/* Annual — the member pass */}
-          <div
-            className="
-              join-plan-card join-plan-card--annual
-              relative flex flex-col overflow-hidden
-              bg-[#FAF7F2] text-[#1A1A1A]
-              shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
-              768:order-last
-            "
+        {isLoading ? (
+          <p
+            className="py-10 text-center text-[0.9rem] text-[#6f6a62]"
+            role="status"
           >
-            <div className="flex flex-1 flex-col p-8 480:p-10">
-              <div className="flex items-start justify-between gap-4">
-                <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#3451C7]">
-                  Annual · Most popular
-                </p>
-                <p
-                  className="
-                    shrink-0 rounded-sm bg-[#3B5BDB] px-2 py-1 font-mono
-                    text-[0.6rem] font-bold uppercase tracking-[0.14em]
-                    text-white
-                  "
-                >
-                  Save 49%
-                </p>
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-baseline gap-x-3">
-                <span className="text-[0.95rem] text-[#1A1A1A]/45 line-through">
-                  <span className="sr-only">Full price at the monthly rate: </span>
-                  $155.88
-                </span>
-                <span className="font-display text-[2.6rem] leading-none 768:text-[3rem]">
-                  $79.99
-                </span>
-                <span className="text-[0.9rem] text-[#6b6a68]">/year</span>
-              </div>
-              <p className="mt-2.5 text-[0.86rem] font-medium text-[#9DACF2]">
-                $6.67 a month — less than $1.55 a week
-              </p>
-
-              <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#4f4e4b]">
-                The complete Questurian library, billed once a year. Twelve
-                months of every article and itinerary for the price
-                of&nbsp;six.
-              </p>
-
-              <PlanArrowLink
-                href="/purchase/yearly"
-                label="Continue with Annual"
-              />
-            </div>
-          </div>
-
-          {/* Monthly */}
+            Loading plans…
+          </p>
+        ) : hasAnyPlan ? (
           <div
-            className="
-              join-plan-card
-              relative flex flex-col
-              bg-[#FAF7F2] p-8
-              shadow-[0_18px_44px_-36px_rgba(26,26,26,0.45)]
-              480:p-10
-            "
+            className={`grid grid-cols-1 items-stretch gap-6 768:gap-8 ${
+              hasBothPlans
+                ? '768:grid-cols-[1fr_1.12fr]'
+                : 'mx-auto max-w-md'
+            }`}
           >
-            <p className="font-mono text-[0.64rem] uppercase tracking-[0.2em] text-[#8a857c]">
-              Monthly
-            </p>
-
-            <div className="mt-6 flex items-baseline gap-x-3">
-              <span className="font-display text-[2.6rem] leading-none text-[#1A1A1A] 768:text-[3rem]">
-                $12.99
-              </span>
-              <span className="text-[0.9rem] text-[#6b6a68]">/month</span>
-            </div>
-            <p className="mt-6 mb-8 flex-1 text-[0.95rem] leading-[1.75] text-[#4f4e4b]">
-              The same full access to every article and itinerary from all
-              of our travel experts, billed month to month.
-            </p>
-
-            <PlanArrowLink
-              href="/purchase/monthly"
-              label="Continue with Monthly"
-            />
+            {/* Annual — the member pass. Absent from Stripe means absent here. */}
+            {yearly ? (
+              <AnnualPlanCard plan={yearly} monthly={monthly} />
+            ) : null}
+            {monthly ? <MonthlyPlanCard plan={monthly} /> : null}
           </div>
-        </div>
+        ) : (
+          <p className="py-10 text-center text-[0.9rem] text-[#6f6a62]">
+            Memberships are temporarily unavailable. Please try again shortly.
+          </p>
+        )}
 
-        <p className="mt-6 text-center text-[0.72rem] tracking-[0.01em] text-[#9a9894]">
-          Secure payment via Stripe · Visa, Mastercard, American Express,
-          Apple&nbsp;Pay
-        </p>
+        {hasAnyPlan ? (
+          <p className="mt-6 text-center text-[0.72rem] tracking-[0.01em] text-[#9a9894]">
+            Secure payment via Stripe · Visa, Mastercard, American Express,
+            Apple&nbsp;Pay
+          </p>
+        ) : null}
       </section>
 
       {/* ── Pull quote ── */}
@@ -280,34 +354,36 @@ export default function PricingDisplay() {
       </section>
 
       {/* ── FAQ ── */}
-      <section className="join-faq px-6 pb-16 max-w-2xl mx-auto 768:pb-20">
-        <h2 className="text-center font-display text-[1.35rem] text-[#1A1A1A] 768:text-[1.5rem]">
-          Before you ask
-        </h2>
-        <div className="mt-8 border-b border-[#1A1A1A]/15">
-          {faqs.map((faq) => (
-            <details key={faq.question} className="group border-t border-[#1A1A1A]/15">
-              <summary
-                className="
-                  flex items-center justify-between gap-4 py-5
-                  text-[0.95rem] font-medium text-[#1A1A1A]
-                "
-              >
-                {faq.question}
-                <span
-                  className="join-faq-plus shrink-0 text-[1.1rem] font-light leading-none text-[#3B5BDB]"
-                  aria-hidden="true"
+      {faqs.length > 0 ? (
+        <section className="join-faq px-6 pb-16 max-w-2xl mx-auto 768:pb-20">
+          <h2 className="text-center font-display text-[1.35rem] text-[#1A1A1A] 768:text-[1.5rem]">
+            Before you ask
+          </h2>
+          <div className="mt-8 border-b border-[#1A1A1A]/15">
+            {faqs.map((faq) => (
+              <details key={faq.question} className="group border-t border-[#1A1A1A]/15">
+                <summary
+                  className="
+                    flex items-center justify-between gap-4 py-5
+                    text-[0.95rem] font-medium text-[#1A1A1A]
+                  "
                 >
-                  +
-                </span>
-              </summary>
-              <p className="pb-5 pr-8 text-[0.88rem] leading-[1.75] text-[#5c5b58]">
-                {faq.answer}
-              </p>
-            </details>
-          ))}
-        </div>
-      </section>
+                  {faq.question}
+                  <span
+                    className="join-faq-plus shrink-0 text-[1.1rem] font-light leading-none text-[#3B5BDB]"
+                    aria-hidden="true"
+                  >
+                    +
+                  </span>
+                </summary>
+                <p className="pb-5 pr-8 text-[0.88rem] leading-[1.75] text-[#5c5b58]">
+                  {faq.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* ── Final CTA ── */}
       <section className="bg-[#2D4A3E] px-6 py-16 text-center text-[#FAF7F2] 768:py-20">
@@ -333,9 +409,16 @@ export default function PricingDisplay() {
           >
             Become a member
           </a>
-          <p className="mt-4 text-[0.76rem] text-[#FAF7F2]/60">
-            From $6.67 a month, billed annually
-          </p>
+          {annualPerMonth ? (
+            <p className="mt-4 text-[0.76rem] text-[#FAF7F2]/60">
+              From {annualPerMonth} a month, billed annually
+            </p>
+          ) : monthly ? (
+            <p className="mt-4 text-[0.76rem] text-[#FAF7F2]/60">
+              {formatPlanAmount(monthly)} per {formatPlanInterval(monthly)},
+              cancel anytime
+            </p>
+          ) : null}
         </div>
       </section>
 

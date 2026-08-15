@@ -1,4 +1,5 @@
 import JoinNavbar from "@/features/Navigation/JoinNavbar";
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import {
   GLOBE_FALLBACK_SRC,
   GLOBE_SIZES,
@@ -29,7 +30,13 @@ export default function JoinLayout({
         fetchPriority="high"
       />
       <JoinNavbar />
-      <main className="flex-1">{children}</main>
+      {/*
+       * The plan cards read their prices from /api/payments/plans rather than
+       * hardcoding them, so this static route still needs a query client.
+       */}
+      <QueryProvider>
+        <main className="flex-1">{children}</main>
+      </QueryProvider>
     </>
   );
 }

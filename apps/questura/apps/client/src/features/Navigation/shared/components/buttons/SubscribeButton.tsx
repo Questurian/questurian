@@ -36,9 +36,14 @@ export default function SubscribeButton() {
         550:h-[40px] 550:w-[234px] 550:px-1.5 550:text-[.850rem]
       `}
     >
+      {/*
+       * No price in this label: it is static chrome on every page and cannot
+       * know the Stripe price, so it used to advertise $1.50/wk against a real
+       * $0.50/month. /join states the price it reads from Stripe.
+       */}
       <span className="380:hidden">Subscribe</span>
-      <span className="hidden 380:inline 550:hidden">Join: $1.50/wk</span>
-      <span className="hidden 550:inline">Subscribe: Less than $1.50/wk</span>
+      <span className="hidden 380:inline 550:hidden">Join</span>
+      <span className="hidden 550:inline">Become a member</span>
 
     </button>
   );
