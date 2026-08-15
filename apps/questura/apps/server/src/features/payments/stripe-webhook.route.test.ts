@@ -4,6 +4,8 @@ import { headers } from 'next/headers'
 const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
   invoiceRetrieve: vi.fn(),
+  chargeRetrieve: vi.fn(),
+  subscriptionUpdate: vi.fn(),
   updateUserSubscription: vi.fn(),
   getStripeSubscriptionDetails: vi.fn(),
   getSubscriptionProductName: vi.fn(),
@@ -41,6 +43,8 @@ vi.mock('@/payments/lib/stripe', () => ({
   stripe: {
     webhooks: { constructEvent: mocks.constructEvent },
     invoices: { retrieve: mocks.invoiceRetrieve },
+    charges: { retrieve: mocks.chargeRetrieve },
+    subscriptions: { update: mocks.subscriptionUpdate },
   },
 }))
 
@@ -134,6 +138,7 @@ describe('Stripe webhook route', () => {
     mocks.payloadCreate.mockResolvedValue({})
     mocks.updateUserSubscription.mockResolvedValue(true)
     mocks.resyncSubscription.mockResolvedValue({ profileId: 10, state: null, transitions: [] })
+    mocks.subscriptionUpdate.mockResolvedValue({})
     mocks.getSubscriptionProductName.mockResolvedValue('Premium Membership')
     mocks.findVisitorProfileByStripeCustomerId.mockResolvedValue({
       id: 10,
@@ -499,5 +504,100 @@ describe('Stripe webhook route', () => {
     expect(response.status).toBe(500)
     expect(mocks.resyncSubscription).not.toHaveBeenCalled()
     expect(mocks.payloadCreate).not.toHaveBeenCalled()
+  })
+
+  it('revokes membership on a fully refunded subscription charge', async () => {
+    givenEvent('charge.refunded', {
+      id: 'ch_1',
+      refunded: true,
+      invoice: 'in_1',
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
+
+    const response = await POST(createRequest())
+
+    await expect(response.json()).resolves.toEqual({ received: true })
+    expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
+      metadata: { access_revoked: 'true' },
+    })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  it('ignores a partial refund so a tax correction does not kill access', async () => {
+    givenEvent('charge.refunded', {
+      id: 'ch_1',
+      refunded: false,
+      amount_refunded: 100,
+      invoice: 'in_1',
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+  })
+
+  it('revokes membership when a dispute is opened', async () => {
+    givenEvent('charge.dispute.created', {
+      id: 'dp_1',
+      charge: { id: 'ch_1', invoice: 'in_1' },
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      parent: { subscription_details: { subscription: 'sub_1' } },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
+      metadata: { access_revoked: 'true' },
+    })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  it('restores membership when a dispute is won', async () => {
+    givenEvent('charge.dispute.closed', {
+      id: 'dp_1',
+      status: 'won',
+      charge: { id: 'ch_1', invoice: 'in_1' },
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
+      metadata: { access_revoked: '' },
+    })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  it('keeps membership revoked when a dispute is lost', async () => {
+    givenEvent('charge.dispute.closed', {
+      id: 'dp_1',
+      status: 'lost',
+      charge: { id: 'ch_1', invoice: 'in_1' },
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
+      metadata: { access_revoked: 'true' },
+    })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  it('does not resync a refunded charge that is not tied to a subscription', async () => {
+    givenEvent('charge.refunded', {
+      id: 'ch_1',
+      refunded: true,
+      invoice: 'in_1',
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1' })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
   })
 })

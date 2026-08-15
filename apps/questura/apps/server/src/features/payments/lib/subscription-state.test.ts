@@ -188,4 +188,19 @@ describe('deriveSubscriptionState', () => {
       new Date(now.getTime() + DUNNING_GRACE_DAYS * 24 * 60 * 60 * 1000).toISOString()
     )
   })
+
+  it('clears paid-through and grace when Stripe metadata says access was revoked', () => {
+    const active = firstWhere((s) => s.status === 'active' && !s.cancel_at_period_end)
+    const revoked = {
+      ...active,
+      metadata: { access_revoked: 'true' },
+    } as Stripe.Subscription
+
+    expect(deriveSubscriptionState(revoked, {
+      previousDunningGraceUntil: '2026-09-20T00:00:00.000Z',
+    })).toMatchObject({
+      paidThroughAt: null,
+      dunningGraceUntil: null,
+    })
+  })
 })
