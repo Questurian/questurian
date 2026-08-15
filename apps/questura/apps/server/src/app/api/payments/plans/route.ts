@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { getMembershipPlans } from '@/payments/lib/membership-plans'
+import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 import { logger } from '@/shared/utils/logger'
 
 /**
@@ -12,6 +13,11 @@ import { logger } from '@/shared/utils/logger'
  */
 export async function GET(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
+
+  const rateLimit = await checkPaymentsRateLimit(req.headers, 'plans')
+  if (!rateLimit.allowed) {
+    return paymentsRateLimitResponse(corsHeaders, rateLimit.retryAfterSeconds)
+  }
 
   try {
     const plans = await getMembershipPlans()

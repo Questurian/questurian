@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { reactivateUserSubscription } from '@/payments/lib/payment-service'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
+import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
+
+  const rateLimit = await checkPaymentsRateLimit(req.headers, 'reactivate')
+  if (!rateLimit.allowed) {
+    return paymentsRateLimitResponse(corsHeaders, rateLimit.retryAfterSeconds)
+  }
 
   try {
     const authResult = await requireVisitorPrincipal(req.headers)

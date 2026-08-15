@@ -5,6 +5,7 @@ import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { isPlanId, priceIdForPlan, type PlanId } from '@/payments/lib/membership-plans'
+import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 import {
   findVisitorProfileByAuthUserId,
   updateVisitorProfileByAuthUserId,
@@ -30,6 +31,11 @@ export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
   const blocked = forbiddenOriginResponse(req, corsHeaders)
   if (blocked) return blocked
+
+  const rateLimit = await checkPaymentsRateLimit(req.headers, 'checkout')
+  if (!rateLimit.allowed) {
+    return paymentsRateLimitResponse(corsHeaders, rateLimit.retryAfterSeconds)
+  }
 
   try {
     // Deliberately not requiring a verified email. Verification before checkout
