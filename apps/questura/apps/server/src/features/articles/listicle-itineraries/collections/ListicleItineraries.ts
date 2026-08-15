@@ -8,6 +8,7 @@ import {
 } from '@/shared/location/server/articleLocationScope'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
+import { accessTierField } from '@/shared/content/accessTier'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
 import {
   assertCanDeleteHomepageFeaturedContent,
@@ -146,6 +147,7 @@ export const ListicleItineraries: CollectionConfig = {
 
     status,
     languageField,
+    accessTierField,
     author,
     publishedAt,
     articleType,

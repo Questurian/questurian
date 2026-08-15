@@ -29,6 +29,7 @@ import * as migration_20260813_010000_add_visitor_profile_billing_email from './
 import * as migration_20260814_010000_add_visitor_profile_paid_through from './20260814_010000_add_visitor_profile_paid_through'
 import * as migration_20260814_020000_drop_legacy_membership_columns from './20260814_020000_drop_legacy_membership_columns'
 import * as migration_20260814_030000_unique_visitor_profile_stripe_customer_id from './20260814_030000_unique_visitor_profile_stripe_customer_id'
+import * as migration_20260815_010000_add_access_tier from './20260815_010000_add_access_tier'
 
 export const migrations = [
   {
@@ -185,5 +186,10 @@ export const migrations = [
     up: migration_20260814_030000_unique_visitor_profile_stripe_customer_id.up,
     down: migration_20260814_030000_unique_visitor_profile_stripe_customer_id.down,
     name: '20260814_030000_unique_visitor_profile_stripe_customer_id',
+  },
+  {
+    up: migration_20260815_010000_add_access_tier.up,
+    down: migration_20260815_010000_add_access_tier.down,
+    name: '20260815_010000_add_access_tier',
   },
 ]
