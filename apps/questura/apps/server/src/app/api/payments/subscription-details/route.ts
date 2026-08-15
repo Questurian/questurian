@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStripeSubscriptionDetails } from '@/payments/lib/payment-service'
-import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
 import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 
 export async function GET(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
+
+  // The only payments route that skipped this. Being a GET with no reflected
+  // CORS header makes it hard to read cross-origin, but "hard to exploit" is
+  // not the guarantee the other five give: this one authenticates from an
+  // ambient cookie and answers with the visitor's billing state. The rule is
+  // that a cookie-authenticated payments route states its allowed origins,
+  // rather than each route being argued about separately.
+  const blocked = forbiddenOriginResponse(req, corsHeaders)
+  if (blocked) return blocked
 
   const rateLimit = await checkPaymentsRateLimit(req.headers, 'details')
   if (!rateLimit.allowed) {
