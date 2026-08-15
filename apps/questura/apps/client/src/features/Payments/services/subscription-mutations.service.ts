@@ -58,12 +58,18 @@ export async function createPortalSessionRequest(): Promise<string | null> {
 
 export async function createCheckoutSessionRequest(
   referralId: string | null,
-  plan: 'monthly' | 'yearly' = 'monthly'
+  plan: 'monthly' | 'yearly' = 'monthly',
+  /**
+   * Where to send the buyer after the success page confirms entitlement. The
+   * server validates this; it is never trusted as sent.
+   */
+  returnTo?: string | null
 ): Promise<CheckoutSessionResponse> {
   try {
     return await post<CheckoutSessionResponse>('/api/payments/create-checkout-session', {
       referralId: referralId || null,
       plan,
+      returnTo: returnTo || null,
     });
   } catch (error) {
     throw mapSubscriptionError(error);

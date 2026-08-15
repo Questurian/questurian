@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { SuspenseBoundary } from '@/components/shared/SuspenseBoundary';
 import { get } from '@/lib/api';
 import { queryKeys } from '@/lib/react-query';
 import type { CurrentPrincipalResponse } from '@/lib/user/types';
+import { getSafeRedirectPath } from '@/lib/validations';
 
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 8000;
@@ -18,6 +19,10 @@ function SubscriptionSuccessContent() {
   const searchParams = useSearchParams() ?? new URLSearchParams();
   const sessionId = searchParams?.get('session_id');
   const queryClient = useQueryClient();
+  const router = useRouter();
+  // Validated server-side before it reached the success_url, and validated
+  // again here because a query parameter is editable in the address bar.
+  const returnTo = getSafeRedirectPath(searchParams?.get('returnTo') ?? null);
   const [mounted, setMounted] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation>('checking');
 
@@ -39,6 +44,14 @@ function SubscriptionSuccessContent() {
             if (!cancelled) {
               setConfirmation('active');
               await queryClient.invalidateQueries({ queryKey: queryKeys.userMe() });
+
+              // Only once entitlement is genuinely live. Forwarding on the
+              // Stripe redirect alone would land the buyer on the article
+              // while the webhook is still in flight, and show them the very
+              // paywall they just paid to remove.
+              if (returnTo && returnTo !== '/') {
+                router.replace(returnTo);
+              }
             }
             return;
           }
@@ -56,7 +69,7 @@ function SubscriptionSuccessContent() {
     return () => {
       cancelled = true;
     };
-  }, [mounted, queryClient]);
+  }, [mounted, queryClient, returnTo, router]);
 
   if (!mounted) {
     return (
