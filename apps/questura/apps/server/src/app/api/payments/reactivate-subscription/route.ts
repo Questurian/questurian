@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { reactivateUserSubscription } from '@/payments/lib/payment-service'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
+  const blocked = forbiddenOriginResponse(req, corsHeaders)
+  if (blocked) return blocked
 
   try {
     const authResult = await requireVisitorPrincipal(req.headers)

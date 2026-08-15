@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/payments/lib/stripe'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
-import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
+  const blocked = forbiddenOriginResponse(req, corsHeaders)
+  if (blocked) return blocked
 
   try {
     const authResult = await requireVisitorPrincipal(req.headers)

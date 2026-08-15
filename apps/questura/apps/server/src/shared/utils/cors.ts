@@ -13,6 +13,29 @@ export function isAllowedOrigin(origin: string): boolean {
   return ALLOWED_ORIGINS.includes(origin)
 }
 
+/**
+ * Same rule Better Auth's router uses: a cookie session with a missing or
+ * untrusted Origin is rejected, not merely CORS-blocked. Cross-site POST
+ * already drops SameSite=Lax cookies; this closes same-site-but-untrusted
+ * hosts (any sibling under the cookie's eTLD+1).
+ */
+export function isForbiddenOrigin(req: { headers: Headers }): boolean {
+  const origin = req.headers.get('origin')
+  const carriesCookie = Boolean(req.headers.get('cookie'))
+
+  if (carriesCookie) {
+    return !origin || !isAllowedOrigin(origin)
+  }
+
+  return Boolean(origin && !isAllowedOrigin(origin))
+}
+
+export function forbiddenOriginResponse(req: NextRequest, corsHeaders: Record<string, string>) {
+  if (!isForbiddenOrigin(req)) return null
+
+  return NextResponse.json({ error: 'Origin not allowed.' }, { status: 403, headers: corsHeaders })
+}
+
 export function getCorsHeaders(req: NextRequest): Record<string, string> {
   const origin = req.headers.get('origin')
 

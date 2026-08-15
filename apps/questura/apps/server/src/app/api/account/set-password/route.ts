@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { visitorAuth } from '@/features/visitor-auth/lib/better-auth'
 import { checkSetPasswordRateLimit } from '@/features/visitor-auth/lib/set-password-rate-limit'
 import { getPasswordStrengthError } from '@/shared/lib/password-strength'
-import { getCorsHeaders, handleCorsOptions, isAllowedOrigin } from '@/shared/utils/cors'
+import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 
 /**
  * Server adapter for Better Auth's `setPassword`, which the browser client does
@@ -30,16 +30,8 @@ import { getCorsHeaders, handleCorsOptions, isAllowedOrigin } from '@/shared/uti
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
 
-  // Better Auth's own `validateOrigin` treats a missing or literal-"null"
-  // Origin as forbidden whenever a Cookie is present, so match that rather than
-  // only rejecting a named-but-untrusted origin. (The session cookie is
-  // SameSite=Lax, so a genuinely cross-site POST arrives without it; this
-  // closes the same-site-but-untrusted case the router would have handled.)
-  const origin = req.headers.get('origin')
-  const carriesCookie = Boolean(req.headers.get('cookie'))
-  if (carriesCookie ? !origin || !isAllowedOrigin(origin) : origin && !isAllowedOrigin(origin)) {
-    return NextResponse.json({ error: 'Origin not allowed.' }, { status: 403, headers: corsHeaders })
-  }
+  const blocked = forbiddenOriginResponse(req, corsHeaders)
+  if (blocked) return blocked
 
   const rateLimit = await checkSetPasswordRateLimit(req.headers)
   if (!rateLimit.allowed) {
