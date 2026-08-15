@@ -102,11 +102,30 @@ export function resetLocalCounters(): void {
 }
 
 /**
- * A caller's IP, taken from the proxy headers Better Auth is also configured to
- * trust. Falls back to a constant so an unidentifiable caller still shares a
- * bucket rather than escaping the limit entirely.
+ * A caller's IP, read from the single header the configured proxy overwrites.
+ *
+ * This used to take the first entry of `X-Forwarded-For`, which is a list the
+ * caller may start — Cloudflare appends the real address to whatever arrived
+ * rather than replacing it, so the first entry belonged to the person being
+ * limited. Every limiter in the app was bypassable by rotating that header.
+ * `trusted-proxy.ts` explains why the replacement is one configured header and
+ * not a search across several.
+ *
+ * The `X-Forwarded-For` path survives for development only, where nothing sits
+ * in front to spoof past; production cannot boot without `TRUSTED_PROXY`.
+ *
+ * Falls back to a constant so an unidentifiable caller shares one bucket rather
+ * than escaping the limit entirely.
  */
 export function getClientIp(headers: Headers): string {
+  const trustedHeader = APP_CONFIG.trustedProxy.header
+
+  if (trustedHeader) {
+    // Deliberately not split on commas: a trusted header carries one address,
+    // and splitting is the habit that created the bypass.
+    return headers.get(trustedHeader)?.trim() || 'unknown'
+  }
+
   const forwardedFor = headers.get('x-forwarded-for')?.split(',')[0]?.trim()
   return forwardedFor || headers.get('x-real-ip')?.trim() || 'unknown'
 }

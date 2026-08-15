@@ -21,6 +21,7 @@ const VALID_PRODUCTION_ENV = {
   STRIPE_SECRET_KEY: 'sk_test_placeholder_not_a_real_key',
   STRIPE_WEBHOOK_SECRET: 'whsec_placeholder_not_a_real_secret',
   STRIPE_PRICE_ID: 'price_monthly_placeholder',
+  TRUSTED_PROXY: 'cloudflare',
 }
 
 describe('production config assertion', () => {
@@ -38,6 +39,7 @@ describe('production config assertion', () => {
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', '')
     vi.stubEnv('STRIPE_PRICE_ID', '')
     vi.stubEnv('STRIPE_PRICE_ID_MONTHLY', '')
+    vi.stubEnv('TRUSTED_PROXY', '')
   })
 
   afterEach(() => {
@@ -349,6 +351,31 @@ describe('production config assertion', () => {
     })
 
     expect(collectProductionConfigProblems()).toEqual([])
+  })
+
+  // Unset, `getClientIp` reads the first x-forwarded-for entry, which the
+  // caller writes — so every rate limit becomes bypassable by rotating one
+  // header. Refusing the boot is the point: a platform move must restate this.
+  it('refuses a production boot that has not said which proxy fronts it', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      TRUSTED_PROXY: '',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('TRUSTED_PROXY is not set'),
+    ])
+  })
+
+  it('refuses a misspelled proxy rather than falling back', async () => {
+    const { collectProductionConfigProblems } = await load({
+      ...VALID_PRODUCTION_ENV,
+      TRUSTED_PROXY: 'cloudfare',
+    })
+
+    expect(collectProductionConfigProblems()).toEqual([
+      expect.stringContaining('TRUSTED_PROXY is set to an unknown value'),
+    ])
   })
 
   it('reports every problem at once rather than one per boot', async () => {

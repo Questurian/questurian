@@ -4,6 +4,7 @@ import {
   readRequiredCookieHosts,
   validateCookieDomain,
 } from './session-cookie'
+import { TRUSTED_PROXY_NAMES } from './trusted-proxy'
 
 /**
  * Fail fast on a production boot that is still carrying development defaults.
@@ -86,6 +87,23 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     problems.push(
       'REDIS_URL is not set — the shared rate limiters have no cross-instance ' +
         'counter and refuse to count in production.'
+    )
+  }
+
+  // Every limiter identifies its caller through `getClientIp`, which reads the
+  // one header the configured proxy overwrites. Unset, it falls back to the
+  // first entry of `X-Forwarded-For` — a list the caller may start, since
+  // Cloudflare appends the real address rather than replacing what arrived.
+  // That fallback is not a smaller limit, it is no limit: rotate the header and
+  // every request is a new identity. Named here so a deployment must state what
+  // it is behind, and so moving platforms cannot silently reinstate the bypass.
+  if (!APP_CONFIG.trustedProxy.header) {
+    const configured = APP_CONFIG.trustedProxy.name
+    problems.push(
+      configured
+        ? `TRUSTED_PROXY is set to an unknown value — expected one of: ${TRUSTED_PROXY_NAMES.join(', ')}.`
+        : 'TRUSTED_PROXY is not set — rate limiters would identify callers from a ' +
+            `caller-writable header, which makes every limit bypassable. Expected one of: ${TRUSTED_PROXY_NAMES.join(', ')}.`
     )
   }
 
