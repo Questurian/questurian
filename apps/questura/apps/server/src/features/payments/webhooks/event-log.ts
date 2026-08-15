@@ -1,6 +1,5 @@
 import type { getPayload } from 'payload'
 import type Stripe from 'stripe'
-import { logger } from '@/shared/utils/logger'
 
 /**
  * Extract the subscription ID from subscription lifecycle events.
@@ -20,28 +19,23 @@ export function getSubscriptionIdFromEvent(event: Stripe.Event): string | null {
 
 /**
  * Persist a processed event ID so duplicate deliveries can be skipped.
- * A concurrent duplicate delivery can hit the unique constraint on eventId —
- * that just means the other delivery won, so the error is safe to swallow.
+ *
+ * Failure must propagate. A webhook is not safely processed until its event
+ * record is durable; acknowledging after a failed write would let a later
+ * duplicate repeat side effects without Stripe retrying this delivery.
  */
 export async function recordProcessedEvent(
   payload: Awaited<ReturnType<typeof getPayload>>,
   event: Stripe.Event,
   subscriptionId: string | null
 ) {
-  try {
-    await payload.create({
-      collection: 'stripe-webhook-events',
-      data: {
-        eventId: event.id,
-        eventType: event.type,
-        eventCreated: event.created,
-        subscriptionId,
-      },
-    })
-  } catch (error) {
-    logger.warn('Could not record processed Stripe event', {
+  await payload.create({
+    collection: 'stripe-webhook-events',
+    data: {
       eventId: event.id,
-      error: error instanceof Error ? error.message : String(error),
-    })
-  }
+      eventType: event.type,
+      eventCreated: event.created,
+      subscriptionId,
+    },
+  })
 }
