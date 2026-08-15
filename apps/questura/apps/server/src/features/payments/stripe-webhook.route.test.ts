@@ -181,36 +181,22 @@ describe('Stripe webhook route', () => {
     )
   })
 
-  it('activates the subscription and sends a confirmation email on checkout completion', async () => {
+  it('resyncs the paid subscription on checkout completion instead of stamping active', async () => {
     givenEvent('checkout.session.completed', {
       id: 'cs_1',
       customer: 'cus_1',
       subscription: 'sub_1',
-      customer_details: { name: 'Grace Hopper' },
+      metadata: { visitorAuthUserId: 'visitor_123' },
     })
-    // Needed by the confirmation email, not by the profile write
-    mocks.getStripeSubscriptionDetails.mockResolvedValue({
-      currentPeriodEnd: new Date(FUTURE_TS * 1000),
-    })
-    // Profile already has a name, so billing name must not overwrite it
+
     const response = await POST(createRequest())
 
     await expect(response.json()).resolves.toEqual({ received: true })
-    // Exact match, not objectContaining: checkout links the subscription and
-    // nothing else. Any date it wrote would be `current_period_end`, which
-    // ADR-0008 rejects as an entitlement date.
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
-      'cus_1',
-      {
-        stripeSubscriptionId: 'sub_1',
-        subscriptionStatus: 'active',
-      },
-      null,
-    )
-    expect(mocks.sendMembershipConfirmationEmail).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ email: 'visitor@example.com', isRecurring: true }),
-    )
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    // Entitlement dates come from resync. Writing `active` here granted no
+    // access (paidThroughAt was still empty) and blocked a retry checkout.
+    expect(mocks.updateUserSubscription).not.toHaveBeenCalled()
+    expect(mocks.sendMembershipConfirmationEmail).not.toHaveBeenCalled()
     expect(mocks.payloadCreate).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ eventId: 'evt_1' }) }),
     )
@@ -235,9 +221,10 @@ describe('Stripe webhook route', () => {
 
     await POST(createRequest())
 
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
     expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
       'cus_1',
-      expect.objectContaining({ firstName: 'Grace', lastName: 'Brewster Hopper' }),
+      { firstName: 'Grace', lastName: 'Brewster Hopper' },
       null,
     )
   })
@@ -261,9 +248,10 @@ describe('Stripe webhook route', () => {
 
     await POST(createRequest())
 
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
     expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
       'cus_1',
-      expect.objectContaining({ billingEmail: 'grace@real-inbox.example' }),
+      { billingEmail: 'grace@real-inbox.example' },
       null,
     )
   })
@@ -288,11 +276,8 @@ describe('Stripe webhook route', () => {
 
     await POST(createRequest())
 
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
-      'cus_1',
-      expect.not.objectContaining({ billingEmail: expect.anything() }),
-      null,
-    )
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    expect(mocks.updateUserSubscription).not.toHaveBeenCalled()
   })
 
   it('resyncs from Stripe on subscription created rather than trusting the payload', async () => {
@@ -416,6 +401,48 @@ describe('Stripe webhook route', () => {
     expect(response.status).toBe(500)
     await expect(response.json()).resolves.toEqual({ error: 'Processing failed' })
     // Not recorded, so Stripe's retry will be processed again
+    expect(mocks.payloadCreate).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when checkout cannot resync, so Stripe retries', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_1',
+      customer: 'cus_1',
+      subscription: 'sub_1',
+    })
+    mocks.resyncSubscription.mockResolvedValue({ profileId: null, state: null, transitions: [] })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(500)
+    expect(mocks.payloadCreate).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when checkout extras cannot be stored', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_1',
+      customer: 'cus_1',
+      subscription: 'sub_1',
+      customer_details: { email: 'grace@real-inbox.example' },
+    })
+    mocks.updateUserSubscription.mockResolvedValue(false)
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(500)
+    expect(mocks.payloadCreate).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when a paid checkout session has no subscription id', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_1',
+      customer: 'cus_1',
+    })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(500)
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
     expect(mocks.payloadCreate).not.toHaveBeenCalled()
   })
 })

@@ -116,8 +116,7 @@ export async function resyncSubscription(subscriptionId: string): Promise<Resync
       typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
 
     if (!customerId) {
-      logger.error('Subscription has no customer; cannot resync', { subscriptionId })
-      return { profileId: null, state: null, transitions: [] }
+      throw new Error(`Subscription ${subscriptionId} has no customer; cannot resync`)
     }
 
     // Checkout copies its metadata onto the subscription, so even a renewal
@@ -129,8 +128,9 @@ export async function resyncSubscription(subscriptionId: string): Promise<Resync
     )
 
     if (!profile) {
-      logger.error('No VisitorProfile found for Stripe customer', { customerId, subscriptionId })
-      return { profileId: null, state: null, transitions: [] }
+      throw new Error(
+        `No VisitorProfile found for Stripe customer ${customerId} on subscription ${subscriptionId}`
+      )
     }
 
     const state = deriveSubscriptionState(subscription, {
