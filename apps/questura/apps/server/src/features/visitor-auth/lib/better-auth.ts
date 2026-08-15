@@ -239,7 +239,13 @@ export const visitorAuth = betterAuth({
     cookiePrefix: 'questura_visitor',
     useSecureCookies: APP_CONFIG.isProduction,
     ipAddress: {
-      ipAddressHeaders: ['x-forwarded-for', 'x-real-ip'],
+      // One header, chosen by `TRUSTED_PROXY`, matching `getClientIp`. Better
+      // Auth takes the first header present in this list, so listing several
+      // would let a caller pick which one identifies them. `x-forwarded-for`
+      // remains only as the development fallback, where nothing fronts the app.
+      ipAddressHeaders: APP_CONFIG.trustedProxy.header
+        ? [APP_CONFIG.trustedProxy.header]
+        : ['x-forwarded-for', 'x-real-ip'],
       disableIpTracking: false,
     },
   },

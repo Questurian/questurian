@@ -159,5 +159,41 @@ describe('shared rate-limit counter', () => {
 
       expect(getClientIp(new Headers())).toBe('unknown')
     })
+
+    // The bypass this replaced: Cloudflare appends the real address to whatever
+    // arrived, so the first x-forwarded-for entry is written by the caller.
+    it('ignores a forged x-forwarded-for once a trusted proxy is configured', async () => {
+      const { getClientIp } = await loadCounter({
+        NODE_ENV: 'development',
+        TRUSTED_PROXY: 'cloudflare',
+      })
+
+      const headers = new Headers({
+        'x-forwarded-for': '203.0.113.77',
+        'cf-connecting-ip': '192.0.2.1',
+      })
+
+      expect(getClientIp(headers)).toBe('192.0.2.1')
+    })
+
+    it('does not fall back to a caller-writable header when the trusted one is absent', async () => {
+      const { getClientIp } = await loadCounter({
+        NODE_ENV: 'development',
+        TRUSTED_PROXY: 'cloudflare',
+      })
+
+      expect(getClientIp(new Headers({ 'x-forwarded-for': '203.0.113.77' }))).toBe('unknown')
+    })
+
+    it('does not split the trusted header, so a comma cannot smuggle an identity', async () => {
+      const { getClientIp } = await loadCounter({
+        NODE_ENV: 'development',
+        TRUSTED_PROXY: 'cloudflare',
+      })
+
+      expect(getClientIp(new Headers({ 'cf-connecting-ip': '203.0.113.77, 192.0.2.1' }))).toBe(
+        '203.0.113.77, 192.0.2.1'
+      )
+    })
   })
 })

@@ -1,5 +1,6 @@
 import { APP_URLS } from './urls'
 import { readCookieDomain, resolveSessionCookieConfig } from './session-cookie'
+import { resolveTrustedProxyHeader } from './trusted-proxy'
 
 // Centralized application configuration
 
@@ -88,6 +89,14 @@ export const APP_CONFIG = {
   // Redis Configuration
   redis: {
     url: process.env.REDIS_URL || '',
+  },
+
+  // Which proxy fronts this deployment. Names the one header allowed to
+  // identify a caller; see `trusted-proxy.ts` for why this is configured
+  // rather than sniffed. Required in production.
+  trustedProxy: {
+    name: process.env.TRUSTED_PROXY || '',
+    header: resolveTrustedProxyHeader(process.env.TRUSTED_PROXY),
   },
 
   // Email Configuration
