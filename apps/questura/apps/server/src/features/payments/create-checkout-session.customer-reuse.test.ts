@@ -203,17 +203,14 @@ describe('create checkout session duplicate Stripe customer guard', () => {
   // Without a profile row nothing stores the linkage, so the charge that
   // follows would land on a customer no profile points at.
   it('shouts when the linkage cannot be persisted', async () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     mocks.updateVisitorProfileByAuthUserId.mockResolvedValue(null)
 
     await POST(createRequest())
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Could not link Stripe customer'),
-      expect.objectContaining({ visitorAuthUserId: 'visitor_123' })
-    )
-
-    consoleErrorSpy.mockRestore()
+    const logged = consoleLogSpy?.mock.calls.map((args) => args.map(String).join(' ')).join('\n') ?? ''
+    expect(logged).toContain('Could not link Stripe customer')
+    expect(logged).not.toContain('visitor_123')
+    expect(logged).not.toContain('cus_')
   })
 
   it('creates a customer when the email is genuinely new to Stripe', async () => {

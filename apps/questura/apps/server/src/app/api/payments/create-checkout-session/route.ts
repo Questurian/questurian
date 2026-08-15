@@ -10,6 +10,7 @@ import {
   findVisitorProfileByAuthUserId,
   updateVisitorProfileByAuthUserId,
 } from '@/features/visitor-auth/lib/visitor-profile'
+import { logger } from '@/shared/utils/logger'
 
 // Referral IDs are opaque tokens from the Endorsely script; anything else in
 // the body must not reach Stripe metadata. Stripe caps metadata values at 500
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
 
       // Log affiliate conversion for debugging
       if (referralId) {
-        console.log(`[Affiliate] Visitor referred by ${referralId}`)
+        logger.info('Checkout includes an affiliate referral')
       }
     }
 
@@ -110,11 +111,10 @@ export async function POST(req: NextRequest) {
       })
 
       stripeCustomerId = resolved.customerId
-      console.log(
+      logger.info(
         resolved.created
-          ? 'Created Stripe customer:'
-          : 'Recovered this visitor\'s existing Stripe customer:',
-        stripeCustomerId
+          ? 'Created Stripe customer for visitor'
+          : 'Reused existing Stripe customer for visitor'
       )
 
       // Re-link the profile so the lookup above succeeds next time. A missing
@@ -124,13 +124,12 @@ export async function POST(req: NextRequest) {
       const linked = await updateVisitorProfileByAuthUserId(visitorAuthUserId, { stripeCustomerId })
 
       if (!linked) {
-        console.error(
-          'Could not link Stripe customer to a visitor profile; no profile row for auth user',
-          { visitorAuthUserId, stripeCustomerId }
+        logger.error(
+          'Could not link Stripe customer to a visitor profile; no profile row for auth user'
         )
       }
     } else {
-      console.log('Using existing Stripe customer:', stripeCustomerId)
+      logger.info('Using existing Stripe customer on the visitor profile')
     }
 
     // 5. Refuse a second live subscription on this customer. Local
@@ -155,7 +154,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 7. Create checkout session for subscription
-    console.log('Creating checkout session', { plan, priceId })
+    logger.info('Creating checkout session', { plan })
 
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
@@ -174,7 +173,7 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    console.log('Created checkout session:', session.id)
+    logger.info('Created checkout session')
 
     return NextResponse.json(
       { sessionId: session.id, url: session.url },
@@ -182,7 +181,9 @@ export async function POST(req: NextRequest) {
     )
 
   } catch (error) {
-    console.error('Error creating checkout session:', error)
+    logger.error('Error creating checkout session', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return NextResponse.json(
       { error: 'Failed to create checkout session' },
       { status: 500, headers: corsHeaders }

@@ -15,10 +15,3 @@ export interface UserSubscriptionUpdate {
   affiliateReferralId?: string
   affiliateReferredAt?: string
 }
-
-export interface StripeCleanupResult {
-  success: boolean
-  subscriptionsCancelled: number
-  customerDeleted: boolean
-  errors: string[]
-}
