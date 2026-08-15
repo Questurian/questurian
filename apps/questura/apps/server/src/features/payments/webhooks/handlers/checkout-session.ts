@@ -2,7 +2,8 @@ import type Stripe from 'stripe'
 import { updateUserSubscription } from '@/payments/lib/payment-service'
 import type { UserSubscriptionUpdate } from '@/payments/types'
 import { APP_CONFIG } from '@/shared/config'
-import { findVisitorProfileByStripeCustomerId, splitDisplayName } from '@/features/visitor-auth/lib/visitor-profile'
+import { splitDisplayName } from '@/features/visitor-auth/lib/visitor-profile'
+import { resolveProfileForStripeCustomer } from '@/payments/lib/subscription-profile'
 import { logger } from '@/shared/utils/logger'
 import { sendMembershipConfirmationAfterPayment } from '../notifications'
 
@@ -15,6 +16,10 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
 
   const customerId = session.customer as string
   const subscriptionId = session.subscription as string
+  // Written by the checkout route. Survives a profile row that lost, or never
+  // stored, its Stripe linkage — without it a completed payment can land on
+  // nobody.
+  const visitorAuthUserId = session.metadata?.visitorAuthUserId ?? null
 
   if (!customerId || !subscriptionId) {
     logger.error('Missing customer or subscription ID in checkout session', {
@@ -50,7 +55,7 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
   const billingEmail = session.customer_details?.email?.trim()
 
   if (billingName || billingEmail) {
-    const profile = await findVisitorProfileByStripeCustomerId(customerId)
+    const profile = await resolveProfileForStripeCustomer(customerId, visitorAuthUserId)
 
     if (billingName && profile && !profile.firstName && !profile.lastName) {
       const { firstName, lastName } = splitDisplayName(billingName)
@@ -75,7 +80,7 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
   }
 
   // Update user with subscription info
-  const success = await updateUserSubscription(customerId, updateData)
+  const success = await updateUserSubscription(customerId, updateData, visitorAuthUserId)
 
   if (success) {
     logger.info('Visitor subscription activated via checkout completion', { subscriptionId })

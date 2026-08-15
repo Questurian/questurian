@@ -6,10 +6,8 @@ import { stripe } from './stripe'
 import { convertStripeTimestamp } from './payment-helpers'
 import type { StripeSubscriptionExpanded, UserSubscriptionUpdate } from '../types'
 import { resyncSubscription } from './subscription-resync'
-import {
-  findVisitorProfileByAuthUserId,
-  findVisitorProfileByStripeCustomerId,
-} from '@/features/visitor-auth/lib/visitor-profile'
+import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
+import { resolveProfileForStripeCustomer } from './subscription-profile'
 
 /**
  * Stripe states in which a subscription is still live enough to cancel or
@@ -46,18 +44,23 @@ export function getCurrentPeriodEnd(subscription: StripeSubscriptionExpanded): D
 
 /**
  * Updates a VisitorProfile subscription based on Stripe customer ID.
+ *
+ * `visitorAuthUserId` comes from the event's own metadata and is only a
+ * fallback: it recovers the visitor when the customer linkage was never stored
+ * or has since been cleared, which would otherwise leave a paid subscription
+ * attached to nobody.
  */
 export async function updateUserSubscription(
   stripeCustomerId: string,
-  updates: UserSubscriptionUpdate
+  updates: UserSubscriptionUpdate,
+  visitorAuthUserId?: string | null
 ): Promise<boolean> {
   try {
     const payload = await getPayload({ config })
 
-    const profile = await findVisitorProfileByStripeCustomerId(stripeCustomerId)
+    const profile = await resolveProfileForStripeCustomer(stripeCustomerId, visitorAuthUserId)
 
     if (!profile) {
-      logger.error('No VisitorProfile found for Stripe customer', { stripeCustomerId })
       return false
     }
 

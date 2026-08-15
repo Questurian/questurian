@@ -3,7 +3,7 @@ import type Stripe from 'stripe'
 import config from '@/payload.config'
 import { logger } from '@/shared/utils/logger'
 import { withAdvisoryLock } from '@/shared/utils/advisory-lock'
-import { findVisitorProfileByStripeCustomerId } from '@/features/visitor-auth/lib/visitor-profile'
+import { resolveProfileForStripeCustomer } from './subscription-profile'
 import {
   sendMembershipConfirmationEmail,
   sendSubscriptionCancelledEmail,
@@ -120,7 +120,13 @@ export async function resyncSubscription(subscriptionId: string): Promise<Resync
       return { profileId: null, state: null, transitions: [] }
     }
 
-    const profile = await findVisitorProfileByStripeCustomerId(customerId)
+    // Checkout copies its metadata onto the subscription, so even a renewal
+    // years later still carries the visitor it belongs to. That is what makes a
+    // lost customer linkage recoverable instead of terminal.
+    const profile = await resolveProfileForStripeCustomer(
+      customerId,
+      subscription.metadata?.visitorAuthUserId ?? null
+    )
 
     if (!profile) {
       logger.error('No VisitorProfile found for Stripe customer', { customerId, subscriptionId })
