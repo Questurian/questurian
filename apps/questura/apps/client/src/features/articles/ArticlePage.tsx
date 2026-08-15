@@ -1,5 +1,7 @@
 import { Bookmark, Share2 } from 'lucide-react'
 import { PublicImage } from '@/components/media/PublicImage'
+import { PaywallNotice } from '@/features/articles/components/PaywallNotice'
+import { readGate } from '@/features/articles/lib/gate'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import {
   Article,
@@ -309,9 +311,10 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
 
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function ArticlePage({ article }: { article: Article }) {
+export function ArticlePage({ article, path }: { article: Article; path?: string }) {
   const { publishedAt, updatedAt, headerSection, contentBlocks } = article
   const featuredImage = headerSection?.featuredImage
+  const gate = readGate(article)
 
   return (
     <article
@@ -352,6 +355,8 @@ export function ArticlePage({ article }: { article: Article }) {
             {contentBlocks?.map((block) => (
               <BlockRenderer key={block.id} block={block} />
             ))}
+
+            {gate?.locked ? <PaywallNotice gate={gate} returnTo={path ?? '/'} /> : null}
           </div>
         </div>
 
