@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   updateVisitorProfileByAuthUserId: vi.fn(),
   stripeCustomerCreate: vi.fn(),
   stripeCustomerList: vi.fn(),
+  stripeSubscriptionList: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
 }))
 
@@ -23,6 +24,9 @@ vi.mock('@/payments/lib/stripe', () => ({
     customers: {
       create: mocks.stripeCustomerCreate,
       list: mocks.stripeCustomerList,
+    },
+    subscriptions: {
+      list: mocks.stripeSubscriptionList,
     },
     checkout: {
       sessions: {
@@ -85,6 +89,7 @@ describe('create checkout session duplicate Stripe customer guard', () => {
     })
     mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_new' })
     mocks.stripeCustomerList.mockResolvedValue({ data: [] })
+    mocks.stripeSubscriptionList.mockResolvedValue({ data: [] })
     mocks.updateVisitorProfileByAuthUserId.mockResolvedValue({ id: 10 })
     mocks.stripeCheckoutCreate.mockResolvedValue({
       id: 'cs_123',

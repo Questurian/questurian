@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   stripeCustomerUpdate: vi.fn(),
+  stripeSubscriptionList: vi.fn(),
 }))
 
 vi.mock('@/payments/lib/stripe', () => ({
@@ -9,10 +10,13 @@ vi.mock('@/payments/lib/stripe', () => ({
     customers: {
       update: mocks.stripeCustomerUpdate,
     },
+    subscriptions: {
+      list: mocks.stripeSubscriptionList,
+    },
   },
 }))
 
-import { syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
+import { findLiveSubscription, syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
 
 let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null
 
@@ -55,5 +59,43 @@ describe('syncStripeCustomerEmail', () => {
 
     await expect(syncStripeCustomerEmail('cus_123', 'new@example.com')).resolves.toBe(false)
     expect(consoleErrorSpy).toHaveBeenCalled()
+  })
+})
+
+describe('findLiveSubscription', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.stripeSubscriptionList.mockResolvedValue({ data: [] })
+  })
+
+  it('returns a past_due subscription that local status would have ignored', async () => {
+    mocks.stripeSubscriptionList.mockResolvedValue({
+      data: [{ id: 'sub_dunning', status: 'past_due' }],
+    })
+
+    await expect(findLiveSubscription('cus_123')).resolves.toEqual(
+      expect.objectContaining({ id: 'sub_dunning', status: 'past_due' })
+    )
+  })
+
+  it('ignores canceled and incomplete subscriptions so the visitor can pay again', async () => {
+    mocks.stripeSubscriptionList.mockResolvedValue({
+      data: [
+        { id: 'sub_old', status: 'canceled' },
+        { id: 'sub_open', status: 'incomplete' },
+      ],
+    })
+
+    await expect(findLiveSubscription('cus_123')).resolves.toBeNull()
+  })
+
+  it('asks Stripe for every status, not only active', async () => {
+    await findLiveSubscription('cus_123')
+
+    expect(mocks.stripeSubscriptionList).toHaveBeenCalledWith({
+      customer: 'cus_123',
+      status: 'all',
+      limit: 100,
+    })
   })
 })
