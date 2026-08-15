@@ -1,8 +1,13 @@
-'use client';
+import type { CSSProperties } from 'react';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CSSProperties, SyntheticEvent } from 'react';
-import Image from 'next/image';
+import JoinHeroReady from './JoinHeroReady';
+import {
+  GLOBE_ELEMENT_ID,
+  GLOBE_FALLBACK_SRC,
+  GLOBE_SIZES,
+  GLOBE_SRCSET,
+  HERO_READY_ATTRIBUTE,
+} from './joinHeroGlobe';
 
 /*
  * Flight routes drawn over the hero globe. Coordinates are in the globe
@@ -49,63 +54,64 @@ const flightHubs = [
   { cx: 1680, cy: 445, delay: '-4s' }, // Seattle
 ];
 
-function revealDecodedImage(
-  img: HTMLImageElement,
-  reveal: () => void,
-) {
-  if (typeof img.decode === 'function') {
-    void img.decode().then(reveal, reveal);
-    return;
-  }
-  reveal();
+/*
+ * The hero is server-rendered so its markup ships in the first HTML and the
+ * enter animation is plain CSS. The reveal is still gated (globe and routes
+ * rise together, globe before the copy), but this parse-time script opens the
+ * gate instead of React state, so it never waits on hydration. The globe is
+ * preloaded in the join layout, so the gate usually opens on first paint.
+ *
+ * The flag lives on <html> as a data attribute React never renders: mutating
+ * a className React owns would put us in a fight with hydration.
+ */
+const heroReadyScript = `(function(){
+var globe=document.getElementById('${GLOBE_ELEMENT_ID}');
+if(!globe)return;
+var done=false;
+function reveal(){if(done)return;done=true;document.documentElement.setAttribute('${HERO_READY_ATTRIBUTE}','');}
+function decoded(){
+if(typeof globe.decode==='function'){globe.decode().then(reveal,reveal);return;}
+reveal();
 }
+if(globe.complete&&globe.naturalWidth>0){decoded();}
+else{
+globe.addEventListener('load',decoded,{once:true});
+globe.addEventListener('error',reveal,{once:true});
+}
+setTimeout(reveal,2500);
+})();`;
 
 export default function JoinHeroVisual() {
-  const [ready, setReady] = useState(false);
-  const globeRef = useRef<HTMLImageElement | null>(null);
-
-  const reveal = useCallback(() => {
-    setReady(true);
-  }, []);
-
-  const handleGlobeReady = useCallback(
-    (event: SyntheticEvent<HTMLImageElement>) => {
-      revealDecodedImage(event.currentTarget, reveal);
-    },
-    [reveal],
-  );
-
-  useEffect(() => {
-    const img = globeRef.current;
-    if (img?.complete && img.naturalWidth > 0) {
-      revealDecodedImage(img, reveal);
-    }
-  }, [reveal]);
-
-  useEffect(() => {
-    if (ready) return;
-    const timeoutId = window.setTimeout(reveal, 6000);
-    return () => window.clearTimeout(timeoutId);
-  }, [ready, reveal]);
-
   return (
-    <section
-      className={`join-hero${ready ? ' is-ready' : ''}`}
-      aria-labelledby="join-hero-title"
-    >
+    <section className="join-hero" aria-labelledby="join-hero-title">
+    {/* No JS means the gate never opens, so show the hero un-animated. */}
+    <noscript>
+      <style
+        dangerouslySetInnerHTML={{
+          __html:
+            '.join-hero-visual-stage,.join-hero-title span,.join-hero-title em{opacity:1;transform:none}',
+        }}
+      />
+    </noscript>
+
     <div className="join-hero-visual" aria-hidden="true">
       <div className="join-hero-visual-stage">
-        <Image
-          ref={globeRef}
-          src="/images/join/questurian-globe.png"
+        {/*
+          Deliberately not next/image: the derivatives are already sized for
+          this slot, and a static URL is what the layout preload can point at.
+        */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          id={GLOBE_ELEMENT_ID}
+          src={GLOBE_FALLBACK_SRC}
+          srcSet={GLOBE_SRCSET}
+          sizes={GLOBE_SIZES}
           alt=""
           width={3840}
           height={2160}
-          priority
-          sizes="(max-width: 768px) 1000px, (max-width: 1536px) 100vw, 1650px"
+          fetchPriority="high"
+          decoding="async"
           className="join-hero-globe-image"
-          onLoad={handleGlobeReady}
-          onError={reveal}
         />
 
         <div className="join-hero-routes">
@@ -203,6 +209,9 @@ export default function JoinHeroVisual() {
         <em>Travel better.</em>
       </h1>
     </div>
+
+    <script dangerouslySetInnerHTML={{ __html: heroReadyScript }} />
+    <JoinHeroReady />
     </section>
   );
 }
