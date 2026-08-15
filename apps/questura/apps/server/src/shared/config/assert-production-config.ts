@@ -179,6 +179,31 @@ export function collectProductionConfigProblems(): ConfigProblem[] {
     if (problem) problems.push(`PAYLOAD_COOKIE_DOMAIN ${problem}`)
   }
 
+  // Empty Stripe secrets do not fail the process: checkout still takes money
+  // and `constructEvent` throws on every delivery, so nobody is ever marked a
+  // member. Catch that at boot rather than as a silent provisioning outage.
+  // Diagnostics name the variable and nothing else — no value, no prefix.
+  if (!(process.env.STRIPE_SECRET_KEY?.trim())) {
+    problems.push(
+      'STRIPE_SECRET_KEY is not set — checkout and webhooks cannot talk to Stripe.'
+    )
+  }
+
+  if (!(process.env.STRIPE_WEBHOOK_SECRET?.trim())) {
+    problems.push(
+      'STRIPE_WEBHOOK_SECRET is not set — every webhook delivery would 400 and ' +
+        'paid visitors would never be marked members.'
+    )
+  }
+
+  const monthlyPriceId =
+    process.env.STRIPE_PRICE_ID_MONTHLY?.trim() || process.env.STRIPE_PRICE_ID?.trim() || ''
+  if (!monthlyPriceId) {
+    problems.push(
+      'STRIPE_PRICE_ID (or STRIPE_PRICE_ID_MONTHLY) is not set — checkout would 400 at peak intent.'
+    )
+  }
+
   return problems
 }
 
