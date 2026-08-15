@@ -22,6 +22,28 @@ export const DUNNING_GRACE_DAYS = 5
 export const ACCESS_REVOKED_METADATA_KEY = 'access_revoked'
 export const ACCESS_REVOKED_METADATA_VALUE = 'true'
 
+/**
+ * Why access was revoked, and the end of the period the revoked charge bought.
+ *
+ * A refund and a dispute both stop entitlement, but they do not end the same
+ * way. A dispute is money still being contested, so only its resolution may
+ * restore access. A refund covers one period; when a later period is paid for
+ * successfully, that refund has nothing left to say and the flag has to lift —
+ * otherwise the visitor keeps being billed with no access, forever and silently.
+ *
+ * The period end is what separates "a new period was paid" from "the refunded
+ * invoice was simply retried".
+ */
+export const ACCESS_REVOKED_REASON_METADATA_KEY = 'access_revoked_reason'
+export const ACCESS_REVOKED_PERIOD_END_METADATA_KEY = 'access_revoked_period_end'
+
+export const ACCESS_REVOKED_REASON_REFUND = 'refund'
+export const ACCESS_REVOKED_REASON_DISPUTE = 'dispute'
+
+export type AccessRevokedReason =
+  | typeof ACCESS_REVOKED_REASON_REFUND
+  | typeof ACCESS_REVOKED_REASON_DISPUTE
+
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
@@ -67,7 +89,9 @@ const RETRY_COVER_BUFFER_MS = 6 * 60 * 60 * 1000
  * subscription item. Read only the item: handlers refetch through the SDK, so
  * there is exactly one shape to support (ADR-0008).
  */
-function getPeriod(subscription: Stripe.Subscription): { start: Date | null; end: Date | null } {
+export function getSubscriptionPeriodSeconds(
+  subscription: Stripe.Subscription
+): { start: number | null; end: number | null } {
   const item = subscription.items?.data?.[0] as
     | { current_period_start?: number | null; current_period_end?: number | null }
     | undefined
@@ -80,8 +104,17 @@ function getPeriod(subscription: Stripe.Subscription): { start: Date | null; end
   }
 
   return {
-    start: convertStripeTimestamp(item.current_period_start ?? null),
-    end: convertStripeTimestamp(item.current_period_end ?? null),
+    start: item.current_period_start ?? null,
+    end: item.current_period_end ?? null,
+  }
+}
+
+function getPeriod(subscription: Stripe.Subscription): { start: Date | null; end: Date | null } {
+  const { start, end } = getSubscriptionPeriodSeconds(subscription)
+
+  return {
+    start: convertStripeTimestamp(start),
+    end: convertStripeTimestamp(end),
   }
 }
 

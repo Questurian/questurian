@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   invoiceRetrieve: vi.fn(),
   chargeRetrieve: vi.fn(),
   subscriptionUpdate: vi.fn(),
+  subscriptionRetrieve: vi.fn(),
   subscriptionList: vi.fn(),
   subscriptionCancel: vi.fn(),
   refundCreate: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock('@/payments/lib/stripe', () => ({
     charges: { retrieve: mocks.chargeRetrieve },
     subscriptions: {
       update: mocks.subscriptionUpdate,
+      retrieve: mocks.subscriptionRetrieve,
       list: mocks.subscriptionList,
       cancel: mocks.subscriptionCancel,
     },
@@ -147,6 +149,7 @@ describe('Stripe webhook route', () => {
     mocks.updateUserSubscription.mockResolvedValue(true)
     mocks.resyncSubscription.mockResolvedValue({ profileId: 10, state: null, transitions: [] })
     mocks.subscriptionUpdate.mockResolvedValue({})
+    mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', metadata: {}, items: { data: [{}] } })
     mocks.subscriptionList.mockResolvedValue({ data: [] })
     mocks.subscriptionCancel.mockResolvedValue({})
     mocks.refundCreate.mockResolvedValue({})
@@ -523,13 +526,21 @@ describe('Stripe webhook route', () => {
       refunded: true,
       invoice: 'in_1',
     })
-    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
 
     const response = await POST(createRequest())
 
     await expect(response.json()).resolves.toEqual({ received: true })
     expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
-      metadata: { access_revoked: 'true' },
+      metadata: {
+        access_revoked: 'true',
+        access_revoked_reason: 'refund',
+        access_revoked_period_end: '2000',
+      },
     })
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
@@ -556,12 +567,17 @@ describe('Stripe webhook route', () => {
     mocks.invoiceRetrieve.mockResolvedValue({
       id: 'in_1',
       parent: { subscription_details: { subscription: 'sub_1' } },
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
     })
 
     await POST(createRequest())
 
     expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
-      metadata: { access_revoked: 'true' },
+      metadata: {
+        access_revoked: 'true',
+        access_revoked_reason: 'dispute',
+        access_revoked_period_end: '2000',
+      },
     })
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
@@ -577,7 +593,11 @@ describe('Stripe webhook route', () => {
     await POST(createRequest())
 
     expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
-      metadata: { access_revoked: '' },
+      metadata: {
+        access_revoked: '',
+        access_revoked_reason: '',
+        access_revoked_period_end: '',
+      },
     })
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
@@ -588,12 +608,20 @@ describe('Stripe webhook route', () => {
       status: 'lost',
       charge: { id: 'ch_1', invoice: 'in_1' },
     })
-    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
 
     await POST(createRequest())
 
     expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', {
-      metadata: { access_revoked: 'true' },
+      metadata: {
+        access_revoked: 'true',
+        access_revoked_reason: 'dispute',
+        access_revoked_period_end: '2000',
+      },
     })
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
@@ -690,5 +718,109 @@ describe('Stripe webhook route', () => {
 
     expect(mocks.resyncSubscription).toHaveBeenLastCalledWith('sub_old')
     expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_new')
+  })
+
+  const CLEARED_REVOCATION_METADATA = {
+    metadata: {
+      access_revoked: '',
+      access_revoked_reason: '',
+      access_revoked_period_end: '',
+    },
+  }
+
+  function givenPaidRenewal(subscription: Record<string, unknown>) {
+    givenEvent('invoice.payment_succeeded', {
+      id: 'in_2',
+      subscription: 'sub_1',
+      billing_reason: 'subscription_cycle',
+    })
+    mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', ...subscription })
+  }
+
+  it('restores access when a period after the refunded one is paid', async () => {
+    givenPaidRenewal({
+      metadata: {
+        access_revoked: 'true',
+        access_revoked_reason: 'refund',
+        access_revoked_period_end: '2000',
+      },
+      items: { data: [{ current_period_start: 2_000, current_period_end: 5_000 }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', CLEARED_REVOCATION_METADATA)
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  it('keeps access revoked when the refunded invoice itself is paid again', async () => {
+    givenPaidRenewal({
+      metadata: {
+        access_revoked: 'true',
+        access_revoked_reason: 'refund',
+        access_revoked_period_end: '2000',
+      },
+      // Still sitting in the period that was refunded.
+      items: { data: [{ current_period_start: 1_000, current_period_end: 2_000 }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  // The money is still contested; only charge.dispute.closed may resolve it.
+  it('keeps access revoked through a paid renewal while a dispute is open', async () => {
+    givenPaidRenewal({
+      metadata: {
+        access_revoked: 'true',
+        access_revoked_reason: 'dispute',
+        access_revoked_period_end: '2000',
+      },
+      items: { data: [{ current_period_start: 2_000, current_period_end: 5_000 }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  // Written before the reason and period were recorded.
+  it('restores access on a paid renewal for a revocation that recorded no reason', async () => {
+    givenPaidRenewal({
+      metadata: { access_revoked: 'true' },
+      items: { data: [{ current_period_start: 5_000, current_period_end: 8_000 }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).toHaveBeenCalledWith('sub_1', CLEARED_REVOCATION_METADATA)
+  })
+
+  it('leaves an unrevoked subscription untouched on a paid renewal', async () => {
+    givenPaidRenewal({
+      metadata: {},
+      items: { data: [{ current_period_start: 2_000, current_period_end: 5_000 }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  it('does not look up the subscription on a checkout invoice', async () => {
+    givenEvent('invoice.payment_succeeded', {
+      id: 'in_1',
+      subscription: 'sub_1',
+      billing_reason: 'subscription_create',
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionRetrieve).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 })
