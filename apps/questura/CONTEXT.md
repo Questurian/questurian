@@ -190,6 +190,26 @@ _Avoid_: identity, account
 Reason a Membership entitlement exists, either `stripe` or `staff_grant`; public account APIs expose only Visitor `stripe` entitlements.
 _Avoid_: subscription status, role
 
+### Access tier
+
+Per-document declaration of what an editorial item costs to read, either `free` or `member`; set on the document, never inferred from collection, category, or tag.
+_Avoid_: premium flag, isPaid, locked, paywalled
+
+### Gated item
+
+An editorial item whose Access tier is `member`.
+_Avoid_: locked article, premium content, paid post
+
+### Free sample
+
+The portion of a Gated item served to every reader regardless of Membership entitlement, so the item stays indexable and sellable.
+_Avoid_: teaser, preview (taken: homepage block previews), excerpt, snippet
+
+### Sample rule
+
+The deterministic per-collection rule that derives a Free sample from a Gated item's body; it has no unset state and takes no editorial input.
+_Avoid_: paywall marker, cut block, teaser length
+
 ### Paid-through date
 
 The end of the last billing period a Visitor account actually paid for; it never advances on an unpaid period.
@@ -259,6 +279,11 @@ _Avoid_: public auth, visitor auth
 - A **Paid-through date** advances only when a billing period is paid, so it never covers a period the visitor has not paid for.
 - **Dunning** does not end a **Membership entitlement**; access ends when both the **Paid-through date** and any **Dunning grace** have passed.
 - A **Dunning grace** is bounded and explicit, so unpaid access can never extend silently for a whole billing period.
+- Every editorial item has exactly one **Access tier**; a `member` tier makes it a **Gated item**.
+- A **Gated item** yields a **Free sample** to every caller without an active **Membership entitlement**, and its full body to every caller with one.
+- A **Sample rule** exists per editorial collection and is the only thing that derives a **Free sample**; it takes no editorial input, so a **Gated item** can never ship with an undefined sample.
+- Crawlers are not a caller class: a **Gated item** returns the same **Free sample** to a search crawler as to an anonymous reader, so there is no crawler-shaped response to verify, cache, or spoof.
+- A **Staff grant** does not unlock a **Gated item** on the public client, because public client flows already treat Staff auth as logged out.
 - A **Staff identity** may have a **Staff grant**, but it is not exposed through public account APIs.
 - A **Staff identity** has at most one **Author**; an **Author** may exist with no Staff identity at all, and that is a fully valid, renderable state (ADR-0007).
 - A **Staff identity** has a lifecycle **status** of `active` or `disabled`. Disabling, not deleting, is how a person is offboarded: a disabled identity cannot sign in and holds no access, while its **Author**, bylines and author page are untouched.
@@ -290,7 +315,7 @@ _Avoid_: public auth, visitor auth
 - Staff and **Operator tool** hosts are siblings under one registrable domain, so the Staff session stays same-site and `payload-token` stays `SameSite=Lax`. Cross-site hosting would force `SameSite=None`, which Safari and Brave block outright.
 - Widening the `payload-token` `Domain` to `questurian.com` creates a server-side trust boundary across every current and future subdomain. `httpOnly` prevents browser JavaScript from reading the cookie, but receiving servers can read it and sibling hosts can overwrite a parent-domain cookie. Today that boundary includes the apex, `www`, `cms`, `abw`, and `abw-api`; all must remain first-party, patched, and takeover-safe, and untrusted or third-party workloads must use another registrable domain. Payload `csrf` limits which browser origins may use the cookie against Payload, but does not narrow this server-side trust boundary.
 - Unverified email/password Visitor accounts may sign in and browse free public content.
-- Checkout, paid content, and sensitive account changes require a verified Visitor account.
+- Sensitive account changes require a verified Visitor account. Checkout and Gated item access deliberately do not: verification before checkout costs the sale at peak intent for a rare failure, and gating the read after an open checkout would let a visitor pay and then be refused what they bought. (Corrected 2026-08-15; the previous rule claimed checkout and paid content required verification, which the shipped checkout route never did.)
 - Google OAuth Visitor accounts satisfy verification when Google reports a verified email.
 - OAuth accounts without provider-verified email must complete Questura verification before gated access.
 - Visitor account linking requires matching provider and email/password email addresses.
@@ -335,6 +360,15 @@ _Avoid_: public auth, visitor auth
 - **Byline implies visibility**: an Author page is publicly visible iff that Author has at least one published editorial item. There is no separate opt-in flag; the legacy `isPublic` checkbox is retired, not left as a dead control. Visibility follows the Author, not the Staff identity, so a departed writer's page stays up.
 - A Staff identity edits only the Author linked to its own account (display name, bio, expertise, social links, avatar). The author-page slug is admin-controlled: it auto-generates once and never changes without an admin, because author URLs are public and un-redirected.
 - Deleting an Author is admin-only and is refused while any byline still points at it; deleting the Staff identity instead leaves the Author in place with no link.
+- **Entitlement is enforced where the body is serialized, not where it is queried.** Every public read runs `overrideAccess: true`, so Payload collection access control cannot gate a Gated item and must never be mistaken for the enforcement point.
+- A locked body is **absent from the response**, not hidden by the client. Client-side concealment is not gating.
+- No response containing a Gated item's full body is ever cacheable. The cached public shell serves only Free samples; full bodies are served from a dynamic no-store path.
+
+## Flagged ambiguities
+
+- "locked" was used for both the Access tier and the reader-facing state — resolved: **Access tier** is the declaration, **Gated item** is the item, **Free sample** is what unentitled readers receive.
+- "preview" already means a homepage block preview (which is the live client, not a mock) — the free portion of a Gated item is a **Free sample**, never a preview.
+- "Checkout, paid content, and sensitive account changes require a verified Visitor account" contradicted the shipped checkout route, which deliberately does not require verification — resolved 2026-08-15 in favour of the code; only sensitive account changes require verification.
 
 ## Naming Conventions
 
