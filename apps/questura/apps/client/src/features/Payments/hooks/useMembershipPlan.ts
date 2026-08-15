@@ -35,19 +35,42 @@ function formatMinorUnits(minorUnits: number, currency: string): string {
   }).format(minorUnits / 100);
 }
 
-function formatAmount(plan: MembershipPlan): string {
+export function formatPlanAmount(plan: MembershipPlan): string {
   return formatMinorUnits(plan.amount, plan.currency);
 }
 
 /** "month", or "3 months" when Stripe is billing in multiples. */
-function formatInterval(plan: MembershipPlan): string {
+export function formatPlanInterval(plan: MembershipPlan): string {
   return plan.intervalCount === 1
     ? plan.interval
     : `${plan.intervalCount} ${plan.interval}s`;
 }
 
 export function formatPlanPrice(plan: MembershipPlan): string {
-  return `${formatAmount(plan)}/${formatInterval(plan)}`;
+  return `${formatPlanAmount(plan)}/${formatPlanInterval(plan)}`;
+}
+
+/**
+ * How many months one billing period covers, or null when Stripe bills in a
+ * unit that does not divide into months (`day`, `week`).
+ */
+function billingMonths(plan: MembershipPlan): number | null {
+  if (plan.interval === 'year') return 12 * plan.intervalCount;
+  if (plan.interval === 'month') return plan.intervalCount;
+  return null;
+}
+
+/**
+ * A multi-month plan's price expressed per month, or null when the plan is
+ * already billed monthly (or in a unit months cannot express).
+ *
+ * Rounded up: a derived figure must never undercut what Stripe will charge.
+ */
+export function formatPerMonthEquivalent(plan: MembershipPlan): string | null {
+  const months = billingMonths(plan);
+  if (!months || months <= 1) return null;
+
+  return formatMinorUnits(Math.ceil(plan.amount / months), plan.currency);
 }
 
 export type PlanSaving = {
@@ -75,8 +98,45 @@ export function getPlanSaving(plan: MembershipPlan): PlanSaving | null {
   };
 }
 
-export function useMembershipPlan(planId: PlanId) {
-  const query = useQuery({
+/**
+ * The saving an annual plan can honestly advertise.
+ *
+ * Preferred form is the real cross-plan comparison: what the same span of
+ * months costs at the monthly price the checkout actually charges. That is what
+ * the crossed-out "full price" on /join claims to be, so it is derived rather
+ * than written down. Falls back to the price's own `compare_at_amount` when the
+ * monthly plan is not offered.
+ */
+export type AnnualSaving = {
+  compareAt: string;
+  percentOff: number;
+};
+
+export function getAnnualSaving(
+  yearly: MembershipPlan,
+  monthly: MembershipPlan | null,
+): AnnualSaving | null {
+  const months = billingMonths(yearly);
+
+  if (monthly && months && months > 1 && monthly.currency === yearly.currency) {
+    const fullPrice = monthly.amount * months;
+
+    if (fullPrice > yearly.amount) {
+      return {
+        compareAt: formatMinorUnits(fullPrice, yearly.currency),
+        percentOff: Math.round(((fullPrice - yearly.amount) / fullPrice) * 100),
+      };
+    }
+  }
+
+  const declared = getPlanSaving(yearly);
+  return declared
+    ? { compareAt: declared.compareAt, percentOff: declared.percentOff }
+    : null;
+}
+
+function useMembershipPlansQuery() {
+  return useQuery({
     queryKey: ['membership-plans'],
     queryFn: async () => {
       const response = await get<{ plans: MembershipPlan[] }>('/api/payments/plans');
@@ -84,6 +144,26 @@ export function useMembershipPlan(planId: PlanId) {
     },
     staleTime: 60 * 60 * 1000,
   });
+}
+
+/**
+ * Every plan Stripe currently offers. A plan missing from the list is a plan
+ * that cannot be bought, so callers hide it rather than advertise it.
+ */
+export function useMembershipPlans() {
+  const query = useMembershipPlansQuery();
+  const plans = query.data ?? [];
+
+  return {
+    monthly: plans.find((plan) => plan.id === 'monthly') ?? null,
+    yearly: plans.find((plan) => plan.id === 'yearly') ?? null,
+    isLoading: query.isLoading,
+    isError: query.isError,
+  };
+}
+
+export function useMembershipPlan(planId: PlanId) {
+  const query = useMembershipPlansQuery();
 
   const plan = query.data?.find((candidate) => candidate.id === planId) ?? null;
 
