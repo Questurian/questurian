@@ -5,7 +5,7 @@ import type { UserSubscriptionUpdate } from '@/payments/types'
 import { APP_CONFIG } from '@/shared/config'
 import { splitDisplayName } from '@/features/visitor-auth/lib/visitor-profile'
 import { resolveProfileForStripeCustomer } from '@/payments/lib/subscription-profile'
-import { listBillableSubscriptions } from '@/payments/lib/customer-linkage'
+import { listBillableSubscriptions, selectSubscriptionToKeep } from '@/payments/lib/customer-linkage'
 import { stripe } from '@/payments/lib/stripe'
 import { logger } from '@/shared/utils/logger'
 
@@ -87,22 +87,29 @@ async function refundDuplicateSubscription(subscription: Stripe.Subscription) {
 
 /**
  * Two Checkout sessions can both complete after the creation-time live-sub
- * check. Keep the oldest billable subscription, cancel and refund the rest,
- * then resync the one that remains.
+ * check. Keep the billable subscription that actually collected, cancel and
+ * refund the rest, then resync the one that remains.
  */
 async function collapseDuplicateSubscriptions(
   customerId: string,
   checkoutSubscriptionId: string
 ): Promise<string> {
   const billable = await listBillableSubscriptions(customerId)
+  const kept = selectSubscriptionToKeep(billable)
 
-  if (billable.length <= 1) {
+  if (!kept) {
     return checkoutSubscriptionId
   }
 
-  const kept = billable.reduce((oldest, subscription) =>
-    subscription.created < oldest.created ? subscription : oldest
-  )
+  // On a retry of this webhook the extras have already been cancelled, so only
+  // the kept subscription is still billable. Returning the session's id here
+  // instead would resync whichever subscription the *session* names — which,
+  // when this handler cancelled and refunded it on the first run, stamps a dead
+  // subscription onto the profile and revokes a membership that was paid for.
+  if (billable.length === 1) {
+    return kept.id
+  }
+
   const extras = billable.filter((subscription) => subscription.id !== kept.id)
 
   logger.error('Customer has multiple live Stripe subscriptions; cancelling extras', {
@@ -111,7 +118,12 @@ async function collapseDuplicateSubscriptions(
   })
 
   for (const extra of extras) {
-    await refundDuplicateSubscription(extra)
+    // An `incomplete` subscription never collected, so there is nothing to give
+    // back; attempting it only logs a missing-charge error for every abandoned
+    // 3DS attempt.
+    if (extra.status !== 'incomplete') {
+      await refundDuplicateSubscription(extra)
+    }
     await stripe.subscriptions.cancel(extra.id)
   }
 

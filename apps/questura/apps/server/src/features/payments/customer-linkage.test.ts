@@ -16,7 +16,12 @@ vi.mock('@/payments/lib/stripe', () => ({
   },
 }))
 
-import { findLiveSubscription, listBillableSubscriptions, syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
+import {
+  findLiveSubscription,
+  listBillableSubscriptions,
+  selectSubscriptionToKeep,
+  syncStripeCustomerEmail,
+} from '@/payments/lib/customer-linkage'
 
 let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null
 
@@ -119,5 +124,53 @@ describe('listBillableSubscriptions', () => {
       expect.objectContaining({ id: 'sub_open', status: 'incomplete' }),
       expect.objectContaining({ id: 'sub_live', status: 'active' }),
     ])
+  })
+})
+
+describe('selectSubscriptionToKeep', () => {
+  const subscription = (
+    id: string,
+    status: string,
+    created: number,
+  ) => ({ id, status, created }) as never
+
+  it('returns null when nothing is billable', () => {
+    expect(selectSubscriptionToKeep([])).toBeNull()
+  })
+
+  it('keeps the subscription that paid over an older abandoned 3DS attempt', () => {
+    const kept = selectSubscriptionToKeep([
+      subscription('sub_abandoned', 'incomplete', 100),
+      subscription('sub_paid', 'active', 200),
+    ])
+
+    expect(kept).toEqual(expect.objectContaining({ id: 'sub_paid' }))
+  })
+
+  it('keeps the oldest when both subscriptions actually collected', () => {
+    const kept = selectSubscriptionToKeep([
+      subscription('sub_old', 'active', 100),
+      subscription('sub_new', 'active', 200),
+    ])
+
+    expect(kept).toEqual(expect.objectContaining({ id: 'sub_old' }))
+  })
+
+  it('prefers a subscription Stripe is still retrying over one that never confirmed', () => {
+    const kept = selectSubscriptionToKeep([
+      subscription('sub_never_confirmed', 'incomplete', 100),
+      subscription('sub_retrying', 'past_due', 200),
+    ])
+
+    expect(kept).toEqual(expect.objectContaining({ id: 'sub_retrying' }))
+  })
+
+  it('falls back to age when every candidate is equally unpaid', () => {
+    const kept = selectSubscriptionToKeep([
+      subscription('sub_newer', 'incomplete', 200),
+      subscription('sub_older', 'incomplete', 100),
+    ])
+
+    expect(kept).toEqual(expect.objectContaining({ id: 'sub_older' }))
   })
 })
