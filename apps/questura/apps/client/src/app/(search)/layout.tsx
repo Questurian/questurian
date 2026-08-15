@@ -1,4 +1,5 @@
 import { PublicChrome } from "@/components/layout/PublicChrome";
+import { SiteFonts } from "@/components/layout/SiteFonts";
 
 // Same chrome as the (public) group, but rendered dynamically so the
 // search page can read query params on the server.
@@ -9,5 +10,9 @@ export default function SearchLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <PublicChrome>{children}</PublicChrome>;
+  return (
+    <SiteFonts>
+      <PublicChrome>{children}</PublicChrome>
+    </SiteFonts>
+  );
 }
