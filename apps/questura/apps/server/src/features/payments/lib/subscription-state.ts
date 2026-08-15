@@ -100,12 +100,16 @@ function resolvePaidThrough(subscription: Stripe.Subscription): Date | null {
  * in the captured run, five days measured from the start of the unpaid period
  * expired seven hours before Stripe's first retry, which would revoke access
  * from a visitor about to be recovered.
+ *
+ * Grace is for recovering a payment that once worked. `incomplete` is mapped
+ * to internal `past_due` for display, but that subscription never collected,
+ * so it must not open a membership window.
  */
 function resolveDunningGrace(
-  status: DerivedSubscriptionState['subscriptionStatus'],
+  stripeStatus: Stripe.Subscription.Status,
   context: DeriveContext
 ): string | null {
-  if (status !== 'past_due') return null
+  if (stripeStatus !== 'past_due' && stripeStatus !== 'unpaid') return null
 
   const existing = context.previousDunningGraceUntil
   if (existing) return existing
@@ -135,6 +139,6 @@ export function deriveSubscriptionState(
     subscriptionStatus,
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
     paidThroughAt: paidThrough ? paidThrough.toISOString() : null,
-    dunningGraceUntil: resolveDunningGrace(subscriptionStatus, context),
+    dunningGraceUntil: resolveDunningGrace(subscription.status, context),
   }
 }
