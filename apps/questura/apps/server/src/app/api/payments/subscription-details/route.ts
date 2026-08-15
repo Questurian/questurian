@@ -3,9 +3,15 @@ import { getStripeSubscriptionDetails } from '@/payments/lib/payment-service'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
+import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 
 export async function GET(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
+
+  const rateLimit = await checkPaymentsRateLimit(req.headers, 'details')
+  if (!rateLimit.allowed) {
+    return paymentsRateLimitResponse(corsHeaders, rateLimit.retryAfterSeconds)
+  }
 
   try {
     const authResult = await requireVisitorPrincipal(req.headers)
