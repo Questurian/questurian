@@ -15,6 +15,21 @@ const mocks = vi.hoisted(() => ({
   resyncSubscription: vi.fn(),
 }))
 
+const eventLock = vi.hoisted(() => ({ tail: Promise.resolve() as Promise<unknown> }))
+
+vi.mock('@/shared/utils/advisory-lock', () => ({
+  withAdvisoryLock: vi.fn(
+    (_payload: unknown, _key: string, work: () => Promise<unknown>) => {
+      const result = eventLock.tail.then(work, work)
+      eventLock.tail = result.then(
+        () => undefined,
+        () => undefined,
+      )
+      return result
+    },
+  ),
+}))
+
 // Subscription state is written by resync alone (ADR-0008); these tests assert
 // that each event reaches it, and subscription-state.test.ts covers what it
 // then derives, against payloads Stripe actually sent.
@@ -107,6 +122,7 @@ function givenEvent(type: string, object: Record<string, unknown>, extra: Partia
 describe('Stripe webhook route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    eventLock.tail = Promise.resolve()
     consoleSpies = [
       vi.spyOn(console, 'log').mockImplementation(() => undefined),
       vi.spyOn(console, 'warn').mockImplementation(() => undefined),
@@ -163,6 +179,31 @@ describe('Stripe webhook route', () => {
     await expect(response.json()).resolves.toEqual({ received: true, duplicate: true })
     expect(mocks.resyncSubscription).not.toHaveBeenCalled()
     expect(mocks.payloadCreate).not.toHaveBeenCalled()
+  })
+
+  it('serializes concurrent deliveries before checking whether the event was processed', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_1',
+      customer: 'cus_1',
+      subscription: 'sub_1',
+    })
+    let processed = false
+    mocks.payloadFind.mockImplementation(async () => ({
+      totalDocs: processed ? 1 : 0,
+      docs: processed ? [{}] : [],
+    }))
+    mocks.payloadCreate.mockImplementation(async () => {
+      processed = true
+      return {}
+    })
+
+    const responses = await Promise.all([POST(createRequest()), POST(createRequest())])
+    const bodies = await Promise.all(responses.map((response) => response.json()))
+
+    expect(bodies).toContainEqual({ received: true })
+    expect(bodies).toContainEqual({ received: true, duplicate: true })
+    expect(mocks.resyncSubscription).toHaveBeenCalledTimes(1)
+    expect(mocks.payloadCreate).toHaveBeenCalledTimes(1)
   })
 
   it('skips stale subscription events when a newer one was already processed', async () => {
@@ -402,6 +443,20 @@ describe('Stripe webhook route', () => {
     await expect(response.json()).resolves.toEqual({ error: 'Processing failed' })
     // Not recorded, so Stripe's retry will be processed again
     expect(mocks.payloadCreate).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when the processed-event record cannot be stored', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_1',
+      customer: 'cus_1',
+      subscription: 'sub_1',
+    })
+    mocks.payloadCreate.mockRejectedValue(new Error('event store unavailable'))
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(500)
+    await expect(response.json()).resolves.toEqual({ error: 'Processing failed' })
   })
 
   it('returns 500 when checkout cannot resync, so Stripe retries', async () => {
