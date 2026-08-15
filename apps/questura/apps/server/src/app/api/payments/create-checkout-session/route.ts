@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/payments/lib/stripe'
-import { resolveStripeCustomerForVisitor } from '@/payments/lib/customer-linkage'
+import { resolveStripeCustomerForVisitor, findLiveSubscription } from '@/payments/lib/customer-linkage'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
@@ -125,8 +125,11 @@ export async function POST(req: NextRequest) {
       console.log('Using existing Stripe customer:', stripeCustomerId)
     }
 
-    // 5. Check if user already has an active subscription
-    if (profile?.subscriptionStatus === 'active' && profile?.stripeSubscriptionId) {
+    // 5. Refuse a second live subscription on this customer. Local
+    // `subscriptionStatus === 'active'` missed past_due / unpaid, so a visitor
+    // being dunned could open another Checkout and get charged twice.
+    const liveSubscription = await findLiveSubscription(stripeCustomerId)
+    if (liveSubscription) {
       return NextResponse.json(
         { error: 'Visitor already has an active subscription' },
         { status: 400, headers: corsHeaders }

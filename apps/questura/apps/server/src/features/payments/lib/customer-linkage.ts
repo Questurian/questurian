@@ -104,3 +104,30 @@ export async function resolveStripeCustomerForVisitor(params: {
 
   return { customerId: customer.id, created: true }
 }
+
+const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
+  'active',
+  'trialing',
+  'past_due',
+  'unpaid',
+])
+
+/**
+ * A subscription Stripe is still collecting on, or retrying.
+ *
+ * Local `subscriptionStatus === 'active'` was the old checkout gate. That let a
+ * `past_due` visitor open a second Checkout session on the same customer, so
+ * Stripe billed them twice and the last webhook won. Incomplete / canceled
+ * are left out: those visitors need to be able to pay again.
+ */
+export async function findLiveSubscription(
+  customerId: string
+): Promise<Stripe.Subscription | null> {
+  const listed = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 100,
+  })
+
+  return listed.data.find((subscription) => LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) ?? null
+}

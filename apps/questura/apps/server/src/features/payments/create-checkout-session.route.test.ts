@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   updateVisitorProfileByAuthUserId: vi.fn(),
   stripeCustomerCreate: vi.fn(),
   stripeCustomerList: vi.fn(),
+  stripeSubscriptionList: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
 }))
 
@@ -23,6 +24,9 @@ vi.mock('@/payments/lib/stripe', () => ({
     customers: {
       create: mocks.stripeCustomerCreate,
       list: mocks.stripeCustomerList,
+    },
+    subscriptions: {
+      list: mocks.stripeSubscriptionList,
     },
     checkout: {
       sessions: {
@@ -75,6 +79,7 @@ describe('create checkout session route auth guard', () => {
     })
     mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_123' })
     mocks.stripeCustomerList.mockResolvedValue({ data: [] })
+    mocks.stripeSubscriptionList.mockResolvedValue({ data: [] })
     mocks.updateVisitorProfileByAuthUserId.mockResolvedValue({ id: 10 })
     mocks.stripeCheckoutCreate.mockResolvedValue({
       id: 'cs_123',
@@ -210,5 +215,71 @@ describe('create checkout session route auth guard', () => {
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({ line_items: [{ price: 'price_123', quantity: 1 }] }),
     )
+  })
+
+  it('refuses checkout when Stripe already has a past_due subscription', async () => {
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'past_due',
+      stripeCustomerId: 'cus_123',
+    })
+    mocks.stripeSubscriptionList.mockResolvedValue({
+      data: [{ id: 'sub_dunning', status: 'past_due' }],
+    })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'Visitor already has an active subscription',
+    })
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
+  })
+
+  it('refuses checkout when Stripe is live even if the local profile looks empty', async () => {
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'none',
+      stripeCustomerId: 'cus_123',
+    })
+    mocks.stripeSubscriptionList.mockResolvedValue({
+      data: [{ id: 'sub_live', status: 'active' }],
+    })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(400)
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
+  })
+
+  it('allows checkout after the only Stripe subscription is canceled', async () => {
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'cancelled',
+      stripeCustomerId: 'cus_123',
+    })
+    mocks.stripeSubscriptionList.mockResolvedValue({
+      data: [{ id: 'sub_old', status: 'canceled' }],
+    })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(200)
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalled()
   })
 })
