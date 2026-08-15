@@ -51,8 +51,14 @@ vi.mock('@/emails', () => ({
   sendSubscriptionCancelledEmail: mocks.sendSubscriptionCancelledEmail,
 }))
 
+vi.mock('@/payments/lib/subscription-profile', () => ({
+  resolveProfileForStripeCustomer: mocks.findVisitorProfileByStripeCustomerId,
+}))
+
 vi.mock('@/features/visitor-auth/lib/visitor-profile', () => ({
   findVisitorProfileByStripeCustomerId: mocks.findVisitorProfileByStripeCustomerId,
+  findVisitorProfileByAuthUserId: vi.fn(),
+  updateVisitorProfileByAuthUserId: vi.fn(),
   splitDisplayName: (name: string | null | undefined) => {
     const parts = (name ?? '').trim().split(/\s+/).filter(Boolean)
     return { firstName: parts[0] ?? '', lastName: parts.slice(1).join(' ') }
@@ -193,10 +199,14 @@ describe('Stripe webhook route', () => {
     // Exact match, not objectContaining: checkout links the subscription and
     // nothing else. Any date it wrote would be `current_period_end`, which
     // ADR-0008 rejects as an entitlement date.
-    expect(mocks.updateUserSubscription).toHaveBeenCalledWith('cus_1', {
-      stripeSubscriptionId: 'sub_1',
-      subscriptionStatus: 'active',
-    })
+    expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
+      'cus_1',
+      {
+        stripeSubscriptionId: 'sub_1',
+        subscriptionStatus: 'active',
+      },
+      null,
+    )
     expect(mocks.sendMembershipConfirmationEmail).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ email: 'visitor@example.com', isRecurring: true }),
@@ -228,6 +238,7 @@ describe('Stripe webhook route', () => {
     expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
       'cus_1',
       expect.objectContaining({ firstName: 'Grace', lastName: 'Brewster Hopper' }),
+      null,
     )
   })
 
@@ -253,6 +264,7 @@ describe('Stripe webhook route', () => {
     expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
       'cus_1',
       expect.objectContaining({ billingEmail: 'grace@real-inbox.example' }),
+      null,
     )
   })
 
@@ -279,6 +291,7 @@ describe('Stripe webhook route', () => {
     expect(mocks.updateUserSubscription).toHaveBeenCalledWith(
       'cus_1',
       expect.not.objectContaining({ billingEmail: expect.anything() }),
+      null,
     )
   })
 
