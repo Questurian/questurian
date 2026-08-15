@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/payments/lib/stripe'
 import { resolveStripeCustomerForVisitor, findLiveSubscription } from '@/payments/lib/customer-linkage'
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
-import { getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
+import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { isPlanId, priceIdForPlan, type PlanId } from '@/payments/lib/membership-plans'
 import {
@@ -28,6 +28,8 @@ function sanitizeReferralId(value: unknown): string | null {
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
+  const blocked = forbiddenOriginResponse(req, corsHeaders)
+  if (blocked) return blocked
 
   try {
     // Deliberately not requiring a verified email. Verification before checkout

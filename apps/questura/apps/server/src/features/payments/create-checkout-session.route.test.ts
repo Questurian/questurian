@@ -282,4 +282,23 @@ describe('create checkout session route auth guard', () => {
     expect(response.status).toBe(200)
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalled()
   })
+
+  it('rejects a cookie session from an untrusted origin before touching Stripe', async () => {
+    const response = await POST(
+      new Request('http://localhost:4000/api/payments/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          origin: 'https://evil.example',
+          cookie: 'questura_visitor.session_token=abc',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      }) as any
+    )
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({ error: 'Origin not allowed.' })
+    expect(mocks.requireVisitorPrincipal).not.toHaveBeenCalled()
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
+  })
 })
