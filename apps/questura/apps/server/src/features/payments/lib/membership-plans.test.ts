@@ -18,7 +18,7 @@ vi.mock('@/shared/config', () => ({
   },
 }))
 
-import { getMembershipPlans } from './membership-plans'
+import { getMembershipPlans, resetMembershipPlansCache } from './membership-plans'
 
 function givenPrice(overrides: Record<string, unknown> = {}) {
   return {
@@ -35,6 +35,7 @@ function givenPrice(overrides: Record<string, unknown> = {}) {
 describe('getMembershipPlans', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetMembershipPlansCache()
   })
 
   it('reports the price and interval Stripe actually holds', async () => {
@@ -98,5 +99,15 @@ describe('getMembershipPlans', () => {
     mocks.priceRetrieve.mockRejectedValue(new Error('no such price'))
 
     await expect(getMembershipPlans()).resolves.toEqual([])
+  })
+
+  it('reuses a successful fetch within the TTL instead of hitting Stripe again', async () => {
+    mocks.priceRetrieve.mockResolvedValue(givenPrice())
+
+    const first = await getMembershipPlans()
+    const second = await getMembershipPlans()
+
+    expect(second).toEqual(first)
+    expect(mocks.priceRetrieve).toHaveBeenCalledTimes(2)
   })
 })
