@@ -17,6 +17,7 @@
     "db:migrate:down": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:down",
     "db:migrate:status": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
     "reconcile:stripe-profiles": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/reconcile-stripe-visitor-profiles.ts",
+    "audit:access-revocations": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/audit-access-revocations.ts",
     "capture:membership-fixtures": "bun scripts/capture-membership-fixtures.ts",
     "inventory:tour-agency": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/inventory-tour-agency-stops.ts",
     "migrate:media-sets": "bun scripts/finish-media-set-migration.ts",
