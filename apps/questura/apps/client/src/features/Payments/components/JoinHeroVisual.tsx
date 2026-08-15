@@ -89,10 +89,12 @@ export default function JoinHeroVisual() {
   }, [ready, reveal]);
 
   return (
+    <section
+      className={`join-hero${ready ? ' is-ready' : ''}`}
+      aria-labelledby="join-hero-title"
+    >
     <div className="join-hero-visual" aria-hidden="true">
-      <div
-        className={`join-hero-visual-stage${ready ? ' is-ready' : ''}`}
-      >
+      <div className="join-hero-visual-stage">
         <Image
           ref={globeRef}
           src="/images/join/questurian-globe.png"
@@ -194,5 +196,13 @@ export default function JoinHeroVisual() {
         </div>
       </div>
     </div>
+
+    <div className="join-hero-copy">
+      <h1 id="join-hero-title" className="join-hero-title">
+        <span>Know more.</span>{' '}
+        <em>Travel better.</em>
+      </h1>
+    </div>
+    </section>
   );
 }

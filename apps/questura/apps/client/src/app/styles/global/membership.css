@@ -48,15 +48,28 @@
 .join-hero-title span,
 .join-hero-title em {
   display: inline-block;
-  animation:
-    join-hero-copy-reveal 820ms cubic-bezier(0.16, 1, 0.3, 1)
-    both;
+  opacity: 0;
 }
 
 .join-hero-title em {
   color: #cde7f0;
   font-weight: 400;
-  animation-delay: 280ms;
+}
+
+/*
+ * Globe leads (1.05s enter). Copy starts once the globe is clearly on
+ * screen (~420ms into that ease), then the italic follows 280ms later.
+ */
+.join-hero.is-ready .join-hero-title span {
+  animation:
+    join-hero-copy-reveal 820ms cubic-bezier(0.16, 1, 0.3, 1) 420ms
+    both;
+}
+
+.join-hero.is-ready .join-hero-title em {
+  animation:
+    join-hero-copy-reveal 820ms cubic-bezier(0.16, 1, 0.3, 1) 700ms
+    both;
 }
 
 .join-hero-visual {
@@ -77,7 +90,7 @@
   transform: translate3d(0, 80px, 0);
 }
 
-.join-hero-visual-stage.is-ready {
+.join-hero.is-ready .join-hero-visual-stage {
   animation: join-hero-visual-enter 1.05s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
@@ -547,7 +560,9 @@
     transform: none;
   }
 
-  .join-hero-visual-stage.is-ready {
+  .join-hero.is-ready .join-hero-visual-stage,
+  .join-hero.is-ready .join-hero-title span,
+  .join-hero.is-ready .join-hero-title em {
     animation: none;
     opacity: 1;
   }
