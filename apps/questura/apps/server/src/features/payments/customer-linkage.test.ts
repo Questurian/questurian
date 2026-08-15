@@ -16,7 +16,7 @@ vi.mock('@/payments/lib/stripe', () => ({
   },
 }))
 
-import { findLiveSubscription, syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
+import { findLiveSubscription, listBillableSubscriptions, syncStripeCustomerEmail } from '@/payments/lib/customer-linkage'
 
 let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null
 
@@ -97,5 +97,27 @@ describe('findLiveSubscription', () => {
       status: 'all',
       limit: 100,
     })
+  })
+})
+
+describe('listBillableSubscriptions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.stripeSubscriptionList.mockResolvedValue({ data: [] })
+  })
+
+  it('includes incomplete subscriptions that checkout completion must collapse', async () => {
+    mocks.stripeSubscriptionList.mockResolvedValue({
+      data: [
+        { id: 'sub_old', status: 'canceled' },
+        { id: 'sub_open', status: 'incomplete' },
+        { id: 'sub_live', status: 'active' },
+      ],
+    })
+
+    await expect(listBillableSubscriptions('cus_123')).resolves.toEqual([
+      expect.objectContaining({ id: 'sub_open', status: 'incomplete' }),
+      expect.objectContaining({ id: 'sub_live', status: 'active' }),
+    ])
   })
 })

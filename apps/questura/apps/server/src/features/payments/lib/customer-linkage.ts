@@ -113,6 +113,27 @@ const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
 ])
 
 /**
+ * Statuses that will bill, including `incomplete` from a Checkout that has
+ * not finished confirming. Creation-time checkout still ignores incomplete
+ * so a visitor can retry after abandoned 3DS; completion-time duplicate
+ * detection must count it or two parallel Checkouts both land.
+ */
+const BILLABLE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
+  ...LIVE_SUBSCRIPTION_STATUSES,
+  'incomplete',
+])
+
+async function listCustomerSubscriptions(customerId: string): Promise<Stripe.Subscription[]> {
+  const listed = await stripe.subscriptions.list({
+    customer: customerId,
+    status: 'all',
+    limit: 100,
+  })
+
+  return listed.data
+}
+
+/**
  * A subscription Stripe is still collecting on, or retrying.
  *
  * Local `subscriptionStatus === 'active'` was the old checkout gate. That let a
@@ -123,11 +144,15 @@ const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
 export async function findLiveSubscription(
   customerId: string
 ): Promise<Stripe.Subscription | null> {
-  const listed = await stripe.subscriptions.list({
-    customer: customerId,
-    status: 'all',
-    limit: 100,
-  })
+  const listed = await listCustomerSubscriptions(customerId)
 
-  return listed.data.find((subscription) => LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) ?? null
+  return listed.find((subscription) => LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) ?? null
+}
+
+export async function listBillableSubscriptions(
+  customerId: string
+): Promise<Stripe.Subscription[]> {
+  const listed = await listCustomerSubscriptions(customerId)
+
+  return listed.filter((subscription) => BILLABLE_SUBSCRIPTION_STATUSES.has(subscription.status))
 }
