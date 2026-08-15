@@ -184,12 +184,16 @@ async function listCustomerSubscriptions(customerId: string): Promise<Stripe.Sub
  * Stripe billed them twice and the last webhook won. Incomplete / canceled
  * are left out: those visitors need to be able to pay again.
  */
+export function isLiveSubscription(subscription: Stripe.Subscription): boolean {
+  return LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)
+}
+
 export async function findLiveSubscription(
   customerId: string
 ): Promise<Stripe.Subscription | null> {
   const listed = await listCustomerSubscriptions(customerId)
 
-  return listed.find((subscription) => LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) ?? null
+  return listed.find(isLiveSubscription) ?? null
 }
 
 export async function listBillableSubscriptions(

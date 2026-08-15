@@ -10,6 +10,7 @@ import {
   sendSubscriptionReactivatedEmail,
 } from '@/emails'
 import { stripe } from './stripe'
+import { findLiveSubscription, isLiveSubscription } from './customer-linkage'
 import { getSubscriptionProductName } from './payment-helpers'
 import { deriveSubscriptionState, type DerivedSubscriptionState } from './subscription-state'
 import { resolveMembershipTransitions, type MembershipTransition } from './membership-transitions'
@@ -43,6 +44,61 @@ function nextPaymentAttemptOf(subscription: Stripe.Subscription): number | null 
   if (!invoice || typeof invoice === 'string') return null
 
   return (invoice as Stripe.Invoice).next_payment_attempt ?? null
+}
+
+/**
+ * Retrieve the subscription the profile currently points at, tolerating an id
+ * Stripe no longer knows. A cancelled subscription is still retrievable, so a
+ * `resource_missing` means the stored id is stale beyond repair (wrong account,
+ * hand-edited row) and must not be allowed to freeze the profile forever. Any
+ * other Stripe failure is transient and propagates, so the webhook retries
+ * rather than deciding ownership on missing information.
+ */
+async function fetchIncumbent(subscriptionId: string): Promise<Stripe.Subscription | null> {
+  try {
+    return await stripe.subscriptions.retrieve(subscriptionId)
+  } catch (error) {
+    if ((error as { code?: string }).code === 'resource_missing') {
+      logger.warn('Profile points at a subscription Stripe no longer has', { subscriptionId })
+      return null
+    }
+    throw error
+  }
+}
+
+/**
+ * Whether this subscription is the one whose state the profile should mirror.
+ *
+ * A profile holds one subscription, but a customer accumulates many, and every
+ * one of them keeps emitting events for years: a goodwill refund on a
+ * subscription cancelled last spring raises `charge.refunded` today, and the
+ * duplicate-checkout collapse deliberately refunds and cancels the extras it
+ * just made. Writing each of those onto the profile unconditionally stamps a
+ * dead subscription over a live membership — the visitor loses access while
+ * Stripe keeps billing them, and `/account` then points its cancel button at
+ * the dead one, so they cannot even stop the charge.
+ *
+ * `charge.refunded` and `charge.dispute.*` carry no subscription id, so the
+ * webhook ordering guard cannot see this collision; ownership has to be decided
+ * here, against Stripe rather than against the delivery.
+ *
+ * The subscription that is billing owns the row. When none is, the newest one
+ * does, so an old cancellation cannot overwrite a newer one's final state.
+ */
+async function ownsProfileRow(
+  customerId: string,
+  subscription: Stripe.Subscription,
+  incumbentId: string
+): Promise<boolean> {
+  if (isLiveSubscription(subscription)) return true
+
+  const live = await findLiveSubscription(customerId)
+  if (live) return false
+
+  const incumbent = await fetchIncumbent(incumbentId)
+  if (!incumbent) return true
+
+  return subscription.created >= incumbent.created
 }
 
 async function sendTransitionEmails(
@@ -131,6 +187,23 @@ export async function resyncSubscription(subscriptionId: string): Promise<Resync
       throw new Error(
         `No VisitorProfile found for Stripe customer ${customerId} on subscription ${subscriptionId}`
       )
+    }
+
+    const incumbentId = profile.stripeSubscriptionId
+
+    if (incumbentId && incumbentId !== subscription.id) {
+      const owns = await ownsProfileRow(customerId, subscription, incumbentId)
+
+      if (!owns) {
+        logger.warn('Ignoring resync of a subscription the profile has moved on from', {
+          subscriptionId,
+          incumbentSubscriptionId: incumbentId,
+          profileId: profile.id,
+          status: subscription.status,
+        })
+
+        return { profileId: profile.id, state: null, transitions: [] }
+      }
     }
 
     const state = deriveSubscriptionState(subscription, {
