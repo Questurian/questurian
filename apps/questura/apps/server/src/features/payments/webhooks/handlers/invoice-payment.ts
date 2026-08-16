@@ -39,10 +39,12 @@ const NEW_PERIOD_BILLING_REASONS = new Set<Stripe.Invoice.BillingReason>([
  *
  * `access_revoked` is written when a charge is fully refunded, and
  * `deriveSubscriptionState` then forces `paidThroughAt: null` on every resync
- * that follows. Stripe does not cancel a subscription because one of its
- * invoices was refunded, so without this the visitor keeps being billed
- * successfully, month after month, while the flag silently denies them access
- * — and nothing but a won dispute ever clears it.
+ * that follows. The refund handler now also cancels the subscription, so a
+ * later period should never be billed at all — but Stripe cancels nothing on
+ * its own, and a subscription revoked before that existed, or one whose cancel
+ * was reversed by hand in the Dashboard, keeps renewing with the flag silently
+ * denying access. This is the escape hatch for those: without it, nothing but a
+ * won dispute ever clears the flag.
  *
  * Two things must not clear it. A dispute is money still being contested, so
  * only `charge.dispute.closed` may resolve one. And a retry of the refunded

@@ -545,6 +545,100 @@ describe('Stripe webhook route', () => {
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 
+  // Revoking access without cancelling bills the visitor again next cycle for a
+  // month they cannot use, and only that charge restores their access.
+  it('cancels the subscription a fully refunded charge belongs to', async () => {
+    givenEvent('charge.refunded', {
+      id: 'ch_1',
+      refunded: true,
+      invoice: 'in_1',
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_1', {
+      cancellation_details: { comment: expect.any(String) },
+    })
+    // The flag has to land before the cancel: Stripe will not take a metadata
+    // write on a cancelled subscription.
+    expect(mocks.subscriptionUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.subscriptionCancel.mock.invocationCallOrder[0],
+    )
+  })
+
+  // Cancel-then-refund is the ordinary support flow, so Stripe rejecting the
+  // cancel because it already happened is the expected outcome, not a failure.
+  it('tolerates a refunded subscription that was already cancelled', async () => {
+    givenEvent('charge.refunded', {
+      id: 'ch_1',
+      refunded: true,
+      invoice: 'in_1',
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
+    mocks.subscriptionCancel.mockRejectedValue(
+      Object.assign(new Error('No such subscription to cancel'), {
+        type: 'invalid_request_error',
+      }),
+    )
+    mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'canceled', metadata: {} })
+
+    const response = await POST(createRequest())
+
+    await expect(response.json()).resolves.toEqual({ received: true })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
+  // A live subscription that failed to cancel is the money bug itself, so the
+  // webhook must retry rather than report success.
+  it('fails the webhook when a refunded subscription cannot be cancelled', async () => {
+    givenEvent('charge.refunded', {
+      id: 'ch_1',
+      refunded: true,
+      invoice: 'in_1',
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
+    mocks.subscriptionCancel.mockRejectedValue(
+      Object.assign(new Error('Invalid API Key provided'), { type: 'invalid_request_error' }),
+    )
+    mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'active', metadata: {} })
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(500)
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+  })
+
+  // A won dispute restores the membership, and a cancelled subscription cannot
+  // be un-cancelled.
+  it('does not cancel the subscription when a dispute is opened', async () => {
+    givenEvent('charge.dispute.created', {
+      id: 'dp_1',
+      charge: { id: 'ch_1', invoice: 'in_1' },
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionCancel).not.toHaveBeenCalled()
+  })
+
   it('ignores a partial refund so a tax correction does not kill access', async () => {
     givenEvent('charge.refunded', {
       id: 'ch_1',
@@ -556,6 +650,7 @@ describe('Stripe webhook route', () => {
     await POST(createRequest())
 
     expect(mocks.subscriptionUpdate).not.toHaveBeenCalled()
+    expect(mocks.subscriptionCancel).not.toHaveBeenCalled()
     expect(mocks.resyncSubscription).not.toHaveBeenCalled()
   })
 

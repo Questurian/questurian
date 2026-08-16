@@ -83,3 +83,39 @@ export async function writeAccessRevocation(
     return false
   }
 }
+
+/**
+ * Stop the billing a fully refunded subscription would otherwise carry on doing.
+ *
+ * Refunding a charge gives one period's money back; it does not tell Stripe to
+ * stop charging. Left alone the subscription renews on schedule, and because
+ * the revocation flag holds `paidThroughAt` at null until a *later* period is
+ * paid, the visitor is billed for a month of nothing and only then gets access
+ * back (`clearRefundRevocationOnNewPeriod`). Cancelling closes that window:
+ * money back, billing stopped, access off, in one webhook rather than in a
+ * Dashboard step somebody has to remember.
+ *
+ * Cancelling is not prorated and raises no invoice, so it never hands out a
+ * second refund on top of the one that triggered it. It is also idempotent in
+ * effect: a subscription support already cancelled before refunding — the
+ * ordinary flow — makes Stripe reject the call, and an already-`canceled`
+ * subscription is the outcome this wanted anyway. Any other rejection still
+ * propagates so the webhook retries instead of leaving a live subscription
+ * billing a refunded visitor.
+ *
+ * Disputes deliberately do not take this path: a won dispute restores the
+ * membership, and a cancelled subscription cannot be un-cancelled.
+ */
+export async function cancelRefundedSubscription(subscriptionId: string): Promise<void> {
+  try {
+    await stripe.subscriptions.cancel(subscriptionId, {
+      cancellation_details: { comment: 'Cancelled automatically after a full refund' },
+    })
+
+    logger.warn('Cancelled subscription after a full refund', { subscriptionId })
+  } catch (error) {
+    if (!(await rejectedForCancelledSubscription(subscriptionId, error))) throw error
+
+    logger.info('Refunded subscription was already cancelled', { subscriptionId })
+  }
+}

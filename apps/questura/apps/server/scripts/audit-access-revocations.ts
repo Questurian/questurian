@@ -10,10 +10,13 @@
  * on a subscription Stripe kept billing produced a visitor who paid every month
  * and had access to nothing, with no signal anywhere that it had happened.
  *
- * The fix stops new cases and heals existing ones at their next successful
- * renewal, which for a yearly plan is up to a year away. This script finds the
- * ones already in that state so they can be resolved by hand instead of waited
- * out.
+ * A refund now also cancels the subscription, so no new case should be created:
+ * the money stops at the same moment the access does. The renewal-clears-a-
+ * refund handling remains for the ones that predate the cancel, and for a
+ * subscription resumed by hand in the Dashboard — but it only heals them at
+ * their next successful renewal, up to a year away on a yearly plan. This
+ * script finds the ones already in that state so they can be resolved by hand
+ * instead of waited out.
  *
  * What it reports
  * ---------------
