@@ -28,7 +28,7 @@ import {
   ItineraryDetailsModal,
   type ItineraryDetailRow,
 } from '@/features/articles/components/ItineraryDetailsModal'
-import { isHttpUrl } from '@/features/articles/lib/listicleVenueFormatters'
+import { formatPriceTier, isHttpUrl } from '@/features/articles/lib/listicleVenueFormatters'
 import type { GridCell } from '@/features/articles/components/ListicleVenueInfoGrid'
 import type { ListicleVenue } from '@/features/articles/types/mapsListicle'
 
@@ -103,7 +103,7 @@ function buildAmenityRows(item: ListicleVenue): ItineraryDetailRow[] {
     if (values.length > 0) push(key, icon, label, values.map(titleCase).join(', '))
   }
 
-  push('price', <CircleDollarSign className={accentClass} strokeWidth={1.75} aria-hidden />, 'Price', text(core.price))
+  push('price', <CircleDollarSign className={accentClass} strokeWidth={1.75} aria-hidden />, 'Price', formatPriceTier(core.price))
   const stayType = text(core.type) || text(item.type)
   if (stayType) push('stay-type', <Building2 className={accentClass} strokeWidth={1.75} aria-hidden />, 'Stay type', titleCase(stayType))
   push('district', <MapPin className={accentClass} strokeWidth={1.75} aria-hidden />, 'Neighborhood', text(core.district))

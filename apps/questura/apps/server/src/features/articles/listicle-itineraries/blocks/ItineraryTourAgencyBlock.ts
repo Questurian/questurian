@@ -1,5 +1,6 @@
 import { Block } from 'payload'
 import { itineraryMomentFields } from './utils/momentFields'
+import { normalizePriceTier, priceTierOptions } from '@/shared/content/priceTier'
 
 const isValidAbsoluteUrl = (value: string | null | undefined): boolean => {
   if (!value) return true
@@ -22,12 +23,6 @@ const existingKeyLocationCollections = [
   'key-locations',
 ] as const
 
-const tourAgencyPriceOptions = [
-  { label: '$', value: '$' },
-  { label: '$$', value: '$$' },
-  { label: '$$$', value: '$$$' },
-  { label: '$$$$', value: '$$$$' },
-] as const
 
 export const ItineraryTourAgencyBlock: Block = {
   slug: 'itinerary-tour-agency',
@@ -59,9 +54,12 @@ export const ItineraryTourAgencyBlock: Block = {
       type: 'select',
       dbName: 'price_tier',
       enumName: 'lit_tour_price_tier',
-      options: [...tourAgencyPriceOptions],
+      options: priceTierOptions,
+      hooks: {
+        beforeValidate: [({ value }) => normalizePriceTier(value)],
+      },
       admin: {
-        description: 'Optional price tier for the tour.',
+        description: 'Optional price tier for the tour. Stored as 1-4; shown as $ to $$$$.',
       },
     },
     {

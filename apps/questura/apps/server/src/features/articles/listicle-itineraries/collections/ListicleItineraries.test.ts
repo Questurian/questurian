@@ -43,7 +43,7 @@ function buildTourAgencyItem(overrides: Record<string, unknown> = {}) {
     blockType: 'itinerary-tour-agency',
     title: 'Sacred Valley Day Tour',
     operator: 'Andes Routes',
-    price: '$$',
+    price: '2',
     url: 'https://example.com/tours/sacred-valley',
     tourDuration: 8,
     startingPoint: {
@@ -153,6 +153,11 @@ describe('ListicleItineraries manual tour-agency validation', () => {
     await expect(runBeforeValidate(data)).rejects.toThrow(
       'Day 1 — Stop 1 price must be $, $$, $$$, or $$$$.',
     )
+  })
+
+  it('still accepts a tick price, which is what synced payloads send', async () => {
+    // Ticks are an input spelling; the field hook stores them as 1-4.
+    await expect(runBeforeValidate(buildData({ price: '$$$' }))).resolves.toBeDefined()
   })
 
   it('rejects tour durations outside 1 to 24 hours', async () => {

@@ -9,6 +9,7 @@ import type { CollectionConfig, Field } from 'payload'
 import { countryCodes } from '@/shared/constants/countryCodes'
 import { createLocationRefField } from '@/shared/location/server/fields'
 import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
+import { normalizePriceTier, priceTierOptions } from '@/shared/content/priceTier'
 
 export const Accommodations: CollectionConfig = {
   slug: 'accommodations',
@@ -131,12 +132,13 @@ export const Accommodations: CollectionConfig = {
                         {
                           name: 'price',
                           type: 'select',
-                          options: [
-                            { label: '$', value: '$' },
-                            { label: '$$', value: '$$' },
-                            { label: '$$$', value: '$$$' },
-                            { label: '$$$$', value: '$$$$' },
-                          ],
+                          options: priceTierOptions,
+                          // Location Manager still sends '$'-'$$$$' in its
+                          // profile payload and deploys on its own cadence, so
+                          // the tick spelling stays a supported input.
+                          hooks: {
+                            beforeValidate: [({ value }) => normalizePriceTier(value)],
+                          },
                         },
                         { name: 'district', type: 'text' },
                         { name: 'type', type: 'text' },
