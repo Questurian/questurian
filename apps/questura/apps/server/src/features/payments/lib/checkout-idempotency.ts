@@ -39,6 +39,7 @@ export type CheckoutIdempotencyInput = {
   successUrl: string
   cancelUrl: string
   referralId: string | null
+  allowPromotionCodes: boolean
 }
 
 /**
@@ -66,6 +67,7 @@ export function checkoutIdempotencyKey(
         input.successUrl,
         input.cancelUrl,
         input.referralId ?? '',
+        String(input.allowPromotionCodes),
         String(bucket),
       ].join('\u0000')
     )
