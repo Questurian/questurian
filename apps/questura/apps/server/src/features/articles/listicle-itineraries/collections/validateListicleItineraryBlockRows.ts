@@ -15,13 +15,10 @@ import {
   getSourceCollectionForBlockType,
 } from '../../shared/utils/itemMedia/sourceItems'
 import { validateTourPicks } from '../../shared/utils/tourPicks'
+import { isPriceTier, normalizePriceTier } from '@/shared/content/priceTier'
 
-const tourAgencyPriceTiers = ['$', '$$', '$$$', '$$$$'] as const
-
-const isTourAgencyPriceTier = (value: unknown): value is (typeof tourAgencyPriceTiers)[number] => (
-  typeof value === 'string'
-  && tourAgencyPriceTiers.includes(value as (typeof tourAgencyPriceTiers)[number])
-)
+// Ticks are accepted as input and stored as 1-4; see shared/content/priceTier.
+const isTourAgencyPriceTier = (value: unknown): boolean => isPriceTier(normalizePriceTier(value))
 
 const isLatitude = (value: unknown): value is number => (
   typeof value === 'number' && Number.isFinite(value) && value >= -90 && value <= 90

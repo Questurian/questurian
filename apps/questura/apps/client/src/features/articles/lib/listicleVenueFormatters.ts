@@ -1,5 +1,24 @@
 /** Dining / venue fields for listicle detail UI */
 
+/**
+ * Renders a stored price tier as the dollar ticks readers expect.
+ *
+ * Tiers are stored as '1'-'4' because Payload builds GraphQL enum member names
+ * out of option values and '$' is not a legal GraphQL name. The ticks are
+ * presentation, so they are produced here rather than persisted.
+ *
+ * Tick input is accepted and passed through: accommodation profiles are synced
+ * from Location Manager, which sends ticks, and rows written before the
+ * encoding changed still hold them.
+ */
+export function formatPriceTier(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const trimmed = value.trim()
+  if (/^\$+$/.test(trimmed)) return trimmed
+  if (!/^[1-4]$/.test(trimmed)) return ''
+  return '$'.repeat(Number(trimmed))
+}
+
 export function isHttpUrl(value: string): boolean {
   try {
     const u = new URL(value.trim())

@@ -91,7 +91,8 @@ export type ItineraryTourAgencyBlock = {
   momentLabel?: string | null;
   title: string;
   operator: string;
-  price?: "$" | "$$" | "$$$" | "$$$$" | null;
+  /** Stored tier, rendered as ticks by `formatPriceTier`. Legacy rows may still hold ticks. */
+  price?: "1" | "2" | "3" | "4" | "$" | "$$" | "$$$" | "$$$$" | null;
   url: string;
   tourDuration: number;
   startingPoint?: {

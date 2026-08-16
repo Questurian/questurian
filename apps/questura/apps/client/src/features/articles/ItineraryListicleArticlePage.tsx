@@ -14,7 +14,10 @@ import {
   populatedVenueStops,
   venueRowFromBlock,
 } from "@/features/articles/lib/itineraryDays";
-import { isHttpUrl } from "@/features/articles/lib/listicleVenueFormatters";
+import {
+  formatPriceTier,
+  isHttpUrl,
+} from "@/features/articles/lib/listicleVenueFormatters";
 import type {
   ItineraryDay,
   ItineraryStopBlock,
@@ -82,6 +85,8 @@ function TourAgencyCard({
     .map(keyLocationLabel)
     .filter((label): label is string => Boolean(label));
   const href = block.url ? normalizedHref(block.url) : null;
+  // Tiers are stored as '1'-'4'; the ticks are rendered, never persisted.
+  const price = formatPriceTier(block.price);
 
   return (
     <li className="scroll-mt-4 border-t-[3px] border-double border-foreground/55 first:border-t-0 first:pt-0 pt-7 pb-7 last:pb-1 max-[379px]:pt-6 max-[379px]:pb-6 480:pt-9 480:pb-9 550:pt-11 550:pb-11 sm:pt-12 sm:pb-12 768:pt-14 768:pb-14">
@@ -115,10 +120,10 @@ function TourAgencyCard({
             <span className="maps-listicle-meta-item">
               <span className="maps-listicle-meta-value">{block.operator}</span>
             </span>
-            {block.price ? (
+            {price ? (
               <span className="maps-listicle-meta-item">
                 <span className="maps-listicle-meta-separator" aria-hidden />
-                <span className="maps-listicle-meta-value">{block.price}</span>
+                <span className="maps-listicle-meta-value">{price}</span>
               </span>
             ) : null}
           </p>
