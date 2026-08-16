@@ -10,6 +10,12 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Lets an operational script import a `.ts` path explicitly, which is what
+    // makes `scripts/verify-stripe-webhook-events.ts` runnable under plain
+    // `node --experimental-strip-types` on the deploy host, where dev
+    // dependencies (and so `tsx`) are absent. Safe with `noEmit`: nothing is
+    // emitted, and Next builds the app through its own pipeline.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",

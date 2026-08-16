@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   DELIBERATELY_UNHANDLED_STRIPE_EVENTS,
   HANDLED_STRIPE_EVENT_TYPES,
-  STRIPE_WEBHOOK_HANDLERS,
   isHandledStripeEventType,
-} from '@/payments/webhooks/handled-events'
+} from '@/payments/webhooks/event-contract'
+import { STRIPE_WEBHOOK_HANDLERS } from '@/payments/webhooks/handled-events'
 
 describe('stripe webhook event contract', () => {
   // This list is what `verify-stripe-webhook-events.ts` diffs the live endpoint
@@ -37,8 +37,11 @@ describe('stripe webhook event contract', () => {
     expect(isHandledStripeEventType('')).toBe(false)
   })
 
-  it('derives the verified list from the dispatch itself', () => {
-    expect(HANDLED_STRIPE_EVENT_TYPES).toHaveLength(Object.keys(STRIPE_WEBHOOK_HANDLERS).length)
+  // The Record<HandledStripeEventType, ...> annotation makes this a compile-time
+  // guarantee; asserted at runtime too so the pairing survives a later loosening
+  // of the type.
+  it('has a handler for every event in the contract, and no others', () => {
+    expect(Object.keys(STRIPE_WEBHOOK_HANDLERS).sort()).toEqual([...HANDLED_STRIPE_EVENT_TYPES].sort())
     for (const type of HANDLED_STRIPE_EVENT_TYPES) {
       expect(typeof STRIPE_WEBHOOK_HANDLERS[type]).toBe('function')
     }
@@ -58,9 +61,25 @@ describe('stripe webhook event contract', () => {
     }
   })
 
-  // Inherited from the object literal, not an event Stripe would ever send.
+  // Inherited object keys are not events Stripe would ever send.
   it('does not treat inherited object keys as handled events', () => {
     expect(isHandledStripeEventType('toString')).toBe(false)
     expect(isHandledStripeEventType('constructor')).toBe(false)
+  })
+
+  // The reason the contract lives in its own module: the verification script has
+  // to run on the deploy host, which has no dev dependencies. A single import
+  // reaching a handler pulls in Payload and the whole server, and the script
+  // stops being runnable exactly where it is needed. Cheap to assert, easy to
+  // break by accident.
+  it('keeps the contract module free of imports', async () => {
+    const { readFile } = await import('node:fs/promises')
+    const { resolve } = await import('node:path')
+    const source = await readFile(
+      resolve(process.cwd(), 'src/features/payments/webhooks/event-contract.ts'),
+      'utf-8'
+    )
+
+    expect(source).not.toMatch(/^\s*import\s/m)
   })
 })

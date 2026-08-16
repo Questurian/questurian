@@ -32,17 +32,28 @@
  * against a live key.
  *
  * Usage:
- *   STRIPE_SECRET_KEY=... pnpm tsx scripts/verify-stripe-webhook-events.ts
+ *   pnpm verify:stripe-webhook-events            # dev machine, via tsx
+ *
+ * On the deploy host there are no dev dependencies, so `tsx` does not exist.
+ * Node strips the types itself there:
+ *
+ *   set -a; . ~/questura/config/server.env; set +a
+ *   node --experimental-strip-types scripts/verify-stripe-webhook-events.ts
  *
  * Exits non-zero if any enabled endpoint is missing a handled event, so it can
  * gate a deploy.
  */
 
 import Stripe from 'stripe'
+// The dependency-free half of the contract, imported with an explicit extension
+// so this runs under plain `node --experimental-strip-types` on a host that has
+// no dev dependencies. Importing the handler map instead would pull in Payload
+// and every handler, which is what made the first version of this script
+// unrunnable anywhere it mattered.
 import {
   DELIBERATELY_UNHANDLED_STRIPE_EVENTS,
   HANDLED_STRIPE_EVENT_TYPES,
-} from '../src/features/payments/webhooks/handled-events'
+} from '../src/features/payments/webhooks/event-contract.ts'
 
 function requireKey(): string {
   const key = process.env.STRIPE_SECRET_KEY
