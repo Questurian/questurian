@@ -2,44 +2,149 @@ import { describe, expect, it } from 'vitest'
 
 import { DEFAULT_SAMPLE_LIMITS, applySampleRule } from './freeSample'
 
-const blocks = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({ blockType: 'text', content: `block ${i}` }))
-
-const items = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({ blockType: 'dining', blurb: `stop ${i}` }))
-
-const days = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({
-    items: items(3),
-    whereStaying: [{ blockType: 'itinerary-where-staying', blurb: `hotel ${i}` }],
-  }))
+const text = (i: number) => ({ blockType: 'text', content: `para ${i}` })
 
 describe('applySampleRule — standard articles', () => {
-  it('keeps the leading blocks and drops the rest', () => {
-    const doc: Record<string, unknown> = { contentBlocks: blocks(9) }
+  it('keeps the opening prose and nothing else', () => {
+    const doc: Record<string, unknown> = {
+      contentBlocks: [text(0), text(1), text(2), text(3)],
+    }
 
     const outcome = applySampleRule('articles', doc)
 
-    expect(outcome).toEqual({ applied: true, unit: 'blocks', shown: 3, total: 9 })
-    expect(doc.contentBlocks).toHaveLength(3)
-    expect((doc.contentBlocks as { content: string }[])[0].content).toBe('block 0')
-  })
-
-  it('reports nothing applied when the body is already at or under the limit', () => {
-    const doc: Record<string, unknown> = { contentBlocks: blocks(2) }
-
-    const outcome = applySampleRule('articles', doc)
-
-    expect(outcome).toEqual({ applied: false, unit: 'blocks', shown: 2, total: 2 })
+    expect(outcome).toEqual({ applied: true, unit: 'blocks', shown: 2, total: 4 })
     expect(doc.contentBlocks).toHaveLength(2)
+    expect((doc.contentBlocks as { content: string }[]).map((b) => b.content)).toEqual([
+      'para 0',
+      'para 1',
+    ])
   })
 
-  it('survives a document with no body at all', () => {
-    const doc: Record<string, unknown> = {}
+  it('withholds editorial blocks even when they come first', () => {
+    // These carry standalone value, so an early key-takeaway must not become
+    // the free part of a paid article.
+    const doc: Record<string, unknown> = {
+      contentBlocks: [
+        { blockType: 'key-takeaway' },
+        { blockType: 'pull-quote' },
+        text(0),
+        { blockType: 'in-the-know' },
+        text(1),
+        { blockType: 'faq' },
+      ],
+    }
 
-    expect(applySampleRule('articles', doc)).toEqual({
+    applySampleRule('articles', doc)
+
+    expect((doc.contentBlocks as { blockType: string }[]).map((b) => b.blockType)).toEqual([
+      'text',
+      'text',
+    ])
+  })
+
+  it('withholds images', () => {
+    const doc: Record<string, unknown> = {
+      contentBlocks: [text(0), { blockType: 'image' }, { blockType: 'img-trio' }, text(1)],
+    }
+
+    applySampleRule('articles', doc)
+
+    expect((doc.contentBlocks as { blockType: string }[]).map((b) => b.blockType)).toEqual([
+      'text',
+      'text',
+    ])
+  })
+
+  it('withholds an unknown future block type by default', () => {
+    // Allowlist, not blocklist: a block type added later must not leak just
+    // because nobody remembered this file.
+    const doc: Record<string, unknown> = {
+      contentBlocks: [{ blockType: 'brand-new-editorial-thing' }, text(0), text(1)],
+    }
+
+    applySampleRule('articles', doc)
+
+    expect((doc.contentBlocks as { blockType: string }[]).map((b) => b.blockType)).toEqual([
+      'text',
+      'text',
+    ])
+  })
+
+  it('reports applied when non-text blocks were removed but every text block survived', () => {
+    const doc: Record<string, unknown> = {
+      contentBlocks: [text(0), { blockType: 'faq' }],
+    }
+
+    const outcome = applySampleRule('articles', doc)
+
+    expect(outcome).toEqual({ applied: true, unit: 'blocks', shown: 1, total: 2 })
+  })
+
+  it('handles an article with no prose at all', () => {
+    const doc: Record<string, unknown> = { contentBlocks: [{ blockType: 'image' }] }
+
+    const outcome = applySampleRule('articles', doc)
+
+    expect(outcome).toEqual({ applied: true, unit: 'blocks', shown: 0, total: 1 })
+    expect(doc.contentBlocks).toEqual([])
+  })
+
+  it('honours a caller-supplied limit', () => {
+    const doc: Record<string, unknown> = { contentBlocks: [text(0), text(1), text(2)] }
+
+    applySampleRule('articles', doc, { ...DEFAULT_SAMPLE_LIMITS, articleTextBlocks: 1 })
+
+    expect(doc.contentBlocks).toHaveLength(1)
+  })
+})
+
+describe('applySampleRule — listicle itineraries', () => {
+  const day = (n: number) => ({
+    items: [{ blockType: 'dining', blurb: `stop ${n}` }],
+    whereStaying: [{ blockType: 'itinerary-where-staying', blurb: `hotel ${n}` }],
+  })
+
+  it('removes every day and keeps only the top-level lodging', () => {
+    const doc: Record<string, unknown> = {
+      whereStaying: [{ blockType: 'itinerary-where-staying', blurb: 'Hotel B' }],
+      itineraryDays: [day(1), day(2), day(3)],
+    }
+
+    const outcome = applySampleRule('listicle-itineraries', doc)
+
+    expect(outcome).toEqual({ applied: true, unit: 'days', shown: 0, total: 3 })
+    expect(doc.itineraryDays).toEqual([])
+    expect(doc.whereStaying).toHaveLength(1)
+  })
+
+  it('takes per-day lodging with the day it belongs to', () => {
+    // Day lodging is nested inside the day rows, and no day survives.
+    const doc: Record<string, unknown> = { itineraryDays: [day(1), day(2)] }
+
+    applySampleRule('listicle-itineraries', doc)
+
+    expect(JSON.stringify(doc.itineraryDays)).not.toContain('hotel')
+  })
+
+  it('strips the legacy top-level stop list too', () => {
+    const doc: Record<string, unknown> = {
+      items: [{ blockType: 'dining' }, { blockType: 'attractions' }],
+      whereStaying: [{ blockType: 'itinerary-where-staying' }],
+    }
+
+    const outcome = applySampleRule('listicle-itineraries', doc)
+
+    expect(outcome.applied).toBe(true)
+    expect(doc.items).toEqual([])
+    expect(doc.whereStaying).toHaveLength(1)
+  })
+
+  it('reports nothing applied for an itinerary with no body', () => {
+    const doc: Record<string, unknown> = { whereStaying: [] }
+
+    expect(applySampleRule('listicle-itineraries', doc)).toEqual({
       applied: false,
-      unit: 'blocks',
+      unit: 'days',
       shown: 0,
       total: 0,
     })
@@ -47,97 +152,12 @@ describe('applySampleRule — standard articles', () => {
 })
 
 describe('applySampleRule — single-type listicles', () => {
-  it('keeps the leading ranked items', () => {
-    const doc: Record<string, unknown> = { items: items(12) }
+  it('removes nothing, because they are never gated', () => {
+    const doc: Record<string, unknown> = { items: [{ blockType: 'dining' }, { blockType: 'bar' }] }
 
     const outcome = applySampleRule('single-type-listicles', doc)
 
-    expect(outcome).toEqual({ applied: true, unit: 'items', shown: 3, total: 12 })
-    expect(doc.items).toHaveLength(3)
-  })
-})
-
-describe('applySampleRule — listicle itineraries', () => {
-  it('keeps Day 1 whole, including its lodging', () => {
-    const doc: Record<string, unknown> = { itineraryDays: days(5) }
-
-    const outcome = applySampleRule('listicle-itineraries', doc)
-
-    expect(outcome).toEqual({ applied: true, unit: 'days', shown: 1, total: 5 })
-    expect(doc.itineraryDays).toHaveLength(1)
-
-    const dayOne = (doc.itineraryDays as { items: unknown[]; whereStaying: unknown[] }[])[0]
-    expect(dayOne.items).toHaveLength(3)
-    expect(dayOne.whereStaying).toHaveLength(1)
-  })
-
-  it('strips the legacy top-level body on a day-shaped itinerary', () => {
-    // Both shapes can be populated at once. Truncating days while leaving the
-    // legacy arrays would hand back the very stops the day cut removed.
-    const doc: Record<string, unknown> = {
-      itineraryDays: days(4),
-      items: items(20),
-      whereStaying: [{ blockType: 'itinerary-where-staying' }],
-    }
-
-    const outcome = applySampleRule('listicle-itineraries', doc)
-
-    expect(outcome.applied).toBe(true)
-    expect(doc.itineraryDays).toHaveLength(1)
-    expect(doc.items).toEqual([])
-    expect(doc.whereStaying).toEqual([])
-  })
-
-  it('falls back to the item rule for a legacy itinerary with no days', () => {
-    const doc: Record<string, unknown> = {
-      itineraryDays: [],
-      items: items(10),
-      whereStaying: [{ blockType: 'itinerary-where-staying' }],
-    }
-
-    const outcome = applySampleRule('listicle-itineraries', doc)
-
-    expect(outcome).toEqual({ applied: true, unit: 'items', shown: 3, total: 10 })
-    expect(doc.items).toHaveLength(3)
-    expect(doc.whereStaying).toEqual([])
-  })
-
-  it('reports applied when only lodging had to be removed', () => {
-    const doc: Record<string, unknown> = {
-      items: items(2),
-      whereStaying: [{ blockType: 'itinerary-where-staying' }],
-    }
-
-    const outcome = applySampleRule('listicle-itineraries', doc)
-
-    expect(outcome.applied).toBe(true)
+    expect(outcome.applied).toBe(false)
     expect(doc.items).toHaveLength(2)
-    expect(doc.whereStaying).toEqual([])
-  })
-})
-
-describe('applySampleRule — limits', () => {
-  it('honours caller-supplied limits over the defaults', () => {
-    const doc: Record<string, unknown> = { contentBlocks: blocks(9) }
-
-    const outcome = applySampleRule('articles', doc, {
-      ...DEFAULT_SAMPLE_LIMITS,
-      articleBlocks: 5,
-    })
-
-    expect(outcome.shown).toBe(5)
-    expect(doc.contentBlocks).toHaveLength(5)
-  })
-
-  it('treats a zero limit as a full lock rather than as no limit', () => {
-    const doc: Record<string, unknown> = { contentBlocks: blocks(4) }
-
-    const outcome = applySampleRule('articles', doc, {
-      ...DEFAULT_SAMPLE_LIMITS,
-      articleBlocks: 0,
-    })
-
-    expect(outcome).toEqual({ applied: true, unit: 'blocks', shown: 0, total: 4 })
-    expect(doc.contentBlocks).toEqual([])
   })
 })

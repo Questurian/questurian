@@ -37,19 +37,35 @@ export function isLocked(article: unknown): boolean {
   return readGate(article)?.locked === true
 }
 
+export type LockCopy = {
+  /** What the reader is looking at, or null when there is nothing useful to say. */
+  headline: string | null
+  cta: string
+}
+
 /**
- * How much is being withheld, phrased in the unit the server cut on: "Day 1 of
- * 5" reads as a sample, where "part of this article" reads as an error.
+ * Names what is being withheld, in the unit the server actually cut on.
+ *
+ * Itineraries keep no day at all, so the old "Day 1 of 5" phrasing would read
+ * as "Day 0 of 5" -- which sounds like a bug rather than an offer. The pitch
+ * for an itinerary is the trip length being unlocked, not the fraction shown.
  */
-export function describeSample(gate: GateState): string | null {
-  if (!gate.locked || gate.total <= 0) return null
+export function describeLock(gate: GateState): LockCopy {
+  if (!gate.locked) return { headline: null, cta: 'Unlock the full guide' }
 
   if (gate.unit === 'days') {
-    return gate.total > gate.shown
-      ? `Day ${gate.shown} of ${gate.total}`
-      : `${gate.total} day${gate.total === 1 ? '' : 's'}`
+    return {
+      headline: 'Your stay is above. The day-by-day plan is for members.',
+      cta: gate.total > 0 ? `Unlock all ${gate.total} days` : 'Unlock the full itinerary',
+    }
   }
 
-  const noun = gate.unit === 'items' ? 'stop' : 'section'
-  return `${gate.shown} of ${gate.total} ${noun}${gate.total === 1 ? '' : 's'}`
+  if (gate.total > gate.shown && gate.shown > 0) {
+    return {
+      headline: `You're reading the first ${gate.shown} of ${gate.total} sections.`,
+      cta: 'Unlock the full guide',
+    }
+  }
+
+  return { headline: null, cta: 'Unlock the full guide' }
 }

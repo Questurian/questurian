@@ -41,6 +41,22 @@ export function gatePublicArticle(
 ): GateState {
   const access = isAccessTier(doc.access) ? doc.access : DEFAULT_ACCESS_TIER
 
+  // Single-type listicles are never gated: they earn from ads, which needs the
+  // whole page reachable. The Access tier field is removed from that collection,
+  // so this only fires on a stale `member` value left in the column from before
+  // the removal -- which must not lock a page that is supposed to pay its way.
+  if (collection === 'single-type-listicles') {
+    const listicleState: GateState = {
+      access: 'free',
+      locked: false,
+      unit: 'items',
+      shown: 0,
+      total: 0,
+    }
+    doc.gate = listicleState
+    return listicleState
+  }
+
   if (!isGatedItem(doc)) {
     const state: GateState = { access, locked: false, unit: 'blocks', shown: 0, total: 0 }
     doc.gate = state

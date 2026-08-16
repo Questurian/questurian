@@ -17,13 +17,13 @@ describe('gatePublicArticle', () => {
     expect(doc.gate).toEqual(state)
   })
 
-  it('reduces a gated article to its Free sample', () => {
+  it('reduces a gated article to its opening prose', () => {
     const doc: Record<string, unknown> = { access: 'member', contentBlocks: blocks(9) }
 
     const state = gatePublicArticle('articles', doc)
 
-    expect(state).toEqual({ access: 'member', locked: true, unit: 'blocks', shown: 3, total: 9 })
-    expect(doc.contentBlocks).toHaveLength(3)
+    expect(state).toEqual({ access: 'member', locked: true, unit: 'blocks', shown: 2, total: 9 })
+    expect(doc.contentBlocks).toHaveLength(2)
   })
 
   it('treats a document with no tier as free rather than locking it', () => {
@@ -59,16 +59,33 @@ describe('gatePublicArticle', () => {
     expect(state).toMatchObject({ shown: 2, total: 2 })
   })
 
-  it('locks an itinerary down to Day 1 and counts in days', () => {
+  it('removes every day from an itinerary and counts in days', () => {
     const doc: Record<string, unknown> = {
       access: 'member',
+      whereStaying: [{ blockType: 'itinerary-where-staying' }],
       itineraryDays: Array.from({ length: 5 }, () => ({ items: [], whereStaying: [] })),
     }
 
     const state = gatePublicArticle('listicle-itineraries', doc)
 
-    expect(state).toEqual({ access: 'member', locked: true, unit: 'days', shown: 1, total: 5 })
-    expect(doc.itineraryDays).toHaveLength(1)
+    expect(state).toEqual({ access: 'member', locked: true, unit: 'days', shown: 0, total: 5 })
+    expect(doc.itineraryDays).toEqual([])
+    expect(doc.whereStaying).toHaveLength(1)
+  })
+
+  it('never locks a single-type listicle, even with a stale member tier', () => {
+    // The field is removed from that collection, but the column can still hold
+    // a value set before removal. Ad revenue needs the whole page reachable.
+    const doc: Record<string, unknown> = {
+      access: 'member',
+      items: [{ blockType: 'dining' }, { blockType: 'bar' }],
+    }
+
+    const state = gatePublicArticle('single-type-listicles', doc)
+
+    expect(state.locked).toBe(false)
+    expect(state.access).toBe('free')
+    expect(doc.items).toHaveLength(2)
   })
 
   it('always attaches gate state, so the client never infers lock from absence', () => {
