@@ -140,4 +140,14 @@ describe('create checkout session referral ID validation', () => {
 
     expect(metadata).not.toHaveProperty('endorsely_referral')
   })
+
+  // Identity travels as the auth user ID alone. The address is on the Stripe
+  // customer already, and metadata is the copy that leaks into exports and logs.
+  it('keeps the visitor email out of Stripe metadata', async () => {
+    const metadata = await metadataForBody({})
+
+    expect(metadata.visitorAuthUserId).toBe('visitor_123')
+    expect(metadata).not.toHaveProperty('visitorEmail')
+    expect(JSON.stringify(metadata)).not.toContain('@')
+  })
 })
