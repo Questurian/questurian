@@ -37,13 +37,24 @@ export default function SubscribeButton() {
       `}
     >
       {/*
-       * No price in this label: it is static chrome on every page and cannot
-       * know the Stripe price, so it used to advertise $1.50/wk against a real
-       * $0.50/month. /join states the price it reads from Stripe.
+       * HARDCODED PRICE -- verify against Stripe before changing plan pricing.
+       *
+       * Derived from the annual plan: $79.99/yr ÷ 52 = $1.538/wk. Rounded up,
+       * so "$1.54" slightly overstates and "under $1.55" stays true; rounding
+       * down would understate the price, which is the direction that gets
+       * argued in a dispute.
+       *
+       * This is static chrome on every page and cannot read Stripe, so it goes
+       * stale the moment plan pricing changes. `GET /api/payments/plans` is the
+       * source of truth, and /join renders from it. If you change the price in
+       * Stripe, change this line in the same breath.
+       *
+       * Weekly framing for a plan billed annually is a deliberate choice, made
+       * 2026-08-15 with the trade-off understood.
        */}
       <span className="380:hidden">Subscribe</span>
-      <span className="hidden 380:inline 550:hidden">Join</span>
-      <span className="hidden 550:inline">Become a member</span>
+      <span className="hidden 380:inline 550:hidden">Join: $1.54/wk</span>
+      <span className="hidden 550:inline">Subscribe: under $1.55/wk</span>
 
     </button>
   );
