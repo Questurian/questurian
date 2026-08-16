@@ -97,6 +97,14 @@ async function fetchIncumbent(subscriptionId: string): Promise<Stripe.Subscripti
  *
  * The subscription that is billing owns the row. When none is, the newest one
  * does, so an old cancellation cannot overwrite a newer one's final state.
+ *
+ * Asked even when the profile already names this subscription. "The row points
+ * at me" is not the same claim as "I am still the one billing": the collapse
+ * refunds and cancels an extra that the profile may already have been moved
+ * onto by that subscription's own `customer.subscription.created`, and the
+ * `charge.refunded` that follows then revokes a membership the survivor is
+ * paying for. Skipping the check on a name match made that case the one place
+ * a live subscription was never consulted.
  */
 async function ownsProfileRow(
   customerId: string,
@@ -106,7 +114,7 @@ async function ownsProfileRow(
   if (isLiveSubscription(subscription)) return true
 
   const live = await findLiveSubscription(customerId)
-  if (live) return false
+  if (live && live.id !== subscription.id) return false
 
   const incumbent = await fetchIncumbent(incumbentId)
   if (!incumbent) return true
@@ -207,7 +215,7 @@ export async function resyncSubscription(
 
     const incumbentId = profile.stripeSubscriptionId
 
-    if (incumbentId && incumbentId !== subscription.id) {
+    if (incumbentId) {
       const owns = await ownsProfileRow(customerId, subscription, incumbentId)
 
       if (!owns) {
