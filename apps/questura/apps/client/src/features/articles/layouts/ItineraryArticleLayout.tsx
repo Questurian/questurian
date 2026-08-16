@@ -13,6 +13,10 @@ import {
   populatedVenueStops,
   venueRowFromBlock,
 } from '@/features/articles/lib/itineraryDays'
+import { GatedBodySkeleton, GatedLoadError } from '@/features/articles/components/GatedStates'
+import { PaywallNotice } from '@/features/articles/components/PaywallNotice'
+import { readGate } from '@/features/articles/lib/gate'
+import { useGatedFullArticle } from '@/features/articles/lib/useGatedFullArticle'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import type { ListicleItineraryArticle } from '@/features/articles/types/itineraryListicle'
 
@@ -21,6 +25,8 @@ interface ItineraryArticleLayoutProps {
   relatedArticles: RelatedMapsArticleTeaser[]
   country: string
   city?: string | null
+  /** Path the reader is on, so checkout can return them to it. */
+  path?: string
 }
 
 export function ItineraryArticleLayout({
@@ -28,8 +34,23 @@ export function ItineraryArticleLayout({
   relatedArticles,
   country,
   city,
+  path,
 }: ItineraryArticleLayoutProps): JSX.Element {
-  const days = useMemo(() => itineraryDaysForArticle(article), [article])
+  const gate = readGate(article)
+  const locked = gate?.locked === true
+
+  // The swap happens here rather than deeper down because this is where days
+  // are derived. A gated itinerary arrives with none, and a member's full body
+  // has to re-enter through the same derivation so the day tabs, map pins and
+  // scroll sync all agree.
+  const { phase, data, retry } = useGatedFullArticle<ListicleItineraryArticle>({
+    articleId: article.id,
+    type: 'itineraries',
+    enabled: locked,
+  })
+
+  const effectiveArticle = locked && phase === 'ready' && data ? data : article
+  const days = useMemo(() => itineraryDaysForArticle(effectiveArticle), [effectiveArticle])
   const [selectedDayIndex, setSelectedDayIndex] = useState(0)
   const dayIndex = Math.min(selectedDayIndex, Math.max(days.length - 1, 0))
 
@@ -69,10 +90,21 @@ export function ItineraryArticleLayout({
         city={city}
       >
         <ItineraryListicleArticlePage
-          article={article}
+          article={effectiveArticle}
           days={days}
           selectedDayIndex={dayIndex}
           onSelectDay={setSelectedDayIndex}
+          lockedSlot={
+            locked && gate ? (
+              phase === 'identifying' || phase === 'anonymous' ? (
+                <PaywallNotice gate={gate} returnTo={path ?? '/'} />
+              ) : phase === 'loading' ? (
+                <GatedBodySkeleton />
+              ) : phase === 'failed' ? (
+                <GatedLoadError onRetry={retry} />
+              ) : null
+            ) : null
+          }
         />
       </ListicleArticleLayout>
     </ListicleMapSyncProvider>
