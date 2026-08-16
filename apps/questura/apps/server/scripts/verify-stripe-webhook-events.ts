@@ -35,10 +35,15 @@
  *   pnpm verify:stripe-webhook-events            # dev machine, via tsx
  *
  * On the deploy host there are no dev dependencies, so `tsx` does not exist.
- * Node strips the types itself there:
+ * Node strips the types itself there — but only from 22.6, and the host's
+ * `/usr/bin/node` is 18, which rejects the flag outright. Use the nvm build:
  *
+ *   cd ~/questura/app/apps/questura/apps/server
  *   set -a; . ~/questura/config/server.env; set +a
- *   node --experimental-strip-types scripts/verify-stripe-webhook-events.ts
+ *   ~/.nvm/versions/node/v22.23.2/bin/node \
+ *     --experimental-strip-types scripts/verify-stripe-webhook-events.ts
+ *
+ * Confirmed working against the live account on 2026-08-16.
  *
  * Exits non-zero if any enabled endpoint is missing a handled event, so it can
  * gate a deploy.
