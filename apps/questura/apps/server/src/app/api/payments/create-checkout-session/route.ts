@@ -7,6 +7,7 @@ import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-pri
 import { isPlanId, priceIdForPlan, type PlanId } from '@/payments/lib/membership-plans'
 import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 import { safeReturnPath } from '@/payments/lib/safe-return-path'
+import { checkoutIdempotencyKey } from '@/payments/lib/checkout-idempotency'
 import {
   findVisitorProfileByAuthUserId,
   updateVisitorProfileByAuthUserId,
@@ -162,6 +163,24 @@ export async function POST(req: NextRequest) {
     // 7. Create checkout session for subscription
     logger.info('Creating checkout session', { plan })
 
+    const successUrl = APP_URLS.frontendUrl(
+      `/subscription/success?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(returnTo)}`,
+    )
+    const cancelUrl = APP_URLS.frontendUrl('/subscription/cancel')
+
+    // A double-clicked buy button otherwise creates two sessions on the same
+    // customer. The key is derived from the request rather than the visitor
+    // alone, because Stripe refuses a reused key whose parameters changed — see
+    // `checkout-idempotency.ts` for why it is also time-bucketed.
+    const idempotencyKey = checkoutIdempotencyKey({
+      visitorAuthUserId,
+      customerId: stripeCustomerId,
+      priceId,
+      successUrl,
+      cancelUrl,
+      referralId,
+    })
+
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: 'subscription', // KEY: subscription mode, not payment
@@ -169,17 +188,15 @@ export async function POST(req: NextRequest) {
         price: priceId,
         quantity: 1
       }],
-      success_url: APP_URLS.frontendUrl(
-        `/subscription/success?session_id={CHECKOUT_SESSION_ID}&returnTo=${encodeURIComponent(returnTo)}`,
-      ),
-      cancel_url: APP_URLS.frontendUrl('/subscription/cancel'),
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata,
       allow_promotion_codes: true, // Optional: allow discount codes
       billing_address_collection: 'auto', // Optional: collect billing address
       subscription_data: {
         metadata // Also add metadata to subscription object
       }
-    })
+    }, { idempotencyKey })
 
     logger.info('Created checkout session')
 
