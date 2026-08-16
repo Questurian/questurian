@@ -24,6 +24,9 @@
  * published should already carry its tier, rather than going live free because
  * this ran before it existed as a published row.
  */
+// A bare tsx script does not load `.env` the way Next does, and Payload
+// refuses to boot without its secret. Same first line as the other scripts.
+import 'dotenv/config'
 import { getPayload } from 'payload'
 
 import config from '../src/payload.config'
