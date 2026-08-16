@@ -30,6 +30,7 @@ import * as migration_20260814_010000_add_visitor_profile_paid_through from './2
 import * as migration_20260814_020000_drop_legacy_membership_columns from './20260814_020000_drop_legacy_membership_columns'
 import * as migration_20260814_030000_unique_visitor_profile_stripe_customer_id from './20260814_030000_unique_visitor_profile_stripe_customer_id'
 import * as migration_20260815_010000_add_access_tier from './20260815_010000_add_access_tier'
+import * as migration_20260816_010000_price_tier_graphql_safe_values from './20260816_010000_price_tier_graphql_safe_values'
 
 export const migrations = [
   {
@@ -191,5 +192,10 @@ export const migrations = [
     up: migration_20260815_010000_add_access_tier.up,
     down: migration_20260815_010000_add_access_tier.down,
     name: '20260815_010000_add_access_tier',
+  },
+  {
+    up: migration_20260816_010000_price_tier_graphql_safe_values.up,
+    down: migration_20260816_010000_price_tier_graphql_safe_values.down,
+    name: '20260816_010000_price_tier_graphql_safe_values',
   },
 ]
