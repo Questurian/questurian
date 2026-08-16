@@ -1,5 +1,5 @@
 import type Stripe from 'stripe'
-import { writeAccessRevocation } from '@/payments/lib/access-revocation'
+import { cancelRefundedSubscription, writeAccessRevocation } from '@/payments/lib/access-revocation'
 import { stripe } from '@/payments/lib/stripe'
 import { resyncSubscription } from '@/payments/lib/subscription-resync'
 import {
@@ -53,8 +53,17 @@ async function chargeFromDispute(dispute: Stripe.Dispute): Promise<Stripe.Charge
  * is refused the revocation is handed straight to the resync instead. The
  * profile is what gates access, so it ends up correct either way.
  */
-async function markAccessRevoked(subscriptionId: string, revocation: AccessRevocation | null) {
+async function markAccessRevoked(
+  subscriptionId: string,
+  revocation: AccessRevocation | null,
+  options: { cancelSubscription?: boolean } = {}
+) {
   const flagged = await writeAccessRevocation(subscriptionId, revocation)
+
+  // After the flag, because Stripe will not take a metadata write on a
+  // subscription that is already cancelled; before the resync, so the profile is
+  // written once, from a subscription that is already in its final state.
+  if (options.cancelSubscription) await cancelRefundedSubscription(subscriptionId)
 
   if (flagged) {
     await resyncSubscription(subscriptionId)
@@ -89,17 +98,27 @@ async function revokeForCharge(
     revokedPeriodEnd: end,
   })
 
-  await markAccessRevoked(subscriptionId, { reason, periodEnd: end })
+  await markAccessRevoked(
+    subscriptionId,
+    { reason, periodEnd: end },
+    // A refund ends the arrangement, so the subscription has to stop billing.
+    // A dispute is money still being contested and may be won, and a cancelled
+    // subscription cannot be revived — so that one is left running.
+    { cancelSubscription: reason === ACCESS_REVOKED_REASON_REFUND }
+  )
 }
 
 /**
  * Full refunds and disputes must not leave `paidThroughAt` at period end.
  *
- * Stripe may cancel the subscription, but a cancelled sub still reports the
- * period that was (no longer) paid for. Writing `access_revoked` onto the
- * subscription makes every later resync — including `subscription.deleted` —
- * clear entitlement instead of restoring it. Partial refunds are left alone:
- * those are often corrections, not "this period was never paid".
+ * A cancelled sub still reports the period that was (no longer) paid for.
+ * Writing `access_revoked` onto the subscription makes every later resync —
+ * including `subscription.deleted` — clear entitlement instead of restoring it.
+ *
+ * The refund also cancels the subscription, because Stripe does not: revoking
+ * access while billing continues charges the visitor for a month they cannot
+ * use. Partial refunds are left alone on both counts: those are often
+ * corrections, not "this period was never paid".
  */
 export async function handleChargeRefunded(charge: Stripe.Charge) {
   logger.info('Processing charge.refunded', { chargeId: charge.id })
