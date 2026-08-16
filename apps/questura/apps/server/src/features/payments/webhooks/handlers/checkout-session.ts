@@ -76,7 +76,11 @@ async function refundDuplicateSubscription(subscription: Stripe.Subscription) {
       invoiceId,
       error: error instanceof Error ? error.message : String(error),
     })
-    return
+    // Swallowing this would let the caller cancel the subscription anyway,
+    // leaving the customer charged, cancelled and un-refunded. The refund is
+    // keyed idempotently, so throwing lets Stripe redeliver the event and retry
+    // the whole collapse without double-refunding.
+    throw error
   }
 
   logger.error('Duplicate subscription cancelled but no charge was found to refund', {
