@@ -120,7 +120,8 @@ describe('create checkout session duplicate Stripe customer guard', () => {
     })
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_existing' })
+      expect.objectContaining({ customer: 'cus_existing' }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 
@@ -148,7 +149,8 @@ describe('create checkout session duplicate Stripe customer guard', () => {
 
     expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1)
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_new' })
+      expect.objectContaining({ customer: 'cus_new' }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
     expect(mocks.updateVisitorProfileByAuthUserId).toHaveBeenCalledWith('visitor_123', {
       stripeCustomerId: 'cus_new',
@@ -166,7 +168,8 @@ describe('create checkout session duplicate Stripe customer guard', () => {
 
     expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1)
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_new' })
+      expect.objectContaining({ customer: 'cus_new' }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 
@@ -185,7 +188,8 @@ describe('create checkout session duplicate Stripe customer guard', () => {
 
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_mine' })
+      expect.objectContaining({ customer: 'cus_mine' }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 
@@ -219,7 +223,8 @@ describe('create checkout session duplicate Stripe customer guard', () => {
     expect(response.status).toBe(200)
     expect(mocks.stripeCustomerCreate).toHaveBeenCalledTimes(1)
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_new' })
+      expect.objectContaining({ customer: 'cus_new' }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
     expect(mocks.updateVisitorProfileByAuthUserId).toHaveBeenCalledWith('visitor_123', {
       stripeCustomerId: 'cus_new',
@@ -238,7 +243,8 @@ describe('create checkout session duplicate Stripe customer guard', () => {
     expect(mocks.stripeCustomerList).not.toHaveBeenCalled()
     expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ customer: 'cus_linked' })
+      expect.objectContaining({ customer: 'cus_linked' }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 })

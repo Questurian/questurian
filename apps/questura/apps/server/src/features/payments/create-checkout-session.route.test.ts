@@ -175,6 +175,7 @@ describe('create checkout session route auth guard', () => {
         mode: 'subscription',
         line_items: [{ price: 'price_123', quantity: 1 }],
       }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 
@@ -189,6 +190,7 @@ describe('create checkout session route auth guard', () => {
 
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({ line_items: [{ price: 'price_123', quantity: 1 }] }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 
@@ -205,6 +207,7 @@ describe('create checkout session route auth guard', () => {
 
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({ line_items: [{ price: 'price_yearly_123', quantity: 1 }] }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 
@@ -219,6 +222,7 @@ describe('create checkout session route auth guard', () => {
 
     expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
       expect.objectContaining({ line_items: [{ price: 'price_123', quantity: 1 }] }),
+      expect.objectContaining({ idempotencyKey: expect.stringMatching(/^checkout:[0-9a-f]{64}$/) }),
     )
   })
 
