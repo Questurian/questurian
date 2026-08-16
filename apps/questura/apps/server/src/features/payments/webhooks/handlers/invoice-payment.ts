@@ -1,7 +1,8 @@
 import type Stripe from 'stripe'
 import { logger } from '@/shared/utils/logger'
+import { writeAccessRevocation } from '@/payments/lib/access-revocation'
 import { stripe } from '@/payments/lib/stripe'
-import { resyncSubscription } from '@/payments/lib/subscription-resync'
+import { resyncSubscription, type ResyncOptions } from '@/payments/lib/subscription-resync'
 import {
   ACCESS_REVOKED_METADATA_KEY,
   ACCESS_REVOKED_METADATA_VALUE,
@@ -53,21 +54,26 @@ const NEW_PERIOD_BILLING_REASONS = new Set<Stripe.Invoice.BillingReason>([
  * period end. Those are treated as refunds and cleared: a wrongly cleared
  * dispute is corrected by its own `closed` event, whereas a wrongly kept
  * refund locks a paying visitor out permanently.
+ *
+ * Returns the options the following resync must run with: the clear normally
+ * lands on Stripe and nothing needs overriding, but a subscription cancelled
+ * between the payment and this delivery will not take the write, and the resync
+ * would then re-read the flag this call just decided to lift.
  */
 async function clearRefundRevocationOnNewPeriod(
   invoice: Stripe.Invoice,
   subscriptionId: string
-): Promise<void> {
+): Promise<ResyncOptions> {
   const billingReason = invoice.billing_reason
-  if (!billingReason || !NEW_PERIOD_BILLING_REASONS.has(billingReason)) return
+  if (!billingReason || !NEW_PERIOD_BILLING_REASONS.has(billingReason)) return {}
 
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
   const metadata = subscription.metadata ?? {}
 
-  if (metadata[ACCESS_REVOKED_METADATA_KEY] !== ACCESS_REVOKED_METADATA_VALUE) return
+  if (metadata[ACCESS_REVOKED_METADATA_KEY] !== ACCESS_REVOKED_METADATA_VALUE) return {}
 
   const reason = metadata[ACCESS_REVOKED_REASON_METADATA_KEY]
-  if (reason && reason !== ACCESS_REVOKED_REASON_REFUND) return
+  if (reason && reason !== ACCESS_REVOKED_REASON_REFUND) return {}
 
   const revokedPeriodEnd = Number(metadata[ACCESS_REVOKED_PERIOD_END_METADATA_KEY])
   const { start: paidPeriodStart } = getSubscriptionPeriodSeconds(subscription)
@@ -78,7 +84,7 @@ async function clearRefundRevocationOnNewPeriod(
     paidPeriodStart !== null &&
     paidPeriodStart < revokedPeriodEnd
   ) {
-    return
+    return {}
   }
 
   logger.warn('Restoring membership: a period after the refunded one was paid', {
@@ -88,13 +94,9 @@ async function clearRefundRevocationOnNewPeriod(
     paidPeriodStart,
   })
 
-  await stripe.subscriptions.update(subscriptionId, {
-    metadata: {
-      [ACCESS_REVOKED_METADATA_KEY]: '',
-      [ACCESS_REVOKED_REASON_METADATA_KEY]: '',
-      [ACCESS_REVOKED_PERIOD_END_METADATA_KEY]: '',
-    },
-  })
+  const cleared = await writeAccessRevocation(subscriptionId, null)
+
+  return cleared ? {} : { accessRevoked: null }
 }
 
 export async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
@@ -108,7 +110,12 @@ export async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
   }
 
   // Before the resync, so the state it derives already reflects the cleared flag.
-  await clearRefundRevocationOnNewPeriod(invoice, subscriptionId)
+  const resyncOptions = await clearRefundRevocationOnNewPeriod(invoice, subscriptionId)
+
+  if ('accessRevoked' in resyncOptions) {
+    await resyncSubscription(subscriptionId, resyncOptions)
+    return
+  }
 
   await resyncSubscription(subscriptionId)
 }

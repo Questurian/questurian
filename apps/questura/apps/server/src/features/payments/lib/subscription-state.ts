@@ -44,6 +44,38 @@ export type AccessRevokedReason =
   | typeof ACCESS_REVOKED_REASON_REFUND
   | typeof ACCESS_REVOKED_REASON_DISPUTE
 
+/** A revocation as the rest of the system passes it around, metadata aside. */
+export type AccessRevocation = {
+  reason: AccessRevokedReason
+  periodEnd: number | null
+}
+
+/**
+ * Read the revocation a subscription is carrying, if any.
+ *
+ * A flag written before the reason and period-end keys existed carries neither;
+ * it is read as a refund, matching how `clearRefundRevocationOnNewPeriod`
+ * treats it — a wrongly cleared dispute is corrected by its own `closed` event,
+ * whereas a wrongly kept refund locks a paying visitor out permanently.
+ */
+export function readAccessRevocation(
+  subscription: Stripe.Subscription
+): AccessRevocation | null {
+  const metadata = subscription.metadata ?? {}
+
+  if (metadata[ACCESS_REVOKED_METADATA_KEY] !== ACCESS_REVOKED_METADATA_VALUE) return null
+
+  const periodEnd = Number(metadata[ACCESS_REVOKED_PERIOD_END_METADATA_KEY])
+
+  return {
+    reason:
+      metadata[ACCESS_REVOKED_REASON_METADATA_KEY] === ACCESS_REVOKED_REASON_DISPUTE
+        ? ACCESS_REVOKED_REASON_DISPUTE
+        : ACCESS_REVOKED_REASON_REFUND,
+    periodEnd: Number.isFinite(periodEnd) && periodEnd > 0 ? periodEnd : null,
+  }
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
@@ -79,6 +111,13 @@ export type DeriveContext = {
    * rather than assuming the fixed window outlasts it.
    */
   nextPaymentAttempt?: number | null
+  /**
+   * Revocation to apply *instead of* the subscription's own metadata, for the
+   * case where Stripe refused the metadata write. `null` asserts "not revoked"
+   * and overrides a flag still sitting on the subscription; omitting the key
+   * reads the metadata as usual. See `payments/lib/access-revocation.ts`.
+   */
+  accessRevoked?: AccessRevocation | null
 }
 
 /**
@@ -233,7 +272,12 @@ export function deriveSubscriptionState(
 ): DerivedSubscriptionState {
   const subscriptionStatus = mapStripeStatusToInternal(subscription.status)
 
-  if (subscription.metadata?.[ACCESS_REVOKED_METADATA_KEY] === ACCESS_REVOKED_METADATA_VALUE) {
+  const revocation =
+    context.accessRevoked !== undefined
+      ? context.accessRevoked
+      : readAccessRevocation(subscription)
+
+  if (revocation) {
     return {
       subscriptionStatus,
       cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),

@@ -1,13 +1,11 @@
 import type Stripe from 'stripe'
+import { writeAccessRevocation } from '@/payments/lib/access-revocation'
 import { stripe } from '@/payments/lib/stripe'
 import { resyncSubscription } from '@/payments/lib/subscription-resync'
 import {
-  ACCESS_REVOKED_METADATA_KEY,
-  ACCESS_REVOKED_METADATA_VALUE,
-  ACCESS_REVOKED_PERIOD_END_METADATA_KEY,
   ACCESS_REVOKED_REASON_DISPUTE,
-  ACCESS_REVOKED_REASON_METADATA_KEY,
   ACCESS_REVOKED_REASON_REFUND,
+  type AccessRevocation,
   type AccessRevokedReason,
 } from '@/payments/lib/subscription-state'
 import { logger } from '@/shared/utils/logger'
@@ -45,22 +43,25 @@ async function chargeFromDispute(dispute: Stripe.Dispute): Promise<Stripe.Charge
   return stripe.charges.retrieve(dispute.charge)
 }
 
-async function markAccessRevoked(
-  subscriptionId: string,
-  revocation: { reason: AccessRevokedReason; periodEnd: number | null } | null
-) {
-  // Stripe deletes a metadata key when its value is the empty string, so a
-  // restore clears all three in one update.
-  await stripe.subscriptions.update(subscriptionId, {
-    metadata: {
-      [ACCESS_REVOKED_METADATA_KEY]: revocation ? ACCESS_REVOKED_METADATA_VALUE : '',
-      [ACCESS_REVOKED_REASON_METADATA_KEY]: revocation ? revocation.reason : '',
-      [ACCESS_REVOKED_PERIOD_END_METADATA_KEY]:
-        revocation && revocation.periodEnd ? String(revocation.periodEnd) : '',
-    },
-  })
+/**
+ * Record the revocation on Stripe, then bring the profile in line with it.
+ *
+ * Stripe is the preferred home for the flag because every later resync refetches
+ * the subscription and would otherwise re-derive access from a period the
+ * visitor was refunded for. But a cancelled subscription will not take the
+ * write, and cancel-then-refund is the ordinary refund flow — so when the write
+ * is refused the revocation is handed straight to the resync instead. The
+ * profile is what gates access, so it ends up correct either way.
+ */
+async function markAccessRevoked(subscriptionId: string, revocation: AccessRevocation | null) {
+  const flagged = await writeAccessRevocation(subscriptionId, revocation)
 
-  await resyncSubscription(subscriptionId)
+  if (flagged) {
+    await resyncSubscription(subscriptionId)
+    return
+  }
+
+  await resyncSubscription(subscriptionId, { accessRevoked: revocation })
 }
 
 async function revokeForCharge(

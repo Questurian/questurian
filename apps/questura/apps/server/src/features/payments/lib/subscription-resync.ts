@@ -12,7 +12,11 @@ import {
 import { stripe } from './stripe'
 import { findLiveSubscription, isLiveSubscription } from './customer-linkage'
 import { getSubscriptionProductName } from './payment-helpers'
-import { deriveSubscriptionState, type DerivedSubscriptionState } from './subscription-state'
+import {
+  deriveSubscriptionState,
+  type AccessRevocation,
+  type DerivedSubscriptionState,
+} from './subscription-state'
 import { resolveMembershipTransitions, type MembershipTransition } from './membership-transitions'
 
 /**
@@ -29,6 +33,15 @@ type ResyncResult = {
   profileId: string | number | null
   state: DerivedSubscriptionState | null
   transitions: MembershipTransition[]
+}
+
+export type ResyncOptions = {
+  /**
+   * Revocation to trust over the subscription's own metadata, for callers that
+   * know the metadata write was refused (a cancelled subscription). `null`
+   * asserts "not revoked"; omit the key entirely to read Stripe as usual.
+   */
+  accessRevoked?: AccessRevocation | null
 }
 
 /** `next_payment_attempt` lives on the invoice, so the grace needs it expanded. */
@@ -163,7 +176,10 @@ async function sendTransitionEmails(
  * atomic, so without the lock two parallel deliveries would each observe the
  * same before-state and each decide the same transition occurred.
  */
-export async function resyncSubscription(subscriptionId: string): Promise<ResyncResult> {
+export async function resyncSubscription(
+  subscriptionId: string,
+  options: ResyncOptions = {}
+): Promise<ResyncResult> {
   const payload = await getPayload({ config })
 
   return withAdvisoryLock(payload, `stripe:subscription:${subscriptionId}`, async () => {
@@ -209,6 +225,9 @@ export async function resyncSubscription(subscriptionId: string): Promise<Resync
     const state = deriveSubscriptionState(subscription, {
       previousDunningGraceUntil: profile.dunningGraceUntil,
       nextPaymentAttempt: nextPaymentAttemptOf(subscription),
+      // Spread so an absent option stays absent: `accessRevoked: undefined`
+      // and `accessRevoked: null` mean different things to the deriver.
+      ...('accessRevoked' in options ? { accessRevoked: options.accessRevoked } : {}),
     })
 
     const transitions = resolveMembershipTransitions(profile, state)
