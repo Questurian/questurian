@@ -10,6 +10,7 @@ import { syncLocationFields } from '@/shared/location/server/syncLocationFields'
 import { languageField } from '@/shared/i18n/languageField'
 import { accessTierField } from '@/shared/content/accessTier'
 import { revalidateArticleCollection } from '@/features/public-revalidation/revalidate-client'
+import { gateExternalApiRead } from '@/features/articles/public/gateExternalApiRead'
 import {
   assertCanDeleteHomepageFeaturedContent,
   assertCanUnpublishHomepageFeaturedContent,
@@ -73,13 +74,10 @@ export const ListicleItineraries: CollectionConfig = {
   },
   access: {
     read: ({ req }) => {
-      if (!req.user) {
-        return {
-          status: {
-            equals: 'published',
-          },
-        }
-      }
+      // No anonymous reads -- same reason as `Articles.access.read`: this is
+      // the only gate on Payload's public REST and GraphQL mounts, and the
+      // day-by-day plan is the paid product.
+      if (!req.user) return false
 
       if (
         staffUser(req.user)?.role === 'admin' ||
@@ -375,6 +373,7 @@ export const ListicleItineraries: CollectionConfig = {
         await assertCanDeleteHomepageFeaturedContent(req.payload, 'listicle-itineraries', id)
       },
     ],
+    afterRead: [gateExternalApiRead('listicle-itineraries')],
     afterChange: [articleRevalidation.afterChange],
     afterDelete: [articleRevalidation.afterDelete],
   },

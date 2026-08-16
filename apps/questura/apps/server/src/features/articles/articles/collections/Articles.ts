@@ -18,6 +18,7 @@ import {
   assertCanUnpublishHomepageFeaturedContent,
 } from '../../shared/lib/referenceLocks'
 import { handleCanonicalPathChange } from '../lib/handleCanonicalPathChange'
+import { gateExternalApiRead } from '@/features/articles/public/gateExternalApiRead'
 import { ensureAuthorIdForUser, findAuthorIdForUser } from '@/features/authors/lib/author-for-user'
 import {
   step1Complete,
@@ -56,15 +57,16 @@ export const Articles: CollectionConfig = {
   },
   access: {
     read: ({ req }) => {
-      // Public can only read published articles
-      if (!req.user) {
-        return {
-          status: {
-            equals: 'published',
-          },
-        }
-      }
-      
+      // No anonymous reads. Payload's own REST and GraphQL mounts are published
+      // on `cms.questurian.com` (the client needs that host for
+      // `/api/public/*`), and on that path this rule is the only gate -- no
+      // serializer runs there, so a "published only" filter handed back whole
+      // paid bodies to `GET /api/articles?where[access][equals]=member`.
+      // Readers never touch this surface: every `/api/public/*` route queries
+      // with `overrideAccess: true` and gates at serialization time (ADR-0009).
+      if (!req.user) return false
+
+
       // Admins, Editors, and Writers can read all articles
       if (
         staffUser(req.user)?.role === 'admin' ||
@@ -263,6 +265,7 @@ export const Articles: CollectionConfig = {
         await assertCanDeleteHomepageFeaturedContent(req.payload, 'articles', id)
       },
     ],
+    afterRead: [gateExternalApiRead('articles')],
     afterChange: [articleRevalidation.afterChange],
     afterDelete: [articleRevalidation.afterDelete],
   },
