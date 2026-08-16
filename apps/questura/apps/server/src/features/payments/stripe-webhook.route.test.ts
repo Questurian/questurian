@@ -743,6 +743,30 @@ describe('Stripe webhook route', () => {
     expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_new')
   })
 
+  it('leaves the duplicate subscription alive when its refund fails', async () => {
+    givenEvent('checkout.session.completed', {
+      id: 'cs_refund_fail',
+      customer: 'cus_1',
+      subscription: 'sub_new',
+    })
+    mocks.subscriptionList.mockResolvedValue({
+      data: [
+        { id: 'sub_old', status: 'active', created: 100, latest_invoice: 'in_old' },
+        { id: 'sub_new', status: 'active', created: 200, latest_invoice: 'in_new' },
+      ],
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_new', payment_intent: 'pi_new' })
+    mocks.refundCreate.mockRejectedValueOnce(new Error('Stripe unavailable'))
+
+    const response = await POST(createRequest())
+
+    // Cancelling anyway would leave the customer charged, cancelled and
+    // un-refunded. Fail the delivery so Stripe retries the refund instead.
+    expect(response.status).toBe(500)
+    expect(mocks.subscriptionCancel).not.toHaveBeenCalled()
+    expect(mocks.resyncSubscription).not.toHaveBeenCalled()
+  })
+
   it('keeps the paid subscription when an older one was abandoned at 3DS', async () => {
     givenEvent('checkout.session.completed', {
       id: 'cs_3',
