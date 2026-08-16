@@ -1,6 +1,6 @@
 "use client";
 
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { Clock, ExternalLink, MapPin, Route } from "lucide-react";
 import { ShimmerImage } from "@/components/media/ShimmerImage";
 import { ArticlePageHeader } from "@/features/articles/components/ArticlePageHeader";
@@ -29,6 +29,11 @@ type ItineraryListicleArticlePageProps = {
   days: ItineraryDay[];
   selectedDayIndex: number;
   onSelectDay: (index: number) => void;
+  /**
+   * Rendered where the day-by-day plan would be when this itinerary is gated
+   * and the reader has not paid for it. Null once a member's full body loads.
+   */
+  lockedSlot?: ReactNode;
 };
 
 function formatDuration(hours: number): string {
@@ -247,6 +252,7 @@ export function ItineraryListicleArticlePage({
   days,
   selectedDayIndex,
   onSelectDay,
+  lockedSlot,
 }: ItineraryListicleArticlePageProps): JSX.Element {
   const dayIndex = Math.min(selectedDayIndex, Math.max(days.length - 1, 0));
   const selectedDay = days[dayIndex] ?? { whereStaying: [], items: [] };
@@ -324,6 +330,8 @@ export function ItineraryListicleArticlePage({
         ) : null}
 
         <StopList stops={stops} />
+
+        {lockedSlot}
       </div>
     </article>
   );
