@@ -117,6 +117,13 @@ export const APP_CONFIG = {
     emailTracking: process.env.EMAIL_TRACKING !== 'false',
     enforcePasswordStrength: process.env.ENFORCE_PASSWORD_STRENGTH !== 'false',
     endorselyAffiliates: process.env.ENDORSELY_ENABLED === 'true',
+    // Whether Checkout shows the "add promotion code" box. Opt-in, because
+    // `allow_promotion_codes: true` makes *every* active code in the Stripe
+    // account redeemable by anyone on any plan — a single unrestricted 100%-off
+    // code is a permanent free membership for whoever learns it. Turn this on
+    // deliberately, once the live codes carry their own restrictions
+    // (`first_time_transaction`, an applies-to price, a redemption cap).
+    stripePromotionCodes: process.env.STRIPE_PROMOTION_CODES === 'true',
     homepageFeaturedAllowDrafts: process.env.HOMEPAGE_FEATURED_ALLOW_DRAFTS === 'true',
   },
 

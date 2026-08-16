@@ -173,6 +173,11 @@ export async function POST(req: NextRequest) {
     )
     const cancelUrl = APP_URLS.frontendUrl('/subscription/cancel')
 
+    // Off unless deliberately enabled: `allow_promotion_codes` opens *every*
+    // active code in the Stripe account to anyone on any plan, so one
+    // unrestricted 100%-off code is a free membership for whoever learns it.
+    const allowPromotionCodes = APP_CONFIG.features.stripePromotionCodes
+
     // A double-clicked buy button otherwise creates two sessions on the same
     // customer. The key is derived from the request rather than the visitor
     // alone, because Stripe refuses a reused key whose parameters changed — see
@@ -184,6 +189,7 @@ export async function POST(req: NextRequest) {
       successUrl,
       cancelUrl,
       referralId,
+      allowPromotionCodes,
     })
 
     const session = await stripe.checkout.sessions.create({
@@ -196,7 +202,7 @@ export async function POST(req: NextRequest) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata,
-      allow_promotion_codes: true, // Optional: allow discount codes
+      allow_promotion_codes: allowPromotionCodes,
       billing_address_collection: 'auto', // Optional: collect billing address
       subscription_data: {
         metadata // Also add metadata to subscription object

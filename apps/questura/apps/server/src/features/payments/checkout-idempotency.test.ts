@@ -12,6 +12,7 @@ const BASE: CheckoutIdempotencyInput = {
   successUrl: 'https://questurian.com/subscription/success?returnTo=%2Fcity',
   cancelUrl: 'https://questurian.com/subscription/cancel',
   referralId: null,
+  allowPromotionCodes: false,
 }
 
 /**
@@ -50,6 +51,7 @@ describe('checkoutIdempotencyKey', () => {
     ['a different return path', { successUrl: 'https://questurian.com/subscription/success?returnTo=%2Fother' }],
     ['a different cancel URL', { cancelUrl: 'https://questurian.com/elsewhere' }],
     ['a referral appearing', { referralId: 'ref_abc' }],
+    ['promotion codes being enabled', { allowPromotionCodes: true }],
     ['a different customer', { customerId: 'cus_other' }],
     ['a different visitor', { visitorAuthUserId: 'visitor_999' }],
   ] as const)('produces a different key for %s', (_label, overrides) => {
