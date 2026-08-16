@@ -262,4 +262,25 @@ describe('deriveSubscriptionState', () => {
       dunningGraceUntil: null,
     })
   })
+
+  // A cancelled subscription will not take the metadata write, so the handler
+  // hands the revocation to the deriver directly instead.
+  it('honours a caller-supplied revocation the subscription never recorded', () => {
+    const active = firstWhere((s) => s.status === 'active' && !s.cancel_at_period_end)
+
+    expect(
+      deriveSubscriptionState(active, {
+        accessRevoked: { reason: 'refund', periodEnd: 2_000 },
+      })
+    ).toMatchObject({ paidThroughAt: null, dunningGraceUntil: null })
+  })
+
+  it('lets an explicit null override a flag still stuck on the subscription', () => {
+    const active = firstWhere((s) => s.status === 'active' && !s.cancel_at_period_end)
+    const revoked = { ...active, metadata: { access_revoked: 'true' } } as Stripe.Subscription
+
+    expect(deriveSubscriptionState(revoked, { accessRevoked: null }).paidThroughAt).toEqual(
+      deriveSubscriptionState(active).paidThroughAt
+    )
+  })
 })
