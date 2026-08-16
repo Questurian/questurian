@@ -1,6 +1,5 @@
 import type { CollectionConfig } from 'payload'
 import { languageField } from '@/shared/i18n/languageField'
-import { accessTierField } from '@/shared/content/accessTier'
 import { singleTypeListicleAccess } from './access'
 import {
   articleType,
@@ -54,9 +53,11 @@ export const SingleTypeListicles: CollectionConfig = {
     items,
     seo,
 
+    // No Access tier: single-type listicles earn from ads and are never
+    // gated. The column is dropped separately -- destructive SQL cannot ride
+    // along in a feature change (infra/softprod/README.md).
     status,
     languageField,
-    accessTierField,
     author,
     publishedAt,
     articleType,
