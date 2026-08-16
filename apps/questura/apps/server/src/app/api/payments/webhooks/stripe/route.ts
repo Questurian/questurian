@@ -8,21 +8,10 @@ import { APP_CONFIG } from '@/shared/config'
 import { logger } from '@/shared/utils/logger'
 import { withAdvisoryLock } from '@/shared/utils/advisory-lock'
 import { getSubscriptionIdFromEvent, recordProcessedEvent } from '@/payments/webhooks/event-log'
-import { handleCheckoutSessionCompleted } from '@/payments/webhooks/handlers/checkout-session'
 import {
-  handleSubscriptionCreated,
-  handleSubscriptionUpdated,
-  handleSubscriptionDeleted,
-} from '@/payments/webhooks/handlers/subscription-lifecycle'
-import {
-  handleInvoicePaymentSucceeded,
-  handleInvoicePaymentFailed,
-} from '@/payments/webhooks/handlers/invoice-payment'
-import {
-  handleChargeRefunded,
-  handleDisputeCreated,
-  handleDisputeClosed,
-} from '@/payments/webhooks/handlers/charge-revocation'
+  STRIPE_WEBHOOK_HANDLERS,
+  isHandledStripeEventType,
+} from '@/payments/webhooks/handled-events'
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -126,45 +115,10 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      switch (event.type) {
-        case 'checkout.session.completed':
-          await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session)
-          break
-
-        case 'customer.subscription.created':
-          await handleSubscriptionCreated(event.data.object as Stripe.Subscription)
-          break
-
-        case 'customer.subscription.updated':
-          await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
-          break
-
-        case 'customer.subscription.deleted':
-          await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
-          break
-
-        case 'invoice.payment_succeeded':
-          await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice)
-          break
-
-        case 'invoice.payment_failed':
-          await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice)
-          break
-
-        case 'charge.refunded':
-          await handleChargeRefunded(event.data.object as Stripe.Charge)
-          break
-
-        case 'charge.dispute.created':
-          await handleDisputeCreated(event.data.object as Stripe.Dispute)
-          break
-
-        case 'charge.dispute.closed':
-          await handleDisputeClosed(event.data.object as Stripe.Dispute)
-          break
-
-        default:
-          logger.info('Unhandled Stripe event type', { eventId: event.id, eventType: event.type })
+      if (isHandledStripeEventType(event.type)) {
+        await STRIPE_WEBHOOK_HANDLERS[event.type](event)
+      } else {
+        logger.info('Unhandled Stripe event type', { eventId: event.id, eventType: event.type })
       }
 
       // Recording is part of successful processing. If storage fails, throw so
