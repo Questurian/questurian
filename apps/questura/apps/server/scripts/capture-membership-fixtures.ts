@@ -138,7 +138,7 @@ async function drive(): Promise<{ subscriptionId: string; customerId: string; st
   const subscription = await stripe.subscriptions.create({
     customer: customer.id,
     items: [{ price: price.id }],
-    metadata: { visitorAuthUserId: 'fixture-auth-user', visitorEmail: customer.email ?? '' },
+    metadata: { visitorAuthUserId: 'fixture-auth-user' },
   })
   log('paid', `subscription ${subscription.id} status=${subscription.status}`)
 

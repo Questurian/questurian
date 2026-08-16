@@ -149,10 +149,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 6. Build metadata including optional affiliate referral
+    // 6. Build metadata including optional affiliate referral.
+    //
+    // `visitorAuthUserId` is the only identity Stripe needs: it is what
+    // ownership is resolved by everywhere (see `resolveStripeCustomerForVisitor`),
+    // and the address itself already lives on the Stripe customer. Carrying the
+    // email as well only copies PII into a field that surfaces in Dashboard
+    // exports, event payloads, and webhook logs.
     const metadata: Record<string, string> = {
       visitorAuthUserId,
-      visitorEmail: visitor.email,
     }
 
     if (referralId) {
