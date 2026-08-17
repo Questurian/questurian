@@ -46,35 +46,24 @@ export async function POST(req: NextRequest) {
     // processes. Without it, two parallel deliveries can both pass the lookup,
     // both run side effects, then race on the unique event record.
     //
-    // Connection budget, measured 2026-08-15 and recorded because the failure
-    // mode is self-amplifying and nobody wants to derive this mid-incident.
-    //
-    // This lock holds one pooled connection for the whole handler, across every
-    // Stripe call and email send. `resyncSubscription` then takes a second for
-    // its per-subscription lock, and Payload's own queries borrow briefly on
-    // top. Against `pool.max: 20` that is roughly 7-9 concurrent deliveries
-    // before `pool.connect()` starts waiting, at which point
-    // `connectionTimeoutMillis: 10000` turns the wait into a 500, Stripe
-    // retries, and the retries add concurrency. That loop is the risk, not the
-    // steady state.
+    // This lock holds its connection for the whole handler, across every Stripe
+    // call and email send. That connection comes from the lock pool in
+    // `advisory-lock.ts`, not Payload's, and the per-subscription lock inside
+    // `resyncSubscription` reuses this same one — see the note there for why
+    // taking either from `pool.max: 20` deadlocked instead of queueing.
     //
     // Throughput is not affected: this key is per *event*, so two different
-    // events never wait on each other. The cost is connections only.
+    // events never wait on each other. The cost is one lock connection per
+    // in-flight delivery.
     //
-    // If exhaustion is ever observed, in increasing order of risk:
-    //   1. Raise `pool.max` in payload.config.ts. Postgres allows 100 here and
-    //      the app peaked at 8; 20 -> 40 is a one-line doubling.
-    //   2. Give the advisory lock its own small pool, so holding a lock cannot
-    //      starve the queries the lock is protecting.
-    //   3. Drop this outer lock and rely on the per-subscription lock inside
+    // If lock-pool exhaustion is ever observed, in increasing order of risk:
+    //   1. Raise `LOCK_POOL_MAX`. Postgres allows 100 and this app is nowhere
+    //      near it; 10 -> 20 is a one-line doubling.
+    //   2. Drop this outer lock and rely on the per-subscription lock inside
     //      `resyncSubscription` plus the unique `eventId`. Every handler
     //      currently funnels into resync, so this is plausible — but it is a
     //      correctness argument about duplicate side effects on the payments
     //      path and needs proving handler by handler, not assuming.
-    //
-    // Deliberately not done in advance: at three subscriptions the trigger
-    // needs a retry storm, and (3) would trade a measured, bounded problem for
-    // an unmeasured one.
     return await withAdvisoryLock(payload, `stripe:event:${event.id}`, async () => {
       const alreadyProcessed = await payload.find({
         collection: 'stripe-webhook-events',
