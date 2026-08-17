@@ -10,6 +10,10 @@ COMPOSE_FILE=${QUESTURA_COMPOSE_FILE:-"$INFRA_ROOT/compose.yml"}
 COMPOSE_ENV=${QUESTURA_COMPOSE_ENV_FILE:-"$INFRA_ROOT/.env"}
 CURL_MAX_TIME=${QUESTURA_MONITOR_CURL_MAX_TIME:-10}
 CURL_CONNECT_TIMEOUT=${QUESTURA_MONITOR_CURL_CONNECT_TIMEOUT:-5}
+REPORTS_ROOT=${QUESTURA_REPORTS_ROOT:-"$DEPLOY_ROOT/reports"}
+# 36h, so one missed nightly is tolerated — a laptop asleep past 04:20 runs the
+# job on wake — but two in a row are not.
+RECONCILE_MAX_AGE_SECONDS=${QUESTURA_RECONCILE_MAX_AGE_SECONDS:-129600}
 
 LOCAL_SERVER_URL=${QUESTURA_MONITOR_LOCAL_SERVER_URL:-http://127.0.0.1:4000/api/health}
 PUBLIC_SERVER_URL=${QUESTURA_MONITOR_PUBLIC_SERVER_URL:-https://cms.questurian.com/api/health}
@@ -212,6 +216,54 @@ check_container() {
   fi
 }
 
+# The nightly reconciliation has no alerting of its own by design; this timer
+# already runs every five minutes, so the freshness of its last run is folded in
+# here rather than adding a service to watch it.
+check_reconcile_freshness() {
+  local status_file="$REPORTS_ROOT/reconcile-status"
+  local line='' status='' exit_code=unknown finished_at='' now age
+
+  if [[ ! -d $REPORTS_ROOT ]]; then
+    # Matters on the deploy that ships this: without it the healthcheck would go
+    # red the moment the probe lands and before the timer is ever installed.
+    record_ok 'check=reconcile state=not-adopted'
+    return
+  fi
+  if [[ ! -r $status_file ]]; then
+    record_failure 'check=reconcile reason=status-missing'
+    return
+  fi
+
+  IFS= read -r line < "$status_file"
+
+  # Matched rather than split, so a corrupted status file can only ever yield
+  # values this script already recognises and never put arbitrary text in a log.
+  [[ $line =~ (^|[[:space:]])status=(ok|fail)([[:space:]]|$) ]] && status=${BASH_REMATCH[2]}
+  [[ $line =~ (^|[[:space:]])exit=([0-9]{1,9})([[:space:]]|$) ]] && exit_code=${BASH_REMATCH[2]}
+  [[ $line =~ (^|[[:space:]])finished_at=([0-9]{1,19})([[:space:]]|$) ]] &&
+    finished_at=${BASH_REMATCH[2]}
+
+  if [[ -z $status || -z $finished_at ]]; then
+    record_failure 'check=reconcile reason=status-unreadable'
+    return
+  fi
+
+  now=$(date -u +%s)
+  age=$((now - finished_at))
+  ((age < 0)) && age=0
+
+  if [[ $status == fail ]]; then
+    record_failure "check=reconcile reason=last-run-failed exit=$exit_code age_seconds=$age"
+    return
+  fi
+  if ((age > RECONCILE_MAX_AGE_SECONDS)); then
+    record_failure "check=reconcile reason=stale age_seconds=$age max_age_seconds=$RECONCILE_MAX_AGE_SECONDS"
+    return
+  fi
+
+  record_ok "check=reconcile state=fresh age_seconds=$age"
+}
+
 deploy_lock_is_busy
 start_lock_state=$?
 if ((start_lock_state == 0)); then
@@ -247,6 +299,7 @@ check_unit questura-tunnel
 check_compose
 check_container questura-postgres postgres
 check_container questura-redis redis
+check_reconcile_freshness
 
 deploy_lock_is_busy
 end_lock_state=$?

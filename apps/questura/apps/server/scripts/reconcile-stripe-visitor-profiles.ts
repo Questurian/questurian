@@ -35,18 +35,32 @@
  * write. It only ever fills in or corrects linkage on existing profiles; it
  * never creates, deletes, or reassigns a profile, and never writes to Stripe.
  *
+ * `--max-apply N` caps the blast radius. If the plan is larger than the cap the
+ * plan is printed and nothing is written, because mass drift means something
+ * systemic — wrong Stripe key, wrong account, a bad deploy — rather than N
+ * genuine divergences. The nightly job runs with a cap for exactly that reason.
+ *
  * Usage:
  *   pnpm exec tsx scripts/reconcile-stripe-visitor-profiles.ts
  *   pnpm exec tsx scripts/reconcile-stripe-visitor-profiles.ts --apply
  *   pnpm exec tsx scripts/reconcile-stripe-visitor-profiles.ts --apply --limit 50
+ *   pnpm exec tsx scripts/reconcile-stripe-visitor-profiles.ts --apply --max-apply 25
+ *
+ * Also callable as `run(options)` by `scripts/nightly-stripe-reconcile.ts`.
  */
 
 import 'dotenv/config'
+import { fileURLToPath } from 'node:url'
+
 import { getPayload } from 'payload'
 import Stripe from 'stripe'
 
 import config from '../src/payload.config'
 import { deriveSubscriptionState } from '../src/features/payments/lib/subscription-state'
+import {
+  exceedsApplyCap,
+  type ReconcileStepResult,
+} from '../src/features/payments/lib/reconcile-report'
 
 type PlannedUpdate = {
   profileId: string | number
@@ -55,10 +69,19 @@ type PlannedUpdate = {
   reason: 'RELINKABLE' | 'DRIFTED'
 }
 
-const APPLY = process.argv.includes('--apply')
+export type ReconcileProfilesOptions = {
+  apply?: boolean
+  /** Stop after this many Stripe customers. `null` walks all of them. */
+  limit?: number | null
+  /** Refuse to write a plan larger than this. `null` disables the cap. */
+  maxApply?: number | null
+  /** Called as each line is produced, so a CLI run still streams. */
+  onLine?: (line: string) => void
+}
 
-function parseLimit(): number | null {
-  const index = process.argv.indexOf('--limit')
+/** Reads a positive-integer flag value from `argv`, or null when absent. */
+function parsePositiveFlag(flag: string): number | null {
+  const index = process.argv.indexOf(flag)
   if (index === -1) return null
   const value = Number(process.argv[index + 1])
   return Number.isFinite(value) && value > 0 ? value : null
@@ -80,7 +103,17 @@ function normalizeEmail(email: string | null | undefined): string {
   return (email ?? '').trim().toLowerCase()
 }
 
-async function main() {
+export async function run(options: ReconcileProfilesOptions = {}): Promise<ReconcileStepResult> {
+  const apply = options.apply ?? false
+  const limit = options.limit ?? null
+  const maxApply = options.maxApply ?? null
+
+  const lines: string[] = []
+  const emit = (line: string) => {
+    lines.push(line)
+    options.onLine?.(line)
+  }
+
   const secretKey = process.env.STRIPE_SECRET_KEY
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY is required to reconcile against Stripe')
@@ -88,9 +121,8 @@ async function main() {
 
   const stripe = new Stripe(secretKey)
   const payload = await getPayload({ config })
-  const limit = parseLimit()
 
-  console.log(APPLY ? '⚠️  APPLY mode — profiles will be written' : '🔍 Dry run — nothing will be written')
+  emit(apply ? '⚠️  APPLY mode — profiles will be written' : '🔍 Dry run — nothing will be written')
 
   // ---- Load every visitor profile, indexed by email and by customer id ------
   const profiles = await payload.find({
@@ -115,7 +147,7 @@ async function main() {
     if (customerId) byCustomerId.set(customerId, profile)
   }
 
-  console.log(`Loaded ${profiles.docs.length} visitor profile(s)\n`)
+  emit(`Loaded ${profiles.docs.length} visitor profile(s)\n`)
 
   // ---- Walk Stripe customers ----------------------------------------------
   const updates: PlannedUpdate[] = []
@@ -125,6 +157,7 @@ async function main() {
   const seenEmails = new Map<string, string[]>()
 
   let scanned = 0
+  let ambiguous = 0
 
   for await (const customer of stripe.customers.list({ limit: 100 })) {
     if (limit && scanned >= limit) break
@@ -174,9 +207,8 @@ async function main() {
     const profile = linked ?? (candidates.length === 1 ? candidates[0] : null)
 
     if (!profile) {
-      console.warn(
-        `⚠️  ${email}: ${candidates.length} profiles share this email — skipping, resolve by hand`
-      )
+      ambiguous += 1
+      emit(`⚠️  ${email}: ${candidates.length} profiles share this email — skipping, resolve by hand`)
       continue
     }
 
@@ -227,69 +259,133 @@ async function main() {
   }
 
   // ---- Report --------------------------------------------------------------
-  console.log(`Scanned ${scanned} Stripe customer(s)\n`)
+  emit(`Scanned ${scanned} Stripe customer(s)\n`)
 
   const relinkable = updates.filter((u) => u.reason === 'RELINKABLE')
   const drifted = updates.filter((u) => u.reason === 'DRIFTED')
 
-  console.log(`RELINKABLE : ${relinkable.length}`)
-  console.log(`DRIFTED    : ${drifted.length}`)
-  console.log(`ORPHANED   : ${orphaned.length}`)
-  console.log(`DUPLICATE  : ${duplicates.size}`)
+  emit(`RELINKABLE : ${relinkable.length}`)
+  emit(`DRIFTED    : ${drifted.length}`)
+  emit(`ORPHANED   : ${orphaned.length}`)
+  emit(`DUPLICATE  : ${duplicates.size}`)
   if (historicalOrphans > 0) {
     // Counted, not warned about: closed records with no profile need no action.
-    console.log(`(${historicalOrphans} ended subscription(s) with no profile — historical, no action)`)
+    emit(`(${historicalOrphans} ended subscription(s) with no profile — historical, no action)`)
   }
-  console.log('')
+  emit('')
 
   for (const update of updates) {
-    console.log(`  [${update.reason}] profile ${update.profileId} <${update.email}>`)
-    console.log(`      ${JSON.stringify(update.changes)}`)
+    emit(`  [${update.reason}] profile ${update.profileId} <${update.email}>`)
+    emit(`      ${JSON.stringify(update.changes)}`)
   }
 
   if (orphaned.length > 0) {
-    console.log(
-      `\n⚠️  ${orphaned.length} Stripe customer(s) have a subscription but NO visitor profile.`
-    )
-    console.log('   This is what destroyed profile rows look like. Resolve by hand:')
-    console.log('   the visitor must sign in (creating an auth user + profile), then re-run')
-    console.log('   this script to re-link them.\n')
+    emit(`\n⚠️  ${orphaned.length} Stripe customer(s) have a subscription but NO visitor profile.`)
+    emit('   This is what destroyed profile rows look like. Resolve by hand:')
+    emit('   the visitor must sign in (creating an auth user + profile), then re-run')
+    emit('   this script to re-link them.\n')
     for (const row of orphaned) {
-      console.log(`  [ORPHANED] ${row.customerId} <${row.email}> subscription=${row.status}`)
+      emit(`  [ORPHANED] ${row.customerId} <${row.email}> subscription=${row.status}`)
     }
   }
 
   if (duplicates.size > 0) {
-    console.log(`\n⚠️  ${duplicates.size} email(s) map to multiple Stripe customers:`)
+    emit(`\n⚠️  ${duplicates.size} email(s) map to multiple Stripe customers:`)
     for (const [email, ids] of duplicates) {
-      console.log(`  [DUPLICATE] <${email}> ${ids.join(', ')}`)
+      emit(`  [DUPLICATE] <${email}> ${ids.join(', ')}`)
     }
-    console.log('   Merge these in the Stripe dashboard; this script will not do it.\n')
+    emit('   Merge these in the Stripe dashboard; this script will not do it.\n')
+  }
+
+  const baseCounts = {
+    scanned,
+    profiles: profiles.docs.length,
+    relinkable: relinkable.length,
+    drifted: drifted.length,
+    orphaned: orphaned.length,
+    duplicate: duplicates.size,
+    ambiguous,
+    historical: historicalOrphans,
+  }
+
+  // ---- Blast-radius cap ----------------------------------------------------
+  // Checked in dry run as well as apply. The cap is a statement about the plan,
+  // not about the write: a plan this large is a finding either way, and the
+  // pre-adoption dry run is where it should be caught.
+  if (exceedsApplyCap(updates.length, maxApply)) {
+    emit(
+      `\n⛔ Plan of ${updates.length} update(s) exceeds the cap of ${maxApply}. Nothing was written.`
+    )
+    emit('   A plan this large means something systemic — wrong Stripe key, wrong')
+    emit('   account, or a bad deploy — rather than that many genuine divergences.')
+    emit('   Review the plan above, then re-run with a deliberate --max-apply.')
+    return {
+      ok: false,
+      reason: 'cap-exceeded',
+      counts: { ...baseCounts, applied: 0, planned: updates.length },
+      lines,
+    }
   }
 
   // ---- Apply ---------------------------------------------------------------
-  if (!APPLY) {
-    console.log('\nDry run complete. Re-run with --apply to write these changes.')
-    return
+  if (!apply) {
+    emit('\nDry run complete. Re-run with --apply to write these changes.')
+    return {
+      // ORPHANED and DUPLICATE are real findings but are not this script's to
+      // repair, so they do not make the run itself a failure. The nightly
+      // escalates them from the counts.
+      ok: true,
+      counts: { ...baseCounts, applied: 0, planned: updates.length },
+      lines,
+    }
   }
 
   let applied = 0
+  let applyFailed = 0
   for (const update of updates) {
-    await payload.update({
-      collection: 'visitor-profiles',
-      id: update.profileId,
-      data: update.changes,
-      overrideAccess: true,
-    })
-    applied += 1
+    try {
+      await payload.update({
+        collection: 'visitor-profiles',
+        id: update.profileId,
+        data: update.changes,
+        overrideAccess: true,
+      })
+      applied += 1
+    } catch (error) {
+      // One unwritable row must not hide the rest of the plan from the report.
+      applyFailed += 1
+      emit(
+        `  ⛔ FAILED profile ${update.profileId} <${update.email}>: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    }
   }
 
-  console.log(`\n✅ Applied ${applied} profile update(s).`)
+  emit(`\n✅ Applied ${applied} profile update(s).`)
+  if (applyFailed > 0) emit(`⛔ ${applyFailed} update(s) could not be written.`)
+
+  return {
+    ok: applyFailed === 0,
+    reason: applyFailed > 0 ? 'apply-failed' : undefined,
+    counts: { ...baseCounts, applied, planned: updates.length, apply_failed: applyFailed },
+    lines,
+  }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('Reconciliation failed:', error)
-    process.exit(1)
+// Unchanged CLI: same flags, same streamed report, and — as before — exit 0 on
+// any completed run. ORPHANED/DUPLICATE were never a non-zero CLI exit and are
+// not made one here; the nightly is what escalates them.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  run({
+    apply: process.argv.includes('--apply'),
+    limit: parsePositiveFlag('--limit'),
+    maxApply: parsePositiveFlag('--max-apply'),
+    onLine: (line) => console.log(line),
   })
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('Reconciliation failed:', error)
+      process.exit(1)
+    })
+}

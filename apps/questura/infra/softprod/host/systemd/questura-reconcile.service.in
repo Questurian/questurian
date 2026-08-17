@@ -1,0 +1,19 @@
+[Unit]
+Description=Questura nightly Stripe reconciliation (soft production)
+Documentation=https://github.com/Questurian/questurian
+After=network-online.target questura-server.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# /usr/bin/node on this host is v18 and the release expects 22, so the nvm bin
+# directory has to come first. @NODE_BIN_DIR@ is rendered by stage-host-config.sh.
+Environment=PATH=@NODE_BIN_DIR@:/usr/local/bin:/usr/bin:/bin
+# Same file and same mechanism questura-server.service already uses, so this
+# parse is known-good. The wrapper only sources it itself for a manual run.
+EnvironmentFile=%h/questura/config/server.env
+ExecStart=/usr/bin/env bash %h/questura/app/apps/questura/infra/softprod/reconcile.sh
+# Generous: the wrapper may wait up to 15 minutes for an in-flight deploy to
+# release the lock before the Stripe walk even starts.
+TimeoutStartSec=1800
+SyslogIdentifier=questura-reconcile

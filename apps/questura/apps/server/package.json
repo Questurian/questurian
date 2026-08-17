@@ -17,6 +17,7 @@
     "db:migrate:down": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:down",
     "db:migrate:status": "cross-env NODE_OPTIONS=--no-deprecation payload migrate:status",
     "reconcile:stripe-profiles": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/reconcile-stripe-visitor-profiles.ts",
+    "reconcile:nightly": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/nightly-stripe-reconcile.ts",
     "audit:access-revocations": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/audit-access-revocations.ts",
     "verify:stripe-webhook-events": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/verify-stripe-webhook-events.ts",
     "set:itinerary-access": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/set-itinerary-access.ts",
@@ -35,7 +36,7 @@
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int && pnpm run test:deploy && pnpm run test:softprod",
     "test:deploy": "node --test scripts/deploy/*.test.mjs",
-    "test:softprod": "bash ../../infra/softprod/deploy.test.sh && bash ../../infra/softprod/release-lib.test.sh && bash ../../infra/softprod/stage-host-config.test.sh && bash ../../infra/softprod/prepare-host-release.test.sh && bash ../../infra/softprod/adopt-host-release.test.sh && bash ../../infra/softprod/healthcheck.test.sh",
+    "test:softprod": "bash ../../infra/softprod/deploy.test.sh && bash ../../infra/softprod/release-lib.test.sh && bash ../../infra/softprod/stage-host-config.test.sh && bash ../../infra/softprod/prepare-host-release.test.sh && bash ../../infra/softprod/adopt-host-release.test.sh && bash ../../infra/softprod/healthcheck.test.sh && bash ../../infra/softprod/reconcile.test.sh",
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.ts",
     "typecheck": "tsc --noEmit"
   },

@@ -43,13 +43,19 @@
  *
  * Usage:
  *   pnpm exec tsx scripts/audit-access-revocations.ts
+ *
+ * Also callable as `run()` by `scripts/nightly-stripe-reconcile.ts`, which
+ * escalates STUCK and UNKNOWN. There is still deliberately no apply mode.
  */
 
 import 'dotenv/config'
+import { fileURLToPath } from 'node:url'
+
 import { getPayload } from 'payload'
 import Stripe from 'stripe'
 
 import config from '../src/payload.config'
+import type { ReconcileStepResult } from '../src/features/payments/lib/reconcile-report'
 import {
   ACCESS_REVOKED_METADATA_KEY,
   ACCESS_REVOKED_METADATA_VALUE,
@@ -104,7 +110,20 @@ function classify(
   return currentPeriodStart >= revokedPeriodEnd ? 'STUCK' : 'IN_PERIOD'
 }
 
-async function main() {
+export type AuditAccessRevocationsOptions = {
+  /** Called as each line is produced, so a CLI run still streams. */
+  onLine?: (line: string) => void
+}
+
+export async function run(
+  options: AuditAccessRevocationsOptions = {}
+): Promise<ReconcileStepResult> {
+  const lines: string[] = []
+  const emit = (line: string) => {
+    lines.push(line)
+    options.onLine?.(line)
+  }
+
   const secretKey = process.env.STRIPE_SECRET_KEY
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY is required to audit revocations against Stripe')
@@ -113,7 +132,7 @@ async function main() {
   const stripe = new Stripe(secretKey)
   const payload = await getPayload({ config })
 
-  console.log('🔍 Read-only audit — nothing will be written to Stripe or Payload\n')
+  emit('🔍 Read-only audit — nothing will be written to Stripe or Payload\n')
 
   const profiles = await payload.find({
     collection: 'visitor-profiles',
@@ -129,7 +148,7 @@ async function main() {
     if (customerId) profileByCustomerId.set(customerId, profile)
   }
 
-  console.log(`Loaded ${profiles.docs.length} visitor profile(s)`)
+  emit(`Loaded ${profiles.docs.length} visitor profile(s)`)
 
   // Walked rather than searched: Stripe's search index lags writes by about a
   // minute, and a subscription missed by an audit of who is locked out is worse
@@ -168,7 +187,7 @@ async function main() {
     })
   }
 
-  console.log(`Scanned ${scanned} Stripe subscription(s)\n`)
+  emit(`Scanned ${scanned} Stripe subscription(s)\n`)
 
   const order: Classification[] = ['STUCK', 'UNKNOWN', 'IN_PERIOD', 'CONTESTED', 'CLOSED']
   const byClassification = new Map<Classification, Finding[]>(
@@ -179,13 +198,23 @@ async function main() {
   )
 
   for (const classification of order) {
-    console.log(`${classification.padEnd(10)}: ${byClassification.get(classification)!.length}`)
+    emit(`${classification.padEnd(10)}: ${byClassification.get(classification)!.length}`)
   }
-  console.log('')
+  emit('')
+
+  const counts = {
+    scanned,
+    profiles: profiles.docs.length,
+    stuck: byClassification.get('STUCK')!.length,
+    unknown: byClassification.get('UNKNOWN')!.length,
+    in_period: byClassification.get('IN_PERIOD')!.length,
+    contested: byClassification.get('CONTESTED')!.length,
+    closed: byClassification.get('CLOSED')!.length,
+  }
 
   if (findings.length === 0) {
-    console.log('✅ No subscription is carrying access_revoked.')
-    return
+    emit('✅ No subscription is carrying access_revoked.')
+    return { ok: true, counts, lines }
   }
 
   for (const classification of order) {
@@ -193,10 +222,8 @@ async function main() {
     if (rows.length === 0) continue
 
     for (const row of rows) {
-      console.log(
-        `  [${row.classification}] ${row.subscriptionId} <${row.profileEmail ?? 'no profile'}>`
-      )
-      console.log(
+      emit(`  [${row.classification}] ${row.subscriptionId} <${row.profileEmail ?? 'no profile'}>`)
+      emit(
         `      stripe=${row.status} reason=${row.reason ?? 'unrecorded'}` +
           ` revoked_through=${formatTimestamp(row.revokedPeriodEnd)}` +
           ` now_in_period_from=${formatTimestamp(row.currentPeriodStart)}` +
@@ -209,26 +236,31 @@ async function main() {
   const unknown = byClassification.get('UNKNOWN')!
 
   if (stuck.length > 0) {
-    console.log(
-      `\n⚠️  ${stuck.length} subscription(s) are being billed while access is revoked.`
-    )
-    console.log('   Each is someone paying for nothing. To release one, delete the')
-    console.log(`   \`${ACCESS_REVOKED_METADATA_KEY}\` key from the subscription's metadata in the`)
-    console.log('   Stripe Dashboard; the resulting customer.subscription.updated event')
-    console.log('   resyncs the profile and restores entitlement.')
+    emit(`\n⚠️  ${stuck.length} subscription(s) are being billed while access is revoked.`)
+    emit('   Each is someone paying for nothing. To release one, delete the')
+    emit(`   \`${ACCESS_REVOKED_METADATA_KEY}\` key from the subscription's metadata in the`)
+    emit('   Stripe Dashboard; the resulting customer.subscription.updated event')
+    emit('   resyncs the profile and restores entitlement.')
   }
 
   if (unknown.length > 0) {
-    console.log(
-      `\n⚠️  ${unknown.length} revocation(s) predate the recorded reason and period.`
-    )
-    console.log('   Read the refund or dispute on the subscription before deciding.')
+    emit(`\n⚠️  ${unknown.length} revocation(s) predate the recorded reason and period.`)
+    emit('   Read the refund or dispute on the subscription before deciding.')
   }
+
+  // STUCK and UNKNOWN are each a decision about somebody's money, waiting on a
+  // person. Nothing here can clear them, so they are what makes a run
+  // not-ok for the nightly.
+  return { ok: counts.stuck === 0 && counts.unknown === 0, counts, lines }
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error('Revocation audit failed:', error)
-    process.exit(1)
-  })
+// Unchanged CLI: same streamed report, and — as before — exit 0 on any completed
+// run. This is a report, not a gate; escalating STUCK is the nightly's job.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  run({ onLine: (line) => console.log(line) })
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error('Revocation audit failed:', error)
+      process.exit(1)
+    })
+}

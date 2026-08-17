@@ -1,0 +1,15 @@
+[Unit]
+Description=Run Questura nightly Stripe reconciliation
+Documentation=https://github.com/Questurian/questurian
+
+[Timer]
+OnCalendar=*-*-* 04:20
+RandomizedDelaySec=300
+AccuracySec=1min
+# Non-negotiable on this host. A laptop asleep at 04:20 runs the missed job on
+# wake, which is precisely the failure mode this job exists to catch.
+Persistent=true
+Unit=questura-reconcile.service
+
+[Install]
+WantedBy=timers.target

@@ -34,6 +34,9 @@
  * Usage:
  *   pnpm verify:stripe-webhook-events            # dev machine, via tsx
  *
+ * Also callable as `run()` by `scripts/nightly-stripe-reconcile.ts`, which needs
+ * the findings rather than an exit code. The CLI behaviour below is unchanged.
+ *
  * On the deploy host there are no dev dependencies, so `tsx` does not exist.
  * Node strips the types itself there — but only from 22.6, and the host's
  * `/usr/bin/node` is 18, which rejects the flag outright. Use the nvm build:
@@ -49,6 +52,8 @@
  * gate a deploy.
  */
 
+import { fileURLToPath } from 'node:url'
+
 import Stripe from 'stripe'
 // The dependency-free half of the contract, imported with an explicit extension
 // so this runs under plain `node --experimental-strip-types` on a host that has
@@ -59,6 +64,9 @@ import {
   DELIBERATELY_UNHANDLED_STRIPE_EVENTS,
   HANDLED_STRIPE_EVENT_TYPES,
 } from '../src/features/payments/webhooks/event-contract.ts'
+// Type-only, so it is erased before Node sees the file and adds no runtime
+// dependency. That property is load-bearing here — see the header.
+import type { ReconcileStepResult } from '../src/features/payments/lib/reconcile-report.ts'
 
 function requireKey(): string {
   const key = process.env.STRIPE_SECRET_KEY
@@ -75,17 +83,41 @@ function requireKey(): string {
  */
 const OUR_ENDPOINT_PATH = '/api/payments/webhooks/stripe'
 
-async function main() {
+export type VerifyWebhookEventsOptions = {
+  /** Called as each line is produced, so a CLI run still streams. */
+  onLine?: (line: string) => void
+}
+
+export async function run(
+  options: VerifyWebhookEventsOptions = {}
+): Promise<ReconcileStepResult> {
+  const lines: string[] = []
+  const emit = (line: string) => {
+    lines.push(line)
+    options.onLine?.(line)
+  }
+
   const stripe = new Stripe(requireKey(), { typescript: true })
   const endpoints = await stripe.webhookEndpoints.list({ limit: 100 })
 
   const ours = endpoints.data.filter((endpoint) => endpoint.url.includes(OUR_ENDPOINT_PATH))
 
   if (ours.length === 0) {
-    console.error(`FAIL: no webhook endpoint on this account points at ${OUR_ENDPOINT_PATH}`)
-    process.exit(1)
+    emit(`FAIL: no webhook endpoint on this account points at ${OUR_ENDPOINT_PATH}`)
+    return {
+      ok: false,
+      reason: 'no-endpoint',
+      counts: { endpoints: 0, missing: 0, disabled: 0, extra: 0 },
+      lines,
+    }
   }
 
+  // Counted rather than flagged so the nightly summary can say how bad it is.
+  // `missing` counts only enabled endpoints: a disabled one is reported through
+  // `disabled` and may be an intentional spare.
+  let missingCount = 0
+  let disabledCount = 0
+  let extraCount = 0
   let failed = false
 
   for (const endpoint of ours) {
@@ -99,26 +131,31 @@ async function main() {
     const extra = endpoint.enabled_events.filter(
       (type) => type !== '*' && !HANDLED_STRIPE_EVENT_TYPES.includes(type as never)
     )
+    extraCount += extra.length
 
-    console.log(`\n${endpoint.url}`)
-    console.log(`  status: ${endpoint.status}`)
+    emit(`\n${endpoint.url}`)
+    emit(`  status: ${endpoint.status}`)
 
     if (endpoint.status !== 'enabled') {
-      console.log('  DISABLED: this endpoint receives nothing regardless of its event list')
+      disabledCount += 1
+      emit('  DISABLED: this endpoint receives nothing regardless of its event list')
     }
 
     if (missing.length > 0) {
       for (const type of missing) {
-        console.log(`  MISSING: ${type} — handled in code, never delivered`)
+        emit(`  MISSING: ${type} — handled in code, never delivered`)
       }
       // Only an enabled endpoint missing events is a live failure. A disabled
       // one is already reported above and may be an intentional spare.
-      if (endpoint.status === 'enabled') failed = true
+      if (endpoint.status === 'enabled') {
+        missingCount += missing.length
+        failed = true
+      }
     }
 
     for (const type of extra) {
       const reason = DELIBERATELY_UNHANDLED_STRIPE_EVENTS[type]
-      console.log(
+      emit(
         reason
           ? `  EXTRA (by decision): ${type} — ${reason}`
           : `  EXTRA: ${type} — delivered but not handled`
@@ -126,19 +163,37 @@ async function main() {
     }
 
     if (missing.length === 0 && endpoint.status === 'enabled') {
-      console.log(`  OK: all ${HANDLED_STRIPE_EVENT_TYPES.length} handled events are enabled`)
+      emit(`  OK: all ${HANDLED_STRIPE_EVENT_TYPES.length} handled events are enabled`)
     }
   }
 
   if (failed) {
-    console.error('\nFAIL: an enabled endpoint is missing events this app handles.')
-    process.exit(1)
+    emit('\nFAIL: an enabled endpoint is missing events this app handles.')
+  } else {
+    emit('\nPASS: every handled event is enabled on every enabled endpoint.')
   }
 
-  console.log('\nPASS: every handled event is enabled on every enabled endpoint.')
+  return {
+    // A disabled endpoint is not a CLI failure today and stays one here; the
+    // nightly escalates it through the `disabled` count instead.
+    ok: !failed,
+    counts: {
+      endpoints: ours.length,
+      missing: missingCount,
+      disabled: disabledCount,
+      extra: extraCount,
+    },
+    lines,
+  }
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error)
-  process.exit(1)
-})
+// Unchanged CLI: streams the same report and still exits non-zero when an
+// enabled endpoint is missing events, so it can keep gating a deploy.
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  run({ onLine: (line) => console.log(line) })
+    .then((result) => process.exit(result.ok ? 0 : 1))
+    .catch((error) => {
+      console.error(error instanceof Error ? error.message : error)
+      process.exit(1)
+    })
+}

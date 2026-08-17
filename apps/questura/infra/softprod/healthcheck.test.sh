@@ -10,6 +10,7 @@ RELEASES_ROOT="$DEPLOY_ROOT/releases"
 INFRA_ROOT="$DEPLOY_ROOT/infra"
 FAKE_BIN="$TEST_ROOT/bin"
 LOG="$TEST_ROOT/commands.log"
+REPORTS_ROOT="$DEPLOY_ROOT/reports"
 FLOCK_COUNT="$TEST_ROOT/flock-count"
 TRANSITION_MARKER="$TEST_ROOT/transitioned"
 SECRET_SENTINEL='postgres://monitor-secret:never-print@example.invalid/db'
@@ -109,6 +110,7 @@ run_monitor() {
     QUESTURA_DEPLOY_ROOT="$DEPLOY_ROOT" \
     QUESTURA_RELEASES_ROOT="$RELEASES_ROOT" \
     QUESTURA_INFRA_ROOT="$INFRA_ROOT" \
+    QUESTURA_REPORTS_ROOT="$REPORTS_ROOT" \
     QUESTURA_MONITOR_CURL_MAX_TIME=1 \
     MONITOR_TEST_LOG="$LOG" \
     MONITOR_TEST_SECRET="$SECRET_SENTINEL" \
@@ -255,5 +257,46 @@ export FAIL_ENDPOINT=local-server ENDPOINT_MODE=wrong-sha
 expect_failure "$TEST_ROOT/unchanged-outage.out" run_monitor
 grep -q 'FAIL check=endpoint label=local-server' "$TEST_ROOT/unchanged-outage.out"
 unset FAIL_ENDPOINT ENDPOINT_MODE
+
+# Nightly reconciliation freshness. Every case above already ran with the reports
+# directory absent, which is the not-adopted path — assert it explicitly, because
+# getting it wrong turns this monitor red on the deploy that ships the probe and
+# before the timer is ever installed.
+[[ ! -d $REPORTS_ROOT ]]
+run_monitor > "$TEST_ROOT/reconcile-not-adopted.out" 2>&1
+grep -q 'OK check=reconcile state=not-adopted' "$TEST_ROOT/reconcile-not-adopted.out"
+
+write_reconcile_status() {
+  mkdir -p "$REPORTS_ROOT"
+  printf 'status=%s exit=%s finished_at=%s\n' "$1" "$2" "$(( $(date -u +%s) - $3 ))" \
+    > "$REPORTS_ROOT/reconcile-status"
+}
+
+write_reconcile_status ok 0 3600
+run_monitor > "$TEST_ROOT/reconcile-fresh.out" 2>&1
+grep -q 'OK check=reconcile state=fresh age_seconds=' "$TEST_ROOT/reconcile-fresh.out"
+
+# 36h + an hour: one missed nightly is tolerated, two are not.
+write_reconcile_status ok 0 133200
+expect_failure "$TEST_ROOT/reconcile-stale.out" run_monitor
+grep -q 'FAIL check=reconcile reason=stale age_seconds=' "$TEST_ROOT/reconcile-stale.out"
+
+# A fresh run that failed is still a failure; the age must not excuse it.
+write_reconcile_status fail 1 60
+expect_failure "$TEST_ROOT/reconcile-failed.out" run_monitor
+grep -q 'FAIL check=reconcile reason=last-run-failed exit=1' "$TEST_ROOT/reconcile-failed.out"
+
+# An adopted directory with no status file, and a corrupted one, both fail closed
+# rather than reading as fresh or echoing their contents.
+rm -f "$REPORTS_ROOT/reconcile-status"
+expect_failure "$TEST_ROOT/reconcile-missing.out" run_monitor
+grep -q 'FAIL check=reconcile reason=status-missing' "$TEST_ROOT/reconcile-missing.out"
+
+printf 'status=%s finished_at=tomorrow\n' "$SECRET_SENTINEL" > "$REPORTS_ROOT/reconcile-status"
+expect_failure "$TEST_ROOT/reconcile-corrupt.out" run_monitor
+grep -q 'FAIL check=reconcile reason=status-unreadable' "$TEST_ROOT/reconcile-corrupt.out"
+! grep -Fq "$SECRET_SENTINEL" "$TEST_ROOT/reconcile-corrupt.out"
+
+rm -rf "$REPORTS_ROOT"
 
 echo 'health monitor tests passed'

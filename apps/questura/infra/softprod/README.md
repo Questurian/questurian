@@ -260,6 +260,121 @@ notify anyone, and an on-host monitor cannot report laptop power, sleep, or
 total network failure. External uptime/heartbeat alerting remains separate
 follow-up work.
 
+## Nightly Stripe reconciliation
+
+Webhooks are the only thing that writes membership state, and until this landed
+nothing verified that Stripe and `visitor_profiles` still agreed. A webhook that
+is never delivered — or is delivered, returns 2xx, and then fails to write —
+leaves a divergence Stripe stops retrying after about three days, after which it
+is permanent and silent: paid-but-no-access, refunded-but-still-access,
+cancelled-but-still-access.
+
+`questura-reconcile.timer` runs `reconcile.sh` at 04:20 local, which runs the
+orchestrator in `apps/questura/apps/server/scripts/nightly-stripe-reconcile.ts`.
+That composes the three scripts that already detect and repair this, in the order
+that catches the cheapest and broadest class first:
+
+1. `verify:stripe-webhook-events` — reads the live endpoint's enabled-event list
+   and diffs it against the code. This is the failure that has already happened
+   once: `charge.refunded` and `charge.dispute.*` were handled and deployed for
+   months while the Dashboard had never enabled them. Read-only.
+2. `reconcile:stripe-profiles` — with `--apply` and a blast-radius cap. Fills in
+   or corrects linkage on existing profiles; never creates, deletes, or reassigns
+   a profile, and never writes to Stripe.
+3. `audit:access-revocations` — read-only, no apply mode. Each row it finds is a
+   decision about somebody's money and is cleared by hand in the Dashboard.
+
+All three run even if an earlier one fails. The exit code is aggregated: **0**
+means all clear *or* drift found and successfully applied — healed drift is the
+job working, so it is logged and not escalated — and **1** means a human is
+needed: `MISSING` events on an enabled endpoint, a `DISABLED` endpoint,
+`ORPHANED`, `DUPLICATE`, `STUCK`, `UNKNOWN`, the cap exceeded, or a step that
+threw. That rule lives in `src/features/payments/lib/reconcile-report.ts` and is
+unit-tested there.
+
+Two env knobs, honoured by both the wrapper and the orchestrator:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `QUESTURA_RECONCILE_APPLY` | `1` | `0` makes the whole run read-only. |
+| `QUESTURA_RECONCILE_MAX_APPLY` | `25` | Plans larger than this print and write nothing. |
+
+The cap exists because mass drift means something systemic — wrong Stripe key,
+wrong account, a bad deploy — rather than that many genuine divergences. A run
+that hits it is a finding, not a number to raise.
+
+`reconcile.sh` **holds** `deploy.lock` for the whole run, with a 15-minute wait,
+because it writes to Postgres while `deploy.sh` may be running migrations. This
+is the opposite of `healthcheck.sh`, which is passive and deliberately never
+holds the lock. If a deploy has it, the run logs `SKIP` and exits 0.
+
+Output goes to journald under `questura-reconcile`, and to
+`~/questura/reports/reconcile-<UTC-date>.log` with `reconcile-latest.log`
+pointing at the newest. `~/questura/reports/` is separate from
+`~/questura/logs/`, which holds the append-only service logs and has a different
+lifecycle; reports are pruned after 30 days.
+
+**These report files contain visitor email addresses and Stripe customer IDs.**
+That is the same data the manual scripts already print to a terminal, so it is
+not a new exposure, but it now persists: the directory is mode 0700 and the files
+0600, and they should be treated as such.
+
+There is no alerting, deliberately — see the rejection of uptime alerting above.
+Instead `healthcheck.sh` folds in a freshness probe on the timer it already has:
+`reconcile-status` missing, older than `QUESTURA_RECONCILE_MAX_AGE_SECONDS`
+(default 36h, so one missed night is tolerated and two are not), or recording
+`status=fail` fails the healthcheck. If `~/questura/reports/` does not exist at
+all the probe reports `state=not-adopted` and stays green.
+
+Adoption is manual, same as the healthcheck, and `stage-host-config.sh` must have
+run first to render the units from their `.in` templates. Dry-run by hand before
+letting it write anything:
+
+```bash
+cd ~/questura/current-server
+set -a; . ~/questura/config/server.env; set +a
+QUESTURA_RECONCILE_APPLY=0 pnpm exec tsx scripts/nightly-stripe-reconcile.ts
+QUESTURA_RECONCILE_APPLY=0 bash ~/questura/app/apps/questura/infra/softprod/reconcile.sh
+```
+
+Confirm the drift count is well under the cap before enabling the timer. Then:
+
+```bash
+mkdir -p ~/.config/systemd/user
+install -m 0644 ~/questura/infra/systemd/questura-reconcile.service \
+  ~/.config/systemd/user/questura-reconcile.service
+install -m 0644 ~/questura/infra/systemd/questura-reconcile.timer \
+  ~/.config/systemd/user/questura-reconcile.timer
+systemd-analyze --user verify \
+  ~/.config/systemd/user/questura-reconcile.service \
+  ~/.config/systemd/user/questura-reconcile.timer
+systemctl --user daemon-reload
+systemctl --user start questura-reconcile.service
+journalctl --user -u questura-reconcile.service -n 200 --no-pager
+systemctl --user enable --now questura-reconcile.timer
+systemctl --user list-timers questura-reconcile.timer
+```
+
+`Persistent=true` on the timer is not optional on this host: a laptop asleep at
+04:20 runs the missed job on wake, which is precisely why this machine needs it.
+To undo, disable the timer and remove the two user-unit files:
+
+```bash
+systemctl --user disable --now questura-reconcile.timer
+rm ~/.config/systemd/user/questura-reconcile.{service,timer}
+systemctl --user daemon-reload
+```
+
+**What survives this machine, and what does not.** The timer, the service, and
+`reconcile.sh` are laptop glue and are deleted at migration; they are worth
+nothing to a serverless deployment. `pnpm reconcile:nightly` is the part that
+travels — it runs anywhere Node runs, and it is the command a Vercel Cron,
+EventBridge rule, or scheduled GitHub Action points at. Serverless removes the
+"host was asleep for three days" failure mode and none of the others: enabled-
+event-list drift, signing-secret drift, and a handler that returns 2xx before its
+write fails are all transport-independent, which is why Stripe's own guidance is
+to reconcile on a schedule regardless of transport.
+
 ## Validation
 
 Migration-preflight and deploy-runner regression tests are part of the server

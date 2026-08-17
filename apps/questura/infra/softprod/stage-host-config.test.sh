@@ -74,6 +74,13 @@ grep -q 'ExecStart=/usr/bin/env bash %h/questura/app/apps/questura/infra/softpro
 grep -q '^OnBootSec=2min$' "$DEPLOY_ROOT/infra/systemd/questura-healthcheck.timer"
 grep -q '^OnCalendar=\*:0/5$' "$DEPLOY_ROOT/infra/systemd/questura-healthcheck.timer"
 grep -q '^Persistent=true$' "$DEPLOY_ROOT/infra/systemd/questura-healthcheck.timer"
+grep -q 'ExecStart=/usr/bin/env bash %h/questura/app/apps/questura/infra/softprod/reconcile.sh' "$DEPLOY_ROOT/infra/systemd/questura-reconcile.service"
+# The host's /usr/bin/node is v18 and the release expects 22, so the nvm bin
+# directory has to lead PATH or the nightly runs on the wrong Node.
+grep -q "^Environment=PATH=$FAKE_BIN:" "$DEPLOY_ROOT/infra/systemd/questura-reconcile.service"
+grep -q '^OnCalendar=\*-\*-\* 04:20$' "$DEPLOY_ROOT/infra/systemd/questura-reconcile.timer"
+# A laptop asleep at 04:20 must still run the missed job on wake.
+grep -q '^Persistent=true$' "$DEPLOY_ROOT/infra/systemd/questura-reconcile.timer"
 ! rg -q '@(NODE_BIN_DIR|PNPM_BIN|CLOUDFLARED_BIN)@' "$DEPLOY_ROOT/infra/systemd"
 grep -q 'docker|.*config --quiet' "$LOG"
 grep -q 'cloudflared|.*tunnel ingress validate' "$LOG"
