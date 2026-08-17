@@ -55,6 +55,34 @@ export function getCorsHeaders(req: NextRequest): Record<string, string> {
   return headers
 }
 
+/**
+ * `no-store` rather than `private`. A shared cache honouring `private` is the
+ * exact failure this exists to prevent, and a per-caller response is never
+ * worth caching anyway. `Vary: Cookie` is appended to the `Vary: Origin` that
+ * CORS already sets, so a cache that stores the response despite `no-store`
+ * still keys it by session rather than serving one visitor's copy to everyone.
+ */
+const NO_STORE = 'no-store, no-cache, must-revalidate'
+
+/**
+ * CORS headers for a route whose body depends on who is asking.
+ *
+ * Next treats a route that reads headers as dynamic on its own, but Cloudflare
+ * sits in front of this origin (TRUSTED_PROXY) and one cache rule matching
+ * `/api/*` is enough to hand one visitor's identity, membership or billing
+ * state to everyone. Every cookie-authenticated route states its own terms
+ * rather than relying on that rule never being written.
+ */
+export function getPrivateCorsHeaders(req: NextRequest): Record<string, string> {
+  const headers = getCorsHeaders(req)
+
+  return {
+    ...headers,
+    'Cache-Control': NO_STORE,
+    'Vary': [headers['Vary'], 'Cookie'].filter(Boolean).join(', '),
+  }
+}
+
 export function handleCorsOptions(req: NextRequest) {
   return new NextResponse('', {
     status: 200,
