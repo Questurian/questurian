@@ -103,8 +103,11 @@ export async function writeAccessRevocation(
  * propagates so the webhook retries instead of leaving a live subscription
  * billing a refunded visitor.
  *
- * Disputes deliberately do not take this path: a won dispute restores the
- * membership, and a cancelled subscription cannot be un-cancelled.
+ * An *open* dispute deliberately does not take this path: it may still be won,
+ * and a cancelled subscription cannot be un-cancelled. A dispute that closes as
+ * lost does take it — that money is back with the visitor for good, and leaving
+ * the subscription alive there billed them monthly behind a revocation flag only
+ * a won dispute could ever have lifted.
  */
 export async function cancelRefundedSubscription(subscriptionId: string): Promise<void> {
   try {
