@@ -6,6 +6,14 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 # `canonical_path` and on macOS /var is itself a symlink to /private/var.
 TEST_ROOT=$(cd -- "$(mktemp -d)" && pwd -P)
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
+# Most assertions here are bare `[[ ]]` and `grep -q`, which print nothing when
+# they fail. Without this, a failure under `set -e` is a silent exit 1 — which is
+# exactly what a CI or deploy log then shows you.
+report_failure() {
+  echo "FAILED at $(basename -- "${BASH_SOURCE[0]}"):$1: $BASH_COMMAND" >&2
+}
+arm_failure_report() { trap 'report_failure $LINENO' ERR; }
+arm_failure_report
 
 DEPLOY_ROOT="$TEST_ROOT/host"
 RELEASES_ROOT="$DEPLOY_ROOT/releases"
@@ -72,10 +80,14 @@ expect_exit() {
   local expected=$1
   local output=$2
   shift 2
+  # The non-zero exit here is the point of the test, so the failure report is
+  # disarmed across it and re-armed after.
+  trap - ERR
   set +e
   "$@" > "$output" 2>&1
   local code=$?
   set -e
+  arm_failure_report
   if [[ $code != "$expected" ]]; then
     echo "expected exit $expected, got $code:" >&2
     tail -20 "$output" >&2
@@ -85,6 +97,13 @@ expect_exit() {
 
 status_field() {
   sed -n "s/.*$1=\([^ ]*\).*/\1/p" "$REPORTS_ROOT/reconcile-status"
+}
+
+# GNU first, BSD as the fallback — the same order the other suites use. Reversing
+# it silently passes on macOS and prints a filesystem report on Linux, because
+# `stat -f` there means "filesystem status" and succeeds instead of failing over.
+file_mode() {
+  stat -c '%a' "$1" 2>/dev/null || stat -f '%Lp' "$1"
 }
 
 # A clean run writes the dated report, the latest symlink, and the status file,
@@ -105,9 +124,9 @@ grep -Fq "=== reconcile start utc=" "$REPORT"
 
 # Reports contain visitor identifiers, so their directory and files are private
 # and the secret from server.env never lands in either.
-[[ $(stat -f '%Lp' "$REPORTS_ROOT" 2>/dev/null || stat -c '%a' "$REPORTS_ROOT") == 700 ]]
-[[ $(stat -f '%Lp' "$REPORT" 2>/dev/null || stat -c '%a' "$REPORT") == 600 ]]
-[[ $(stat -f '%Lp' "$REPORTS_ROOT/reconcile-status" 2>/dev/null || stat -c '%a' "$REPORTS_ROOT/reconcile-status") == 600 ]]
+[[ $(file_mode "$REPORTS_ROOT") == 700 ]]
+[[ $(file_mode "$REPORT") == 600 ]]
+[[ $(file_mode "$REPORTS_ROOT/reconcile-status") == 600 ]]
 ! grep -Fq "$SECRET_SENTINEL" "$REPORT"
 ! grep -Fq "$SECRET_SENTINEL" "$TEST_ROOT/clean.out"
 ! grep -Fq 'also-secret' "$REPORT"
