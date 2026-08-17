@@ -7,7 +7,9 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 # /usr/bin/node on this host is v18 and the release expects 22, so the nvm bin
-# directory has to come first. @NODE_BIN_DIR@ is rendered by stage-host-config.sh.
+# directory has to come first. stage-host-config.sh renders it into the PATH
+# below; the placeholder is not written here because it would be substituted in
+# this comment too.
 Environment=PATH=@NODE_BIN_DIR@:/usr/local/bin:/usr/bin:/bin
 # Same file and same mechanism questura-server.service already uses, so this
 # parse is known-good. The wrapper only sources it itself for a manual run.
