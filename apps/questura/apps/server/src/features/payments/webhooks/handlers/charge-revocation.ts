@@ -13,6 +13,9 @@ import { resolveInvoiceSubscriptionId } from '../invoice-subscription'
 
 const RESTORE_ON_DISPUTE_STATUS = new Set<Stripe.Dispute.Status>(['won', 'warning_closed'])
 
+/** The one closing status that means the money went back and is not coming again. */
+const DISPUTE_STATUS_LOST: Stripe.Dispute.Status = 'lost'
+
 /** `invoice` is on the wire but absent from the pinned SDK's `Charge`. */
 type ChargeWithInvoice = Stripe.Charge & {
   invoice?: string | Stripe.Invoice | null
@@ -103,7 +106,8 @@ async function revokeForCharge(
     { reason, periodEnd: end },
     // A refund ends the arrangement, so the subscription has to stop billing.
     // A dispute is money still being contested and may be won, and a cancelled
-    // subscription cannot be revived — so that one is left running.
+    // subscription cannot be revived — so that one is left running until
+    // `charge.dispute.closed` says which way it went.
     { cancelSubscription: reason === ACCESS_REVOKED_REASON_REFUND }
   )
 }
@@ -143,6 +147,24 @@ export async function handleDisputeCreated(dispute: Stripe.Dispute) {
   await revokeForCharge(charge, ACCESS_REVOKED_REASON_DISPUTE, 'charge.dispute.created')
 }
 
+/**
+ * Resolve a dispute: restore the membership, or end the arrangement with it.
+ *
+ * A won dispute clears the flag and leaves the subscription alone — that is why
+ * `charge.dispute.created` never cancels, since a cancel cannot be undone.
+ *
+ * A lost dispute is the other terminal end: the money is back with the visitor,
+ * so it is treated exactly like a refund and the subscription is cancelled. The
+ * flag alone was not enough. `deriveSubscriptionState` pins `paidThroughAt` to
+ * null for as long as it is set, and `invoice.payment_succeeded` may only lift a
+ * *refund* revocation, so a live subscription renewed month after month behind a
+ * permanent dispute flag: charged every cycle, never let back in, with no event
+ * left that could recover it. Cancelling is the missing half of "money returned
+ * = arrangement over".
+ *
+ * Only `lost` cancels. Any other non-restoring status is left billing for a
+ * later event to resolve, because the cancel is the irreversible direction.
+ */
 export async function handleDisputeClosed(dispute: Stripe.Dispute) {
   logger.info('Processing charge.dispute.closed', {
     disputeId: dispute.id,
@@ -166,17 +188,27 @@ export async function handleDisputeClosed(dispute: Stripe.Dispute) {
   }
 
   const restore = RESTORE_ON_DISPUTE_STATUS.has(dispute.status)
+  const lost = dispute.status === DISPUTE_STATUS_LOST
 
-  logger.info(restore ? 'Restoring membership after won dispute' : 'Keeping membership revoked after lost dispute', {
-    disputeId: dispute.id,
-    subscriptionId,
-    status: dispute.status,
-  })
+  logger.info(
+    restore
+      ? 'Restoring membership after won dispute'
+      : lost
+        ? 'Keeping membership revoked and stopping billing after lost dispute'
+        : 'Keeping membership revoked while the dispute is unresolved',
+    {
+      disputeId: dispute.id,
+      subscriptionId,
+      status: dispute.status,
+    }
+  )
 
   await markAccessRevoked(
     subscriptionId,
     restore
       ? null
-      : { reason: ACCESS_REVOKED_REASON_DISPUTE, periodEnd: invoicePeriod(invoice).end }
+      : { reason: ACCESS_REVOKED_REASON_DISPUTE, periodEnd: invoicePeriod(invoice).end },
+    // The money is gone for good, so the subscription must stop charging for it.
+    { cancelSubscription: lost }
   )
 }

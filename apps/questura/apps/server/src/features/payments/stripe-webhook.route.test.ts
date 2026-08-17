@@ -721,6 +721,75 @@ describe('Stripe webhook route', () => {
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
   })
 
+  // The revocation alone is a money bug: only invoice.payment_succeeded lifts a
+  // flag, and it refuses to lift a dispute one, so a subscription left running
+  // here charges every month with entitlement pinned to null and nothing able to
+  // recover it.
+  it('stops billing when a dispute is lost', async () => {
+    givenEvent('charge.dispute.closed', {
+      id: 'dp_1',
+      status: 'lost',
+      charge: { id: 'ch_1', invoice: 'in_1' },
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_1', {
+      cancellation_details: { comment: expect.any(String) },
+    })
+    // Same order as the refund path: Stripe will not take the metadata write
+    // once the subscription is cancelled.
+    expect(mocks.subscriptionUpdate.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.subscriptionCancel.mock.invocationCallOrder[0],
+    )
+  })
+
+  // The cancel is the irreversible direction, so it belongs only to the status
+  // that actually ends the arrangement.
+  it('does not cancel the subscription when a dispute is won', async () => {
+    givenEvent('charge.dispute.closed', {
+      id: 'dp_1',
+      status: 'won',
+      charge: { id: 'ch_1', invoice: 'in_1' },
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
+
+    await POST(createRequest())
+
+    expect(mocks.subscriptionCancel).not.toHaveBeenCalled()
+  })
+
+  // A visitor whose subscription was already cancelled by hand still loses the
+  // dispute; Stripe rejecting the second cancel is the outcome this wanted.
+  it('tolerates a lost dispute on a subscription that was already cancelled', async () => {
+    givenEvent('charge.dispute.closed', {
+      id: 'dp_1',
+      status: 'lost',
+      charge: { id: 'ch_1', invoice: 'in_1' },
+    })
+    mocks.invoiceRetrieve.mockResolvedValue({
+      id: 'in_1',
+      subscription: 'sub_1',
+      lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
+    })
+    mocks.subscriptionCancel.mockRejectedValue(
+      Object.assign(new Error('No such subscription to cancel'), {
+        type: 'invalid_request_error',
+      }),
+    )
+    mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'canceled', metadata: {} })
+
+    const response = await POST(createRequest())
+
+    await expect(response.json()).resolves.toEqual({ received: true })
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+
   // Cancel-then-refund is the ordinary refund flow, and Stripe refuses most
   // updates to a cancelled subscription. Throwing here used to 500 the webhook
   // forever, leaving the refunded visitor's access and paidThroughAt intact.
