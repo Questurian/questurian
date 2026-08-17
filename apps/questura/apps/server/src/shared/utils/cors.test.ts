@@ -7,7 +7,12 @@ vi.mock('@/shared/config', () => ({
   },
 }))
 
-import { forbiddenOriginResponse, getCorsHeaders, isForbiddenOrigin } from './cors'
+import {
+  forbiddenOriginResponse,
+  getCorsHeaders,
+  getPrivateCorsHeaders,
+  isForbiddenOrigin,
+} from './cors'
 
 function requestWithOrigin(origin?: string) {
   return new NextRequest('http://localhost:4000/api/health', {
@@ -36,6 +41,38 @@ describe('getCorsHeaders', () => {
 
     expect(headers).not.toHaveProperty('Access-Control-Allow-Origin')
     expect(headers).not.toHaveProperty('Access-Control-Allow-Credentials')
+  })
+})
+
+describe('getPrivateCorsHeaders', () => {
+  it('forbids storing a per-caller response', () => {
+    const headers = getPrivateCorsHeaders(requestWithOrigin('https://app.example.com'))
+
+    expect(headers['Cache-Control']).toBe('no-store, no-cache, must-revalidate')
+  })
+
+  // `private` would be honoured by the browser and ignored by exactly the
+  // shared cache this is defending against.
+  it('never downgrades to a directive a shared cache may store', () => {
+    const headers = getPrivateCorsHeaders(requestWithOrigin('https://app.example.com'))
+
+    expect(headers['Cache-Control']).not.toMatch(/(^|[\s,])(private|public|max-age)/)
+  })
+
+  it('varies by cookie as well as origin, so a stored copy is keyed by session', () => {
+    const headers = getPrivateCorsHeaders(requestWithOrigin('https://app.example.com'))
+
+    expect(headers['Vary']).toBe('Origin, Cookie')
+  })
+
+  it('keeps the CORS contract of the headers it wraps', () => {
+    const allowed = getPrivateCorsHeaders(requestWithOrigin('https://app.example.com'))
+    const disallowed = getPrivateCorsHeaders(requestWithOrigin('https://evil.example.com'))
+
+    expect(allowed['Access-Control-Allow-Origin']).toBe('https://app.example.com')
+    expect(allowed['Access-Control-Allow-Credentials']).toBe('true')
+    expect(disallowed).not.toHaveProperty('Access-Control-Allow-Origin')
+    expect(disallowed['Cache-Control']).toBe('no-store, no-cache, must-revalidate')
   })
 })
 
