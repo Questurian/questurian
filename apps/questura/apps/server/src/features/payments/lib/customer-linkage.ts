@@ -148,8 +148,9 @@ const LOWEST_KEEP_PRIORITY = 3
  * derives entitlement from one that never collected — the visitor pays, is
  * refunded, and gets nothing.
  *
- * Paid-ness is therefore ranked first and `created` only breaks ties, which is
- * what the genuine duplicate case (two Checkouts both confirming) needs.
+ * Paid-ness is therefore ranked first. Equal-priority ties keep the newer
+ * subscription: two Checkouts that both collected (monthly then yearly) should
+ * keep the later choice, not refund the one the buyer just paid for.
  */
 export function selectSubscriptionToKeep(
   billable: Stripe.Subscription[]
@@ -162,7 +163,7 @@ export function selectSubscriptionToKeep(
 
     if (candidate !== incumbent) return candidate < incumbent ? subscription : best
 
-    return subscription.created < best.created ? subscription : best
+    return subscription.created > best.created ? subscription : best
   }, null)
 }
 

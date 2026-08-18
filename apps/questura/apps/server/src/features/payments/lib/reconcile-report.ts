@@ -3,13 +3,13 @@
  *
  * Why this exists
  * ---------------
- * The nightly job runs three scripts and then has to answer one question: does
+ * The nightly job runs four scripts and then has to answer one question: does
  * a human need to look at this tonight? That answer is the whole value of the
  * job — get it wrong in the lenient direction and divergence stays silent; get
  * it wrong in the noisy direction and the report joins the pile of output
  * nobody reads.
  *
- * So the answer is computed here, as a pure function over the three result
+ * So the answer is computed here, as a pure function over the step result
  * objects, and nowhere else. It lives in `src/` rather than `scripts/` because
  * `vitest.config.ts` only collects tests under `src/shared`, `src/features`,
  * and `src/app`: putting it here makes the rule testable with no config change.
@@ -24,7 +24,7 @@
  *           exceeded, or a step that threw.
  */
 
-export type ReconcileStepName = 'verify' | 'profiles' | 'audit'
+export type ReconcileStepName = 'verify' | 'profiles' | 'audit' | 'retention'
 
 /**
  * What each script's `run()` hands back. `lines` is the detail report the
@@ -60,6 +60,8 @@ export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly stri
   verify: ['missing', 'disabled'],
   profiles: ['orphaned', 'duplicate'],
   audit: ['stuck', 'unknown'],
+  // Pruning old webhook rows is the job working. A throw still escalates.
+  retention: [],
 }
 
 /**
@@ -70,6 +72,7 @@ const SUMMARY_COUNTS: Readonly<Record<ReconcileStepName, readonly string[]>> = {
   verify: ['missing', 'disabled', 'extra'],
   profiles: ['relinkable', 'drifted', 'applied', 'orphaned', 'duplicate'],
   audit: ['stuck', 'unknown', 'in_period', 'contested', 'closed'],
+  retention: ['expired', 'deleted'],
 }
 
 export type StepClassification = {
@@ -112,7 +115,7 @@ function formatCounts(step: ReconcileStepName, counts: Record<string, number> | 
   // Keyed even when there is nothing to report: every field on the summary line
   // has to be a `key=value` pair or the line stops being parseable.
   if (!counts) return `${step}_counts=unavailable`
-  // Count names are unique across the three steps, so they need no prefix.
+  // Count names are unique across steps, so they need no prefix.
   return SUMMARY_COUNTS[step].map((key) => `${key}=${counts[key] ?? 0}`).join(' ')
 }
 

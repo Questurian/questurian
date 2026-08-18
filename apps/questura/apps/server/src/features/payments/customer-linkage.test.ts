@@ -147,13 +147,13 @@ describe('selectSubscriptionToKeep', () => {
     expect(kept).toEqual(expect.objectContaining({ id: 'sub_paid' }))
   })
 
-  it('keeps the oldest when both subscriptions actually collected', () => {
+  it('keeps the newer when both subscriptions actually collected', () => {
     const kept = selectSubscriptionToKeep([
       subscription('sub_old', 'active', 100),
       subscription('sub_new', 'active', 200),
     ])
 
-    expect(kept).toEqual(expect.objectContaining({ id: 'sub_old' }))
+    expect(kept).toEqual(expect.objectContaining({ id: 'sub_new' }))
   })
 
   it('prefers a subscription Stripe is still retrying over one that never confirmed', () => {
@@ -165,12 +165,12 @@ describe('selectSubscriptionToKeep', () => {
     expect(kept).toEqual(expect.objectContaining({ id: 'sub_retrying' }))
   })
 
-  it('falls back to age when every candidate is equally unpaid', () => {
+  it('falls back to newer when every candidate is equally unpaid', () => {
     const kept = selectSubscriptionToKeep([
       subscription('sub_newer', 'incomplete', 200),
       subscription('sub_older', 'incomplete', 100),
     ])
 
-    expect(kept).toEqual(expect.objectContaining({ id: 'sub_older' }))
+    expect(kept).toEqual(expect.objectContaining({ id: 'sub_newer' }))
   })
 })
