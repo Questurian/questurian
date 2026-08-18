@@ -36,7 +36,8 @@ export interface UserWithMembership {
 // Component Props
 // ============================================================================
 /**
- * Props for MembershipGuard component
+ * Props for MembershipGuard. Children render only when the user is not an
+ * active member. `fallback` replaces the default "already a member" screen.
  */
 export interface MembershipGuardProps {
   user?: UserWithMembership | null;

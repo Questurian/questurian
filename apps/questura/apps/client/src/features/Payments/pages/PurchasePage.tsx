@@ -6,7 +6,6 @@ import { useAuth } from '@/lib/user/hooks';
 import { EnhancedAuthForm } from '@/features/Auth';
 import { isServiceUnavailableError, post } from '@/lib/api';
 import MembershipGuard from '../components/MembershipGuard';
-import { useMembership } from '../hooks/useMembership';
 import { useCreateCheckoutSessionMutation } from '../hooks/useSubscriptionMutations';
 import { formatPlanPrice, getPlanSaving, useMembershipPlan, type PlanId } from '../hooks/useMembershipPlan';
 import { queryKeys } from '@/lib/react-query';
@@ -25,7 +24,6 @@ export default function PurchasePage({
 }: PurchasePageProps) {
   const { user, loading, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { hasValidMembership } = useMembership(user);
 
   const checkoutMutation = useCreateCheckoutSessionMutation();
   const { plan: pricing, isLoading: pricingLoading, isUnavailable: pricingUnavailable } = useMembershipPlan(plan);
@@ -81,16 +79,9 @@ export default function PurchasePage({
     }
   };
 
-  if (hasValidMembership) {
-    return (
-      <MembershipGuard user={user}>
-        <div />
-      </MembershipGuard>
-    );
-  }
-
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <MembershipGuard user={user}>
+      <div className="max-w-2xl mx-auto px-4 py-8">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
@@ -208,5 +199,6 @@ export default function PurchasePage({
           </div>
         </div>
       </div>
-    );
+    </MembershipGuard>
+  );
 }

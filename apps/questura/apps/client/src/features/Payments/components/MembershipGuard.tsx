@@ -5,11 +5,16 @@ import { isActiveMember } from '../lib/membership';
 import { useDevStore } from '@/lib/stores/devStore';
 import type { MembershipGuardProps } from '../types';
 
+/**
+ * Hides purchase UI from active members.
+ * Active membership → fallback, or the "already a member" screen.
+ * Otherwise → children.
+ */
 export default function MembershipGuard({ user, children, fallback }: MembershipGuardProps) {
   useDevStore((s) => s.membershipOverride);
   const hasActiveMembership = user ? isActiveMember(user) : false;
 
-  if (hasActiveMembership) {
+  if (!hasActiveMembership) {
     return <>{children}</>;
   }
 
