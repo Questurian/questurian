@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  formatPerWeekEquivalent,
+  formatPlanAmount,
+  formatPlanInterval,
+  formatPlanPrice,
+  formatUnderWeeklyCeiling,
+  useMembershipPlans,
+  type MembershipPlan,
+} from '@/features/Payments/hooks/useMembershipPlan';
+
 /**
  * Breakpoints from globals.css:
  * --breakpoint-280: 280px
@@ -13,7 +23,35 @@
  * --breakpoint-1280: 1280px
  * --breakpoint-1536: 1536px
  */
+
+function shortBillingUnit(plan: MembershipPlan): string {
+  if (plan.intervalCount !== 1) return formatPlanInterval(plan);
+  if (plan.interval === 'month') return 'mo';
+  if (plan.interval === 'year') return 'yr';
+  if (plan.interval === 'week') return 'wk';
+  return plan.interval;
+}
+
 export default function SubscribeButton() {
+  const { monthly, yearly } = useMembershipPlans();
+
+  // Same source /join and /purchase use. Catalog $12.99 / $79.99, not the
+  // laptop $0.50 test charge. See docs/membership-pricing.md.
+  const weekly = yearly ? formatPerWeekEquivalent(yearly) : null;
+  const underWeekly = yearly ? formatUnderWeeklyCeiling(yearly) : null;
+  const billedPlan = yearly ?? monthly;
+
+  let mid = 'Join';
+  let wide = 'Subscribe';
+
+  if (weekly && underWeekly) {
+    mid = `Join: ${weekly}/wk`;
+    wide = `Subscribe: under ${underWeekly}/wk`;
+  } else if (billedPlan) {
+    mid = `Join: ${formatPlanAmount(billedPlan)}/${shortBillingUnit(billedPlan)}`;
+    wide = `Subscribe: ${formatPlanPrice(billedPlan)}`;
+  }
+
   return (
     <button
       className={`
@@ -36,26 +74,9 @@ export default function SubscribeButton() {
         550:h-[40px] 550:w-[234px] 550:px-1.5 550:text-[.850rem]
       `}
     >
-      {/*
-       * HARDCODED PRICE -- verify against Stripe before changing plan pricing.
-       *
-       * Derived from the annual plan: $79.99/yr ÷ 52 = $1.538/wk. Rounded up,
-       * so "$1.54" slightly overstates and "under $1.55" stays true; rounding
-       * down would understate the price, which is the direction that gets
-       * argued in a dispute.
-       *
-       * This is static chrome on every page and cannot read Stripe, so it goes
-       * stale the moment plan pricing changes. `GET /api/payments/plans` is the
-       * source of truth, and /join renders from it. If you change the price in
-       * Stripe, change this line in the same breath.
-       *
-       * Weekly framing for a plan billed annually is a deliberate choice, made
-       * 2026-08-15 with the trade-off understood.
-       */}
       <span className="380:hidden">Subscribe</span>
-      <span className="hidden 380:inline 550:hidden">Join: $1.54/wk</span>
-      <span className="hidden 550:inline">Subscribe: under $1.55/wk</span>
-
+      <span className="hidden 380:inline 550:hidden">{mid}</span>
+      <span className="hidden 550:inline">{wide}</span>
     </button>
   );
 }

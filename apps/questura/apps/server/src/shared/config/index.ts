@@ -71,9 +71,8 @@ export const APP_CONFIG = {
   stripe: {
     secretKey: process.env.STRIPE_SECRET_KEY || '',
     webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
-    // One price per billing interval. `STRIPE_PRICE_ID` is the pre-plan name and
-    // is kept as the monthly fallback so a host missing the new vars still sells
-    // the monthly plan rather than failing checkout outright.
+    // `STRIPE_PRICE_ID` is the pre-plan monthly fallback. Laptop $0.50 vs
+    // catalog $12.99 / $79.99 is a host env switch — docs/membership-pricing.md.
     priceId: process.env.STRIPE_PRICE_ID || '',
     monthlyPriceId: process.env.STRIPE_PRICE_ID_MONTHLY || process.env.STRIPE_PRICE_ID || '',
     yearlyPriceId: process.env.STRIPE_PRICE_ID_YEARLY || '',

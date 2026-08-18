@@ -13,7 +13,7 @@ import { queryKeys } from '@/lib/react-query';
 
 interface PurchasePageProps {
   planName?: string;
-  /** Which Stripe price to sell. The amount comes from Stripe, never from here. */
+  /** Which plan to sell. Advertised amount is the catalog via /api/payments/plans. */
   plan?: PlanId;
   planDescription?: string;
 }

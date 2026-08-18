@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { MEMBERSHIP_CATALOG } from './membership-catalog'
+
 const mocks = vi.hoisted(() => ({
   priceRetrieve: vi.fn(),
 }))
@@ -20,10 +22,10 @@ vi.mock('@/shared/config', () => ({
 
 import { getMembershipPlans, resetMembershipPlansCache } from './membership-plans'
 
-function givenPrice(overrides: Record<string, unknown> = {}) {
+function givenMonthly(overrides: Record<string, unknown> = {}) {
   return {
     id: 'price_monthly',
-    unit_amount: 1299,
+    unit_amount: MEMBERSHIP_CATALOG.monthly.amount,
     currency: 'usd',
     recurring: { interval: 'month', interval_count: 1 },
     product: { name: 'Questurian Membership' },
@@ -32,18 +34,61 @@ function givenPrice(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function givenYearly(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'price_yearly',
+    unit_amount: MEMBERSHIP_CATALOG.yearly.amount,
+    currency: 'usd',
+    recurring: { interval: 'year', interval_count: 1 },
+    product: { name: 'Questurian Membership' },
+    metadata: {},
+    ...overrides,
+  }
+}
+
+function stubStripePrices(monthly: Record<string, unknown>, yearly: Record<string, unknown> | null) {
+  mocks.priceRetrieve.mockImplementation(async (id: string) => {
+    if (id === 'price_yearly') {
+      if (!yearly) throw new Error('no such price')
+      return yearly
+    }
+    return monthly
+  })
+}
+
 describe('getMembershipPlans', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetMembershipPlansCache()
   })
 
-  it('reports the price and interval Stripe actually holds', async () => {
-    mocks.priceRetrieve.mockResolvedValue(givenPrice())
+  it('advertises the catalog even when Stripe charges a cheaper test amount', async () => {
+    stubStripePrices(givenMonthly({ unit_amount: 50 }), givenYearly({ unit_amount: 50 }))
 
-    const [plan] = await getMembershipPlans()
+    const plans = await getMembershipPlans()
 
-    expect(plan).toMatchObject({
+    expect(plans).toEqual([
+      expect.objectContaining({
+        id: 'monthly',
+        amount: 1299,
+        currency: 'usd',
+        interval: 'month',
+      }),
+      expect.objectContaining({
+        id: 'yearly',
+        amount: 7999,
+        currency: 'usd',
+        interval: 'year',
+      }),
+    ])
+  })
+
+  it('advertises the catalog when Stripe already matches it', async () => {
+    stubStripePrices(givenMonthly(), givenYearly())
+
+    const [monthly] = await getMembershipPlans()
+
+    expect(monthly).toMatchObject({
       amount: 1299,
       currency: 'usd',
       interval: 'month',
@@ -52,45 +97,61 @@ describe('getMembershipPlans', () => {
     })
   })
 
-  it('carries a compare-at price from metadata', async () => {
-    mocks.priceRetrieve.mockResolvedValue(
-      givenPrice({
-        unit_amount: 7999,
-        recurring: { interval: 'year', interval_count: 1 },
-        metadata: { compare_at_amount: '15588' },
-      })
-    )
+  it('omits a plan Stripe would charge more than the catalog', async () => {
+    stubStripePrices(givenMonthly({ unit_amount: 2000 }), givenYearly())
 
-    const [plan] = await getMembershipPlans()
+    const plans = await getMembershipPlans()
 
-    expect(plan.compareAtAmount).toBe(15588)
-    expect(plan.interval).toBe('year')
+    expect(plans.map((plan) => plan.id)).toEqual(['yearly'])
   })
 
-  it('ignores a compare-at price that is not above the real price', async () => {
-    // A "was" price at or below what is charged advertises a saving that does
-    // not exist, which is worse than showing none.
-    mocks.priceRetrieve.mockResolvedValue(
-      givenPrice({ unit_amount: 7999, metadata: { compare_at_amount: '7999' } })
+  it('omits a yearly price that actually bills monthly', async () => {
+    stubStripePrices(
+      givenMonthly(),
+      givenYearly({ recurring: { interval: 'month', interval_count: 1 } }),
     )
 
-    const [plan] = await getMembershipPlans()
+    const plans = await getMembershipPlans()
 
-    expect(plan.compareAtAmount).toBeNull()
+    expect(plans.map((plan) => plan.id)).toEqual(['monthly'])
+  })
+
+  it('carries a compare-at price from metadata', async () => {
+    stubStripePrices(
+      givenMonthly(),
+      givenYearly({ metadata: { compare_at_amount: '15588' } }),
+    )
+
+    const yearly = (await getMembershipPlans()).find((plan) => plan.id === 'yearly')
+
+    expect(yearly?.compareAtAmount).toBe(15588)
+    expect(yearly?.interval).toBe('year')
+  })
+
+  it('ignores a compare-at price that is not above the catalog', async () => {
+    stubStripePrices(
+      givenMonthly({ metadata: { compare_at_amount: '1299' } }),
+      givenYearly(),
+    )
+
+    const monthly = (await getMembershipPlans()).find((plan) => plan.id === 'monthly')
+
+    expect(monthly?.compareAtAmount).toBeNull()
   })
 
   it('ignores compare-at metadata that is not a number', async () => {
-    mocks.priceRetrieve.mockResolvedValue(
-      givenPrice({ metadata: { compare_at_amount: 'one hundred' } })
+    stubStripePrices(
+      givenMonthly({ metadata: { compare_at_amount: 'one hundred' } }),
+      givenYearly(),
     )
 
-    const [plan] = await getMembershipPlans()
+    const monthly = (await getMembershipPlans()).find((plan) => plan.id === 'monthly')
 
-    expect(plan.compareAtAmount).toBeNull()
+    expect(monthly?.compareAtAmount).toBeNull()
   })
 
   it('omits a plan whose price is not recurring rather than selling it', async () => {
-    mocks.priceRetrieve.mockResolvedValue(givenPrice({ recurring: null }))
+    stubStripePrices(givenMonthly({ recurring: null }), null)
 
     await expect(getMembershipPlans()).resolves.toEqual([])
   })
@@ -102,7 +163,7 @@ describe('getMembershipPlans', () => {
   })
 
   it('reuses a successful fetch within the TTL instead of hitting Stripe again', async () => {
-    mocks.priceRetrieve.mockResolvedValue(givenPrice())
+    stubStripePrices(givenMonthly(), givenYearly())
 
     const first = await getMembershipPlans()
     const second = await getMembershipPlans()

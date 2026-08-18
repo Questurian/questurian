@@ -12,6 +12,11 @@ So this is a **live-like test environment that happens to be publicly
 reachable**. The only transactions on it are the owner's own tests. It is not
 serving customers, and nobody but the owner depends on it being up.
 
+**Catalog vs laptop test charge.** One Stripe product, catalog **$12.99/month**
+and **$79.99/year** on the site, **$0.50/month** in Checkout while this machine
+is the test runtime. Intentional until serverless. Do not sync the UI to $0.50.
+How to switch to a real-price test, and Stripe CLI: `docs/membership-pricing.md`.
+
 **It has an expiry date.** Once the site is proven end to end here, this
 machine is switched off and production moves to a serverless deployment. That
 is the plan of record, not a vague intention.

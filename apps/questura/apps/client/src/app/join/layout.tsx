@@ -31,8 +31,9 @@ export default function JoinLayout({
       />
       <JoinNavbar />
       {/*
-       * The plan cards read their prices from /api/payments/plans rather than
-       * hardcoding them, so this static route still needs a query client.
+       * Plan cards read advertised catalog prices ($12.99 / $79.99) from
+       * /api/payments/plans, so this static route still needs a query client.
+       * Laptop may charge $0.50. See docs/membership-pricing.md.
        */}
       <QueryProvider>
         <main className="flex-1">{children}</main>
