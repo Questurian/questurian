@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Live Stripe CLI with the questura-linux-laptop key (host STRIPE_SECRET_KEY).
+# Never the Mac `CLI key for Rubens-iMac-2.local`. See docs/membership-pricing.md.
+set -euo pipefail
+
+key="$(
+  ssh -o BatchMode=yes linux-laptop \
+    'python3 -c "import pathlib,re; t=pathlib.Path.home().joinpath(\"questura/config/server.env\").read_text(); m=re.search(r\"^STRIPE_SECRET_KEY=(.*)$\", t, re.M); print(m.group(1).strip().strip(chr(34)).strip(chr(39)) if m else \"\")"'
+)"
+
+suffix="${key: -4}"
+if [[ $key != rk_live_* || $suffix != 1dDj ]]; then
+  echo "stripe-live: refusing unexpected key suffix …${suffix}" >&2
+  exit 1
+fi
+
+# Stripe CLI 1.29 rejects `--live` before the resource command. Key via env;
+# `--live` last so this never uses the Mac device key.
+exec env STRIPE_API_KEY="$key" stripe "$@" --live

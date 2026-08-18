@@ -89,13 +89,8 @@ function PlanArrowLink({ href, label }: { href: string; label: string }) {
 }
 
 /**
- * The annual card, priced from Stripe.
- *
- * Every figure here — the price, the crossed-out "full price", the discount
- * badge, the per-month equivalent — is derived from the two prices the checkout
- * charges. This page used to hardcode $79.99 / $155.88 / $6.67 / "Save 49%"
- * against a real price of $0.50 a month, which is the drift /purchase was fixed
- * for. See `useMembershipPlan`.
+ * The annual card, priced from the catalog ($79.99/year).
+ * Laptop Checkout may still charge $0.50. See docs/membership-pricing.md.
  */
 function AnnualPlanCard({
   plan,

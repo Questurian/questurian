@@ -1,26 +1,26 @@
 import { APP_CONFIG } from '@/shared/config'
 import { logger } from '@/shared/utils/logger'
+import { MEMBERSHIP_CATALOG } from './membership-catalog'
 import { stripe } from './stripe'
 
 /**
- * The membership plans Questura sells, resolved from Stripe.
+ * The membership plans Questura sells.
  *
- * Prices used to be hardcoded in the purchase pages while checkout charged
- * whatever `STRIPE_PRICE_ID` pointed at. The two drifted immediately: the pages
- * advertised $12.99 and $79.99 against a single $0.50/month price, and the
- * "Annual Plan" billed monthly. A page that states a price it does not control
- * will eventually lie, so the amount shown is read from the same price the
- * checkout session uses.
+ * Advertised amounts come from `MEMBERSHIP_CATALOG` ($12.99/month, $79.99/year).
+ * Checkout charges whichever Stripe price ID is in host env. On the laptop that
+ * is usually $0.50/month on the same product. Intentional until serverless.
+ * Do not copy Stripe `unit_amount` onto the page.
+ * See `apps/questura/docs/membership-pricing.md`.
  */
 export type PlanId = 'monthly' | 'yearly'
 
 export type MembershipPlan = {
   id: PlanId
   priceId: string
-  /** Minor units, as Stripe reports them. */
+  /** Catalog amount in minor units ($12.99 or $79.99). Not the laptop test charge. */
   amount: number
   currency: string
-  /** Stripe's own billing interval, so the page never has to assume "month". */
+  /** Catalog billing interval, verified against Stripe so yearly cannot bill monthly. */
   interval: string
   intervalCount: number
   productName: string | null
@@ -60,9 +60,39 @@ async function fetchPlan(plan: PlanId): Promise<MembershipPlan | null> {
       return null
     }
 
+    const catalog = MEMBERSHIP_CATALOG[plan]
+    const stripeAmount = price.unit_amount ?? 0
+
+    if (
+      price.recurring.interval !== catalog.interval ||
+      price.recurring.interval_count !== 1 ||
+      price.currency !== catalog.currency
+    ) {
+      logger.error('Configured membership price does not match the catalog', {
+        plan,
+        priceId,
+        stripeInterval: price.recurring.interval,
+        stripeIntervalCount: price.recurring.interval_count,
+        stripeCurrency: price.currency,
+      })
+      return null
+    }
+
+    // Cheaper than catalog = laptop test charge. More than catalog = we would
+    // advertise $12.99 and charge more, which is the dispute. Refuse that plan.
+    if (stripeAmount > catalog.amount) {
+      logger.error('Stripe would charge more than the catalog price; refusing to advertise', {
+        plan,
+        priceId,
+        stripeAmount,
+        catalogAmount: catalog.amount,
+      })
+      return null
+    }
+
     const compareAtRaw = Number.parseInt(price.metadata?.compare_at_amount ?? '', 10)
     const compareAtAmount =
-      Number.isFinite(compareAtRaw) && compareAtRaw > (price.unit_amount ?? 0) ? compareAtRaw : null
+      Number.isFinite(compareAtRaw) && compareAtRaw > catalog.amount ? compareAtRaw : null
 
     const product = price.product
     const productName =
@@ -73,10 +103,10 @@ async function fetchPlan(plan: PlanId): Promise<MembershipPlan | null> {
     return {
       id: plan,
       priceId,
-      amount: price.unit_amount ?? 0,
-      currency: price.currency,
-      interval: price.recurring.interval,
-      intervalCount: price.recurring.interval_count,
+      amount: catalog.amount,
+      currency: catalog.currency,
+      interval: catalog.interval,
+      intervalCount: 1,
       productName,
       compareAtAmount,
     }

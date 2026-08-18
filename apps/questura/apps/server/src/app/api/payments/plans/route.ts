@@ -5,11 +5,8 @@ import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/li
 import { logger } from '@/shared/utils/logger'
 
 /**
- * What the membership actually costs, straight from Stripe.
- *
- * Public and unauthenticated on purpose: a visitor has to see the price before
- * deciding to sign in, and prices are already public information. It exposes
- * only what a pricing page needs -- no keys, no customer data.
+ * Catalog amounts ($12.99 / $79.99), not the laptop $0.50 test charge.
+ * Checkout uses the host Stripe price ID. See docs/membership-pricing.md.
  */
 export async function GET(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
