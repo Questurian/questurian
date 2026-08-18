@@ -13,7 +13,8 @@ membership product. Monthly, yearly, and the cheap laptop test charge are
 
 | What | Amount | Where it lives |
 |---|---|---|
-| **Catalog** (what the site says) | **$12.99 / month**, **$79.99 / year** | `membership-catalog.ts` → `/api/payments/plans` → `/join`, `/purchase`, Subscribe button |
+| **Catalog** (what the site says) | **$12.99 / month**, **$79.99 / year** | `membership-catalog.ts` → `/api/payments/plans` → `/join`, `/purchase` |
+| **Nav Subscribe button** | **`Join: $1.54/wk` / `Subscribe: under $1.55/wk`** | Hardcoded in `SubscribeButton.tsx`. Not a bug. Do not wire plans/Stripe into it. |
 | **Laptop test charge** (what Checkout takes now) | **$0.50 / month** | Host `STRIPE_PRICE_ID_MONTHLY` → Stripe Checkout |
 
 The site advertises the catalog. The laptop charges $0.50 so live Checkout can

@@ -27,8 +27,11 @@
  * 2. `reconcile-stripe-visitor-profiles` — with apply and a blast-radius cap.
  * 3. `audit-access-revocations` — read-only. Each row is a decision about
  *    somebody's money and stays manual by design; do not add an apply mode.
+ * 4. `prune-stripe-webhook-events` — drop processed webhook rows older than
+ *    30 days. Last so a prune failure cannot hide billing drift. Respects
+ *    `QUESTURA_RECONCILE_APPLY`: dry-run counts, apply deletes.
  *
- * All three run even if an earlier one fails, because the value is in the whole
+ * All four run even if an earlier one fails, because the value is in the whole
  * picture and a Stripe outage in step one should not hide drift in step two.
  * The exit code is aggregated by `reconcile-report.ts`.
  *
@@ -55,6 +58,7 @@ import {
   type ReconcileStepReport,
 } from '../src/features/payments/lib/reconcile-report'
 import { run as runAuditRevocations } from './audit-access-revocations'
+import { run as runPruneWebhookEvents } from './prune-stripe-webhook-events'
 import { run as runReconcileProfiles } from './reconcile-stripe-visitor-profiles'
 import { run as runVerifyWebhookEvents } from './verify-stripe-webhook-events'
 
@@ -107,6 +111,7 @@ async function main(): Promise<number> {
   reports.push(await runStep('verify', () => runVerifyWebhookEvents()))
   reports.push(await runStep('profiles', () => runReconcileProfiles({ apply, maxApply })))
   reports.push(await runStep('audit', () => runAuditRevocations()))
+  reports.push(await runStep('retention', () => runPruneWebhookEvents({ apply })))
 
   const report = buildReconcileReport(reports, { apply, maxApply })
   for (const line of report.lines) console.log(line)
@@ -117,7 +122,7 @@ async function main(): Promise<number> {
 main()
   .then((exitCode) => process.exit(exitCode))
   .catch((error) => {
-    // Only a failure outside the three steps reaches here — a bad env knob, or
+    // Only a failure outside the steps reaches here — a bad env knob, or
     // the report builder itself. A step that throws is reported, not fatal.
     console.error(
       'RECONCILE result=error exit=1 reason=orchestrator-failed',

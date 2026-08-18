@@ -20,6 +20,7 @@
     "reconcile:nightly": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/nightly-stripe-reconcile.ts",
     "audit:access-revocations": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/audit-access-revocations.ts",
     "verify:stripe-webhook-events": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/verify-stripe-webhook-events.ts",
+    "prune:stripe-webhook-events": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/prune-stripe-webhook-events.ts",
     "set:itinerary-access": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/set-itinerary-access.ts",
     "capture:membership-fixtures": "bun scripts/capture-membership-fixtures.ts",
     "inventory:tour-agency": "cross-env NODE_OPTIONS=--no-deprecation tsx scripts/inventory-tour-agency-stops.ts",

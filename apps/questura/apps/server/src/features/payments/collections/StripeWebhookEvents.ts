@@ -4,6 +4,7 @@ import type { CollectionConfig } from 'payload'
  * Records every Stripe webhook event we have processed.
  * Used by the webhook route to skip duplicate deliveries (Stripe retries)
  * and to ignore out-of-order subscription events that would overwrite newer state.
+ * Nightly prune drops rows older than 30 days (`event-retention.ts`).
  */
 export const StripeWebhookEvents: CollectionConfig = {
   slug: 'stripe-webhook-events',

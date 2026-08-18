@@ -1,15 +1,5 @@
 "use client";
 
-import {
-  formatPerWeekEquivalent,
-  formatPlanAmount,
-  formatPlanInterval,
-  formatPlanPrice,
-  formatUnderWeeklyCeiling,
-  useMembershipPlans,
-  type MembershipPlan,
-} from '@/features/Payments/hooks/useMembershipPlan';
-
 /**
  * Breakpoints from globals.css:
  * --breakpoint-280: 280px
@@ -24,34 +14,7 @@ import {
  * --breakpoint-1536: 1536px
  */
 
-function shortBillingUnit(plan: MembershipPlan): string {
-  if (plan.intervalCount !== 1) return formatPlanInterval(plan);
-  if (plan.interval === 'month') return 'mo';
-  if (plan.interval === 'year') return 'yr';
-  if (plan.interval === 'week') return 'wk';
-  return plan.interval;
-}
-
 export default function SubscribeButton() {
-  const { monthly, yearly } = useMembershipPlans();
-
-  // Same source /join and /purchase use. Catalog $12.99 / $79.99, not the
-  // laptop $0.50 test charge. See docs/membership-pricing.md.
-  const weekly = yearly ? formatPerWeekEquivalent(yearly) : null;
-  const underWeekly = yearly ? formatUnderWeeklyCeiling(yearly) : null;
-  const billedPlan = yearly ?? monthly;
-
-  let mid = 'Join';
-  let wide = 'Subscribe';
-
-  if (weekly && underWeekly) {
-    mid = `Join: ${weekly}/wk`;
-    wide = `Subscribe: under ${underWeekly}/wk`;
-  } else if (billedPlan) {
-    mid = `Join: ${formatPlanAmount(billedPlan)}/${shortBillingUnit(billedPlan)}`;
-    wide = `Subscribe: ${formatPlanPrice(billedPlan)}`;
-  }
-
   return (
     <button
       className={`
@@ -74,9 +37,23 @@ export default function SubscribeButton() {
         550:h-[40px] 550:w-[234px] 550:px-1.5 550:text-[.850rem]
       `}
     >
+      {/*
+        HARDCODED. Leave it. This is not a bug, not stale, not a laptop/$0.50
+        mismatch, not a catalog-sync issue. Do not wire useMembershipPlans,
+        Stripe, or GET /api/payments/plans into this button. Do not replace
+        these strings with $12.99, $79.99, or $0.50. Owner locked this copy
+        2026-08-17.
+
+        Mid:  Join: $1.54/wk
+        Wide: Subscribe: under $1.55/wk
+
+        $79.99/yr ÷ 52 = $1.538/wk. Rounded up so "$1.54" slightly overstates
+        and "under $1.55" stays true. Weekly framing for an annual plan is
+        deliberate (2026-08-15).
+      */}
       <span className="380:hidden">Subscribe</span>
-      <span className="hidden 380:inline 550:hidden">{mid}</span>
-      <span className="hidden 550:inline">{wide}</span>
+      <span className="hidden 380:inline 550:hidden">Join: $1.54/wk</span>
+      <span className="hidden 550:inline">Subscribe: under $1.55/wk</span>
     </button>
   );
 }

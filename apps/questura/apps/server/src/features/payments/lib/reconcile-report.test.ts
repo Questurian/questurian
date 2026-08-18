@@ -37,18 +37,23 @@ const CLEAN_AUDIT = {
   closed: 0,
 }
 
-function reports(overrides: Partial<Record<'verify' | 'profiles' | 'audit', ReconcileStepReport>> = {}) {
+const CLEAN_RETENTION = { expired: 0, deleted: 0 }
+
+function reports(
+  overrides: Partial<Record<'verify' | 'profiles' | 'audit' | 'retention', ReconcileStepReport>> = {}
+) {
   return [
     overrides.verify ?? { step: 'verify' as const, counts: CLEAN_VERIFY, lines: [] },
     overrides.profiles ?? { step: 'profiles' as const, counts: CLEAN_PROFILES, lines: [] },
     overrides.audit ?? { step: 'audit' as const, counts: CLEAN_AUDIT, lines: [] },
+    overrides.retention ?? { step: 'retention' as const, counts: CLEAN_RETENTION, lines: [] },
   ]
 }
 
 const OPTIONS = { apply: true, maxApply: 25 }
 
 describe('buildReconcileReport exit code', () => {
-  it('exits 0 when all three steps are clean', () => {
+  it('exits 0 when all steps are clean', () => {
     const report = buildReconcileReport(reports(), OPTIONS)
     expect(report.exitCode).toBe(0)
     expect(report.summaryLine).toContain('result=ok')
@@ -141,6 +146,7 @@ describe('buildReconcileReport exit code', () => {
     // The other two ran anyway: a Stripe blip in step one must not hide drift.
     expect(report.summaryLine).toContain('profiles=ok')
     expect(report.summaryLine).toContain('audit=ok')
+    expect(report.summaryLine).toContain('retention=ok')
     expect(report.lines.join('\n')).toContain('socket hang up')
   })
 
@@ -183,6 +189,21 @@ describe('buildReconcileReport exit code', () => {
       OPTIONS
     )
     expect(report.exitCode).toBe(0)
+  })
+
+  it('does not escalate pruned webhook rows — that is the retention job working', () => {
+    const report = buildReconcileReport(
+      reports({
+        retention: {
+          step: 'retention',
+          counts: { expired: 40, deleted: 40 },
+          lines: [],
+        },
+      }),
+      OPTIONS
+    )
+    expect(report.exitCode).toBe(0)
+    expect(report.summaryLine).toContain('expired=40 deleted=40')
   })
 
   it('reports missing counts as zero rather than failing to render them', () => {

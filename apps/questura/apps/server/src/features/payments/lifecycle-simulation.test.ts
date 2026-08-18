@@ -576,9 +576,9 @@ describe('duplicate checkout collapse', () => {
     const newer = makeSub('sub_B', { created: now() - 50, latest_invoice: 'in_B' })
     store.subs.set(older.id, older)
     store.subs.set(newer.id, newer)
-    store.invoices.set('in_A', makeInvoice('in_A'))
+    store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
     store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
-    store.charges.set('ch_in_B', { id: 'ch_in_B', invoice: 'in_B', refunded: true, payment_intent: 'pi_in_B' })
+    store.charges.set('ch_in_A', { id: 'ch_in_A', invoice: 'in_A', refunded: true, payment_intent: 'pi_in_A' })
 
     await deliver('checkout.session.completed', {
       id: 'cs_2', customer: 'cus_1', subscription: 'sub_B',
@@ -586,15 +586,15 @@ describe('duplicate checkout collapse', () => {
       customer_details: {},
     })
 
-    expect(profile().stripeSubscriptionId).toBe('sub_A')
+    expect(profile().stripeSubscriptionId).toBe('sub_B')
     expect(entitled()).toBe(true)
     expect(store.refunds).toHaveLength(1)
-    expect(store.subs.get('sub_B')!.status).toBe('canceled')
+    expect(store.subs.get('sub_A')!.status).toBe('canceled')
 
     // Stripe now emits the refund we just made. It must not revoke the
     // membership that survived.
-    await deliver('charge.refunded', store.charges.get('ch_in_B'))
-    expect(profile().stripeSubscriptionId).toBe('sub_A')
+    await deliver('charge.refunded', store.charges.get('ch_in_A'))
+    expect(profile().stripeSubscriptionId).toBe('sub_B')
     expect(entitled()).toBe(true)
   })
 
@@ -679,19 +679,19 @@ describe('adversarial', () => {
     store.subs.set(b.id, b)
     store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
     store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
-    store.charges.set('ch_in_B', { id: 'ch_in_B', invoice: 'in_B', refunded: true, payment_intent: 'pi_in_B' })
+    store.charges.set('ch_in_A', { id: 'ch_in_A', invoice: 'in_A', refunded: true, payment_intent: 'pi_in_A' })
 
-    // sub_B's checkout resynced first, so the profile points at the loser.
-    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_B'
+    // sub_A's checkout resynced first, so the profile points at the loser.
+    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].subscriptionStatus = 'active'
     db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 20 * DAY * 1000).toISOString()
 
-    // Stripe cancels + refunds B, and the refund event beats the collapse's resync.
-    b.status = 'canceled'
-    b.ended_at = now()
-    await deliver('charge.refunded', store.charges.get('ch_in_B'))
+    // Stripe cancels + refunds A, and the refund event beats the collapse's resync.
+    a.status = 'canceled'
+    a.ended_at = now()
+    await deliver('charge.refunded', store.charges.get('ch_in_A'))
 
-    // sub_A is live and paid for. The buyer must not be locked out.
+    // sub_B is live and paid for. The buyer must not be locked out.
     expect(entitled()).toBe(true)
   })
 

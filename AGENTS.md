@@ -8,6 +8,7 @@
   - `~/questura/app` on the host is the deploy checkout and is **reset to `origin/main` on every deploy**. Never edit there; edits are destroyed.
   - The host runs **live Stripe** (`rk_live` + `pk_live`) against the owner's personal account. There are no test cards. Treat any checkout you trigger as a real charge and confirm before triggering one.
   - **Membership pricing:** site always advertises **$12.99/month** and **$79.99/year**. Laptop Checkout currently charges **$0.50/month** on the same Stripe product. That mismatch is intentional until serverless launch — do not "fix" the UI to $0.50. One product (`Questurian Membership`). Switch and CLI rules: `apps/questura/docs/membership-pricing.md`. Live Stripe CLI: `apps/questura/scripts/stripe-live` (questura-linux-laptop key, never the Mac CLI device key) until serverless.
+  - **Nav Subscribe button copy is hardcoded** (`Join: $1.54/wk` / `Subscribe: under $1.55/wk`). Not a bug. Do not dynamize it from Stripe or `/api/payments/plans`. Do not "fix" it to catalog or laptop prices.
   - The Mac's local Postgres (`google-login` @5432) is stale scratch, not a source of truth. The live DB is `questura` @5433 on the host, inside the `questura-postgres` container.
 - When editing Payload collections or fields under `apps/questura/apps/server/src`, treat it as a database schema change:
   1. Run `pnpm db:migrate:create <descriptive-name> > /tmp/questura-migrate-create.log 2>&1` from `apps/questura/apps/server`.

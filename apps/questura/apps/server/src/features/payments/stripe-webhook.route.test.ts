@@ -879,7 +879,7 @@ describe('Stripe webhook route', () => {
     expect(mocks.resyncSubscription).not.toHaveBeenCalled()
   })
 
-  it('cancels and refunds a newer duplicate subscription, then resyncs the oldest', async () => {
+  it('cancels and refunds an older duplicate subscription, then resyncs the newer', async () => {
     givenEvent('checkout.session.completed', {
       id: 'cs_2',
       customer: 'cus_1',
@@ -892,19 +892,19 @@ describe('Stripe webhook route', () => {
       ],
     })
     mocks.invoiceRetrieve.mockResolvedValue({
-      id: 'in_new',
-      payment_intent: 'pi_new',
+      id: 'in_old',
+      payment_intent: 'pi_old',
     })
 
     await POST(createRequest())
 
     expect(mocks.refundCreate).toHaveBeenCalledWith(
-      { payment_intent: 'pi_new' },
-      { idempotencyKey: 'dup-sub-refund-sub_new' },
+      { payment_intent: 'pi_old' },
+      { idempotencyKey: 'dup-sub-refund-sub_old' },
     )
-    expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_new')
-    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_old')
-    expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_new')
+    expect(mocks.subscriptionCancel).toHaveBeenCalledWith('sub_old')
+    expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_new')
+    expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_old')
   })
 
   it('leaves the duplicate subscription alive when its refund fails', async () => {
@@ -919,7 +919,7 @@ describe('Stripe webhook route', () => {
         { id: 'sub_new', status: 'active', created: 200, latest_invoice: 'in_new' },
       ],
     })
-    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_new', payment_intent: 'pi_new' })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_old', payment_intent: 'pi_old' })
     mocks.refundCreate.mockRejectedValueOnce(new Error('Stripe unavailable'))
 
     const response = await POST(createRequest())
@@ -957,7 +957,7 @@ describe('Stripe webhook route', () => {
     givenEvent('checkout.session.completed', {
       id: 'cs_4',
       customer: 'cus_1',
-      subscription: 'sub_new',
+      subscription: 'sub_old',
     })
     mocks.subscriptionList.mockResolvedValueOnce({
       data: [
@@ -965,7 +965,7 @@ describe('Stripe webhook route', () => {
         { id: 'sub_new', status: 'active', created: 200, latest_invoice: 'in_new' },
       ],
     })
-    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_new', payment_intent: 'pi_new' })
+    mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_old', payment_intent: 'pi_old' })
     mocks.resyncSubscription.mockRejectedValueOnce(new Error('Stripe unavailable'))
 
     const failed = await POST(createRequest())
@@ -974,13 +974,13 @@ describe('Stripe webhook route', () => {
     // Stripe retries. The extras this handler already cancelled are no longer
     // billable, so the session's own subscription is the cancelled, refunded one.
     mocks.subscriptionList.mockResolvedValue({
-      data: [{ id: 'sub_old', status: 'active', created: 100, latest_invoice: 'in_old' }],
+      data: [{ id: 'sub_new', status: 'active', created: 200, latest_invoice: 'in_new' }],
     })
 
     await POST(createRequest())
 
-    expect(mocks.resyncSubscription).toHaveBeenLastCalledWith('sub_old')
-    expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_new')
+    expect(mocks.resyncSubscription).toHaveBeenLastCalledWith('sub_new')
+    expect(mocks.resyncSubscription).not.toHaveBeenCalledWith('sub_old')
   })
 
   const CLEARED_REVOCATION_METADATA = {
