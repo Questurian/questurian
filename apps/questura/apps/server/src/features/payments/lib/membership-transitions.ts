@@ -14,6 +14,7 @@ export type MembershipSnapshot = {
   subscriptionStatus?: string | null
   cancelAtPeriodEnd?: boolean | null
   paidThroughAt?: string | null
+  dunningGraceUntil?: string | null
 }
 
 export type MembershipTransition =
@@ -26,6 +27,40 @@ function isFuture(value: string | null | undefined): boolean {
   if (!value) return false
   const at = new Date(value)
   return !Number.isNaN(at.getTime()) && at > new Date()
+}
+
+/**
+ * Whether the profile already had a membership before this event.
+ *
+ * Both a beginning and an ending hang on this one question, and the internal
+ * status cannot answer it alone. `mapStripeStatusToInternal` folds Stripe's
+ * `incomplete` into `past_due`, so one label covers both a member whose
+ * renewal charge failed and a buyer whose very first charge has not cleared
+ * yet — the 3DS/SCA case, where the card is authorised seconds later, or
+ * abandoned and expired. Reading that label as dunning got both ends wrong:
+ * the buyer's `incomplete → active` looked like a recovery, which is
+ * deliberately silent, so nothing welcomed them; and their
+ * `incomplete_expired → cancelled` looked like a membership ending, so an
+ * expired attempt mailed a farewell for a membership that never existed.
+ *
+ * Entitlement answers it directly. A real member has paid time behind them:
+ * an `active` status, a `paidThroughAt` still in the future, or a dunning
+ * grace — which `deriveSubscriptionState` opens only for Stripe's own
+ * `past_due`/`unpaid` and never for `incomplete`, and which stays on the
+ * profile, expired, for as long as the dunning lasts. A subscription that has
+ * never collected a payment has none of the three.
+ *
+ * `cancelled` is terminal regardless of leftover paid time: the subscription
+ * is gone, so the next `active` is a new membership rather than the
+ * continuation of one, and a redelivered ending announces nothing.
+ */
+function hadMembership(before: MembershipSnapshot): boolean {
+  const previousStatus = before.subscriptionStatus ?? 'none'
+
+  if (previousStatus === 'cancelled') return false
+  if (previousStatus === 'active') return true
+
+  return isFuture(before.paidThroughAt) || Boolean(before.dunningGraceUntil)
 }
 
 /**
@@ -42,10 +77,9 @@ export function resolveMembershipTransitions(
   const transitions: MembershipTransition[] = []
 
   const wasCancelling = Boolean(before.cancelAtPeriodEnd)
-  const previousStatus = before.subscriptionStatus ?? 'none'
+  const wasMember = hadMembership(before)
 
-  const startedFrom = previousStatus === 'none' || previousStatus === 'cancelled'
-  if (startedFrom && after.subscriptionStatus === 'active') {
+  if (!wasMember && after.subscriptionStatus === 'active') {
     transitions.push({ kind: 'membership_started' })
   }
 
@@ -59,7 +93,11 @@ export function resolveMembershipTransitions(
 
   // A subscription that ends after the visitor scheduled it was already
   // announced when they cancelled; only an unannounced ending needs an email.
-  if (previousStatus !== 'cancelled' && after.subscriptionStatus === 'cancelled' && !wasCancelling) {
+  // An ending is also only news to someone who had a membership to lose, which
+  // is what keeps an abandoned first charge — `incomplete_expired`, and so
+  // internally `cancelled` — from mailing a farewell to a visitor who never
+  // got in.
+  if (wasMember && after.subscriptionStatus === 'cancelled' && !wasCancelling) {
     transitions.push({ kind: 'membership_ended', wasImmediate: !isFuture(after.paidThroughAt) })
   }
 

@@ -367,6 +367,67 @@ describe('purchase', () => {
     expect(entitled()).toBe(true)
     expect(emails).toEqual(['confirmation'])
   })
+
+  it('S1b: a 3DS buyer is welcomed once the delayed first charge clears', async () => {
+    // Stripe reports `incomplete` until the cardholder finishes the challenge,
+    // and `mapStripeStatusToInternal` folds that into `past_due` — the same
+    // internal status a failed renewal produces. The welcome email has to
+    // survive that collision.
+    const start = now() - 60
+    const sub = makeSub('sub_A', {
+      status: 'incomplete',
+      items: { data: [{ current_period_start: start, current_period_end: start + 30 * DAY, price: {} }] },
+      latest_invoice: 'in_1',
+    })
+    store.subs.set(sub.id, sub)
+    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open', paid: false }))
+
+    await deliver('customer.subscription.created', sub)
+
+    expect(profile().subscriptionStatus).toBe('past_due')
+    // An unpaid first period must not open a dunning window or grant access.
+    expect(profile().dunningGraceUntil).toBeNull()
+    expect(entitled()).toBe(false)
+    expect(emails).toEqual([])
+
+    // The challenge succeeds.
+    const s = store.subs.get('sub_A')!
+    s.status = 'active'
+    store.invoices.set('in_1', makeInvoice('in_1'))
+
+    await deliver('invoice.payment_succeeded', store.invoices.get('in_1'))
+
+    expect(profile().subscriptionStatus).toBe('active')
+    expect(entitled()).toBe(true)
+    expect(emails).toEqual(['confirmation'])
+  })
+
+  it('S1c: an abandoned 3DS attempt expires without mailing anything', async () => {
+    // `incomplete_expired` maps to `cancelled`, the same internal status a real
+    // ending produces. Nobody was ever let in, so there is no goodbye to send.
+    const start = now() - 60
+    const sub = makeSub('sub_A', {
+      status: 'incomplete',
+      items: { data: [{ current_period_start: start, current_period_end: start + 30 * DAY, price: {} }] },
+      latest_invoice: 'in_1',
+    })
+    store.subs.set(sub.id, sub)
+    store.invoices.set('in_1', makeInvoice('in_1', { status: 'open', paid: false }))
+
+    await deliver('customer.subscription.created', sub)
+    expect(emails).toEqual([])
+
+    // The cardholder never finishes; Stripe expires the attempt ~23h later.
+    const s = store.subs.get('sub_A')!
+    s.status = 'incomplete_expired'
+    s.ended_at = now()
+
+    await deliver('customer.subscription.deleted', s)
+
+    expect(profile().subscriptionStatus).toBe('cancelled')
+    expect(entitled()).toBe(false)
+    expect(emails).toEqual([])
+  })
 })
 
 describe('renewal and dunning', () => {
@@ -422,11 +483,17 @@ describe('renewal and dunning', () => {
     store.invoices.set('in_2', makeInvoice('in_2', { status: 'open', paid: false }))
     db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
     db['visitor-profiles'][0].subscriptionStatus = 'past_due'
+    // What the failed renewal left behind: paid through the last period it
+    // collected, and a grace that has long since run out.
+    db['visitor-profiles'][0].paidThroughAt = new Date(start * 1000).toISOString()
+    db['visitor-profiles'][0].dunningGraceUntil = new Date(Date.now() - 10 * DAY * 1000).toISOString()
 
     await deliver('customer.subscription.deleted', sub)
 
     expect(profile().subscriptionStatus).toBe('cancelled')
     expect(entitled()).toBe(false)
+    // This membership was real, so its ending is still announced.
+    expect(emails).toEqual(['cancelled'])
   })
 })
 
