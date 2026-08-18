@@ -48,6 +48,11 @@
  * rule itself lives in `src/features/payments/lib/reconcile-ownership.ts` so it
  * is shared with its tests and cannot drift from the checkout path.
  *
+ * Which of a customer's subscriptions a profile mirrors is decided by
+ * `selectProfileSubscription` (`customer-linkage.ts`) — the billing one, and
+ * only the newest when none is billing — the same rule `ownsProfileRow` applies
+ * on the webhook path.
+ *
  * `--max-apply N` caps the blast radius. If the plan is larger than the cap the
  * plan is printed and nothing is written, because mass drift means something
  * systemic — wrong Stripe key, wrong account, a bad deploy — rather than N
@@ -69,6 +74,7 @@ import { getPayload } from 'payload'
 import Stripe from 'stripe'
 
 import config from '../src/payload.config'
+import { selectProfileSubscription } from '../src/features/payments/lib/customer-linkage'
 import { deriveSubscriptionState } from '../src/features/payments/lib/subscription-state'
 import {
   exceedsApplyCap,
@@ -202,16 +208,21 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     seenEmails.set(email, emailBucket)
     if (emailBucket.length > 1) duplicates.set(email, emailBucket)
 
-    // Newest subscription wins; Stripe returns most recent first.
+    // Every subscription, not just the newest: which one owns the profile row
+    // is an ownership question, and `selectProfileSubscription` answers it with
+    // the same rule the webhook path enforces (`ownsProfileRow`). Reading only
+    // the newest made a ~23h `incomplete` from an abandoned 3DS attempt
+    // outrank the membership actually billing, and this script writes what it
+    // reads.
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.id,
       status: 'all',
-      limit: 1,
+      limit: 100,
       // The dunning grace is derived from Stripe's own next retry time, which
       // lives on the invoice.
       expand: ['data.latest_invoice'],
     })
-    const subscription = subscriptions.data[0] ?? null
+    const subscription = selectProfileSubscription(subscriptions.data)
 
     const owner = normalizeAuthUserId(customer.metadata?.visitorAuthUserId)
     const candidates = byEmail.get(email) ?? []
@@ -242,13 +253,22 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     }
 
     if (target.kind === 'none') {
-      if (subscription) {
+      if (subscriptions.data.length > 0) {
         // Only a subscription that could still grant access is a problem. A
         // customer whose subscription ended and whose profile is gone is
         // history: there is nothing to repair and nothing to grant, so warning
         // about it every run trains people to ignore the warning.
-        if (LIVE_SUBSCRIPTION_STATUSES.has(subscription.status)) {
-          orphaned.push({ customerId: customer.id, email, status: subscription.status })
+        //
+        // Asked of the whole list rather than of the selected one: the question
+        // here is "is anyone paying with no account to grant it to", which any
+        // grantable subscription answers, not just the one that would own a row
+        // that does not exist.
+        const grantable = subscriptions.data.find((candidate) =>
+          LIVE_SUBSCRIPTION_STATUSES.has(candidate.status)
+        )
+
+        if (grantable) {
+          orphaned.push({ customerId: customer.id, email, status: grantable.status })
         } else {
           historicalOrphans += 1
         }
