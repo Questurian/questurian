@@ -32,6 +32,7 @@ vi.mock('@/payments/lib/stripe', () => ({
 
 vi.mock('@/payments/lib/payments-rate-limit', () => ({
   checkPaymentsRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkPaymentsVisitorRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
   paymentsRateLimitResponse: vi.fn(),
 }))
 

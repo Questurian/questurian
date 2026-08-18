@@ -20,7 +20,7 @@ vi.mock('@/shared/config', () => ({
   },
 }))
 
-import { getMembershipPlans, resetMembershipPlansCache } from './membership-plans'
+import { getMembershipPlans } from './membership-plans'
 
 function givenMonthly(overrides: Record<string, unknown> = {}) {
   return {
@@ -59,7 +59,6 @@ function stubStripePrices(monthly: Record<string, unknown>, yearly: Record<strin
 describe('getMembershipPlans', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    resetMembershipPlansCache()
   })
 
   it('advertises the catalog even when Stripe charges a cheaper test amount', async () => {
@@ -162,13 +161,13 @@ describe('getMembershipPlans', () => {
     await expect(getMembershipPlans()).resolves.toEqual([])
   })
 
-  it('reuses a successful fetch within the TTL instead of hitting Stripe again', async () => {
+  it('hits Stripe on every call rather than serving a per-process cache', async () => {
     stubStripePrices(givenMonthly(), givenYearly())
 
     const first = await getMembershipPlans()
     const second = await getMembershipPlans()
 
     expect(second).toEqual(first)
-    expect(mocks.priceRetrieve).toHaveBeenCalledTimes(2)
+    expect(mocks.priceRetrieve).toHaveBeenCalledTimes(4)
   })
 })

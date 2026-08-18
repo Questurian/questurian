@@ -14,34 +14,40 @@ import { logger } from '@/shared/utils/logger'
  * visitor can burn the shared Stripe rate budget that webhook processing
  * also uses. Plans is public and was two Stripe reads per unauthenticated
  * hit. Webhooks are excluded: Stripe retries must not 429.
+ *
+ * Two buckets, applied in order:
+ * 1. IP, before auth. Cheap flood bound so a NAT office is not one 8-slot
+ *    bucket, and unauthenticated hammering never reaches session lookup.
+ * 2. Visitor, after login. The Stripe-budget bound that used to live on IP.
+ *    Plans has no visitor bucket: it is public.
  */
 
 const WINDOW_SECONDS = 60
 
 export const PAYMENTS_RATE_LIMITS = {
-  checkout: 8,
-  portal: 8,
-  cancel: 8,
-  reactivate: 8,
-  details: 20,
-  plans: 30,
+  checkout: { ip: 40, visitor: 8 },
+  portal: { ip: 40, visitor: 8 },
+  cancel: { ip: 40, visitor: 8 },
+  reactivate: { ip: 40, visitor: 8 },
+  details: { ip: 60, visitor: 20 },
+  plans: { ip: 30 },
 } as const
 
 export type PaymentsRateLimitScope = keyof typeof PAYMENTS_RATE_LIMITS
+export type AuthenticatedPaymentsScope = Exclude<PaymentsRateLimitScope, 'plans'>
 
 export type PaymentsRateLimitResult =
   | { allowed: true }
   | { allowed: false; retryAfterSeconds: number }
 
-export async function checkPaymentsRateLimit(
-  headers: Headers,
+async function checkCounter(
+  key: string,
+  limit: number,
   scope: PaymentsRateLimitScope
 ): Promise<PaymentsRateLimitResult> {
-  const ipKey = `payments:rate-limit:${scope}:ip:${hashIdentifier(getClientIp(headers))}`
-
   let counter
   try {
-    counter = await incrementCounter(ipKey, WINDOW_SECONDS)
+    counter = await incrementCounter(key, WINDOW_SECONDS)
   } catch (error) {
     logger.error('Payments rate limit unavailable; denying', {
       scope,
@@ -50,11 +56,27 @@ export async function checkPaymentsRateLimit(
     return { allowed: false, retryAfterSeconds: WINDOW_SECONDS }
   }
 
-  if (counter.count > PAYMENTS_RATE_LIMITS[scope]) {
+  if (counter.count > limit) {
     return { allowed: false, retryAfterSeconds: counter.ttlSeconds }
   }
 
   return { allowed: true }
+}
+
+export async function checkPaymentsRateLimit(
+  headers: Headers,
+  scope: PaymentsRateLimitScope
+): Promise<PaymentsRateLimitResult> {
+  const ipKey = `payments:rate-limit:${scope}:ip:${hashIdentifier(getClientIp(headers))}`
+  return checkCounter(ipKey, PAYMENTS_RATE_LIMITS[scope].ip, scope)
+}
+
+export async function checkPaymentsVisitorRateLimit(
+  visitorId: string,
+  scope: AuthenticatedPaymentsScope
+): Promise<PaymentsRateLimitResult> {
+  const visitorKey = `payments:rate-limit:${scope}:visitor:${hashIdentifier(visitorId)}`
+  return checkCounter(visitorKey, PAYMENTS_RATE_LIMITS[scope].visitor, scope)
 }
 
 export function paymentsRateLimitResponse(

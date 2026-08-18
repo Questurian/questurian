@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { cancelUserSubscription } from '@/payments/lib/payment-service'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
-import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
+import { checkPaymentsRateLimit, checkPaymentsVisitorRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 
 export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(req)
@@ -25,6 +25,11 @@ export async function POST(req: NextRequest) {
     }
 
     const visitor = authResult.principal!
+    const visitorLimit = await checkPaymentsVisitorRateLimit(String(visitor.id), 'cancel')
+    if (!visitorLimit.allowed) {
+      return paymentsRateLimitResponse(corsHeaders, visitorLimit.retryAfterSeconds)
+    }
+
     const result = await cancelUserSubscription(String(visitor.id))
 
     if (!result.success) {

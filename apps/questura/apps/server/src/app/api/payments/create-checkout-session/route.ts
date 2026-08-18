@@ -5,7 +5,7 @@ import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { isPlanId, priceIdForPlan, type PlanId } from '@/payments/lib/membership-plans'
-import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
+import { checkPaymentsRateLimit, checkPaymentsVisitorRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 import { safeReturnPath } from '@/payments/lib/safe-return-path'
 import { checkoutIdempotencyKey } from '@/payments/lib/checkout-idempotency'
 import {
@@ -58,6 +58,11 @@ export async function POST(req: NextRequest) {
 
     const visitor = authResult.principal!
     const visitorAuthUserId = String(visitor.id)
+    const visitorLimit = await checkPaymentsVisitorRateLimit(visitorAuthUserId, 'checkout')
+    if (!visitorLimit.allowed) {
+      return paymentsRateLimitResponse(corsHeaders, visitorLimit.retryAfterSeconds)
+    }
+
     const profile = await findVisitorProfileByAuthUserId(visitorAuthUserId)
 
     // 2. Validate required user data
