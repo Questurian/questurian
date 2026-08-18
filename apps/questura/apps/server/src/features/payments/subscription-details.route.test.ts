@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   findVisitorProfileByAuthUserId: vi.fn(),
   getStripeSubscriptionDetails: vi.fn(),
   checkPaymentsRateLimit: vi.fn(),
+  checkPaymentsVisitorRateLimit: vi.fn(),
 }))
 
 vi.mock('@/features/visitor-auth/lib/current-principal', () => ({
@@ -19,10 +20,14 @@ vi.mock('@/payments/lib/payment-service', () => ({
   getStripeSubscriptionDetails: mocks.getStripeSubscriptionDetails,
 }))
 
-vi.mock('@/payments/lib/payments-rate-limit', () => ({
-  checkPaymentsRateLimit: mocks.checkPaymentsRateLimit,
-  paymentsRateLimitResponse: vi.fn(),
-}))
+vi.mock('@/payments/lib/payments-rate-limit', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/payments/lib/payments-rate-limit')>()
+  return {
+    ...actual,
+    checkPaymentsRateLimit: mocks.checkPaymentsRateLimit,
+    checkPaymentsVisitorRateLimit: mocks.checkPaymentsVisitorRateLimit,
+  }
+})
 
 vi.mock('@/shared/config', () => ({
   APP_CONFIG: {
@@ -43,6 +48,7 @@ describe('subscription-details route', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.checkPaymentsRateLimit.mockResolvedValue({ allowed: true })
+    mocks.checkPaymentsVisitorRateLimit.mockResolvedValue({ allowed: true })
     mocks.requireVisitorPrincipal.mockResolvedValue({ principal: { id: 'visitor_1' } })
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
       id: 10,
@@ -82,6 +88,41 @@ describe('subscription-details route', () => {
 
     expect(response.status).toBe(403)
     expect(mocks.requireVisitorPrincipal).not.toHaveBeenCalled()
+  })
+
+  it('429s the IP bucket before resolving the visitor', async () => {
+    mocks.checkPaymentsRateLimit.mockResolvedValue({ allowed: false, retryAfterSeconds: 17 })
+
+    const response = await GET(
+      createRequest({
+        origin: 'http://localhost:3000',
+        cookie: 'questura_visitor.session_token=abc',
+      })
+    )
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get('Retry-After')).toBe('17')
+    expect(mocks.requireVisitorPrincipal).not.toHaveBeenCalled()
+    expect(mocks.checkPaymentsVisitorRateLimit).not.toHaveBeenCalled()
+  })
+
+  it('429s the visitor bucket after resolving the session', async () => {
+    mocks.checkPaymentsVisitorRateLimit.mockResolvedValue({
+      allowed: false,
+      retryAfterSeconds: 17,
+    })
+
+    const response = await GET(
+      createRequest({
+        origin: 'http://localhost:3000',
+        cookie: 'questura_visitor.session_token=abc',
+      })
+    )
+
+    expect(response.status).toBe(429)
+    expect(response.headers.get('Retry-After')).toBe('17')
+    expect(mocks.requireVisitorPrincipal).toHaveBeenCalled()
+    expect(mocks.getStripeSubscriptionDetails).not.toHaveBeenCalled()
   })
 
   it('serves the visitor their own subscription from an allowed origin', async () => {

@@ -121,28 +121,7 @@ async function fetchPlan(plan: PlanId): Promise<MembershipPlan | null> {
 }
 
 /** Every plan that is actually purchasable right now. */
-const PLAN_CACHE_TTL_MS = 5 * 60 * 1000
-
-let planCache: { storedAt: number; plans: MembershipPlan[] } | null = null
-
 export async function getMembershipPlans(): Promise<MembershipPlan[]> {
-  if (planCache && Date.now() - planCache.storedAt < PLAN_CACHE_TTL_MS) {
-    return planCache.plans
-  }
-
   const plans = await Promise.all([fetchPlan('monthly'), fetchPlan('yearly')])
-  const resolved = plans.filter((plan): plan is MembershipPlan => plan !== null)
-
-  // Do not cache an empty result: a Stripe blip would hide both plans for
-  // the whole TTL, and prices change ~never so a successful fetch is stable.
-  if (resolved.length > 0) {
-    planCache = { storedAt: Date.now(), plans: resolved }
-  }
-
-  return resolved
-}
-
-/** Test seam: drop the in-process cache between cases. */
-export function resetMembershipPlansCache(): void {
-  planCache = null
+  return plans.filter((plan): plan is MembershipPlan => plan !== null)
 }

@@ -4,7 +4,7 @@ import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
-import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
+import { checkPaymentsRateLimit, checkPaymentsVisitorRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 import { logger } from '@/shared/utils/logger'
 
 export async function POST(req: NextRequest) {
@@ -28,6 +28,11 @@ export async function POST(req: NextRequest) {
     }
 
     const visitor = authResult.principal!
+    const visitorLimit = await checkPaymentsVisitorRateLimit(String(visitor.id), 'portal')
+    if (!visitorLimit.allowed) {
+      return paymentsRateLimitResponse(corsHeaders, visitorLimit.retryAfterSeconds)
+    }
+
     const profile = await findVisitorProfileByAuthUserId(String(visitor.id))
 
     // 2. Validate user has a Stripe customer ID

@@ -3,7 +3,7 @@ import { getStripeSubscriptionDetails } from '@/payments/lib/payment-service'
 import { forbiddenOriginResponse, getPrivateCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
-import { checkPaymentsRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
+import { checkPaymentsRateLimit, checkPaymentsVisitorRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +37,11 @@ export async function GET(req: NextRequest) {
     }
 
     const visitor = authResult.principal!
+    const visitorLimit = await checkPaymentsVisitorRateLimit(String(visitor.id), 'details')
+    if (!visitorLimit.allowed) {
+      return paymentsRateLimitResponse(corsHeaders, visitorLimit.retryAfterSeconds)
+    }
+
     const profile = await findVisitorProfileByAuthUserId(String(visitor.id))
 
     if (!profile?.stripeSubscriptionId) {
