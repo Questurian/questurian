@@ -19,6 +19,7 @@ vi.mock('@/payments/lib/stripe', () => ({
 import {
   findLiveSubscription,
   listBillableSubscriptions,
+  selectProfileSubscription,
   selectSubscriptionToKeep,
   syncStripeCustomerEmail,
 } from '@/payments/lib/customer-linkage'
@@ -172,5 +173,60 @@ describe('selectSubscriptionToKeep', () => {
     ])
 
     expect(kept).toEqual(expect.objectContaining({ id: 'sub_newer' }))
+  })
+})
+
+describe('selectProfileSubscription', () => {
+  const subscription = (
+    id: string,
+    status: string,
+    created: number,
+  ) => ({ id, status, created }) as never
+
+  it('returns null for a customer with no subscriptions', () => {
+    expect(selectProfileSubscription([])).toBeNull()
+  })
+
+  // The reconciler bug: an abandoned 3DS attempt sits `incomplete` for ~23
+  // hours, so it is the newest thing on the customer while the membership that
+  // is actually billing runs on. Mirroring the attempt onto the profile writes
+  // `past_due` over remaining paid time and points the cancel button at a dead
+  // subscription.
+  it('keeps the billing subscription over a newer abandoned attempt', () => {
+    const selected = selectProfileSubscription([
+      subscription('sub_abandoned', 'incomplete', 200),
+      subscription('sub_paid', 'active', 100),
+    ])
+
+    expect(selected).toEqual(expect.objectContaining({ id: 'sub_paid' }))
+  })
+
+  it('keeps a subscription Stripe is still retrying over a newer dead one', () => {
+    const selected = selectProfileSubscription([
+      subscription('sub_dead', 'canceled', 300),
+      subscription('sub_retrying', 'past_due', 100),
+    ])
+
+    expect(selected).toEqual(expect.objectContaining({ id: 'sub_retrying' }))
+  })
+
+  it('keeps the newest when several are live', () => {
+    const selected = selectProfileSubscription([
+      subscription('sub_old', 'active', 100),
+      subscription('sub_new', 'active', 200),
+    ])
+
+    expect(selected).toEqual(expect.objectContaining({ id: 'sub_new' }))
+  })
+
+  // With nothing billing, the newest closed record is the profile's final
+  // state, so an older cancellation cannot overwrite a newer one.
+  it('falls back to the newest when nothing is live', () => {
+    const selected = selectProfileSubscription([
+      subscription('sub_older', 'canceled', 100),
+      subscription('sub_newer', 'incomplete_expired', 200),
+    ])
+
+    expect(selected).toEqual(expect.objectContaining({ id: 'sub_newer' }))
   })
 })

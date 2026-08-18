@@ -197,6 +197,34 @@ export async function findLiveSubscription(
   return listed.find(isLiveSubscription) ?? null
 }
 
+/**
+ * The one subscription a profile row should mirror, given everything Stripe
+ * holds for the customer.
+ *
+ * This is the same ownership rule `ownsProfileRow` enforces on the webhook path
+ * (`subscription-resync.ts`): the subscription that is billing owns the row,
+ * and only when none is does the newest one own it. Newest-wins on its own is
+ * the bug PR #324 fixed — a visitor who abandons 3DS leaves an `incomplete`
+ * subscription sitting on the customer for ~23 hours, so a dead attempt is the
+ * newest thing there while a paid membership is still running. Mirroring the
+ * attempt stamps `past_due` and its period start over the live membership's
+ * remaining paid time, and points `/account`'s cancel button at a dead id.
+ *
+ * Ties among live subscriptions keep the newest, matching the order Stripe
+ * lists them in, so the batch path and the webhook path cannot disagree.
+ */
+export function selectProfileSubscription(
+  subscriptions: Stripe.Subscription[]
+): Stripe.Subscription | null {
+  const live = subscriptions.filter(isLiveSubscription)
+  const candidates = live.length > 0 ? live : subscriptions
+
+  return candidates.reduce<Stripe.Subscription | null>(
+    (best, subscription) => (!best || subscription.created > best.created ? subscription : best),
+    null
+  )
+}
+
 export async function listBillableSubscriptions(
   customerId: string
 ): Promise<Stripe.Subscription[]> {
