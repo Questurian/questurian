@@ -15,8 +15,9 @@
  *
  * What it reports
  * ---------------
- *   RELINKABLE  A Stripe customer whose email matches a profile that has no
- *               `stripeCustomerId`. Repairable here.
+ *   RELINKABLE  A Stripe customer that names its owner in
+ *               `metadata.visitorAuthUserId`, whose profile still exists but
+ *               has lost its `stripeCustomerId`. Repairable here.
  *   DRIFTED     Linked profile whose subscription state disagrees with Stripe.
  *               Repairable here.
  *   ORPHANED    A Stripe customer with a LIVE subscription and no profile at
@@ -28,12 +29,24 @@
  *   DUPLICATE   Several Stripe customers share one email -- the second-customer
  *               bug. Reported so billing can be merged in Stripe by hand;
  *               merging customers is not something to automate.
+ *   UNPROVEN    A Stripe customer whose email matches profiles, but which does
+ *               not name any of them as its owner. NOT repairable here: email
+ *               alone never proves ownership (see `customer-linkage.ts`), and
+ *               adopting on an email match would hand a stranger the payer's
+ *               billing portal and membership. Reported for hand resolution.
+ *   MISMATCHED  A profile already carries this `stripeCustomerId`, but Stripe
+ *               names a different owner. A bad link already exists; it is
+ *               reported and skipped rather than written to.
  *
  * Safety
  * ------
  * Dry-run by default: prints the plan and writes nothing. Pass `--apply` to
  * write. It only ever fills in or corrects linkage on existing profiles; it
  * never creates, deletes, or reassigns a profile, and never writes to Stripe.
+ *
+ * Ownership is proven by `metadata.visitorAuthUserId` — never by email. The
+ * rule itself lives in `src/features/payments/lib/reconcile-ownership.ts` so it
+ * is shared with its tests and cannot drift from the checkout path.
  *
  * `--max-apply N` caps the blast radius. If the plan is larger than the cap the
  * plan is printed and nothing is written, because mass drift means something
@@ -61,6 +74,10 @@ import {
   exceedsApplyCap,
   type ReconcileStepResult,
 } from '../src/features/payments/lib/reconcile-report'
+import {
+  normalizeAuthUserId,
+  resolveReconcileTarget,
+} from '../src/features/payments/lib/reconcile-ownership'
 
 type PlannedUpdate = {
   profileId: string | number
@@ -135,6 +152,9 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
 
   const byEmail = new Map<string, (typeof profiles.docs)[number][]>()
   const byCustomerId = new Map<string, (typeof profiles.docs)[number]>()
+  // The ownership index. `metadata.visitorAuthUserId` on the Stripe customer is
+  // matched against this, and nothing else decides who a customer belongs to.
+  const byAuthUserId = new Map<string, (typeof profiles.docs)[number]>()
 
   for (const profile of profiles.docs) {
     const email = normalizeEmail(profile.email as string)
@@ -145,6 +165,8 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     }
     const customerId = profile.stripeCustomerId as string | null
     if (customerId) byCustomerId.set(customerId, profile)
+    const authUserId = normalizeAuthUserId(profile.authUserId as string | null)
+    if (authUserId) byAuthUserId.set(authUserId, profile)
   }
 
   emit(`Loaded ${profiles.docs.length} visitor profile(s)\n`)
@@ -156,8 +178,15 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
   const duplicates = new Map<string, string[]>()
   const seenEmails = new Map<string, string[]>()
 
+  const unproven: Array<{ customerId: string; email: string; status: string | null }> = []
+  const mismatched: Array<{
+    customerId: string
+    email: string
+    profileId: string | number
+    owner: string
+  }> = []
+
   let scanned = 0
-  let ambiguous = 0
 
   for await (const customer of stripe.customers.list({ limit: 100 })) {
     if (limit && scanned >= limit) break
@@ -184,10 +213,35 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     })
     const subscription = subscriptions.data[0] ?? null
 
-    const linked = byCustomerId.get(customer.id)
+    const owner = normalizeAuthUserId(customer.metadata?.visitorAuthUserId)
     const candidates = byEmail.get(email) ?? []
 
-    if (!linked && candidates.length === 0) {
+    const target = resolveReconcileTarget({
+      customerOwnerAuthUserId: owner,
+      linkedProfile: byCustomerId.get(customer.id),
+      ownedProfile: owner ? byAuthUserId.get(owner) : null,
+      emailCandidateCount: candidates.length,
+    })
+
+    if (target.kind === 'mismatched') {
+      mismatched.push({
+        customerId: customer.id,
+        email,
+        profileId: target.profile.id,
+        owner: owner ?? '',
+      })
+      continue
+    }
+
+    if (target.kind === 'unproven') {
+      // The old code adopted this case on the strength of the shared email.
+      // It is reported instead: an email match is a lead for a human, never a
+      // licence to hand over someone's billing portal and membership.
+      unproven.push({ customerId: customer.id, email, status: subscription?.status ?? null })
+      continue
+    }
+
+    if (target.kind === 'none') {
       if (subscription) {
         // Only a subscription that could still grant access is a problem. A
         // customer whose subscription ended and whose profile is gone is
@@ -202,15 +256,7 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
       continue
     }
 
-    // Prefer the already-linked profile; otherwise adopt the sole email match.
-    // Ambiguous email matches are left alone rather than guessed at.
-    const profile = linked ?? (candidates.length === 1 ? candidates[0] : null)
-
-    if (!profile) {
-      ambiguous += 1
-      emit(`⚠️  ${email}: ${candidates.length} profiles share this email — skipping, resolve by hand`)
-      continue
-    }
+    const profile = target.profile
 
     const desired: Record<string, unknown> = {}
 
@@ -268,6 +314,8 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
   emit(`DRIFTED    : ${drifted.length}`)
   emit(`ORPHANED   : ${orphaned.length}`)
   emit(`DUPLICATE  : ${duplicates.size}`)
+  emit(`UNPROVEN   : ${unproven.length}`)
+  emit(`MISMATCHED : ${mismatched.length}`)
   if (historicalOrphans > 0) {
     // Counted, not warned about: closed records with no profile need no action.
     emit(`(${historicalOrphans} ended subscription(s) with no profile — historical, no action)`)
@@ -282,10 +330,35 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
   if (orphaned.length > 0) {
     emit(`\n⚠️  ${orphaned.length} Stripe customer(s) have a subscription but NO visitor profile.`)
     emit('   This is what destroyed profile rows look like. Resolve by hand:')
-    emit('   the visitor must sign in (creating an auth user + profile), then re-run')
-    emit('   this script to re-link them.\n')
+    emit('   the visitor signs in (creating an auth user + profile), then set')
+    emit('   metadata.visitorAuthUserId on the customer in Stripe to that auth user')
+    emit('   — signing in alone does not prove who paid — and re-run this script.\n')
     for (const row of orphaned) {
       emit(`  [ORPHANED] ${row.customerId} <${row.email}> subscription=${row.status}`)
+    }
+  }
+
+  if (unproven.length > 0) {
+    emit(`\n⚠️  ${unproven.length} Stripe customer(s) match a profile by email only.`)
+    emit('   Email is not ownership: a customer keeps the address it was created')
+    emit('   with, and this account also holds customers made by hand. Nothing was')
+    emit('   written. Confirm the payer by hand, then set')
+    emit('   metadata.visitorAuthUserId on the customer in Stripe and re-run.\n')
+    for (const row of unproven) {
+      emit(
+        `  [UNPROVEN] ${row.customerId} <${row.email}> subscription=${row.status ?? 'none'}`
+      )
+    }
+  }
+
+  if (mismatched.length > 0) {
+    emit(`\n⛔ ${mismatched.length} profile(s) hold a Stripe customer that names another owner.`)
+    emit('   A wrong linkage already exists. Nothing was written to these profiles;')
+    emit('   resolve the ownership by hand before this run can heal them.\n')
+    for (const row of mismatched) {
+      emit(
+        `  [MISMATCHED] ${row.customerId} <${row.email}> profile=${row.profileId} stripe_owner=${row.owner}`
+      )
     }
   }
 
@@ -304,7 +377,8 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     drifted: drifted.length,
     orphaned: orphaned.length,
     duplicate: duplicates.size,
-    ambiguous,
+    unproven: unproven.length,
+    mismatched: mismatched.length,
     historical: historicalOrphans,
   }
 
