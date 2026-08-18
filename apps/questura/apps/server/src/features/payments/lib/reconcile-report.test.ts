@@ -24,7 +24,8 @@ const CLEAN_PROFILES = {
   planned: 0,
   orphaned: 0,
   duplicate: 0,
-  ambiguous: 0,
+  unproven: 0,
+  mismatched: 0,
   historical: 0,
 }
 const CLEAN_AUDIT = {
@@ -245,5 +246,20 @@ describe('exceedsApplyCap', () => {
 
   it('has no cap when none is given, which is the manual CLI default', () => {
     expect(exceedsApplyCap(10_000, null)).toBe(false)
+  })
+})
+
+describe('ownership findings escalate', () => {
+  // An email-only match is not something the apply pass may repair, so finding
+  // one has to reach a human the same way ORPHANED and DUPLICATE do.
+  it.each(['unproven', 'mismatched'])('treats %s as needing attention', (key) => {
+    const classified = classifyStep({
+      step: 'profiles',
+      counts: { ...CLEAN_PROFILES, [key]: 1 },
+      lines: [],
+    })
+
+    expect(classified.status).toBe('attention')
+    expect(classified.escalations).toContain(key)
   })
 })

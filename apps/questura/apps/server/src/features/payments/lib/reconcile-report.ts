@@ -58,7 +58,10 @@ export type StepStatus = 'ok' | 'attention' | 'error'
  */
 export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly string[]>> = {
   verify: ['missing', 'disabled'],
-  profiles: ['orphaned', 'duplicate'],
+  // `unproven` and `mismatched` are ownership questions only a human can
+  // answer: an email match is not proof, so the script reports them instead of
+  // adopting them, and the nightly must not let that report go unread.
+  profiles: ['orphaned', 'duplicate', 'unproven', 'mismatched'],
   audit: ['stuck', 'unknown'],
   // Pruning old webhook rows is the job working. A throw still escalates.
   retention: [],
@@ -70,7 +73,7 @@ export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly stri
  */
 const SUMMARY_COUNTS: Readonly<Record<ReconcileStepName, readonly string[]>> = {
   verify: ['missing', 'disabled', 'extra'],
-  profiles: ['relinkable', 'drifted', 'applied', 'orphaned', 'duplicate'],
+  profiles: ['relinkable', 'drifted', 'applied', 'orphaned', 'duplicate', 'unproven', 'mismatched'],
   audit: ['stuck', 'unknown', 'in_period', 'contested', 'closed'],
   retention: ['expired', 'deleted'],
 }
