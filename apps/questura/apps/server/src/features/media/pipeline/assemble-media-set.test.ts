@@ -17,6 +17,15 @@ const makeSource = async (): Promise<Buffer> =>
     .jpeg()
     .toBuffer()
 
+/**
+ * Real libvips work — see the note in `from-source.test.ts`. This test builds a
+ * 2400x1600 source and every variant off it, which makes it one of the three
+ * slowest tests in the suite and the only one in this file. vitest's 5s default
+ * flaked it on a loaded machine; raised here per test so the default still
+ * guards everything else.
+ */
+const IMAGE_WORK_TIMEOUT_MS = 30_000
+
 describe('assembleMediaSetFromSource', () => {
   it('skips legacy Bunny URL sync while creating source and variant media assets', async () => {
     const createCalls: Array<Record<string, unknown>> = []
@@ -52,5 +61,5 @@ describe('assembleMediaSetFromSource', () => {
         [BUNNY_ORIGINAL_URL_SYNC_CONTEXT_KEY]: true,
       })
     }
-  })
+  }, IMAGE_WORK_TIMEOUT_MS)
 })
