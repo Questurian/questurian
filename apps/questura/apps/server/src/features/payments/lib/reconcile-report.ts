@@ -61,7 +61,11 @@ export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly stri
   // `unproven` and `mismatched` are ownership questions only a human can
   // answer: an email match is not proof, so the script reports them instead of
   // adopting them, and the nightly must not let that report go unread.
-  profiles: ['orphaned', 'duplicate', 'unproven', 'mismatched'],
+  // `multi_live` is a customer Stripe is billing twice. The checkout collapse
+  // repairs the case it can see; this count is what catches the rest, and
+  // deciding which subscription to keep — and therefore who gets refunded — is
+  // a human call, so it escalates.
+  profiles: ['orphaned', 'duplicate', 'unproven', 'mismatched', 'multi_live'],
   audit: ['stuck', 'unknown'],
   // Pruning old webhook rows is the job working. A throw still escalates.
   retention: [],
@@ -73,7 +77,16 @@ export const ESCALATING_COUNTS: Readonly<Record<ReconcileStepName, readonly stri
  */
 const SUMMARY_COUNTS: Readonly<Record<ReconcileStepName, readonly string[]>> = {
   verify: ['missing', 'disabled', 'extra'],
-  profiles: ['relinkable', 'drifted', 'applied', 'orphaned', 'duplicate', 'unproven', 'mismatched'],
+  profiles: [
+    'relinkable',
+    'drifted',
+    'applied',
+    'orphaned',
+    'duplicate',
+    'unproven',
+    'mismatched',
+    'multi_live',
+  ],
   audit: ['stuck', 'unknown', 'in_period', 'contested', 'closed'],
   retention: ['expired', 'deleted'],
 }
