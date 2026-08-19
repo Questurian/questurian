@@ -62,12 +62,23 @@ async function rejectedForCancelledSubscription(
  * `resyncSubscription` as `accessRevoked` rather than letting it re-read the
  * metadata that was never updated.
  *
- * This is the common shape of a refund, not an edge case: support cancels the
+ * In practice Stripe has been observed accepting this write on an
+ * already-cancelled subscription (2026-08-19, `sub_1U5yA8`), so `false` is the
+ * rare answer rather than the usual one. It is still handled, because Stripe
+ * documents no guarantee that a metadata-only update stays exempt from the
+ * "a canceled subscription can only update its cancellation_details" rule, and
+ * the failure mode if that changed unnoticed is a refunded visitor keeping
+ * access.
+ *
+ * What *is* the common shape of a refund is the order: support cancels the
  * subscription and *then* refunds the charge, so `charge.refunded` routinely
- * arrives against a cancelled subscription. Throwing there would 500 the
- * webhook, Stripe would retry for three days and never succeed, and the
- * refunded visitor would keep their access with `paidThroughAt` still sitting
- * at the period end they were given their money back for.
+ * arrives against a cancelled subscription — which is why
+ * `cancelRefundedSubscription` below, not this write, is where that ordinary
+ * flow actually met Stripe's rejection. Rethrowing an expected rejection from
+ * either call 500s the webhook, Stripe retries for three days and never
+ * succeeds, and the refunded visitor keeps their access with `paidThroughAt`
+ * still sitting at the period end they were given their money back for. That is
+ * not hypothetical: it is what `evt_3U5yA4` did until 2026-08-19.
  */
 export async function writeAccessRevocation(
   subscriptionId: string,
