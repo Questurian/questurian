@@ -134,7 +134,10 @@ describe('applyPlannedUpdate', () => {
 
     await applyPlannedUpdate(plan(), d)
 
-    expect(locked).toEqual(['stripe:subscription:sub_1'])
+    // The customer, not the subscription: that is what the profile row belongs
+    // to, and a subscription-keyed lock excludes nothing when the same customer
+    // has a second subscription writing the same row.
+    expect(locked).toEqual(['stripe:customer:cus_1'])
   })
 
   it('writes what Stripe says now, not what the scan planned', async () => {
@@ -209,7 +212,7 @@ describe('applyPlannedUpdate', () => {
     })
   })
 
-  it('runs a linkage-only row unlocked, guarded by the timestamp alone', async () => {
+  it('locks a linkage-only row too, on its customer', async () => {
     const { deps: d, writeProfile, locked } = deps({
       readProfile: async () => profile({ stripeCustomerId: null, stripeSubscriptionId: null }),
       readDesired: async () => ({ customerId: 'cus_1', subscriptionId: null, state: null }),
@@ -221,7 +224,7 @@ describe('applyPlannedUpdate', () => {
     )
 
     expect(outcome).toBe('applied')
-    expect(locked).toEqual([])
+    expect(locked).toEqual(['stripe:customer:cus_1'])
     expect(writeProfile).toHaveBeenCalledWith('p1', { stripeCustomerId: 'cus_1' })
   })
 
