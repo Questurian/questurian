@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   stripeCustomerList: vi.fn(),
   stripeSubscriptionList: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
+  stripePriceRetrieve: vi.fn(),
   // Mutable so a single suite can exercise both sides of the flag; the config
   // module is read at request time, not captured at import.
   features: { endorselyAffiliates: false, stripePromotionCodes: false },
@@ -27,6 +28,7 @@ vi.mock('@/payments/lib/stripe', () => ({
     customers: { create: mocks.stripeCustomerCreate, list: mocks.stripeCustomerList },
     subscriptions: { list: mocks.stripeSubscriptionList },
     checkout: { sessions: { create: mocks.stripeCheckoutCreate } },
+    prices: { retrieve: mocks.stripePriceRetrieve },
   },
 }))
 
@@ -52,6 +54,8 @@ vi.mock('@/shared/config', () => ({
   },
 }))
 
+import { catalogPriceRetrieve } from './__fixtures__/membership-prices'
+
 import { POST } from '@/app/api/payments/create-checkout-session/route'
 
 let consoleLogSpy: ReturnType<typeof vi.spyOn> | null = null
@@ -73,6 +77,10 @@ async function sessionParams() {
 describe('create checkout session payment methods', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Checkout validates the configured price against the catalog before it
+    // charges anything, so a session is only created when Stripe returns a
+    // price that matches.
+    mocks.stripePriceRetrieve.mockImplementation(catalogPriceRetrieve())
     mocks.features.stripePromotionCodes = false
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     mocks.stripeCustomerList.mockResolvedValue({ data: [] })

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   stripeCustomerList: vi.fn(),
   stripeSubscriptionList: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
+  stripePriceRetrieve: vi.fn(),
 }))
 
 vi.mock('@/features/visitor-auth/lib/current-principal', () => ({
@@ -32,6 +33,9 @@ vi.mock('@/payments/lib/stripe', () => ({
       sessions: {
         create: mocks.stripeCheckoutCreate,
       },
+    },
+    prices: {
+      retrieve: mocks.stripePriceRetrieve,
     },
   },
 }))
@@ -60,6 +64,8 @@ vi.mock('@/shared/config', () => ({
   },
 }))
 
+import { catalogPrice, catalogPriceRetrieve } from './__fixtures__/membership-prices'
+
 import { POST } from '@/app/api/payments/create-checkout-session/route'
 
 let consoleLogSpy: ReturnType<typeof vi.spyOn> | null = null
@@ -78,6 +84,10 @@ function createRequest(body: Record<string, unknown> = {}) {
 describe('create checkout session route auth guard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Checkout validates the configured price against the catalog before it
+    // charges anything, so a session is only created when Stripe returns a
+    // price that matches.
+    mocks.stripePriceRetrieve.mockImplementation(catalogPriceRetrieve())
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
       id: 10,
@@ -310,5 +320,146 @@ describe('create checkout session route auth guard', () => {
     await expect(response.json()).resolves.toEqual({ error: 'Origin not allowed.' })
     expect(mocks.requireVisitorPrincipal).not.toHaveBeenCalled()
     expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
+  })
+})
+
+/**
+ * Checkout used to charge `STRIPE_PRICE_ID_*` straight out of host env.
+ *
+ * Every check on what that price actually is lived on `/api/payments/plans`,
+ * the display path — so a yearly price that really billed monthly, or billed in
+ * EUR, or billed $99.99, was dropped from the pricing page with nothing but a
+ * log line while this endpoint went on charging it. `/purchase/yearly` posts
+ * `{"plan":"yearly"}` without ever loading the pricing page, and the nav
+ * Subscribe copy is hardcoded, so a buyer could reach the charge without
+ * passing the one check that existed.
+ */
+describe('create checkout session price validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    mocks.stripePriceRetrieve.mockImplementation(catalogPriceRetrieve())
+    mocks.requireVisitorPrincipal.mockResolvedValue({
+      principal: { id: 'visitor_123', email: 'visitor@example.com', profileId: 10 },
+      error: null,
+      status: 200,
+    })
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'none',
+      stripeCustomerId: 'cus_123',
+    })
+    mocks.stripeCustomerCreate.mockResolvedValue({ id: 'cus_123' })
+    mocks.stripeCustomerList.mockResolvedValue({ data: [] })
+    mocks.stripeSubscriptionList.mockResolvedValue({ data: [] })
+    mocks.updateVisitorProfileByAuthUserId.mockResolvedValue({ id: 10 })
+    mocks.stripeCheckoutCreate.mockResolvedValue({
+      id: 'cs_123',
+      url: 'https://checkout.stripe.test/session',
+    })
+  })
+
+  afterEach(() => {
+    consoleLogSpy?.mockRestore()
+    consoleLogSpy = null
+  })
+
+  async function expectRefused(body: Record<string, unknown> = {}) {
+    const response = await POST(createRequest(body))
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: 'That plan is not available right now.',
+    })
+    expect(mocks.stripeCheckoutCreate).not.toHaveBeenCalled()
+    return response
+  }
+
+  it('refuses to charge a yearly price that actually bills monthly', async () => {
+    mocks.stripePriceRetrieve.mockResolvedValue(
+      catalogPrice('yearly', 'price_yearly_123', {
+        recurring: { interval: 'month', interval_count: 1 },
+      })
+    )
+
+    await expectRefused({ plan: 'yearly' })
+  })
+
+  it('refuses to charge a price billed in another currency', async () => {
+    mocks.stripePriceRetrieve.mockResolvedValue(
+      catalogPrice('monthly', 'price_123', { currency: 'eur' })
+    )
+
+    await expectRefused()
+  })
+
+  it('refuses to charge more than the advertised catalog amount', async () => {
+    mocks.stripePriceRetrieve.mockResolvedValue(
+      catalogPrice('yearly', 'price_yearly_123', { unit_amount: 9999 })
+    )
+
+    await expectRefused({ plan: 'yearly' })
+  })
+
+  it('refuses to charge a price that is not recurring at all', async () => {
+    mocks.stripePriceRetrieve.mockResolvedValue(
+      catalogPrice('monthly', 'price_123', { recurring: null })
+    )
+
+    await expectRefused()
+  })
+
+  it('fails closed when Stripe cannot resolve the configured price', async () => {
+    mocks.stripePriceRetrieve.mockRejectedValue(new Error('No such price: price_123'))
+
+    await expectRefused()
+  })
+
+  // The refusal has to land before anything is created on the Stripe side.
+  // A customer minted for a checkout that is then refused is an orphan row
+  // nothing points at.
+  it('refuses before creating a Stripe customer', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue({
+      id: 10,
+      subscriptionStatus: 'none',
+      stripeCustomerId: null,
+    })
+    mocks.stripePriceRetrieve.mockResolvedValue(
+      catalogPrice('monthly', 'price_123', { unit_amount: 9999 })
+    )
+
+    await expectRefused()
+
+    expect(mocks.stripeCustomerCreate).not.toHaveBeenCalled()
+    expect(mocks.stripeCustomerList).not.toHaveBeenCalled()
+  })
+
+  // The one mismatch that is deliberate: the laptop bills $0.50/month on the
+  // same product while the site advertises $12.99. Validation must not break
+  // that. See apps/questura/docs/membership-pricing.md.
+  it('still sells the cheaper laptop test charge', async () => {
+    mocks.stripePriceRetrieve.mockResolvedValue(
+      catalogPrice('monthly', 'price_123', { unit_amount: 50 })
+    )
+
+    const response = await POST(createRequest())
+
+    expect(response.status).toBe(200)
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ line_items: [{ price: 'price_123', quantity: 1 }] }),
+      expect.anything(),
+    )
+  })
+
+  // The id charged is the validated plan's, not whatever the body asked for a
+  // price of — the two must not be able to drift apart.
+  it('charges the price id the validated plan carries', async () => {
+    await POST(createRequest({ plan: 'yearly' }))
+
+    expect(mocks.stripePriceRetrieve).toHaveBeenCalledWith('price_yearly_123', expect.anything())
+    expect(mocks.stripeCheckoutCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ line_items: [{ price: 'price_yearly_123', quantity: 1 }] }),
+      expect.anything(),
+    )
   })
 })
