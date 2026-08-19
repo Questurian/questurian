@@ -45,6 +45,7 @@ require_regular_file "$SERVER_ENV_SOURCE"
 require_regular_file "$CLIENT_ENV_SOURCE"
 require_regular_file "$HOST_SOURCE/compose.yml"
 require_regular_file "$HOST_SOURCE/tunnel-config.yml"
+require_regular_file "$HOST_SOURCE/wait-for-postgres.sh"
 
 PNPM_BIN=${QUESTURA_PNPM_BIN:-}
 if [[ -z $PNPM_BIN ]]; then
@@ -72,6 +73,7 @@ install -m 0600 "$SERVER_ENV_SOURCE" "$stage_directory/config/server.env"
 install -m 0600 "$CLIENT_ENV_SOURCE" "$stage_directory/config/client.env"
 install -m 0644 "$HOST_SOURCE/compose.yml" "$stage_directory/infra/compose.yml"
 install -m 0644 "$HOST_SOURCE/tunnel-config.yml" "$stage_directory/infra/tunnel-config.yml"
+install -m 0755 "$HOST_SOURCE/wait-for-postgres.sh" "$stage_directory/infra/wait-for-postgres.sh"
 
 expected_compose_json="$stage_directory/expected-compose.json"
 if [[ -f $INFRA_ROOT/.env ]]; then
@@ -192,6 +194,7 @@ for path in \
   "$INFRA_ROOT/.env" \
   "$INFRA_ROOT/compose.yml" \
   "$INFRA_ROOT/tunnel-config.yml" \
+  "$INFRA_ROOT/wait-for-postgres.sh" \
   "$RENDERED_ROOT"; do
   if [[ -e $path ]]; then cp -a "$path" "$backup_directory/"; fi
 done
@@ -203,6 +206,7 @@ install -m 0600 "$stage_directory/config/client.env" "$CONFIG_ROOT/client.env"
 install -m 0600 "$stage_directory/infra/.env" "$INFRA_ROOT/.env"
 install -m 0644 "$stage_directory/infra/compose.yml" "$INFRA_ROOT/compose.yml"
 install -m 0644 "$stage_directory/infra/tunnel-config.yml" "$INFRA_ROOT/tunnel-config.yml"
+install -m 0755 "$stage_directory/infra/wait-for-postgres.sh" "$INFRA_ROOT/wait-for-postgres.sh"
 for unit in "$stage_directory/infra/systemd"/*.service "$stage_directory/infra/systemd"/*.timer; do
   install -m 0644 "$unit" "$RENDERED_ROOT/$(basename -- "$unit")"
 done

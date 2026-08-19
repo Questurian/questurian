@@ -12,6 +12,12 @@ Environment=NODE_ENV=production
 Environment=NODE_OPTIONS=--no-deprecation
 EnvironmentFile=%h/questura/config/server.env
 EnvironmentFile=%h/questura/current-server/.env.release
+# Postgres is a Docker container owned by the system daemon, so this user
+# unit has nothing to order itself after. Without the wait, a reboot starts
+# the server before the database is listening: it logs a connection failure,
+# throws an unhandledRejection, and is restarted into health about a minute
+# later. See host/wait-for-postgres.sh.
+ExecStartPre=%h/questura/infra/wait-for-postgres.sh
 ExecStart=@PNPM_BIN@ exec next start -H 127.0.0.1 -p 4000
 Restart=always
 RestartSec=5
