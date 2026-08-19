@@ -51,10 +51,16 @@ async function chargeFromDispute(dispute: Stripe.Dispute): Promise<Stripe.Charge
  *
  * Stripe is the preferred home for the flag because every later resync refetches
  * the subscription and would otherwise re-derive access from a period the
- * visitor was refunded for. But a cancelled subscription will not take the
- * write, and cancel-then-refund is the ordinary refund flow — so when the write
- * is refused the revocation is handed straight to the resync instead. The
- * profile is what gates access, so it ends up correct either way.
+ * visitor was refunded for.
+ *
+ * A cancelled subscription *does* take a metadata-only write — observed on this
+ * account 2026-08-19, where `sub_1U5yA8` carried all three revocation keys
+ * despite having been cancelled 42 minutes before the refund that wrote them.
+ * The `flagged === false` fallback below is therefore defensive, not the usual
+ * path: it exists because Stripe documents no guarantee either way, so a future
+ * tightening would otherwise silently leave the profile un-revoked. When the
+ * write is refused the revocation is handed straight to the resync instead, and
+ * the profile is what gates access, so it ends up correct either way.
  */
 async function markAccessRevoked(
   subscriptionId: string,
