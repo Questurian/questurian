@@ -1,7 +1,6 @@
 import type { User } from '@/lib/user/types';
 
-import { isActiveMember } from '../../Payments/lib/membership';
-import type { BillingInfo, MembershipState } from '../types/membership.types';
+import type { BillingInfo, MembershipState, MembershipType } from '../types/membership.types';
 
 function formatDate(dateString: string | null): string {
   if (!dateString) return '';
@@ -24,8 +23,15 @@ function formatDate(dateString: string | null): string {
   return formattedDate;
 }
 
-export function getBillingInfo(user: User | null): BillingInfo | null {
+/**
+ * `entitled` is the server's access decision (`membership.active`), passed in by
+ * the caller. A subscription can read `active` while entitlement has been taken
+ * away from it, and a "next billing" line under a membership that grants nothing
+ * is the same false claim as the badge above it.
+ */
+export function getBillingInfo(user: User | null, entitled: boolean): BillingInfo | null {
   if (!user || user.subscriptionStatus !== 'active') return null;
+  if (!entitled) return null;
   if (user.cancelAtPeriodEnd) return null;
 
   if (user.subscriptionRenewsAt) {
@@ -185,29 +191,80 @@ function membershipStateFromStatus(user: User | null): MembershipState {
   }
 }
 
+/** States whose copy tells the visitor they have paid access right now. */
+const STATES_CLAIMING_ACCESS: ReadonlySet<MembershipType> = new Set<MembershipType>([
+  'active',
+  'expiring',
+  'payment_issue',
+]);
+
+function claimsCurrentAccess(state: MembershipState, user: User): boolean {
+  if (STATES_CLAIMING_ACCESS.has(state.type)) return true;
+
+  // `cancelled` covers two branches above. The one that claims access is the
+  // "remains active until <date>" shape, and it is the only one reached with an
+  // unexpired `membershipExpiration`.
+  return state.type === 'cancelled' && Boolean(user.membershipExpiration);
+}
+
+/**
+ * What the card says when the subscription is alive but grants nothing.
+ *
+ * No Upgrade button: the subscription still exists and still bills, so selling a
+ * second one is the worst available answer. The portal is the next step instead
+ * -- it is where the visitor can stop the billing they are getting nothing for.
+ */
+function accessPausedState(): MembershipState {
+  return {
+    type: 'access_paused',
+    label: 'Access Paused',
+    badgeClass: 'bg-[#fff3e0] text-[#e65100] border border-[#ffe0b2]',
+    description:
+      'Your premium access is paused while a payment on this subscription is being resolved. ' +
+      'The subscription itself has not been cancelled, and access returns on its own if the ' +
+      'payment settles. Use "Update Payment Method" below to manage or cancel it.',
+    showCancelButton: false,
+    showUpgradeButton: false,
+    showReactivateButton: false,
+  };
+}
+
 /**
  * The membership as the account page should present it.
  *
- * The status enum alone produced a dead end: a subscription Stripe has already
- * deleted reports `canceled` while the period it was paid for is still running,
- * so the card said "cancelled -- Upgrade" to a visitor who was still entitled.
- * `/purchase` gates on the same entitlement (`MembershipGuard` -> `isActiveMember`
- * -> `membership.active`) and turned them away as an existing member. A button
- * that cannot work, in front of someone who might reasonably answer it by paying
- * a second time through another route.
+ * `entitled` is `membership.active` from `/api/me` -- the server's single access
+ * decision, and the same read `MembershipGuard` makes. It is passed in rather
+ * than read here so this module stays free of the dev-override store and can be
+ * exercised directly; `useMembershipSection` supplies it.
  *
- * Entitlement is the tie-breaker because it is the thing that actually gates
- * access, and it is derived once on the server. Offering to sell a membership to
- * someone who already has one is wrong regardless of which status produced it,
- * so this is applied to every branch rather than to the one that was reported.
+ * The status enum alone produced a dead end in both directions.
+ *
+ * Claiming too little: a subscription Stripe has already deleted reports
+ * `canceled` while the period it was paid for is still running, so the card said
+ * "cancelled -- Upgrade" to a visitor who was still entitled, and `/purchase`
+ * then turned them away as an existing member.
+ *
+ * Claiming too much: a refund or a dispute withdraws entitlement without
+ * touching the subscription -- `charge.dispute.created` deliberately leaves it
+ * alive, because a dispute can be won -- so `subscriptionStatus` stays `active`
+ * and the card said "Premium Member. Your premium membership is active." while
+ * every paid article returned 403. Profiles the webhooks left stuck, the class
+ * `audit-access-revocations.ts` exists to find, have the same shape.
+ *
+ * Entitlement decides both, because it is the thing that actually gates the
+ * articles: never sell to someone who already has access, never promise access
+ * to someone who has none.
  */
-export function getMembershipState(user: User | null): MembershipState {
+export function getMembershipState(user: User | null, entitled: boolean): MembershipState {
   const state = membershipStateFromStatus(user);
 
-  // `membership.active` is the server's entitlement decision; `isActiveMember`
-  // is the same read the purchase guard makes, dev override included, so the two
-  // screens cannot disagree about who is already a member.
-  if (!user || !state.showUpgradeButton || !isActiveMember(user)) return state;
+  if (!user) return state;
+
+  if (!entitled) {
+    return claimsCurrentAccess(state, user) ? accessPausedState() : state;
+  }
+
+  if (!state.showUpgradeButton) return state;
 
   return {
     ...state,

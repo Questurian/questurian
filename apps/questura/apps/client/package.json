@@ -8,6 +8,7 @@
     "check:global-css": "node scripts/check-global-css-boundaries.mjs",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --experimental-strip-types --test \"src/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
