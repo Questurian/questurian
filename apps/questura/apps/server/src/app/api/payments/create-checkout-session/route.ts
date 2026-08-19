@@ -182,6 +182,7 @@ export async function POST(req: NextRequest) {
     // active code in the Stripe account to anyone on any plan, so one
     // unrestricted 100%-off code is a free membership for whoever learns it.
     const allowPromotionCodes = APP_CONFIG.features.stripePromotionCodes
+    const forceThreeDSecure = APP_CONFIG.features.stripeForceThreeDSecure
 
     // A double-clicked buy button otherwise creates two sessions on the same
     // customer. The key is derived from the request rather than the visitor
@@ -195,6 +196,7 @@ export async function POST(req: NextRequest) {
       cancelUrl,
       referralId,
       allowPromotionCodes,
+      forceThreeDSecure,
     })
 
     const session = await stripe.checkout.sessions.create({
@@ -211,7 +213,14 @@ export async function POST(req: NextRequest) {
       billing_address_collection: 'auto', // Optional: collect billing address
       subscription_data: {
         metadata // Also add metadata to subscription object
-      }
+      },
+      // Off unless the host asks for it. A US-issued card never triggers SCA on
+      // its own, so without this the subscription never passes through
+      // `incomplete` and the 3DS branch of the membership emails cannot be
+      // exercised against a real Stripe at all. See `stripeForceThreeDSecure`.
+      ...(forceThreeDSecure
+        ? { payment_method_options: { card: { request_three_d_secure: 'any' as const } } }
+        : {}),
     }, { idempotencyKey })
 
     logger.info('Created checkout session')

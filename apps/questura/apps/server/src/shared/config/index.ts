@@ -124,6 +124,20 @@ export const APP_CONFIG = {
     // (`first_time_transaction`, an applies-to price, a redemption cap).
     stripePromotionCodes: process.env.STRIPE_PROMOTION_CODES === 'true',
     homepageFeaturedAllowDrafts: process.env.HOMEPAGE_FEATURED_ALLOW_DRAFTS === 'true',
+    /**
+     * Ask the issuer to authenticate every Checkout card, even where it would
+     * not otherwise be required.
+     *
+     * Purely a testing lever, and off by default. SCA is an EU/UK rule, so a
+     * US-issued card never challenges on its own — which leaves the whole
+     * `incomplete → active` path (and the emails that hang off it) impossible
+     * to exercise from here. Forcing the request is the only way to make a real
+     * subscription pass through `incomplete` on this account.
+     *
+     * Never turn this on where real buyers can reach it: it adds a challenge
+     * step to every purchase and issuers decline some of them outright.
+     */
+    stripeForceThreeDSecure: process.env.STRIPE_FORCE_3DS === 'true',
   },
 
   // Backend URL - localhost for Phase 1

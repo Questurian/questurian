@@ -40,6 +40,7 @@ export type CheckoutIdempotencyInput = {
   cancelUrl: string
   referralId: string | null
   allowPromotionCodes: boolean
+  forceThreeDSecure: boolean
 }
 
 /**
@@ -68,6 +69,7 @@ export function checkoutIdempotencyKey(
         input.cancelUrl,
         input.referralId ?? '',
         String(input.allowPromotionCodes),
+        String(input.forceThreeDSecure),
         String(bucket),
       ].join('\u0000')
     )
