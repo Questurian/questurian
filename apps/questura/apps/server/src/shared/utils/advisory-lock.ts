@@ -12,19 +12,20 @@ import { logger } from './logger'
  * Payload has no way to express "hold a row against a concurrent handler while
  * I go and ask Stripe something", and the operation is not a single statement,
  * so ordinary row locks do not help. Stripe delivers webhooks in parallel, so
- * two events for the same subscription can otherwise interleave: both read the
+ * two events for the same customer can otherwise interleave: both read the
  * same before-state, both write, and both conclude the same transition
  * happened and send the same email twice.
  *
  * This is the only raw SQL in runtime server code. It is deliberate and narrow:
- * one lock, keyed per subscription, so unrelated visitors never contend.
+ * one lock, keyed per Stripe customer (`customerLockKey`) or per event, so
+ * unrelated visitors never contend.
  *
  * Connection ownership, and why it is not Payload's pool
  * ------------------------------------------------------
  * A session-level lock holds its connection for the whole of `work` — every
  * Stripe call and email send inside it. Taken from Payload's pool that is a
  * mutual wait, not contention: the Stripe webhook handler locks per event, then
- * `resyncSubscription` locks per subscription inside it, and the queries those
+ * `resyncSubscription` locks per customer inside it, and the queries those
  * locks exist to protect need connections from the same pool. Enough concurrent
  * deliveries (measured 2026-08-15: roughly 7-9 against `pool.max: 20`) and every
  * connection is held by a lock holder that cannot progress without a connection

@@ -23,11 +23,11 @@
  * values to write. Every write re-derives from scratch:
  *
  *   1. Under the same advisory lock the webhook path uses
- *      (`stripe:subscription:${id}`, see `subscription-resync.ts`), so a resync
- *      cannot interleave with this at all.
+ *      (`customerLockKey`, see `subscription-lock.ts`), so a resync cannot
+ *      interleave with this at all. The key is the customer, so it also covers
+ *      linkage-only rows, which have no subscription to name.
  *   2. Re-reading the profile, and abandoning the row if it changed since the
- *      scan saw it -- a compare-and-swap on `updatedAt`. This is what covers
- *      the rows with no subscription to lock on.
+ *      scan saw it -- a compare-and-swap on `updatedAt`.
  *   3. Re-reading Stripe, including which subscription owns the row. The
  *      revocation flag lives in subscription metadata, so a fresh read is the
  *      only thing that can see a refund the scan snapshot predates.
@@ -40,6 +40,7 @@
  * `vitest`, which only collects `src/`.
  */
 
+import { customerLockKey } from './subscription-lock'
 import type { DerivedSubscriptionState } from './subscription-state'
 
 /** The profile fields reconciliation reads and writes. */
@@ -70,8 +71,9 @@ export type PlannedUpdate = {
   reason: 'RELINKABLE' | 'DRIFTED'
   customerId: string
   /**
-   * Lock key, and the subscription the scan decided owns this row. Null when
-   * the plan is customer linkage only.
+   * The subscription the scan decided owns this row, re-checked under the lock.
+   * Null when the plan is customer linkage only. Not the lock key -- that is
+   * the customer, because that is what the profile row belongs to.
    */
   subscriptionId: string | null
   /** Compare-and-swap token, captured when the scan read the profile. */
@@ -218,12 +220,10 @@ export async function applyPlannedUpdate(
   }
 
   try {
-    // No subscription means no key the webhook path would ever contend on, so
-    // there is nothing to serialise against and the `updatedAt` check above is
-    // the whole guard for those rows.
-    return update.subscriptionId
-      ? await deps.withLock(`stripe:subscription:${update.subscriptionId}`, work)
-      : await work()
+    // Every planned row has a customer, so every row is serialised against the
+    // webhook path -- including linkage-only rows, which a subscription-keyed
+    // lock left running with the `updatedAt` check as their only guard.
+    return await deps.withLock(customerLockKey(update.customerId), work)
   } catch (error) {
     // One unwritable row must not hide the rest of the plan from the report.
     deps.emit(

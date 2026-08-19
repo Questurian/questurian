@@ -844,6 +844,39 @@ describe('adversarial', () => {
     expect(profile().stripeSubscriptionId).toBe('sub_NEW')
     expect(entitled()).toBe(true)
   })
+
+  it('N13: a delayed event for the old subscription cannot outrun the collapse onto the new one', async () => {
+    // The lock has to be keyed on what the *row* belongs to. Keyed per
+    // subscription, these two deliveries take different keys and run straight
+    // through each other: the sub_A resync decides it owns the row while sub_A
+    // is still live, the checkout collapse then refunds and cancels sub_A and
+    // writes sub_B, and the sub_A write lands last -- leaving the profile on a
+    // cancelled, refunded subscription while sub_B quietly bills.
+    const a = makeSub('sub_A', { created: now() - 100, latest_invoice: 'in_A' })
+    const b = makeSub('sub_B', { created: now() - 50, latest_invoice: 'in_B' })
+    store.subs.set(a.id, a)
+    store.subs.set(b.id, b)
+    store.invoices.set('in_A', makeInvoice('in_A', { subscription: 'sub_A' }))
+    store.invoices.set('in_B', makeInvoice('in_B', { subscription: 'sub_B' }))
+    store.charges.set('ch_in_A', { id: 'ch_in_A', invoice: 'in_A', refunded: false, payment_intent: 'pi_in_A' })
+    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
+    db['visitor-profiles'][0].subscriptionStatus = 'active'
+    db['visitor-profiles'][0].paidThroughAt = new Date(Date.now() + 20 * DAY * 1000).toISOString()
+
+    await Promise.all([
+      deliver('customer.subscription.updated', a, { id: 'evt_A' }),
+      deliver('checkout.session.completed', {
+        id: 'cs_B', customer: 'cus_1', subscription: 'sub_B',
+        metadata: { visitorAuthUserId: 'auth_1' }, customer_details: {},
+      }, { id: 'evt_B' }),
+    ])
+
+    // The row must name the subscription that is actually billing, so /account
+    // can cancel it and entitlement is derived from something alive.
+    expect(profile().stripeSubscriptionId).toBe('sub_B')
+    expect(store.subs.get(profile().stripeSubscriptionId as string)!.status).not.toBe('canceled')
+    expect(entitled()).toBe(true)
+  })
 })
 
 describe('resync ownership when the profile points at the dead subscription', () => {

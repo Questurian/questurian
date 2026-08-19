@@ -3,6 +3,7 @@ import type Stripe from 'stripe'
 import config from '@/payload.config'
 import { logger } from '@/shared/utils/logger'
 import { withAdvisoryLock } from '@/shared/utils/advisory-lock'
+import { customerLockKey } from './subscription-lock'
 import { resolveProfileForStripeCustomer } from './subscription-profile'
 import {
   sendMembershipConfirmationEmail,
@@ -42,6 +43,28 @@ export type ResyncOptions = {
    * asserts "not revoked"; omit the key entirely to read Stripe as usual.
    */
   accessRevoked?: AccessRevocation | null
+}
+
+/**
+ * The customer a subscription belongs to, read before the lock because the lock
+ * key depends on it.
+ *
+ * Reading this outside the lock is safe precisely because it is the one field
+ * that cannot change: Stripe never moves a subscription between customers.
+ * Nothing else from this response is used — every value the write derives from
+ * is refetched inside the lock, so a snapshot taken here cannot become the
+ * thing that gets written.
+ */
+async function fetchCustomerId(subscriptionId: string): Promise<string> {
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  const customerId =
+    typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
+
+  if (!customerId) {
+    throw new Error(`Subscription ${subscriptionId} has no customer; cannot resync`)
+  }
+
+  return customerId
 }
 
 /** `next_payment_attempt` lives on the invoice, so the grace needs it expanded. */
@@ -180,24 +203,22 @@ async function sendTransitionEmails(
  * Refetch a subscription from Stripe and write everything it implies onto the
  * matching Visitor profile, emitting emails for whatever actually changed.
  *
- * Serialised per subscription: the read, the Stripe call and the write are not
+ * Serialised per *customer*: the read, the Stripe call and the write are not
  * atomic, so without the lock two parallel deliveries would each observe the
- * same before-state and each decide the same transition occurred.
+ * same before-state and each decide the same transition occurred. The key is
+ * the customer rather than the subscription because the row this writes is the
+ * profile, and every one of a customer's subscriptions writes that same row —
+ * see `subscription-lock.ts`.
  */
 export async function resyncSubscription(
   subscriptionId: string,
   options: ResyncOptions = {}
 ): Promise<ResyncResult> {
   const payload = await getPayload({ config })
+  const customerId = await fetchCustomerId(subscriptionId)
 
-  return withAdvisoryLock(payload, `stripe:subscription:${subscriptionId}`, async () => {
+  return withAdvisoryLock(payload, customerLockKey(customerId), async () => {
     const subscription = await fetchSubscription(subscriptionId)
-    const customerId =
-      typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
-
-    if (!customerId) {
-      throw new Error(`Subscription ${subscriptionId} has no customer; cannot resync`)
-    }
 
     // Checkout copies its metadata onto the subscription, so even a renewal
     // years later still carries the visitor it belongs to. That is what makes a
