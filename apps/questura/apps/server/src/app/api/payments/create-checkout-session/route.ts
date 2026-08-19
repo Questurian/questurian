@@ -4,7 +4,7 @@ import { resolveStripeCustomerForVisitor, findLiveSubscription } from '@/payment
 import { APP_CONFIG, APP_URLS } from '@/shared/config'
 import { forbiddenOriginResponse, getCorsHeaders, handleCorsOptions } from '@/shared/utils/cors'
 import { requireVisitorPrincipal } from '@/features/visitor-auth/lib/current-principal'
-import { isPlanId, priceIdForPlan, type PlanId } from '@/payments/lib/membership-plans'
+import { getPurchasablePlan, isPlanId, type PlanId } from '@/payments/lib/membership-plans'
 import { checkPaymentsRateLimit, checkPaymentsVisitorRateLimit, paymentsRateLimitResponse } from '@/payments/lib/payments-rate-limit'
 import { safeReturnPath } from '@/payments/lib/safe-return-path'
 import { checkoutIdempotencyKey } from '@/payments/lib/checkout-idempotency'
@@ -124,19 +124,43 @@ export async function POST(req: NextRequest) {
     }
 
     const plan: PlanId = isPlanId(body?.plan) ? body.plan : 'monthly'
-    const priceId = priceIdForPlan(plan)
 
     // Where to send the buyer once the success page has confirmed entitlement.
     // Attacker-controlled by definition and destined for a URL Stripe redirects
     // a browser to, so it is validated here rather than trusted from the client.
     const returnTo = safeReturnPath(body?.returnTo)
 
-    if (!priceId) {
+    // The price is resolved through the same validation the pricing page uses,
+    // not read straight out of host env.
+    //
+    // The two paths used to disagree. `/api/payments/plans` checked the
+    // configured Stripe price against `MEMBERSHIP_CATALOG` and dropped any plan
+    // whose interval, currency or amount did not match — so a yearly price that
+    // actually billed monthly, or billed in EUR, or billed $99.99, simply
+    // vanished from the pricing page with only a log line. This endpoint did
+    // none of that and charged it anyway. A buyer never has to see the pricing
+    // page to get here: `/purchase/yearly` posts `{"plan":"yearly"}` directly
+    // and the nav Subscribe copy is hardcoded, so the one check that existed
+    // could be bypassed just by taking the normal route through the site.
+    //
+    // The mismatch that is *not* an error is the laptop test charge: a price
+    // cheaper than the catalog is deliberate and stays purchasable. See
+    // `apps/questura/docs/membership-pricing.md`.
+    const purchasablePlan = await getPurchasablePlan(plan)
+
+    if (!purchasablePlan) {
+      // Also covers a plan with no configured price at all, which is how yearly
+      // behaved before an annual price existed in Stripe. Failing closed here
+      // costs a sale; the alternative charges a card an amount or an interval
+      // the site never advertised, which is a chargeback the customer wins.
+      logger.error('Refusing checkout for a plan that failed catalog validation', { plan })
       return NextResponse.json(
         { error: 'That plan is not available right now.' },
         { status: 400, headers: corsHeaders }
       )
     }
+
+    const priceId = purchasablePlan.priceId
 
     let referralId: string | null = null
     if (APP_CONFIG.features.endorselyAffiliates) {

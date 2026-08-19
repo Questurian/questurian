@@ -24,6 +24,32 @@ the product.
 
 The only forbidden mismatch: advertising **less** than Stripe will charge.
 
+## What enforces that
+
+`getPurchasablePlan()` in `membership-plans.ts`. It retrieves the configured
+price from Stripe and refuses the plan outright when the price disagrees with
+`MEMBERSHIP_CATALOG` on:
+
+- **billing interval** — a "yearly" price that actually bills monthly
+- **interval count** — anything other than every 1 interval
+- **currency** — anything other than the catalog currency
+- **amount** — *above* the catalog amount. Below is the laptop test charge and
+  is allowed; that is the whole point of the switch below.
+
+It also refuses when Stripe cannot be reached at all, rather than guessing.
+
+**Both the pricing page and Checkout go through it.** They did not always:
+`/api/payments/plans` validated and `POST /api/payments/create-checkout-session`
+did not, so a bad `STRIPE_PRICE_ID_*` dropped the plan from `/join` with only a
+log line while `/purchase/yearly` — which posts `{"plan":"yearly"}` without ever
+loading the pricing page — kept charging it.
+
+A refused plan is a **400 `That plan is not available right now.`** on Checkout
+and a missing entry on `/api/payments/plans`. If the buy button starts returning
+that, the price ID in `~/questura/config/server.env` is the thing to look at,
+and the reason is in the server log (`Configured membership price does not match
+the catalog`, or `Stripe would charge more than the catalog price`).
+
 ## This is not launch
 
 The Linux laptop is a live-like test environment, not production. Production

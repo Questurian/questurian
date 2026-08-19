@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   stripeCustomerList: vi.fn(),
   stripeSubscriptionList: vi.fn(),
   stripeCheckoutCreate: vi.fn(),
+  stripePriceRetrieve: vi.fn(),
 }))
 
 vi.mock('@/features/visitor-auth/lib/current-principal', () => ({
@@ -32,6 +33,9 @@ vi.mock('@/payments/lib/stripe', () => ({
       sessions: {
         create: mocks.stripeCheckoutCreate,
       },
+    },
+    prices: {
+      retrieve: mocks.stripePriceRetrieve,
     },
   },
 }))
@@ -60,6 +64,8 @@ vi.mock('@/shared/config', () => ({
   },
 }))
 
+import { catalogPriceRetrieve } from './__fixtures__/membership-prices'
+
 import { POST } from '@/app/api/payments/create-checkout-session/route'
 
 let consoleLogSpy: ReturnType<typeof vi.spyOn> | null = null
@@ -78,6 +84,10 @@ function createRequest(body: unknown) {
 describe('create checkout session referral ID validation', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Checkout validates the configured price against the catalog before it
+    // charges anything, so a session is only created when Stripe returns a
+    // price that matches.
+    mocks.stripePriceRetrieve.mockImplementation(catalogPriceRetrieve())
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined)
     mocks.stripeCustomerList.mockResolvedValue({ data: [] })
     mocks.stripeSubscriptionList.mockResolvedValue({ data: [] })
