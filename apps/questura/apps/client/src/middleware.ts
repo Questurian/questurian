@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import {
+  APPLE_PAY_DOMAIN_ASSOCIATION_BODY,
+  APPLE_PAY_DOMAIN_ASSOCIATION_PATH,
+  WELL_KNOWN_PREFIX,
+} from '@/lib/wellKnown'
 
 function isAssetPath(pathname: string): boolean {
   if (pathname.startsWith('/_next')) return true
@@ -59,8 +64,36 @@ function handleHomeGeoRedirect(request: NextRequest): NextResponse | null {
   return null
 }
 
+/**
+ * `/.well-known/*` falls through to routing that cannot resolve a leading-dot
+ * segment, and Next answers with its built-in 500 page. Middleware runs first,
+ * so it is the only place that can answer at all. Serve the one file that is
+ * meant to exist and give everything else the 404 it should always have been.
+ */
+function handleWellKnown(pathname: string): NextResponse | null {
+  if (!pathname.startsWith(WELL_KNOWN_PREFIX)) return null
+
+  if (pathname === APPLE_PAY_DOMAIN_ASSOCIATION_PATH) {
+    return new NextResponse(APPLE_PAY_DOMAIN_ASSOCIATION_BODY, {
+      status: 200,
+      headers: {
+        'content-type': 'text/plain; charset=utf-8',
+        'cache-control': 'public, max-age=3600',
+      },
+    })
+  }
+
+  return new NextResponse('Not Found', {
+    status: 404,
+    headers: { 'content-type': 'text/plain; charset=utf-8' },
+  })
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  const wellKnown = handleWellKnown(pathname)
+  if (wellKnown) return wellKnown
 
   if (isAssetPath(pathname)) {
     return NextResponse.next()
