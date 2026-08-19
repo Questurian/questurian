@@ -24,28 +24,43 @@ export default function GoogleSignInButton({
     const callbackURL = new URL(redirectPath, window.location.origin).toString();
     const errorCallbackURL = new URL('/auth-error', window.location.origin).toString();
 
-    const response = await fetch(`${backendUrl}/api/visitor-auth/sign-in/social`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        provider: 'google',
-        callbackURL,
-        errorCallbackURL,
-      }),
-    });
+    try {
+      const response = await fetch(`${backendUrl}/api/visitor-auth/sign-in/social`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          provider: 'google',
+          callbackURL,
+          errorCallbackURL,
+        }),
+      });
 
-    if (!response.ok) {
-      window.location.href = `/auth-error?error=oauth_failed`;
-      return;
+      if (!response.ok) {
+        window.location.href = `/auth-error?error=oauth_failed`;
+        return;
+      }
+
+      const data = await response.json() as { url?: string };
+      window.location.href = data.url || '/auth-error?error=oauth_failed';
+    } catch {
+      // `fetch` rejects rather than resolving when the request never reaches the
+      // backend at all -- a refused origin, a DNS failure, an offline browser.
+      // Unhandled, that rejection is invisible: the click appears to do nothing
+      // at all, which is indistinguishable from a dead button and sends people
+      // to support saying "the Google button doesn't work".
+      window.location.href = `/auth-error?error=oauth_unreachable`;
     }
-
-    const data = await response.json() as { url?: string };
-    window.location.href = data.url || '/auth-error?error=oauth_failed';
   };
 
   return (
     <button
+      // Both sign-in steps render this inside their `<form>`, and a button with
+      // no type submits the form it sits in. Clicking Google therefore ran the
+      // form's own validation and stopped on the required email field instead
+      // of ever reaching `handleSignIn` -- OAuth was unreachable for anyone who
+      // had not already filled the form in.
+      type="button"
       onClick={handleSignIn}
       className={`flex items-center justify-center gap-3 bg-white border border-gray-300 hover:bg-gray-50 text-black px-6 py-3 rounded-lg transition-colors shadow-sm cursor-pointer ${className}`}
     >
