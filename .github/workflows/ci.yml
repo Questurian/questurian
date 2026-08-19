@@ -70,6 +70,25 @@ jobs:
       - name: Unit tests
         run: pnpm --dir apps/questura/apps/server run test:int
 
+  questura-client:
+    name: Questura client tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # Deliberately no `pnpm install`: these are node:test suites over pure
+      # modules, and node strips the TypeScript itself (needs >= 22.18, or the
+      # --experimental-strip-types the script passes). Nothing here imports a
+      # dependency, which is the constraint that keeps the job this cheap.
+      - name: Unit tests
+        run: pnpm --dir apps/questura/apps/client run test
+
   writer-web:
     name: Writer frontend
     runs-on: ubuntu-latest

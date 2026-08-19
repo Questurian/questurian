@@ -30,9 +30,9 @@ export function MembershipSection({ user }: MembershipSectionProps) {
             membershipState={vm.membershipState}
           />
 
-          {vm.billingInfo && !vm.isRenewing && (
+          {vm.showActionLinks && !vm.isRenewing && (
             <>
-              <MembershipBillingInfo billingInfo={vm.billingInfo} />
+              {vm.billingInfo && <MembershipBillingInfo billingInfo={vm.billingInfo} />}
               <MembershipActionLinks
                 canUpdatePayment={vm.canUpdatePayment}
                 canCancel={vm.membershipState.showCancelButton}

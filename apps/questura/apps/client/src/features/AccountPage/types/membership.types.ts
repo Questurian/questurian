@@ -12,7 +12,14 @@ export type MembershipType =
   | 'cancelled'
   | 'inactive'
   /** Renewal charge failed; Stripe is retrying and access is still covered. */
-  | 'payment_issue';
+  | 'payment_issue'
+  /**
+   * The subscription is still live, but entitlement has been withdrawn from it
+   * -- a refunded or disputed charge, or a profile the webhooks left stuck.
+   * Access is gone while the subscription keeps billing, so the card has to say
+   * so rather than read the status enum's `active`.
+   */
+  | 'access_paused';
 
 export interface MembershipState {
   type: MembershipType;
