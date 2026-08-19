@@ -246,6 +246,28 @@ export async function POST(req: NextRequest) {
         price: priceId,
         quantity: 1
       }],
+      // Pinned here rather than left to the Dashboard, because the rest of this
+      // system is written against cards and says so out loud:
+      // `DELIBERATELY_UNHANDLED_STRIPE_EVENTS` leaves
+      // `checkout.session.async_payment_failed` unhandled on the stated grounds
+      // that "Checkout is card-only, so it cannot fire".
+      //
+      // That was not true. The account's default payment method configuration
+      // (`pmc_1RdDUl…`, checked 2026-08-19) enables affirm, amazon_pay,
+      // bancontact, blik, cashapp, eps, giropay and klarna alongside card and
+      // link. `mode: 'subscription'` filters that list to methods supporting
+      // recurring payments, which is why nothing has broken yet — but bancontact
+      // reaches recurring through a SEPA mandate, and SEPA is a
+      // delayed-notification method: the session completes `unpaid`, money
+      // arrives later, and the failure case is the event we do not handle.
+      //
+      // Naming the methods here means an enabled Dashboard toggle can no longer
+      // silently widen what this endpoint sells, and the contract's reasoning
+      // becomes true again. Apple Pay and Google Pay are unaffected — they ride
+      // in as card wallets. Link is the one thing this drops; add `'link'` to
+      // the array to bring it back, since it is card-backed and settles
+      // immediately.
+      payment_method_types: ['card'],
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata,
