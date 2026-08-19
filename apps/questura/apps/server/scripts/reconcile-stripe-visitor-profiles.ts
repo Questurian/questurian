@@ -44,6 +44,13 @@
  * write. It only ever fills in or corrects linkage on existing profiles; it
  * never creates, deletes, or reassigns a profile, and never writes to Stripe.
  *
+ * The plan is never written as read. The scan takes minutes, webhooks keep
+ * arriving during it, and a plan applied verbatim makes the older reading win
+ * purely by writing last — restoring access to a visitor refunded mid-scan, or
+ * burying a membership bought mid-scan. So `--apply` treats the plan as a list
+ * of rows worth revisiting and re-derives each one under the webhook's own
+ * advisory lock. `src/features/payments/lib/reconcile-apply.ts` owns that pass.
+ *
  * Ownership is proven by `metadata.visitorAuthUserId` — never by email. The
  * rule itself lives in `src/features/payments/lib/reconcile-ownership.ts` so it
  * is shared with its tests and cannot drift from the checkout path.
@@ -81,16 +88,17 @@ import {
   type ReconcileStepResult,
 } from '../src/features/payments/lib/reconcile-report'
 import {
+  applyPlan,
+  diffProfileAgainst,
+  type ApplyDeps,
+  type PlannedUpdate,
+  type ProfileSnapshot,
+} from '../src/features/payments/lib/reconcile-apply'
+import { withAdvisoryLock } from '../src/shared/utils/advisory-lock'
+import {
   normalizeAuthUserId,
   resolveReconcileTarget,
 } from '../src/features/payments/lib/reconcile-ownership'
-
-type PlannedUpdate = {
-  profileId: string | number
-  email: string
-  changes: Record<string, unknown>
-  reason: 'RELINKABLE' | 'DRIFTED'
-}
 
 export type ReconcileProfilesOptions = {
   apply?: boolean
@@ -124,6 +132,17 @@ const LIVE_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
 
 function normalizeEmail(email: string | null | undefined): string {
   return (email ?? '').trim().toLowerCase()
+}
+
+/**
+ * Stripe's own next retry time, which the dunning grace is derived from. It
+ * lives on the latest invoice, so both the scan and the apply pass have to
+ * expand it -- an unexpanded id yields no retry time and a shorter grace.
+ */
+function nextPaymentAttemptOf(subscription: Stripe.Subscription): number | null {
+  const invoice = subscription.latest_invoice
+
+  return invoice && typeof invoice !== 'string' ? (invoice.next_payment_attempt ?? null) : null
 }
 
 export async function run(options: ReconcileProfilesOptions = {}): Promise<ReconcileStepResult> {
@@ -278,48 +297,38 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
 
     const profile = target.profile
 
-    const desired: Record<string, unknown> = {}
+    // Reuse the webhook's own derivation rather than restating it, so a
+    // reconciliation run and a live resync cannot disagree about what a
+    // Stripe subscription means. This previously read `current_period_end`
+    // off the subscription root, which the SDK's API version does not
+    // populate, and restated the paid-access rule by hand.
+    const state = subscription
+      ? deriveSubscriptionState(subscription, {
+          previousDunningGraceUntil: profile.dunningGraceUntil,
+          nextPaymentAttempt: nextPaymentAttemptOf(subscription),
+        })
+      : null
 
-    if (!profile.stripeCustomerId) {
-      desired.stripeCustomerId = customer.id
-    }
+    // What the scan saw, for the report and for deciding which rows are worth
+    // revisiting. It is NOT what gets written: by the time the apply pass runs
+    // this reading is minutes old, so it re-derives under a lock instead. See
+    // `reconcile-apply.ts`.
+    const changes = diffProfileAgainst(profile as ProfileSnapshot, {
+      customerId: customer.id,
+      subscriptionId: subscription?.id ?? null,
+      state,
+    })
 
-    if (subscription) {
-      // Reuse the webhook's own derivation rather than restating it, so a
-      // reconciliation run and a live resync cannot disagree about what a
-      // Stripe subscription means. This previously read `current_period_end`
-      // off the subscription root, which the SDK's API version does not
-      // populate, and restated the paid-access rule by hand.
-      const invoice = subscription.latest_invoice
-      const state = deriveSubscriptionState(subscription, {
-        previousDunningGraceUntil: profile.dunningGraceUntil,
-        nextPaymentAttempt:
-          invoice && typeof invoice !== 'string' ? (invoice.next_payment_attempt ?? null) : null,
-      })
-
-      if (profile.stripeSubscriptionId !== subscription.id) {
-        desired.stripeSubscriptionId = subscription.id
-      }
-      if (profile.subscriptionStatus !== state.subscriptionStatus) {
-        desired.subscriptionStatus = state.subscriptionStatus
-      }
-      if (Boolean(profile.cancelAtPeriodEnd) !== state.cancelAtPeriodEnd) {
-        desired.cancelAtPeriodEnd = state.cancelAtPeriodEnd
-      }
-      if ((profile.paidThroughAt ?? null) !== state.paidThroughAt) {
-        desired.paidThroughAt = state.paidThroughAt
-      }
-      if ((profile.dunningGraceUntil ?? null) !== state.dunningGraceUntil) {
-        desired.dunningGraceUntil = state.dunningGraceUntil
-      }
-    }
-
-    if (Object.keys(desired).length > 0) {
+    if (Object.keys(changes).length > 0) {
       updates.push({
         profileId: profile.id,
         email,
-        changes: desired,
+        changes,
         reason: profile.stripeCustomerId ? 'DRIFTED' : 'RELINKABLE',
+        customerId: customer.id,
+        subscriptionId: subscription?.id ?? null,
+        // Compare-and-swap token: the apply pass abandons the row if this moved.
+        updatedAt: (profile.updatedAt as string | null) ?? null,
       })
     }
   }
@@ -434,35 +443,96 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     }
   }
 
-  let applied = 0
-  let applyFailed = 0
-  for (const update of updates) {
-    try {
+  // Every write re-reads the profile and re-reads Stripe, under the same lock
+  // the webhook path takes. The plan above is a list of rows worth revisiting,
+  // never the values to write -- see the header of `reconcile-apply.ts` for the
+  // two ways writing it verbatim corrupts live membership state.
+  const deps: ApplyDeps = {
+    emit,
+
+    readProfile: async (profileId) => {
+      const doc = await payload.findByID({
+        collection: 'visitor-profiles',
+        id: profileId,
+        depth: 0,
+        overrideAccess: true,
+        // A row deleted between the scan and now is a skip, not a throw.
+        disableErrors: true,
+      })
+
+      return (doc as ProfileSnapshot | null) ?? null
+    },
+
+    readDesired: async (customerId, profile) => {
+      const customer = await stripe.customers.retrieve(customerId)
+      if (customer.deleted) return null
+
+      // Ownership is re-proven, not assumed to have survived the scan. It is
+      // the same rule the scan applied: `metadata.visitorAuthUserId`, never
+      // email.
+      const owner = normalizeAuthUserId(customer.metadata?.visitorAuthUserId)
+      if (!owner || owner !== normalizeAuthUserId(profile.authUserId ?? null)) return null
+
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all',
+        limit: 100,
+        expand: ['data.latest_invoice'],
+      })
+
+      // Re-selected, not refetched by id: a checkout during the scan can make a
+      // different subscription the one this row mirrors.
+      const subscription = selectProfileSubscription(subscriptions.data)
+
+      return {
+        customerId,
+        subscriptionId: subscription?.id ?? null,
+        state: subscription
+          ? deriveSubscriptionState(subscription, {
+              previousDunningGraceUntil: profile.dunningGraceUntil,
+              nextPaymentAttempt: nextPaymentAttemptOf(subscription),
+            })
+          : null,
+      }
+    },
+
+    writeProfile: async (profileId, changes) => {
       await payload.update({
         collection: 'visitor-profiles',
-        id: update.profileId,
-        data: update.changes,
+        id: profileId,
+        data: changes,
         overrideAccess: true,
       })
-      applied += 1
-    } catch (error) {
-      // One unwritable row must not hide the rest of the plan from the report.
-      applyFailed += 1
-      emit(
-        `  ⛔ FAILED profile ${update.profileId} <${update.email}>: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      )
-    }
+    },
+
+    withLock: (key, work) => withAdvisoryLock(payload, key, work),
   }
 
-  emit(`\n✅ Applied ${applied} profile update(s).`)
-  if (applyFailed > 0) emit(`⛔ ${applyFailed} update(s) could not be written.`)
+  const summary = await applyPlan(updates, deps)
+  const skipped = summary.stale + summary.noop + summary.missing
+
+  emit(`\n✅ Applied ${summary.applied} profile update(s).`)
+  if (skipped > 0) {
+    emit(
+      `↷ ${skipped} planned update(s) skipped as out of date (${summary.stale} changed under the scan, ${summary.noop} already in sync, ${summary.missing} no longer resolvable).`
+    )
+  }
+  if (summary.failed > 0) emit(`⛔ ${summary.failed} update(s) could not be written.`)
 
   return {
-    ok: applyFailed === 0,
-    reason: applyFailed > 0 ? 'apply-failed' : undefined,
-    counts: { ...baseCounts, applied, planned: updates.length, apply_failed: applyFailed },
+    ok: summary.failed === 0,
+    reason: summary.failed > 0 ? 'apply-failed' : undefined,
+    counts: {
+      ...baseCounts,
+      applied: summary.applied,
+      planned: updates.length,
+      apply_failed: summary.failed,
+      // Skips are the guard working, not a finding: `ESCALATING_COUNTS` does
+      // not list them, so they inform the report without paging anyone.
+      skipped_stale: summary.stale,
+      skipped_noop: summary.noop,
+      skipped_missing: summary.missing,
+    },
     lines,
   }
 }
