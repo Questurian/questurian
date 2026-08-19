@@ -26,6 +26,7 @@ const CLEAN_PROFILES = {
   duplicate: 0,
   unproven: 0,
   mismatched: 0,
+  multi_live: 0,
   historical: 0,
 }
 const CLEAN_AUDIT = {
@@ -251,8 +252,10 @@ describe('exceedsApplyCap', () => {
 
 describe('ownership findings escalate', () => {
   // An email-only match is not something the apply pass may repair, so finding
-  // one has to reach a human the same way ORPHANED and DUPLICATE do.
-  it.each(['unproven', 'mismatched'])('treats %s as needing attention', (key) => {
+  // one has to reach a human the same way ORPHANED and DUPLICATE do. Nor is a
+  // customer billed twice: which subscription to keep decides who gets
+  // refunded, so `multi_live` escalates rather than being auto-applied.
+  it.each(['unproven', 'mismatched', 'multi_live'])('treats %s as needing attention', (key) => {
     const classified = classifyStep({
       step: 'profiles',
       counts: { ...CLEAN_PROFILES, [key]: 1 },

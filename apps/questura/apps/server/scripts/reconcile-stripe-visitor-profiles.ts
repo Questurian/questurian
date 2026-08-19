@@ -99,6 +99,7 @@ import {
   normalizeAuthUserId,
   resolveReconcileTarget,
 } from '../src/features/payments/lib/reconcile-ownership'
+import { isLiveSubscription } from '../src/features/payments/lib/customer-linkage'
 
 export type ReconcileProfilesOptions = {
   apply?: boolean
@@ -203,6 +204,19 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
   const duplicates = new Map<string, string[]>()
   const seenEmails = new Map<string, string[]>()
 
+  /**
+   * Customers Stripe is billing more than once.
+   *
+   * `collapseDuplicateSubscriptions` (checkout webhook) refunds and cancels the
+   * extras the moment a duplicate checkout completes, and logs an error when it
+   * does — but a log line on one host is not a thing anyone reads, and the
+   * collapse only runs if that webhook arrived at all. This is the standing
+   * check: whatever the cause, a customer holding two live subscriptions is
+   * being charged twice, so it escalates the nightly rather than waiting to be
+   * noticed on a statement.
+   */
+  const multiLive: Array<{ customerId: string; email: string; subscriptionIds: string[] }> = []
+
   const unproven: Array<{ customerId: string; email: string; status: string | null }> = []
   const mismatched: Array<{
     customerId: string
@@ -242,6 +256,15 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
       expand: ['data.latest_invoice'],
     })
     const subscription = selectProfileSubscription(subscriptions.data)
+
+    const live = subscriptions.data.filter(isLiveSubscription)
+    if (live.length > 1) {
+      multiLive.push({
+        customerId: customer.id,
+        email,
+        subscriptionIds: live.map((candidate) => candidate.id),
+      })
+    }
 
     const owner = normalizeAuthUserId(customer.metadata?.visitorAuthUserId)
     const candidates = byEmail.get(email) ?? []
@@ -345,6 +368,7 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
   emit(`DUPLICATE  : ${duplicates.size}`)
   emit(`UNPROVEN   : ${unproven.length}`)
   emit(`MISMATCHED : ${mismatched.length}`)
+  emit(`MULTI_LIVE : ${multiLive.length}`)
   if (historicalOrphans > 0) {
     // Counted, not warned about: closed records with no profile need no action.
     emit(`(${historicalOrphans} ended subscription(s) with no profile — historical, no action)`)
@@ -391,6 +415,16 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     }
   }
 
+  if (multiLive.length > 0) {
+    emit(`\n⛔ ${multiLive.length} Stripe customer(s) hold more than one live subscription.`)
+    emit('   They are being billed twice. Nothing is cancelled here: which one to')
+    emit('   keep decides who gets refunded, so it is a human call. Keep the one')
+    emit('   that collected, refund and cancel the rest in Stripe, then re-run.\n')
+    for (const row of multiLive) {
+      emit(`  [MULTI_LIVE] ${row.customerId} <${row.email}> ${row.subscriptionIds.join(', ')}`)
+    }
+  }
+
   if (duplicates.size > 0) {
     emit(`\n⚠️  ${duplicates.size} email(s) map to multiple Stripe customers:`)
     for (const [email, ids] of duplicates) {
@@ -408,6 +442,7 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     duplicate: duplicates.size,
     unproven: unproven.length,
     mismatched: mismatched.length,
+    multi_live: multiLive.length,
     historical: historicalOrphans,
   }
 

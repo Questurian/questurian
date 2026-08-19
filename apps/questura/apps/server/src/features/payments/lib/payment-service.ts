@@ -8,6 +8,7 @@ import type { StripeSubscriptionExpanded, UserSubscriptionUpdate } from '../type
 import { resyncSubscription } from './subscription-resync'
 import { findVisitorProfileByAuthUserId } from '@/features/visitor-auth/lib/visitor-profile'
 import { resolveProfileForStripeCustomer } from './subscription-profile'
+import { findLiveSubscription } from './customer-linkage'
 
 /**
  * Stripe states in which a subscription is still live enough to cancel or
@@ -136,26 +137,52 @@ export async function cancelUserSubscription(authUserId: string): Promise<{
     // local `active` status locked visitors in dunning out of cancelling, which
     // is exactly when someone most wants to stop the retries (ADR-0008).
     const current = await stripe.subscriptions.retrieve(profile.stripeSubscriptionId)
+    let target: Stripe.Subscription = current
 
     if (!CANCELLABLE_STRIPE_STATUSES.has(current.status)) {
-      return { success: false, message: 'This subscription can no longer be cancelled.' }
+      // The row names a subscription Stripe will not cancel, but the button
+      // that got us here was offered off the *mirror*, which said the visitor
+      // has a membership. Refusing here is the worst answer available: if a
+      // different subscription is the one actually billing, the visitor is
+      // being charged with no way to stop it — exactly the dead end a stale
+      // `stripeSubscriptionId` used to produce.
+      //
+      // So ask Stripe who is billing, repoint the row onto it, and cancel that
+      // one. The resync is what repairs the row, and it runs before anything is
+      // cancelled so the profile is correct even if the cancel then fails.
+      const live = profile.stripeCustomerId
+        ? await findLiveSubscription(profile.stripeCustomerId)
+        : null
+
+      if (!live || live.id === profile.stripeSubscriptionId) {
+        return { success: false, message: 'This subscription can no longer be cancelled.' }
+      }
+
+      logger.warn('Profile named an uncancellable subscription; healing onto the live one', {
+        storedSubscriptionId: profile.stripeSubscriptionId,
+        liveSubscriptionId: live.id,
+        profileId: profile.id,
+      })
+
+      await resyncSubscription(live.id)
+      target = live
     }
 
-    if (current.cancel_at_period_end) {
+    if (target.cancel_at_period_end) {
       return { success: false, message: 'Subscription is already scheduled to cancel.' }
     }
 
-    await stripe.subscriptions.update(profile.stripeSubscriptionId, {
+    await stripe.subscriptions.update(target.id, {
       cancel_at_period_end: true,
     })
 
     // Writing state is resync's job; this returns what resync actually wrote so
     // the response is derived truth rather than a local guess.
-    const { state } = await resyncSubscription(profile.stripeSubscriptionId)
+    const { state } = await resyncSubscription(target.id)
     const endsAt = state?.paidThroughAt ?? null
 
     logger.info('Cancelled subscription', {
-      subscriptionId: profile.stripeSubscriptionId,
+      subscriptionId: target.id,
       endsAt,
     })
 

@@ -9,12 +9,20 @@ const mocks = vi.hoisted(() => ({
   findVisitorProfileByStripeCustomerId: vi.fn(),
   payloadUpdate: vi.fn(),
   resyncSubscription: vi.fn(),
+  findLiveSubscription: vi.fn(),
 }))
 
 // cancel/reactivate call Stripe then hand the write to resync, so these tests
 // assert delegation rather than re-checking what resync derives.
 vi.mock('@/payments/lib/subscription-resync', () => ({
   resyncSubscription: mocks.resyncSubscription,
+}))
+
+// The cancel path asks Stripe who is actually billing when the stored id turns
+// out to be uncancellable, so this is a seam these tests drive rather than the
+// real customer walk.
+vi.mock('@/payments/lib/customer-linkage', () => ({
+  findLiveSubscription: mocks.findLiveSubscription,
 }))
 
 vi.mock('@/payments/lib/stripe', () => ({
@@ -66,6 +74,7 @@ const activeProfile = {
   email: 'visitor@example.com',
   firstName: 'Ada',
   lastName: 'Lovelace',
+  stripeCustomerId: 'cus_1',
   stripeSubscriptionId: 'sub_1',
   subscriptionStatus: 'active',
   cancelAtPeriodEnd: false,
@@ -206,17 +215,71 @@ describe('cancelUserSubscription', () => {
     })
   })
 
-  it('refuses when Stripe reports the subscription already gone', async () => {
+  it('refuses when Stripe reports the subscription already gone and nothing else is billing', async () => {
     mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
     mocks.stripeSubscriptionRetrieve.mockResolvedValue({
       id: 'sub_1',
       status: 'canceled',
       cancel_at_period_end: false,
     })
+    mocks.findLiveSubscription.mockResolvedValue(null)
 
     await expect(cancelUserSubscription('auth_1')).resolves.toEqual({
       success: false,
       message: 'This subscription can no longer be cancelled.',
+    })
+    expect(mocks.stripeSubscriptionUpdate).not.toHaveBeenCalled()
+  })
+
+  // The dead end this replaces: the card offered Cancel off the mirrored
+  // status, the stored id was uncancellable, and the visitor kept being charged
+  // by a subscription the button could not reach.
+  it('cancels the subscription that is really billing when the stored id is dead', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'canceled',
+      cancel_at_period_end: false,
+    })
+    mocks.findLiveSubscription.mockResolvedValue({
+      id: 'sub_2',
+      status: 'active',
+      cancel_at_period_end: false,
+    })
+    mocks.resyncSubscription.mockResolvedValue({
+      profileId: 10,
+      state: { paidThroughAt: new Date(FUTURE_TS * 1000).toISOString() },
+      transitions: [],
+    })
+
+    const result = await cancelUserSubscription('auth_1')
+
+    expect(result.success).toBe(true)
+    expect(mocks.stripeSubscriptionUpdate).toHaveBeenCalledWith('sub_2', {
+      cancel_at_period_end: true,
+    })
+    // Repointed before anything was cancelled, so the row is right even if the
+    // cancel then fails.
+    expect(mocks.resyncSubscription).toHaveBeenNthCalledWith(1, 'sub_2')
+  })
+
+  it('does not cancel a live subscription that is already scheduled to end', async () => {
+    mocks.findVisitorProfileByAuthUserId.mockResolvedValue(activeProfile)
+    mocks.stripeSubscriptionRetrieve.mockResolvedValue({
+      id: 'sub_1',
+      status: 'canceled',
+      cancel_at_period_end: false,
+    })
+    mocks.findLiveSubscription.mockResolvedValue({
+      id: 'sub_2',
+      status: 'active',
+      cancel_at_period_end: true,
+    })
+    mocks.resyncSubscription.mockResolvedValue({ profileId: 10, state: null, transitions: [] })
+
+    await expect(cancelUserSubscription('auth_1')).resolves.toEqual({
+      success: false,
+      message: 'Subscription is already scheduled to cancel.',
     })
     expect(mocks.stripeSubscriptionUpdate).not.toHaveBeenCalled()
   })
