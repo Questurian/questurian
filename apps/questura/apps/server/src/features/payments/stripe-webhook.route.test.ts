@@ -122,11 +122,45 @@ const PAST_TS = Math.floor(Date.now() / 1000) - 24 * 60 * 60
 
 let consoleSpies: Array<ReturnType<typeof vi.spyOn>> = []
 
-function createRequest() {
+function createRequest(
+  options: { body?: string | ReadableStream<Uint8Array>; contentLength?: string } = {},
+) {
+  const { body = '{}', contentLength } = options
+
   return new Request('http://localhost:4000/api/payments/webhooks/stripe', {
     method: 'POST',
-    body: '{}',
-  }) as any
+    body,
+    headers: contentLength === undefined ? undefined : { 'content-length': contentLength },
+    // Required by undici before it will accept a stream as a request body.
+    duplex: 'half',
+  } as any) as any
+}
+
+/** The structured log line the logger emitted for `message`, parsed back. */
+function loggedWarning(message: string): Record<string, unknown> | undefined {
+  for (const [line] of vi.mocked(console.log).mock.calls as unknown as Array<[unknown]>) {
+    if (typeof line !== 'string' || !line.includes(message)) continue
+    try {
+      return JSON.parse(line)
+    } catch {
+      return undefined
+    }
+  }
+  return undefined
+}
+
+/** A body delivered in chunks, the way a real chunked upload arrives. */
+function streamOf(...chunks: Array<string | Uint8Array>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder()
+
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) {
+        controller.enqueue(typeof chunk === 'string' ? encoder.encode(chunk) : chunk)
+      }
+      controller.close()
+    },
+  })
 }
 
 function givenEvent(type: string, object: Record<string, unknown>, extra: Partial<{ id: string; created: number }> = {}) {
@@ -1080,5 +1114,117 @@ describe('Stripe webhook route', () => {
 
     expect(mocks.subscriptionRetrieve).not.toHaveBeenCalled()
     expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+  })
+  /**
+   * The URL is public and the signature is the only thing authenticating the
+   * caller — but it cannot be checked until the payload is buffered. Without a
+   * cap, anyone who knows the URL can make the server hold whatever they send.
+   */
+  describe('body size cap', () => {
+    const OVER_CAP_BYTES = 1_048_577
+
+    it('rejects an oversized body that declares its size, without buffering it', async () => {
+      const response = await POST(
+        createRequest({ body: '{}', contentLength: String(OVER_CAP_BYTES) }),
+      )
+
+      expect(response.status).toBe(413)
+      await expect(response.json()).resolves.toEqual({ error: 'Payload too large' })
+      // The whole point: the caller never reaches the verification step, so it
+      // never costs us the payload it claimed to be sending.
+      expect(mocks.constructEvent).not.toHaveBeenCalled()
+
+      // A silent 413 makes a real misconfiguration indistinguishable from an
+      // attack, so the size that triggered it has to be in the log.
+      expect(loggedWarning('Stripe webhook rejected: body exceeds size cap')).toMatchObject({
+        level: 'warn',
+        observedBytes: OVER_CAP_BYTES,
+        declaredBytes: OVER_CAP_BYTES,
+        maxBytes: 1_048_576,
+      })
+    })
+
+    it('rejects an oversized body that declares no size at all', async () => {
+      // Chunked encoding carries no `content-length`, and a hostile caller can
+      // simply omit it. A cap that only reads the header is not a cap.
+      const megabyteChunk = new Uint8Array(1_048_576)
+      const response = await POST(
+        createRequest({ body: streamOf(megabyteChunk, megabyteChunk) }),
+      )
+
+      expect(response.status).toBe(413)
+      expect(mocks.constructEvent).not.toHaveBeenCalled()
+    })
+
+    it('rejects an oversized body that understates its size', async () => {
+      // `content-length` is a claim by the sender, not a fact. Believing a
+      // small one would hand an attacker the uncapped read straight back.
+      const megabyteChunk = new Uint8Array(1_048_576)
+      const response = await POST(
+        createRequest({ body: streamOf(megabyteChunk, megabyteChunk), contentLength: '2' }),
+      )
+
+      expect(response.status).toBe(413)
+      expect(mocks.constructEvent).not.toHaveBeenCalled()
+    })
+
+    it('passes an ordinary event through untouched', async () => {
+      // Real events from this account run 3.8-5.6 KB; nothing near the cap.
+      const payload = JSON.stringify({ id: 'evt_1', type: 'customer.subscription.deleted' })
+      givenEvent('customer.subscription.deleted', { id: 'sub_1', customer: 'cus_1' })
+
+      const response = await POST(createRequest({ body: payload }))
+
+      expect(response.status).toBe(200)
+      expect(mocks.constructEvent).toHaveBeenCalledWith(payload, 't=1,v1=sig', 'whsec_test')
+      expect(mocks.resyncSubscription).toHaveBeenCalledWith('sub_1')
+    })
+
+    it('accepts a body that sits just under the cap', async () => {
+      const payload = 'x'.repeat(1_048_576)
+      givenEvent('customer.subscription.deleted', { id: 'sub_1', customer: 'cus_1' })
+
+      const response = await POST(createRequest({ body: payload }))
+
+      expect(response.status).toBe(200)
+      expect(mocks.constructEvent).toHaveBeenCalledWith(payload, 't=1,v1=sig', 'whsec_test')
+    })
+
+    it('reassembles a multi-byte character split across chunks', async () => {
+      // Signature verification is byte-exact. Decoding each chunk on its own
+      // would turn a character straddling the boundary into replacement
+      // characters, and every event naming a customer with an accent or an
+      // emoji would fail to verify — a silent, total outage of the webhook.
+      const payload = JSON.stringify({ name: 'Renée 🎟 Grüßen', city: '東京' })
+      const bytes = new TextEncoder().encode(payload)
+      // Cut one byte into the four-byte emoji, so neither half is valid UTF-8
+      // on its own.
+      const cut = new TextEncoder().encode(payload.slice(0, payload.indexOf('🎟'))).byteLength + 1
+      const chunks = [bytes.slice(0, cut), bytes.slice(cut)]
+
+      // Guard the guard: if the cut had landed on a character boundary this
+      // test would pass without exercising anything.
+      expect(chunks.map((chunk) => new TextDecoder().decode(chunk)).join('')).not.toBe(payload)
+
+      givenEvent('customer.subscription.deleted', { id: 'sub_1', customer: 'cus_1' })
+
+      const response = await POST(createRequest({ body: streamOf(...chunks) }))
+
+      expect(response.status).toBe(200)
+      expect(mocks.constructEvent).toHaveBeenCalledWith(payload, 't=1,v1=sig', 'whsec_test')
+    })
+
+    it('is byte-identical to reading the request whole', async () => {
+      // The regression this locks down: any change to how the body is read
+      // must produce exactly what `req.text()` would have, or every signature
+      // fails and no membership is ever granted again.
+      const payload = JSON.stringify({ accents: 'Ångström', emoji: '💳', cjk: '東京都' })
+      givenEvent('customer.subscription.deleted', { id: 'sub_1', customer: 'cus_1' })
+
+      await POST(createRequest({ body: payload }))
+
+      const [received] = mocks.constructEvent.mock.calls[0]
+      expect(received).toBe(await createRequest({ body: payload }).text())
+    })
   })
 })
