@@ -1,5 +1,6 @@
 import type { User } from '@/lib/user/types';
 
+import { isActiveMember } from '../../Payments/lib/membership';
 import type { BillingInfo, MembershipState } from '../types/membership.types';
 
 function formatDate(dateString: string | null): string {
@@ -37,7 +38,15 @@ export function getBillingInfo(user: User | null): BillingInfo | null {
   return null;
 }
 
-export function getMembershipState(user: User | null): MembershipState {
+/**
+ * The status enum's reading of the membership, before entitlement is consulted.
+ *
+ * `subscriptionStatus` and `membershipExpiration` describe the *subscription*.
+ * Whether the visitor may actually read paid content is a separate, server-side
+ * decision (`membership.active`, derived from `paidThroughAt`). Where the two
+ * disagree, entitlement wins -- see `getMembershipState`.
+ */
+function membershipStateFromStatus(user: User | null): MembershipState {
   if (!user) {
     return {
       type: 'free',
@@ -174,4 +183,37 @@ export function getMembershipState(user: User | null): MembershipState {
         showReactivateButton: false,
       };
   }
+}
+
+/**
+ * The membership as the account page should present it.
+ *
+ * The status enum alone produced a dead end: a subscription Stripe has already
+ * deleted reports `canceled` while the period it was paid for is still running,
+ * so the card said "cancelled -- Upgrade" to a visitor who was still entitled.
+ * `/purchase` gates on the same entitlement (`MembershipGuard` -> `isActiveMember`
+ * -> `membership.active`) and turned them away as an existing member. A button
+ * that cannot work, in front of someone who might reasonably answer it by paying
+ * a second time through another route.
+ *
+ * Entitlement is the tie-breaker because it is the thing that actually gates
+ * access, and it is derived once on the server. Offering to sell a membership to
+ * someone who already has one is wrong regardless of which status produced it,
+ * so this is applied to every branch rather than to the one that was reported.
+ */
+export function getMembershipState(user: User | null): MembershipState {
+  const state = membershipStateFromStatus(user);
+
+  // `membership.active` is the server's entitlement decision; `isActiveMember`
+  // is the same read the purchase guard makes, dev override included, so the two
+  // screens cannot disagree about who is already a member.
+  if (!user || !state.showUpgradeButton || !isActiveMember(user)) return state;
+
+  return {
+    ...state,
+    showUpgradeButton: false,
+    // Without a next step this is just a card with nothing to do on it. The
+    // visitor still has access; what they need is when it ends and what then.
+    description: `${state.description} You can rejoin once it ends.`,
+  };
 }
