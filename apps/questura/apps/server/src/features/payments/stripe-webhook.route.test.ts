@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { headers } from 'next/headers'
+import {
+  badApiKeyError,
+  cancelledSubscriptionError,
+  stripeInvalidRequestError,
+} from './__fixtures__/stripe-errors'
 
 const mocks = vi.hoisted(() => ({
   constructEvent: vi.fn(),
@@ -585,9 +590,7 @@ describe('Stripe webhook route', () => {
       lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
     })
     mocks.subscriptionCancel.mockRejectedValue(
-      Object.assign(new Error('No such subscription to cancel'), {
-        type: 'invalid_request_error',
-      }),
+      stripeInvalidRequestError('No such subscription to cancel'),
     )
     mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'canceled', metadata: {} })
 
@@ -611,7 +614,7 @@ describe('Stripe webhook route', () => {
       lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
     })
     mocks.subscriptionCancel.mockRejectedValue(
-      Object.assign(new Error('Invalid API Key provided'), { type: 'invalid_request_error' }),
+      badApiKeyError(),
     )
     mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'active', metadata: {} })
 
@@ -778,9 +781,7 @@ describe('Stripe webhook route', () => {
       lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
     })
     mocks.subscriptionCancel.mockRejectedValue(
-      Object.assign(new Error('No such subscription to cancel'), {
-        type: 'invalid_request_error',
-      }),
+      stripeInvalidRequestError('No such subscription to cancel'),
     )
     mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'canceled', metadata: {} })
 
@@ -805,10 +806,7 @@ describe('Stripe webhook route', () => {
       lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
     })
     mocks.subscriptionUpdate.mockRejectedValue(
-      Object.assign(
-        new Error('A canceled subscription can only update its cancellation_details.'),
-        { type: 'invalid_request_error' },
-      ),
+      cancelledSubscriptionError(),
     )
     mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'canceled', metadata: {} })
 
@@ -828,10 +826,7 @@ describe('Stripe webhook route', () => {
     })
     mocks.invoiceRetrieve.mockResolvedValue({ id: 'in_1', subscription: 'sub_1' })
     mocks.subscriptionUpdate.mockRejectedValue(
-      Object.assign(
-        new Error('A canceled subscription can only update its cancellation_details.'),
-        { type: 'invalid_request_error' },
-      ),
+      cancelledSubscriptionError(),
     )
     mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'canceled', metadata: {} })
 
@@ -855,7 +850,7 @@ describe('Stripe webhook route', () => {
       lines: { data: [{ period: { start: 1_000, end: 2_000 } }] },
     })
     mocks.subscriptionUpdate.mockRejectedValue(
-      Object.assign(new Error('Invalid API Key provided'), { type: 'invalid_request_error' }),
+      badApiKeyError(),
     )
     mocks.subscriptionRetrieve.mockResolvedValue({ id: 'sub_1', status: 'active', metadata: {} })
 

@@ -23,6 +23,7 @@
  * sandbox test clock.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { stripeInvalidRequestError } from './__fixtures__/stripe-errors'
 
 // ---------------------------------------------------------------------------
 // Fake Stripe
@@ -68,10 +69,13 @@ const store = {
   cancelCalls: [] as string[],
 }
 
+// Built by the SDK's own error class so the fake rejects exactly as a real
+// client does -- `type` is the class name, `rawType` the API's spelling. A
+// hand-shaped error here is what let the cancelled-subscription refund bug pass
+// its tests. Called during tests, never while this factory is hoisted, so the
+// top-level import is initialised by the time it runs.
 function stripeError(message: string) {
-  const err = new Error(message) as Error & { type: string; code?: string }
-  err.type = 'invalid_request_error'
-  return err
+  return stripeInvalidRequestError(message) as Error & { type: string; code?: string }
 }
 
 function clone<T>(value: T): T {
