@@ -28,18 +28,32 @@ const mocks = vi.hoisted(() => ({
 
 const eventLock = vi.hoisted(() => ({ tail: Promise.resolve() as Promise<unknown> }))
 
-vi.mock('@/shared/utils/advisory-lock', () => ({
-  withAdvisoryLock: vi.fn(
-    (_payload: unknown, _key: string, work: () => Promise<unknown>) => {
-      const result = eventLock.tail.then(work, work)
-      eventLock.tail = result.then(
-        () => undefined,
-        () => undefined,
-      )
-      return result
-    },
-  ),
-}))
+// One tail for every key, so any two deliveries serialise -- stricter than
+// production, which is what makes the ordering assertions here deterministic.
+// A lock taken *inside* another one runs straight through instead: the handler
+// path nests (event lock, then the checkout collapse's customer lock), and
+// queueing a nested take behind the tail its own caller holds would deadlock
+// the test rather than model anything real.
+vi.mock('@/shared/utils/advisory-lock', async () => {
+  const { AsyncLocalStorage } = await import('node:async_hooks')
+  const nested = new AsyncLocalStorage<true>()
+
+  return {
+    withAdvisoryLock: vi.fn(
+      (_payload: unknown, _key: string, work: () => Promise<unknown>) => {
+        if (nested.getStore()) return work()
+
+        const run = () => nested.run(true, work)
+        const result = eventLock.tail.then(run, run)
+        eventLock.tail = result.then(
+          () => undefined,
+          () => undefined,
+        )
+        return result
+      },
+    ),
+  }
+})
 
 // Subscription state is written by resync alone (ADR-0008); these tests assert
 // that each event reaches it, and subscription-state.test.ts covers what it

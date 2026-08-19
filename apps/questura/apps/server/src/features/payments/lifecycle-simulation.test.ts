@@ -221,17 +221,35 @@ const { db, fakePayload } = D
 vi.mock('payload', () => ({ getPayload: async () => D.fakePayload }))
 vi.mock('@/payload.config', () => ({ default: {} }))
 
-// Per-key mutex, matching production's advisory-lock semantics.
+// Per-key mutex, matching production's advisory-lock semantics -- including
+// re-entrancy: nested calls share one connection (`AsyncLocalStorage`) and
+// Postgres counts advisory locks per session, so re-taking a key this async
+// context already holds returns immediately instead of waiting on itself.
+// Without that, the checkout handler's collapse lock would deadlock against the
+// resync lock nested inside it.
 const L = vi.hoisted(() => ({ locks: new Map<string, Promise<unknown>>() }))
 const locks = L.locks
-vi.mock('@/shared/utils/advisory-lock', () => ({
-  withAdvisoryLock: (_p: unknown, key: string, work: () => Promise<unknown>) => {
-    const prior = L.locks.get(key) ?? Promise.resolve()
-    const result = prior.then(work, work)
-    L.locks.set(key, result.then(() => undefined, () => undefined))
-    return result
-  },
-}))
+vi.mock('@/shared/utils/advisory-lock', async () => {
+  const { AsyncLocalStorage } = await import('node:async_hooks')
+  const held = new AsyncLocalStorage<Set<string>>()
+
+  return {
+    withAdvisoryLock: (_p: unknown, key: string, work: () => Promise<unknown>) => {
+      const owned = held.getStore()
+
+      if (owned?.has(key)) return work()
+
+      const next = new Set(owned ?? [])
+      next.add(key)
+      const run = () => held.run(next, work)
+
+      const prior = L.locks.get(key) ?? Promise.resolve()
+      const result = prior.then(run, run)
+      L.locks.set(key, result.then(() => undefined, () => undefined))
+      return result
+    },
+  }
+})
 
 const E = vi.hoisted(() => ({ emails: [] as string[] }))
 const emails = E.emails
