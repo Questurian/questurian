@@ -106,10 +106,31 @@ describe('create checkout session payment methods', () => {
   // cashapp and others switched on. This is the assertion that makes the
   // contract's claim true, so enabling a delayed-notification method in the
   // Dashboard can no longer quietly invalidate it.
-  it('sells through cards only, whatever the Dashboard has enabled', async () => {
+  it('sells through card and Link only, whatever the Dashboard has enabled', async () => {
     const [params] = await sessionParams()
 
-    expect(params.payment_method_types).toEqual(['card'])
+    expect(params.payment_method_types).toEqual(['card', 'link'])
+  })
+
+  // The point of the list is not the count, it is that nothing on it can
+  // complete a session before the money settles. Link is card-backed and
+  // settles immediately, so it belongs; anything that reaches recurring through
+  // a SEPA-style mandate does not. This assertion is what should fail if a
+  // future edit adds a delayed-notification method to the array.
+  it('never sells through a delayed-notification method', async () => {
+    const [params] = await sessionParams()
+
+    const delayedNotification = [
+      'acss_debit', 'au_becs_debit', 'bacs_debit', 'bancontact', 'boleto',
+      'ideal', 'sepa_debit', 'sofort', 'us_bank_account',
+    ]
+
+    expect(params.payment_method_types).not.toEqual(
+      expect.arrayContaining(delayedNotification),
+    )
+    for (const method of params.payment_method_types ?? []) {
+      expect(delayedNotification).not.toContain(method)
+    }
   })
 
   // Omitting the field is the failure this guards: Stripe then falls back to the

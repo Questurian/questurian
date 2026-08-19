@@ -264,10 +264,14 @@ export async function POST(req: NextRequest) {
       // Naming the methods here means an enabled Dashboard toggle can no longer
       // silently widen what this endpoint sells, and the contract's reasoning
       // becomes true again. Apple Pay and Google Pay are unaffected — they ride
-      // in as card wallets. Link is the one thing this drops; add `'link'` to
-      // the array to bring it back, since it is card-backed and settles
-      // immediately.
-      payment_method_types: ['card'],
+      // in as card wallets.
+      //
+      // `link` is named alongside `card` deliberately. Link is card-backed and
+      // settles immediately, so it is not a delayed-notification method and does
+      // not reopen the `checkout.session.async_payment_failed` hole this list
+      // exists to close. Listing it explicitly keeps the guarantee intact while
+      // still offering returning customers one-click checkout.
+      payment_method_types: ['card', 'link'],
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata,
