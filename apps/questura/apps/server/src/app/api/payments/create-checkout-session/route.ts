@@ -218,8 +218,13 @@ export async function POST(req: NextRequest) {
       // its own, so without this the subscription never passes through
       // `incomplete` and the 3DS branch of the membership emails cannot be
       // exercised against a real Stripe at all. See `stripeForceThreeDSecure`.
+      // `challenge`, not `any`: `any` only asks the issuer to authenticate, and a
+      // US issuer answers that frictionlessly — authenticated invisibly, paid in
+      // three seconds, subscription `active` on arrival. Observed on this account
+      // 2026-08-18. `challenge` asks for an interactive step, which is what
+      // actually leaves the subscription sitting in `incomplete`.
       ...(forceThreeDSecure
-        ? { payment_method_options: { card: { request_three_d_secure: 'any' as const } } }
+        ? { payment_method_options: { card: { request_three_d_secure: 'challenge' as const } } }
         : {}),
     }, { idempotencyKey })
 
