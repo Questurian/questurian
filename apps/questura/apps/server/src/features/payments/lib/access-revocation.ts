@@ -9,6 +9,22 @@ import {
 } from './subscription-state'
 
 /**
+ * Whether this is the SDK's "Stripe rejected the request itself" error.
+ *
+ * `rawType` carries the API's own error type (`invalid_request_error`); `type`
+ * carries the SDK's *class name* (`StripeInvalidRequestError`). Reading `type`
+ * and comparing it to the API spelling matches nothing a real client ever
+ * throws, which is exactly how this guard came to reject every error it was
+ * written to recognise. Both spellings are accepted so neither reading can
+ * silently fail again.
+ */
+function isInvalidRequestError(error: unknown): boolean {
+  const { type, rawType } = (error ?? {}) as { type?: string; rawType?: string }
+
+  return rawType === 'invalid_request_error' || type === 'StripeInvalidRequestError'
+}
+
+/**
  * Whether Stripe rejected this write because the subscription is already over.
  *
  * Stripe refuses most updates to a `canceled` subscription — "a canceled
@@ -26,7 +42,7 @@ async function rejectedForCancelledSubscription(
   subscriptionId: string,
   error: unknown
 ): Promise<boolean> {
-  if ((error as { type?: string }).type !== 'invalid_request_error') return false
+  if (!isInvalidRequestError(error)) return false
 
   try {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
