@@ -19,12 +19,52 @@ import { logger } from '@/shared/utils/logger'
 // chars — bound well below that.
 const REFERRAL_ID_MAX_LENGTH = 100
 
+/**
+ * The characters an affiliate id can be made of. Anything else is not an id.
+ *
+ * Length alone was the only bound, so any 100 characters at all — newlines,
+ * quotes, control bytes, invisible Unicode — rode the request body into Stripe
+ * metadata and into the checkout idempotency hash. Nothing downstream
+ * interpolates the value, so this is not a live injection; it is an untrusted
+ * string being carried into places that are hard to clean up. Metadata surfaces
+ * in Dashboard exports, event payloads and webhook logs, and a value with an
+ * embedded newline is a forged line in a log a human will later read as truth.
+ *
+ * Endorsely does not publish the format, and the value is minted server-side —
+ * `assets.endorsely.com/endorsely.js` only copies whatever
+ * `app.endorsely.com/api/public/track` hands back into
+ * `window.endorsely_referral`. The one concrete sample in this repo is our own
+ * Endorsely org id, `fcadb40c-1e6f-45a3-b69f-709deae165c0` (client
+ * `.env.production.local`), so their ids are at least UUID-shaped. That is
+ * suggestive, not proof, so this set is drawn wider than a UUID on purpose: it
+ * also admits prefixed ids (`ref_abc123`), base64 and base64url tokens, and
+ * dotted or colon-namespaced slugs.
+ *
+ * Erring wide is the right direction here. Rejecting a real referral silently
+ * drops the metadata, the affiliate never gets the commission, and nobody finds
+ * out — there is no error anywhere. Accepting an odd-but-harmless id costs
+ * nothing.
+ *
+ * Two printable characters are still left out. `/` never appears in an id and
+ * is the one character that would matter if this value were ever put in a path.
+ * `@` is excluded so the "no email in metadata" guard below stays meaningful:
+ * with it allowed, a caller could plant an address-shaped string in the one
+ * field that assertion exists to keep addresses out of.
+ */
+const REFERRAL_ID_PATTERN = /^[A-Za-z0-9._:+=-]+$/
+
 function sanitizeReferralId(value: unknown): string | null {
   if (typeof value !== 'string') {
     return null
   }
   const trimmed = value.trim()
   if (trimmed.length === 0 || trimmed.length > REFERRAL_ID_MAX_LENGTH) {
+    return null
+  }
+  // `null` is the existing "no referral" answer, so a malformed value is
+  // ignored rather than failing the checkout. A visitor must not lose a
+  // subscription because an affiliate script sent something odd.
+  if (!REFERRAL_ID_PATTERN.test(trimmed)) {
     return null
   }
   return trimmed
