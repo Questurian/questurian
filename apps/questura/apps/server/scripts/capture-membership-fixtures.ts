@@ -49,6 +49,11 @@ const FIXTURE_PATH = resolve(
   '../src/features/payments/__fixtures__/membership-lifecycle.events.json'
 )
 
+const INCOMPLETE_FIXTURE_PATH = resolve(
+  __dirname,
+  '../src/features/payments/__fixtures__/membership-incomplete.events.json'
+)
+
 /** Stripe test payment methods: one that always works, one that fails on charge. */
 const PM_GOOD = 'pm_card_visa'
 const PM_FAILING = 'pm_card_chargeCustomerFail'
@@ -191,6 +196,90 @@ async function drive(): Promise<{ subscriptionId: string; customerId: string; st
   return { subscriptionId: subscription.id, customerId: customer.id, startedAt }
 }
 
+/**
+ * Drive the waiting state: a subscription that exists but has not collected.
+ *
+ * This is the one path the tests covered without a single captured payload
+ * behind them. Production reaches it through Checkout with
+ * `request_three_d_secure: 'challenge'` -- the visitor is sent to their bank,
+ * and until they come back the subscription sits `incomplete` with an unpaid
+ * first invoice. `UNPAID_CURRENT_PERIOD` and `mapStripeStatusToInternal` both
+ * have branches for that status, and `resolveDunningGrace` deliberately refuses
+ * to open a grace window for it, all written against hand-built objects.
+ *
+ * `payment_behavior: 'default_incomplete'` reproduces the same state without a
+ * browser: Stripe creates the subscription, leaves it `incomplete`, and waits
+ * for the invoice to be paid. It is the *state* these fixtures are for, not the
+ * reason it was reached -- a 3DS challenge and a deferred confirmation leave the
+ * subscription in the same shape, and only the former needs a human at a bank's
+ * redirect page.
+ *
+ * No test clock here. Nothing needs time to pass: the subscription is born
+ * waiting, and paying the invoice ends the wait. That keeps this stage seconds
+ * long instead of minutes, so it can be re-run on its own.
+ */
+async function driveIncomplete(): Promise<{
+  subscriptionId: string
+  customerId: string
+  startedAt: number
+}> {
+  const startedAt = Math.floor(Date.now() / 1000)
+
+  const price = await stripe.prices.create({
+    currency: 'usd',
+    unit_amount: 50,
+    recurring: { interval: 'month' },
+    product_data: { name: 'Questura Membership (incomplete fixture)' },
+  })
+  log('incomplete', `price ${price.id}`)
+
+  const customer = await stripe.customers.create({
+    email: `fixture-incomplete+${startedAt}@questurian.test`,
+    name: 'Fixture Visitor (incomplete)',
+  })
+  log('incomplete', `customer ${customer.id}`)
+
+  await setDefaultPaymentMethod(customer.id, PM_GOOD)
+
+  const subscription = await stripe.subscriptions.create({
+    customer: customer.id,
+    items: [{ price: price.id }],
+    payment_behavior: 'default_incomplete',
+    metadata: { visitorAuthUserId: 'fixture-auth-user-incomplete' },
+  })
+  log('incomplete', `subscription ${subscription.id} status=${subscription.status}`)
+
+  if (subscription.status !== 'incomplete') {
+    throw new Error(
+      `Expected an incomplete subscription to capture; Stripe returned ${subscription.status}. ` +
+        'Without it this fixture would record the ordinary paid path under the wrong name.'
+    )
+  }
+
+  // The wait ends. Paying the open invoice is what a returning visitor's
+  // completed 3DS challenge amounts to on Stripe's side.
+  const invoiceId =
+    typeof subscription.latest_invoice === 'string'
+      ? subscription.latest_invoice
+      : subscription.latest_invoice?.id
+
+  if (!invoiceId) {
+    throw new Error('Incomplete subscription has no latest invoice to pay.')
+  }
+
+  await stripe.invoices.pay(invoiceId)
+  log('authenticated', `paid invoice ${invoiceId}`)
+
+  const settled = await stripe.subscriptions.retrieve(subscription.id)
+  log('authenticated', `subscription status=${settled.status}`)
+
+  if (settled.status !== 'active') {
+    log('authenticated', `WARNING: expected active after payment, got ${settled.status}`)
+  }
+
+  return { subscriptionId: subscription.id, customerId: customer.id, startedAt }
+}
+
 const CAPTURED_EVENT_TYPES = new Set([
   'customer.subscription.created',
   'customer.subscription.updated',
@@ -248,8 +337,110 @@ function reportPeriodEndShape(events: Stripe.Event[]) {
   }
 }
 
+/**
+ * Which capture to run. The lifecycle stage advances a test clock through three
+ * months and takes minutes; the incomplete stage takes seconds. Re-running the
+ * slow one to refresh the fast one wastes time and rewrites a fixture that did
+ * not need to change, so each can be asked for on its own.
+ */
+type CaptureStage = 'lifecycle' | 'incomplete' | 'all'
+
+function requestedStage(): CaptureStage {
+  const raw = (process.env.CAPTURE_STAGE ?? 'all').trim()
+
+  if (raw === 'lifecycle' || raw === 'incomplete' || raw === 'all') return raw
+
+  throw new Error(
+    `CAPTURE_STAGE must be lifecycle, incomplete or all; got ${JSON.stringify(raw)}.`
+  )
+}
+
+/**
+ * Wait for Stripe's event list to catch up with what already happened.
+ *
+ * `events.list` is eventually consistent. Reading it straight after paying the
+ * invoice returned only `customer.subscription.created` -- the transition out of
+ * the waiting state, which is the entire point of this capture, had not been
+ * listed yet. A fixture written from that read would have recorded a
+ * subscription that never leaves `incomplete` and looked, at a glance, like a
+ * successful capture.
+ *
+ * So the read is repeated until the event that proves the transition shows up.
+ * Failing loudly on timeout is deliberate: a short fixture that silently
+ * omits the interesting half is worse than no fixture.
+ */
+async function waitForEvents(
+  subscriptionId: string,
+  since: number,
+  required: string[],
+  stage: string
+): Promise<Stripe.Event[]> {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const events = await collectEvents(subscriptionId, since)
+    const seen = new Set<string>(events.map((event) => event.type))
+
+    if (required.every((type) => seen.has(type))) return events
+
+    if (attempt === 0) {
+      log(stage, `waiting for ${required.filter((type) => !seen.has(type)).join(', ')}`)
+    }
+
+    await sleep(2000)
+  }
+
+  const events = await collectEvents(subscriptionId, since)
+  const seen = new Set<string>(events.map((event) => event.type))
+  const missing = required.filter((type) => !seen.has(type))
+
+  throw new Error(
+    `Stripe never listed ${missing.join(', ')} for ${subscriptionId}. ` +
+      `Captured only: ${[...seen].join(', ') || '(nothing)'}. Refusing to write a partial fixture.`
+  )
+}
+
+async function captureIncomplete() {
+  const { subscriptionId, customerId, startedAt } = await driveIncomplete()
+
+  // `subscription.updated` is the transition this fixture exists for; without it
+  // there is no evidence the waiting state ever ends.
+  const events = await waitForEvents(
+    subscriptionId,
+    startedAt,
+    ['customer.subscription.created', 'customer.subscription.updated', 'invoice.payment_succeeded'],
+    'capture'
+  )
+  log('capture', `${events.length} events for ${subscriptionId}`)
+
+  reportPeriodEndShape(events)
+
+  const fixture = {
+    capturedAt: new Date().toISOString(),
+    note: 'Captured from a real Stripe test-mode run of the incomplete (awaiting payment) path. Do not hand-edit; re-run the script.',
+    subscriptionId,
+    customerId,
+    events,
+  }
+
+  mkdirSync(dirname(INCOMPLETE_FIXTURE_PATH), { recursive: true })
+  writeFileSync(INCOMPLETE_FIXTURE_PATH, `${JSON.stringify(fixture, null, 2)}\n`)
+
+  console.log(`\nWrote ${events.length} events to ${INCOMPLETE_FIXTURE_PATH}`)
+}
+
 async function main() {
-  log('setup', 'test mode confirmed, driving the lifecycle')
+  const stage = requestedStage()
+  log('setup', `test mode confirmed, stage=${stage}`)
+
+  if (stage === 'incomplete') {
+    await captureIncomplete()
+    return
+  }
+
+  if (stage === 'all') {
+    await captureIncomplete()
+  }
+
+  log('setup', 'driving the lifecycle')
 
   const { subscriptionId, customerId, startedAt } = await drive()
 
