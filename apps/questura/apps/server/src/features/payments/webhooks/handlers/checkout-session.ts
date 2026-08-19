@@ -1,4 +1,6 @@
+import { getPayload } from 'payload'
 import type Stripe from 'stripe'
+import config from '@/payload.config'
 import { updateUserSubscription } from '@/payments/lib/payment-service'
 import { resyncSubscription } from '@/payments/lib/subscription-resync'
 import type { UserSubscriptionUpdate } from '@/payments/types'
@@ -7,6 +9,8 @@ import { splitDisplayName } from '@/features/visitor-auth/lib/visitor-profile'
 import { resolveProfileForStripeCustomer } from '@/payments/lib/subscription-profile'
 import { listBillableSubscriptions, selectSubscriptionToKeep } from '@/payments/lib/customer-linkage'
 import { stripe } from '@/payments/lib/stripe'
+import { customerLockKey } from '@/payments/lib/subscription-lock'
+import { withAdvisoryLock } from '@/shared/utils/advisory-lock'
 import { logger } from '@/shared/utils/logger'
 
 type InvoiceWithPayment = Stripe.Invoice & {
@@ -156,12 +160,35 @@ export async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Se
     )
   }
 
-  const keptSubscriptionId = await collapseDuplicateSubscriptions(customerId, subscriptionId)
-  const { profileId } = await resyncSubscription(keptSubscriptionId)
+  const payload = await getPayload({ config })
 
-  if (!profileId) {
-    throw new Error(`Failed to resync subscription ${keptSubscriptionId} after checkout`)
-  }
+  // Collapsing and resyncing are one decision, so they take one lock.
+  //
+  // The collapse is itself a read-decide-write over the customer: it lists the
+  // subscriptions, picks the survivor, then refunds and cancels the rest.
+  // Unlocked, a second delivery can list the same set before this one has
+  // cancelled anything, and the two pick survivors against a state each is
+  // about to invalidate -- two collapses, two refund attempts, and a resync
+  // deciding ownership from a list that is already wrong.
+  //
+  // `resyncSubscription` takes this same key inside. That is a re-entry, not a
+  // second lock: nested calls share one connection (`AsyncLocalStorage`) and
+  // Postgres counts advisory locks per session, so the inner take returns
+  // immediately and the inner release only decrements.
+  const keptSubscriptionId = await withAdvisoryLock(
+    payload,
+    customerLockKey(customerId),
+    async () => {
+      const kept = await collapseDuplicateSubscriptions(customerId, subscriptionId)
+      const { profileId } = await resyncSubscription(kept)
+
+      if (!profileId) {
+        throw new Error(`Failed to resync subscription ${kept} after checkout`)
+      }
+
+      return kept
+    }
+  )
 
   const extras: UserSubscriptionUpdate = {}
 
