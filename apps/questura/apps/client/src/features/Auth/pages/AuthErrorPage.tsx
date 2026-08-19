@@ -32,6 +32,12 @@ function AuthErrorContent() {
         case 'oauth_failed':
           setError('Google sign-in failed. Please try again or use email/password login.');
           break;
+        // The request never reached the server, so "sign-in failed" would be
+        // misleading -- nothing was attempted and retrying the same way fails
+        // the same way.
+        case 'oauth_unreachable':
+          setError('We could not reach the sign-in service. Check your connection and try again.');
+          break;
         case 'invalid_credentials':
           setError('Invalid credentials provided. Please check your email and password.');
           break;
