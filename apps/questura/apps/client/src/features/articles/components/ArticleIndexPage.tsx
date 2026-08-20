@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { PublicImage } from '@/components/media/PublicImage'
+import { BookmarkButton } from '@/features/bookmarks/components/BookmarkButton'
 import { fetchArticleIndex } from '@/features/articles/lib/fetchArticleIndex'
 import {
   hubHrefForScope,
@@ -69,6 +70,13 @@ export async function ArticleIndexPage({ scope, type, page, lang }: Props) {
               <Link href={item.href} className="block">
                 {item.thumbnail && (
                   <div className="relative mb-4 aspect-[4/3] w-full overflow-hidden rounded-lg bg-foreground/5">
+                    <div className="absolute right-2 top-2 z-10">
+                      <BookmarkButton
+                        targetType={type}
+                        targetId={Number(item.id)}
+                        variant="card"
+                      />
+                    </div>
                     <PublicImage
                       src={item.thumbnail.url}
                       alt={item.thumbnail.alt ?? ''}

@@ -12,6 +12,12 @@ export const queryKeys = {
   account: ['account'] as const,
   accountCheck: (email: string) => [...queryKeys.account, 'check', email] as const,
 
+  // Bookmark queries
+  bookmarks: ['bookmarks'] as const,
+  bookmarkRefs: () => [...queryKeys.bookmarks, 'refs'] as const,
+  bookmarkPage: (page: number, type: string | null) =>
+    [...queryKeys.bookmarks, 'page', page, type ?? 'all'] as const,
+
   // Subscription queries
   subscription: ['subscription'] as const,
 

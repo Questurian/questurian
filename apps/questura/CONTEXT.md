@@ -172,13 +172,28 @@ _Avoid_: author account, author role, author profile (retired 2026-08: authorshi
 
 ### Visitor account
 
-Authenticated public-site identity for end visitors using login, signup, profile, saved content, and checkout flows.
+Authenticated public-site identity for end visitors using login, signup, profile, Bookmarks, and checkout flows.
 _Avoid_: staff user, member
 
 ### Visitor profile
 
 Questura-owned public-site profile and commerce record for one Visitor account.
 _Avoid_: credential, session, staff user
+
+### Bookmark
+
+A Visitor account's own marker on one **Bookmark target**, so the visitor can return to it later. Authoritative definition: `docs/adr/0010-bookmarks-are-private-reader-markers-on-url-bearing-targets.md`. Reader-facing word and internal word are the same one. Requires a Visitor session; it is not a **Membership entitlement** and never grants or reflects paid access.
+_Avoid_: save, saved item, saved content, favourite, reading list, watchlist, pin
+
+### Bookmark target
+
+A document a **Bookmark** may point at. The qualifying test is a public URL of its own: a Bookmark exists to return the visitor somewhere, so a document with no page cannot be one. Today that is `articles`, `single-type-listicles`, and `listicle-itineraries` and nothing else. Venues (`dining`, `accommodations`, `attractions`, `nightlife`, `tours`) are deliberately excluded because they render only inside listicles, itineraries and homepage blocks and have no route in `app/(public)`; they qualify the day they get one.
+_Avoid_: bookmarkable, saved type, entity
+
+### Bookmark list
+
+The Visitor account's whole set of **Bookmarks**, and the private page that renders it.
+_Avoid_: collection (taken: Payload collection), folder, board, library
 
 ### Membership entitlement
 
@@ -288,6 +303,10 @@ _Avoid_: public auth, visitor auth
 - A **Staff identity** has at most one **Author**; an **Author** may exist with no Staff identity at all, and that is a fully valid, renderable state (ADR-0007).
 - A **Staff identity** has a lifecycle **status** of `active` or `disabled`. Disabling, not deleting, is how a person is offboarded: a disabled identity cannot sign in and holds no access, while its **Author**, bylines and author page are untouched.
 - A **Visitor account** has exactly one **Visitor profile**.
+- A **Visitor account** has zero or more **Bookmarks**; an anonymous reader has none, because a Bookmark needs a **Visitor session** to belong to.
+- A **Bookmark** points at exactly one **Bookmark target**, and a Visitor account holds at most one Bookmark per target.
+- A **Bookmark** is available to every Visitor account regardless of **Membership entitlement**. Bookmarking a **Gated item** is allowed and grants nothing; the **Free sample** rule is unchanged by it.
+- Bookmarking an **Author** is deliberately not offered: a marker on a person reads as a promise of a feed of their new work, which is a different concept from a Bookmark and is not built.
 - A **Visitor profile** is durable membership and billing identity. Independent deletion is unsupported until an erasure workflow can coordinate BetterAuth, Stripe, and profile data.
 - A **Staff identity** is separate from a **Visitor account**.
 - A **Staff identity** enters through a **Staff entry point**, not a **Visitor entry point**.
@@ -343,7 +362,7 @@ _Avoid_: public auth, visitor auth
 - Staff identities never create Stripe checkout or customer records.
 - Payment APIs authenticate through the Current principal and require a Visitor principal for Stripe checkout/customer operations.
 - BetterAuth endpoints own Visitor credential, session, verification, and provider-linking operations.
-- Questura account APIs exist only for Visitor profile, preference, saved-content, affiliate/referral, and membership-view operations.
+- Questura account APIs exist only for Visitor profile, preference, Bookmark, affiliate/referral, and membership-view operations.
 - BetterAuth owns Visitor auth email token and flow state.
 - Questura's Resend email feature renders and sends Visitor auth emails through BetterAuth mail hooks.
 
@@ -363,6 +382,11 @@ _Avoid_: public auth, visitor auth
 - **Entitlement is enforced where the body is serialized, not where it is queried.** Every public read runs `overrideAccess: true`, so Payload collection access control cannot gate a Gated item and must never be mistaken for the enforcement point.
 - A locked body is **absent from the response**, not hidden by the client. Client-side concealment is not gating.
 - No response containing a Gated item's full body is ever cacheable. The cached public shell serves only Free samples; full bodies are served from a dynamic no-store path.
+
+- A **Bookmark** stores a reference to its **Bookmark target** — type and document id — and never a snapshot of the target's title, image or path. Title, thumbnail and href are resolved live on every read, so a retitled or re-slugged target stays correct and `ArticleRedirects` is not load-bearing for the **Bookmark list**.
+- The **Bookmark list** resolves targets through the same `status: "published"` gate the public article index uses. There is no second definition of publicly visible.
+- A **Bookmark** never blocks an editorial action. Unlike a **Homepage reference lock**, it does not prevent deletion or unpublish: a homepage reference is an editorial commitment that breaks a public page if severed, while a Bookmark is a private reader marker, and one reader must not hold deletion policy for a document.
+- A **Bookmark** outlives its target's availability. An unpublished or deleted target is omitted from the **Bookmark list** silently, with no placeholder, because a "no longer available" card raises a question that cannot be answered without exposing editorial state. The row is retained so a republished target reappears; rows are removed only by explicit cleanup, never as a side effect of an editorial action.
 
 ## Flagged ambiguities
 

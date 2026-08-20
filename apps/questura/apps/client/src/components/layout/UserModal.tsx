@@ -115,6 +115,15 @@ export default function UserModal({ isOpen, onClose }: UserModalProps) {
               >
                 Go to Account
               </Link>
+              <Link
+                href="/account/bookmarks"
+                className={`
+                  text-white text-lg hover:underline transition-colors underline
+                `}
+                onClick={onClose}
+              >
+                Bookmarks
+              </Link>
               {process.env.NODE_ENV === 'development' && (
                 <>
                   <button

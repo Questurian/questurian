@@ -31,6 +31,7 @@ export function MapsListicleArticlePage({
         publishedAt={article.publishedAt}
         updatedAt={article.updatedAt}
         author={article.author}
+        bookmark={{ targetType: 'maps', targetId: article.id }}
       />
 
       {introHtml ? (

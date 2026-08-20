@@ -3,6 +3,7 @@ import { PublicImage } from '@/components/media/PublicImage'
 import { GatedArticleBody } from '@/features/articles/components/GatedArticleBody'
 import { ArticleShareButton } from '@/features/articles/components/ArticleShareButton'
 import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
+import { BookmarkButton } from '@/features/bookmarks/components/BookmarkButton'
 import {
   ArticleRail,
   ArticlePartners,
@@ -37,7 +38,7 @@ function StandardArticleHeader({
   path?: string
   shareUrl: string
 }) {
-  const { title, author, publishedAt, updatedAt, seoSection, headerSection } = article
+  const { id: articleId, title, author, publishedAt, updatedAt, seoSection, headerSection } = article
   const description = seoSection?.metaDescription
   const displayName = author?.displayName
   const dateLine = formatMagazineDate(publishedAt ?? updatedAt)
@@ -102,11 +103,17 @@ function StandardArticleHeader({
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-        <ArticleShareButton
-          url={shareUrl}
-          title={title}
-          imageUrl={headerSection?.featuredImage?.url}
-        />
+        <div className="flex items-center gap-3 380:gap-4">
+          <ArticleShareButton
+            url={shareUrl}
+            title={title}
+            imageUrl={headerSection?.featuredImage?.url}
+          />
+
+          <span aria-hidden="true" className="size-[3px] rounded-full bg-foreground/30" />
+
+          <BookmarkButton targetType="articles" targetId={articleId} />
+        </div>
         {/* Same CTA the listicle/itinerary headers render (see ArticlePageHeader). */}
         <AddOnGoogleButton variant="google" />
       </div>

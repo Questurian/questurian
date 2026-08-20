@@ -1,9 +1,10 @@
-import { Bookmark } from 'lucide-react'
 import type { JSX } from 'react'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
 import type { ArticleAuthor } from '@/features/articles/types'
 import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
 import { ArticleShareButton } from '@/features/articles/components/ArticleShareButton'
+import { BookmarkButton } from '@/features/bookmarks/components/BookmarkButton'
+import type { BookmarkTargetType } from '@/features/bookmarks/types'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 type ArticlePageHeaderProps = {
@@ -13,6 +14,8 @@ type ArticlePageHeaderProps = {
   publishedAt?: string
   updatedAt?: string
   author?: ArticleAuthor | null
+  /** Bookmark target for this page. Omitted only where there is nothing to bookmark. */
+  bookmark?: { targetType: BookmarkTargetType; targetId: number } | null
 }
 
 function AuthorBlock({
@@ -85,6 +88,7 @@ export function ArticlePageHeader({
   publishedAt,
   updatedAt,
   author,
+  bookmark,
 }: ArticlePageHeaderProps): JSX.Element {
   const publishedLine = (() => {
     const formatted = formatHeaderDate(publishedAt ?? updatedAt)
@@ -162,19 +166,19 @@ export function ArticlePageHeader({
             <div className="flex items-center gap-3 380:gap-4">
               <ArticleShareButton title={title} imageUrl={featuredImage?.url} />
 
-              <span
-                aria-hidden="true"
-                className="size-[3px] rounded-full bg-foreground/30"
-              />
+              {bookmark ? (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="size-[3px] rounded-full bg-foreground/30"
+                  />
 
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 font-display text-[10px] uppercase leading-none tracking-[0.18em] text-foreground transition-opacity hover:opacity-70 active:opacity-100 380:text-[11px]"
-                aria-label="Save article"
-              >
-                <Bookmark size={13} strokeWidth={1.75} aria-hidden="true" />
-                Save
-              </button>
+                  <BookmarkButton
+                    targetType={bookmark.targetType}
+                    targetId={bookmark.targetId}
+                  />
+                </>
+              ) : null}
             </div>
           </div>
         </div>

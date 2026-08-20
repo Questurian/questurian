@@ -281,6 +281,7 @@ export function ItineraryListicleArticlePage({
         publishedAt={article.publishedAt ?? undefined}
         updatedAt={article.updatedAt}
         author={article.author}
+        bookmark={{ targetType: "itineraries", targetId: article.id }}
       />
 
       {introHtml ? (
