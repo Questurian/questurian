@@ -106,4 +106,32 @@ describe('gateExternalApiRead', () => {
 
     expect(doc.gate).toBeUndefined()
   })
+  it("strips locked prose from a gated item's structured data over REST", () => {
+    // Surface parity. `seoSection.structuredData` is free-form JSON emitted
+    // whole, and a rule that lands on only one of the two enforcement surfaces
+    // is what let anonymous `GET /api/articles` hand over paid bodies until
+    // 2026-08-16. The strip lives in `applySampleRule`, so both callers get it.
+    const doc: Record<string, unknown> = {
+      access: 'member',
+      contentBlocks: blocks(9),
+      seoSection: {
+        structuredData: {
+          '@type': 'Article',
+          headline: 'Three days in Lima',
+          isAccessibleForFree: false,
+          articleBody: 'z'.repeat(5000),
+        },
+      },
+    }
+
+    read(hook, doc, { payloadAPI: 'REST' })
+
+    const jsonLd = (doc.seoSection as Record<string, unknown>).structuredData as Record<
+      string,
+      unknown
+    >
+    expect(jsonLd.articleBody).toBeUndefined()
+    expect(jsonLd.headline).toBe('Three days in Lima')
+    expect(jsonLd.isAccessibleForFree).toBe(false)
+  })
 })
