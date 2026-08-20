@@ -6,7 +6,9 @@ This Linux laptop serves the live domains, but it is **not the production
 platform**. It exists for one reason: some things cannot be proven anywhere
 else. Stripe has to reach a real webhook URL, OAuth has to redirect to a real
 origin, and cookies only behave like cookies over real HTTPS on real
-subdomains. A localhost stack cannot exercise any of that honestly.
+subdomains. A localhost stack cannot exercise any of that honestly. Localhost is still
+the default for UI work; park this host when you do not need a live window.
+Pause/resume: `docs/local-vs-live.md`.
 
 So this is a **live-like test environment that happens to be publicly
 reachable**. The only transactions on it are the owner's own tests. It is not

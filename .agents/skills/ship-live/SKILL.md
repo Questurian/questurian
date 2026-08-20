@@ -8,8 +8,9 @@ description: >
   I", "roll back", or invokes /ship-live.
 ---
 
-Questura has one runtime: the Linux laptop (`ssh linux-laptop`). There is no
-localhost Questura. See `AGENTS.md`.
+Default verify is Mac localhost (`apps/questura/docs/local-vs-live.md`).
+This skill is the **live window**: resume the laptop, then PR / CI / deploy.
+Do not run it for ordinary UI tweaks. See `AGENTS.md`.
 
 This skill owns the entire path from an edited file to verified-live. Invoke it
 at any point — before starting work, mid-change, or after merging. It works out
