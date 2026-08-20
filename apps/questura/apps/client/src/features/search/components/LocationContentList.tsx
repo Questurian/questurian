@@ -73,7 +73,7 @@ export function LocationContentList({ content, pageHref, emptyMessage }: Props) 
                   {item.title}
                 </h2>
                 {item.excerpt && (
-                  <p className="mt-1.5 line-clamp-2 text-[14px] leading-6 text-foreground/68">
+                  <p data-article-dek className="mt-1.5 line-clamp-2 text-[14px] leading-6 text-foreground/68">
                     {item.excerpt}
                   </p>
                 )}

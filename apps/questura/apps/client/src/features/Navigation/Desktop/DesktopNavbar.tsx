@@ -40,6 +40,7 @@ export default function DesktopNavbar() {
           </div>
           <Link
             href="/"
+            data-no-hover-underline
             className="cursor-pointer justify-self-center"
           >
             <Logo />

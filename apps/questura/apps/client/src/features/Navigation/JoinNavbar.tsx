@@ -10,6 +10,7 @@ export default function JoinNavbar() {
     <nav className="sticky top-0 z-40 flex h-[55px] w-full items-center justify-center bg-[#031522] 1024:h-16">
       <Link
         href="/"
+        data-no-hover-underline
         aria-label="Questurian home"
         className="cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#78C7E8]"
       >

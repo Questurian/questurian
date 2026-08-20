@@ -109,7 +109,7 @@ export function FeaturedArticleOneArticlePreview({
             {article.title}
           </h2>
           {excerpt ? (
-            <p className="mt-4 font-editorial text-[0.95rem] leading-[1.55] text-[#b0a89e]">
+            <p data-article-dek className="mt-4 font-editorial text-[0.95rem] leading-[1.55] text-[#b0a89e]">
               {excerpt}
             </p>
           ) : null}
@@ -130,7 +130,7 @@ export function FeaturedArticleOneArticlePreview({
             {article.title}
           </h2>
           {excerpt ? (
-            <p className="mt-5 font-editorial text-[0.95rem] leading-[1.55] text-[#b0a89e] max-w-[480px] 1024:text-[1rem]">
+            <p data-article-dek className="mt-5 font-editorial text-[0.95rem] leading-[1.55] text-[#b0a89e] max-w-[480px] 1024:text-[1rem]">
               {excerpt}
             </p>
           ) : null}

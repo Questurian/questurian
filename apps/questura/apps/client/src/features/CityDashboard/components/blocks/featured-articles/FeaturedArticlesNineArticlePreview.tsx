@@ -190,8 +190,8 @@ function CenterHeroCard({ article }: SlotCardProps): JSX.Element {
             ) : article.title}
           </h2>
 
-          <p className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-            {excerpt}
+          <p data-article-dek className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+            {article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
@@ -294,7 +294,7 @@ function CompactListCard({ article }: SlotCardProps): JSX.Element {
             <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
           ) : article.title}
         </h2>
-        <p className="city-compact-article-meta">{excerpt}</p>
+        <p data-article-dek className="city-compact-article-meta">{article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}</p>
         <p className="city-compact-article-author">
           By <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
         </p>

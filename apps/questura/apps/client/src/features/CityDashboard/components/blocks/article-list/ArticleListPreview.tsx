@@ -67,7 +67,7 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
         </h3>
 
         {excerpt ? (
-          <p className="mt-2 font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] 768:text-[0.92rem] 1024:text-[0.95rem]">
+          <p data-article-dek className="mt-2 font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] 768:text-[0.92rem] 1024:text-[0.95rem]">
             {excerpt}
           </p>
         ) : null}

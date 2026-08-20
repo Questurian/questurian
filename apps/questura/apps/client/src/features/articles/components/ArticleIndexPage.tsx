@@ -94,7 +94,7 @@ export async function ArticleIndexPage({ scope, type, page, lang }: Props) {
                   {item.title}
                 </h2>
                 {item.excerpt && (
-                  <p className="mt-2 text-[14px] leading-6 text-foreground/68">{item.excerpt}</p>
+                  <p data-article-dek className="mt-2 text-[14px] leading-6 text-foreground/68">{item.excerpt}</p>
                 )}
               </Link>
             </li>

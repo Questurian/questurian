@@ -20,6 +20,7 @@ export default function MobileNavbar() {
           />
           <Link
             href="/"
+            data-no-hover-underline
             className="inline-flex min-w-0 cursor-pointer items-center self-center"
           >
             <Logo

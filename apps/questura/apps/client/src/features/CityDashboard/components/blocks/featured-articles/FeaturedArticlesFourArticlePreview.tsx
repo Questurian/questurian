@@ -125,8 +125,8 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
             ) : article.title}
           </h2>
 
-          <p className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
-            {excerpt}
+          <p data-article-dek className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+            {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
@@ -191,7 +191,7 @@ function SideListArticleCard({ article }: SideListArticleCardProps): JSX.Element
             <Link href={articlePath} className="hover:underline">{article.title}</Link>
           ) : article.title}
         </h3>
-        <p className="city-four-side-meta">{excerpt}</p>
+        <p data-article-dek className="city-four-side-meta">{articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}</p>
         <p className="city-four-side-author">
           <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
         </p>

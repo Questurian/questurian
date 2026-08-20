@@ -109,3 +109,66 @@ input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px #F5F0E8 inset !important;
   -webkit-text-fill-color: #1A1A1A !important;
 }
+
+/* INTERACTIVE AFFORDANCE — app-wide, declared once.
+
+   Tailwind v4's preflight leaves buttons at `cursor: default`, so every control
+   in the app had to remember `cursor-pointer` and most did not. A control that
+   does not change the cursor does not read as a control, so the rule lives here
+   rather than in 38 component files.
+
+   `role="link"` is in the list because a byline inside a card-wide link cannot
+   be an anchor -- nested anchors are invalid HTML -- so AuthorLink renders a
+   span that navigates on click. It is a link to the reader either way, so it
+   has to feel like one. */
+a[href],
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']),
+[role='link']:not([aria-disabled='true']),
+summary,
+label[for],
+select:not(:disabled),
+input[type='submit']:not(:disabled),
+input[type='button']:not(:disabled),
+input[type='checkbox']:not(:disabled),
+input[type='radio']:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[role='button'][aria-disabled='true'] {
+  cursor: default;
+}
+
+/* A linked headline underlines on hover -- one element at a time.
+
+   Only what the pointer is actually over reacts: over the headline, the
+   headline underlines; over the dek, the dek underlines. The pointer is the
+   reader's finger on the page, so exactly one thing under it should answer.
+
+   The three heading selectors cover the three ways cards wire a title: heading
+   inside a whole-card anchor, anchor inside the heading, and heading that is
+   itself the anchor. All three require `:hover` on the title's own box, so a
+   card-wide anchor does not underline its headline from across the card. */
+a[href] :is(h1, h2, h3, h4, h5, h6):hover,
+:is(h1, h2, h3, h4, h5, h6) a[href]:hover,
+a[href]:is(h1, h2, h3, h4, h5, h6):hover,
+a[href]:focus-visible :is(h1, h2, h3, h4, h5, h6),
+:is(h1, h2, h3, h4, h5, h6) a[href]:focus-visible,
+[data-article-dek]:hover {
+  text-decoration-line: underline;
+  text-underline-offset: 0.14em;
+  text-decoration-thickness: from-font;
+}
+
+/* `data-no-hover-underline` opts a link out, for chrome where the whole
+   surface, not the text, is the affordance. */
+a[href][data-no-hover-underline]:hover :is(h1, h2, h3, h4, h5, h6),
+a[href][data-no-hover-underline] :is(h1, h2, h3, h4, h5, h6):hover,
+a[href][data-no-hover-underline]:focus-visible :is(h1, h2, h3, h4, h5, h6) {
+  text-decoration-line: none;
+}
+
+/* `data-article-dek` marks the meta description on a card that serves an
+   article. Every such card carries it, so the dek behaves the same way in the
+   city blocks, the article index, author pages, search and bookmarks. */

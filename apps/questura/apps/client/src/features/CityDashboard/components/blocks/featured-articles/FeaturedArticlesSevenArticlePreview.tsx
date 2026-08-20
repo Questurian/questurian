@@ -136,8 +136,8 @@ function FeaturedArticlePreviewCard({
             ) : article.title}
           </h2>
 
-          <p className="mt-3 max-w-xl overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] 768:max-w-none 768:text-[1.04rem] 768:leading-[1.5] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] 768:[-webkit-line-clamp:3]">
-            {excerpt}
+          <p data-article-dek className="mt-3 max-w-xl overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] 768:max-w-none 768:text-[1.04rem] 768:leading-[1.5] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] 768:[-webkit-line-clamp:3]">
+            {article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:mt-4 768:text-[0.72rem] 768:tracking-[0.1em]">
@@ -188,7 +188,7 @@ function CompactArticlePreviewCard({
             <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
           ) : article.title}
         </h2>
-        <p className="city-compact-article-meta">{excerpt}</p>
+        <p data-article-dek className="city-compact-article-meta">{article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}</p>
         <p className="city-compact-article-author">
           By <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
         </p>

@@ -1,184 +1,147 @@
-import Link from 'next/link'
-import type { JSX } from 'react'
-import type { AuthorArticleItem, PublicAuthor } from '@/features/authors/lib/fetchAuthor'
-import { AuthorSocialIcons } from '@/features/authors/components/AuthorSocialLinks'
-import { AuthorAvatar } from '@/features/authors/components/AuthorAvatar'
+import Link from "next/link";
+import type { JSX } from "react";
+import type {
+  AuthorArticleItem,
+  PublicAuthor,
+} from "@/features/authors/lib/fetchAuthor";
+import { AuthorSocialIcons } from "@/features/authors/components/AuthorSocialLinks";
+import { AuthorAvatar } from "@/features/authors/components/AuthorAvatar";
 
 function formatDate(iso: string | null): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(d)
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
-function SectionHeading({ label }: { label: string }): JSX.Element {
-  return (
-    <div className="border-b border-foreground pb-2">
-      <h2 className="font-display text-[18px] font-semibold uppercase tracking-[0.06em] text-foreground sm:text-[20px]">
-        {label}
-      </h2>
-    </div>
-  )
-}
-
-function Byline({ name, publishedAt }: { name: string; publishedAt: string | null }): JSX.Element {
-  const dateLine = formatDate(publishedAt)
-  return (
-    <div className="font-mono text-[11px] uppercase tracking-[0.12em]">
-      <p className="font-semibold text-foreground">{name}</p>
-      {dateLine ? <p className="mt-0.5 text-foreground/60">{dateLine}</p> : null}
-    </div>
-  )
+function articleLabel(article: AuthorArticleItem): string {
+  if (article.href.includes("/itineraries/")) return "Itineraries";
+  if (article.href.includes("/maps/")) return "City guides";
+  return "Travel";
 }
 
 function ArticleThumbnail({
   thumbnail,
-  className,
 }: {
-  thumbnail: AuthorArticleItem['thumbnail']
-  className?: string
-}): JSX.Element | null {
-  if (!thumbnail?.url) return null
+  thumbnail: AuthorArticleItem["thumbnail"];
+}): JSX.Element {
+  if (!thumbnail?.url) {
+    return (
+      <div
+        aria-hidden="true"
+        className="aspect-[16/10] w-full bg-paper-accent"
+      />
+    );
+  }
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={thumbnail.url}
-      alt={thumbnail.alt ?? ''}
-      className={className}
+      alt={thumbnail.alt ?? ""}
+      className="aspect-[16/10] w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.025] motion-reduce:transition-none"
       loading="lazy"
       decoding="async"
     />
-  )
+  );
 }
 
-function FeaturedArticle({
+function ArticleCard({
   article,
   authorName,
 }: {
-  article: AuthorArticleItem
-  authorName: string
+  article: AuthorArticleItem;
+  authorName: string;
 }): JSX.Element {
+  const date = formatDate(article.publishedAt);
+
   return (
-    <section aria-label="Featured article" className="mt-12">
-      <SectionHeading label="Featured" />
+    <article className="border-t border-foreground/20 pt-7 first:border-t-0 first:pt-0 md:border-t-0 md:pt-0">
       <Link
         href={article.href}
-        className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-10"
+        className="group block outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-background"
       >
-        <div className="flex flex-1 flex-col items-center text-center">
-          <h3 className="font-display text-[26px] font-semibold leading-[1.2] text-foreground sm:text-[30px]">
-            {article.title}
-          </h3>
-          {article.excerpt ? (
-            <p className="mt-4 max-w-[52ch] font-display text-[15px] leading-[1.5] text-foreground/85 sm:text-[16px]">
-              {article.excerpt}
-            </p>
-          ) : null}
-          <div className="mt-5">
-            <Byline name={authorName} publishedAt={article.publishedAt} />
-          </div>
+        <div className="overflow-hidden bg-paper">
+          <ArticleThumbnail thumbnail={article.thumbnail} />
         </div>
-        {article.thumbnail?.url ? (
-          <div className="w-full sm:w-1/2">
-            <ArticleThumbnail
-              thumbnail={article.thumbnail}
-              className="aspect-[3/2] w-full object-cover"
-            />
-          </div>
-        ) : null}
-      </Link>
-    </section>
-  )
-}
-
-function LatestArticleRow({
-  article,
-  authorName,
-}: {
-  article: AuthorArticleItem
-  authorName: string
-}): JSX.Element {
-  return (
-    <Link
-      href={article.href}
-      className="flex items-start gap-5 border-b border-foreground/15 py-8 sm:gap-8"
-    >
-      <div className="min-w-0 flex-1">
-        <h3 className="font-display text-[20px] font-semibold leading-[1.25] text-foreground sm:text-[24px]">
+        <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.13em] text-accent">
+          {articleLabel(article)}
+        </p>
+        <h3 className="mt-2 font-display text-[26px] font-medium leading-[1.12] tracking-[-0.015em] text-foreground sm:text-[29px]">
           {article.title}
         </h3>
-        {article.excerpt ? (
-          <p className="mt-2 font-display text-[14px] leading-[1.5] text-foreground/80 sm:text-[15px]">
-            {article.excerpt}
-          </p>
-        ) : null}
-        <div className="mt-4">
-          <Byline name={authorName} publishedAt={article.publishedAt} />
-        </div>
-      </div>
-      {article.thumbnail?.url ? (
-        <div className="w-[110px] shrink-0 sm:w-[220px]">
-          <ArticleThumbnail
-            thumbnail={article.thumbnail}
-            className="aspect-square w-full object-cover sm:aspect-[3/2]"
-          />
-        </div>
-      ) : null}
-    </Link>
-  )
+        <p className="mt-4 font-editorial text-[16px] italic leading-none text-foreground/65">
+          {date ? `${date} · ` : ""}
+          {authorName}
+        </p>
+      </Link>
+    </article>
+  );
 }
 
-
 export function AuthorPage({ author }: { author: PublicAuthor }): JSX.Element {
-  const name = author.displayName ?? 'Questurian'
-  const [featured, ...latest] = author.articles
-  // Placeholder bio until a real bio is stored for every author.
-  const bio = author.bio ?? `${name} is a contributing writer at Questurian.`
+  const name = author.displayName ?? "Questurian";
+  const bio = author.bio ?? `${name} is a contributing writer at Questurian.`;
 
   return (
-    <div className="bg-background">
-      <header className="bg-[#ece9e3]">
-        <div className="mx-auto flex w-full max-w-[920px] items-center gap-6 px-4 py-12 sm:gap-10 sm:px-6 sm:py-16">
+    <main className="bg-background text-foreground">
+      <header className="mx-auto w-full max-w-[1400px] px-5 pt-14 sm:px-8 sm:pt-20 lg:px-10 lg:pt-24">
+        <div className="grid max-w-[1080px] gap-9 sm:grid-cols-[auto_1fr] sm:items-start sm:gap-10 lg:gap-14">
           <AuthorAvatar avatar={author.avatar} name={name} />
-          <div className="min-w-0">
-            <h1 className="font-display text-[34px] font-bold uppercase leading-[1.05] tracking-[0.01em] text-foreground sm:text-[44px]">
+
+          <div className="min-w-0 pt-1">
+            <h1 className="font-display text-[43px] font-medium leading-[0.98] tracking-[-0.035em] text-foreground sm:text-[58px] lg:text-[68px]">
               {name}
             </h1>
-            <p className="mt-4 max-w-[62ch] font-display text-[16px] leading-[1.5] text-foreground/85 sm:text-[18px]">
-              {bio}
+            <p className="mt-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-accent sm:text-[13px]">
+              Questurian contributor
             </p>
-            <div className="mt-6">
+            <div className="mt-5">
               <AuthorSocialIcons links={author.socialLinks} authorName={name} />
             </div>
           </div>
         </div>
+
+        <p className="mt-10 max-w-[900px] font-editorial text-[21px] leading-[1.5] text-foreground/90 sm:mt-12 sm:text-[24px] lg:text-[26px]">
+          {bio}
+        </p>
+
+        <div className="mt-12 h-px w-full max-w-[1000px] bg-foreground/20 sm:mt-16" />
       </header>
 
-      <main className="mx-auto w-full max-w-[1080px] px-4 py-12 sm:px-6">
-        {featured ? <FeaturedArticle article={featured} authorName={name} /> : null}
+      <section
+        aria-labelledby="recent-articles-heading"
+        className="mx-auto w-full max-w-[1400px] px-5 pb-24 pt-24 sm:px-8 sm:pb-28 sm:pt-32 lg:px-10 lg:pt-40"
+      >
+        <h2
+          id="recent-articles-heading"
+          className="font-editorial text-[38px] font-medium uppercase leading-none tracking-[-0.03em] text-foreground sm:text-[48px] lg:text-[54px]"
+        >
+          More recent articles
+        </h2>
 
-        {latest.length > 0 ? (
-          <section aria-label="Latest articles" className="mx-auto mt-16 max-w-[880px]">
-            <SectionHeading label="Latest" />
-            <div>
-              {latest.map((article) => (
-                <LatestArticleRow key={`${article.href}`} article={article} authorName={name} />
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        {author.articles.length === 0 ? (
-          <p className="py-16 text-center font-display text-[16px] text-foreground/60">
+        {author.articles.length > 0 ? (
+          <div className="mt-10 grid gap-x-6 gap-y-14 md:grid-cols-2 md:gap-y-16 lg:grid-cols-3 lg:gap-x-7">
+            {author.articles.map((article) => (
+              <ArticleCard
+                key={article.href}
+                article={article}
+                authorName={name}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-10 border-t border-foreground/20 py-12 font-editorial text-[20px] text-foreground/60">
             No published articles yet.
           </p>
-        ) : null}
-      </main>
-    </div>
-  )
+        )}
+      </section>
+    </main>
+  );
 }

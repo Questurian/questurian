@@ -6,12 +6,15 @@ import { Bookmark } from 'lucide-react';
 import { useBookmark } from '../hooks/useBookmarks';
 import type { BookmarkTargetType } from '../types';
 
-type Variant = 'inline' | 'card';
+type Variant = 'inline' | 'card' | 'icon';
 
 type BookmarkButtonProps = {
   targetType: BookmarkTargetType;
   targetId: number;
-  /** `inline` sits in the article's byline rule beside Share; `card` overlays a thumbnail. */
+  /**
+   * `inline` sits in the article's byline rule beside Share; `card` overlays a
+   * thumbnail; `icon` is the bare glyph used in the saved-list action row.
+   */
   variant?: Variant;
   className?: string;
 };
@@ -21,6 +24,9 @@ const inlineClass =
 
 const cardClass =
   'inline-flex size-8 items-center justify-center rounded-full bg-paper/90 backdrop-blur-[2px] transition-colors hover:bg-paper';
+
+const iconClass =
+  'inline-flex items-center justify-center transition-opacity hover:opacity-60 active:opacity-100';
 
 /**
  * The bookmark control (ADR-0010).
@@ -55,6 +61,29 @@ export function BookmarkButton({
     event.stopPropagation();
     void toggle();
   };
+
+  if (variant === 'icon') {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={isPending}
+        aria-pressed={isBookmarked}
+        aria-label={label}
+        title={label}
+        className={[iconClass, isBookmarked ? 'text-accent' : 'text-foreground/60', className]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <Bookmark
+          className="size-[18px]"
+          strokeWidth={1.75}
+          fill={isBookmarked ? 'currentColor' : 'none'}
+          aria-hidden
+        />
+      </button>
+    );
+  }
 
   if (variant === 'card') {
     return (

@@ -195,7 +195,14 @@ export async function listBookmarkPage(options: {
           ],
         },
         limit: ids.length,
-        depth: 1,
+        // Two, not one. The card thumbnail lives at
+        // `header.featuredMediaSet.variants.thumbnail`, which is a relation
+        // inside a relation: at depth 1 the media set populates but its
+        // variants are still ids, so `resolveMediaSetForPlacement` finds no
+        // asset and the card renders imageless. Docs that also carry a legacy
+        // `header.featuredImage` hide this by falling through to that asset --
+        // and then show the wrong variant.
+        depth: 2,
         overrideAccess: true,
       })
 
