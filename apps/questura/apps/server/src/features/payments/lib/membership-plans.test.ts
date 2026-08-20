@@ -162,6 +162,14 @@ describe('getMembershipPlans', () => {
   })
 
   it('hits Stripe on every call rather than serving a per-process cache', async () => {
+    // A per-process cache was here and was removed on purpose (e8a69d1d): it
+    // disagreed across instances, and checkout never used it, so it protected
+    // the display path only. Re-adding it has been proposed since on the
+    // grounds that two `prices.retrieve` per pricing-page view share Stripe's
+    // rate budget with webhook processing. That budget is already defended the
+    // way that commit chose -- a per-visitor limit alongside the per-IP one --
+    // and nothing has been observed throttling a webhook. Reverse this only
+    // with a measurement, not an argument.
     stubStripePrices(givenMonthly(), givenYearly())
 
     const first = await getMembershipPlans()
