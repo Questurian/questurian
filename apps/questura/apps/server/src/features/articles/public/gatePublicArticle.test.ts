@@ -98,4 +98,93 @@ describe('gatePublicArticle', () => {
     expect(free.gate).toBeDefined()
     expect(gated.gate).toBeDefined()
   })
+  describe("a gated item's structured data", () => {
+    const gatedWithJsonLd = (structuredData: unknown): Record<string, unknown> => ({
+      access: 'member',
+      contentBlocks: blocks(9),
+      seoSection: { structuredData },
+    })
+
+    const jsonLdOf = (doc: Record<string, unknown>) =>
+      (doc.seoSection as Record<string, unknown>).structuredData as Record<string, unknown>
+
+    it('drops articleBody at any length', () => {
+      // Body text by definition. A short one is a truncated body, not a safe one.
+      const doc = gatedWithJsonLd({ '@type': 'Article', articleBody: 'the whole piece' })
+
+      gatePublicArticle('articles', doc)
+
+      expect(jsonLdOf(doc).articleBody).toBeUndefined()
+      expect(jsonLdOf(doc)['@type']).toBe('Article')
+    })
+
+    it('drops a body-length string under any key', () => {
+      const doc = gatedWithJsonLd({ '@type': 'Article', notes: 'x'.repeat(1001) })
+
+      gatePublicArticle('articles', doc)
+
+      expect(jsonLdOf(doc).notes).toBeUndefined()
+    })
+
+    it('keeps the paywall markup ADR-0009 needs for indexability', () => {
+      // Stripping the field wholesale would cost the `isAccessibleForFree` /
+      // `hasPart` markup that keeps a short sample from reading as thin content.
+      const doc = gatedWithJsonLd({
+        '@type': 'Article',
+        headline: 'Three days in Lima',
+        isAccessibleForFree: false,
+        hasPart: {
+          '@type': 'WebPageElement',
+          isAccessibleForFree: false,
+          cssSelector: '.paywalled',
+        },
+        articleBody: 'y'.repeat(5000),
+      })
+
+      gatePublicArticle('articles', doc)
+
+      expect(jsonLdOf(doc)).toEqual({
+        '@type': 'Article',
+        headline: 'Three days in Lima',
+        isAccessibleForFree: false,
+        hasPart: {
+          '@type': 'WebPageElement',
+          isAccessibleForFree: false,
+          cssSelector: '.paywalled',
+        },
+      })
+    })
+
+    it('reaches prose nested in arrays', () => {
+      const doc = gatedWithJsonLd({
+        '@type': 'ItemList',
+        itemListElement: [{ '@type': 'ListItem', name: 'Day 1', text: 'the locked day' }],
+      })
+
+      gatePublicArticle('listicle-itineraries', doc)
+
+      const list = jsonLdOf(doc).itemListElement as Array<Record<string, unknown>>
+      expect(list[0].text).toBeUndefined()
+      expect(list[0].name).toBe('Day 1')
+    })
+
+    it('leaves a free item alone', () => {
+      // Free items are not sampled, so nothing about them is locked.
+      const doc: Record<string, unknown> = {
+        access: 'free',
+        contentBlocks: blocks(3),
+        seoSection: { structuredData: { articleBody: 'all of it, deliberately' } },
+      }
+
+      gatePublicArticle('articles', doc)
+
+      expect(jsonLdOf(doc).articleBody).toBe('all of it, deliberately')
+    })
+
+    it('tolerates a gated item with no structured data at all', () => {
+      const doc: Record<string, unknown> = { access: 'member', contentBlocks: blocks(9) }
+
+      expect(() => gatePublicArticle('articles', doc)).not.toThrow()
+    })
+  })
 })
