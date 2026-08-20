@@ -80,6 +80,7 @@ import { fileURLToPath } from 'node:url'
 import { getPayload } from 'payload'
 import Stripe from 'stripe'
 
+import { STRIPE_API_VERSION } from '../src/features/payments/lib/stripe-api-version'
 import config from '../src/payload.config'
 import { selectProfileSubscription } from '../src/features/payments/lib/customer-linkage'
 import { deriveSubscriptionState } from '../src/features/payments/lib/subscription-state'
@@ -162,7 +163,7 @@ export async function run(options: ReconcileProfilesOptions = {}): Promise<Recon
     throw new Error('STRIPE_SECRET_KEY is required to reconcile against Stripe')
   }
 
-  const stripe = new Stripe(secretKey)
+  const stripe = new Stripe(secretKey, { apiVersion: STRIPE_API_VERSION, typescript: true })
   const payload = await getPayload({ config })
 
   emit(apply ? '⚠️  APPLY mode — profiles will be written' : '🔍 Dry run — nothing will be written')
