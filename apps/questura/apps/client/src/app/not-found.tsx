@@ -2,26 +2,30 @@ import Link from 'next/link';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div className="max-w-md w-full text-center space-y-4">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+    <div className="min-h-screen flex items-center justify-center px-5">
+      <div className="w-full max-w-md">
+        <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-8 text-center">
+          <h1 className="font-display text-[2.1rem] text-[#1A1A1A]">
             404
           </h1>
-          <p className="text-xl font-semibold text-gray-700 dark:text-gray-300">
+          <p className="mt-2 font-display text-[1.15rem] text-[#1A1A1A]">
             Page Not Found
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-[0.88rem] text-[#6b6a68] leading-[1.65] mb-6">
             The page you&apos;re looking for doesn&apos;t exist or has been moved.
           </p>
-        </div>
 
-        <Link
-          href="/"
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:ring-offset-gray-900"
-        >
-          Return to Home
-        </Link>
+          <Link
+            href="/"
+            className="
+              inline-block w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+              text-white text-center py-3.5 rounded
+              text-[0.88rem] font-medium transition-colors
+            "
+          >
+            Return to Home
+          </Link>
+        </div>
       </div>
     </div>
   );

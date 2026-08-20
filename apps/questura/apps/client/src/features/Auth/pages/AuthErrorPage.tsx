@@ -62,12 +62,12 @@ function AuthErrorContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 640:px-6 1024:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 dark:bg-red-900/20">
+    <div className="min-h-screen flex items-center justify-center px-5 py-12">
+      <div className="w-full max-w-md">
+        <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-8 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-[#fce4ec] rounded-full mb-4">
             <svg
-              className="h-8 w-8 text-red-600 dark:text-red-400"
+              className="w-6 h-6 text-[#c62828]"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -80,43 +80,53 @@ function AuthErrorContent() {
               />
             </svg>
           </div>
-          
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
+
+          <h2 className="font-display text-[1.35rem] text-[#1A1A1A] mb-4">
             Authentication Error
           </h2>
-          
-          <div className="mt-4 p-4 rounded-md bg-red-50 dark:bg-red-900/20">
-            <p className="text-sm text-red-800 dark:text-red-200">
+
+          <div className="mb-6 p-3 bg-[#fce4ec] border border-[#f8bbd0] rounded-sm text-left">
+            <p className="text-[0.84rem] text-[#c62828] leading-[1.65]">
               {error}
             </p>
           </div>
-        </div>
 
-        <div className="mt-8 space-y-4">
-          <button
-            onClick={handleGoToLogin}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors cursor-pointer"
-          >
-            Go to Sign In
-          </button>
-          
-          <button
-            onClick={handleGoToSignup}
-            className="w-full flex justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors cursor-pointer"
-          >
-            Create New Account
-          </button>
-          
-          <button
-            onClick={handleGoHome}
-            className="w-full flex justify-center py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer"
-          >
-            Go to Homepage
-          </button>
-        </div>
+          <div className="space-y-3">
+            <button
+              onClick={handleGoToLogin}
+              className="
+                w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+                text-white text-center py-3 rounded
+                text-[0.88rem] font-medium transition-colors cursor-pointer
+              "
+            >
+              Go to Sign In
+            </button>
 
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+            <button
+              onClick={handleGoToSignup}
+              className="
+                w-full bg-white border border-[#d7d4ce]
+                text-[#4f4e4b] text-center py-3 rounded
+                text-[0.88rem] font-medium transition-colors
+                hover:bg-[#f0efeb] cursor-pointer
+              "
+            >
+              Create New Account
+            </button>
+
+            <button
+              onClick={handleGoHome}
+              className="
+                w-full text-[0.82rem] text-[#6b6a68] hover:text-[#1A1A1A]
+                underline underline-offset-2 cursor-pointer transition-colors py-2
+              "
+            >
+              Go to Homepage
+            </button>
+          </div>
+
+          <p className="mt-6 text-[0.78rem] text-[#9a9894]">
             If you continue to experience issues, please contact support.
           </p>
         </div>
@@ -128,10 +138,10 @@ function AuthErrorContent() {
 export default function AuthErrorPage() {
   return (
     <SuspenseBoundary fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center px-5">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+          <div className="w-8 h-8 border-2 border-[#9a9894] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-[0.88rem] text-[#6b6a68]">Loading...</p>
         </div>
       </div>
     }>

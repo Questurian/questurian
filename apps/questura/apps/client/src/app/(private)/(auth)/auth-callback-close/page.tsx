@@ -73,28 +73,30 @@ function AuthCallbackCloseContent() {
   }, [searchParams]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-md w-full text-center space-y-4 p-6">
-        <div className="mx-auto h-12 w-12 bg-green-100 rounded-full flex items-center justify-center">
-          {closing ? (
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          ) : (
-            <div className="animate-spin h-6 w-6 border-2 border-green-600 border-t-transparent rounded-full"></div>
-          )}
+    <div className="min-h-screen flex items-center justify-center px-5">
+      <div className="w-full max-w-md">
+        <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-8 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-[#e8f5e9] rounded-full mb-4">
+            {closing ? (
+              <svg className="w-6 h-6 text-[#2e7d32]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <div className="w-6 h-6 border-2 border-[#2e7d32] border-t-transparent rounded-full animate-spin" />
+            )}
+          </div>
+          <h2 className="font-display text-[1.35rem] text-[#1A1A1A] mb-2">
+            {closing ? 'Success!' : 'Processing...'}
+          </h2>
+          <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65]">
+            {closing
+              ? 'Authentication complete. This window will close automatically.'
+              : 'Please wait while we complete your authentication.'}
+          </p>
+          <p className="mt-3 text-[0.78rem] text-[#9a9894]">
+            You can close this window if it doesn&apos;t close automatically.
+          </p>
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          {closing ? 'Success!' : 'Processing...'}
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          {closing
-            ? 'Authentication complete. This window will close automatically.'
-            : 'Please wait while we complete your authentication.'}
-        </p>
-        <p className="text-sm text-gray-500 dark:text-gray-500">
-          You can close this window if it doesn&apos;t close automatically.
-        </p>
       </div>
     </div>
   );

@@ -74,7 +74,7 @@ function SubscriptionSuccessContent() {
   if (!mounted) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Loading...</div>
+        <div className="text-[0.88rem] text-[#6b6a68]">Loading...</div>
       </div>
     );
   }
@@ -94,65 +94,79 @@ function SubscriptionSuccessContent() {
         : 'Your payment went through. Membership may take a moment to appear on your account — refresh or check back shortly.';
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-        <div className="mb-6">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-            confirmation === 'active'
-              ? 'bg-green-100 dark:bg-green-900/20'
-              : 'bg-gray-100 dark:bg-gray-700'
-          }`}>
-            {confirmation === 'active' ? (
-              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-            ) : confirmation === 'checking' ? (
-              <div className="w-8 h-8 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg className="w-8 h-8 text-gray-500 dark:text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-              </svg>
+    <div className="min-h-screen">
+      <div className="px-6 pt-8 pb-16 480:pt-10 768:pt-12">
+        <div className="max-w-xl mx-auto">
+          <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8 text-center">
+            <div className="flex justify-center mb-6">
+              <div className={`flex items-center justify-center h-12 w-12 rounded-full ${
+                confirmation === 'active'
+                  ? 'bg-[#e8f5e9]'
+                  : 'bg-white border border-[#e5e2dc]'
+              }`}>
+                {confirmation === 'active' ? (
+                  <svg className="h-6 w-6 text-[#2e7d32]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : confirmation === 'checking' ? (
+                  <div className="w-6 h-6 border-2 border-[#9a9894] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="h-6 w-6 text-[#6b6a68]" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </div>
+            </div>
+
+            <h1 className="font-display text-[1.35rem] text-[#1A1A1A] mb-2 480:text-[1.55rem]">
+              {headline}
+            </h1>
+            <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65] mb-6">
+              {body}
+            </p>
+
+            {sessionId && (
+              <div className="bg-white border border-[#e5e2dc] rounded-sm p-4 mb-6 text-left">
+                <p className="text-[0.82rem] text-[#6b6a68]">
+                  <span className="font-medium text-[#4f4e4b]">Session ID:</span> {sessionId}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Link
+                href="/account"
+                className="
+                  block w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+                  text-white text-center py-3.5 rounded
+                  text-[0.88rem] font-medium transition-colors
+                "
+              >
+                Go to Account Dashboard
+              </Link>
+
+              <Link
+                href="/"
+                className="
+                  block w-full bg-white border border-[#d7d4ce]
+                  text-[#4f4e4b] text-center py-3 rounded
+                  text-[0.88rem] font-medium transition-colors
+                  hover:bg-[#f0efeb]
+                "
+              >
+                Return to Home
+              </Link>
+            </div>
+
+            {confirmation === 'active' && (
+              <div className="mt-8 pt-5 border-t border-[#e5e2dc]">
+                <p className="text-[0.78rem] text-[#9a9894] leading-[1.65]">
+                  Thank you for your subscription! You now have access to all premium features.
+                </p>
+              </div>
             )}
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            {confirmation === 'active' ? '🎉 ' : ''}{headline}
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mb-6">
-            {body}
-          </p>
         </div>
-
-        {sessionId && (
-          <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              <span className="font-medium">Session ID:</span> {sessionId}
-            </p>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <Link
-            href="/account"
-            className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-          >
-            Go to Account Dashboard
-          </Link>
-
-          <Link
-            href="/"
-            className="inline-block w-full bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-          >
-            Return to Home
-          </Link>
-        </div>
-
-        {confirmation === 'active' && (
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Thank you for your subscription! You now have access to all premium features.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -162,7 +176,7 @@ export default function SubscriptionSuccessPage() {
   return (
     <SuspenseBoundary fallback={
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Loading...</div>
+        <div className="text-[0.88rem] text-[#6b6a68]">Loading...</div>
       </div>
     }>
       <SubscriptionSuccessContent />

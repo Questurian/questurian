@@ -43,7 +43,7 @@ export default function PurchasePage({
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Loading...</div>
+        <div className="text-[0.88rem] text-[#6b6a68]">Loading...</div>
       </div>
     );
   }
@@ -81,121 +81,136 @@ export default function PurchasePage({
 
   return (
     <MembershipGuard user={user}>
-      <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Complete Your Purchase
-            </h1>
-            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
-              <h2 className="text-xl font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                {planName}
-              </h2>
-              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+      <div className="min-h-screen">
+        <div className="px-6 pt-8 pb-16 480:pt-10 768:pt-12">
+          <div className="max-w-xl mx-auto">
+            <div className="mb-8">
+              <h1 className="font-display text-[1.35rem] text-[#1A1A1A] 480:text-[1.55rem] 768:text-[1.75rem]">
+                Complete Your Purchase
+              </h1>
+            </div>
+
+            <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8">
+              <div className="bg-white border border-[#e5e2dc] rounded-sm p-4 mb-6">
+                <h2 className="font-display text-[1.1rem] text-[#1A1A1A] mb-1">
+                  {planName}
+                </h2>
+                <p className="font-display text-[1.35rem] text-[#1A1A1A]">
+                  {saving ? (
+                    <span className="mr-2 text-[1rem] font-normal text-[#9a9894] line-through">
+                      {saving.compareAt}
+                    </span>
+                  ) : null}
+                  {priceLabel ?? (pricingLoading ? 'Loading price…' : 'Price unavailable')}
+                </p>
                 {saving ? (
-                  <span className="mr-2 text-lg font-normal text-blue-700/70 line-through dark:text-blue-300/70">
-                    {saving.compareAt}
-                  </span>
-                ) : null}
-                {priceLabel ?? (pricingLoading ? 'Loading price…' : 'Price unavailable')}
-              </p>
-              {saving ? (
-                <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                  Save {saving.saved} ({saving.percentOff}% off)
-                </p>
-              ) : null}
-              <p className="text-blue-700 dark:text-blue-300 text-sm">
-                {planDescription}
-              </p>
-            </div>
-          </div>
-
-          {!isAuthenticated ? (
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 text-center">
-                {authFormState.showPasswordStep
-                  ? (authFormState.isSignUp ? 'Create Account To Complete Purchase' : 'Log In To Complete Purchase')
-                  : 'Sign In To Complete Your Purchase'}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 text-center">
-                {authFormState.showPasswordStep
-                  ? (authFormState.isSignUp
-                      ? 'Set up your password to create your account and proceed to checkout.'
-                      : 'Enter your password to sign in and proceed to checkout.')
-                  : 'If you have an account, you will be asked to sign in with your password. If not, the provided email address will be used to create a new account.'}
-              </p>
-
-              <EnhancedAuthForm inModal={true} onSuccess={handleAuthSuccess} onModeChange={handleAuthFormStateChange} />
-            </div>
-          ) : (
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 text-center">
-                Complete Your Payment
-              </h3>
-
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-2">Account Details</h4>
-                <p className="text-gray-700 dark:text-gray-300">
-                  <span className="font-medium">Email:</span> {user?.email}
-                </p>
-                {user?.kind === 'visitor' && user.firstName && user.lastName && (
-                  <p className="text-gray-700 dark:text-gray-300">
-                    <span className="font-medium">Name:</span> {user.firstName} {user.lastName}
+                  <p className="mt-1 text-[0.84rem] font-medium text-[#2e7d32]">
+                    Save {saving.saved} ({saving.percentOff}% off)
                   </p>
-                )}
+                ) : null}
+                <p className="mt-1 text-[0.82rem] text-[#6b6a68]">
+                  {planDescription}
+                </p>
               </div>
 
-              {checkoutMutation.error ? (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-                  <p className="text-red-700 dark:text-red-300 text-sm">
-                    {isServiceUnavailableError(checkoutMutation.error)
-                      ? 'Service is unavailable. Please try again later.'
-                      : checkoutMutation.error instanceof Error
-                      ? checkoutMutation.error.message
-                      : 'Failed to create checkout session'}
+              {!isAuthenticated ? (
+                <div>
+                  <h3 className="font-display text-[1.1rem] text-[#1A1A1A] mb-2 text-center">
+                    {authFormState.showPasswordStep
+                      ? (authFormState.isSignUp ? 'Create Account To Complete Purchase' : 'Log In To Complete Purchase')
+                      : 'Sign In To Complete Your Purchase'}
+                  </h3>
+                  <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65] mb-6 text-center">
+                    {authFormState.showPasswordStep
+                      ? (authFormState.isSignUp
+                          ? 'Set up your password to create your account and proceed to checkout.'
+                          : 'Enter your password to sign in and proceed to checkout.')
+                      : 'If you have an account, you will be asked to sign in with your password. If not, the provided email address will be used to create a new account.'}
                   </p>
+
+                  <EnhancedAuthForm inModal={true} onSuccess={handleAuthSuccess} onModeChange={handleAuthFormStateChange} />
                 </div>
-              ) : null}
+              ) : (
+                <div>
+                  <h3 className="font-display text-[1.1rem] text-[#1A1A1A] mb-5 text-center">
+                    Complete Your Payment
+                  </h3>
 
-              <button
-                onClick={handleSubscribe}
-                disabled={checkoutMutation.isPending || pricingLoading || pricingUnavailable}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                {checkoutMutation.isPending
-                  ? 'Creating session...'
-                  : priceLabel
-                    ? `Subscribe Now - ${priceLabel}`
-                    : 'Subscribe Now'}
-              </button>
-
-              {!user?.emailVerified && (
-                <div className="mt-4 space-y-2 text-center">
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Your email isn&apos;t verified yet. You can subscribe now and verify later.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleResendVerificationEmail}
-                    disabled={sendingVerificationEmail}
-                    className="text-sm font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {sendingVerificationEmail ? 'Sending...' : 'Resend verification email'}
-                  </button>
-                  {verificationEmailStatus && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      {verificationEmailStatus}
+                  <div className="bg-white border border-[#e5e2dc] rounded-sm p-4 mb-6">
+                    <h4 className="text-[0.84rem] font-medium text-[#1A1A1A] mb-1">Account Details</h4>
+                    <p className="text-[0.88rem] text-[#6b6a68]">
+                      <span className="font-medium text-[#4f4e4b]">Email:</span> {user?.email}
                     </p>
+                    {user?.kind === 'visitor' && user.firstName && user.lastName && (
+                      <p className="text-[0.88rem] text-[#6b6a68]">
+                        <span className="font-medium text-[#4f4e4b]">Name:</span> {user.firstName} {user.lastName}
+                      </p>
+                    )}
+                  </div>
+
+                  {checkoutMutation.error ? (
+                    <div className="bg-[#fce4ec] border border-[#f8bbd0] rounded-sm p-3.5 mb-6">
+                      <p className="text-[0.84rem] text-[#c62828]">
+                        {isServiceUnavailableError(checkoutMutation.error)
+                          ? 'Service is unavailable. Please try again later.'
+                          : checkoutMutation.error instanceof Error
+                          ? checkoutMutation.error.message
+                          : 'Failed to create checkout session'}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  <button
+                    onClick={handleSubscribe}
+                    disabled={checkoutMutation.isPending || pricingLoading || pricingUnavailable}
+                    className="
+                      w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+                      text-white text-center py-3 rounded
+                      text-[0.88rem] font-medium transition-colors
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                    "
+                  >
+                    {checkoutMutation.isPending
+                      ? 'Creating session...'
+                      : priceLabel
+                        ? `Subscribe Now - ${priceLabel}`
+                        : 'Subscribe Now'}
+                  </button>
+
+                  {!user?.emailVerified && (
+                    <div className="mt-4 space-y-2 text-center">
+                      <p className="text-[0.82rem] text-[#6b6a68] leading-[1.65]">
+                        Your email isn&apos;t verified yet. You can subscribe now and verify later.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleResendVerificationEmail}
+                        disabled={sendingVerificationEmail}
+                        className="
+                          text-[0.82rem] text-[#6b6a68] hover:text-[#1A1A1A]
+                          underline underline-offset-2 cursor-pointer transition-colors
+                          disabled:text-[#c4c2be] disabled:hover:text-[#c4c2be]
+                          disabled:cursor-not-allowed
+                        "
+                      >
+                        {sendingVerificationEmail ? 'Sending...' : 'Resend verification email'}
+                      </button>
+                      {verificationEmailStatus && (
+                        <p className="text-[0.82rem] text-[#6b6a68]">
+                          {verificationEmailStatus}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
-            </div>
-          )}
 
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Secure payment powered by Stripe
-            </p>
+              <div className="mt-8 pt-5 border-t border-[#e5e2dc]">
+                <p className="text-center text-[0.78rem] text-[#9a9894]">
+                  Secure payment powered by Stripe
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

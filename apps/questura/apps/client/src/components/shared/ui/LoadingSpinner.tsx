@@ -24,17 +24,17 @@ export default function LoadingSpinner({
 
   if (variant === 'fullscreen') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center px-5">
         <div className="max-w-md w-full text-center space-y-4">
-          <LoaderCircle 
-            className="animate-spin mx-auto text-blue-500" 
+          <LoaderCircle
+            className="animate-spin mx-auto text-[#2C2C2C]"
             size={sizeMap[size]}
           />
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="font-display text-[1.35rem] text-[#1A1A1A]">
             {message}
           </h2>
           {subMessage && (
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65]">
               {subMessage}
             </p>
           )}
@@ -45,8 +45,8 @@ export default function LoadingSpinner({
 
   if (variant === 'inline') {
     return (
-      <LoaderCircle 
-        className={`animate-spin text-blue-600 ${className}`}
+      <LoaderCircle
+        className={`animate-spin text-[#2C2C2C] ${className}`}
         size={sizeMap[size]}
       />
     );
@@ -54,13 +54,13 @@ export default function LoadingSpinner({
 
   return (
     <div className={`text-center ${className}`}>
-      <LoaderCircle 
-        className="animate-spin mx-auto text-blue-600" 
+      <LoaderCircle
+        className="animate-spin mx-auto text-[#2C2C2C]"
         size={sizeMap[size]}
       />
-      <p className="mt-4 text-gray-600 dark:text-gray-400">{message}</p>
+      <p className="mt-4 text-[0.88rem] text-[#6b6a68]">{message}</p>
       {subMessage && (
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">{subMessage}</p>
+        <p className="mt-2 text-[0.78rem] text-[#9a9894]">{subMessage}</p>
       )}
     </div>
   );
