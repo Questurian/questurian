@@ -84,6 +84,33 @@ describe('Visitor profile system helpers', () => {
     })
   })
 
+  it('returns the winner\'s profile when a concurrent request created it first', async () => {
+    // `authUserId` is unique, so the losing create is refused. The row it wanted
+    // exists, so this is not an error to hand back to `/api/me` -- a 500 there
+    // reads as anonymous on the client and shows a member the paywall.
+    payload.find
+      .mockResolvedValueOnce({ docs: [] })
+      .mockResolvedValueOnce({ docs: [{ id: 7, authUserId: 'auth_123' }] })
+    payload.create.mockRejectedValue(new Error('duplicate key value violates unique constraint'))
+
+    const profile = await ensureVisitorProfileForAuthUser({
+      id: 'auth_123',
+      email: 'visitor@example.com',
+      name: 'Ada Lovelace',
+    })
+
+    expect(profile).toEqual({ id: 7, authUserId: 'auth_123' })
+  })
+
+  it('rethrows a create failure that is not a lost race', async () => {
+    payload.find.mockResolvedValue({ docs: [] })
+    payload.create.mockRejectedValue(new Error('connection terminated'))
+
+    await expect(
+      ensureVisitorProfileForAuthUser({ id: 'auth_123', email: 'visitor@example.com', name: '' })
+    ).rejects.toThrow('connection terminated')
+  })
+
   it('updates existing VisitorProfiles with system access', async () => {
     payload.find.mockResolvedValue({
       docs: [{ id: 42, authUserId: 'auth_123' }],
