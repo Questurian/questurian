@@ -618,6 +618,13 @@
   }
 }
 
+@media print {
+  [data-article-sidebar],
+  [data-article-share] {
+    display: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shimmer-image::before,
   .shimmer-image > img,
