@@ -1,4 +1,5 @@
 import { User } from '@/lib/user/types';
+import { accountActionLinkClassName, accountGuidanceClassName } from '../account.styles';
 
 interface ConnectedAccountsSectionProps {
   user: User | null;
@@ -43,19 +44,13 @@ export function ConnectedAccountsSection({ user, onLinkGoogle, onUnlinkGoogle, s
               <button
                 onClick={onUnlinkGoogle}
                 disabled={!canUnlinkGoogle}
-                className="
-                  text-[0.82rem] text-[#c62828] hover:text-[#b71c1c]
-                  underline underline-offset-2 cursor-pointer
-                  transition-colors 480:ml-4 flex-shrink-0
-                  mt-2 480:mt-0 self-start 480:self-auto
-                  disabled:text-[#c4c2be] disabled:cursor-not-allowed
-                "
+                className={`${accountActionLinkClassName} 480:ml-4 flex-shrink-0 mt-2 480:mt-0 self-start 480:self-auto`}
               >
                 Disconnect
               </button>
             </div>
             {!canUnlinkGoogle && (
-              <p className="mb-4 text-[0.78rem] text-[#C65D3B]">
+              <p className={`${accountGuidanceClassName} mb-4`}>
                 Add a password before disconnecting Google.
               </p>
             )}
