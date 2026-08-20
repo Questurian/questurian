@@ -18,50 +18,54 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
-      <div className="max-w-md w-full text-center space-y-4">
-        <div className="mx-auto h-12 w-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-          <svg
-            className="h-6 w-6 text-red-600 dark:text-red-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4v2m0 0a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </div>
+    <div className="min-h-screen flex items-center justify-center px-5">
+      <div className="w-full max-w-md">
+        <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-8 text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-[#fce4ec] rounded-full mb-4">
+            <svg
+              className="w-6 h-6 text-[#c62828]"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4v2m0 0a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
 
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="font-display text-[1.35rem] text-[#1A1A1A]">
             Something went wrong
           </h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-[0.88rem] text-[#6b6a68] leading-[1.65]">
             We encountered an unexpected error. Please try again.
           </p>
+
+          {process.env.NODE_ENV === 'development' && error.message && (
+            <details className="mt-4 text-left">
+              <summary className="cursor-pointer text-[0.82rem] text-[#9a9894] hover:text-[#1A1A1A]">
+                Error details (development only)
+              </summary>
+              <pre className="mt-2 p-3 bg-white border border-[#e5e2dc] rounded-sm text-xs overflow-auto text-[#c62828]">
+                {error.message}
+              </pre>
+            </details>
+          )}
+
+          <button
+            onClick={() => reset()}
+            className="
+              mt-6 w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+              text-white text-center py-3.5 rounded
+              text-[0.88rem] font-medium transition-colors
+            "
+          >
+            Try again
+          </button>
         </div>
-
-        {process.env.NODE_ENV === 'development' && error.message && (
-          <details className="mt-4 text-left">
-            <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-              Error details (development only)
-            </summary>
-            <pre className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-auto text-red-600 dark:text-red-400">
-              {error.message}
-            </pre>
-          </details>
-        )}
-
-        <button
-          onClick={() => reset()}
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:ring-offset-gray-900"
-        >
-          Try again
-        </button>
       </div>
     </div>
   );

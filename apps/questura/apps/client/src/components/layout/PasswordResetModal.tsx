@@ -34,77 +34,80 @@ export default function PasswordResetModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto">
-      {/* Background overlay */}
-      <div
-        className="fixed inset-0 bg-black/30 transition-opacity"
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-5">
+      <button
+        type="button"
+        className="absolute inset-0 bg-[#1A1A1A]/60"
         onClick={onClose}
-        aria-hidden="true"
-      ></div>
+        aria-label="Close password reset"
+      />
 
-      {/* Modal container */}
-      <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center 640:block 640:p-0">
-        <span className="hidden 640:inline-block 640:align-middle 640:h-screen" aria-hidden="true">&#8203;</span>
+      <div
+        className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm max-w-md w-full p-6 480:p-8 relative"
+        role="dialog"
+      >
+        <button
+          type="button"
+          className="absolute top-4 right-4 text-[#9a9894] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+          onClick={onClose}
+        >
+          <span className="sr-only">Close</span>
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
 
-        {/* Modal content */}
-        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all 640:my-8 640:align-middle 640:max-w-md 640:w-full 640:p-6 relative z-[60] pointer-events-auto" role="dialog">
-          <div className="absolute top-0 right-0 pt-4 pr-4 z-10">
-            <button
-              type="button"
-              className="bg-white dark:bg-gray-800 rounded-md text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer"
-              onClick={onClose}
-            >
-              <span className="sr-only">Close</span>
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        <h3 className="font-display text-[1.15rem] text-[#1A1A1A] mb-2 768:text-[1.25rem]">
+          Reset Password
+        </h3>
+        <p className="text-[0.88rem] text-[#6b6a68] leading-[1.65] mb-6">
+          {sent
+            ? "Check your email for a password reset link."
+            : "We'll email you a secure link to choose a new password."}
+        </p>
 
-          <div className="640:flex 640:items-start">
-            <div className="w-full mt-3 text-center 640:mt-0 640:text-left">
-              <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-2">
-                Reset Password
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                {sent
-                  ? "Check your email for a password reset link."
-                  : "We'll email you a secure link to choose a new password."}
+        {sent ? (
+          <button
+            type="button"
+            className="
+              w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+              text-white text-center py-3 rounded
+              text-[0.88rem] font-medium transition-colors
+            "
+            onClick={onClose}
+          >
+            Done
+          </button>
+        ) : (
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <input
+              type="email"
+              value={email}
+              readOnly
+              className="
+                w-full px-3.5 py-2.5 border border-[#e5e2dc] rounded-sm
+                text-[0.88rem] text-[#1A1A1A] bg-white
+              "
+            />
+            {resetRequest.error && (
+              <p className="text-[0.84rem] text-[#c62828]">
+                {resetRequest.error.message}
               </p>
-
-              {sent ? (
-                <button
-                  type="button"
-                  className="w-full rounded-lg bg-[#468BE6] px-4 py-3 text-sm font-medium text-white hover:bg-[#1A5799]"
-                  onClick={onClose}
-                >
-                  Done
-                </button>
-              ) : (
-                <form className="space-y-4" onSubmit={handleSubmit}>
-                  <input
-                    type="email"
-                    value={email}
-                    readOnly
-                    className="w-full rounded-lg border border-gray-300 bg-gray-50 px-3 py-3 text-sm text-black"
-                  />
-                  {resetRequest.error && (
-                    <p className="text-sm text-red-600">
-                      {resetRequest.error.message}
-                    </p>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={resetRequest.isPending}
-                    className="w-full rounded-lg bg-[#468BE6] px-4 py-3 text-sm font-medium text-white hover:bg-[#1A5799] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {resetRequest.isPending ? 'Sending...' : 'Send reset link'}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
+            )}
+            <button
+              type="submit"
+              disabled={resetRequest.isPending}
+              className="
+                w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+                text-white text-center py-3 rounded
+                text-[0.88rem] font-medium transition-colors
+                disabled:opacity-50 disabled:cursor-not-allowed
+              "
+            >
+              {resetRequest.isPending ? 'Sending...' : 'Send reset link'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

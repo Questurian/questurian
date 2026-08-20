@@ -1,6 +1,6 @@
 /**
- * Reusable password input component with show/hide toggle
- * Matches the design from Auth forms
+ * Reusable password input with show/hide toggle.
+ * Matches the account / email-change form fields.
  */
 
 import { useState, type ChangeEvent } from 'react';
@@ -41,7 +41,7 @@ export default function PasswordInput({
       {label && (
         <label
           htmlFor={id || name}
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          className="block text-[0.82rem] font-medium text-[#4f4e4b] mb-1.5"
         >
           {label}
         </label>
@@ -53,11 +53,15 @@ export default function PasswordInput({
           type={showPassword ? "text" : "password"}
           autoComplete={autoComplete}
           required={required}
-          className={`appearance-none rounded-lg relative block w-full px-3 py-3 pr-16 border ${
-            error
-              ? 'border-red-300 dark:border-red-600'
-              : 'border-gray-300 dark:border-gray-600'
-          } placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-800 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 640:text-sm ${className || ''}`}
+          className={`
+            w-full px-3.5 py-2.5 pr-14 border rounded-sm
+            text-[0.88rem] text-[#1A1A1A] placeholder-[#c4c2be]
+            bg-white transition-colors
+            focus:outline-none focus:border-[#1A1A1A]
+            disabled:opacity-50
+            ${error ? 'border-[#f8bbd0]' : 'border-[#d7d4ce]'}
+            ${className || ''}
+          `}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
@@ -67,14 +71,14 @@ export default function PasswordInput({
         <button
           type="button"
           onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-sm font-medium text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 cursor-pointer z-20"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-[0.78rem] text-[#6b6a68] hover:text-[#1A1A1A] transition-colors cursor-pointer z-20"
           tabIndex={-1}
         >
           {showPassword ? 'Hide' : 'Show'}
         </button>
       </div>
       {error && (
-        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+        <p className="mt-1.5 text-[0.84rem] text-[#c62828]">
           {error}
         </p>
       )}
