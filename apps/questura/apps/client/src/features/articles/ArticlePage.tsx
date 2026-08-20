@@ -1,12 +1,17 @@
-import { Bookmark, Share2 } from 'lucide-react'
+import Link from 'next/link'
 import { PublicImage } from '@/components/media/PublicImage'
 import { GatedArticleBody } from '@/features/articles/components/GatedArticleBody'
+import { ArticleShareBar } from '@/features/articles/components/ArticleShareBar'
+import { ArticleSidebar } from '@/features/articles/components/ArticleSidebar'
 import { readGate } from '@/features/articles/lib/gate'
+import { articleCrumbsFromPath } from '@/features/articles/lib/articleCrumbs'
+import { fetchStandardArticleSidebar } from '@/features/articles/lib/fetchArticleSidebar'
 import { BlockRenderer } from '@/features/articles/components/BlockRenderer'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
 import { Article } from './types'
 
-function formatArticleDate(iso: string | undefined): string | null {
+function formatMagazineDate(iso: string | undefined): string | null {
   if (!iso) return null
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return null
@@ -15,149 +20,149 @@ function formatArticleDate(iso: string | undefined): string | null {
     month: 'long',
     day: 'numeric',
     year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short',
     timeZone: 'America/New_York',
-  })
-    .format(date)
-    .replace(' at ', ', ')
+  }).format(date)
 }
 
-function formatLocationLabel(location: string | undefined): string {
-  const parts = (location ?? '')
-    .split('|')
-    .map((part) => part.trim())
-    .filter(Boolean)
-
-  if (parts.length === 0) return 'Questurian'
-
-  return parts
-    .map((part) =>
-      part
-        .split('-')
-        .map((word) => (word ? `${word[0].toUpperCase()}${word.slice(1)}` : word))
-        .join(' '),
-    )
-    .join(' / ')
-}
-
-function StandardArticleHeader({ article }: { article: Article }) {
-  const { title, author, publishedAt, updatedAt, seoSection, location } = article
+function StandardArticleHeader({
+  article,
+  path,
+  shareUrl,
+}: {
+  article: Article
+  path?: string
+  shareUrl: string
+}) {
+  const { title, author, publishedAt, updatedAt, seoSection, headerSection } = article
   const description = seoSection?.metaDescription
-  const label = formatLocationLabel(location)
   const displayName = author?.displayName
-  const dateLine = formatArticleDate(publishedAt ?? updatedAt)
+  const dateLine = formatMagazineDate(publishedAt ?? updatedAt)
+  const crumbs = articleCrumbsFromPath(path)
 
   return (
-    <header className="mx-auto w-full max-w-[840px] px-4 pt-8 pb-8 sm:px-0 sm:pt-12 sm:pb-10 lg:pt-16">
-      <p className="mb-7 font-mono text-[12px] uppercase tracking-[0.18em] text-foreground">
-        {label}
-      </p>
-      <h1 className="font-display text-[36px] font-normal leading-[1.05] text-foreground sm:text-[46px] lg:text-[52px]">
+    <header className="px-4 pt-8 pb-6 1024:px-0 1024:pt-10 1024:pb-8">
+      <div className="mb-5 flex flex-col gap-2 1024:mb-6 1024:flex-row 1024:items-baseline 1024:justify-between 1024:gap-6">
+        {crumbs.length > 0 ? (
+          <nav aria-label="Breadcrumb">
+            <ol className="flex flex-wrap items-center gap-x-1.5 font-[family-name:var(--font-dm-sans)] text-[11px] font-semibold uppercase tracking-[0.14em] text-terracotta">
+              {crumbs.map((crumb, index) => (
+                <li key={`${crumb.label}-${index}`} className="flex items-center gap-x-1.5">
+                  {index > 0 ? <span aria-hidden className="text-terracotta/60">›</span> : null}
+                  {crumb.href ? (
+                    <Link href={crumb.href} className="hover:underline">
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span>{crumb.label}</span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        ) : (
+          <span />
+        )}
+        {displayName || dateLine ? (
+          <p className="font-display text-[15px] italic leading-snug text-foreground 1024:text-right">
+            {displayName ? (
+              <>
+                By{' '}
+                <AuthorLink
+                  authorSlug={author?.slug}
+                  authorId={author?.id}
+                  className="hover:underline"
+                >
+                  {displayName}
+                </AuthorLink>
+              </>
+            ) : null}
+            {displayName && dateLine ? ' • ' : null}
+            {dateLine}
+          </p>
+        ) : null}
+      </div>
+
+      <h1 className="font-display text-[32px] font-normal leading-[1.08] text-foreground sm:text-[40px] 1024:text-[44px]">
         {title}
       </h1>
+
       {description ? (
-        <p className="mt-6 max-w-[680px] font-display text-[20px] leading-[1.32] text-foreground sm:text-[22px] lg:text-[23px]">
-          {description}
-        </p>
-      ) : null}
-      {displayName ? (
-        <p className="mt-7 font-display text-[20px] leading-snug text-foreground sm:text-[22px]">
-          By <AuthorLink authorSlug={author?.slug} authorId={author?.id} className="hover:underline">{displayName}</AuthorLink>
-        </p>
-      ) : null}
-      {dateLine ? (
-        <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground/55 sm:hidden">
-          {dateLine}
-        </p>
-      ) : null}
+        <>
+          <div className="mt-5 h-px w-full bg-foreground/18" aria-hidden />
+          <p className="mt-5 max-w-[40rem] font-display text-[18px] italic leading-[1.4] text-foreground/80 sm:text-[20px]">
+            {description}
+          </p>
+        </>
+      ) : (
+        <div className="mt-5 h-px w-full bg-foreground/18" aria-hidden />
+      )}
+
+      <div className="mt-6">
+        <ArticleShareBar
+          url={shareUrl}
+          title={title}
+          imageUrl={headerSection?.featuredImage?.url}
+        />
+      </div>
     </header>
   )
 }
 
-function ArticleMetaRow({
-  publishedAt,
-  updatedAt,
-}: {
-  publishedAt?: string
-  updatedAt?: string
-}) {
-  const dateLine = formatArticleDate(publishedAt ?? updatedAt)
-
-  return (
-    <div className="mx-auto max-w-[700px] border-b border-t border-foreground/18 px-4 py-5 sm:px-0">
-      <div className="flex items-center justify-between gap-5">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">
-          {dateLine}
-        </p>
-        <div className="flex shrink-0 items-center gap-6 font-mono text-[11px] uppercase tracking-[0.14em] text-foreground">
-          <button type="button" className="inline-flex items-center gap-1.5 hover:text-terracotta">
-            Share <Share2 size={16} strokeWidth={1.6} aria-hidden />
-          </button>
-          <button type="button" className="inline-flex items-center gap-1.5 hover:text-terracotta">
-            Save <Bookmark size={16} strokeWidth={1.6} aria-hidden />
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-
-// ── Main component ───────────────────────────────────────────────────────────
-
-export function ArticlePage({ article, path }: { article: Article; path?: string }) {
-  const { publishedAt, updatedAt, headerSection, contentBlocks } = article
+export async function ArticlePage({ article, path }: { article: Article; path?: string }) {
+  const { headerSection, contentBlocks } = article
   const featuredImage = headerSection?.featuredImage
   const gate = readGate(article)
+  const sidebar = await fetchStandardArticleSidebar(article, path)
+  const sharePath = path && path.startsWith('/') ? path : `/${article.slug}`
+  const shareUrl = `${getPublicBaseUrl()}${sharePath}`
 
   return (
-    <article
-      data-article-layout="standard"
-      className="min-h-screen bg-background"
-    >
-      <div className="mx-auto w-full max-w-[960px]">
+    <article data-article-layout="standard" className="min-h-screen bg-background">
+      <div className="mx-auto w-full max-w-6xl px-0 1024:px-8">
+        <div className="1024:grid 1024:grid-cols-[1fr_300px] 1024:gap-x-12">
+          <div className="1024:col-start-1 1024:row-start-1">
+            <StandardArticleHeader article={article} path={path} shareUrl={shareUrl} />
+          </div>
 
-        <StandardArticleHeader article={article} />
+          <div className="min-w-0 1024:col-start-1 1024:row-start-2">
+            {featuredImage?.url ? (
+              <figure className="px-0">
+                <div className="aspect-[16/10] w-full overflow-hidden">
+                  <PublicImage
+                    src={featuredImage.url}
+                    alt={featuredImage.alt_text ?? ''}
+                    width={1600}
+                    height={1000}
+                    sizes="(min-width: 1024px) 780px, 100vw"
+                    className="h-full w-full object-cover"
+                    priority
+                  />
+                </div>
+                {featuredImage.alt_text ? (
+                  <figcaption className="px-4 pt-2 font-mono text-[11px] text-foreground/45 1024:px-0">
+                    {featuredImage.alt_text}
+                  </figcaption>
+                ) : null}
+              </figure>
+            ) : null}
 
-        {/* ── Featured image ───────────────────────────────────────── */}
-        {featuredImage?.url && (
-          <figure className="px-0">
-            <div className="aspect-[16/10] w-full overflow-hidden">
-              <PublicImage
-                src={featuredImage.url}
-                alt={featuredImage.alt_text ?? ''}
-                width={1600}
-                height={1000}
-                sizes="(min-width: 1024px) 880px, (min-width: 768px) 760px, 100vw"
-                className="w-full h-full object-cover"
-                priority
-              />
+            <div className="px-4 pt-8 pb-16 1024:px-0 1024:pt-10 1024:pb-20">
+              <div className="space-y-8 sm:space-y-10">
+                {contentBlocks?.map((block) => (
+                  <BlockRenderer key={block.id} block={block} />
+                ))}
+
+                {gate?.locked ? (
+                  <GatedArticleBody articleId={article.id} gate={gate} path={path ?? '/'} />
+                ) : null}
+              </div>
             </div>
-            {featuredImage.alt_text ? (
-              <figcaption className="pt-2 font-mono text-[11px] text-foreground/45">
-                {featuredImage.alt_text}
-              </figcaption>
-            ) : null}
-          </figure>
-        )}
+          </div>
 
-        <ArticleMetaRow publishedAt={publishedAt} updatedAt={updatedAt} />
-
-        {/* ── Content blocks ───────────────────────────────────────── */}
-        <div className="px-4 pt-10 pb-20 sm:px-0 sm:pt-12">
-          <div className="mx-auto max-w-[700px] space-y-8 sm:space-y-10">
-            {contentBlocks?.map((block) => (
-              <BlockRenderer key={block.id} block={block} />
-            ))}
-
-            {gate?.locked ? (
-              <GatedArticleBody articleId={article.id} gate={gate} path={path ?? '/'} />
-            ) : null}
+          <div className="px-4 1024:col-start-2 1024:row-start-2 1024:px-0">
+            <ArticleSidebar trending={sidebar.trending} partners={sidebar.partners} />
           </div>
         </div>
-
       </div>
     </article>
   )

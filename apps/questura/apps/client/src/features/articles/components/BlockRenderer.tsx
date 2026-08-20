@@ -31,7 +31,7 @@ function TextBlockRenderer({ block }: { block: TextBlock }) {
 
 function ImageBlockRenderer({ block }: { block: ImageBlock }) {
   return (
-    <figure className="-mx-4 sm:mx-0 lg:-mx-10">
+    <figure className="-mx-4 1024:mx-0">
       <PublicImage
         src={block.image.url}
         alt={block.altText ?? block.image.alt_text ?? ''}
@@ -41,7 +41,7 @@ function ImageBlockRenderer({ block }: { block: ImageBlock }) {
         className="w-full object-cover"
       />
       {block.caption && (
-        <figcaption className="px-4 pt-2 text-[11px] text-foreground/50 italic sm:px-0 sm:text-[12px]">
+        <figcaption className="px-4 pt-2 text-[11px] italic text-foreground/50 1024:px-0 sm:text-[12px]">
           {block.caption}
         </figcaption>
       )}
@@ -54,7 +54,7 @@ function ImgPairBlockRenderer({ block }: { block: ImgPairBlock }) {
   const alt2 = block.imageTwo.mediaSet?.alt_text ?? block.imageTwo.alt_text ?? ''
 
   return (
-    <figure className="-mx-4 sm:mx-0 lg:-mx-10">
+    <figure className="-mx-4 1024:mx-0">
       <div className="flex gap-1 sm:gap-2">
         <PublicImage
           src={block.imageOne.url}
@@ -74,7 +74,7 @@ function ImgPairBlockRenderer({ block }: { block: ImgPairBlock }) {
         />
       </div>
       {block.caption && (
-        <figcaption className="px-4 pt-2 text-[11px] text-foreground/50 italic sm:px-0 sm:text-[12px]">
+        <figcaption className="px-4 pt-2 text-[11px] italic text-foreground/50 1024:px-0 sm:text-[12px]">
           {block.caption}
         </figcaption>
       )}
@@ -88,7 +88,7 @@ function ImgTrioBlockRenderer({ block }: { block: ImgTrioBlock }) {
   const imageClassName = isLandscape ? 'aspect-[16/10]' : 'aspect-square'
 
   return (
-    <figure className="-mx-4 sm:mx-0 lg:-mx-10">
+    <figure className="-mx-4 1024:mx-0">
       <div className="grid grid-cols-1 gap-1 sm:grid-cols-3 sm:gap-2">
         {images.map((image, index) => (
           <PublicImage
@@ -103,7 +103,7 @@ function ImgTrioBlockRenderer({ block }: { block: ImgTrioBlock }) {
         ))}
       </div>
       {block.caption && (
-        <figcaption className="px-4 pt-2 text-[11px] text-foreground/50 italic sm:px-0 sm:text-[12px]">
+        <figcaption className="px-4 pt-2 text-[11px] italic text-foreground/50 1024:px-0 sm:text-[12px]">
           {block.caption}
         </figcaption>
       )}
