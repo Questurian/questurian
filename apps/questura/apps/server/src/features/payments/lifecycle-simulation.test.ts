@@ -598,6 +598,32 @@ describe('refunds and disputes', () => {
     expect(entitled()).toBe(false)
   })
 
+  it('S14: a won dispute does not lift a later period\'s refund revocation', async () => {
+    // Two periods on one subscription: January is disputed, February is refunded
+    // in full. A revocation is three scalar metadata keys, so February's
+    // overwrites January's -- and clearing on the won January dispute used to
+    // take February's with it, handing back access to a refunded period.
+    const januaryEnd = now() - 2 * DAY
+    const sub = makeSub('sub_A', { latest_invoice: 'in_2' })
+    store.subs.set(sub.id, sub)
+    store.invoices.set('in_1', makeInvoice('in_1', { lines: { data: [{ period: { end: januaryEnd } }] } }))
+    store.invoices.set('in_2', makeInvoice('in_2', { billing_reason: 'subscription_cycle' }))
+    store.charges.set('ch_in_1', { id: 'ch_in_1', invoice: 'in_1', refunded: false, payment_intent: 'pi_in_1' })
+    store.charges.set('ch_in_2', { id: 'ch_in_2', invoice: 'in_2', refunded: true, payment_intent: 'pi_in_2' })
+    db['visitor-profiles'][0].stripeSubscriptionId = 'sub_A'
+    db['visitor-profiles'][0].subscriptionStatus = 'active'
+
+    await deliver('charge.dispute.created', { id: 'dp_1', charge: 'ch_in_1', status: 'needs_response' })
+    await deliver('charge.refunded', store.charges.get('ch_in_2'))
+    expect(entitled()).toBe(false)
+
+    await deliver('charge.dispute.closed', { id: 'dp_1', charge: 'ch_in_1', status: 'won' })
+
+    expect(store.subs.get('sub_A')!.metadata.access_revoked).toBe('true')
+    expect(store.subs.get('sub_A')!.metadata.access_revoked_reason).toBe('refund')
+    expect(entitled()).toBe(false)
+  })
+
   it('S13: a paid period after a refunded one lifts the revocation', async () => {
     const start = now() - 60
     const sub = makeSub('sub_A', {

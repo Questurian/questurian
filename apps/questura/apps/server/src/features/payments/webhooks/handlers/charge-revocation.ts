@@ -5,6 +5,7 @@ import { resyncSubscription } from '@/payments/lib/subscription-resync'
 import {
   ACCESS_REVOKED_REASON_DISPUTE,
   ACCESS_REVOKED_REASON_REFUND,
+  readAccessRevocation,
   type AccessRevocation,
   type AccessRevokedReason,
 } from '@/payments/lib/subscription-state'
@@ -154,6 +155,41 @@ export async function handleDisputeCreated(dispute: Stripe.Dispute) {
 }
 
 /**
+ * The revocation on the subscription right now, when it is not the one this
+ * dispute wrote.
+ *
+ * A revocation is three scalar metadata keys, so a subscription only ever holds
+ * the most recent one. Clearing on a won dispute therefore clears whatever is
+ * there — including a revocation some *later* event wrote for a different
+ * period. The order that does damage: a dispute opens on January's charge, then
+ * February's charge is refunded in full and overwrites the flag, then the
+ * January dispute is won and lifts the refund's revocation with it. The visitor
+ * keeps access to a period they were given their money back for, and
+ * `clearRefundRevocationOnNewPeriod` cannot help — it only ever clears.
+ *
+ * The dispute's own revocation is recognised by reason *and* period end, so a
+ * second dispute still open on another period is held onto too. Anything that
+ * is not this dispute's stays, and the resync re-reads it rather than being
+ * handed a null.
+ *
+ * One extra retrieve, only on the restoring path.
+ */
+async function revocationOutlivingThisDispute(
+  subscriptionId: string,
+  disputedPeriodEnd: number | null
+): Promise<AccessRevocation | null> {
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  const current = readAccessRevocation(subscription)
+
+  if (!current) return null
+  if (current.reason === ACCESS_REVOKED_REASON_DISPUTE && current.periodEnd === disputedPeriodEnd) {
+    return null
+  }
+
+  return current
+}
+
+/**
  * Resolve a dispute: restore the membership, or end the arrangement with it.
  *
  * A won dispute clears the flag and leaves the subscription alone — that is why
@@ -195,6 +231,26 @@ export async function handleDisputeClosed(dispute: Stripe.Dispute) {
 
   const restore = RESTORE_ON_DISPUTE_STATUS.has(dispute.status)
   const lost = dispute.status === DISPUTE_STATUS_LOST
+  const disputedPeriodEnd = invoicePeriod(invoice).end
+
+  const outliving = restore
+    ? await revocationOutlivingThisDispute(subscriptionId, disputedPeriodEnd)
+    : null
+
+  if (outliving) {
+    logger.warn('Won dispute left the membership revoked; a later event revoked it again', {
+      disputeId: dispute.id,
+      subscriptionId,
+      status: dispute.status,
+      heldReason: outliving.reason,
+      heldPeriodEnd: outliving.periodEnd,
+    })
+
+    // The flag on Stripe is already the one to keep, so the resync re-reads it
+    // rather than being handed anything.
+    await resyncSubscription(subscriptionId)
+    return
+  }
 
   logger.info(
     restore
@@ -211,9 +267,7 @@ export async function handleDisputeClosed(dispute: Stripe.Dispute) {
 
   await markAccessRevoked(
     subscriptionId,
-    restore
-      ? null
-      : { reason: ACCESS_REVOKED_REASON_DISPUTE, periodEnd: invoicePeriod(invoice).end },
+    restore ? null : { reason: ACCESS_REVOKED_REASON_DISPUTE, periodEnd: disputedPeriodEnd },
     // The money is gone for good, so the subscription must stop charging for it.
     { cancelSubscription: lost }
   )
