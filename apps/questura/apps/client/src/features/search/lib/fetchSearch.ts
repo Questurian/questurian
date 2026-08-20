@@ -98,8 +98,7 @@ export async function fetchLocationContent(
   const url = `${config.backendUrl}/api/public/articles/by-location?${params.toString()}`
   const res = await fetch(url, { next: { revalidate: 300 } })
 
-  if (res.status === 404) return null
-  if (!res.ok) throw new Error(`Failed to fetch location content: ${res.status}`)
+  if (!res.ok) return null
 
   return res.json() as Promise<LocationContentResponse>
 }

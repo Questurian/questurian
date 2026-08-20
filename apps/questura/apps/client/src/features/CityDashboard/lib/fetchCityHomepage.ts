@@ -12,8 +12,7 @@ export async function fetchCityHomepage(
     publicFetchOptions([publicCacheTags.locationHomepage(country, city), publicCacheTags.sitemap()]),
   )
 
-  if (res.status === 404) return null
-  if (!res.ok) throw new Error(`Failed to fetch city homepage: ${res.status}`)
+  if (!res.ok) return null
 
   return res.json() as Promise<CityHomepageResponse>
 }

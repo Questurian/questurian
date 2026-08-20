@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { originFromRequest } from '@/lib/seo/requestOrigin'
 import {
   APPLE_PAY_DOMAIN_ASSOCIATION_BODY,
   APPLE_PAY_DOMAIN_ASSOCIATION_PATH,
@@ -15,21 +16,13 @@ function isAssetPath(pathname: string): boolean {
   return /\.[a-zA-Z0-9]+$/.test(pathname)
 }
 
-const PUBLIC_FRONTEND_URL =
-  process.env.NEXT_PUBLIC_FRONTEND_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  'https://www.questurian.com'
-
 function getPublicOrigin(request: NextRequest): string {
-  const forwardedHost = request.headers.get('x-forwarded-host')
-  const host = forwardedHost || request.headers.get('host')
-  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https'
-
-  if (host && !host.startsWith('localhost') && !host.startsWith('127.0.0.1')) {
-    return `${forwardedProto}://${host}`
-  }
-
-  return PUBLIC_FRONTEND_URL.replace(/\/+$/, '')
+  return originFromRequest({
+    host: request.headers.get('host'),
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    urlOrigin: request.nextUrl.origin,
+  })
 }
 
 function redirectToPublicLocation(request: NextRequest, location: string, status = 307): NextResponse {
