@@ -1,8 +1,9 @@
-import { Share2, Bookmark } from 'lucide-react'
+import { Bookmark } from 'lucide-react'
 import type { JSX } from 'react'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
 import type { ArticleAuthor } from '@/features/articles/types'
 import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
+import { ArticleShareButton } from '@/features/articles/components/ArticleShareButton'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
 type ArticlePageHeaderProps = {
@@ -158,15 +159,8 @@ export function ArticlePageHeader({
             */}
             <AddOnGoogleButton variant="google" />
 
-            <div className="flex items-center gap-3 text-foreground/55 380:gap-4">
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 font-display text-[10px] uppercase leading-none tracking-[0.18em] transition-colors hover:text-foreground active:text-foreground 380:text-[11px]"
-                aria-label="Share article"
-              >
-                <Share2 size={13} strokeWidth={1.75} aria-hidden="true" />
-                Share
-              </button>
+            <div className="flex items-center gap-3 380:gap-4">
+              <ArticleShareButton title={title} imageUrl={featuredImage?.url} />
 
               <span
                 aria-hidden="true"
@@ -175,7 +169,7 @@ export function ArticlePageHeader({
 
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 font-display text-[10px] uppercase leading-none tracking-[0.18em] transition-colors hover:text-foreground active:text-foreground 380:text-[11px]"
+                className="inline-flex items-center gap-1.5 font-display text-[10px] uppercase leading-none tracking-[0.18em] text-foreground transition-opacity hover:opacity-70 active:opacity-100 380:text-[11px]"
                 aria-label="Save article"
               >
                 <Bookmark size={13} strokeWidth={1.75} aria-hidden="true" />

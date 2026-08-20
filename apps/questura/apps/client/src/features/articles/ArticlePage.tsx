@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { PublicImage } from '@/components/media/PublicImage'
 import { GatedArticleBody } from '@/features/articles/components/GatedArticleBody'
-import { ArticleShareBar } from '@/features/articles/components/ArticleShareBar'
+import { ArticleShareButton } from '@/features/articles/components/ArticleShareButton'
 import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
 import {
   ArticleRail,
@@ -102,7 +102,7 @@ function StandardArticleHeader({
       )}
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-        <ArticleShareBar
+        <ArticleShareButton
           url={shareUrl}
           title={title}
           imageUrl={headerSection?.featuredImage?.url}
