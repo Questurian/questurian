@@ -54,6 +54,7 @@ import { fileURLToPath } from 'node:url'
 import { getPayload } from 'payload'
 import Stripe from 'stripe'
 
+import { STRIPE_API_VERSION } from '../src/features/payments/lib/stripe-api-version'
 import config from '../src/payload.config'
 import type { ReconcileStepResult } from '../src/features/payments/lib/reconcile-report'
 import {
@@ -129,7 +130,7 @@ export async function run(
     throw new Error('STRIPE_SECRET_KEY is required to audit revocations against Stripe')
   }
 
-  const stripe = new Stripe(secretKey)
+  const stripe = new Stripe(secretKey, { apiVersion: STRIPE_API_VERSION, typescript: true })
   const payload = await getPayload({ config })
 
   emit('🔍 Read-only audit — nothing will be written to Stripe or Payload\n')

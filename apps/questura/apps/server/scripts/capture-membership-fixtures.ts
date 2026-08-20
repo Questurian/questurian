@@ -43,6 +43,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import Stripe from 'stripe'
+import { STRIPE_API_VERSION } from '../src/features/payments/lib/stripe-api-version'
 
 const FIXTURE_PATH = resolve(
   __dirname,
@@ -72,7 +73,7 @@ function requireTestKey(): string {
   return key
 }
 
-const stripe = new Stripe(requireTestKey(), { typescript: true })
+const stripe = new Stripe(requireTestKey(), { apiVersion: STRIPE_API_VERSION, typescript: true })
 
 function log(stage: string, message: string) {
   console.log(`[${stage}] ${message}`)

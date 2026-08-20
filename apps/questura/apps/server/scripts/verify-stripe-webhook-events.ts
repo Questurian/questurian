@@ -66,6 +66,7 @@ import {
 } from '../src/features/payments/webhooks/event-contract.ts'
 // Type-only, so it is erased before Node sees the file and adds no runtime
 // dependency. That property is load-bearing here — see the header.
+import { STRIPE_API_VERSION } from '../src/features/payments/lib/stripe-api-version.ts'
 import type { ReconcileStepResult } from '../src/features/payments/lib/reconcile-report.ts'
 
 function requireKey(): string {
@@ -97,7 +98,7 @@ export async function run(
     options.onLine?.(line)
   }
 
-  const stripe = new Stripe(requireKey(), { typescript: true })
+  const stripe = new Stripe(requireKey(), { apiVersion: STRIPE_API_VERSION, typescript: true })
   const endpoints = await stripe.webhookEndpoints.list({ limit: 100 })
 
   const ours = endpoints.data.filter((endpoint) => endpoint.url.includes(OUR_ENDPOINT_PATH))
