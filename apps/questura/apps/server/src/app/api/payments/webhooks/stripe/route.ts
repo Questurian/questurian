@@ -182,9 +182,17 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ received: true, duplicate: true })
       }
 
-      // Ordering guard: Stripe does not guarantee delivery order. If we've
-      // already processed a newer event for this subscription, don't let this
-      // older event overwrite that state.
+      // Ordering guard: Stripe does not guarantee delivery order. If we have
+      // already processed a newer event for this subscription, do not let this
+      // older one overwrite that state.
+      //
+      // Its resolution is one second, and the comparison is strict, so two
+      // events for one subscription in the same second get no protection from
+      // it at all. That is survivable only because of ADR-0008: every handler
+      // refetches the subscription from Stripe rather than reading the event
+      // payload, so the loser of a same-second race still writes current state.
+      // This guard saves the refetch and the write; it is not what makes the
+      // outcome correct, and it must not be relied on as if it were.
       const subscriptionId = getSubscriptionIdFromEvent(event)
 
       if (subscriptionId) {

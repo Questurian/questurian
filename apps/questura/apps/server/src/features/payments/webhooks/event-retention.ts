@@ -8,6 +8,17 @@ import type { getPayload } from 'payload'
  * state. Stripe stops retrying after about three days. After that the row is
  * only taking space. 30 days keeps dashboard "resend this event" replays
  * deduped without letting the table grow forever.
+ *
+ * Past 30 days a Dashboard resend runs its handler again, since the row that
+ * would have deduped it is gone. Every handler refetches from Stripe and
+ * mirrors what it finds, so they converge on a second run — with two
+ * exceptions that mutate Stripe rather than mirror it: `charge.refunded`
+ * rewrites the revocation flag and re-attempts a cancel, and `charge.dispute.*`
+ * does the same. Both are effectively idempotent — the flag is rewritten to the
+ * same values and `cancelRefundedSubscription` tolerates an already-cancelled
+ * subscription — so this is a thing to know before resending an old event, not
+ * a defect. Raising the window would trade table growth for a guarantee we do
+ * not currently need.
  */
 
 export const WEBHOOK_EVENT_RETENTION_DAYS = 30
