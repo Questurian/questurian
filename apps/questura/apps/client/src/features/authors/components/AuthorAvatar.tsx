@@ -7,7 +7,7 @@ function AvatarPlaceholder(): JSX.Element {
   return (
     <div
       aria-hidden="true"
-      className="flex size-[136px] shrink-0 items-center justify-center bg-paper sm:size-[176px] lg:size-[192px]"
+      className="flex size-[88px] shrink-0 items-center justify-center bg-paper sm:size-[104px] lg:size-[112px]"
     >
       <svg
         viewBox="0 0 24 24"
@@ -55,7 +55,7 @@ export function AuthorAvatar({
 
   return (
     <div
-      className="author-avatar-shell relative size-[136px] shrink-0 overflow-hidden bg-paper sm:size-[176px] lg:size-[192px]"
+      className="author-avatar-shell relative size-[88px] shrink-0 overflow-hidden bg-paper sm:size-[104px] lg:size-[112px]"
       data-image-loaded={status === "loaded" ? "true" : "false"}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -77,7 +77,7 @@ export function AuthorSocialIcons({
   if (linked.length === 0) return null
 
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex items-center gap-3.5">
       {linked.map(({ platform, href }) => (
         <a
           key={platform.key}
@@ -87,7 +87,7 @@ export function AuthorSocialIcons({
           aria-label={`${authorName} on ${platform.label}`}
           className="text-foreground/60 transition-colors hover:text-foreground"
         >
-          <svg viewBox="0 0 24 24" fill="currentColor" className="size-[22px]" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="size-[18px]" aria-hidden="true">
             <path d={platform.iconPath} fillRule="evenodd" />
           </svg>
         </a>
