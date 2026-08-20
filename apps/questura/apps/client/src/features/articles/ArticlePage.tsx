@@ -48,10 +48,10 @@ function StandardArticleHeader({
       <div className="mb-5 flex flex-col gap-2 1024:mb-6 1024:flex-row 1024:items-baseline 1024:justify-between 1024:gap-6">
         {crumbs.length > 0 ? (
           <nav aria-label="Breadcrumb">
-            <ol className="flex flex-wrap items-center gap-x-1.5 font-[family-name:var(--font-dm-sans)] text-[11px] font-semibold uppercase tracking-[0.14em] text-terracotta">
+            <ol className="flex flex-wrap items-center gap-x-1.5 font-[family-name:var(--font-dm-sans)] text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
               {crumbs.map((crumb, index) => (
                 <li key={`${crumb.label}-${index}`} className="flex items-center gap-x-1.5">
-                  {index > 0 ? <span aria-hidden className="text-terracotta/60">›</span> : null}
+                  {index > 0 ? <span aria-hidden className="text-accent/60">›</span> : null}
                   {crumb.href ? (
                     <Link href={crumb.href} className="hover:underline">
                       {crumb.label}

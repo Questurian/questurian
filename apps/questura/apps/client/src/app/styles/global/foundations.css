@@ -15,8 +15,24 @@ html {
   --ochre: #D4A574;
   --cream: #FAF7F2;
   --charcoal: #2C2C2C;
-  --maps-listicle-accent: #3B5BDB;
-  --maps-listicle-accent-rgb: 59 91 219;
+
+  /* SITE ACCENT -- single source of truth.
+     The blue is the site's accent everywhere (prose links, listicles,
+     membership, editorial blocks). Terracotta/ochre are legacy warm tones:
+     do not introduce new accent usage in them. The `--maps-listicle-*` names
+     are kept because a lot of CSS already references them, but they alias the
+     accent rather than declaring their own colour. */
+  --accent: #3B5BDB;
+  --accent-rgb: 59 91 219;
+  /* Accent lightened enough to hold contrast on the ink-on-dark blocks. */
+  --accent-soft: #9DB0F2;
+  --maps-listicle-accent: var(--accent);
+  --maps-listicle-accent-rgb: var(--accent-rgb);
+
+  /* Editorial card surfaces. Both sit in the same warm family as --background
+     (#F5F0E8); a near-white card reads as a foreign element on this page. */
+  --paper: #EFE9DE;
+  --paper-accent: color-mix(in srgb, var(--accent) 9%, var(--background));
   --maps-listicle-chip: #e4e0d8;
 
   /* Typography */
@@ -39,6 +55,22 @@ html {
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-display);
   --font-editorial: var(--font-editorial-serif);
+
+  /* Palette tokens exposed as Tailwind color utilities. Without these the
+     `bg-cream` / `text-terracotta` / `text-ochre` / `bg-background-warm`
+     classes used by the editorial blocks compile to nothing. */
+  --color-background-warm: var(--background-warm);
+  --color-cream: var(--cream);
+  --color-terracotta: var(--terracotta);
+  --color-terracotta-light: var(--terracotta-light);
+  --color-forest: var(--forest);
+  --color-forest-light: var(--forest-light);
+  --color-ochre: var(--ochre);
+  --color-charcoal: var(--charcoal);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-paper: var(--paper);
+  --color-paper-accent: var(--paper-accent);
 
   /* Custom Breakpoints */
   --breakpoint-280: 280px;
