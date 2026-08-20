@@ -1,5 +1,6 @@
 import { User } from '@/lib/user/types';
 import { useRouter } from 'next/navigation';
+import { accountActionLinkClassName, accountGuidanceClassName } from '../account.styles';
 
 interface EmailSectionProps {
   user: User | null;
@@ -11,7 +12,7 @@ export function EmailSection({ user }: EmailSectionProps) {
   const canChangeEmail = hasPassword && !user?.hasGoogleOAuth;
 
   return (
-    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
+    <div>
       <div className="flex flex-col 480:flex-row 480:justify-between 480:items-start">
         <div className="flex-1 min-w-0">
           <h3 className="font-display text-[1rem] 480:text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">
@@ -24,12 +25,12 @@ export function EmailSection({ user }: EmailSectionProps) {
             {user?.email}
           </div>
           {!hasPassword && (
-            <p className="text-[0.75rem] 480:text-[0.78rem] text-[#C65D3B]">
+            <p className={accountGuidanceClassName}>
               You must add a password to your account before changing your email.
             </p>
           )}
           {hasPassword && user?.hasGoogleOAuth && (
-            <p className="text-[0.75rem] 480:text-[0.78rem] text-[#C65D3B]">
+            <p className={accountGuidanceClassName}>
               Disconnect Google before changing your email.
             </p>
           )}
@@ -37,18 +38,18 @@ export function EmailSection({ user }: EmailSectionProps) {
         {canChangeEmail ? (
           <button
             onClick={() => router.push('/account/change-email')}
-            className="
-              text-[0.82rem] text-[#6b6a68] hover:text-[#1A1A1A]
-              underline underline-offset-2 480:ml-4 cursor-pointer
-              transition-colors mt-3 480:mt-0 self-start
-            "
+            className={`${accountActionLinkClassName} 480:ml-4 mt-3 480:mt-0 self-start`}
           >
             Edit
           </button>
         ) : (
-          <span className="text-[0.82rem] text-[#c4c2be] 480:ml-4 cursor-not-allowed mt-3 480:mt-0 self-start">
+          <button
+            type="button"
+            disabled
+            className={`${accountActionLinkClassName} 480:ml-4 mt-3 480:mt-0 self-start`}
+          >
             Edit
-          </span>
+          </button>
         )}
       </div>
     </div>

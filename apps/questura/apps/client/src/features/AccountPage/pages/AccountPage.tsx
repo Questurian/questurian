@@ -76,14 +76,16 @@ function AccountContent() {
       {/* ── Sections ── */}
       <section className="px-4 480:px-6 pt-6 480:pt-10 pb-16 768:pt-12 768:pb-20">
         <div className="max-w-2xl mx-auto space-y-4 480:space-y-5 768:space-y-6">
-          <EmailSection user={user} />
+          <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
+            <EmailSection user={user} />
 
-          <PasswordSection
-            user={user}
-            passwordSuccess={passwordSuccess}
-            passwordError={passwordError}
-            onClearPasswordMessages={clearPasswordMessages}
-          />
+            <PasswordSection
+              user={user}
+              passwordSuccess={passwordSuccess}
+              passwordError={passwordError}
+              onClearPasswordMessages={clearPasswordMessages}
+            />
+          </div>
 
           <ConnectedAccountsSection
             user={user}

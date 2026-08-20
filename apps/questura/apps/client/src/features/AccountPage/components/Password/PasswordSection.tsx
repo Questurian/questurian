@@ -7,6 +7,7 @@ import { useAddPasswordMutation } from '@/features/AccountPage/hooks/useAccountM
 import PasswordStrengthIndicator from '@/features/Auth/components/PasswordStrengthIndicator';
 import { validatePasswordRequirements, isPasswordValid } from '@/features/Auth/lib/auth-utils';
 import { isServiceUnavailableError } from '@/lib/api';
+import { accountActionLinkClassName } from '../account.styles';
 
 function AccountPasswordInput({
   label,
@@ -143,7 +144,7 @@ export function PasswordSection({ user, passwordSuccess, passwordError, onClearP
   const isOAuthOnly = user?.authProvider !== 'local' && user?.authProvider !== 'dual';
 
   return (
-    <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-4 480:p-6 768:p-8">
+    <div className="mt-5 pt-5 border-t border-[#d7d4ce] 480:mt-6 480:pt-6 768:mt-8 768:pt-8">
       <div className="flex flex-col 480:flex-row 480:justify-between 480:items-start">
         <div className="flex-1 min-w-0">
           <h3 className="font-display text-[1rem] 480:text-[1.1rem] text-[#1A1A1A] mb-1.5 768:text-[1.2rem]">
@@ -206,11 +207,7 @@ export function PasswordSection({ user, passwordSuccess, passwordError, onClearP
                 setShowForm(true);
               }
             }}
-            className="
-              text-[0.82rem] text-[#6b6a68] hover:text-[#1A1A1A]
-              underline underline-offset-2 480:ml-4 cursor-pointer
-              transition-colors whitespace-nowrap mt-3 480:mt-0 self-start
-            "
+            className={`${accountActionLinkClassName} 480:ml-4 whitespace-nowrap mt-3 480:mt-0 self-start`}
           >
             {!isOAuthOnly ? 'Change password' : 'Set password'}
           </button>
