@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
 import {
   MenuIcon,
   Logo,
@@ -46,9 +45,9 @@ export default function DesktopNavbar() {
             <Logo />
           </Link>
           <div className="flex items-center justify-self-end gap-4">
-            {loading ? (
-              <LoadingSpinner variant="inline" size="small" />
-            ) : (
+            {/* Auth unresolved: render nothing. No spinner -- the buttons either
+                appear or they do not; a permanently empty slot is our bug to fix. */}
+            {loading ? null : (
               <>
                 {shouldShowSubscribe ? (
                   <Link href="/join">

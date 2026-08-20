@@ -2,7 +2,11 @@ import Link from 'next/link'
 import { PublicImage } from '@/components/media/PublicImage'
 import { GatedArticleBody } from '@/features/articles/components/GatedArticleBody'
 import { ArticleShareBar } from '@/features/articles/components/ArticleShareBar'
-import { ArticleSidebar } from '@/features/articles/components/ArticleSidebar'
+import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleButton'
+import {
+  ArticleRail,
+  ArticlePartners,
+} from '@/features/articles/components/ArticleSidebar'
 import { readGate } from '@/features/articles/lib/gate'
 import { articleCrumbsFromPath } from '@/features/articles/lib/articleCrumbs'
 import { fetchStandardArticleSidebar } from '@/features/articles/lib/fetchArticleSidebar'
@@ -97,12 +101,14 @@ function StandardArticleHeader({
         <div className="mt-5 h-px w-full bg-foreground/18" aria-hidden />
       )}
 
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
         <ArticleShareBar
           url={shareUrl}
           title={title}
           imageUrl={headerSection?.featuredImage?.url}
         />
+        {/* Same CTA the listicle/itinerary headers render (see ArticlePageHeader). */}
+        <AddOnGoogleButton variant="google" />
       </div>
     </header>
   )
@@ -159,9 +165,13 @@ export async function ArticlePage({ article, path }: { article: Article; path?: 
             </div>
           </div>
 
-          <div className="px-4 1024:col-start-2 1024:row-start-2 1024:px-0">
-            <ArticleSidebar trending={sidebar.trending} partners={sidebar.partners} />
+          <div className="px-4 pt-10 1024:col-start-2 1024:row-start-2 1024:px-0 1024:pt-0">
+            <ArticleRail trending={sidebar.trending} />
           </div>
+        </div>
+
+        <div className="px-4 1024:px-0">
+          <ArticlePartners partners={sidebar.partners} />
         </div>
       </div>
     </article>

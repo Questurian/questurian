@@ -1,14 +1,10 @@
 import Link from 'next/link'
 import { PublicImage } from '@/components/media/PublicImage'
 import type { ArticleIndexItem } from '@/features/articles/lib/fetchArticleIndex'
+import { StickyRail } from '@/features/articles/components/StickyRail'
 
-type ArticleSidebarProps = {
-  trending: ArticleIndexItem[]
-  partners: ArticleIndexItem[]
-}
-
-function AdSlot({ size }: { size: 'half-page' | 'rectangle' }) {
-  const height = size === 'half-page' ? 'h-[250px] 1024:h-[600px]' : 'h-[250px]'
+function AdSlot({ size }: { size: 'half-page' | 'square' }) {
+  const height = size === 'half-page' ? 'h-[250px] 1024:h-[600px]' : 'h-[300px]'
 
   return (
     <div className="w-full">
@@ -27,7 +23,7 @@ function AdSlot({ size }: { size: 'half-page' | 'rectangle' }) {
   )
 }
 
-function SidebarHeading({ id, children }: { id: string; children: string }) {
+function SectionHeading({ id, children }: { id: string; children: string }) {
   return (
     <h2
       id={id}
@@ -38,68 +34,85 @@ function SidebarHeading({ id, children }: { id: string; children: string }) {
   )
 }
 
-function SidebarArticleRow({ item, size }: { item: ArticleIndexItem; size: 'trending' | 'partner' }) {
-  const thumb = size === 'trending' ? 'size-[72px]' : 'size-[56px]'
-
+/**
+ * Ad rail. Sticks alongside the article body and releases at the end of the
+ * body, at which point the trending list below it comes into view.
+ */
+export function ArticleRail({ trending }: { trending: ArticleIndexItem[] }) {
   return (
-    <li>
-      <Link href={item.href} className="group flex gap-3 py-3">
-        <div className={`relative ${thumb} shrink-0 overflow-hidden bg-foreground/8`}>
-          {item.thumbnail ? (
-            <PublicImage
-              src={item.thumbnail.url}
-              alt={item.thumbnail.alt ?? ''}
-              width={144}
-              height={144}
-              sizes="72px"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : null}
-        </div>
-        <p
-          className={`min-w-0 font-display leading-snug text-foreground group-hover:underline ${
-            size === 'trending' ? 'text-[15px]' : 'text-[14px]'
-          }`}
-        >
-          {item.title}
-        </p>
-      </Link>
-    </li>
+    <div data-article-sidebar className="1024:h-full">
+      <StickyRail className="flex flex-col gap-8 1024:sticky">
+        <AdSlot size="half-page" />
+        <AdSlot size="square" />
+        <ArticleTrending trending={trending} />
+      </StickyRail>
+    </div>
   )
 }
 
-export function ArticleSidebar({ trending, partners }: ArticleSidebarProps) {
+function ArticleTrending({ trending }: { trending: ArticleIndexItem[] }) {
+  if (trending.length === 0) return null
+
   return (
-    <aside
-      data-article-sidebar
-      className="flex flex-col gap-8 pt-10 1024:pt-0"
-      aria-label="Article sidebar"
-    >
-      <AdSlot size="half-page" />
+    <section aria-labelledby="article-trending-heading">
+      <SectionHeading id="article-trending-heading">Trending News</SectionHeading>
+      <ul className="divide-y divide-foreground/12">
+        {trending.map((item) => (
+          <li key={item.id}>
+            <Link href={item.href} className="group flex gap-3 py-3">
+              <div className="relative size-[72px] shrink-0 overflow-hidden bg-foreground/8">
+                {item.thumbnail ? (
+                  <PublicImage
+                    src={item.thumbnail.url}
+                    alt={item.thumbnail.alt ?? ''}
+                    width={144}
+                    height={144}
+                    sizes="72px"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : null}
+              </div>
+              <p className="min-w-0 font-display text-[15px] leading-snug text-foreground group-hover:underline">
+                {item.title}
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
 
-      {trending.length > 0 ? (
-        <section aria-labelledby="article-trending-heading">
-          <SidebarHeading id="article-trending-heading">Trending News</SidebarHeading>
-          <ul className="divide-y divide-foreground/12">
-            {trending.map((item) => (
-              <SidebarArticleRow key={item.id} item={item} size="trending" />
-            ))}
-          </ul>
-        </section>
-      ) : null}
+/** Full-width card row that closes the page. */
+export function ArticlePartners({ partners }: { partners: ArticleIndexItem[] }) {
+  if (partners.length === 0) return null
 
-      <AdSlot size="rectangle" />
-
-      {partners.length > 0 ? (
-        <section aria-labelledby="article-partners-heading">
-          <SidebarHeading id="article-partners-heading">From Our Partners</SidebarHeading>
-          <ul className="divide-y divide-foreground/12">
-            {partners.map((item) => (
-              <SidebarArticleRow key={item.id} item={item} size="partner" />
-            ))}
-          </ul>
-        </section>
-      ) : null}
-    </aside>
+  return (
+    <section aria-labelledby="article-partners-heading" className="pt-12 pb-16 1024:pt-16 1024:pb-20">
+      <SectionHeading id="article-partners-heading">From Our Partners</SectionHeading>
+      <ul className="mt-6 grid grid-cols-2 gap-x-5 gap-y-8 sm:grid-cols-3 1024:grid-cols-5">
+        {partners.map((item) => (
+          <li key={item.id}>
+            <Link href={item.href} className="group block">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-foreground/8">
+                {item.thumbnail ? (
+                  <PublicImage
+                    src={item.thumbnail.url}
+                    alt={item.thumbnail.alt ?? ''}
+                    width={480}
+                    height={360}
+                    sizes="(min-width: 1024px) 210px, (min-width: 640px) 30vw, 45vw"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : null}
+              </div>
+              <p className="mt-2.5 font-display text-[15px] leading-snug text-foreground group-hover:underline">
+                {item.title}
+              </p>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

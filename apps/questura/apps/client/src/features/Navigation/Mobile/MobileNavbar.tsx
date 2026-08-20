@@ -4,7 +4,6 @@ import { Logo, MenuIcon, SignInButton, SubscribeButton, UserIcon } from "./compo
 import Link from "next/link";
 import { useAuth } from "@/lib/user/hooks";
 import { useMembership } from "@/features/Payments/hooks/useMembership";
-import LoadingSpinner from "@/components/shared/ui/LoadingSpinner";
 
 export default function MobileNavbar() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -31,9 +30,9 @@ export default function MobileNavbar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 max-[379.98px]:gap-2.5">
-          {loading ? (
-            <LoadingSpinner variant="inline" size="small" />
-          ) : (
+          {/* Auth unresolved: render nothing. No spinner -- the buttons either
+              appear or they do not; a permanently empty slot is our bug to fix. */}
+          {loading ? null : (
             <>
               {shouldShowSubscribe ? (
                 <Link href="/join" className="flex h-8 items-center max-[379.98px]:h-auto">
