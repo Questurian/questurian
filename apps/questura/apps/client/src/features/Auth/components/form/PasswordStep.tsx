@@ -138,7 +138,7 @@ export default function PasswordStep({
             <div className="w-full border-t border-gray-300" />
           </div>
           <div className="relative flex justify-center text-sm">
-            <span className={`px-2 ${inModal ? 'bg-white' : 'bg-gray-50'} text-black font-bold`}>
+            <span className={`px-2 ${inModal ? 'bg-white' : 'bg-[#f7f6f2]'} text-black font-bold`}>
               Or continue with
             </span>
           </div>

@@ -15,34 +15,34 @@ export default function AuthFormLayout({
 }: AuthFormLayoutProps) {
   const containerClasses = inModal
     ? "w-full space-y-6"
-    : "min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 640:px-6 1024:px-8";
+    : "min-h-screen flex items-center justify-center px-5 py-12";
 
   const contentClasses = inModal
     ? "w-full space-y-4"
-    : "max-w-md w-full space-y-8";
+    : "max-w-xl w-full bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8 space-y-6";
 
   return (
     <div className={containerClasses}>
       <div className={contentClasses}>
         {!inModal && (
           <div>
-            <h2 className="mt-6 text-center text-3xl font-extrabold text-black">
+            <h2 className="mt-6 text-center font-display text-[1.35rem] text-[#1A1A1A] 480:text-[1.55rem]">
               {title}
             </h2>
-            <p className="mt-2 text-center text-sm text-gray-600">
+            <p className="mt-2 text-center text-[0.88rem] text-[#6b6a68] leading-[1.65]">
               {subtitle}
             </p>
           </div>
         )}
 
         {generalErrors.length > 0 && (
-          <div className="rounded-md bg-red-50 p-4 border border-red-200">
+          <div className="rounded-sm bg-[#fce4ec] p-3.5 border border-[#f8bbd0]">
             <div className="flex">
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
+                <h3 className="text-[0.84rem] font-medium text-[#c62828]">
                   {isSignUp ? 'Sign up failed' : 'Sign in failed'}
                 </h3>
-                <div className="mt-2 text-sm text-red-700">
+                <div className="mt-2 text-[0.84rem] text-[#c62828]">
                   <ul className="list-disc pl-5 space-y-1">
                     {generalErrors.map((error, index) => (
                       <li key={index}>{error}</li>

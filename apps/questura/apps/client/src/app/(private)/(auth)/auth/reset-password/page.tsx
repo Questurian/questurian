@@ -5,6 +5,7 @@ import Link from 'next/link';
 
 import { post } from '@/lib/api';
 import { isPasswordValid } from '@/features/Auth/lib/auth-utils';
+import PasswordInput from '@/components/shared/ui/PasswordInput';
 
 export default function ResetPasswordPage() {
   const [token, setToken] = useState('');
@@ -49,52 +50,75 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[70vh] w-full max-w-md items-center px-4 py-12">
-      <div className="w-full space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-semibold text-black">Reset Password</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {complete ? 'Your password has been updated.' : 'Choose a new password for your account.'}
-          </p>
-        </div>
+    <div className="min-h-screen">
+      <div className="px-6 pt-8 pb-16 480:pt-10 768:pt-12">
+        <div className="max-w-xl mx-auto">
+          <div className="mb-8">
+            <h1 className="font-display text-[1.35rem] text-[#1A1A1A] 480:text-[1.55rem] 768:text-[1.75rem]">
+              Reset Password
+            </h1>
+            <p className="mt-2 text-[0.88rem] text-[#6b6a68] leading-[1.6]">
+              {complete ? 'Your password has been updated.' : 'Choose a new password for your account.'}
+            </p>
+          </div>
 
-        {complete ? (
-          <Link
-            href="/?showLogin=true"
-            className="block w-full rounded-lg bg-[#468BE6] px-4 py-3 text-center text-sm font-medium text-white hover:bg-[#1A5799]"
-          >
-            Sign in
-          </Link>
-        ) : (
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder="New password"
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm text-black"
-              required
-            />
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-3 text-sm text-black"
-              required
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <button
-              type="submit"
-              disabled={pending}
-              className="w-full rounded-lg bg-[#468BE6] px-4 py-3 text-sm font-medium text-white hover:bg-[#1A5799] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {pending ? 'Updating...' : 'Update password'}
-            </button>
-          </form>
-        )}
+          <div className="bg-[#f7f6f2] border border-[#d7d4ce] rounded-sm p-6 480:p-8">
+            {error ? (
+              <div className="mb-5 p-3 bg-[#fce4ec] border border-[#f8bbd0] rounded-sm">
+                <p className="text-[0.84rem] text-[#c62828]">{error}</p>
+              </div>
+            ) : null}
+
+            {complete ? (
+              <Link
+                href="/?showLogin=true"
+                className="
+                  block w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+                  text-white text-center py-3.5 rounded
+                  text-[0.88rem] font-medium transition-colors
+                "
+              >
+                Sign in
+              </Link>
+            ) : (
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                <PasswordInput
+                  label="New Password"
+                  name="newPassword"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  placeholder="New password"
+                  autoComplete="new-password"
+                  required
+                  disabled={pending}
+                  autoFocus
+                />
+                <PasswordInput
+                  label="Confirm New Password"
+                  name="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Confirm new password"
+                  autoComplete="new-password"
+                  required
+                  disabled={pending}
+                />
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="
+                    w-full bg-[#2C2C2C] hover:bg-[#1A1A1A]
+                    text-white text-center py-3 rounded
+                    text-[0.88rem] font-medium transition-colors
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                  "
+                >
+                  {pending ? 'Updating...' : 'Update password'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
