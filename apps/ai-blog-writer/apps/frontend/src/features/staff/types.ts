@@ -90,3 +90,27 @@ export type AuthorPatch = {
   expertise?: { area: string }[]
   socialLinks?: SocialLinks
 }
+
+/**
+ * Who a ProfileEditor is editing. Both variants exist because both ADR-0007
+ * null-sides are real: `user` reaches a staff identity that may not have an
+ * Author yet (the form creates one on first save), `author` reaches an Author
+ * that may have no staff identity at all -- an orphan byline.
+ */
+export type ProfileSubject =
+  | { kind: 'user'; userId: number | string }
+  | { kind: 'author'; authorId: number | string }
+
+/**
+ * What the acting operator may do to this subject. Each flag names one server
+ * rule rather than one role, so the UI cannot drift into asserting a privilege
+ * Payload does not actually grant.
+ */
+export type ProfileCapabilities = {
+  /** Authors.slug is isAdminFieldLevel: admins only, at every tier. */
+  editSlug: boolean
+  /** Users.firstName/lastName -- reachable only when the subject has an account. */
+  editAccountNames: boolean
+  /** Show the email + role header. Requires reading the subject's Users row. */
+  showAccountHeader: boolean
+}

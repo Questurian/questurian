@@ -15,7 +15,18 @@ export default function MyProfilePage() {
           once you have published work.
         </p>
       </header>
-      <ProfileEditor userId={authUser.id} variant="self" />
+      <ProfileEditor
+        subject={{ kind: 'user', userId: authUser.id }}
+        can={{
+          // Your own account row is yours to update at every role; the slug is
+          // admin-only even here, because renaming it breaks inbound author URLs.
+          editAccountNames: true,
+          editSlug: false,
+          // Your own email and role are on the page you came from; repeating
+          // them above your own form adds nothing.
+          showAccountHeader: false,
+        }}
+      />
     </div>
   )
 }

@@ -56,7 +56,10 @@ export default function StaffProfilePage() {
           avatar, and the author URL slug.
         </p>
       </header>
-      <ProfileEditor userId={id} variant="admin" />
+      <ProfileEditor
+        subject={{ kind: 'user', userId: id }}
+        can={{ editAccountNames: true, editSlug: true, showAccountHeader: true }}
+      />
     </div>
   )
 }

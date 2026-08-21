@@ -3,13 +3,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   avatarUrl,
   createAuthorForUser,
+  fetchAuthorById,
   fetchAuthorForUser,
   fetchStaffUser,
   updateAuthor,
   updateStaffUser,
   uploadAvatarAsset,
 } from '../api/staff.api'
-import type { Author, AuthorPatch, SocialLinks, StaffUserPatch } from '../types'
+import type {
+  Author,
+  AuthorPatch,
+  ProfileCapabilities,
+  ProfileSubject,
+  SocialLinks,
+  StaffUser,
+  StaffUserPatch,
+} from '../types'
 
 type ProfileFormState = {
   firstName: string
@@ -33,13 +42,19 @@ const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: strin
 ]
 
 type ProfileEditorProps = {
-  userId: number | string
   /**
-   * 'self' is the My Profile experience (slug read-only, admins manage it).
-   * 'admin' is the staff-management experience: the acting admin edits any
-   * Staff identity, including the author slug.
+   * Who is being edited. A union rather than one id because both ADR-0007
+   * null-sides are real states: a hire who has never published has a staff
+   * identity and no Author (created on first save), and an orphan byline has
+   * an Author and no staff identity. Neither key alone spans the domain.
    */
-  variant: 'self' | 'admin'
+  subject: ProfileSubject
+  /**
+   * What the acting operator may do, resolved by the page from usePermissions.
+   * Explicit flags rather than a role-ish `variant`, so each one maps to a
+   * named server rule and a fourth tier has somewhere obvious to land.
+   */
+  can: ProfileCapabilities
 }
 
 /**
@@ -48,12 +63,12 @@ type ProfileEditorProps = {
  * published -- a normal state, filled in on first save.
  */
 function formStateFromRecords(
-  user: { firstName?: string | null; lastName?: string | null },
+  user: { firstName?: string | null; lastName?: string | null } | null,
   author: Author | null,
 ): ProfileFormState {
   return {
-    firstName: user.firstName ?? '',
-    lastName: user.lastName ?? '',
+    firstName: user?.firstName ?? '',
+    lastName: user?.lastName ?? '',
     displayName: author?.displayName ?? '',
     bio: author?.bio ?? '',
     slug: author?.slug ?? '',
@@ -64,8 +79,9 @@ function formStateFromRecords(
   }
 }
 
-export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
+export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
   const queryClient = useQueryClient()
+  const subjectKey = subject.kind === 'user' ? `user:${subject.userId}` : `author:${subject.authorId}`
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [form, setForm] = useState<ProfileFormState | null>(null)
@@ -76,11 +92,19 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const profileQuery = useQuery({
-    queryKey: ['staff', 'profile', String(userId)],
-    queryFn: async () => {
+    queryKey: ['staff', 'profile', subjectKey],
+    queryFn: async (): Promise<{ user: StaffUser | null; author: Author | null }> => {
+      // By-author is the orphan-reachable path, so it must tolerate a null
+      // account rather than assume one. `showAccountHeader` gates the only
+      // read of the staff row, because an editor cannot read anyone else's.
+      if (subject.kind === 'author') {
+        const author = await fetchAuthorById(subject.authorId)
+        return { user: null, author }
+      }
+
       const [user, author] = await Promise.all([
-        fetchStaffUser(userId),
-        fetchAuthorForUser(userId),
+        fetchStaffUser(subject.userId),
+        fetchAuthorForUser(subject.userId),
       ])
       return { user, author }
     },
@@ -99,7 +123,7 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
     setPendingAvatarPreview(null)
     setStatusMessage(null)
     setErrorMessage(null)
-  }, [userId])
+  }, [subjectKey])
 
   const avatarUpload = useMutation({
     mutationFn: (file: File) => uploadAvatarAsset(file),
@@ -135,27 +159,36 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
       // An unchanged or cleared slug is omitted so the field is never blanked.
       const existingAuthor = profileQuery.data?.author ?? null
       const nextSlug = state.slug.trim()
-      if (variant === 'admin' && nextSlug && nextSlug !== (existingAuthor?.slug ?? '')) {
+      if (can.editSlug && nextSlug && nextSlug !== (existingAuthor?.slug ?? '')) {
         authorPatch.slug = nextSlug
       }
 
-      // Names and authorship are two records now, so this is two writes. The
-      // account goes first: it is the one that must not be lost if the second
-      // fails, and an author record can always be re-saved.
-      const [user, author] = [
-        await updateStaffUser(userId, userPatch),
-        existingAuthor
-          ? await updateAuthor(existingAuthor.id, authorPatch)
-          : await createAuthorForUser(userId, authorPatch),
-      ]
+      // Names and authorship are two records now, so this can be two writes.
+      // The account goes first: it is the one that must not be lost if the
+      // second fails, and an author record can always be re-saved. An editor
+      // acting on someone else has no account write at all -- Users stays
+      // admin-only (ADR-0011) -- and an orphan byline has no account to write.
+      const user =
+        can.editAccountNames && subject.kind === 'user'
+          ? await updateStaffUser(subject.userId, userPatch)
+          : (profileQuery.data?.user ?? null)
+
+      const author = existingAuthor
+        ? await updateAuthor(existingAuthor.id, authorPatch)
+        : subject.kind === 'user'
+          ? await createAuthorForUser(subject.userId, authorPatch)
+          : // Unreachable: a by-author subject was resolved from an existing
+            // Author, so `existingAuthor` is always set on this path.
+            (() => {
+              throw new Error('Cannot create an author record without a staff account to link.')
+            })()
 
       return { user, author }
     },
     onSuccess: (updated) => {
-      queryClient.setQueryData(['staff', 'profile', String(userId)], updated)
-      if (variant === 'admin') {
-        void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
-      }
+      queryClient.setQueryData(['staff', 'profile', subjectKey], updated)
+      void queryClient.invalidateQueries({ queryKey: ['staff', 'list'] })
+      void queryClient.invalidateQueries({ queryKey: ['authors', 'directory'] })
       setForm(formStateFromRecords(updated.user, updated.author))
       setPendingAvatarId(null)
       setPendingAvatarPreview(null)
@@ -207,11 +240,21 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
         saveProfile.mutate(form)
       }}
     >
-      {variant === 'admin' ? (
+      {can.showAccountHeader && profile ? (
         <section className="staff-section">
           <h2>Account</h2>
           <p className="staff-muted">
             {profile.email} · <span className={`staff-role staff-role--${profile.role}`}>{profile.role}</span>
+          </p>
+        </section>
+      ) : null}
+
+      {subject.kind === 'author' && !author?.user ? (
+        <section className="staff-section">
+          <h2>Unlinked byline</h2>
+          <p className="staff-muted">
+            This author has no staff account — the person has left, or never had one. Their byline and
+            author page keep working, and edits here still reach the public site.
           </p>
         </section>
       ) : null}
@@ -223,7 +266,7 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
             <img className="staff-avatar" src={currentAvatar} alt="Profile avatar" />
           ) : (
             <div className="staff-avatar staff-avatar-empty" aria-hidden="true">
-              {(form.displayName || form.firstName || profile.email).slice(0, 1).toUpperCase()}
+              {(form.displayName || form.firstName || profile?.email || '?').slice(0, 1).toUpperCase()}
             </div>
           )}
           <div>
@@ -254,24 +297,33 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
 
       <section className="staff-section">
         <h2>Name</h2>
-        <div className="staff-field-row">
-          <label className="staff-field">
-            <span>First name</span>
-            <input
-              type="text"
-              value={form.firstName}
-              onChange={(event) => update('firstName', event.target.value)}
-            />
-          </label>
-          <label className="staff-field">
-            <span>Last name</span>
-            <input
-              type="text"
-              value={form.lastName}
-              onChange={(event) => update('lastName', event.target.value)}
-            />
-          </label>
-        </div>
+        {/*
+          First/last name live on the staff account, not the Author. They are
+          shown only when the acting operator can actually write that record --
+          an editor editing a writer cannot, and an orphan byline has no
+          account to write. The byline below is the Author field and is always
+          editable, which is the one that reaches readers.
+        */}
+        {can.editAccountNames ? (
+          <div className="staff-field-row">
+            <label className="staff-field">
+              <span>First name</span>
+              <input
+                type="text"
+                value={form.firstName}
+                onChange={(event) => update('firstName', event.target.value)}
+              />
+            </label>
+            <label className="staff-field">
+              <span>Last name</span>
+              <input
+                type="text"
+                value={form.lastName}
+                onChange={(event) => update('lastName', event.target.value)}
+              />
+            </label>
+          </div>
+        ) : null}
         <label className="staff-field">
           <span>Display name (byline)</span>
           <input
@@ -281,7 +333,7 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
             onChange={(event) => update('displayName', event.target.value)}
           />
         </label>
-        {variant === 'admin' ? (
+        {can.editSlug ? (
           <>
             <label className="staff-field">
               <span>Author URL slug</span>

@@ -39,6 +39,45 @@ export async function fetchAuthors(): Promise<Author[]> {
   return response.docs ?? []
 }
 
+/** One author by its own id -- the only way to address an orphan byline. */
+export async function fetchAuthorById(id: number | string): Promise<Author> {
+  return payloadRequest(`/api/authors/${id}?depth=1`)
+}
+
+/**
+ * The Author Directory listing (ADR-0011). Sends the same filter the server's
+ * `Authors.update` access rule applies, so an editor is shown only rows they
+ * can in fact save. This is a UI convenience and a deliberate duplication of
+ * server logic -- Payload stays the enforcement point; the alternative is
+ * offering an editor rows that 403 on save.
+ *
+ * An admin sends no filter, because their access rule has none.
+ *
+ * The role branch traverses the `user` relationship, which is a SQL join and
+ * needs no read access on `users` -- the reason an editor can scope by role
+ * while being unable to read a single staff identity.
+ */
+export async function fetchEditableAuthors(
+  scope: 'all' | 'writers-and-orphans',
+  selfUserId: number | string,
+): Promise<Author[]> {
+  const base = '/api/authors?limit=200&sort=displayName&depth=1'
+
+  // Mirrors all three branches of the editor clause in Authors.update, own
+  // record included -- an editor whose directory silently omitted them would
+  // not match the rule it claims to preview.
+  const query =
+    scope === 'all'
+      ? base
+      : `${base}` +
+        `&where[or][0][user][equals]=${selfUserId}` +
+        `&where[or][1][user.role][equals]=writer` +
+        `&where[or][2][user][exists]=false`
+
+  const response = (await payloadRequest(query)) as { docs?: Author[] }
+  return response.docs ?? []
+}
+
 export async function createAuthorForUser(
   userId: number | string,
   patch: AuthorPatch,

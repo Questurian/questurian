@@ -4,7 +4,9 @@ import {
   avatarUrl,
   changeStaffRole,
   createAuthorForUser,
+  fetchAuthorById,
   fetchAuthorForUser,
+  fetchEditableAuthors,
   createStaffUser,
   fetchEmailLogs,
   fetchStaffUser,
@@ -269,5 +271,63 @@ describe('staff.api', () => {
     expect(avatarUrl({ id: 1, filename: 'x.jpg' })).toContain('/api/media-assets/file/x.jpg')
     expect(avatarUrl(5)).toBeNull()
     expect(avatarUrl(null)).toBeNull()
+  })
+})
+
+describe('Author Directory query (ADR-0011)', () => {
+  /**
+   * This query is a deliberate duplication of the server's `Authors.update`
+   * access clause, so that an editor is offered only rows they can actually
+   * save. If the two drift, the symptom is a 403 on save rather than an error
+   * here -- which is why the shape is pinned rather than smoke-tested.
+   */
+  it('sends all three editor branches: self, writers, and orphan bylines', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+
+    await fetchEditableAuthors('writers-and-orphans', 7)
+
+    const url = String(fetchMock.mock.calls[0][0])
+    expect(url).toContain('where[or][0][user][equals]=7')
+    expect(url).toContain('where[or][1][user.role][equals]=writer')
+    expect(url).toContain('where[or][2][user][exists]=false')
+  })
+
+  it('never names a role other than writer', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+
+    await fetchEditableAuthors('writers-and-orphans', 7)
+
+    const url = String(fetchMock.mock.calls[0][0])
+    expect(url).not.toContain('editor')
+    expect(url).not.toContain('admin')
+  })
+
+  it('sends no filter for an admin, whose access rule carries none', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+
+    await fetchEditableAuthors('all', 1)
+
+    const url = String(fetchMock.mock.calls[0][0])
+    expect(url).not.toContain('where')
+  })
+
+  it('populates the avatar relationship so the list can render photos', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ docs: [] }))
+
+    await fetchEditableAuthors('all', 1)
+
+    expect(String(fetchMock.mock.calls[0][0])).toContain('depth=1')
+  })
+
+  it('fetches one author by its own id, the only way to reach an orphan', async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ id: 12, displayName: 'Departed Writer', user: null }))
+
+    const author = await fetchAuthorById(12)
+
+    expect(author.user).toBeNull()
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(String(url)).toContain('/api/authors/12?depth=1')
+    expect(new Headers(init.headers).get('Authorization')).toBeNull()
+    expect(init.credentials).toBe('include')
   })
 })
