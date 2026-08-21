@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type JSX } from "react";
-import type { PublicAuthor } from "@/features/authors/lib/fetchAuthor";
 
 const AVATAR_SIZE = {
   page: "size-[88px] sm:size-[104px] lg:size-[112px]",
@@ -36,7 +35,13 @@ export function AuthorAvatar({
   name,
   size = "page",
 }: {
-  avatar: PublicAuthor["avatar"];
+  /**
+   * Widened past `PublicAuthor["avatar"]`: article bylines carry the same
+   * shape with `alt` optional, and the API genuinely omits it. The render
+   * already falls back to a generated alt, so requiring the key bought
+   * nothing but a type error at the article call sites.
+   */
+  avatar?: { url: string; alt?: string | null } | null;
   name: string;
   size?: keyof typeof AVATAR_SIZE;
 }): JSX.Element {

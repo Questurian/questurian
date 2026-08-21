@@ -15,9 +15,31 @@ import {
   initialListicleMapNavigationState,
   listicleMapNavigationReducer,
 } from '@/features/articles/components/ListicleMapNavigation'
+import { DESKTOP_MAP_QUERY } from '@/features/articles/lib/useIsDesktopMap'
+
+/**
+ * Bottom edge of whatever is pinned to the top of the page: the navbar,
+ * plus any sticky article chrome that opts in with the data attribute (the
+ * itinerary day tabs).
+ *
+ * Measured live rather than captured once, because the navbar shrinks as the
+ * page scrolls - a value taken before a smooth scroll is stale by the time
+ * that scroll lands.
+ */
+function stickyChromeBottom(): number {
+  const declared = parseFloat(
+    getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+  )
+  let bottom = Number.isFinite(declared) ? declared : 0
+  for (const el of document.querySelectorAll('[data-listicle-sticky-chrome]')) {
+    bottom += el.getBoundingClientRect().height
+  }
+  return bottom
+}
 
 const READING_BAND_TOP = 0.35
 const READING_BAND_BOTTOM = 0.45
+/** Desktop drops the target into the reading band, not against the chrome. */
 const NAVIGATION_TOP = 0.18
 const SCROLL_SETTLE_MS = 140
 const SCROLL_FALLBACK_MS = 2000
@@ -31,6 +53,13 @@ const SCROLL_KEYS = new Set([
   ' ',
 ])
 
+/** Card fields the mobile map takeover shows for the active stop. */
+export type ListicleMapPointPreview = {
+  address: string | null
+  excerpt: string | null
+  image: { url: string; alt: string } | null
+}
+
 export type ListicleMapPoint = {
   /** Listicle row id - rows can share a venue, so keys must come from the row. */
   id: string
@@ -40,6 +69,8 @@ export type ListicleMapPoint = {
   lng: number
   /** 'stay' pins render a house glyph instead of the entry number. */
   kind?: 'stay' | 'stop'
+  /** Absent on desktop, where the reading column is already beside the map. */
+  preview?: ListicleMapPointPreview
 }
 
 type ListicleMapSyncValue = {
@@ -130,7 +161,23 @@ export function ListicleMapSyncProvider({
             nextId = id
           }
         }
-        dispatchNavigation({ type: 'observe', id: nextId })
+        // Nothing in the band is ambiguous: the reader is either above the
+        // list entirely (map should show every pin) or passing through a gap
+        // between entries - an ad slot, a separator, a tall photo - where the
+        // map must hold its place. Distinguish them by asking whether every
+        // entry still sits below the band.
+        let aboveList = false
+        if (nextId === null) {
+          const bandBottom = window.innerHeight * READING_BAND_BOTTOM
+          let topmost = Infinity
+          for (const el of elementsById.current.values()) {
+            const top = el.getBoundingClientRect().top
+            if (top < topmost) topmost = top
+          }
+          aboveList = topmost === Infinity || topmost > bandBottom
+        }
+
+        dispatchNavigation({ type: 'observe', id: nextId, aboveList })
       },
       // Band from 35% to 45% of viewport height: the entry crossing it is
       // the one the reader is looking at.
@@ -169,10 +216,22 @@ export function ListicleMapSyncProvider({
     navigationCleanup.current?.()
     dispatchNavigation({ type: 'navigate', id })
 
-    const desiredTop = window.innerHeight * NAVIGATION_TOP
-    const top = window.scrollY + el.getBoundingClientRect().top - desiredTop
+    /**
+     * On a phone the map sits in a sheet over the lower half, so the reading
+     * band is a thin strip under the chrome. Landing an entry at 18% of the
+     * viewport would put its rule mid-strip and push the photo and venue name
+     * out of sight, so mobile aligns the entry's top rule flush against the
+     * chrome and gets the whole card. Desktop reads beside a full-height map
+     * and keeps the roomier band position.
+     */
+    const desiredTop = () =>
+      window.matchMedia(DESKTOP_MAP_QUERY).matches
+        ? window.innerHeight * NAVIGATION_TOP
+        : stickyChromeBottom()
+
+    const top = window.scrollY + el.getBoundingClientRect().top - desiredTop()
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const alreadyAligned = Math.abs(el.getBoundingClientRect().top - desiredTop) <= 2
+    const alreadyAligned = Math.abs(el.getBoundingClientRect().top - desiredTop()) <= 2
     let done = false
     let settleTimer: number | null = null
     let fallbackTimer: number | null = null
@@ -194,7 +253,7 @@ export function ListicleMapSyncProvider({
 
       const currentTarget = elementsById.current.get(id)
       if (alignTarget && currentTarget) {
-        const correction = currentTarget.getBoundingClientRect().top - desiredTop
+        const correction = currentTarget.getBoundingClientRect().top - desiredTop()
         if (Math.abs(correction) > 2) {
           window.scrollBy({ top: correction, behavior: 'auto' })
         }
@@ -218,7 +277,13 @@ export function ListicleMapSyncProvider({
       settleTimer = window.setTimeout(() => release(true), SCROLL_SETTLE_MS)
     }
 
-    function handleUserInterrupt() {
+    function handleUserInterrupt(event?: Event) {
+      // Dragging the mobile map sheet is not the reader taking the page
+      // scroll back, so it must not cancel a marker-driven scroll in flight.
+      const target = event?.target
+      if (target instanceof Element && target.closest('[data-listicle-map-sheet]')) {
+        return
+      }
       release(false)
     }
 

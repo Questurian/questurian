@@ -1,9 +1,14 @@
 'use client'
 
 import type { CSSProperties, JSX } from 'react'
+import {
+  LISTICLE_MAP_PILL_CLEARANCE,
+  ListicleMapSheet,
+} from '@/features/articles/components/ListicleMapSheet'
 import { MapPanel } from '@/features/articles/components/MapPanel'
 import { RelatedListicleShelf } from '@/features/articles/components/RelatedListicleShelf'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
+import { useIsDesktopMap } from '@/features/articles/lib/useIsDesktopMap'
 import { useDevStore } from '@/lib/stores/devStore'
 
 interface ListicleArticleLayoutProps {
@@ -27,6 +32,12 @@ export function ListicleArticleLayout({
   city,
 }: ListicleArticleLayoutProps): JSX.Element {
   const { mapsEnabled } = useDevStore()
+  const isDesktopMap = useIsDesktopMap()
+  // Below 1024 the map lives in a bottom sheet instead of a side column. The
+  // two never coexist: a CSS-hidden column would still mount MapPanel, and
+  // that instantiates a billed google.maps.Map nothing can display.
+  const showMapColumn = mapsEnabled && isDesktopMap
+  const showMapSheet = mapsEnabled && !isDesktopMap
 
   return (
     <>
@@ -51,14 +62,22 @@ export function ListicleArticleLayout({
       >
         <div className="maps-article-column 1024:min-w-0 1024:pt-[25px]">
           {children}
+          {showMapSheet ? (
+            <div
+              aria-hidden="true"
+              style={{
+                height: `calc(${LISTICLE_MAP_PILL_CLEARANCE}px + env(safe-area-inset-bottom))`,
+              }}
+            />
+          ) : null}
         </div>
-        {mapsEnabled && (
+        {showMapColumn && (
           <div
             aria-hidden="true"
             className="maps-map-divider hidden 1024:block 1024:absolute 1024:top-[25px] 1024:bottom-0 1024:z-20 1024:w-px 1024:pointer-events-none"
           />
         )}
-        {mapsEnabled && (
+        {showMapColumn && (
           <div
             className="maps-map-column hidden 1024:flex 1024:flex-col 1024:sticky 1024:self-start"
           >
@@ -72,6 +91,7 @@ export function ListicleArticleLayout({
             />
           </div>
         )}
+        {showMapSheet ? <ListicleMapSheet /> : null}
       </div>
     </>
   )

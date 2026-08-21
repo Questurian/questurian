@@ -7,6 +7,7 @@ import {
   type ListicleMapPoint,
 } from '@/features/articles/components/ListicleMapSync'
 import { ListicleArticleLayout } from '@/features/articles/layouts/ListicleArticleLayout'
+import { mapPointPreviewFromRow } from '@/features/articles/lib/listicleMapPreview'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import type { MapsListicleArticle } from '@/features/articles/types/mapsListicle'
 
@@ -29,7 +30,14 @@ export function MapsArticleLayout({
     rows.forEach((row, index) => {
       const { latitude, longitude, title } = row.item
       if (typeof latitude !== 'number' || typeof longitude !== 'number') return
-      result.push({ id: row.id, index, title, lat: latitude, lng: longitude })
+      result.push({
+        id: row.id,
+        index,
+        title,
+        lat: latitude,
+        lng: longitude,
+        preview: mapPointPreviewFromRow(row),
+      })
     })
     return result
   }, [article])

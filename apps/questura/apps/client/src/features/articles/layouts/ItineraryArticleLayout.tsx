@@ -13,6 +13,7 @@ import {
   populatedVenueStops,
   venueRowFromBlock,
 } from '@/features/articles/lib/itineraryDays'
+import { mapPointPreviewFromRow } from '@/features/articles/lib/listicleMapPreview'
 import { GatedBodySkeleton, GatedLoadError } from '@/features/articles/components/GatedStates'
 import { PaywallNotice } from '@/features/articles/components/PaywallNotice'
 import { readGate } from '@/features/articles/lib/gate'
@@ -64,7 +65,15 @@ export function ItineraryArticleLayout({
     populatedVenueStops(day.whereStaying).forEach((row, index) => {
       const { latitude, longitude, title } = row.item
       if (typeof latitude !== 'number' || typeof longitude !== 'number') return
-      result.push({ id: row.id, index, title, lat: latitude, lng: longitude, kind: 'stay' })
+      result.push({
+        id: row.id,
+        index,
+        title,
+        lat: latitude,
+        lng: longitude,
+        kind: 'stay',
+        preview: mapPointPreviewFromRow(row),
+      })
     })
 
     // Tour-agency stops occupy a slot in the on-page numbering but have no
@@ -76,7 +85,15 @@ export function ItineraryArticleLayout({
       if (!row) return
       const { latitude, longitude, title } = row.item
       if (typeof latitude !== 'number' || typeof longitude !== 'number') return
-      result.push({ id: row.id, index, title, lat: latitude, lng: longitude, kind: 'stop' })
+      result.push({
+        id: row.id,
+        index,
+        title,
+        lat: latitude,
+        lng: longitude,
+        kind: 'stop',
+        preview: mapPointPreviewFromRow(row),
+      })
     })
 
     return result

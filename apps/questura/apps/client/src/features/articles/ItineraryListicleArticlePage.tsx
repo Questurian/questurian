@@ -296,7 +296,10 @@ export function ItineraryListicleArticlePage({
       <ListicleSeparator />
 
       {days.length > 1 ? (
-        <div className="sticky top-[var(--navbar-height,0px)] z-10 bg-background px-3 380:px-4 480:px-5 550:px-6 sm:px-8 768:px-10">
+        <div
+          data-listicle-sticky-chrome=""
+          className="sticky top-[var(--navbar-height,0px)] z-10 bg-background px-3 380:px-4 480:px-5 550:px-6 sm:px-8 768:px-10"
+        >
           <div
             role="tablist"
             aria-label="Itinerary days"

@@ -6,6 +6,12 @@ import {
   useListicleMapSync,
   type ListicleMapPoint,
 } from '@/features/articles/components/ListicleMapSync'
+import {
+  cameraForPoints,
+  haversineMeters,
+  shiftCenterSouthByPixels,
+  type LatLng,
+} from '@/features/articles/lib/mapCamera'
 
 const LIMA_CENTER = { lat: -12.0464, lng: -77.0428 }
 const DEFAULT_ZOOM = 13
@@ -17,24 +23,10 @@ const MAX_FIT_ZOOM = 17
 // not a tight crop, so back off from the exact fit.
 const OVERVIEW_ZOOM_OUT = 1.5
 const FIT_PADDING = 56
-const WORLD_TILE_PX = 256
 const ACCENT = '#3B5BDB'
 const ACTIVE_PIN = '#1a1a1a'
 
 type CameraAnimation = { frame: number }
-
-function haversineMeters(
-  a: google.maps.LatLngLiteral,
-  b: google.maps.LatLngLiteral,
-): number {
-  const rad = Math.PI / 180
-  const dLat = (b.lat - a.lat) * rad
-  const dLng = (b.lng - a.lng) * rad
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2
-  return 2 * 6_371_000 * Math.asin(Math.sqrt(h))
-}
 
 /**
  * `map.panTo` only animates jumps smaller than roughly one viewport, so
@@ -45,7 +37,7 @@ function haversineMeters(
 function flyTo(
   map: google.maps.Map,
   animation: CameraAnimation,
-  target: google.maps.LatLngLiteral,
+  target: LatLng,
   targetZoom: number,
 ) {
   cancelAnimationFrame(animation.frame)
@@ -193,57 +185,26 @@ function markerContent(point: ListicleMapPoint, isActive: boolean): HTMLElement 
   return isActive ? pinElement(ACTIVE_PIN, 1.3, innerDotGlyph()) : dotElement()
 }
 
-function mercatorY(lat: number): number {
-  const sin = Math.sin((lat * Math.PI) / 180)
-  return Math.log((1 + sin) / (1 - sin)) / 2
+export type MapPanelProps = {
+  /**
+   * Map div pixels sitting below the fold. The mobile sheet keeps the map at
+   * a fixed height and slides it, so framing has to aim at the visible slice
+   * rather than the div's own center. Desktop leaves this at 0.
+   */
+  viewportInsetBottomPx?: number
+  /** Hold the camera still while the map is out of sight (sheet collapsed). */
+  paused?: boolean
+  /** Small viewports need a wider view to keep a stop in context. */
+  activeZoom?: number
+  fitPadding?: number
 }
 
-function latFromMercatorY(y: number): number {
-  return ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180) / Math.PI
-}
-
-/**
- * The center/zoom `fitBounds` would land on, computed up front so the move
- * can go through `flyTo` and animate — `fitBounds` itself snaps on jumps
- * larger than a viewport, which is what made day switches flash.
- */
-function cameraForPoints(
-  mapDiv: HTMLElement,
-  points: ListicleMapPoint[],
-): { center: google.maps.LatLngLiteral; zoom: number } {
-  if (points.length === 0) return { center: LIMA_CENTER, zoom: DEFAULT_ZOOM }
-  if (points.length === 1) {
-    return {
-      center: { lat: points[0].lat, lng: points[0].lng },
-      zoom: SINGLE_POINT_OVERVIEW_ZOOM,
-    }
-  }
-
-  const lats = points.map((point) => point.lat)
-  const lngs = points.map((point) => point.lng)
-  const north = Math.max(...lats)
-  const south = Math.min(...lats)
-  const east = Math.max(...lngs)
-  const west = Math.min(...lngs)
-
-  const latFraction = (mercatorY(north) - mercatorY(south)) / (2 * Math.PI)
-  const lngFraction = (east - west) / 360
-
-  const width = Math.max(mapDiv.clientWidth - FIT_PADDING * 2, 1)
-  const height = Math.max(mapDiv.clientHeight - FIT_PADDING * 2, 1)
-  const latZoom = Math.log2(height / WORLD_TILE_PX / Math.max(latFraction, 1e-9))
-  const lngZoom = Math.log2(width / WORLD_TILE_PX / Math.max(lngFraction, 1e-9))
-
-  return {
-    center: {
-      lat: latFromMercatorY((mercatorY(north) + mercatorY(south)) / 2),
-      lng: (east + west) / 2,
-    },
-    zoom: Math.min(latZoom, lngZoom, MAX_FIT_ZOOM) - OVERVIEW_ZOOM_OUT,
-  }
-}
-
-export function MapPanel() {
+export function MapPanel({
+  viewportInsetBottomPx = 0,
+  paused = false,
+  activeZoom = ACTIVE_ZOOM,
+  fitPadding = FIT_PADDING,
+}: MapPanelProps = {}) {
   const mapRef = useRef<HTMLDivElement>(null)
   const { points, activeId, scrollToEntry } = useListicleMapSync()
 
@@ -321,21 +282,41 @@ export function MapPanel() {
       marker.content = markerContent(point, isActive)
       marker.zIndex = isActive ? 1000 : point.kind === 'stay' ? 500 : 0
     }
+  }, [ready, activeId, points])
+
+  useEffect(() => {
+    const map = mapInstance.current
+    if (!ready || !map || paused || !mapRef.current) return
 
     const active = points.find((point) => point.id === activeId)
-    if (active) {
-      flyTo(map, cameraAnimation.current, { lat: active.lat, lng: active.lng }, ACTIVE_ZOOM)
-    } else if (mapRef.current) {
-      const camera = cameraForPoints(mapRef.current, points)
-      if (hasFramedPoints.current) {
-        flyTo(map, cameraAnimation.current, camera.center, camera.zoom)
-      } else {
-        cancelAnimationFrame(cameraAnimation.current.frame)
-        map.moveCamera(camera)
-      }
+    const camera = active
+      ? {
+          center: shiftCenterSouthByPixels(
+            { lat: active.lat, lng: active.lng },
+            activeZoom,
+            viewportInsetBottomPx / 2,
+          ),
+          zoom: activeZoom,
+        }
+      : cameraForPoints(points, {
+          width: mapRef.current.clientWidth,
+          height: mapRef.current.clientHeight,
+          insetBottom: viewportInsetBottomPx,
+          padding: fitPadding,
+          maxZoom: MAX_FIT_ZOOM,
+          zoomOut: OVERVIEW_ZOOM_OUT,
+          singlePointZoom: SINGLE_POINT_OVERVIEW_ZOOM,
+          fallback: { center: LIMA_CENTER, zoom: DEFAULT_ZOOM },
+        })
+
+    if (hasFramedPoints.current) {
+      flyTo(map, cameraAnimation.current, camera.center, camera.zoom)
+    } else {
+      cancelAnimationFrame(cameraAnimation.current.frame)
+      map.moveCamera(camera)
     }
     hasFramedPoints.current = true
-  }, [ready, activeId, points])
+  }, [ready, activeId, points, paused, viewportInsetBottomPx, activeZoom, fitPadding])
 
   useEffect(() => {
     const animation = cameraAnimation.current

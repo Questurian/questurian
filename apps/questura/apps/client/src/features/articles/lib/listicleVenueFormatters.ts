@@ -211,3 +211,39 @@ export function formatListicleOperationHours(raw: unknown): string | null {
   }
   return rows.map((r) => `${r.day}: ${r.hours}`).join(' · ')
 }
+
+const HTML_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+  '&nbsp;': ' ',
+}
+
+/**
+ * Flattens a stored blurb into a single run of plain text for previews.
+ *
+ * Listicle blurbs are stored as HTML and rendered through `article-prose` in
+ * the reading column. The map card is a two-line teaser inside a floating box,
+ * so it takes the words only - passing the markup through would drag paragraph
+ * spacing and link styling into a space that has no room for either, and
+ * rendering stored HTML in a new surface widens the injection surface for no
+ * gain.
+ */
+export function plainTextExcerpt(value: unknown, maxChars = 160): string {
+  if (typeof value !== 'string') return ''
+
+  let text = value.replace(/<[^>]*>/g, ' ')
+  for (const [entity, char] of Object.entries(HTML_ENTITIES)) {
+    text = text.split(entity).join(char)
+  }
+  text = text.replace(/\s+/g, ' ').trim()
+
+  if (text.length <= maxChars) return text
+
+  const clipped = text.slice(0, maxChars)
+  const lastSpace = clipped.lastIndexOf(' ')
+  return `${(lastSpace > maxChars * 0.6 ? clipped.slice(0, lastSpace) : clipped).replace(/[,;:.\s]+$/, '')}...`
+}
