@@ -1,4 +1,5 @@
 import type { PublicImage } from '@/features/media/lib/resolve-public-image'
+import type { ReferenceCardHighlight } from '../../reference-grid/candidate'
 
 export type HomepageHotelItemRef = {
   id: number
@@ -17,6 +18,9 @@ export type HomepageHotelCandidate = HomepageHotelItemRef & {
   /** Resolved card-placement image with url, alt, dimensions, variant, status. */
   image: PublicImage | null
   location: string | null
+  dek: string | null
+  highlights: ReferenceCardHighlight[]
+  bookingUrl: string | null
 }
 
 export type HomepageHotelInvalidReason = 'invalid_reference' | 'not_found' | 'not_published'

@@ -57,6 +57,7 @@
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
     "graphql": "^16.8.1",
+    "i18n-iso-countries": "^7.14.0",
     "ioredis": "^5.11.0",
     "next": "15.4.11",
     "payload": "3.79.1",

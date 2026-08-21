@@ -164,6 +164,7 @@ describe('location homepage routes', () => {
       {
         locationKey: 'peru',
         label: 'Peru',
+        countryCode: 'PE',
         href: '/peru',
         cities: [{ locationKey: 'peru|lima', label: 'Lima', href: '/peru/lima' }],
       },

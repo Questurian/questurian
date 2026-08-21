@@ -47,6 +47,25 @@ function extractSeoExcerpt(doc: PayloadDocLike): string | null {
   return null
 }
 
+function trimmedString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null
+}
+
+function extractAuthorAvatar(
+  author: Record<string, unknown>,
+): NonNullable<HomepageFeaturedCandidate['author']>['avatar'] {
+  const avatar = author.avatar
+  if (!isRecord(avatar)) return null
+
+  const url = trimmedString(avatar.url) ?? trimmedString(avatar.bunny_original_url)
+  if (!url) return null
+
+  return {
+    url,
+    alt: trimmedString(avatar.alt_text) ?? trimmedString(avatar.alt),
+  }
+}
+
 function extractAuthorPreview(doc: PayloadDocLike): HomepageFeaturedCandidate['author'] {
   const author = doc.author
   if (!isRecord(author)) return null
@@ -59,11 +78,13 @@ function extractAuthorPreview(doc: PayloadDocLike): HomepageFeaturedCandidate['a
       : null
 
   const slug = typeof author.slug === 'string' && author.slug.trim() ? author.slug.trim() : null
+  const avatar = extractAuthorAvatar(author)
 
   return {
     id: normalizeNumericId(author.id),
     slug,
     name: displayName,
+    ...(avatar ? { avatar } : {}),
   }
 }
 

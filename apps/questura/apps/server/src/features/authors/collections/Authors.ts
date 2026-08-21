@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
 
 import { isAdminFieldLevel } from '@/features/auth/collections/access'
 import { isDisabledStaff } from '@/features/auth/lib/staff-status'
@@ -59,13 +59,14 @@ export const Authors: CollectionConfig = {
       // disable any account but their own, and `slug` stays admin-only via
       // field access below.
       if (user.role === 'editor') {
-        return {
+        const editorScope: Where = {
           or: [
             { user: { equals: user.id } },
             { 'user.role': { equals: 'writer' } },
             { user: { exists: false } },
           ],
         }
+        return editorScope
       }
       // Everyone else may edit only the author record linked to their account.
       return { user: { equals: user.id } }

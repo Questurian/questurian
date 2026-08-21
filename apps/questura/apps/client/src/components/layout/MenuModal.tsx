@@ -4,15 +4,28 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Search, X } from "lucide-react";
-import { fetchLocationMenu } from "@/features/Navigation/lib/fetchLocationMenu";
+import { ArrowRight, Building2, Search, X } from "lucide-react";
+import {
+  fetchLocationMenu,
+  type LocationMenuResponse,
+} from "@/features/Navigation/lib/fetchLocationMenu";
+import CountryFlag from "@/components/shared/ui/CountryFlag";
 
 interface MenuModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /**
+   * Menu rendered on the server and shipped with the page. When present the
+   * modal opens with no request at all; null falls back to fetching on open.
+   */
+  initialLocationMenu?: LocationMenuResponse | null;
 }
 
-export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
+export default function MenuModal({
+  isOpen,
+  onClose,
+  initialLocationMenu = null,
+}: MenuModalProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const locationMenuQuery = useQuery({
@@ -20,6 +33,7 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
     queryFn: fetchLocationMenu,
     enabled: isOpen,
     staleTime: 5 * 60 * 1000,
+    initialData: initialLocationMenu ?? undefined,
   });
   const countries = locationMenuQuery.data?.countries ?? [];
 
@@ -187,8 +201,12 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
                     <Link
                       href={country.href}
                       onClick={onClose}
-                      className="group inline-flex items-center gap-2 font-display text-[1.75rem] font-semibold leading-none text-white transition-colors hover:text-white/78 focus:outline-none focus-visible:text-white/78 1024:text-[2rem]"
+                      className="group inline-flex items-center gap-2.5 font-display text-[1.75rem] font-semibold leading-none text-white transition-colors hover:text-white/78 focus:outline-none focus-visible:text-white/78 1024:text-[2rem]"
                     >
+                      <CountryFlag
+                        code={country.countryCode}
+                        className="h-[1.05rem] w-[1.575rem] shadow-[0_0_0_1px_rgba(255,255,255,0.22)] 1024:h-[1.2rem] 1024:w-[1.8rem]"
+                      />
                       {country.label}
                       <ArrowRight className="mt-1 h-5 w-5 transition-transform group-hover:translate-x-1" aria-hidden />
                     </Link>
@@ -200,8 +218,9 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
                             key={city.locationKey}
                             href={city.href}
                             onClick={onClose}
-                            className="block text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
+                            className="flex items-center gap-2.5 text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
                           >
+                            <Building2 className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden />
                             {city.label}
                           </Link>
                         ))
@@ -209,8 +228,9 @@ export default function MenuModal({ isOpen, onClose }: MenuModalProps) {
                         <Link
                           href={country.href}
                           onClick={onClose}
-                          className="block text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
+                          className="flex items-center gap-2.5 text-[1.05rem] font-bold text-white/88 transition-colors hover:text-white focus:outline-none focus-visible:text-white"
                         >
+                          <Building2 className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden />
                           View all {country.label} guides
                         </Link>
                       )}

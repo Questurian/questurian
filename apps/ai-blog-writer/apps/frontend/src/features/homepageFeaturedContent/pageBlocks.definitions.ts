@@ -26,6 +26,18 @@ const PAGE_BLOCK_DEFINITIONS = {
     articlePayload: true,
     convertTarget: true
   },
+  'featured-creator-article': {
+    label: 'Creator Feature',
+    description:
+      'Same dark hero as Hero Article, with the author portrait above the title — for creator collaborations',
+    quickSlotCounts: [1],
+    defaultSlotCount: 1,
+    minSlotCount: 1,
+    maxSlotCount: 1,
+    order: 5.5,
+    articlePayload: true,
+    convertTarget: true
+  },
   'featured-article-carousel': {
     label: 'Featured Article Carousel',
     description:

@@ -16,6 +16,7 @@ import type {
   HomepageBlockLayoutProps,
 } from '../types'
 import { FeaturedArticleOneArticlePreview } from '../components/blocks/featured-article/FeaturedArticleOneArticlePreview'
+import { FeaturedCreatorArticlePreview } from '../components/blocks/featured-creator-article/FeaturedCreatorArticlePreview'
 import { FeaturedArticleCarouselPreview } from '../components/blocks/featured-article-carousel/FeaturedArticleCarouselPreview'
 import { FeaturedArticlesEightArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesEightArticlePreview'
 import { FeaturedArticlesFiveArticlePreview } from '../components/blocks/featured-articles/FeaturedArticlesFiveArticlePreview'
@@ -108,6 +109,10 @@ const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
   defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
     blockType: 'featured-article',
     Component: FeaturedArticleOneArticlePreview,
+  }),
+  defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
+    blockType: 'featured-creator-article',
+    Component: FeaturedCreatorArticlePreview,
   }),
   defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
     blockType: 'featured-article-carousel',

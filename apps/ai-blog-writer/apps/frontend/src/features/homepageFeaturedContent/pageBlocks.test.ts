@@ -20,6 +20,7 @@ describe('pageBlocks registry', () => {
       'article-grid',
       'article-list',
       'featured-article',
+      'featured-creator-article',
       'featured-article-carousel',
       'location-grid',
       'where-to-eat-drink',
@@ -36,6 +37,7 @@ describe('pageBlocks registry', () => {
   it('derives convert targets and article block types', () => {
     expect(CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES).toEqual([
       'featured-article',
+      'featured-creator-article',
       'featured-article-carousel',
       'article-grid',
       'location-grid',
@@ -50,6 +52,7 @@ describe('pageBlocks registry', () => {
     ])
     expect(ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES).toEqual([
       'featured-article',
+      'featured-creator-article',
       'featured-article-carousel',
       'featured-articles',
       'article-grid',

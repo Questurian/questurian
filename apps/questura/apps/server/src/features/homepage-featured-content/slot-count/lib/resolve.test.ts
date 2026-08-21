@@ -5,6 +5,7 @@ import { resolveStoredSlotCountForBlockType } from './resolve'
 describe('resolveStoredSlotCountForBlockType', () => {
   it('uses canonical counts for fixed-size types', () => {
     expect(resolveStoredSlotCountForBlockType('featured-article', 99)).toBe(1)
+    expect(resolveStoredSlotCountForBlockType('featured-creator-article', 99)).toBe(1)
     expect(resolveStoredSlotCountForBlockType('questurian-maps', 1)).toBe(6)
     expect(resolveStoredSlotCountForBlockType('newsletter-signup', 5)).toBe(0)
   })

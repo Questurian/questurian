@@ -205,6 +205,7 @@ const newsletterSignupBehavior: CuratedBlockBehavior = {
  */
 export const CURATED_BLOCK_BEHAVIORS: Record<string, CuratedBlockBehavior> = {
   'featured-article': { ...featuredBehavior, requiredImageField: () => 'imageHero' },
+  'featured-creator-article': { ...featuredBehavior, requiredImageField: () => 'imageHero' },
   'featured-article-carousel': featuredBehavior,
   'featured-articles': {
     ...featuredBehavior,

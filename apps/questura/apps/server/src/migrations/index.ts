@@ -32,6 +32,7 @@ import * as migration_20260814_030000_unique_visitor_profile_stripe_customer_id 
 import * as migration_20260815_010000_add_access_tier from './20260815_010000_add_access_tier'
 import * as migration_20260816_010000_price_tier_graphql_safe_values from './20260816_010000_price_tier_graphql_safe_values'
 import * as migration_20260820_010000_add_bookmarks from './20260820_010000_add_bookmarks'
+import * as migration_20260821_010000_add_featured_creator_article_block from './20260821_010000_add_featured_creator_article_block'
 
 export const migrations = [
   {
@@ -203,5 +204,10 @@ export const migrations = [
     up: migration_20260820_010000_add_bookmarks.up,
     down: migration_20260820_010000_add_bookmarks.down,
     name: '20260820_010000_add_bookmarks',
+  },
+  {
+    up: migration_20260821_010000_add_featured_creator_article_block.up,
+    down: migration_20260821_010000_add_featured_creator_article_block.down,
+    name: '20260821_010000_add_featured_creator_article_block',
   },
 ]

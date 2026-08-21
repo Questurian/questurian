@@ -41,6 +41,7 @@ describe('buildPublicLocationMenu', () => {
         {
           locationKey: 'peru',
           label: 'Peru',
+          countryCode: 'PE',
           href: '/peru',
           cities: [
             { locationKey: 'peru|cusco', label: 'Cusco', href: '/peru/cusco' },
@@ -75,6 +76,7 @@ describe('buildPublicLocationMenu', () => {
       {
         locationKey: 'usa',
         label: 'United States',
+        countryCode: 'US',
         href: '/usa',
         cities: [],
       },
@@ -100,11 +102,30 @@ describe('buildPublicLocationMenu', () => {
       {
         locationKey: 'colombia',
         label: 'Colombia',
+        countryCode: 'CO',
         href: '/colombia',
         cities: [
           { locationKey: 'colombia|bogota', label: 'Bogota', href: '/colombia/bogota' },
         ],
       },
     ])
+  })
+
+  it('falls back to the slug when the display name is missing', () => {
+    const menu = buildPublicLocationMenu(
+      [{ level: 'country', locationKey: 'united-states', country: 'united-states' }],
+      [],
+    )
+
+    expect(menu.countries[0]?.countryCode).toBe('US')
+  })
+
+  it('leaves countryCode null for names that match no country', () => {
+    const menu = buildPublicLocationMenu(
+      [{ level: 'country', locationKey: 'atlantis', countryName: 'Atlantis' }],
+      [],
+    )
+
+    expect(menu.countries[0]?.countryCode).toBeNull()
   })
 })

@@ -30,6 +30,7 @@ export type {
   BlockValidationStatus,
   CuratedHomepageBlockResponse,
   FeaturedArticleBlockResponse,
+  FeaturedCreatorArticleBlockResponse,
   FeaturedArticleCarouselBlockResponse,
   FeaturedArticlesBlockResponse,
   FeaturedArticlesSlot3Layout,

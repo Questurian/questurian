@@ -311,6 +311,10 @@ describe('homepage featured content service', () => {
         id: 7,
         slug: 'ana-rivera',
         displayName: 'Ana Rivera',
+        avatar: {
+          url: 'https://cdn.example/ana.webp',
+          alt_text: 'Ana Rivera',
+        },
       },
       category: {
         id: 3,
@@ -333,6 +337,10 @@ describe('homepage featured content service', () => {
         id: 7,
         slug: 'ana-rivera',
         name: 'Ana Rivera',
+        avatar: {
+          url: 'https://cdn.example/ana.webp',
+          alt: 'Ana Rivera',
+        },
       },
       category: {
         id: 3,

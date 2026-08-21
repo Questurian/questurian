@@ -1,106 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
-import type { TourGridBlock, TourGridItem, HomepageBlockLayoutProps } from '../../../types'
-import { BlockSection, BLOCK_GUTTER_CLASS } from '../BlockSection'
+import type { TourGridBlock, HomepageBlockLayoutProps } from '../../../types'
+import { BLOCK_GUTTER_CLASS, BlockSection } from '../BlockSection'
+import { PlaceCarouselCard } from '../PlaceCarouselCard'
 import { useSnapCarousel } from '../useSnapCarousel'
-
-function TourCard({ item, isPriority, isLast }: { item: TourGridItem; isPriority: boolean; isLast: boolean }): JSX.Element {
-  const imgRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    item.imageUrl ? 'loading' : 'failed',
-  )
-
-  // The image is server-rendered at opacity-0 and faded in via onLoad. If it
-  // finishes loading (e.g. from cache) before hydration attaches the handler,
-  // the load event is missed and the card stays blank. Reconcile on mount.
-  useEffect(() => {
-    setImageStatus(item.imageUrl ? 'loading' : 'failed')
-    const image = imgRef.current
-    if (!item.imageUrl || !image) return
-    if (image.complete && image.naturalWidth > 0) {
-      setImageStatus('loaded')
-    }
-  }, [item.imageUrl])
-
-  const isImageLoaded = !item.imageUrl || imageStatus === 'loaded'
-  const isContentReady = !item.imageUrl || imageStatus !== 'loading'
-  const meta = [item.priceLevel, item.location?.toUpperCase()].filter(Boolean).join(' | ')
-
-  return (
-    <article
-      className={`city-article-card flex-none snap-always flex flex-col w-[calc(100vw-5.25rem)] 380:w-[291px] 768:w-[340px] 1024:w-[400px] 1280:w-[460px] ${isLast ? 'snap-end' : 'snap-start'}`}
-      data-content-ready={isContentReady ? 'true' : 'false'}
-      data-image-loaded={isImageLoaded ? 'true' : 'false'}
-    >
-      <div className="city-article-image-shell relative aspect-[3/2] overflow-hidden bg-[#d7dcde]">
-        {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imgRef}
-            src={item.imageUrl}
-            alt={item.title}
-            className={`relative z-10 h-full w-full object-cover transition-opacity duration-300 ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
-            fetchPriority={isPriority ? 'high' : 'auto'}
-            loading={isPriority ? 'eager' : 'lazy'}
-            onError={() => setImageStatus('failed')}
-            onLoad={() => setImageStatus('loaded')}
-          />
-        ) : null}
-      </div>
-
-      <div className="relative flex flex-col flex-1">
-        <div className="city-article-content pt-4 flex flex-col flex-1">
-          <h3 className="font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
-            {item.title}
-          </h3>
-
-          {meta ? (
-            <p className="mt-2 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#C65D3B]">
-              {meta}
-            </p>
-          ) : null}
-
-          {item.type ? (
-            <p className="mt-1 font-[family-name:var(--font-dm-sans)] text-[0.68rem] uppercase tracking-[0.08em] text-[#5f5952]">
-              {item.type}
-            </p>
-          ) : null}
-
-          <div className="mt-auto pt-5">
-            {item.slug ? (
-              <a
-                href={item.slug}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-[#1a1a1a] text-white text-center font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.14em] py-3.5 transition-colors hover:bg-[#2c2c2c]"
-              >
-                Book Now
-              </a>
-            ) : (
-              <button
-                type="button"
-                className="block w-full bg-[#1a1a1a] text-white text-center font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.14em] py-3.5 transition-colors hover:bg-[#2c2c2c] cursor-pointer"
-              >
-                Book Now
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div
-          aria-hidden="true"
-          className="city-article-text-skeleton absolute inset-0 flex flex-col justify-start pt-4"
-        >
-          <span className="city-skeleton-line h-4 w-full" />
-          <span className="city-skeleton-line mt-2.5 h-4 w-full" />
-          <span className="city-skeleton-line mt-2.5 h-4 w-2/3" />
-        </div>
-      </div>
-    </article>
-  )
-}
 
 export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBlock>): JSX.Element | null {
   const items = block.selection?.items ?? []
@@ -180,11 +85,26 @@ export function TourGridPreview({ block }: HomepageBlockLayoutProps<TourGridBloc
           style={{ scrollSnapType: 'x mandatory', scrollPaddingLeft: 'var(--block-gutter)', scrollPaddingRight: 'var(--block-gutter)', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
         >
           {items.map((item, index) => (
-            <TourCard key={item.id} item={item} isPriority={index === 0} isLast={index === items.length - 1} />
+            <PlaceCarouselCard
+              key={item.id}
+              title={item.title}
+              imageUrl={item.imageUrl}
+              isPriority={index === 0}
+              isLast={index === items.length - 1}
+              priceLevel={item.priceLevel}
+              location={item.location}
+              type={null}
+              priceAppearance="amount"
+              highlights={item.highlights}
+              ctaHref={item.bookingUrl ?? item.slug}
+              ctaExternal
+            />
           ))}
           <div className="w-[var(--block-gutter)] shrink-0" aria-hidden="true" />
         </div>
-        <div className="absolute inset-y-0 left-0 w-[var(--block-gutter)] bg-[#f5f0e8] pointer-events-none" aria-hidden="true" />
+        {/* Masks the scrolled-past card tails that sit inside the gutter. Card
+            images are `relative z-10`, so this has to be above them. */}
+        <div className="absolute inset-y-0 left-0 z-20 w-[var(--block-gutter)] bg-[#f5f0e8] pointer-events-none" aria-hidden="true" />
       </div>
 
       {/* Dot indicators — one per scroll page, not per item */}

@@ -36,6 +36,7 @@ export type LocationHomepageDoc = {
 
 export type CuratedBlockType =
   | 'featured-article'
+  | 'featured-creator-article'
   | 'featured-article-carousel'
   | 'featured-articles'
   | 'article-grid'

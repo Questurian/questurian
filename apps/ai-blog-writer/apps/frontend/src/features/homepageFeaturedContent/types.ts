@@ -26,6 +26,15 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   imageUrlSquare?: string | null
   excerpt: string | null
   authorLabel: string | null
+  author?: {
+    id: number | null
+    slug?: string | null
+    name: string | null
+    avatar?: {
+      url: string
+      alt: string | null
+    } | null
+  } | null
 }
 
 export type HomepageFeaturedInvalidItem = {

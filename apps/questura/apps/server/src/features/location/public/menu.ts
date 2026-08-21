@@ -1,3 +1,5 @@
+import { resolveCountryCode } from './countryCode'
+
 export type LocationMenuLevel = 'country' | 'city' | 'neighborhood'
 
 export type LocationMenuLocationDoc = {
@@ -20,6 +22,8 @@ export type PublicLocationMenuCity = {
 export type PublicLocationMenuCountry = {
   locationKey: string
   label: string
+  /** ISO 3166-1 alpha-2, uppercase. Null when the name matches no country. */
+  countryCode: string | null
   href: string
   cities: PublicLocationMenuCity[]
 }
@@ -54,6 +58,7 @@ function ensureCountry(
   map: Map<string, PublicLocationMenuCountry>,
   key: string,
   label: string,
+  countryCode: string | null,
 ): PublicLocationMenuCountry {
   const existing = map.get(key)
   if (existing) return existing
@@ -61,6 +66,7 @@ function ensureCountry(
   const country: PublicLocationMenuCountry = {
     locationKey: key,
     label,
+    countryCode,
     href: `/${key}`,
     cities: [],
   }
@@ -80,7 +86,8 @@ export function buildPublicLocationMenu(
     const key = stringOrNull(doc.locationKey) ?? countrySlug(doc)
     if (!key) continue
 
-    ensureCountry(countriesByKey, key, countryLabel(doc, key))
+    const label = countryLabel(doc, key)
+    ensureCountry(countriesByKey, key, label, resolveCountryCode(label, countrySlug(doc), key))
   }
 
   for (const location of cityDocs) {
@@ -91,7 +98,13 @@ export function buildPublicLocationMenu(
     const city = citySlug(location)
     if (!key || !country || !city) continue
 
-    const countryItem = ensureCountry(countriesByKey, country, countryLabel(location, country))
+    const countryLabelText = countryLabel(location, country)
+    const countryItem = ensureCountry(
+      countriesByKey,
+      country,
+      countryLabelText,
+      resolveCountryCode(countryLabelText, country),
+    )
     if (countryItem.cities.some((item) => item.locationKey === key)) continue
 
     countryItem.cities.push({
