@@ -94,13 +94,17 @@ export type ContentBlock =
 /**
  * The byline, as served from the Authors collection (ADR-0007). Authorship is
  * no longer a view of the staff account, so there are no name parts and no
- * nested public profile. Article-only avatar and featured links are exposed
- * through the author's opt-in byline presentation.
+ * nested public profile. Compact article bylines still opt into avatar/links
+ * via `articleByline`; the standard-article footer uses the public profile.
  */
 export type ArticleAuthor = {
   id: number
   slug?: string | null
   displayName: string
+  bio?: string | null
+  expertise?: string[]
+  avatar?: { url: string; alt?: string | null } | null
+  socialLinks?: import('@/features/authors/lib/fetchAuthor').AuthorSocialLinks | null
   articleByline?: {
     avatar?: { url: string; alt?: string | null } | null
     links: Array<{

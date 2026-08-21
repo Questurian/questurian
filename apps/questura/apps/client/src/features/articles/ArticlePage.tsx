@@ -14,6 +14,7 @@ import { articleCrumbsFromPath } from '@/features/articles/lib/articleCrumbs'
 import { fetchStandardArticleSidebar } from '@/features/articles/lib/fetchArticleSidebar'
 import { ArticleBlockStream } from '@/features/articles/components/ArticleBlockStream'
 import { ArticleByline } from '@/features/articles/components/ArticleByline'
+import { ArticleAuthorBanner } from '@/features/articles/components/ArticleAuthorBanner'
 import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
 import { Article } from './types'
 
@@ -157,6 +158,8 @@ export async function ArticlePage({ article, path }: { article: Article; path?: 
                 {gate?.locked ? (
                   <GatedArticleBody articleId={article.id} gate={gate} path={path ?? '/'} />
                 ) : null}
+
+                {article.author ? <ArticleAuthorBanner author={article.author} /> : null}
               </div>
             </div>
           </div>

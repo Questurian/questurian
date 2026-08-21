@@ -99,13 +99,26 @@ describe('serializeArticleByCollection featured image resolution', () => {
   })
 })
 
+const blankSocialLinks = {
+  instagram: null,
+  twitter: null,
+  facebook: null,
+  linkedin: null,
+  reddit: null,
+  youtube: null,
+  patreon: null,
+  website: null,
+}
+
 describe('serializeArticleByCollection author byline', () => {
-  it('projects an opted-in author into a safe featured byline', async () => {
+  it('projects an opted-in author into a public profile plus featured byline', async () => {
     const article: Record<string, unknown> = {
       author: {
         id: 42,
         slug: 'lima-creator',
         displayName: 'Lima Creator',
+        bio: 'Lima-based writer covering markets, food, and city walks.',
+        expertise: [{ area: 'Peru' }, { area: 'Street food' }, { area: '  ' }],
         user: { id: 7, email: 'private@example.com' },
         avatar: {
           url: 'https://cdn.example/creator.webp',
@@ -130,6 +143,19 @@ describe('serializeArticleByCollection author byline', () => {
       id: 42,
       slug: 'lima-creator',
       displayName: 'Lima Creator',
+      bio: 'Lima-based writer covering markets, food, and city walks.',
+      expertise: ['Peru', 'Street food'],
+      avatar: {
+        url: 'https://cdn.example/creator.webp',
+        alt: 'Lima Creator at a market',
+      },
+      socialLinks: {
+        ...blankSocialLinks,
+        instagram: 'https://instagram.com/lima-creator',
+        youtube: 'https://youtube.com/@lima-creator',
+        website: 'https://creator.example',
+        facebook: 'https://facebook.com/lima-creator',
+      },
       articleByline: {
         avatar: {
           url: 'https://cdn.example/creator.webp',
@@ -142,6 +168,7 @@ describe('serializeArticleByCollection author byline', () => {
         ],
       },
     })
+    expect(article.author).not.toHaveProperty('user')
   })
 
   it.each(['articles', 'single-type-listicles', 'listicle-itineraries'] as const)(
@@ -163,6 +190,13 @@ describe('serializeArticleByCollection author byline', () => {
         id: 42,
         slug: 'staff-writer',
         displayName: 'Staff Writer',
+        bio: null,
+        expertise: [],
+        avatar: { url: 'https://cdn.example/staff.webp', alt: null },
+        socialLinks: {
+          ...blankSocialLinks,
+          instagram: 'https://instagram.com/staff',
+        },
         articleByline: { avatar: null, links: [] },
       })
     },
@@ -189,6 +223,13 @@ describe('serializeArticleByCollection author byline', () => {
       id: 42,
       slug: 'camera-creator',
       displayName: 'Camera Creator',
+      bio: null,
+      expertise: [],
+      avatar: { url: 'https://cdn.example/camera.webp', alt: null },
+      socialLinks: {
+        ...blankSocialLinks,
+        instagram: 'https://instagram.com/camera',
+      },
       articleByline: {
         avatar: { url: 'https://cdn.example/camera.webp', alt: null },
         links: [{ platform: 'instagram', url: 'https://instagram.com/camera' }],

@@ -3,11 +3,16 @@
 import { useEffect, useRef, useState, type JSX } from "react";
 import type { PublicAuthor } from "@/features/authors/lib/fetchAuthor";
 
-function AvatarPlaceholder(): JSX.Element {
+const AVATAR_SIZE = {
+  page: "size-[88px] sm:size-[104px] lg:size-[112px]",
+  article: "size-[72px] 480:size-[80px] sm:size-[88px]",
+} as const;
+
+function AvatarPlaceholder({ size }: { size: keyof typeof AVATAR_SIZE }): JSX.Element {
   return (
     <div
       aria-hidden="true"
-      className="flex size-[88px] shrink-0 items-center justify-center bg-paper sm:size-[104px] lg:size-[112px]"
+      className={`flex shrink-0 items-center justify-center bg-paper ${AVATAR_SIZE[size]}`}
     >
       <svg
         viewBox="0 0 24 24"
@@ -29,9 +34,11 @@ function AvatarPlaceholder(): JSX.Element {
 export function AuthorAvatar({
   avatar,
   name,
+  size = "page",
 }: {
   avatar: PublicAuthor["avatar"];
   name: string;
+  size?: keyof typeof AVATAR_SIZE;
 }): JSX.Element {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const [status, setStatus] = useState<"loading" | "loaded" | "failed">(
@@ -50,12 +57,12 @@ export function AuthorAvatar({
   }, [avatar?.url]);
 
   if (!avatar?.url || status === "failed") {
-    return <AvatarPlaceholder />;
+    return <AvatarPlaceholder size={size} />;
   }
 
   return (
     <div
-      className="author-avatar-shell relative size-[88px] shrink-0 overflow-hidden bg-paper sm:size-[104px] lg:size-[112px]"
+      className={`author-avatar-shell relative shrink-0 overflow-hidden bg-paper ${AVATAR_SIZE[size]}`}
       data-image-loaded={status === "loaded" ? "true" : "false"}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}

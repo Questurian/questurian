@@ -112,7 +112,7 @@ export function ArticlePageHeader({
       </div>
 
       {(author || publishedLine) ? (
-        <div className="mt-2 flex flex-col gap-4 380:mt-3 380:gap-5 480:mt-4 sm:mt-5 768:mt-6">
+        <div className="mt-4 flex flex-col gap-5 380:mt-5 380:gap-6 480:mt-6 sm:mt-7 768:mt-8">
           {author ? (
             <ArticleByline author={author} dateLine={publishedLine} variant="framed" />
           ) : (

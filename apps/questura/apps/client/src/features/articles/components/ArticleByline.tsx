@@ -14,7 +14,21 @@ type ArticleBylineProps = {
   variant: 'framed' | 'standard'
 }
 
-function FeaturedLinks({ author }: { author: ArticleAuthor }): JSX.Element | null {
+export function hasFeaturedArticleByline(author: ArticleAuthor): boolean {
+  return Boolean(author.articleByline?.avatar || author.articleByline?.links.length)
+}
+
+export function FeaturedBylineLinks({
+  author,
+  className = 'flex items-center gap-3',
+  linkClassName = 'text-accent transition-colors hover:text-foreground',
+  iconClassName = 'size-4',
+}: {
+  author: ArticleAuthor
+  className?: string
+  linkClassName?: string
+  iconClassName?: string
+}): JSX.Element | null {
   const links = (author.articleByline?.links ?? []).flatMap((link) => {
     const platform = AUTHOR_SOCIAL_PLATFORMS.find(
       (candidate) => candidate.linkKey === link.platform,
@@ -25,15 +39,15 @@ function FeaturedLinks({ author }: { author: ArticleAuthor }): JSX.Element | nul
   if (links.length === 0) return null
 
   return (
-    <div className="flex items-center gap-3">
+    <div className={className}>
       {links.map(({ platform, url }) => (
         <AuthorSocialIconLink
           key={platform.key}
           platform={platform}
           href={url}
           authorName={author.displayName}
-          className="text-accent transition-colors hover:text-foreground"
-          iconClassName="size-4"
+          className={linkClassName}
+          iconClassName={iconClassName}
         />
       ))}
     </div>
@@ -45,13 +59,13 @@ function Avatar({ author }: { author: ArticleAuthor }): JSX.Element | null {
   if (!avatar?.url) return null
 
   return (
-    <div className="size-11 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/15 480:size-12">
+    <div className="size-14 shrink-0 overflow-hidden rounded-full ring-1 ring-foreground/12 480:size-16">
       <ShimmerImage
         src={avatar.url}
         alt={avatar.alt ?? `${author.displayName} profile photo`}
-        width={96}
-        height={96}
-        sizes="48px"
+        width={128}
+        height={128}
+        sizes="64px"
         className="h-full w-full object-cover"
         wrapperClassName="h-full w-full"
       />
@@ -60,9 +74,11 @@ function Avatar({ author }: { author: ArticleAuthor }): JSX.Element | null {
 }
 
 export function ArticleByline({ author, dateLine, variant }: ArticleBylineProps): JSX.Element {
-  const isFeatured = Boolean(author.articleByline?.avatar || author.articleByline?.links.length)
+  const isFeatured = hasFeaturedArticleByline(author)
 
-  if (!isFeatured && variant === 'standard') {
+  // Standard article headers stay the compact text byline even when the author
+  // opted into an avatar/social banner — that banner lives at the article foot.
+  if (variant === 'standard') {
     return (
       <p className="font-display text-[15px] italic leading-snug text-foreground 1024:text-right">
         By{' '}
@@ -92,25 +108,26 @@ export function ArticleByline({ author, dateLine, variant }: ArticleBylineProps)
     )
   }
 
-  const alignment = variant === 'framed' ? 'items-center text-center' : 'items-start text-left'
-  const justification = variant === 'framed' ? 'justify-center' : ''
-
   return (
-    <div className={`flex min-w-0 gap-3 ${alignment} ${justification}`}>
+    <div className="mx-auto flex items-center justify-center gap-4 py-1 sm:gap-5 sm:py-2">
       <Avatar author={author} />
-      <div className={`flex min-w-0 flex-col gap-1 ${alignment}`}>
-        <span className="break-words font-display text-[14px] font-semibold leading-snug text-foreground sm:text-[15px]">
+      <div className="flex min-w-0 flex-col items-start text-left">
+        <span className="break-words font-display text-[15px] font-semibold leading-snug text-foreground sm:text-[16px]">
           By{' '}
           <AuthorLink authorSlug={author.slug} authorId={author.id} className="hover:underline">
             {author.displayName}
           </AuthorLink>
         </span>
         {dateLine ? (
-          <span className="font-display text-[11px] leading-snug tracking-[0.02em] text-foreground/50 480:text-[12px]">
+          <span className="mt-1 font-display text-[12px] leading-snug tracking-[0.02em] text-foreground/50 sm:text-[13px]">
             {dateLine}
           </span>
         ) : null}
-        <FeaturedLinks author={author} />
+        <FeaturedBylineLinks
+          author={author}
+          className="mt-2.5 flex items-center justify-start gap-3.5"
+          iconClassName="size-4 480:size-[18px]"
+        />
       </div>
     </div>
   )
