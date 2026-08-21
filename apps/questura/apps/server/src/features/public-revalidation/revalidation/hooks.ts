@@ -2,12 +2,14 @@ import type { CollectionAfterChangeHook, CollectionAfterDeleteHook } from 'paylo
 import { triggerClientRevalidation } from './delivery'
 import {
   articleRevalidationTarget,
+  authoredArticlesTarget,
   authorTarget,
   locationHomepageTarget,
   locationTarget,
   mergeTargets,
   redirectTarget,
 } from './targets'
+import { idValue } from './documents'
 import type { AnyDoc } from './types'
 
 export function revalidateArticleCollection(
@@ -40,12 +42,16 @@ export function revalidateArticleCollection(
 export const revalidateAuthorAfterChange: CollectionAfterChangeHook = async ({
   doc,
   previousDoc,
+  req,
   operation,
 }) => {
+  const authorId = idValue(doc) ?? idValue(previousDoc)
+
   await triggerClientRevalidation(
     mergeTargets(
       authorTarget(previousDoc as AnyDoc | undefined),
       authorTarget(doc as AnyDoc | undefined),
+      authorId ? await authoredArticlesTarget(req, authorId) : {},
     ),
     `authors:${operation}`,
   )

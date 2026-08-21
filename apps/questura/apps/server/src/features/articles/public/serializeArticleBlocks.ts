@@ -1,4 +1,5 @@
 import type { Payload } from 'payload'
+import { serializeArticleAuthor } from './serializeArticleAuthor'
 import { convertLexicalToHTMLAsync } from '@payloadcms/richtext-lexical/html-async'
 
 import { resolveMediaSetForPlacement } from '@/features/media/lib/resolve-public-image'
@@ -11,7 +12,6 @@ async function toLexicalHTML(data: unknown): Promise<string> {
     disableContainer: true,
   })
 }
-
 type SanitizedTourImage = {
   url: string
   alt: string
@@ -223,5 +223,6 @@ export async function serializeArticleByCollection(
   if (collection === 'articles') await serializeStandardArticleBlocks(article)
   if (collection === 'single-type-listicles') await serializeMapsListicleBlocks(article, payload)
   if (collection === 'listicle-itineraries') await serializeItineraryBlocks(article, payload)
+  serializeArticleAuthor(article)
   attachResolvedFeaturedImage(article)
 }

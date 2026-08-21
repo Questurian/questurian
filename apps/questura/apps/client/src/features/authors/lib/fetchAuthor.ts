@@ -23,6 +23,8 @@ export type AuthorSocialLinks = {
   website: string | null
 }
 
+export type AuthorSocialPlatform = keyof AuthorSocialLinks
+
 export type PublicAuthor = {
   id: number
   slug: string | null

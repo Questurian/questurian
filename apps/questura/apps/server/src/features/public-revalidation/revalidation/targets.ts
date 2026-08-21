@@ -39,6 +39,39 @@ export function articleRevalidationTarget(
     paths: unique([path]),
   }
 }
+export async function authoredArticlesTarget(
+  req: PayloadRequest,
+  authorId: string | number,
+): Promise<RevalidationTarget> {
+  const collections = [
+    'articles',
+    'single-type-listicles',
+    'listicle-itineraries',
+  ] as const
+
+  const results = await Promise.all(
+    collections.map(async (collection) => {
+      const result = await req.payload.find({
+        collection,
+        where: {
+          and: [
+            { author: { equals: authorId } },
+            { status: { equals: 'published' } },
+          ],
+        },
+        depth: 0,
+        pagination: false,
+        overrideAccess: true,
+      })
+
+      return result.docs.map((article) =>
+        articleRevalidationTarget(collection, article as unknown as AnyDoc),
+      )
+    }),
+  )
+
+  return mergeTargets(...results.flat())
+}
 
 export function mergeTargets(...targets: RevalidationTarget[]): RevalidationTarget {
   return {

@@ -13,7 +13,7 @@ import { readGate } from '@/features/articles/lib/gate'
 import { articleCrumbsFromPath } from '@/features/articles/lib/articleCrumbs'
 import { fetchStandardArticleSidebar } from '@/features/articles/lib/fetchArticleSidebar'
 import { ArticleBlockStream } from '@/features/articles/components/ArticleBlockStream'
-import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { ArticleByline } from '@/features/articles/components/ArticleByline'
 import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
 import { Article } from './types'
 
@@ -29,7 +29,6 @@ function formatMagazineDate(iso: string | undefined): string | null {
     timeZone: 'America/New_York',
   }).format(date)
 }
-
 function StandardArticleHeader({
   article,
   path,
@@ -41,7 +40,6 @@ function StandardArticleHeader({
 }) {
   const { id: articleId, title, author, publishedAt, updatedAt, seoSection, headerSection } = article
   const description = seoSection?.metaDescription
-  const displayName = author?.displayName
   const dateLine = formatMagazineDate(publishedAt ?? updatedAt)
   const crumbs = articleCrumbsFromPath(path)
 
@@ -68,21 +66,10 @@ function StandardArticleHeader({
         ) : (
           <span />
         )}
-        {displayName || dateLine ? (
+        {author ? (
+          <ArticleByline author={author} dateLine={dateLine} variant="standard" />
+        ) : dateLine ? (
           <p className="font-display text-[15px] italic leading-snug text-foreground 1024:text-right">
-            {displayName ? (
-              <>
-                By{' '}
-                <AuthorLink
-                  authorSlug={author?.slug}
-                  authorId={author?.id}
-                  className="hover:underline"
-                >
-                  {displayName}
-                </AuthorLink>
-              </>
-            ) : null}
-            {displayName && dateLine ? ' • ' : null}
             {dateLine}
           </p>
         ) : null}

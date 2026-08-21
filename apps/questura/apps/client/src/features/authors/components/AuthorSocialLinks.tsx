@@ -1,15 +1,15 @@
 import type { JSX } from 'react'
-import type { AuthorSocialLinks } from '@/features/authors/lib/fetchAuthor'
+import type { AuthorSocialLinks, AuthorSocialPlatform } from '@/features/authors/lib/fetchAuthor'
 
-type SocialPlatform = {
-  key: 'instagram' | 'x' | 'facebook' | 'linkedin' | 'reddit' | 'youtube' | 'patreon'
+export type SocialPlatform = {
+  key: AuthorSocialPlatform
   /** Field on AuthorSocialLinks holding this platform's author URL. */
   linkKey: keyof AuthorSocialLinks
   label: string
   iconPath: string
 }
 
-const PLATFORMS: SocialPlatform[] = [
+export const AUTHOR_SOCIAL_PLATFORMS: SocialPlatform[] = [
   {
     key: 'instagram',
     linkKey: 'instagram',
@@ -18,7 +18,7 @@ const PLATFORMS: SocialPlatform[] = [
       'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zm0 10.162a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z',
   },
   {
-    key: 'x',
+    key: 'twitter',
     linkKey: 'twitter',
     label: 'X',
     iconPath:
@@ -59,7 +59,42 @@ const PLATFORMS: SocialPlatform[] = [
     iconPath:
       'M0 .48v23.04h4.22V.48zm15.385 0c-4.764 0-8.641 3.88-8.641 8.65 0 4.755 3.877 8.623 8.641 8.623 4.75 0 8.615-3.868 8.615-8.623C24 4.36 20.136.48 15.385.48z',
   },
+  {
+    key: 'website',
+    linkKey: 'website',
+    label: 'Website',
+    iconPath:
+      'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.92 6h-3.03a15.7 15.7 0 0 0-1.38-3.56A8.05 8.05 0 0 1 18.92 8ZM12 4c.83 1.2 1.48 2.53 1.82 4h-3.64A13.7 13.7 0 0 1 12 4ZM4.26 14a7.8 7.8 0 0 1 0-4h3.39a16.5 16.5 0 0 0 0 4H4.26Zm.82 2h3.03c.3 1.27.77 2.47 1.38 3.56A8.05 8.05 0 0 1 5.08 16ZM8.11 8H5.08a8.05 8.05 0 0 1 4.41-3.56A15.7 15.7 0 0 0 8.11 8ZM12 20a13.7 13.7 0 0 1-1.82-4h3.64A13.7 13.7 0 0 1 12 20Zm2.22-6H9.78a14.5 14.5 0 0 1 0-4h4.44a14.5 14.5 0 0 1 0 4Zm.29 5.56A15.7 15.7 0 0 0 15.89 16h3.03a8.05 8.05 0 0 1-4.41 3.56ZM16.35 14a16.5 16.5 0 0 0 0-4h3.39a7.8 7.8 0 0 1 0 4h-3.39Z',
+  },
 ]
+
+export function AuthorSocialIconLink({
+  platform,
+  href,
+  authorName,
+  className = 'text-foreground/60 transition-colors hover:text-foreground',
+  iconClassName = 'size-[18px]',
+}: {
+  platform: SocialPlatform
+  href: string
+  authorName: string
+  className?: string
+  iconClassName?: string
+}): JSX.Element {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`${authorName} on ${platform.label}`}
+      className={className}
+    >
+      <svg viewBox="0 0 24 24" fill="currentColor" className={iconClassName} aria-hidden="true">
+        <path d={platform.iconPath} fillRule="evenodd" />
+      </svg>
+    </a>
+  )
+}
 
 export function AuthorSocialIcons({
   links,
@@ -69,7 +104,7 @@ export function AuthorSocialIcons({
   authorName: string
 }): JSX.Element | null {
   // Only platforms the author actually linked get a badge.
-  const linked = PLATFORMS.map((platform) => ({
+  const linked = AUTHOR_SOCIAL_PLATFORMS.map((platform) => ({
     platform,
     href: links?.[platform.linkKey] || null,
   })).filter((entry): entry is { platform: SocialPlatform; href: string } => Boolean(entry.href))
@@ -79,18 +114,12 @@ export function AuthorSocialIcons({
   return (
     <div className="flex items-center gap-3.5">
       {linked.map(({ platform, href }) => (
-        <a
+        <AuthorSocialIconLink
           key={platform.key}
+          platform={platform}
           href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`${authorName} on ${platform.label}`}
-          className="text-foreground/60 transition-colors hover:text-foreground"
-        >
-          <svg viewBox="0 0 24 24" fill="currentColor" className="size-[18px]" aria-hidden="true">
-            <path d={platform.iconPath} fillRule="evenodd" />
-          </svg>
-        </a>
+          authorName={authorName}
+        />
       ))}
     </div>
   )

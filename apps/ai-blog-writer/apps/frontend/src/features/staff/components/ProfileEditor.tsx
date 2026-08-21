@@ -12,6 +12,7 @@ import {
 } from '../api/staff.api'
 import type {
   Author,
+  ArticleBylinePlatform,
   AuthorPatch,
   ProfileCapabilities,
   ProfileSubject,
@@ -28,8 +29,11 @@ type ProfileFormState = {
   slug: string
   expertise: string[]
   socialLinks: Required<{ [K in keyof SocialLinks]: string }>
+  articleByline: {
+    showAvatar: boolean
+    featuredLinks: ArticleBylinePlatform[]
+  }
 }
-
 const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: string }[] = [
   { key: 'instagram', label: 'Instagram URL', placeholder: 'https://instagram.com/…' },
   { key: 'twitter', label: 'Twitter / X URL', placeholder: 'https://x.com/…' },
@@ -76,6 +80,10 @@ function formStateFromRecords(
     socialLinks: Object.fromEntries(
       SOCIAL_FIELDS.map(({ key }) => [key, author?.socialLinks?.[key] ?? '']),
     ) as ProfileFormState['socialLinks'],
+    articleByline: {
+      showAvatar: author?.articleByline?.showAvatar === true,
+      featuredLinks: (author?.articleByline?.featuredLinks ?? []).slice(0, 3),
+    },
   }
 }
 
@@ -153,6 +161,7 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
         socialLinks: Object.fromEntries(
           SOCIAL_FIELDS.map(({ key }) => [key, state.socialLinks[key].trim() || null]),
         ) as SocialLinks,
+        articleByline: state.articleByline,
       }
 
       // Slug renames are admin-only (Payload field access enforces this too).
@@ -232,6 +241,17 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
     setNewExpertise('')
   }
 
+  function toggleFeaturedLink(platform: ArticleBylinePlatform) {
+    const selected = form?.articleByline.featuredLinks ?? []
+    const featuredLinks = selected.includes(platform)
+      ? selected.filter((existing) => existing !== platform)
+      : [...selected, platform].slice(0, 3)
+    update('articleByline', {
+      showAvatar: form?.articleByline.showAvatar ?? false,
+      featuredLinks,
+    })
+  }
+
   return (
     <form
       className="staff-card"
@@ -292,6 +312,50 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
               <p className="staff-hint">New avatar is applied when you save.</p>
             ) : null}
           </div>
+        </div>
+      </section>
+
+      <section className="staff-section">
+        <h2>Article byline</h2>
+        <p className="staff-muted">
+          Optional creator treatment on articles. Your Author page still shows every social link.
+        </p>
+        <label className="staff-checkbox-option">
+          <input
+            type="checkbox"
+            checked={form.articleByline.showAvatar}
+            onChange={(event) =>
+              update('articleByline', {
+                ...form.articleByline,
+                showAvatar: event.target.checked,
+              })
+            }
+          />
+          <span>Show avatar on articles</span>
+        </label>
+        {!currentAvatar && form.articleByline.showAvatar ? (
+          <p className="staff-hint">Upload an avatar above before this can appear publicly.</p>
+        ) : null}
+        <p className="staff-hint">Feature up to 3 configured links:</p>
+        <div className="staff-byline-links">
+          {SOCIAL_FIELDS.filter(({ key }) => form.socialLinks[key].trim()).map(({ key, label }) => {
+            const selected = form.articleByline.featuredLinks.includes(key)
+            const atLimit = form.articleByline.featuredLinks.length >= 3
+            return (
+              <label key={key} className="staff-checkbox-option">
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  disabled={!selected && atLimit}
+                  onChange={() => toggleFeaturedLink(key)}
+                />
+                <span>Feature {label.replace(' URL', '')}</span>
+              </label>
+            )
+          })}
+          {SOCIAL_FIELDS.every(({ key }) => !form.socialLinks[key].trim()) ? (
+            <span className="staff-muted">Add a social link below to make it available here.</span>
+          ) : null}
         </div>
       </section>
 

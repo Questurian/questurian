@@ -116,6 +116,31 @@
   gap: var(--space-3);
 }
 
+.staff-checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.staff-checkbox-option input {
+  accent-color: var(--accent);
+}
+
+.staff-checkbox-option:has(input:disabled) {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.staff-byline-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+}
+
 .staff-add-row {
   align-items: center;
 }

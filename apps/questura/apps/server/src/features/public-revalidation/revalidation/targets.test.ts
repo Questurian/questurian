@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
   articleRevalidationTarget,
+  authoredArticlesTarget,
   locationTarget,
   mergeTargets,
   redirectTarget,
 } from './targets'
+import type { PayloadRequest } from 'payload'
 
 describe('public revalidation target builders', () => {
   it('builds article tags and paths for published city-scoped maps', () => {
@@ -61,5 +63,41 @@ describe('public revalidation target builders', () => {
       tags: ['article-redirect:%2Fold'],
       paths: ['/old'],
     })
+  })
+
+  it('targets every published article carrying an edited Author byline', async () => {
+    const req = {
+      payload: {
+        find: async ({ collection }: { collection: string }) => ({
+          docs:
+            collection === 'articles'
+              ? [
+                  {
+                    status: 'published',
+                    language: 'en',
+                    slug: 'creator-story',
+                    canonicalPath: '/peru/lima/food/creator-story',
+                  },
+                ]
+              : collection === 'single-type-listicles'
+                ? [
+                    {
+                      status: 'published',
+                      language: 'en',
+                      slug: 'creator-brunch',
+                      location: 'peru|lima',
+                    },
+                  ]
+                : [],
+        }),
+      },
+    } as unknown as PayloadRequest
+
+    const target = await authoredArticlesTarget(req, 42)
+
+    expect(target.paths).toEqual([
+      '/peru/lima/food/creator-story',
+      '/peru/lima/maps/creator-brunch',
+    ])
   })
 })

@@ -32,6 +32,13 @@ export type SocialLinks = {
   website?: string | null
 }
 
+export type ArticleBylinePlatform = keyof SocialLinks
+
+export type ArticleByline = {
+  showAvatar?: boolean | null
+  featuredLinks?: ArticleBylinePlatform[] | null
+}
+
 /**
  * The public authorship record (ADR-0007). Its own collection, linked to a
  * staff account by `user` -- and valid with that link absent, which is what
@@ -46,6 +53,7 @@ export type Author = {
   bio?: string | null
   expertise?: ExpertiseEntry[] | null
   socialLinks?: SocialLinks | null
+  articleByline?: ArticleByline | null
 }
 
 export type StaffUser = {
@@ -89,6 +97,7 @@ export type AuthorPatch = {
   bio?: string
   expertise?: { area: string }[]
   socialLinks?: SocialLinks
+  articleByline?: ArticleByline
 }
 
 /**

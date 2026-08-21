@@ -6,6 +6,7 @@ import { staffUser } from '@/features/auth/lib/staff-user'
 import { revalidateAuthorAfterChange } from '@/features/public-revalidation/revalidate-client'
 import { authorSlugHook } from './hooks/authorSlug'
 import { authorSocialLinks } from './fields/socialLinks'
+import { articleByline } from './fields/articleByline'
 
 /**
  * Public authorship, separated from the staff account that happens to hold it
@@ -158,5 +159,6 @@ export const Authors: CollectionConfig = {
       ],
     },
     authorSocialLinks,
+    articleByline,
   ],
 }

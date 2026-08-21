@@ -5,7 +5,7 @@ import { AddOnGoogleButton } from '@/features/articles/components/AddOnGoogleBut
 import { ArticleShareButton } from '@/features/articles/components/ArticleShareButton'
 import { BookmarkButton } from '@/features/bookmarks/components/BookmarkButton'
 import type { BookmarkTargetType } from '@/features/bookmarks/types'
-import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { ArticleByline } from '@/features/articles/components/ArticleByline'
 
 type ArticlePageHeaderProps = {
   title: string
@@ -17,30 +17,6 @@ type ArticlePageHeaderProps = {
   /** Bookmark target for this page. Omitted only where there is nothing to bookmark. */
   bookmark?: { targetType: BookmarkTargetType; targetId: number } | null
 }
-
-function AuthorBlock({
-  author,
-  publishedLine,
-}: {
-  author: ArticleAuthor
-  publishedLine?: string | null
-}): JSX.Element {
-  const displayName = author.displayName
-
-  return (
-    <div className="mx-auto flex w-full min-w-0 max-w-[44ch] flex-col items-center gap-1.5 text-center">
-      <span className="break-words text-balance font-display text-[13px] font-semibold leading-snug text-foreground 480:text-[14px] sm:text-[15px]">
-        By <AuthorLink authorSlug={author.slug} authorId={author.id} className="hover:underline">{displayName}</AuthorLink>
-      </span>
-      {publishedLine ? (
-        <span className="break-words text-balance font-display text-[11px] font-normal leading-snug tracking-[0.02em] text-foreground/50 480:text-[12px]">
-          {publishedLine}
-        </span>
-      ) : null}
-    </div>
-  )
-}
-
 function DoubleRuleRail(): JSX.Element {
   return (
     <div className="box-border min-h-[3px] flex-1 border-x-0 border-b-0 border-t-[3px] border-double border-t-foreground" />
@@ -138,7 +114,7 @@ export function ArticlePageHeader({
       {(author || publishedLine) ? (
         <div className="mt-2 flex flex-col gap-4 380:mt-3 380:gap-5 480:mt-4 sm:mt-5 768:mt-6">
           {author ? (
-            <AuthorBlock author={author} publishedLine={publishedLine} />
+            <ArticleByline author={author} dateLine={publishedLine} variant="framed" />
           ) : (
             <span className="mx-auto max-w-[44ch] text-center font-display text-[11px] font-normal leading-snug tracking-[0.02em] text-foreground/50 480:text-[12px]">
               {publishedLine}

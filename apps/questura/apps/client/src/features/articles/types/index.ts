@@ -100,7 +100,13 @@ export type ArticleAuthor = {
   id: number
   slug?: string | null
   displayName: string
-  avatar?: string | null
+  articleByline?: {
+    avatar?: { url: string; alt?: string | null } | null
+    links: Array<{
+      platform: import('@/features/authors/lib/fetchAuthor').AuthorSocialPlatform
+      url: string
+    }>
+  }
 }
 
 export type SeoSection = {

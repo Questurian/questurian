@@ -98,3 +98,49 @@ describe('serializeArticleByCollection featured image resolution', () => {
     expect(article).toEqual({ title: 'No header' })
   })
 })
+
+describe('serializeArticleByCollection author byline', () => {
+  it('projects an opted-in author into a safe featured byline', async () => {
+    const article: Record<string, unknown> = {
+      author: {
+        id: 42,
+        slug: 'lima-creator',
+        displayName: 'Lima Creator',
+        user: { id: 7, email: 'private@example.com' },
+        avatar: {
+          url: 'https://cdn.example/creator.webp',
+          alt_text: 'Lima Creator at a market',
+        },
+        socialLinks: {
+          instagram: 'https://instagram.com/lima-creator',
+          youtube: 'https://youtube.com/@lima-creator',
+          website: 'https://creator.example',
+          facebook: 'https://facebook.com/lima-creator',
+        },
+        articleByline: {
+          showAvatar: true,
+          featuredLinks: ['instagram', 'youtube', 'website', 'facebook'],
+        },
+      },
+    }
+
+    await serializeArticleByCollection('single-type-listicles', article)
+
+    expect(article.author).toEqual({
+      id: 42,
+      slug: 'lima-creator',
+      displayName: 'Lima Creator',
+      articleByline: {
+        avatar: {
+          url: 'https://cdn.example/creator.webp',
+          alt: 'Lima Creator at a market',
+        },
+        links: [
+          { platform: 'instagram', url: 'https://instagram.com/lima-creator' },
+          { platform: 'youtube', url: 'https://youtube.com/@lima-creator' },
+          { platform: 'website', url: 'https://creator.example' },
+        ],
+      },
+    })
+  })
+})
