@@ -8,10 +8,11 @@ import {
   ArticleRail,
   ArticlePartners,
 } from '@/features/articles/components/ArticleSidebar'
+import { planArticleAds } from '@/features/articles/lib/adPlacement'
 import { readGate } from '@/features/articles/lib/gate'
 import { articleCrumbsFromPath } from '@/features/articles/lib/articleCrumbs'
 import { fetchStandardArticleSidebar } from '@/features/articles/lib/fetchArticleSidebar'
-import { BlockRenderer } from '@/features/articles/components/BlockRenderer'
+import { ArticleBlockStream } from '@/features/articles/components/ArticleBlockStream'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 import { getPublicBaseUrl } from '@/lib/seo/publicBaseUrl'
 import { Article } from './types'
@@ -125,6 +126,9 @@ export async function ArticlePage({ article, path }: { article: Article; path?: 
   const { headerSection, contentBlocks } = article
   const featuredImage = headerSection?.featuredImage
   const gate = readGate(article)
+  const adPlan = planArticleAds(contentBlocks ?? [], {
+    gateAt: gate?.locked ? gate.shown : null,
+  })
   const sidebar = await fetchStandardArticleSidebar(article, path)
   const sharePath = path && path.startsWith('/') ? path : `/${article.slug}`
   const shareUrl = `${getPublicBaseUrl()}${sharePath}`
@@ -161,9 +165,7 @@ export async function ArticlePage({ article, path }: { article: Article; path?: 
 
             <div className="px-4 pt-8 pb-16 1024:px-0 1024:pt-10 1024:pb-20">
               <div className="space-y-8 sm:space-y-10">
-                {contentBlocks?.map((block) => (
-                  <BlockRenderer key={block.id} block={block} />
-                ))}
+                <ArticleBlockStream blocks={contentBlocks ?? []} plan={adPlan} />
 
                 {gate?.locked ? (
                   <GatedArticleBody articleId={article.id} gate={gate} path={path ?? '/'} />

@@ -1,8 +1,9 @@
 'use client'
 
-import { BlockRenderer } from '@/features/articles/components/BlockRenderer'
+import { ArticleBlockStream } from '@/features/articles/components/ArticleBlockStream'
 import { GatedBodySkeleton, GatedLoadError } from '@/features/articles/components/GatedStates'
 import { PaywallNotice } from '@/features/articles/components/PaywallNotice'
+import { planArticleAds } from '@/features/articles/lib/adPlacement'
 import type { GateState } from '@/features/articles/lib/gate'
 import { useGatedFullArticle } from '@/features/articles/lib/useGatedFullArticle'
 import type { ContentBlock } from '@/features/articles/types'
@@ -54,13 +55,13 @@ export function GatedArticleBody({ articleId, gate, path, lang }: GatedArticleBo
 
   // The full body includes the sample blocks the server already rendered, so
   // the sample is dropped here rather than duplicated above this component.
+  // Ads are planned over the whole body for the same reason the sample is: the
+  // server already placed the slots for the prefix, and the plan has to agree
+  // with it or the two halves double-place an ad across the seam.
+  const adPlan = planArticleAds(data.contentBlocks, { gateAt: gate.shown })
   const remaining = data.contentBlocks.slice(gate.shown)
 
   return (
-    <>
-      {remaining.map((block) => (
-        <BlockRenderer key={block.id} block={block} />
-      ))}
-    </>
+    <ArticleBlockStream blocks={remaining} plan={adPlan} startIndex={gate.shown} />
   )
 }

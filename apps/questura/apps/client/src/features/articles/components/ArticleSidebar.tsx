@@ -1,24 +1,15 @@
 import Link from 'next/link'
 import { PublicImage } from '@/components/media/PublicImage'
+import { AdLabel, AdMockSurface } from '@/features/articles/components/AdMock'
 import type { ArticleIndexItem } from '@/features/articles/lib/fetchArticleIndex'
-import { StickyRail } from '@/features/articles/components/StickyRail'
 
 function AdSlot({ size }: { size: 'half-page' | 'square' }) {
   const height = size === 'half-page' ? 'h-[250px] 1024:h-[600px]' : 'h-[300px]'
 
   return (
     <div className="w-full">
-      <p className="mb-1.5 text-center font-[family-name:var(--font-dm-sans)] text-[9px] uppercase tracking-[0.2em] text-foreground/40">
-        Advertisement
-      </p>
-      <div
-        className={`flex ${height} w-full items-center justify-center border border-foreground/12 bg-foreground/[0.04]`}
-        aria-hidden
-      >
-        <span className="font-[family-name:var(--font-dm-sans)] text-[10px] uppercase tracking-[0.16em] text-foreground/25">
-          Ad space
-        </span>
-      </div>
+      <AdLabel className="mb-1.5" />
+      <AdMockSurface className={height} />
     </div>
   )
 }
@@ -35,17 +26,27 @@ function SectionHeading({ id, children }: { id: string; children: string }) {
 }
 
 /**
- * Ad rail. Sticks alongside the article body and releases at the end of the
- * body, at which point the trending list below it comes into view.
+ * Ad rail. The ads pin below the navbar and stay there for the whole read, so
+ * the top ad is always in view. The trending list sits *outside* the sticky
+ * box, in the column below it: that keeps it from pushing the ads off-screen
+ * (a sticky box taller than the viewport can only ever show one of its ends)
+ * and gives the ads a containing block that ends just above it, so they
+ * release into the trending list at the bottom of the article instead of
+ * overlapping it.
  */
 export function ArticleRail({ trending }: { trending: ArticleIndexItem[] }) {
   return (
-    <div data-article-sidebar className="1024:h-full">
-      <StickyRail className="flex flex-col gap-8 1024:sticky">
-        <AdSlot size="half-page" />
-        <AdSlot size="square" />
+    <div data-article-sidebar className="1024:flex 1024:h-full 1024:flex-col">
+      <div className="1024:flex-1">
+        <div className="flex flex-col gap-8 1024:sticky 1024:top-24">
+          <AdSlot size="half-page" />
+          <AdSlot size="square" />
+        </div>
+      </div>
+
+      <div className="mt-8 1024:mt-10">
         <ArticleTrending trending={trending} />
-      </StickyRail>
+      </div>
     </div>
   )
 }

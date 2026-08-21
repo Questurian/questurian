@@ -27,13 +27,25 @@ import {
  * the cached server render (ADR-0009).
  */
 
-function TextBlockRenderer({ block }: { block: TextBlock }) {
+/**
+ * One run of body HTML.
+ *
+ * A text block is split into several of these when an ad is planned inside it
+ * (see `lib/adPlacement`). Each run keeps the `article-prose` class so the
+ * descendant type rules still apply, and drops the leading heading's top margin
+ * -- the parent `space-y-*` already owns the gap after the ad above it.
+ */
+export function ProseRun({ html }: { html: string }) {
   return (
     <div
-      className="article-prose"
-      dangerouslySetInnerHTML={{ __html: block.content }}
+      className="article-prose [&>h2:first-child]:mt-0 [&>h3:first-child]:mt-0"
+      dangerouslySetInnerHTML={{ __html: html }}
     />
   )
+}
+
+function TextBlockRenderer({ block }: { block: TextBlock }) {
+  return <ProseRun html={block.content} />
 }
 
 function ImageBlockRenderer({ block }: { block: ImageBlock }) {
