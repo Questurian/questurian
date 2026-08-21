@@ -10,7 +10,7 @@ import {
 import { PAYLOAD_ARTICLES_STORAGE_KEY } from '../constants'
 
 export default function PayloadArticlesPage() {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const { localDrafts, discardLocalDraft, clearAllLocalDrafts } = useLocalStagedDrafts(
     PAYLOAD_ARTICLES_STORAGE_KEY,
   )
@@ -60,7 +60,7 @@ export default function PayloadArticlesPage() {
               ? (payloadDocsQuery.error instanceof Error ? payloadDocsQuery.error.message : 'Unknown error')
               : null
           }
-          isSignedIn={Boolean()}
+          isSignedIn={isAuthenticated}
         />
       </main>
     </div>

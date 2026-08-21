@@ -84,7 +84,6 @@ export default function ProfileEditor({ userId, variant }: ProfileEditorProps) {
       ])
       return { user, author }
     },
-    enabled: Boolean(),
   })
 
   useEffect(() => {

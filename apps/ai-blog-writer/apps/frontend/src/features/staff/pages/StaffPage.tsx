@@ -92,19 +92,19 @@ export default function StaffPage() {
   const staffQuery = useQuery({
     queryKey: ['staff', 'list'],
     queryFn: () => fetchStaffUsers(),
-    enabled: Boolean() && canManageUsers,
+    enabled: canManageUsers,
   })
 
   const authorsQuery = useQuery({
     queryKey: ['staff', 'authors'],
     queryFn: () => fetchAuthors(),
-    enabled: Boolean() && canManageUsers,
+    enabled: canManageUsers,
   })
 
   const emailLogsQuery = useQuery({
     queryKey: ['staff', 'email-logs'],
     queryFn: () => fetchEmailLogs(),
-    enabled: Boolean() && canManageUsers,
+    enabled: canManageUsers,
   })
 
   const inviteStaff = useMutation({

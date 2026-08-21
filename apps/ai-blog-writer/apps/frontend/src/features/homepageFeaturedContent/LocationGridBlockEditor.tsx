@@ -186,11 +186,10 @@ export default function LocationGridBlockEditor({
     pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
   const currentSlotId = currentSlotItem?.id ?? null
 
+  // No signed-in conjunct here: this editor renders only under RequireAuth,
+  // so the guard this replaced was already unreachable (ADR-0028).
   const saveNeedsAllSlots =
-    hasUnsavedChanges &&
-    !hasAllSlotsFilled &&
-    Boolean() &&
-    !saveMutation.isPending
+    hasUnsavedChanges && !hasAllSlotsFilled && !saveMutation.isPending
 
   return (
     <div className="hf-block-section">
