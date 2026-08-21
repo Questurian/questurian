@@ -119,3 +119,30 @@ describe('Users collection access', () => {
     })
   })
 })
+
+/**
+ * ADR-0011 widened `authors.update` for editors. It deliberately did NOT widen
+ * anything here: the whole reason that change is safe is that a Staff identity
+ * stays a credential an editor cannot reach. These pin the half that must not
+ * move, so a future "editors need to see their writers" change has to argue
+ * with a red test rather than slip through.
+ */
+describe('editors stay scoped to their own staff identity (ADR-0011)', () => {
+  const editor = { id: 7, collection: 'users', role: 'editor', status: 'active' }
+
+  it('reads only their own row', () => {
+    expect(collectionAccess.read({ req: { user: editor } } as any)).toEqual({
+      id: { equals: 7 },
+    })
+  })
+
+  it('updates only their own row', () => {
+    expect(collectionAccess.update({ req: { user: editor }, id: 7 } as any)).toBe(true)
+    expect(collectionAccess.update({ req: { user: editor }, id: 8 } as any)).toBe(false)
+  })
+
+  it('cannot create or delete a staff identity', async () => {
+    await expect(collectionAccess.create({ req: { user: editor } } as any)).resolves.toBe(false)
+    expect(collectionAccess.delete({ req: { user: editor } } as any)).toBe(false)
+  })
+})
