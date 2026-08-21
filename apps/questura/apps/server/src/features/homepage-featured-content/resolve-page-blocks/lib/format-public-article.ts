@@ -20,14 +20,29 @@ export function formatPublicAuthor(
   // Accepts either the already-flattened preview (`name`) or a raw Authors doc
   // (`displayName`); the byline no longer carries account name parts.
   const name = stringOrNull(value.name) ?? stringOrNull(value.displayName)
+  const avatar = formatPublicAuthorAvatar(value)
 
   const author = {
     id: normalizeNumericId(value.id),
     slug: stringOrNull(value.slug),
     name,
+    ...(avatar ? { avatar } : {}),
   }
 
   return author.id !== null || author.name ? author : null
+}
+
+function formatPublicAuthorAvatar(
+  value: Record<string, unknown>,
+): NonNullable<PublicPreviewPerson['avatar']> | null {
+  const nested = isRecord(value.avatar) ? value.avatar : null
+  const url = stringOrNull(nested?.url) ?? stringOrNull(nested?.bunny_original_url)
+  if (!url) return null
+
+  return {
+    url,
+    alt: stringOrNull(nested?.alt) ?? stringOrNull(nested?.alt_text),
+  }
 }
 
 export function formatPublicCategory(value: unknown): PublicPreviewCategory | null {

@@ -48,7 +48,13 @@ import {
 import { ImageRecreationPromptsPage } from './features/imageRecreationPrompts'
 import { MediaLibraryPage } from './features/mediaLibrary'
 import BatchImageRecreationPage from './features/batchImageRecreation/BatchImageRecreationPage'
-import { MyProfilePage, StaffPage, StaffProfilePage } from './features/staff'
+import {
+  AuthorDirectoryPage,
+  AuthorProfilePage,
+  MyProfilePage,
+  StaffPage,
+  StaffProfilePage,
+} from './features/staff'
 import './styles.css'
 
 const queryClient = new QueryClient()
@@ -129,6 +135,10 @@ export default function App() {
               <Route path="profile" element={<MyProfilePage />} />
               <Route path="staff" element={<StaffPage />} />
               <Route path="staff/:id" element={<StaffProfilePage />} />
+
+              {/* Author Directory -- editor-reachable, keyed by author id */}
+              <Route path="authors" element={<AuthorDirectoryPage />} />
+              <Route path="authors/:id" element={<AuthorProfilePage />} />
             </Route>
           </Routes>
         </BrowserRouter>

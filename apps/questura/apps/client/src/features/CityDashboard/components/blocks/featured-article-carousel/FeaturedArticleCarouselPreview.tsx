@@ -8,7 +8,7 @@ import type {
   FeaturedArticleTeaser,
   HomepageBlockLayoutProps,
 } from '../../../types'
-import { BlockSection, BLOCK_GUTTER_CLASS } from '../BlockSection'
+import { BLOCK_GUTTER_CLASS, BlockSection, CAROUSEL_CARD_WIDTH_CLASS } from '../BlockSection'
 import { useSnapCarousel } from '../useSnapCarousel'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
 
@@ -96,7 +96,7 @@ function CarouselArticleCard({ article, isPriority, isLast }: CarouselArticleCar
     </>
   )
 
-  const cardClass = `flex-none snap-always flex flex-col w-[calc(100vw-5.25rem)] 380:w-[291px] 768:w-[340px] 1024:w-[400px] 1280:w-[460px] ${isLast ? 'snap-end' : 'snap-start'}`
+  const cardClass = `flex-none snap-always flex flex-col ${CAROUSEL_CARD_WIDTH_CLASS} ${isLast ? 'snap-end' : 'snap-start'}`
 
   return articlePath ? (
     <Link href={articlePath} className={cardClass}>
@@ -196,7 +196,9 @@ export function FeaturedArticleCarouselPreview({
           ))}
           <div className="w-[var(--block-gutter)] shrink-0" aria-hidden="true" />
         </div>
-        <div className="absolute inset-y-0 left-0 w-[var(--block-gutter)] bg-[#f5f0e8] pointer-events-none" aria-hidden="true" />
+        {/* Masks the scrolled-past card tails that sit inside the gutter. Card
+            images are `relative z-10`, so this has to be above them. */}
+        <div className="absolute inset-y-0 left-0 z-20 w-[var(--block-gutter)] bg-[#f5f0e8] pointer-events-none" aria-hidden="true" />
       </div>
 
       {/* Dot indicators — one per scroll page, not per item */}

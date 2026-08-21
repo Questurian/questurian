@@ -38,9 +38,40 @@
   cursor: pointer;
 }
 
+.hf-fa-spotlight-avatar {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #1a1a1a;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.hf-fa-spotlight-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hf-fa-spotlight-avatar-placeholder {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.28) 0 22%, transparent 23%),
+    radial-gradient(circle at 50% 92%, rgba(255, 255, 255, 0.22) 0 38%, transparent 39%);
+}
+
 .hf-fa-spotlight-copy-button:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.7);
   outline-offset: 0.35rem;
+}
+
+.hf-fa-spotlight-copy-button--creator {
+  align-items: center;
+  text-align: center;
 }
 
 .hf-fa-spotlight-title {

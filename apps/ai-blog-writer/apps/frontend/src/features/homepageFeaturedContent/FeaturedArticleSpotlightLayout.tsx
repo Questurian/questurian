@@ -39,12 +39,14 @@ type Props = {
   item: SlotValue
   invalidItem: HomepageFeaturedInvalidItem | undefined
   onPick: () => void
+  showAuthorAvatar?: boolean
 }
 
 export default function FeaturedArticleSpotlightLayout({
   item,
   invalidItem,
-  onPick
+  onPick,
+  showAuthorAvatar = false
 }: Props) {
   const publishedLine = formatPublishedLine(item?.publishedAt ?? null)
   const byline =
@@ -70,16 +72,31 @@ export default function FeaturedArticleSpotlightLayout({
               <span className="hf-fa-spotlight-empty-hint">
                 {invalidItem
                   ? 'Click to replace this slot.'
-                  : 'One article or listicle, full-width hero preview.'}
+                  : showAuthorAvatar
+                    ? 'One article or listicle, with the author portrait above the title.'
+                    : 'One article or listicle, full-width hero preview.'}
               </span>
             </button>
           ) : (
             <>
               <button
                 type="button"
-                className="hf-fa-spotlight-copy-button"
+                className={
+                  showAuthorAvatar
+                    ? 'hf-fa-spotlight-copy-button hf-fa-spotlight-copy-button--creator'
+                    : 'hf-fa-spotlight-copy-button'
+                }
                 onClick={onPick}
               >
+                {showAuthorAvatar ? (
+                  <span className="hf-fa-spotlight-avatar" aria-hidden={!item.author?.avatar?.url}>
+                    {item.author?.avatar?.url ? (
+                      <img src={item.author.avatar.url} alt="" />
+                    ) : (
+                      <span className="hf-fa-spotlight-avatar-placeholder" />
+                    )}
+                  </span>
+                ) : null}
                 <h2 className="hf-fa-spotlight-title">{item.title}</h2>
                 <p className="hf-fa-spotlight-dek">
                   {item.excerpt?.trim()

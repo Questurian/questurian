@@ -107,4 +107,47 @@ describe('usePermissions', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.canManageUsers).toBe(true);
   });
+
+  /**
+   * canEditOtherAuthors gates the Author Directory. It cannot come from
+   * `authors.update`: an editor and a writer both return
+   * `{ permission: true, where: {...} }` there, so that response cannot tell
+   * this surface's two audiences apart. It is taken from `articles.update`,
+   * which is strict `true` for editor and admin and a `where` for a writer.
+   */
+  it('grants canEditOtherAuthors to an editor via articles.update === true', async () => {
+    stubAuth('editor');
+    mockFetchAccess.mockResolvedValue({ collections: { articles: { update: true } } });
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.canEditOtherAuthors).toBe(true);
+    // ...without granting anything on the staff-identity surface.
+    expect(result.current.canManageUsers).toBe(false);
+  });
+
+  it('denies canEditOtherAuthors to a writer, whose articles.update is query-constrained', async () => {
+    stubAuth('writer');
+    mockFetchAccess.mockResolvedValue({
+      collections: { articles: { update: { permission: true, where: { author: { equals: 5 } } } } },
+    });
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.canEditOtherAuthors).toBe(false);
+  });
+
+  it('grants canEditOtherAuthors to an admin', async () => {
+    stubAuth('admin');
+    mockFetchAccess.mockResolvedValue({
+      collections: { articles: { update: true }, users: { create: true } },
+    });
+
+    const { result } = renderHook(() => usePermissions());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.canEditOtherAuthors).toBe(true);
+  });
 });

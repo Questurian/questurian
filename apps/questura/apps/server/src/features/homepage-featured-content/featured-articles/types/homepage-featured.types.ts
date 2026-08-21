@@ -13,11 +13,18 @@ export type HomepageFeaturedItemRef = {
   id: number
 }
 
+export type HomepageFeaturedAuthorAvatar = {
+  url: string
+  alt: string | null
+}
+
 export type HomepageFeaturedAuthor = {
   id: number | null
   slug: string | null
   /** The author's display name. Name parts left with the staff account (ADR-0007). */
   name: string | null
+  /** Profile photo when the author upload is populated. */
+  avatar?: HomepageFeaturedAuthorAvatar | null
 }
 
 export type HomepageFeaturedCategory = {

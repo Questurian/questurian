@@ -19,6 +19,7 @@ import {
 import { FeaturedArticleBlock } from '../featured-article/block'
 import { FeaturedArticleCarouselBlock } from '../featured-article-carousel/block'
 import { FeaturedArticlesBlock } from '../featured-articles/block'
+import { FeaturedCreatorArticleBlock } from '../featured-creator-article/block'
 import { HotelGridBlock } from '../hotel-grid/block'
 import { LOCATION_GRID_MAX_SLOTS, LOCATION_GRID_MIN_SLOTS } from '../location-grid/constants'
 import { LocationGridBlock } from '../location-grid/block'
@@ -85,6 +86,12 @@ const REFERENCE_PUBLIC_PAYLOAD = 'reference' satisfies CuratedBlockPublicPayload
 const CURATED_BLOCK_DEFINITIONS: readonly CuratedBlockDefinition[] = [
   defineCuratedBlock({
     block: FeaturedArticleBlock,
+    slotCounts: { min: 1, max: 1, default: 1 },
+    convertibleWhenEmpty: true,
+    publicPayloadKind: ARTICLE_PUBLIC_PAYLOAD,
+  }),
+  defineCuratedBlock({
+    block: FeaturedCreatorArticleBlock,
     slotCounts: { min: 1, max: 1, default: 1 },
     convertibleWhenEmpty: true,
     publicPayloadKind: ARTICLE_PUBLIC_PAYLOAD,

@@ -38,9 +38,24 @@ Examples: `Prompt2BlogPage`, `YouTube2BlogPage`, `Url2BlogPage`, `LocationDocume
 
 ### Staff management
 
-Definition: the admin-gated feature for editorial staffing — creating `writer`/`editor` Staff identities (invite-style, no shared passwords), promoting a writer to editor, re-sending the password-set invite email, viewing the email delivery log, admin editing of any Staff identity's Author profile (Staff identities are often operated on the author's behalf; slug edits are admin-only), and self-service Author profile editing for every logged-in Staff identity. Deliberately narrower than the Payload admin panel; see `docs/adr/0023`.
-Related terms: Staff identity, Author profile (both defined in Questura's CONTEXT.md — Payload owns the records; this is only a surface over them). Email tracking rows come from Questura's `email-logs` collection ("Sent" = accepted by the provider, not delivered; server-side `EMAIL_TRACKING=false` turns recording off).
-Do not confuse with: Visitor accounts (BetterAuth, public site) — never touched here.
+Definition: the admin-gated feature for editorial staffing — creating `writer`/`editor` Staff identities (invite-style, no shared passwords), promoting a writer to editor, re-sending the password-set invite email, viewing the email delivery log, and admin editing of any Author. Deliberately narrower than the Payload admin panel; see `docs/adr/0023`.
+Related terms: Staff identity, Author (both defined in Questura's CONTEXT.md — Payload owns the records; this is only a surface over them); Author Directory; Delegated Author edit. Email tracking rows come from Questura's `email-logs` collection ("Sent" = accepted by the provider, not delivered; server-side `EMAIL_TRACKING=false` turns recording off).
+Do not confuse with: the Author Directory (editor-reachable, edits Authors only); Visitor accounts (BetterAuth, public site) — never touched here.
+Note: say **Author**, never "author profile" — Questura's CONTEXT.md retired that phrasing in 2026-08 because authorship stopped being a view of the Staff identity.
+
+### Author Directory
+
+Definition: the editor-and-admin surface listing every Author the signed-in operator may edit, and the entry point for a Delegated Author edit. Distinct from Staff management: it never shows or touches a Staff identity's email, role or status, so an editor — who can read no Staff identity but their own — can still use it.
+Related terms: Delegated Author edit, Staff management, Author.
+Mechanism: the list is a `/api/authors` query carrying the same filter the server's access rule applies, so the operator is shown only what they may in fact edit. The client filter is a UI convenience; Payload's `Authors.update` access remains the enforcement point.
+Do not confuse with: Questura's public `/authors/<slug>` pages (reader-facing); the Staff list (accounts, admin-only).
+
+### Delegated Author edit
+
+Definition: one operator editing another person's Author — photo, display name, bio, expertise, social links. Admins may do this to any Author; editors only to Authors linked to a `writer` and to Authors with no linked Staff identity at all. The slug stays admin-only in every case.
+Related terms: Author Directory, Author, Staff identity.
+Rule: a delegated edit never reaches the Staff identity. Email, role and status are not editable through this path by anyone, including admins — those live in Staff management.
+Do not confuse with: self-service editing (the same form, own Author); promoting or disabling a Staff identity (Staff management, admin-only).
 
 ### Saved Articles Page
 
@@ -209,6 +224,13 @@ Do not confuse with: Slot swap, which exchanges two existing slot contents.
 - **Featured Articles** has 3–9 **Curated slots**; a **Slot swap** preserves the number of slots and exchanges exactly two slot contents.
 - **Slot replacement** preserves the slot position and changes only the item assigned to that **Curated slot**.
 - **Article Grid** has either 4 or 8 **Curated slots** and uses the same **Slot swap** behavior as Featured Articles.
+- A **Staff identity** has zero or one **Author**; an **Author** has zero or one **Staff identity**. Both nulls are valid states, and each is reachable only from the side that can name it — a never-published hire by Staff identity, an orphan byline by Author.
+- **Staff management** operates on **Staff identities**; the **Author Directory** operates on **Authors**. They share the editing form and nothing else.
+
+## Flagged ambiguities
+
+- "profile" was used to mean the **Staff identity** (email, role, status), the **Author** (photo, byline, bio, socials, slug), and Questura's **Visitor profile** (a paying reader). Resolved: this context edits **Authors** only, never touches Visitor profiles, and reaches Staff identities solely through Staff management.
+- "author profile" is retired — see **Author** in Questura's CONTEXT.md. Say **Author**.
 
 ## Domain Rules
 

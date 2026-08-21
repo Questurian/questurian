@@ -182,11 +182,12 @@ export default function HomepageFeaturedSlotEditor({
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}
         />
-      ) : variant === 'featured-article' ? (
+      ) : variant === 'featured-article' || variant === 'featured-creator-article' ? (
         <FeaturedArticleSpotlightLayout
           item={slots[0] ?? null}
           invalidItem={invalidItemsBySlot.get(1)}
           onPick={() => setPickerSlotIndex(0)}
+          showAuthorAvatar={variant === 'featured-creator-article'}
         />
       ) : variant === 'featured-article-carousel' ? (
         <FeaturedArticleCarouselLayout

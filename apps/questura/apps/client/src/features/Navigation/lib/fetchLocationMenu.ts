@@ -9,6 +9,8 @@ export type LocationMenuCity = {
 export type LocationMenuCountry = {
   locationKey: string
   label: string
+  /** ISO 3166-1 alpha-2, uppercase. Null when the server could not match a country. */
+  countryCode: string | null
   href: string
   cities: LocationMenuCity[]
 }

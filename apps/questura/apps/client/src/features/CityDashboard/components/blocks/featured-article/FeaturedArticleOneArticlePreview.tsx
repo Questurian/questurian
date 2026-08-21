@@ -76,9 +76,52 @@ function TextSkeleton({ className }: { className: string }): JSX.Element {
   )
 }
 
+function CreatorAvatar({
+  article,
+  authorLabel,
+}: {
+  article: FeaturedArticleTeaser
+  authorLabel: string
+}): JSX.Element {
+  const avatarUrl = article.author?.avatar?.url ?? null
+  const avatarAlt = article.author?.avatar?.alt ?? `${authorLabel} profile photo`
+
+  const ring = (
+    <span className="block size-16 overflow-hidden rounded-full bg-[#1a1a1a] ring-2 ring-white/20 768:size-[4.5rem] 1024:size-20">
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={avatarUrl} alt={avatarAlt} className="h-full w-full object-cover" />
+      ) : (
+        <span className="flex h-full w-full items-center justify-center text-[#6a635c]" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="size-[55%]">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+          </svg>
+        </span>
+      )}
+    </span>
+  )
+
+  return (
+    <div className="mb-5 flex justify-center">
+      <AuthorLink
+        authorSlug={article.author?.slug}
+        authorId={article.author?.id}
+        nested
+        className="block"
+      >
+        {ring}
+      </AuthorLink>
+    </div>
+  )
+}
+
 export function FeaturedArticleOneArticlePreview({
   block,
-}: HomepageBlockLayoutProps<CityHomepageArticleBlock>): JSX.Element | null {
+  showAuthorAvatar = false,
+}: HomepageBlockLayoutProps<CityHomepageArticleBlock> & {
+  showAuthorAvatar?: boolean
+}): JSX.Element | null {
   const article = block.items[0] ?? null
 
   const desktopImageUrl = article ? (article.imageUrl ?? article.imageUrlSquare ?? null) : null
@@ -104,7 +147,8 @@ export function FeaturedArticleOneArticlePreview({
         <div className="w-full aspect-[3/2] bg-[#1a1a1a]" />
       )}
       <div className="relative">
-        <div className="city-article-content px-6 py-9">
+        <div className={`city-article-content px-6 py-9 ${showAuthorAvatar ? 'text-center' : ''}`}>
+          {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
           <h2 className="font-editorial font-semibold text-[2.1rem] leading-[1.0] text-white">
             {article.title}
           </h2>
@@ -124,24 +168,25 @@ export function FeaturedArticleOneArticlePreview({
 
   const desktopContent = (
     <>
-      <div className="relative flex flex-col justify-center py-14 pl-6 pr-10 768:w-1/2 1024:pl-10 1024:pr-14 1280:pl-12 1280:pr-16">
-        <div className="city-article-content">
-          <h2 className="font-editorial font-semibold leading-[1.0] text-white text-[2.4rem] 1024:text-[3rem] 1280:text-[3.6rem]">
+      <div className="relative flex flex-col justify-center px-6 py-8 768:w-1/2 1024:px-10 1280:px-12">
+        <div className="city-article-content mx-auto w-full max-w-[460px] text-center">
+          {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
+          <h2 className="font-editorial font-semibold leading-[1.15] text-white text-[1.35rem] 1024:text-[1.6rem] 1280:text-[1.85rem]">
             {article.title}
           </h2>
           {excerpt ? (
-            <p data-article-dek className="mt-5 font-editorial text-[0.95rem] leading-[1.55] text-[#b0a89e] max-w-[480px] 1024:text-[1rem]">
+            <p data-article-dek className="mt-3 font-editorial text-[0.85rem] leading-[1.45] text-[#b0a89e] 1024:text-[0.9rem]">
               {excerpt}
             </p>
           ) : null}
-          <p className="mt-8 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#6a635c]">
+          <p className="mt-4 font-[family-name:var(--font-dm-sans)] text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-[#6a635c]">
             BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} nested className="hover:underline">{authorLabel}</AuthorLink>
           </p>
         </div>
-        <TextSkeleton className="justify-center py-14 pl-6 pr-10 1024:pl-10 1024:pr-14 1280:pl-12 1280:pr-16" />
+        <TextSkeleton className="justify-center px-6 py-8 1024:px-10 1280:px-12" />
       </div>
-      <div className="768:w-1/2 768:py-8 768:pr-6 1024:py-10 1024:pr-10 1280:pr-12 flex items-stretch">
-        <div className="city-article-image-shell relative w-full overflow-hidden bg-[#1a1a1a] 768:min-h-[360px] 1024:min-h-[420px]">
+      <div className="768:w-1/2 768:py-10 768:pr-8 1024:py-14 1024:pr-12 1280:py-16 1280:pr-16 flex items-center">
+        <div className="city-article-image-shell relative ml-auto w-[96%] aspect-[3/2] overflow-hidden bg-[#1a1a1a]">
           {desktopImageUrl ? (
             <ArticleImage src={desktopImageUrl} priority className="h-full w-full object-cover" status={desktopImage} />
           ) : null}
@@ -189,7 +234,7 @@ export function FeaturedArticleOneArticlePreview({
       {articlePath ? (
         <Link
           href={articlePath}
-          className={`city-article-card city-article-card--dark hidden 768:flex 768:items-stretch ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
+          className={`city-article-card city-article-card--dark hidden 768:flex 768:items-center ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
           data-content-ready={desktopImage.isContentReady ? 'true' : 'false'}
           data-image-loaded={desktopImage.isImageLoaded ? 'true' : 'false'}
         >
@@ -197,7 +242,7 @@ export function FeaturedArticleOneArticlePreview({
         </Link>
       ) : (
         <div
-          className={`city-article-card city-article-card--dark hidden 768:flex 768:items-stretch ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
+          className={`city-article-card city-article-card--dark hidden 768:flex 768:items-center ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
           data-content-ready={desktopImage.isContentReady ? 'true' : 'false'}
           data-image-loaded={desktopImage.isImageLoaded ? 'true' : 'false'}
         >

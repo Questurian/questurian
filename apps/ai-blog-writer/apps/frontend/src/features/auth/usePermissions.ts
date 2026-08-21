@@ -7,6 +7,20 @@ export type Permissions = {
   canManagePublished: boolean;
   /** Can create Staff identities and promote writers (admins only). */
   canManageUsers: boolean;
+  /**
+   * Can open the Author Directory and edit someone else's Author (ADR-0011:
+   * admins reach every Author, editors reach writers and orphan bylines).
+   *
+   * Deliberately not derived from `authors.update`: an editor and a writer
+   * both come back from /api/access as `{ permission: true, where: {...} }`,
+   * so that response cannot tell this surface's two audiences apart. It is
+   * taken from `canManagePublished` instead -- strict `true` on
+   * `articles.update` for editor and admin, a `where` for a writer -- which
+   * keeps ADR-0023's "derive from /api/access, not from a role literal" rule
+   * without a second request. If the two ever need to diverge, this needs its
+   * own signal rather than a role check.
+   */
+  canEditOtherAuthors: boolean;
   role: string | null;
   isLoading: boolean;
 };
@@ -89,6 +103,7 @@ export function usePermissions(): Permissions {
     return {
       canManagePublished,
       canManageUsers,
+      canEditOtherAuthors: canManagePublished,
       role: user?.role ?? null,
       isLoading,
     };

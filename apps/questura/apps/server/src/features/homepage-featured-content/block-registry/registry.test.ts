@@ -10,6 +10,7 @@ import { curatedBlockRegistry } from './registry'
  */
 const EXPECTED_KEYS = [
   'featured-article',
+  'featured-creator-article',
   'featured-article-carousel',
   'featured-articles',
   'article-grid',
@@ -82,6 +83,7 @@ describe('curatedBlockRegistry', () => {
       )
       expect(articleTypes).toEqual([
         'featured-article',
+        'featured-creator-article',
         'featured-article-carousel',
         'featured-articles',
         'article-grid',
@@ -111,6 +113,7 @@ describe('curatedBlockRegistry', () => {
         curatedBlockRegistry.get(blockType)?.behavior.requiredImageField?.(block, slot) ?? 'image'
 
       expect(requiredImageField('featured-article', {}, 0)).toBe('imageHero')
+      expect(requiredImageField('featured-creator-article', {}, 0)).toBe('imageHero')
       expect(requiredImageField('featured-articles', {}, 0)).toBe('imageHero')
       expect(requiredImageField('featured-articles', {}, 1)).toBe('image')
       expect(requiredImageField('article-grid', { selection: { totalSlots: 8 } }, 0)).toBe(
@@ -135,6 +138,7 @@ describe('curatedBlockRegistry', () => {
         ),
       ).toEqual({
         'featured-article': { min: 1, max: 1, default: 1 },
+        'featured-creator-article': { min: 1, max: 1, default: 1 },
         'featured-article-carousel': { min: 2, max: 10, default: 3 },
         'featured-articles': { min: 3, max: 9, default: 4 },
         'article-grid': { min: 4, max: 8, default: 4 },
@@ -157,6 +161,7 @@ describe('curatedBlockRegistry', () => {
     it('derives empty-convert source types from registry metadata', () => {
       expect(curatedBlockRegistry.emptyConvertSourceBlockTypes).toEqual([
         'featured-article',
+        'featured-creator-article',
         'featured-article-carousel',
         'featured-articles',
         'article-grid',
@@ -173,6 +178,7 @@ describe('curatedBlockRegistry', () => {
     it('derives public article block types from registry metadata', () => {
       expect([...curatedBlockRegistry.publicArticleBlockTypes]).toEqual([
         'featured-article',
+        'featured-creator-article',
         'featured-article-carousel',
         'featured-articles',
         'article-grid',

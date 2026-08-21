@@ -13,6 +13,14 @@ export type FeaturedArticleBlockResponse = {
   sectionSubheading: string | null
 }
 
+export type FeaturedCreatorArticleBlockResponse = {
+  id: string
+  blockType: 'featured-creator-article'
+  selection: HomepageFeaturedSelection
+  sectionHeading: string | null
+  sectionSubheading: string | null
+}
+
 export type FeaturedArticleCarouselBlockResponse = {
   id: string
   blockType: 'featured-article-carousel'
@@ -134,6 +142,7 @@ export type ArticleListBlockResponse = {
 
 export type ArticleCuratedHomepageBlockResponse =
   | FeaturedArticleBlockResponse
+  | FeaturedCreatorArticleBlockResponse
   | FeaturedArticleCarouselBlockResponse
   | FeaturedArticlesBlockResponse
   | ArticleGridBlockResponse

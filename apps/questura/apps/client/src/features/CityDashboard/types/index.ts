@@ -41,6 +41,7 @@ export type CityHomepageResponse = {
 
 export type ArticleBackedHomepageBlockType =
   | 'featured-article'
+  | 'featured-creator-article'
   | 'featured-article-carousel'
   | 'featured-articles'
   | 'article-grid'
@@ -58,6 +59,10 @@ export type FeaturedArticleTeaser = {
     slug?: string | null
     /** The author's display name; name parts stayed with the staff account. */
     name: string | null
+    avatar?: {
+      url: string
+      alt: string | null
+    } | null
   } | null
   category: {
     id: number | null
@@ -77,6 +82,11 @@ export type CityHomepageArticleBlock = {
   sectionSubheading?: string | null
 }
 
+export type PlaceCardHighlight = {
+  key: string
+  label: string
+}
+
 export type HotelGridItem = {
   id: number
   title: string
@@ -87,6 +97,9 @@ export type HotelGridItem = {
   updatedAt: string | null
   imageUrl: string | null
   location: string | null
+  dek?: string | null
+  highlights?: PlaceCardHighlight[]
+  bookingUrl?: string | null
   slot?: number
 }
 
@@ -116,6 +129,9 @@ export type TourGridItem = {
   updatedAt: string | null
   imageUrl: string | null
   location: string | null
+  dek?: string | null
+  highlights?: PlaceCardHighlight[]
+  bookingUrl?: string | null
   slot?: number
 }
 
@@ -179,6 +195,9 @@ export type ThingsToDoAttractionItem = {
   updatedAt: string | null
   imageUrl: string | null
   location: string | null
+  dek?: string | null
+  highlights?: PlaceCardHighlight[]
+  bookingUrl?: string | null
   slot?: number
 }
 

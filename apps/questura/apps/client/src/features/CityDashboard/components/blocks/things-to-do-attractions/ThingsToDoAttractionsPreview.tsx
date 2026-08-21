@@ -1,91 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState, type JSX } from 'react'
+import type { JSX } from 'react'
 
-import type {
-  ThingsToDoAttractionsBlock,
-  ThingsToDoAttractionItem,
-  HomepageBlockLayoutProps,
-} from '../../../types'
-import { BlockSection, BLOCK_GUTTER_CLASS } from '../BlockSection'
+import type { ThingsToDoAttractionsBlock, HomepageBlockLayoutProps } from '../../../types'
+import { BLOCK_GUTTER_CLASS, BlockSection } from '../BlockSection'
+import { PlaceCarouselCard } from '../PlaceCarouselCard'
 import { useSnapCarousel } from '../useSnapCarousel'
-
-const PRICE_LEVEL_MAP: Record<string, string> = {
-  '1': '$',
-  '2': '$$',
-  '3': '$$$',
-  '4': '$$$$',
-}
-
-function formatPriceLevel(value: string | null): string | null {
-  if (!value) return null
-  return PRICE_LEVEL_MAP[value] ?? value
-}
-
-function AttractionCard({
-  item,
-  isPriority,
-  isLast,
-}: {
-  item: ThingsToDoAttractionItem
-  isPriority: boolean
-  isLast: boolean
-}): JSX.Element {
-  const imgRef = useRef<HTMLImageElement | null>(null)
-  const [imgLoaded, setImgLoaded] = useState(false)
-
-  // The image is server-rendered at opacity-0 and faded in via onLoad. If it
-  // finishes loading (e.g. from cache) before hydration attaches the handler,
-  // the load event is missed and the card stays blank. Reconcile on mount.
-  useEffect(() => {
-    const image = imgRef.current
-    if (image && image.complete && image.naturalWidth > 0) {
-      setImgLoaded(true)
-    }
-  }, [item.imageUrl])
-
-  const priceLabel = formatPriceLevel(item.priceLevel)
-  const meta = [priceLabel, item.location?.toUpperCase()].filter(Boolean).join(' | ')
-
-  return (
-    <article
-      className={`flex-none snap-always flex flex-col w-[calc(100vw-5.25rem)] 380:w-[291px] 768:w-[340px] 1024:w-[400px] 1280:w-[460px] ${isLast ? 'snap-end' : 'snap-start'}`}
-    >
-      <div className="aspect-[3/2] overflow-hidden bg-[#d7dcde]">
-        {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            ref={imgRef}
-            src={item.imageUrl}
-            alt={item.title}
-            className={`h-full w-full object-cover transition-opacity duration-300 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
-            fetchPriority={isPriority ? 'high' : 'auto'}
-            loading={isPriority ? 'eager' : 'lazy'}
-            onLoad={() => setImgLoaded(true)}
-          />
-        ) : null}
-      </div>
-
-      <div className="pt-4 flex flex-col flex-1">
-        <h3 className="font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
-          {item.title}
-        </h3>
-
-        {meta ? (
-          <p className="mt-2 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#C65D3B]">
-            {meta}
-          </p>
-        ) : null}
-
-        {item.type ? (
-          <p className="mt-1 font-[family-name:var(--font-dm-sans)] text-[0.68rem] uppercase tracking-[0.08em] text-[#5f5952]">
-            {item.type}
-          </p>
-        ) : null}
-      </div>
-    </article>
-  )
-}
 
 export function ThingsToDoAttractionsPreview({
   block,
@@ -177,17 +97,26 @@ export function ThingsToDoAttractionsPreview({
           }
         >
           {items.map((item, index) => (
-            <AttractionCard
+            <PlaceCarouselCard
               key={item.id}
-              item={item}
+              title={item.title}
+              imageUrl={item.imageUrl}
               isPriority={index === 0}
               isLast={index === items.length - 1}
+              priceLevel={item.priceLevel}
+              location={item.location}
+              type={item.type}
+              highlights={item.highlights}
+              ctaHref={item.bookingUrl}
+              ctaExternal
             />
           ))}
           <div className="w-[var(--block-gutter)] shrink-0" aria-hidden="true" />
         </div>
+        {/* Masks the scrolled-past card tails that sit inside the gutter. Card
+            images are `relative z-10`, so this has to be above them. */}
         <div
-          className="absolute inset-y-0 left-0 w-[var(--block-gutter)] bg-[#f5f0e8] pointer-events-none"
+          className="absolute inset-y-0 left-0 z-20 w-[var(--block-gutter)] bg-[#f5f0e8] pointer-events-none"
           aria-hidden="true"
         />
       </div>

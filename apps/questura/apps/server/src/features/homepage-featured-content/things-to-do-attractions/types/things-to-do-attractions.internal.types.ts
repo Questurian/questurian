@@ -11,7 +11,9 @@ export type AttractionDocLike = {
   status?: unknown
   updatedAt?: unknown
   location?: unknown
+  locationRef?: unknown
   gallery?: unknown
+  attractionsDetails?: unknown
 }
 
 export type ParsedAttractionSlot = {

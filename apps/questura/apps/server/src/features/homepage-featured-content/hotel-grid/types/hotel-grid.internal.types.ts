@@ -11,7 +11,12 @@ export type AccommodationDocLike = {
   status?: unknown
   updatedAt?: unknown
   location?: unknown
+  locationRef?: unknown
   gallery?: unknown
+  core?: unknown
+  theStay?: unknown
+  theExperience?: unknown
+  theDetails?: unknown
 }
 
 export type ParsedHotelSlot = {

@@ -4,6 +4,7 @@ import { formatPublicLocationHomepageDoc } from './service'
 
 const articleBlockTypes = [
   'featured-article',
+  'featured-creator-article',
   'featured-article-carousel',
   'featured-articles',
   'article-grid',
@@ -59,6 +60,10 @@ describe('formatPublicLocationHomepageDoc', () => {
                 id: 7,
                 slug: 'ana-rivera',
                 name: 'Ana Rivera',
+                avatar: {
+                  url: 'https://cdn.example/ana.webp',
+                  alt: 'Ana Rivera',
+                },
               },
               authorLabel: 'Ana Rivera',
               category: {
@@ -89,6 +94,10 @@ describe('formatPublicLocationHomepageDoc', () => {
                 id: 7,
                 slug: 'ana-rivera',
                 name: 'Ana Rivera',
+                avatar: {
+                  url: 'https://cdn.example/ana.webp',
+                  alt: 'Ana Rivera',
+                },
               },
               category: {
                 id: 3,

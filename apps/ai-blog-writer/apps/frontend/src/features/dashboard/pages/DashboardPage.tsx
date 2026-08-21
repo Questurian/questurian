@@ -241,6 +241,29 @@ const LANDING_CARDS: LandingCardConfig[] = [
     ),
   },
   {
+    id: 'authors',
+    title: 'Authors',
+    description:
+      'Edit public author pages — photo, byline, bio and social links. Editors cover writers and unlinked bylines.',
+    to: '/authors',
+    section: 'editorial-tools',
+    priority: 3,
+    accentClass: 'landing-card--payload-articles',
+    actionLabel: 'Edit Authors',
+    roles: ['admin', 'editor'],
+    icon: (
+      <>
+        <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="2" />
+        <path
+          d="M5 19.5c1-3.4 3.7-5.2 7-5.2s6 1.8 7 5.2"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </>
+    ),
+  },
+  {
     id: 'itineraries-pipeline',
     title: 'Itineraries Pipeline',
     description: 'Run and manage the itineraries pipeline workflow from a single place.',

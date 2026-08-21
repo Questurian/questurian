@@ -1,4 +1,4 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionConfig, Where } from 'payload'
 
 import { isAdminFieldLevel } from '@/features/auth/collections/access'
 import { isDisabledStaff } from '@/features/auth/lib/staff-status'
@@ -51,6 +51,23 @@ export const Authors: CollectionConfig = {
       const user = staffUser(req.user)
       if (!user || isDisabledStaff(user)) return false
       if (user.role === 'admin') return true
+      // An editor curates bylines, so they reach a writer's author record as
+      // well as their own -- and an orphan record, which is the byline of
+      // someone who has left and the one most likely to need a correction
+      // with nobody around to make it (ADR-0011). This widens `authors` only:
+      // `users` is untouched, so an editor still cannot read, re-role or
+      // disable any account but their own, and `slug` stays admin-only via
+      // field access below.
+      if (user.role === 'editor') {
+        const editorScope: Where = {
+          or: [
+            { user: { equals: user.id } },
+            { 'user.role': { equals: 'writer' } },
+            { user: { exists: false } },
+          ],
+        }
+        return editorScope
+      }
       // Everyone else may edit only the author record linked to their account.
       return { user: { equals: user.id } }
     },
