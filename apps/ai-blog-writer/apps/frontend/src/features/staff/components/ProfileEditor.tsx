@@ -338,8 +338,12 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
         ) : null}
         <p className="staff-hint">Feature up to 3 configured links:</p>
         <div className="staff-byline-links">
-          {SOCIAL_FIELDS.filter(({ key }) => form.socialLinks[key].trim()).map(({ key, label }) => {
+          {SOCIAL_FIELDS.filter(
+            ({ key }) =>
+              form.socialLinks[key].trim() || form.articleByline.featuredLinks.includes(key),
+          ).map(({ key, label }) => {
             const selected = form.articleByline.featuredLinks.includes(key)
+            const hasUrl = Boolean(form.socialLinks[key].trim())
             const atLimit = form.articleByline.featuredLinks.length >= 3
             return (
               <label key={key} className="staff-checkbox-option">
@@ -349,7 +353,10 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
                   disabled={!selected && atLimit}
                   onChange={() => toggleFeaturedLink(key)}
                 />
-                <span>Feature {label.replace(' URL', '')}</span>
+                <span>
+                  Feature {label.replace(' URL', '')}
+                  {!hasUrl ? ' (URL missing)' : ''}
+                </span>
               </label>
             )
           })}

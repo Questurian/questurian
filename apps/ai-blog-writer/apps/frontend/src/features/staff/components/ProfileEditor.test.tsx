@@ -71,4 +71,37 @@ describe('ProfileEditor article byline', () => {
       ),
     )
   })
+
+  it('keeps a selected link visible after its URL is cleared so it can be removed', async () => {
+    mockFetchAuthorById.mockResolvedValue({
+      id: 9,
+      displayName: 'Lima Creator',
+      socialLinks: { instagram: 'https://instagram.com/lima-creator' },
+      articleByline: { showAvatar: false, featuredLinks: ['instagram'] },
+    })
+    mockUpdateAuthor.mockImplementation(async (_id, patch) => ({
+      id: 9,
+      displayName: 'Lima Creator',
+      ...patch,
+    }))
+
+    renderEditor()
+    const user = userEvent.setup()
+
+    await user.clear(await screen.findByRole('textbox', { name: /instagram url/i }))
+    await user.click(
+      screen.getByRole('checkbox', { name: /feature instagram \(url missing\)/i }),
+    )
+    await user.click(screen.getByRole('button', { name: /save profile/i }))
+
+    await waitFor(() =>
+      expect(mockUpdateAuthor).toHaveBeenCalledWith(
+        9,
+        expect.objectContaining({
+          articleByline: { showAvatar: false, featuredLinks: [] },
+          socialLinks: expect.objectContaining({ instagram: null }),
+        }),
+      ),
+    )
+  })
 })

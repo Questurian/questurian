@@ -143,4 +143,56 @@ describe('serializeArticleByCollection author byline', () => {
       },
     })
   })
+
+  it.each(['articles', 'single-type-listicles', 'listicle-itineraries'] as const)(
+    'keeps the byline presentation hidden by default for %s',
+    async (collection) => {
+      const article: Record<string, unknown> = {
+        author: {
+          id: 42,
+          slug: 'staff-writer',
+          displayName: 'Staff Writer',
+          avatar: { url: 'https://cdn.example/staff.webp' },
+          socialLinks: { instagram: 'https://instagram.com/staff' },
+        },
+      }
+
+      await serializeArticleByCollection(collection, article)
+
+      expect(article.author).toEqual({
+        id: 42,
+        slug: 'staff-writer',
+        displayName: 'Staff Writer',
+        articleByline: { avatar: null, links: [] },
+      })
+    },
+  )
+
+  it('supports avatar-only presentation and suppresses selected links without URLs', async () => {
+    const article: Record<string, unknown> = {
+      author: {
+        id: 42,
+        slug: 'camera-creator',
+        displayName: 'Camera Creator',
+        avatar: { url: 'https://cdn.example/camera.webp' },
+        socialLinks: { instagram: 'https://instagram.com/camera' },
+        articleByline: {
+          showAvatar: true,
+          featuredLinks: ['instagram', 'youtube'],
+        },
+      },
+    }
+
+    await serializeArticleByCollection('articles', article)
+
+    expect(article.author).toEqual({
+      id: 42,
+      slug: 'camera-creator',
+      displayName: 'Camera Creator',
+      articleByline: {
+        avatar: { url: 'https://cdn.example/camera.webp', alt: null },
+        links: [{ platform: 'instagram', url: 'https://instagram.com/camera' }],
+      },
+    })
+  })
 })

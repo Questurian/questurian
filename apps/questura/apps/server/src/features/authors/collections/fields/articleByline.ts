@@ -1,19 +1,48 @@
 import type { Field } from 'payload'
 
-export const ARTICLE_BYLINE_PLATFORM_OPTIONS = [
-  { label: 'Instagram', value: 'instagram' },
-  { label: 'YouTube', value: 'youtube' },
-  { label: 'Website', value: 'website' },
-  { label: 'X', value: 'twitter' },
-  { label: 'Facebook', value: 'facebook' },
-  { label: 'LinkedIn', value: 'linkedin' },
-  { label: 'Reddit', value: 'reddit' },
-  { label: 'Patreon', value: 'patreon' },
-] as const
+import {
+  ARTICLE_BYLINE_PLATFORMS,
+  type ArticleBylinePlatform,
+} from '../../lib/articleBylinePlatforms'
 
-export function validateFeaturedBylineLinks(value: unknown): true | string {
-  if (!Array.isArray(value) || value.length <= 3) return true
-  return 'Choose no more than 3 featured byline links.'
+const ARTICLE_BYLINE_PLATFORM_LABELS: Record<ArticleBylinePlatform, string> = {
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  website: 'Website',
+  twitter: 'X',
+  facebook: 'Facebook',
+  linkedin: 'LinkedIn',
+  reddit: 'Reddit',
+  patreon: 'Patreon',
+}
+
+export const ARTICLE_BYLINE_PLATFORM_OPTIONS = ARTICLE_BYLINE_PLATFORMS.map((value) => ({
+  label: ARTICLE_BYLINE_PLATFORM_LABELS[value],
+  value,
+}))
+
+export function validateFeaturedBylineLinks(
+  value: unknown,
+  { data }: { data?: unknown } = {},
+): true | string {
+  if (!Array.isArray(value)) return true
+  if (value.length > 3) return 'Choose no more than 3 featured byline links.'
+
+  const socialLinks =
+    data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as { socialLinks?: Record<string, unknown> }).socialLinks
+      : undefined
+
+  for (const platform of value) {
+    if (typeof platform !== 'string') continue
+    const url = socialLinks?.[platform]
+    if (typeof url !== 'string' || !url.trim()) {
+      const label = ARTICLE_BYLINE_PLATFORM_OPTIONS.find((option) => option.value === platform)?.label
+      return `Add a ${label ?? platform} URL under Social Links or remove it from featured byline links.`
+    }
+  }
+
+  return true
 }
 
 export const articleByline: Field = {

@@ -1,17 +1,9 @@
-const BYLINE_PLATFORMS = [
-  'instagram',
-  'twitter',
-  'facebook',
-  'linkedin',
-  'reddit',
-  'youtube',
-  'patreon',
-  'website',
-] as const
+import {
+  ARTICLE_BYLINE_PLATFORMS,
+  type ArticleBylinePlatform,
+} from '../../authors/lib/articleBylinePlatforms'
 
-type BylinePlatform = (typeof BYLINE_PLATFORMS)[number]
-
-const BYLINE_PLATFORM_SET = new Set<string>(BYLINE_PLATFORMS)
+const BYLINE_PLATFORM_SET = new Set<string>(ARTICLE_BYLINE_PLATFORMS)
 
 function recordValue(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -29,7 +21,7 @@ function serializeAvatar(author: Record<string, unknown>, showAvatar: boolean) {
   const avatar = recordValue(author.avatar)
   if (!avatar) return null
 
-  const url = stringValue(avatar.url) ?? stringValue(avatar.bunny_original_url)
+  const url = stringValue(avatar.url)
   if (!url) return null
 
   return {
@@ -41,13 +33,13 @@ function serializeAvatar(author: Record<string, unknown>, showAvatar: boolean) {
 function serializeFeaturedLinks(
   author: Record<string, unknown>,
   featuredLinks: unknown,
-): Array<{ platform: BylinePlatform; url: string }> {
+): Array<{ platform: ArticleBylinePlatform; url: string }> {
   const socialLinks = recordValue(author.socialLinks)
   if (!socialLinks || !Array.isArray(featuredLinks)) return []
 
   return featuredLinks
     .filter(
-      (platform): platform is BylinePlatform =>
+      (platform): platform is ArticleBylinePlatform =>
         typeof platform === 'string' && BYLINE_PLATFORM_SET.has(platform),
     )
     .flatMap((platform) => {
