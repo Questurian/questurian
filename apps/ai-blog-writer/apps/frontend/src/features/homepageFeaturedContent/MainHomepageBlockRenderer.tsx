@@ -14,6 +14,7 @@ import {
   updateMainHomepageFeaturedSlot4Layout,
   updateMainHomepageFeaturedSlot5Layout,
   updateMainHomepageLocationGridMediaAspect,
+  updateMainHomepageCreatorKicker,
 } from './api'
 import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
@@ -118,6 +119,14 @@ export default function MainHomepageBlockRenderer({
           await updateMainHomepageFeaturedSectionSubheading(block.id, value)
           invalidateHomepage()
         }}
+        saveCreatorKicker={
+          block.blockType === 'featured-creator-article'
+            ? async (value) => {
+                await updateMainHomepageCreatorKicker(block.id, value)
+                invalidateHomepage()
+              }
+            : undefined
+        }
         saveSlot3Layout={
           block.blockType === 'featured-articles' && block.selection.totalSlots === 3
             ? async (value) => {

@@ -5,6 +5,7 @@ import {
   parseSlot5LayoutBodyField,
 } from '../../featured-articles/lib/slot-layouts'
 import { parseLocationGridMediaAspectBodyField } from '../../location-grid/lib/media-aspect'
+import { parseCreatorKickerBodyField } from '../../featured-creator-article/creator-kicker'
 import {
   homepageBlockSupportsSectionHeading,
   parseSectionHeadingBodyField,
@@ -20,6 +21,7 @@ type Slot4LayoutParse = ReturnType<typeof parseSlot4LayoutBodyField>
 type Slot5LayoutParse = ReturnType<typeof parseSlot5LayoutBodyField>
 type MediaAspectParse = ReturnType<typeof parseLocationGridMediaAspectBodyField>
 type ArticleGridFourLayoutParse = ReturnType<typeof parseArticleGridFourLayoutBodyField>
+type CreatorKickerParse = ReturnType<typeof parseCreatorKickerBodyField>
 
 export type ParsedBlockUpdateFields = {
   sectionHeading: Extract<SectionHeadingParse, { ok: true }>
@@ -29,6 +31,7 @@ export type ParsedBlockUpdateFields = {
   slot5Layout: Extract<Slot5LayoutParse, { ok: true }>
   mediaAspect: Extract<MediaAspectParse, { ok: true }>
   articleGridFourLayout: Extract<ArticleGridFourLayoutParse, { ok: true }>
+  creatorKicker: Extract<CreatorKickerParse, { ok: true }>
 }
 
 export type ParsedBlockUpdateInput = {
@@ -85,6 +88,11 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
     return { ok: false, status: 400, message: articleGridFourLayout.message }
   }
 
+  const creatorKicker = parseCreatorKickerBodyField(bodyRecord)
+  if (!creatorKicker.ok) {
+    return { ok: false, status: 400, message: creatorKicker.message }
+  }
+
   const fields = {
     sectionHeading,
     sectionSubheading,
@@ -93,6 +101,7 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
     slot5Layout,
     mediaAspect,
     articleGridFourLayout,
+    creatorKicker,
   }
   const rawItems = bodyRecord.items
   const hasItems = Array.isArray(rawItems)
@@ -112,7 +121,7 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
       ok: false,
       status: 400,
       message:
-        'Provide items (array) and/or sectionHeading and/or sectionSubheading and/or slot3Layout and/or slot4Layout and/or slot5Layout and/or mediaAspect and/or articleGridFourLayout to update this block.',
+        'Provide items (array) and/or a supported block field to update this block.',
     }
   }
 
@@ -137,6 +146,7 @@ export function hasBlockFieldUpdates(fields: ParsedBlockUpdateFields): boolean {
     || !fields.slot5Layout.omit
     || !fields.mediaAspect.omit
     || !fields.articleGridFourLayout.omit
+    || !fields.creatorKicker.omit
   )
 }
 
@@ -176,6 +186,10 @@ export function validateBlockUpdateFields(
 
   if (!fields.sectionSubheading.omit && !homepageBlockSupportsSectionHeading(block.blockType)) {
     return { message: 'sectionSubheading is not supported for this block type.' }
+  }
+
+  if (!fields.creatorKicker.omit && block.blockType !== 'featured-creator-article') {
+    return { message: 'creatorKicker is only supported for featured-creator-article blocks.' }
   }
 
   return null

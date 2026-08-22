@@ -13,6 +13,7 @@ export type RawBlock = {
   slotCount?: number
   sectionHeading?: string | null
   sectionSubheading?: string | null
+  creatorKicker?: string | null
   slot3Layout?: string
   slot4Layout?: string
   slot5Layout?: string

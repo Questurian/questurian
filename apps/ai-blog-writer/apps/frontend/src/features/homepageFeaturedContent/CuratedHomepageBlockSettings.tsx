@@ -1,4 +1,5 @@
 import HomepageBlockConvertSection from './HomepageBlockConvertSection'
+import CreatorKickerField from './CreatorKickerField'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import HomepageBlockLayoutSection from './HomepageBlockLayoutSection'
 import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
@@ -20,6 +21,7 @@ type Props = {
   layoutState: CuratedHomepageLayoutsState
   saveSectionHeading?: (value: string | null) => Promise<void>
   saveSectionSubheading?: (value: string | null) => Promise<void>
+  saveCreatorKicker?: (value: string | null) => Promise<void>
   enableSlot3Layout: boolean
   enableSlot4Layout: boolean
   enableSlot5Layout: boolean
@@ -44,6 +46,7 @@ export default function CuratedHomepageBlockSettings({
   layoutState,
   saveSectionHeading,
   saveSectionSubheading,
+  saveCreatorKicker,
   enableSlot3Layout,
   enableSlot4Layout,
   enableSlot5Layout,
@@ -103,6 +106,13 @@ export default function CuratedHomepageBlockSettings({
         saveSectionHeading={saveSectionHeading}
         saveSectionSubheading={saveSectionSubheading}
       />
+      {block.blockType === 'featured-creator-article' ? (
+        <CreatorKickerField
+          blockId={block.id}
+          creatorKicker={block.creatorKicker}
+          saveCreatorKicker={saveCreatorKicker}
+        />
+      ) : null}
       <HomepageBlockSlotCountSection
         blockId={block.id}
         blockType={block.blockType}

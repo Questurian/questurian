@@ -3,6 +3,7 @@ export type ApiCuratedBlock = {
   blockType: string
   sectionHeading?: string | null
   sectionSubheading?: string | null
+  creatorKicker?: string | null
   slot3Layout?: unknown
   slot4Layout?: unknown
   slot5Layout?: unknown

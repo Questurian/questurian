@@ -48,6 +48,18 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
+.hf-fa-spotlight-creator-kicker {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--accent);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
 .hf-fa-spotlight-avatar img {
   width: 100%;
   height: 100%;

@@ -30,6 +30,17 @@ export async function updateLocationHomepageFeaturedSectionSubheading(
   })
 }
 
+export async function updateLocationHomepageCreatorKicker(
+  id: number,
+  blockId: string,
+  creatorKicker: string | null
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(`/api/location-homepages/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, creatorKicker })
+  })
+}
+
 export async function updateLocationHomepageFeaturedSlot3Layout(
   homepageId: number,
   blockId: string,

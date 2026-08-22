@@ -19,6 +19,7 @@ import {
   updateLocationHomepageFeaturedSlot4Layout,
   updateLocationHomepageFeaturedSlot5Layout,
   updateLocationHomepageArticleGridFourLayout,
+  updateLocationHomepageCreatorKicker,
 } from './locationHomepages'
 import {
   homepageBlockEditorIdentity,
@@ -132,6 +133,14 @@ export default function LocationHomepageBlockRenderer({
           await updateLocationHomepageFeaturedSectionSubheading(numericId, block.id, value)
           invalidateHomepage()
         }}
+        saveCreatorKicker={
+          block.blockType === 'featured-creator-article'
+            ? async (value) => {
+                await updateLocationHomepageCreatorKicker(numericId, block.id, value)
+                invalidateHomepage()
+              }
+            : undefined
+        }
         saveSlot3Layout={
           block.blockType === 'featured-articles' && block.selection.totalSlots === 3
             ? async (value) => {

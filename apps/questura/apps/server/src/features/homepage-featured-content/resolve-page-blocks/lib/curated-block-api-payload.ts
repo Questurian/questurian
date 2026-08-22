@@ -5,6 +5,7 @@ import {
   publicFeaturedArticlesSlot5Layout,
 } from '../../featured-articles/lib/slot-layouts'
 import { publicLocationGridMediaAspect } from '../../location-grid/lib/media-aspect'
+import { publicCreatorKicker } from '../../featured-creator-article/creator-kicker'
 
 import type { ApiCuratedBlock } from '../types'
 
@@ -33,6 +34,12 @@ export function curatedBlockApiPayload(block: ApiCuratedBlock, selection: unknow
         slot3Layout: publicFeaturedArticlesSlot3Layout(block, totalSlots),
         slot4Layout: publicFeaturedArticlesSlot4Layout(block, totalSlots),
         slot5Layout: publicFeaturedArticlesSlot5Layout(block, totalSlots),
+      }
+    }
+    if (block.blockType === 'featured-creator-article') {
+      return {
+        ...base,
+        creatorKicker: publicCreatorKicker(block),
       }
     }
     if (block.blockType === 'location-grid') {

@@ -67,6 +67,7 @@ type Props = {
   featuredArticlesSlot5Layout?: FeaturedArticlesSlot5Layout
   /** When `variant` is article-grid with 4 slots. */
   articleGridFourLayout?: ArticleGridFourLayout
+  creatorKicker?: string | null
 }
 
 export default function HomepageFeaturedSlotEditor({
@@ -80,7 +81,8 @@ export default function HomepageFeaturedSlotEditor({
   featuredArticlesSlot3Layout = 'hero-left',
   featuredArticlesSlot4Layout = 'sidebar-stack',
   featuredArticlesSlot5Layout = 'card-grid',
-  articleGridFourLayout = 'four-across'
+  articleGridFourLayout = 'four-across',
+  creatorKicker = null
 }: Props) {
   const {
     selectionQuery,
@@ -188,6 +190,7 @@ export default function HomepageFeaturedSlotEditor({
           invalidItem={invalidItemsBySlot.get(1)}
           onPick={() => setPickerSlotIndex(0)}
           showAuthorAvatar={variant === 'featured-creator-article'}
+          creatorKicker={variant === 'featured-creator-article' ? creatorKicker : null}
         />
       ) : variant === 'featured-article-carousel' ? (
         <FeaturedArticleCarouselLayout

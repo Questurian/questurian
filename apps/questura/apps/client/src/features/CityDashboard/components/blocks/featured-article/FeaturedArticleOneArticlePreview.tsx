@@ -135,6 +135,9 @@ export function FeaturedArticleOneArticlePreview({
   const excerpt = article.excerpt ?? null
   const sectionHeading = block.sectionHeading?.trim() || null
   const sectionSubheading = block.sectionSubheading?.trim() || null
+  const creatorKicker = showAuthorAvatar
+    ? block.creatorKicker?.trim() || sectionHeading
+    : null
   const articlePath = article.articlePath ?? null
 
   const mobileContent = (
@@ -148,6 +151,11 @@ export function FeaturedArticleOneArticlePreview({
       )}
       <div className="relative">
         <div className={`city-article-content px-6 py-9 ${showAuthorAvatar ? 'text-center' : ''}`}>
+          {creatorKicker ? (
+            <p className="mb-6 text-center font-[family-name:var(--font-dm-sans)] text-[0.88rem] font-bold uppercase tracking-[0.16em] text-accent-soft">
+              {creatorKicker}
+            </p>
+          ) : null}
           {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
           <h2 className="font-editorial font-semibold text-[2.1rem] leading-[1.0] text-white">
             {article.title}
@@ -168,8 +176,19 @@ export function FeaturedArticleOneArticlePreview({
 
   const desktopContent = (
     <>
-      <div className="relative flex flex-col justify-center px-6 py-8 768:w-1/2 1024:px-10 1280:px-12">
+      <div
+        className={`relative flex flex-col px-6 768:w-1/2 1024:px-10 1280:px-12 ${
+          showAuthorAvatar
+            ? 'justify-start py-10 1024:py-14 1280:py-16'
+            : 'justify-center py-8'
+        }`}
+      >
         <div className="city-article-content mx-auto w-full max-w-[460px] text-center">
+          {creatorKicker ? (
+            <p className="mb-6 text-center font-[family-name:var(--font-dm-sans)] text-[0.9rem] font-bold uppercase tracking-[0.16em] text-accent-soft 1024:text-[1rem]">
+              {creatorKicker}
+            </p>
+          ) : null}
           {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
           <h2 className="font-editorial font-semibold leading-[1.15] text-white text-[1.35rem] 1024:text-[1.6rem] 1280:text-[1.85rem]">
             {article.title}
@@ -197,7 +216,7 @@ export function FeaturedArticleOneArticlePreview({
 
   return (
     <section className="bg-[#0a0a0a] text-white">
-      {sectionHeading ? (
+      {sectionHeading && !showAuthorAvatar ? (
         <div className={`${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS} pt-8 pb-2`}>
           <h2 className="font-editorial font-semibold leading-tight text-white text-[1.4rem] 768:text-[1.7rem] 1024:text-[2rem] 1280:text-[2.3rem]">
             {sectionHeading}

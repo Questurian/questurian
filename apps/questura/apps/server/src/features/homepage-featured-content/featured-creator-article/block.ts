@@ -5,6 +5,7 @@ import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
 } from '../resolve-page-blocks/lib/section-heading'
 import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
+import { CREATOR_KICKER_MAX_LENGTH } from './creator-kicker'
 
 export const FeaturedCreatorArticleBlock: Block = {
   slug: 'featured-creator-article',
@@ -41,6 +42,15 @@ export const FeaturedCreatorArticleBlock: Block = {
       maxLength: HOMEPAGE_FEATURED_ARTICLES_SECTION_SUBHEADING_MAX,
       admin: {
         description: 'Optional supporting line under the section heading.',
+      },
+    },
+    {
+      name: 'creatorKicker',
+      type: 'text',
+      required: false,
+      maxLength: CREATOR_KICKER_MAX_LENGTH,
+      admin: {
+        description: 'Optional colored text shown directly above the creator portrait.',
       },
     },
     {

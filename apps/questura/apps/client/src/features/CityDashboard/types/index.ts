@@ -80,6 +80,7 @@ export type CityHomepageArticleBlock = {
   items: FeaturedArticleTeaser[]
   sectionHeading?: string | null
   sectionSubheading?: string | null
+  creatorKicker?: string | null
 }
 
 export type PlaceCardHighlight = {

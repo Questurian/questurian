@@ -40,13 +40,15 @@ type Props = {
   invalidItem: HomepageFeaturedInvalidItem | undefined
   onPick: () => void
   showAuthorAvatar?: boolean
+  creatorKicker?: string | null
 }
 
 export default function FeaturedArticleSpotlightLayout({
   item,
   invalidItem,
   onPick,
-  showAuthorAvatar = false
+  showAuthorAvatar = false,
+  creatorKicker = null
 }: Props) {
   const publishedLine = formatPublishedLine(item?.publishedAt ?? null)
   const byline =
@@ -89,13 +91,18 @@ export default function FeaturedArticleSpotlightLayout({
                 onClick={onPick}
               >
                 {showAuthorAvatar ? (
-                  <span className="hf-fa-spotlight-avatar" aria-hidden={!item.author?.avatar?.url}>
-                    {item.author?.avatar?.url ? (
-                      <img src={item.author.avatar.url} alt="" />
-                    ) : (
-                      <span className="hf-fa-spotlight-avatar-placeholder" />
-                    )}
-                  </span>
+                  <>
+                    {creatorKicker?.trim() ? (
+                      <span className="hf-fa-spotlight-creator-kicker">{creatorKicker.trim()}</span>
+                    ) : null}
+                    <span className="hf-fa-spotlight-avatar" aria-hidden={!item.author?.avatar?.url}>
+                      {item.author?.avatar?.url ? (
+                        <img src={item.author.avatar.url} alt="" />
+                      ) : (
+                        <span className="hf-fa-spotlight-avatar-placeholder" />
+                      )}
+                    </span>
+                  </>
                 ) : null}
                 <h2 className="hf-fa-spotlight-title">{item.title}</h2>
                 <p className="hf-fa-spotlight-dek">

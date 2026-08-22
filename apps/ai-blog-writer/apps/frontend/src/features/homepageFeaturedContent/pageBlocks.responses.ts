@@ -19,6 +19,7 @@ export type FeaturedCreatorArticleBlockResponse = {
   selection: HomepageFeaturedSelection
   sectionHeading: string | null
   sectionSubheading: string | null
+  creatorKicker: string | null
 }
 
 export type FeaturedArticleCarouselBlockResponse = {

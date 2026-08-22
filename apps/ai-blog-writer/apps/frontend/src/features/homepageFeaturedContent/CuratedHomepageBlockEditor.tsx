@@ -35,6 +35,7 @@ type Props = {
   ) => Promise<HomepageFeaturedSelection>
   saveSectionHeading?: (value: string | null) => Promise<void>
   saveSectionSubheading?: (value: string | null) => Promise<void>
+  saveCreatorKicker?: (value: string | null) => Promise<void>
   saveSlot3Layout?: (value: FeaturedArticlesSlot3Layout) => Promise<void>
   saveSlot4Layout?: (value: FeaturedArticlesSlot4Layout) => Promise<void>
   saveSlot5Layout?: (value: FeaturedArticlesSlot5Layout) => Promise<void>
@@ -62,6 +63,7 @@ export default function CuratedHomepageBlockEditor({
   saveSelection,
   saveSectionHeading,
   saveSectionSubheading,
+  saveCreatorKicker,
   saveSlot3Layout,
   saveSlot4Layout,
   saveSlot5Layout,
@@ -157,6 +159,7 @@ export default function CuratedHomepageBlockEditor({
         layoutState={layouts}
         saveSectionHeading={saveSectionHeading}
         saveSectionSubheading={saveSectionSubheading}
+        saveCreatorKicker={saveCreatorKicker}
         enableSlot3Layout={
           Boolean(saveSlot3Layout) &&
           block.blockType === 'featured-articles' &&
@@ -187,12 +190,12 @@ export default function CuratedHomepageBlockEditor({
       />
 
       <div className="hf-block-content">
-        {block.sectionHeading?.trim() ? (
+        {block.sectionHeading?.trim() && block.blockType !== 'featured-creator-article' ? (
           <h2 className="hf-block-section-heading-h2 hf-block-public-section-title">
             {block.sectionHeading.trim()}
           </h2>
         ) : null}
-        {block.sectionSubheading?.trim() ? (
+        {block.sectionSubheading?.trim() && block.blockType !== 'featured-creator-article' ? (
           <p className="hf-block-public-section-subtitle">{block.sectionSubheading.trim()}</p>
         ) : null}
         <HomepageFeaturedSlotEditor
@@ -202,6 +205,11 @@ export default function CuratedHomepageBlockEditor({
           compact
           suppressToolbar
           variant={block.blockType}
+          creatorKicker={
+            block.blockType === 'featured-creator-article'
+              ? block.creatorKicker?.trim() || block.sectionHeading
+              : undefined
+          }
           featuredArticlesSlot3Layout={
             block.blockType === 'featured-articles' && savedTotalSlots === 3
               ? layouts.slot3.draft

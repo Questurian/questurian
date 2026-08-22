@@ -1,5 +1,6 @@
 import { publicArticleGridFourLayout } from '../../article-grid/service'
 import { publicFeaturedArticlesSlot3Layout } from '../../featured-articles/lib/slot-layouts'
+import { publicCreatorKicker } from '../../featured-creator-article/creator-kicker'
 import { PUBLIC_ARTICLE_BLOCK_TYPES } from '../constants'
 import { formatPublicArticleItem } from './format-public-article'
 import { isRecord } from './guards'
@@ -27,6 +28,11 @@ export function formatPublicHomepageBlock(block: unknown, location?: LocationCon
     sectionHeading: stringOrNull(block.sectionHeading),
     sectionSubheading: stringOrNull(block.sectionSubheading),
     items: rawItems.map((item) => formatPublicArticleItem(item, location)),
+  }
+
+  if (blockType === 'featured-creator-article') {
+    const creatorKicker = publicCreatorKicker(block)
+    return creatorKicker ? { ...base, creatorKicker } : base
   }
 
   const slot3Layout =

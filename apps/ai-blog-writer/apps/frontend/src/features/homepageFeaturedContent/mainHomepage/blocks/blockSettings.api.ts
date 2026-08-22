@@ -28,6 +28,16 @@ export async function updateMainHomepageFeaturedSectionSubheading(
   })
 }
 
+export async function updateMainHomepageCreatorKicker(
+  blockId: string,
+  creatorKicker: string | null,
+): Promise<MainHomepageResponse> {
+  return mainHomepageRequest('/api/homepage-featured-content', {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, creatorKicker }),
+  })
+}
+
 export async function updateMainHomepageFeaturedSlot3Layout(
   blockId: string,
   slot3Layout: FeaturedArticlesSlot3Layout,

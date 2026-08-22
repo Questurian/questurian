@@ -34,6 +34,7 @@ import * as migration_20260816_010000_price_tier_graphql_safe_values from './202
 import * as migration_20260820_010000_add_bookmarks from './20260820_010000_add_bookmarks'
 import * as migration_20260821_010000_add_featured_creator_article_block from './20260821_010000_add_featured_creator_article_block'
 import * as migration_20260821_161023_add_author_article_byline from './20260821_161023_add_author_article_byline'
+import * as migration_20260822_041423_add_creator_kicker from './20260822_041423_add_creator_kicker'
 
 export const migrations = [
   {
@@ -215,5 +216,10 @@ export const migrations = [
     up: migration_20260821_161023_add_author_article_byline.up,
     down: migration_20260821_161023_add_author_article_byline.down,
     name: '20260821_161023_add_author_article_byline',
+  },
+  {
+    up: migration_20260822_041423_add_creator_kicker.up,
+    down: migration_20260822_041423_add_creator_kicker.down,
+    name: '20260822_041423_add_creator_kicker',
   },
 ]
