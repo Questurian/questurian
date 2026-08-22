@@ -243,7 +243,6 @@ function StopList({
             key={row.id}
             row={row}
             index={index}
-            variant="itinerary"
             moment={block.moment}
             momentLabel={block.momentLabel}
           />

@@ -61,7 +61,10 @@ export function MapsListicleArticlePage({
           <ol className="m-0 list-none p-0">
             {items.map((row, i) => (
               <Fragment key={row.id}>
-                <ListicleVenueEntry row={row} index={i} />
+                <ListicleVenueEntry
+                  row={row}
+                  index={i}
+                />
                 {ads.afterItem.has(i) ? <ListicleAd slotId={`listicle-${i}`} /> : null}
               </Fragment>
             ))}
