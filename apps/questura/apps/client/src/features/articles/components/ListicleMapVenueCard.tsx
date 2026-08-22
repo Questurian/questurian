@@ -151,7 +151,9 @@ export function ListicleMapVenueCard({
               href={tour.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex w-[212px] shrink-0 snap-start items-center gap-2.5 rounded-sm border border-foreground/20 bg-paper p-2 shadow-[0_10px_30px_rgba(26,26,26,0.22)]"
+              className={`flex items-center gap-2.5 rounded-sm border border-foreground/20 bg-paper p-2 shadow-[0_10px_30px_rgba(26,26,26,0.22)] ${
+                tours.length === 1 ? 'w-full' : 'w-[212px] shrink-0 snap-start'
+              }`}
             >
               {tour.image ? (
                 <span className="block size-11 shrink-0 overflow-hidden rounded-sm bg-foreground/[0.06]">
