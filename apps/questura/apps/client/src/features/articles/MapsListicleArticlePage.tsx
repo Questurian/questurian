@@ -1,5 +1,6 @@
 import { Fragment, type JSX } from 'react'
 import { ArticlePageHeader } from '@/features/articles/components/ArticlePageHeader'
+import { ListicleMapRegion } from '@/features/articles/components/ListicleMapRegion'
 import { ListicleSeparator } from '@/features/articles/components/ListicleSeparator'
 import { ListicleAd } from '@/features/articles/components/ListicleAd'
 import { ListicleVenueEntry } from '@/features/articles/components/ListicleVenueEntry'
@@ -56,14 +57,16 @@ export function MapsListicleArticlePage({
       <ListicleSeparator />
 
       <div className="px-3 pb-20 pt-4 380:px-4 380:pt-6 480:px-5 480:pt-8 480:pb-24 550:px-6 550:pt-10 sm:px-8 sm:pt-8 sm:pb-32 768:px-10">
-        <ol className="m-0 list-none p-0">
-          {items.map((row, i) => (
-            <Fragment key={row.id}>
-              <ListicleVenueEntry row={row} index={i} />
-              {ads.afterItem.has(i) ? <ListicleAd slotId={`listicle-${i}`} /> : null}
-            </Fragment>
-          ))}
-        </ol>
+        <ListicleMapRegion>
+          <ol className="m-0 list-none p-0">
+            {items.map((row, i) => (
+              <Fragment key={row.id}>
+                <ListicleVenueEntry row={row} index={i} />
+                {ads.afterItem.has(i) ? <ListicleAd slotId={`listicle-${i}`} /> : null}
+              </Fragment>
+            ))}
+          </ol>
+        </ListicleMapRegion>
       </div>
     </article>
   )

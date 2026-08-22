@@ -7,6 +7,7 @@ import { ArticlePageHeader } from "@/features/articles/components/ArticlePageHea
 import { InstagramEmbedBlock } from "@/features/articles/components/InstagramEmbedBlock";
 import { ItineraryStayCard } from "@/features/articles/components/ItineraryStayCard";
 import { ItineraryMomentBadge } from "@/features/articles/components/ItineraryMomentBadge";
+import { ListicleMapRegion } from "@/features/articles/components/ListicleMapRegion";
 import { ListicleSeparator } from "@/features/articles/components/ListicleSeparator";
 import { ListicleVenueEntry } from "@/features/articles/components/ListicleVenueEntry";
 import {
@@ -330,15 +331,17 @@ export function ItineraryListicleArticlePage({
       ) : null}
 
       <div className="px-3 pb-20 pt-6 380:px-4 380:pt-7 480:px-5 480:pt-8 480:pb-24 550:px-6 550:pt-10 sm:px-8 sm:pt-8 sm:pb-32 768:px-10">
-        {whereStaying.length > 0 ? (
-          <div className="mb-7 space-y-8 border-b-[3px] border-double border-foreground/55 pb-7 max-[379px]:mb-6 max-[379px]:pb-6 480:mb-9 480:space-y-10 480:pb-9 550:mb-11 550:pb-11 sm:mb-12 sm:space-y-12 sm:pb-12 768:mb-14 768:pb-14">
-            {whereStaying.map((row) => (
-              <ItineraryStayCard key={row.id} row={row} />
-            ))}
-          </div>
-        ) : null}
+        <ListicleMapRegion>
+          {whereStaying.length > 0 ? (
+            <div className="mb-7 space-y-8 border-b-[3px] border-double border-foreground/55 pb-7 max-[379px]:mb-6 max-[379px]:pb-6 480:mb-9 480:space-y-10 480:pb-9 550:mb-11 550:pb-11 sm:mb-12 sm:space-y-12 sm:pb-12 768:mb-14 768:pb-14">
+              {whereStaying.map((row) => (
+                <ItineraryStayCard key={row.id} row={row} />
+              ))}
+            </div>
+          ) : null}
 
-        <StopList stops={stops} />
+          <StopList stops={stops} />
+        </ListicleMapRegion>
 
         {lockedSlot}
       </div>

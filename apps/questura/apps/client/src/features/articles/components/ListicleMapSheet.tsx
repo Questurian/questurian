@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { CornerUpLeft, List, Map as MapIcon, MapPin, Rows2 } from 'lucide-react'
 import type { ListicleMapGuides } from '@/features/articles/components/ListicleMapGuidesMenu'
+import { LISTICLE_MAP_REGION_SELECTOR } from '@/features/articles/components/ListicleMapRegion'
 import { MapPanel } from '@/features/articles/components/MapPanel'
 import { ListicleMapVenueCard } from '@/features/articles/components/ListicleMapVenueCard'
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
@@ -54,10 +55,11 @@ const MODE_ICONS: Record<ListicleMapMode, typeof List> = {
  * `list` parks the sheet off screen, `split` shows the map under the copy the
  * reader is scrolling, and `map` is a takeover that covers everything but the
  * navbar.
- * The switch stays put in all three, so there is always one visible control
- * saying where you are and how to get back. The takeover also floats a card
- * for the active stop, because it is the one mode where the reading column
- * cannot say what a pin is.
+ * The switch stays put in all three while the list is in front of the reader,
+ * so there is always one visible control saying where you are and how to get
+ * back. Once the list has scrolled away, the switch gets out of the article
+ * footer's way. The takeover also floats a card for the active stop, because
+ * it is the one mode where the reading column cannot say what a pin is.
  *
  * The switch is the only way to change mode. A drag handle used to sit on the
  * sheet's top edge, which in the takeover is the top of the screen - exactly
@@ -86,6 +88,7 @@ export function ListicleMapSheet({
   // hard-coding it.
   const [navbarHeight, setNavbarHeight] = useState(0)
   const [reduceMotion, setReduceMotion] = useState(false)
+  const [hasPassedListRegion, setHasPassedListRegion] = useState(false)
   // The card and switch cover the bottom of the map, and the card's height
   // depends on whether the stop has a photo and a blurb - so it is measured
   // rather than assumed, and fed back into the camera as hidden space.
@@ -119,6 +122,33 @@ export function ListicleMapSheet({
   useEffect(() => {
     if (mode !== 'list') setHasOpened(true)
   }, [mode])
+
+  useEffect(() => {
+    const region = document.querySelector<HTMLElement>(LISTICLE_MAP_REGION_SELECTOR)
+    if (!region) return
+
+    const sync = () => {
+      setHasPassedListRegion(
+        region.getBoundingClientRect().bottom <= window.innerHeight / 2,
+      )
+    }
+    // Use the viewport's lower half as the active observation area. The
+    // region stops intersecting exactly when its trailing edge crosses the
+    // centre line, in either scroll direction.
+    const intersectionObserver = new IntersectionObserver(sync, {
+      rootMargin: '-50% 0px 0px',
+    })
+    const resizeObserver = new ResizeObserver(sync)
+
+    sync()
+    intersectionObserver.observe(region)
+    resizeObserver.observe(region)
+
+    return () => {
+      intersectionObserver.disconnect()
+      resizeObserver.disconnect()
+    }
+  }, [])
 
   /**
    * Split parks an opaque sheet over the bottom of the viewport, and the page
@@ -166,6 +196,7 @@ export function ListicleMapSheet({
   const activeIndex = points.findIndex((point) => point.id === activeId)
   const activePoint = activeIndex >= 0 ? points[activeIndex] : null
   const showMap = mode !== 'list'
+  const showControls = !hasPassedListRegion
   const transition = reduceMotion
     ? 'none'
     : 'transform 340ms cubic-bezier(0.22, 1, 0.36, 1)'
@@ -201,7 +232,10 @@ export function ListicleMapSheet({
       <div
         ref={overlayRef}
         data-listicle-map-sheet=""
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2.5 px-3 1024:hidden"
+        aria-hidden={!showControls}
+        className={`pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2.5 px-3 1024:hidden ${
+          showControls ? '' : 'invisible'
+        }`}
         style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
       >
         {mode === 'map' && activePoint ? (
