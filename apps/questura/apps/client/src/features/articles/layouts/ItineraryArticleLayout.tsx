@@ -18,12 +18,14 @@ import { GatedBodySkeleton, GatedLoadError } from '@/features/articles/component
 import { PaywallNotice } from '@/features/articles/components/PaywallNotice'
 import { readGate } from '@/features/articles/lib/gate'
 import { useGatedFullArticle } from '@/features/articles/lib/useGatedFullArticle'
+import type { ListicleFooterLinks } from '@/features/articles/lib/fetchListicleFooterLinks'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import type { ListicleItineraryArticle } from '@/features/articles/types/itineraryListicle'
 
 interface ItineraryArticleLayoutProps {
   article: ListicleItineraryArticle
   relatedArticles: RelatedMapsArticleTeaser[]
+  footerLinks?: ListicleFooterLinks | null
   country: string
   city?: string | null
   /** Path the reader is on, so checkout can return them to it. */
@@ -33,6 +35,7 @@ interface ItineraryArticleLayoutProps {
 export function ItineraryArticleLayout({
   article,
   relatedArticles,
+  footerLinks,
   country,
   city,
   path,
@@ -117,6 +120,7 @@ export function ItineraryArticleLayout({
     <ListicleMapSyncProvider points={points} days={mapDays}>
       <ListicleArticleLayout
         relatedArticles={relatedArticles}
+        footerLinks={footerLinks}
         country={country}
         city={city}
       >

@@ -3,6 +3,7 @@ import { JsonLd } from '@/components/seo/JsonLd'
 import { buildArticleBreadcrumbJsonLd } from '@/features/articles/lib/articleBreadcrumbJsonLd'
 import { articleHrefForScope } from '@/features/articles/lib/articleScope'
 import { fetchArticle } from '@/features/articles/lib/fetchArticle'
+import { fetchListicleFooterLinks } from '@/features/articles/lib/fetchListicleFooterLinks'
 import { fetchRelatedMapsArticles } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { MapsArticleLayout } from '@/features/articles/layouts/MapsArticleLayout'
 import { isMapsListicleArticle } from '@/features/articles/types/mapsListicle'
@@ -19,9 +20,16 @@ export async function renderMapsArticleRoute({
   slug,
   lang,
 }: RenderMapsArticleRouteParams) {
-  const [article, relatedArticles] = await Promise.all([
+  const [article, relatedArticles, footerLinks] = await Promise.all([
     fetchArticle({ scope, type: 'maps', slug, lang }),
     fetchRelatedMapsArticles(scope.country, scope.city, slug),
+    fetchListicleFooterLinks({
+      country: scope.country,
+      city: scope.city,
+      currentHref: articleHrefForScope(scope, 'maps', slug),
+      currentSlug: slug,
+      lang,
+    }),
   ])
 
   if (!article || !isMapsListicleArticle(article)) {
@@ -37,6 +45,7 @@ export async function renderMapsArticleRoute({
       <MapsArticleLayout
         article={article}
         relatedArticles={relatedArticles}
+        footerLinks={footerLinks}
         country={scope.country}
         city={scope.city}
       />

@@ -1,7 +1,12 @@
 import type { getPayload } from 'payload'
 
 import { TYPE_TO_COLLECTION, type ArticleTypeKey } from '@/features/articles/public/scope'
-import { serializeIndexItem, type IndexItem } from '@/features/articles/public/indexItem'
+import {
+  INDEX_ITEM_DEPTH,
+  INDEX_ITEM_SELECT,
+  serializeIndexItem,
+  type IndexItem,
+} from '@/features/articles/public/indexItem'
 
 export const ALL_TYPES: ArticleTypeKey[] = ['articles', 'maps', 'itineraries']
 
@@ -52,7 +57,8 @@ export async function hydrateHits(payload: Awaited<ReturnType<typeof getPayload>
         collection: TYPE_TO_COLLECTION[type],
         where: { id: { in: ids } },
         limit: ids.length,
-        depth: 1,
+        depth: INDEX_ITEM_DEPTH,
+        select: INDEX_ITEM_SELECT,
         overrideAccess: true,
       })
 

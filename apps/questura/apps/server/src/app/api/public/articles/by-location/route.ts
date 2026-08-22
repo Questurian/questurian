@@ -8,7 +8,12 @@ import {
   TYPE_TO_COLLECTION,
   type ArticleTypeKey,
 } from '@/features/articles/public/scope'
-import { serializeIndexItem, type IndexItem } from '@/features/articles/public/indexItem'
+import {
+  INDEX_ITEM_DEPTH,
+  INDEX_ITEM_SELECT,
+  serializeIndexItem,
+  type IndexItem,
+} from '@/features/articles/public/indexItem'
 
 const MAX_PAGE_SIZE = 50
 const DEFAULT_PAGE_SIZE = 20
@@ -96,7 +101,8 @@ export async function GET(req: NextRequest) {
           collection: TYPE_TO_COLLECTION[type],
           where,
           limit: fetchLimit,
-          depth: 1,
+          depth: INDEX_ITEM_DEPTH,
+          select: INDEX_ITEM_SELECT,
           sort: '-publishedAt',
           overrideAccess: true,
         }),

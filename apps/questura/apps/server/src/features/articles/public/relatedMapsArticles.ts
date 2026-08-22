@@ -1,6 +1,7 @@
 import type { Payload, Where } from 'payload'
 
 import { resolveArticleFeaturedImage } from './view-model'
+import { INDEX_ITEM_DEPTH, INDEX_ITEM_SELECT } from './indexItem'
 import {
   getLocationScope,
   normalizeLocationKey,
@@ -151,7 +152,8 @@ export async function fetchRelatedMapsArticles(
       collection: 'single-type-listicles',
       where: relatedWhere,
       limit: MAP_ARTICLE_LIMIT + 1,
-      depth: 1,
+      depth: INDEX_ITEM_DEPTH,
+      select: INDEX_ITEM_SELECT,
       sort: '-publishedAt',
       overrideAccess: true,
     }),
@@ -159,7 +161,8 @@ export async function fetchRelatedMapsArticles(
       collection: 'listicle-itineraries',
       where: relatedWhere,
       limit: 2,
-      depth: 1,
+      depth: INDEX_ITEM_DEPTH,
+      select: INDEX_ITEM_SELECT,
       sort: '-publishedAt',
       overrideAccess: true,
     }),

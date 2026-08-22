@@ -5,6 +5,7 @@ import { articleJsonLdNodes } from '@/features/articles/lib/paywallJsonLd'
 import { isLocked } from '@/features/articles/lib/gate'
 import { articleHrefForScope } from '@/features/articles/lib/articleScope'
 import { fetchArticle } from '@/features/articles/lib/fetchArticle'
+import { fetchListicleFooterLinks } from '@/features/articles/lib/fetchListicleFooterLinks'
 import { fetchRelatedMapsArticles } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { ItineraryArticleLayout } from '@/features/articles/layouts/ItineraryArticleLayout'
 import { isListicleItineraryArticle } from '@/features/articles/types/itineraryListicle'
@@ -21,9 +22,16 @@ export async function renderItineraryArticleRoute({
   slug,
   lang,
 }: RenderItineraryArticleRouteParams) {
-  const [article, relatedArticles] = await Promise.all([
+  const [article, relatedArticles, footerLinks] = await Promise.all([
     fetchArticle({ scope, type: 'itineraries', slug, lang }),
     fetchRelatedMapsArticles(scope.country, scope.city, slug),
+    fetchListicleFooterLinks({
+      country: scope.country,
+      city: scope.city,
+      currentHref: articleHrefForScope(scope, 'itineraries', slug),
+      currentSlug: slug,
+      lang,
+    }),
   ])
 
   if (!article || !isListicleItineraryArticle(article)) {
@@ -45,6 +53,7 @@ export async function renderItineraryArticleRoute({
       <ItineraryArticleLayout
         article={article}
         relatedArticles={relatedArticles}
+        footerLinks={footerLinks}
         country={scope.country}
         city={scope.city}
         path={path}

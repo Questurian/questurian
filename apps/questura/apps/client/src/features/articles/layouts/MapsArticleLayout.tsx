@@ -8,12 +8,14 @@ import {
 } from '@/features/articles/components/ListicleMapSync'
 import { ListicleArticleLayout } from '@/features/articles/layouts/ListicleArticleLayout'
 import { mapPointPreviewFromRow } from '@/features/articles/lib/listicleMapPreview'
+import type { ListicleFooterLinks } from '@/features/articles/lib/fetchListicleFooterLinks'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import type { MapsListicleArticle } from '@/features/articles/types/mapsListicle'
 
 interface MapsArticleLayoutProps {
   article: MapsListicleArticle
   relatedArticles: RelatedMapsArticleTeaser[]
+  footerLinks?: ListicleFooterLinks | null
   country: string
   city?: string | null
 }
@@ -21,6 +23,7 @@ interface MapsArticleLayoutProps {
 export function MapsArticleLayout({
   article,
   relatedArticles,
+  footerLinks,
   country,
   city,
 }: MapsArticleLayoutProps): JSX.Element {
@@ -46,6 +49,7 @@ export function MapsArticleLayout({
     <ListicleMapSyncProvider points={points}>
       <ListicleArticleLayout
         relatedArticles={relatedArticles}
+        footerLinks={footerLinks}
         country={country}
         city={city}
       >

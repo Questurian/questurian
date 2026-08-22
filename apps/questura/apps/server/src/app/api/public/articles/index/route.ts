@@ -12,7 +12,11 @@ import {
   type ArticleScope,
   type ArticleTypeKey,
 } from '@/features/articles/public/scope'
-import { serializeIndexItem } from '@/features/articles/public/indexItem'
+import {
+  INDEX_ITEM_DEPTH,
+  INDEX_ITEM_SELECT,
+  serializeIndexItem,
+} from '@/features/articles/public/indexItem'
 
 const MAX_PAGE_SIZE = 50
 const DEFAULT_PAGE_SIZE = 20
@@ -86,7 +90,8 @@ export async function GET(req: NextRequest) {
       where: { and: whereClauses },
       page,
       limit: pageSize,
-      depth: 1,
+      depth: INDEX_ITEM_DEPTH,
+      select: INDEX_ITEM_SELECT,
       sort: '-publishedAt',
       overrideAccess: true,
     })

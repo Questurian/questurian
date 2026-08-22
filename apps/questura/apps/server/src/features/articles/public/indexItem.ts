@@ -1,6 +1,32 @@
 import { resolveArticleFeaturedImage } from './view-model'
 import { articleHrefForScope, type ArticleScope, type ArticleTypeKey } from './scope'
 
+/**
+ * Card images live at `header.featuredMediaSet.variants.<variant>`, one level
+ * deeper than `header.featuredImage`. A depth-1 query leaves those variants
+ * as ids, so any article whose header carries only a media set serialized
+ * with `thumbnail: null` -- it showed as a grey box in every list.
+ *
+ * Depth 2 fixes that, but on its own it would also populate the venue
+ * relations hanging off every listicle item. Selecting just the fields
+ * `serializeIndexItem` reads keeps the extra depth on the header alone.
+ */
+export const INDEX_ITEM_DEPTH = 2
+
+export const INDEX_ITEM_SELECT = {
+  title: true,
+  slug: true,
+  publishedAt: true,
+  location: true,
+  canonicalPath: true,
+  seoSection: true,
+  // Standard articles keep the header group under `headerSection`; the
+  // listicle collections use `header`. Both must be selected or one of the
+  // two loses its card image.
+  header: true,
+  headerSection: true,
+} as const
+
 export type IndexItem = {
   id: number | string
   title: string

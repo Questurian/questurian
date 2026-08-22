@@ -5,8 +5,10 @@ import {
   LISTICLE_MAP_PILL_CLEARANCE,
   ListicleMapSheet,
 } from '@/features/articles/components/ListicleMapSheet'
+import { ListicleArticleFooter } from '@/features/articles/components/ListicleArticleFooter'
 import { MapPanel } from '@/features/articles/components/MapPanel'
 import { RelatedListicleShelf } from '@/features/articles/components/RelatedListicleShelf'
+import type { ListicleFooterLinks } from '@/features/articles/lib/fetchListicleFooterLinks'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
 import { useIsDesktopMap } from '@/features/articles/lib/useIsDesktopMap'
 import { useDevStore } from '@/lib/stores/devStore'
@@ -14,6 +16,8 @@ import { useDevStore } from '@/lib/stores/devStore'
 interface ListicleArticleLayoutProps {
   children: JSX.Element
   relatedArticles: RelatedMapsArticleTeaser[]
+  /** Links for the foot of the article; the list is the last thing above it. */
+  footerLinks?: ListicleFooterLinks | null
   country: string
   city?: string | null
 }
@@ -28,6 +32,7 @@ const listicleLayoutStyle = {
 export function ListicleArticleLayout({
   children,
   relatedArticles,
+  footerLinks,
   country,
   city,
 }: ListicleArticleLayoutProps): JSX.Element {
@@ -38,8 +43,8 @@ export function ListicleArticleLayout({
   // that instantiates a billed google.maps.Map nothing can display.
   const showMapColumn = mapsEnabled && isDesktopMap
   const showMapSheet = mapsEnabled && !isDesktopMap
-  // The desktop shelf under the map and the on-map menu show the same links;
-  // the menu is how the phone reaches them, since the takeover hides the shelf.
+  // Only the sheet takes guides: desktop reaches the same links through the
+  // shelf under the map column and the section at the foot of the article.
   const guides = { articles: relatedArticles, country, city }
 
   return (
@@ -60,40 +65,55 @@ export function ListicleArticleLayout({
       />
       <div
         data-article-layout="listicle"
-        className="relative 1024:flex 1024:min-h-screen 1024:max-w-[1600px] 1024:mx-auto"
+        className="relative 1024:max-w-[1600px] 1024:mx-auto"
         style={listicleLayoutStyle}
       >
-        <div className="maps-article-column 1024:min-w-0 1024:pt-[25px]">
-          {children}
-          {showMapSheet ? (
+        {/* The two columns are a row of their own so the sticky map is bound
+            by the list: it stops travelling where the last item ends, and
+            what comes after runs the full width under both. */}
+        <div className="relative 1024:flex 1024:min-h-screen">
+          <div className="maps-article-column 1024:min-w-0 1024:pt-[25px]">
+            {children}
+          </div>
+          {showMapColumn && (
             <div
               aria-hidden="true"
-              style={{
-                height: `calc(${LISTICLE_MAP_PILL_CLEARANCE}px + env(safe-area-inset-bottom))`,
-              }}
+              className="maps-map-divider hidden 1024:block 1024:absolute 1024:top-[25px] 1024:bottom-0 1024:z-20 1024:w-px 1024:pointer-events-none"
             />
-          ) : null}
+          )}
+          {showMapColumn && (
+            <div
+              className="maps-map-column hidden 1024:flex 1024:flex-col 1024:sticky 1024:self-start"
+            >
+              <div className="flex-1 min-h-0">
+                {/* No guides menu here: the shelf under this map already shows
+                    the same links. The menu exists for the phone takeover,
+                    which has no shelf. */}
+                <MapPanel />
+              </div>
+              <RelatedListicleShelf
+                articles={relatedArticles}
+                country={country}
+                city={city}
+              />
+            </div>
+          )}
         </div>
-        {showMapColumn && (
+        {footerLinks ? (
+          <ListicleArticleFooter
+            links={footerLinks}
+            country={country}
+            city={city}
+          />
+        ) : null}
+        {showMapSheet ? (
           <div
             aria-hidden="true"
-            className="maps-map-divider hidden 1024:block 1024:absolute 1024:top-[25px] 1024:bottom-0 1024:z-20 1024:w-px 1024:pointer-events-none"
+            style={{
+              height: `calc(${LISTICLE_MAP_PILL_CLEARANCE}px + env(safe-area-inset-bottom))`,
+            }}
           />
-        )}
-        {showMapColumn && (
-          <div
-            className="maps-map-column hidden 1024:flex 1024:flex-col 1024:sticky 1024:self-start"
-          >
-            <div className="flex-1 min-h-0">
-              <MapPanel guides={guides} />
-            </div>
-            <RelatedListicleShelf
-              articles={relatedArticles}
-              country={country}
-              city={city}
-            />
-          </div>
-        )}
+        ) : null}
         {showMapSheet ? <ListicleMapSheet guides={guides} /> : null}
       </div>
     </>
