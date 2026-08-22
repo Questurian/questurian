@@ -233,10 +233,17 @@ export function ListicleMapSheet({
         ref={overlayRef}
         data-listicle-map-sheet=""
         aria-hidden={!showControls}
-        className={`pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2.5 px-3 1024:hidden ${
-          showControls ? '' : 'invisible'
-        }`}
-        style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-[60] flex flex-col items-center gap-2.5 px-3 1024:hidden"
+        style={{
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+          transform: showControls
+            ? 'translateY(0)'
+            : 'translateY(calc(100% + 2rem))',
+          transition: reduceMotion
+            ? 'none'
+            : 'transform 260ms cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+        inert={!showControls}
       >
         {mode === 'map' && activePoint ? (
           <ListicleMapVenueCard
