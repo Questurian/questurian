@@ -74,6 +74,9 @@ export function applyBlockFieldUpdates(block: RawBlock, fields: ParsedBlockUpdat
   if (!fields.creatorKicker.omit) {
     next = { ...next, creatorKicker: fields.creatorKicker.value }
   }
+  for (const [key, field] of Object.entries(fields.editorialFeature)) {
+    if (!field.omit) next = { ...next, [key]: field.value }
+  }
 
   return next
 }

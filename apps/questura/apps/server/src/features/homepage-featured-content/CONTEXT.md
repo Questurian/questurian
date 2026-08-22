@@ -48,7 +48,7 @@ Slices present today: `featured-article`, `featured-article-carousel`, `featured
 
 Cross-cutting slices (operate across all block types):
 
-- `block-registry/` — the **single source of truth for which block types exist *and how each behaves***. `curatedBlockRegistry` holds an ordered `CuratedBlockDefinition[]` of `{ blockType, block, behavior }` and exposes `keys`, `blocks` (feeds the collection's three block arrays), `has` (the membership guard), and `get`. `behaviors.ts` defines the per-type `CuratedBlockBehavior` — `prepareRecord` / `assertAllowed` / `clearsItems` / `buildStoredItems` (write path), `resolveSelection` (read path), and `isArticleBlock` / `requiredImageField` (publish rules). The write-path normalizer, read-path resolver, and publish-status rules all **iterate the registry** instead of restating a `blockType` switch. See ADR 0005.
+- `block-registry/` — the **single source of truth for which block types exist _and how each behaves_**. `curatedBlockRegistry` holds an ordered `CuratedBlockDefinition[]` of `{ blockType, block, behavior }` and exposes `keys`, `blocks` (feeds the collection's three block arrays), `has` (the membership guard), and `get`. `behaviors.ts` defines the per-type `CuratedBlockBehavior` — `prepareRecord` / `assertAllowed` / `clearsItems` / `buildStoredItems` (write path), `resolveSelection` (read path), and `isArticleBlock` / `requiredImageField` (publish rules). The write-path normalizer, read-path resolver, and publish-status rules all **iterate the registry** instead of restating a `blockType` switch. See ADR 0005.
 - `resolve-page-blocks/` — turns stored blocks into editor / public payloads. `operations/normalize-page-blocks.ts` is the **write-path driver** (`curatedBlockRegistry.get` → `behavior.prepareRecord` / `assertAllowed` / `buildStoredItems`). `operations/resolve-blocks.ts` is the **read-path** driver (`behavior.resolveSelection`). Both are now type-agnostic loops.
 - `candidate-route.ts` — `createCandidateHandler` (homepage / main-homepage) and `createLocationCandidateHandler` (per-location, with `withLocationKey` / `withLocationGridScope`) factories. The 14 `*-candidates` route files are thin: each names its `searchXCandidates` function, a fallback message, and (location family) how the homepage doc resolves into search params. Not exported from `index.ts` (it pulls in `next/server`); routes import it by deep path.
 - `location-homepages/` — homepage lifecycle (get / publish / delete) and `lib/publish-status.ts` (publishability rules + draft-vs-published status).
@@ -76,6 +76,26 @@ How many items a block holds. Each type declares `min`/`max` (and sometimes a fi
 ### Item / ref
 
 An entry in a block's `items`. On input it's a loose reference; `lib/refs.ts` normalizes it to a `ref`, `operations/validate.ts` checks it, and `buildXGlobalData` produces the stored shape.
+
+### Editorial feature panel
+
+A manually authored homepage feature containing a Feature kicker, title, description, and editor-selected Media Set. Its content remains stable when the accompanying related-article presentation changes.
+
+### Feature kicker
+
+The short custom label above an Editorial feature panel title, such as “Featured Destination.” It is distinct from an Article category.
+
+### Editorial Feature
+
+A page block combining one Editorial feature panel with a Related article rail. It may frame any editorial theme or destination and may optionally link its panel to a selected Location with a public Location Homepage.
+
+### Related article rail
+
+The ordered article selection accompanying an Editorial feature panel. It supports 2, 3, 4, or 6 articles; its presentation becomes denser as article count increases.
+
+### Linkable Location
+
+A Location whose Location Homepage is enabled, has been published, and contains at least one published page block. An Editorial Feature may target one optionally; its image, Feature kicker, title, and description become separate links while the panel container remains non-clickable. If the Location later stops being linkable, the panel remains visible without links and the editor receives a warning.
 
 ### Candidate
 

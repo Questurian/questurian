@@ -15,6 +15,7 @@ import {
   updateMainHomepageFeaturedSlot5Layout,
   updateMainHomepageLocationGridMediaAspect,
   updateMainHomepageCreatorKicker,
+  updateMainHomepageEditorialFeatureFields
 } from './api'
 import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
@@ -34,7 +35,7 @@ import {
   type CuratedHomepageBlockType,
   type HotelOrAttractionGridBlockResponse,
   type LocationGridBlockResponse,
-  type PageBlockResponse,
+  type PageBlockResponse
 } from './pageBlocks'
 
 type Props = {
@@ -50,7 +51,7 @@ type Props = {
   onConvertBlock: (
     block: PageBlockResponse,
     blockType: CuratedHomepageBlockType,
-    slotCount: number,
+    slotCount: number
   ) => Promise<void>
   invalidateHomepage: () => void
 }
@@ -66,7 +67,7 @@ export default function MainHomepageBlockRenderer({
   deletingBlockId,
   deleteError,
   onConvertBlock,
-  invalidateHomepage,
+  invalidateHomepage
 }: Props) {
   const isDeletingBlockFor = (blockId: string) =>
     isDeletePending && deletingBlockId === blockId
@@ -84,17 +85,18 @@ export default function MainHomepageBlockRenderer({
         deleteError={deleteErrorFor(block.id)}
         selectionQueryKey={[
           'main-homepage-block',
-          ...homepageBlockEditorIdentity(block),
+          ...homepageBlockEditorIdentity(block)
         ]}
         saveSelection={async (items, slotCount) => {
           const updated = await updateMainHomepageBlock(
             block.id,
             items,
-            slotCount,
+            slotCount
           )
           const updatedBlock = updated.pageBlocks.find(
             (candidate): candidate is ArticleCuratedHomepageBlockResponse =>
-              candidate.id === block.id && candidate.blockType === block.blockType,
+              candidate.id === block.id &&
+              candidate.blockType === block.blockType
           )
           if (!updatedBlock) throw new Error('Block not found after save.')
           invalidateHomepage()
@@ -104,18 +106,19 @@ export default function MainHomepageBlockRenderer({
           block.blockType === 'questurian-maps'
             ? fetchHomepageFeaturedCandidates({
                 ...params,
-                type: 'single-type-listicles',
+                type: 'single-type-listicles'
               })
             : block.blockType === 'where-to-eat-drink'
               ? fetchWhereToEatDrinkCandidates(params)
               : block.blockType === 'things-to-do-listicles'
                 ? fetchThingsToDoListicleCandidates(params)
-                : fetchHomepageFeaturedCandidates(params)}
-        saveSectionHeading={async (value) => {
+                : fetchHomepageFeaturedCandidates(params)
+        }
+        saveSectionHeading={block.blockType === 'editorial-feature' ? undefined : async (value) => {
           await updateMainHomepageFeaturedSectionHeading(block.id, value)
           invalidateHomepage()
         }}
-        saveSectionSubheading={async (value) => {
+        saveSectionSubheading={block.blockType === 'editorial-feature' ? undefined : async (value) => {
           await updateMainHomepageFeaturedSectionSubheading(block.id, value)
           invalidateHomepage()
         }}
@@ -128,7 +131,8 @@ export default function MainHomepageBlockRenderer({
             : undefined
         }
         saveSlot3Layout={
-          block.blockType === 'featured-articles' && block.selection.totalSlots === 3
+          block.blockType === 'featured-articles' &&
+          block.selection.totalSlots === 3
             ? async (value) => {
                 await updateMainHomepageFeaturedSlot3Layout(block.id, value)
                 invalidateHomepage()
@@ -136,7 +140,8 @@ export default function MainHomepageBlockRenderer({
             : undefined
         }
         saveSlot4Layout={
-          block.blockType === 'featured-articles' && block.selection.totalSlots === 4
+          block.blockType === 'featured-articles' &&
+          block.selection.totalSlots === 4
             ? async (value) => {
                 await updateMainHomepageFeaturedSlot4Layout(block.id, value)
                 invalidateHomepage()
@@ -144,7 +149,8 @@ export default function MainHomepageBlockRenderer({
             : undefined
         }
         saveSlot5Layout={
-          block.blockType === 'featured-articles' && block.selection.totalSlots === 5
+          block.blockType === 'featured-articles' &&
+          block.selection.totalSlots === 5
             ? async (value) => {
                 await updateMainHomepageFeaturedSlot5Layout(block.id, value)
                 invalidateHomepage()
@@ -159,11 +165,18 @@ export default function MainHomepageBlockRenderer({
               }
             : undefined
         }
-        convertEmptyFeaturedArticlesTargets={CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES}
-        onConvertEmptyFeaturedArticlesBlock={async (
-          blockType,
-          slotCount,
-        ) => {
+        saveEditorialFeatureFields={
+          block.blockType === 'editorial-feature'
+            ? async (fields) => {
+                await updateMainHomepageEditorialFeatureFields(block.id, fields)
+                invalidateHomepage()
+              }
+            : undefined
+        }
+        convertEmptyFeaturedArticlesTargets={
+          CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES
+        }
+        onConvertEmptyFeaturedArticlesBlock={async (blockType, slotCount) => {
           await onConvertBlock(block, blockType, slotCount)
         }}
         externalUsedKeys={externalUsedKeys}
@@ -184,17 +197,18 @@ export default function MainHomepageBlockRenderer({
         childLevel="city"
         selectionQueryKey={[
           'main-homepage-location-grid',
-          ...homepageBlockEditorIdentity(block),
+          ...homepageBlockEditorIdentity(block)
         ]}
         saveSelection={async (items, slotCount) => {
           const updated = await updateMainHomepageBlock(
             block.id,
             items,
-            slotCount,
+            slotCount
           )
           const updatedBlock = updated.pageBlocks.find(
             (candidate): candidate is LocationGridBlockResponse =>
-              candidate.id === block.id && candidate.blockType === block.blockType,
+              candidate.id === block.id &&
+              candidate.blockType === block.blockType
           )
           if (!updatedBlock) throw new Error('Block not found after save.')
           invalidateHomepage()
@@ -242,9 +256,9 @@ export default function MainHomepageBlockRenderer({
   }
 
   if (
-    isHotelGridBlock(block)
-    || isTourGridBlock(block)
-    || isThingsToDoAttractionsBlock(block)
+    isHotelGridBlock(block) ||
+    isTourGridBlock(block) ||
+    isThingsToDoAttractionsBlock(block)
   ) {
     const gridBlock = block
     return (
@@ -257,18 +271,18 @@ export default function MainHomepageBlockRenderer({
         deleteError={deleteErrorFor(gridBlock.id)}
         selectionQueryKey={[
           'main-homepage-hotel-grid',
-          ...homepageBlockEditorIdentity(gridBlock),
+          ...homepageBlockEditorIdentity(gridBlock)
         ]}
         saveSelection={async (items, slotCount) => {
           const updated = await updateMainHomepageBlock(
             gridBlock.id,
             items,
-            slotCount,
+            slotCount
           )
           const updatedBlock = updated.pageBlocks.find(
             (candidate): candidate is HotelOrAttractionGridBlockResponse =>
-              candidate.id === gridBlock.id
-              && candidate.blockType === gridBlock.blockType,
+              candidate.id === gridBlock.id &&
+              candidate.blockType === gridBlock.blockType
           )
           if (!updatedBlock) throw new Error('Block not found after save.')
           invalidateHomepage()
@@ -279,23 +293,18 @@ export default function MainHomepageBlockRenderer({
             ? fetchThingsToDoAttractionCandidates(params)
             : gridBlock.blockType === 'tour-grid'
               ? fetchTourGridCandidates(params)
-              : fetchHomepageHotelGridCandidates(params)}
+              : fetchHomepageHotelGridCandidates(params)
+        }
         convertBlockTargets={CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES}
         onConvertEmptyBlock={async (blockType, slotCount) => {
           await onConvertBlock(gridBlock, blockType, slotCount)
         }}
         saveHotelGridSectionHeading={async (value) => {
-          await updateMainHomepageFeaturedSectionHeading(
-            gridBlock.id,
-            value,
-          )
+          await updateMainHomepageFeaturedSectionHeading(gridBlock.id, value)
           invalidateHomepage()
         }}
         saveHotelGridSectionSubheading={async (value) => {
-          await updateMainHomepageFeaturedSectionSubheading(
-            gridBlock.id,
-            value,
-          )
+          await updateMainHomepageFeaturedSectionSubheading(gridBlock.id, value)
           invalidateHomepage()
         }}
       />
@@ -320,8 +329,8 @@ export default function MainHomepageBlockRenderer({
       </div>
       <div className="hf-block-content hf-empty">
         <p>
-          Editor for &ldquo;{block.blockType}&rdquo; blocks is not yet available in
-          this tool.
+          Editor for &ldquo;{block.blockType}&rdquo; blocks is not yet available
+          in this tool.
         </p>
       </div>
     </div>

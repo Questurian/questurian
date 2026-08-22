@@ -10,6 +10,7 @@ import type {
 } from '../../../types'
 import { BlockSection } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { NavigableImageTarget } from '../NavigableImageTarget'
 
 function getArticleTypeLabel(article: FeaturedArticleTeaser): string {
   return article.articleType ?? article.category?.name ?? 'Article'
@@ -80,6 +81,7 @@ function GridArticleCard({
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div className="relative flex flex-col flex-1">
@@ -89,12 +91,12 @@ function GridArticleCard({
           </p>
 
           <h3 className="mt-2 font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
-            {article.title}
+            {articlePath ? <Link href={articlePath}>{article.title}</Link> : article.title}
           </h3>
 
           {excerpt ? (
             <p data-article-dek className="mt-2 overflow-hidden font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
-              {excerpt}
+              {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
             </p>
           ) : null}
 
@@ -103,7 +105,6 @@ function GridArticleCard({
             <AuthorLink
               authorSlug={article.author?.slug}
               authorId={article.author?.id}
-              nested
               className="hover:underline"
             >
               {authorLabel}
@@ -123,16 +124,7 @@ function GridArticleCard({
     </>
   )
 
-  return articlePath ? (
-    <Link
-      href={articlePath}
-      className="city-article-card flex flex-col"
-      data-content-ready={isContentReady ? 'true' : 'false'}
-      data-image-loaded={isImageLoaded ? 'true' : 'false'}
-    >
-      {inner}
-    </Link>
-  ) : (
+  return (
     <article
       className="city-article-card flex flex-col"
       data-content-ready={isContentReady ? 'true' : 'false'}

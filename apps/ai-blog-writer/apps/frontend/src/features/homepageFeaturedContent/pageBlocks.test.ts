@@ -15,6 +15,7 @@ describe('pageBlocks registry', () => {
   it('derives add-block order and config from one definition map', () => {
     expect(HOMEPAGE_PAGE_BLOCK_TYPES).toEqual([
       'featured-articles',
+      'editorial-feature',
       'hotel-grid',
       'tour-grid',
       'article-grid',
@@ -39,6 +40,7 @@ describe('pageBlocks registry', () => {
       'featured-article',
       'featured-creator-article',
       'featured-article-carousel',
+      'editorial-feature',
       'article-grid',
       'location-grid',
       'questurian-maps',
@@ -55,6 +57,7 @@ describe('pageBlocks registry', () => {
       'featured-creator-article',
       'featured-article-carousel',
       'featured-articles',
+      'editorial-feature',
       'article-grid',
       'questurian-maps',
       'where-to-eat-drink',
@@ -87,6 +90,8 @@ describe('pageBlocks registry', () => {
     expect(isValidHomepageBlockSlotCount('article-grid', 8)).toBe(true)
     expect(isValidHomepageBlockSlotCount('article-grid', 6)).toBe(false)
     expect(isValidHomepageBlockSlotCount('featured-articles', 6)).toBe(false)
+    expect(isValidHomepageBlockSlotCount('editorial-feature', 2)).toBe(true)
+    expect(isValidHomepageBlockSlotCount('editorial-feature', 5)).toBe(false)
     expect(isValidHomepageBlockSlotCount('hotel-grid', 12)).toBe(true)
     expect(isValidHomepageBlockSlotCount('hotel-grid', 13)).toBe(false)
     expect(isValidHomepageBlockSlotCount('newsletter-signup', 0)).toBe(true)

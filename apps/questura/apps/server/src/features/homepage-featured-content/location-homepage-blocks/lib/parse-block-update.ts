@@ -7,6 +7,10 @@ import {
 import { parseLocationGridMediaAspectBodyField } from '../../location-grid/lib/media-aspect'
 import { parseCreatorKickerBodyField } from '../../featured-creator-article/creator-kicker'
 import {
+  hasEditorialFeatureFieldUpdates,
+  parseEditorialFeatureFields,
+} from '../../editorial-feature/service'
+import {
   homepageBlockSupportsSectionHeading,
   parseSectionHeadingBodyField,
   parseSectionSubheadingBodyField,
@@ -22,6 +26,7 @@ type Slot5LayoutParse = ReturnType<typeof parseSlot5LayoutBodyField>
 type MediaAspectParse = ReturnType<typeof parseLocationGridMediaAspectBodyField>
 type ArticleGridFourLayoutParse = ReturnType<typeof parseArticleGridFourLayoutBodyField>
 type CreatorKickerParse = ReturnType<typeof parseCreatorKickerBodyField>
+type EditorialFeatureFieldsParse = ReturnType<typeof parseEditorialFeatureFields>
 
 export type ParsedBlockUpdateFields = {
   sectionHeading: Extract<SectionHeadingParse, { ok: true }>
@@ -32,6 +37,9 @@ export type ParsedBlockUpdateFields = {
   mediaAspect: Extract<MediaAspectParse, { ok: true }>
   articleGridFourLayout: Extract<ArticleGridFourLayoutParse, { ok: true }>
   creatorKicker: Extract<CreatorKickerParse, { ok: true }>
+  editorialFeature: {
+    [K in keyof EditorialFeatureFieldsParse]: Extract<EditorialFeatureFieldsParse[K], { ok: true }>
+  }
 }
 
 export type ParsedBlockUpdateInput = {
@@ -93,6 +101,11 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
     return { ok: false, status: 400, message: creatorKicker.message }
   }
 
+  const editorialFeature = parseEditorialFeatureFields(bodyRecord)
+  for (const field of Object.values(editorialFeature)) {
+    if (!field.ok) return { ok: false, status: 400, message: field.message }
+  }
+
   const fields = {
     sectionHeading,
     sectionSubheading,
@@ -102,15 +115,14 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
     mediaAspect,
     articleGridFourLayout,
     creatorKicker,
+    editorialFeature: editorialFeature as ParsedBlockUpdateFields['editorialFeature'],
   }
   const rawItems = bodyRecord.items
   const hasItems = Array.isArray(rawItems)
   const items = hasItems ? rawItems : []
   const rawSlotCount = bodyRecord.slotCount
   const slotCount =
-    typeof rawSlotCount === 'number' && Number.isInteger(rawSlotCount)
-      ? rawSlotCount
-      : null
+    typeof rawSlotCount === 'number' && Number.isInteger(rawSlotCount) ? rawSlotCount : null
 
   if (rawSlotCount !== undefined && slotCount === null) {
     return { ok: false, status: 400, message: 'slotCount must be an integer when provided.' }
@@ -120,8 +132,7 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
     return {
       ok: false,
       status: 400,
-      message:
-        'Provide items (array) and/or a supported block field to update this block.',
+      message: 'Provide items (array) and/or a supported block field to update this block.',
     }
   }
 
@@ -139,14 +150,15 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
 
 export function hasBlockFieldUpdates(fields: ParsedBlockUpdateFields): boolean {
   return (
-    !fields.sectionHeading.omit
-    || !fields.sectionSubheading.omit
-    || !fields.slot3Layout.omit
-    || !fields.slot4Layout.omit
-    || !fields.slot5Layout.omit
-    || !fields.mediaAspect.omit
-    || !fields.articleGridFourLayout.omit
-    || !fields.creatorKicker.omit
+    !fields.sectionHeading.omit ||
+    !fields.sectionSubheading.omit ||
+    !fields.slot3Layout.omit ||
+    !fields.slot4Layout.omit ||
+    !fields.slot5Layout.omit ||
+    !fields.mediaAspect.omit ||
+    !fields.articleGridFourLayout.omit ||
+    !fields.creatorKicker.omit ||
+    hasEditorialFeatureFieldUpdates(fields.editorialFeature)
   )
 }
 
@@ -156,15 +168,24 @@ export function validateBlockUpdateFields(
 ): { message: string } | null {
   const blockSlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
 
-  if (!fields.slot3Layout.omit && (block.blockType !== 'featured-articles' || blockSlotCount !== 3)) {
+  if (
+    !fields.slot3Layout.omit &&
+    (block.blockType !== 'featured-articles' || blockSlotCount !== 3)
+  ) {
     return { message: 'slot3Layout is only supported for featured-articles blocks with 3 slots.' }
   }
 
-  if (!fields.slot4Layout.omit && (block.blockType !== 'featured-articles' || blockSlotCount !== 4)) {
+  if (
+    !fields.slot4Layout.omit &&
+    (block.blockType !== 'featured-articles' || blockSlotCount !== 4)
+  ) {
     return { message: 'slot4Layout is only supported for featured-articles blocks with 4 slots.' }
   }
 
-  if (!fields.slot5Layout.omit && (block.blockType !== 'featured-articles' || blockSlotCount !== 5)) {
+  if (
+    !fields.slot5Layout.omit &&
+    (block.blockType !== 'featured-articles' || blockSlotCount !== 5)
+  ) {
     return { message: 'slot5Layout is only supported for featured-articles blocks with 5 slots.' }
   }
 
@@ -190,6 +211,13 @@ export function validateBlockUpdateFields(
 
   if (!fields.creatorKicker.omit && block.blockType !== 'featured-creator-article') {
     return { message: 'creatorKicker is only supported for featured-creator-article blocks.' }
+  }
+
+  if (
+    hasEditorialFeatureFieldUpdates(fields.editorialFeature) &&
+    block.blockType !== 'editorial-feature'
+  ) {
+    return { message: 'Editorial feature fields are only supported for editorial-feature blocks.' }
   }
 
   return null

@@ -54,6 +54,41 @@ export type FeaturedArticlesBlockResponse = {
   slot5Layout?: FeaturedArticlesSlot5Layout | null
 }
 
+export type EditorialFeaturePublicImage = {
+  url: string | null
+  alt: string
+  width: number | null
+  height: number | null
+  variant: string | null
+  status: string
+}
+
+export type EditorialFeatureLinkedLocation = {
+  id: number
+  label: string | null
+  locationKey: string | null
+  href: string | null
+  isLinkable: boolean
+}
+
+export type EditorialFeatureBlockResponse = {
+  id: string
+  blockType: 'editorial-feature'
+  selection: HomepageFeaturedSelection
+  sectionHeading?: string | null
+  sectionSubheading?: string | null
+  featureKicker: string | null
+  featureTitle: string | null
+  featureDescription: string | null
+  featureMediaSetId: number | null
+  featureImagePortrait: EditorialFeaturePublicImage | null
+  featureImageWide: EditorialFeaturePublicImage | null
+  featureImageAltReady: boolean
+  linkedLocationId: number | null
+  linkedLocation: EditorialFeatureLinkedLocation | null
+  linkWarning: string | null
+}
+
 /** When `selection.totalSlots === 4`: one row of four (wide images) vs 2×2 (square images). */
 export type ArticleGridFourLayout = 'four-across' | 'two-by-two'
 
@@ -146,6 +181,7 @@ export type ArticleCuratedHomepageBlockResponse =
   | FeaturedCreatorArticleBlockResponse
   | FeaturedArticleCarouselBlockResponse
   | FeaturedArticlesBlockResponse
+  | EditorialFeatureBlockResponse
   | ArticleGridBlockResponse
   | QuesturianMapsBlockResponse
   | WhereToEatDrinkBlockResponse

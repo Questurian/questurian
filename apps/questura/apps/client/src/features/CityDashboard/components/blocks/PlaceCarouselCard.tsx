@@ -22,6 +22,7 @@ import { useEffect, useRef, useState, type JSX } from 'react'
 
 import type { PlaceCardHighlight } from '../../types'
 import { CAROUSEL_CARD_WIDTH_CLASS } from './BlockSection'
+import { NavigableImageTarget } from './NavigableImageTarget'
 
 const PRICE_LEVEL_MAP: Record<string, string> = {
   '1': '$',
@@ -136,12 +137,26 @@ export function PlaceCarouselCard({
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget
+          href={ctaHref}
+          label={`${ctaLabel}: ${title}`}
+          external={ctaExternal}
+        />
       </div>
 
       <div className="relative flex flex-col flex-1">
         <div className="city-article-content pt-4 flex flex-col flex-1">
           <h3 className="font-editorial text-[1.35rem] font-semibold leading-[1.1] text-foreground">
-            {title}
+            {ctaHref ? (
+              <a
+                href={ctaHref}
+                {...(ctaExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+              >
+                {title}
+              </a>
+            ) : (
+              title
+            )}
           </h3>
 
           {isAmount && priceLabel ? (
@@ -171,7 +186,9 @@ export function PlaceCarouselCard({
                     key={`${highlight.key}:${highlight.label}`}
                     className="flex items-center gap-2 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-foreground"
                   >
-                    {Icon ? <Icon className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden /> : null}
+                    {Icon ? (
+                      <Icon className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden />
+                    ) : null}
                     {highlight.label}
                   </li>
                 )

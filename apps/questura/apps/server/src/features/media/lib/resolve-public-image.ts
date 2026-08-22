@@ -4,6 +4,7 @@ export type MediaPlacement =
   | 'card'
   | 'square-card'
   | 'wide-card'
+  | 'portrait-card'
   | 'hero'
   | 'article-header'
   | 'open-graph'
@@ -47,6 +48,7 @@ const PLACEMENT_CONFIG: Record<MediaPlacement, PlacementConfig> = {
   card: { required: 'thumbnail', migrationFallbacks: [] },
   'square-card': { required: 'square', migrationFallbacks: [] },
   'wide-card': { required: 'wide', migrationFallbacks: ['thumbnail'] },
+  'portrait-card': { required: 'portrait', migrationFallbacks: [] },
   hero: { required: 'hero', migrationFallbacks: ['wide'] },
   'article-header': { required: 'wide', migrationFallbacks: ['hero'] },
   'open-graph': { required: 'open_graph', migrationFallbacks: [] },
@@ -171,12 +173,7 @@ export const resolveMediaSetForPlacement = (
     for (const fallbackVariant of config.migrationFallbacks) {
       const fallbackAsset = getVariantAsset(mediaSet, fallbackVariant)
       if (!fallbackAsset) continue
-      const image = assetToPublicImage(
-        fallbackAsset,
-        fallbackVariant,
-        'legacy_fallback',
-        mediaSet,
-      )
+      const image = assetToPublicImage(fallbackAsset, fallbackVariant, 'legacy_fallback', mediaSet)
       if (image.status === 'legacy_fallback') return image
     }
   }

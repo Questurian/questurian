@@ -30,9 +30,9 @@ function isReadyImage(value: unknown): boolean {
   return isRecord(value) && text(value.url) !== '' && value.status === 'ready'
 }
 
-function requiredImageField(block: Record<string, unknown>, slotIndex: number): string {
+function requiredImageField(block: Record<string, unknown>, slotIndex: number): string | null {
   const behavior = curatedBlockRegistry.get(text(block.blockType))?.behavior
-  return behavior?.requiredImageField?.(block, slotIndex) ?? 'image'
+  return behavior?.requiredImageField ? behavior.requiredImageField(block, slotIndex) : 'image'
 }
 
 /**
@@ -52,6 +52,11 @@ export function getBlockPublishBlockers(block: unknown, blockIndex: number): str
     return blockers
   }
 
+  const customBlockers = curatedBlockRegistry
+    .get(text(block.blockType))
+    ?.behavior.getPublishBlockers?.(block, blockIndex)
+  if (customBlockers?.length) blockers.push(...customBlockers)
+
   if (!isArticleBlockType(block.blockType)) return blockers
 
   const items = Array.isArray(selection.items) ? selection.items : []
@@ -68,7 +73,7 @@ export function getBlockPublishBlockers(block: unknown, blockIndex: number): str
     }
 
     const imageField = requiredImageField(block, slotIndex)
-    if (!isReadyImage(item[imageField])) {
+    if (imageField && !isReadyImage(item[imageField])) {
       const title = text(item.title) || `${text(item.collectionLabel) || 'Item'} #${item.id}`
       blockers.push(
         `Block ${blockIndex + 1}, slot ${slotIndex + 1} (${title}) is missing a ready ${imageField} placement.`,

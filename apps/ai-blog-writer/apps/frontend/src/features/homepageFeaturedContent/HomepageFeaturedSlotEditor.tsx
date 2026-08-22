@@ -19,12 +19,14 @@ import {
   CuratedSlotSwapWrap
 } from './CuratedArticleSlotSwap'
 import QuesturianMapsArticleLayout from './QuesturianMapsArticleLayout'
+import EditorialFeatureLayout from './EditorialFeatureLayout'
 import type {
   ArticleCuratedHomepageBlockType,
   ArticleGridFourLayout,
   FeaturedArticlesSlot3Layout,
   FeaturedArticlesSlot4Layout,
-  FeaturedArticlesSlot5Layout
+  FeaturedArticlesSlot5Layout,
+  EditorialFeatureBlockResponse
 } from './pageBlocks'
 
 function getInvalidMessage(item: HomepageFeaturedInvalidItem): string {
@@ -68,6 +70,7 @@ type Props = {
   /** When `variant` is article-grid with 4 slots. */
   articleGridFourLayout?: ArticleGridFourLayout
   creatorKicker?: string | null
+  editorialFeatureBlock?: EditorialFeatureBlockResponse
 }
 
 export default function HomepageFeaturedSlotEditor({
@@ -82,7 +85,8 @@ export default function HomepageFeaturedSlotEditor({
   featuredArticlesSlot4Layout = 'sidebar-stack',
   featuredArticlesSlot5Layout = 'card-grid',
   articleGridFourLayout = 'four-across',
-  creatorKicker = null
+  creatorKicker = null,
+  editorialFeatureBlock
 }: Props) {
   const {
     selectionQuery,
@@ -160,8 +164,7 @@ export default function HomepageFeaturedSlotEditor({
       {!(compact && suppressToolbar) ? (
         <div className="hf-slot-controls">
           <span className="hf-panel-desc">
-            {slots.filter(Boolean).length} /{' '}
-            {slots.length} slots filled
+            {slots.filter(Boolean).length} / {slots.length} slots filled
           </span>
           <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
             <button
@@ -177,20 +180,31 @@ export default function HomepageFeaturedSlotEditor({
       ) : null}
 
       {/* ── Slot grid / Layout ─────────────────────────────── */}
-      {variant === 'questurian-maps' ? (
+      {variant === 'editorial-feature' && editorialFeatureBlock ? (
+        <EditorialFeatureLayout
+          block={editorialFeatureBlock}
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
+        />
+      ) : variant === 'questurian-maps' ? (
         <QuesturianMapsArticleLayout
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}
         />
-      ) : variant === 'featured-article' || variant === 'featured-creator-article' ? (
+      ) : variant === 'featured-article' ||
+        variant === 'featured-creator-article' ? (
         <FeaturedArticleSpotlightLayout
           item={slots[0] ?? null}
           invalidItem={invalidItemsBySlot.get(1)}
           onPick={() => setPickerSlotIndex(0)}
           showAuthorAvatar={variant === 'featured-creator-article'}
-          creatorKicker={variant === 'featured-creator-article' ? creatorKicker : null}
+          creatorKicker={
+            variant === 'featured-creator-article' ? creatorKicker : null
+          }
         />
       ) : variant === 'featured-article-carousel' ? (
         <FeaturedArticleCarouselLayout

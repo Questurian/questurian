@@ -130,6 +130,7 @@ export function normalizeHomepageFeaturedCandidate(
     title: typeof doc.title === 'string' && doc.title.trim() ? doc.title.trim() : 'Untitled',
     slug: typeof doc.slug === 'string' && doc.slug.trim() ? doc.slug : null,
     canonicalPath: typeof doc.canonicalPath === 'string' && doc.canonicalPath.trim() ? doc.canonicalPath : null,
+    locationKey: typeof doc.location === 'string' && doc.location.trim() ? doc.location : null,
     status: typeof doc.status === 'string' && doc.status.trim() ? doc.status : null,
     updatedAt: typeof doc.updatedAt === 'string' && doc.updatedAt.trim() ? doc.updatedAt : null,
     publishedAt:

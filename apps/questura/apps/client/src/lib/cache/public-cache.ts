@@ -37,8 +37,8 @@ export function publicFetchOptions(tags: string[]): PublicFetchOptions {
 export const publicCacheTags = {
   sitemap: () => "sitemap",
   countryCities: (country: string) => `country-cities:${tagPart(country)}`,
-  locationHomepage: (country: string, city: string) =>
-    `location-homepage:${tagPart(country)}:${tagPart(city)}`,
+  locationHomepage: (country: string, city: string, neighborhood?: string) =>
+    `location-homepage:${tagPart(country)}:${tagPart(city)}${neighborhood ? `:${tagPart(neighborhood)}` : ''}`,
   article: (scope: ArticleScope, type: ArticleTypeKey, slug: string, lang: string) =>
     `article:${scopeTag(scope)}:${tagPart(type)}:${tagPart(slug)}:${tagPart(lang)}`,
   articlePath: (path: string, lang: string) => `article-path:${tagPart(path)}:${tagPart(lang)}`,

@@ -10,6 +10,7 @@ import type {
 } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { NavigableImageTarget } from '../NavigableImageTarget'
 
 function getAuthorLabel(article: FeaturedArticleTeaser): string {
   return article.author?.name || 'Questurian'
@@ -145,6 +146,7 @@ export function FeaturedArticleOneArticlePreview({
       {mobileImageUrl ? (
         <div className="city-article-image-shell relative w-full aspect-[3/2] overflow-hidden bg-[#1a1a1a]">
           <ArticleImage src={mobileImageUrl} priority className="h-full w-full object-cover" status={mobileImage} />
+          <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
         </div>
       ) : (
         <div className="w-full aspect-[3/2] bg-[#1a1a1a]" />
@@ -158,15 +160,15 @@ export function FeaturedArticleOneArticlePreview({
           ) : null}
           {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
           <h2 className="font-editorial font-semibold text-[2.1rem] leading-[1.0] text-white">
-            {article.title}
+            {articlePath ? <Link href={articlePath}>{article.title}</Link> : article.title}
           </h2>
           {excerpt ? (
             <p data-article-dek className="mt-4 font-editorial text-[0.95rem] leading-[1.55] text-[#b0a89e]">
-              {excerpt}
+              {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
             </p>
           ) : null}
           <p className="mt-7 text-center font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-[#6a635c]">
-            BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} nested className="hover:underline">{authorLabel}</AuthorLink>
+            BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
           </p>
         </div>
         <TextSkeleton className="justify-start px-6 py-9" />
@@ -191,15 +193,15 @@ export function FeaturedArticleOneArticlePreview({
           ) : null}
           {showAuthorAvatar ? <CreatorAvatar article={article} authorLabel={authorLabel} /> : null}
           <h2 className="font-editorial font-semibold leading-[1.15] text-white text-[1.35rem] 1024:text-[1.6rem] 1280:text-[1.85rem]">
-            {article.title}
+            {articlePath ? <Link href={articlePath}>{article.title}</Link> : article.title}
           </h2>
           {excerpt ? (
             <p data-article-dek className="mt-3 font-editorial text-[0.85rem] leading-[1.45] text-[#b0a89e] 1024:text-[0.9rem]">
-              {excerpt}
+              {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
             </p>
           ) : null}
           <p className="mt-4 font-[family-name:var(--font-dm-sans)] text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-[#6a635c]">
-            BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} nested className="hover:underline">{authorLabel}</AuthorLink>
+            BY <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
           </p>
         </div>
         <TextSkeleton className="justify-center px-6 py-8 1024:px-10 1280:px-12" />
@@ -209,6 +211,7 @@ export function FeaturedArticleOneArticlePreview({
           {desktopImageUrl ? (
             <ArticleImage src={desktopImageUrl} priority className="h-full w-full object-cover" status={desktopImage} />
           ) : null}
+          <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
         </div>
       </div>
     </>
@@ -230,44 +233,22 @@ export function FeaturedArticleOneArticlePreview({
       ) : null}
 
       {/* ── Mobile ─────────────────────────────────────────────── */}
-      {articlePath ? (
-        <Link
-          href={articlePath}
-          className="city-article-card city-article-card--dark block 768:hidden"
-          data-content-ready={mobileImage.isContentReady ? 'true' : 'false'}
-          data-image-loaded={mobileImage.isImageLoaded ? 'true' : 'false'}
-        >
-          {mobileContent}
-        </Link>
-      ) : (
-        <div
-          className="city-article-card city-article-card--dark 768:hidden"
-          data-content-ready={mobileImage.isContentReady ? 'true' : 'false'}
-          data-image-loaded={mobileImage.isImageLoaded ? 'true' : 'false'}
-        >
-          {mobileContent}
-        </div>
-      )}
+      <div
+        className="city-article-card city-article-card--dark 768:hidden"
+        data-content-ready={mobileImage.isContentReady ? 'true' : 'false'}
+        data-image-loaded={mobileImage.isImageLoaded ? 'true' : 'false'}
+      >
+        {mobileContent}
+      </div>
 
       {/* ── Desktop ────────────────────────────────────────────── */}
-      {articlePath ? (
-        <Link
-          href={articlePath}
-          className={`city-article-card city-article-card--dark hidden 768:flex 768:items-center ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
-          data-content-ready={desktopImage.isContentReady ? 'true' : 'false'}
-          data-image-loaded={desktopImage.isImageLoaded ? 'true' : 'false'}
-        >
-          {desktopContent}
-        </Link>
-      ) : (
-        <div
-          className={`city-article-card city-article-card--dark hidden 768:flex 768:items-center ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
-          data-content-ready={desktopImage.isContentReady ? 'true' : 'false'}
-          data-image-loaded={desktopImage.isImageLoaded ? 'true' : 'false'}
-        >
-          {desktopContent}
-        </div>
-      )}
+      <div
+        className={`city-article-card city-article-card--dark hidden 768:flex 768:items-center ${BLOCK_MAX_WIDTH_CLASS} ${BLOCK_GUTTER_CLASS}`}
+        data-content-ready={desktopImage.isContentReady ? 'true' : 'false'}
+        data-image-loaded={desktopImage.isImageLoaded ? 'true' : 'false'}
+      >
+        {desktopContent}
+      </div>
     </section>
   )
 }

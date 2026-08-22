@@ -62,6 +62,19 @@ const PAGE_BLOCK_DEFINITIONS = {
     articlePayload: true,
     convertTarget: false
   },
+  'editorial-feature': {
+    label: 'Editorial Feature',
+    description:
+      'Custom feature image and copy with 2, 3, 4, or 6 related articles',
+    quickSlotCounts: [2, 3, 4, 6],
+    defaultSlotCount: 3,
+    minSlotCount: 2,
+    maxSlotCount: 6,
+    validSlotCounts: [2, 3, 4, 6],
+    order: 0.5,
+    articlePayload: true,
+    convertTarget: true
+  },
   'article-grid': {
     label: 'Article Grid',
     description:

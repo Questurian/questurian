@@ -10,6 +10,7 @@ import type {
 } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { NavigableImageTarget } from '../NavigableImageTarget'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -100,6 +101,7 @@ function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div className="relative px-[var(--block-gutter)]">
@@ -115,16 +117,29 @@ function MagazineHeroCard({ article }: MagazineHeroCardProps): JSX.Element {
             )}
           >
             {articlePath ? (
-              <Link href={articlePath} className="hover:underline">{article.title}</Link>
-            ) : article.title}
+              <Link href={articlePath} className="hover:underline">
+                {article.title}
+              </Link>
+            ) : (
+              article.title
+            )}
           </h2>
 
-          <p data-article-dek className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+          <p
+            data-article-dek
+            className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
+          >
             {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
-            <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+            <AuthorLink
+              authorSlug={article.author?.slug}
+              authorId={article.author?.id}
+              className="hover:underline"
+            >
+              {authorLabel}
+            </AuthorLink>
           </p>
         </div>
 
@@ -176,17 +191,28 @@ function SidebarMediaCard({ article }: SidebarMediaCardProps): JSX.Element {
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div className="city-five-side-copy">
         <p className="city-five-side-type">{articleTypeLabel}</p>
         <h3 className="city-five-side-title">
           {articlePath ? (
-            <Link href={articlePath} className="hover:underline">{article.title}</Link>
-          ) : article.title}
+            <Link href={articlePath} className="hover:underline">
+              {article.title}
+            </Link>
+          ) : (
+            article.title
+          )}
         </h3>
         <p className="city-five-side-author">
-          <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+          <AuthorLink
+            authorSlug={article.author?.slug}
+            authorId={article.author?.id}
+            className="hover:underline"
+          >
+            {authorLabel}
+          </AuthorLink>
         </p>
       </div>
     </section>
@@ -209,12 +235,24 @@ function SidebarTextRow({ article }: SidebarTextRowProps): JSX.Element {
       <p className="city-five-side-type">{articleTypeLabel}</p>
       <h3 className="city-five-side-title">
         {articlePath ? (
-          <Link href={articlePath} className="hover:underline">{article.title}</Link>
-        ) : article.title}
+          <Link href={articlePath} className="hover:underline">
+            {article.title}
+          </Link>
+        ) : (
+          article.title
+        )}
       </h3>
-      <p data-article-dek className="city-five-side-dek">{articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}</p>
+      <p data-article-dek className="city-five-side-dek">
+        {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
+      </p>
       <p className="city-five-side-author">
-        <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+        <AuthorLink
+          authorSlug={article.author?.slug}
+          authorId={article.author?.id}
+          className="hover:underline"
+        >
+          {authorLabel}
+        </AuthorLink>
       </p>
     </section>
   )
@@ -258,10 +296,7 @@ export function FeaturedArticlesFiveArticlePreview({
             <SidebarMediaCard key={getArticleKey(mediaArticle, 1)} article={mediaArticle} />
           ) : null}
           {textArticles.map((article, index) => (
-            <SidebarTextRow
-              key={getArticleKey(article, index + 2)}
-              article={article}
-            />
+            <SidebarTextRow key={getArticleKey(article, index + 2)} article={article} />
           ))}
         </div>
       </div>

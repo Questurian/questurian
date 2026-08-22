@@ -1,4 +1,9 @@
 import type { Metadata } from 'next'
+import {
+  CityDashboardPage,
+  CityHomepageContent,
+  fetchNeighborhoodHomepage,
+} from '@/features/CityDashboard'
 import { renderStandardArticleByPath } from '@/features/articles/routes/renderStandardArticleByPath'
 import {
   guardArticleSlug,
@@ -22,14 +27,47 @@ function buildPath(country: string, categorySlug: string, articleSlug: string): 
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { country, city, category } = await params
-  return buildArticleMetadataByPath({ path: buildPath(country, city, category) })
+  const neighborhood = await fetchNeighborhoodHomepage(country, city, category)
+  if (neighborhood) {
+    const label = category
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+    return {
+      title: `${label} — Questurian`,
+      description: `Your Questurian guide to ${label}.`,
+      openGraph: {
+        title: `${label} — Questurian`,
+        url: `/${country}/${city}/${category}`,
+      },
+    }
+  }
+  return buildArticleMetadataByPath({
+    path: buildPath(country, city, category),
+  })
 }
 
 export default async function CountryCategoryArticlePage({ params }: Props) {
   const { country, city, category } = await params
   guardCountrySegment(country)
+
+  const neighborhood = await fetchNeighborhoodHomepage(country, city, category)
+  if (neighborhood) {
+    return (
+      <>
+        <CityHomepageContent
+          pageBlocks={neighborhood.pageBlocks}
+          location={neighborhood.location}
+        />
+        <CityDashboardPage citySlug={city} countrySlug={country} />
+      </>
+    )
+  }
+
   guardCategorySegment(city)
   guardArticleSlug(category)
 
-  return renderStandardArticleByPath({ path: buildPath(country, city, category) })
+  return renderStandardArticleByPath({
+    path: buildPath(country, city, category),
+  })
 }

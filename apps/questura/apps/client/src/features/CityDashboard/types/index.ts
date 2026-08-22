@@ -36,6 +36,7 @@ export type CityHomepageLegacyBlock<TItem = unknown> = {
 }
 
 export type CityHomepageResponse = {
+  location?: CityHomepageLocation | null
   pageBlocks: CityHomepageBlock[]
 }
 
@@ -71,6 +72,9 @@ export type FeaturedArticleTeaser = {
   } | null
   imageUrl: string | null
   imageUrlSquare: string | null
+  image?: EditorialFeatureImage | null
+  imageSquare?: EditorialFeatureImage | null
+  imageWide?: EditorialFeatureImage | null
   articlePath: string | null
 }
 
@@ -81,6 +85,30 @@ export type CityHomepageArticleBlock = {
   sectionHeading?: string | null
   sectionSubheading?: string | null
   creatorKicker?: string | null
+}
+
+export type EditorialFeatureImage = {
+  url: string
+  alt: string | null
+  width?: number | null
+  height?: number | null
+}
+
+export type EditorialFeatureBlock = {
+  blockType: 'editorial-feature'
+  totalSlots: 2 | 3 | 4 | 6
+  items: FeaturedArticleTeaser[]
+  featureKicker: string | null
+  featureTitle: string | null
+  featureDescription: string | null
+  featureImagePortrait: EditorialFeatureImage | null
+  featureImageWide: EditorialFeatureImage | null
+  linkedLocation: {
+    id: number | null
+    label: string | null
+    locationKey: string | null
+    href: string
+  } | null
 }
 
 export type PlaceCardHighlight = {
@@ -156,6 +184,7 @@ export type LocationGridItem = {
   id: number
   level: string | null
   locationKey: string | null
+  href?: string | null
   parentKey: string | null
   countryName: string | null
   cityName: string | null
@@ -231,6 +260,7 @@ export type NewsletterSignupBlock = {
 
 export type CityHomepageBlock<TItem = unknown> =
   | CityHomepageArticleBlock
+  | EditorialFeatureBlock
   | HotelGridBlock
   | TourGridBlock
   | LocationGridBlock

@@ -3,10 +3,11 @@ export const HOMEPAGE_FEATURED_TOTAL_SLOTS = 10
 export const HOMEPAGE_FEATURED_COLLECTIONS = [
   'articles',
   'single-type-listicles',
-  'listicle-itineraries',
+  'listicle-itineraries'
 ] as const
 
-export type HomepageFeaturedCollection = (typeof HOMEPAGE_FEATURED_COLLECTIONS)[number]
+export type HomepageFeaturedCollection =
+  (typeof HOMEPAGE_FEATURED_COLLECTIONS)[number]
 
 export type HomepageFeaturedItemRef = {
   relationTo: HomepageFeaturedCollection
@@ -24,6 +25,7 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   imageUrl: string | null
   /** Square crop URL from media set when available; magazine layout prefers this. */
   imageUrlSquare?: string | null
+  imageWide?: { url?: string | null } | null
   excerpt: string | null
   authorLabel: string | null
   author?: {
@@ -34,6 +36,11 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
       url: string
       alt: string | null
     } | null
+  } | null
+  category?: {
+    id: number | null
+    name: string | null
+    slug: string | null
   } | null
 }
 

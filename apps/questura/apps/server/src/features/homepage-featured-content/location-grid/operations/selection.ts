@@ -12,6 +12,34 @@ import { findLocationGridDoc } from '../lib/repository'
 import { parseLocationGridSlots } from '../lib/refs'
 import { isLocationWithinScope } from '../lib/scope'
 
+function publicLocationHref(locationKey: string | null): string | null {
+  const parts = locationKey?.split('|').filter(Boolean) ?? []
+  return parts.length === 2 || parts.length === 3 ? `/${parts.join('/')}` : null
+}
+
+async function resolvePublishedHomepageHref(
+  payload: Payload,
+  candidate: LocationGridCandidate,
+): Promise<string | null> {
+  const result = await payload.find({
+    collection: 'location-homepages',
+    where: {
+      and: [
+        { location: { equals: candidate.id } },
+        { isEnabled: { equals: true } },
+        { publishedRevision: { greater_than: 0 } },
+      ],
+    },
+    limit: 1,
+    depth: 0,
+    overrideAccess: true,
+    select: { publishedPageBlocks: true },
+  })
+  const homepage = (result as { docs?: Array<{ publishedPageBlocks?: unknown[] }> } | undefined)
+    ?.docs?.[0]
+  return homepage?.publishedPageBlocks?.length ? publicLocationHref(candidate.locationKey) : null
+}
+
 export async function getLocationGridSelectionFromItems(
   payload: Payload,
   rawItems: unknown,
@@ -54,6 +82,7 @@ export async function getLocationGridSelectionFromItems(
 
     items.push({
       ...candidate,
+      href: await resolvePublishedHomepageHref(payload, candidate),
       slot: slot.slot,
     })
   }

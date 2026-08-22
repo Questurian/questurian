@@ -156,10 +156,7 @@ describe('formatPublicLocationHomepageDoc', () => {
     ] as never)
 
     expect(response.pageBlocks[0]).toMatchObject({
-      items: [
-        { articleType: 'Questurian Maps' },
-        { articleType: 'Itinerary' },
-      ],
+      items: [{ articleType: 'Questurian Maps' }, { articleType: 'Itinerary' }],
     })
   })
 
@@ -346,6 +343,62 @@ describe('formatPublicLocationHomepageDoc', () => {
     ] as never)
 
     expect(response).toEqual({ pageBlocks: [] })
+  })
+
+  it('formats editorial feature copy, images, articles, and only a usable location link', () => {
+    const response = formatPublicLocationHomepageDoc([
+      {
+        blockType: 'editorial-feature',
+        featureKicker: 'Featured neighborhood',
+        featureTitle: 'Miraflores',
+        featureDescription: 'A coastal base for food, parks, and long walks.',
+        featureImagePortrait: { url: '/portrait.webp', alt: 'Miraflores coast' },
+        featureImageWide: { url: '/wide.webp', alt: 'Miraflores coast' },
+        linkedLocation: {
+          id: 12,
+          label: 'Miraflores',
+          locationKey: 'peru|lima|miraflores',
+          href: '/peru/lima/miraflores',
+        },
+        selection: {
+          totalSlots: 2,
+          isComplete: true,
+          items: [{ relationTo: 'articles', title: 'Where to eat', canonicalPath: '/eat' }],
+        },
+      },
+    ] as never)
+
+    expect(response.pageBlocks[0]).toMatchObject({
+      blockType: 'editorial-feature',
+      totalSlots: 2,
+      featureTitle: 'Miraflores',
+      linkedLocation: { href: '/peru/lima/miraflores' },
+      items: [{ title: 'Where to eat', articlePath: '/eat' }],
+    })
+  })
+
+  it('builds main-homepage listicle links from each item location', () => {
+    const response = formatPublicLocationHomepageDoc([
+      {
+        blockType: 'editorial-feature',
+        selection: {
+          totalSlots: 2,
+          isComplete: true,
+          items: [
+            {
+              relationTo: 'single-type-listicles',
+              title: 'Miraflores restaurants',
+              slug: 'miraflores-restaurants',
+              locationKey: 'peru|lima|miraflores',
+            },
+          ],
+        },
+      },
+    ] as never)
+
+    expect(response.pageBlocks[0]).toMatchObject({
+      items: [{ articlePath: '/peru/lima/maps/miraflores-restaurants' }],
+    })
   })
 
   it('returns only pageBlocks at the top level', () => {

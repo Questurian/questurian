@@ -7,6 +7,18 @@ import type {
 } from '../../pageBlocks'
 import { locationHomepageRequest } from '../request'
 import type { LocationHomepageResponse } from '../types'
+import type { EditorialFeatureFieldsUpdate } from '../../mainHomepage/blocks/blockSettings.api'
+
+export async function updateLocationHomepageEditorialFeatureFields(
+  homepageId: number,
+  blockId: string,
+  fields: EditorialFeatureFieldsUpdate
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, ...fields })
+  })
+}
 
 export async function updateLocationHomepageFeaturedSectionHeading(
   id: number,
@@ -46,13 +58,10 @@ export async function updateLocationHomepageFeaturedSlot3Layout(
   blockId: string,
   slot3Layout: FeaturedArticlesSlot3Layout
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    `/api/location-homepages/${homepageId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, slot3Layout })
-    }
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot3Layout })
+  })
 }
 
 export async function updateLocationHomepageFeaturedSlot4Layout(
@@ -60,13 +69,10 @@ export async function updateLocationHomepageFeaturedSlot4Layout(
   blockId: string,
   slot4Layout: FeaturedArticlesSlot4Layout
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    `/api/location-homepages/${homepageId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, slot4Layout })
-    }
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot4Layout })
+  })
 }
 
 export async function updateLocationHomepageFeaturedSlot5Layout(
@@ -74,13 +80,10 @@ export async function updateLocationHomepageFeaturedSlot5Layout(
   blockId: string,
   slot5Layout: FeaturedArticlesSlot5Layout
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    `/api/location-homepages/${homepageId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, slot5Layout })
-    }
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, slot5Layout })
+  })
 }
 
 export async function updateLocationHomepageLocationGridMediaAspect(
@@ -88,13 +91,10 @@ export async function updateLocationHomepageLocationGridMediaAspect(
   blockId: string,
   mediaAspect: LocationGridMediaAspect
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    `/api/location-homepages/${homepageId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, mediaAspect })
-    }
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, mediaAspect })
+  })
 }
 
 export async function updateLocationHomepageArticleGridFourLayout(
@@ -102,11 +102,8 @@ export async function updateLocationHomepageArticleGridFourLayout(
   blockId: string,
   articleGridFourLayout: ArticleGridFourLayout
 ): Promise<LocationHomepageResponse> {
-  return locationHomepageRequest(
-    `/api/location-homepages/${homepageId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ blockId, articleGridFourLayout })
-    }
-  )
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, articleGridFourLayout })
+  })
 }
