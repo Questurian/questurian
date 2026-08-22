@@ -81,6 +81,27 @@ const BLOCK_PICKER_GROUP_BY_TYPE: Record<
 const SECTION_HEADING_MAX_LEN = 120
 const SECTION_SUBHEADING_MAX_LEN = 200
 
+const FEATURED_ARTICLES_LAYOUT_LABELS: Record<number, string> = {
+  3: 'Hero + 2 stacked',
+  4: 'Hero + 3 side rows',
+  5: 'Hero + media + text rows',
+  7: '2 left + hero + 4 compact',
+  8: '2 left + hero + 5 compact',
+  9: '2 left + hero pair + 5 compact'
+}
+
+const EDITORIAL_FEATURE_LAYOUT_LABELS: Record<number, string> = {
+  2: 'Portrait + copy + 2 large cards',
+  3: 'Portrait + copy + 3 square cards',
+  4: 'Portrait + copy + 4 wide cards',
+  6: 'Portrait + copy + 6 numbered rows'
+}
+
+const ARTICLE_GRID_LAYOUT_LABELS: Record<number, string> = {
+  4: '4 across · wide images',
+  8: '4 × 2 · square images'
+}
+
 type Props = {
   isPending: boolean
   onConfirm: (
@@ -148,10 +169,6 @@ export default function AddHomepageBlockPicker({
 
   function handleSelectBlockType(blockType: CuratedHomepageBlockType) {
     const nextConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
-    if (nextConfig.minSlotCount === nextConfig.maxSlotCount) {
-      onConfirm(blockType, nextConfig.defaultSlotCount, undefined, undefined)
-      return
-    }
     setSelectedBlockType(blockType)
     setSelectedSlotCount(nextConfig.defaultSlotCount)
     setCustomSlotCount('')
@@ -243,76 +260,142 @@ export default function AddHomepageBlockPicker({
   }
 
   return (
-    <div className="hf-add-block-picker">
-      <p className="hf-add-block-prompt">{blockConfig.label} size</p>
-      <p className="hf-add-block-hint">
-        {selectedBlockType === 'article-grid'
-          ? 'Choose 4 (square grid: four across on large screens, 2×2 on narrow) or 8 (four columns × two rows, all square).'
-          : `Choose between ${blockConfig.minSlotCount} and ${blockConfig.maxSlotCount} items.`}
-      </p>
-      <div className="hf-add-block-counts">
-        {blockConfig.quickSlotCounts.map((count) => (
-          <button
-            key={count}
-            type="button"
-            className={`hf-btn-ghost${selectedSlotCount === count && !customSlotCount.trim() ? ' active' : ''}`}
-            onClick={() => {
-              setSelectedSlotCount(count)
-              setCustomSlotCount('')
-            }}
-          >
-            {count}
-          </button>
-        ))}
-        <input
-          type="number"
-          className="hf-slot-count-input"
-          min={blockConfig.minSlotCount}
-          max={blockConfig.maxSlotCount}
-          placeholder="Custom…"
-          value={customSlotCount}
-          onChange={(event) => setCustomSlotCount(event.target.value)}
-        />
-      </div>
-      <label className="hf-add-block-section-heading">
-        <span className="hf-add-block-section-heading-label">
-          Section heading (optional)
-        </span>
-        <input
-          type="text"
-          className="hf-add-block-section-heading-input"
-          maxLength={SECTION_HEADING_MAX_LEN}
-          placeholder="Shown above this block on the site"
-          value={sectionHeadingDraft}
-          onChange={(event) => setSectionHeadingDraft(event.target.value)}
-          autoComplete="off"
-        />
-      </label>
-      <label className="hf-add-block-section-heading">
-        <span className="hf-add-block-section-heading-label">
-          Subheading (optional)
-        </span>
-        <textarea
-          className="hf-add-block-section-subheading-input"
-          maxLength={SECTION_SUBHEADING_MAX_LEN}
-          rows={2}
-          placeholder="Supporting line under the title"
-          value={sectionSubheadingDraft}
-          onChange={(event) => setSectionSubheadingDraft(event.target.value)}
-          autoComplete="off"
-        />
-      </label>
-      <div className="hf-add-block-actions">
-        <button type="button" className="hf-btn-ghost" onClick={handleBack}>
-          ← Back
+    <div className="hf-add-block-picker hf-add-block-picker--layouts hf-add-block-picker--options">
+      <div className="hf-add-block-picker-heading hf-add-block-options-heading">
+        <button
+          type="button"
+          className="hf-add-block-back"
+          onClick={handleBack}
+        >
+          ← All block types
         </button>
+        <p className="hf-add-block-prompt">Choose {blockConfig.label} size</p>
+        <p className="hf-add-block-hint">
+          Pick the layout by shape. Each preview shows how its slots share the
+          section.
+        </p>
+      </div>
+
+      <div
+        className="hf-add-block-size-options"
+        role="group"
+        aria-label={`${blockConfig.label} size`}
+      >
+        {blockConfig.quickSlotCounts.map((count) => {
+          const isSelected =
+            selectedSlotCount === count && !customSlotCount.trim()
+          const itemLabel =
+            count === 0
+              ? 'Fixed banner'
+              : `${count} ${count === 1 ? 'item' : 'items'}`
+          const arrangementLabel =
+            selectedBlockType === 'featured-articles'
+              ? FEATURED_ARTICLES_LAYOUT_LABELS[count]
+              : selectedBlockType === 'editorial-feature'
+                ? EDITORIAL_FEATURE_LAYOUT_LABELS[count]
+                : selectedBlockType === 'article-grid'
+                  ? ARTICLE_GRID_LAYOUT_LABELS[count]
+                  : count === 0
+                    ? 'Full-width section'
+                    : count === 1
+                      ? 'Single-slot layout'
+                      : `${count}-slot layout`
+
+          return (
+            <button
+              key={count}
+              type="button"
+              className={`hf-add-block-size-option${isSelected ? ' active' : ''}`}
+              aria-pressed={isSelected}
+              onClick={() => {
+                setSelectedSlotCount(count)
+                setCustomSlotCount('')
+              }}
+            >
+              <HomepageBlockLayoutPreview
+                blockType={selectedBlockType}
+                slotCount={count}
+              />
+              <span className="hf-add-block-size-copy">
+                <strong>{itemLabel}</strong>
+                <span>{arrangementLabel}</span>
+              </span>
+              <span className="hf-add-block-size-check" aria-hidden="true">
+                ✓
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {blockConfig.allowCustomSlotCount &&
+        blockConfig.minSlotCount !== blockConfig.maxSlotCount && (
+          <label className="hf-add-block-custom-count">
+            <span>
+              Need another count? {blockConfig.minSlotCount}–
+              {blockConfig.maxSlotCount}
+            </span>
+            <input
+              type="number"
+              className="hf-slot-count-input"
+              min={blockConfig.minSlotCount}
+              max={blockConfig.maxSlotCount}
+              placeholder="Custom…"
+              value={customSlotCount}
+              onChange={(event) => setCustomSlotCount(event.target.value)}
+            />
+          </label>
+        )}
+
+      <section
+        className="hf-add-block-section-copy"
+        aria-labelledby="hf-add-block-section-copy-heading"
+      >
+        <div className="hf-add-block-section-copy-heading">
+          <h3 id="hf-add-block-section-copy-heading">Section introduction</h3>
+          <p>Optional. Add context above the layout.</p>
+        </div>
+        <div className="hf-add-block-section-copy-fields">
+          <label className="hf-add-block-section-heading">
+            <span className="hf-add-block-section-heading-label">
+              Section heading
+            </span>
+            <input
+              type="text"
+              className="hf-add-block-section-heading-input"
+              maxLength={SECTION_HEADING_MAX_LEN}
+              placeholder="Shown above this block on the site"
+              value={sectionHeadingDraft}
+              onChange={(event) => setSectionHeadingDraft(event.target.value)}
+              autoComplete="off"
+            />
+          </label>
+          <label className="hf-add-block-section-heading">
+            <span className="hf-add-block-section-heading-label">
+              Subheading
+            </span>
+            <textarea
+              className="hf-add-block-section-subheading-input"
+              maxLength={SECTION_SUBHEADING_MAX_LEN}
+              rows={2}
+              placeholder="Supporting line under the title"
+              value={sectionSubheadingDraft}
+              onChange={(event) =>
+                setSectionSubheadingDraft(event.target.value)
+              }
+              autoComplete="off"
+            />
+          </label>
+        </div>
+      </section>
+      <div className="hf-add-block-actions">
         <button
           type="button"
           className="hf-btn-primary"
           onClick={handleConfirm}
           disabled={isPending || !isSlotCountValid}
         >
-          {isPending ? 'Adding…' : 'Add Block'}
+          {isPending ? 'Adding…' : `Add ${blockConfig.label}`}
         </button>
       </div>
     </div>

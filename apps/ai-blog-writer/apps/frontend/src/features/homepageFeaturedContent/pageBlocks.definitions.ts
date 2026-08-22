@@ -2,6 +2,7 @@ export type CuratedHomepageBlockConfig = {
   label: string
   description: string
   quickSlotCounts: readonly number[]
+  allowCustomSlotCount: boolean
   defaultSlotCount: number
   minSlotCount: number
   maxSlotCount: number
@@ -76,7 +77,8 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'article-grid': {
     label: 'Article Grid',
-    description: 'Four or eight stories in equal square image cards',
+    description:
+      'Four wide-image cards across, or eight square cards in two rows',
     quickSlotCounts: [4, 8],
     defaultSlotCount: 4,
     minSlotCount: 4,
@@ -215,6 +217,7 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG = Object.fromEntries(
       label: definition.label,
       description: definition.description,
       quickSlotCounts: definition.quickSlotCounts,
+      allowCustomSlotCount: !('validSlotCounts' in definition),
       defaultSlotCount: definition.defaultSlotCount,
       minSlotCount: definition.minSlotCount,
       maxSlotCount: definition.maxSlotCount
