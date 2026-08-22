@@ -13,6 +13,7 @@ export const homepageFeaturedSelect = {
   title: true,
   slug: true,
   canonicalPath: true,
+  location: true,
   status: true,
   updatedAt: true,
   publishedAt: true,

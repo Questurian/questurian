@@ -2,6 +2,7 @@ import type { ComponentType } from 'react'
 
 import type {
   ArticleGridBlock,
+  EditorialFeatureBlock,
   CityHomepageBlock,
   CityHomepageArticleBlock,
   FeaturedArticlesBlock,
@@ -32,6 +33,7 @@ import { LocationGridPreview } from '../components/blocks/location-grid/Location
 import { QuestUrianMapsPreview } from '../components/blocks/questurian-maps/QuestUrianMapsPreview'
 import { ArticleListPreview } from '../components/blocks/article-list/ArticleListPreview'
 import { NewsletterSignupPreview } from '../components/blocks/newsletter-signup/NewsletterSignupPreview'
+import { EditorialFeaturePreview } from '../components/blocks/editorial-feature/EditorialFeaturePreview'
 
 function homepageBlockLayoutKey(blockType: string, totalSlots: number): HomepageBlockLayoutKey {
   return `${blockType}:${totalSlots}`
@@ -106,6 +108,10 @@ const homepageBlockLayoutMap = new Map<HomepageBlockLayoutKey, HomepageBlockLayo
 
 // Fallback: blockType only — matches any slot count not covered above
 const homepageBlockFallbackLayouts: HomepageBlockLayoutFallbackDefinition[] = [
+  defineHomepageBlockLayoutAnySlots<EditorialFeatureBlock>({
+    blockType: 'editorial-feature',
+    Component: EditorialFeaturePreview,
+  }),
   defineHomepageBlockLayoutAnySlots<CityHomepageArticleBlock>({
     blockType: 'featured-article',
     Component: FeaturedArticleOneArticlePreview,

@@ -4,6 +4,10 @@ import type { PayloadInstance } from '@/types'
 
 import { normalizeArticleGridFourLayout } from '../article-grid/service'
 import {
+  getEditorialFeaturePublishBlockers,
+  resolveEditorialFeatureFields,
+} from '../editorial-feature/service'
+import {
   buildHomepageFeaturedGlobalData,
   getHomepageFeaturedSelectionFromItems,
   getNewsletterSignupPlaceholderSelection,
@@ -72,6 +76,7 @@ export type BlockReadPathContext = {
   payload: PayloadInstance
   slotCount: number
   locationGridScope: LocationGridScope | null
+  block: Record<string, unknown>
 }
 
 /**
@@ -93,13 +98,20 @@ export type CuratedBlockBehavior = {
   buildStoredItems?: (items: unknown, ctx: BlockWritePathContext) => Promise<unknown[]>
   /** Read path: resolve stored items into the editor-facing selection. */
   resolveSelection: (items: unknown, ctx: BlockReadPathContext) => unknown | Promise<unknown>
+  /** Resolve non-item fields that require Payload reads, then merge them into API block data. */
+  resolveFields?: (
+    block: Record<string, unknown>,
+    ctx: BlockReadPathContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>
   /**
    * Article-style block whose items must each be individually published and image-ready
    * to publish (the former `ARTICLE_BLOCK_TYPES` membership in `publish-status.ts`).
    */
   isArticleBlock?: boolean
   /** The image field a slot must have ready, given the block + slot index. Defaults to `image`. */
-  requiredImageField?: (block: Record<string, unknown>, slotIndex: number) => string
+  requiredImageField?: (block: Record<string, unknown>, slotIndex: number) => string | null
+  /** Additional completeness rules for block-owned fields. */
+  getPublishBlockers?: (block: Record<string, unknown>, blockIndex: number) => string[]
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -158,6 +170,12 @@ const featuredBehavior = gridBehavior({
   isArticleBlock: true,
 })
 
+function editorialFeatureImageField(block: Record<string, unknown>): string | null {
+  const totalSlots = Number(isRecord(block.selection) ? block.selection.totalSlots : 0)
+  if (totalSlots === 6) return null
+  return totalSlots === 4 ? 'imageWide' : 'imageSquare'
+}
+
 /** Image field for an `article-grid` slot — square card for 8-up or the two-by-two layout. */
 function articleGridImageField(block: Record<string, unknown>): string {
   const totalSlots = Number(isRecord(block.selection) ? block.selection.totalSlots : 0)
@@ -210,6 +228,12 @@ export const CURATED_BLOCK_BEHAVIORS: Record<string, CuratedBlockBehavior> = {
   'featured-articles': {
     ...featuredBehavior,
     requiredImageField: (_block, slotIndex) => (slotIndex === 0 ? 'imageHero' : 'image'),
+  },
+  'editorial-feature': {
+    ...featuredBehavior,
+    requiredImageField: editorialFeatureImageField,
+    resolveFields: (block, ctx) => resolveEditorialFeatureFields(ctx.payload, block),
+    getPublishBlockers: getEditorialFeaturePublishBlockers,
   },
   'article-grid': {
     ...featuredBehavior,

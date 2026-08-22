@@ -11,14 +11,16 @@ import type { LocationHomepageDoc } from '@/features/homepage-featured-content'
 import { getErrorMessage } from '@/shared/utils/api-response'
 
 function formatListItem(doc: LocationHomepageDoc) {
-  const location = typeof doc.location === 'object' && doc.location !== null
-    ? doc.location
-    : null
+  const location = typeof doc.location === 'object' && doc.location !== null ? doc.location : null
 
   return {
     id: doc.id,
     isEnabled: doc.isEnabled ?? false,
     updatedAt: doc.updatedAt ?? null,
+    publishedRevision: doc.publishedRevision ?? 0,
+    publishedBlockCount: Array.isArray(doc.publishedPageBlocks)
+      ? doc.publishedPageBlocks.length
+      : 0,
     location: location
       ? {
           id: location.id,
@@ -43,7 +45,10 @@ export async function GET(req: NextRequest) {
     })
 
     if (authResult.error) {
-      return NextResponse.json({ message: authResult.error }, { status: authResult.status, headers })
+      return NextResponse.json(
+        { message: authResult.error },
+        { status: authResult.status, headers },
+      )
     }
 
     const payload = await getPayload({ config })
@@ -57,6 +62,8 @@ export async function GET(req: NextRequest) {
         id: true,
         isEnabled: true,
         updatedAt: true,
+        publishedRevision: true,
+        publishedPageBlocks: true,
         location: true,
       },
     })
@@ -83,7 +90,10 @@ export async function POST(req: NextRequest) {
     })
 
     if (authResult.error) {
-      return NextResponse.json({ message: authResult.error }, { status: authResult.status, headers })
+      return NextResponse.json(
+        { message: authResult.error },
+        { status: authResult.status, headers },
+      )
     }
 
     const body = await req.json().catch(() => null)
@@ -97,7 +107,7 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = await getPayload({ config })
-    const doc = await payload.create({
+    const doc = (await payload.create({
       collection: 'location-homepages',
       data: {
         location: locationId,
@@ -107,7 +117,7 @@ export async function POST(req: NextRequest) {
         publishedRevision: 0,
       },
       overrideAccess: true,
-    }) as LocationHomepageDoc
+    })) as LocationHomepageDoc
 
     return NextResponse.json({ id: doc.id }, { status: 201, headers })
   } catch (error) {

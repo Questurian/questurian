@@ -19,6 +19,11 @@ export type RawBlock = {
   slot5Layout?: string
   mediaAspect?: string
   articleGridFourLayout?: string
+  featureKicker?: string | null
+  featureTitle?: string | null
+  featureDescription?: string | null
+  featureMediaSet?: unknown
+  linkedLocation?: unknown
   items?: unknown
 }
 
@@ -40,6 +45,7 @@ export type CuratedBlockType =
   | 'featured-creator-article'
   | 'featured-article-carousel'
   | 'featured-articles'
+  | 'editorial-feature'
   | 'article-grid'
   | 'location-grid'
   | 'questurian-maps'

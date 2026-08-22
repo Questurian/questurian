@@ -19,6 +19,8 @@ function publishedArticleItem(overrides: AnyBlock = {}): AnyBlock {
     status: 'published',
     image: readyImage(),
     imageHero: readyImage(),
+    imageSquare: readyImage(),
+    imageWide: readyImage(),
     ...overrides,
   }
 }
@@ -79,6 +81,53 @@ describe('getBlockPublishBlockers', () => {
     }
     expect(getBlockPublishBlockers(block, 0)).toEqual([])
   })
+
+  it('requires editorial feature copy, responsive image placements, and authored alt text', () => {
+    const block = {
+      blockType: 'editorial-feature',
+      featureKicker: '',
+      featureTitle: '',
+      featureDescription: '',
+      featureImagePortrait: null,
+      featureImageWide: null,
+      featureImageAltReady: false,
+      selection: {
+        isComplete: true,
+        totalSlots: 3,
+        items: [publishedArticleItem(), publishedArticleItem(), publishedArticleItem()],
+      },
+    }
+    expect(getBlockPublishBlockers(block, 1)).toEqual(
+      expect.arrayContaining([
+        'Block 2 is missing its Feature kicker.',
+        'Block 2 is missing its feature title.',
+        'Block 2 is missing its feature description.',
+        'Block 2 feature image is missing a ready portrait placement.',
+        'Block 2 feature image is missing a ready wide placement.',
+        'Block 2 feature image is missing authored alt text.',
+      ]),
+    )
+  })
+
+  it('does not require article images for the six-title editorial feature layout', () => {
+    const block = {
+      blockType: 'editorial-feature',
+      featureKicker: 'Featured Destination',
+      featureTitle: 'Miraflores',
+      featureDescription: 'A neighborhood guide.',
+      featureImagePortrait: readyImage(),
+      featureImageWide: readyImage(),
+      featureImageAltReady: true,
+      selection: {
+        isComplete: true,
+        totalSlots: 6,
+        items: Array.from({ length: 6 }, () =>
+          publishedArticleItem({ image: null, imageSquare: null, imageWide: null }),
+        ),
+      },
+    }
+    expect(getBlockPublishBlockers(block, 0)).toEqual([])
+  })
 })
 
 describe('snapshotDraftBlocksForPublish', () => {
@@ -107,8 +156,18 @@ describe('augmentBlocksWithPublishStatus', () => {
       { id: 'd3', blockType: 'featured-articles', sectionHeading: 'Brand new' },
     ]
     const rawPublished = [
-      { id: 'p1', sourceBlockKey: 'd1', blockType: 'featured-articles', sectionHeading: 'Live one' },
-      { id: 'p2', sourceBlockKey: 'd2', blockType: 'featured-articles', sectionHeading: 'Old text' },
+      {
+        id: 'p1',
+        sourceBlockKey: 'd1',
+        blockType: 'featured-articles',
+        sectionHeading: 'Live one',
+      },
+      {
+        id: 'p2',
+        sourceBlockKey: 'd2',
+        blockType: 'featured-articles',
+        sectionHeading: 'Old text',
+      },
     ]
     // Resolved blocks are index-aligned with rawDraft; all complete/publishable here.
     const resolvedDraft = rawDraft.map((raw) => ({
@@ -151,7 +210,9 @@ describe('augmentBlocksWithPublishStatus', () => {
     const rawPublished = [
       { id: 'pX', sourceBlockKey: 'dX', blockType: 'featured-articles', sectionHeading: 'Same' },
     ]
-    const resolvedDraft = [{ id: 'dX', blockType: 'featured-articles', selection: { isComplete: true, items: [] } }]
+    const resolvedDraft = [
+      { id: 'dX', blockType: 'featured-articles', selection: { isComplete: true, items: [] } },
+    ]
     const [block] = augmentBlocksWithPublishStatus(resolvedDraft, rawDraft, rawPublished)
     expect(block.publishStatus).toBe('live')
   })

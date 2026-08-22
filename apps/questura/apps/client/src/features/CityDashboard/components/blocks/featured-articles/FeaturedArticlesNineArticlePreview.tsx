@@ -10,6 +10,7 @@ import type {
 } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { NavigableImageTarget } from '../NavigableImageTarget'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -64,8 +65,9 @@ function WideCard({ article }: SlotCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } =
-    useArticleImageStatus(mobileImageUrl ?? desktopImageUrl)
+  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = useArticleImageStatus(
+    mobileImageUrl ?? desktopImageUrl,
+  )
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const authorLabel = getAuthorLabel(article)
@@ -96,6 +98,7 @@ function WideCard({ article }: SlotCardProps): JSX.Element {
             />
           </picture>
         ) : null}
+        <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div className="relative">
@@ -111,12 +114,22 @@ function WideCard({ article }: SlotCardProps): JSX.Element {
             )}
           >
             {article.articlePath ? (
-              <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
-            ) : article.title}
+              <Link href={article.articlePath} className="hover:underline">
+                {article.title}
+              </Link>
+            ) : (
+              article.title
+            )}
           </h2>
 
           <p className="mt-3 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
-            <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+            <AuthorLink
+              authorSlug={article.author?.slug}
+              authorId={article.author?.id}
+              className="hover:underline"
+            >
+              {authorLabel}
+            </AuthorLink>
           </p>
         </div>
 
@@ -138,8 +151,9 @@ function CenterHeroCard({ article }: SlotCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } =
-    useArticleImageStatus(mobileImageUrl ?? desktopImageUrl)
+  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = useArticleImageStatus(
+    mobileImageUrl ?? desktopImageUrl,
+  )
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
@@ -171,6 +185,7 @@ function CenterHeroCard({ article }: SlotCardProps): JSX.Element {
             />
           </picture>
         ) : null}
+        <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div className="relative">
@@ -186,16 +201,29 @@ function CenterHeroCard({ article }: SlotCardProps): JSX.Element {
             )}
           >
             {article.articlePath ? (
-              <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
-            ) : article.title}
+              <Link href={article.articlePath} className="hover:underline">
+                {article.title}
+              </Link>
+            ) : (
+              article.title
+            )}
           </h2>
 
-          <p data-article-dek className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+          <p
+            data-article-dek
+            className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]"
+          >
             {article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
-            <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+            <AuthorLink
+              authorSlug={article.author?.slug}
+              authorId={article.author?.id}
+              className="hover:underline"
+            >
+              {authorLabel}
+            </AuthorLink>
           </p>
         </div>
 
@@ -235,12 +263,22 @@ function HorizontalCard({ article }: SlotCardProps): JSX.Element {
 
           <h2 className="mt-2 font-editorial text-[1.18rem] font-bold leading-[1.08] text-[#111111]">
             {article.articlePath ? (
-              <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
-            ) : article.title}
+              <Link href={article.articlePath} className="hover:underline">
+                {article.title}
+              </Link>
+            ) : (
+              article.title
+            )}
           </h2>
 
           <p className="mt-2.5 font-[family-name:var(--font-dm-sans)] text-[0.6rem] font-bold uppercase tracking-[0.11em] leading-none text-[#5e5752]">
-            <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+            <AuthorLink
+              authorSlug={article.author?.slug}
+              authorId={article.author?.id}
+              className="hover:underline"
+            >
+              {authorLabel}
+            </AuthorLink>
           </p>
         </div>
 
@@ -269,6 +307,7 @@ function HorizontalCard({ article }: SlotCardProps): JSX.Element {
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />
       </div>
     </section>
   )
@@ -291,12 +330,25 @@ function CompactListCard({ article }: SlotCardProps): JSX.Element {
       <div className="city-compact-article-copy">
         <h2 className="city-compact-article-title">
           {article.articlePath ? (
-            <Link href={article.articlePath} className="hover:underline">{article.title}</Link>
-          ) : article.title}
+            <Link href={article.articlePath} className="hover:underline">
+              {article.title}
+            </Link>
+          ) : (
+            article.title
+          )}
         </h2>
-        <p data-article-dek className="city-compact-article-meta">{article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}</p>
+        <p data-article-dek className="city-compact-article-meta">
+          {article.articlePath ? <Link href={article.articlePath}>{excerpt}</Link> : excerpt}
+        </p>
         <p className="city-compact-article-author">
-          By <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+          By{' '}
+          <AuthorLink
+            authorSlug={article.author?.slug}
+            authorId={article.author?.id}
+            className="hover:underline"
+          >
+            {authorLabel}
+          </AuthorLink>
         </p>
       </div>
 
@@ -315,6 +367,7 @@ function CompactListCard({ article }: SlotCardProps): JSX.Element {
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget href={article.articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div aria-hidden="true" className="city-compact-article-skeleton">
@@ -356,34 +409,22 @@ export function FeaturedArticlesNineArticlePreview({
       <div className="city-featured-nine-layout">
         <div className="city-featured-nine-left">
           {wideArticles.map((article, index) => (
-            <WideCard
-              key={getArticleKey(article, index)}
-              article={article}
-            />
+            <WideCard key={getArticleKey(article, index)} article={article} />
           ))}
         </div>
 
         <div className="city-featured-nine-center">
           {heroArticle ? (
-            <CenterHeroCard
-              key={getArticleKey(heroArticle, 2)}
-              article={heroArticle}
-            />
+            <CenterHeroCard key={getArticleKey(heroArticle, 2)} article={heroArticle} />
           ) : null}
           {horizArticle ? (
-            <HorizontalCard
-              key={getArticleKey(horizArticle, 3)}
-              article={horizArticle}
-            />
+            <HorizontalCard key={getArticleKey(horizArticle, 3)} article={horizArticle} />
           ) : null}
         </div>
 
         <div className="city-featured-nine-right">
           {listArticles.map((article, index) => (
-            <CompactListCard
-              key={getArticleKey(article, index + 4)}
-              article={article}
-            />
+            <CompactListCard key={getArticleKey(article, index + 4)} article={article} />
           ))}
         </div>
       </div>

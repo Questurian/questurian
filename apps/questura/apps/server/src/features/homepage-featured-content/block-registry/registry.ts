@@ -20,6 +20,7 @@ import { FeaturedArticleBlock } from '../featured-article/block'
 import { FeaturedArticleCarouselBlock } from '../featured-article-carousel/block'
 import { FeaturedArticlesBlock } from '../featured-articles/block'
 import { FeaturedCreatorArticleBlock } from '../featured-creator-article/block'
+import { EditorialFeatureBlock } from '../editorial-feature/block'
 import { HotelGridBlock } from '../hotel-grid/block'
 import { LOCATION_GRID_MAX_SLOTS, LOCATION_GRID_MIN_SLOTS } from '../location-grid/constants'
 import { LocationGridBlock } from '../location-grid/block'
@@ -109,6 +110,18 @@ const CURATED_BLOCK_DEFINITIONS: readonly CuratedBlockDefinition[] = [
       max: 9,
       default: 4,
       validCounts: [3, 4, 5, 7, 8, 9],
+      invalidFallback: 'previous-valid',
+    },
+    convertibleWhenEmpty: true,
+    publicPayloadKind: ARTICLE_PUBLIC_PAYLOAD,
+  }),
+  defineCuratedBlock({
+    block: EditorialFeatureBlock,
+    slotCounts: {
+      min: 2,
+      max: 6,
+      default: 3,
+      validCounts: [2, 3, 4, 6],
       invalidFallback: 'previous-valid',
     },
     convertibleWhenEmpty: true,

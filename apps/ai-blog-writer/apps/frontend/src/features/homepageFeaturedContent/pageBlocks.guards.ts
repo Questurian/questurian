@@ -8,6 +8,7 @@ import type {
   ArticleCuratedHomepageBlockResponse,
   ArticleGridFourLayout,
   CuratedHomepageBlockResponse,
+  EditorialFeatureBlockResponse,
   FeaturedArticlesSlot3Layout,
   FeaturedArticlesSlot4Layout,
   FeaturedArticlesSlot5Layout,
@@ -69,6 +70,12 @@ export function isArticleCuratedHomepageBlock(
   block: PageBlockResponse
 ): block is ArticleCuratedHomepageBlockResponse {
   return ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPE_SET.has(block.blockType)
+}
+
+export function isEditorialFeatureBlock(
+  block: PageBlockResponse
+): block is EditorialFeatureBlockResponse {
+  return block.blockType === 'editorial-feature'
 }
 
 export function isLocationGridBlock(

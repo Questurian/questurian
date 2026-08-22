@@ -24,9 +24,19 @@ export async function resolvePageBlocks(
         payload,
         slotCount,
         locationGridScope,
+        block,
       })
 
-      return curatedBlockApiPayload(block, selection)
+      const resolvedFields = definition.behavior.resolveFields
+        ? await definition.behavior.resolveFields(block, {
+            payload,
+            slotCount,
+            locationGridScope,
+            block,
+          })
+        : undefined
+
+      return curatedBlockApiPayload(block, selection, resolvedFields)
     }),
   )
 }

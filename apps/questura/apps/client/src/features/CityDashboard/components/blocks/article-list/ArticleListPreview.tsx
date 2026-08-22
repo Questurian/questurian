@@ -10,6 +10,7 @@ import type {
 } from '../../../types'
 import { BlockSection } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { NavigableImageTarget } from '../NavigableImageTarget'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -63,17 +64,17 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
         </p>
 
         <h3 className="mt-2 font-editorial text-[1.25rem] font-semibold leading-[1.15] text-[#1a1a1a] 768:text-[1.45rem] 1024:text-[1.65rem]">
-          {article.title}
+          {articlePath ? <Link href={articlePath}>{article.title}</Link> : article.title}
         </h3>
 
         {excerpt ? (
           <p data-article-dek className="mt-2 font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] 768:text-[0.92rem] 1024:text-[0.95rem]">
-            {excerpt}
+            {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
           </p>
         ) : null}
 
         <p className="mt-3 font-[family-name:var(--font-dm-sans)] text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952] 768:text-[0.65rem]">
-          By <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} nested className="hover:underline">{authorLabel}</AuthorLink>
+          By <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
         </p>
       </div>
 
@@ -96,19 +97,14 @@ function ArticleRow({ article, isPriority }: ArticleRowProps): JSX.Element {
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
       </div>
     </>
   )
 
   const rowClass = 'flex items-start gap-4 py-6 768:gap-8 768:py-8 1024:py-10'
 
-  return articlePath ? (
-    <Link href={articlePath} className={rowClass}>
-      {inner}
-    </Link>
-  ) : (
-    <article className={rowClass}>{inner}</article>
-  )
+  return <article className={rowClass}>{inner}</article>
 }
 
 export function ArticleListPreview({

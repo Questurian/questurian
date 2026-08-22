@@ -46,6 +46,18 @@ describe('public revalidation target builders', () => {
     })
   })
 
+  it('invalidates both parent-city and neighborhood homepage caches', () => {
+    expect(locationTarget({ locationKey: 'Peru|Lima|Miraflores' })).toEqual({
+      tags: [
+        'sitemap',
+        'country-cities:peru',
+        'location-homepage:peru:lima',
+        'location-homepage:peru:lima:miraflores',
+      ],
+      paths: ['/Peru', '/Peru/Lima', '/Peru/Lima/Miraflores'],
+    })
+  })
+
   it('dedupes merged tags and paths', () => {
     expect(
       mergeTargets(

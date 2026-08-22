@@ -10,6 +10,7 @@ import type {
 } from '../../../types'
 import { BLOCK_GUTTER_CLASS, BLOCK_MAX_WIDTH_CLASS } from '../BlockSection'
 import { AuthorLink } from '@/features/authors/components/AuthorLink'
+import { NavigableImageTarget } from '../NavigableImageTarget'
 
 function joinClassNames(...classes: Array<string | false | null | undefined>): string {
   return classes.filter(Boolean).join(' ')
@@ -71,8 +72,9 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
   const mobileImageUrl = article.imageUrlSquare ?? article.imageUrl ?? null
   const desktopImageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
   const hasImage = mobileImageUrl !== null || desktopImageUrl !== null
-  const { imageRef, isContentReady, isImageLoaded, setImageStatus } =
-    useArticleImageStatus(mobileImageUrl ?? desktopImageUrl)
+  const { imageRef, isContentReady, isImageLoaded, setImageStatus } = useArticleImageStatus(
+    mobileImageUrl ?? desktopImageUrl,
+  )
 
   const articleTypeLabel = getArticleTypeLabel(article)
   const excerpt = article.excerpt ?? 'Meta description not set'
@@ -106,6 +108,7 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
             />
           </picture>
         ) : null}
+        <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div className="relative px-[var(--block-gutter)]">
@@ -121,16 +124,29 @@ function HeroArticleCard({ article }: HeroArticleCardProps): JSX.Element {
             )}
           >
             {articlePath ? (
-              <Link href={articlePath} className="hover:underline">{article.title}</Link>
-            ) : article.title}
+              <Link href={articlePath} className="hover:underline">
+                {article.title}
+              </Link>
+            ) : (
+              article.title
+            )}
           </h2>
 
-          <p data-article-dek className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+          <p
+            data-article-dek
+            className="mt-3 overflow-hidden font-editorial text-sm font-normal leading-[1.4] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
+          >
             {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
           </p>
 
           <p className="mt-3.5 font-[family-name:var(--font-dm-sans)] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-[#5f5952]">
-            <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+            <AuthorLink
+              authorSlug={article.author?.slug}
+              authorId={article.author?.id}
+              className="hover:underline"
+            >
+              {authorLabel}
+            </AuthorLink>
           </p>
         </div>
 
@@ -182,18 +198,31 @@ function SideListArticleCard({ article }: SideListArticleCardProps): JSX.Element
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
+        <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
       </div>
 
       <div className="city-four-side-copy">
         <p className="city-four-side-type">{articleTypeLabel}</p>
         <h3 className="city-four-side-title">
           {articlePath ? (
-            <Link href={articlePath} className="hover:underline">{article.title}</Link>
-          ) : article.title}
+            <Link href={articlePath} className="hover:underline">
+              {article.title}
+            </Link>
+          ) : (
+            article.title
+          )}
         </h3>
-        <p data-article-dek className="city-four-side-meta">{articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}</p>
+        <p data-article-dek className="city-four-side-meta">
+          {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
+        </p>
         <p className="city-four-side-author">
-          <AuthorLink authorSlug={article.author?.slug} authorId={article.author?.id} className="hover:underline">{authorLabel}</AuthorLink>
+          <AuthorLink
+            authorSlug={article.author?.slug}
+            authorId={article.author?.id}
+            className="hover:underline"
+          >
+            {authorLabel}
+          </AuthorLink>
         </p>
       </div>
     </section>
@@ -228,19 +257,13 @@ export function FeaturedArticlesFourArticlePreview({
       <div className="city-featured-four-layout">
         <div className="city-featured-four-hero">
           {heroArticle ? (
-            <HeroArticleCard
-              key={getArticleKey(heroArticle, 0)}
-              article={heroArticle}
-            />
+            <HeroArticleCard key={getArticleKey(heroArticle, 0)} article={heroArticle} />
           ) : null}
         </div>
 
         <div className="city-featured-four-list">
           {sideArticles.map((article, index) => (
-            <SideListArticleCard
-              key={getArticleKey(article, index + 1)}
-              article={article}
-            />
+            <SideListArticleCard key={getArticleKey(article, index + 1)} article={article} />
           ))}
         </div>
       </div>

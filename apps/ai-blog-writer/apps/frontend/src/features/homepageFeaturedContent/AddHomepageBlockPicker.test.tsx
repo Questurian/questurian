@@ -17,8 +17,9 @@ describe('AddHomepageBlockPicker', () => {
     const options = screen.getAllByRole('button')
 
     expect(options[0]).toHaveTextContent('Multi-Article Feature')
-    expect(options[1]).toHaveTextContent('Hotel Grid')
-    expect(options[2]).toHaveTextContent('Tour Grid')
+    expect(options[1]).toHaveTextContent('Editorial Feature')
+    expect(options[2]).toHaveTextContent('Hotel Grid')
+    expect(options[3]).toHaveTextContent('Tour Grid')
   })
 
   it('submits newsletter-signup in one click (fixed zero slots)', async () => {

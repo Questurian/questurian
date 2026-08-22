@@ -101,19 +101,26 @@ type LocationContext = { country: string; city: string }
 function buildArticlePath(item: Record<string, unknown>, location?: LocationContext): string | null {
   const relationTo = stringOrNull(item.relationTo)
   const slug = stringOrNull(item.slug)
+  const canonicalPath = stringOrNull(item.canonicalPath)
 
   if (relationTo === 'articles') {
-    return stringOrNull(item.canonicalPath)
+    return canonicalPath
   }
 
-  if (!slug || !location) return null
+  const locationParts = stringOrNull(item.locationKey)?.split('|').filter(Boolean)
+  const routeLocation = location ?? (
+    locationParts && locationParts.length >= 2
+      ? { country: locationParts[0], city: locationParts[1] }
+      : null
+  )
+  if (!slug || !routeLocation) return null
 
   if (relationTo === 'single-type-listicles') {
-    return `/${location.country}/${location.city}/maps/${slug}`
+    return `/${routeLocation.country}/${routeLocation.city}/maps/${slug}`
   }
 
   if (relationTo === 'listicle-itineraries') {
-    return `/${location.country}/${location.city}/itineraries/${slug}`
+    return `/${routeLocation.country}/${routeLocation.city}/itineraries/${slug}`
   }
 
   return null

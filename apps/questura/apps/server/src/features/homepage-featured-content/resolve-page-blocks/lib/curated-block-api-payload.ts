@@ -15,7 +15,11 @@ import {
   publicFeaturedArticlesSectionSubheading,
 } from './section-heading'
 
-export function curatedBlockApiPayload(block: ApiCuratedBlock, selection: unknown) {
+export function curatedBlockApiPayload(
+  block: ApiCuratedBlock,
+  selection: unknown,
+  resolvedFields?: Record<string, unknown>,
+) {
   if (homepageBlockSupportsSectionHeading(block.blockType)) {
     const base = {
       id: block.id,
@@ -61,5 +65,5 @@ export function curatedBlockApiPayload(block: ApiCuratedBlock, selection: unknow
     return base
   }
 
-  return { id: block.id, blockType: block.blockType, selection }
+  return { id: block.id, blockType: block.blockType, selection, ...resolvedFields }
 }

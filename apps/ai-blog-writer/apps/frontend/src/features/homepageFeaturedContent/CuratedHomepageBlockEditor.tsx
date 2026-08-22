@@ -10,19 +10,21 @@ import {
   type CuratedHomepageBlockType,
   type FeaturedArticlesSlot3Layout,
   type FeaturedArticlesSlot4Layout,
-  type FeaturedArticlesSlot5Layout,
+  type FeaturedArticlesSlot5Layout
 } from './pageBlocks'
 import { useCuratedHomepageLayouts } from './useCuratedHomepageLayouts'
 import {
   useHomepageFeaturedSlots,
-  type CandidateParams,
+  type CandidateParams
 } from './useHomepageFeaturedSlots'
 import { usePageBlockDuplicateExclusion } from './usePageBlockDuplicateExclusion'
 import type {
   HomepageFeaturedCandidatesResponse,
   HomepageFeaturedItemRef,
-  HomepageFeaturedSelection,
+  HomepageFeaturedSelection
 } from './types'
+import EditorialFeaturePanelEditor from './EditorialFeaturePanelEditor'
+import type { EditorialFeatureFieldsUpdate } from './mainHomepage/blocks/blockSettings.api'
 
 type Props = {
   block: ArticleCuratedHomepageBlockResponse
@@ -31,7 +33,7 @@ type Props = {
   selectionQueryKey: unknown[]
   saveSelection: (
     items: HomepageFeaturedItemRef[],
-    slotCount?: number,
+    slotCount?: number
   ) => Promise<HomepageFeaturedSelection>
   saveSectionHeading?: (value: string | null) => Promise<void>
   saveSectionSubheading?: (value: string | null) => Promise<void>
@@ -43,16 +45,19 @@ type Props = {
   convertEmptyFeaturedArticlesTargets?: CuratedHomepageBlockType[]
   onConvertEmptyFeaturedArticlesBlock?: (
     blockType: CuratedHomepageBlockType,
-    slotCount: number,
+    slotCount: number
   ) => Promise<void>
   fetchCandidates: (
-    params: CandidateParams,
+    params: CandidateParams
   ) => Promise<HomepageFeaturedCandidatesResponse>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
   deleteError: string | null
   externalUsedKeys?: Set<string>
   onSlotsChange?: (blockId: string, keys: Set<string>) => void
+  saveEditorialFeatureFields?: (
+    fields: EditorialFeatureFieldsUpdate
+  ) => Promise<void>
 }
 
 export default function CuratedHomepageBlockEditor({
@@ -76,6 +81,7 @@ export default function CuratedHomepageBlockEditor({
   deleteError,
   externalUsedKeys,
   onSlotsChange,
+  saveEditorialFeatureFields
 }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
@@ -84,7 +90,7 @@ export default function CuratedHomepageBlockEditor({
     saveSlot3Layout,
     saveSlot4Layout,
     saveSlot5Layout,
-    saveArticleGridFourLayout,
+    saveArticleGridFourLayout
   })
   const slotEditorState = useHomepageFeaturedSlots({
     canManage,
@@ -93,23 +99,26 @@ export default function CuratedHomepageBlockEditor({
     fetchCandidates,
     selectionQueryKey,
     lockedCollectionFilter:
-      block.blockType === 'questurian-maps' ? 'single-type-listicles' : undefined,
+      block.blockType === 'questurian-maps'
+        ? 'single-type-listicles'
+        : undefined
   })
   const effectiveSlotEditorState = usePageBlockDuplicateExclusion({
     blockId: block.id,
     slotEditorState,
     externalUsedKeys,
-    onSlotsChange,
+    onSlotsChange
   })
 
   const convertTargets = useMemo(() => {
     const others = convertEmptyFeaturedArticlesTargets.filter(
-      (target) => target !== block.blockType,
+      (target) => target !== block.blockType
     )
     return [block.blockType, ...others]
   }, [convertEmptyFeaturedArticlesTargets, block.blockType])
 
-  const { slots, savedSlots, savedInvalidItems, hasUnsavedChanges } = slotEditorState
+  const { slots, savedSlots, savedInvalidItems, hasUnsavedChanges } =
+    slotEditorState
   const savedTotalSlots = block.selection.totalSlots
   const slotsFilled = slots.filter(Boolean).length
   const staleSlotNotice =
@@ -149,7 +158,9 @@ export default function CuratedHomepageBlockEditor({
         </div>
       </div>
 
-      {staleSlotNotice ? <div className="hf-banner error">{staleSlotNotice}</div> : null}
+      {staleSlotNotice ? (
+        <div className="hf-banner error">{staleSlotNotice}</div>
+      ) : null}
 
       <CuratedHomepageBlockSettings
         block={block}
@@ -190,13 +201,25 @@ export default function CuratedHomepageBlockEditor({
       />
 
       <div className="hf-block-content">
-        {block.sectionHeading?.trim() && block.blockType !== 'featured-creator-article' ? (
+        {block.blockType === 'editorial-feature' &&
+        saveEditorialFeatureFields ? (
+          <EditorialFeaturePanelEditor
+            block={block}
+            canManage={canManage}
+            saveFields={saveEditorialFeatureFields}
+          />
+        ) : null}
+        {block.sectionHeading?.trim() &&
+        block.blockType !== 'featured-creator-article' ? (
           <h2 className="hf-block-section-heading-h2 hf-block-public-section-title">
             {block.sectionHeading.trim()}
           </h2>
         ) : null}
-        {block.sectionSubheading?.trim() && block.blockType !== 'featured-creator-article' ? (
-          <p className="hf-block-public-section-subtitle">{block.sectionSubheading.trim()}</p>
+        {block.sectionSubheading?.trim() &&
+        block.blockType !== 'featured-creator-article' ? (
+          <p className="hf-block-public-section-subtitle">
+            {block.sectionSubheading.trim()}
+          </p>
         ) : null}
         <HomepageFeaturedSlotEditor
           pageTitle=""
@@ -229,6 +252,9 @@ export default function CuratedHomepageBlockEditor({
             block.blockType === 'article-grid' && savedTotalSlots === 4
               ? layouts.articleGridFour.draft
               : undefined
+          }
+          editorialFeatureBlock={
+            block.blockType === 'editorial-feature' ? block : undefined
           }
         />
       </div>

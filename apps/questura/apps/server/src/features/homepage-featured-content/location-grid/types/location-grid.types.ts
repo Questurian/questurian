@@ -15,6 +15,7 @@ export type LocationGridCandidate = LocationGridItemRef & {
   slot?: number
   level: LocationGridLevel
   locationKey: string | null
+  href: string | null
   parentKey: string | null
   countryName: string | null
   cityName: string | null

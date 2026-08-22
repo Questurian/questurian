@@ -29,6 +29,7 @@ export function normalizeLocationGridCandidate(doc: LocationDocLike): LocationGr
     id: view.id ?? 0,
     level: view.level === 'neighborhood' ? 'neighborhood' : 'city',
     locationKey: view.locationKey,
+    href: null,
     parentKey: view.parentKey,
     countryName: view.countryName,
     cityName: view.cityName,

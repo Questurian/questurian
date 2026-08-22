@@ -9,6 +9,11 @@ export type ApiCuratedBlock = {
   slot5Layout?: unknown
   mediaAspect?: unknown
   articleGridFourLayout?: unknown
+  featureKicker?: unknown
+  featureTitle?: unknown
+  featureDescription?: unknown
+  featureMediaSet?: unknown
+  linkedLocation?: unknown
 }
 
 export type PublicPreviewPersonAvatar = {

@@ -13,6 +13,7 @@ const EXPECTED_KEYS = [
   'featured-creator-article',
   'featured-article-carousel',
   'featured-articles',
+  'editorial-feature',
   'article-grid',
   'location-grid',
   'questurian-maps',
@@ -86,6 +87,7 @@ describe('curatedBlockRegistry', () => {
         'featured-creator-article',
         'featured-article-carousel',
         'featured-articles',
+        'editorial-feature',
         'article-grid',
         'questurian-maps',
         'where-to-eat-drink',
@@ -109,13 +111,24 @@ describe('curatedBlockRegistry', () => {
         blockType: string,
         block: Record<string, unknown>,
         slot: number,
-      ) =>
-        curatedBlockRegistry.get(blockType)?.behavior.requiredImageField?.(block, slot) ?? 'image'
+      ) => {
+        const resolver = curatedBlockRegistry.get(blockType)?.behavior.requiredImageField
+        return resolver ? resolver(block, slot) : 'image'
+      }
 
       expect(requiredImageField('featured-article', {}, 0)).toBe('imageHero')
       expect(requiredImageField('featured-creator-article', {}, 0)).toBe('imageHero')
       expect(requiredImageField('featured-articles', {}, 0)).toBe('imageHero')
       expect(requiredImageField('featured-articles', {}, 1)).toBe('image')
+      expect(requiredImageField('editorial-feature', { selection: { totalSlots: 3 } }, 0)).toBe(
+        'imageSquare',
+      )
+      expect(requiredImageField('editorial-feature', { selection: { totalSlots: 4 } }, 0)).toBe(
+        'imageWide',
+      )
+      expect(
+        requiredImageField('editorial-feature', { selection: { totalSlots: 6 } }, 0),
+      ).toBeNull()
       expect(requiredImageField('article-grid', { selection: { totalSlots: 8 } }, 0)).toBe(
         'imageSquare',
       )
@@ -141,6 +154,7 @@ describe('curatedBlockRegistry', () => {
         'featured-creator-article': { min: 1, max: 1, default: 1 },
         'featured-article-carousel': { min: 2, max: 10, default: 3 },
         'featured-articles': { min: 3, max: 9, default: 4 },
+        'editorial-feature': { min: 2, max: 6, default: 3 },
         'article-grid': { min: 4, max: 8, default: 4 },
         'location-grid': { min: 4, max: 8, default: 4 },
         'questurian-maps': { min: 6, max: 6, default: 6 },
@@ -156,6 +170,9 @@ describe('curatedBlockRegistry', () => {
       expect(curatedBlockRegistry.get('featured-articles')?.slotCounts.validCounts).toEqual([
         3, 4, 5, 7, 8, 9,
       ])
+      expect(curatedBlockRegistry.get('editorial-feature')?.slotCounts.validCounts).toEqual([
+        2, 3, 4, 6,
+      ])
     })
 
     it('derives empty-convert source types from registry metadata', () => {
@@ -164,6 +181,7 @@ describe('curatedBlockRegistry', () => {
         'featured-creator-article',
         'featured-article-carousel',
         'featured-articles',
+        'editorial-feature',
         'article-grid',
         'location-grid',
         'questurian-maps',
@@ -181,6 +199,7 @@ describe('curatedBlockRegistry', () => {
         'featured-creator-article',
         'featured-article-carousel',
         'featured-articles',
+        'editorial-feature',
         'article-grid',
         'questurian-maps',
         'where-to-eat-drink',

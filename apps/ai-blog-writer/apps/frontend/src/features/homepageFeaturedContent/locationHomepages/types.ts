@@ -16,6 +16,8 @@ export type LocationHomepageListItem = {
   id: number
   isEnabled: boolean
   updatedAt: string | null
+  publishedRevision?: number
+  publishedBlockCount?: number
   location: LocationRef | null
 }
 

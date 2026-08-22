@@ -38,6 +38,7 @@ export type HomepageFeaturedCandidate = HomepageFeaturedItemRef & {
   title: string
   slug: string | null
   canonicalPath: string | null
+  locationKey: string | null
   status: string | null
   updatedAt: string | null
   publishedAt: string | null

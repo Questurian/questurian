@@ -90,6 +90,7 @@ export async function locationHomepageTarget(
   const parts = locationParts(location)
   const country = parts[0]
   const city = parts[1]
+  const neighborhood = parts[2]
 
   if (!country) return { tags: [publicCacheTags.sitemap()] }
 
@@ -98,8 +99,15 @@ export async function locationHomepageTarget(
       publicCacheTags.sitemap(),
       publicCacheTags.countryCities(country),
       city ? publicCacheTags.locationHomepage(country, city) : null,
+      city && neighborhood
+        ? publicCacheTags.locationHomepage(country, city, neighborhood)
+        : null,
     ]),
-    paths: unique([`/${country}`, city ? `/${country}/${city}` : null]),
+    paths: unique([
+      `/${country}`,
+      city ? `/${country}/${city}` : null,
+      city && neighborhood ? `/${country}/${city}/${neighborhood}` : null,
+    ]),
   }
 }
 
@@ -107,6 +115,7 @@ export function locationTarget(doc: AnyDoc | null | undefined): RevalidationTarg
   const parts = locationParts(doc)
   const country = parts[0]
   const city = parts[1]
+  const neighborhood = parts[2]
   if (!country) return { tags: [publicCacheTags.sitemap()] }
 
   return {
@@ -114,8 +123,15 @@ export function locationTarget(doc: AnyDoc | null | undefined): RevalidationTarg
       publicCacheTags.sitemap(),
       publicCacheTags.countryCities(country),
       city ? publicCacheTags.locationHomepage(country, city) : null,
+      city && neighborhood
+        ? publicCacheTags.locationHomepage(country, city, neighborhood)
+        : null,
     ]),
-    paths: unique([`/${country}`, city ? `/${country}/${city}` : null]),
+    paths: unique([
+      `/${country}`,
+      city ? `/${country}/${city}` : null,
+      city && neighborhood ? `/${country}/${city}/${neighborhood}` : null,
+    ]),
   }
 }
 
