@@ -17,7 +17,7 @@ type PageBlockDefinition = CuratedHomepageBlockConfig & {
 const PAGE_BLOCK_DEFINITIONS = {
   'featured-article': {
     label: 'Hero Article',
-    description: 'One full-width dark hero for a single article or listicle',
+    description: 'One story fills a wide, image-led banner',
     quickSlotCounts: [1],
     defaultSlotCount: 1,
     minSlotCount: 1,
@@ -29,7 +29,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'featured-creator-article': {
     label: 'Creator Feature',
     description:
-      'Same dark hero as Hero Article, with the author portrait above the title — for creator collaborations',
+      'A wide story banner that puts the creator portrait and byline first',
     quickSlotCounts: [1],
     defaultSlotCount: 1,
     minSlotCount: 1,
@@ -40,8 +40,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'featured-article-carousel': {
     label: 'Featured Article Carousel',
-    description:
-      'Full-width dark hero with left/right arrows to cycle through multiple articles',
+    description: 'Several stories share one wide banner, with arrows to browse',
     quickSlotCounts: [2, 3, 4, 5],
     defaultSlotCount: 3,
     minSlotCount: 2,
@@ -52,7 +51,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'featured-articles': {
     label: 'Multi-Article Feature',
-    description: 'A curated multi-slot editorial layout for several articles',
+    description: 'One lead story paired with smaller supporting stories',
     quickSlotCounts: [3, 4, 5, 7, 8, 9],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -65,7 +64,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'editorial-feature': {
     label: 'Editorial Feature',
     description:
-      'Custom feature image and copy with 2, 3, 4, or 6 related articles',
+      'Custom image and intro copy, followed by a small grid of related stories',
     quickSlotCounts: [2, 3, 4, 6],
     defaultSlotCount: 3,
     minSlotCount: 2,
@@ -77,8 +76,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'article-grid': {
     label: 'Article Grid',
-    description:
-      'Square thumbnails: 4 (2×2 / four-across) or 8 (four columns × two rows)',
+    description: 'Four or eight stories in equal square image cards',
     quickSlotCounts: [4, 8],
     defaultSlotCount: 4,
     minSlotCount: 4,
@@ -90,8 +88,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'location-grid': {
     label: 'Location Grid',
-    description:
-      'A child-location grid for cities on main and neighborhoods on city homepages',
+    description: 'Cities or neighborhoods shown as a browsable card grid',
     quickSlotCounts: [4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 4,
@@ -102,8 +99,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'questurian-maps': {
     label: 'Questurian Maps',
-    description:
-      'Six single-type listicles in a 2×3 maps grid with headline styling',
+    description: 'Six map-focused guides in a three-column card grid',
     quickSlotCounts: [6],
     defaultSlotCount: 6,
     minSlotCount: 6,
@@ -114,7 +110,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'hotel-grid': {
     label: 'Hotel Grid',
-    description: 'A curated hotel card grid sourced from accommodations',
+    description: 'Selected hotels shown in matching image cards',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -125,7 +121,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'tour-grid': {
     label: 'Tour Grid',
-    description: 'A curated tour card grid sourced from tour documents',
+    description: 'Selected tours shown in matching image cards',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -136,7 +132,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'where-to-eat-drink': {
     label: 'Where to Eat & Drink',
-    description: 'Dining-only single-type listicles',
+    description: 'Dining guides shown in a browsable card grid',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -147,7 +143,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'things-to-do-listicles': {
     label: 'Things to Do (Listicles)',
-    description: 'Attractions single-type listicles only',
+    description: 'Things-to-do guides shown in a browsable card grid',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -158,7 +154,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'things-to-do-attractions': {
     label: 'Things to Do (Places)',
-    description: 'A curated grid of attraction records',
+    description: 'Individual attractions shown in matching image cards',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -169,8 +165,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   },
   'newsletter-signup': {
     label: 'Newsletter signup',
-    description:
-      'Dark full-width placeholder for a future email capture section',
+    description: 'A full-width email signup banner',
     quickSlotCounts: [0],
     defaultSlotCount: 0,
     minSlotCount: 0,
@@ -182,7 +177,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'article-list': {
     label: 'Article List',
     description:
-      'Vertical list of articles — thumbnail left, title/excerpt/author right (5–25 items)',
+      'A compact vertical feed with thumbnail, title, excerpt, and author',
     quickSlotCounts: [5, 10, 15, 20],
     defaultSlotCount: 10,
     minSlotCount: 5,
