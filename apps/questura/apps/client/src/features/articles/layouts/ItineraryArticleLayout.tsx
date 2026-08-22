@@ -99,8 +99,22 @@ export function ItineraryArticleLayout({
     return result
   }, [days, dayIndex])
 
+  // The map carries its own day switcher, because the takeover covers the
+  // article's day tabs. Same state, so the two can never disagree.
+  const mapDays = useMemo(
+    () =>
+      days.length > 1
+        ? {
+            labels: days.map((_, index) => `Day ${index + 1}`),
+            activeIndex: dayIndex,
+            select: setSelectedDayIndex,
+          }
+        : null,
+    [days, dayIndex],
+  )
+
   return (
-    <ListicleMapSyncProvider points={points}>
+    <ListicleMapSyncProvider points={points} days={mapDays}>
       <ListicleArticleLayout
         relatedArticles={relatedArticles}
         country={country}

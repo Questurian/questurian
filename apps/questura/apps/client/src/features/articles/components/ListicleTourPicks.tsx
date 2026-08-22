@@ -1,39 +1,8 @@
 import type { JSX } from 'react'
 import { Ticket } from 'lucide-react'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
-import { isHttpUrl } from '@/features/articles/lib/listicleVenueFormatters'
-import type { ListicleTourImage, ListicleTourPick } from '@/features/articles/types/mapsListicle'
-
-type RenderableTourPick = {
-  id: number | string
-  title: string
-  price: string | null
-  href: string
-  image: ListicleTourImage | null
-}
-
-function renderableTourPicks(tours: ListicleTourPick[] | null | undefined): RenderableTourPick[] {
-  return (tours ?? [])
-    .map((tour, index): RenderableTourPick | null => {
-      const title = typeof tour?.title === 'string' ? tour.title.trim() : ''
-      const link = typeof tour?.bookingLink === 'string' ? tour.bookingLink.trim() : ''
-      if (!title || !link) return null
-
-      const image =
-        tour.image && typeof tour.image.url === 'string' && tour.image.url.trim()
-          ? tour.image
-          : null
-
-      return {
-        id: tour.id ?? `tour-${index}`,
-        title,
-        price: typeof tour.price === 'string' && tour.price.trim() ? tour.price.trim() : null,
-        href: isHttpUrl(link) ? link : `https://${link}`,
-        image,
-      }
-    })
-    .filter((tour): tour is RenderableTourPick => Boolean(tour))
-}
+import { renderableTourPicks } from '@/features/articles/lib/listicleTourPicks'
+import type { ListicleTourPick } from '@/features/articles/types/mapsListicle'
 
 /**
  * Booking affordance: a circular arrow whose ring draws itself on hover,

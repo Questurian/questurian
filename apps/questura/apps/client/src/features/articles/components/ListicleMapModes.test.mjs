@@ -36,3 +36,20 @@ test('the takeover hides nothing; split hides the rest', () => {
   assert.equal(hiddenBelowFold(visibleHeightForMode('map', VIEWPORT), VIEWPORT), 0)
   assert.equal(hiddenBelowFold(visibleHeightForMode('split', VIEWPORT), VIEWPORT), 384)
 })
+
+test('the takeover stops under the navbar so it is always reachable', () => {
+  const NAVBAR = 55
+  assert.equal(visibleHeightForMode('map', VIEWPORT, NAVBAR), VIEWPORT - NAVBAR)
+  assert.equal(
+    translateForVisibleHeight(
+      visibleHeightForMode('map', VIEWPORT, NAVBAR),
+      VIEWPORT,
+    ),
+    NAVBAR,
+  )
+  // Split is short enough to clear the navbar on its own.
+  assert.equal(
+    visibleHeightForMode('split', VIEWPORT, NAVBAR),
+    visibleHeightForMode('split', VIEWPORT),
+  )
+})

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { ShimmerImage } from '@/components/media/ShimmerImage'
 import type { RelatedMapsArticleTeaser } from '@/features/articles/lib/fetchRelatedMapsArticles'
+import { relatedArticleHref } from '@/features/articles/lib/relatedArticleHref'
 
 interface RelatedListicleShelfProps {
   articles: RelatedMapsArticleTeaser[]
@@ -82,9 +83,7 @@ export function RelatedListicleShelf({
           {articles.map((article) => {
             const imageUrl = article.header?.featuredImage?.url ?? null
             const imageAlt = article.header?.featuredImage?.alt_text ?? ''
-            const href = city
-              ? `/${country}/${city}/${article.routeType}/${article.slug}`
-              : `/${country}/${article.routeType}/${article.slug}`
+            const href = relatedArticleHref(article, country, city)
 
             return (
               <Link

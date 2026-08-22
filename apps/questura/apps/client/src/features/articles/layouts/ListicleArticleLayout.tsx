@@ -38,6 +38,9 @@ export function ListicleArticleLayout({
   // that instantiates a billed google.maps.Map nothing can display.
   const showMapColumn = mapsEnabled && isDesktopMap
   const showMapSheet = mapsEnabled && !isDesktopMap
+  // The desktop shelf under the map and the on-map menu show the same links;
+  // the menu is how the phone reaches them, since the takeover hides the shelf.
+  const guides = { articles: relatedArticles, country, city }
 
   return (
     <>
@@ -82,7 +85,7 @@ export function ListicleArticleLayout({
             className="maps-map-column hidden 1024:flex 1024:flex-col 1024:sticky 1024:self-start"
           >
             <div className="flex-1 min-h-0">
-              <MapPanel />
+              <MapPanel guides={guides} />
             </div>
             <RelatedListicleShelf
               articles={relatedArticles}
@@ -91,7 +94,7 @@ export function ListicleArticleLayout({
             />
           </div>
         )}
-        {showMapSheet ? <ListicleMapSheet /> : null}
+        {showMapSheet ? <ListicleMapSheet guides={guides} /> : null}
       </div>
     </>
   )

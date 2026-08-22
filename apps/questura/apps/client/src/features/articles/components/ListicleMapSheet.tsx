@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { CornerUpLeft, List, Map as MapIcon, MapPin, Rows2 } from 'lucide-react'
+import type { ListicleMapGuides } from '@/features/articles/components/ListicleMapGuidesMenu'
 import { MapPanel } from '@/features/articles/components/MapPanel'
 import { ListicleMapVenueCard } from '@/features/articles/components/ListicleMapVenueCard'
 import { useListicleMapSync } from '@/features/articles/components/ListicleMapSync'
@@ -24,19 +25,19 @@ export const LISTICLE_MAP_PILL_CLEARANCE = 72
 /**
  * How close the camera sits on the active stop, per mode.
  *
- * Deliberately well below the desktop's 17: a phone at street zoom shows one
- * block and one dot, which makes the map look empty and tells the reader
- * nothing about what else is nearby. The takeover pulls back furthest because
- * it has the most screen to fill - it is the mode for seeing the shape of the
- * whole list, with the card naming the stop the map no longer has to.
+ * Below the desktop's 17: a phone at street zoom shows one block and one
+ * dot, which makes the map look empty and tells the reader nothing about what
+ * else is nearby. Close enough, though, that the streets around the stop are
+ * legible - a stop framed at neighbourhood scale is not worth centring on.
+ * The takeover pulls back slightly because it has the most screen to fill.
  *
  * `list` is never actually used - the camera is paused in that mode - but it
  * is declared so the map is fully described by its mode.
  */
 const MODE_ACTIVE_ZOOM: Record<ListicleMapMode, number> = {
-  list: 14.75,
-  split: 14.75,
-  map: 14.25,
+  list: 15.5,
+  split: 15.5,
+  map: 15.25,
 }
 const MOBILE_FIT_PADDING = 28
 
@@ -51,7 +52,8 @@ const MODE_ICONS: Record<ListicleMapMode, typeof List> = {
  * slides up behind a floating three-way switch.
  *
  * `list` parks the sheet off screen, `split` shows the map under the copy the
- * reader is scrolling, and `map` is a genuine takeover that covers the nav.
+ * reader is scrolling, and `map` is a takeover that covers everything but the
+ * navbar.
  * The switch stays put in all three, so there is always one visible control
  * saying where you are and how to get back. The takeover also floats a card
  * for the active stop, because it is the one mode where the reading column
@@ -68,13 +70,21 @@ const MODE_ICONS: Record<ListicleMapMode, typeof List> = {
  * sheet but deliberately do not reach MapPanel - the camera settles once per
  * mode, not once per frame.
  */
-export function ListicleMapSheet(): JSX.Element | null {
+export function ListicleMapSheet({
+  guides,
+}: {
+  guides?: ListicleMapGuides
+}): JSX.Element | null {
   const { points, activeId, scrollToEntry } = useListicleMapSync()
   const [mode, setMode] = useState<ListicleMapMode>('list')
   // The map is mounted the first time the reader asks for it and then kept,
   // so going back and forth never pays for a second billed map load.
   const [hasOpened, setHasOpened] = useState(false)
   const [viewportHeight, setViewportHeight] = useState(0)
+  // The takeover stops under the navbar, so its height is part of the sheet's
+  // geometry. Read from the variable the navbar keeps in sync rather than
+  // hard-coding it.
+  const [navbarHeight, setNavbarHeight] = useState(0)
   const [reduceMotion, setReduceMotion] = useState(false)
   // The card and switch cover the bottom of the map, and the card's height
   // depends on whether the stop has a photo and a blurb - so it is measured
@@ -82,7 +92,13 @@ export function ListicleMapSheet(): JSX.Element | null {
   const [overlayHeight, setOverlayHeight] = useState(LISTICLE_MAP_PILL_CLEARANCE)
 
   useEffect(() => {
-    const sync = () => setViewportHeight(window.innerHeight)
+    const sync = () => {
+      setViewportHeight(window.innerHeight)
+      const declared = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--navbar-height'),
+      )
+      setNavbarHeight(Number.isFinite(declared) ? declared : 0)
+    }
     sync()
     window.addEventListener('resize', sync)
     window.addEventListener('orientationchange', sync)
@@ -104,6 +120,29 @@ export function ListicleMapSheet(): JSX.Element | null {
     if (mode !== 'list') setHasOpened(true)
   }, [mode])
 
+  /**
+   * Split parks an opaque sheet over the bottom of the viewport, and the page
+   * cannot scroll out from under it: at maximum scroll the end of the article
+   * is still behind the map.
+   *
+   * The fix is exactly one sheet-height of extra scroll, and it has to come
+   * after everything in the document. Inside the article column it only opens
+   * a gap of empty background above the footer - the reader scrolls past the
+   * end into nothing, which is worse than the bug. Padding the body puts that
+   * height below the footer, where the sheet covers it at maximum scroll, so
+   * the page stops with its last line resting on the sheet's top edge.
+   */
+  useEffect(() => {
+    if (mode !== 'split' || viewportHeight === 0) return
+
+    const body = document.body
+    const previous = body.style.paddingBottom
+    body.style.paddingBottom = `${visibleHeightForMode('split', viewportHeight)}px`
+    return () => {
+      body.style.paddingBottom = previous
+    }
+  }, [mode, viewportHeight])
+
   const overlayRef = useCallback((node: HTMLDivElement | null) => {
     if (!node) return
     setOverlayHeight(node.offsetHeight)
@@ -120,13 +159,9 @@ export function ListicleMapSheet(): JSX.Element | null {
   if (points.length === 0 || viewportHeight === 0) return null
 
   const height = sheetHeightPx(viewportHeight)
-  const translateY = translateForVisibleHeight(
-    visibleHeightForMode(mode, viewportHeight),
-    viewportHeight,
-  )
-  const mapInset =
-    hiddenBelowFold(visibleHeightForMode(mode, viewportHeight), viewportHeight) +
-    overlayHeight
+  const visibleHeight = visibleHeightForMode(mode, viewportHeight, navbarHeight)
+  const translateY = translateForVisibleHeight(visibleHeight, viewportHeight)
+  const mapInset = hiddenBelowFold(visibleHeight, viewportHeight) + overlayHeight
 
   const activeIndex = points.findIndex((point) => point.id === activeId)
   const activePoint = activeIndex >= 0 ? points[activeIndex] : null
@@ -153,6 +188,11 @@ export function ListicleMapSheet(): JSX.Element | null {
               paused={mode === 'list'}
               activeZoom={MODE_ACTIVE_ZOOM[mode]}
               fitPadding={MOBILE_FIT_PADDING}
+              guides={guides}
+              // Split keeps the article on screen with its day tabs and its
+              // scroll, so the map only adds what the phone cannot otherwise
+              // reach: the related guides.
+              showArticleControls={mode === 'map'}
             />
           ) : null}
         </div>

@@ -15,6 +15,7 @@ import {
   initialListicleMapNavigationState,
   listicleMapNavigationReducer,
 } from '@/features/articles/components/ListicleMapNavigation'
+import type { RenderableTourPick } from '@/features/articles/lib/listicleTourPicks'
 import { DESKTOP_MAP_QUERY } from '@/features/articles/lib/useIsDesktopMap'
 
 /**
@@ -58,6 +59,10 @@ export type ListicleMapPointPreview = {
   address: string | null
   excerpt: string | null
   image: { url: string; alt: string } | null
+  /** The venue's own booking link, when it takes reservations. */
+  reserveHref: string | null
+  /** Bookable Tour Picks for this stop; empty on stops that sell nothing. */
+  tours: RenderableTourPick[]
 }
 
 export type ListicleMapPoint = {
@@ -73,7 +78,18 @@ export type ListicleMapPoint = {
   preview?: ListicleMapPointPreview
 }
 
+/**
+ * The article's day tabs, as the map needs them. Only multi-day itineraries
+ * pass this; a single-day itinerary or a maps listicle leaves it null.
+ */
+export type ListicleMapDays = {
+  labels: string[]
+  activeIndex: number
+  select: (index: number) => void
+}
+
 type ListicleMapSyncValue = {
+  days: ListicleMapDays | null
   points: ListicleMapPoint[]
   activeId: string | null
   registerEntry: (id: string, el: HTMLElement | null) => void
@@ -81,6 +97,7 @@ type ListicleMapSyncValue = {
 }
 
 const ListicleMapSyncContext = createContext<ListicleMapSyncValue>({
+  days: null,
   points: [],
   activeId: null,
   registerEntry: () => {},
@@ -125,9 +142,11 @@ function entryInReadingBand(elementsById: Map<string, HTMLElement>): string | nu
  */
 export function ListicleMapSyncProvider({
   points,
+  days = null,
   children,
 }: {
   points: ListicleMapPoint[]
+  days?: ListicleMapDays | null
   children: ReactNode
 }): JSX.Element {
   const [{ activeId }, dispatchNavigation] = useReducer(
@@ -321,8 +340,8 @@ export function ListicleMapSyncProvider({
   )
 
   const value = useMemo(
-    () => ({ points, activeId, registerEntry, scrollToEntry }),
-    [points, activeId, registerEntry, scrollToEntry],
+    () => ({ days, points, activeId, registerEntry, scrollToEntry }),
+    [days, points, activeId, registerEntry, scrollToEntry],
   )
 
   return <MapSyncProvider value={value}>{children}</MapSyncProvider>

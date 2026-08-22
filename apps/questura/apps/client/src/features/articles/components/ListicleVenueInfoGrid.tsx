@@ -12,6 +12,7 @@ import {
   formatListicleAddressLabel,
   formatListiclePhone,
   isHttpUrl,
+  normalizeWebsiteUrl,
   parseListicleOperationHoursRows,
 } from '@/features/articles/lib/listicleVenueFormatters'
 import { ListicleHoursModalTrigger } from '@/features/articles/components/ListicleHoursModalTrigger'
@@ -24,14 +25,6 @@ export type GridCell = {
   key: string
   icon: JSX.Element
   node: JSX.Element
-}
-
-function normalizeWebsiteUrl(url: string): string {
-  const t = url.trim()
-  if (!t) {
-    return t
-  }
-  return isHttpUrl(t) ? t : `https://${t}`
 }
 
 export function ListicleVenueInfoGrid({

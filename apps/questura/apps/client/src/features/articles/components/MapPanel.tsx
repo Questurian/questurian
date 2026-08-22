@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
+import { ListicleMapDayMenu } from '@/features/articles/components/ListicleMapDayMenu'
+import {
+  ListicleMapGuidesMenu,
+  type ListicleMapGuides,
+} from '@/features/articles/components/ListicleMapGuidesMenu'
+import { ListicleMapStepper } from '@/features/articles/components/ListicleMapStepper'
 import {
   useListicleMapSync,
   type ListicleMapPoint,
@@ -24,7 +30,12 @@ const MAX_FIT_ZOOM = 17
 const OVERVIEW_ZOOM_OUT = 1.5
 const FIT_PADDING = 56
 const ACCENT = '#3B5BDB'
-const ACTIVE_PIN = '#1a1a1a'
+/**
+ * A home pin is context, not a stop: it sits smaller than an active stop pin
+ * so the overview reads "that's where you're staying" without the house
+ * dominating the frame.
+ */
+const STAY_IDLE_SCALE = 0.72
 
 type CameraAnimation = { frame: number }
 
@@ -80,18 +91,26 @@ function flyTo(
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
-const PIN_WIDTH = 26
+const PIN_WIDTH = 29
 const PIN_HEIGHT = 37
-const DOT_SIZE = 14
+const DOT_SIZE = 13
 /**
- * Teardrop whose tail edges are tangent to the head circle (centre 12,12,
- * r 9), so head and tail meet without a crease and the tip lands exactly on
- * the coordinate at the marker's bottom-centre anchor.
+ * Broad-shouldered teardrop: head circle (centre 12,12.6, r 10) with tail
+ * edges tangent to it, so the shoulders meet the tail without a crease and
+ * the shape stays stout rather than balloon-on-a-string. The tail closes to
+ * a point at 12,31 - the bottom edge of the viewBox, which is the marker's
+ * bottom-centre anchor - so the tip is genuinely sharp and lands exactly on
+ * the coordinate.
  */
-const PIN_PATH = 'M3.96 16.05A9 9 0 1 1 20.04 16.05L12 32Z'
+const PIN_PATH = 'M3.61 18.03A10 10 0 1 1 20.39 18.03L12 31Z'
+/**
+ * Markers carry no white collar, so the shadow alone has to lift them off
+ * the map: a tight contact shadow for the edge plus a soft ambient one.
+ */
 const PIN_SHADOW =
-  'drop-shadow(0 1px 1px rgba(23, 20, 15, 0.22)) drop-shadow(0 4px 7px rgba(23, 20, 15, 0.18))'
-const DOT_SHADOW = 'drop-shadow(0 1px 1.5px rgba(23, 20, 15, 0.3))'
+  'drop-shadow(0 1px 1.5px rgba(23, 20, 15, 0.32)) drop-shadow(0 5px 8px rgba(23, 20, 15, 0.22))'
+const DOT_SHADOW =
+  'drop-shadow(0 1px 1.5px rgba(23, 20, 15, 0.38)) drop-shadow(0 2px 4px rgba(23, 20, 15, 0.2))'
 const SWELL = 'transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1), opacity 150ms ease'
 
 function svgRoot(viewBox: string, width: number, height: number): SVGSVGElement {
@@ -110,10 +129,10 @@ function svgRoot(viewBox: string, width: number, height: number): SVGSVGElement 
 function houseGlyph(): SVGElement {
   const group = document.createElementNS(SVG_NS, 'g')
   // Lucide's house sits in a 24-box; shrink it and re-centre on the head.
-  group.setAttribute('transform', 'translate(12 12) scale(0.46) translate(-12 -12)')
+  group.setAttribute('transform', 'translate(12 12.6) scale(0.52) translate(-12 -12)')
   group.setAttribute('fill', 'none')
   group.setAttribute('stroke', '#ffffff')
-  group.setAttribute('stroke-width', '2.4')
+  group.setAttribute('stroke-width', '2.2')
   group.setAttribute('stroke-linecap', 'round')
   group.setAttribute('stroke-linejoin', 'round')
   for (const d of [
@@ -131,41 +150,35 @@ function houseGlyph(): SVGElement {
 function bullseyeGlyph(): SVGElement {
   const circle = document.createElementNS(SVG_NS, 'circle')
   circle.setAttribute('cx', '12')
-  circle.setAttribute('cy', '12')
-  circle.setAttribute('r', '3.1')
+  circle.setAttribute('cy', '12.6')
+  circle.setAttribute('r', '3.5')
   circle.setAttribute('fill', '#ffffff')
   return circle
 }
 
 function pinSvg(kind: ListicleMapPoint['kind']): SVGSVGElement {
-  const svg = svgRoot('0 0 24 34', PIN_WIDTH, PIN_HEIGHT)
+  const svg = svgRoot('0 0 24 31', PIN_WIDTH, PIN_HEIGHT)
   svg.style.filter = PIN_SHADOW
 
   const body = document.createElementNS(SVG_NS, 'path')
   body.setAttribute('d', PIN_PATH)
   body.setAttribute('fill', ACCENT)
-  body.setAttribute('stroke', '#ffffff')
-  body.setAttribute('stroke-width', '1.75')
-  body.setAttribute('stroke-linejoin', 'round')
-  body.dataset.pinBody = ''
   svg.appendChild(body)
   svg.appendChild(kind === 'stay' ? houseGlyph() : bullseyeGlyph())
 
   return svg
 }
 
-/** Small ringed dot centred on the coordinate, for stops that aren't active. */
+/** Small solid dot centred on the coordinate, for stops that aren't active. */
 function dotSvg(): SVGSVGElement {
-  const svg = svgRoot('0 0 14 14', DOT_SIZE, DOT_SIZE)
+  const svg = svgRoot('0 0 12 12', DOT_SIZE, DOT_SIZE)
   svg.style.filter = DOT_SHADOW
 
   const circle = document.createElementNS(SVG_NS, 'circle')
-  circle.setAttribute('cx', '7')
-  circle.setAttribute('cy', '7')
-  circle.setAttribute('r', '5.1')
+  circle.setAttribute('cx', '6')
+  circle.setAttribute('cy', '6')
+  circle.setAttribute('r', '6')
   circle.setAttribute('fill', ACCENT)
-  circle.setAttribute('stroke', '#ffffff')
-  circle.setAttribute('stroke-width', '1.8')
   svg.appendChild(circle)
 
   return svg
@@ -180,7 +193,10 @@ type MarkerContent = {
  * Stops render as a dot until they're active, then the dot shrinks away as a
  * pin grows out of the same coordinate. Both layers live in one element so the
  * swap is a CSS transition rather than a content rebuild, which popped.
- * 'stay' points always show the house pin and only swell when active.
+ * Colour never changes, for either kind: every marker is the accent, so
+ * becoming active reads as size and elevation rather than a repaint. 'stay'
+ * points skip the dot and show a scaled-down house pin, swelling to full size
+ * when active.
  */
 function createMarkerContent(point: ListicleMapPoint): MarkerContent {
   const isStay = point.kind === 'stay'
@@ -210,13 +226,9 @@ function createMarkerContent(point: ListicleMapPoint): MarkerContent {
   wrap.appendChild(dot)
   wrap.appendChild(pin)
 
-  const body = pin.querySelector<SVGPathElement>('[data-pin-body]')
-
   const setActive = (isActive: boolean) => {
-    body?.setAttribute('fill', isActive ? ACTIVE_PIN : ACCENT)
-
     const pinShown = isStay || isActive
-    const pinScale = isActive ? (isStay ? 1.15 : 1) : isStay ? 1 : 0.55
+    const pinScale = isActive ? 1 : isStay ? STAY_IDLE_SCALE : 0.55
     pin.style.transform = `translateX(-50%) scale(${pinScale})`
     pin.style.opacity = pinShown ? '1' : '0'
 
@@ -240,6 +252,16 @@ export type MapPanelProps = {
   /** Small viewports need a wider view to keep a stop in context. */
   activeZoom?: number
   fitPadding?: number
+  /** Related guides for the on-map menu; omitted when there are none. */
+  guides?: ListicleMapGuides
+  /**
+   * Whether the map has to carry the article's own controls. False when the
+   * reading column is on screen above the map: its day tabs and its scroll
+   * already do that job, and a second copy over the map is clutter. The
+   * guides menu is never covered by this - the phone has no other way to
+   * reach the related-guides shelf.
+   */
+  showArticleControls?: boolean
 }
 
 export function MapPanel({
@@ -247,6 +269,8 @@ export function MapPanel({
   paused = false,
   activeZoom = ACTIVE_ZOOM,
   fitPadding = FIT_PADDING,
+  guides,
+  showArticleControls = true,
 }: MapPanelProps = {}) {
   const mapRef = useRef<HTMLDivElement>(null)
   const { points, activeId, scrollToEntry } = useListicleMapSync()
@@ -370,5 +394,22 @@ export function MapPanel({
     return () => cancelAnimationFrame(animation.frame)
   }, [])
 
-  return <div ref={mapRef} className="h-full w-full" />
+  return (
+    <div className="relative h-full w-full">
+      <div ref={mapRef} className="h-full w-full" />
+      {/* Where you are on the left, where you can go on the right, so the
+          controls never fight for the same corner. */}
+      {showArticleControls ? (
+        <div className="pointer-events-none absolute left-3 top-3 z-10 flex items-center gap-2">
+          <ListicleMapDayMenu />
+        </div>
+      ) : null}
+      <div className="pointer-events-none absolute right-3 top-3 z-10 flex items-center gap-2">
+        {guides && guides.articles.length > 0 ? (
+          <ListicleMapGuidesMenu {...guides} />
+        ) : null}
+        {showArticleControls ? <ListicleMapStepper /> : null}
+      </div>
+    </div>
+  )
 }

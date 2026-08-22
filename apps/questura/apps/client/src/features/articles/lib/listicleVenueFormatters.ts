@@ -19,6 +19,17 @@ export function formatPriceTier(value: unknown): string {
   return '$'.repeat(Number(trimmed))
 }
 
+/**
+ * Editors paste venue links as bare hostnames as often as full URLs, so a
+ * link field is only usable after this. Shared, because the entry's action
+ * buttons and the map card's have to resolve to the same href.
+ */
+export function normalizeWebsiteUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return trimmed
+  return isHttpUrl(trimmed) ? trimmed : `https://${trimmed}`
+}
+
 export function isHttpUrl(value: string): boolean {
   try {
     const u = new URL(value.trim())
