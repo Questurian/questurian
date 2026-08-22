@@ -86,7 +86,7 @@ export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<Edit
   return (
     <BlockSection
       aria-label={block.featureTitle ?? 'Featured destination'}
-      className="bg-background py-12 768:py-16 1280:py-20"
+      className="bg-background py-8"
     >
       <div className="grid gap-8 768:grid-cols-[minmax(230px,0.82fr)_1.18fr] 768:items-stretch 1024:grid-cols-[minmax(260px,0.9fr)_minmax(280px,0.9fr)_minmax(330px,1.1fr)] 1024:gap-10">
         <div className="aspect-[16/10] overflow-hidden bg-paper 768:aspect-[4/5]">
@@ -103,7 +103,7 @@ export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<Edit
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-col justify-center border-y border-foreground/30 py-8 text-center 768:px-5 1024:border-y-0 1024:px-0">
+        <div className="flex min-w-0 flex-col justify-center border-foreground/30 py-8 text-center 768:border-y 768:px-5 1024:border-y-0 1024:px-0">
           {block.featureKicker ? (
             <p className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.14em] text-accent">
               <Linked href={featureHref} className="outline-none focus-visible:ring-2 focus-visible:ring-accent">
@@ -127,7 +127,7 @@ export function EditorialFeaturePreview({ block }: HomepageBlockLayoutProps<Edit
           ) : null}
         </div>
 
-        <div className={`grid content-start gap-4 border-t border-foreground/70 pt-6 768:col-span-2 768:grid-cols-2 1024:col-span-1 1024:grid-cols-1 1024:border-l 1024:border-t-0 1024:pl-6 1024:pt-0 ${block.totalSlots === 6 ? '1280:grid-cols-1' : ''}`}>
+        <div className={`grid content-start gap-4 border-foreground/70 768:col-span-2 768:grid-cols-2 768:border-t 768:pt-6 1024:col-span-1 1024:grid-cols-1 1024:border-l 1024:border-t-0 1024:pl-6 1024:pt-0 ${block.totalSlots === 6 ? '1280:grid-cols-1' : ''}`}>
           {block.items.map((article, index) => (
             <RelatedArticle key={`${article.articlePath ?? article.title}:${index}`}
               article={article} count={block.totalSlots} index={index} />
