@@ -3,7 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { ImagePicker, type ImagePickerResult } from '../../shared/images/picker'
 import { updateMediaSet } from '../../shared/api/payload/payload.api'
-import { generateAltTextFromUrl } from '../mediaLibrary/api/mediaLibraryApi'
+import { generateAltTextFromUrl } from '../mediaLibrary'
 import { fetchLocationHomepagesList } from './locationHomepages'
 import type { EditorialFeatureBlockResponse } from './pageBlocks'
 import type { EditorialFeatureFieldsUpdate } from './mainHomepage/blocks/blockSettings.api'
