@@ -1,5 +1,4 @@
 export const AUTHOR_FEATURE_SLOT_COUNTS = [1, 2, 3, 4, 6] as const
-export const AUTHOR_FEATURE_MAX_AUTHORS = 1
 export const AUTHOR_FEATURE_SPOTLIGHT_NOTE_MAX = 160
 
 export const AUTHOR_FEATURE_IMAGE_STYLES = ['circle', 'square', 'portrait'] as const

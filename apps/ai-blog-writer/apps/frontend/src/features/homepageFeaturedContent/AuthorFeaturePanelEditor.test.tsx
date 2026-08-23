@@ -96,6 +96,30 @@ function renderEditor(
 }
 
 describe('AuthorFeaturePanelEditor', () => {
+  it('saves a square treatment with the one Author card', async () => {
+    const user = userEvent.setup()
+    const saveFields = renderEditor(vi.fn(async () => {}), {
+      ...block,
+      imageStyle: 'portrait'
+    })
+
+    await user.click(screen.getByText('Author feature panel'))
+    await user.selectOptions(
+      screen.getByRole('combobox', { name: 'Portrait treatment' }),
+      'square'
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'Save Author feature' })
+    )
+
+    await waitFor(() =>
+      expect(saveFields).toHaveBeenCalledWith({
+        imageStyle: 'square',
+        authorCards: [{ author: 1, image: 11, spotlightNote: 'Local expat' }]
+      })
+    )
+  })
+
   it('keeps a complete Author panel closed and exposes one Author selector', async () => {
     const user = userEvent.setup()
     renderEditor()

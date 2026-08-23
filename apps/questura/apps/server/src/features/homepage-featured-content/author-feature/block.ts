@@ -1,4 +1,4 @@
-import type { Block } from 'payload'
+import { validations, type Block } from 'payload'
 
 import {
   HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX,
@@ -6,7 +6,6 @@ import {
 } from '../resolve-page-blocks/lib/section-heading'
 import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 import {
-  AUTHOR_FEATURE_MAX_AUTHORS,
   AUTHOR_FEATURE_MOTION_STYLES,
   AUTHOR_FEATURE_SLOT_COUNTS,
   AUTHOR_FEATURE_SPOTLIGHT_NOTE_MAX,
@@ -67,9 +66,19 @@ export const AuthorFeatureBlock: Block = {
       name: 'authorCards',
       type: 'array',
       minRows: 1,
-      maxRows: AUTHOR_FEATURE_MAX_AUTHORS,
+      validate: (value, options) => {
+        const lengthResult = validations.array(value, options)
+        if (lengthResult !== true) return lengthResult
+        if (!Array.isArray(value) || value.length <= 1) return true
+
+        return Array.isArray(options.previousValue) &&
+          JSON.stringify(value) === JSON.stringify(options.previousValue)
+          ? true
+          : 'Author Feature supports exactly one Author.'
+      },
       admin: {
-        description: 'Exactly one Author. Image must be one of that Author’s uploaded images.',
+        description:
+          'Exactly one Author. Legacy extra rows remain readable but are ignored by the editor and public API.',
       },
       fields: [
         {
