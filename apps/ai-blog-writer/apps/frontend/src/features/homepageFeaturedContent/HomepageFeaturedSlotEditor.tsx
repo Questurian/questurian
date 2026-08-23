@@ -21,13 +21,15 @@ import {
 } from './CuratedArticleSlotSwap'
 import QuesturianMapsArticleLayout from './QuesturianMapsArticleLayout'
 import EditorialFeatureLayout from './EditorialFeatureLayout'
+import AuthorFeatureLayout from './AuthorFeatureLayout'
 import type {
   ArticleCuratedHomepageBlockType,
   ArticleGridFourLayout,
   FeaturedArticlesSlot3Layout,
   FeaturedArticlesSlot4Layout,
   FeaturedArticlesSlot5Layout,
-  EditorialFeatureBlockResponse
+  EditorialFeatureBlockResponse,
+  AuthorFeatureBlockResponse
 } from './pageBlocks'
 
 function getInvalidMessage(item: HomepageFeaturedInvalidItem): string {
@@ -72,6 +74,7 @@ type Props = {
   articleGridFourLayout?: ArticleGridFourLayout
   creatorKicker?: string | null
   editorialFeatureBlock?: EditorialFeatureBlockResponse
+  authorFeatureBlock?: AuthorFeatureBlockResponse
 }
 
 export default function HomepageFeaturedSlotEditor({
@@ -87,7 +90,8 @@ export default function HomepageFeaturedSlotEditor({
   featuredArticlesSlot5Layout = 'card-grid',
   articleGridFourLayout = 'four-across',
   creatorKicker = null,
-  editorialFeatureBlock
+  editorialFeatureBlock,
+  authorFeatureBlock
 }: Props) {
   const {
     selectionQuery,
@@ -184,6 +188,14 @@ export default function HomepageFeaturedSlotEditor({
       {variant === 'editorial-feature' && editorialFeatureBlock ? (
         <EditorialFeatureLayout
           block={editorialFeatureBlock}
+          slots={slots}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
+        />
+      ) : variant === 'author-feature' && authorFeatureBlock ? (
+        <AuthorFeatureLayout
+          block={authorFeatureBlock}
           slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}

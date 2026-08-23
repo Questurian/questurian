@@ -21,6 +21,7 @@ import {
   OPTIONS as optionsPublicLocationMenu,
 } from '@/app/api/public/locations/menu/route'
 import { POST as resetAllHomepageContent } from '@/app/api/homepage-featured-content/reset/route'
+import { POST as addMainHomepageBlock } from '@/app/api/homepage-featured-content/blocks/route'
 import { PATCH as reorderLocationHomepageBlocks } from '@/app/api/location-homepages/[id]/blocks/route'
 import { GET as getPublicLocationHomepage } from '@/app/api/public/location-homepages/[country]/[city]/route'
 import { authenticateRequest } from '@/features/auth/lib/auth-middleware'
@@ -262,6 +263,44 @@ describe('location homepage routes', () => {
     expect(data).toEqual({ orderedBlockIds: ['b', 'a'] })
     expect(payload.findByID).toHaveBeenCalledWith(expect.objectContaining({ depth: 0 }))
     expect(payload.update).toHaveBeenCalledWith(expect.objectContaining({ depth: 0 }))
+  })
+
+  it('persists a string id when adding a main homepage JSON block', async () => {
+    vi.mocked(authenticateRequest).mockResolvedValue({
+      user: { role: 'editor' },
+      error: null,
+      status: 200,
+    } as never)
+    const payload = {
+      findGlobal: vi.fn().mockResolvedValue({
+        draftPageBlocks: [],
+        publishedPageBlocks: [],
+        publishedRevision: 0,
+      }),
+      updateGlobal: vi.fn().mockImplementation(({ data }) => Promise.resolve({
+        ...data,
+        publishedRevision: 0,
+      })),
+    }
+    vi.mocked(getPayload).mockResolvedValue(payload as never)
+
+    const response = await addMainHomepageBlock(new Request(
+      'http://localhost:4000/api/homepage-featured-content/blocks',
+      {
+        method: 'POST',
+        body: JSON.stringify({ blockType: 'newsletter-signup', slotCount: 0 }),
+      },
+    ) as never)
+    const data = await response.json()
+
+    expect(response.status).toBe(201)
+    expect(data.pageBlocks[0].id).toEqual(expect.any(String))
+    expect(data.pageBlocks[0].id).not.toBe('')
+    expect(payload.updateGlobal).toHaveBeenCalledWith(expect.objectContaining({
+      data: {
+        draftPageBlocks: [expect.objectContaining({ id: data.pageBlocks[0].id })],
+      },
+    }))
   })
 
   it('clears legacy, draft, and published blocks for every homepage', async () => {

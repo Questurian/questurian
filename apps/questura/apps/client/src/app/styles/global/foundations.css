@@ -165,7 +165,9 @@ a[href]:focus-visible :is(h1, h2, h3, h4, h5, h6),
    surface, not the text, is the affordance. */
 a[href][data-no-hover-underline]:hover :is(h1, h2, h3, h4, h5, h6),
 a[href][data-no-hover-underline] :is(h1, h2, h3, h4, h5, h6):hover,
-a[href][data-no-hover-underline]:focus-visible :is(h1, h2, h3, h4, h5, h6) {
+a[href][data-no-hover-underline]:focus-visible :is(h1, h2, h3, h4, h5, h6),
+:is(h1, h2, h3, h4, h5, h6) a[href][data-no-hover-underline]:hover,
+:is(h1, h2, h3, h4, h5, h6) a[href][data-no-hover-underline]:focus-visible {
   text-decoration-line: none;
 }
 

@@ -12,6 +12,7 @@ import type { AuthorMediaSet } from '../types'
 type Props = {
   mediaSet: AuthorMediaSet | number | null | undefined
   disabled?: boolean
+  onSaved?: () => Promise<void> | void
 }
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value))
@@ -23,7 +24,8 @@ function mediaSetId(mediaSet: AuthorMediaSet | number | null | undefined) {
 
 export default function AuthorImagePlacementEditor({
   mediaSet,
-  disabled = false
+  disabled = false,
+  onSaved
 }: Props) {
   const id = mediaSetId(mediaSet)
   const initialMediaSet = typeof mediaSet === 'number' ? undefined : mediaSet
@@ -63,6 +65,7 @@ export default function AuthorImagePlacementEditor({
       if (!id) return
       await updateAuthorMediaSetPlacement(id, focalPoint)
       await regenerateAuthorMediaSet(id)
+      await onSaved?.()
     },
     onSuccess: async () => {
       await query.refetch()
@@ -97,21 +100,41 @@ export default function AuthorImagePlacementEditor({
           This image has no source file for placement editing.
         </p>
       ) : (
-        <div className="author-image-placement-canvas">
-          <img
-            ref={imageRef}
-            src={sourceUrl}
-            alt=""
-            draggable={false}
-            onClick={handleClick}
-          />
-          <span
-            aria-hidden="true"
-            style={{
-              left: `calc(${focalPoint.x * 100}% - 10px)`,
-              top: `calc(${focalPoint.y * 100}% - 10px)`
-            }}
-          />
+        <div className="author-image-placement-workspace">
+          <div className="author-image-placement-canvas">
+            <img
+              ref={imageRef}
+              src={sourceUrl}
+              alt="Selected Author source"
+              draggable={false}
+              onClick={handleClick}
+            />
+            <span
+              aria-hidden="true"
+              style={{
+                left: `calc(${focalPoint.x * 100}% - 10px)`,
+                top: `calc(${focalPoint.y * 100}% - 10px)`
+              }}
+            />
+          </div>
+          <div className="author-image-crop-preview" aria-label="Crop preview">
+            {[
+              { label: 'Portrait', className: 'is-portrait' },
+              { label: 'Square', className: 'is-square' },
+              { label: 'Wide', className: 'is-wide' }
+            ].map((crop) => (
+              <figure className={crop.className} key={crop.label}>
+                <img
+                  src={sourceUrl}
+                  alt=""
+                  style={{
+                    objectPosition: `${focalPoint.x * 100}% ${focalPoint.y * 100}%`
+                  }}
+                />
+                <figcaption>{crop.label}</figcaption>
+              </figure>
+            ))}
+          </div>
         </div>
       )}
       <button

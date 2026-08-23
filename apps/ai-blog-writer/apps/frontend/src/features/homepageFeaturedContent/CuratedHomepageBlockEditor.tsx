@@ -273,6 +273,9 @@ export default function CuratedHomepageBlockEditor({
           editorialFeatureBlock={
             block.blockType === 'editorial-feature' ? block : undefined
           }
+          authorFeatureBlock={
+            block.blockType === 'author-feature' ? block : undefined
+          }
         />
       </div>
     </div>
