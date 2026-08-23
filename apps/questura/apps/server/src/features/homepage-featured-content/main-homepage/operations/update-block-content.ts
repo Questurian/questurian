@@ -1,7 +1,6 @@
 import {
   applyBlockFieldUpdates,
   applyBlockItemsUpdate,
-  validateUpdatedAuthorFeatureItems,
 } from '../../location-homepage-blocks/lib/apply-block-update'
 import { validateAuthorFeatureCardImageSelections } from '../../author-feature/service'
 import {
@@ -86,19 +85,10 @@ export async function updateMainHomepageBlockContent(
     { ...block, slotCount: blockSlotCount },
     parsed.input.fields,
   )
-  if (authorCards.ok && !authorCards.omit) {
-    const authorItemsError = await validateUpdatedAuthorFeatureItems(
-      payload,
-      blockWithFieldUpdates,
-      parsed.input.hasItems ? parsed.input.items : block.items,
-    )
-    if (authorItemsError) return { status: 400, body: { message: authorItemsError } }
-  }
-
   if (parsed.input.hasItems) {
     const itemUpdate = await applyBlockItemsUpdate(
       payload,
-      block.blockType === 'author-feature' ? blockWithFieldUpdates : block,
+      blockWithFieldUpdates,
       parsed.input.items,
       blockSlotCount,
       MAIN_HOMEPAGE_LOCATION_GRID_SCOPE,
@@ -106,7 +96,7 @@ export async function updateMainHomepageBlockContent(
     if (!itemUpdate.ok) {
       return { status: itemUpdate.status, body: { message: itemUpdate.message } }
     }
-    updatedBlocks[blockIndex] = applyBlockFieldUpdates(itemUpdate.block, parsed.input.fields)
+    updatedBlocks[blockIndex] = itemUpdate.block
   } else {
     updatedBlocks[blockIndex] = blockWithFieldUpdates
   }

@@ -46,24 +46,22 @@ const block: AuthorFeatureBlockResponse = {
   sectionSubheading: null,
   imageStyle: 'square',
   motionStyle: 'subtle',
-  authorCards: [
-    {
-      author: {
-        id: 1,
-        name: 'Alan Malpartida',
-        slug: 'alan-malpartida',
-        href: '/authors/alan-malpartida',
-        bio: 'Local guide.',
-        expertise: ['Lima', 'Restaurants']
-      },
-      imageMediaSetId: 11,
-      image,
-      imageSquare: image,
-      imageWide: image,
-      imageAltReady: true,
-      spotlightNote: 'Local expat'
-    }
-  ]
+  authorCard: {
+    author: {
+      id: 1,
+      name: 'Alan Malpartida',
+      slug: 'alan-malpartida',
+      href: '/authors/alan-malpartida',
+      bio: 'Local guide.',
+      expertise: ['Lima', 'Restaurants']
+    },
+    imageMediaSetId: 11,
+    image,
+    imageSquare: image,
+    imageWide: image,
+    imageAltReady: true,
+    spotlightNote: 'Local expat'
+  }
 }
 
 describe('AuthorFeatureLayout', () => {

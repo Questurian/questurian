@@ -26,7 +26,7 @@ export default function AuthorFeatureLayout({
   onReorder
 }: Props) {
   const count = slots.length
-  const author = block.authorCards[0]
+  const author = block.authorCard
   const shaped = block.imageStyle === 'circle' || block.imageStyle === 'square'
   const featureImage = shaped
     ? (author?.imageSquare?.url ?? author?.image?.url ?? null)

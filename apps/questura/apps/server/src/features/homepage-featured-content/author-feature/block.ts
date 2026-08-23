@@ -96,7 +96,7 @@ export const AuthorFeatureBlock: Block = {
         {
           name: 'isEmphasized',
           type: 'checkbox',
-          defaultValue: true,
+          defaultValue: false,
           admin: {
             hidden: true,
             description: 'Legacy compatibility field. Author Feature now supports one Author only.',

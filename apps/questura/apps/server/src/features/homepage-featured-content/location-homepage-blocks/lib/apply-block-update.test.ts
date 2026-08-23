@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { applyBlockItemsUpdate, validateUpdatedAuthorFeatureItems } from './apply-block-update'
+import { applyBlockItemsUpdate } from './apply-block-update'
 
 function mediaSet(id: number) {
   return {
@@ -109,27 +109,5 @@ describe('applyBlockItemsUpdate', () => {
       status: 400,
       message: '"newsletter-signup" blocks do not support item updates.',
     })
-  })
-})
-
-describe('validateUpdatedAuthorFeatureItems', () => {
-  it('rejects articles written by a different Author after Author replacement', async () => {
-    const payload = {
-      findByID: vi.fn(async () => ({ author: 12 })),
-    }
-
-    await expect(
-      validateUpdatedAuthorFeatureItems(
-        payload as never,
-        {
-          id: 'author-feature-1',
-          blockType: 'author-feature',
-          slotCount: 1,
-          authorCards: [{ author: 34 }],
-          items: [],
-        },
-        [{ relationTo: 'articles', value: 99 }],
-      ),
-    ).resolves.toBe('Author Feature articles must be written by the selected Author.')
   })
 })

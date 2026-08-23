@@ -110,7 +110,9 @@ export default function CuratedHomepageBlockEditor({
         : undefined,
     candidateAuthorIds:
       block.blockType === 'author-feature'
-        ? block.authorCards.map((card) => card.author.id)
+        ? block.authorCard
+          ? [block.authorCard.author.id]
+          : []
         : undefined
   })
   const effectiveSlotEditorState = usePageBlockDuplicateExclusion({

@@ -92,7 +92,7 @@ export function parseAuthorFeatureCardsBodyField(
   if (!Array.isArray(body.authorCards)) {
     return { ok: false, message: 'authorCards must be an array.' }
   }
-  if (body.authorCards.length > 1) {
+  if (body.authorCards.length !== 1) {
     return { ok: false, message: 'Author Feature supports exactly one Author.' }
   }
 

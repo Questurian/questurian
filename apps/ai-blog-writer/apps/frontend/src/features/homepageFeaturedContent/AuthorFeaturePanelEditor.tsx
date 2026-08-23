@@ -11,8 +11,8 @@ import {
 import type { AuthorFeatureBlockResponse } from './pageBlocks'
 import type { AuthorFeatureFieldsUpdate } from './mainHomepage/blocks/blockSettings.api'
 
-type DraftAuthor = {
-  author: number
+type DraftAuthorSelection = {
+  authorId: number
   image: number | null
   spotlightNote: string
 }
@@ -41,11 +41,13 @@ function mediaSetTitle(entry: AuthorImageEntry): string {
     : entry.mediaSet.title || `Image #${id}`
 }
 
-function initialAuthor(block: AuthorFeatureBlockResponse): DraftAuthor | null {
-  const card = block.authorCards[0]
+function initialAuthor(
+  block: AuthorFeatureBlockResponse
+): DraftAuthorSelection | null {
+  const card = block.authorCard
   return card
     ? {
-        author: card.author.id,
+        authorId: card.author.id,
         image: card.imageMediaSetId,
         spotlightNote: card.spotlightNote ?? ''
       }
@@ -66,20 +68,18 @@ function fieldsSignature(block: AuthorFeatureBlockResponse): string {
 }
 
 function fieldsFromDraft(
-  author: DraftAuthor | null,
+  draftAuthor: DraftAuthorSelection,
   imageStyle: AuthorFeatureBlockResponse['imageStyle']
 ): AuthorFeatureFieldsUpdate {
   return {
     imageStyle,
-    authorCards: author
-      ? [
-          {
-            author: author.author,
-            image: author.image,
-            spotlightNote: author.spotlightNote.trim() || null
-          }
-        ]
-      : []
+    authorCards: [
+      {
+        author: draftAuthor.authorId,
+        image: draftAuthor.image,
+        spotlightNote: draftAuthor.spotlightNote.trim() || null
+      }
+    ]
   }
 }
 
@@ -88,13 +88,13 @@ export default function AuthorFeaturePanelEditor({
   canManage,
   saveFields
 }: Props) {
-  const [author, setAuthor] = useState(() => initialAuthor(block))
+  const [draftAuthor, setDraftAuthor] = useState(() => initialAuthor(block))
   const [imageStyle, setImageStyle] = useState(() => editableImageStyle(block))
   const [hydratedSignature, setHydratedSignature] = useState(() =>
     fieldsSignature(block)
   )
   const [settingsOpen, setSettingsOpen] = useState(
-    () => !block.authorCards[0] || block.authorCards[0].imageMediaSetId === null
+    () => !block.authorCard || block.authorCard.imageMediaSetId === null
   )
 
   const authorsQuery = useQuery({
@@ -106,7 +106,7 @@ export default function AuthorFeaturePanelEditor({
   useEffect(() => {
     const nextSignature = fieldsSignature(block)
     if (nextSignature === hydratedSignature) return
-    setAuthor(initialAuthor(block))
+    setDraftAuthor(initialAuthor(block))
     setImageStyle(editableImageStyle(block))
     setHydratedSignature(nextSignature)
   }, [block, hydratedSignature])
@@ -116,13 +116,16 @@ export default function AuthorFeaturePanelEditor({
     () => new Map(authors.map((candidate) => [candidate.id, candidate])),
     [authors]
   )
-  const selectedAuthor = author ? authorsById.get(author.author) : undefined
-  const savedAuthor = block.authorCards[0]
+  const selectedAuthor = draftAuthor
+    ? authorsById.get(draftAuthor.authorId)
+    : undefined
+  const savedAuthor = block.authorCard
   const authorImages = selectedAuthor?.authorImages ?? []
   const selectedImage = authorImages.find(
-    (entry) => mediaSetId(entry) === author?.image
+    (entry) => mediaSetId(entry) === draftAuthor?.image
   )
-  const currentFields = () => fieldsFromDraft(author, imageStyle)
+  const currentFields = (): AuthorFeatureFieldsUpdate =>
+    draftAuthor ? fieldsFromDraft(draftAuthor, imageStyle) : { imageStyle }
 
   const saveMutation = useMutation({
     mutationFn: () => saveFields(currentFields()),
@@ -131,9 +134,9 @@ export default function AuthorFeaturePanelEditor({
 
   function selectAuthor(authorId: string) {
     const id = Number(authorId)
-    setAuthor(
+    setDraftAuthor(
       authorsById.has(id)
-        ? { author: id, image: null, spotlightNote: '' }
+        ? { authorId: id, image: null, spotlightNote: '' }
         : null
     )
   }
@@ -155,7 +158,7 @@ export default function AuthorFeaturePanelEditor({
           <label className="is-wide">
             <span>Author</span>
             <select
-              value={author?.author ?? ''}
+              value={draftAuthor?.authorId ?? ''}
               disabled={!canManage || authorsQuery.isLoading}
               onChange={(event) => selectAuthor(event.target.value)}
             >
@@ -198,13 +201,13 @@ export default function AuthorFeaturePanelEditor({
           </label>
         </div>
 
-        {author ? (
+        {draftAuthor ? (
           <section
             className="hf-author-feature-card-editor"
             aria-label={
               selectedAuthor?.displayName ??
               savedAuthor?.author.name ??
-              `Author #${author.author}`
+              `Author #${draftAuthor.authorId}`
             }
           >
             <header className="hf-author-feature-card-header">
@@ -213,7 +216,7 @@ export default function AuthorFeaturePanelEditor({
                 <strong>
                   {selectedAuthor?.displayName ??
                     savedAuthor?.author.name ??
-                    `Author #${author.author}`}
+                    `Author #${draftAuthor.authorId}`}
                 </strong>
               </div>
             </header>
@@ -228,7 +231,7 @@ export default function AuthorFeaturePanelEditor({
                     const id = mediaSetId(entry)
                     const preview = mediaSetPreviewUrl(entry.mediaSet)
                     const title = mediaSetTitle(entry)
-                    const isSelected = id === author.image
+                    const isSelected = id === draftAuthor.image
                     return (
                       <button
                         type="button"
@@ -238,7 +241,7 @@ export default function AuthorFeaturePanelEditor({
                         aria-pressed={isSelected}
                         disabled={!canManage}
                         onClick={() =>
-                          setAuthor((current) =>
+                          setDraftAuthor((current) =>
                             current ? { ...current, image: id } : current
                           )
                         }
@@ -258,7 +261,7 @@ export default function AuthorFeaturePanelEditor({
               )}
             </fieldset>
 
-            {authorImages.length > 0 && author.image === null ? (
+            {authorImages.length > 0 && draftAuthor.image === null ? (
               <p className="hf-banner error">
                 Choose one of this Author’s uploaded images.
               </p>
@@ -273,14 +276,16 @@ export default function AuthorFeaturePanelEditor({
             ) : null}
 
             <label className="hf-author-feature-note">
-              <span>Homepage note · {author.spotlightNote.length}/160</span>
+              <span>
+                Homepage note · {draftAuthor.spotlightNote.length}/160
+              </span>
               <textarea
-                value={author.spotlightNote}
+                value={draftAuthor.spotlightNote}
                 maxLength={160}
                 disabled={!canManage}
                 placeholder="e.g. Local expat"
                 onChange={(event) =>
-                  setAuthor((current) =>
+                  setDraftAuthor((current) =>
                     current
                       ? { ...current, spotlightNote: event.target.value }
                       : current
@@ -297,8 +302,8 @@ export default function AuthorFeaturePanelEditor({
           disabled={
             !canManage ||
             saveMutation.isPending ||
-            !author ||
-            author.image === null
+            !draftAuthor ||
+            draftAuthor.image === null
           }
           onClick={() => saveMutation.mutate()}
         >

@@ -18,7 +18,7 @@ export type ApiCuratedBlock = {
   linkedLocation?: unknown
   imageStyle?: unknown
   motionStyle?: unknown
-  authorCards?: unknown
+  authorCard?: unknown
 }
 
 export type PublicPreviewPersonAvatar = {

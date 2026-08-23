@@ -13305,7 +13305,7 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": true
+          "default": false
         }
       },
       "indexes": {

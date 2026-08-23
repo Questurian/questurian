@@ -52,12 +52,11 @@ export function formatPublicHomepageBlock(block: unknown, location?: LocationCon
   }
 
   if (blockType === 'author-feature') {
-    const authorCards = Array.isArray(block.authorCards) ? block.authorCards : []
     return {
       ...base,
       imageStyle: stringOrNull(block.imageStyle) ?? 'portrait',
       motionStyle: stringOrNull(block.motionStyle) ?? 'subtle',
-      authorCards,
+      authorCard: isRecord(block.authorCard) ? block.authorCard : null,
     }
   }
 

@@ -117,7 +117,7 @@ export type AuthorFeatureBlockResponse = {
   sectionSubheading: string | null
   imageStyle: AuthorFeatureImageStyle
   motionStyle: AuthorFeatureMotionStyle
-  authorCards: AuthorFeatureCard[]
+  authorCard: AuthorFeatureCard | null
 }
 
 /** When `selection.totalSlots === 4`: one row of four (wide images) vs 2×2 (square images). */

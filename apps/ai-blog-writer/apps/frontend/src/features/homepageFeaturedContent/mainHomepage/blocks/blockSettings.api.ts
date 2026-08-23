@@ -25,7 +25,7 @@ export type AuthorFeatureCardUpdate = {
 }
 
 export type AuthorFeatureFieldsUpdate = {
-  authorCards?: AuthorFeatureCardUpdate[]
+  authorCards?: [AuthorFeatureCardUpdate]
   imageStyle?: AuthorFeatureImageStyle
   motionStyle?: AuthorFeatureMotionStyle
 }

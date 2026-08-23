@@ -41,6 +41,13 @@ describe('Author Feature fields', () => {
     ).toEqual({ ok: false, message: 'Author Feature supports exactly one Author.' })
   })
 
+  it('rejects an empty Author selection', () => {
+    expect(parseAuthorFeatureCardsBodyField({ authorCards: [] })).toEqual({
+      ok: false,
+      message: 'Author Feature supports exactly one Author.',
+    })
+  })
+
   it('rejects selecting an image not attached to that Author', async () => {
     const payload = {
       findByID: vi.fn(async () => ({

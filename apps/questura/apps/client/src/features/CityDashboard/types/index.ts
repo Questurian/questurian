@@ -133,7 +133,7 @@ export type AuthorFeatureBlock = CityHomepageArticleBlock & {
   blockType: "author-feature";
   imageStyle: "circle" | "square" | "portrait";
   motionStyle: "none" | "subtle";
-  authorCards: AuthorFeatureCard[];
+  authorCard: AuthorFeatureCard | null;
 };
 
 export type PlaceCardHighlight = {

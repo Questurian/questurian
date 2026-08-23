@@ -60,8 +60,7 @@ function selectedMotion(value: unknown): AuthorFeatureMotionStyle {
 
 export function authorIdsFromAuthorFeatureBlock(block: Record<string, unknown>): number[] {
   const cards = Array.isArray(block.authorCards) ? block.authorCards : []
-  const selected = cards.find((card) => isRecord(card) && card.isEmphasized === true) ?? cards[0]
-  const id = isRecord(selected) ? relationshipId(selected.author) : null
+  const id = isRecord(cards[0]) ? relationshipId(cards[0].author) : null
   return id ? [id] : []
 }
 
@@ -91,8 +90,7 @@ export async function resolveAuthorFeatureFields(
   block: Record<string, unknown>,
 ) {
   const rawCards = Array.isArray(block.authorCards) ? block.authorCards : []
-  const selectedCard =
-    rawCards.find((card) => isRecord(card) && card.isEmphasized === true) ?? rawCards[0]
+  const selectedCard = rawCards[0]
 
   const cards = await Promise.all(
     (selectedCard ? [selectedCard] : []).map(async (rawCard) => {
@@ -157,6 +155,6 @@ export async function resolveAuthorFeatureFields(
   return {
     imageStyle: selectedStyle(block.imageStyle),
     motionStyle: selectedMotion(block.motionStyle),
-    authorCards: cards.filter(Boolean),
+    authorCard: cards.find(Boolean) ?? null,
   }
 }

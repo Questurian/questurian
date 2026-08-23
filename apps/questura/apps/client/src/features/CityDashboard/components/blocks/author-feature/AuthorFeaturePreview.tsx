@@ -208,7 +208,7 @@ function RelatedArticle({
 export function AuthorFeaturePreview({
   block,
 }: HomepageBlockLayoutProps<AuthorFeatureBlock>) {
-  const author = block.authorCards[0];
+  const author = block.authorCard;
 
   if (!author) return null;
 
