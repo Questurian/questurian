@@ -48,6 +48,7 @@ export type CuratedBlockType =
   | 'featured-article-carousel'
   | 'featured-articles'
   | 'editorial-feature'
+  | 'author-feature'
   | 'article-grid'
   | 'location-grid'
   | 'questurian-maps'

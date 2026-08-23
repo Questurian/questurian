@@ -15,7 +15,8 @@ import {
   updateMainHomepageFeaturedSlot5Layout,
   updateMainHomepageLocationGridMediaAspect,
   updateMainHomepageCreatorKicker,
-  updateMainHomepageEditorialFeatureFields
+  updateMainHomepageEditorialFeatureFields,
+  updateMainHomepageAuthorFeatureFields
 } from './api'
 import CuratedHomepageBlockEditor from './CuratedHomepageBlockEditor'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
@@ -114,14 +115,25 @@ export default function MainHomepageBlockRenderer({
                 ? fetchThingsToDoListicleCandidates(params)
                 : fetchHomepageFeaturedCandidates(params)
         }
-        saveSectionHeading={block.blockType === 'editorial-feature' ? undefined : async (value) => {
-          await updateMainHomepageFeaturedSectionHeading(block.id, value)
-          invalidateHomepage()
-        }}
-        saveSectionSubheading={block.blockType === 'editorial-feature' ? undefined : async (value) => {
-          await updateMainHomepageFeaturedSectionSubheading(block.id, value)
-          invalidateHomepage()
-        }}
+        saveSectionHeading={
+          block.blockType === 'editorial-feature'
+            ? undefined
+            : async (value) => {
+                await updateMainHomepageFeaturedSectionHeading(block.id, value)
+                invalidateHomepage()
+              }
+        }
+        saveSectionSubheading={
+          block.blockType === 'editorial-feature'
+            ? undefined
+            : async (value) => {
+                await updateMainHomepageFeaturedSectionSubheading(
+                  block.id,
+                  value
+                )
+                invalidateHomepage()
+              }
+        }
         saveCreatorKicker={
           block.blockType === 'featured-creator-article'
             ? async (value) => {
@@ -169,6 +181,14 @@ export default function MainHomepageBlockRenderer({
           block.blockType === 'editorial-feature'
             ? async (fields) => {
                 await updateMainHomepageEditorialFeatureFields(block.id, fields)
+                invalidateHomepage()
+              }
+            : undefined
+        }
+        saveAuthorFeatureFields={
+          block.blockType === 'author-feature'
+            ? async (fields) => {
+                await updateMainHomepageAuthorFeatureFields(block.id, fields)
                 invalidateHomepage()
               }
             : undefined

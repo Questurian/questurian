@@ -27,6 +27,7 @@ export function curatedBlockApiPayload(
       selection,
       sectionHeading: publicFeaturedArticlesSectionHeading(block),
       sectionSubheading: publicFeaturedArticlesSectionSubheading(block),
+      ...resolvedFields,
     }
     if (block.blockType === 'featured-articles') {
       const totalSlots =

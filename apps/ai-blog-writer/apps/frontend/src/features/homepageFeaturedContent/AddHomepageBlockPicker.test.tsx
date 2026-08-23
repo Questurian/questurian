@@ -43,7 +43,8 @@ describe('AddHomepageBlockPicker', () => {
 
     expect(options[0]).toHaveTextContent('Multi-Article Feature')
     expect(options[1]).toHaveTextContent('Editorial Feature')
-    expect(options[2]).toHaveTextContent('Hero Article')
+    expect(options[2]).toHaveTextContent('Author Feature')
+    expect(options[3]).toHaveTextContent('Hero Article')
   })
 
   it('shows each choice as a described layout preview', () => {
@@ -119,24 +120,29 @@ describe('AddHomepageBlockPicker', () => {
   it.each([
     ['hotel-grid', 'Hotel Grid'],
     ['tour-grid', 'Tour Grid']
-  ] as const)('adds growable %s blocks at four slots without a size step', async (blockType, label) => {
-    const user = userEvent.setup()
-    const onConfirm = vi.fn()
+  ] as const)(
+    'adds growable %s blocks at four slots without a size step',
+    async (blockType, label) => {
+      const user = userEvent.setup()
+      const onConfirm = vi.fn()
 
-    render(
-      <AddHomepageBlockPicker
-        isPending={false}
-        onConfirm={onConfirm}
-        onCancel={vi.fn()}
-        availableBlockTypes={[blockType]}
-      />
-    )
+      render(
+        <AddHomepageBlockPicker
+          isPending={false}
+          onConfirm={onConfirm}
+          onCancel={vi.fn()}
+          availableBlockTypes={[blockType]}
+        />
+      )
 
-    await user.click(screen.getByRole('button', { name: new RegExp(label) }))
+      await user.click(screen.getByRole('button', { name: new RegExp(label) }))
 
-    expect(onConfirm).toHaveBeenCalledWith(blockType, 4)
-    expect(screen.queryByRole('group', { name: `${label} size` })).not.toBeInTheDocument()
-  })
+      expect(onConfirm).toHaveBeenCalledWith(blockType, 4)
+      expect(
+        screen.queryByRole('group', { name: `${label} size` })
+      ).not.toBeInTheDocument()
+    }
+  )
 
   it('shows every Multi-Article Feature size as a visual layout choice', async () => {
     const user = userEvent.setup()

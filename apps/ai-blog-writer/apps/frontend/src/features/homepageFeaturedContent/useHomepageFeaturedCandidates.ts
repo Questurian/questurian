@@ -12,6 +12,7 @@ type UseHomepageFeaturedCandidatesOptions = Pick<
   | 'fetchCandidates'
   | 'selectionQueryKey'
   | 'lockedCollectionFilter'
+  | 'candidateAuthorIds'
 > & {
   pickerSlotIndex: number | null
 }
@@ -21,6 +22,7 @@ export function useHomepageFeaturedCandidates({
   fetchCandidates,
   selectionQueryKey,
   lockedCollectionFilter,
+  candidateAuthorIds,
   pickerSlotIndex
 }: UseHomepageFeaturedCandidatesOptions) {
   const [searchValue, setSearchValue] = useState('')
@@ -41,14 +43,16 @@ export function useHomepageFeaturedCandidates({
       'candidates',
       effectiveCollectionFilter,
       deferredSearchValue,
-      candidatePage
+      candidatePage,
+      ...(candidateAuthorIds ?? [])
     ],
     queryFn: () =>
       fetchCandidates({
         type: effectiveCollectionFilter,
         query: deferredSearchValue || undefined,
         page: candidatePage,
-        limit: CANDIDATE_PAGE_SIZE
+        limit: CANDIDATE_PAGE_SIZE,
+        authorIds: candidateAuthorIds
       }),
     enabled: Boolean(canManage && pickerSlotIndex !== null),
     placeholderData: (previousData) => previousData

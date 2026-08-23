@@ -8,7 +8,7 @@ import HomepageBlockSlotCountSection from './HomepageBlockSlotCountSection'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
   type ArticleCuratedHomepageBlockResponse,
-  type CuratedHomepageBlockType,
+  type CuratedHomepageBlockType
 } from './pageBlocks'
 import type { CuratedHomepageLayoutsState } from './useCuratedHomepageLayouts'
 import type { UseHomepageFeaturedSlotsResult } from './useHomepageFeaturedSlots'
@@ -31,7 +31,7 @@ type Props = {
   canConvert: boolean
   onConvert?: (
     blockType: CuratedHomepageBlockType,
-    slotCount: number,
+    slotCount: number
   ) => Promise<void>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
@@ -57,7 +57,7 @@ export default function CuratedHomepageBlockSettings({
   onConvert,
   onDeleteBlock,
   isDeletingBlock,
-  deleteError,
+  deleteError
 }: Props) {
   const {
     saveMutation,
@@ -65,7 +65,7 @@ export default function CuratedHomepageBlockSettings({
     saveDisabled,
     handleSave,
     handleResizeSlotCount,
-    savedInvalidItems,
+    savedInvalidItems
   } = slotEditorState
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
   const slotsFilled = slots.filter(Boolean).length
@@ -95,7 +95,10 @@ export default function CuratedHomepageBlockSettings({
         </>
       }
     >
-      <p className="hf-block-slot-meta hf-block-settings-slot-summary" aria-live="polite">
+      <p
+        className="hf-block-slot-meta hf-block-settings-slot-summary"
+        aria-live="polite"
+      >
         {slotsFilled} / {slots.length} filled
       </p>
       <HomepageBlockSectionTextFields
@@ -133,15 +136,25 @@ export default function CuratedHomepageBlockSettings({
           ariaLabel="Three-slot layout"
           value={layoutState.slot3.draft}
           options={[
-            { value: 'hero-left', label: 'Hero left — two stacked on the right' },
-            { value: 'featured-center', label: 'Three columns — large feature in the center' },
+            {
+              value: 'hero-left',
+              label: 'Hero left — two stacked on the right'
+            },
+            {
+              value: 'featured-center',
+              label: 'Three columns — large feature in the center'
+            }
           ]}
           dirty={layoutState.slot3.dirty}
           isPending={layoutState.slot3.mutation.isPending}
           error={layoutState.slot3.mutation.error}
           onChange={layoutState.slot3.setDraft}
-          onReset={() => layoutState.slot3.setDraft(layoutState.slot3.savedValue)}
-          onSave={() => layoutState.slot3.mutation.mutate(layoutState.slot3.draft)}
+          onReset={() =>
+            layoutState.slot3.setDraft(layoutState.slot3.savedValue)
+          }
+          onSave={() =>
+            layoutState.slot3.mutation.mutate(layoutState.slot3.draft)
+          }
         />
       ) : null}
 
@@ -153,15 +166,25 @@ export default function CuratedHomepageBlockSettings({
           ariaLabel="Four-slot layout"
           value={layoutState.slot4.draft}
           options={[
-            { value: 'sidebar-stack', label: 'Hero column + stacked sidebar (default)' },
-            { value: 'one-over-three', label: 'Lead row: text + image, then three columns' },
+            {
+              value: 'sidebar-stack',
+              label: 'Hero column + stacked sidebar (default)'
+            },
+            {
+              value: 'one-over-three',
+              label: 'Lead row: text + image, then three columns'
+            }
           ]}
           dirty={layoutState.slot4.dirty}
           isPending={layoutState.slot4.mutation.isPending}
           error={layoutState.slot4.mutation.error}
           onChange={layoutState.slot4.setDraft}
-          onReset={() => layoutState.slot4.setDraft(layoutState.slot4.savedValue)}
-          onSave={() => layoutState.slot4.mutation.mutate(layoutState.slot4.draft)}
+          onReset={() =>
+            layoutState.slot4.setDraft(layoutState.slot4.savedValue)
+          }
+          onSave={() =>
+            layoutState.slot4.mutation.mutate(layoutState.slot4.draft)
+          }
         />
       ) : null}
 
@@ -174,14 +197,18 @@ export default function CuratedHomepageBlockSettings({
           value={layoutState.slot5.draft}
           options={[
             { value: 'card-grid', label: 'Card grid (default)' },
-            { value: 'hero-sidebar', label: 'Magazine — hero + sidebar stack' },
+            { value: 'hero-sidebar', label: 'Magazine — hero + sidebar stack' }
           ]}
           dirty={layoutState.slot5.dirty}
           isPending={layoutState.slot5.mutation.isPending}
           error={layoutState.slot5.mutation.error}
           onChange={layoutState.slot5.setDraft}
-          onReset={() => layoutState.slot5.setDraft(layoutState.slot5.savedValue)}
-          onSave={() => layoutState.slot5.mutation.mutate(layoutState.slot5.draft)}
+          onReset={() =>
+            layoutState.slot5.setDraft(layoutState.slot5.savedValue)
+          }
+          onSave={() =>
+            layoutState.slot5.mutation.mutate(layoutState.slot5.draft)
+          }
         />
       ) : null}
 
@@ -194,25 +221,29 @@ export default function CuratedHomepageBlockSettings({
           value={layoutState.articleGridFour.draft}
           options={[
             { value: 'four-across', label: 'One row × four — wide images' },
-            { value: 'two-by-two', label: '2×2 grid — square images' },
+            { value: 'two-by-two', label: '2×2 grid — square images' }
           ]}
           dirty={layoutState.articleGridFour.dirty}
           isPending={layoutState.articleGridFour.mutation.isPending}
           error={layoutState.articleGridFour.mutation.error}
           onChange={layoutState.articleGridFour.setDraft}
           onReset={() =>
-            layoutState.articleGridFour.setDraft(layoutState.articleGridFour.savedValue)
+            layoutState.articleGridFour.setDraft(
+              layoutState.articleGridFour.savedValue
+            )
           }
           onSave={() =>
-            layoutState.articleGridFour.mutation.mutate(layoutState.articleGridFour.draft)
+            layoutState.articleGridFour.mutation.mutate(
+              layoutState.articleGridFour.draft
+            )
           }
         />
       ) : null}
 
       {!saveSectionHeading && !canConvert ? (
         <p className="hf-block-settings-hint">
-          Choose articles in the grid below, then use <strong>Save</strong> in the footer to
-          persist slot picks.
+          Choose articles in the grid below, then use <strong>Save</strong> in
+          the footer to persist slot picks.
         </p>
       ) : null}
 

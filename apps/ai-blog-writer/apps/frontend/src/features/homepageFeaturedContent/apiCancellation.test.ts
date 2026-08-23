@@ -4,11 +4,11 @@ import { fetchMainHomepage } from './api'
 import { fetchLocationHomepage } from './locationHomepages'
 
 vi.mock('../../shared/api/client/config', () => ({
-  PAYLOAD_API_URL: 'http://payload.test',
+  PAYLOAD_API_URL: 'http://payload.test'
 }))
 
 vi.mock('../../shared/api/client/error-parser', () => ({
-  parseErrorResponse: vi.fn(),
+  parseErrorResponse: vi.fn()
 }))
 
 function mockAbortableFetch() {
@@ -23,10 +23,10 @@ function mockAbortableFetch() {
         requestSignal?.addEventListener(
           'abort',
           () => reject(new DOMException('Aborted', 'AbortError')),
-          { once: true },
+          { once: true }
         )
       })
-    }),
+    })
   )
 
   return () => requestSignal

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+
 import { parseNewBlockInput } from '../../resolve-page-blocks/service'
 import {
   getDraftPageBlocks,
@@ -18,7 +20,10 @@ export async function addMainHomepageBlock(
 
   const payload = await getMainHomepagePayload()
   const doc = await loadMainHomepage(payload)
-  const blocks = [...getDraftPageBlocks(doc), parsed.block]
+  // Main homepage blocks live in a JSON field, unlike location homepage
+  // Payload blocks. Payload therefore cannot mint their row ids for us.
+  const block = { ...parsed.block, id: randomUUID() }
+  const blocks = [...getDraftPageBlocks(doc), block]
   const formatted = await updateAndFormatMainHomepageBlocks(payload, blocks)
 
   return { status: 201, body: formatted }

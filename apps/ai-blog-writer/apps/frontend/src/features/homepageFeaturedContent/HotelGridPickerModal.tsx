@@ -180,10 +180,10 @@ export function HotelGridPickerModal({
                     {!hasUsableImage
                       ? 'Needs image'
                       : isCurrentSlot
-                      ? 'Current'
-                      : isUsedElsewhere
-                        ? 'In use'
-                        : 'Pick'}
+                        ? 'Current'
+                        : isUsedElsewhere
+                          ? 'In use'
+                          : 'Pick'}
                   </button>
                 </div>
               )

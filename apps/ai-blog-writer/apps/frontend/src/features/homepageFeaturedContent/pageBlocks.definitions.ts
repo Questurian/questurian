@@ -9,7 +9,10 @@ export type CuratedHomepageBlockConfig = {
   maxSlotCount: number
 }
 
-type PageBlockDefinition = CuratedHomepageBlockConfig & {
+type PageBlockDefinition = Omit<
+  CuratedHomepageBlockConfig,
+  'allowCustomSlotCount'
+> & {
   order: number
   articlePayload: boolean
   convertTarget: boolean
@@ -80,6 +83,20 @@ const PAGE_BLOCK_DEFINITIONS = {
     maxSlotCount: 6,
     validSlotCounts: [2, 3, 4, 6],
     order: 0.5,
+    articlePayload: true,
+    convertTarget: true
+  },
+  'author-feature': {
+    label: 'Author Feature',
+    description:
+      'One to four Authors with styled portraits and their articles beside them',
+    frontendReadySlotCounts: 'all',
+    quickSlotCounts: [1, 2, 3, 4, 6],
+    defaultSlotCount: 3,
+    minSlotCount: 1,
+    maxSlotCount: 6,
+    validSlotCounts: [1, 2, 3, 4, 6],
+    order: 0.6,
     articlePayload: true,
     convertTarget: true
   },
@@ -274,7 +291,7 @@ export function isHomepageBlockFrontendReady(
   slotCount?: number
 ): boolean {
   const readyCounts =
-    PAGE_BLOCK_DEFINITIONS[blockType].frontendReadySlotCounts
+    HOMEPAGE_PAGE_BLOCK_CONFIG[blockType].frontendReadySlotCounts
 
   if (readyCounts === 'all') return true
   if (slotCount === undefined) return readyCounts.length > 0

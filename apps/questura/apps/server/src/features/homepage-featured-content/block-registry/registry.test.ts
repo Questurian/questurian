@@ -14,6 +14,7 @@ const EXPECTED_KEYS = [
   'featured-article-carousel',
   'featured-articles',
   'editorial-feature',
+  'author-feature',
   'article-grid',
   'location-grid',
   'questurian-maps',
@@ -88,6 +89,7 @@ describe('curatedBlockRegistry', () => {
         'featured-article-carousel',
         'featured-articles',
         'editorial-feature',
+        'author-feature',
         'article-grid',
         'questurian-maps',
         'where-to-eat-drink',
@@ -155,6 +157,7 @@ describe('curatedBlockRegistry', () => {
         'featured-article-carousel': { min: 2, max: 10, default: 3 },
         'featured-articles': { min: 3, max: 9, default: 4 },
         'editorial-feature': { min: 2, max: 6, default: 3 },
+        'author-feature': { min: 1, max: 6, default: 3 },
         'article-grid': { min: 4, max: 8, default: 4 },
         'location-grid': { min: 4, max: 8, default: 4 },
         'questurian-maps': { min: 6, max: 6, default: 6 },
@@ -173,6 +176,9 @@ describe('curatedBlockRegistry', () => {
       expect(curatedBlockRegistry.get('editorial-feature')?.slotCounts.validCounts).toEqual([
         2, 3, 4, 6,
       ])
+      expect(curatedBlockRegistry.get('author-feature')?.slotCounts.validCounts).toEqual([
+        1, 2, 3, 4, 6,
+      ])
     })
 
     it('derives empty-convert source types from registry metadata', () => {
@@ -182,6 +188,7 @@ describe('curatedBlockRegistry', () => {
         'featured-article-carousel',
         'featured-articles',
         'editorial-feature',
+        'author-feature',
         'article-grid',
         'location-grid',
         'questurian-maps',
@@ -200,6 +207,7 @@ describe('curatedBlockRegistry', () => {
         'featured-article-carousel',
         'featured-articles',
         'editorial-feature',
+        'author-feature',
         'article-grid',
         'questurian-maps',
         'where-to-eat-drink',

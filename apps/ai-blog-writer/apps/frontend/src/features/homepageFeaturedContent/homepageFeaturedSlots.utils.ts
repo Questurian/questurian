@@ -1,11 +1,16 @@
-import type { HomepageFeaturedItemRef, HomepageFeaturedSelection } from './types'
+import type {
+  HomepageFeaturedItemRef,
+  HomepageFeaturedSelection
+} from './types'
 import type { SlotValue } from './homepageFeaturedSlots.types'
 
 export function createEmptySlots(count: number): SlotValue[] {
   return Array.from({ length: count }, () => null)
 }
 
-export function mapSelectionToSlots(selection: HomepageFeaturedSelection): SlotValue[] {
+export function mapSelectionToSlots(
+  selection: HomepageFeaturedSelection
+): SlotValue[] {
   const slots = createEmptySlots(selection.totalSlots)
 
   for (const item of selection.items) {
@@ -25,10 +30,16 @@ function areRefsEqual(left: SlotValue, right: SlotValue): boolean {
   return left.id === right.id && left.relationTo === right.relationTo
 }
 
-export function areSlotListsEqual(left: SlotValue[] | null, right: SlotValue[]): boolean {
+export function areSlotListsEqual(
+  left: SlotValue[] | null,
+  right: SlotValue[]
+): boolean {
   if (!left) return false
 
-  return left.length === right.length && left.every((item, index) => areRefsEqual(item, right[index]))
+  return (
+    left.length === right.length &&
+    left.every((item, index) => areRefsEqual(item, right[index]))
+  )
 }
 
 export function hasDuplicateSlots(slots: SlotValue[]): boolean {

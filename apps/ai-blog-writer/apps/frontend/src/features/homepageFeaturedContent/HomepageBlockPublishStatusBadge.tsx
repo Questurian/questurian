@@ -11,7 +11,7 @@ const badgeBase: CSSProperties = {
   fontSize: '0.7rem',
   fontWeight: 600,
   lineHeight: 1.6,
-  whiteSpace: 'nowrap',
+  whiteSpace: 'nowrap'
 }
 
 function chip(background: string, color: string): CSSProperties {
@@ -25,7 +25,7 @@ function chip(background: string, color: string): CSSProperties {
 export default function HomepageBlockPublishStatusBadge({
   publishStatus,
   validationStatus,
-  publishBlockers,
+  publishBlockers
 }: BlockPublishMeta) {
   if (validationStatus === 'blocked') {
     return (
@@ -42,7 +42,10 @@ export default function HomepageBlockPublishStatusBadge({
 
   if (publishStatus === 'live') {
     return (
-      <span style={chip('#dcfce7', '#166534')} title="Matches the published page.">
+      <span
+        style={chip('#dcfce7', '#166534')}
+        title="Matches the published page."
+      >
         ● Live
       </span>
     )
@@ -50,14 +53,20 @@ export default function HomepageBlockPublishStatusBadge({
 
   if (publishStatus === 'modified') {
     return (
-      <span style={chip('#fef3c7', '#92400e')} title="Draft has changes not yet published.">
+      <span
+        style={chip('#fef3c7', '#92400e')}
+        title="Draft has changes not yet published."
+      >
         ✎ Modified
       </span>
     )
   }
 
   return (
-    <span style={chip('#f1f5f9', '#475569')} title="This block has never been published.">
+    <span
+      style={chip('#f1f5f9', '#475569')}
+      title="This block has never been published."
+    >
       ○ Not published yet
     </span>
   )

@@ -51,6 +51,16 @@ export function formatPublicHomepageBlock(block: unknown, location?: LocationCon
     }
   }
 
+  if (blockType === 'author-feature') {
+    const authorCards = Array.isArray(block.authorCards) ? block.authorCards : []
+    return {
+      ...base,
+      imageStyle: stringOrNull(block.imageStyle) ?? 'mixed',
+      motionStyle: stringOrNull(block.motionStyle) ?? 'subtle',
+      authorCards,
+    }
+  }
+
   if (blockType === 'featured-creator-article') {
     const creatorKicker = publicCreatorKicker(block)
     return creatorKicker ? { ...base, creatorKicker } : base

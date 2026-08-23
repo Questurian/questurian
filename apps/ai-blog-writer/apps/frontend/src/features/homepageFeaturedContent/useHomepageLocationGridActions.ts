@@ -4,7 +4,9 @@ import type { LocationGridSlotValue } from './homepageLocationGridSlots.utils'
 type UseHomepageLocationGridActionsOptions = {
   pickerSlotIndex: number | null
   setPickerSlotIndex: (value: number | null) => void
-  updateSlots: (transform: (current: LocationGridSlotValue[]) => LocationGridSlotValue[]) => void
+  updateSlots: (
+    transform: (current: LocationGridSlotValue[]) => LocationGridSlotValue[]
+  ) => void
   resetToSavedSlots: () => void
 }
 

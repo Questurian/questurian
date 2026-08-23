@@ -38,6 +38,7 @@ import * as migration_20260822_041423_add_creator_kicker from './20260822_041423
 import * as migration_20260822_143211_add_editorial_feature_homepage_block from './20260822_143211_add_editorial_feature_homepage_block'
 import * as migration_20260822_204353_location_grid_card_descriptions from './20260822_204353_location_grid_card_descriptions'
 import * as migration_20260822_224713_location_grid_card_kickers from './20260822_224713_location_grid_card_kickers'
+import * as migration_20260823_143937_add_author_feature_images_and_block from './20260823_143937_add_author_feature_images_and_block'
 
 export const migrations = [
   {
@@ -239,5 +240,10 @@ export const migrations = [
     up: migration_20260822_224713_location_grid_card_kickers.up,
     down: migration_20260822_224713_location_grid_card_kickers.down,
     name: '20260822_224713_location_grid_card_kickers',
+  },
+  {
+    up: migration_20260823_143937_add_author_feature_images_and_block.up,
+    down: migration_20260823_143937_add_author_feature_images_and_block.down,
+    name: '20260823_143937_add_author_feature_images_and_block',
   },
 ]

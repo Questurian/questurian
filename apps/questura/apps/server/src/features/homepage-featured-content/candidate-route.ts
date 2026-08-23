@@ -27,6 +27,7 @@ export type CandidateSearchParams = {
   page?: number
   limit?: number
   type?: string | null
+  authorIds?: number[]
   locationKey?: string
   scope?: LocationGridScope
 }
@@ -55,10 +56,7 @@ type RouteHandlers = {
 }
 
 type LocationRouteHandlers = {
-  GET: (
-    req: NextRequest,
-    ctx: { params: Promise<{ id: string }> },
-  ) => Promise<NextResponse>
+  GET: (req: NextRequest, ctx: { params: Promise<{ id: string }> }) => Promise<NextResponse>
   OPTIONS: (req: NextRequest) => NextResponse | Promise<NextResponse>
 }
 
@@ -69,10 +67,15 @@ function parsePositiveInt(value: string | null): number | undefined {
 }
 
 function baseParams(searchParams: URLSearchParams): CandidateSearchParams {
+  const authorIds = searchParams
+    .getAll('authorId')
+    .map((value) => Number.parseInt(value, 10))
+    .filter((value) => Number.isInteger(value) && value > 0)
   return {
     query: searchParams.get('q') || undefined,
     page: parsePositiveInt(searchParams.get('page')),
     limit: parsePositiveInt(searchParams.get('limit')),
+    ...(authorIds.length ? { authorIds } : {}),
   }
 }
 
@@ -139,11 +142,17 @@ function locationDoc(doc: LocationHomepageDoc): LocationHomepageDoc['location'] 
 export function withLocationKey(doc: LocationHomepageDoc): LocationCandidateContext {
   const location = locationDoc(doc)
   const locationKey =
-    location && typeof location === 'object' && typeof location.locationKey === 'string' && location.locationKey.trim()
+    location &&
+    typeof location === 'object' &&
+    typeof location.locationKey === 'string' &&
+    location.locationKey.trim()
       ? location.locationKey.trim()
       : null
   if (!locationKey) {
-    return { ok: false, message: 'Location homepage is missing a location with a valid location key.' }
+    return {
+      ok: false,
+      message: 'Location homepage is missing a location with a valid location key.',
+    }
   }
   return { ok: true, params: { locationKey } }
 }

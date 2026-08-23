@@ -9,8 +9,8 @@ function renderModal() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
-      mutations: { retry: false },
-    },
+      mutations: { retry: false }
+    }
   })
 
   return render(
@@ -20,7 +20,7 @@ function renderModal() {
         onSelect={vi.fn().mockResolvedValue(undefined)}
         onClose={vi.fn()}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
 }
 
@@ -47,10 +47,10 @@ describe('LocationPickerModal', () => {
           neighborhoodName: '',
           locationKey: 'peru|lima',
           parentKey: 'peru',
-          updatedAt: '2026-04-10T12:00:00.000Z',
-        },
+          updatedAt: '2026-04-10T12:00:00.000Z'
+        }
       ],
-      totalPages: 1,
+      totalPages: 1
     }
     const neighborhoodResponse = {
       docs: [
@@ -65,7 +65,7 @@ describe('LocationPickerModal', () => {
           neighborhoodName: 'Barranco',
           locationKey: 'peru|lima|barranco',
           parentKey: 'peru|lima',
-          updatedAt: '2026-04-10T12:00:00.000Z',
+          updatedAt: '2026-04-10T12:00:00.000Z'
         },
         {
           id: 3,
@@ -78,23 +78,27 @@ describe('LocationPickerModal', () => {
           neighborhoodName: 'Miraflores',
           locationKey: 'peru|lima|miraflores',
           parentKey: 'peru|lima',
-          updatedAt: '2026-04-10T12:00:00.000Z',
-        },
+          updatedAt: '2026-04-10T12:00:00.000Z'
+        }
       ],
-      totalPages: 1,
+      totalPages: 1
     }
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
       const payload = url.includes('where%5Blevel%5D%5Bequals%5D=city')
         ? cityResponse
         : neighborhoodResponse
-      return Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }))
+      return Promise.resolve(
+        new Response(JSON.stringify(payload), { status: 200 })
+      )
     })
     vi.stubGlobal('fetch', fetchMock)
 
     renderModal()
 
-    expect(await screen.findByRole('heading', { level: 3, name: 'Lima' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 3, name: 'Lima' })
+    ).toBeInTheDocument()
     expect(screen.getByText('Neighborhoods')).toBeInTheDocument()
     expect(screen.getByText('Barranco, Lima')).toBeInTheDocument()
     expect(screen.getByText('Miraflores, Lima')).toBeInTheDocument()
@@ -114,7 +118,7 @@ describe('LocationPickerModal', () => {
           neighborhoodName: '',
           locationKey: 'peru|lima',
           parentKey: 'peru',
-          updatedAt: '2026-04-10T12:00:00.000Z',
+          updatedAt: '2026-04-10T12:00:00.000Z'
         },
         {
           id: 4,
@@ -127,10 +131,10 @@ describe('LocationPickerModal', () => {
           neighborhoodName: '',
           locationKey: 'colombia|medellin',
           parentKey: 'colombia',
-          updatedAt: '2026-04-10T12:00:00.000Z',
-        },
+          updatedAt: '2026-04-10T12:00:00.000Z'
+        }
       ],
-      totalPages: 1,
+      totalPages: 1
     }
     const neighborhoodResponse = {
       docs: [
@@ -145,7 +149,7 @@ describe('LocationPickerModal', () => {
           neighborhoodName: 'Barranco',
           locationKey: 'peru|lima|barranco',
           parentKey: 'peru|lima',
-          updatedAt: '2026-04-10T12:00:00.000Z',
+          updatedAt: '2026-04-10T12:00:00.000Z'
         },
         {
           id: 3,
@@ -158,7 +162,7 @@ describe('LocationPickerModal', () => {
           neighborhoodName: 'Miraflores',
           locationKey: 'peru|lima|miraflores',
           parentKey: 'peru|lima',
-          updatedAt: '2026-04-10T12:00:00.000Z',
+          updatedAt: '2026-04-10T12:00:00.000Z'
         },
         {
           id: 5,
@@ -171,17 +175,19 @@ describe('LocationPickerModal', () => {
           neighborhoodName: 'El Poblado',
           locationKey: 'colombia|medellin|el-poblado',
           parentKey: 'colombia|medellin',
-          updatedAt: '2026-04-10T12:00:00.000Z',
-        },
+          updatedAt: '2026-04-10T12:00:00.000Z'
+        }
       ],
-      totalPages: 1,
+      totalPages: 1
     }
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
       const payload = url.includes('where%5Blevel%5D%5Bequals%5D=city')
         ? cityResponse
         : neighborhoodResponse
-      return Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }))
+      return Promise.resolve(
+        new Response(JSON.stringify(payload), { status: 200 })
+      )
     })
     vi.stubGlobal('fetch', fetchMock)
 
@@ -191,14 +197,18 @@ describe('LocationPickerModal', () => {
 
     await userEvent.type(
       screen.getByPlaceholderText('Search cities or neighborhoods…'),
-      'Barranco',
+      'Barranco'
     )
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { level: 3, name: 'Lima' })).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 3, name: 'Lima' })
+      ).toBeInTheDocument()
       expect(screen.getByText('Barranco, Lima')).toBeInTheDocument()
       expect(screen.queryByText('Miraflores, Lima')).not.toBeInTheDocument()
-      expect(screen.queryByRole('heading', { level: 3, name: 'Medellin' })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('heading', { level: 3, name: 'Medellin' })
+      ).not.toBeInTheDocument()
     })
   })
 })

@@ -20,7 +20,8 @@ import {
   updateLocationHomepageFeaturedSlot5Layout,
   updateLocationHomepageArticleGridFourLayout,
   updateLocationHomepageCreatorKicker,
-  updateLocationHomepageEditorialFeatureFields
+  updateLocationHomepageEditorialFeatureFields,
+  updateLocationHomepageAuthorFeatureFields
 } from './locationHomepages'
 import {
   homepageBlockEditorIdentity,
@@ -137,14 +138,30 @@ export default function LocationHomepageBlockRenderer({
                     >[1]
                   )
         }
-        saveSectionHeading={block.blockType === 'editorial-feature' ? undefined : async (value) => {
-          await updateLocationHomepageFeaturedSectionHeading(numericId, block.id, value)
-          invalidateHomepage()
-        }}
-        saveSectionSubheading={block.blockType === 'editorial-feature' ? undefined : async (value) => {
-          await updateLocationHomepageFeaturedSectionSubheading(numericId, block.id, value)
-          invalidateHomepage()
-        }}
+        saveSectionHeading={
+          block.blockType === 'editorial-feature'
+            ? undefined
+            : async (value) => {
+                await updateLocationHomepageFeaturedSectionHeading(
+                  numericId,
+                  block.id,
+                  value
+                )
+                invalidateHomepage()
+              }
+        }
+        saveSectionSubheading={
+          block.blockType === 'editorial-feature'
+            ? undefined
+            : async (value) => {
+                await updateLocationHomepageFeaturedSectionSubheading(
+                  numericId,
+                  block.id,
+                  value
+                )
+                invalidateHomepage()
+              }
+        }
         saveCreatorKicker={
           block.blockType === 'featured-creator-article'
             ? async (value) => {
@@ -212,6 +229,18 @@ export default function LocationHomepageBlockRenderer({
           block.blockType === 'editorial-feature'
             ? async (fields) => {
                 await updateLocationHomepageEditorialFeatureFields(
+                  numericId,
+                  block.id,
+                  fields
+                )
+                invalidateHomepage()
+              }
+            : undefined
+        }
+        saveAuthorFeatureFields={
+          block.blockType === 'author-feature'
+            ? async (fields) => {
+                await updateLocationHomepageAuthorFeatureFields(
                   numericId,
                   block.id,
                   fields

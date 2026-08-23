@@ -135,6 +135,25 @@ export const Authors: CollectionConfig = {
       },
     },
     {
+      name: 'authorImages',
+      type: 'array',
+      admin: {
+        description:
+          'Public MediaSets available for Author Feature homepage treatments. Upload/manage these from the ABW profile editor.',
+      },
+      fields: [
+        {
+          name: 'mediaSet',
+          type: 'relationship',
+          relationTo: 'media-sets',
+          required: true,
+          admin: {
+            description: 'Public image for author-led feature placements.',
+          },
+        },
+      ],
+    },
+    {
       name: 'bio',
       type: 'textarea',
       admin: {

@@ -76,7 +76,9 @@ export default function ArticleListLayout({
                 </span>
                 <strong>
                   {item?.title ??
-                    (invalidItem ? 'Replace unavailable article' : 'Add article')}
+                    (invalidItem
+                      ? 'Replace unavailable article'
+                      : 'Add article')}
                 </strong>
                 <span className="hf-article-list-summary">
                   {item?.excerpt?.trim() ||

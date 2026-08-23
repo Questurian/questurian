@@ -16,6 +16,7 @@ describe('pageBlocks registry', () => {
     expect(HOMEPAGE_PAGE_BLOCK_TYPES).toEqual([
       'featured-articles',
       'editorial-feature',
+      'author-feature',
       'hotel-grid',
       'tour-grid',
       'article-grid',
@@ -41,6 +42,7 @@ describe('pageBlocks registry', () => {
       'featured-creator-article',
       'featured-article-carousel',
       'editorial-feature',
+      'author-feature',
       'article-grid',
       'location-grid',
       'questurian-maps',
@@ -58,6 +60,7 @@ describe('pageBlocks registry', () => {
       'featured-article-carousel',
       'featured-articles',
       'editorial-feature',
+      'author-feature',
       'article-grid',
       'questurian-maps',
       'where-to-eat-drink',

@@ -13,7 +13,7 @@ import { getLocationLabel } from './locationHomepagePage.utils'
 import {
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
   HOMEPAGE_PAGE_BLOCK_TYPES,
-  type PageBlockResponse,
+  type PageBlockResponse
 } from './pageBlocks'
 
 export default function LocationHomepagePage() {
@@ -40,7 +40,7 @@ export default function LocationHomepagePage() {
     handleConvertBlock,
     handleConfirmAddBlock,
     deleteError,
-    invalidateHomepage,
+    invalidateHomepage
   } = useLocationHomepageEditor(numericId, canManage, user?.id)
 
   if (!canManage) {
@@ -75,7 +75,11 @@ export default function LocationHomepagePage() {
               ? homepageQuery.error.message
               : 'Failed to load location homepage.'}
           </p>
-          <Link to="/homepage-featured-content" className="hf-btn-ghost" style={{ marginTop: '1rem' }}>
+          <Link
+            to="/homepage-featured-content"
+            className="hf-btn-ghost"
+            style={{ marginTop: '1rem' }}
+          >
             Back to hub
           </Link>
         </div>
@@ -86,14 +90,18 @@ export default function LocationHomepagePage() {
   const homepage = homepageQuery.data
   const locationLabel = getLocationLabel(homepage.location)
   const enabledState = isEnabled ?? homepage.isEnabled
-  const locationGridChildLevel = homepage.location?.level === 'city' ? 'neighborhood' : null
+  const locationGridChildLevel =
+    homepage.location?.level === 'city' ? 'neighborhood' : null
   const availableBlockTypes = locationGridChildLevel
     ? HOMEPAGE_PAGE_BLOCK_TYPES
-    : HOMEPAGE_PAGE_BLOCK_TYPES.filter((blockType) => blockType !== 'location-grid')
+    : HOMEPAGE_PAGE_BLOCK_TYPES.filter(
+        (blockType) => blockType !== 'location-grid'
+      )
 
-  const convertEmptyFeaturedArticlesTargets = CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES.filter(
-    (t) => availableBlockTypes.includes(t),
-  )
+  const convertEmptyFeaturedArticlesTargets =
+    CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES.filter((t) =>
+      availableBlockTypes.includes(t)
+    )
 
   return (
     <div className="hf-page">
@@ -124,7 +132,11 @@ export default function LocationHomepagePage() {
         </div>
 
         <div className="hf-detail-header-actions">
-          <div className="hf-view-mode-group" role="group" aria-label="View mode">
+          <div
+            className="hf-view-mode-group"
+            role="group"
+            aria-label="View mode"
+          >
             <button
               type="button"
               onClick={() => setViewMode('draft')}
@@ -135,9 +147,13 @@ export default function LocationHomepagePage() {
             <button
               type="button"
               onClick={() => setViewMode('published')}
-              disabled={!homepage.publishedPageBlocks || homepage.publishedPageBlocks.length === 0}
+              disabled={
+                !homepage.publishedPageBlocks ||
+                homepage.publishedPageBlocks.length === 0
+              }
               title={
-                homepage.publishedPageBlocks && homepage.publishedPageBlocks.length > 0
+                homepage.publishedPageBlocks &&
+                homepage.publishedPageBlocks.length > 0
                   ? 'View the published page (read-only)'
                   : 'Nothing published yet'
               }
@@ -169,79 +185,87 @@ export default function LocationHomepagePage() {
       {viewMode === 'published' ? (
         <PublishedHomepagePreview blocks={homepage.publishedPageBlocks} />
       ) : (
-      <>
-      <HomepageDraftPublishSummary blocks={homepage.pageBlocks} />
-      {homepage.pageBlocks.length === 0 ? (
-        <div className="hf-state-screen">
-          <h2>No blocks yet</h2>
-          <p>
-            This homepage has no content blocks. Add a content block to start curating.
-          </p>
-        </div>
-      ) : (
-        <HomepageBlocksSortableList
-          blocks={homepage.pageBlocks}
-          disabled={
-            reorderBlocksMutation.isPending
-            || deleteBlockMutation.isPending
-            || addBlockMutation.isPending
-          }
-          onReorder={(orderedIds) => reorderBlocksMutation.mutate(orderedIds)}
-        >
-          {(block: PageBlockResponse, idx: number) => {
-            const externalUsedKeys = (() => {
-              const combined = new Set<string>()
-              for (const [id, keys] of pageBlockSlotKeys) {
-                if (id !== block.id) for (const k of keys) combined.add(k)
+        <>
+          <HomepageDraftPublishSummary blocks={homepage.pageBlocks} />
+          {homepage.pageBlocks.length === 0 ? (
+            <div className="hf-state-screen">
+              <h2>No blocks yet</h2>
+              <p>
+                This homepage has no content blocks. Add a content block to
+                start curating.
+              </p>
+            </div>
+          ) : (
+            <HomepageBlocksSortableList
+              blocks={homepage.pageBlocks}
+              disabled={
+                reorderBlocksMutation.isPending ||
+                deleteBlockMutation.isPending ||
+                addBlockMutation.isPending
               }
-              return combined
-            })()
+              onReorder={(orderedIds) =>
+                reorderBlocksMutation.mutate(orderedIds)
+              }
+            >
+              {(block: PageBlockResponse, idx: number) => {
+                const externalUsedKeys = (() => {
+                  const combined = new Set<string>()
+                  for (const [id, keys] of pageBlockSlotKeys) {
+                    if (id !== block.id) for (const k of keys) combined.add(k)
+                  }
+                  return combined
+                })()
 
-            return (
-              <LocationHomepageBlockRenderer
-                key={locationHomepageBlockKey(block, locationGridChildLevel)}
-                block={block}
-                blockIndex={idx}
-                homepageId={numericId}
-                canManage={canManage}
-                locationGridChildLevel={locationGridChildLevel}
-                convertTargets={convertEmptyFeaturedArticlesTargets}
-                externalUsedKeys={externalUsedKeys}
-                onSlotsChange={handleSlotsChange}
-                onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
-                isDeletePending={deleteBlockMutation.isPending}
-                deletingBlockId={deletingBlockId}
-                deleteError={deleteError}
-                onConvertBlock={handleConvertBlock}
-                invalidateHomepage={invalidateHomepage}
-              />
-            )
-          }}
-        </HomepageBlocksSortableList>
-      )}
-      </>
+                return (
+                  <LocationHomepageBlockRenderer
+                    key={locationHomepageBlockKey(
+                      block,
+                      locationGridChildLevel
+                    )}
+                    block={block}
+                    blockIndex={idx}
+                    homepageId={numericId}
+                    canManage={canManage}
+                    locationGridChildLevel={locationGridChildLevel}
+                    convertTargets={convertEmptyFeaturedArticlesTargets}
+                    externalUsedKeys={externalUsedKeys}
+                    onSlotsChange={handleSlotsChange}
+                    onDeleteBlock={(blockId) =>
+                      deleteBlockMutation.mutate({ blockId })
+                    }
+                    isDeletePending={deleteBlockMutation.isPending}
+                    deletingBlockId={deletingBlockId}
+                    deleteError={deleteError}
+                    onConvertBlock={handleConvertBlock}
+                    invalidateHomepage={invalidateHomepage}
+                  />
+                )
+              }}
+            </HomepageBlocksSortableList>
+          )}
+        </>
       )}
 
       {/* ── Add block ──────────────────────────────────────── */}
       {viewMode === 'draft' && (
-      <div className="hf-add-block-row">
-        {!showAddBlock ? (
-          <button
-            type="button"
-            className="hf-btn-ghost"
-            onClick={() => setShowAddBlock(true)}
-          >
-            + Add Block
-          </button>
-        ) : (
-          <AddHomepageBlockPicker
-            isPending={addBlockMutation.isPending}
-            onConfirm={handleConfirmAddBlock}
-            onCancel={() => setShowAddBlock(false)}
-            availableBlockTypes={availableBlockTypes}
-          />
-        )}
-      </div>
+        <div className="hf-add-block-row">
+          {!showAddBlock ? (
+            <button
+              type="button"
+              className="hf-btn-ghost"
+              onClick={() => setShowAddBlock(true)}
+            >
+              + Add Block
+            </button>
+          ) : (
+            <AddHomepageBlockPicker
+              isPending={addBlockMutation.isPending}
+              onConfirm={handleConfirmAddBlock}
+              onCancel={() => setShowAddBlock(false)}
+              availableBlockTypes={availableBlockTypes}
+            />
+          )}
+        </div>
       )}
     </div>
   )

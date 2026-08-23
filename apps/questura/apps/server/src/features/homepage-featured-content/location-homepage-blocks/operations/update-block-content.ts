@@ -5,6 +5,7 @@ import {
   loadLocationHomepage,
   updateLocationHomepage,
 } from '../../location-homepages/lib/persistence'
+import { validateAuthorFeatureCardImageSelections } from '../../author-feature/service'
 import {
   isCuratedBlockType,
   resolveLocationGridScope,
@@ -14,18 +15,9 @@ import {
   isValidRequestedSlotCount,
   resolveStoredSlotCountForBlockType,
 } from '../../slot-count/service'
-import {
-  applyBlockFieldUpdates,
-  applyBlockItemsUpdate,
-} from '../lib/apply-block-update'
-import {
-  parseBlockUpdateBody,
-  validateBlockUpdateFields,
-} from '../lib/parse-block-update'
-import type {
-  FormattedLocationHomepage,
-  LocationHomepageBlocksOperationResult,
-} from '../types'
+import { applyBlockFieldUpdates, applyBlockItemsUpdate } from '../lib/apply-block-update'
+import { parseBlockUpdateBody, validateBlockUpdateFields } from '../lib/parse-block-update'
+import type { FormattedLocationHomepage, LocationHomepageBlocksOperationResult } from '../types'
 
 type ErrorBody = { message: string }
 
@@ -66,8 +58,20 @@ export async function updateLocationHomepageBlockContent(
     return { status: 400, body: { message: fieldError.message } }
   }
 
+  const authorCards = parsed.input.fields.authorFeature.authorCards
+  if (authorCards.ok && !authorCards.omit) {
+    const authorImageError = await validateAuthorFeatureCardImageSelections(
+      payload,
+      authorCards.value,
+    )
+    if (authorImageError) return { status: 400, body: { message: authorImageError } }
+  }
+
   const locationGridScope = await resolveLocationGridScope(payload, doc.location)
-  const resolvedBlockSlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+  const resolvedBlockSlotCount = resolveStoredSlotCountForBlockType(
+    block.blockType,
+    block.slotCount,
+  )
   const blockSlotCount = parsed.input.slotCount ?? resolvedBlockSlotCount
 
   if (!isValidRequestedSlotCount(block.blockType, blockSlotCount)) {

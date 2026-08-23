@@ -4,6 +4,12 @@ import type { PayloadInstance } from '@/types'
 
 import { normalizeArticleGridFourLayout } from '../article-grid/service'
 import {
+  assertAuthorFeatureItemsMatchAuthors,
+  authorIdsFromAuthorFeatureBlock,
+  getAuthorFeaturePublishBlockers,
+  resolveAuthorFeatureFields,
+} from '../author-feature/service'
+import {
   getEditorialFeaturePublishBlockers,
   resolveEditorialFeatureFields,
 } from '../editorial-feature/service'
@@ -69,6 +75,7 @@ export type BlockWritePathContext = {
   slotCount: number
   allowDrafts: boolean
   locationGridScope: LocationGridScope | null
+  block: Record<string, unknown>
 }
 
 /** Context handed to a block's read-path hook (`resolveSelection`) during `resolvePageBlocks`. */
@@ -255,6 +262,25 @@ export const CURATED_BLOCK_BEHAVIORS: Record<string, CuratedBlockBehavior> = {
     requiredImageField: editorialFeatureImageField,
     resolveFields: (block, ctx) => resolveEditorialFeatureFields(ctx.payload, block),
     getPublishBlockers: getEditorialFeaturePublishBlockers,
+  },
+  'author-feature': {
+    ...featuredBehavior,
+    requiredImageField: editorialFeatureImageField,
+    async buildStoredItems(items, ctx) {
+      const refs = normalizeHomepageFeaturedInput(items)
+      await validateHomepageFeaturedItems(ctx.payload, refs, {
+        allowDrafts: ctx.allowDrafts,
+        slotCount: ctx.slotCount,
+      })
+      await assertAuthorFeatureItemsMatchAuthors(
+        ctx.payload,
+        refs,
+        authorIdsFromAuthorFeatureBlock(ctx.block),
+      )
+      return buildHomepageFeaturedGlobalData(refs).items
+    },
+    resolveFields: (block, ctx) => resolveAuthorFeatureFields(ctx.payload, block),
+    getPublishBlockers: getAuthorFeaturePublishBlockers,
   },
   'article-grid': {
     ...featuredBehavior,

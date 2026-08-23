@@ -18,7 +18,7 @@ export default function HomepageBlockSettingsModal({
   title = 'Block settings',
   ariaLabel,
   footer,
-  children,
+  children
 }: Props) {
   const titleId = useId()
 
@@ -47,7 +47,12 @@ export default function HomepageBlockSettingsModal({
         <div className="hf-modal-top">
           <div className="hf-modal-title-row">
             <h2 id={titleId}>{title}</h2>
-            <button type="button" className="hf-modal-close" onClick={onClose} aria-label="Close">
+            <button
+              type="button"
+              className="hf-modal-close"
+              onClick={onClose}
+              aria-label="Close"
+            >
               ×
             </button>
           </div>

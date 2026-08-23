@@ -41,6 +41,7 @@ export function useHomepageFeaturedSlots(
     fetchCandidates,
     selectionQueryKey,
     lockedCollectionFilter,
+    candidateAuthorIds,
     repairSlotCount
   } = options
 
@@ -80,6 +81,7 @@ export function useHomepageFeaturedSlots(
     fetchCandidates,
     selectionQueryKey,
     lockedCollectionFilter,
+    candidateAuthorIds,
     pickerSlotIndex
   })
 

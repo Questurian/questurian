@@ -1,5 +1,11 @@
 import { parseArticleGridFourLayoutBodyField } from '../../article-grid/service'
 import {
+  hasAuthorFeatureFieldUpdates,
+  parseAuthorFeatureCardsBodyField,
+  parseAuthorFeatureImageStyleBodyField,
+  parseAuthorFeatureMotionStyleBodyField,
+} from '../../author-feature/service'
+import {
   parseSlot3LayoutBodyField,
   parseSlot4LayoutBodyField,
   parseSlot5LayoutBodyField,
@@ -27,6 +33,9 @@ type MediaAspectParse = ReturnType<typeof parseLocationGridMediaAspectBodyField>
 type ArticleGridFourLayoutParse = ReturnType<typeof parseArticleGridFourLayoutBodyField>
 type CreatorKickerParse = ReturnType<typeof parseCreatorKickerBodyField>
 type EditorialFeatureFieldsParse = ReturnType<typeof parseEditorialFeatureFields>
+type AuthorFeatureCardsParse = ReturnType<typeof parseAuthorFeatureCardsBodyField>
+type AuthorFeatureImageStyleParse = ReturnType<typeof parseAuthorFeatureImageStyleBodyField>
+type AuthorFeatureMotionStyleParse = ReturnType<typeof parseAuthorFeatureMotionStyleBodyField>
 
 export type ParsedBlockUpdateFields = {
   sectionHeading: Extract<SectionHeadingParse, { ok: true }>
@@ -39,6 +48,11 @@ export type ParsedBlockUpdateFields = {
   creatorKicker: Extract<CreatorKickerParse, { ok: true }>
   editorialFeature: {
     [K in keyof EditorialFeatureFieldsParse]: Extract<EditorialFeatureFieldsParse[K], { ok: true }>
+  }
+  authorFeature: {
+    authorCards: Extract<AuthorFeatureCardsParse, { ok: true }>
+    imageStyle: Extract<AuthorFeatureImageStyleParse, { ok: true }>
+    motionStyle: Extract<AuthorFeatureMotionStyleParse, { ok: true }>
   }
 }
 
@@ -106,6 +120,15 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
     if (!field.ok) return { ok: false, status: 400, message: field.message }
   }
 
+  const authorFeature = {
+    authorCards: parseAuthorFeatureCardsBodyField(bodyRecord),
+    imageStyle: parseAuthorFeatureImageStyleBodyField(bodyRecord),
+    motionStyle: parseAuthorFeatureMotionStyleBodyField(bodyRecord),
+  }
+  for (const field of Object.values(authorFeature)) {
+    if (!field.ok) return { ok: false, status: 400, message: field.message }
+  }
+
   const fields = {
     sectionHeading,
     sectionSubheading,
@@ -116,6 +139,7 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
     articleGridFourLayout,
     creatorKicker,
     editorialFeature: editorialFeature as ParsedBlockUpdateFields['editorialFeature'],
+    authorFeature: authorFeature as ParsedBlockUpdateFields['authorFeature'],
   }
   const rawItems = bodyRecord.items
   const hasItems = Array.isArray(rawItems)
@@ -158,7 +182,8 @@ export function hasBlockFieldUpdates(fields: ParsedBlockUpdateFields): boolean {
     !fields.mediaAspect.omit ||
     !fields.articleGridFourLayout.omit ||
     !fields.creatorKicker.omit ||
-    hasEditorialFeatureFieldUpdates(fields.editorialFeature)
+    hasEditorialFeatureFieldUpdates(fields.editorialFeature) ||
+    hasAuthorFeatureFieldUpdates(fields.authorFeature)
   )
 }
 
@@ -218,6 +243,10 @@ export function validateBlockUpdateFields(
     block.blockType !== 'editorial-feature'
   ) {
     return { message: 'Editorial feature fields are only supported for editorial-feature blocks.' }
+  }
+
+  if (hasAuthorFeatureFieldUpdates(fields.authorFeature) && block.blockType !== 'author-feature') {
+    return { message: 'Author feature fields are only supported for author-feature blocks.' }
   }
 
   return null

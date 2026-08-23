@@ -25,6 +25,7 @@ export type HomepageFeaturedSearchOptions = {
   page?: number
   limit?: number
   allowDrafts?: boolean
+  authorIds?: number[]
 }
 
 export type HomepageFeaturedPlaceholderOptions = {

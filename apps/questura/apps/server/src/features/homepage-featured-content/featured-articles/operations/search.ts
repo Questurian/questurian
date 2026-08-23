@@ -63,6 +63,14 @@ export async function searchHomepageFeaturedCandidates(
         })
       }
 
+      if (options.authorIds?.length) {
+        whereClauses.push({
+          author: {
+            in: options.authorIds,
+          },
+        })
+      }
+
       const where: PayloadFindWhere | undefined =
         whereClauses.length > 1 ? { and: whereClauses } : whereClauses[0]
 
@@ -87,9 +95,7 @@ export async function searchHomepageFeaturedCandidates(
     }),
   )
 
-  const allDocs = results
-    .flatMap((result) => result.docs)
-    .sort(sortHomepageFeaturedCandidates)
+  const allDocs = results.flatMap((result) => result.docs).sort(sortHomepageFeaturedCandidates)
   const totalDocs = results.reduce((sum, result) => sum + result.totalDocs, 0)
   const start = (page - 1) * limit
   const docs = allDocs.slice(start, start + limit)

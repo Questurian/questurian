@@ -89,6 +89,26 @@ The short custom label above an Editorial feature panel title, such as “Featur
 
 A page block combining one Editorial feature panel with a Related article rail. It may frame any editorial theme or destination and may optionally link its panel to a selected Location with a public Location Homepage.
 
+### Author Feature
+
+A page block combining one to four Author spotlights with a Related article rail. Each person image, name, and supporting copy links to that Author page; the block may visually emphasize one selected Author within the group.
+
+### Emphasized Author
+
+The main Author within an Author Feature. Editors may choose one from the selected Authors; if omitted, the first selected Author is treated as emphasized.
+
+### Author images
+
+The public MediaSets attached to an Author for author-led homepage treatments. Editors upload and manage these images on the Author profile; an Author Feature must choose one of that Author’s images and cannot upload its own person image.
+
+### Author feature image
+
+The selected Author image used for one Author inside an Author Feature. It must carry editor-authored alt text and be placement-ready before Whole-page publish.
+
+### Spotlight note
+
+Optional short homepage-specific copy for one Author inside an Author Feature. It supplements, but does not rename or replace, the Author's canonical display name or biography.
+
 ### Related article rail
 
 The ordered article selection accompanying an Editorial feature panel. It supports 2, 3, 4, or 6 articles; its presentation becomes denser as article count increases.

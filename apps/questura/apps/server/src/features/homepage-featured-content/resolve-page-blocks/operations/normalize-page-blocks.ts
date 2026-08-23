@@ -57,6 +57,7 @@ export async function normalizePageBlocksArrayInPlace(
       slotCount,
       allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
       locationGridScope,
+      block: blockRecord,
     }
 
     if (shouldValidateBlock) {
@@ -69,10 +70,10 @@ export async function normalizePageBlocksArrayInPlace(
     }
 
     if (
-      !shouldValidateBlock
-      || !behavior.buildStoredItems
-      || !Array.isArray(blockRecord.items)
-      || blockRecord.items.length === 0
+      !shouldValidateBlock ||
+      !behavior.buildStoredItems ||
+      !Array.isArray(blockRecord.items) ||
+      blockRecord.items.length === 0
     ) {
       continue
     }
@@ -94,15 +95,18 @@ function shouldValidatePageBlock(
     return true
   }
 
-  return stableStringify({
-    blockType: block.blockType,
-    slotCount: block.slotCount,
-    items: block.items,
-  }) !== stableStringify({
-    blockType: original.blockType,
-    slotCount: original.slotCount,
-    items: original.items,
-  })
+  return (
+    stableStringify({
+      blockType: block.blockType,
+      slotCount: block.slotCount,
+      items: block.items,
+    }) !==
+    stableStringify({
+      blockType: original.blockType,
+      slotCount: original.slotCount,
+      items: original.items,
+    })
+  )
 }
 
 function stableStringify(value: unknown): string {

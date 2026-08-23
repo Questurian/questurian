@@ -1,7 +1,4 @@
-import type {
-  CuratedHomepageBlockType,
-  PageBlockResponse,
-} from './pageBlocks'
+import type { CuratedHomepageBlockType, PageBlockResponse } from './pageBlocks'
 
 type HomepageBlockList = {
   pageBlocks: PageBlockResponse[]
@@ -13,7 +10,7 @@ function articleSelection(totalSlots: number) {
     invalidItems: [],
     isComplete: totalSlots === 0,
     allowDrafts: true,
-    totalSlots,
+    totalSlots
   }
 }
 
@@ -22,7 +19,7 @@ function locationGridSelection(totalSlots: number) {
     items: [],
     invalidItems: [],
     isComplete: totalSlots === 0,
-    totalSlots,
+    totalSlots
   }
 }
 
@@ -32,67 +29,70 @@ function hotelGridSelection(totalSlots: number) {
     invalidItems: [],
     isComplete: totalSlots === 0,
     allowDrafts: true,
-    totalSlots,
+    totalSlots
   }
 }
 
 function sectionText(block: PageBlockResponse) {
   return {
     sectionHeading: 'sectionHeading' in block ? block.sectionHeading : null,
-    sectionSubheading: 'sectionSubheading' in block ? block.sectionSubheading : null,
+    sectionSubheading:
+      'sectionSubheading' in block ? block.sectionSubheading : null
   }
 }
 
 export function reorderHomepageBlocksInCache<T extends HomepageBlockList>(
   homepage: T | undefined,
-  orderedBlockIds: string[],
+  orderedBlockIds: string[]
 ): T | undefined {
   if (!homepage) return homepage
 
-  const blocksById = new Map(homepage.pageBlocks.map((block) => [block.id, block]))
+  const blocksById = new Map(
+    homepage.pageBlocks.map((block) => [block.id, block])
+  )
   if (
-    orderedBlockIds.length !== homepage.pageBlocks.length
-    || orderedBlockIds.some((id) => !blocksById.has(id))
+    orderedBlockIds.length !== homepage.pageBlocks.length ||
+    orderedBlockIds.some((id) => !blocksById.has(id))
   ) {
     return homepage
   }
 
   return {
     ...homepage,
-    pageBlocks: orderedBlockIds.map((id) => blocksById.get(id)!),
+    pageBlocks: orderedBlockIds.map((id) => blocksById.get(id)!)
   }
 }
 
 export function deleteHomepageBlockFromCache<T extends HomepageBlockList>(
   homepage: T | undefined,
-  blockId: string,
+  blockId: string
 ): T | undefined {
   if (!homepage) return homepage
 
   return {
     ...homepage,
-    pageBlocks: homepage.pageBlocks.filter((block) => block.id !== blockId),
+    pageBlocks: homepage.pageBlocks.filter((block) => block.id !== blockId)
   }
 }
 
 export function replaceHomepageBlockInCache<T extends HomepageBlockList>(
   homepage: T | undefined,
-  block: PageBlockResponse,
+  block: PageBlockResponse
 ): T | undefined {
   if (!homepage) return homepage
 
   return {
     ...homepage,
     pageBlocks: homepage.pageBlocks.map((candidate) =>
-      candidate.id === block.id ? block : candidate,
-    ),
+      candidate.id === block.id ? block : candidate
+    )
   }
 }
 
 export function buildOptimisticConvertedHomepageBlock(
   block: PageBlockResponse,
   blockType: CuratedHomepageBlockType,
-  slotCount: number,
+  slotCount: number
 ): PageBlockResponse {
   const text = sectionText(block)
 
@@ -102,20 +102,20 @@ export function buildOptimisticConvertedHomepageBlock(
       blockType,
       ...text,
       mediaAspect: 'rectangle',
-      selection: locationGridSelection(slotCount),
+      selection: locationGridSelection(slotCount)
     }
   }
 
   if (
-    blockType === 'hotel-grid'
-    || blockType === 'tour-grid'
-    || blockType === 'things-to-do-attractions'
+    blockType === 'hotel-grid' ||
+    blockType === 'tour-grid' ||
+    blockType === 'things-to-do-attractions'
   ) {
     return {
       id: block.id,
       blockType,
       ...text,
-      selection: hotelGridSelection(slotCount),
+      selection: hotelGridSelection(slotCount)
     }
   }
 
@@ -125,7 +125,7 @@ export function buildOptimisticConvertedHomepageBlock(
       blockType,
       ...text,
       articleGridFourLayout: slotCount === 4 ? 'four-across' : null,
-      selection: articleSelection(slotCount),
+      selection: articleSelection(slotCount)
     }
   }
 
@@ -137,7 +137,7 @@ export function buildOptimisticConvertedHomepageBlock(
       slot3Layout: slotCount === 3 ? 'hero-left' : null,
       slot4Layout: slotCount === 4 ? 'sidebar-stack' : null,
       slot5Layout: slotCount === 5 ? 'card-grid' : null,
-      selection: articleSelection(slotCount),
+      selection: articleSelection(slotCount)
     }
   }
 
@@ -145,6 +145,6 @@ export function buildOptimisticConvertedHomepageBlock(
     id: block.id,
     blockType,
     ...text,
-    selection: articleSelection(slotCount),
+    selection: articleSelection(slotCount)
   } as PageBlockResponse
 }

@@ -21,7 +21,7 @@ export default function HomepageBlockSectionTextFields({
   sectionSubheading,
   settingsOpen,
   saveSectionHeading,
-  saveSectionSubheading,
+  saveSectionSubheading
 }: Props) {
   const savedHeading = sectionHeading ?? ''
   const savedSub = sectionSubheading ?? ''
@@ -50,14 +50,14 @@ export default function HomepageBlockSectionTextFields({
     mutationFn: async (value: string | null) => {
       if (!saveSectionHeading) return
       await saveSectionHeading(value)
-    },
+    }
   })
 
   const subMutation = useMutation({
     mutationFn: async (value: string | null) => {
       if (!saveSectionSubheading) return
       await saveSectionSubheading(value)
-    },
+    }
   })
 
   if (!saveSectionHeading) return null
@@ -98,7 +98,11 @@ export default function HomepageBlockSectionTextFields({
           type="button"
           className="hf-btn-primary"
           disabled={!headingDirty || headingMutation.isPending}
-          onClick={() => headingMutation.mutate(headingTrimmed === '' ? null : headingTrimmed)}
+          onClick={() =>
+            headingMutation.mutate(
+              headingTrimmed === '' ? null : headingTrimmed
+            )
+          }
         >
           {headingMutation.isPending ? 'Saving…' : 'Save title'}
         </button>
@@ -113,9 +117,12 @@ export default function HomepageBlockSectionTextFields({
 
       {showSub ? (
         <>
-          <h3 className="hf-block-settings-kicker hf-block-settings-kicker-spaced">Subheading</h3>
+          <h3 className="hf-block-settings-kicker hf-block-settings-kicker-spaced">
+            Subheading
+          </h3>
           <p className="hf-block-settings-hint">
-            Optional supporting line under the title (shown on the public site when set).
+            Optional supporting line under the title (shown on the public site
+            when set).
           </p>
           <label className="hf-sr-only" htmlFor={`hf-section-sub-${blockId}`}>
             Subheading
@@ -144,7 +151,9 @@ export default function HomepageBlockSectionTextFields({
               type="button"
               className="hf-btn-primary"
               disabled={!subDirty || subMutation.isPending}
-              onClick={() => subMutation.mutate(subTrimmed === '' ? null : subTrimmed)}
+              onClick={() =>
+                subMutation.mutate(subTrimmed === '' ? null : subTrimmed)
+              }
             >
               {subMutation.isPending ? 'Saving…' : 'Save subheading'}
             </button>

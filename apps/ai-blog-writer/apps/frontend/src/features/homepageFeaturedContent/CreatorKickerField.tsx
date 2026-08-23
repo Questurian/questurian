@@ -12,7 +12,7 @@ type Props = {
 export default function CreatorKickerField({
   blockId,
   creatorKicker,
-  saveCreatorKicker,
+  saveCreatorKicker
 }: Props) {
   const savedValue = creatorKicker ?? ''
   const [draft, setDraft] = useState(savedValue)
@@ -26,7 +26,7 @@ export default function CreatorKickerField({
   const mutation = useMutation({
     mutationFn: async (value: string | null) => {
       if (saveCreatorKicker) await saveCreatorKicker(value)
-    },
+    }
   })
 
   if (!saveCreatorKicker) return null
@@ -71,7 +71,9 @@ export default function CreatorKickerField({
       </div>
       {mutation.isError ? (
         <p className="hf-block-section-heading-error">
-          {mutation.error instanceof Error ? mutation.error.message : 'Failed to save label.'}
+          {mutation.error instanceof Error
+            ? mutation.error.message
+            : 'Failed to save label.'}
         </p>
       ) : null}
     </section>

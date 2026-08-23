@@ -30,9 +30,15 @@ export type UseHomepageLocationGridSlotsOptions = {
 
 export type UseHomepageLocationGridSlotsResult = {
   selectionQuery: ReturnType<typeof useQuery<HomepageLocationGridSelection>>
-  candidatesQuery: ReturnType<typeof useQuery<HomepageLocationGridCandidatesResponse>>
+  candidatesQuery: ReturnType<
+    typeof useQuery<HomepageLocationGridCandidatesResponse>
+  >
   saveMutation: ReturnType<
-    typeof useMutation<HomepageLocationGridSelection, unknown, HomepageLocationGridItemRef[]>
+    typeof useMutation<
+      HomepageLocationGridSelection,
+      unknown,
+      HomepageLocationGridItemRef[]
+    >
   >
   slots: LocationGridSlotValue[]
   savedSlots: LocationGridSlotValue[]

@@ -1,9 +1,12 @@
 import type { LocationHomepageListItem, LocationRef } from './locationHomepages'
-import type { CountryHomepageGroup, CityHomepageGroup } from './locationHomepageList.types'
+import type {
+  CountryHomepageGroup,
+  CityHomepageGroup
+} from './locationHomepageList.types'
 
 const LOCATION_COLLATOR = new Intl.Collator('en', {
   numeric: true,
-  sensitivity: 'base',
+  sensitivity: 'base'
 })
 
 export function formatHomepageDate(value: string | null): string {
@@ -13,22 +16,28 @@ export function formatHomepageDate(value: string | null): string {
   return new Date(timestamp).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
-    year: 'numeric',
+    year: 'numeric'
   })
 }
 
-export function getLocationHomepageLabel(item: LocationHomepageListItem): string {
+export function getLocationHomepageLabel(
+  item: LocationHomepageListItem
+): string {
   const loc = item.location
   if (!loc) return `Homepage #${item.id}`
 
   if (loc.neighborhoodName) {
-    return loc.cityName ? `${loc.neighborhoodName}, ${loc.cityName}` : loc.neighborhoodName
+    return loc.cityName
+      ? `${loc.neighborhoodName}, ${loc.cityName}`
+      : loc.neighborhoodName
   }
 
   return loc.cityName ?? loc.countryName ?? `Homepage #${item.id}`
 }
 
-export function getLocationHomepagePrimaryLabel(item: LocationHomepageListItem): string {
+export function getLocationHomepagePrimaryLabel(
+  item: LocationHomepageListItem
+): string {
   const loc = item.location
   if (!loc) return `Homepage #${item.id}`
 
@@ -43,7 +52,9 @@ export function getLocationHomepagePrimaryLabel(item: LocationHomepageListItem):
   return getLocationHomepageLabel(item)
 }
 
-function normalizeGroupValue(...values: Array<string | null | undefined>): string {
+function normalizeGroupValue(
+  ...values: Array<string | null | undefined>
+): string {
   for (const value of values) {
     if (typeof value === 'string' && value.trim()) {
       return value.trim()
@@ -56,13 +67,18 @@ function normalizeGroupValue(...values: Array<string | null | undefined>): strin
 function getCountryLabel(location: LocationRef | null): string {
   if (!location) return 'Unassigned country'
   const keyParts = location.locationKey?.split('|') ?? []
-  return normalizeGroupValue(location.countryName, keyParts[0]) || 'Unassigned country'
+  return (
+    normalizeGroupValue(location.countryName, keyParts[0]) ||
+    'Unassigned country'
+  )
 }
 
 function getCityLabel(location: LocationRef | null): string {
   if (!location) return 'Unassigned city'
   const keyParts = location.locationKey?.split('|') ?? []
-  return normalizeGroupValue(location.cityName, keyParts[1]) || 'Unassigned city'
+  return (
+    normalizeGroupValue(location.cityName, keyParts[1]) || 'Unassigned city'
+  )
 }
 
 function toGroupKey(label: string, fallback: string): string {
@@ -70,7 +86,9 @@ function toGroupKey(label: string, fallback: string): string {
   return normalized || fallback
 }
 
-export function getLocationHomepageSearchText(item: LocationHomepageListItem): string {
+export function getLocationHomepageSearchText(
+  item: LocationHomepageListItem
+): string {
   const location = item.location
 
   return [
@@ -80,21 +98,24 @@ export function getLocationHomepageSearchText(item: LocationHomepageListItem): s
     location?.cityName,
     location?.neighborhoodName,
     location?.locationKey,
-    location?.level,
+    location?.level
   ]
     .filter((value): value is string => Boolean(value?.trim()))
     .join(' ')
     .toLowerCase()
 }
 
-function compareItems(left: LocationHomepageListItem, right: LocationHomepageListItem): number {
+function compareItems(
+  left: LocationHomepageListItem,
+  right: LocationHomepageListItem
+): number {
   if (left.isEnabled !== right.isEnabled) {
     return left.isEnabled ? -1 : 1
   }
 
   const labelComparison = LOCATION_COLLATOR.compare(
     getLocationHomepagePrimaryLabel(left),
-    getLocationHomepagePrimaryLabel(right),
+    getLocationHomepagePrimaryLabel(right)
   )
   if (labelComparison !== 0) return labelComparison
 
@@ -102,7 +123,7 @@ function compareItems(left: LocationHomepageListItem, right: LocationHomepageLis
 }
 
 export function buildHomepageGroups(
-  items: LocationHomepageListItem[],
+  items: LocationHomepageListItem[]
 ): CountryHomepageGroup[] {
   const countryMap = new Map<
     string,
@@ -121,7 +142,7 @@ export function buildHomepageGroups(
         key: countryKey,
         countryLabel,
         cityGroups: [],
-        cityMap: new Map<string, CityHomepageGroup>(),
+        cityMap: new Map<string, CityHomepageGroup>()
       }
       countryMap.set(countryKey, countryGroup)
     }
@@ -132,7 +153,7 @@ export function buildHomepageGroups(
         key: cityKey,
         cityLabel,
         cityHomepage: null,
-        neighborhoodHomepages: [],
+        neighborhoodHomepages: []
       }
       countryGroup.cityMap.set(cityKey, cityGroup)
       countryGroup.cityGroups.push(cityGroup)
@@ -153,28 +174,36 @@ export function buildHomepageGroups(
       cityGroups: countryGroup.cityGroups
         .map((cityGroup) => ({
           ...cityGroup,
-          neighborhoodHomepages: [...cityGroup.neighborhoodHomepages].sort(compareItems),
+          neighborhoodHomepages: [...cityGroup.neighborhoodHomepages].sort(
+            compareItems
+          )
         }))
-        .sort((left, right) => LOCATION_COLLATOR.compare(left.cityLabel, right.cityLabel)),
+        .sort((left, right) =>
+          LOCATION_COLLATOR.compare(left.cityLabel, right.cityLabel)
+        )
     }))
-    .sort((left, right) => LOCATION_COLLATOR.compare(left.countryLabel, right.countryLabel))
+    .sort((left, right) =>
+      LOCATION_COLLATOR.compare(left.countryLabel, right.countryLabel)
+    )
 }
 
 export function filterHomepageGroups(
   homepageGroups: CountryHomepageGroup[],
-  searchValue: string,
+  searchValue: string
 ): CountryHomepageGroup[] {
   const normalizedQuery = searchValue.trim().toLowerCase()
   if (!normalizedQuery) return homepageGroups
 
   return homepageGroups
     .map((countryGroup) => {
-      const countryMatches = countryGroup.countryLabel.toLowerCase().includes(normalizedQuery)
+      const countryMatches = countryGroup.countryLabel
+        .toLowerCase()
+        .includes(normalizedQuery)
       const cityGroups = countryGroup.cityGroups.flatMap((cityGroup) => {
         const citySearchText = [
           cityGroup.cityLabel,
           cityGroup.cityHomepage?.location?.locationKey,
-          countryGroup.countryLabel,
+          countryGroup.countryLabel
         ]
           .filter((value): value is string => Boolean(value?.trim()))
           .join(' ')
@@ -184,26 +213,31 @@ export function filterHomepageGroups(
           return [cityGroup]
         }
 
-        const matchingNeighborhoods = cityGroup.neighborhoodHomepages.filter((item) =>
-          getLocationHomepageSearchText(item).includes(normalizedQuery),
+        const matchingNeighborhoods = cityGroup.neighborhoodHomepages.filter(
+          (item) =>
+            getLocationHomepageSearchText(item).includes(normalizedQuery)
         )
 
         if (matchingNeighborhoods.length === 0) {
           return []
         }
 
-        return [{
-          ...cityGroup,
-          neighborhoodHomepages: matchingNeighborhoods,
-        }]
+        return [
+          {
+            ...cityGroup,
+            neighborhoodHomepages: matchingNeighborhoods
+          }
+        ]
       })
 
       if (cityGroups.length === 0) return []
 
-      return [{
-        ...countryGroup,
-        cityGroups,
-      }]
+      return [
+        {
+          ...countryGroup,
+          cityGroups
+        }
+      ]
     })
     .flat()
 }

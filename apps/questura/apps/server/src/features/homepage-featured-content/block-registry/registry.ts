@@ -3,6 +3,7 @@ import type { Block } from 'payload'
 import { CURATED_BLOCK_BEHAVIORS, type CuratedBlockBehavior } from './behaviors'
 import { ArticleGridBlock } from '../article-grid/block'
 import { ArticleListBlock } from '../article-list/block'
+import { AuthorFeatureBlock } from '../author-feature/block'
 import {
   HOMEPAGE_HOTEL_GRID_MAX_SLOTS,
   HOMEPAGE_HOTEL_GRID_MIN_SLOTS,
@@ -122,6 +123,18 @@ const CURATED_BLOCK_DEFINITIONS: readonly CuratedBlockDefinition[] = [
       max: 6,
       default: 3,
       validCounts: [2, 3, 4, 6],
+      invalidFallback: 'previous-valid',
+    },
+    convertibleWhenEmpty: true,
+    publicPayloadKind: ARTICLE_PUBLIC_PAYLOAD,
+  }),
+  defineCuratedBlock({
+    block: AuthorFeatureBlock,
+    slotCounts: {
+      min: 1,
+      max: 6,
+      default: 3,
+      validCounts: [1, 2, 3, 4, 6],
       invalidFallback: 'previous-valid',
     },
     convertibleWhenEmpty: true,

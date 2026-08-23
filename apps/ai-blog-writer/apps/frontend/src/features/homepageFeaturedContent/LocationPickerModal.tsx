@@ -10,12 +10,12 @@ type LocationPickerModalProps = {
 export function LocationPickerModal({
   existingLocationIds,
   onSelect,
-  onClose,
+  onClose
 }: LocationPickerModalProps) {
   const picker = useLocationPicker({
     existingLocationIds,
     onSelect,
-    onClose,
+    onClose
   })
 
   return (

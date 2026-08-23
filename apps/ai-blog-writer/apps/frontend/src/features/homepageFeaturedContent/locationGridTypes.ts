@@ -1,12 +1,20 @@
 import type { LocationLevel } from '../locationDocuments/types'
 
-export const LOCATION_GRID_MEDIA_ASPECTS = ['rectangle', 'square', 'portrait'] as const
+export const LOCATION_GRID_MEDIA_ASPECTS = [
+  'rectangle',
+  'square',
+  'portrait'
+] as const
 export const LOCATION_GRID_DESCRIPTION_MAX_LENGTH = 180
 export const LOCATION_GRID_KICKER_MAX_LENGTH = 40
 
-export type LocationGridMediaAspect = (typeof LOCATION_GRID_MEDIA_ASPECTS)[number]
+export type LocationGridMediaAspect =
+  (typeof LOCATION_GRID_MEDIA_ASPECTS)[number]
 
-export type HomepageLocationGridLevel = Extract<LocationLevel, 'city' | 'neighborhood'>
+export type HomepageLocationGridLevel = Extract<
+  LocationLevel,
+  'city' | 'neighborhood'
+>
 
 export type HomepageLocationGridItemRef = {
   id: number

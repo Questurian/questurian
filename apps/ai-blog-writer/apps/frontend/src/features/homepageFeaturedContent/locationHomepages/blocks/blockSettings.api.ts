@@ -8,11 +8,23 @@ import type {
 import { locationHomepageRequest } from '../request'
 import type { LocationHomepageResponse } from '../types'
 import type { EditorialFeatureFieldsUpdate } from '../../mainHomepage/blocks/blockSettings.api'
+import type { AuthorFeatureFieldsUpdate } from '../../mainHomepage/blocks/blockSettings.api'
 
 export async function updateLocationHomepageEditorialFeatureFields(
   homepageId: number,
   blockId: string,
   fields: EditorialFeatureFieldsUpdate
+): Promise<LocationHomepageResponse> {
+  return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, ...fields })
+  })
+}
+
+export async function updateLocationHomepageAuthorFeatureFields(
+  homepageId: number,
+  blockId: string,
+  fields: AuthorFeatureFieldsUpdate
 ): Promise<LocationHomepageResponse> {
   return locationHomepageRequest(`/api/location-homepages/${homepageId}`, {
     method: 'PUT',

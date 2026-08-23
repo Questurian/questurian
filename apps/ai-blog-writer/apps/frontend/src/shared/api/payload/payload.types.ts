@@ -52,7 +52,7 @@ export const ALL_VARIANT_KEYS: MediaVariantKey[] = [
   'portrait',
   'hero',
   'open_graph',
-  'editorial',
+  'editorial'
 ]
 
 export type MediaAsset = {
@@ -67,7 +67,11 @@ export type MediaAsset = {
   // legacy aliases some Payload contexts return
   alt?: string | null
   altText?: string | null
-  mediaSet?: number | string | { id?: number | string; title?: string | null } | null
+  mediaSet?:
+    | number
+    | string
+    | { id?: number | string; title?: string | null }
+    | null
   variant?: MediaVariantKey | null
   url?: string | null
   mimeType?: string | null
@@ -102,6 +106,10 @@ export type MediaSet = {
   status?: MediaSetStatus | string | null
   externalRef?: string | null
   source?: number | MediaSetVariantAsset | null
+  focal_point?: {
+    x?: number | null
+    y?: number | null
+  } | null
   variants?: {
     thumbnail?: number | MediaSetVariantAsset | null
     square?: number | MediaSetVariantAsset | null
@@ -122,4 +130,8 @@ export type MediaSetPatch = {
   location?: number | null
   location_finalized?: boolean | null
   tags?: number[]
+  focal_point?: {
+    x: number
+    y: number
+  }
 }

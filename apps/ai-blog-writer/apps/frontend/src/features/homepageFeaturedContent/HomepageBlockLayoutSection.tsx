@@ -35,13 +35,17 @@ export default function HomepageBlockLayoutSection<T extends string>({
   error,
   onChange,
   onReset,
-  onSave,
+  onSave
 }: Props<T>) {
   return (
     <section className="hf-block-settings-section">
       <h3 className="hf-block-settings-kicker">{title}</h3>
       <p className="hf-block-settings-hint">{hint}</p>
-      <div className="hf-slot3-layout-options" role="radiogroup" aria-label={ariaLabel}>
+      <div
+        className="hf-slot3-layout-options"
+        role="radiogroup"
+        aria-label={ariaLabel}
+      >
         {options.map((option) => (
           <label className="hf-slot3-layout-label" key={option.value}>
             <input

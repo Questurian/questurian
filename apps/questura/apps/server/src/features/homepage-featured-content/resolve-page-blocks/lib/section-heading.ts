@@ -6,6 +6,7 @@ export const HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING = [
   'featured-article',
   'featured-creator-article',
   'featured-article-carousel',
+  'author-feature',
   'where-to-eat-drink',
   'things-to-do-listicles',
   'hotel-grid',
@@ -19,7 +20,9 @@ export type HomepageBlockTypeWithOptionalSectionHeading =
   (typeof HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING)[number]
 
 export function homepageBlockSupportsSectionHeading(blockType: string): boolean {
-  return (HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING as readonly string[]).includes(blockType)
+  return (HOMEPAGE_BLOCK_TYPES_WITH_OPTIONAL_SECTION_HEADING as readonly string[]).includes(
+    blockType,
+  )
 }
 
 export const HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX = 120
@@ -32,7 +35,9 @@ type SectionHeadingParseResult =
   | { ok: true; omit: false; value: string | null }
   | { ok: false; message: string }
 
-export function parseSectionHeadingBodyField(body: Record<string, unknown>): SectionHeadingParseResult {
+export function parseSectionHeadingBodyField(
+  body: Record<string, unknown>,
+): SectionHeadingParseResult {
   if (!Object.prototype.hasOwnProperty.call(body, 'sectionHeading')) {
     return { ok: true, omit: true }
   }
@@ -47,7 +52,9 @@ export function parseSectionHeadingBodyField(body: Record<string, unknown>): Sec
   return { ok: true, omit: false, value: t.length ? t : null }
 }
 
-export function publicFeaturedArticlesSectionHeading(block: { sectionHeading?: unknown }): string | null {
+export function publicFeaturedArticlesSectionHeading(block: {
+  sectionHeading?: unknown
+}): string | null {
   const s = block.sectionHeading
   if (typeof s !== 'string' || !s.trim()) return null
   return s.trim().slice(0, HOMEPAGE_FEATURED_ARTICLES_SECTION_HEADING_MAX)

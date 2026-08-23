@@ -6,19 +6,23 @@ import {
   fetchAuthorById,
   fetchAuthorForUser,
   fetchStaffUser,
+  mediaSetPreviewUrl,
   updateAuthor,
   updateStaffUser,
-  uploadAvatarAsset,
+  uploadAuthorMediaSet,
+  uploadAvatarAsset
 } from '../api/staff.api'
+import AuthorImagePlacementEditor from './AuthorImagePlacementEditor'
 import type {
   Author,
   ArticleBylinePlatform,
+  AuthorImageEntry,
   AuthorPatch,
   ProfileCapabilities,
   ProfileSubject,
   SocialLinks,
   StaffUser,
-  StaffUserPatch,
+  StaffUserPatch
 } from '../types'
 
 type ProfileFormState = {
@@ -27,6 +31,7 @@ type ProfileFormState = {
   displayName: string
   bio: string
   slug: string
+  authorImages: AuthorImageEntry[]
   expertise: string[]
   socialLinks: Required<{ [K in keyof SocialLinks]: string }>
   articleByline: {
@@ -34,15 +39,43 @@ type ProfileFormState = {
     featuredLinks: ArticleBylinePlatform[]
   }
 }
-const SOCIAL_FIELDS: { key: keyof SocialLinks; label: string; placeholder: string }[] = [
-  { key: 'instagram', label: 'Instagram URL', placeholder: 'https://instagram.com/…' },
+const SOCIAL_FIELDS: {
+  key: keyof SocialLinks
+  label: string
+  placeholder: string
+}[] = [
+  {
+    key: 'instagram',
+    label: 'Instagram URL',
+    placeholder: 'https://instagram.com/…'
+  },
   { key: 'twitter', label: 'Twitter / X URL', placeholder: 'https://x.com/…' },
-  { key: 'facebook', label: 'Facebook URL', placeholder: 'https://facebook.com/…' },
-  { key: 'linkedin', label: 'LinkedIn URL', placeholder: 'https://linkedin.com/in/…' },
-  { key: 'reddit', label: 'Reddit URL', placeholder: 'https://reddit.com/user/…' },
-  { key: 'youtube', label: 'YouTube URL', placeholder: 'https://youtube.com/…' },
-  { key: 'patreon', label: 'Patreon URL', placeholder: 'https://patreon.com/…' },
-  { key: 'website', label: 'Website URL', placeholder: 'https://…' },
+  {
+    key: 'facebook',
+    label: 'Facebook URL',
+    placeholder: 'https://facebook.com/…'
+  },
+  {
+    key: 'linkedin',
+    label: 'LinkedIn URL',
+    placeholder: 'https://linkedin.com/in/…'
+  },
+  {
+    key: 'reddit',
+    label: 'Reddit URL',
+    placeholder: 'https://reddit.com/user/…'
+  },
+  {
+    key: 'youtube',
+    label: 'YouTube URL',
+    placeholder: 'https://youtube.com/…'
+  },
+  {
+    key: 'patreon',
+    label: 'Patreon URL',
+    placeholder: 'https://patreon.com/…'
+  },
+  { key: 'website', label: 'Website URL', placeholder: 'https://…' }
 ]
 
 type ProfileEditorProps = {
@@ -68,7 +101,7 @@ type ProfileEditorProps = {
  */
 function formStateFromRecords(
   user: { firstName?: string | null; lastName?: string | null } | null,
-  author: Author | null,
+  author: Author | null
 ): ProfileFormState {
   return {
     firstName: user?.firstName ?? '',
@@ -76,32 +109,43 @@ function formStateFromRecords(
     displayName: author?.displayName ?? '',
     bio: author?.bio ?? '',
     slug: author?.slug ?? '',
+    authorImages: author?.authorImages ?? [],
     expertise: (author?.expertise ?? []).map((entry) => entry.area),
     socialLinks: Object.fromEntries(
-      SOCIAL_FIELDS.map(({ key }) => [key, author?.socialLinks?.[key] ?? '']),
+      SOCIAL_FIELDS.map(({ key }) => [key, author?.socialLinks?.[key] ?? ''])
     ) as ProfileFormState['socialLinks'],
     articleByline: {
       showAvatar: author?.articleByline?.showAvatar === true,
-      featuredLinks: (author?.articleByline?.featuredLinks ?? []).slice(0, 3),
-    },
+      featuredLinks: (author?.articleByline?.featuredLinks ?? []).slice(0, 3)
+    }
   }
 }
 
 export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
   const queryClient = useQueryClient()
-  const subjectKey = subject.kind === 'user' ? `user:${subject.userId}` : `author:${subject.authorId}`
+  const subjectKey =
+    subject.kind === 'user'
+      ? `user:${subject.userId}`
+      : `author:${subject.authorId}`
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [form, setForm] = useState<ProfileFormState | null>(null)
   const [newExpertise, setNewExpertise] = useState('')
   const [pendingAvatarId, setPendingAvatarId] = useState<number | null>(null)
-  const [pendingAvatarPreview, setPendingAvatarPreview] = useState<string | null>(null)
+  const [pendingAvatarPreview, setPendingAvatarPreview] = useState<
+    string | null
+  >(null)
+  const [authorImageTitle, setAuthorImageTitle] = useState('')
+  const [authorImageAlt, setAuthorImageAlt] = useState('')
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const profileQuery = useQuery({
     queryKey: ['staff', 'profile', subjectKey],
-    queryFn: async (): Promise<{ user: StaffUser | null; author: Author | null }> => {
+    queryFn: async (): Promise<{
+      user: StaffUser | null
+      author: Author | null
+    }> => {
       // By-author is the orphan-reachable path, so it must tolerate a null
       // account rather than assume one. `showAccountHeader` gates the only
       // read of the staff row, because an editor cannot read anyone else's.
@@ -112,15 +156,17 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
 
       const [user, author] = await Promise.all([
         fetchStaffUser(subject.userId),
-        fetchAuthorForUser(subject.userId),
+        fetchAuthorForUser(subject.userId)
       ])
       return { user, author }
-    },
+    }
   })
 
   useEffect(() => {
     if (profileQuery.data && form === null) {
-      setForm(formStateFromRecords(profileQuery.data.user, profileQuery.data.author))
+      setForm(
+        formStateFromRecords(profileQuery.data.user, profileQuery.data.author)
+      )
     }
   }, [profileQuery.data, form])
 
@@ -140,18 +186,53 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
       setPendingAvatarPreview(avatarUrl(asset))
       setErrorMessage(null)
     },
-    onError: (error: Error) => setErrorMessage(error.message),
+    onError: (error: Error) => setErrorMessage(error.message)
+  })
+
+  const authorImageUpload = useMutation({
+    mutationFn: (file: File) =>
+      uploadAuthorMediaSet({
+        file,
+        title: authorImageTitle.trim(),
+        altText: authorImageAlt.trim()
+      }),
+    onSuccess: (mediaSet) => {
+      setForm((prev) =>
+        prev
+          ? {
+              ...prev,
+              authorImages: [...prev.authorImages, { mediaSet }]
+            }
+          : prev
+      )
+      setAuthorImageTitle('')
+      setAuthorImageAlt('')
+      setStatusMessage(
+        'Author image uploaded. Save profile to attach it to this Author.'
+      )
+      setErrorMessage(null)
+    },
+    onError: (error: Error) => setErrorMessage(error.message)
   })
 
   const saveProfile = useMutation({
     mutationFn: async (state: ProfileFormState) => {
       const userPatch: StaffUserPatch = {
         firstName: state.firstName.trim(),
-        lastName: state.lastName.trim(),
+        lastName: state.lastName.trim()
       }
 
       const authorPatch: AuthorPatch = {
         ...(pendingAvatarId !== null ? { avatar: pendingAvatarId } : {}),
+        authorImages: state.authorImages
+          .map((entry) => {
+            const id =
+              typeof entry.mediaSet === 'number'
+                ? entry.mediaSet
+                : entry.mediaSet.id
+            return Number.isInteger(id) && id > 0 ? { mediaSet: id } : null
+          })
+          .filter((entry): entry is { mediaSet: number } => Boolean(entry)),
         displayName: state.displayName.trim(),
         bio: state.bio.trim(),
         expertise: state.expertise
@@ -159,16 +240,23 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
           .filter(Boolean)
           .map((area) => ({ area })),
         socialLinks: Object.fromEntries(
-          SOCIAL_FIELDS.map(({ key }) => [key, state.socialLinks[key].trim() || null]),
+          SOCIAL_FIELDS.map(({ key }) => [
+            key,
+            state.socialLinks[key].trim() || null
+          ])
         ) as SocialLinks,
-        articleByline: state.articleByline,
+        articleByline: state.articleByline
       }
 
       // Slug renames are admin-only (Payload field access enforces this too).
       // An unchanged or cleared slug is omitted so the field is never blanked.
       const existingAuthor = profileQuery.data?.author ?? null
       const nextSlug = state.slug.trim()
-      if (can.editSlug && nextSlug && nextSlug !== (existingAuthor?.slug ?? '')) {
+      if (
+        can.editSlug &&
+        nextSlug &&
+        nextSlug !== (existingAuthor?.slug ?? '')
+      ) {
         authorPatch.slug = nextSlug
       }
 
@@ -189,7 +277,9 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
           : // Unreachable: a by-author subject was resolved from an existing
             // Author, so `existingAuthor` is always set on this path.
             (() => {
-              throw new Error('Cannot create an author record without a staff account to link.')
+              throw new Error(
+                'Cannot create an author record without a staff account to link.'
+              )
             })()
 
       return { user, author }
@@ -207,7 +297,7 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
     onError: (error: Error) => {
       setStatusMessage(null)
       setErrorMessage(error.message)
-    },
+    }
   })
 
   if (profileQuery.isLoading || form === null || !profileQuery.data) {
@@ -225,7 +315,10 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
   const author = profileQuery.data.author
   const currentAvatar = pendingAvatarPreview ?? avatarUrl(author?.avatar)
 
-  function update<K extends keyof ProfileFormState>(key: K, value: ProfileFormState[K]) {
+  function update<K extends keyof ProfileFormState>(
+    key: K,
+    value: ProfileFormState[K]
+  ) {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev))
     setStatusMessage(null)
   }
@@ -233,7 +326,11 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
   function addExpertise() {
     const area = newExpertise.trim()
     if (!area || !form) return
-    if (form.expertise.some((existing) => existing.toLowerCase() === area.toLowerCase())) {
+    if (
+      form.expertise.some(
+        (existing) => existing.toLowerCase() === area.toLowerCase()
+      )
+    ) {
       setNewExpertise('')
       return
     }
@@ -248,8 +345,16 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
       : [...selected, platform].slice(0, 3)
     update('articleByline', {
       showAvatar: form?.articleByline.showAvatar ?? false,
-      featuredLinks,
+      featuredLinks
     })
+  }
+
+  function removeAuthorImage(index: number) {
+    if (!form) return
+    update(
+      'authorImages',
+      form.authorImages.filter((_, currentIndex) => currentIndex !== index)
+    )
   }
 
   return (
@@ -264,7 +369,10 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
         <section className="staff-section">
           <h2>Account</h2>
           <p className="staff-muted">
-            {profile.email} · <span className={`staff-role staff-role--${profile.role}`}>{profile.role}</span>
+            {profile.email} ·{' '}
+            <span className={`staff-role staff-role--${profile.role}`}>
+              {profile.role}
+            </span>
           </p>
         </section>
       ) : null}
@@ -273,8 +381,9 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
         <section className="staff-section">
           <h2>Unlinked byline</h2>
           <p className="staff-muted">
-            This author has no staff account — the person has left, or never had one. Their byline and
-            author page keep working, and edits here still reach the public site.
+            This author has no staff account — the person has left, or never had
+            one. Their byline and author page keep working, and edits here still
+            reach the public site.
           </p>
         </section>
       ) : null}
@@ -283,10 +392,16 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
         <h2>Avatar</h2>
         <div className="staff-avatar-row">
           {currentAvatar ? (
-            <img className="staff-avatar" src={currentAvatar} alt="Profile avatar" />
+            <img
+              className="staff-avatar"
+              src={currentAvatar}
+              alt="Profile avatar"
+            />
           ) : (
             <div className="staff-avatar staff-avatar-empty" aria-hidden="true">
-              {(form.displayName || form.firstName || profile?.email || '?').slice(0, 1).toUpperCase()}
+              {(form.displayName || form.firstName || profile?.email || '?')
+                .slice(0, 1)
+                .toUpperCase()}
             </div>
           )}
           <div>
@@ -318,7 +433,8 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
       <section className="staff-section">
         <h2>Article byline</h2>
         <p className="staff-muted">
-          Optional creator treatment on articles. Your Author page still shows every social link.
+          Optional creator treatment on articles. Your Author page still shows
+          every social link.
         </p>
         <label className="staff-checkbox-option">
           <input
@@ -327,20 +443,23 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
             onChange={(event) =>
               update('articleByline', {
                 ...form.articleByline,
-                showAvatar: event.target.checked,
+                showAvatar: event.target.checked
               })
             }
           />
           <span>Show avatar on articles</span>
         </label>
         {!currentAvatar && form.articleByline.showAvatar ? (
-          <p className="staff-hint">Upload an avatar above before this can appear publicly.</p>
+          <p className="staff-hint">
+            Upload an avatar above before this can appear publicly.
+          </p>
         ) : null}
         <p className="staff-hint">Feature up to 3 configured links:</p>
         <div className="staff-byline-links">
           {SOCIAL_FIELDS.filter(
             ({ key }) =>
-              form.socialLinks[key].trim() || form.articleByline.featuredLinks.includes(key),
+              form.socialLinks[key].trim() ||
+              form.articleByline.featuredLinks.includes(key)
           ).map(({ key, label }) => {
             const selected = form.articleByline.featuredLinks.includes(key)
             const hasUrl = Boolean(form.socialLinks[key].trim())
@@ -361,9 +480,111 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
             )
           })}
           {SOCIAL_FIELDS.every(({ key }) => !form.socialLinks[key].trim()) ? (
-            <span className="staff-muted">Add a social link below to make it available here.</span>
+            <span className="staff-muted">
+              Add a social link below to make it available here.
+            </span>
           ) : null}
         </div>
+      </section>
+
+      <section className="staff-section">
+        <h2>Author feature images</h2>
+        <p className="staff-muted">
+          Uploaded images attached to this Author. Author Feature blocks can
+          choose one of these images for this person.
+        </p>
+        <div className="staff-author-images-grid">
+          {form.authorImages.map((entry, index) => {
+            const mediaSet = entry.mediaSet
+            const preview = mediaSetPreviewUrl(mediaSet)
+            const title =
+              typeof mediaSet === 'number'
+                ? `MediaSet #${mediaSet}`
+                : mediaSet.title
+            return (
+              <div
+                className="staff-author-image-card"
+                key={`${typeof mediaSet === 'number' ? mediaSet : mediaSet.id}:${index}`}
+              >
+                {preview ? (
+                  <img src={preview} alt="" />
+                ) : (
+                  <div className="staff-author-image-empty">No preview</div>
+                )}
+                <div>
+                  <strong>{title || 'Author image'}</strong>
+                  {typeof mediaSet !== 'number' && mediaSet.alt_text ? (
+                    <span>{mediaSet.alt_text}</span>
+                  ) : null}
+                </div>
+                <button
+                  type="button"
+                  className="staff-button-secondary"
+                  onClick={() => removeAuthorImage(index)}
+                >
+                  Remove
+                </button>
+                {typeof mediaSet !== 'number' ? (
+                  <AuthorImagePlacementEditor mediaSet={mediaSet} />
+                ) : null}
+              </div>
+            )
+          })}
+          {form.authorImages.length === 0 ? (
+            <span className="staff-muted">No Author Feature images yet.</span>
+          ) : null}
+        </div>
+        <div className="staff-field-row">
+          <label className="staff-field">
+            <span>Image title</span>
+            <input
+              type="text"
+              value={authorImageTitle}
+              placeholder="Alan in Lima"
+              onChange={(event) => setAuthorImageTitle(event.target.value)}
+            />
+          </label>
+          <label className="staff-field">
+            <span>Alt text</span>
+            <input
+              type="text"
+              value={authorImageAlt}
+              placeholder="Alan walking through Barranco at sunset"
+              onChange={(event) => setAuthorImageAlt(event.target.value)}
+            />
+          </label>
+        </div>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="staff-file-input"
+          id={`author-image-upload-${subjectKey}`}
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            if (!file) return
+            if (!authorImageTitle.trim() || !authorImageAlt.trim()) {
+              setErrorMessage('Author image title and alt text are required.')
+              event.currentTarget.value = ''
+              return
+            }
+            authorImageUpload.mutate(file)
+            event.currentTarget.value = ''
+          }}
+        />
+        <button
+          type="button"
+          className="staff-button-secondary"
+          disabled={authorImageUpload.isPending}
+          onClick={() =>
+            document
+              .getElementById(`author-image-upload-${subjectKey}`)
+              ?.click()
+          }
+        >
+          {authorImageUpload.isPending
+            ? 'Uploading…'
+            : 'Upload author feature image'}
+        </button>
       </section>
 
       <section className="staff-section">
@@ -400,7 +621,9 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
           <input
             type="text"
             value={form.displayName}
-            placeholder={`${form.firstName} ${form.lastName}`.trim() || 'Shown to readers'}
+            placeholder={
+              `${form.firstName} ${form.lastName}`.trim() || 'Shown to readers'
+            }
             onChange={(event) => update('displayName', event.target.value)}
           />
         </label>
@@ -416,16 +639,20 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
               />
             </label>
             <p className="staff-hint">
-              Author page: <code>/authors/{form.slug.trim() || '…'}</code> — renaming a slug breaks
-              inbound author URLs; there are no redirects.
+              Author page: <code>/authors/{form.slug.trim() || '…'}</code> —
+              renaming a slug breaks inbound author URLs; there are no
+              redirects.
             </p>
           </>
         ) : author?.slug ? (
           <p className="staff-hint">
-            Author page: <code>/authors/{author.slug}</code> — the URL is managed by admins.
+            Author page: <code>/authors/{author.slug}</code> — the URL is
+            managed by admins.
           </p>
         ) : (
-          <p className="staff-hint">Your author URL is generated the first time your profile is saved.</p>
+          <p className="staff-hint">
+            Your author URL is generated the first time your profile is saved.
+          </p>
         )}
       </section>
 
@@ -453,7 +680,7 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
                 onClick={() =>
                   update(
                     'expertise',
-                    form.expertise.filter((existing) => existing !== area),
+                    form.expertise.filter((existing) => existing !== area)
                   )
                 }
               >
@@ -462,7 +689,9 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
             </span>
           ))}
           {form.expertise.length === 0 ? (
-            <span className="staff-muted">No areas yet — e.g. “Southeast Asia”, “Budget Travel”.</span>
+            <span className="staff-muted">
+              No areas yet — e.g. “Southeast Asia”, “Budget Travel”.
+            </span>
           ) : null}
         </div>
         <div className="staff-field-row staff-add-row">
@@ -478,7 +707,11 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
               }
             }}
           />
-          <button type="button" className="staff-button-secondary" onClick={addExpertise}>
+          <button
+            type="button"
+            className="staff-button-secondary"
+            onClick={addExpertise}
+          >
             Add
           </button>
         </div>
@@ -494,7 +727,10 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
               value={form.socialLinks[key]}
               placeholder={placeholder}
               onChange={(event) =>
-                update('socialLinks', { ...form.socialLinks, [key]: event.target.value })
+                update('socialLinks', {
+                  ...form.socialLinks,
+                  [key]: event.target.value
+                })
               }
             />
           </label>
@@ -502,9 +738,17 @@ export default function ProfileEditor({ subject, can }: ProfileEditorProps) {
       </section>
 
       <footer className="staff-form-footer">
-        {statusMessage ? <span className="staff-success">{statusMessage}</span> : null}
-        {errorMessage ? <span className="staff-error">{errorMessage}</span> : null}
-        <button type="submit" className="staff-button-primary" disabled={saveProfile.isPending}>
+        {statusMessage ? (
+          <span className="staff-success">{statusMessage}</span>
+        ) : null}
+        {errorMessage ? (
+          <span className="staff-error">{errorMessage}</span>
+        ) : null}
+        <button
+          type="submit"
+          className="staff-button-primary"
+          disabled={saveProfile.isPending}
+        >
           {saveProfile.isPending ? 'Saving…' : 'Save profile'}
         </button>
       </footer>

@@ -93,9 +93,14 @@ export default function FeaturedArticleSpotlightLayout({
                 {showAuthorAvatar ? (
                   <>
                     {creatorKicker?.trim() ? (
-                      <span className="hf-fa-spotlight-creator-kicker">{creatorKicker.trim()}</span>
+                      <span className="hf-fa-spotlight-creator-kicker">
+                        {creatorKicker.trim()}
+                      </span>
                     ) : null}
-                    <span className="hf-fa-spotlight-avatar" aria-hidden={!item.author?.avatar?.url}>
+                    <span
+                      className="hf-fa-spotlight-avatar"
+                      aria-hidden={!item.author?.avatar?.url}
+                    >
                       {item.author?.avatar?.url ? (
                         <img src={item.author.avatar.url} alt="" />
                       ) : (

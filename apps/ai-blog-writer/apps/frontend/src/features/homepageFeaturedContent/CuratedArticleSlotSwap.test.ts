@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import {
-  swapCuratedArticleSlots,
-  swapCuratedSlots
-} from './curatedSlotSwap'
+import { swapCuratedArticleSlots, swapCuratedSlots } from './curatedSlotSwap'
 import type { SlotValue } from './useHomepageFeaturedSlots'
 
 function article(id: number, title: string): NonNullable<SlotValue> {
