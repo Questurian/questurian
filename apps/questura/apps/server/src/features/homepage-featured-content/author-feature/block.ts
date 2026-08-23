@@ -109,7 +109,7 @@ export const AuthorFeatureBlock: Block = {
       type: 'relationship',
       relationTo: [...HOMEPAGE_FEATURED_CONTENT_COLLECTIONS],
       hasMany: true,
-      admin: { description: 'Articles by the selected Authors in display order.' },
+      admin: { description: 'Articles by the selected Author in display order.' },
     },
   ],
 }
