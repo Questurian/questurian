@@ -1,7 +1,12 @@
 import { APP_CONFIG } from '@/shared/config'
 import type { PayloadInstance } from '@/types'
 
+import {
+  assertAuthorFeatureItemsMatchAuthors,
+  authorIdsFromAuthorFeatureBlock,
+} from '../../author-feature/service'
 import { curatedBlockRegistry } from '../../block-registry'
+import { normalizeHomepageFeaturedInput } from '../../featured-articles/service'
 import type { LocationGridScope } from '../../location-grid/types'
 import {
   normalizeLocationGridDescriptions,
@@ -95,4 +100,23 @@ export function applyBlockFieldUpdates(block: RawBlock, fields: ParsedBlockUpdat
   }
 
   return next
+}
+
+export async function validateUpdatedAuthorFeatureItems(
+  payload: PayloadInstance,
+  block: RawBlock,
+  items: unknown,
+): Promise<string | null> {
+  if (block.blockType !== 'author-feature') return null
+
+  try {
+    await assertAuthorFeatureItemsMatchAuthors(
+      payload,
+      normalizeHomepageFeaturedInput(items),
+      authorIdsFromAuthorFeatureBlock(block),
+    )
+    return null
+  } catch (error) {
+    return error instanceof Error ? error.message : 'Author Feature articles are invalid.'
+  }
 }

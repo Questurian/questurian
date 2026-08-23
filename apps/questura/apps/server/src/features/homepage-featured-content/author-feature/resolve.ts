@@ -49,7 +49,7 @@ function publicAuthorHref(slug: string | null): string | null {
 }
 
 function selectedStyle(value: unknown): AuthorFeatureImageStyle {
-  return value === 'circle' || value === 'square' || value === 'portrait' || value === 'mixed'
+  return value === 'circle' || value === 'square' || value === 'portrait'
     ? value
     : DEFAULT_AUTHOR_FEATURE_IMAGE_STYLE
 }
@@ -60,8 +60,9 @@ function selectedMotion(value: unknown): AuthorFeatureMotionStyle {
 
 export function authorIdsFromAuthorFeatureBlock(block: Record<string, unknown>): number[] {
   const cards = Array.isArray(block.authorCards) ? block.authorCards : []
-  const ids = cards.map((card) => (isRecord(card) ? relationshipId(card.author) : null))
-  return ids.filter((id): id is number => Boolean(id))
+  const selected = cards.find((card) => isRecord(card) && card.isEmphasized === true) ?? cards[0]
+  const id = isRecord(selected) ? relationshipId(selected.author) : null
+  return id ? [id] : []
 }
 
 export async function assertAuthorFeatureItemsMatchAuthors(
@@ -80,7 +81,7 @@ export async function assertAuthorFeatureItemsMatchAuthors(
       select: { author: true } as never,
     })) as unknown as Record<string, unknown>
     if (!allowed.has(relationshipId(doc.author) ?? 0)) {
-      throw new Error('Author Feature articles must be written by one of the selected Authors.')
+      throw new Error('Author Feature articles must be written by the selected Author.')
     }
   }
 }
@@ -90,13 +91,11 @@ export async function resolveAuthorFeatureFields(
   block: Record<string, unknown>,
 ) {
   const rawCards = Array.isArray(block.authorCards) ? block.authorCards : []
-  const emphasizedIndex = Math.max(
-    0,
-    rawCards.findIndex((card) => isRecord(card) && card.isEmphasized === true),
-  )
+  const selectedCard =
+    rawCards.find((card) => isRecord(card) && card.isEmphasized === true) ?? rawCards[0]
 
   const cards = await Promise.all(
-    rawCards.slice(0, 4).map(async (rawCard, index) => {
+    (selectedCard ? [selectedCard] : []).map(async (rawCard) => {
       const card = isRecord(rawCard) ? rawCard : {}
       const authorId = relationshipId(card.author)
       if (!authorId) return null
@@ -140,7 +139,6 @@ export async function resolveAuthorFeatureFields(
             : null,
           imageAltReady: selectedMediaSet ? mediaSetHasAuthoredAlt(selectedMediaSet) : false,
           spotlightNote: text(card.spotlightNote),
-          isEmphasized: index === emphasizedIndex,
         }
       } catch {
         return {
@@ -151,7 +149,6 @@ export async function resolveAuthorFeatureFields(
           imageWide: null,
           imageAltReady: false,
           spotlightNote: text(card.spotlightNote),
-          isEmphasized: index === emphasizedIndex,
         }
       }
     }),

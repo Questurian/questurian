@@ -39,6 +39,7 @@ import * as migration_20260822_143211_add_editorial_feature_homepage_block from 
 import * as migration_20260822_204353_location_grid_card_descriptions from './20260822_204353_location_grid_card_descriptions'
 import * as migration_20260822_224713_location_grid_card_kickers from './20260822_224713_location_grid_card_kickers'
 import * as migration_20260823_143937_add_author_feature_images_and_block from './20260823_143937_add_author_feature_images_and_block'
+import * as migration_20260823_212107_single_author_feature from './20260823_212107_single_author_feature'
 
 export const migrations = [
   {
@@ -245,5 +246,10 @@ export const migrations = [
     up: migration_20260823_143937_add_author_feature_images_and_block.up,
     down: migration_20260823_143937_add_author_feature_images_and_block.down,
     name: '20260823_143937_add_author_feature_images_and_block',
+  },
+  {
+    up: migration_20260823_212107_single_author_feature.up,
+    down: migration_20260823_212107_single_author_feature.down,
+    name: '20260823_212107_single_author_feature',
   },
 ]

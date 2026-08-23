@@ -18,12 +18,6 @@ function categoryLabel(item: NonNullable<SlotValue>): string {
   return item.category?.name ?? item.collectionLabel ?? 'Article'
 }
 
-function selectedAuthor(block: AuthorFeatureBlockResponse) {
-  return (
-    block.authorCards.find((card) => card.isEmphasized) ?? block.authorCards[0]
-  )
-}
-
 export default function AuthorFeatureLayout({
   block,
   slots,
@@ -32,12 +26,11 @@ export default function AuthorFeatureLayout({
   onReorder
 }: Props) {
   const count = slots.length
-  const author = selectedAuthor(block)
+  const author = block.authorCards[0]
   const shaped = block.imageStyle === 'circle' || block.imageStyle === 'square'
   const featureImage = shaped
     ? (author?.imageSquare?.url ?? author?.image?.url ?? null)
     : (author?.image?.url ?? author?.imageWide?.url ?? null)
-  const secondaryAuthors = block.authorCards.filter((card) => card !== author)
 
   return (
     <div
@@ -57,13 +50,6 @@ export default function AuthorFeatureLayout({
         <div>{author?.author.bio || 'Author bio appears here.'}</div>
         {author?.author.expertise.length ? (
           <b>{author.author.expertise.slice(0, 3).join(' / ')}</b>
-        ) : null}
-        {secondaryAuthors.length ? (
-          <ul aria-label="Also featured">
-            {secondaryAuthors.map((card) => (
-              <li key={card.author.id}>{card.author.name || 'Author'}</li>
-            ))}
-          </ul>
         ) : null}
       </div>
       <CuratedSlotSwapProvider slots={slots} onReorder={onReorder}>

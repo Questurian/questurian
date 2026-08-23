@@ -55,7 +55,7 @@ export function formatPublicHomepageBlock(block: unknown, location?: LocationCon
     const authorCards = Array.isArray(block.authorCards) ? block.authorCards : []
     return {
       ...base,
-      imageStyle: stringOrNull(block.imageStyle) ?? 'mixed',
+      imageStyle: stringOrNull(block.imageStyle) ?? 'portrait',
       motionStyle: stringOrNull(block.motionStyle) ?? 'subtle',
       authorCards,
     }

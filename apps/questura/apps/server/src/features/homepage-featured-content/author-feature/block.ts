@@ -6,11 +6,11 @@ import {
 } from '../resolve-page-blocks/lib/section-heading'
 import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 import {
-  AUTHOR_FEATURE_IMAGE_STYLES,
   AUTHOR_FEATURE_MAX_AUTHORS,
   AUTHOR_FEATURE_MOTION_STYLES,
   AUTHOR_FEATURE_SLOT_COUNTS,
   AUTHOR_FEATURE_SPOTLIGHT_NOTE_MAX,
+  AUTHOR_FEATURE_STORED_IMAGE_STYLES,
   DEFAULT_AUTHOR_FEATURE_IMAGE_STYLE,
   DEFAULT_AUTHOR_FEATURE_MOTION_STYLE,
 } from './constants'
@@ -50,7 +50,10 @@ export const AuthorFeatureBlock: Block = {
       name: 'imageStyle',
       type: 'select',
       defaultValue: DEFAULT_AUTHOR_FEATURE_IMAGE_STYLE,
-      options: AUTHOR_FEATURE_IMAGE_STYLES.map((value) => ({ label: value, value })),
+      options: AUTHOR_FEATURE_STORED_IMAGE_STYLES.map((value) => ({
+        label: value === 'mixed' ? 'mixed (legacy)' : value,
+        value,
+      })),
       admin: { description: 'Public image treatment for author portraits.' },
     },
     {
@@ -66,8 +69,7 @@ export const AuthorFeatureBlock: Block = {
       minRows: 1,
       maxRows: AUTHOR_FEATURE_MAX_AUTHORS,
       admin: {
-        description:
-          'One to four Authors. Mark one as emphasized; each image must be one of that Author’s uploaded images.',
+        description: 'Exactly one Author. Image must be one of that Author’s uploaded images.',
       },
       fields: [
         {
@@ -94,9 +96,10 @@ export const AuthorFeatureBlock: Block = {
         {
           name: 'isEmphasized',
           type: 'checkbox',
-          defaultValue: false,
+          defaultValue: true,
           admin: {
-            description: 'Main Author in this block. First Author is used if none checked.',
+            hidden: true,
+            description: 'Legacy compatibility field. Author Feature now supports one Author only.',
           },
         },
       ],

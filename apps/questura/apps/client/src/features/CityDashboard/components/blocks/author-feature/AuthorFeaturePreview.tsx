@@ -96,47 +96,6 @@ function AuthorPortrait({
   );
 }
 
-function SecondaryAuthor({
-  card,
-  imageStyle,
-}: {
-  card: AuthorFeatureCard;
-  imageStyle: AuthorFeatureBlock["imageStyle"];
-}) {
-  const image = imageForStyle(
-    card,
-    imageStyle === "mixed" ? "circle" : imageStyle,
-  );
-
-  return (
-    <Linked
-      href={card.author.href}
-      className="flex min-w-0 items-center gap-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
-    >
-      <span className="aspect-square w-10 shrink-0 overflow-hidden rounded-full bg-paper ring-1 ring-foreground/15">
-        {image?.url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={image.url}
-            alt={image.alt ?? ""}
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover"
-          />
-        ) : null}
-      </span>
-      <span className="min-w-0">
-        <span className="block font-sans text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-accent">
-          Also featured
-        </span>
-        <span className="block truncate font-editorial text-[0.95rem] font-semibold text-foreground">
-          {card.author.name ?? "Author"}
-        </span>
-      </span>
-    </Linked>
-  );
-}
-
 function ArticleImage({
   article,
   square,
@@ -249,11 +208,9 @@ function RelatedArticle({
 export function AuthorFeaturePreview({
   block,
 }: HomepageBlockLayoutProps<AuthorFeatureBlock>) {
-  const emphasized =
-    block.authorCards.find((card) => card.isEmphasized) ?? block.authorCards[0];
-  const secondary = block.authorCards.filter((card) => card !== emphasized);
+  const author = block.authorCards[0];
 
-  if (!emphasized) return null;
+  if (!author) return null;
 
   return (
     <BlockSection
@@ -261,7 +218,7 @@ export function AuthorFeaturePreview({
       className="bg-background py-8"
     >
       <div className="grid gap-8 768:grid-cols-[minmax(230px,0.82fr)_1.18fr] 768:items-stretch 1024:grid-cols-[minmax(260px,0.9fr)_minmax(280px,0.9fr)_minmax(330px,1.1fr)] 1024:gap-10">
-        <AuthorPortrait card={emphasized} style={block.imageStyle} />
+        <AuthorPortrait card={author} style={block.imageStyle} />
 
         <div className="relative z-20 flex min-w-0 flex-col justify-center border-foreground/30 py-8 text-center 768:border-y 768:px-5 1024:border-y-0 1024:px-0">
           <p className="mb-4 font-sans text-xs font-semibold uppercase tracking-[0.14em] text-accent">
@@ -269,24 +226,24 @@ export function AuthorFeaturePreview({
           </p>
           <h2 className="mx-auto max-w-none text-balance font-display text-[2.55rem] font-medium leading-[0.94] text-foreground 768:max-w-[9ch] 768:text-[3.05rem] 1280:text-[3.35rem]">
             <Linked
-              href={emphasized.author.href}
+              href={author.author.href}
               className="outline-none focus-visible:ring-2 focus-visible:ring-accent"
             >
-              {emphasized.author.name ?? "Author"}
+              {author.author.name ?? "Author"}
             </Linked>
           </h2>
-          {emphasized.spotlightNote ? (
+          {author.spotlightNote ? (
             <p className="mx-auto mt-4 font-sans text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-foreground/55">
-              {emphasized.spotlightNote}
+              {author.spotlightNote}
             </p>
           ) : null}
-          {emphasized.author.bio ? (
+          {author.author.bio ? (
             <p className="mx-auto mt-5 max-w-[38rem] font-editorial text-[1rem] leading-[1.5] text-foreground/80">
               <Linked
-                href={emphasized.author.href}
+                href={author.author.href}
                 className="outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                {emphasized.author.bio}
+                {author.author.bio}
               </Linked>
             </p>
           ) : null}
@@ -295,21 +252,10 @@ export function AuthorFeaturePreview({
               {block.sectionSubheading}
             </p>
           ) : null}
-          {emphasized.author.expertise.length ? (
+          {author.author.expertise.length ? (
             <p className="mx-auto mt-5 font-sans text-[0.66rem] font-semibold uppercase tracking-[0.11em] text-accent">
-              {emphasized.author.expertise.slice(0, 3).join(" / ")}
+              {author.author.expertise.slice(0, 3).join(" / ")}
             </p>
-          ) : null}
-          {secondary.length ? (
-            <div className="mt-6 grid gap-3 border-t border-foreground/20 pt-5 640:grid-cols-2 1024:grid-cols-1 1280:grid-cols-2">
-              {secondary.map((card) => (
-                <SecondaryAuthor
-                  key={card.author.id}
-                  card={card}
-                  imageStyle={block.imageStyle}
-                />
-              ))}
-            </div>
           ) : null}
         </div>
 

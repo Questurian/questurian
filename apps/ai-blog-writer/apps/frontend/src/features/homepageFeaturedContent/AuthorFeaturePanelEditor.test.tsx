@@ -57,8 +57,7 @@ const block: AuthorFeatureBlockResponse = {
       imageSquare: image,
       imageWide: image,
       imageAltReady: true,
-      spotlightNote: 'Local expat',
-      isEmphasized: true
+      spotlightNote: 'Local expat'
     }
   ]
 }
@@ -99,7 +98,7 @@ function renderEditor(
 }
 
 describe('AuthorFeaturePanelEditor', () => {
-  it('keeps a complete single-Author panel closed and hides main-portrait choice', async () => {
+  it('keeps a complete Author panel closed and exposes one Author selector', async () => {
     const user = userEvent.setup()
     renderEditor()
 
@@ -107,12 +106,12 @@ describe('AuthorFeaturePanelEditor', () => {
     expect(summary.closest('details')).not.toHaveAttribute('open')
 
     await user.click(summary)
-    expect(screen.queryByRole('radio', { name: 'Main portrait' })).toBeNull()
-    expect(screen.getByText('Single Author')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Author' })).toHaveValue('1')
     expect(
-      screen.getByRole('combobox', { name: 'Single Author treatment' })
+      screen.getByRole('combobox', { name: 'Portrait treatment' })
     ).toHaveValue('square')
-    expect(screen.queryByRole('option', { name: /Mixed/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Add Author' })).toBeNull()
+    expect(screen.queryByRole('radio')).toBeNull()
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: 'Use Alan portrait' })
@@ -120,21 +119,14 @@ describe('AuthorFeaturePanelEditor', () => {
     )
   })
 
-  it('requires an explicit image choice when adding a supporting Author', async () => {
+  it('replaces the Author and requires an explicit image choice', async () => {
     const user = userEvent.setup()
     const saveFields = renderEditor()
 
     await user.click(screen.getByText('Author feature panel'))
-    const authorSelect = await screen.findByRole('combobox', {
-      name: 'Add supporting Author'
-    })
+    const authorSelect = await screen.findByRole('combobox', { name: 'Author' })
     await user.selectOptions(authorSelect, '2')
-    await user.click(screen.getByRole('button', { name: 'Add Author' }))
 
-    expect(screen.getByText('Multiple Authors')).toBeInTheDocument()
-    expect(
-      screen.queryByRole('combobox', { name: 'Single Author treatment' })
-    ).toBeNull()
     expect(
       screen.getByText('Choose one of this Author’s uploaded images.')
     ).toBeInTheDocument()
@@ -152,30 +144,8 @@ describe('AuthorFeaturePanelEditor', () => {
     await waitFor(() => expect(saveFields).toHaveBeenCalledTimes(1))
     expect(saveFields).toHaveBeenCalledWith(
       expect.objectContaining({
-        authorCards: expect.arrayContaining([
-          expect.objectContaining({ author: 2, image: 22 })
-        ])
+        authorCards: [{ author: 2, image: 22, spotlightNote: null }]
       })
-    )
-  })
-
-  it('normalizes legacy mixed treatment to portrait for one Author', async () => {
-    const user = userEvent.setup()
-    const saveFields = vi.fn(async () => {})
-    renderEditor(saveFields, { ...block, imageStyle: 'mixed' })
-
-    await user.click(screen.getByText('Author feature panel'))
-    expect(
-      screen.getByRole('combobox', { name: 'Single Author treatment' })
-    ).toHaveValue('portrait')
-    await user.click(
-      screen.getByRole('button', { name: 'Save Author feature' })
-    )
-
-    await waitFor(() =>
-      expect(saveFields).toHaveBeenCalledWith(
-        expect.objectContaining({ imageStyle: 'portrait' })
-      )
     )
   })
 })

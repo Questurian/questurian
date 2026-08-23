@@ -127,12 +127,11 @@ export type AuthorFeatureCard = {
   imageSquare: EditorialFeatureImage | null;
   imageWide: EditorialFeatureImage | null;
   spotlightNote: string | null;
-  isEmphasized: boolean;
 };
 
 export type AuthorFeatureBlock = CityHomepageArticleBlock & {
   blockType: "author-feature";
-  imageStyle: "circle" | "square" | "portrait" | "mixed";
+  imageStyle: "circle" | "square" | "portrait";
   motionStyle: "none" | "subtle";
   authorCards: AuthorFeatureCard[];
 };

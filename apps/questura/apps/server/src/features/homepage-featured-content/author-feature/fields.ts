@@ -59,7 +59,6 @@ export type AuthorFeatureCardInput = {
   author: number
   image: number | null
   spotlightNote: string | null
-  isEmphasized: boolean
 }
 
 export function parseAuthorFeatureImageStyleBodyField(
@@ -93,12 +92,11 @@ export function parseAuthorFeatureCardsBodyField(
   if (!Array.isArray(body.authorCards)) {
     return { ok: false, message: 'authorCards must be an array.' }
   }
-  if (body.authorCards.length > 4) {
-    return { ok: false, message: 'authorCards may contain at most 4 Authors.' }
+  if (body.authorCards.length > 1) {
+    return { ok: false, message: 'Author Feature supports exactly one Author.' }
   }
 
   const cards: AuthorFeatureCardInput[] = []
-  const seenAuthors = new Set<number>()
   for (const raw of body.authorCards) {
     if (typeof raw !== 'object' || raw === null) {
       return { ok: false, message: 'Every authorCards entry must be an object.' }
@@ -106,17 +104,11 @@ export function parseAuthorFeatureCardsBodyField(
     const item = raw as Record<string, unknown>
     const author = intId(item.author)
     if (!author) return { ok: false, message: 'Every authorCards entry needs an author id.' }
-    if (seenAuthors.has(author)) {
-      return { ok: false, message: 'authorCards cannot contain the same Author twice.' }
-    }
-    seenAuthors.add(author)
-
     const note = typeof item.spotlightNote === 'string' ? item.spotlightNote.trim() : ''
     cards.push({
       author,
       image: intId(item.image),
       spotlightNote: note ? note.slice(0, AUTHOR_FEATURE_SPOTLIGHT_NOTE_MAX) : null,
-      isEmphasized: item.isEmphasized === true,
     })
   }
 

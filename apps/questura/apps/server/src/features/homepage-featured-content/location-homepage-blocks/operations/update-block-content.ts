@@ -15,7 +15,11 @@ import {
   isValidRequestedSlotCount,
   resolveStoredSlotCountForBlockType,
 } from '../../slot-count/service'
-import { applyBlockFieldUpdates, applyBlockItemsUpdate } from '../lib/apply-block-update'
+import {
+  applyBlockFieldUpdates,
+  applyBlockItemsUpdate,
+  validateUpdatedAuthorFeatureItems,
+} from '../lib/apply-block-update'
 import { parseBlockUpdateBody, validateBlockUpdateFields } from '../lib/parse-block-update'
 import type { FormattedLocationHomepage, LocationHomepageBlocksOperationResult } from '../types'
 
@@ -84,11 +88,23 @@ export async function updateLocationHomepageBlockContent(
   }
 
   const updatedBlocks = [...rawBlocks]
+  const blockWithFieldUpdates = applyBlockFieldUpdates(
+    { ...block, slotCount: blockSlotCount },
+    parsed.input.fields,
+  )
+  if (authorCards.ok && !authorCards.omit) {
+    const authorItemsError = await validateUpdatedAuthorFeatureItems(
+      payload,
+      blockWithFieldUpdates,
+      parsed.input.hasItems ? parsed.input.items : block.items,
+    )
+    if (authorItemsError) return { status: 400, body: { message: authorItemsError } }
+  }
 
   if (parsed.input.hasItems) {
     const itemUpdate = await applyBlockItemsUpdate(
       payload,
-      block,
+      block.blockType === 'author-feature' ? blockWithFieldUpdates : block,
       parsed.input.items,
       blockSlotCount,
       locationGridScope,
@@ -100,10 +116,7 @@ export async function updateLocationHomepageBlockContent(
 
     updatedBlocks[blockIndex] = applyBlockFieldUpdates(itemUpdate.block, parsed.input.fields)
   } else {
-    updatedBlocks[blockIndex] = applyBlockFieldUpdates(
-      { ...block, slotCount: blockSlotCount },
-      parsed.input.fields,
-    )
+    updatedBlocks[blockIndex] = blockWithFieldUpdates
   }
 
   const updated = await updateLocationHomepage(payload, id, updatedBlocks, 0)

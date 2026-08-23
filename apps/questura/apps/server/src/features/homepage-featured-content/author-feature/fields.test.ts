@@ -14,7 +14,6 @@ describe('Author Feature fields', () => {
             author: 3,
             image: 1101,
             spotlightNote: ' Local expat ',
-            isEmphasized: true,
           },
         ],
       }),
@@ -26,10 +25,20 @@ describe('Author Feature fields', () => {
           author: 3,
           image: 1101,
           spotlightNote: 'Local expat',
-          isEmphasized: true,
         },
       ],
     })
+  })
+
+  it('rejects more than one Author', () => {
+    expect(
+      parseAuthorFeatureCardsBodyField({
+        authorCards: [
+          { author: 3, image: 1101 },
+          { author: 4, image: 2202 },
+        ],
+      }),
+    ).toEqual({ ok: false, message: 'Author Feature supports exactly one Author.' })
   })
 
   it('rejects selecting an image not attached to that Author', async () => {
@@ -45,7 +54,6 @@ describe('Author Feature fields', () => {
           author: 3,
           image: 2202,
           spotlightNote: null,
-          isEmphasized: true,
         },
       ]),
     ).resolves.toBe('Author Feature card 1 image must be one of that Author’s uploaded images.')
@@ -64,7 +72,6 @@ describe('Author Feature fields', () => {
           author: 3,
           image: 1101,
           spotlightNote: null,
-          isEmphasized: true,
         },
       ]),
     ).resolves.toBeNull()

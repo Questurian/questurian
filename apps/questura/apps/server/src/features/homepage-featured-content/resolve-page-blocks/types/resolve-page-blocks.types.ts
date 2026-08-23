@@ -26,6 +26,9 @@ export type RawBlock = {
   featureDescription?: string | null
   featureMediaSet?: unknown
   linkedLocation?: unknown
+  imageStyle?: unknown
+  motionStyle?: unknown
+  authorCards?: unknown
   items?: unknown
 }
 

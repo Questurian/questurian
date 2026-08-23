@@ -89,7 +89,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'author-feature': {
     label: 'Author Feature',
     description:
-      'One to four Authors with styled portraits and their articles beside them',
+      'One Author with a styled portrait and their articles beside them',
     frontendReadySlotCounts: 'all',
     quickSlotCounts: [1, 2, 3, 4, 6],
     defaultSlotCount: 3,

@@ -89,7 +89,7 @@ export type EditorialFeatureBlockResponse = {
   linkWarning: string | null
 }
 
-export type AuthorFeatureImageStyle = 'circle' | 'square' | 'portrait' | 'mixed'
+export type AuthorFeatureImageStyle = 'circle' | 'square' | 'portrait'
 export type AuthorFeatureMotionStyle = 'none' | 'subtle'
 
 export type AuthorFeatureCard = {
@@ -107,7 +107,6 @@ export type AuthorFeatureCard = {
   imageWide: EditorialFeaturePublicImage | null
   imageAltReady: boolean
   spotlightNote: string | null
-  isEmphasized: boolean
 }
 
 export type AuthorFeatureBlockResponse = {

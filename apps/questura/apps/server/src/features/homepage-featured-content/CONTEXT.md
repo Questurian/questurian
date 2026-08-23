@@ -91,11 +91,7 @@ A page block combining one Editorial feature panel with a Related article rail. 
 
 ### Author Feature
 
-A page block combining one to four Author spotlights with a Related article rail. Each person image, name, and supporting copy links to that Author page; the block may visually emphasize one selected Author within the group.
-
-### Emphasized Author
-
-The main Author within an Author Feature. Editors may choose one from the selected Authors; if omitted, the first selected Author is treated as emphasized.
+A page block combining exactly one Author spotlight with a Related article rail. The portrait, name, and biography link to that Author page; optional homepage note and expertise label provide supporting context.
 
 ### Author images
 

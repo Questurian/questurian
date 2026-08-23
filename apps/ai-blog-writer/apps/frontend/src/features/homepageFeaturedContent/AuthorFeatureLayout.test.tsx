@@ -61,8 +61,7 @@ const block: AuthorFeatureBlockResponse = {
       imageSquare: image,
       imageWide: image,
       imageAltReady: true,
-      spotlightNote: 'Local expat',
-      isEmphasized: true
+      spotlightNote: 'Local expat'
     }
   ]
 }

@@ -19,7 +19,7 @@ export function getAuthorFeaturePublishBlockers(
   const blockers: string[] = []
 
   if (cards.length === 0) blockers.push(`${prefix} is missing Author cards.`)
-  if (cards.length > 4) blockers.push(`${prefix} has more than 4 Author cards.`)
+  if (cards.length > 1) blockers.push(`${prefix} has more than one Author.`)
 
   cards.forEach((card, index) => {
     if (!isRecord(card)) {

@@ -22,7 +22,6 @@ export type AuthorFeatureCardUpdate = {
   author: number
   image: number | null
   spotlightNote: string | null
-  isEmphasized: boolean
 }
 
 export type AuthorFeatureFieldsUpdate = {

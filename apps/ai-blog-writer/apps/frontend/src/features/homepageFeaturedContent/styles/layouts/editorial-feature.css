@@ -175,19 +175,6 @@
   font-size: 10px;
 }
 
-.hf-author-feature-panel-copy ul {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 14px;
-  margin: 18px 0 0;
-  padding: 14px 0 0;
-  border-top: 1px solid #d1c9bc;
-  color: #2d2925;
-  font-family: Georgia, serif;
-  font-size: 13px;
-  list-style: none;
-}
 .hf-editorial-feature-rail {
   border-left: 1px solid #1a1a1a;
   padding-left: 22px;
@@ -245,32 +232,6 @@
   font-size: 22px;
 }
 
-.hf-author-feature-card-list {
-  display: grid;
-  gap: 14px;
-  margin: 16px 0;
-}
-
-.hf-author-feature-mode {
-  display: grid;
-  gap: 3px;
-  padding: 12px 0;
-  border-top: 1px solid #d1c9bc;
-  border-bottom: 1px solid #d1c9bc;
-}
-
-.hf-author-feature-mode strong {
-  color: #3b5bdb;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.hf-author-feature-mode span {
-  color: #6d665d;
-  font-size: 12px;
-}
-
 .hf-author-feature-card-editor {
   display: grid;
   gap: 14px;
@@ -306,13 +267,6 @@
   font-size: 20px;
 }
 
-.hf-author-feature-emphasis {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  font-weight: 700;
-}
-
 .hf-author-feature-image-picker {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
@@ -329,8 +283,7 @@
 }
 
 .hf-author-feature-image-fieldset legend,
-.hf-author-feature-note > span,
-.hf-author-feature-add-row label > span {
+.hf-author-feature-note > span {
   margin-bottom: 7px;
   color: #2d2925;
   font-size: 12px;
@@ -398,29 +351,6 @@
   resize: vertical;
 }
 
-.hf-author-feature-remove {
-  justify-self: start;
-}
-
-.hf-author-feature-add-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-}
-
-.hf-author-feature-add-row label {
-  display: grid;
-}
-
-.hf-author-feature-add-row select {
-  width: 100%;
-  border: 1px solid #b9b1a5;
-  background: #f5f0e8;
-  padding: 10px;
-  color: #1a1a1a;
-}
-
 @media (max-width: 950px) {
   .hf-editorial-feature-preview {
     grid-template-columns: 1fr 1fr;
@@ -449,12 +379,8 @@
     grid-template-columns: 1fr;
   }
 
-  .hf-author-feature-card-header,
-  .hf-author-feature-add-row {
-    grid-template-columns: 1fr;
-  }
-
   .hf-author-feature-card-header {
     display: grid;
+    grid-template-columns: 1fr;
   }
 }

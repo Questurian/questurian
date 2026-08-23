@@ -139,7 +139,7 @@ export const Authors: CollectionConfig = {
       type: 'array',
       admin: {
         description:
-          'Public MediaSets available for Author Feature homepage treatments. Upload/manage these from the ABW profile editor.',
+          'Public MediaSets available when this Author is selected for an Author Feature. Upload/manage these from the ABW profile editor.',
       },
       fields: [
         {
