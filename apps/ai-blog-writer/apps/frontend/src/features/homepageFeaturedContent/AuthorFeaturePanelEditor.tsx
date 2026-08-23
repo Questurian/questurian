@@ -164,7 +164,14 @@ export default function AuthorFeaturePanelEditor({
   )
   const profileExpertise = selectedAuthor?.expertise?.length
     ? selectedAuthor.expertise.map((entry) => entry.area)
-    : (savedAuthor?.author.expertise ?? [])
+    : savedAuthor && savedAuthor.author.id === draftAuthor?.authorId
+      ? savedAuthor.author.expertise
+      : []
+  const profileBio =
+    selectedAuthor?.bio ??
+    (savedAuthor && savedAuthor.author.id === draftAuthor?.authorId
+      ? savedAuthor.author.bio
+      : null)
   const currentFields = (): AuthorFeatureFieldsUpdate =>
     draftAuthor
       ? fieldsFromDraft(draftAuthor, imageStyle, {
@@ -188,6 +195,8 @@ export default function AuthorFeaturePanelEditor({
         ? { authorId: id, image: null, spotlightNote: '' }
         : null
     )
+    setDescriptionMode('profile')
+    setCustomDescription('')
     setExpertiseMode('profile')
     setSelectedExpertise([])
   }
@@ -399,9 +408,7 @@ export default function AuthorFeaturePanelEditor({
                 </label>
               ) : (
                 <p className="staff-muted">
-                  {selectedAuthor?.bio ??
-                    savedAuthor?.author.bio ??
-                    'No profile bio yet.'}
+                  {profileBio ?? 'No profile bio yet.'}
                 </p>
               )}
             </fieldset>

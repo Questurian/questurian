@@ -197,11 +197,29 @@ describe('AuthorFeaturePanelEditor', () => {
 
   it('replaces the Author and requires an explicit image choice', async () => {
     const user = userEvent.setup()
-    const saveFields = renderEditor()
+    const saveFields = renderEditor(vi.fn(async () => {}), {
+      ...block,
+      descriptionMode: 'custom',
+      sectionSubheading: 'Previous Author description.'
+    })
 
     await user.click(screen.getByText('Author feature panel'))
+    expect(
+      screen.getByRole('radio', { name: 'Write custom description' })
+    ).toBeChecked()
     const authorSelect = await screen.findByRole('combobox', { name: 'Author' })
     await user.selectOptions(authorSelect, '2')
+
+    expect(
+      screen.getByRole('radio', { name: 'Use bio from profile' })
+    ).toBeChecked()
+    expect(screen.getByText('No profile bio yet.')).toBeInTheDocument()
+    expect(screen.queryByText('Local guide.')).toBeNull()
+    await user.click(
+      screen.getByRole('radio', { name: 'Choose expertise to show' })
+    )
+    expect(screen.getByText('No profile expertise yet.')).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: 'Lima' })).toBeNull()
 
     expect(
       screen.getByText('Choose one of this Author’s uploaded images.')

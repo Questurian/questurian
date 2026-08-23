@@ -140,6 +140,9 @@ export async function resolveAuthorFeatureFields(
               .map((entry) => (isRecord(entry) ? text(entry.area) : null))
               .filter((entry): entry is string => Boolean(entry))
           : []
+        const validExpertiseSelection = profileExpertise.filter((entry) =>
+          expertiseSelection.includes(entry),
+        )
 
         return {
           author: {
@@ -151,7 +154,8 @@ export async function resolveAuthorFeatureFields(
             expertise: profileExpertise,
           },
           displayDescription: descriptionMode === 'custom' ? customDescription : bio,
-          displayExpertise: expertiseMode === 'selected' ? expertiseSelection : profileExpertise,
+          displayExpertise:
+            expertiseMode === 'selected' ? validExpertiseSelection : profileExpertise,
           imageMediaSetId: imageId,
           image: selectedMediaSet
             ? resolveMediaSetForPlacement(selectedMediaSet, 'portrait-card')
@@ -169,7 +173,7 @@ export async function resolveAuthorFeatureFields(
         return {
           author: { id: authorId, name: null, slug: null, href: null, bio: null, expertise: [] },
           displayDescription: descriptionMode === 'custom' ? customDescription : null,
-          displayExpertise: expertiseMode === 'selected' ? expertiseSelection : [],
+          displayExpertise: [],
           imageMediaSetId: null,
           image: null,
           imageSquare: null,
@@ -181,12 +185,16 @@ export async function resolveAuthorFeatureFields(
     }),
   )
 
+  const authorCard = cards.find(Boolean) ?? null
+
   return {
     imageStyle: selectedStyle(block.imageStyle),
     motionStyle: selectedMotion(block.motionStyle),
     descriptionMode,
     expertiseMode,
-    selectedExpertise: expertiseSelection,
-    authorCard: cards.find(Boolean) ?? null,
+    selectedExpertise: authorCard
+      ? authorCard.author.expertise.filter((entry) => expertiseSelection.includes(entry))
+      : [],
+    authorCard,
   }
 }

@@ -24,7 +24,7 @@ describe('resolveAuthorFeatureFields', () => {
       descriptionMode: 'custom',
       sectionSubheading: 'Custom homepage description.',
       expertiseMode: 'selected',
-      selectedExpertise: [{ area: 'Digital Nomad' }],
+      selectedExpertise: [{ area: 'Digital Nomad' }, { area: 'Invented Expertise' }],
     })
 
     expect(resolved.authorCard).toEqual(
@@ -33,6 +33,7 @@ describe('resolveAuthorFeatureFields', () => {
         displayExpertise: ['Digital Nomad'],
       }),
     )
+    expect(resolved.selectedExpertise).toEqual(['Digital Nomad'])
   })
 
   it('uses profile bio and expertise by default', async () => {
