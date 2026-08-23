@@ -47,9 +47,11 @@ export default function AuthorFeatureLayout({
         <p>{block.sectionHeading || 'Author spotlight'}</p>
         <h3>{author?.author.name || 'Choose an Author'}</h3>
         {author?.spotlightNote ? <small>{author.spotlightNote}</small> : null}
-        <div>{author?.author.bio || 'Author bio appears here.'}</div>
-        {author?.author.expertise.length ? (
-          <b>{author.author.expertise.slice(0, 3).join(' / ')}</b>
+        <div>
+          {author?.displayDescription || 'Author description appears here.'}
+        </div>
+        {author?.displayExpertise.length ? (
+          <b>{author.displayExpertise.join(' / ')}</b>
         ) : null}
       </div>
       <CuratedSlotSwapProvider slots={slots} onReorder={onReorder}>

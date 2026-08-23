@@ -4,8 +4,12 @@ import { resolveMediaSetForPlacement } from '@/features/media/lib/resolve-public
 import type { PayloadInstance } from '@/types'
 
 import {
+  DEFAULT_AUTHOR_FEATURE_DESCRIPTION_MODE,
+  DEFAULT_AUTHOR_FEATURE_EXPERTISE_MODE,
   DEFAULT_AUTHOR_FEATURE_IMAGE_STYLE,
   DEFAULT_AUTHOR_FEATURE_MOTION_STYLE,
+  type AuthorFeatureDescriptionMode,
+  type AuthorFeatureExpertiseMode,
   type AuthorFeatureImageStyle,
   type AuthorFeatureMotionStyle,
 } from './constants'
@@ -58,6 +62,21 @@ function selectedMotion(value: unknown): AuthorFeatureMotionStyle {
   return value === 'none' || value === 'subtle' ? value : DEFAULT_AUTHOR_FEATURE_MOTION_STYLE
 }
 
+function selectedDescriptionMode(value: unknown): AuthorFeatureDescriptionMode {
+  return value === 'custom' ? value : DEFAULT_AUTHOR_FEATURE_DESCRIPTION_MODE
+}
+
+function selectedExpertiseMode(value: unknown): AuthorFeatureExpertiseMode {
+  return value === 'selected' ? value : DEFAULT_AUTHOR_FEATURE_EXPERTISE_MODE
+}
+
+function selectedExpertise(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((entry) => (isRecord(entry) ? text(entry.area) : null))
+    .filter((entry): entry is string => Boolean(entry))
+}
+
 export function authorIdsFromAuthorFeatureBlock(block: Record<string, unknown>): number[] {
   const cards = Array.isArray(block.authorCards) ? block.authorCards : []
   const id = isRecord(cards[0]) ? relationshipId(cards[0].author) : null
@@ -91,6 +110,10 @@ export async function resolveAuthorFeatureFields(
 ) {
   const rawCards = Array.isArray(block.authorCards) ? block.authorCards : []
   const selectedCard = rawCards[0]
+  const descriptionMode = selectedDescriptionMode(block.descriptionMode)
+  const expertiseMode = selectedExpertiseMode(block.expertiseMode)
+  const expertiseSelection = selectedExpertise(block.selectedExpertise)
+  const customDescription = text(block.sectionSubheading)
 
   const cards = await Promise.all(
     (selectedCard ? [selectedCard] : []).map(async (rawCard) => {
@@ -111,6 +134,12 @@ export async function resolveAuthorFeatureFields(
           ? (images.find((mediaSet) => relationshipId(mediaSet) === selectedImageId) ?? null)
           : null
         const imageId = selectedMediaSet ? relationshipId(selectedMediaSet) : null
+        const bio = text(author.bio)
+        const profileExpertise = Array.isArray(author.expertise)
+          ? author.expertise
+              .map((entry) => (isRecord(entry) ? text(entry.area) : null))
+              .filter((entry): entry is string => Boolean(entry))
+          : []
 
         return {
           author: {
@@ -118,13 +147,11 @@ export async function resolveAuthorFeatureFields(
             name: text(author.displayName),
             slug: text(author.slug),
             href: publicAuthorHref(text(author.slug)),
-            bio: text(author.bio),
-            expertise: Array.isArray(author.expertise)
-              ? author.expertise
-                  .map((entry) => (isRecord(entry) ? text(entry.area) : null))
-                  .filter(Boolean)
-              : [],
+            bio,
+            expertise: profileExpertise,
           },
+          displayDescription: descriptionMode === 'custom' ? customDescription : bio,
+          displayExpertise: expertiseMode === 'selected' ? expertiseSelection : profileExpertise,
           imageMediaSetId: imageId,
           image: selectedMediaSet
             ? resolveMediaSetForPlacement(selectedMediaSet, 'portrait-card')
@@ -141,6 +168,8 @@ export async function resolveAuthorFeatureFields(
       } catch {
         return {
           author: { id: authorId, name: null, slug: null, href: null, bio: null, expertise: [] },
+          displayDescription: descriptionMode === 'custom' ? customDescription : null,
+          displayExpertise: expertiseMode === 'selected' ? expertiseSelection : [],
           imageMediaSetId: null,
           image: null,
           imageSquare: null,
@@ -155,6 +184,9 @@ export async function resolveAuthorFeatureFields(
   return {
     imageStyle: selectedStyle(block.imageStyle),
     motionStyle: selectedMotion(block.motionStyle),
+    descriptionMode,
+    expertiseMode,
+    selectedExpertise: expertiseSelection,
     authorCard: cards.find(Boolean) ?? null,
   }
 }

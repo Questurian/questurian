@@ -1,5 +1,7 @@
 import type { LocationGridMediaAspect } from '../../locationGridTypes'
 import type {
+  AuthorFeatureDescriptionMode,
+  AuthorFeatureExpertiseMode,
   AuthorFeatureImageStyle,
   AuthorFeatureMotionStyle,
   ArticleGridFourLayout,
@@ -26,6 +28,11 @@ export type AuthorFeatureCardUpdate = {
 
 export type AuthorFeatureFieldsUpdate = {
   authorCards?: [AuthorFeatureCardUpdate]
+  sectionHeading?: string | null
+  sectionSubheading?: string | null
+  descriptionMode?: AuthorFeatureDescriptionMode
+  expertiseMode?: AuthorFeatureExpertiseMode
+  selectedExpertise?: string[]
   imageStyle?: AuthorFeatureImageStyle
   motionStyle?: AuthorFeatureMotionStyle
 }

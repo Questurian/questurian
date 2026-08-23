@@ -40,6 +40,7 @@ import * as migration_20260822_204353_location_grid_card_descriptions from './20
 import * as migration_20260822_224713_location_grid_card_kickers from './20260822_224713_location_grid_card_kickers'
 import * as migration_20260823_143937_add_author_feature_images_and_block from './20260823_143937_add_author_feature_images_and_block'
 import * as migration_20260823_212107_single_author_feature from './20260823_212107_single_author_feature'
+import * as migration_20260823_225423_author_feature_editable_copy from './20260823_225423_author_feature_editable_copy'
 
 export const migrations = [
   {
@@ -251,5 +252,10 @@ export const migrations = [
     up: migration_20260823_212107_single_author_feature.up,
     down: migration_20260823_212107_single_author_feature.down,
     name: '20260823_212107_single_author_feature',
+  },
+  {
+    up: migration_20260823_225423_author_feature_editable_copy.up,
+    down: migration_20260823_225423_author_feature_editable_copy.down,
+    name: '20260823_225423_author_feature_editable_copy',
   },
 ]

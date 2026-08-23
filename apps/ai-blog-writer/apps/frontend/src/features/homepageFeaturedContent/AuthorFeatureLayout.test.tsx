@@ -46,6 +46,9 @@ const block: AuthorFeatureBlockResponse = {
   sectionSubheading: null,
   imageStyle: 'square',
   motionStyle: 'subtle',
+  descriptionMode: 'custom',
+  expertiseMode: 'selected',
+  selectedExpertise: ['Digital Nomad'],
   authorCard: {
     author: {
       id: 1,
@@ -55,6 +58,8 @@ const block: AuthorFeatureBlockResponse = {
       bio: 'Local guide.',
       expertise: ['Lima', 'Restaurants']
     },
+    displayDescription: 'Custom homepage description.',
+    displayExpertise: ['Digital Nomad'],
     imageMediaSetId: 11,
     image,
     imageSquare: image,
@@ -85,7 +90,9 @@ describe('AuthorFeatureLayout', () => {
     expect(container.firstChild).toHaveClass('hf-author-feature-preview')
     expect(screen.getByText('Author spotlight')).toBeInTheDocument()
     expect(screen.getByText('Alan Malpartida')).toBeInTheDocument()
-    expect(screen.getByText('Local guide.')).toBeInTheDocument()
+    expect(screen.getByText('Custom homepage description.')).toBeInTheDocument()
+    expect(screen.getByText('Digital Nomad')).toBeInTheDocument()
+    expect(screen.queryByText('Lima / Restaurants')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /Second guide/i }))
     expect(onSlotClick).toHaveBeenCalledWith(1)

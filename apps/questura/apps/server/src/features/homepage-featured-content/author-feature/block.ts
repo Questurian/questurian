@@ -6,10 +6,16 @@ import {
 } from '../resolve-page-blocks/lib/section-heading'
 import { HOMEPAGE_FEATURED_CONTENT_COLLECTIONS } from '../types'
 import {
+  AUTHOR_FEATURE_DESCRIPTION_MODES,
+  AUTHOR_FEATURE_EXPERTISE_AREA_MAX,
+  AUTHOR_FEATURE_EXPERTISE_MODES,
   AUTHOR_FEATURE_MOTION_STYLES,
+  AUTHOR_FEATURE_SELECTED_EXPERTISE_MAX,
   AUTHOR_FEATURE_SLOT_COUNTS,
   AUTHOR_FEATURE_SPOTLIGHT_NOTE_MAX,
   AUTHOR_FEATURE_STORED_IMAGE_STYLES,
+  DEFAULT_AUTHOR_FEATURE_DESCRIPTION_MODE,
+  DEFAULT_AUTHOR_FEATURE_EXPERTISE_MODE,
   DEFAULT_AUTHOR_FEATURE_IMAGE_STYLE,
   DEFAULT_AUTHOR_FEATURE_MOTION_STYLE,
 } from './constants'
@@ -61,6 +67,34 @@ export const AuthorFeatureBlock: Block = {
       defaultValue: DEFAULT_AUTHOR_FEATURE_MOTION_STYLE,
       options: AUTHOR_FEATURE_MOTION_STYLES.map((value) => ({ label: value, value })),
       admin: { description: 'Public motion treatment.' },
+    },
+    {
+      name: 'descriptionMode',
+      type: 'select',
+      defaultValue: DEFAULT_AUTHOR_FEATURE_DESCRIPTION_MODE,
+      options: AUTHOR_FEATURE_DESCRIPTION_MODES.map((value) => ({ label: value, value })),
+      admin: { description: 'Use the Author profile bio or custom homepage description.' },
+    },
+    {
+      name: 'expertiseMode',
+      type: 'select',
+      defaultValue: DEFAULT_AUTHOR_FEATURE_EXPERTISE_MODE,
+      options: AUTHOR_FEATURE_EXPERTISE_MODES.map((value) => ({ label: value, value })),
+      admin: { description: 'Use all profile expertise or an editor-selected subset.' },
+    },
+    {
+      name: 'selectedExpertise',
+      type: 'array',
+      maxRows: AUTHOR_FEATURE_SELECTED_EXPERTISE_MAX,
+      admin: { description: 'Expertise labels selected for this homepage feature.' },
+      fields: [
+        {
+          name: 'area',
+          type: 'text',
+          required: true,
+          maxLength: AUTHOR_FEATURE_EXPERTISE_AREA_MAX,
+        },
+      ],
     },
     {
       name: 'authorCards',

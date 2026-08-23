@@ -122,6 +122,8 @@ export type AuthorFeatureCard = {
     bio: string | null;
     expertise: string[];
   };
+  displayDescription: string | null;
+  displayExpertise: string[];
   imageMediaSetId: number | null;
   image: EditorialFeatureImage | null;
   imageSquare: EditorialFeatureImage | null;

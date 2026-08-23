@@ -18,6 +18,9 @@ export type ApiCuratedBlock = {
   linkedLocation?: unknown
   imageStyle?: unknown
   motionStyle?: unknown
+  descriptionMode?: unknown
+  expertiseMode?: unknown
+  selectedExpertise?: unknown
   authorCard?: unknown
 }
 

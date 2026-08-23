@@ -28,6 +28,9 @@ export type RawBlock = {
   linkedLocation?: unknown
   imageStyle?: unknown
   motionStyle?: unknown
+  descriptionMode?: unknown
+  expertiseMode?: unknown
+  selectedExpertise?: unknown
   authorCards?: unknown
   items?: unknown
 }

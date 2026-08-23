@@ -27,6 +27,8 @@ export type {
   ArticleCuratedHomepageBlockResponse,
   AuthorFeatureBlockResponse,
   AuthorFeatureCard,
+  AuthorFeatureDescriptionMode,
+  AuthorFeatureExpertiseMode,
   AuthorFeatureImageStyle,
   AuthorFeatureMotionStyle,
   ArticleGridBlockResponse,

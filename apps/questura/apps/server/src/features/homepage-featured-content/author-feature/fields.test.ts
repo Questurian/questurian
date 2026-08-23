@@ -2,10 +2,37 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   parseAuthorFeatureCardsBodyField,
+  parseAuthorFeatureDescriptionModeBodyField,
+  parseAuthorFeatureExpertiseModeBodyField,
+  parseAuthorFeatureSelectedExpertiseBodyField,
   validateAuthorFeatureCardImageSelections,
 } from './fields'
 
 describe('Author Feature fields', () => {
+  it('accepts a custom description mode', () => {
+    expect(parseAuthorFeatureDescriptionModeBodyField({ descriptionMode: 'custom' })).toEqual({
+      ok: true,
+      omit: false,
+      value: 'custom',
+    })
+  })
+
+  it('accepts a trimmed subset of profile expertise', () => {
+    expect(
+      parseAuthorFeatureSelectedExpertiseBodyField({
+        selectedExpertise: [' Digital Nomad ', 'Digital Nomad', ''],
+      }),
+    ).toEqual({ ok: true, omit: false, value: [{ area: 'Digital Nomad' }] })
+  })
+
+  it('accepts selecting individual expertise labels', () => {
+    expect(parseAuthorFeatureExpertiseModeBodyField({ expertiseMode: 'selected' })).toEqual({
+      ok: true,
+      omit: false,
+      value: 'selected',
+    })
+  })
+
   it('accepts one Author with one explicitly selected image', () => {
     expect(
       parseAuthorFeatureCardsBodyField({

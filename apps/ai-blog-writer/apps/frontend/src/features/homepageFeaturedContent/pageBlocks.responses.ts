@@ -91,6 +91,8 @@ export type EditorialFeatureBlockResponse = {
 
 export type AuthorFeatureImageStyle = 'circle' | 'square' | 'portrait'
 export type AuthorFeatureMotionStyle = 'none' | 'subtle'
+export type AuthorFeatureDescriptionMode = 'profile' | 'custom'
+export type AuthorFeatureExpertiseMode = 'profile' | 'selected'
 
 export type AuthorFeatureCard = {
   author: {
@@ -101,6 +103,8 @@ export type AuthorFeatureCard = {
     bio: string | null
     expertise: string[]
   }
+  displayDescription: string | null
+  displayExpertise: string[]
   imageMediaSetId: number | null
   image: EditorialFeaturePublicImage | null
   imageSquare: EditorialFeaturePublicImage | null
@@ -117,6 +121,9 @@ export type AuthorFeatureBlockResponse = {
   sectionSubheading: string | null
   imageStyle: AuthorFeatureImageStyle
   motionStyle: AuthorFeatureMotionStyle
+  descriptionMode: AuthorFeatureDescriptionMode
+  expertiseMode: AuthorFeatureExpertiseMode
+  selectedExpertise: string[]
   authorCard: AuthorFeatureCard | null
 }
 

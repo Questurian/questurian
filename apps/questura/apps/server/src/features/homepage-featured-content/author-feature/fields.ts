@@ -1,9 +1,17 @@
 import {
+  AUTHOR_FEATURE_DESCRIPTION_MODES,
+  AUTHOR_FEATURE_EXPERTISE_AREA_MAX,
+  AUTHOR_FEATURE_EXPERTISE_MODES,
   AUTHOR_FEATURE_IMAGE_STYLES,
   AUTHOR_FEATURE_MOTION_STYLES,
+  AUTHOR_FEATURE_SELECTED_EXPERTISE_MAX,
   AUTHOR_FEATURE_SPOTLIGHT_NOTE_MAX,
+  DEFAULT_AUTHOR_FEATURE_DESCRIPTION_MODE,
+  DEFAULT_AUTHOR_FEATURE_EXPERTISE_MODE,
   DEFAULT_AUTHOR_FEATURE_IMAGE_STYLE,
   DEFAULT_AUTHOR_FEATURE_MOTION_STYLE,
+  type AuthorFeatureDescriptionMode,
+  type AuthorFeatureExpertiseMode,
   type AuthorFeatureImageStyle,
   type AuthorFeatureMotionStyle,
 } from './constants'
@@ -83,6 +91,50 @@ export function parseAuthorFeatureMotionStyleBodyField(
   )
 }
 
+export function parseAuthorFeatureDescriptionModeBodyField(
+  body: Record<string, unknown>,
+): ParseResult<AuthorFeatureDescriptionMode> {
+  return parseStyle(
+    body,
+    'descriptionMode',
+    AUTHOR_FEATURE_DESCRIPTION_MODES,
+    DEFAULT_AUTHOR_FEATURE_DESCRIPTION_MODE,
+  )
+}
+
+export function parseAuthorFeatureExpertiseModeBodyField(
+  body: Record<string, unknown>,
+): ParseResult<AuthorFeatureExpertiseMode> {
+  return parseStyle(
+    body,
+    'expertiseMode',
+    AUTHOR_FEATURE_EXPERTISE_MODES,
+    DEFAULT_AUTHOR_FEATURE_EXPERTISE_MODE,
+  )
+}
+
+export function parseAuthorFeatureSelectedExpertiseBodyField(
+  body: Record<string, unknown>,
+): ParseResult<{ area: string }[]> {
+  if (!Object.prototype.hasOwnProperty.call(body, 'selectedExpertise')) {
+    return { ok: true, omit: true }
+  }
+  if (!Array.isArray(body.selectedExpertise)) {
+    return { ok: false, message: 'selectedExpertise must be an array.' }
+  }
+
+  const value = [
+    ...new Set(
+      body.selectedExpertise
+        .map((entry) => (typeof entry === 'string' ? entry.trim() : ''))
+        .filter(Boolean)
+        .map((entry) => entry.slice(0, AUTHOR_FEATURE_EXPERTISE_AREA_MAX)),
+    ),
+  ].slice(0, AUTHOR_FEATURE_SELECTED_EXPERTISE_MAX)
+
+  return { ok: true, omit: false, value: value.map((area) => ({ area })) }
+}
+
 export function parseAuthorFeatureCardsBodyField(
   body: Record<string, unknown>,
 ): ParseResult<AuthorFeatureCardInput[]> {
@@ -117,13 +169,19 @@ export function parseAuthorFeatureCardsBodyField(
 
 export function hasAuthorFeatureFieldUpdates(fields: {
   authorCards: ParseResult<AuthorFeatureCardInput[]>
+  descriptionMode: ParseResult<AuthorFeatureDescriptionMode>
+  expertiseMode: ParseResult<AuthorFeatureExpertiseMode>
   imageStyle: ParseResult<AuthorFeatureImageStyle>
   motionStyle: ParseResult<AuthorFeatureMotionStyle>
+  selectedExpertise: ParseResult<{ area: string }[]>
 }): boolean {
   return (
     (fields.authorCards.ok && !fields.authorCards.omit) ||
+    (fields.descriptionMode.ok && !fields.descriptionMode.omit) ||
+    (fields.expertiseMode.ok && !fields.expertiseMode.omit) ||
     (fields.imageStyle.ok && !fields.imageStyle.omit) ||
-    (fields.motionStyle.ok && !fields.motionStyle.omit)
+    (fields.motionStyle.ok && !fields.motionStyle.omit) ||
+    (fields.selectedExpertise.ok && !fields.selectedExpertise.omit)
   )
 }
 

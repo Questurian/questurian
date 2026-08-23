@@ -91,7 +91,7 @@ A page block combining one Editorial feature panel with a Related article rail. 
 
 ### Author Feature
 
-A page block combining exactly one Author spotlight with a Related article rail. The portrait, name, and biography link to that Author page; optional homepage note and expertise label provide supporting context.
+A page block combining exactly one Author spotlight with a Related article rail. The Author name remains profile-owned. Editors may customize the spotlight kicker, use the profile bio or write a homepage-only description, and show all profile expertise or an explicitly selected subset. The portrait, name, and description link to that Author page; the optional homepage note provides additional context.
 
 ### Author images
 

@@ -2,8 +2,11 @@ import { parseArticleGridFourLayoutBodyField } from '../../article-grid/service'
 import {
   hasAuthorFeatureFieldUpdates,
   parseAuthorFeatureCardsBodyField,
+  parseAuthorFeatureDescriptionModeBodyField,
+  parseAuthorFeatureExpertiseModeBodyField,
   parseAuthorFeatureImageStyleBodyField,
   parseAuthorFeatureMotionStyleBodyField,
+  parseAuthorFeatureSelectedExpertiseBodyField,
 } from '../../author-feature/service'
 import {
   parseSlot3LayoutBodyField,
@@ -34,8 +37,15 @@ type ArticleGridFourLayoutParse = ReturnType<typeof parseArticleGridFourLayoutBo
 type CreatorKickerParse = ReturnType<typeof parseCreatorKickerBodyField>
 type EditorialFeatureFieldsParse = ReturnType<typeof parseEditorialFeatureFields>
 type AuthorFeatureCardsParse = ReturnType<typeof parseAuthorFeatureCardsBodyField>
+type AuthorFeatureDescriptionModeParse = ReturnType<
+  typeof parseAuthorFeatureDescriptionModeBodyField
+>
+type AuthorFeatureExpertiseModeParse = ReturnType<typeof parseAuthorFeatureExpertiseModeBodyField>
 type AuthorFeatureImageStyleParse = ReturnType<typeof parseAuthorFeatureImageStyleBodyField>
 type AuthorFeatureMotionStyleParse = ReturnType<typeof parseAuthorFeatureMotionStyleBodyField>
+type AuthorFeatureSelectedExpertiseParse = ReturnType<
+  typeof parseAuthorFeatureSelectedExpertiseBodyField
+>
 
 export type ParsedBlockUpdateFields = {
   sectionHeading: Extract<SectionHeadingParse, { ok: true }>
@@ -51,8 +61,11 @@ export type ParsedBlockUpdateFields = {
   }
   authorFeature: {
     authorCards: Extract<AuthorFeatureCardsParse, { ok: true }>
+    descriptionMode: Extract<AuthorFeatureDescriptionModeParse, { ok: true }>
+    expertiseMode: Extract<AuthorFeatureExpertiseModeParse, { ok: true }>
     imageStyle: Extract<AuthorFeatureImageStyleParse, { ok: true }>
     motionStyle: Extract<AuthorFeatureMotionStyleParse, { ok: true }>
+    selectedExpertise: Extract<AuthorFeatureSelectedExpertiseParse, { ok: true }>
   }
 }
 
@@ -122,8 +135,11 @@ export function parseBlockUpdateBody(body: unknown): ParseBlockUpdateResult {
 
   const authorFeature = {
     authorCards: parseAuthorFeatureCardsBodyField(bodyRecord),
+    descriptionMode: parseAuthorFeatureDescriptionModeBodyField(bodyRecord),
+    expertiseMode: parseAuthorFeatureExpertiseModeBodyField(bodyRecord),
     imageStyle: parseAuthorFeatureImageStyleBodyField(bodyRecord),
     motionStyle: parseAuthorFeatureMotionStyleBodyField(bodyRecord),
+    selectedExpertise: parseAuthorFeatureSelectedExpertiseBodyField(bodyRecord),
   }
   for (const field of Object.values(authorFeature)) {
     if (!field.ok) return { ok: false, status: 400, message: field.message }

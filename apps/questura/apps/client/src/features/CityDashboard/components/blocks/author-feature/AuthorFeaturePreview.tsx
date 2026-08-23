@@ -237,24 +237,19 @@ export function AuthorFeaturePreview({
               {author.spotlightNote}
             </p>
           ) : null}
-          {author.author.bio ? (
+          {author.displayDescription ? (
             <p className="mx-auto mt-5 max-w-[38rem] font-editorial text-[1rem] leading-[1.5] text-foreground/80">
               <Linked
                 href={author.author.href}
                 className="outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                {author.author.bio}
+                {author.displayDescription}
               </Linked>
             </p>
           ) : null}
-          {block.sectionSubheading ? (
-            <p className="mx-auto mt-4 max-w-[36rem] font-editorial text-[0.95rem] italic leading-[1.4] text-foreground/65">
-              {block.sectionSubheading}
-            </p>
-          ) : null}
-          {author.author.expertise.length ? (
+          {author.displayExpertise.length ? (
             <p className="mx-auto mt-5 font-sans text-[0.66rem] font-semibold uppercase tracking-[0.11em] text-accent">
-              {author.author.expertise.slice(0, 3).join(" / ")}
+              {author.displayExpertise.join(" / ")}
             </p>
           ) : null}
         </div>

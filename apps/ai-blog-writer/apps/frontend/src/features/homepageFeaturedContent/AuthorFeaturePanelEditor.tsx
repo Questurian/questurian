@@ -63,16 +63,36 @@ function editableImageStyle(
 function fieldsSignature(block: AuthorFeatureBlockResponse): string {
   return JSON.stringify({
     imageStyle: editableImageStyle(block),
+    sectionHeading: block.sectionHeading,
+    sectionSubheading: block.sectionSubheading,
+    descriptionMode: block.descriptionMode,
+    expertiseMode: block.expertiseMode,
+    selectedExpertise: block.selectedExpertise,
     author: initialAuthor(block)
   })
 }
 
 function fieldsFromDraft(
   draftAuthor: DraftAuthorSelection,
-  imageStyle: AuthorFeatureBlockResponse['imageStyle']
+  imageStyle: AuthorFeatureBlockResponse['imageStyle'],
+  content: {
+    kicker: string
+    descriptionMode: AuthorFeatureBlockResponse['descriptionMode']
+    customDescription: string
+    expertiseMode: AuthorFeatureBlockResponse['expertiseMode']
+    selectedExpertise: string[]
+  }
 ): AuthorFeatureFieldsUpdate {
   return {
     imageStyle,
+    sectionHeading: content.kicker.trim() || null,
+    sectionSubheading:
+      content.descriptionMode === 'custom'
+        ? content.customDescription.trim() || null
+        : null,
+    descriptionMode: content.descriptionMode,
+    expertiseMode: content.expertiseMode,
+    selectedExpertise: content.selectedExpertise,
     authorCards: [
       {
         author: draftAuthor.authorId,
@@ -90,6 +110,19 @@ export default function AuthorFeaturePanelEditor({
 }: Props) {
   const [draftAuthor, setDraftAuthor] = useState(() => initialAuthor(block))
   const [imageStyle, setImageStyle] = useState(() => editableImageStyle(block))
+  const [kicker, setKicker] = useState(
+    () => block.sectionHeading ?? 'Author spotlight'
+  )
+  const [descriptionMode, setDescriptionMode] = useState(
+    () => block.descriptionMode
+  )
+  const [customDescription, setCustomDescription] = useState(
+    () => block.sectionSubheading ?? ''
+  )
+  const [expertiseMode, setExpertiseMode] = useState(() => block.expertiseMode)
+  const [selectedExpertise, setSelectedExpertise] = useState(
+    () => block.selectedExpertise
+  )
   const [hydratedSignature, setHydratedSignature] = useState(() =>
     fieldsSignature(block)
   )
@@ -108,6 +141,11 @@ export default function AuthorFeaturePanelEditor({
     if (nextSignature === hydratedSignature) return
     setDraftAuthor(initialAuthor(block))
     setImageStyle(editableImageStyle(block))
+    setKicker(block.sectionHeading ?? 'Author spotlight')
+    setDescriptionMode(block.descriptionMode)
+    setCustomDescription(block.sectionSubheading ?? '')
+    setExpertiseMode(block.expertiseMode)
+    setSelectedExpertise(block.selectedExpertise)
     setHydratedSignature(nextSignature)
   }, [block, hydratedSignature])
 
@@ -124,8 +162,19 @@ export default function AuthorFeaturePanelEditor({
   const selectedImage = authorImages.find(
     (entry) => mediaSetId(entry) === draftAuthor?.image
   )
+  const profileExpertise = selectedAuthor?.expertise?.length
+    ? selectedAuthor.expertise.map((entry) => entry.area)
+    : (savedAuthor?.author.expertise ?? [])
   const currentFields = (): AuthorFeatureFieldsUpdate =>
-    draftAuthor ? fieldsFromDraft(draftAuthor, imageStyle) : { imageStyle }
+    draftAuthor
+      ? fieldsFromDraft(draftAuthor, imageStyle, {
+          kicker,
+          descriptionMode,
+          customDescription,
+          expertiseMode,
+          selectedExpertise
+        })
+      : { imageStyle }
 
   const saveMutation = useMutation({
     mutationFn: () => saveFields(currentFields()),
@@ -138,6 +187,16 @@ export default function AuthorFeaturePanelEditor({
       authorsById.has(id)
         ? { authorId: id, image: null, spotlightNote: '' }
         : null
+    )
+    setExpertiseMode('profile')
+    setSelectedExpertise([])
+  }
+
+  function toggleExpertise(area: string) {
+    setSelectedExpertise((current) =>
+      current.includes(area)
+        ? current.filter((entry) => entry !== area)
+        : [...current, area]
     )
   }
 
@@ -155,6 +214,16 @@ export default function AuthorFeaturePanelEditor({
         </p>
 
         <div className="hf-editorial-feature-field-grid">
+          <label className="is-wide">
+            <span>Kicker</span>
+            <input
+              value={kicker}
+              maxLength={120}
+              disabled={!canManage}
+              onChange={(event) => setKicker(event.target.value)}
+            />
+          </label>
+
           <label className="is-wide">
             <span>Author</span>
             <select
@@ -293,6 +362,92 @@ export default function AuthorFeaturePanelEditor({
                 }
               />
             </label>
+
+            <fieldset className="hf-author-feature-image-fieldset">
+              <legend>Description</legend>
+              <label>
+                <input
+                  type="radio"
+                  name={`author-description-${block.id}`}
+                  checked={descriptionMode === 'profile'}
+                  disabled={!canManage}
+                  onChange={() => setDescriptionMode('profile')}
+                />
+                Use bio from profile
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name={`author-description-${block.id}`}
+                  checked={descriptionMode === 'custom'}
+                  disabled={!canManage}
+                  onChange={() => setDescriptionMode('custom')}
+                />
+                Write custom description
+              </label>
+              {descriptionMode === 'custom' ? (
+                <label className="hf-author-feature-note">
+                  <span>Custom description</span>
+                  <textarea
+                    value={customDescription}
+                    maxLength={200}
+                    disabled={!canManage}
+                    onChange={(event) =>
+                      setCustomDescription(event.target.value)
+                    }
+                  />
+                </label>
+              ) : (
+                <p className="staff-muted">
+                  {selectedAuthor?.bio ??
+                    savedAuthor?.author.bio ??
+                    'No profile bio yet.'}
+                </p>
+              )}
+            </fieldset>
+
+            <fieldset className="hf-author-feature-image-fieldset">
+              <legend>Expertise</legend>
+              <label>
+                <input
+                  type="radio"
+                  name={`author-expertise-${block.id}`}
+                  checked={expertiseMode === 'profile'}
+                  disabled={!canManage}
+                  onChange={() => setExpertiseMode('profile')}
+                />
+                Show all profile expertise
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name={`author-expertise-${block.id}`}
+                  checked={expertiseMode === 'selected'}
+                  disabled={!canManage}
+                  onChange={() => setExpertiseMode('selected')}
+                />
+                Choose expertise to show
+              </label>
+              {expertiseMode === 'selected' ? (
+                profileExpertise.length ? (
+                  <div>
+                    {profileExpertise.map((area) => (
+                      <label key={area}>
+                        <input
+                          type="checkbox"
+                          checked={selectedExpertise.includes(area)}
+                          disabled={!canManage}
+                          onChange={() => toggleExpertise(area)}
+                        />
+                        {area}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="staff-muted">No profile expertise yet.</p>
+                )
+              ) : null}
+            </fieldset>
           </section>
         ) : null}
 

@@ -101,14 +101,16 @@ export default function CuratedHomepageBlockSettings({
       >
         {slotsFilled} / {slots.length} filled
       </p>
-      <HomepageBlockSectionTextFields
-        blockId={block.id}
-        sectionHeading={block.sectionHeading}
-        sectionSubheading={block.sectionSubheading}
-        settingsOpen={isOpen}
-        saveSectionHeading={saveSectionHeading}
-        saveSectionSubheading={saveSectionSubheading}
-      />
+      {block.blockType !== 'author-feature' ? (
+        <HomepageBlockSectionTextFields
+          blockId={block.id}
+          sectionHeading={block.sectionHeading}
+          sectionSubheading={block.sectionSubheading}
+          settingsOpen={isOpen}
+          saveSectionHeading={saveSectionHeading}
+          saveSectionSubheading={saveSectionSubheading}
+        />
+      ) : null}
       {block.blockType === 'featured-creator-article' ? (
         <CreatorKickerField
           blockId={block.id}

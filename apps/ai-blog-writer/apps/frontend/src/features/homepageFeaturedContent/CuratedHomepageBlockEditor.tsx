@@ -229,13 +229,15 @@ export default function CuratedHomepageBlockEditor({
           />
         ) : null}
         {block.sectionHeading?.trim() &&
-        block.blockType !== 'featured-creator-article' ? (
+        block.blockType !== 'featured-creator-article' &&
+        block.blockType !== 'author-feature' ? (
           <h2 className="hf-block-section-heading-h2 hf-block-public-section-title">
             {block.sectionHeading.trim()}
           </h2>
         ) : null}
         {block.sectionSubheading?.trim() &&
-        block.blockType !== 'featured-creator-article' ? (
+        block.blockType !== 'featured-creator-article' &&
+        block.blockType !== 'author-feature' ? (
           <p className="hf-block-public-section-subtitle">
             {block.sectionSubheading.trim()}
           </p>
