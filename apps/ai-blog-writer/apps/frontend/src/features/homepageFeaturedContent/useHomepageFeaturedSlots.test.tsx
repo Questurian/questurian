@@ -11,15 +11,15 @@ const selection: HomepageFeaturedSelection = {
   invalidItems: [],
   isComplete: false,
   allowDrafts: true,
-  totalSlots: 1,
+  totalSlots: 1
 }
 
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
-      mutations: { retry: false },
-    },
+      mutations: { retry: false }
+    }
   })
   return ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -40,9 +40,9 @@ describe('useHomepageFeaturedSlots', () => {
           saveSelection: vi.fn(),
           fetchCandidates: vi.fn(),
           // Inline array on purpose: parents rebuild the query key each render.
-          selectionQueryKey: ['block', 'block-1', 'test-token'],
+          selectionQueryKey: ['block', 'block-1', 'test-token']
         }),
-      { wrapper: createWrapper() },
+      { wrapper: createWrapper() }
     )
 
     const initialUsedKeys = result.current.usedKeys

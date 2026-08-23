@@ -71,12 +71,8 @@ export default function HotelGridBlockEditor({
     params: HotelGridCandidateParams
   ) => Promise<HomepageHotelGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
-  saveHotelGridSectionHeading?: (
-    value: string | null
-  ) => Promise<void>
-  saveHotelGridSectionSubheading?: (
-    value: string | null
-  ) => Promise<void>
+  saveHotelGridSectionHeading?: (value: string | null) => Promise<void>
+  saveHotelGridSectionSubheading?: (value: string | null) => Promise<void>
   convertBlockTargets?: CuratedHomepageBlockType[]
   onConvertEmptyBlock?: (
     blockType: CuratedHomepageBlockType,
@@ -320,8 +316,7 @@ export default function HotelGridBlockEditor({
           onAppend={growsWithContent ? handleAppendItem : undefined}
           onRemove={
             growsWithContent
-              ? (slotIndex) =>
-                  handleRemove(slotIndex, blockConfig.minSlotCount)
+              ? (slotIndex) => handleRemove(slotIndex, blockConfig.minSlotCount)
               : undefined
           }
           maxItems={growsWithContent ? blockConfig.maxSlotCount : undefined}

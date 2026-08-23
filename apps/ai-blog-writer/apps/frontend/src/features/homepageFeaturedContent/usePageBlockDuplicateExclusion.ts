@@ -12,7 +12,7 @@ export function usePageBlockDuplicateExclusion({
   blockId,
   slotEditorState,
   externalUsedKeys,
-  onSlotsChange,
+  onSlotsChange
 }: Params): UseHomepageFeaturedSlotsResult {
   useEffect(() => {
     onSlotsChange?.(blockId, slotEditorState.usedKeys)
@@ -26,21 +26,22 @@ export function usePageBlockDuplicateExclusion({
       externalUsedKeys && externalUsedKeys.size > 0
         ? new Set([...slotEditorState.usedKeys, ...externalUsedKeys])
         : slotEditorState.usedKeys,
-    [slotEditorState.usedKeys, externalUsedKeys],
+    [slotEditorState.usedKeys, externalUsedKeys]
   )
 
   const hasCrossBlockDuplicate =
     externalUsedKeys != null &&
     externalUsedKeys.size > 0 &&
     slotEditorState.slots.some(
-      (slot) => slot != null && externalUsedKeys.has(`${slot.relationTo}:${slot.id}`),
+      (slot) =>
+        slot != null && externalUsedKeys.has(`${slot.relationTo}:${slot.id}`)
     )
 
   return hasCrossBlockDuplicate || mergedUsedKeys !== slotEditorState.usedKeys
     ? {
         ...slotEditorState,
         usedKeys: mergedUsedKeys,
-        saveDisabled: slotEditorState.saveDisabled || hasCrossBlockDuplicate,
+        saveDisabled: slotEditorState.saveDisabled || hasCrossBlockDuplicate
       }
     : slotEditorState
 }

@@ -89,6 +89,38 @@ export type EditorialFeatureBlockResponse = {
   linkWarning: string | null
 }
 
+export type AuthorFeatureImageStyle = 'circle' | 'square' | 'portrait' | 'mixed'
+export type AuthorFeatureMotionStyle = 'none' | 'subtle'
+
+export type AuthorFeatureCard = {
+  author: {
+    id: number
+    name: string | null
+    slug: string | null
+    href: string | null
+    bio: string | null
+    expertise: string[]
+  }
+  imageMediaSetId: number | null
+  image: EditorialFeaturePublicImage | null
+  imageSquare: EditorialFeaturePublicImage | null
+  imageWide: EditorialFeaturePublicImage | null
+  imageAltReady: boolean
+  spotlightNote: string | null
+  isEmphasized: boolean
+}
+
+export type AuthorFeatureBlockResponse = {
+  id: string
+  blockType: 'author-feature'
+  selection: HomepageFeaturedSelection
+  sectionHeading: string | null
+  sectionSubheading: string | null
+  imageStyle: AuthorFeatureImageStyle
+  motionStyle: AuthorFeatureMotionStyle
+  authorCards: AuthorFeatureCard[]
+}
+
 /** When `selection.totalSlots === 4`: one row of four (wide images) vs 2×2 (square images). */
 export type ArticleGridFourLayout = 'four-across' | 'two-by-two'
 
@@ -182,6 +214,7 @@ export type ArticleCuratedHomepageBlockResponse =
   | FeaturedArticleCarouselBlockResponse
   | FeaturedArticlesBlockResponse
   | EditorialFeatureBlockResponse
+  | AuthorFeatureBlockResponse
   | ArticleGridBlockResponse
   | QuesturianMapsBlockResponse
   | WhereToEatDrinkBlockResponse

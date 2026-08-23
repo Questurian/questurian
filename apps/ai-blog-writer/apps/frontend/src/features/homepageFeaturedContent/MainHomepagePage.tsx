@@ -13,7 +13,7 @@ import { useMainHomepageEditor } from './useMainHomepageEditor'
 
 function usedKeysOutsideBlock(
   slotKeysByBlock: Map<string, Set<string>>,
-  blockId: string,
+  blockId: string
 ) {
   const usedKeys = new Set<string>()
   for (const [candidateBlockId, keys] of slotKeysByBlock) {
@@ -43,7 +43,7 @@ export default function MainHomepagePage() {
     handleConvertBlock,
     handleConfirmAddBlock,
     deleteError,
-    invalidateHomepage,
+    invalidateHomepage
   } = useMainHomepageEditor(canManage, user?.id)
 
   if (!canManage) {
@@ -105,7 +105,7 @@ export default function MainHomepagePage() {
               style={{
                 fontSize: '0.78rem',
                 color: 'var(--muted)',
-                fontFamily: 'monospace',
+                fontFamily: 'monospace'
               }}
             >
               domain.com
@@ -117,7 +117,11 @@ export default function MainHomepagePage() {
           <span className="hf-enabled-tag on">Always active</span>
         </div>
         <div className="hf-detail-header-actions">
-          <div className="hf-view-mode-group" role="group" aria-label="View mode">
+          <div
+            className="hf-view-mode-group"
+            role="group"
+            aria-label="View mode"
+          >
             <button
               type="button"
               onClick={() => setViewMode('draft')}
@@ -182,11 +186,13 @@ export default function MainHomepagePage() {
             <HomepageBlocksSortableList
               blocks={homepage.pageBlocks}
               disabled={
-                reorderBlocksMutation.isPending
-                || deleteBlockMutation.isPending
-                || addBlockMutation.isPending
+                reorderBlocksMutation.isPending ||
+                deleteBlockMutation.isPending ||
+                addBlockMutation.isPending
               }
-              onReorder={(orderedIds) => reorderBlocksMutation.mutate(orderedIds)}
+              onReorder={(orderedIds) =>
+                reorderBlocksMutation.mutate(orderedIds)
+              }
             >
               {(block: PageBlockResponse, blockIndex: number) => (
                 <MainHomepageBlockRenderer
@@ -194,9 +200,14 @@ export default function MainHomepagePage() {
                   block={block}
                   blockIndex={blockIndex}
                   canManage={canManage}
-                  externalUsedKeys={usedKeysOutsideBlock(pageBlockSlotKeys, block.id)}
+                  externalUsedKeys={usedKeysOutsideBlock(
+                    pageBlockSlotKeys,
+                    block.id
+                  )}
                   onSlotsChange={handleSlotsChange}
-                  onDeleteBlock={(blockId) => deleteBlockMutation.mutate({ blockId })}
+                  onDeleteBlock={(blockId) =>
+                    deleteBlockMutation.mutate({ blockId })
+                  }
                   isDeletePending={deleteBlockMutation.isPending}
                   deletingBlockId={deletingBlockId}
                   deleteError={deleteError}

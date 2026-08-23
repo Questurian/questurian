@@ -6,7 +6,7 @@ import type {
   HomepageFeaturedCollection,
   HomepageFeaturedInvalidItem,
   HomepageFeaturedItemRef,
-  HomepageFeaturedSelection,
+  HomepageFeaturedSelection
 } from './types'
 
 export type SlotValue = HomepageFeaturedCandidate | null
@@ -16,6 +16,7 @@ export type CandidateParams = {
   query?: string
   page?: number
   limit?: number
+  authorIds?: number[]
 }
 
 export type UseHomepageFeaturedSlotsOptions = {
@@ -23,12 +24,15 @@ export type UseHomepageFeaturedSlotsOptions = {
   selection: HomepageFeaturedSelection
   saveSelection: (
     items: HomepageFeaturedItemRef[],
-    slotCount?: number,
+    slotCount?: number
   ) => Promise<HomepageFeaturedSelection>
-  fetchCandidates: (params: CandidateParams) => Promise<HomepageFeaturedCandidatesResponse>
+  fetchCandidates: (
+    params: CandidateParams
+  ) => Promise<HomepageFeaturedCandidatesResponse>
   selectionQueryKey: unknown[]
   /** When set, candidate search stays on this collection (e.g. Questurian Maps → single-type listicles). */
   lockedCollectionFilter?: HomepageFeaturedCollection
+  candidateAuthorIds?: number[]
   /** When stale saved items were removed, persist remaining items under this lower slot count. */
   repairSlotCount?: number
 }
@@ -42,7 +46,11 @@ export type SaveNotification = {
 export type UseHomepageFeaturedSlotsResult = {
   selectionQuery: UseQueryResult<HomepageFeaturedSelection>
   candidatesQuery: UseQueryResult<HomepageFeaturedCandidatesResponse>
-  saveMutation: UseMutationResult<HomepageFeaturedSelection, unknown, HomepageFeaturedItemRef[]>
+  saveMutation: UseMutationResult<
+    HomepageFeaturedSelection,
+    unknown,
+    HomepageFeaturedItemRef[]
+  >
   slots: SlotValue[]
   savedSlots: SlotValue[]
   draftSlots: SlotValue[] | null

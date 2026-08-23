@@ -1,5 +1,7 @@
 import type { LocationGridMediaAspect } from '../../locationGridTypes'
 import type {
+  AuthorFeatureImageStyle,
+  AuthorFeatureMotionStyle,
   ArticleGridFourLayout,
   FeaturedArticlesSlot3Layout,
   FeaturedArticlesSlot4Layout,
@@ -16,9 +18,32 @@ export type EditorialFeatureFieldsUpdate = {
   linkedLocation?: number | null
 }
 
+export type AuthorFeatureCardUpdate = {
+  author: number
+  image: number | null
+  spotlightNote: string | null
+  isEmphasized: boolean
+}
+
+export type AuthorFeatureFieldsUpdate = {
+  authorCards?: AuthorFeatureCardUpdate[]
+  imageStyle?: AuthorFeatureImageStyle
+  motionStyle?: AuthorFeatureMotionStyle
+}
+
 export async function updateMainHomepageEditorialFeatureFields(
   blockId: string,
   fields: EditorialFeatureFieldsUpdate
+): Promise<MainHomepageResponse> {
+  return mainHomepageRequest('/api/homepage-featured-content', {
+    method: 'PUT',
+    body: JSON.stringify({ blockId, ...fields })
+  })
+}
+
+export async function updateMainHomepageAuthorFeatureFields(
+  blockId: string,
+  fields: AuthorFeatureFieldsUpdate
 ): Promise<MainHomepageResponse> {
   return mainHomepageRequest('/api/homepage-featured-content', {
     method: 'PUT',

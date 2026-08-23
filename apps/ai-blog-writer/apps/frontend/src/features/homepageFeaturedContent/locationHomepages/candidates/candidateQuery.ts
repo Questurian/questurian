@@ -2,6 +2,7 @@ export type CandidateQueryParams = {
   query?: string
   page?: number
   limit?: number
+  authorIds?: number[]
 }
 
 export function buildCandidateQuery(params: CandidateQueryParams): string {
@@ -17,6 +18,10 @@ export function buildCandidateQuery(params: CandidateQueryParams): string {
 
   if (params.limit) {
     searchParams.set('limit', String(params.limit))
+  }
+
+  for (const authorId of params.authorIds ?? []) {
+    searchParams.append('authorId', String(authorId))
   }
 
   const query = searchParams.toString()

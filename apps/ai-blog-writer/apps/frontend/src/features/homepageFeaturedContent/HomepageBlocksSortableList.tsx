@@ -6,14 +6,14 @@ import {
   closestCenter,
   useSensor,
   useSensors,
-  type DragEndEvent,
+  type DragEndEvent
 } from '@dnd-kit/core'
 import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy,
+  verticalListSortingStrategy
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
@@ -28,12 +28,12 @@ export default function HomepageBlocksSortableList<T extends { id: string }>({
   blocks,
   disabled,
   children,
-  onReorder,
+  onReorder
 }: Props<T>) {
   const ids = blocks.map((b) => b.id)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
   function handleDragEnd(event: DragEndEvent) {
@@ -77,27 +77,38 @@ export default function HomepageBlocksSortableList<T extends { id: string }>({
 function SortableBlockItem({
   id,
   disabled,
-  children,
+  children
 }: {
   id: string
   disabled?: boolean
   children: ReactNode
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({
     id,
-    disabled,
+    disabled
   })
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.92 : undefined,
+    opacity: isDragging ? 0.92 : undefined
   }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={isDragging ? 'hf-sortable-block hf-sortable-block--dragging' : 'hf-sortable-block'}
+      className={
+        isDragging
+          ? 'hf-sortable-block hf-sortable-block--dragging'
+          : 'hf-sortable-block'
+      }
     >
       <button
         type="button"

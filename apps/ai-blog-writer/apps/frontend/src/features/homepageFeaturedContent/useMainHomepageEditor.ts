@@ -8,20 +8,17 @@ import {
   fetchMainHomepage,
   publishMainHomepage,
   reorderMainHomepageBlocks,
-  type MainHomepageResponse,
+  type MainHomepageResponse
 } from './api'
 import {
   buildOptimisticConvertedHomepageBlock,
   deleteHomepageBlockFromCache,
   reorderHomepageBlocksInCache,
-  replaceHomepageBlockInCache,
+  replaceHomepageBlockInCache
 } from './homepageBlockOptimisticUpdates'
 import type { CuratedHomepageBlockType, PageBlockResponse } from './pageBlocks'
 
-export function useMainHomepageEditor(
-  canManage: boolean,
-  operatorId?: string,
-) {
+export function useMainHomepageEditor(canManage: boolean, operatorId?: string) {
   const queryClient = useQueryClient()
   // Keyed by operator: the QueryClient outlives a logout, so an unkeyed cache
   // would hand the next operator the previous one's data until a refetch lands.
@@ -30,56 +27,60 @@ export function useMainHomepageEditor(
   const homepageQuery = useQuery({
     queryKey: homepageQueryKey,
     queryFn: ({ signal }) => fetchMainHomepage(signal),
-    enabled: Boolean(canManage),
+    enabled: Boolean(canManage)
   })
 
   const [showAddBlock, setShowAddBlock] = useState(false)
   const [viewMode, setViewMode] = useState<'draft' | 'published'>('draft')
   const [deletingBlockId, setDeletingBlockId] = useState<string | null>(null)
-  const [pageBlockSlotKeys, setPageBlockSlotKeys] = useState<Map<string, Set<string>>>(
-    () => new Map(),
+  const [pageBlockSlotKeys, setPageBlockSlotKeys] = useState<
+    Map<string, Set<string>>
+  >(() => new Map())
+
+  const handleSlotsChange = useCallback(
+    (blockId: string, keys: Set<string>) => {
+      setPageBlockSlotKeys((previous) => {
+        const existing = previous.get(blockId)
+        if (keys.size === 0 && !existing) return previous
+        if (
+          existing &&
+          existing.size === keys.size &&
+          [...keys].every((key) => existing.has(key))
+        ) {
+          return previous
+        }
+
+        const next = new Map(previous)
+        if (keys.size === 0) next.delete(blockId)
+        else next.set(blockId, keys)
+        return next
+      })
+    },
+    []
   )
-
-  const handleSlotsChange = useCallback((blockId: string, keys: Set<string>) => {
-    setPageBlockSlotKeys((previous) => {
-      const existing = previous.get(blockId)
-      if (keys.size === 0 && !existing) return previous
-      if (
-        existing
-        && existing.size === keys.size
-        && [...keys].every((key) => existing.has(key))
-      ) {
-        return previous
-      }
-
-      const next = new Map(previous)
-      if (keys.size === 0) next.delete(blockId)
-      else next.set(blockId, keys)
-      return next
-    })
-  }, [])
 
   const addBlockMutation = useMutation({
     mutationFn: ({
       blockType,
       slotCount,
       sectionHeading,
-      sectionSubheading,
+      sectionSubheading
     }: {
       blockType: CuratedHomepageBlockType
       slotCount: number
       sectionHeading?: string | null
       sectionSubheading?: string | null
-    }) => addMainHomepageBlock(
-      blockType,
-      slotCount,
-      sectionHeading,
-      sectionSubheading,
-    ),
+    }) =>
+      addMainHomepageBlock(
+        blockType,
+        slotCount,
+        sectionHeading,
+        sectionSubheading
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: homepageQueryKey })
       setShowAddBlock(false)
-    },
+    }
   })
 
   const deleteBlockMutation = useMutation({
@@ -90,8 +91,9 @@ export function useMainHomepageEditor(
       await queryClient.cancelQueries({ queryKey: homepageQueryKey })
       const previousHomepage =
         queryClient.getQueryData<MainHomepageResponse>(homepageQueryKey)
-      queryClient.setQueryData<MainHomepageResponse>(homepageQueryKey, (current) =>
-        deleteHomepageBlockFromCache(current, blockId),
+      queryClient.setQueryData<MainHomepageResponse>(
+        homepageQueryKey,
+        (current) => deleteHomepageBlockFromCache(current, blockId)
       )
       return { previousHomepage }
     },
@@ -102,7 +104,7 @@ export function useMainHomepageEditor(
     },
     onSettled: () => {
       setDeletingBlockId(null)
-    },
+    }
   })
 
   const reorderBlocksMutation = useMutation({
@@ -112,21 +114,24 @@ export function useMainHomepageEditor(
       await queryClient.cancelQueries({ queryKey: homepageQueryKey })
       const previousHomepage =
         queryClient.getQueryData<MainHomepageResponse>(homepageQueryKey)
-      queryClient.setQueryData<MainHomepageResponse>(homepageQueryKey, (current) =>
-        reorderHomepageBlocksInCache(current, orderedBlockIds),
+      queryClient.setQueryData<MainHomepageResponse>(
+        homepageQueryKey,
+        (current) => reorderHomepageBlocksInCache(current, orderedBlockIds)
       )
       return { previousHomepage }
     },
     onSuccess: (result) => {
-      queryClient.setQueryData<MainHomepageResponse>(homepageQueryKey, (current) =>
-        reorderHomepageBlocksInCache(current, result.orderedBlockIds),
+      queryClient.setQueryData<MainHomepageResponse>(
+        homepageQueryKey,
+        (current) =>
+          reorderHomepageBlocksInCache(current, result.orderedBlockIds)
       )
     },
     onError: (_error, _variables, context) => {
       if (context?.previousHomepage) {
         queryClient.setQueryData(homepageQueryKey, context.previousHomepage)
       }
-    },
+    }
   })
 
   const publishMutation = useMutation({
@@ -134,13 +139,13 @@ export function useMainHomepageEditor(
     onSuccess: (result) => {
       queryClient.setQueryData<MainHomepageResponse>(homepageQueryKey, result)
       queryClient.invalidateQueries({ queryKey: homepageQueryKey })
-    },
+    }
   })
 
   async function handleConvertBlock(
     block: PageBlockResponse,
     blockType: CuratedHomepageBlockType,
-    slotCount: number,
+    slotCount: number
   ) {
     await queryClient.cancelQueries({ queryKey: homepageQueryKey })
     const previousHomepage =
@@ -148,21 +153,23 @@ export function useMainHomepageEditor(
     const optimisticBlock = buildOptimisticConvertedHomepageBlock(
       block,
       blockType,
-      slotCount,
+      slotCount
     )
 
-    queryClient.setQueryData<MainHomepageResponse>(homepageQueryKey, (current) =>
-      replaceHomepageBlockInCache(current, optimisticBlock),
+    queryClient.setQueryData<MainHomepageResponse>(
+      homepageQueryKey,
+      (current) => replaceHomepageBlockInCache(current, optimisticBlock)
     )
 
     try {
       const result = await convertMainHomepageFeaturedArticlesBlock(
         block.id,
         blockType,
-        slotCount,
+        slotCount
       )
-      queryClient.setQueryData<MainHomepageResponse>(homepageQueryKey, (current) =>
-        replaceHomepageBlockInCache(current, result.block),
+      queryClient.setQueryData<MainHomepageResponse>(
+        homepageQueryKey,
+        (current) => replaceHomepageBlockInCache(current, result.block)
       )
     } catch (error) {
       if (previousHomepage) {
@@ -176,13 +183,13 @@ export function useMainHomepageEditor(
     blockType: CuratedHomepageBlockType,
     slotCount: number,
     sectionHeading?: string | null,
-    sectionSubheading?: string | null,
+    sectionSubheading?: string | null
   ) {
     addBlockMutation.mutate({
       blockType,
       slotCount,
       sectionHeading,
-      sectionSubheading,
+      sectionSubheading
     })
   }
 
@@ -212,6 +219,6 @@ export function useMainHomepageEditor(
     handleConvertBlock,
     handleConfirmAddBlock,
     deleteError,
-    invalidateHomepage,
+    invalidateHomepage
   }
 }

@@ -12,32 +12,34 @@ describe('image eligibility in homepage pickers', () => {
       <LocationGridPickerModal
         slotIndex={0}
         childLevel="neighborhood"
-        candidatesQuery={{
-          data: {
-            docs: [
-              {
-                id: 252,
-                level: 'neighborhood',
-                locationKey: 'peru|lima|barranco',
-                parentKey: 'peru|lima',
-                countryName: 'Peru',
-                cityName: 'Lima',
-                neighborhoodName: 'Barranco',
-                title: 'Barranco',
-                subtitle: 'Lima, Peru',
-                updatedAt: null,
-                coverImageUrl: null,
-                coverImageAlt: null
-              }
-            ],
-            totalDocs: 1,
-            totalPages: 1,
-            page: 1,
-            limit: 24
-          },
-          error: null,
-          isLoading: false
-        } as never}
+        candidatesQuery={
+          {
+            data: {
+              docs: [
+                {
+                  id: 252,
+                  level: 'neighborhood',
+                  locationKey: 'peru|lima|barranco',
+                  parentKey: 'peru|lima',
+                  countryName: 'Peru',
+                  cityName: 'Lima',
+                  neighborhoodName: 'Barranco',
+                  title: 'Barranco',
+                  subtitle: 'Lima, Peru',
+                  updatedAt: null,
+                  coverImageUrl: null,
+                  coverImageAlt: null
+                }
+              ],
+              totalDocs: 1,
+              totalPages: 1,
+              page: 1,
+              limit: 24
+            },
+            error: null,
+            isLoading: false
+          } as never
+        }
         searchValue=""
         candidatePage={1}
         usedIds={new Set()}
@@ -56,31 +58,33 @@ describe('image eligibility in homepage pickers', () => {
     render(
       <HotelGridPickerModal
         slotIndex={0}
-        candidatesQuery={{
-          data: {
-            docs: [
-              {
-                id: 3,
-                title: 'Bridge of Sighs',
-                slug: null,
-                type: 'attraction',
-                priceLevel: null,
-                status: 'published',
-                updatedAt: null,
-                imageUrl: null,
-                location: 'Barranco'
-              }
-            ],
-            totalDocs: 1,
-            totalPages: 1,
-            page: 1,
-            limit: 24,
-            allowDrafts: true
-          },
-          error: null,
-          isFetching: false,
-          isPending: false
-        } as never}
+        candidatesQuery={
+          {
+            data: {
+              docs: [
+                {
+                  id: 3,
+                  title: 'Bridge of Sighs',
+                  slug: null,
+                  type: 'attraction',
+                  priceLevel: null,
+                  status: 'published',
+                  updatedAt: null,
+                  imageUrl: null,
+                  location: 'Barranco'
+                }
+              ],
+              totalDocs: 1,
+              totalPages: 1,
+              page: 1,
+              limit: 24,
+              allowDrafts: true
+            },
+            error: null,
+            isFetching: false,
+            isPending: false
+          } as never
+        }
         searchValue=""
         candidatePage={1}
         usedIds={new Set()}

@@ -79,8 +79,8 @@ export default function HomepageBlockSlotCountSection({
     <section className="hf-block-settings-section">
       <h3 className="hf-block-settings-kicker">Grid size</h3>
       <p className="hf-block-settings-hint">
-        Change slot count without rebuilding the block. Growing keeps current picks and adds empty
-        slots at the end; shrinking removes end slots.
+        Change slot count without rebuilding the block. Growing keeps current
+        picks and adds empty slots at the end; shrinking removes end slots.
       </p>
       <div className="hf-block-convert-row">
         <span className="hf-block-convert-label">Slots</span>
@@ -122,11 +122,13 @@ export default function HomepageBlockSlotCountSection({
         </p>
       ) : delta > 0 ? (
         <p className="hf-block-settings-hint">
-          Applies locally: adds {delta} empty slot{delta === 1 ? '' : 's'}. Fill them, then save.
+          Applies locally: adds {delta} empty slot{delta === 1 ? '' : 's'}. Fill
+          them, then save.
         </p>
       ) : delta < 0 ? (
         <p className="hf-block-settings-hint">
-          Applies locally: removes {Math.abs(delta)} end slot{Math.abs(delta) === 1 ? '' : 's'}
+          Applies locally: removes {Math.abs(delta)} end slot
+          {Math.abs(delta) === 1 ? '' : 's'}
           {removedItemCount > 0
             ? `, including ${removedItemCount} filled slot${removedItemCount === 1 ? '' : 's'}`
             : ''}
@@ -134,7 +136,8 @@ export default function HomepageBlockSlotCountSection({
         </p>
       ) : savedSlotCount !== currentSlotCount ? (
         <p className="hf-block-settings-hint">
-          Draft size is {currentSlotCount}; saved size is {savedSlotCount}. Save to persist.
+          Draft size is {currentSlotCount}; saved size is {savedSlotCount}. Save
+          to persist.
         </p>
       ) : null}
     </section>

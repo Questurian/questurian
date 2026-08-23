@@ -164,10 +164,10 @@ export function LocationGridPickerModal({
                     {!hasUsableImage
                       ? 'Needs image'
                       : isCurrentSlot
-                      ? 'Current'
-                      : isUsedElsewhere
-                        ? 'In use'
-                        : 'Pick'}
+                        ? 'Current'
+                        : isUsedElsewhere
+                          ? 'In use'
+                          : 'Pick'}
                   </button>
                 </div>
               )

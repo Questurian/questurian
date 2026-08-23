@@ -6,7 +6,7 @@ import {
   isArticleCuratedHomepageBlock,
   isLocationGridBlock,
   isNewsletterSignupBlock,
-  type PageBlockResponse,
+  type PageBlockResponse
 } from './pageBlocks'
 
 /**
@@ -22,15 +22,15 @@ import {
  */
 export function locationHomepageBlockKey(
   block: PageBlockResponse,
-  locationGridChildLevel: 'neighborhood' | null,
+  locationGridChildLevel: 'neighborhood' | null
 ): string {
   if (
-    isArticleCuratedHomepageBlock(block)
-    || (isLocationGridBlock(block) && locationGridChildLevel)
-    || isNewsletterSignupBlock(block)
-    || isHotelGridBlock(block)
-    || isTourGridBlock(block)
-    || isThingsToDoAttractionsBlock(block)
+    isArticleCuratedHomepageBlock(block) ||
+    (isLocationGridBlock(block) && locationGridChildLevel) ||
+    isNewsletterSignupBlock(block) ||
+    isHotelGridBlock(block) ||
+    isTourGridBlock(block) ||
+    isThingsToDoAttractionsBlock(block)
   ) {
     return homepageBlockEditorIdentity(block).join(':')
   }

@@ -15,7 +15,7 @@ export default function HomepageBlockDeleteTrigger({
   blockLabel,
   onDeleteBlock,
   isDeletingBlock,
-  deleteError,
+  deleteError
 }: Props) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
@@ -46,7 +46,9 @@ export default function HomepageBlockDeleteTrigger({
       {showDeleteModal && (
         <div
           className="hf-modal-backdrop hf-block-delete-confirm-backdrop"
-          onClick={!isDeletingBlock ? () => setShowDeleteModal(false) : undefined}
+          onClick={
+            !isDeletingBlock ? () => setShowDeleteModal(false) : undefined
+          }
         >
           <div
             className="hf-modal hf-delete-modal"
@@ -57,10 +59,13 @@ export default function HomepageBlockDeleteTrigger({
           >
             <div className="hf-delete-modal-body">
               <div className="hf-delete-modal-icon">⚠</div>
-              <h3 id={`hf-delete-block-title-${blockId}`}>Delete this block?</h3>
+              <h3 id={`hf-delete-block-title-${blockId}`}>
+                Delete this block?
+              </h3>
               <p>
-                This will permanently remove Block {blockIndex + 1} ({blockLabel}) and all of its
-                curated slots. This action cannot be undone.
+                This will permanently remove Block {blockIndex + 1} (
+                {blockLabel}) and all of its curated slots. This action cannot
+                be undone.
               </p>
               {deleteError && <p className="hf-modal-error">{deleteError}</p>}
             </div>

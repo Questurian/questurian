@@ -1,4 +1,7 @@
-import { CuratedSlotSwapProvider, CuratedSlotSwapWrap } from './CuratedArticleSlotSwap'
+import {
+  CuratedSlotSwapProvider,
+  CuratedSlotSwapWrap
+} from './CuratedArticleSlotSwap'
 import type {
   HomepageLocationGridInvalidItem,
   HomepageLocationGridLevel,
@@ -41,7 +44,9 @@ export default function LocationGridLayout({
 
   return (
     <CuratedSlotSwapProvider slots={slots} onReorder={onReorder}>
-      <div className={`hf-location-grid hf-location-grid--aspect-${mediaAspect}`}>
+      <div
+        className={`hf-location-grid hf-location-grid--aspect-${mediaAspect}`}
+      >
         {slots.map((item, slotIndex) => {
           const invalidItem = invalidItemsBySlot.get(slotIndex + 1)
 
@@ -60,12 +65,18 @@ export default function LocationGridLayout({
                     <span className="hf-location-grid-empty-label">
                       {getInvalidMessage(invalidItem)}
                     </span>
-                    <span className="hf-location-grid-empty-hint">Click to replace</span>
+                    <span className="hf-location-grid-empty-hint">
+                      Click to replace
+                    </span>
                   </>
                 ) : (
                   <>
-                    <span style={{ fontSize: '1.7rem', color: 'var(--muted)' }}>＋</span>
-                    <span className="hf-location-grid-empty-label">{emptyLabel}</span>
+                    <span style={{ fontSize: '1.7rem', color: 'var(--muted)' }}>
+                      ＋
+                    </span>
+                    <span className="hf-location-grid-empty-label">
+                      {emptyLabel}
+                    </span>
                   </>
                 )}
               </button>
@@ -73,7 +84,10 @@ export default function LocationGridLayout({
           }
 
           return (
-            <CuratedSlotSwapWrap key={`slot-${slotIndex + 1}`} slotIndex={slotIndex}>
+            <CuratedSlotSwapWrap
+              key={`slot-${slotIndex + 1}`}
+              slotIndex={slotIndex}
+            >
               <article className="hf-location-grid-card hf-location-guide-card">
                 <button
                   type="button"
@@ -91,10 +105,18 @@ export default function LocationGridLayout({
                       decoding="async"
                     />
                   ) : null}
-                  <span className="hf-location-guide-shade" aria-hidden="true" />
+                  <span
+                    className="hf-location-guide-shade"
+                    aria-hidden="true"
+                  />
                   <span className="hf-location-guide-copy">
-                    <span className="hf-location-guide-rule" aria-hidden="true" />
-                    <span className="hf-location-guide-title">{item.title}</span>
+                    <span
+                      className="hf-location-guide-rule"
+                      aria-hidden="true"
+                    />
+                    <span className="hf-location-guide-title">
+                      {item.title}
+                    </span>
                   </span>
                 </button>
                 <label className="hf-location-guide-kicker-editor">
@@ -104,24 +126,32 @@ export default function LocationGridLayout({
                     value={item.kicker ?? ''}
                     maxLength={LOCATION_GRID_KICKER_MAX_LENGTH}
                     placeholder="Destination guides"
-                    onChange={(event) => onKickerChange(slotIndex, event.target.value)}
+                    onChange={(event) =>
+                      onKickerChange(slotIndex, event.target.value)
+                    }
                   />
                   <span className="hf-location-guide-kicker-count">
-                    {(item.kicker ?? '').length} / {LOCATION_GRID_KICKER_MAX_LENGTH}
+                    {(item.kicker ?? '').length} /{' '}
+                    {LOCATION_GRID_KICKER_MAX_LENGTH}
                   </span>
                 </label>
                 <label className="hf-location-guide-description-editor">
-                  <span className="hf-sr-only">Supporting text for {item.title}</span>
+                  <span className="hf-sr-only">
+                    Supporting text for {item.title}
+                  </span>
                   <textarea
                     aria-label={`Supporting text for ${item.title}`}
                     value={item.description ?? ''}
                     maxLength={LOCATION_GRID_DESCRIPTION_MAX_LENGTH}
                     rows={3}
                     placeholder="Add a short reason to explore this location…"
-                    onChange={(event) => onDescriptionChange(slotIndex, event.target.value)}
+                    onChange={(event) =>
+                      onDescriptionChange(slotIndex, event.target.value)
+                    }
                   />
                   <span className="hf-location-guide-character-count">
-                    {(item.description ?? '').length} / {LOCATION_GRID_DESCRIPTION_MAX_LENGTH}
+                    {(item.description ?? '').length} /{' '}
+                    {LOCATION_GRID_DESCRIPTION_MAX_LENGTH}
                   </span>
                 </label>
               </article>

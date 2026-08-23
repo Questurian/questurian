@@ -2,6 +2,7 @@ import {
   applyBlockFieldUpdates,
   applyBlockItemsUpdate,
 } from '../../location-homepage-blocks/lib/apply-block-update'
+import { validateAuthorFeatureCardImageSelections } from '../../author-feature/service'
 import {
   parseBlockUpdateBody,
   validateBlockUpdateFields,
@@ -19,14 +20,15 @@ import {
   loadMainHomepage,
   updateMainHomepageDraft,
 } from '../lib/persistence'
-import type {
-  MainHomepageErrorBody,
-  MainHomepageOperationResult,
-} from '../types'
+import type { MainHomepageErrorBody, MainHomepageOperationResult } from '../types'
 
 export async function updateMainHomepageBlockContent(
   body: unknown,
-): Promise<MainHomepageOperationResult<Awaited<ReturnType<typeof formatMainHomepage>> | MainHomepageErrorBody>> {
+): Promise<
+  MainHomepageOperationResult<
+    Awaited<ReturnType<typeof formatMainHomepage>> | MainHomepageErrorBody
+  >
+> {
   const parsed = parseBlockUpdateBody(body)
   if (!parsed.ok) {
     return { status: parsed.status, body: { message: parsed.message } }
@@ -38,21 +40,38 @@ export async function updateMainHomepageBlockContent(
   const blockIndex = blocks.findIndex((block) => block.id === parsed.input.blockId)
 
   if (blockIndex === -1) {
-    return { status: 404, body: { message: `Block ${parsed.input.blockId} not found in main homepage.` } }
+    return {
+      status: 404,
+      body: { message: `Block ${parsed.input.blockId} not found in main homepage.` },
+    }
   }
 
   const block = blocks[blockIndex]
   if (!isCuratedBlockType(block.blockType)) {
     return {
       status: 400,
-      body: { message: `Block type "${block.blockType}" does not support item updates via this endpoint.` },
+      body: {
+        message: `Block type "${block.blockType}" does not support item updates via this endpoint.`,
+      },
     }
   }
 
   const fieldError = validateBlockUpdateFields(block, parsed.input.fields)
   if (fieldError) return { status: 400, body: { message: fieldError.message } }
 
-  const resolvedBlockSlotCount = resolveStoredSlotCountForBlockType(block.blockType, block.slotCount)
+  const authorCards = parsed.input.fields.authorFeature.authorCards
+  if (authorCards.ok && !authorCards.omit) {
+    const authorImageError = await validateAuthorFeatureCardImageSelections(
+      payload,
+      authorCards.value,
+    )
+    if (authorImageError) return { status: 400, body: { message: authorImageError } }
+  }
+
+  const resolvedBlockSlotCount = resolveStoredSlotCountForBlockType(
+    block.blockType,
+    block.slotCount,
+  )
   const blockSlotCount = parsed.input.slotCount ?? resolvedBlockSlotCount
   if (!isValidRequestedSlotCount(block.blockType, blockSlotCount)) {
     return {

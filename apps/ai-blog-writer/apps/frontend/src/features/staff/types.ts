@@ -16,6 +16,23 @@ export type AvatarAsset = {
   alt_text?: string | null
 }
 
+export type AuthorMediaSet = {
+  id: number
+  title?: string | null
+  alt_text?: string | null
+  source?: AvatarAsset | number | null
+  focal_point?: {
+    x?: number | null
+    y?: number | null
+  } | null
+  variants?: Record<string, AvatarAsset | number | null> | null
+}
+
+export type AuthorImageEntry = {
+  id?: string | null
+  mediaSet: AuthorMediaSet | number
+}
+
 export type ExpertiseEntry = {
   id?: string | null
   area: string
@@ -50,6 +67,7 @@ export type Author = {
   user?: number | { id: number } | null
   displayName: string
   avatar?: AvatarAsset | number | null
+  authorImages?: AuthorImageEntry[] | null
   bio?: string | null
   expertise?: ExpertiseEntry[] | null
   socialLinks?: SocialLinks | null
@@ -94,6 +112,7 @@ export type AuthorPatch = {
   user?: number
   displayName?: string
   avatar?: number | null
+  authorImages?: { mediaSet: number }[]
   bio?: string
   expertise?: { area: string }[]
   socialLinks?: SocialLinks

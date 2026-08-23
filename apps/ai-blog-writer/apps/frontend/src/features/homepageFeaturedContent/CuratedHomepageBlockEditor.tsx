@@ -24,7 +24,11 @@ import type {
   HomepageFeaturedSelection
 } from './types'
 import EditorialFeaturePanelEditor from './EditorialFeaturePanelEditor'
-import type { EditorialFeatureFieldsUpdate } from './mainHomepage/blocks/blockSettings.api'
+import AuthorFeaturePanelEditor from './AuthorFeaturePanelEditor'
+import type {
+  AuthorFeatureFieldsUpdate,
+  EditorialFeatureFieldsUpdate
+} from './mainHomepage/blocks/blockSettings.api'
 
 type Props = {
   block: ArticleCuratedHomepageBlockResponse
@@ -58,6 +62,7 @@ type Props = {
   saveEditorialFeatureFields?: (
     fields: EditorialFeatureFieldsUpdate
   ) => Promise<void>
+  saveAuthorFeatureFields?: (fields: AuthorFeatureFieldsUpdate) => Promise<void>
 }
 
 export default function CuratedHomepageBlockEditor({
@@ -81,7 +86,8 @@ export default function CuratedHomepageBlockEditor({
   deleteError,
   externalUsedKeys,
   onSlotsChange,
-  saveEditorialFeatureFields
+  saveEditorialFeatureFields,
+  saveAuthorFeatureFields
 }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
@@ -101,6 +107,10 @@ export default function CuratedHomepageBlockEditor({
     lockedCollectionFilter:
       block.blockType === 'questurian-maps'
         ? 'single-type-listicles'
+        : undefined,
+    candidateAuthorIds:
+      block.blockType === 'author-feature'
+        ? block.authorCards.map((card) => card.author.id)
         : undefined
   })
   const effectiveSlotEditorState = usePageBlockDuplicateExclusion({
@@ -207,6 +217,13 @@ export default function CuratedHomepageBlockEditor({
             block={block}
             canManage={canManage}
             saveFields={saveEditorialFeatureFields}
+          />
+        ) : null}
+        {block.blockType === 'author-feature' && saveAuthorFeatureFields ? (
+          <AuthorFeaturePanelEditor
+            block={block}
+            canManage={canManage}
+            saveFields={saveAuthorFeatureFields}
           />
         ) : null}
         {block.sectionHeading?.trim() &&

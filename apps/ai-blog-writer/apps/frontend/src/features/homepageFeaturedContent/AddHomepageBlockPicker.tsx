@@ -68,6 +68,7 @@ const BLOCK_PICKER_GROUP_BY_TYPE: Record<
   'featured-article-carousel': 'hero-features',
   'featured-articles': 'lead-stories',
   'editorial-feature': 'lead-stories',
+  'author-feature': 'lead-stories',
   'article-grid': 'story-collections',
   'article-list': 'page-ending',
   'where-to-eat-drink': 'story-collections',

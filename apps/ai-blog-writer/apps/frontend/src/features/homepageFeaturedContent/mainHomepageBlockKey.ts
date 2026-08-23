@@ -6,7 +6,7 @@ import {
   isArticleCuratedHomepageBlock,
   isLocationGridBlock,
   isNewsletterSignupBlock,
-  type PageBlockResponse,
+  type PageBlockResponse
 } from './pageBlocks'
 
 /**
@@ -23,12 +23,12 @@ import {
  */
 export function mainHomepageBlockKey(block: PageBlockResponse): string {
   if (
-    isArticleCuratedHomepageBlock(block)
-    || isLocationGridBlock(block)
-    || isNewsletterSignupBlock(block)
-    || isHotelGridBlock(block)
-    || isTourGridBlock(block)
-    || isThingsToDoAttractionsBlock(block)
+    isArticleCuratedHomepageBlock(block) ||
+    isLocationGridBlock(block) ||
+    isNewsletterSignupBlock(block) ||
+    isHotelGridBlock(block) ||
+    isTourGridBlock(block) ||
+    isThingsToDoAttractionsBlock(block)
   ) {
     return homepageBlockEditorIdentity(block).join(':')
   }

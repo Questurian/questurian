@@ -28,12 +28,21 @@ export type {
   UseHomepageLocationGridSlotsOptions,
   UseHomepageLocationGridSlotsResult
 } from './homepageLocationGridSlots.types'
-export { buildSaveItems, hasDuplicateSlots } from './homepageLocationGridSlots.utils'
+export {
+  buildSaveItems,
+  hasDuplicateSlots
+} from './homepageLocationGridSlots.utils'
 
 export function useHomepageLocationGridSlots(
   options: UseHomepageLocationGridSlotsOptions
 ): UseHomepageLocationGridSlotsResult {
-  const { canManage, selection, saveSelection, fetchCandidates, selectionQueryKey } = options
+  const {
+    canManage,
+    selection,
+    saveSelection,
+    fetchCandidates,
+    selectionQueryKey
+  } = options
 
   const {
     draftSlots,
@@ -56,13 +65,18 @@ export function useHomepageLocationGridSlots(
     isFetching: false
   } as ReturnType<typeof useQuery<HomepageLocationGridSelection>>
 
-  const { searchValue, candidatePage, candidatesQuery, setSearchValue, setCandidatePage } =
-    useHomepageLocationGridCandidates({
-      canManage,
-      fetchCandidates,
-      selectionQueryKey,
-      pickerSlotIndex
-    })
+  const {
+    searchValue,
+    candidatePage,
+    candidatesQuery,
+    setSearchValue,
+    setCandidatePage
+  } = useHomepageLocationGridCandidates({
+    canManage,
+    fetchCandidates,
+    selectionQueryKey,
+    pickerSlotIndex
+  })
 
   const slots = draftSlots ?? savedSlots
   const currentSaveSlotCountRef = useRef(selection.totalSlots)
@@ -80,7 +94,9 @@ export function useHomepageLocationGridSlots(
     },
     onError: (error: unknown) => {
       setResultMessage(
-        error instanceof Error ? error.message : 'Failed to save homepage location grid.'
+        error instanceof Error
+          ? error.message
+          : 'Failed to save homepage location grid.'
       )
     }
   })
@@ -121,7 +137,10 @@ export function useHomepageLocationGridSlots(
       if (slotCount === current.length) return current
       if (slotCount < current.length) return current.slice(0, slotCount)
 
-      return [...current, ...Array.from({ length: slotCount - current.length }, () => null)]
+      return [
+        ...current,
+        ...Array.from({ length: slotCount - current.length }, () => null)
+      ]
     })
   }
 

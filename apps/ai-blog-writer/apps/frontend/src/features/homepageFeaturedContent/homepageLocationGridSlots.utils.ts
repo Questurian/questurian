@@ -25,12 +25,17 @@ export function mapSelectionToSlots(
   return slots
 }
 
-export function areRefsEqual(left: LocationGridSlotValue, right: LocationGridSlotValue): boolean {
+export function areRefsEqual(
+  left: LocationGridSlotValue,
+  right: LocationGridSlotValue
+): boolean {
   if (!left && !right) return true
   if (!left || !right) return false
 
   return (
-    left.id === right.id && left.kicker === right.kicker && left.description === right.description
+    left.id === right.id &&
+    left.kicker === right.kicker &&
+    left.description === right.description
   )
 }
 
@@ -41,7 +46,8 @@ export function areSlotListsEqual(
   if (!left) return false
 
   return (
-    left.length === right.length && left.every((item, index) => areRefsEqual(item, right[index]))
+    left.length === right.length &&
+    left.every((item, index) => areRefsEqual(item, right[index]))
   )
 }
 
@@ -58,7 +64,9 @@ export function hasDuplicateSlots(slots: LocationGridSlotValue[]): boolean {
   return false
 }
 
-export function buildSaveItems(slots: LocationGridSlotValue[]): HomepageLocationGridItemRef[] {
+export function buildSaveItems(
+  slots: LocationGridSlotValue[]
+): HomepageLocationGridItemRef[] {
   return slots.flatMap((item) => {
     if (!item) return []
 
@@ -72,15 +80,21 @@ export function buildSaveItems(slots: LocationGridSlotValue[]): HomepageLocation
   })
 }
 
-export function hasCompleteDescriptions(slots: LocationGridSlotValue[]): boolean {
-  return slots.every((item) => item === null || Boolean(item.description?.trim()))
+export function hasCompleteDescriptions(
+  slots: LocationGridSlotValue[]
+): boolean {
+  return slots.every(
+    (item) => item === null || Boolean(item.description?.trim())
+  )
 }
 
 export function hasCompleteKickers(slots: LocationGridSlotValue[]): boolean {
   return slots.every((item) => item === null || Boolean(item.kicker?.trim()))
 }
 
-export function invalidItemsBySlotMap<T extends { slot: number }>(items: T[]): Map<number, T> {
+export function invalidItemsBySlotMap<T extends { slot: number }>(
+  items: T[]
+): Map<number, T> {
   const invalidItemsBySlot = new Map<number, T>()
   for (const item of items) {
     invalidItemsBySlot.set(item.slot, item)

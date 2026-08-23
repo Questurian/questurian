@@ -37,6 +37,7 @@ export async function applyBlockItemsUpdate(
     slotCount: blockSlotCount,
     allowDrafts: APP_CONFIG.features.homepageFeaturedAllowDrafts,
     locationGridScope,
+    block,
   }
 
   behavior.assertAllowed?.(context)
@@ -87,6 +88,9 @@ export function applyBlockFieldUpdates(block: RawBlock, fields: ParsedBlockUpdat
     next = { ...next, creatorKicker: fields.creatorKicker.value }
   }
   for (const [key, field] of Object.entries(fields.editorialFeature)) {
+    if (!field.omit) next = { ...next, [key]: field.value }
+  }
+  for (const [key, field] of Object.entries(fields.authorFeature)) {
     if (!field.omit) next = { ...next, [key]: field.value }
   }
 

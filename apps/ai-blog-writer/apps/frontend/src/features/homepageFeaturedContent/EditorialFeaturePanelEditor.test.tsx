@@ -152,9 +152,7 @@ describe('EditorialFeaturePanelEditor', () => {
       screen.getByRole('textbox', { name: /Feature title/ }),
       'New feature'
     )
-    await user.click(
-      screen.getByRole('button', { name: 'Save feature panel' })
-    )
+    await user.click(screen.getByRole('button', { name: 'Save feature panel' }))
 
     await waitFor(() => expect(disclosure).not.toHaveAttribute('open'))
     expect(saveFields).toHaveBeenCalledWith(

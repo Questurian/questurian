@@ -4,19 +4,19 @@ import {
   articleGridFourLayoutForBlock,
   slot3LayoutForBlock,
   slot4LayoutForBlock,
-  slot5LayoutForBlock,
+  slot5LayoutForBlock
 } from './curatedHomepageLayouts'
 import type {
   ArticleCuratedHomepageBlockResponse,
   ArticleGridFourLayout,
   FeaturedArticlesSlot3Layout,
   FeaturedArticlesSlot4Layout,
-  FeaturedArticlesSlot5Layout,
+  FeaturedArticlesSlot5Layout
 } from './pageBlocks'
 
 function usePersistedLayoutDraft<T extends string>(
   savedValue: T,
-  save: ((value: T) => Promise<void>) | undefined,
+  save: ((value: T) => Promise<void>) | undefined
 ) {
   const [draft, setDraft] = useState(savedValue)
 
@@ -28,7 +28,7 @@ function usePersistedLayoutDraft<T extends string>(
     mutationFn: async (value: T) => {
       if (!save) return
       await save(value)
-    },
+    }
   })
 
   return {
@@ -36,7 +36,7 @@ function usePersistedLayoutDraft<T extends string>(
     setDraft,
     savedValue,
     dirty: draft !== savedValue,
-    mutation,
+    mutation
   }
 }
 
@@ -53,17 +53,28 @@ export function useCuratedHomepageLayouts({
   saveSlot3Layout,
   saveSlot4Layout,
   saveSlot5Layout,
-  saveArticleGridFourLayout,
+  saveArticleGridFourLayout
 }: Params) {
-  const slot3 = usePersistedLayoutDraft(slot3LayoutForBlock(block), saveSlot3Layout)
-  const slot4 = usePersistedLayoutDraft(slot4LayoutForBlock(block), saveSlot4Layout)
-  const slot5 = usePersistedLayoutDraft(slot5LayoutForBlock(block), saveSlot5Layout)
+  const slot3 = usePersistedLayoutDraft(
+    slot3LayoutForBlock(block),
+    saveSlot3Layout
+  )
+  const slot4 = usePersistedLayoutDraft(
+    slot4LayoutForBlock(block),
+    saveSlot4Layout
+  )
+  const slot5 = usePersistedLayoutDraft(
+    slot5LayoutForBlock(block),
+    saveSlot5Layout
+  )
   const articleGridFour = usePersistedLayoutDraft(
     articleGridFourLayoutForBlock(block),
-    saveArticleGridFourLayout,
+    saveArticleGridFourLayout
   )
 
   return { slot3, slot4, slot5, articleGridFour }
 }
 
-export type CuratedHomepageLayoutsState = ReturnType<typeof useCuratedHomepageLayouts>
+export type CuratedHomepageLayoutsState = ReturnType<
+  typeof useCuratedHomepageLayouts
+>

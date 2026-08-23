@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
-import { HOMEPAGE_PAGE_BLOCK_CONFIG, type CuratedHomepageBlockType } from './pageBlocks'
+import {
+  HOMEPAGE_PAGE_BLOCK_CONFIG,
+  type CuratedHomepageBlockType
+} from './pageBlocks'
 
 type Props = {
   blockId: string
@@ -14,7 +17,7 @@ type Props = {
   canConvert: boolean
   onConvert: (
     blockType: CuratedHomepageBlockType,
-    slotCount: number,
+    slotCount: number
   ) => Promise<void>
   onConverted?: () => void
 }
@@ -26,11 +29,11 @@ export default function HomepageBlockConvertSection({
   convertTargetOptions,
   canConvert,
   onConvert,
-  onConverted,
+  onConverted
 }: Props) {
   const convertTargets = useMemo(
     () => (convertTargetOptions.length > 0 ? convertTargetOptions : []),
-    [convertTargetOptions],
+    [convertTargetOptions]
   )
 
   const [convertTargetType, setConvertTargetType] =
@@ -50,7 +53,7 @@ export default function HomepageBlockConvertSection({
       setConvertSlotCount(
         next === currentBlockType
           ? currentSlotCount
-          : HOMEPAGE_PAGE_BLOCK_CONFIG[next].defaultSlotCount,
+          : HOMEPAGE_PAGE_BLOCK_CONFIG[next].defaultSlotCount
       )
     }
   }, [convertTargets, convertTargetType, currentBlockType, currentSlotCount])
@@ -60,14 +63,16 @@ export default function HomepageBlockConvertSection({
     if (convertTargetType === currentBlockType) {
       setConvertSlotCount(currentSlotCount)
     } else {
-      setConvertSlotCount(HOMEPAGE_PAGE_BLOCK_CONFIG[convertTargetType].defaultSlotCount)
+      setConvertSlotCount(
+        HOMEPAGE_PAGE_BLOCK_CONFIG[convertTargetType].defaultSlotCount
+      )
     }
   }, [convertTargetType, convertTargets, currentBlockType, currentSlotCount])
 
   const convertMutation = useMutation({
     mutationFn: async ({
       blockType,
-      slotCount,
+      slotCount
     }: {
       blockType: CuratedHomepageBlockType
       slotCount: number
@@ -76,7 +81,7 @@ export default function HomepageBlockConvertSection({
     },
     onSuccess: () => {
       onConverted?.()
-    },
+    }
   })
 
   const convertCfg = HOMEPAGE_PAGE_BLOCK_CONFIG[convertTargetType]
@@ -87,17 +92,24 @@ export default function HomepageBlockConvertSection({
     if (convertSlotsFixed) {
       n = convertCfg.defaultSlotCount
     } else {
-      n = Math.min(Math.max(Math.trunc(n), convertCfg.minSlotCount), convertCfg.maxSlotCount)
+      n = Math.min(
+        Math.max(Math.trunc(n), convertCfg.minSlotCount),
+        convertCfg.maxSlotCount
+      )
     }
     return n
   })()
 
   const isNoOp =
-    convertTargetType === currentBlockType && normalizedChosen === currentSlotCount
+    convertTargetType === currentBlockType &&
+    normalizedChosen === currentSlotCount
 
   function handleConvert() {
     if (!canConvert || isNoOp) return
-    convertMutation.mutate({ blockType: convertTargetType, slotCount: normalizedChosen })
+    convertMutation.mutate({
+      blockType: convertTargetType,
+      slotCount: normalizedChosen
+    })
   }
 
   if (!canConvert || convertTargets.length === 0) {
@@ -117,18 +129,24 @@ export default function HomepageBlockConvertSection({
     <section className="hf-block-settings-section">
       <h3 className="hf-block-settings-kicker">Change block type</h3>
       <p className="hf-block-settings-hint">
-        Nothing saved in this block yet. Choose a type and slot count, or keep this type and only
-        change slots. Your section title is kept when supported.
+        Nothing saved in this block yet. Choose a type and slot count, or keep
+        this type and only change slots. Your section title is kept when
+        supported.
       </p>
       <div className="hf-block-convert-row">
-        <label className="hf-block-convert-label" htmlFor={`hf-convert-type-${blockId}`}>
+        <label
+          className="hf-block-convert-label"
+          htmlFor={`hf-convert-type-${blockId}`}
+        >
           Block type
         </label>
         <select
           id={`hf-convert-type-${blockId}`}
           className="hf-block-convert-select"
           value={convertTargetType}
-          onChange={(e) => setConvertTargetType(e.target.value as CuratedHomepageBlockType)}
+          onChange={(e) =>
+            setConvertTargetType(e.target.value as CuratedHomepageBlockType)
+          }
         >
           {convertTargets.map((t) => (
             <option key={t} value={t}>
@@ -138,7 +156,9 @@ export default function HomepageBlockConvertSection({
           ))}
         </select>
         {convertSlotsFixed ? (
-          <span className="hf-block-convert-slot-note">{convertCfg.defaultSlotCount} slots</span>
+          <span className="hf-block-convert-slot-note">
+            {convertCfg.defaultSlotCount} slots
+          </span>
         ) : (
           <>
             <span className="hf-block-convert-label">Slots</span>
@@ -175,7 +195,9 @@ export default function HomepageBlockConvertSection({
         </button>
       </div>
       {isNoOp ? (
-        <p className="hf-block-settings-hint">Choose a different type or slot count to apply a change.</p>
+        <p className="hf-block-settings-hint">
+          Choose a different type or slot count to apply a change.
+        </p>
       ) : null}
       {convertMutation.isError ? (
         <p className="hf-block-section-heading-error">

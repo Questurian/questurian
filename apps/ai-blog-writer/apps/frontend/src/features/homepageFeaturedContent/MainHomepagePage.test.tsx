@@ -14,14 +14,14 @@ function createAuthValue(): AuthContextValue {
     user: {
       id: 'user-1',
       email: 'editor@example.com',
-      role: 'editor',
+      role: 'editor'
     },
     isAuthenticated: true,
     isRestoringSession: false,
     isConnected: true,
     connectionError: null,
     login: vi.fn(),
-    logout: vi.fn(),
+    logout: vi.fn()
   }
 }
 
@@ -29,8 +29,8 @@ function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
-      mutations: { retry: false },
-    },
+      mutations: { retry: false }
+    }
   })
 
   return render(
@@ -40,7 +40,7 @@ function renderPage() {
           <MainHomepagePage />
         </MemoryRouter>
       </AuthContext.Provider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
 }
 
@@ -57,10 +57,10 @@ const homepage: MainHomepageResponse = {
         invalidItems: [],
         isComplete: false,
         allowDrafts: true,
-        totalSlots: 1,
-      },
-    },
-  ],
+        totalSlots: 1
+      }
+    }
+  ]
 }
 
 const emptyCandidates = {
@@ -69,7 +69,7 @@ const emptyCandidates = {
   totalPages: 1,
   page: 1,
   limit: 24,
-  allowDrafts: true,
+  allowDrafts: true
 }
 
 describe('MainHomepagePage performance behavior', () => {
@@ -87,7 +87,9 @@ describe('MainHomepagePage performance behavior', () => {
           ? emptyCandidates
           : homepage
 
-      return Promise.resolve(new Response(JSON.stringify(payload), { status: 200 }))
+      return Promise.resolve(
+        new Response(JSON.stringify(payload), { status: 200 })
+      )
     })
     vi.stubGlobal('fetch', fetchMock)
 
@@ -95,14 +97,22 @@ describe('MainHomepagePage performance behavior', () => {
 
     await screen.findByRole('button', { name: /choose featured article/i })
 
-    expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/candidates')))
-      .toBe(false)
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes('/candidates')
+      )
+    ).toBe(false)
 
-    await user.click(screen.getByRole('button', { name: /choose featured article/i }))
+    await user.click(
+      screen.getByRole('button', { name: /choose featured article/i })
+    )
 
     await waitFor(() => {
-      expect(fetchMock.mock.calls.some(([input]) => String(input).includes('/candidates')))
-        .toBe(true)
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).includes('/candidates')
+        )
+      ).toBe(true)
     })
   })
 })

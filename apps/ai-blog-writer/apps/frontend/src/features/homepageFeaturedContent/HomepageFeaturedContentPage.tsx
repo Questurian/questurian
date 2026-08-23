@@ -9,7 +9,7 @@ import {
   deleteLocationHomepage,
   fetchLocationHomepagesList,
   toggleLocationHomepage,
-  type LocationHomepageListItem,
+  type LocationHomepageListItem
 } from './locationHomepages'
 import { LocationHomepageRow } from './components/LocationHomepageRow'
 import { DeleteLocationHomepageModal } from './components/DeleteLocationHomepageModal'
@@ -22,7 +22,9 @@ export default function HomepageFeaturedContentPage() {
   const queryClient = useQueryClient()
   const { canManagePublished: canManage } = usePermissions()
 
-  const [editingCountryKey, setEditingCountryKey] = useState<string | null>(null)
+  const [editingCountryKey, setEditingCountryKey] = useState<string | null>(
+    null
+  )
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
 
   const listQueryKey = ['location-homepages-list', user?.id ?? 'anonymous']
@@ -30,12 +32,12 @@ export default function HomepageFeaturedContentPage() {
   const listQuery = useQuery({
     queryKey: listQueryKey,
     queryFn: () => fetchLocationHomepagesList(),
-    enabled: isAuthenticated && canManage,
+    enabled: isAuthenticated && canManage
   })
 
   const toggleMutation = useMutation({
     mutationFn: ({ id }: { id: number }) => toggleLocationHomepage(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: listQueryKey }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: listQueryKey })
   })
 
   const deleteMutation = useMutation({
@@ -43,19 +45,22 @@ export default function HomepageFeaturedContentPage() {
     onSuccess: () => {
       setDeleteTargetId(null)
       queryClient.invalidateQueries({ queryKey: listQueryKey })
-    },
+    }
   })
 
   const locationHomepages = listQuery.data ?? EMPTY_LOCATION_HOMEPAGES
-  const deleteTarget = deleteTargetId !== null
-    ? locationHomepages.find((h) => h.id === deleteTargetId) ?? null
-    : null
+  const deleteTarget =
+    deleteTargetId !== null
+      ? (locationHomepages.find((h) => h.id === deleteTargetId) ?? null)
+      : null
   const deleteError = deleteMutation.isError
-    ? (deleteMutation.error instanceof Error ? deleteMutation.error.message : 'Failed to delete.')
+    ? deleteMutation.error instanceof Error
+      ? deleteMutation.error.message
+      : 'Failed to delete.'
     : null
   const homepageGroups = useMemo(
     () => buildHomepageGroups(locationHomepages),
-    [locationHomepages],
+    [locationHomepages]
   )
 
   if (!canManage) {
@@ -76,8 +81,9 @@ export default function HomepageFeaturedContentPage() {
         <div className="hf-hero-copy">
           <h1>Homepage Manager</h1>
           <p className="hf-hero-desc">
-            Manage the main domain homepage and create curated homepages for specific cities and
-            neighborhoods. Each homepage is built from content blocks.
+            Manage the main domain homepage and create curated homepages for
+            specific cities and neighborhoods. Each homepage is built from
+            content blocks.
           </p>
         </div>
       </header>
@@ -97,13 +103,16 @@ export default function HomepageFeaturedContentPage() {
                 <span className="hf-enabled-tag on">Always active</span>
               </div>
               <p className="hf-hub-card-desc">
-                Default homepage content shown on the main domain. Requires exactly 10 featured
-                items.
+                Default homepage content shown on the main domain. Requires
+                exactly 10 featured items.
               </p>
             </div>
           </div>
           <div className="hf-hub-card-actions">
-            <Link to="/homepage-featured-content/main" className="hf-btn-primary">
+            <Link
+              to="/homepage-featured-content/main"
+              className="hf-btn-primary"
+            >
               Edit content
             </Link>
           </div>
@@ -135,12 +144,16 @@ export default function HomepageFeaturedContentPage() {
               return (
                 <div key={countryGroup.key} className="hf-country-section">
                   <div className="hf-country-section-header">
-                    <h3 className="hf-country-section-name">{countryGroup.countryLabel}</h3>
+                    <h3 className="hf-country-section-name">
+                      {countryGroup.countryLabel}
+                    </h3>
                     <button
                       type="button"
                       className={`hf-country-edit-btn${isEditing ? ' is-done' : ''}`}
                       onClick={() =>
-                        setEditingCountryKey(isEditing ? null : countryGroup.key)
+                        setEditingCountryKey(
+                          isEditing ? null : countryGroup.key
+                        )
                       }
                     >
                       {isEditing ? 'Done' : 'Manage'}
@@ -150,15 +163,21 @@ export default function HomepageFeaturedContentPage() {
                   <div className="hf-city-block-list">
                     {countryGroup.cityGroups.map((cityGroup) => {
                       const cityMissingHomepage =
-                        cityGroup.cityHomepage === null
-                        && cityGroup.neighborhoodHomepages.length > 0
+                        cityGroup.cityHomepage === null &&
+                        cityGroup.neighborhoodHomepages.length > 0
 
                       return (
                         <div key={cityGroup.key} className="hf-city-block">
-                          <div className={`hf-city-block-header${cityMissingHomepage ? ' is-missing' : ''}`}>
-                            <h4 className="hf-city-block-name">{cityGroup.cityLabel}</h4>
+                          <div
+                            className={`hf-city-block-header${cityMissingHomepage ? ' is-missing' : ''}`}
+                          >
+                            <h4 className="hf-city-block-name">
+                              {cityGroup.cityLabel}
+                            </h4>
                             {cityMissingHomepage && (
-                              <span className="hf-city-missing-hint">No city homepage</span>
+                              <span className="hf-city-missing-hint">
+                                No city homepage
+                              </span>
                             )}
                           </div>
 
@@ -170,9 +189,12 @@ export default function HomepageFeaturedContentPage() {
                                 onRequestDelete={setDeleteTargetId}
                                 onToggle={(id) => toggleMutation.mutate({ id })}
                                 isToggling={
-                                  toggleMutation.isPending
-                                  && (toggleMutation.variables as { id: number } | undefined)
-                                    ?.id === cityGroup.cityHomepage.id
+                                  toggleMutation.isPending &&
+                                  (
+                                    toggleMutation.variables as
+                                      | { id: number }
+                                      | undefined
+                                  )?.id === cityGroup.cityHomepage.id
                                 }
                               />
                             )}
@@ -185,9 +207,12 @@ export default function HomepageFeaturedContentPage() {
                                 onRequestDelete={setDeleteTargetId}
                                 onToggle={(id) => toggleMutation.mutate({ id })}
                                 isToggling={
-                                  toggleMutation.isPending
-                                  && (toggleMutation.variables as { id: number } | undefined)
-                                    ?.id === item.id
+                                  toggleMutation.isPending &&
+                                  (
+                                    toggleMutation.variables as
+                                      | { id: number }
+                                      | undefined
+                                  )?.id === item.id
                                 }
                               />
                             ))}

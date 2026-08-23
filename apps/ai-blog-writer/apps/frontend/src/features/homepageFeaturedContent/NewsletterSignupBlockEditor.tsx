@@ -3,7 +3,10 @@ import { useState } from 'react'
 import HomepageBlockDeleteTrigger from './HomepageBlockDeleteTrigger'
 import HomepageBlockSectionTextFields from './HomepageBlockSectionTextFields'
 import HomepageBlockSettingsModal from './HomepageBlockSettingsModal'
-import { HOMEPAGE_PAGE_BLOCK_CONFIG, type NewsletterSignupBlockResponse } from './pageBlocks'
+import {
+  HOMEPAGE_PAGE_BLOCK_CONFIG,
+  type NewsletterSignupBlockResponse
+} from './pageBlocks'
 
 export default function NewsletterSignupBlockEditor({
   block,
@@ -12,7 +15,7 @@ export default function NewsletterSignupBlockEditor({
   isDeletingBlock,
   deleteError,
   saveSectionHeading,
-  saveSectionSubheading,
+  saveSectionSubheading
 }: {
   block: NewsletterSignupBlockResponse
   blockIndex: number
@@ -25,10 +28,12 @@ export default function NewsletterSignupBlockEditor({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG['newsletter-signup']
 
-  const displayKicker = (block.sectionHeading?.trim() || 'Newsletter').toUpperCase()
+  const displayKicker = (
+    block.sectionHeading?.trim() || 'Newsletter'
+  ).toUpperCase()
   const displayHeadline =
-    block.sectionSubheading?.trim()
-    || 'Our best stories and perspectives — delivered to your inbox. (Placeholder — hook up signup later.)'
+    block.sectionSubheading?.trim() ||
+    'Our best stories and perspectives — delivered to your inbox. (Placeholder — hook up signup later.)'
 
   return (
     <div className="hf-block-section">
@@ -64,8 +69,8 @@ export default function NewsletterSignupBlockEditor({
         title="Newsletter block"
       >
         <p className="hf-block-settings-hint" style={{ marginTop: 0 }}>
-          Optional labels below map to the small kicker and main headline in the preview. Leave blank
-          to use the default placeholder copy.
+          Optional labels below map to the small kicker and main headline in the
+          preview. Leave blank to use the default placeholder copy.
         </p>
         <HomepageBlockSectionTextFields
           blockId={block.id}
@@ -77,7 +82,10 @@ export default function NewsletterSignupBlockEditor({
         />
       </HomepageBlockSettingsModal>
 
-      <div className="hf-newsletter-placeholder" aria-label="Newsletter section preview (placeholder)">
+      <div
+        className="hf-newsletter-placeholder"
+        aria-label="Newsletter section preview (placeholder)"
+      >
         <div className="hf-newsletter-placeholder-inner">
           <div className="hf-newsletter-placeholder-copy">
             <p className="hf-newsletter-kicker">{displayKicker}</p>
@@ -87,7 +95,8 @@ export default function NewsletterSignupBlockEditor({
               <div className="hf-newsletter-fake-btn">Sign up</div>
             </div>
             <p className="hf-newsletter-muted">
-              Terms, privacy, and real signup flow will ship with the public site — this is layout-only.
+              Terms, privacy, and real signup flow will ship with the public
+              site — this is layout-only.
             </p>
           </div>
           <div className="hf-newsletter-visual" aria-hidden>

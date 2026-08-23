@@ -21,6 +21,7 @@ const PREVIEW_KIND_BY_BLOCK_TYPE: Record<
   'featured-article-carousel': 'carousel',
   'featured-articles': 'editorial',
   'editorial-feature': 'story-grid',
+  'author-feature': 'creator-hero',
   'article-grid': 'article-grid',
   'location-grid': 'place-grid',
   'questurian-maps': 'map-grid',

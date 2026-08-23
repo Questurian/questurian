@@ -25,6 +25,10 @@ export {
 
 export type {
   ArticleCuratedHomepageBlockResponse,
+  AuthorFeatureBlockResponse,
+  AuthorFeatureCard,
+  AuthorFeatureImageStyle,
+  AuthorFeatureMotionStyle,
   ArticleGridBlockResponse,
   ArticleGridFourLayout,
   ArticleListBlockResponse,
