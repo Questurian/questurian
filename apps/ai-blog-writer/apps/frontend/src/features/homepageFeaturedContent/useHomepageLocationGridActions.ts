@@ -4,9 +4,7 @@ import type { LocationGridSlotValue } from './homepageLocationGridSlots.utils'
 type UseHomepageLocationGridActionsOptions = {
   pickerSlotIndex: number | null
   setPickerSlotIndex: (value: number | null) => void
-  updateSlots: (
-    transform: (current: LocationGridSlotValue[]) => LocationGridSlotValue[]
-  ) => void
+  updateSlots: (transform: (current: LocationGridSlotValue[]) => LocationGridSlotValue[]) => void
   resetToSavedSlots: () => void
 }
 
@@ -21,11 +19,33 @@ export function useHomepageLocationGridActions({
 
     updateSlots((current) => {
       const next = [...current]
-      next[pickerSlotIndex] = candidate
+      next[pickerSlotIndex] = { ...candidate, description: null }
       return next
     })
 
     setPickerSlotIndex(null)
+  }
+
+  function handleDescriptionChange(slotIndex: number, description: string) {
+    updateSlots((current) => {
+      const item = current[slotIndex]
+      if (!item) return current
+
+      const next = [...current]
+      next[slotIndex] = { ...item, description }
+      return next
+    })
+  }
+
+  function handleKickerChange(slotIndex: number, kicker: string) {
+    updateSlots((current) => {
+      const item = current[slotIndex]
+      if (!item) return current
+
+      const next = [...current]
+      next[slotIndex] = { ...item, kicker }
+      return next
+    })
   }
 
   function handleMove(slotIndex: number, direction: -1 | 1) {
@@ -58,6 +78,8 @@ export function useHomepageLocationGridActions({
 
   return {
     handleCandidatePick,
+    handleKickerChange,
+    handleDescriptionChange,
     handleMove,
     handleReorderAll,
     handleRemove,

@@ -10,13 +10,16 @@
 export type {
   ArticleCuratedHomepageBlockType,
   CuratedHomepageBlockConfig,
-  CuratedHomepageBlockType
+  CuratedHomepageBlockType,
+  GrowingCarouselBlockType
 } from './pageBlocks.definitions'
 export {
   ARTICLE_CURATED_HOMEPAGE_BLOCK_TYPES,
   CONVERT_EMPTY_FEATURED_ARTICLES_TO_BLOCK_TYPES,
   HOMEPAGE_PAGE_BLOCK_CONFIG,
   HOMEPAGE_PAGE_BLOCK_TYPES,
+  isHomepageBlockFrontendReady,
+  isGrowingCarouselBlockType,
   isValidHomepageBlockSlotCount
 } from './pageBlocks.definitions'
 

@@ -34,6 +34,56 @@ describe('resolve-public-image', () => {
     })
   })
 
+  it('anchors relative Payload asset URLs to the configured backend origin', () => {
+    const originalBackendUrl = process.env.BACKEND_URL_LOCAL
+    process.env.BACKEND_URL_LOCAL = 'http://localhost:4000'
+
+    try {
+      const image = resolveMediaSetForPlacement(
+        {
+          variants: {
+            thumbnail: {
+              url: '/api/media-assets/file/lima.webp',
+            },
+          },
+        },
+        'card',
+      )
+
+      expect(image.url).toBe('http://localhost:4000/api/media-assets/file/lima.webp')
+    } finally {
+      process.env.BACKEND_URL_LOCAL = originalBackendUrl
+    }
+  })
+
+  it('uses Payload filename when a migrated asset has no stored URL', () => {
+    const originalBackendUrl = process.env.BACKEND_URL_LOCAL
+    process.env.BACKEND_URL_LOCAL = 'http://localhost:4000'
+
+    try {
+      const image = resolveMediaSetForPlacement(
+        {
+          variants: {
+            thumbnail: {
+              filename: 'lima cover_thumbnail.webp',
+              width: 600,
+              height: 400,
+            },
+          },
+        },
+        'card',
+      )
+
+      expect(image).toMatchObject({
+        url: 'http://localhost:4000/api/media-assets/file/lima%20cover_thumbnail.webp',
+        status: 'ready',
+        variant: 'thumbnail',
+      })
+    } finally {
+      process.env.BACKEND_URL_LOCAL = originalBackendUrl
+    }
+  })
+
   it('falls back from asset alt to set alt then title', () => {
     expect(
       resolveMediaSetForPlacement(

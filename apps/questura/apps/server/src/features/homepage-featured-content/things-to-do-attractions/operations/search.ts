@@ -31,7 +31,7 @@ export async function searchThingsToDoAttractionCandidates(
 
   const response = await payload.find({
     collection: 'attractions',
-    depth: 1,
+    depth: 2,
     limit,
     page,
     sort: '-updatedAt',

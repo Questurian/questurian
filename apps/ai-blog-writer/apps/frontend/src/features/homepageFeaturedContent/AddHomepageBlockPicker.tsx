@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
   HOMEPAGE_PAGE_BLOCK_TYPES,
+  isHomepageBlockFrontendReady,
+  isGrowingCarouselBlockType,
   isValidHomepageBlockSlotCount,
   type CuratedHomepageBlockType
 } from './pageBlocks'
@@ -114,6 +116,19 @@ type Props = {
   availableBlockTypes?: CuratedHomepageBlockType[]
 }
 
+function FrontendReadyBadge() {
+  return (
+    <span
+      className="hf-frontend-ready-badge"
+      aria-label="Matching frontend client layout exists"
+      title="Matching frontend client layout exists"
+    >
+      <span aria-hidden="true">★</span>
+      Client ready
+    </span>
+  )
+}
+
 export default function AddHomepageBlockPicker({
   isPending,
   onConfirm,
@@ -169,6 +184,12 @@ export default function AddHomepageBlockPicker({
 
   function handleSelectBlockType(blockType: CuratedHomepageBlockType) {
     const nextConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[blockType]
+
+    if (isGrowingCarouselBlockType(blockType)) {
+      onConfirm(blockType, nextConfig.defaultSlotCount)
+      return
+    }
+
     setSelectedBlockType(blockType)
     setSelectedSlotCount(nextConfig.defaultSlotCount)
     setCustomSlotCount('')
@@ -230,11 +251,17 @@ export default function AddHomepageBlockPicker({
                       key={blockType}
                       type="button"
                       className="hf-block-type-option"
+                      disabled={isPending}
                       onClick={() => handleSelectBlockType(blockType)}
                     >
                       <HomepageBlockLayoutPreview blockType={blockType} />
                       <span className="hf-block-type-option-copy">
-                        <strong>{config.label}</strong>
+                        <strong>
+                          {config.label}
+                          {isHomepageBlockFrontendReady(blockType) && (
+                            <FrontendReadyBadge />
+                          )}
+                        </strong>
                         <span>{config.description}</span>
                       </span>
                       <span
@@ -319,6 +346,9 @@ export default function AddHomepageBlockPicker({
               <span className="hf-add-block-size-copy">
                 <strong>{itemLabel}</strong>
                 <span>{arrangementLabel}</span>
+                {isHomepageBlockFrontendReady(selectedBlockType, count) && (
+                  <FrontendReadyBadge />
+                )}
               </span>
               <span className="hf-add-block-size-check" aria-hidden="true">
                 ✓

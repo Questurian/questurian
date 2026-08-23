@@ -1,3 +1,4 @@
+import { LOCATION_GRID_DESCRIPTION_MAX_LENGTH, LOCATION_GRID_KICKER_MAX_LENGTH } from '../constants'
 import type { LocationGridItemRef, ParsedLocationGridSlot } from '../types'
 
 import { isRecord, normalizeNumericId } from './candidate'
@@ -61,4 +62,60 @@ export function buildLocationGridGlobalData(items: LocationGridItemRef[]) {
   return {
     items: items.map((item) => item.id),
   }
+}
+
+export function normalizeLocationGridDescriptions(rawItems: unknown): string[] {
+  if (!Array.isArray(rawItems)) return []
+
+  return rawItems.map((item, index) => {
+    if (!isRecord(item)) {
+      throw new Error(`Location grid slot ${index + 1} needs supporting text.`)
+    }
+
+    const description = typeof item.description === 'string' ? item.description.trim() : ''
+    if (!description) {
+      throw new Error(`Location grid slot ${index + 1} needs supporting text.`)
+    }
+    if (description.length > LOCATION_GRID_DESCRIPTION_MAX_LENGTH) {
+      throw new Error(
+        `Location grid slot ${index + 1} supporting text must be ${LOCATION_GRID_DESCRIPTION_MAX_LENGTH} characters or fewer.`,
+      )
+    }
+
+    return description
+  })
+}
+
+export function normalizeLocationGridKickers(rawItems: unknown): string[] {
+  if (!Array.isArray(rawItems)) return []
+
+  return rawItems.map((item, index) => {
+    if (!isRecord(item)) {
+      throw new Error(`Location grid slot ${index + 1} needs a kicker.`)
+    }
+
+    const kicker = typeof item.kicker === 'string' ? item.kicker.trim() : ''
+    if (!kicker) {
+      throw new Error(`Location grid slot ${index + 1} needs a kicker.`)
+    }
+    if (kicker.length > LOCATION_GRID_KICKER_MAX_LENGTH) {
+      throw new Error(
+        `Location grid slot ${index + 1} kicker must be ${LOCATION_GRID_KICKER_MAX_LENGTH} characters or fewer.`,
+      )
+    }
+
+    return kicker
+  })
+}
+
+export function parseStoredLocationGridDescriptions(value: unknown): Array<string | null> {
+  if (!Array.isArray(value)) return []
+  return value.map((description) =>
+    typeof description === 'string' && description.trim() ? description.trim() : null,
+  )
+}
+
+export function parseStoredLocationGridKickers(value: unknown): Array<string | null> {
+  if (!Array.isArray(value)) return []
+  return value.map((kicker) => (typeof kicker === 'string' && kicker.trim() ? kicker.trim() : null))
 }

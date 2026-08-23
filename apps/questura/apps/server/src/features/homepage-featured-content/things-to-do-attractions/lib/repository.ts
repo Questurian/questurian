@@ -13,7 +13,7 @@ export async function findAttractionDoc(
     const doc = await payload.findByID({
       collection: 'attractions',
       id: ref.id,
-      depth: 1,
+      depth: 2,
       overrideAccess: true,
     })
     return normalizeAttractionCandidate(doc as AttractionDocLike)

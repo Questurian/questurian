@@ -25,6 +25,8 @@ export type LocationGridValidationOptions = {
 export type LocationGridSelectionOptions = {
   totalSlots?: number
   scope: LocationGridScope | null
+  itemKickers?: unknown
+  itemDescriptions?: unknown
 }
 
 export type LocationGridSearchOptions = {

@@ -3,6 +3,10 @@ import type { PayloadInstance } from '@/types'
 
 import { curatedBlockRegistry } from '../../block-registry'
 import type { LocationGridScope } from '../../location-grid/types'
+import {
+  normalizeLocationGridDescriptions,
+  normalizeLocationGridKickers,
+} from '../../location-grid/service'
 import type { RawBlock } from '../../resolve-page-blocks/service'
 import type { ParsedBlockUpdateFields } from './parse-block-update'
 
@@ -37,12 +41,20 @@ export async function applyBlockItemsUpdate(
 
   behavior.assertAllowed?.(context)
   const storedItems = await behavior.buildStoredItems(items, context)
+  const locationGridFields =
+    block.blockType === 'location-grid'
+      ? {
+          itemKickers: normalizeLocationGridKickers(items),
+          itemDescriptions: normalizeLocationGridDescriptions(items),
+        }
+      : {}
   return {
     ok: true,
     block: {
       ...block,
       slotCount: blockSlotCount,
       items: storedItems,
+      ...locationGridFields,
     },
   }
 }

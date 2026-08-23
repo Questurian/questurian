@@ -16,11 +16,17 @@ describe('resolveStoredSlotCountForBlockType', () => {
     expect(resolveStoredSlotCountForBlockType('article-grid', 5)).toBe(4)
     expect(resolveStoredSlotCountForBlockType('featured-articles', 2)).toBe(3)
     expect(resolveStoredSlotCountForBlockType('featured-articles', 12)).toBe(9)
+    expect(resolveStoredSlotCountForBlockType('hotel-grid', 3)).toBe(4)
+    expect(resolveStoredSlotCountForBlockType('hotel-grid', 21)).toBe(20)
+    expect(resolveStoredSlotCountForBlockType('tour-grid', 3)).toBe(4)
+    expect(resolveStoredSlotCountForBlockType('tour-grid', 21)).toBe(20)
   })
 
   it('keeps in-range stored values', () => {
     expect(resolveStoredSlotCountForBlockType('article-grid', 4)).toBe(4)
     expect(resolveStoredSlotCountForBlockType('article-grid', 8)).toBe(8)
     expect(resolveStoredSlotCountForBlockType('featured-articles', 7)).toBe(7)
+    expect(resolveStoredSlotCountForBlockType('hotel-grid', 14)).toBe(14)
+    expect(resolveStoredSlotCountForBlockType('tour-grid', 20)).toBe(20)
   })
 })

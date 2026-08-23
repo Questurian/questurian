@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   getLocationGridSelectionFromItems,
+  normalizeLocationGridDescriptions,
+  normalizeLocationGridKickers,
   searchLocationGridCandidates,
   validateLocationGridItems,
 } from './service'
@@ -23,6 +25,51 @@ describe('location grid service', () => {
     vi.clearAllMocks()
   })
 
+  it('normalizes required per-card supporting copy', () => {
+    expect(
+      normalizeLocationGridDescriptions([
+        { id: 1, description: '  Coastal walks and standout dining.  ' },
+      ]),
+    ).toEqual(['Coastal walks and standout dining.'])
+    expect(() => normalizeLocationGridDescriptions([{ id: 1, description: '  ' }])).toThrow(
+      'slot 1 needs supporting text',
+    )
+  })
+
+  it('normalizes required per-card kickers', () => {
+    expect(normalizeLocationGridKickers([{ id: 1, kicker: '  City escapes  ' }])).toEqual([
+      'City escapes',
+    ])
+    expect(() => normalizeLocationGridKickers([{ id: 1, kicker: '  ' }])).toThrow(
+      'slot 1 needs a kicker',
+    )
+  })
+
+  it('merges stored supporting copy into resolved card slots', async () => {
+    const payload = createPayloadMock()
+    payload.findByID.mockResolvedValue({
+      id: 1,
+      level: 'neighborhood',
+      locationKey: 'usa|austin|downtown',
+      parentKey: 'usa|austin',
+      countryName: 'United States',
+      cityName: 'Austin',
+      neighborhoodName: 'Downtown',
+    })
+
+    const selection = await getLocationGridSelectionFromItems(payload as never, [1], {
+      totalSlots: 1,
+      scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE,
+      itemKickers: ['Local favorites'],
+      itemDescriptions: ['Live music, new restaurants, and walkable streets.'],
+    })
+
+    expect(selection.items[0]?.kicker).toBe('Local favorites')
+    expect(selection.items[0]?.description).toBe(
+      'Live music, new restaurants, and walkable streets.',
+    )
+  })
+
   it('rejects locations outside the allowed child scope', async () => {
     const payload = createPayloadMock()
     payload.findByID.mockImplementation(async ({ id }: { id: number }) => ({
@@ -41,11 +88,10 @@ describe('location grid service', () => {
     }))
 
     await expect(
-      validateLocationGridItems(
-        payload as never,
-        [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }],
-        { slotCount: 4, scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE },
-      ),
+      validateLocationGridItems(payload as never, [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }], {
+        slotCount: 4,
+        scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE,
+      }),
     ).rejects.toThrow('not an eligible neighborhood')
   })
 
@@ -61,14 +107,10 @@ describe('location grid service', () => {
       neighborhoodName: id === 2 ? null : `Neighborhood ${id}`,
     }))
 
-    const selection = await getLocationGridSelectionFromItems(
-      payload as never,
-      [1, 2, 3, 4],
-      {
-        totalSlots: 4,
-        scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE,
-      },
-    )
+    const selection = await getLocationGridSelectionFromItems(payload as never, [1, 2, 3, 4], {
+      totalSlots: 4,
+      scope: CITY_HOMEPAGE_LOCATION_GRID_SCOPE,
+    })
 
     expect(selection.items).toHaveLength(3)
     expect(selection.invalidItems).toEqual([

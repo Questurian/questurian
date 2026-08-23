@@ -194,6 +194,8 @@ export type LocationGridItem = {
   updatedAt: string | null
   coverImageUrl: string | null
   coverImageAlt: string | null
+  kicker: string | null
+  description: string | null
   slot?: number
 }
 

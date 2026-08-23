@@ -61,8 +61,13 @@ export function useHomepageHotelGridActions({
     })
   }
 
-  function handleRemove(slotIndex: number) {
+  function handleRemove(slotIndex: number, minimumSlotCount = 0) {
+    setPickerSlotIndex(null)
     updateSlots((current) => {
+      if (current.length > minimumSlotCount) {
+        return current.filter((_, index) => index !== slotIndex)
+      }
+
       const next = [...current]
       next[slotIndex] = null
       return next

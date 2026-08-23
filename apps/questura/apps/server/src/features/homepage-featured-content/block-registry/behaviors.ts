@@ -205,6 +205,27 @@ const locationGridBehavior: CuratedBlockBehavior = {
     return getLocationGridSelectionFromItems(ctx.payload, items, {
       totalSlots: ctx.slotCount,
       scope: ctx.locationGridScope,
+      itemKickers: ctx.block.itemKickers,
+      itemDescriptions: ctx.block.itemDescriptions,
+    })
+  },
+  getPublishBlockers(block, blockIndex) {
+    const selection = isRecord(block.selection) ? block.selection : null
+    const items = selection && Array.isArray(selection.items) ? selection.items : []
+
+    return items.flatMap((item, itemIndex) => {
+      if (!isRecord(item)) {
+        return [`Block ${blockIndex + 1}, slot ${itemIndex + 1} is missing location card copy.`]
+      }
+
+      return [
+        ...(!text(item.kicker)
+          ? [`Block ${blockIndex + 1}, slot ${itemIndex + 1} is missing location kicker.`]
+          : []),
+        ...(!text(item.description)
+          ? [`Block ${blockIndex + 1}, slot ${itemIndex + 1} is missing location supporting text.`]
+          : []),
+      ]
     })
   },
 }

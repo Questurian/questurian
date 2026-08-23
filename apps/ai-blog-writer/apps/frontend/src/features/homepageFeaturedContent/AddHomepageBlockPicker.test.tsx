@@ -80,6 +80,9 @@ describe('AddHomepageBlockPicker', () => {
     expect(
       screen.getByRole('button', { name: /Article List.*vertical feed/i })
     ).toBeInTheDocument()
+    expect(
+      screen.getAllByLabelText('Matching frontend client layout exists')
+    ).toHaveLength(2)
   })
 
   it('keeps fixed-size blocks in the inline flow so section copy can be added', async () => {
@@ -113,6 +116,28 @@ describe('AddHomepageBlockPicker', () => {
     )
   })
 
+  it.each([
+    ['hotel-grid', 'Hotel Grid'],
+    ['tour-grid', 'Tour Grid']
+  ] as const)('adds growable %s blocks at four slots without a size step', async (blockType, label) => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn()
+
+    render(
+      <AddHomepageBlockPicker
+        isPending={false}
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+        availableBlockTypes={[blockType]}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: new RegExp(label) }))
+
+    expect(onConfirm).toHaveBeenCalledWith(blockType, 4)
+    expect(screen.queryByRole('group', { name: `${label} size` })).not.toBeInTheDocument()
+  })
+
   it('shows every Multi-Article Feature size as a visual layout choice', async () => {
     const user = userEvent.setup()
 
@@ -137,6 +162,9 @@ describe('AddHomepageBlockPicker', () => {
       'block-layout-preview-featured-articles'
     )
     expect(previews).toHaveLength(6)
+    expect(
+      screen.getAllByLabelText('Matching frontend client layout exists')
+    ).toHaveLength(6)
     previews.forEach((preview, index) => {
       expect(preview.querySelectorAll('[data-featured-slot]')).toHaveLength(
         counts[index]
@@ -157,7 +185,7 @@ describe('AddHomepageBlockPicker', () => {
     for (const [index, count] of counts.entries()) {
       expect(
         screen.getByRole('button', {
-          name: `${count} items ${layoutLabels[index]}`
+          name: `${count} items ${layoutLabels[index]} Matching frontend client layout exists`
         })
       ).toBeInTheDocument()
     }
@@ -217,7 +245,11 @@ describe('AddHomepageBlockPicker', () => {
       '4 items Portrait + copy + 4 wide cards',
       '6 items Portrait + copy + 6 numbered rows'
     ]) {
-      expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', {
+          name: `${label} Matching frontend client layout exists`
+        })
+      ).toBeInTheDocument()
     }
   })
 
@@ -244,12 +276,12 @@ describe('AddHomepageBlockPicker', () => {
     expect(previews[1]).toHaveAttribute('data-slot-count', '8')
     expect(
       screen.getByRole('button', {
-        name: '4 items 4 across · wide images'
+        name: /4 items 4 across · wide images/
       })
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', {
-        name: '8 items 4 × 2 · square images'
+        name: /8 items 4 × 2 · square images/
       })
     ).toBeInTheDocument()
 

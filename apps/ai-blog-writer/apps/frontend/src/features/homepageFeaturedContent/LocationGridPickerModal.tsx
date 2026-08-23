@@ -101,6 +101,7 @@ export function LocationGridPickerModal({
               const isCurrentSlot = candidate.id === currentSlotId
               const isUsedElsewhere =
                 usedIds.has(candidate.id) && !isCurrentSlot
+              const hasUsableImage = Boolean(candidate.coverImageUrl?.trim())
 
               return (
                 <div
@@ -140,10 +141,19 @@ export function LocationGridPickerModal({
                   <button
                     type="button"
                     className={
-                      isCurrentSlot ? 'hf-btn-ghost' : 'hf-btn-primary'
+                      isCurrentSlot || !hasUsableImage
+                        ? 'hf-btn-ghost'
+                        : 'hf-btn-primary'
                     }
                     onClick={() => onPick(candidate)}
-                    disabled={isCurrentSlot || isUsedElsewhere}
+                    disabled={
+                      isCurrentSlot || isUsedElsewhere || !hasUsableImage
+                    }
+                    title={
+                      hasUsableImage
+                        ? undefined
+                        : 'Assign a Location cover image before featuring it.'
+                    }
                     style={{
                       fontSize: '0.82rem',
                       padding: '0.4rem 0.9rem',
@@ -151,7 +161,9 @@ export function LocationGridPickerModal({
                       flexShrink: 0
                     }}
                   >
-                    {isCurrentSlot
+                    {!hasUsableImage
+                      ? 'Needs image'
+                      : isCurrentSlot
                       ? 'Current'
                       : isUsedElsewhere
                         ? 'In use'

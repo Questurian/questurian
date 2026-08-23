@@ -1,6 +1,7 @@
 export type CuratedHomepageBlockConfig = {
   label: string
   description: string
+  frontendReadySlotCounts: 'all' | readonly number[]
   quickSlotCounts: readonly number[]
   allowCustomSlotCount: boolean
   defaultSlotCount: number
@@ -15,10 +16,13 @@ type PageBlockDefinition = CuratedHomepageBlockConfig & {
   validSlotCounts?: readonly number[]
 }
 
+// Verified against Questura client's CityDashboard/blockLayoutRegistry.tsx.
+// New layouts stay unbadged until their public client renderer exists.
 const PAGE_BLOCK_DEFINITIONS = {
   'featured-article': {
     label: 'Hero Article',
     description: 'One story fills a wide, image-led banner',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [1],
     defaultSlotCount: 1,
     minSlotCount: 1,
@@ -31,6 +35,7 @@ const PAGE_BLOCK_DEFINITIONS = {
     label: 'Creator Feature',
     description:
       'A wide story banner that puts the creator portrait and byline first',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [1],
     defaultSlotCount: 1,
     minSlotCount: 1,
@@ -42,6 +47,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'featured-article-carousel': {
     label: 'Featured Article Carousel',
     description: 'Several stories share one wide banner, with arrows to browse',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [2, 3, 4, 5],
     defaultSlotCount: 3,
     minSlotCount: 2,
@@ -53,6 +59,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'featured-articles': {
     label: 'Multi-Article Feature',
     description: 'One lead story paired with smaller supporting stories',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [3, 4, 5, 7, 8, 9],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -66,6 +73,7 @@ const PAGE_BLOCK_DEFINITIONS = {
     label: 'Editorial Feature',
     description:
       'Custom image and intro copy, followed by a small grid of related stories',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [2, 3, 4, 6],
     defaultSlotCount: 3,
     minSlotCount: 2,
@@ -79,6 +87,7 @@ const PAGE_BLOCK_DEFINITIONS = {
     label: 'Article Grid',
     description:
       'Four wide-image cards across, or eight square cards in two rows',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [4, 8],
     defaultSlotCount: 4,
     minSlotCount: 4,
@@ -91,6 +100,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'location-grid': {
     label: 'Location Grid',
     description: 'Cities or neighborhoods shown as a browsable card grid',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 4,
@@ -102,6 +112,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'questurian-maps': {
     label: 'Questurian Maps',
     description: 'Six map-focused guides in a three-column card grid',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [6],
     defaultSlotCount: 6,
     minSlotCount: 6,
@@ -113,10 +124,11 @@ const PAGE_BLOCK_DEFINITIONS = {
   'hotel-grid': {
     label: 'Hotel Grid',
     description: 'Selected hotels shown in matching image cards',
-    quickSlotCounts: [3, 4, 6, 8],
+    frontendReadySlotCounts: 'all',
+    quickSlotCounts: [4],
     defaultSlotCount: 4,
-    minSlotCount: 3,
-    maxSlotCount: 12,
+    minSlotCount: 4,
+    maxSlotCount: 20,
     order: 1,
     articlePayload: false,
     convertTarget: true
@@ -124,10 +136,11 @@ const PAGE_BLOCK_DEFINITIONS = {
   'tour-grid': {
     label: 'Tour Grid',
     description: 'Selected tours shown in matching image cards',
-    quickSlotCounts: [3, 4, 6, 8],
+    frontendReadySlotCounts: 'all',
+    quickSlotCounts: [4],
     defaultSlotCount: 4,
-    minSlotCount: 3,
-    maxSlotCount: 12,
+    minSlotCount: 4,
+    maxSlotCount: 20,
     order: 2,
     articlePayload: false,
     convertTarget: true
@@ -135,6 +148,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'where-to-eat-drink': {
     label: 'Where to Eat & Drink',
     description: 'Dining guides shown in a browsable card grid',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -146,6 +160,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'things-to-do-listicles': {
     label: 'Things to Do (Listicles)',
     description: 'Things-to-do guides shown in a browsable card grid',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -157,6 +172,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'things-to-do-attractions': {
     label: 'Things to Do (Places)',
     description: 'Individual attractions shown in matching image cards',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [3, 4, 6, 8],
     defaultSlotCount: 4,
     minSlotCount: 3,
@@ -168,6 +184,7 @@ const PAGE_BLOCK_DEFINITIONS = {
   'newsletter-signup': {
     label: 'Newsletter signup',
     description: 'A full-width email signup banner',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [0],
     defaultSlotCount: 0,
     minSlotCount: 0,
@@ -180,6 +197,7 @@ const PAGE_BLOCK_DEFINITIONS = {
     label: 'Article List',
     description:
       'A compact vertical feed with thumbnail, title, excerpt, and author',
+    frontendReadySlotCounts: 'all',
     quickSlotCounts: [5, 10, 15, 20],
     defaultSlotCount: 10,
     minSlotCount: 5,
@@ -191,6 +209,14 @@ const PAGE_BLOCK_DEFINITIONS = {
 } as const satisfies Record<string, PageBlockDefinition>
 
 export type CuratedHomepageBlockType = keyof typeof PAGE_BLOCK_DEFINITIONS
+
+export type GrowingCarouselBlockType = 'hotel-grid' | 'tour-grid'
+
+export function isGrowingCarouselBlockType(
+  blockType: CuratedHomepageBlockType
+): blockType is GrowingCarouselBlockType {
+  return blockType === 'hotel-grid' || blockType === 'tour-grid'
+}
 
 export type ArticleCuratedHomepageBlockType = {
   [K in CuratedHomepageBlockType]: (typeof PAGE_BLOCK_DEFINITIONS)[K]['articlePayload'] extends true
@@ -216,6 +242,7 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG = Object.fromEntries(
     {
       label: definition.label,
       description: definition.description,
+      frontendReadySlotCounts: definition.frontendReadySlotCounts,
       quickSlotCounts: definition.quickSlotCounts,
       allowCustomSlotCount: !('validSlotCounts' in definition),
       defaultSlotCount: definition.defaultSlotCount,
@@ -240,6 +267,19 @@ export function isValidHomepageBlockSlotCount(
   return (
     slotCount >= definition.minSlotCount && slotCount <= definition.maxSlotCount
   )
+}
+
+export function isHomepageBlockFrontendReady(
+  blockType: CuratedHomepageBlockType,
+  slotCount?: number
+): boolean {
+  const readyCounts =
+    PAGE_BLOCK_DEFINITIONS[blockType].frontendReadySlotCounts
+
+  if (readyCounts === 'all') return true
+  if (slotCount === undefined) return readyCounts.length > 0
+
+  return readyCounts.includes(slotCount)
 }
 
 export const HOMEPAGE_PAGE_BLOCK_TYPES = (

@@ -40,5 +40,7 @@ export function normalizeLocationGridCandidate(doc: LocationDocLike): LocationGr
     coverImageUrl: coverImage?.url ?? null,
     coverImageAlt: coverImage?.alt || null,
     coverImage,
+    kicker: view.level === 'neighborhood' ? 'Neighborhood guides' : 'Destination guides',
+    description: null,
   }
 }

@@ -12,6 +12,8 @@ import type {
 import {
   areSlotListsEqual,
   buildSaveItems,
+  hasCompleteDescriptions,
+  hasCompleteKickers,
   hasDuplicateSlots,
   invalidItemsBySlotMap
 } from './homepageLocationGridSlots.utils'
@@ -31,13 +33,7 @@ export { buildSaveItems, hasDuplicateSlots } from './homepageLocationGridSlots.u
 export function useHomepageLocationGridSlots(
   options: UseHomepageLocationGridSlotsOptions
 ): UseHomepageLocationGridSlotsResult {
-  const {
-    canManage,
-    selection,
-    saveSelection,
-    fetchCandidates,
-    selectionQueryKey
-  } = options
+  const { canManage, selection, saveSelection, fetchCandidates, selectionQueryKey } = options
 
   const {
     draftSlots,
@@ -60,18 +56,13 @@ export function useHomepageLocationGridSlots(
     isFetching: false
   } as ReturnType<typeof useQuery<HomepageLocationGridSelection>>
 
-  const {
-    searchValue,
-    candidatePage,
-    candidatesQuery,
-    setSearchValue,
-    setCandidatePage
-  } = useHomepageLocationGridCandidates({
-    canManage,
-    fetchCandidates,
-    selectionQueryKey,
-    pickerSlotIndex
-  })
+  const { searchValue, candidatePage, candidatesQuery, setSearchValue, setCandidatePage } =
+    useHomepageLocationGridCandidates({
+      canManage,
+      fetchCandidates,
+      selectionQueryKey,
+      pickerSlotIndex
+    })
 
   const slots = draftSlots ?? savedSlots
   const currentSaveSlotCountRef = useRef(selection.totalSlots)
@@ -89,23 +80,26 @@ export function useHomepageLocationGridSlots(
     },
     onError: (error: unknown) => {
       setResultMessage(
-        error instanceof Error
-          ? error.message
-          : 'Failed to save homepage location grid.'
+        error instanceof Error ? error.message : 'Failed to save homepage location grid.'
       )
     }
   })
 
   const usedIds = new Set(slots.flatMap((item) => (item ? [item.id] : [])))
   const hasAllSlotsFilled = slots.every((item) => item !== null)
+  const descriptionsComplete = hasCompleteDescriptions(slots)
+  const kickersComplete = hasCompleteKickers(slots)
   const hasUnsavedChanges = areSlotListsEqual(draftSlots, savedSlots) === false
   const saveDisabled =
     !hasAllSlotsFilled ||
+    !kickersComplete ||
+    !descriptionsComplete ||
     hasDuplicateSlots(slots) ||
     saveMutation.isPending ||
     !hasUnsavedChanges
 
-  const invalidItemsBySlot = invalidItemsBySlotMap<HomepageLocationGridInvalidItem>(savedInvalidItems)
+  const invalidItemsBySlot =
+    invalidItemsBySlotMap<HomepageLocationGridInvalidItem>(savedInvalidItems)
   const actions = useHomepageLocationGridActions({
     pickerSlotIndex,
     setPickerSlotIndex,
@@ -127,10 +121,7 @@ export function useHomepageLocationGridSlots(
       if (slotCount === current.length) return current
       if (slotCount < current.length) return current.slice(0, slotCount)
 
-      return [
-        ...current,
-        ...Array.from({ length: slotCount - current.length }, () => null)
-      ]
+      return [...current, ...Array.from({ length: slotCount - current.length }, () => null)]
     })
   }
 
@@ -145,6 +136,8 @@ export function useHomepageLocationGridSlots(
     pickerSlotIndex,
     usedIds,
     hasAllSlotsFilled,
+    hasCompleteKickers: kickersComplete,
+    hasCompleteDescriptions: descriptionsComplete,
     hasUnsavedChanges,
     saveDisabled,
     invalidItemsBySlot,

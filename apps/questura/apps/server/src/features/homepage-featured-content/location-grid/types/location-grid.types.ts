@@ -9,6 +9,8 @@ export type LocationGridScope = {
 
 export type LocationGridItemRef = {
   id: number
+  kicker?: string | null
+  description?: string | null
 }
 
 export type LocationGridCandidate = LocationGridItemRef & {
@@ -30,6 +32,8 @@ export type LocationGridCandidate = LocationGridItemRef & {
   coverImageUrl: string | null
   /** @deprecated Read `coverImage.alt` instead. Kept for back-compat. */
   coverImageAlt: string | null
+  kicker: string | null
+  description: string | null
   /** Resolved card-placement cover image. */
   coverImage: PublicImage | null
 }

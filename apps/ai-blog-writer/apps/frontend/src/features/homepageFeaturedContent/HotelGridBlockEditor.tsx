@@ -14,6 +14,7 @@ import type {
 } from './hotelGridTypes'
 import {
   HOMEPAGE_PAGE_BLOCK_CONFIG,
+  isGrowingCarouselBlockType,
   type CuratedHomepageBlockType,
   type HotelOrAttractionGridBlockResponse
 } from './pageBlocks'
@@ -113,6 +114,7 @@ export default function HotelGridBlockEditor({
     candidatePage,
     handleCandidatePick,
     handleReorderAll,
+    handleRemove,
     handleResizeSlotCount,
     handleSave,
     setSearchValue,
@@ -136,6 +138,27 @@ export default function HotelGridBlockEditor({
     savedInvalidItems.length === 0
 
   const blockConfig = HOMEPAGE_PAGE_BLOCK_CONFIG[block.blockType]
+  const growsWithContent = isGrowingCarouselBlockType(block.blockType)
+  const itemLabel =
+    block.blockType === 'tour-grid'
+      ? 'tour'
+      : block.blockType === 'things-to-do-attractions'
+        ? 'place'
+        : 'hotel'
+
+  function handleAppendItem() {
+    if (
+      !growsWithContent ||
+      slots.some((slot) => slot === null) ||
+      slots.length >= blockConfig.maxSlotCount
+    ) {
+      return
+    }
+
+    const nextSlotIndex = slots.length
+    handleResizeSlotCount(nextSlotIndex + 1)
+    setPickerSlotIndex(nextSlotIndex)
+  }
 
   if (selectionQuery.isLoading && draftSlots === null) {
     return (
@@ -227,17 +250,19 @@ export default function HotelGridBlockEditor({
           saveSectionHeading={saveHotelGridSectionHeading}
           saveSectionSubheading={saveHotelGridSectionSubheading}
         />
-        <HomepageBlockSlotCountSection
-          blockId={block.id}
-          blockType={block.blockType}
-          currentSlotCount={slots.length}
-          savedSlotCount={block.selection.totalSlots}
-          slots={slots}
-          invalidSlots={savedInvalidItems.map((item) => item.slot)}
-          disabled={saveMutation.isPending}
-          isPending={saveMutation.isPending}
-          onResize={handleResizeSlotCount}
-        />
+        {!growsWithContent ? (
+          <HomepageBlockSlotCountSection
+            blockId={block.id}
+            blockType={block.blockType}
+            currentSlotCount={slots.length}
+            savedSlotCount={block.selection.totalSlots}
+            slots={slots}
+            invalidSlots={savedInvalidItems.map((item) => item.slot)}
+            disabled={saveMutation.isPending}
+            isPending={saveMutation.isPending}
+            onResize={handleResizeSlotCount}
+          />
+        ) : null}
         <HomepageBlockConvertSection
           blockId={block.id}
           currentBlockType={block.blockType}
@@ -269,7 +294,12 @@ export default function HotelGridBlockEditor({
             {savedSectionSubheading.trim()}
           </p>
         ) : null}
-        <p className="hf-panel-desc">{blockConfig.description}.</p>
+        <p className="hf-panel-desc">
+          {blockConfig.description}.
+          {growsWithContent
+            ? ` Add cards as needed — ${blockConfig.minSlotCount} minimum, ${blockConfig.maxSlotCount} maximum.`
+            : ''}
+        </p>
         {savedInvalidItems.length > 0 && (
           <div className="hf-banner warning">
             {getInvalidMessage(block.blockType, savedInvalidItems.length)}
@@ -287,13 +317,15 @@ export default function HotelGridBlockEditor({
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}
-          itemLabel={
-            block.blockType === 'tour-grid'
-              ? 'tour'
-              : block.blockType === 'things-to-do-attractions'
-                ? 'place'
-                : 'hotel'
+          onAppend={growsWithContent ? handleAppendItem : undefined}
+          onRemove={
+            growsWithContent
+              ? (slotIndex) =>
+                  handleRemove(slotIndex, blockConfig.minSlotCount)
+              : undefined
           }
+          maxItems={growsWithContent ? blockConfig.maxSlotCount : undefined}
+          itemLabel={itemLabel}
         />
       </div>
 
@@ -309,13 +341,7 @@ export default function HotelGridBlockEditor({
           onClose={() => setPickerSlotIndex(null)}
           setSearchValue={setSearchValue}
           setCandidatePage={setCandidatePage}
-          itemLabel={
-            block.blockType === 'tour-grid'
-              ? 'tour'
-              : block.blockType === 'things-to-do-attractions'
-                ? 'place'
-                : 'hotel'
-          }
+          itemLabel={itemLabel}
         />
       )}
     </div>

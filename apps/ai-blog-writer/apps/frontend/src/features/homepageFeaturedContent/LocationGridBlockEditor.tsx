@@ -48,21 +48,12 @@ type Props = {
     params: LocationGridCandidateParams
   ) => Promise<HomepageLocationGridCandidatesResponse>
   /** Persist optional section title (PUT without items). */
-  saveLocationGridSectionHeading?: (
-    value: string | null
-  ) => Promise<void>
-  saveLocationGridSectionSubheading?: (
-    value: string | null
-  ) => Promise<void>
-  saveLocationGridMediaAspect?: (
-    value: LocationGridMediaAspect
-  ) => Promise<void>
+  saveLocationGridSectionHeading?: (value: string | null) => Promise<void>
+  saveLocationGridSectionSubheading?: (value: string | null) => Promise<void>
+  saveLocationGridMediaAspect?: (value: LocationGridMediaAspect) => Promise<void>
   /** When the grid has no saved locations, user may switch block type (section title kept). */
   convertBlockTargets?: CuratedHomepageBlockType[]
-  onConvertEmptyBlock?: (
-    blockType: CuratedHomepageBlockType,
-    slotCount: number
-  ) => Promise<void>
+  onConvertEmptyBlock?: (blockType: CuratedHomepageBlockType, slotCount: number) => Promise<void>
   onDeleteBlock: (blockId: string) => void
   isDeletingBlock: boolean
   deleteError: string | null
@@ -87,8 +78,7 @@ export default function LocationGridBlockEditor({
 }: Props) {
   const savedSectionHeading = block.sectionHeading ?? ''
   const savedSectionSubheading = block.sectionSubheading ?? ''
-  const savedMediaAspect: LocationGridMediaAspect =
-    block.mediaAspect ?? 'rectangle'
+  const savedMediaAspect: LocationGridMediaAspect = block.mediaAspect ?? 'rectangle'
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [mediaAspectDraft, setMediaAspectDraft] =
     useState<LocationGridMediaAspect>(savedMediaAspect)
@@ -129,6 +119,8 @@ export default function LocationGridBlockEditor({
     searchValue,
     candidatePage,
     handleCandidatePick,
+    handleKickerChange,
+    handleDescriptionChange,
     handleReorderAll,
     handleResizeSlotCount,
     handleSave,
@@ -137,6 +129,8 @@ export default function LocationGridBlockEditor({
     setPickerSlotIndex,
     draftSlots,
     hasAllSlotsFilled,
+    hasCompleteKickers,
+    hasCompleteDescriptions,
     hasUnsavedChanges
   } = slotEditorState
 
@@ -182,23 +176,24 @@ export default function LocationGridBlockEditor({
     )
   }
 
-  const currentSlotItem =
-    pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
+  const currentSlotItem = pickerSlotIndex !== null ? slots[pickerSlotIndex] : null
   const currentSlotId = currentSlotItem?.id ?? null
 
   // No signed-in conjunct here: this editor renders only under RequireAuth,
   // so the guard this replaced was already unreachable (ADR-0028).
-  const saveNeedsAllSlots =
-    hasUnsavedChanges && !hasAllSlotsFilled && !saveMutation.isPending
+  const saveNeedsAllSlots = hasUnsavedChanges && !hasAllSlotsFilled && !saveMutation.isPending
+  const saveNeedsCardCopy =
+    hasUnsavedChanges &&
+    hasAllSlotsFilled &&
+    (!hasCompleteKickers || !hasCompleteDescriptions) &&
+    !saveMutation.isPending
 
   return (
     <div className="hf-block-section">
       <div className="hf-block-header">
         <div className="hf-block-label">
           <span>Block {blockIndex + 1}</span>
-          <span className="hf-block-type-label-minimal">
-            {blockConfig.label}
-          </span>
+          <span className="hf-block-type-label-minimal">{blockConfig.label}</span>
         </div>
         <div className="hf-block-header-actions">
           <span className="hf-block-slot-meta" aria-live="polite">
@@ -229,7 +224,9 @@ export default function LocationGridBlockEditor({
               title={
                 saveNeedsAllSlots
                   ? `Fill all ${slots.length} locations before saving.`
-                  : undefined
+                  : saveNeedsCardCopy
+                    ? 'Add a kicker and supporting text to every location before saving.'
+                    : undefined
               }
             >
               {saveMutation.isPending ? 'Saving…' : 'Save'}
@@ -245,10 +242,7 @@ export default function LocationGridBlockEditor({
           </>
         }
       >
-        <p
-          className="hf-block-slot-meta hf-block-settings-slot-summary"
-          aria-live="polite"
-        >
+        <p className="hf-block-slot-meta hf-block-settings-slot-summary" aria-live="polite">
           {slots.filter(Boolean).length} / {slots.length} filled
         </p>
         <HomepageBlockSectionTextFields
@@ -276,8 +270,8 @@ export default function LocationGridBlockEditor({
           <section className="hf-block-settings-section">
             <h3 className="hf-block-settings-kicker">Card image shape</h3>
             <p className="hf-block-settings-hint">
-              Aspect ratio for each location cover image in this grid (editor
-              preview matches the public homepage).
+              Aspect ratio for each location cover image in this grid (editor preview matches the
+              public homepage).
             </p>
             <div
               className="hf-slot3-layout-options"
@@ -334,17 +328,18 @@ export default function LocationGridBlockEditor({
         <section className="hf-block-settings-section">
           <h3 className="hf-block-settings-kicker">Saving the grid</h3>
           <p className="hf-block-settings-hint">
-            The public homepage expects every slot filled (
-            {slots.length} {childLabel}). Save is only available
-            when all slots have a location and there are no duplicate picks.
+            The public homepage expects every slot filled ({slots.length} {childLabel}). Save is
+            only available when all slots have a location and there are no duplicate picks.
           </p>
           {saveNeedsAllSlots ? (
-            <p
-              className="hf-block-settings-hint"
-              style={{ color: 'var(--accent)' }}
-            >
-              You have unsaved changes but the grid is not complete — fill the
-              remaining slots before saving.
+            <p className="hf-block-settings-hint" style={{ color: 'var(--accent)' }}>
+              You have unsaved changes but the grid is not complete — fill the remaining slots
+              before saving.
+            </p>
+          ) : null}
+          {saveNeedsCardCopy ? (
+            <p className="hf-block-settings-hint" style={{ color: 'var(--accent)' }}>
+              Add a kicker and supporting text to every location card before saving.
             </p>
           ) : null}
         </section>
@@ -363,8 +358,8 @@ export default function LocationGridBlockEditor({
         />
         {onConvertEmptyBlock && !canConvertEmptyBlock ? (
           <p className="hf-block-settings-hint">
-            To change type, remove every location, save an empty grid (or
-            discard unsaved edits), and fix any invalid picks first.
+            To change type, remove every location, save an empty grid (or discard unsaved edits),
+            and fix any invalid picks first.
           </p>
         ) : null}
       </HomepageBlockSettingsModal>
@@ -376,26 +371,19 @@ export default function LocationGridBlockEditor({
           </h2>
         ) : null}
         {savedSectionSubheading.trim() ? (
-          <p className="hf-block-public-section-subtitle">
-            {savedSectionSubheading.trim()}
-          </p>
+          <p className="hf-block-public-section-subtitle">{savedSectionSubheading.trim()}</p>
         ) : null}
         <p className="hf-panel-desc">
-          {blockConfig.description}. This block can only select {childLabel}.
-          Click a card to pick or swap a location; drag handles swap slot
-          positions.
+          {blockConfig.description}. This block can only select {childLabel}. Click a card to pick
+          or swap a location; drag handles swap slot positions.
         </p>
 
         {savedInvalidItems.length > 0 && (
-          <div className="hf-banner warning">
-            {getInvalidMessage(savedInvalidItems.length)}
-          </div>
+          <div className="hf-banner warning">{getInvalidMessage(savedInvalidItems.length)}</div>
         )}
 
         {resultMessage && (
-          <div
-            className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}
-          >
+          <div className={`hf-banner ${saveMutation.isError ? 'error' : 'success'}`}>
             {resultMessage}
           </div>
         )}
@@ -406,6 +394,8 @@ export default function LocationGridBlockEditor({
           mediaAspect={mediaAspectDraft}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
+          onKickerChange={handleKickerChange}
+          onDescriptionChange={handleDescriptionChange}
           onReorder={handleReorderAll}
         />
       </div>

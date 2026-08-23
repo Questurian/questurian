@@ -82,6 +82,42 @@ describe('getBlockPublishBlockers', () => {
     expect(getBlockPublishBlockers(block, 0)).toEqual([])
   })
 
+  it('requires supporting copy for every location grid card', () => {
+    const block = {
+      blockType: 'location-grid',
+      selection: {
+        isComplete: true,
+        items: [
+          {
+            id: 1,
+            title: 'Miraflores',
+            kicker: 'Neighborhood guides',
+            description: 'Pacific views and destination dining.',
+          },
+          { id: 2, title: 'Barranco', kicker: 'Neighborhood guides', description: null },
+        ],
+      },
+    }
+
+    expect(getBlockPublishBlockers(block, 8)).toEqual([
+      'Block 9, slot 2 is missing location supporting text.',
+    ])
+  })
+
+  it('requires a kicker for every location grid card', () => {
+    const block = {
+      blockType: 'location-grid',
+      selection: {
+        isComplete: true,
+        items: [{ id: 1, title: 'Miraflores', kicker: '', description: 'Pacific views.' }],
+      },
+    }
+
+    expect(getBlockPublishBlockers(block, 8)).toEqual([
+      'Block 9, slot 1 is missing location kicker.',
+    ])
+  })
+
   it('requires editorial feature copy, responsive image placements, and authored alt text', () => {
     const block = {
       blockType: 'editorial-feature',

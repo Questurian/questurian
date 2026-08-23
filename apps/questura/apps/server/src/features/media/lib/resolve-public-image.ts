@@ -22,6 +22,7 @@ export type PublicImage = {
 
 type MediaAssetLike = {
   url?: unknown
+  filename?: unknown
   bunny_original_url?: unknown
   alt_text?: unknown
   width?: unknown
@@ -86,36 +87,49 @@ const numberOrNull = (value: unknown): number | null => {
 
 const backendOriginForPublicUrls = (): string | null => {
   const value = process.env.BACKEND_URL_LOCAL || process.env.NEXT_PUBLIC_BACKEND_URL
-  if (!value) return null
+  if (!value) return process.env.NODE_ENV === 'production' ? null : 'http://localhost:4000'
 
   try {
-    const url = new URL(value)
-    return url.hostname === 'localhost' || url.hostname === '127.0.0.1' ? null : url.origin
+    return new URL(value).origin
   } catch {
     return null
   }
 }
 
 const normalizePublicAssetUrl = (value: string): string => {
+  const publicBackendOrigin = backendOriginForPublicUrls()
+
   try {
     const url = new URL(value)
     const isLocalBackend =
       (url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === '4000'
-    const publicBackendOrigin = backendOriginForPublicUrls()
 
     if (isLocalBackend && publicBackendOrigin) {
       return `${publicBackendOrigin}${url.pathname}${url.search}${url.hash}`
     }
   } catch {
-    // Relative paths and malformed historical data should pass through unchanged.
+    if (value.startsWith('/') && publicBackendOrigin) {
+      return `${publicBackendOrigin}${value}`
+    }
   }
 
   return value
 }
 
+const assetUrlFromFilename = (asset: MediaAssetLike): string | null => {
+  const filename = textOrNull(asset.filename)
+  if (!filename) return null
+
+  return normalizePublicAssetUrl(
+    `/api/media-assets/file/${encodeURIComponent(filename)}`,
+  )
+}
+
 const assetUrl = (asset: MediaAssetLike, status: PublicImageStatus): string | null => {
   const canonicalUrl = textOrNull(asset.url)
   if (canonicalUrl) return normalizePublicAssetUrl(canonicalUrl)
+  const filenameUrl = assetUrlFromFilename(asset)
+  if (filenameUrl) return filenameUrl
   const fallbackUrl = status === 'legacy_fallback' ? textOrNull(asset.bunny_original_url) : null
   return fallbackUrl ? normalizePublicAssetUrl(fallbackUrl) : null
 }

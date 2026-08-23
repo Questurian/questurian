@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildSaveItems,
+  hasCompleteDescriptions,
+  hasCompleteKickers,
   hasDuplicateSlots,
   mapSelectionToSlots
 } from './homepageLocationGridSlots.utils'
@@ -23,7 +25,9 @@ const selection: HomepageLocationGridSelection = {
       subtitle: 'Peru',
       updatedAt: null,
       coverImageUrl: null,
-      coverImageAlt: null
+      coverImageAlt: null,
+      kicker: 'Destination guides',
+      description: 'Pacific food capital.'
     }
   ],
   invalidItems: []
@@ -46,6 +50,28 @@ describe('homepage location grid slot utilities', () => {
   })
 
   it('builds compact save payloads from filled slots only', () => {
-    expect(buildSaveItems(mapSelectionToSlots(selection))).toEqual([{ id: 10 }])
+    expect(buildSaveItems(mapSelectionToSlots(selection))).toEqual([
+      {
+        id: 10,
+        kicker: 'Destination guides',
+        description: 'Pacific food capital.'
+      }
+    ])
+  })
+
+  it('requires supporting copy for every filled location', () => {
+    const slots = mapSelectionToSlots(selection)
+    expect(hasCompleteDescriptions(slots)).toBe(true)
+
+    if (slots[1]) slots[1] = { ...slots[1], description: '   ' }
+    expect(hasCompleteDescriptions(slots)).toBe(false)
+  })
+
+  it('requires a kicker for every filled location', () => {
+    const slots = mapSelectionToSlots(selection)
+    expect(hasCompleteKickers(slots)).toBe(true)
+
+    if (slots[1]) slots[1] = { ...slots[1], kicker: '   ' }
+    expect(hasCompleteKickers(slots)).toBe(false)
   })
 })

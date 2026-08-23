@@ -66,5 +66,23 @@ export const LocationGridBlock: Block = {
           'Locations in display order. Main homepages can select cities; city homepages can select neighborhoods.',
       },
     },
+    {
+      name: 'itemKickers',
+      type: 'json',
+      required: false,
+      admin: {
+        hidden: true,
+        description: 'Ordered kicker copy for each location card. Managed in AI Blog Writer.',
+      },
+    },
+    {
+      name: 'itemDescriptions',
+      type: 'json',
+      required: false,
+      admin: {
+        hidden: true,
+        description: 'Ordered supporting copy for each location card. Managed in AI Blog Writer.',
+      },
+    },
   ],
 }

@@ -2,6 +2,8 @@ import { locationIdentitySelect } from '@/shared/location/constants'
 
 export const LOCATION_GRID_MIN_SLOTS = 4
 export const LOCATION_GRID_MAX_SLOTS = 8
+export const LOCATION_GRID_DESCRIPTION_MAX_LENGTH = 180
+export const LOCATION_GRID_KICKER_MAX_LENGTH = 40
 
 /** Select identity + cover image relationship (populated at depth ≥ 2). */
 export const locationGridSelect = {

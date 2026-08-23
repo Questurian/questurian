@@ -8,6 +8,8 @@ export type ApiCuratedBlock = {
   slot4Layout?: unknown
   slot5Layout?: unknown
   mediaAspect?: unknown
+  itemKickers?: unknown
+  itemDescriptions?: unknown
   articleGridFourLayout?: unknown
   featureKicker?: unknown
   featureTitle?: unknown

@@ -40,7 +40,9 @@ function location(id: number, title: string): HomepageLocationGridCandidate {
     subtitle: null,
     updatedAt: null,
     coverImageUrl: null,
-    coverImageAlt: null
+    coverImageAlt: null,
+    kicker: 'Destination guides',
+    description: `${title} supporting text`
   }
 }
 
@@ -72,15 +74,9 @@ describe('remaining curated slot swap layouts', () => {
       />
     )
 
-    expect(
-      container.querySelectorAll('.hf-curated-article-slot-drag-handle')
-    ).toHaveLength(2)
-    expect(
-      screen.getByRole('button', { name: 'Previous slide' })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: 'Next slide' })
-    ).toBeInTheDocument()
+    expect(container.querySelectorAll('.hf-curated-article-slot-drag-handle')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Previous slide' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next slide' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /First/i }))
     expect(onSlotClick).toHaveBeenCalledWith(0)
@@ -98,9 +94,7 @@ describe('remaining curated slot swap layouts', () => {
       />
     )
 
-    expect(
-      container.querySelectorAll('.hf-curated-article-slot-drag-handle')
-    ).toHaveLength(2)
+    expect(container.querySelectorAll('.hf-curated-article-slot-drag-handle')).toHaveLength(2)
     expect(screen.queryByTitle('Move up')).not.toBeInTheDocument()
     expect(screen.queryByTitle('Move down')).not.toBeInTheDocument()
 
@@ -113,6 +107,8 @@ describe('remaining curated slot swap layouts', () => {
 
   it('uses filled-slot handles for location grids and keeps empty cells click-to-fill', () => {
     const onSlotClick = vi.fn()
+    const onKickerChange = vi.fn()
+    const onDescriptionChange = vi.fn()
 
     const { container } = render(
       <LocationGridLayout
@@ -120,13 +116,13 @@ describe('remaining curated slot swap layouts', () => {
         childLevel="city"
         invalidItemsBySlot={new Map()}
         onSlotClick={onSlotClick}
+        onKickerChange={onKickerChange}
+        onDescriptionChange={onDescriptionChange}
         onReorder={vi.fn()}
       />
     )
 
-    expect(
-      container.querySelectorAll('.hf-curated-article-slot-drag-handle')
-    ).toHaveLength(2)
+    expect(container.querySelectorAll('.hf-curated-article-slot-drag-handle')).toHaveLength(2)
     expect(screen.queryByTitle('Move up')).not.toBeInTheDocument()
     expect(screen.queryByTitle('Move down')).not.toBeInTheDocument()
 
@@ -135,6 +131,16 @@ describe('remaining curated slot swap layouts', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Paris/i }))
     expect(onSlotClick).toHaveBeenCalledWith(0)
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Kicker for Paris' }), {
+      target: { value: 'City escapes' }
+    })
+    expect(onKickerChange).toHaveBeenCalledWith(0, 'City escapes')
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Supporting text for Paris' }), {
+      target: { value: 'A new Paris description' }
+    })
+    expect(onDescriptionChange).toHaveBeenCalledWith(0, 'A new Paris description')
   })
 
   it('uses filled-slot handles for hotel, tour, and place grids and keeps empty cells click-to-fill', () => {
@@ -149,9 +155,7 @@ describe('remaining curated slot swap layouts', () => {
       />
     )
 
-    expect(
-      container.querySelectorAll('.hf-curated-article-slot-drag-handle')
-    ).toHaveLength(2)
+    expect(container.querySelectorAll('.hf-curated-article-slot-drag-handle')).toHaveLength(2)
     expect(screen.queryByTitle('Move up')).not.toBeInTheDocument()
     expect(screen.queryByTitle('Move down')).not.toBeInTheDocument()
 

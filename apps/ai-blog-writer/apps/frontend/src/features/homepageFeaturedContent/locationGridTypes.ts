@@ -1,6 +1,8 @@
 import type { LocationLevel } from '../locationDocuments/types'
 
 export const LOCATION_GRID_MEDIA_ASPECTS = ['rectangle', 'square', 'portrait'] as const
+export const LOCATION_GRID_DESCRIPTION_MAX_LENGTH = 180
+export const LOCATION_GRID_KICKER_MAX_LENGTH = 40
 
 export type LocationGridMediaAspect = (typeof LOCATION_GRID_MEDIA_ASPECTS)[number]
 
@@ -8,6 +10,8 @@ export type HomepageLocationGridLevel = Extract<LocationLevel, 'city' | 'neighbo
 
 export type HomepageLocationGridItemRef = {
   id: number
+  kicker?: string | null
+  description?: string | null
 }
 
 export type HomepageLocationGridCandidate = HomepageLocationGridItemRef & {
@@ -24,6 +28,8 @@ export type HomepageLocationGridCandidate = HomepageLocationGridItemRef & {
   /** From the top-level Location coverImage media-set relationship, when set in Payload */
   coverImageUrl: string | null
   coverImageAlt: string | null
+  /** Grid-specific supporting copy shown over this location's image. */
+  description?: string | null
 }
 
 export type HomepageLocationGridInvalidItem = {

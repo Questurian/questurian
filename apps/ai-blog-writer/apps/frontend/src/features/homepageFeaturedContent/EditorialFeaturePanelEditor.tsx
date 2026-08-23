@@ -15,6 +15,15 @@ type Props = {
   saveFields: (fields: EditorialFeatureFieldsUpdate) => Promise<void>
 }
 
+const needsFeaturePanelSetup = (block: EditorialFeatureBlockResponse) =>
+  !(
+    block.featureKicker?.trim() ||
+    block.featureTitle?.trim() ||
+    block.featureDescription?.trim() ||
+    block.featureMediaSetId ||
+    block.linkedLocationId
+  )
+
 export default function EditorialFeaturePanelEditor({
   block,
   canManage,
@@ -30,7 +39,9 @@ export default function EditorialFeaturePanelEditor({
   )
   const [imagePickerOpen, setImagePickerOpen] = useState(false)
   const [generatedAlt, setGeneratedAlt] = useState('')
-  const [settingsOpen, setSettingsOpen] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(() =>
+    needsFeaturePanelSetup(block)
+  )
 
   useEffect(() => {
     setFeatureKicker(block.featureKicker ?? '')
@@ -65,7 +76,8 @@ export default function EditorialFeaturePanelEditor({
   )
 
   const saveMutation = useMutation({
-    mutationFn: saveFields
+    mutationFn: saveFields,
+    onSuccess: () => setSettingsOpen(false)
   })
   const generateAltMutation = useMutation({
     mutationFn: async () => {

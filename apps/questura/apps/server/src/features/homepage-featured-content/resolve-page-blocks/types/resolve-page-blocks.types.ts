@@ -18,6 +18,8 @@ export type RawBlock = {
   slot4Layout?: string
   slot5Layout?: string
   mediaAspect?: string
+  itemKickers?: unknown
+  itemDescriptions?: unknown
   articleGridFourLayout?: string
   featureKicker?: string | null
   featureTitle?: string | null

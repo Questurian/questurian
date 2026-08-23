@@ -6,6 +6,7 @@ import type { UseHomepageFeaturedSlotsResult } from './useHomepageFeaturedSlots'
 import type { HomepageFeaturedInvalidItem } from './types'
 import { ArticlePickerModal } from './ArticlePickerModal'
 import ArticleGridLayout from './ArticleGridLayout'
+import ArticleListLayout from './ArticleListLayout'
 import FeaturedArticleSpotlightLayout from './FeaturedArticleSpotlightLayout'
 import FeaturedArticleCarouselLayout from './FeaturedArticleCarouselLayout'
 import FeaturedArticlesLayout3 from './FeaturedArticlesLayout3'
@@ -217,6 +218,13 @@ export default function HomepageFeaturedSlotEditor({
         <ArticleGridLayout
           slots={slots}
           articleGridFourLayout={articleGridFourLayout}
+          invalidItemsBySlot={invalidItemsBySlot}
+          onSlotClick={setPickerSlotIndex}
+          onReorder={handleReorderAll}
+        />
+      ) : variant === 'article-list' ? (
+        <ArticleListLayout
+          slots={slots}
           invalidItemsBySlot={invalidItemsBySlot}
           onSlotClick={setPickerSlotIndex}
           onReorder={handleReorderAll}

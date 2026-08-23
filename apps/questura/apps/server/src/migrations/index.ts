@@ -36,6 +36,8 @@ import * as migration_20260821_010000_add_featured_creator_article_block from '.
 import * as migration_20260821_161023_add_author_article_byline from './20260821_161023_add_author_article_byline'
 import * as migration_20260822_041423_add_creator_kicker from './20260822_041423_add_creator_kicker'
 import * as migration_20260822_143211_add_editorial_feature_homepage_block from './20260822_143211_add_editorial_feature_homepage_block'
+import * as migration_20260822_204353_location_grid_card_descriptions from './20260822_204353_location_grid_card_descriptions'
+import * as migration_20260822_224713_location_grid_card_kickers from './20260822_224713_location_grid_card_kickers'
 
 export const migrations = [
   {
@@ -227,5 +229,15 @@ export const migrations = [
     up: migration_20260822_143211_add_editorial_feature_homepage_block.up,
     down: migration_20260822_143211_add_editorial_feature_homepage_block.down,
     name: '20260822_143211_add_editorial_feature_homepage_block',
+  },
+  {
+    up: migration_20260822_204353_location_grid_card_descriptions.up,
+    down: migration_20260822_204353_location_grid_card_descriptions.down,
+    name: '20260822_204353_location_grid_card_descriptions',
+  },
+  {
+    up: migration_20260822_224713_location_grid_card_kickers.up,
+    down: migration_20260822_224713_location_grid_card_kickers.down,
+    name: '20260822_224713_location_grid_card_kickers',
   },
 ]

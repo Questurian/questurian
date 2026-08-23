@@ -9,7 +9,11 @@ import type {
 
 import { LOCATION_GRID_MIN_SLOTS } from '../constants'
 import { findLocationGridDoc } from '../lib/repository'
-import { parseLocationGridSlots } from '../lib/refs'
+import {
+  parseLocationGridSlots,
+  parseStoredLocationGridDescriptions,
+  parseStoredLocationGridKickers,
+} from '../lib/refs'
 import { isLocationWithinScope } from '../lib/scope'
 
 function publicLocationHref(locationKey: string | null): string | null {
@@ -47,6 +51,8 @@ export async function getLocationGridSelectionFromItems(
 ): Promise<LocationGridSelection> {
   const totalSlots = options.totalSlots ?? LOCATION_GRID_MIN_SLOTS
   const parsedSlots = parseLocationGridSlots(rawItems)
+  const kickers = parseStoredLocationGridKickers(options.itemKickers)
+  const descriptions = parseStoredLocationGridDescriptions(options.itemDescriptions)
   const items: LocationGridCandidate[] = []
   const invalidItems: LocationGridInvalidItem[] = []
 
@@ -84,6 +90,8 @@ export async function getLocationGridSelectionFromItems(
       ...candidate,
       href: await resolvePublishedHomepageHref(payload, candidate),
       slot: slot.slot,
+      kicker: kickers[slot.slot - 1] ?? candidate.kicker,
+      description: descriptions[slot.slot - 1] ?? null,
     })
   }
 
