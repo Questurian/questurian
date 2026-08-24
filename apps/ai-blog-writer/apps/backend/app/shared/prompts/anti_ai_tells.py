@@ -112,8 +112,13 @@ rewrite the sentence into two shorter sentences, or drop the aside entirely. \
 A comma should join clauses or list items, not impersonate a dash.
 Do not substitute a hyphen either. "The room is warm - and quietly so" is the \
 same dash wearing a different hat, and a spaced hyphen reads as a typewriter \
-artefact rather than punctuation anyone chose. Hyphens join compound words. \
-They do not bracket asides and they do not break sentences."""
+artefact rather than punctuation anyone chose. Hyphens do not bracket asides and they do not break sentences.
+Do not use hyphenated compounds at all. "Two-bedroom apartments", \
+"a long-stay visa", "a well-known, family-run spot" -- each is correct \
+English on its own, but a run of them through an article is one of the \
+clearest signals the text was generated. Rephrase instead: "apartments with \
+two bedrooms", "a visa for long stays", "a spot the family runs, and people \
+know it". Proper names keep their hyphens; nothing else does."""
 
 _VOICE = """\
 Voice rules. Write from a single point of view with an opinion. If the writing \

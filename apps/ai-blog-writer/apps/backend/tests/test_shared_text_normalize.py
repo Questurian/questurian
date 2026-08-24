@@ -120,8 +120,55 @@ def test_hyphens_that_are_not_dashes_are_left_alone():
         "Open 9 - 5 on weekdays.",
         "The bus runs 9-5 daily.",
         "- Trains are frequent",
-        "A well-known, family-run spot near the market.",
         "Rent runs US$800 - US$1,200 per month.",
         "| Route | Cost |\n| --- | --- |",
     ):
         assert validate_anti_ai_tells_markdown(line).valid is True, line
+
+
+def test_hyphenated_compounds_are_rejected():
+    """Each is correct English on its own, but a run of them through an
+    article is one of the clearest signals the text was generated."""
+    result = validate_anti_ai_tells_markdown(
+        "Two-bedroom apartments suit a long-stay visa holder."
+    )
+
+    assert result.valid is False
+    assert any("hyphenated compounds" in error for error in result.errors)
+    assert "Two-bedroom" in result.errors[0]
+    assert "long-stay" in result.errors[0]
+
+
+def test_proper_names_keep_their_hyphens():
+    """Rewriting a name corrupts a fact. A capitalised segment after the first
+    hyphen is what separates a name from a compound modifier -- "Two-bedroom"
+    at the start of a sentence has only its first letter capitalised."""
+    for line in (
+        "Aix-en-Provence is worth a detour.",
+        "The Colombia-Peru border crossing takes a day.",
+        "COVID-19 rules were lifted in 2023.",
+    ):
+        assert validate_anti_ai_tells_markdown(line).valid is True, line
+
+
+def test_hyphens_that_are_syntax_are_not_compounds():
+    """Link targets, inline code and editorial directives carry hyphens that
+    no writer chose."""
+    for line in (
+        "See the guide at https://example.com/long-stay-visa for details.",
+        "Set `max-width` on the container.",
+        "> [!EDITORIAL-BOX|highlight_callout]",
+        "| Route | Cost |",
+    ):
+        assert validate_anti_ai_tells_markdown(line).valid is True, line
+
+
+def test_the_repair_prompt_says_how_to_fix_a_compound():
+    # Deleting the hyphen in place would produce "Twobedroom".
+    prompt = build_anti_ai_repair_prompt(
+        "Two-bedroom apartments.",
+        ["Line 1: hyphenated compounds are not allowed: Two-bedroom"],
+    )
+
+    assert "rephrasing the sentence" in prompt
+    assert "never by deleting the hyphen" in prompt
