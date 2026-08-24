@@ -37,6 +37,43 @@ _DOUBLE_HYPHEN_PROSE = re.compile(r"(?<=\w)\s*--\s*(?=\w)")
 # one, and reads as a typewriter dash rather than as punctuation anyone
 # chose. Digit-digit spans are excluded: those are ranges, not dashes.
 _SPACED_HYPHEN_PROSE = re.compile(r"(?<=[A-Za-z,;:])\s+-\s+(?=[A-Za-z])")
+
+# Spans where a hyphen is syntax or data rather than a writer's choice, blanked
+# before the compound check reads a line.
+_NON_PROSE_SPANS = (
+    re.compile(r"`[^`]*`"),
+    re.compile(r"\]\([^)]*\)"),
+    re.compile(r"https?://\S+"),
+    re.compile(r"\[![^\]]*\]"),
+    re.compile(r"<[^>]+>"),
+)
+
+# Hyphenated compounds. A run of them is a strong AI tell -- "one-bedroom",
+# "long-stay", "well-known", "cost-of-living" stacked through an article read
+# as generated even though each word is correct English. House style is none:
+# rephrase, and a human adds one back if the sentence really needs it.
+_HYPHENATED_COMPOUND = re.compile(r"\b[A-Za-z]+(?:-[A-Za-z]+)+\b")
+
+# ...except proper nouns, where the hyphen is part of the name and rewriting it
+# corrupts a fact. "Aix-en-Provence" and "Colombia-Peru" keep theirs;
+# "Two-bedroom" at the start of a sentence does not, because only its first
+# letter is capitalised.
+
+
+def _is_proper_noun_compound(word: str) -> bool:
+    return any(part[:1].isupper() for part in word.split("-")[1:])
+
+
+def _hyphenated_compounds(line: str) -> list[str]:
+    for pattern in _NON_PROSE_SPANS:
+        line = pattern.sub(" ", line)
+    return [
+        word
+        for word in _HYPHENATED_COMPOUND.findall(line)
+        if not _is_proper_noun_compound(word)
+    ]
+
+
 _COMMA_AS_DASH_ASIDE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r",\s+(?:and\s+)?quietly\s+so\s*,", re.I),
     re.compile(r",\s+convincingly\s*,", re.I),
@@ -119,6 +156,12 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
             errors.append(
                 f"Line {line_number}: spaced hyphen used as a dash is not allowed."
             )
+        compounds = _hyphenated_compounds(line)
+        if compounds:
+            listed = ", ".join(sorted(set(compounds))[:8])
+            errors.append(
+                f"Line {line_number}: hyphenated compounds are not allowed: {listed}"
+            )
         if _has_non_numeric_en_dash(line):
             errors.append(f"Line {line_number}: non-numeric en dash is not allowed.")
         for pattern in _COMMA_AS_DASH_ASIDE_PATTERNS:
@@ -138,7 +181,9 @@ def build_anti_ai_repair_prompt(content: str, errors: list[str]) -> str:
         "Your previous output violated the anti-AI voice rules.\n"
         "Repair only the listed issues. Preserve markdown, facts, headings, tables, "
         "and source meaning. Do not replace dashes with comma-bracketed asides; "
-        "rewrite affected sentences into clean prose.\n\n"
+        "rewrite affected sentences into clean prose. Fix a hyphenated compound "
+        "by rephrasing the sentence, never by deleting the hyphen or splitting "
+        "the word in place.\n\n"
         f"Validation errors:\n{error_lines}\n\n"
         "Previous output:\n"
         "<<<CONTENT>>>\n"
