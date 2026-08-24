@@ -109,6 +109,78 @@
   padding: 0;
 }
 
+.sab-markdown-round-trip-status,
+.sab-markdown-round-trip-error {
+  align-self: center;
+  max-width: 22rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.sab-markdown-round-trip-status {
+  color: #27543c;
+}
+
+.sab-markdown-round-trip-error,
+.sab-markdown-import-error {
+  color: #8a3030;
+}
+
+.sab-markdown-import-modal {
+  width: min(980px, 100%);
+  display: grid;
+  gap: 1rem;
+}
+
+.sab-markdown-import-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.sab-markdown-import-header h3,
+.sab-markdown-import-header p,
+.sab-markdown-import-error {
+  margin: 0;
+}
+
+.sab-markdown-import-header p {
+  margin-top: 0.25rem;
+  color: var(--stl-muted);
+  font-size: 0.88rem;
+}
+
+.sab-markdown-import-rules {
+  border: 1px solid var(--stl-border);
+  border-radius: 10px;
+  padding: 0.65rem 0.8rem;
+  background: #f7f9fc;
+  color: var(--stl-muted);
+  font-size: 0.85rem;
+}
+
+.sab-markdown-import-rules summary {
+  color: var(--stl-ink);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.sab-markdown-import-rules ul {
+  margin: 0.65rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.sab-markdown-import-field textarea {
+  min-height: 440px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.55;
+}
+
+.sab-markdown-import-actions {
+  justify-content: flex-end;
+}
+
 .sab-stage-sync-result {
   border-radius: 10px;
   padding: 0.7rem 0.8rem;
