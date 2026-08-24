@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Prompt2BlogArticleTypeOption } from '../../api'
+import { Panel } from './Panel'
 
 interface CoreInputsPanelProps {
   angle: string
@@ -25,11 +26,11 @@ export function CoreInputsPanel(props: CoreInputsPanelProps) {
     () => Boolean(props.angle.trim() || props.callToAction.trim()),
   )
 
-  return <section className="p2b-panel">
-    <div className="p2b-panel-header"><div className="p2b-panel-header-text"><h2>Core Inputs</h2><p>Select article type and provide intent/context.</p></div>
-      <button type="button" className="p2b-section-clear-btn" onClick={props.onClear}>Clear section</button>
-    </div>
-    <div className="p2b-panel-body">
+  return <Panel
+    title="Core Inputs"
+    description="Select article type and provide intent/context."
+    onClear={props.onClear}
+  >
       <div className="p2b-field">
         <label htmlFor="p2b-article-type">Article Type</label>
         <select id="p2b-article-type" className="p2b-select" value={props.articleTypeId ?? ''} onChange={event => props.onArticleTypeChange(event.target.value ? Number(event.target.value) : null)}>
@@ -70,6 +71,5 @@ export function CoreInputsPanel(props: CoreInputsPanelProps) {
           </div>
         </div>
       </details>
-    </div>
-  </section>
+  </Panel>
 }

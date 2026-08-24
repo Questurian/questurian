@@ -10,6 +10,7 @@ import {
   resolvePrompt2BlogWriterModel,
 } from '../../constants/prompt2blog.constants'
 import type { P2BFormState } from '../composer.types'
+import { Panel } from './Panel'
 
 const CREATIVITY_LEVELS = ['low', 'medium', 'high'] as const
 
@@ -34,9 +35,11 @@ interface PromptProfilesPanelProps {
 }
 
 export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
-  return <section className="p2b-panel">
-    <div className="p2b-panel-header"><div className="p2b-panel-header-text"><h2>Prompt Profiles</h2><p>These dropdowns are loaded from markdown option catalogs.</p></div><button type="button" className="p2b-section-clear-btn" onClick={props.onClear}>Clear section</button></div>
-    <div className="p2b-panel-body">
+  return <Panel
+    title="Prompt Profiles"
+    description="These dropdowns are loaded from markdown option catalogs."
+    onClear={props.onClear}
+  >
       <div className="p2b-field-row p2b-field-row--3">
         <SelectField id="p2b-tone" label="Tone" value={props.toneId} options={props.inputOptions?.tones || []} onChange={value => props.onChange('toneId', value)} />
         <SelectField id="p2b-length" label="Length" value={props.lengthId} options={props.inputOptions?.lengths || []} onChange={value => props.onChange('lengthId', value)} />
@@ -70,8 +73,7 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
           </div>
         </div>
       </details>
-    </div>
-  </section>
+  </Panel>
 }
 
 function SelectField({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Array<{ id: string; label: string; description?: string }>; onChange: (value: string) => void }) {

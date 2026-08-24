@@ -5,6 +5,7 @@ import { useCleanupDetailsModal } from '../cleanup-details/hooks/useCleanupDetai
 import { CoreInputsPanel } from '../composer/components/CoreInputsPanel'
 import { EasySetupPanel } from '../composer/components/EasySetupPanel'
 import { GuidelinePreviewPanel } from '../composer/components/GuidelinePreviewPanel'
+import { MiddleSectionsFold } from '../composer/components/MiddleSectionsFold'
 import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
 import { SeoConstraintsPanel } from '../composer/components/SeoConstraintsPanel'
 import { SourceMaterialPanel } from '../composer/components/SourceMaterialPanel'
@@ -72,57 +73,59 @@ export default function Prompt2BlogPage() {
             onLocationChange={value => composer.updateField('easySetupLocation', value)}
             onTitleChange={value => composer.updateField('easySetupTitle', value)}
           />
-          <CoreInputsPanel
-            angle={state.angle}
-            articleGoal={state.articleGoal}
-            articleTypeId={state.articleTypeId}
-            callToAction={state.callToAction}
-            destinationContext={state.destinationContext}
-            groupedOptions={composer.groupedArticleTypeOptions}
-            quickPicks={composer.articleTypeQuickPicks}
-            selectedArticleType={composer.selectedArticleType}
-            targetReader={state.targetReader}
-            onAngleChange={value => composer.updateField('angle', value)}
-            onArticleGoalChange={value => composer.updateField('articleGoal', value)}
-            onArticleTypeChange={value => composer.updateField('articleTypeId', value)}
-            onCallToActionChange={value => composer.updateField('callToAction', value)}
-            onClear={composer.clearCoreInputs}
-            onDestinationContextChange={value => composer.updateField('destinationContext', value)}
-            onTargetReaderChange={value => composer.updateField('targetReader', value)}
-          />
-          <PromptProfilesPanel
-            brandVoiceId={state.brandVoiceId}
-            creativityLevel={state.creativityLevel}
-            enableEditorialAugmentation={state.enableEditorialAugmentation}
-            inputOptions={composer.inputOptions}
-            lengthId={state.lengthId}
-            modelName={state.modelName}
-            writingModel={state.writingModel}
-            negativeInstructions={state.negativeInstructions}
-            toneId={state.toneId}
-            onChange={composer.updateField}
-            onClear={composer.clearPromptProfiles}
-          />
-          <SeoConstraintsPanel
-            mustInclude={state.mustInclude}
-            primaryKeyword={state.primaryKeyword}
-            secondaryKeywords={state.secondaryKeywords}
-            onClear={composer.clearSeoConstraints}
-            onMustIncludeChange={value => composer.updateField('mustInclude', value)}
-            onPrimaryKeywordChange={value => composer.updateField('primaryKeyword', value)}
-            onSecondaryKeywordsChange={value => composer.updateField('secondaryKeywords', value)}
-          />
-          <SourceMaterialPanel
-            blobs={state.blobs}
-            onAdd={composer.addBlob}
-            onClear={composer.clearSourceMaterial}
-            onRemove={composer.removeBlob}
-            onUpdate={composer.updateBlob}
-          />
-          <GuidelinePreviewPanel
-            loading={composer.guidelineLoading}
-            preview={composer.guidelinePreview}
-          />
+          <MiddleSectionsFold>
+            <CoreInputsPanel
+              angle={state.angle}
+              articleGoal={state.articleGoal}
+              articleTypeId={state.articleTypeId}
+              callToAction={state.callToAction}
+              destinationContext={state.destinationContext}
+              groupedOptions={composer.groupedArticleTypeOptions}
+              quickPicks={composer.articleTypeQuickPicks}
+              selectedArticleType={composer.selectedArticleType}
+              targetReader={state.targetReader}
+              onAngleChange={value => composer.updateField('angle', value)}
+              onArticleGoalChange={value => composer.updateField('articleGoal', value)}
+              onArticleTypeChange={value => composer.updateField('articleTypeId', value)}
+              onCallToActionChange={value => composer.updateField('callToAction', value)}
+              onClear={composer.clearCoreInputs}
+              onDestinationContextChange={value => composer.updateField('destinationContext', value)}
+              onTargetReaderChange={value => composer.updateField('targetReader', value)}
+            />
+            <PromptProfilesPanel
+              brandVoiceId={state.brandVoiceId}
+              creativityLevel={state.creativityLevel}
+              enableEditorialAugmentation={state.enableEditorialAugmentation}
+              inputOptions={composer.inputOptions}
+              lengthId={state.lengthId}
+              modelName={state.modelName}
+              writingModel={state.writingModel}
+              negativeInstructions={state.negativeInstructions}
+              toneId={state.toneId}
+              onChange={composer.updateField}
+              onClear={composer.clearPromptProfiles}
+            />
+            <SeoConstraintsPanel
+              mustInclude={state.mustInclude}
+              primaryKeyword={state.primaryKeyword}
+              secondaryKeywords={state.secondaryKeywords}
+              onClear={composer.clearSeoConstraints}
+              onMustIncludeChange={value => composer.updateField('mustInclude', value)}
+              onPrimaryKeywordChange={value => composer.updateField('primaryKeyword', value)}
+              onSecondaryKeywordsChange={value => composer.updateField('secondaryKeywords', value)}
+            />
+            <SourceMaterialPanel
+              blobs={state.blobs}
+              onAdd={composer.addBlob}
+              onClear={composer.clearSourceMaterial}
+              onRemove={composer.removeBlob}
+              onUpdate={composer.updateBlob}
+            />
+            <GuidelinePreviewPanel
+              loading={composer.guidelineLoading}
+              preview={composer.guidelinePreview}
+            />
+          </MiddleSectionsFold>
           <PipelinePanel
             run={pipeline}
             onOpenCleanupModal={() => void cleanupModal.open()}

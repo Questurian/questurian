@@ -446,7 +446,7 @@ describe('Prompt2BlogPage', () => {
     expect(editorialExtras).toBeChecked()
   })
 
-  it('keeps optional controls collapsed while core choices stay visible', async () => {
+  it('folds every middle section behind one Article Details bar', async () => {
     renderPage()
 
     const advancedGenerationSummary = await screen.findByText('Advanced generation controls')
@@ -456,18 +456,24 @@ describe('Prompt2BlogPage', () => {
     const optionalGuidanceSummary = screen.getByText('Optional editorial guidance')
     const optionalGuidance = optionalGuidanceSummary.closest('details')
 
+    const articleDetailsHeading = screen.getByRole('heading', { name: 'Article Details' })
+    const articleDetails = articleDetailsHeading.closest('details')
+    const middlePanels = [
+      'Core Inputs',
+      'Prompt Profiles',
+      'SEO + Constraints',
+      'Source Material',
+      'Guideline Preview',
+    ].map(title => screen.getByRole('heading', { name: title }).closest('details'))
+
+    expect(screen.getByRole('heading', { name: 'Easy Set Up' }).closest('details')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Pipeline' }).closest('details')).toBeNull()
+    expect(articleDetails).not.toHaveAttribute('open')
+    middlePanels.forEach(panel => expect(panel).toBe(articleDetails))
+
     expect(advancedGeneration).not.toHaveAttribute('open')
     expect(advancedSeo).not.toHaveAttribute('open')
     expect(optionalGuidance).not.toHaveAttribute('open')
-    for (const label of [
-      'Tone',
-      'Length',
-      'Brand Voice',
-      'Primary Keyword',
-      'Must Include (one per line)',
-    ]) {
-      expect(screen.getByLabelText(label).closest('details')).toBeNull()
-    }
     for (const label of [
       'Base Draft Model',
       'Writer Model',
@@ -489,10 +495,12 @@ describe('Prompt2BlogPage', () => {
       optionalGuidance,
     )
 
+    fireEvent.click(articleDetailsHeading)
     fireEvent.click(advancedGenerationSummary)
     fireEvent.click(advancedSeoSummary)
     fireEvent.click(optionalGuidanceSummary)
 
+    expect(articleDetails).toHaveAttribute('open')
     expect(advancedGeneration).toHaveAttribute('open')
     expect(advancedSeo).toHaveAttribute('open')
     expect(optionalGuidance).toHaveAttribute('open')
