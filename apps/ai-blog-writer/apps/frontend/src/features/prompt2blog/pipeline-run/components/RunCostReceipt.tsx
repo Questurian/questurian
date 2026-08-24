@@ -1,5 +1,9 @@
 import { PROMPT2BLOG_MODEL_STACKS } from '../../constants/prompt2blog.constants'
-import type { Prompt2BlogPipelinePayload } from '../../types/pipeline.types'
+import type {
+  Prompt2BlogPipelinePayload,
+  Prompt2BlogPipelineStage,
+} from '../../types/pipeline.types'
+import { PIPELINE_STAGE_LABELS } from '../pipeline-status'
 
 type RunCost = NonNullable<Prompt2BlogPipelinePayload['run_cost']>
 
@@ -32,6 +36,7 @@ export function RunCostReceipt({ cost }: { cost: RunCost }) {
     <p className="p2b-run-cost__coverage">{coverageLabel}</p>
     <details className="p2b-run-cost__details">
       <summary>Price and model breakdown</summary>
+      <span className="p2b-run-cost__eyebrow">By model</span>
       <div className="p2b-run-cost__models">
         {cost.by_model.map(model => <div key={model.model}>
           <strong>{formatModelName(model.model)}</strong>
@@ -40,6 +45,17 @@ export function RunCostReceipt({ cost }: { cost: RunCost }) {
           <span>{formatUsd(model.estimated_cost_usd)}</span>
         </div>)}
       </div>
+      {cost.by_stage != null && cost.by_stage.length > 0 && <>
+        <span className="p2b-run-cost__eyebrow">By stage</span>
+        <div className="p2b-run-cost__models">
+          {cost.by_stage.map(row => <div key={row.stage}>
+            <strong>{formatStageName(row.stage)}</strong>
+            <span>{formatTokens(row.total_tokens)} tokens</span>
+            <span>{row.calls} {row.calls === 1 ? 'call' : 'calls'}</span>
+            <span>{formatTokens(row.reasoning_tokens)} reasoning</span>
+          </div>)}
+        </div>
+      </>}
       <p>{cost.pricing_note}</p>
       <p>Estimate excludes network, storage, grounding, and other non-token charges.</p>
     </details>
@@ -64,6 +80,11 @@ function formatUsd(
   if (value == null) return 'Unavailable'
   const digits = value < 0.01 ? 4 : 2
   return `${measurementStatus === 'partial' ? '≥' : ''}$${value.toFixed(digits)}`
+}
+
+function formatStageName(stage: string): string {
+  return PIPELINE_STAGE_LABELS[stage as Prompt2BlogPipelineStage]
+    || stage.replace(/^stage_/, '').replace(/_/g, ' ')
 }
 
 function formatModelName(model: string): string {

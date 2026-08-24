@@ -65,3 +65,9 @@ The generation graph exposes these first-class nodes:
 
 The full-run graph prepends source preparation. Individual stages continue to
 record their existing `stage_*` payloads through `RunRecorder`.
+
+`RunRecorder` snapshots the token tracker's cumulative totals on `start_stage`
+and writes the delta into each stage payload as `stage_usage`, which is also
+what feeds the `by_stage` rows of the `run_cost` receipt. Recorders built
+without a `usage_reader` -- every test that constructs one directly -- behave
+as they did before attribution existed.

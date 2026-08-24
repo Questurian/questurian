@@ -137,11 +137,36 @@ def _estimated_cost(
     ) / 1_000_000
 
 
+TOKEN_KEYS = (
+    "input_tokens",
+    "output_tokens",
+    "reasoning_tokens",
+    "cached_input_tokens",
+    "total_tokens",
+)
+
+STAGE_USAGE_KEYS = TOKEN_KEYS + ("calls",)
+
+
 @dataclass
 class Prompt2BlogTokenUsageTracker:
     successful_calls: int = 0
     measured_calls: int = 0
     by_model: dict[str, dict[str, Any]] = field(default_factory=dict)
+    by_stage: dict[str, dict[str, int]] = field(default_factory=dict)
+
+    def totals(self) -> dict[str, int]:
+        return {
+            key: sum(item[key] for item in self.by_model.values())
+            for key in STAGE_USAGE_KEYS
+        }
+
+    def record_stage_usage(self, stage: str, usage: dict[str, int]) -> None:
+        row = self.by_stage.setdefault(stage, dict.fromkeys(STAGE_USAGE_KEYS, 0))
+        # Stages repeat: groundedness and the quality audit run once per repair
+        # pass, so a stage's cost is the sum of its passes, not the last one.
+        for key in STAGE_USAGE_KEYS:
+            row[key] += _token_count(usage.get(key))
 
     def record(self, model_name: str, raw_usage: Any) -> None:
         self.successful_calls += 1
@@ -227,6 +252,15 @@ class Prompt2BlogTokenUsageTracker:
                     ),
                 }
             )
+        # Sorted by spend so the stages worth capping or de-thinking are the
+        # ones read first.
+        stage_rows = [
+            {"stage": stage_name, **usage}
+            for stage_name, usage in sorted(
+                self.by_stage.items(),
+                key=lambda item: (-item[1]["total_tokens"], item[0]),
+            )
+        ]
         if self.measured_calls == 0:
             measurement_status = "unavailable"
         elif self.measured_calls < self.successful_calls or not fully_priced:
@@ -255,6 +289,7 @@ class Prompt2BlogTokenUsageTracker:
             ),
             "currency": "USD",
             "by_model": model_rows,
+            "by_stage": stage_rows,
             "pricing_note": (
                 "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 "
                 "Flash introductory pricing ends 2026-12-31."

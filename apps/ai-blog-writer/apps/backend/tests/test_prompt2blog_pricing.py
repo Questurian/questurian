@@ -223,3 +223,24 @@ def test_default_prompt2blog_llm_records_each_successful_call(monkeypatch):
     assert summary["measured_calls"] == 1
     assert summary["total_tokens"] == 500
     assert summary["estimated_cost_usd"] == 0.000675
+
+
+def test_a_run_with_no_reported_usage_is_unavailable_not_free():
+    """Providers that return no usage metadata must not read as a zero-cost
+    run. Previously only the pipeline contract test covered this."""
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.record("gemini-3.7-flash", None)
+    tracker.record("gemini-3.7-flash", {})
+
+    summary = tracker.summary(
+        stack_id="balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="gemini-3.7-flash",
+        audit_model="gemini-3.7-flash",
+    )
+
+    assert summary["measurement_status"] == "unavailable"
+    assert summary["successful_calls"] == 2
+    assert summary["measured_calls"] == 0
+    assert summary["by_model"] == []
+    assert summary["by_stage"] == []

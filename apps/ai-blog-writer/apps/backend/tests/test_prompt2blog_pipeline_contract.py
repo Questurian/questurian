@@ -17,6 +17,7 @@ from app.features.prompt2blog.models import (
     Prompt2BlogInputRequest,
 )
 from app.features.prompt2blog.orchestrator import run_full_pipeline, run_pipeline_v2
+from app.features.prompt2blog.pricing import Prompt2BlogTokenUsageTracker
 from app.features.prompt2blog.run_recorder import RunRecorder
 
 
@@ -221,8 +222,16 @@ def _pipeline_fakes(
             return "A Practical First Visit to Kyoto"
         raise AssertionError(f"Unexpected text prompt: {prompt[:120]}")
 
+    tracker = Prompt2BlogTokenUsageTracker()
+
     class FakeLLM:
-        def invoke_json(self, **kwargs: Any) -> tuple[dict[str, Any], str]:
+        # Carries a real tracker so a full run exercises per-stage attribution
+        # end to end. Usage is fabricated from prompt length, which is enough
+        # to tell an expensive stage from a cheap one. PipelineDependencies
+        # looks for this attribute to wire the recorder up.
+        usage_tracker = tracker
+
+        def _record(self, **kwargs: Any) -> None:
             recorded["calls"].append(
                 {
                     "prompt": kwargs["prompt"],
@@ -230,17 +239,25 @@ def _pipeline_fakes(
                     "temperature": kwargs.get("temperature"),
                 }
             )
+            tracker.record(
+                kwargs.get("model_name") or "test-model",
+                {
+                    "input_tokens": len(kwargs["prompt"]) // 4,
+                    "output_tokens": 100,
+                    "total_tokens": len(kwargs["prompt"]) // 4 + 100,
+                },
+            )
+
+        def invoke_json(self, **kwargs: Any) -> tuple[dict[str, Any], str]:
+            self._record(**kwargs)
             return invoke_json(**kwargs)
 
         def invoke_text(self, **kwargs: Any) -> str:
-            recorded["calls"].append(
-                {
-                    "prompt": kwargs["prompt"],
-                    "model_name": kwargs.get("model_name"),
-                    "temperature": kwargs.get("temperature"),
-                }
-            )
+            self._record(**kwargs)
             return invoke_text(**kwargs)
+
+        def usage_summary(self, **kwargs: Any) -> dict[str, Any]:
+            return tracker.summary(**kwargs)
 
         @staticmethod
         def enforce_anti_ai(text: str, **kwargs: Any) -> str:
@@ -299,6 +316,20 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "pipeline_v2",
     ]
     assert stage_names[-1] in {"pipeline_v2", "langgraph_trace"}
+
+    # Every stage the run recorded is attributed, including the ones that spend
+    # nothing. A stage missing from by_stage would be spend nobody can see.
+    run_cost = _stage_payload(recorded, "pipeline_v2")["data"]["run_cost"]
+    attributed = {row["stage"] for row in run_cost["by_stage"]}
+    assert attributed == {
+        stage for stage in stage_names if stage.startswith("stage_")
+    }
+    assert sum(row["total_tokens"] for row in run_cost["by_stage"]) == (
+        run_cost["total_tokens"]
+    )
+    assert sum(row["calls"] for row in run_cost["by_stage"]) == (
+        run_cost["measured_calls"]
+    )
     assert recorded["statuses"][-1][1]["state"] == "completed"
     assert recorded["statuses"][-1][1]["stage"] == "complete"
 
@@ -310,10 +341,14 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "name": "Travel Guide",
         "definition": "A practical destination guide.",
     }
-    assert artifact["pipeline_v2"]["run_cost"]["measurement_status"] == (
-        "unavailable"
-    )
-    assert artifact["pipeline_v2"]["run_cost"]["models"] == {
+    run_cost = artifact["pipeline_v2"]["run_cost"]
+    # "partial", not "complete": the harness reports usage for every call, but
+    # its model names are not in the price table, so the run is measured and
+    # unpriced. (The "unavailable" branch -- no usage reported at all -- is
+    # covered directly in test_prompt2blog_pricing.py.)
+    assert run_cost["measurement_status"] == "partial"
+    assert run_cost["estimated_cost_usd"] is None
+    assert run_cost["models"] == {
         "worker": "test-model",
         "writer": "test-writer",
         "judge": P2B_AUDIT_MODEL,
