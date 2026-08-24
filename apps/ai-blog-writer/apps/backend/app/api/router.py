@@ -11,6 +11,7 @@ from app.features.prompt2blog import router as prompt2blog_router
 from app.features.editor_assist import router as editor_assist_router
 from app.features.itineraries_pipeline import router as itineraries_pipeline_router
 from app.features.staged_drafts import router as staged_drafts_router
+from app.features.claude_connection import router as claude_connection_router
 
 router = APIRouter()
 
@@ -30,3 +31,4 @@ router.include_router(prompt2blog_router)
 router.include_router(editor_assist_router)
 router.include_router(itineraries_pipeline_router)
 router.include_router(staged_drafts_router)
+router.include_router(claude_connection_router)

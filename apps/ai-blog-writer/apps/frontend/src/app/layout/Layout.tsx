@@ -1,6 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../features/auth';
+import { ClaudeStatusPill } from '../../features/claudeConnection';
 
 export default function Layout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -93,6 +94,7 @@ export default function Layout() {
                 {isConnected ? 'Payload Online' : 'Payload Offline'}
               </span>
             </div>
+            <ClaudeStatusPill />
             <div className="nav-user-menu">
               <button
                 type="button"
@@ -144,6 +146,7 @@ export default function Layout() {
           {connectionError && !isConnected && (
             <p className="nav-mobile-connection-error">{connectionError}</p>
           )}
+          <ClaudeStatusPill variant="mobile" onNavigate={() => setIsMobileMenuOpen(false)} />
           <span className="nav-mobile-user">{user?.email}</span>
           <Link to="/profile" className="nav-mobile-profile-link">
             My Profile

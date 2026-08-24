@@ -13,6 +13,7 @@
     "lint": "pnpm run python:deps && pnpm run nx:prepare && NX_DAEMON=false NX_WORKSPACE_DATA_DIRECTORY=.cache/nx/workspace-data NX_CACHE_DIRECTORY=.cache/nx/cache nx run-many -t lint",
     "test": "pnpm run python:deps && pnpm run nx:prepare && NX_DAEMON=false NX_WORKSPACE_DATA_DIRECTORY=.cache/nx/workspace-data NX_CACHE_DIRECTORY=.cache/nx/cache nx run-many -t test",
     "dev:docker": "docker compose up --build",
+    "smoke:claude": "sh scripts/claude-agent-sdk-smoke/run.sh",
     "docker:build": "pnpm run nx:prepare && NX_DAEMON=false NX_WORKSPACE_DATA_DIRECTORY=.cache/nx/workspace-data NX_CACHE_DIRECTORY=.cache/nx/cache nx run-many -t docker-build"
   },
   "dependencies": {

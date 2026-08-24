@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider, LoginPage, RequireAuth } from './features/auth'
 import { DashboardPage } from './features/dashboard'
+import { ClaudeConnectionPage } from './features/claudeConnection'
 import Layout from './app/layout'
 import {
   YouTube2BlogPage,
@@ -130,6 +131,9 @@ export default function App() {
 
               {/* Batch Image Recreation */}
               <Route path="batch-image-recreation" element={<BatchImageRecreationPage />} />
+
+              {/* Claude subscription connection */}
+              <Route path="settings/claude" element={<ClaudeConnectionPage />} />
 
               {/* Staff management */}
               <Route path="profile" element={<MyProfilePage />} />

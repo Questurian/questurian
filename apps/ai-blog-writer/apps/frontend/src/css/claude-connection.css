@@ -1,0 +1,341 @@
+/* Claude connection page + the degraded state its nav pill adds. */
+
+/*
+ * The Payload pill only has two states. The Claude one needs three: a login
+ * that answers but bills as API usage is not the same failure as one that
+ * does not answer at all, and colouring them alike would train the eye to
+ * ignore the amber case -- which is the expensive one.
+ */
+.nav-connection-status.degraded,
+.nav-mobile-connection.degraded {
+  background: var(--warning-soft);
+  border-color: transparent;
+}
+
+.nav-connection-status.degraded .connection-text,
+.nav-mobile-connection.degraded .connection-text {
+  color: var(--warning);
+}
+
+.connection-dot.degraded {
+  background: var(--warning);
+}
+
+.claude-status-pill {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.claude-connection-page {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.claude-connection-header h1 {
+  font-family: var(--font-display);
+  margin: 0 0 var(--space-2);
+}
+
+.claude-connection-header p {
+  margin: 0;
+  color: var(--ink-soft, var(--ink));
+  max-width: 60ch;
+}
+
+.claude-status-card,
+.claude-panel {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-5);
+}
+
+.claude-status-card.connected {
+  border-left: 4px solid var(--success);
+}
+
+.claude-status-card.degraded {
+  border-left: 4px solid var(--warning);
+}
+
+.claude-status-card.disconnected {
+  border-left: 4px solid var(--error);
+}
+
+.claude-status-headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.claude-status-headline h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.claude-status-explanation {
+  margin: var(--space-3) 0 0;
+  max-width: 70ch;
+}
+
+.claude-override-list {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-5);
+}
+
+.claude-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.claude-status-note {
+  margin: var(--space-3) 0 0;
+  color: var(--success);
+}
+
+.claude-status-error {
+  margin: var(--space-3) 0 0;
+  color: var(--error);
+}
+
+.claude-button {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--cream-dark);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.claude-button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.claude-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.claude-button--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--cream);
+}
+
+.claude-button--primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+  background: var(--accent);
+}
+
+.claude-panel h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 1.0625rem;
+}
+
+.claude-panel--muted {
+  background: var(--cream-dark);
+}
+
+.claude-panel ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 75ch;
+}
+
+.claude-detail-grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3) var(--space-5);
+}
+
+.claude-detail-row dt {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: 0.6;
+}
+
+.claude-detail-row dd {
+  margin: var(--space-1) 0 0;
+  word-break: break-word;
+}
+
+.claude-command-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+
+.claude-command {
+  flex: 1 1 320px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--cream-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8125rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* --- Test bench ------------------------------------------------------- */
+
+.claude-bench-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.claude-bench-header h2 {
+  margin: 0;
+}
+
+.claude-bench-intro {
+  margin: var(--space-2) 0 var(--space-4);
+  max-width: 70ch;
+}
+
+.claude-bench-controls {
+  margin-bottom: var(--space-4);
+}
+
+.claude-bench-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.claude-bench-field > span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.claude-bench-field select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--cream-dark);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+
+.claude-bench-note {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8125rem;
+  opacity: 0.7;
+}
+
+.claude-bench-transcript {
+  list-style: none;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.claude-bench-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.bench-bubble {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.bench-bubble p {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bench-bubble--you {
+  background: var(--cream-dark);
+}
+
+.bench-bubble--claude {
+  background: var(--accent-softer);
+  border-color: var(--accent-soft);
+}
+
+.bench-bubble--failed {
+  background: var(--error-soft);
+  border-color: transparent;
+}
+
+.bench-who {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.bench-waiting {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.bench-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+  opacity: 0.7;
+}
+
+.claude-bench-compose textarea {
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--cream-dark);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  resize: vertical;
+}
+
+.claude-bench-send-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.claude-bench-hint {
+  font-size: 0.8125rem;
+  opacity: 0.65;
+}
