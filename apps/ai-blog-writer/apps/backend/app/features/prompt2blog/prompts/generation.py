@@ -76,6 +76,12 @@ Return Markdown only (no JSON).
 
 Rules:
 - Base claims on source material themes and facts.
+- The source blocks are internal working material. Never cite them in the
+  article: no "(Source 1)", no "[Source 2]", no "according to Source 3",
+  no numbered source references of any kind. The reader cannot see the
+  sources and has no idea what a numbered source is.
+- Attribute a fact in prose only by naming the real publication or body it
+  came from, never by its position in the source list.
 - Do not invent specific facts, numbers, quotes, prices, names, or policies.
 - Supplemental context may explain concepts mentioned in the source, but the final article cannot invent unsupported specifics.
 - If details are missing, use cautious phrasing and clearly mark uncertainty.
@@ -196,6 +202,12 @@ Return strict JSON only:
 
 Hard rules:
 - Preserve factual meaning from sources.
+- The source blocks are internal working material. Never cite them in the
+  article: no "(Source 1)", no "[Source 2]", no "according to Source 3",
+  no numbered source references of any kind. The reader cannot see the
+  sources and has no idea what a numbered source is.
+- Attribute a fact in prose only by naming the real publication or body it
+  came from, never by its position in the source list.
 - Do not invent facts.
 - Avoid long verbatim phrasing from sources.
 - improved_content must not contain a `#` H1.

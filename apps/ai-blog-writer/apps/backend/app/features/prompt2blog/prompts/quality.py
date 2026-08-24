@@ -148,6 +148,12 @@ Rules:
 - Resolve each required revision directly.
 - Do not invent facts.
 - Reduce similarity to source phrasing/flow.
+- The source blocks are internal working material. Never cite them in the
+  article: no "(Source 1)", no "[Source 2]", no "according to Source 3",
+  no numbered source references of any kind. The reader cannot see the
+  sources and has no idea what a numbered source is.
+- Attribute a fact in prose only by naming the real publication or body it
+  came from, never by its position in the source list.
 - Keep complete article prose with clear `##` / `###` structure.
 - Preserve CTA and keyword requirements naturally.
 - If source support is missing, explicitly state uncertainty.

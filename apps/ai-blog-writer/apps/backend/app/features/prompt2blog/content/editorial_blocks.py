@@ -6,6 +6,7 @@ from typing import Any
 from ..config import EDITORIAL_COMPONENT_LABELS
 from ..support import _safe_dict, _safe_str, _tokenize_words
 from .markdown import _ensure_markdown_section_headers
+from .source_citations import strip_source_citations
 
 
 def _normalize_editorial_component_name(value: str) -> str:
@@ -265,6 +266,11 @@ def _sanitize_editorial_augmentation(
         augmented_content = fallback_markdown
 
     augmented_content = _ensure_markdown_section_headers(augmented_content)
+    # Augmentation regenerates the whole article, so it can reintroduce the
+    # source citations compose had stripped.
+    augmented_content, source_citations_removed = strip_source_citations(
+        augmented_content
+    )
 
     components_added: list[dict[str, str]] = []
     raw_components = parsed.get("components_added")
@@ -339,6 +345,7 @@ def _sanitize_editorial_augmentation(
 
     return {
         "augmented_content": augmented_content,
+        "source_citations_removed": source_citations_removed,
         "components_added": components_added,
         "diagnostic": diagnostic,
         "augmentation_summary": augmentation_summary,

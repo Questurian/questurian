@@ -109,7 +109,11 @@ have written "X — Y — Z" before the no-em-dash rule, do not write "X, Y, Z" 
 instead. Comma-bracketed adverbials like "arguing, convincingly, that" or \
 "the room is warm, and quietly so, throughout" are em dashes in disguise — \
 rewrite the sentence into two shorter sentences, or drop the aside entirely. \
-A comma should join clauses or list items, not impersonate a dash."""
+A comma should join clauses or list items, not impersonate a dash.
+Do not substitute a hyphen either. "The room is warm - and quietly so" is the \
+same dash wearing a different hat, and a spaced hyphen reads as a typewriter \
+artefact rather than punctuation anyone chose. Hyphens join compound words. \
+They do not bracket asides and they do not break sentences."""
 
 _VOICE = """\
 Voice rules. Write from a single point of view with an opinion. If the writing \
