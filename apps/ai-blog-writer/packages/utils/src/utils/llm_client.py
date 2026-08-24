@@ -63,6 +63,7 @@ class ClaudeTextLLM:
     def __init__(self, *, model_name: str, max_tokens: int) -> None:
         self.model_name = model_name
         self.max_tokens = max_tokens
+        self.last_usage_metadata: dict[str, Any] | None = None
 
     def invoke(self, prompt: str) -> str:
         client = _get_anthropic_client(model_name=self.model_name)
@@ -72,6 +73,11 @@ class ClaudeTextLLM:
             messages=[{'role': 'user', 'content': prompt}],
         ) as stream:
             message = stream.get_final_message()
+        usage = getattr(message, 'usage', None)
+        self.last_usage_metadata = {
+            'input_tokens': getattr(usage, 'input_tokens', 0),
+            'output_tokens': getattr(usage, 'output_tokens', 0),
+        } if usage is not None else None
         text = _message_text(message)
         if not text:
             raise _empty_message_error(message)

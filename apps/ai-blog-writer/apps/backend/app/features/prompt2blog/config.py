@@ -4,17 +4,15 @@ from pathlib import Path
 
 FEATURE_NAME = "prompt2blog"
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.7-flash"
 
 # The reader-facing compose and augmentation stages use the selected writer
 # model, defaulting to this stronger model. This was "claude-opus-4-8" while
 # Anthropic was funded; shared model resolution still supports that selection.
 P2B_COMPOSE_MODEL = "gemini-3.1-pro-preview"
 
-# The quality audit judges prose written by the writer model. A judge weaker
-# than the writer produces noisy scores and spurious repair triggers, so the
-# audit runs a tier above DEFAULT_MODEL rather than on the analysis model.
-P2B_AUDIT_MODEL = "gemini-2.5-flash"
+# Used only when an older client does not send its selected stack's audit model.
+P2B_AUDIT_MODEL = "gemini-3.7-flash"
 
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",

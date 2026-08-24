@@ -69,6 +69,23 @@ describe('loadSavedComposerState', () => {
     expect(loadSavedComposerState().enableEditorialAugmentation).toBe(true)
   })
 
+  it('preserves the selected full-pipeline model stack', () => {
+    saveComposerState({
+      ...DEFAULT_COMPOSER_STATE,
+      modelStackId: 'economy',
+      modelName: 'gemini-3.1-flash-lite',
+      writingModel: 'gemini-3.1-flash-lite',
+      auditModel: 'gemini-3.1-flash-lite',
+    })
+
+    expect(loadSavedComposerState()).toMatchObject({
+      modelStackId: 'economy',
+      modelName: 'gemini-3.1-flash-lite',
+      writingModel: 'gemini-3.1-flash-lite',
+      auditModel: 'gemini-3.1-flash-lite',
+    })
+  })
+
   it('does not reinterpret a draft written by a newer storage version', () => {
     localStorage.setItem(COMPOSER_STORAGE_KEY, JSON.stringify({
       composerStorageVersion: 999,

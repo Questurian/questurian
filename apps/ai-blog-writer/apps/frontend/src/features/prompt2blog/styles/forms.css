@@ -81,6 +81,131 @@
   gap: var(--space-6);
 }
 
+/* One priced preset expands into a receipt of the three model assignments. */
+.p2b-stack-picker {
+  max-width: 34rem;
+}
+
+.p2b-stack-picker .p2b-select {
+  font-weight: 700;
+}
+
+.p2b-stack-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.p2b-stack-cost {
+  padding: var(--space-5);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--p2b-accent);
+  background: var(--surface);
+}
+
+.p2b-stack-cost-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.p2b-stack-cost-headline strong {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.p2b-stack-cost-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.72rem;
+}
+
+.p2b-stack-cost-method,
+.p2b-stack-details {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.p2b-stack-cost-method {
+  margin-top: var(--space-3);
+}
+
+.p2b-stack-cost-method summary,
+.p2b-stack-details summary {
+  width: fit-content;
+  color: var(--p2b-accent-hover);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.p2b-stack-cost-method p {
+  max-width: 48rem;
+  margin: var(--space-2) 0 0;
+  line-height: 1.5;
+}
+
+.p2b-stack-details[open] summary {
+  margin-bottom: var(--space-3);
+}
+
+.p2b-stack-receipt {
+  display: grid;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--p2b-accent);
+  background: var(--surface);
+}
+
+.p2b-stack-assignment {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 0.8fr) minmax(11rem, 1fr) minmax(14rem, 1.5fr);
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.p2b-stack-assignment + .p2b-stack-assignment {
+  border-top: 1px solid var(--border);
+}
+
+.p2b-stack-assignment-label {
+  color: var(--p2b-accent-hover);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.p2b-stack-assignment strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.p2b-stack-assignment-stages {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.p2b-model-routing-note {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--p2b-accent);
+}
+
 /* One compact gate for every middle form section. */
 .p2b-middle-fold-panel {
   animation: p2bSlideUp 0.3s ease-out;

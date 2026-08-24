@@ -68,7 +68,11 @@ def _initial_generation_state(
             request.writing_model,
             default=P2B_COMPOSE_MODEL,
         ),
-        "audit_model": P2B_AUDIT_MODEL,
+        "audit_model": dependencies.resolve_writer_model(
+            request.audit_model,
+            default=P2B_AUDIT_MODEL,
+        ),
+        "model_stack_id": request.model_stack_id,
         "cleaned_data": _safe_str(request.cleaned_data),
         "raw_sources": raw_sources,
         "raw_sources_text": _format_raw_sources(raw_sources),

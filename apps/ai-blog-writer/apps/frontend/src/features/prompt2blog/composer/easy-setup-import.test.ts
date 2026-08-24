@@ -48,8 +48,6 @@ function createApprovedJson(overrides: Record<string, unknown> = {}) {
     negative_instructions: ['No unsourced price claims'],
     enable_editorial_augmentation: false,
     source_material: ['RESEARCH NEEDED: current Carris fare'],
-    model_name: 'gemini-2.5-flash-lite',
-    writing_model: 'gemini-3.1-pro-preview',
     ...overrides,
   })
 }
@@ -78,8 +76,6 @@ describe('reviewEasySetupJson', () => {
       mustInclude: 'Tram 28 crowding\nAirport transfer costs',
       negativeInstructions: 'No unsourced price claims',
       enableEditorialAugmentation: false,
-      modelName: 'gemini-2.5-flash-lite',
-      writingModel: 'gemini-3.1-pro-preview',
       blobs: [{ id: 1, content: 'RESEARCH NEEDED: current Carris fare' }],
     })
     expect(review.rows).toContainEqual({ field: 'Article Type', value: 'Destination Guide (id 7)' })
@@ -204,14 +200,31 @@ describe('reviewEasySetupJson', () => {
     })
   })
 
-  it('rejects a writer model that is not currently offered', () => {
+  it('accepts but ignores model routing from a legacy Easy Setup brief', () => {
     const review = reviewEasySetupJson(
-      createApprovedJson({ writing_model: 'claude-opus-4-8' }),
+      createApprovedJson({
+        model_name: 'gemini-2.5-pro',
+        writing_model: 'claude-opus-4-8',
+        audit_model: 'gemini-2.5-flash',
+      }),
       createInputOptions(),
     )
 
-    expect(review.patch).toBeNull()
-    expect(review.issues.some(issue => issue.field === 'writing_model')).toBe(true)
+    expect(review.issues).toEqual([])
+    expect(review.patch).not.toHaveProperty('modelName')
+    expect(review.patch).not.toHaveProperty('writingModel')
+    expect(review.corrections).toContainEqual({
+      field: 'model_name',
+      message: 'Ignored. Choose this run setting in Run Stack.',
+    })
+    expect(review.corrections).toContainEqual({
+      field: 'writing_model',
+      message: 'Ignored. Choose this run setting in Run Stack.',
+    })
+    expect(review.corrections).toContainEqual({
+      field: 'audit_model',
+      message: 'Ignored. Choose this run setting in Run Stack.',
+    })
   })
 
   it('reports missing keys, wrong types, and renamed keys together', () => {

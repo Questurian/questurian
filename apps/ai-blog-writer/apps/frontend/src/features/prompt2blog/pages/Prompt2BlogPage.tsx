@@ -6,6 +6,7 @@ import { CoreInputsPanel } from '../composer/components/CoreInputsPanel'
 import { EasySetupPanel } from '../composer/components/EasySetupPanel'
 import { GuidelinePreviewPanel } from '../composer/components/GuidelinePreviewPanel'
 import { MiddleSectionsFold } from '../composer/components/MiddleSectionsFold'
+import { ModelRoutingPanel } from '../composer/components/ModelRoutingPanel'
 import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
 import { SeoConstraintsPanel } from '../composer/components/SeoConstraintsPanel'
 import { SourceMaterialPanel } from '../composer/components/SourceMaterialPanel'
@@ -65,6 +66,11 @@ export default function Prompt2BlogPage() {
 
       <main className="p2b-form-container">
         <form className="p2b-form" onSubmit={(event) => event.preventDefault()}>
+          <ModelRoutingPanel
+            modelStackId={state.modelStackId}
+            onChange={composer.applyModelStack}
+            onClear={composer.clearModelRouting}
+          />
           <EasySetupPanel
             inputOptions={composer.inputOptions}
             location={state.easySetupLocation}
@@ -98,8 +104,6 @@ export default function Prompt2BlogPage() {
               enableEditorialAugmentation={state.enableEditorialAugmentation}
               inputOptions={composer.inputOptions}
               lengthId={state.lengthId}
-              modelName={state.modelName}
-              writingModel={state.writingModel}
               negativeInstructions={state.negativeInstructions}
               toneId={state.toneId}
               onChange={composer.updateField}

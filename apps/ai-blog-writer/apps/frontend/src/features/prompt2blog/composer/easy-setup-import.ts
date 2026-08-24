@@ -1,13 +1,7 @@
 import type {
   Prompt2BlogInputOption,
   Prompt2BlogInputOptionsResponse,
-  Prompt2BlogModelName,
-  Prompt2BlogWriterModel,
 } from '../api'
-import {
-  PROMPT2BLOG_MODEL_OPTIONS,
-  PROMPT2BLOG_WRITER_MODEL_OPTIONS,
-} from '../constants/prompt2blog.constants'
 import type { P2BFormState, RawBlob } from './composer.types'
 
 export interface EasySetupImportMessage {
@@ -55,11 +49,10 @@ const EXPECTED_KEYS = [
   'source_material',
   'model_name',
   'writing_model',
+  'audit_model',
 ] as const
 
 const CREATIVITY_LEVELS: Array<P2BFormState['creativityLevel']> = ['low', 'medium', 'high']
-const MODEL_VALUES = PROMPT2BLOG_MODEL_OPTIONS.map(option => option.value)
-const WRITER_MODEL_VALUES = PROMPT2BLOG_WRITER_MODEL_OPTIONS.map(option => option.value)
 const SUMMARY_VALUE_LENGTH = 140
 
 /**
@@ -440,8 +433,16 @@ export function reviewEasySetupJson(
   const negativeInstructions = readStringArray('negative_instructions')
   const enableEditorialAugmentation = readBoolean('enable_editorial_augmentation')
   const sourceMaterial = readStringArray('source_material')
-  const modelName = readAllowed('model_name', MODEL_VALUES, new Map())
-  const writingModel = readAllowed('writing_model', WRITER_MODEL_VALUES, new Map())
+  // Older Easy Setup prompts included model routing. Accept those keys so a
+  // saved brief remains usable, but keep routing under the operator's control.
+  for (const key of ['model_name', 'writing_model', 'audit_model'] as const) {
+    if (key in record) {
+      corrections.push({
+        field: key,
+        message: 'Ignored. Choose this run setting in Run Stack.',
+      })
+    }
+  }
 
   for (const key of unknownKeys) {
     const suggestion = suggestKey(key, missingKeys)
@@ -480,8 +481,6 @@ export function reviewEasySetupJson(
     || negativeInstructions === null
     || enableEditorialAugmentation === null
     || sourceMaterial === null
-    || modelName === null
-    || writingModel === null
   ) {
     return empty()
   }
@@ -508,8 +507,6 @@ export function reviewEasySetupJson(
     mustInclude: mustInclude.join('\n'),
     negativeInstructions: negativeInstructions.join('\n'),
     enableEditorialAugmentation,
-    modelName: modelName as Prompt2BlogModelName,
-    writingModel: writingModel as Prompt2BlogWriterModel,
     blobs,
   }
 
@@ -535,8 +532,6 @@ export function reviewEasySetupJson(
     { field: 'Negative Instructions', value: countLabel(negativeInstructions, 'item') },
     { field: 'Editorial Extras', value: enableEditorialAugmentation ? 'On' : 'Off' },
     { field: 'Source Material', value: describeSourceMaterial(sourceMaterial) },
-    { field: 'Base Draft Model', value: modelName },
-    { field: 'Writer Model', value: writingModel },
   )
 
   return { issues, corrections, rows, direction, patch }

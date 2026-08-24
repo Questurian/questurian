@@ -1,24 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import {
-  DEFAULT_PROMPT2BLOG_MODEL,
-  DEFAULT_PROMPT2BLOG_WRITER_MODEL,
-} from '../constants/prompt2blog.constants'
 import { DEFAULT_COMPOSER_STATE } from './composer.storage'
 import type { P2BFormState } from './composer.types'
 import { buildPrompt2BlogPayload } from './prompt-payload'
 
 function createState(overrides: Partial<P2BFormState> = {}): P2BFormState {
   return {
-    easySetupLocation: '',
-    easySetupTitle: '',
+    ...DEFAULT_COMPOSER_STATE,
     articleTypeId: 7,
     articleGoal: 'Help readers plan a trip.',
     targetReader: 'First-time visitors',
     destinationContext: 'Lisbon, Portugal',
     angle: '',
     callToAction: '',
-    modelName: DEFAULT_PROMPT2BLOG_MODEL,
-    writingModel: DEFAULT_PROMPT2BLOG_WRITER_MODEL,
     toneId: 'balanced',
     lengthId: 'standard',
     brandVoiceId: 'questurian',
@@ -43,6 +36,10 @@ describe('buildPrompt2BlogPayload', () => {
       expect.objectContaining({
         article_type_id: 7,
         source_material: ['Source material'],
+        model_name: 'gemini-3.7-flash',
+        writing_model: 'gemini-3.1-pro-preview',
+        audit_model: 'gemini-3.7-flash',
+        model_stack_id: 'editorial-premium',
       }),
     )
   })

@@ -12,6 +12,7 @@ class Prompt2BlogGraphState(TypedDict, total=False):
     model_name: str
     writing_model: str
     audit_model: str
+    model_stack_id: str | None
     cleaned_data: str
     raw_sources: list[str]
     raw_sources_text: str

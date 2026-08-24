@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from app.shared.text import enforce_anti_ai_tells_markdown
@@ -11,6 +12,8 @@ from .support import _safe_str
 
 logger = logging.getLogger(__name__)
 
+UsageRecorder = Callable[[str, Any], None]
+
 
 def _invoke_text_llm(
     *,
@@ -18,6 +21,7 @@ def _invoke_text_llm(
     max_tokens: int,
     temperature: float,
     model_name: str | None,
+    usage_recorder: UsageRecorder | None = None,
 ) -> str:
     resolved_model = model_name or DEFAULT_MODEL
     # get_vertex_llm routes claude-* models to the Anthropic API.
@@ -27,6 +31,11 @@ def _invoke_text_llm(
         model_name=resolved_model,
     )
     result = llm.invoke(prompt)
+    if usage_recorder is not None:
+        usage_recorder(
+            str(getattr(llm, "model_name", resolved_model)),
+            getattr(llm, "last_usage_metadata", None),
+        )
     text = _safe_str(result)
     if not text:
         raise RuntimeError("LLM returned empty response")
@@ -39,6 +48,7 @@ def _enforce_anti_ai_markdown_with_model(
     model_name: str | None,
     max_tokens: int,
     context: str,
+    usage_recorder: UsageRecorder | None = None,
 ) -> str:
     return enforce_anti_ai_tells_markdown(
         text,
@@ -47,6 +57,7 @@ def _enforce_anti_ai_markdown_with_model(
             max_tokens=max_tokens,
             temperature=0.1,
             model_name=model_name,
+            usage_recorder=usage_recorder,
         ),
         context=context,
     )
@@ -58,6 +69,7 @@ def _invoke_json_llm(
     max_tokens: int,
     temperature: float,
     model_name: str | None,
+    usage_recorder: UsageRecorder | None = None,
 ) -> tuple[dict[str, Any], str]:
     strict_prompt = (
         f"{prompt}\n\n"
@@ -76,6 +88,7 @@ def _invoke_json_llm(
             max_tokens=max_tokens,
             temperature=temperature if attempt == 1 else 0.0,
             model_name=model_name,
+            usage_recorder=usage_recorder,
         )
         last_response = raw_response
 

@@ -59,6 +59,7 @@ def _validate_prompt2blog_input_request(request: Prompt2BlogInputRequest) -> Non
 
     try:
         resolve_writer_model(request.writing_model)
+        resolve_writer_model(request.audit_model)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -87,6 +88,9 @@ async def start_pipeline_v2(
             "include_debug": request.include_debug,
             "enable_editorial_augmentation": request.enable_editorial_augmentation,
             "model_name": request.model_name or DEFAULT_MODEL,
+            "writing_model": request.writing_model,
+            "audit_model": request.audit_model,
+            "model_stack_id": request.model_stack_id,
         },
     )
     background_tasks.add_task(_run_full_pipeline_background, run_id, request)
@@ -118,6 +122,9 @@ async def start_full_run(
             "include_debug": request.include_debug,
             "enable_editorial_augmentation": request.enable_editorial_augmentation,
             "model_name": request.model_name or DEFAULT_MODEL,
+            "writing_model": request.writing_model,
+            "audit_model": request.audit_model,
+            "model_stack_id": request.model_stack_id,
         },
     )
     background_tasks.add_task(_run_full_pipeline_background, run_id, request)

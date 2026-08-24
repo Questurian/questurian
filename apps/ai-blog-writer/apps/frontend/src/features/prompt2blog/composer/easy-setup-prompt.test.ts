@@ -63,8 +63,6 @@ describe('buildEasySetupPrompt', () => {
       'tone_id',
       'length_id',
       'brand_voice_id',
-      'model_name',
-      'writing_model',
       'creativity_level',
       'negative_instructions',
       'enable_editorial_augmentation',
@@ -117,12 +115,11 @@ describe('buildEasySetupPrompt', () => {
     expect(prompt).toContain('Never return a value that is not on the list')
   })
 
-  it('pins the model fields to the app defaults instead of asking for a choice', () => {
+  it('leaves model routing to the run controls', () => {
     const prompt = buildEasySetupPrompt('A weekend in Lisbon', 'Lisbon, Portugal', createInputOptions())
 
-    expect(prompt).toContain('"model_name": "gemini-2.5-flash-lite",')
-    expect(prompt).toContain('"writing_model": "gemini-3.1-pro-preview"')
-    expect(prompt).toContain('app settings rather than editorial choices')
+    expect(prompt).not.toContain('"model_name"')
+    expect(prompt).not.toContain('"writing_model"')
   })
 
   it('shortens long catalog blurbs to one readable line', () => {

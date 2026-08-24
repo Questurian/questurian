@@ -47,6 +47,8 @@ class PipelineV2RuntimeRequest(BaseModel):
     enable_editorial_augmentation: bool = False
     model_name: str | None = None
     writing_model: str | None = None
+    audit_model: str | None = None
+    model_stack_id: str | None = None
 
 
 class Prompt2BlogInputRequest(BaseModel):
@@ -71,3 +73,5 @@ class Prompt2BlogInputRequest(BaseModel):
     enable_editorial_augmentation: bool = False
     model_name: str | None = None
     writing_model: str | None = None
+    audit_model: str | None = None
+    model_stack_id: str | None = None

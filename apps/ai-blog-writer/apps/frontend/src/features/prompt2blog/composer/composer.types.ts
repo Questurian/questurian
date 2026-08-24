@@ -1,4 +1,5 @@
 import type { Prompt2BlogModelName, Prompt2BlogWriterModel } from '../api'
+import type { Prompt2BlogModelStackId } from '../constants/prompt2blog.constants'
 
 export interface RawBlob {
   id: number
@@ -14,8 +15,10 @@ export interface P2BFormState {
   destinationContext: string
   angle: string
   callToAction: string
+  modelStackId: Prompt2BlogModelStackId
   modelName: Prompt2BlogModelName
   writingModel: Prompt2BlogWriterModel
+  auditModel: Prompt2BlogWriterModel
   toneId: string
   lengthId: string
   brandVoiceId: string

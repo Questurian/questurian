@@ -22,6 +22,8 @@ export function buildPrompt2BlogPayload(state: P2BFormState): Prompt2BlogRunRequ
     call_to_action: state.callToAction || undefined,
     model_name: state.modelName,
     writing_model: state.writingModel,
+    audit_model: state.auditModel,
+    model_stack_id: state.modelStackId,
     tone_id: state.toneId,
     length_id: state.lengthId,
     brand_voice_id: state.brandVoiceId || undefined,

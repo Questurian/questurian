@@ -132,4 +132,6 @@ def prepare_full_pipeline_request(
         enable_editorial_augmentation=request.enable_editorial_augmentation,
         model_name=model_name,
         writing_model=request.writing_model,
+        audit_model=request.audit_model,
+        model_stack_id=request.model_stack_id,
     )

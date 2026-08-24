@@ -3,10 +3,6 @@ import type {
   Prompt2BlogInputOption,
   Prompt2BlogInputOptionsResponse,
 } from '../api'
-import {
-  DEFAULT_PROMPT2BLOG_MODEL,
-  DEFAULT_PROMPT2BLOG_WRITER_MODEL,
-} from '../constants/prompt2blog.constants'
 
 // Catalog blurbs are authored as markdown paragraphs; the prompt only needs
 // enough of each to tell two neighbouring options apart.
@@ -78,9 +74,7 @@ export function buildEasySetupPrompt(
     '  "must_include": ["string", "…"],',
     '  "negative_instructions": ["string", "…"],',
     '  "enable_editorial_augmentation": true | false,',
-    '  "source_material": ["string", "…"],',
-    `  "model_name": ${JSON.stringify(DEFAULT_PROMPT2BLOG_MODEL)},`,
-    `  "writing_model": ${JSON.stringify(DEFAULT_PROMPT2BLOG_WRITER_MODEL)}`,
+    '  "source_material": ["string", "…"]',
   ].filter(Boolean).join('\n')
 
   const catalogs = [
@@ -145,8 +139,6 @@ ALLOWED VALUES
 Copy the listed value exactly, character for character. Never return a value that is not on the list, and never invent a new option.
 
 ${catalogs}
-
-model_name and writing_model are app settings rather than editorial choices, so copy the two values shown in the schema verbatim.
 
 HOW TO FILL THE FREE-TEXT FIELDS
 - direction: three to five sentences, written first, stating what this piece is, the reader decision it resolves, the take it commits to, and the generic version you are refusing to write. Write it as an editor briefing a writer, not as a summary of the title.

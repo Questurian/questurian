@@ -5,6 +5,7 @@ from typing import Any
 from ..content.markdown import _build_markdown
 from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
+from ..pricing import Prompt2BlogTokenUsageTracker
 from ..quality import _build_constraint_checks
 from ..support import _safe_dict, _safe_str
 
@@ -43,6 +44,18 @@ def run_finalize_stage(
         and state["groundedness"]["grounded"]
         else "needs_revision"
     )
+    usage_summary = getattr(dependencies.llm, "usage_summary", None)
+    usage_kwargs = {
+        "stack_id": state.get("model_stack_id"),
+        "worker_model": state["model_name"],
+        "writing_model": state["writing_model"],
+        "audit_model": state["audit_model"],
+    }
+    run_cost = (
+        usage_summary(**usage_kwargs)
+        if callable(usage_summary)
+        else Prompt2BlogTokenUsageTracker().summary(**usage_kwargs)
+    )
     dependencies.recorder.record_stage(
         run_id,
         stage,
@@ -74,6 +87,7 @@ def run_finalize_stage(
             "content": final_content,
         },
         "final_markdown": final_markdown,
+        "run_cost": run_cost,
         "input_profiles": {
             "tone": _safe_dict(state["option_context"].get("tone")),
             "length": _safe_dict(state["option_context"].get("length")),
@@ -135,6 +149,7 @@ def run_finalize_stage(
                 "stage_repair": state["writing_model"],
                 "stage_title": state["writing_model"],
                 "stage_quality_audit": state["audit_model"],
+                "stage_groundedness": state["audit_model"],
             },
         },
     }
@@ -143,6 +158,9 @@ def run_finalize_stage(
             "pipeline_input": {
                 "article_type_id": state["request"].article_type_id,
                 "model_name": state["model_name"],
+                "writing_model": state["writing_model"],
+                "audit_model": state["audit_model"],
+                "model_stack_id": state.get("model_stack_id"),
                 "include_debug": state["include_debug"],
                 "enable_editorial_augmentation": state["enable_editorial_augmentation"],
                 "raw_sources_count": len(state["raw_sources"]),

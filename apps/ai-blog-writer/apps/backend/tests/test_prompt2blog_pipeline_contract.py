@@ -309,6 +309,14 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "name": "Travel Guide",
         "definition": "A practical destination guide.",
     }
+    assert artifact["pipeline_v2"]["run_cost"]["measurement_status"] == (
+        "unavailable"
+    )
+    assert artifact["pipeline_v2"]["run_cost"]["models"] == {
+        "worker": "test-model",
+        "writer": "test-writer",
+        "judge": P2B_AUDIT_MODEL,
+    }
     assert artifact["stages"].keys() == {
         "stage_guideline_fetch",
         "stage_coverage_check",
@@ -398,6 +406,17 @@ def test_quality_audit_runs_on_the_audit_model_not_the_analysis_model():
     assert _model_for(recorded, "quality auditor") != "test-model"
 
 
+def test_selected_audit_model_serves_groundedness_and_quality_audit():
+    recorded, dependencies = _pipeline_fakes(quality_scores=[9])
+    request = _runtime_request()
+    request.audit_model = "test-auditor"
+
+    run_pipeline_v2(f"run-selected-audit-{uuid4()}", request, dependencies)
+
+    assert _model_for(recorded, "fact-grounding checker") == "test-auditor"
+    assert _model_for(recorded, "quality auditor") == "test-auditor"
+
+
 def test_finalize_records_actual_stage_model_routing():
     recorded, dependencies = _pipeline_fakes(quality_scores=[9])
 
@@ -412,6 +431,7 @@ def test_finalize_records_actual_stage_model_routing():
         "stage_editorial_augmentation": "test-writer",
         "stage_repair": "test-writer",
         "stage_title": "test-writer",
+        "stage_groundedness": P2B_AUDIT_MODEL,
         "stage_quality_audit": P2B_AUDIT_MODEL,
     }
 

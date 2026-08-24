@@ -1,6 +1,6 @@
 import {
-  DEFAULT_PROMPT2BLOG_MODEL,
-  DEFAULT_PROMPT2BLOG_WRITER_MODEL,
+  DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
+  resolvePrompt2BlogModelStack,
   resolvePrompt2BlogModelName,
   resolvePrompt2BlogWriterModel,
 } from '../constants/prompt2blog.constants'
@@ -8,6 +8,7 @@ import type { P2BFormState } from './composer.types'
 
 export const COMPOSER_STORAGE_KEY = 'p2b-form-draft'
 const COMPOSER_STORAGE_VERSION = 2
+const DEFAULT_MODEL_STACK = resolvePrompt2BlogModelStack(DEFAULT_PROMPT2BLOG_MODEL_STACK_ID)
 
 export const DEFAULT_COMPOSER_STATE: P2BFormState = {
   easySetupLocation: '',
@@ -18,8 +19,10 @@ export const DEFAULT_COMPOSER_STATE: P2BFormState = {
   destinationContext: '',
   angle: '',
   callToAction: '',
-  modelName: DEFAULT_PROMPT2BLOG_MODEL,
-  writingModel: DEFAULT_PROMPT2BLOG_WRITER_MODEL,
+  modelStackId: DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
+  modelName: DEFAULT_MODEL_STACK.modelName,
+  writingModel: DEFAULT_MODEL_STACK.writingModel,
+  auditModel: DEFAULT_MODEL_STACK.auditModel,
   toneId: '',
   lengthId: '',
   brandVoiceId: '',
@@ -72,11 +75,14 @@ export function loadSavedComposerState(): P2BFormState {
       // Earlier drafts stored `true` as the default, not as explicit consent.
       parsed.enableEditorialAugmentation = false
     }
+    const modelStack = resolvePrompt2BlogModelStack(parsed.modelStackId)
     return {
       ...DEFAULT_COMPOSER_STATE,
       ...parsed,
-      modelName: resolvePrompt2BlogModelName(parsed.modelName),
-      writingModel: resolvePrompt2BlogWriterModel(parsed.writingModel),
+      modelStackId: modelStack.id,
+      modelName: resolvePrompt2BlogModelName(modelStack.modelName),
+      writingModel: resolvePrompt2BlogWriterModel(modelStack.writingModel),
+      auditModel: resolvePrompt2BlogWriterModel(modelStack.auditModel),
       blobs: Array.isArray(parsed.blobs) && parsed.blobs.length
         ? parsed.blobs
         : DEFAULT_COMPOSER_STATE.blobs,

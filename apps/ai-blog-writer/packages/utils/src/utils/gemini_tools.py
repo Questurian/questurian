@@ -66,6 +66,7 @@ class Gemini3ChatTextLLM:
         self.model_name = model_name
         self.max_tokens = max_tokens
         self.project = project
+        self.last_usage_metadata: dict[str, Any] | None = None
 
     def invoke(self, prompt: str) -> str:
         llm = ChatVertexAI(
@@ -75,6 +76,15 @@ class Gemini3ChatTextLLM:
             location=GEMINI3_LOCATION,
         )
         message = llm.invoke(prompt)
+        usage_metadata = getattr(message, 'usage_metadata', None)
+        response_metadata = getattr(message, 'response_metadata', None)
+        if isinstance(usage_metadata, dict):
+            self.last_usage_metadata = usage_metadata
+        elif isinstance(response_metadata, dict):
+            candidate = response_metadata.get('usage_metadata') or response_metadata.get(
+                'token_usage'
+            )
+            self.last_usage_metadata = candidate if isinstance(candidate, dict) else None
         text = _gemini_chat_text(getattr(message, 'content', None))
         if not text:
             raise RuntimeError(

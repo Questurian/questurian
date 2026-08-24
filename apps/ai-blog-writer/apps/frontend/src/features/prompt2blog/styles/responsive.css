@@ -32,6 +32,11 @@
     grid-template-columns: 1fr;
   }
 
+  .p2b-stack-assignment {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
   .p2b-input,
   .p2b-textarea,
   .p2b-select {

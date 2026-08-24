@@ -9,7 +9,6 @@ import {
   DEFAULT_COMPOSER_STATE,
   saveComposerState,
 } from '../composer/composer.storage'
-import { DEFAULT_PROMPT2BLOG_MODEL } from '../constants/prompt2blog.constants'
 import Prompt2BlogPage from './Prompt2BlogPage'
 
 vi.mock('../api', () => ({
@@ -79,6 +78,44 @@ function createStoredPipelineResult() {
       content: 'Body content',
     },
     final_markdown: 'Sample destination guide',
+    run_cost: {
+      stack_id: 'editorial-premium',
+      models: {
+        worker: 'gemini-3.7-flash',
+        writer: 'gemini-3.1-pro-preview',
+        judge: 'gemini-3.7-flash',
+      },
+      input_tokens: 123456,
+      output_tokens: 23456,
+      cached_input_tokens: 3456,
+      total_tokens: 146912,
+      successful_calls: 11,
+      measured_calls: 11,
+      measurement_status: 'complete',
+      estimated_cost_usd: 0.184321,
+      currency: 'USD',
+      by_model: [
+        {
+          model: 'gemini-3.7-flash',
+          input_tokens: 90000,
+          output_tokens: 12000,
+          cached_input_tokens: 3456,
+          total_tokens: 102000,
+          calls: 7,
+          estimated_cost_usd: 0.108417,
+        },
+        {
+          model: 'gemini-3.1-pro-preview',
+          input_tokens: 33456,
+          output_tokens: 11456,
+          cached_input_tokens: 0,
+          total_tokens: 44912,
+          calls: 4,
+          estimated_cost_usd: 0.075904,
+        },
+      ],
+      pricing_note: 'Standard global Vertex rates checked 2026-08-24.',
+    },
     quality_review: {
       alignment_summary: 'Aligned',
       improvements_applied: [],
@@ -208,8 +245,12 @@ describe('Prompt2BlogPage', () => {
       .closest('section')
     const coreInputsPanel = screen.getByRole('heading', { name: 'Core Inputs' })
       .closest('section')
+    const modelRoutingPanel = screen.getByRole('heading', { name: 'Run Stack' })
+      .closest('section')
 
     expect(easySetupPanel).toBeInTheDocument()
+    expect(modelRoutingPanel?.compareDocumentPosition(easySetupPanel!))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(easySetupPanel?.compareDocumentPosition(coreInputsPanel!))
       .toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(within(easySetupPanel!).getByLabelText('Title')).toBeInTheDocument()
@@ -355,8 +396,7 @@ describe('Prompt2BlogPage', () => {
       .toHaveValue('Book the viewpoint slot before arriving.')
     expect(screen.getByLabelText('Tone')).toHaveValue('balanced')
     expect(screen.getByLabelText('Creativity Level')).toHaveValue('high')
-    expect(screen.getByLabelText('Base Draft Model')).toHaveValue('gemini-2.5-pro')
-    expect(screen.getByLabelText('Writer Model')).toHaveValue('gemini-2.5-flash')
+    expect(screen.getByLabelText('Pipeline preset')).toHaveValue('editorial-premium')
     expect(screen.getByLabelText('Primary Keyword')).toHaveValue('weekend in lisbon')
     expect(screen.getByLabelText('Secondary Keywords (comma-separated)'))
       .toHaveValue('lisbon itinerary, 48 hours in lisbon')
@@ -366,7 +406,7 @@ describe('Prompt2BlogPage', () => {
       .toHaveValue('No unsourced price claims')
     expect(screen.getByLabelText('Add editorial extras')).toBeChecked()
     expect(screen.getByLabelText('Title')).toHaveValue('A Weekend in Lisbon')
-    expect(screen.getByText('Applied 20 fields to the form below.')).toBeInTheDocument()
+    expect(screen.getByText('Applied 18 fields to the form below.')).toBeInTheDocument()
   })
 
   it('blocks applying a brief whose values are not in the loaded options', async () => {
@@ -423,12 +463,30 @@ describe('Prompt2BlogPage', () => {
     expect(screen.getByLabelText('Location')).toHaveValue('Lisbon, Portugal')
   })
 
-  it('defaults the base draft model selector to flash lite', async () => {
+  it('offers price-ordered full-run presets and shows their assignments', async () => {
     renderPage()
 
-    const modelSelect = await screen.findByLabelText('Base Draft Model')
+    const preset = await screen.findByLabelText('Pipeline preset')
+    const options = within(preset).getAllByRole('option')
+    const receipt = screen.getByLabelText('Editorial Premium model assignments')
 
-    expect(modelSelect).toHaveValue(DEFAULT_PROMPT2BLOG_MODEL)
+    expect(options.map(option => option.textContent)).toEqual([
+      '$$$$$$ · Maximum Quality · Slowest',
+      '$$$$$ · Premium Review · Slow',
+      '$$$$ · Editorial Premium · Moderate',
+      '$$$ · Fast + Optimal · Fast',
+      '$$ · Best Value · Faster',
+      '$ · Fastest',
+    ])
+    expect(preset).toHaveValue('editorial-premium')
+    expect(within(receipt).getByText('Research worker')).toBeInTheDocument()
+    expect(within(receipt).getByText('Article writer')).toBeInTheDocument()
+    expect(within(receipt).getByText('Quality judge')).toBeInTheDocument()
+    expect(within(receipt).getByText('Gemini 3.1 Pro Preview')).toBeInTheDocument()
+    const pricing = screen.getByLabelText('Editorial Premium estimated pricing')
+    expect(within(pricing).getByText('$2.55')).toBeInTheDocument()
+    expect(within(pricing).getByText('Input $1.32 / 1M')).toBeInTheDocument()
+    expect(within(pricing).getByText('Output $7.50 / 1M')).toBeInTheDocument()
   })
 
   it('keeps editorial extras off until the operator opts in', async () => {
@@ -475,14 +533,13 @@ describe('Prompt2BlogPage', () => {
     expect(advancedSeo).not.toHaveAttribute('open')
     expect(optionalGuidance).not.toHaveAttribute('open')
     for (const label of [
-      'Base Draft Model',
-      'Writer Model',
       'Creativity Level',
       'Negative Instructions (one per line)',
       'Add editorial extras',
     ]) {
       expect(screen.getByLabelText(label).closest('details')).toBe(advancedGeneration)
     }
+    expect(screen.getByLabelText('Pipeline preset').closest('details')).toBeNull()
     expect(screen.queryByLabelText('Audience Profile (Optional)')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Prompt Enhance')).not.toBeInTheDocument()
     expect(
@@ -582,7 +639,7 @@ describe('Prompt2BlogPage', () => {
     expect(secondaryKeywords).toHaveValue('')
   })
 
-  it('sends the selected model in the run payload', async () => {
+  it('sends every model bundled by the selected run stack', async () => {
     renderPage()
 
     await waitFor(() => {
@@ -601,8 +658,8 @@ describe('Prompt2BlogPage', () => {
     fireEvent.change(screen.getByLabelText('Destination Context'), {
       target: { value: 'Lisbon, Portugal' },
     })
-    fireEvent.change(screen.getByLabelText('Base Draft Model'), {
-      target: { value: 'gemini-2.5-pro' },
+    fireEvent.change(screen.getByLabelText('Pipeline preset'), {
+      target: { value: 'best-value' },
     })
     fireEvent.change(screen.getByLabelText('Source Block 1'), {
       target: { value: 'Alfama is historic. Principe Real is calmer and more upscale.' },
@@ -614,7 +671,9 @@ describe('Prompt2BlogPage', () => {
       expect(startPrompt2BlogRunMock).toHaveBeenCalledWith(
         expect.objectContaining({
           article_type_id: 7,
-          model_name: 'gemini-2.5-pro',
+          model_name: 'gemini-3.1-flash-lite',
+          writing_model: 'gemini-3.7-flash',
+          audit_model: 'gemini-3.7-flash',
           tone_id: 'balanced',
           length_id: 'standard',
           enable_editorial_augmentation: false,
@@ -704,6 +763,13 @@ describe('Prompt2BlogPage', () => {
     })
 
     renderPage()
+
+    const receipt = await screen.findByLabelText('Run cost and token usage')
+    expect(within(receipt).getByText('Editorial Premium')).toBeInTheDocument()
+    expect(within(receipt).getByText('$0.18')).toBeInTheDocument()
+    expect(within(receipt).getByText('146,912')).toBeInTheDocument()
+    expect(within(receipt).getByText('Measured from all 11 successful model calls.'))
+      .toBeInTheDocument()
 
     fireEvent.click(await screen.findByRole('button', { name: 'View clean source material details' }))
 

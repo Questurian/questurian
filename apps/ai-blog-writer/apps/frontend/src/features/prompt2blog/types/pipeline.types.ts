@@ -1,4 +1,8 @@
 export type Prompt2BlogModelName =
+  | 'gemini-3.7-flash'
+  | 'gemini-3.5-flash'
+  | 'gemini-3.5-flash-lite'
+  | 'gemini-3.1-flash-lite'
   | 'gemini-3.1-pro-preview'
   | 'gemini-3.1-flash-lite-preview'
   | 'gemini-3.1-flash-image-preview'
@@ -13,6 +17,10 @@ export type Prompt2BlogWriterModel =
   | 'claude-opus-4-8'
   | 'claude-opus-4-7'
   | 'claude-sonnet-5'
+  | 'gemini-3.7-flash'
+  | 'gemini-3.5-flash'
+  | 'gemini-3.5-flash-lite'
+  | 'gemini-3.1-flash-lite'
   | 'gemini-3.1-pro-preview'
   | 'gemini-2.5-pro'
   | 'gemini-2.5-flash'
@@ -77,6 +85,8 @@ export type Prompt2BlogRunRequest = {
   enable_editorial_augmentation?: boolean
   model_name?: Prompt2BlogModelName
   writing_model?: Prompt2BlogWriterModel
+  audit_model?: Prompt2BlogWriterModel
+  model_stack_id?: string
 }
 
 export type Prompt2BlogRunResponse = {
@@ -157,6 +167,33 @@ export type Prompt2BlogPipelinePayload = {
     content: string
   }
   final_markdown: string
+  run_cost?: {
+    stack_id: string
+    models: {
+      worker: string
+      writer: string
+      judge: string
+    }
+    input_tokens: number
+    output_tokens: number
+    cached_input_tokens: number
+    total_tokens: number
+    successful_calls: number
+    measured_calls: number
+    measurement_status: 'complete' | 'partial' | 'unavailable'
+    estimated_cost_usd: number | null
+    currency: 'USD'
+    by_model: Array<{
+      model: string
+      input_tokens: number
+      output_tokens: number
+      cached_input_tokens: number
+      total_tokens: number
+      calls: number
+      estimated_cost_usd: number | null
+    }>
+    pricing_note: string
+  }
   quality_review: {
     alignment_summary: string
     improvements_applied: string[]

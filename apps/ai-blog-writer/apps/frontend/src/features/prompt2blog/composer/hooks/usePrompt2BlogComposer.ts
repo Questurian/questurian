@@ -5,6 +5,10 @@ import {
   type Prompt2BlogGuidelinePreviewResponse,
   type Prompt2BlogInputOptionsResponse,
 } from '../../api'
+import {
+  resolvePrompt2BlogModelStack,
+  type Prompt2BlogModelStackId,
+} from '../../constants/prompt2blog.constants'
 import { buildGroupedArticleTypes, findDefaultOption, getArticleTypeQuickPicks } from '../article-type-options'
 import {
   COMPOSER_STORAGE_KEY,
@@ -156,8 +160,6 @@ export function usePrompt2BlogComposer() {
   const clearPromptProfiles = useCallback(() => {
     setState(prev => ({
       ...prev,
-      modelName: DEFAULT_COMPOSER_STATE.modelName,
-      writingModel: DEFAULT_COMPOSER_STATE.writingModel,
       toneId: inputOptions ? findDefaultOption(inputOptions.tones) : DEFAULT_COMPOSER_STATE.toneId,
       lengthId: inputOptions
         ? findDefaultOption(inputOptions.lengths)
@@ -170,6 +172,27 @@ export function usePrompt2BlogComposer() {
       enableEditorialAugmentation: DEFAULT_COMPOSER_STATE.enableEditorialAugmentation,
     }))
   }, [inputOptions])
+
+  const clearModelRouting = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      modelStackId: DEFAULT_COMPOSER_STATE.modelStackId,
+      modelName: DEFAULT_COMPOSER_STATE.modelName,
+      writingModel: DEFAULT_COMPOSER_STATE.writingModel,
+      auditModel: DEFAULT_COMPOSER_STATE.auditModel,
+    }))
+  }, [])
+
+  const applyModelStack = useCallback((modelStackId: Prompt2BlogModelStackId) => {
+    const stack = resolvePrompt2BlogModelStack(modelStackId)
+    setState(prev => ({
+      ...prev,
+      modelStackId: stack.id,
+      modelName: stack.modelName,
+      writingModel: stack.writingModel,
+      auditModel: stack.auditModel,
+    }))
+  }, [])
 
   const clearSeoConstraints = useCallback(() => {
     setState(prev => ({
@@ -204,6 +227,8 @@ export function usePrompt2BlogComposer() {
     removeBlob,
     updateBlob,
     clearCoreInputs,
+    clearModelRouting,
+    applyModelStack,
     clearPromptProfiles,
     clearSeoConstraints,
     clearSourceMaterial,

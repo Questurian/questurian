@@ -12,6 +12,7 @@ from . import llm
 from .input import _build_writing_brief_from_input
 from .options import _read_article_type_markdown
 from .options import _resolve_input_options
+from .pricing import Prompt2BlogTokenUsageTracker
 from .run_recorder import RunRecorder
 
 
@@ -46,14 +47,33 @@ class Prompt2BlogLLM(Protocol):
 
 @dataclass(frozen=True)
 class DefaultPrompt2BlogLLM:
+    usage_tracker: Prompt2BlogTokenUsageTracker = field(
+        default_factory=Prompt2BlogTokenUsageTracker,
+        compare=False,
+        repr=False,
+    )
+
     def invoke_text(self, **kwargs: Any) -> str:
-        return llm._invoke_text_llm(**kwargs)
+        return llm._invoke_text_llm(
+            **kwargs,
+            usage_recorder=self.usage_tracker.record,
+        )
 
     def invoke_json(self, **kwargs: Any) -> tuple[dict[str, Any], str]:
-        return llm._invoke_json_llm(**kwargs)
+        return llm._invoke_json_llm(
+            **kwargs,
+            usage_recorder=self.usage_tracker.record,
+        )
 
     def enforce_anti_ai(self, text: str, **kwargs: Any) -> str:
-        return llm._enforce_anti_ai_markdown_with_model(text, **kwargs)
+        return llm._enforce_anti_ai_markdown_with_model(
+            text,
+            **kwargs,
+            usage_recorder=self.usage_tracker.record,
+        )
+
+    def usage_summary(self, **kwargs: Any) -> dict[str, Any]:
+        return self.usage_tracker.summary(**kwargs)
 
 
 @dataclass(frozen=True)
