@@ -109,6 +109,7 @@ export const PROMPT2BLOG_PIPELINE_STAGES = [
   'stage_repair',
   'stage_quality_settle',
   'stage_editorial_augmentation',
+  'stage_final_verify',
   'stage_title',
   'stage_finalize',
   'complete',

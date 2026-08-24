@@ -249,9 +249,14 @@ def run_quality_settle_stage(
         stage=stage,
         output=settlement,
     )
+    # The grounding verdict travels with the draft it describes. Settling
+    # restored an earlier draft's text and scores but left `groundedness` on
+    # whatever the last loop iteration produced, so a reverted run could report
+    # a verdict belonging to a draft it had just discarded.
     return {
         "current_stage": stage,
         "rewrite": best_rewrite,
         "quality": best_quality,
         "quality_checks": best_checks,
+        "groundedness": best_quality.get("groundedness") or state["groundedness"],
     }

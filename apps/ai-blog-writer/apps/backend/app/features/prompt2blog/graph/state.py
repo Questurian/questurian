@@ -42,6 +42,7 @@ class Prompt2BlogGraphState(TypedDict, total=False):
     best_quality: dict[str, Any]
     best_quality_checks: dict[str, Any]
     augmentation_rolled_back: bool
+    content_changed_by_augmentation: bool
     editorial_augmentation: dict[str, Any]
     editorial_augmentation_raw_response: str
     final_title: str

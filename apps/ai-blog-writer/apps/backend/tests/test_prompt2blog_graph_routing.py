@@ -47,6 +47,7 @@ def test_prompt2blog_pipeline_v2_routes_each_stage_through_graph(monkeypatch):
         "repair",
         "quality_settle",
         "editorial_augmentation",
+        "final_verify",
         "title",
         "finalize",
     ]
@@ -87,6 +88,7 @@ def test_prompt2blog_full_run_prepends_preparation_node(monkeypatch):
         "repair",
         "quality_settle",
         "editorial_augmentation",
+        "final_verify",
         "title",
         "finalize",
     ]

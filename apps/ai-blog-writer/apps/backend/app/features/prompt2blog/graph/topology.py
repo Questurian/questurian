@@ -23,6 +23,7 @@ GENERATION_NODES = (
     "repair",
     "quality_settle",
     "editorial_augmentation",
+    "final_verify",
     "title",
     "finalize",
 )
@@ -71,7 +72,11 @@ def build_prompt2blog_graph(nodes: dict[str, Any]) -> Any:
     builder.add_edge("repair", "groundedness")
 
     builder.add_edge("quality_settle", "editorial_augmentation")
-    builder.add_edge("editorial_augmentation", "title")
+    # Augmentation is a full-article generation call, so the text that
+    # ships is not the text the audit saw. final_verify re-grounds it
+    # before anything reports on it.
+    builder.add_edge("editorial_augmentation", "final_verify")
+    builder.add_edge("final_verify", "title")
     builder.add_edge("title", "finalize")
     builder.add_edge("finalize", END)
     return builder

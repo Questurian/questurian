@@ -5,7 +5,10 @@ from typing import Any
 
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 
-from ..content.editorial_blocks import _sanitize_editorial_augmentation
+from ..content.editorial_blocks import (
+    _normalize_markdown_for_comparison,
+    _sanitize_editorial_augmentation,
+)
 from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
@@ -145,6 +148,14 @@ def run_augmentation_stage(
             },
         )
 
+    # `augmentation_applied` requires components to have been added. Content
+    # can change without them -- augmentation is a full-article generation call
+    # and returns rewritten prose either way -- so what the downstream re-check
+    # keys off is the text itself, not the component list.
+    content_changed = _normalize_markdown_for_comparison(
+        augmentation["augmented_content"]
+    ) != _normalize_markdown_for_comparison(rewrite["improved_content"])
+
     rewrite = {**rewrite, "improved_content": augmentation["augmented_content"]}
     dependencies.recorder.record_stage(
         run_id,
@@ -154,6 +165,7 @@ def run_augmentation_stage(
             "raw_response": raw_response,
             "skipped": not state["enable_editorial_augmentation"],
             "rolled_back": rolled_back,
+            "content_changed": content_changed,
             "retention_checks": augmentation_diagnostics,
         },
     )
@@ -163,4 +175,5 @@ def run_augmentation_stage(
         "editorial_augmentation": augmentation,
         "editorial_augmentation_raw_response": raw_response,
         "augmentation_rolled_back": rolled_back,
+        "content_changed_by_augmentation": content_changed,
     }

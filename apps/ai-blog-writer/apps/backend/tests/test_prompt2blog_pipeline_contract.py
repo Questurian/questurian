@@ -293,6 +293,7 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "stage_quality_audit",
         "stage_quality_settle",
         "stage_editorial_augmentation",
+        "stage_final_verify",
         "stage_title",
         "stage_finalize",
         "pipeline_v2",
