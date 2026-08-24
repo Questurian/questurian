@@ -82,11 +82,32 @@ def evaluate_readiness(
     return ReadinessVerdict(ready=not blockers, blockers=tuple(blockers))
 
 
-def _quality_rank(quality: dict[str, Any]) -> tuple[int, int]:
-    """Rank a draft for keep-best comparison. Overall score first, then
-    guideline coverage as the tie-break."""
+def _quality_rank(quality: dict[str, Any]) -> tuple[int, int, int, int]:
+    """Rank a draft for keep-best comparison, validity before quality.
+
+    Ranking on score alone let an unsafe draft win. A repair pass that fixed
+    an invented visa fee but scored 8 lost to the ungrounded original scoring
+    9, and the settle node restored the ungrounded one.
+
+    So the ordering is: grounded first, then how many readiness blockers the
+    draft carries, and only then the auditor's scores. The blocker count is
+    read from `evaluate_readiness`, the same function finalize ships on, so a
+    draft cannot rank first and then be refused at the gate for a reason
+    ranking never looked at.
+    """
     quality = _safe_dict(quality)
+    groundedness = _safe_dict(quality.get("groundedness"))
+    verdict = evaluate_readiness(
+        quality=quality,
+        checks=_safe_dict(quality.get("constraint_checks")),
+        groundedness=groundedness,
+    )
+    grounded = _safe_bool(groundedness.get("checked"), default=False) and _safe_bool(
+        groundedness.get("grounded"), default=False
+    )
     return (
+        1 if grounded else 0,
+        -len(verdict.blockers),
         _safe_int(quality.get("overall_score"), default=0),
         _safe_int(quality.get("guideline_coverage_score"), default=0),
     )
@@ -99,7 +120,9 @@ def is_better_quality(
     """True when ``candidate`` should replace ``incumbent`` as the best draft.
 
     Repair used to overwrite the draft unconditionally, so a repair pass that
-    scored worse than the draft it replaced still shipped.
+    scored worse than the draft it replaced still shipped. Ranking then ran on
+    scores alone, so a safer draft could still lose to a higher-scoring unsafe
+    one; see `_quality_rank`.
     """
     if not incumbent:
         return True

@@ -79,6 +79,59 @@ def test_keep_best_breaks_ties_on_guideline_coverage():
     )
 
 
+GROUNDED = {"checked": True, "grounded": True}
+UNGROUNDED = {"checked": True, "grounded": False}
+
+
+def _draft_quality(score, groundedness, **checks):
+    """A quality dict shaped the way stage_quality_audit emits one."""
+    return {
+        "audit_complete": True,
+        "overall_score": score,
+        "guideline_coverage_score": score,
+        "too_close_to_source": False,
+        "groundedness": groundedness,
+        "constraint_checks": {
+            **PASSING_CHECKS,
+            "claims_grounded": groundedness["grounded"],
+            **checks,
+        },
+    }
+
+
+def test_keep_best_prefers_a_grounded_draft_over_a_higher_scoring_ungrounded_one():
+    # The reported case: repair removes an invented visa fee and scores 8; the
+    # ungrounded original scored 9 and the settle node restored it.
+    safe_repair = _draft_quality(8, GROUNDED)
+    ungrounded_original = _draft_quality(9, UNGROUNDED)
+
+    assert is_better_quality(safe_repair, ungrounded_original)
+    assert not is_better_quality(ungrounded_original, safe_repair)
+
+
+def test_keep_best_prefers_a_draft_with_fewer_readiness_blockers():
+    fewer_blockers = _draft_quality(7, GROUNDED)
+    more_blockers = _draft_quality(9, GROUNDED, must_include_covered=False)
+
+    assert is_better_quality(fewer_blockers, more_blockers)
+    assert not is_better_quality(more_blockers, fewer_blockers)
+
+
+def test_keep_best_still_ranks_on_score_when_validity_is_equal():
+    assert is_better_quality(_draft_quality(9, GROUNDED), _draft_quality(7, GROUNDED))
+    assert not is_better_quality(
+        _draft_quality(7, GROUNDED), _draft_quality(9, GROUNDED)
+    )
+
+
+def test_keep_best_prefers_a_checked_grounding_result_over_an_unchecked_one():
+    # An outage reports grounded=True; that is a degraded signal, not evidence.
+    checked = _draft_quality(8, GROUNDED)
+    unchecked = _draft_quality(9, {"checked": False, "grounded": True})
+
+    assert is_better_quality(checked, unchecked)
+
+
 def test_augmentation_accepted_when_it_only_adds():
     augmented = DRAFT + "\n> [!EDITORIAL-BOX|highlight_callout]\n> Budget extra time.\n"
 
