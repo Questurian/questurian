@@ -5,6 +5,7 @@ from typing import Any
 from ..content.markdown import _build_markdown
 from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
+from ..policies import evaluate_readiness
 from ..pricing import Prompt2BlogTokenUsageTracker
 from ..quality import _build_constraint_checks
 from ..support import _safe_dict, _safe_str
@@ -35,15 +36,27 @@ def run_finalize_stage(
         final_content,
         state["writing_brief"],
     )
-    # An article carrying claims the sources do not support is not ready to
-    # stage, however well it scores on structure and keywords.
-    pipeline_status = (
-        "ready_for_staging"
-        if final_checks["target_word_count_met"]
-        and final_checks["primary_keyword_present"]
-        and state["groundedness"]["grounded"]
-        else "needs_revision"
+    # The checks the run is judged on: the auditor's semantic verdicts and the
+    # grounding result carried forward, with every measurable check recomputed
+    # on the text that is actually shipping.
+    settled_checks = {
+        **quality_checks,
+        **{
+            key: value
+            for key, value in final_checks.items()
+            if not key.endswith("_coverage") and key != "word_count_estimate"
+        },
+    }
+    # Readiness is one shared decision (see policies.evaluate_readiness), not a
+    # third opinion. Finalize used to accept any draft that hit its word count
+    # and primary keyword and reported `grounded`, which passed low-scoring
+    # articles and crashed grounding checks alike.
+    verdict = evaluate_readiness(
+        quality=quality,
+        checks=settled_checks,
+        groundedness=state["groundedness"],
     )
+    pipeline_status = "ready_for_staging" if verdict.ready else "needs_revision"
     usage_summary = getattr(dependencies.llm, "usage_summary", None)
     usage_kwargs = {
         "stack_id": state.get("model_stack_id"),
@@ -61,6 +74,7 @@ def run_finalize_stage(
         stage,
         {
             "pipeline_status": pipeline_status,
+            "readiness_blockers": list(verdict.blockers),
             "final_title": final_title,
             "word_count_estimate": final_checks["word_count_estimate"],
             "constraint_checks": final_checks,
@@ -71,6 +85,7 @@ def run_finalize_stage(
         "message": "Prompt2Blog pipeline v2 completed",
         "run_id": run_id,
         "pipeline_status": pipeline_status,
+        "readiness_blockers": list(verdict.blockers),
         "article_type": {
             "id": guideline["id"],
             "name": guideline["name"],
@@ -111,17 +126,8 @@ def run_finalize_stage(
             },
             # audience_match and tone_match come from the auditor and pass
             # through; the measurable checks are recomputed on the final text.
-            "constraint_checks": {
-                **quality_checks,
-                "target_word_count_met": final_checks["target_word_count_met"],
-                "paragraph_length_met": final_checks["paragraph_length_met"],
-                "cta_present": final_checks["cta_present"],
-                "primary_keyword_present": final_checks["primary_keyword_present"],
-                "secondary_keywords_present": final_checks[
-                    "secondary_keywords_present"
-                ],
-                "must_include_covered": final_checks["must_include_covered"],
-            },
+            "constraint_checks": settled_checks,
+            "readiness_blockers": list(verdict.blockers),
             "secondary_keyword_coverage": final_checks["secondary_keyword_coverage"],
             "must_include_coverage": final_checks["must_include_coverage"],
             "word_count_estimate": final_checks["word_count_estimate"],

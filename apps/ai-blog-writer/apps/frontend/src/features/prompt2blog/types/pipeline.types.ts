@@ -145,6 +145,8 @@ export type Prompt2BlogPipelinePayload = {
   langsmith_trace_url?: string
   langsmith_trace_run_id?: string
   pipeline_status: 'ready_for_staging' | 'needs_revision'
+  // Why a run was held back. Empty when the run is ready.
+  readiness_blockers?: string[]
   article_type: {
     id: number
     name: string
@@ -218,6 +220,7 @@ export type Prompt2BlogPipelinePayload = {
       must_include_covered: boolean
       claims_grounded: boolean
     }
+    readiness_blockers?: string[]
     groundedness: {
       checked: boolean
       grounded: boolean

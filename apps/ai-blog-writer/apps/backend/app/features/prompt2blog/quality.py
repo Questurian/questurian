@@ -27,6 +27,25 @@ REPAIR_SCORE_THRESHOLD = 7
 # threshold, so a gap in the response is never itself a repair trigger.
 NEUTRAL_QUALITY_SCORE = 7
 
+# The constraint checks an article must satisfy to ship. This is the single
+# list; `_should_run_repair` spends an attempt when one of these fails, and
+# `policies.evaluate_readiness` refuses to mark the run ready while one still
+# fails. Keeping both on the same tuple is what stops the gate that decides
+# "try again" and the gate that decides "ship it" from disagreeing -- finalize
+# used to check three of these and ignore the rest.
+#
+# `paragraph_length_met` is deliberately absent: it is a soft stylistic
+# preference, it never triggered repair, and promoting it to a blocker would
+# fail runs that nothing in the pipeline is able to fix.
+HARD_CONSTRAINT_CHECK_KEYS = (
+    "target_word_count_met",
+    "cta_present",
+    "primary_keyword_present",
+    "secondary_keywords_present",
+    "must_include_covered",
+    "claims_grounded",
+)
+
 
 def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
     editorial = _safe_str(writing_brief.get("editorial_instructions"))
@@ -351,14 +370,7 @@ def _should_run_repair(quality: dict[str, Any], checks: dict[str, Any]) -> bool:
     if _safe_bool(quality.get("too_close_to_source"), default=False):
         return True
 
-    for key in (
-        "target_word_count_met",
-        "cta_present",
-        "primary_keyword_present",
-        "secondary_keywords_present",
-        "must_include_covered",
-        "claims_grounded",
-    ):
+    for key in HARD_CONSTRAINT_CHECK_KEYS:
         if not _safe_bool(checks.get(key), default=True):
             return True
 
