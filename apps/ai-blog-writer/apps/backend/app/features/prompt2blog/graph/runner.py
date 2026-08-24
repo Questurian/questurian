@@ -62,7 +62,9 @@ def run_prompt2blog_stage_graph(
             metadata={"entrypoint": trace_name},
             inputs={"run_id": run_id},
         ) as (trace_run, trace_metadata):
-            with langgraph_checkpoint() as checkpointer:
+            # The run has no resume path, so its snapshots are dropped when
+            # it ends rather than accumulating in the shared database.
+            with langgraph_checkpoint(discard_thread=run_id) as checkpointer:
                 graph = builder.compile(checkpointer=checkpointer)
                 result = graph.invoke(
                     {

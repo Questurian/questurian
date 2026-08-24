@@ -169,12 +169,52 @@ def langsmith_trace_payload(
     return payload
 
 
+def _discard_thread_checkpoints(saver: Any, thread_id: str | None) -> None:
+    """Drop one thread's checkpoints once its run is over.
+
+    LangGraph writes the whole graph state after every node, and Prompt2Blog's
+    state grows as it goes: sources, cleaned data, each draft, each audit. A
+    run therefore leaves behind a stack of snapshots roughly as large as the
+    run itself, and nothing ever removed them -- the shared checkpoint database
+    had reached 305 MB.
+
+    Checkpoints exist so an interrupted run can resume. Nothing in this
+    codebase resumes one; there is no call to `get_state`, `update_state`, or a
+    replay config anywhere. Keeping them past the end of a run buys storage and
+    nothing else, so a finished run drops its own.
+
+    Best effort by design: retention is housekeeping, and a run that has
+    already produced its article must not fail because a cleanup delete did.
+    """
+    if saver is None or not thread_id:
+        return
+    delete_thread = getattr(saver, "delete_thread", None)
+    if not callable(delete_thread):
+        return
+    try:
+        delete_thread(thread_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "Could not discard LangGraph checkpoints for thread %s (%s: %s)",
+            thread_id,
+            type(exc).__name__,
+            exc,
+        )
+
+
 @contextmanager
-def langgraph_checkpoint() -> Generator[Any | None, None, None]:
+def langgraph_checkpoint(
+    *,
+    discard_thread: str | None = None,
+) -> Generator[Any | None, None, None]:
     """
     Yield a SQLite checkpoint saver when available.
 
     If langgraph or sqlite checkpoint extras are unavailable, yields None.
+
+    ``discard_thread`` names a thread whose checkpoints are dropped on the way
+    out, whether the run succeeded or raised. Pass it from any caller that has
+    no resume path, which today is all of them.
     """
     if not langgraph_is_available():
         yield None
@@ -189,7 +229,10 @@ def langgraph_checkpoint() -> Generator[Any | None, None, None]:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     checkpoint_path = Path(LANGGRAPH_CHECKPOINT_PATH).resolve()
     with SqliteSaver.from_conn_string(str(checkpoint_path)) as saver:
-        yield saver
+        try:
+            yield saver
+        finally:
+            _discard_thread_checkpoints(saver, discard_thread)
 
 
 @asynccontextmanager
