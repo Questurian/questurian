@@ -24,6 +24,7 @@ from .stages.audit_repair import (
 )
 from .stages.augmentation import run_augmentation_stage
 from .stages.finalize import run_finalize_stage
+from .stages.final_verify import run_final_verify_stage
 from .stages.groundedness import run_groundedness_stage
 from .stages.guideline_coverage import run_coverage_stage, run_guideline_stage
 from .stages.outline import run_outline_stage
@@ -121,6 +122,7 @@ def _generation_nodes(
         ("repair", run_repair_stage),
         ("quality_settle", run_quality_settle_stage),
         ("editorial_augmentation", run_augmentation_stage),
+        ("final_verify", run_final_verify_stage),
         ("title", run_title_stage),
         ("finalize", run_finalize_stage),
     ]

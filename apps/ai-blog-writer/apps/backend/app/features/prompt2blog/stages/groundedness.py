@@ -12,25 +12,19 @@ from ..quality import _sanitize_groundedness, unchecked_groundedness
 logger = logging.getLogger(__name__)
 
 
-def run_groundedness_stage(
+def check_groundedness(
     state: Prompt2BlogGraphState,
     dependencies: PipelineDependencies,
+    *,
+    stage: str,
+    rewrite: dict[str, Any],
 ) -> dict[str, Any]:
-    """Check the draft's claims against the source material.
+    """Run the grounding check over one draft and return the sanitised result.
 
-    The quality audit scored `too_close_to_source` -- the plagiarism direction.
-    Nothing checked the opposite direction, so a draft that invented a visa
-    rule, a price or an opening time passed every gate. The supplement stage
-    can generate content the sources never contained, and that content flows
-    straight into compose, so the risk is structural rather than incidental.
-
-    Runs inside the repair loop, so a repaired draft is re-checked.
+    Shared by the in-loop check and the post-augmentation re-check so both ask
+    the same question of the same sources.
     """
-    stage = "stage_groundedness"
     run_id = state["run_id"]
-    rewrite = state["rewrite"]
-    dependencies.recorder.start_stage(run_id, stage)
-
     prompt = P2B_GROUNDEDNESS_PROMPT.format(
         raw_sources=state["raw_sources_text"],
         cleaned_data=state["cleaned_data"],
@@ -81,6 +75,31 @@ def run_groundedness_stage(
         run_id,
         stage,
         {"groundedness": groundedness, "raw_response": raw_response},
+    )
+    return groundedness
+
+
+def run_groundedness_stage(
+    state: Prompt2BlogGraphState,
+    dependencies: PipelineDependencies,
+) -> dict[str, Any]:
+    """Check the draft's claims against the source material.
+
+    The quality audit scored `too_close_to_source` -- the plagiarism direction.
+    Nothing checked the opposite direction, so a draft that invented a visa
+    rule, a price or an opening time passed every gate. The supplement stage
+    can generate content the sources never contained, and that content flows
+    straight into compose, so the risk is structural rather than incidental.
+
+    Runs inside the repair loop, so a repaired draft is re-checked.
+    """
+    stage = "stage_groundedness"
+    dependencies.recorder.start_stage(state["run_id"], stage)
+    groundedness = check_groundedness(
+        state,
+        dependencies,
+        stage=stage,
+        rewrite=state["rewrite"],
     )
     return {
         "current_stage": stage,
