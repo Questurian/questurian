@@ -1,6 +1,7 @@
 import type { TimelineListViewProps } from '../../features/editorial-stage-article/selectors'
 import type { StagedArticle } from '../../types'
 import { EditorialTimelineList } from '../editorial-stage/EditorialTimelineList'
+import { ArticleMarkdownRoundTripControls } from './ArticleMarkdownRoundTripControls'
 
 type StandardArticleContentPanelProps = {
   stagedArticle: StagedArticle
@@ -28,6 +29,10 @@ export function StandardArticleContentPanel({
       <div className="stl-panel-header">
         <h2>{!isSynced ? <span className="stl-kicker">Step 3</span> : null} Content Blocks</h2>
         <div className="stl-inline-actions">
+          <ArticleMarkdownRoundTripControls
+            stagedArticle={stagedArticle}
+            onUpdateArticle={onUpdateArticle}
+          />
           <button type="button" className="stl-btn stl-btn-secondary" onClick={onResetToOriginalBlocks}>
             Reset to Original
           </button>
