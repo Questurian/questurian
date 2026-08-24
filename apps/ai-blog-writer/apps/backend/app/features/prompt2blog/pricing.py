@@ -50,11 +50,29 @@ def normalize_token_usage(value: Any) -> dict[str, int] | None:
         "prompt_token_count",
         "prompt_tokens",
     )
+    # Google bills reasoning tokens at the output rate, but LangChain does not
+    # put them in `output_tokens`. `_get_usage_metadata_gemini` sets
+    # `output_tokens = candidates_token_count` and files the thinking tokens
+    # under `output_token_details["reasoning"]`, so reading `output_tokens`
+    # alone charged the run for the visible answer and nothing for the
+    # reasoning that produced it.
+    reasoning_tokens = 0
+    output_details = value.get("output_token_details")
+    if isinstance(output_details, dict):
+        reasoning_tokens = _usage_value(output_details, "reasoning", "reasoning_tokens")
+
     output_tokens = _usage_value(value, "output_tokens", "completion_tokens")
-    if not output_tokens:
-        output_tokens = _usage_value(value, "candidates_token_count") + _usage_value(
-            value,
-            "thoughts_token_count",
+    if output_tokens:
+        output_tokens += reasoning_tokens
+    else:
+        # Raw Vertex metadata rather than LangChain's: `candidates_token_count`
+        # excludes thinking too, and `thoughts_token_count` carries it.
+        reasoning_tokens = max(
+            reasoning_tokens,
+            _usage_value(value, "thoughts_token_count"),
+        )
+        output_tokens = (
+            _usage_value(value, "candidates_token_count") + reasoning_tokens
         )
     total_tokens = _usage_value(value, "total_tokens", "total_token_count")
     input_details = value.get("input_token_details")
@@ -76,6 +94,10 @@ def normalize_token_usage(value: Any) -> dict[str, int] | None:
     return {
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
+        # Reported separately as well as folded into output_tokens: a receipt
+        # that shows a title call spending thousands of tokens is the signal
+        # that stage-level thinking control is worth having.
+        "reasoning_tokens": reasoning_tokens,
         "cached_input_tokens": min(cached_input_tokens, input_tokens),
         "total_tokens": total_tokens,
     }
@@ -132,6 +154,7 @@ class Prompt2BlogTokenUsageTracker:
             {
                 "input_tokens": 0,
                 "output_tokens": 0,
+                "reasoning_tokens": 0,
                 "cached_input_tokens": 0,
                 "total_tokens": 0,
                 "calls": 0,
@@ -143,6 +166,7 @@ class Prompt2BlogTokenUsageTracker:
         for key in (
             "input_tokens",
             "output_tokens",
+            "reasoning_tokens",
             "cached_input_tokens",
             "total_tokens",
         ):
@@ -168,6 +192,9 @@ class Prompt2BlogTokenUsageTracker:
     ) -> dict[str, Any]:
         input_tokens = sum(item["input_tokens"] for item in self.by_model.values())
         output_tokens = sum(item["output_tokens"] for item in self.by_model.values())
+        reasoning_tokens = sum(
+            item["reasoning_tokens"] for item in self.by_model.values()
+        )
         cached_input_tokens = sum(
             item["cached_input_tokens"] for item in self.by_model.values()
         )
@@ -189,6 +216,7 @@ class Prompt2BlogTokenUsageTracker:
                         for key in (
                             "input_tokens",
                             "output_tokens",
+                            "reasoning_tokens",
                             "cached_input_tokens",
                             "total_tokens",
                             "calls",
@@ -214,6 +242,7 @@ class Prompt2BlogTokenUsageTracker:
             },
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
+            "reasoning_tokens": reasoning_tokens,
             "cached_input_tokens": cached_input_tokens,
             "total_tokens": total_tokens,
             "successful_calls": self.successful_calls,

@@ -18,6 +18,7 @@ def test_normalize_token_usage_accepts_langchain_and_google_shapes():
     ) == {
         "input_tokens": 120,
         "output_tokens": 30,
+        "reasoning_tokens": 0,
         "cached_input_tokens": 20,
         "total_tokens": 150,
     }
@@ -32,9 +33,58 @@ def test_normalize_token_usage_accepts_langchain_and_google_shapes():
     ) == {
         "input_tokens": 80,
         "output_tokens": 25,
+        "reasoning_tokens": 5,
         "cached_input_tokens": 10,
         "total_tokens": 105,
     }
+
+
+def test_langchain_reasoning_tokens_are_billed_as_output():
+    """LangChain's Gemini adapter sets `output_tokens` to
+    `candidates_token_count` and files thinking tokens under
+    `output_token_details["reasoning"]`. Reading `output_tokens` alone charged
+    the run for the visible answer and nothing for the reasoning."""
+    assert normalize_token_usage(
+        {
+            "input_tokens": 5_000,
+            "output_tokens": 40,
+            "total_tokens": 9_040,
+            "input_token_details": {"cache_read": 0},
+            "output_token_details": {"reasoning": 4_000},
+        }
+    ) == {
+        "input_tokens": 5_000,
+        "output_tokens": 4_040,
+        "reasoning_tokens": 4_000,
+        "cached_input_tokens": 0,
+        "total_tokens": 9_040,
+    }
+
+
+def test_reasoning_tokens_are_not_counted_twice():
+    """Raw Vertex metadata carries thinking in `thoughts_token_count`, which
+    `candidates_token_count` excludes. Both shapes must land on the same
+    number rather than one of them double-adding."""
+    langchain_shape = normalize_token_usage(
+        {
+            "input_tokens": 80,
+            "output_tokens": 20,
+            "total_tokens": 105,
+            "output_token_details": {"reasoning": 5},
+        }
+    )
+    raw_shape = normalize_token_usage(
+        {
+            "prompt_token_count": 80,
+            "candidates_token_count": 20,
+            "thoughts_token_count": 5,
+            "total_token_count": 105,
+        }
+    )
+
+    assert langchain_shape["output_tokens"] == 25
+    assert raw_shape["output_tokens"] == 25
+    assert langchain_shape["reasoning_tokens"] == raw_shape["reasoning_tokens"] == 5
 
 
 def test_usage_tracker_aggregates_models_and_prices_cached_tokens():
