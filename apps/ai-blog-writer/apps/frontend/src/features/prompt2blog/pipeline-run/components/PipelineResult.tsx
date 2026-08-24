@@ -21,6 +21,7 @@ export function PipelineResult(props: PipelineResultProps) {
     </div>
     {props.result.run_cost && <RunCostReceipt cost={props.result.run_cost} />}
     <p><strong>Status:</strong> {props.result.pipeline_status}</p>
+    {props.result.readiness_blockers && props.result.readiness_blockers.length > 0 && <p><strong>Held back by:</strong> {props.result.readiness_blockers.join(', ')}</p>}
     <p><strong>Article Type:</strong> {props.result.article_type.name}</p>
     <p><strong>Model Used:</strong> {props.result.quality_review.model_used}</p>
     <p><strong>Title:</strong> {props.result.improved_article.title}</p>

@@ -8,11 +8,78 @@ what it replaced. They hold no I/O and no prompt construction.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from .config import P2B_AUGMENTATION_MIN_RETENTION_RATIO, P2B_REPAIR_MAX_ATTEMPTS
-from .quality import _should_run_repair
-from .support import _safe_dict, _safe_int, _safe_str, _tokenize_words
+from .quality import (
+    HARD_CONSTRAINT_CHECK_KEYS,
+    REPAIR_SCORE_THRESHOLD,
+    _should_run_repair,
+)
+from .support import _safe_bool, _safe_dict, _safe_int, _safe_str, _tokenize_words
+
+
+@dataclass(frozen=True)
+class ReadinessVerdict:
+    """Whether a finished run may be handed to staging, and why not if not."""
+
+    ready: bool
+    blockers: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"ready": self.ready, "blockers": list(self.blockers)}
+
+
+def evaluate_readiness(
+    *,
+    quality: dict[str, Any],
+    checks: dict[str, Any],
+    groundedness: dict[str, Any],
+) -> ReadinessVerdict:
+    """Decide whether a settled run is ready for staging.
+
+    Finalize used to ask three questions -- word count, primary keyword,
+    `groundedness["grounded"]` -- and shipped anything that answered yes. A
+    4/10 article whose repair attempts had all failed still came back
+    `ready_for_staging`, and so did a run whose grounding check had crashed,
+    because the unchecked result reports `grounded: True` so that a checker
+    outage degrades the run instead of blocking it.
+
+    The blocker set is deliberately the repair loop's own trigger conditions
+    plus the two failures repair cannot clear (an audit that produced no score,
+    and a grounding check that never ran). Blocking on anything repair does not
+    try to fix would mark runs `needs_revision` that the pipeline had no way of
+    rescuing.
+    """
+    quality = _safe_dict(quality)
+    checks = _safe_dict(checks)
+    groundedness = _safe_dict(groundedness)
+    blockers: list[str] = []
+
+    # Absent rather than present is the safe default here. `unchecked_groundedness`
+    # sets `checked: False, grounded: True`; reading `grounded` alone treats a
+    # crashed checker as a pass.
+    if not _safe_bool(groundedness.get("checked"), default=False):
+        blockers.append("groundedness_unchecked")
+    elif not _safe_bool(groundedness.get("grounded"), default=False):
+        blockers.append("claims_ungrounded")
+
+    if not _safe_bool(quality.get("audit_complete"), default=False):
+        blockers.append("audit_incomplete")
+    elif (
+        _safe_int(quality.get("overall_score"), default=0) < REPAIR_SCORE_THRESHOLD
+    ):
+        blockers.append("quality_score_below_threshold")
+
+    if _safe_bool(quality.get("too_close_to_source"), default=False):
+        blockers.append("too_close_to_source")
+
+    for key in HARD_CONSTRAINT_CHECK_KEYS:
+        if not _safe_bool(checks.get(key), default=True):
+            blockers.append(key)
+
+    return ReadinessVerdict(ready=not blockers, blockers=tuple(blockers))
 
 
 def _quality_rank(quality: dict[str, Any]) -> tuple[int, int]:
