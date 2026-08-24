@@ -119,6 +119,20 @@ def _prepare_source(
     invoke_json,
     invoke_text=_synthesize_source,
 ) -> tuple[list[str], dict[str, Any]]:  # noqa: ANN001
+    raw_sources, cleanup_data, _runtime_request = _prepare_source_run(
+        source_text,
+        invoke_json=invoke_json,
+        invoke_text=invoke_text,
+    )
+    return raw_sources, cleanup_data
+
+
+def _prepare_source_run(
+    source_text: str,
+    *,
+    invoke_json,
+    invoke_text=_synthesize_source,
+):  # noqa: ANN001, ANN202
     run_id = f"p2b-{uuid4()}"
     dependencies = _preparation_dependencies(
         invoke_json=invoke_json,
@@ -130,7 +144,7 @@ def _prepare_source(
         dependencies,
     )
     cleanup_stage = read_stage_result(run_id, "stage_input_cleanup")
-    return runtime_request.raw_sources, cleanup_stage["data"]
+    return runtime_request.raw_sources, cleanup_stage["data"], runtime_request
 
 
 def test_cleanup_uses_ai_payload_and_keeps_travel_facts(
@@ -211,24 +225,23 @@ https://example.com/privacy
 Main travel safety guidance stays here.
 
 Keep this logistics paragraph."""
-    captured_prompt: dict[str, str] = {}
 
-    def _fake_synthesize_llm(**kwargs):  # noqa: ANN001
-        captured_prompt["prompt"] = kwargs["prompt"]
-        return "Synthesized source material"
+    def _unexpected_text_llm(**kwargs):  # noqa: ANN001
+        raise AssertionError("Synthesis should not run for a single source.")
 
     def _raising_cleanup_llm(**kwargs):  # noqa: ANN001
         raise RuntimeError("Invalid JSON")
 
-    raw_sources, cleanup_data = _prepare_source(
+    raw_sources, cleanup_data, runtime_request = _prepare_source_run(
         source_text,
         invoke_json=_raising_cleanup_llm,
-        invoke_text=_fake_synthesize_llm,
+        invoke_text=_unexpected_text_llm,
     )
     expected_fallback, _ = _preclean_source_text(source_text)
 
     assert raw_sources == [expected_fallback]
-    assert expected_fallback in captured_prompt["prompt"]
+    # The precleaned fallback is what reaches the graph, unparaphrased.
+    assert runtime_request.cleaned_data == expected_fallback
 
     source = cleanup_data["sources"][0]
     assert source["fallback_used"] is True
@@ -296,3 +309,67 @@ def test_cleanup_chunks_long_sources_and_merges_duplicates(
     assert source["cleaned_text"] == expected_cleaned
     assert source["title"] == "Long Peru Source"
     assert len(source["removed_blocks"]) == 2
+
+
+def _cleanup_json(cleaned_text: str):  # noqa: ANN202
+    def _invoke(**kwargs):  # noqa: ANN003
+        return (
+            {
+                "title": "Peru",
+                "published_at": "",
+                "cleaned_text": cleaned_text,
+                "removed_blocks": [],
+            },
+            "{}",
+        )
+
+    return _invoke
+
+
+def test_a_single_source_skips_synthesis(empty_prompt2blog_storage):
+    """Synthesis combines several sources and deduplicates them. With one
+    source it is an unaudited paraphrase between the source and every stage
+    that reads cleaned_data -- including the grounding checker."""
+    run_id = f"p2b-{uuid4()}"
+
+    def _unexpected_text_llm(**kwargs):  # noqa: ANN003
+        raise AssertionError("Synthesis should not run for a single source.")
+
+    dependencies = _preparation_dependencies(
+        invoke_json=_cleanup_json("Peru travel guidance stays here."),
+        invoke_text=_unexpected_text_llm,
+    )
+    runtime_request = prepare_full_pipeline_request(
+        run_id,
+        _build_request(["Peru travel guidance stays here."]),
+        dependencies,
+    )
+
+    assert runtime_request.cleaned_data == "Peru travel guidance stays here."
+    stage = read_stage_result(run_id, "stage_synthesize_sources")["data"]
+    assert stage["skipped"] is True
+    assert stage["source_material_count"] == 1
+
+
+def test_several_sources_still_synthesize(empty_prompt2blog_storage):
+    run_id = f"p2b-{uuid4()}"
+    prompts: list[str] = []
+
+    def _synthesize(**kwargs):  # noqa: ANN003
+        prompts.append(kwargs["prompt"])
+        return "One combined account of Peru travel."
+
+    dependencies = _preparation_dependencies(
+        invoke_json=_cleanup_json("Peru travel guidance stays here."),
+        invoke_text=_synthesize,
+    )
+    runtime_request = prepare_full_pipeline_request(
+        run_id,
+        _build_request(["First Peru source.", "Second Peru source."]),
+        dependencies,
+    )
+
+    assert len(prompts) == 1
+    assert runtime_request.cleaned_data == "One combined account of Peru travel."
+    stage = read_stage_result(run_id, "stage_synthesize_sources")["data"]
+    assert stage["skipped"] is False
