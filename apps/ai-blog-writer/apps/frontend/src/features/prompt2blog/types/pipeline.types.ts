@@ -179,6 +179,8 @@ export type Prompt2BlogPipelinePayload = {
     }
     input_tokens: number
     output_tokens: number
+    // Billed at the output rate, and included in output_tokens.
+    reasoning_tokens?: number
     cached_input_tokens: number
     total_tokens: number
     successful_calls: number
@@ -190,6 +192,7 @@ export type Prompt2BlogPipelinePayload = {
       model: string
       input_tokens: number
       output_tokens: number
+      reasoning_tokens?: number
       cached_input_tokens: number
       total_tokens: number
       calls: number

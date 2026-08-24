@@ -26,6 +26,7 @@ export function RunCostReceipt({ cost }: { cost: RunCost }) {
       <RunMetric label="Total tokens" value={formatTokens(cost.total_tokens)} />
       <RunMetric label="Input" value={formatTokens(cost.input_tokens)} />
       <RunMetric label="Output" value={formatTokens(cost.output_tokens)} />
+      {cost.reasoning_tokens != null && cost.reasoning_tokens > 0 && <RunMetric label="of which reasoning" value={formatTokens(cost.reasoning_tokens)} />}
       <RunMetric label="Cached input" value={formatTokens(cost.cached_input_tokens)} />
     </div>
     <p className="p2b-run-cost__coverage">{coverageLabel}</p>
