@@ -63,6 +63,13 @@ def _enforce_anti_ai_markdown_with_model(
     )
 
 
+# The parse error names what went wrong, so the excerpt only has to show the
+# shape of the failure -- a fenced block, a preamble, a truncation. Sending
+# more of the bad output costs input tokens and invites the model to anchor on
+# text it has already been told is wrong.
+JSON_RETRY_EXCERPT_CHARS = 1_200
+
+
 def _invoke_json_llm(
     *,
     prompt: str,
@@ -102,11 +109,24 @@ def _invoke_json_llm(
                 attempt,
                 last_error,
             )
+            # The retry used to send only the truncated bad output. That
+            # discarded the task, the source material and the schema, so the
+            # model was asked to re-emit a full article as JSON while no
+            # longer able to see the article -- and the two paid retries after
+            # a compose failure could not have succeeded on their own terms.
+            # The instructions come back, and the parse error goes with them:
+            # naming what was wrong is worth more than a longer sample of the
+            # output that was wrong.
             current_prompt = (
-                "Your previous output was invalid JSON.\n"
-                "Return ONLY one strict JSON object.\n"
-                "No markdown fences, no commentary.\n\n"
-                f"Previous invalid output:\n{raw_response[:4000]}"
+                f"{strict_prompt}\n\n"
+                "RETRY NOTICE\n"
+                "Your previous response to this exact task could not be parsed "
+                f"as JSON: {last_error}\n"
+                "Return the same content again as one strict JSON object. "
+                "No markdown fences, no commentary, no text before or after "
+                "the object.\n\n"
+                "Start of the unparseable response, for reference only:\n"
+                f"{raw_response[:JSON_RETRY_EXCERPT_CHARS]}"
             )
 
     raise RuntimeError(
