@@ -99,20 +99,37 @@ def prepare_full_pipeline_request(
     current_stage = "stage_synthesize_sources"
     recorder.start_stage(run_id, current_stage)
 
-    synthesized_text = dependencies.llm.invoke_text(
-        prompt=SYNTHESIZE_PROMPT + "\n\n---\n\n".join(cleaned_sources),
-        max_tokens=8192,
-        temperature=0.3,
-        model_name=model_name,
-    ).strip()
-    if not synthesized_text:
-        raise RuntimeError("Synthesis produced empty output.")
+    # Synthesis exists to reconcile several sources into one account:
+    # "combine all these sources... eliminating duplication". With one source
+    # there is nothing to combine and nothing to deduplicate, and cleanup has
+    # already stripped the artifacts. What is left is an unaudited paraphrase
+    # sitting between the source and every stage that reads `cleaned_data` --
+    # including the grounding checker, which then compares the draft against a
+    # rewrite of the source rather than the source.
+    synthesis_skipped = len(cleaned_sources) == 1
+    if synthesis_skipped:
+        synthesized_text = cleaned_sources[0]
+    else:
+        synthesized_text = dependencies.llm.invoke_text(
+            prompt=SYNTHESIZE_PROMPT + "\n\n---\n\n".join(cleaned_sources),
+            max_tokens=8192,
+            temperature=0.3,
+            model_name=model_name,
+        ).strip()
+        if not synthesized_text:
+            raise RuntimeError("Synthesis produced empty output.")
 
     recorder.record_stage(
         run_id,
         current_stage,
         {
             "source_material_count": len(cleaned_sources),
+            "skipped": synthesis_skipped,
+            "skipped_reason": (
+                "Single source; nothing to combine or deduplicate."
+                if synthesis_skipped
+                else None
+            ),
             "synthesized_text": synthesized_text,
         },
     )
