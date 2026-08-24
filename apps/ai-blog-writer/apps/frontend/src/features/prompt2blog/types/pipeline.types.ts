@@ -198,6 +198,17 @@ export type Prompt2BlogPipelinePayload = {
       calls: number
       estimated_cost_usd: number | null
     }>
+    // Sorted by total tokens descending. Absent on runs recorded before
+    // per-stage attribution existed.
+    by_stage?: Array<{
+      stage: string
+      input_tokens: number
+      output_tokens: number
+      reasoning_tokens: number
+      cached_input_tokens: number
+      total_tokens: number
+      calls: number
+    }>
     pricing_note: string
   }
   quality_review: {

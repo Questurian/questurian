@@ -57,6 +57,19 @@ def run_finalize_stage(
         groundedness=state["groundedness"],
     )
     pipeline_status = "ready_for_staging" if verdict.ready else "needs_revision"
+    dependencies.recorder.record_stage(
+        run_id,
+        stage,
+        {
+            "pipeline_status": pipeline_status,
+            "readiness_blockers": list(verdict.blockers),
+            "final_title": final_title,
+            "word_count_estimate": final_checks["word_count_estimate"],
+            "constraint_checks": final_checks,
+        },
+    )
+    # Summarised after this stage is recorded, so the `by_stage` breakdown the
+    # receipt shows includes finalize itself rather than stopping one row short.
     usage_summary = getattr(dependencies.llm, "usage_summary", None)
     usage_kwargs = {
         "stack_id": state.get("model_stack_id"),
@@ -68,17 +81,6 @@ def run_finalize_stage(
         usage_summary(**usage_kwargs)
         if callable(usage_summary)
         else Prompt2BlogTokenUsageTracker().summary(**usage_kwargs)
-    )
-    dependencies.recorder.record_stage(
-        run_id,
-        stage,
-        {
-            "pipeline_status": pipeline_status,
-            "readiness_blockers": list(verdict.blockers),
-            "final_title": final_title,
-            "word_count_estimate": final_checks["word_count_estimate"],
-            "constraint_checks": final_checks,
-        },
     )
 
     response_payload: dict[str, Any] = {

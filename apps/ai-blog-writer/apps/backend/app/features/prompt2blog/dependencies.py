@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
 from app.core import get_article_type_by_id
@@ -88,3 +88,18 @@ class PipelineDependencies:
     build_writing_brief: Callable[..., dict[str, Any]] = _build_writing_brief_from_input
     resolve_writer_model: Callable[..., str] = resolve_writer_model
     normalize_dashes: Callable[[str], str] = normalize_dashes
+
+    def __post_init__(self) -> None:
+        # Per-stage attribution only exists when the two halves are wired to
+        # each other. A test LLM double carries no tracker, and the recorder
+        # then behaves exactly as it did before this existed.
+        tracker = getattr(self.llm, "usage_tracker", None)
+        reader = getattr(tracker, "totals", None)
+        writer = getattr(tracker, "record_stage_usage", None)
+        if not callable(reader) or not callable(writer):
+            return
+        object.__setattr__(
+            self,
+            "recorder",
+            replace(self.recorder, usage_reader=reader, usage_writer=writer),
+        )
