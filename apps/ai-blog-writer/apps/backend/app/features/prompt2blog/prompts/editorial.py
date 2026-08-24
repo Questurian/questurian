@@ -7,6 +7,8 @@ Goal:
 - Optionally add high-signal editorial components that improve comprehension, pacing, or emphasis.
 - Default to zero add-ons when the article already reads clearly.
 - Keep output in Markdown and preserve the author's voice.
+- Never introduce numbered source citations -- no "(Source 1)", no
+  "according to Source 2". The reader never sees a source list.
 
 Return strict JSON only:
 {{

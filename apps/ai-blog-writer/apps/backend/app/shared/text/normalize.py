@@ -31,6 +31,12 @@ _FENCE_LINE = re.compile(r"^\s*(```|~~~)")
 _TABLE_DELIMITER_ROW = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
 _HORIZONTAL_RULE = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$")
 _DOUBLE_HYPHEN_PROSE = re.compile(r"(?<=\w)\s*--\s*(?=\w)")
+# Banning the em dash without banning its replacements just moves the tell.
+# The comma-bracketed aside was the first substitution and is caught below;
+# a spaced single hyphen ("the room is warm - and quietly so") is the next
+# one, and reads as a typewriter dash rather than as punctuation anyone
+# chose. Digit-digit spans are excluded: those are ranges, not dashes.
+_SPACED_HYPHEN_PROSE = re.compile(r"(?<=[A-Za-z,;:])\s+-\s+(?=[A-Za-z])")
 _COMMA_AS_DASH_ASIDE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r",\s+(?:and\s+)?quietly\s+so\s*,", re.I),
     re.compile(r",\s+convincingly\s*,", re.I),
@@ -109,6 +115,10 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
             errors.append(f"Line {line_number}: em dash is not allowed.")
         if _DOUBLE_HYPHEN_PROSE.search(line):
             errors.append(f"Line {line_number}: prose double hyphen dash is not allowed.")
+        if _SPACED_HYPHEN_PROSE.search(line):
+            errors.append(
+                f"Line {line_number}: spaced hyphen used as a dash is not allowed."
+            )
         if _has_non_numeric_en_dash(line):
             errors.append(f"Line {line_number}: non-numeric en dash is not allowed.")
         for pattern in _COMMA_AS_DASH_ASIDE_PATTERNS:

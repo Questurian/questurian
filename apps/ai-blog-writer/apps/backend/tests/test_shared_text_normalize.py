@@ -101,3 +101,27 @@ def test_enforce_anti_ai_tells_returns_dirty_retry_without_substitution():
         context="test",
     )
     assert result == "Still dirty — no comma rewrite."
+
+
+def test_a_spaced_hyphen_used_as_a_dash_is_rejected():
+    """Banning the em dash without banning its replacements moves the tell
+    rather than removing it. The comma-bracketed aside was the first
+    substitution; a spaced hyphen is the next one."""
+    result = validate_anti_ai_tells_markdown(
+        "The room is warm - and quietly so - throughout."
+    )
+
+    assert result.valid is False
+    assert any("spaced hyphen" in error for error in result.errors)
+
+
+def test_hyphens_that_are_not_dashes_are_left_alone():
+    for line in (
+        "Open 9 - 5 on weekdays.",
+        "The bus runs 9-5 daily.",
+        "- Trains are frequent",
+        "A well-known, family-run spot near the market.",
+        "Rent runs US$800 - US$1,200 per month.",
+        "| Route | Cost |\n| --- | --- |",
+    ):
+        assert validate_anti_ai_tells_markdown(line).valid is True, line

@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from .content.markdown import _clean_title
+from .content.source_citations import strip_source_citations
 from .support import (
     _safe_bool,
     _safe_dict,
@@ -247,6 +248,12 @@ def _sanitize_rewrite(
 
     improved_title = _clean_title(_safe_str(parsed.get("improved_title")))
     improved_content = _safe_str(parsed.get("improved_content"))
+    # The source blocks handed to compose are labelled "Source 1:", "Source 2:"
+    # so the model can tell them apart, and it cited them back into the prose.
+    # The prompts now forbid that; this is the half that does not rely on the
+    # model having listened.
+    improved_title, title_citations = strip_source_citations(improved_title)
+    improved_content, content_citations = strip_source_citations(improved_content)
 
     return {
         "improved_title": improved_title or _clean_title(fallback_title),
@@ -257,6 +264,7 @@ def _sanitize_rewrite(
         or "Guideline alignment summary not provided.",
         "improvements_applied": improvements,
         "remaining_gaps": remaining,
+        "source_citations_removed": title_citations + content_citations,
     }
 
 
