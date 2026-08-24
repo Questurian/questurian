@@ -37,7 +37,7 @@ export function BuilderSidebar({
   canAutoWriteEmptyFields,
   onAutoWriteEmptyFields,
   onSaveLocalDraft,
-  onSyncToPayload,
+  onSyncToPayload
 }: BuilderSidebarProps) {
   const hasTargetSelected = draft.targetItemCount > 0
   const targetDelta = draft.targetItemCount - draft.items.length
@@ -48,8 +48,12 @@ export function BuilderSidebar({
     'stl-btn-secondary',
     'stl-btn-ai-state',
     isAutoWritingEmptyFields ? 'stl-btn-ai-active' : '',
-    !isAutoWritingEmptyFields && autoWriteEmptyFieldsQueueCount > 0 ? 'stl-btn-ai-queued' : '',
-  ].filter(Boolean).join(' ')
+    !isAutoWritingEmptyFields && autoWriteEmptyFieldsQueueCount > 0
+      ? 'stl-btn-ai-queued'
+      : ''
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <SharedBuilderSidebar
@@ -60,9 +64,11 @@ export function BuilderSidebar({
       seoCoreComplete={seoComplete}
       stepThreeSyncIssueLabel="Items have unsaved changes."
       requiresStep2Lock={false}
-      extraChecklistRow={(
+      showPublishedBadge
+      extraChecklistRow={
         <li className={hasTargetCount ? 'done' : ''}>
-          Target match: {hasTargetCount
+          Target match:{' '}
+          {hasTargetCount
             ? 'Met'
             : !hasTargetSelected
               ? 'Not set'
@@ -70,7 +76,7 @@ export function BuilderSidebar({
                 ? `Need ${targetDelta} more`
                 : 'Above target'}
         </li>
-      )}
+      }
       editorModelName={editorModelName}
       onEditorModelChange={onEditorModelChange}
       isSaving={isSaving}
@@ -79,7 +85,9 @@ export function BuilderSidebar({
           type="button"
           className={autoWriteEmptyFieldsButtonClassName}
           onClick={() => void onAutoWriteEmptyFields()}
-          disabled={isSaving || isAutoWritingEmptyFields || !canAutoWriteEmptyFields}
+          disabled={
+            isSaving || isAutoWritingEmptyFields || !canAutoWriteEmptyFields
+          }
         >
           <AiJobButtonContent
             isRunning={isAutoWritingEmptyFields}

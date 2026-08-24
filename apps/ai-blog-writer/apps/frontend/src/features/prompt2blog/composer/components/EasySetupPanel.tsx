@@ -94,9 +94,14 @@ export function EasySetupPanel({
       <div className="p2b-panel-header">
         <div className="p2b-panel-header-text">
           <h2>Easy Set Up</h2>
+          <p>Generate a structured brief, or import one you already approved.</p>
         </div>
       </div>
       <div className="p2b-panel-body">
+        <div className="p2b-subsection-heading">
+          <h3>Generate a setup prompt</h3>
+          <p>Start with the working title and destination.</p>
+        </div>
         <div className="p2b-field-row p2b-field-row--2">
           <div className="p2b-field">
             <label htmlFor="p2b-easy-setup-title">Title</label>
@@ -106,6 +111,7 @@ export function EasySetupPanel({
               className="p2b-input"
               value={title}
               onChange={event => onTitleChange(event.target.value)}
+              placeholder="e.g. A long weekend in Lisbon"
             />
           </div>
           <div className="p2b-field">
@@ -116,6 +122,7 @@ export function EasySetupPanel({
               className="p2b-input"
               value={location}
               onChange={event => onLocationChange(event.target.value)}
+              placeholder="e.g. Lisbon, Portugal"
             />
           </div>
         </div>
@@ -126,7 +133,7 @@ export function EasySetupPanel({
             disabled={!title.trim() || !location.trim()}
             onClick={handleConfirmSetup}
           >
-            Confirm Setup
+            Generate setup prompt
           </button>
         </div>
         {!catalogsLoaded && (
@@ -156,6 +163,10 @@ export function EasySetupPanel({
             />
           </div>
         )}
+        <div className="p2b-subsection-heading p2b-subsection-heading--divided">
+          <h3>Import an approved brief</h3>
+          <p>Validate model JSON before it changes any fields below.</p>
+        </div>
         <div className="p2b-field">
           <label htmlFor="p2b-easy-setup-json">Approved JSON</label>
           <textarea

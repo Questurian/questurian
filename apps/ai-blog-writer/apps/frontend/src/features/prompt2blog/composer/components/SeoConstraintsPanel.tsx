@@ -10,7 +10,7 @@ interface SeoConstraintsPanelProps {
 
 export function SeoConstraintsPanel(props: SeoConstraintsPanelProps) {
   return <section className="p2b-panel">
-    <div className="p2b-panel-header"><div className="p2b-panel-header-text"><h2>SEO + Constraints</h2></div><button type="button" className="p2b-section-clear-btn" onClick={props.onClear}>Clear section</button></div>
+    <div className="p2b-panel-header"><div className="p2b-panel-header-text"><h2>SEO + Constraints</h2><p>Set only requirements the finished draft must obey.</p></div><button type="button" className="p2b-section-clear-btn" onClick={props.onClear}>Clear section</button></div>
     <div className="p2b-panel-body">
       <div className="p2b-field"><label htmlFor="p2b-primary-kw">Primary Keyword</label><input id="p2b-primary-kw" type="text" className="p2b-input" value={props.primaryKeyword} onChange={event => props.onPrimaryKeywordChange(event.target.value)} /></div>
       <div className="p2b-field"><label htmlFor="p2b-must-include">Must Include (one per line)</label><textarea id="p2b-must-include" className="p2b-textarea" rows={3} value={props.mustInclude} onChange={event => props.onMustIncludeChange(event.target.value)} /></div>

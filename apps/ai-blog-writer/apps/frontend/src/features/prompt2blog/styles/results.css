@@ -34,20 +34,20 @@
   font-family: var(--font-body);
   border: none;
   padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-md);
+  border-radius: var(--p2b-control-radius);
   background: var(--p2b-accent);
   color: white;
   font-weight: 600;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  box-shadow: none;
 }
 
 .p2b-rerun-btn:hover:not(:disabled) {
   background: var(--p2b-accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+  transform: none;
+  box-shadow: none;
 }
 
 .p2b-rerun-btn:disabled {
@@ -63,7 +63,7 @@
   font-family: var(--font-body);
   border: 1px solid var(--border-strong);
   padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-md);
+  border-radius: var(--p2b-control-radius);
   background: white;
   color: var(--ink);
   font-weight: 600;
@@ -119,4 +119,3 @@
 @keyframes p2bSpin {
   to { transform: rotate(360deg); }
 }
-

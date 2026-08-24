@@ -89,6 +89,7 @@ describe('pageBlocks registry', () => {
   })
 
   it('validates sparse and ranged slot counts', () => {
+    expect(isValidHomepageBlockSlotCount('article-grid', 3)).toBe(true)
     expect(isValidHomepageBlockSlotCount('article-grid', 4)).toBe(true)
     expect(isValidHomepageBlockSlotCount('article-grid', 8)).toBe(true)
     expect(isValidHomepageBlockSlotCount('article-grid', 6)).toBe(false)

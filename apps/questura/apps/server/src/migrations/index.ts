@@ -41,6 +41,7 @@ import * as migration_20260822_224713_location_grid_card_kickers from './2026082
 import * as migration_20260823_143937_add_author_feature_images_and_block from './20260823_143937_add_author_feature_images_and_block'
 import * as migration_20260823_212107_single_author_feature from './20260823_212107_single_author_feature'
 import * as migration_20260823_225423_author_feature_editable_copy from './20260823_225423_author_feature_editable_copy'
+import * as migration_20260823_235319_expand_single_type_listicle_angle_values from './20260823_235319_expand_single_type_listicle_angle_values'
 
 export const migrations = [
   {
@@ -257,5 +258,10 @@ export const migrations = [
     up: migration_20260823_225423_author_feature_editable_copy.up,
     down: migration_20260823_225423_author_feature_editable_copy.down,
     name: '20260823_225423_author_feature_editable_copy',
+  },
+  {
+    up: migration_20260823_235319_expand_single_type_listicle_angle_values.up,
+    down: migration_20260823_235319_expand_single_type_listicle_angle_values.down,
+    name: '20260823_235319_expand_single_type_listicle_angle_values',
   },
 ]

@@ -158,7 +158,7 @@ describe('curatedBlockRegistry', () => {
         'featured-articles': { min: 3, max: 9, default: 4 },
         'editorial-feature': { min: 2, max: 6, default: 3 },
         'author-feature': { min: 1, max: 6, default: 3 },
-        'article-grid': { min: 4, max: 8, default: 4 },
+        'article-grid': { min: 3, max: 8, default: 4 },
         'location-grid': { min: 4, max: 8, default: 4 },
         'questurian-maps': { min: 6, max: 6, default: 6 },
         'hotel-grid': { min: 4, max: 20, default: 4 },
@@ -169,7 +169,7 @@ describe('curatedBlockRegistry', () => {
         'newsletter-signup': { min: 0, max: 0, default: 0 },
         'article-list': { min: 5, max: 25, default: 5 },
       })
-      expect(curatedBlockRegistry.get('article-grid')?.slotCounts.validCounts).toEqual([4, 8])
+      expect(curatedBlockRegistry.get('article-grid')?.slotCounts.validCounts).toEqual([3, 4, 8])
       expect(curatedBlockRegistry.get('featured-articles')?.slotCounts.validCounts).toEqual([
         3, 4, 5, 7, 8, 9,
       ])

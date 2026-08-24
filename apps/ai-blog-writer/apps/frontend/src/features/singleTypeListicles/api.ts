@@ -1,38 +1,90 @@
-import { convertMarkdownToLexical, generateListicleContentWithAi, generateSeoMetadataWithAi, generateTitleWithAi, rewriteBlockWithAi } from '../staging/api'
-import { appendScopedLocationWhere, getArticleLocationScope } from '../../shared/locationScope/scope'
+import {
+  convertMarkdownToLexical,
+  generateListicleContentWithAi,
+  generateSeoMetadataWithAi,
+  generateTitleWithAi,
+  rewriteBlockWithAi
+} from '../staging/api'
+import {
+  appendScopedLocationWhere,
+  getArticleLocationScope
+} from '../../shared/locationScope/scope'
 import { normalizeRelatedItems } from '../../shared/related-items/normalizeRelatedItems'
 import type { LocationScope } from '../../shared/locationScope/types'
 import type {
   ListicleType,
   LocationOption,
   MediaAssetOption,
+  InstagramPostOption,
   PayloadListicleDoc,
   PayloadListResponse,
-  RelatedItemOption,
+  RelatedItemOption
 } from './types'
 
-const PAYLOAD_API_URL = import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
+const PAYLOAD_API_URL =
+  import.meta.env.VITE_PAYLOAD_API_URL || 'http://localhost:4000'
 
-async function payloadRequest<T>(endpoint: string, init?: RequestInit): Promise<T> {
+const readErrorMessage = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() ? value.trim() : null
+
+const isGenericPayloadError = (value: string): boolean =>
+  value.toLowerCase() === 'something went wrong.' ||
+  value.toLowerCase() === 'something went wrong'
+
+function getPayloadErrorMessage(value: unknown, status: number): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return `Payload request failed: ${status}`
+  }
+
+  const error = value as { message?: unknown; errors?: unknown }
+  const topLevelMessage = readErrorMessage(error.message)
+  const nestedMessages = Array.isArray(error.errors)
+    ? error.errors.flatMap((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry))
+          return []
+        const message = readErrorMessage(
+          (entry as { message?: unknown }).message
+        )
+        return message ? [message] : []
+      })
+    : []
+
+  return (
+    nestedMessages.find((message) => !isGenericPayloadError(message)) ||
+    (topLevelMessage && !isGenericPayloadError(topLevelMessage)
+      ? topLevelMessage
+      : null) ||
+    nestedMessages[0] ||
+    topLevelMessage ||
+    `Payload request failed: ${status}`
+  )
+}
+
+async function payloadRequest<T>(
+  endpoint: string,
+  init?: RequestInit
+): Promise<T> {
   const response = await fetch(`${PAYLOAD_API_URL}${endpoint}`, {
     ...init,
     credentials: 'include',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
+      ...(init?.headers || {})
+    }
   })
 
   if (!response.ok) {
-    const err = await response.json().catch(() => ({ message: 'Payload request failed' }))
-    throw new Error(err.message || err.errors?.[0]?.message || `Payload request failed: ${response.status}`)
+    const err: unknown = await response.json().catch(() => null)
+    throw new Error(getPayloadErrorMessage(err, response.status))
   }
 
   return response.json()
 }
 
-function relatedCollectionForType(type: ListicleType): 'dining' | 'accommodations' | 'attractions' | 'nightlife' {
+function relatedCollectionForType(
+  type: ListicleType
+): 'dining' | 'accommodations' | 'attractions' | 'nightlife' {
   switch (type) {
     case 'dining':
       return 'dining'
@@ -58,30 +110,42 @@ export function getBlockTypeForListicleType(type: ListicleType) {
   }
 }
 
-export async function fetchListicles(): Promise<PayloadListResponse<PayloadListicleDoc>> {
+export async function fetchListicles(): Promise<
+  PayloadListResponse<PayloadListicleDoc>
+> {
   return payloadRequest(`/api/single-type-listicles?limit=100&sort=-updatedAt`)
 }
 
-export async function fetchListicleById(id: number): Promise<PayloadListicleDoc> {
+export async function fetchListicleById(
+  id: number
+): Promise<PayloadListicleDoc> {
   return payloadRequest<PayloadListicleDoc>(`/api/single-type-listicles/${id}`)
 }
 
-export async function createListicle(body: Record<string, unknown>): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles`, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
+export async function createListicle(
+  body: Record<string, unknown>
+): Promise<PayloadListicleDoc> {
+  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(
+    `/api/single-type-listicles`,
+    {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }
+  )
   return response.doc
 }
 
 export async function updateListicle(
   id: number,
-  body: Record<string, unknown>,
+  body: Record<string, unknown>
 ): Promise<PayloadListicleDoc> {
-  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(`/api/single-type-listicles/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify(body),
-  })
+  const response = await payloadRequest<{ doc: PayloadListicleDoc }>(
+    `/api/single-type-listicles/${id}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    }
+  )
   return response.doc
 }
 
@@ -92,7 +156,7 @@ export async function fetchLocations(): Promise<LocationOption[]> {
 
   while (page <= totalPages) {
     const response = await payloadRequest<PayloadListResponse<LocationOption>>(
-      `/api/locations?limit=200&page=${page}&depth=0`,
+      `/api/locations?limit=200&page=${page}&depth=0`
     )
     allDocs.push(...(response.docs || []))
     totalPages = response.totalPages || 1
@@ -104,15 +168,30 @@ export async function fetchLocations(): Promise<LocationOption[]> {
 
 export async function fetchMediaAssets(): Promise<MediaAssetOption[]> {
   const response = await payloadRequest<PayloadListResponse<MediaAssetOption>>(
-    `/api/media-assets?limit=200&where[mimeType][like]=image/`,
+    `/api/media-assets?limit=200&where[mimeType][like]=image/`
   )
+  return response.docs || []
+}
+
+export async function fetchInstagramPostsByIds(
+  ids: number[]
+): Promise<InstagramPostOption[]> {
+  if (ids.length === 0) return []
+  const params = new URLSearchParams()
+  params.set('limit', String(ids.length))
+  params.set('depth', '1')
+  params.set('where[id][in]', ids.join(','))
+
+  const response = await payloadRequest<
+    PayloadListResponse<InstagramPostOption>
+  >(`/api/instagram-posts?${params.toString()}`)
   return response.docs || []
 }
 
 export async function fetchRelatedItems(
   listicleType: ListicleType,
   locationKey: string,
-  scope?: LocationScope,
+  scope?: LocationScope
 ): Promise<RelatedItemOption[]> {
   const collection = relatedCollectionForType(listicleType)
   const params = new URLSearchParams()
@@ -120,18 +199,21 @@ export async function fetchRelatedItems(
   params.set('limit', '200')
   params.set('where[status][equals]', 'published')
   if (locationKey) {
-    const resolvedScope = scope || (await getArticleLocationScope({ locationKey }))
+    const resolvedScope =
+      scope || (await getArticleLocationScope({ locationKey }))
     appendScopedLocationWhere(params, resolvedScope)
   }
 
   const response = await payloadRequest<PayloadListResponse<RelatedItemOption>>(
-    `/api/${collection}?${params.toString()}`,
+    `/api/${collection}?${params.toString()}`
   )
 
   return normalizeRelatedItems(response.docs || [])
 }
 
-export async function markdownToLexical(markdown: string): Promise<Record<string, unknown>> {
+export async function markdownToLexical(
+  markdown: string
+): Promise<Record<string, unknown>> {
   const result = await convertMarkdownToLexical(markdown)
   if (!result.success || !result.data) {
     throw new Error(result.error || 'Failed to convert markdown to lexical')
@@ -139,4 +221,9 @@ export async function markdownToLexical(markdown: string): Promise<Record<string
   return result.data as Record<string, unknown>
 }
 
-export { generateListicleContentWithAi, generateSeoMetadataWithAi, generateTitleWithAi, rewriteBlockWithAi }
+export {
+  generateListicleContentWithAi,
+  generateSeoMetadataWithAi,
+  generateTitleWithAi,
+  rewriteBlockWithAi
+}

@@ -47,7 +47,7 @@ export function parseNewBlockInput(body: unknown): ParseNewBlockResult {
   if (slotCount === null) {
     const message =
       blockType === 'article-grid'
-        ? `slotCount must be 4 or 8 for "${blockType}".`
+        ? `slotCount must be 3, 4, or 8 for "${blockType}".`
         : `slotCount must be between ${slotLimits.min} and ${slotLimits.max} for "${blockType}".`
     return { ok: false, status: 400, message }
   }

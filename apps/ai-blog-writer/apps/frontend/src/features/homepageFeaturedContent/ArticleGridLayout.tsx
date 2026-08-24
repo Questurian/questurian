@@ -51,7 +51,9 @@ export default function ArticleGridLayout({
   const gridVariant =
     slots.length === 8
       ? 'hf-article-grid--slots-8'
-      : `hf-article-grid--slots-4 ${fourVariant}`
+      : slots.length === 3
+        ? 'hf-article-grid--slots-3'
+        : `hf-article-grid--slots-4 ${fourVariant}`
 
   return (
     <CuratedArticleSlotSwapProvider slots={slots} onReorder={onReorder}>

@@ -277,9 +277,15 @@ describe('AddHomepageBlockPicker', () => {
       screen.getByRole('group', { name: 'Article Grid size' })
     ).toBeInTheDocument()
     const previews = screen.getAllByTestId('block-layout-preview-article-grid')
-    expect(previews).toHaveLength(2)
-    expect(previews[0]).toHaveAttribute('data-slot-count', '4')
-    expect(previews[1]).toHaveAttribute('data-slot-count', '8')
+    expect(previews).toHaveLength(3)
+    expect(previews[0]).toHaveAttribute('data-slot-count', '3')
+    expect(previews[1]).toHaveAttribute('data-slot-count', '4')
+    expect(previews[2]).toHaveAttribute('data-slot-count', '8')
+    expect(
+      screen.getByRole('button', {
+        name: /3 items Editorial row · wide images/
+      })
+    ).toBeInTheDocument()
     expect(
       screen.getByRole('button', {
         name: /4 items 4 across · wide images/

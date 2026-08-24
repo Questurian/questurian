@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react'
-import { fetchRelatedItems } from '../../api'
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { fetchInstagramPostsByIds, fetchRelatedItems } from '../../api'
 import { getArticleLocationScope } from '../../../../shared/locationScope/scope'
-import type { LocationOption, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
+import type {
+  LocationOption,
+  RelatedItemOption,
+  SingleTypeListicleDraft
+} from '../../types'
+import { reconcileStaleInstagramSelections } from '../services/reconcile-stale-instagram-selections'
 
 type UseRelatedItemsParams = {
   draft: SingleTypeListicleDraft | null
   locations: LocationOption[]
+  setDraft: Dispatch<SetStateAction<SingleTypeListicleDraft | null>>
   onError: (message: string) => void
 }
 
@@ -14,7 +20,12 @@ type UseRelatedItemsResult = {
   isLoadingRelated: boolean
 }
 
-export function useRelatedItems({ draft, locations, onError }: UseRelatedItemsParams): UseRelatedItemsResult {
+export function useRelatedItems({
+  draft,
+  locations,
+  setDraft,
+  onError
+}: UseRelatedItemsParams): UseRelatedItemsResult {
   const [relatedItems, setRelatedItems] = useState<RelatedItemOption[]>([])
   const [isLoadingRelated, setIsLoadingRelated] = useState(false)
 
@@ -34,19 +45,38 @@ export function useRelatedItems({ draft, locations, onError }: UseRelatedItemsPa
     getArticleLocationScope({
       locationKey,
       sharedNeighborhoods,
-      locations,
+      locations
     })
       .then((scope) => {
         if (cancelled) return []
         return fetchRelatedItems(listicleType, locationKey, scope)
       })
-      .then((docs) => {
+      .then(async (docs) => {
         if (cancelled) return
         setRelatedItems(docs)
+
+        const selectedPostIds = [
+          ...new Set(
+            draft.items.flatMap((item) =>
+              item.selectedInstagramPost ? [item.selectedInstagramPost] : []
+            )
+          )
+        ]
+        if (selectedPostIds.length === 0) return
+
+        const selectedPosts = await fetchInstagramPostsByIds(selectedPostIds)
+        if (cancelled) return
+        setDraft((current) =>
+          current
+            ? reconcileStaleInstagramSelections(current, docs, selectedPosts)
+            : current
+        )
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        onError(err instanceof Error ? err.message : 'Failed to load related items')
+        onError(
+          err instanceof Error ? err.message : 'Failed to load related items'
+        )
       })
       .finally(() => {
         if (cancelled) return
@@ -56,7 +86,14 @@ export function useRelatedItems({ draft, locations, onError }: UseRelatedItemsPa
     return () => {
       cancelled = true
     }
-  }, [draft?.listicleType, draft?.location, draft?.sharedNeighborhoods, locations, onError])
+  }, [
+    draft?.listicleType,
+    draft?.location,
+    draft?.sharedNeighborhoods,
+    locations,
+    setDraft,
+    onError
+  ])
 
   return { relatedItems, isLoadingRelated }
 }

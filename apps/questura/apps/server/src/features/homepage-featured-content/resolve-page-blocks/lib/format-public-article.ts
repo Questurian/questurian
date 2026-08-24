@@ -98,7 +98,10 @@ function formatPublicImage(value: unknown): PublicImage | null {
 
 type LocationContext = { country: string; city: string }
 
-function buildArticlePath(item: Record<string, unknown>, location?: LocationContext): string | null {
+function buildArticlePath(
+  item: Record<string, unknown>,
+  location?: LocationContext,
+): string | null {
   const relationTo = stringOrNull(item.relationTo)
   const slug = stringOrNull(item.slug)
   const canonicalPath = stringOrNull(item.canonicalPath)
@@ -108,11 +111,11 @@ function buildArticlePath(item: Record<string, unknown>, location?: LocationCont
   }
 
   const locationParts = stringOrNull(item.locationKey)?.split('|').filter(Boolean)
-  const routeLocation = location ?? (
-    locationParts && locationParts.length >= 2
+  const routeLocation =
+    location ??
+    (locationParts && locationParts.length >= 2
       ? { country: locationParts[0], city: locationParts[1] }
-      : null
-  )
+      : null)
   if (!slug || !routeLocation) return null
 
   if (relationTo === 'single-type-listicles') {
@@ -126,7 +129,10 @@ function buildArticlePath(item: Record<string, unknown>, location?: LocationCont
   return null
 }
 
-export function formatPublicArticleItem(value: unknown, location?: LocationContext): PublicArticleItem {
+export function formatPublicArticleItem(
+  value: unknown,
+  location?: LocationContext,
+): PublicArticleItem {
   const item = isRecord(value) ? value : {}
   const category = formatPublicCategory(item.category)
   const image = formatPublicImage(item.image)

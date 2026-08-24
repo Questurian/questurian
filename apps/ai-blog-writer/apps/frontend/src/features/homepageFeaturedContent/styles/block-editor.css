@@ -973,6 +973,11 @@
   grid-template-rows: 1fr;
 }
 
+.hf-block-layout-preview--article-grid[data-slot-count='3'] .hf-layout-canvas {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 1fr;
+}
+
 .hf-block-layout-preview--article-grid[data-slot-count='8'] .hf-layout-canvas {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));

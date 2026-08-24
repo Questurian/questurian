@@ -1,14 +1,26 @@
-import { createListicle, getBlockTypeForListicleType, markdownToLexical, updateListicle } from '../../api'
+import {
+  createListicle,
+  getBlockTypeForListicleType,
+  markdownToLexical,
+  updateListicle
+} from '../../api'
 import { getSchemaPublisherConfig } from '../../../../shared/seo/services/schema-publisher-config.service'
 import { buildSeoPayload } from './seo-section.service'
-import type { PayloadListicleDoc, RelatedItemOption, SingleTypeListicleDraft } from '../../types'
+import type {
+  PayloadListicleDoc,
+  RelatedItemOption,
+  SingleTypeListicleDraft
+} from '../../types'
 import { payloadDocToDraft } from '../mappers/listicle-draft.mapper'
 import { buildPayloadListicleMetadataPatch } from './payload-listicle-metadata.service'
 import {
   buildSingleTypeListicleStructuredDataTemplate,
-  serializeStructuredDataTemplate,
+  serializeStructuredDataTemplate
 } from './structured-data-template.service'
-import { requiresInstagram, requiresPhotos } from '../../../../shared/builder/utils/item-media.utils'
+import {
+  requiresInstagram,
+  requiresPhotos
+} from '../../../../shared/builder/utils/item-media.utils'
 import { readLexicalFromJsonText } from '../../../../shared/builder/utils/lexical-json.utils'
 import { validateSubmit } from '../validators/submit.validators'
 import { markDraftAsPayloadSynced } from '../../../../shared/payloadSync/draftPayloadSync'
@@ -25,17 +37,45 @@ export async function submitListicle({
   draft,
   selectedLocationRefId,
   targetStatus,
-  relatedItems,
-}: SubmitListicleParams): Promise<{ doc: PayloadListicleDoc; nextDraft: SingleTypeListicleDraft; resultMessage: string }> {
-  const submitIssue = validateSubmit(draft, selectedLocationRefId, targetStatus, relatedItems)
-  if (submitIssue) throw new Error(submitIssue)
+  relatedItems
+}: SubmitListicleParams): Promise<{
+  doc: PayloadListicleDoc
+  nextDraft: SingleTypeListicleDraft
+  resultMessage: string
+}> {
   const schemaPublisherConfig = getSchemaPublisherConfig()
+  const seoSectionForSubmit =
+    targetStatus === 'published'
+      ? {
+          ...draft.seoSection,
+          structuredData: serializeStructuredDataTemplate(
+            buildSingleTypeListicleStructuredDataTemplate({
+              draft: {
+                ...draft,
+                status: 'published'
+              },
+              relatedItems,
+              publisherConfig: schemaPublisherConfig
+            })
+          )
+        }
+      : draft.seoSection
+  const submitIssue = validateSubmit(
+    { ...draft, seoSection: seoSectionForSubmit },
+    selectedLocationRefId,
+    targetStatus,
+    relatedItems
+  )
+  if (submitIssue) throw new Error(submitIssue)
 
   const headerIntro = draft.header.introMarkdown.trim()
     ? await markdownToLexical(draft.header.introMarkdown)
     : readLexicalFromJsonText(draft.header.introJsonText || '', 'Header intro')
 
-  if (!draft.header.introMarkdown.trim() && !draft.header.introJsonText?.trim()) {
+  if (
+    !draft.header.introMarkdown.trim() &&
+    !draft.header.introJsonText?.trim()
+  ) {
     throw new Error('Header intro is required (markdown or lexical JSON)')
   }
 
@@ -48,10 +88,15 @@ export async function submitListicle({
 
     const blurb = item.blurbMarkdown.trim()
       ? await markdownToLexical(item.blurbMarkdown)
-      : readLexicalFromJsonText(item.blurbJsonText || '', `Item ${index + 1} blurb`)
+      : readLexicalFromJsonText(
+          item.blurbJsonText || '',
+          `Item ${index + 1} blurb`
+        )
 
     if (!item.blurbMarkdown.trim() && !item.blurbJsonText?.trim()) {
-      throw new Error(`Item ${index + 1} blurb is required (markdown or lexical JSON)`)
+      throw new Error(
+        `Item ${index + 1} blurb is required (markdown or lexical JSON)`
+      )
     }
 
     payloadItems.push({
@@ -61,9 +106,11 @@ export async function submitListicle({
       ...(item.blockType === 'data-attractions' ? { tours: item.tours } : {}),
       mediaMode: item.mediaMode,
       selectedPhotos: requiresPhotos(item.mediaMode) ? item.selectedPhotos : [],
-      selectedInstagramPost: requiresInstagram(item.mediaMode) ? item.selectedInstagramPost : null,
+      selectedInstagramPost: requiresInstagram(item.mediaMode)
+        ? item.selectedInstagramPost
+        : null,
       angle: item.angle ?? null,
-      blurb,
+      blurb
     })
   }
 
@@ -72,22 +119,6 @@ export async function submitListicle({
   if (draft.items.some((item) => item.blockType !== expectedBlockType)) {
     throw new Error('Item block types do not match selected listicle type')
   }
-
-  const seoSectionForSubmit = targetStatus === 'published'
-    ? {
-        ...draft.seoSection,
-        structuredData: serializeStructuredDataTemplate(
-          buildSingleTypeListicleStructuredDataTemplate({
-            draft: {
-              ...draft,
-              status: 'published',
-            },
-            relatedItems,
-            publisherConfig: schemaPublisherConfig,
-          }),
-        ),
-      }
-    : draft.seoSection
 
   const body: Record<string, unknown> = {
     title: draft.title.trim(),
@@ -107,12 +138,12 @@ export async function submitListicle({
     header: {
       intro: headerIntro,
       featuredMediaSet: draft.header.featuredMediaSet || undefined,
-      featuredImage: draft.header.featuredImage || undefined,
+      featuredImage: draft.header.featuredImage || undefined
     },
     items: payloadItems,
     seoSection: buildSeoPayload(seoSectionForSubmit),
     status: targetStatus,
-    articleType: 'single-type-listicle',
+    articleType: 'single-type-listicle'
   }
 
   let doc = draft.payloadId
@@ -126,14 +157,14 @@ export async function submitListicle({
           ...draft,
           ...buildPayloadListicleMetadataPatch({
             doc,
-            fallbackAuthorName: schemaPublisherConfig.defaultAuthorName,
+            fallbackAuthorName: schemaPublisherConfig.defaultAuthorName
           }),
           status: 'published',
-          seoSection: seoSectionForSubmit,
+          seoSection: seoSectionForSubmit
         },
         relatedItems,
-        publisherConfig: schemaPublisherConfig,
-      }),
+        publisherConfig: schemaPublisherConfig
+      })
     )
 
     if (publishedStructuredData !== seoSectionForSubmit.structuredData.trim()) {
@@ -141,8 +172,8 @@ export async function submitListicle({
         ...body,
         seoSection: buildSeoPayload({
           ...seoSectionForSubmit,
-          structuredData: publishedStructuredData,
-        }),
+          structuredData: publishedStructuredData
+        })
       })
     }
   }
@@ -152,17 +183,18 @@ export async function submitListicle({
   nextDraft.header.introMarkdown = draft.header.introMarkdown
   nextDraft.items = nextDraft.items.map((nextItem, index) => ({
     ...nextItem,
-    blurbMarkdown: draft.items[index]?.blurbMarkdown || '',
+    blurbMarkdown: draft.items[index]?.blurbMarkdown || ''
   }))
   nextDraft = markDraftAsPayloadSynced(
     nextDraft,
     buildSingleTypeListicleDraftComparableShape,
-    doc.updatedAt || new Date().toISOString(),
+    doc.updatedAt || new Date().toISOString()
   )
 
-  const resultMessage = targetStatus === 'published'
-    ? `Published listicle #${doc.id}`
-    : `Synced draft listicle #${doc.id} to Payload`
+  const resultMessage =
+    targetStatus === 'published'
+      ? `Published listicle #${doc.id}`
+      : `Synced draft listicle #${doc.id} to Payload`
 
   return { doc, nextDraft, resultMessage }
 }

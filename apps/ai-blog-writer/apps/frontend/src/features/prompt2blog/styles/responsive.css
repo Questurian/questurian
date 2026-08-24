@@ -6,7 +6,21 @@
 
   .p2b-panel {
     padding: var(--space-5);
-    border-radius: var(--radius-lg);
+    border-radius: 3px;
+  }
+
+  .p2b-hero {
+    align-items: start;
+    margin-bottom: var(--space-6);
+    text-align: left;
+  }
+
+  .p2b-hero h1 {
+    font-size: clamp(2.3rem, 11vw, 3.5rem);
+  }
+
+  .p2b-badge-row {
+    justify-content: flex-start;
   }
 
   .p2b-panel-header h2 {
@@ -47,6 +61,14 @@
 @media (max-width: 480px) {
   .p2b-panel {
     padding: var(--space-4);
+  }
+
+  .p2b-panel-header {
+    flex-direction: column;
+  }
+
+  .p2b-section-clear-btn {
+    align-self: flex-start;
   }
 
   .p2b-panel-header h2 {

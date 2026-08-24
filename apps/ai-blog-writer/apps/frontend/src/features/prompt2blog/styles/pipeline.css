@@ -1,20 +1,34 @@
 .p2b-progress-grid {
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  display: flex;
+  flex-direction: column;
+  counter-reset: pipeline-stage;
+  border-top: 1px solid var(--border-strong);
 }
 
 .p2b-progress-item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: #f8fafc;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 42px;
+  padding: 0.55rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  counter-increment: pipeline-stage;
+}
+
+.p2b-progress-item::before {
+  content: counter(pipeline-stage, decimal-leading-zero);
+  color: var(--muted);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .p2b-progress-item small {
+  grid-column: 2 / -1;
   font-size: 0.75rem;
   color: var(--p2b-accent-hover);
   font-weight: 600;
@@ -23,21 +37,22 @@
 .p2b-progress-item strong {
   margin: 0;
   color: var(--ink);
-  font-size: 0.8125rem;
-  line-height: 1.4;
+  font-size: 0.75rem;
+  line-height: 1.3;
 }
 
 .p2b-progress-item span {
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.6875rem;
+  font-size: 0.6rem;
   color: #64748b;
   font-weight: 700;
 }
 
 .p2b-progress-item--running {
-  border-color: #93c5fd;
-  background: #eff6ff;
+  border-left: 3px solid var(--p2b-accent);
+  padding-left: var(--space-2);
+  background: var(--p2b-accent-softer);
 }
 
 .p2b-progress-item--running span {
@@ -45,8 +60,8 @@
 }
 
 .p2b-progress-item--done {
-  border-color: #86efac;
-  background: #f0fdf4;
+  border-left: 3px solid #22c55e;
+  padding-left: var(--space-2);
 }
 
 .p2b-progress-item--done span {
@@ -54,8 +69,8 @@
 }
 
 .p2b-progress-item--failed {
-  border-color: #fca5a5;
-  background: #fef2f2;
+  border-left: 3px solid #ef4444;
+  padding-left: var(--space-2);
 }
 
 .p2b-progress-item--failed span {
@@ -63,7 +78,7 @@
 }
 
 .p2b-progress-item--pending {
-  opacity: 0.9;
+  opacity: 0.82;
 }
 
 .p2b-progress-item--interactive {
@@ -71,13 +86,11 @@
   text-align: left;
   font: inherit;
   cursor: pointer;
-  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+  transition: color var(--transition-base), background var(--transition-base);
 }
 
 .p2b-progress-item--interactive:hover {
-  transform: translateY(-1px);
-  border-color: var(--p2b-accent);
-  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.12);
+  background: var(--p2b-accent-softer);
 }
 
 .p2b-progress-item--interactive:focus {
@@ -104,20 +117,19 @@
   font-family: var(--font-body);
   border: none;
   padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-md);
+  border-radius: var(--p2b-control-radius);
   background: var(--p2b-accent);
   color: white;
   font-weight: 600;
   font-size: 0.9375rem;
   cursor: pointer;
   transition: all var(--transition-base);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+  box-shadow: none;
 }
 
 .p2b-synthesize-btn:hover:not(:disabled) {
   background: var(--p2b-accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.35);
+  box-shadow: none;
 }
 
 .p2b-synthesize-btn:disabled {

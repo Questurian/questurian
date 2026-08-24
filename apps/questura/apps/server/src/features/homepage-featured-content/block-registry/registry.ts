@@ -143,10 +143,10 @@ const CURATED_BLOCK_DEFINITIONS: readonly CuratedBlockDefinition[] = [
   defineCuratedBlock({
     block: ArticleGridBlock,
     slotCounts: {
-      min: 4,
+      min: 3,
       max: 8,
       default: 4,
-      validCounts: [4, 8],
+      validCounts: [3, 4, 8],
       invalidFallback: 'default',
     },
     convertibleWhenEmpty: true,

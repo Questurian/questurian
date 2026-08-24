@@ -23,6 +23,7 @@ describe('resolveStoredSlotCountForBlockType', () => {
   })
 
   it('keeps in-range stored values', () => {
+    expect(resolveStoredSlotCountForBlockType('article-grid', 3)).toBe(3)
     expect(resolveStoredSlotCountForBlockType('article-grid', 4)).toBe(4)
     expect(resolveStoredSlotCountForBlockType('article-grid', 8)).toBe(8)
     expect(resolveStoredSlotCountForBlockType('featured-articles', 7)).toBe(7)

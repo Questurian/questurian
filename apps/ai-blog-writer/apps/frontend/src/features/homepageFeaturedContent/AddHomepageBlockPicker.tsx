@@ -101,6 +101,7 @@ const EDITORIAL_FEATURE_LAYOUT_LABELS: Record<number, string> = {
 }
 
 const ARTICLE_GRID_LAYOUT_LABELS: Record<number, string> = {
+  3: 'Editorial row · wide images',
   4: '4 across · wide images',
   8: '4 × 2 · square images'
 }

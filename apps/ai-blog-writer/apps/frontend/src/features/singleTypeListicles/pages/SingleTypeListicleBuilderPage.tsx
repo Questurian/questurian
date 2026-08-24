@@ -19,6 +19,7 @@ import { useSingleTypeListicleAiWriting } from '../builder/hooks/useSingleTypeLi
 import { useSingleTypeListiclePermalink } from '../builder/hooks/useSingleTypeListiclePermalink'
 import { useSingleTypeListicleSeo } from '../builder/hooks/useSingleTypeListicleSeo'
 import { getSingleTypeAutoWriteTargetIds } from '../builder/services/ai-autowrite.service'
+import { getListicleSyncTargetStatus } from '../builder/services/listicle-sync-target.service'
 import { buildSingleTypeListicleDraftComparableShape } from '../builder/utils/single-type-listicle-draft-sync-signature'
 import { saveDraft } from '../storage'
 import '../styles.css'
@@ -35,18 +36,13 @@ export default function SingleTypeListicleBuilderPage() {
     setError(message || null)
   }, [])
 
-  const {
-    draft,
-    setDraft,
-    isLoading,
-    locations,
-    mediaAssets,
-  } = useBuilderBootstrap({
-    payloadIdParam,
-    draftIdParam,
-    setSearchParams,
-    onError,
-  })
+  const { draft, setDraft, isLoading, locations, mediaAssets } =
+    useBuilderBootstrap({
+      payloadIdParam,
+      draftIdParam,
+      setSearchParams,
+      onError
+    })
 
   useBuilderAutosave(draft, saveDraft)
 
@@ -57,12 +53,13 @@ export default function SingleTypeListicleBuilderPage() {
     isLoading,
     routeKey: `${payloadIdParam ?? ''}:${draftIdParam ?? ''}`,
     buildComparableShape: buildSingleTypeListicleDraftComparableShape,
-    initializeMissingBaselineAsSynced: true,
+    initializeMissingBaselineAsSynced: true
   })
   const { relatedItems, isLoadingRelated } = useRelatedItems({
     draft,
     locations,
-    onError,
+    setDraft,
+    onError
   })
   const actions = useBuilderDraftActions({
     draft,
@@ -72,7 +69,7 @@ export default function SingleTypeListicleBuilderPage() {
     navigate,
     setSearchParams,
     onError,
-    setResult,
+    setResult
   })
   const progress = useBuilderProgress(draft)
   const aiWriting = useSingleTypeListicleAiWriting({
@@ -81,13 +78,13 @@ export default function SingleTypeListicleBuilderPage() {
     locations,
     setDraft,
     onError,
-    setResult,
+    setResult
   })
   const permalink = useSingleTypeListiclePermalink({
     draft,
     locations,
     setDraft,
-    onError,
+    onError
   })
   const seo = useSingleTypeListicleSeo({
     draft,
@@ -95,7 +92,7 @@ export default function SingleTypeListicleBuilderPage() {
     selectedLocationRefId: actions.selectedLocationRefId,
     setDraft,
     onError,
-    setResult,
+    setResult
   })
   const { isSaving, submit } = useListicleSubmit({
     draft,
@@ -104,19 +101,24 @@ export default function SingleTypeListicleBuilderPage() {
     setDraft,
     setSearchParams,
     onError,
-    onResult: setResult,
+    onResult: setResult
   })
 
   const isStep1Locked = Boolean(draft?.step1_complete && !draft?.in_update_mode)
-  const isStep2Locked = Boolean(draft?.step2_complete && !draft?.step2_in_update_mode)
-  const isStep3Locked = Boolean(draft?.step3_complete && !draft?.step3_in_update_mode)
+  const isStep2Locked = Boolean(
+    draft?.step2_complete && !draft?.step2_in_update_mode
+  )
+  const isStep3Locked = Boolean(
+    draft?.step3_complete && !draft?.step3_in_update_mode
+  )
   const isStep4Ready = isStep1Locked && isStep3Locked
+  const syncTargetStatus = draft ? getListicleSyncTargetStatus(draft) : 'draft'
 
   useAutoStructuredData({
     draft,
     relatedItems,
     enabled: isStep4Ready,
-    setDraft,
+    setDraft
   })
 
   const saveLocalDraft = useCallback(async (): Promise<void> => {
@@ -129,9 +131,11 @@ export default function SingleTypeListicleBuilderPage() {
   if (isLoading || !draft) {
     return (
       <div className="stl-page stl-single-type-page">
-        {!isLoading && error
-          ? <p className="stl-error">{error}</p>
-          : <p className="stl-placeholder">Loading builder...</p>}
+        {!isLoading && error ? (
+          <p className="stl-error">{error}</p>
+        ) : (
+          <p className="stl-placeholder">Loading builder...</p>
+        )}
       </div>
     )
   }
@@ -154,14 +158,18 @@ export default function SingleTypeListicleBuilderPage() {
 
           {isSynced && hasUnsyncedPayloadChanges ? (
             <div className="stl-out-of-sync-banner" role="status">
-              <span className="stl-out-of-sync-banner__dot" aria-hidden="true" />
+              <span
+                className="stl-out-of-sync-banner__dot"
+                aria-hidden="true"
+              />
               <span className="stl-out-of-sync-banner__text">
-                Out of sync — you have local changes. Sync to Payload to apply them to the live article.
+                Out of sync — you have local changes. Sync to Payload to apply
+                them to the live article.
               </span>
               <button
                 type="button"
                 className="stl-btn stl-out-of-sync-banner__btn"
-                onClick={() => void submit('draft')}
+                onClick={() => void submit(syncTargetStatus)}
                 disabled={isSaving}
               >
                 {isSaving ? 'Syncing...' : 'Save & Sync'}
@@ -185,7 +193,7 @@ export default function SingleTypeListicleBuilderPage() {
             isGeneratingSlug={permalink.isGeneratingSlug}
           />
 
-          {(isStep1Locked || isSynced) ? (
+          {isStep1Locked || isSynced ? (
             <BuilderHeaderPanel
               draft={draft}
               locationRef={actions.selectedLocationRefId ?? draft.locationRef}
@@ -195,10 +203,14 @@ export default function SingleTypeListicleBuilderPage() {
               isIntroAiGenerating={aiWriting.isIntroAiGenerating}
               introAiQueueCount={aiWriting.introAiQueueCount}
               introAiStatus={aiWriting.introAiStatus}
-              introAiDisabledReason={aiWriting.introAiDisabledReason ?? undefined}
-              onIntroInspect={() => aiWriting.openInspect(aiWriting.introTargetId, 'Intro')}
+              introAiDisabledReason={
+                aiWriting.introAiDisabledReason ?? undefined
+              }
+              onIntroInspect={() =>
+                aiWriting.openInspect(aiWriting.introTargetId, 'Intro')
+              }
               introHasInspectableSteps={Boolean(
-                aiWriting.stepsByTargetId[aiWriting.introTargetId]?.length,
+                aiWriting.stepsByTargetId[aiWriting.introTargetId]?.length
               )}
               isLocked={isStep2Locked}
               isSynced={isSynced}
@@ -219,13 +231,18 @@ export default function SingleTypeListicleBuilderPage() {
               updateItem={actions.updateItem}
               onItemBlurbAiAutoWrite={aiWriting.autoWriteItemBlurb}
               onItemBlurbInspect={(itemId, index) =>
-                aiWriting.openInspect(`${itemId}_blurb`, `Item ${index + 1} blurb`)
+                aiWriting.openInspect(
+                  `${itemId}_blurb`,
+                  `Item ${index + 1} blurb`
+                )
               }
               hasInspectableStepsByItemId={Object.fromEntries(
                 draft.items.map((entry) => [
                   entry.id,
-                  Boolean(aiWriting.stepsByTargetId[`${entry.id}_blurb`]?.length),
-                ]),
+                  Boolean(
+                    aiWriting.stepsByTargetId[`${entry.id}_blurb`]?.length
+                  )
+                ])
               )}
               activeAiItemId={aiWriting.runningAiItemId}
               queuedAiItemIds={aiWriting.queuedAiItemIds}
@@ -238,7 +255,7 @@ export default function SingleTypeListicleBuilderPage() {
             />
           ) : null}
 
-          {(isStep4Ready || isSynced) ? (
+          {isStep4Ready || isSynced ? (
             <BuilderSeoPanel
               draft={draft}
               setDraft={setDraft}
@@ -263,15 +280,17 @@ export default function SingleTypeListicleBuilderPage() {
           onEditorModelChange={actions.setEditorModelName}
           isSaving={isSaving}
           isAutoWritingEmptyFields={aiWriting.isAutoWritingEmptyFields}
-          autoWriteEmptyFieldsQueueCount={aiWriting.autoWriteEmptyFieldsQueueCount}
+          autoWriteEmptyFieldsQueueCount={
+            aiWriting.autoWriteEmptyFieldsQueueCount
+          }
           autoWriteEmptyFieldsStatus={aiWriting.autoWriteEmptyFieldsStatus}
           canAutoWriteEmptyFields={
-            (isSynced || isStep1Locked)
-            && getSingleTypeAutoWriteTargetIds(draft, relatedItems).length > 0
+            (isSynced || isStep1Locked) &&
+            getSingleTypeAutoWriteTargetIds(draft, relatedItems).length > 0
           }
           onAutoWriteEmptyFields={aiWriting.autoWriteEmptyFields}
           onSaveLocalDraft={saveLocalDraft}
-          onSyncToPayload={() => submit('draft')}
+          onSyncToPayload={() => submit(syncTargetStatus)}
         />
       </div>
 
@@ -286,10 +305,13 @@ export default function SingleTypeListicleBuilderPage() {
         }
         isRunning={
           aiWriting.inspectTarget
-            ? aiWriting.visualStateById[aiWriting.inspectTarget.targetId] === 'running'
+            ? aiWriting.visualStateById[aiWriting.inspectTarget.targetId] ===
+              'running'
             : false
         }
-        autoCloseOnCompletion={aiWriting.inspectTarget?.openedAutomatically ?? false}
+        autoCloseOnCompletion={
+          aiWriting.inspectTarget?.openedAutomatically ?? false
+        }
       />
     </div>
   )

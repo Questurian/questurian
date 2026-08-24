@@ -1,16 +1,17 @@
-/* Prompt2Blog Feature Styles - Editorial Warmth Theme with Blue Accent */
+/* Prompt2Blog workspace — operational editorial system */
 
 .p2b-page {
-  padding: var(--space-6) 5vw var(--space-8);
-  max-width: 1600px;
+  width: min(100%, 1440px);
   margin: 0 auto;
-  animation: p2bFadeIn 0.4s ease-out;
+  padding: var(--space-7) clamp(var(--space-4), 4vw, var(--space-8)) var(--space-10);
+  animation: p2bFadeIn 0.35s ease-out;
 
-  /* Blue theme variables */
+  /* Existing Prompt2Blog blue palette remains the only feature accent. */
   --p2b-accent: #3b82f6;
   --p2b-accent-hover: #2563eb;
   --p2b-accent-soft: rgba(59, 130, 246, 0.12);
   --p2b-accent-softer: rgba(59, 130, 246, 0.06);
+  --p2b-control-radius: 3px;
 }
 
 @keyframes p2bFadeIn {
@@ -18,30 +19,35 @@
   to { opacity: 1; }
 }
 
-/* Hero */
+/* Hero: compact masthead, not a marketing splash. */
 .p2b-hero {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  margin-bottom: var(--space-8);
+  align-items: center;
+  gap: var(--space-6);
+  max-width: 1240px;
+  margin: 0 auto var(--space-8);
+  padding: 0 0 var(--space-6);
+  border-bottom: 1px solid var(--border-strong);
   text-align: center;
 }
 
 .p2b-hero h1 {
-  font-family: var(--font-display);
-  font-size: clamp(2.25rem, 5vw, 3.5rem);
-  font-weight: 700;
   max-width: 800px;
   margin: 0 auto;
-  line-height: 1.15;
   color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(2.35rem, 4.5vw, 4.35rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
 }
 
 .p2b-underline-text {
   text-decoration: underline;
   text-decoration-color: var(--p2b-accent);
   text-decoration-thickness: 3px;
-  text-underline-offset: 6px;
+  text-underline-offset: 8px;
 }
 
 .p2b-dot {
@@ -50,67 +56,73 @@
 }
 
 .p2b-lede {
-  max-width: 600px;
-  font-size: 1.1rem;
-  line-height: 1.7;
-  margin: 0 auto;
-  color: var(--muted);
+  max-width: 670px;
+  margin: var(--space-4) auto 0;
+  color: var(--ink-light);
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 .p2b-eyebrow {
-  display: inline-block;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
+  display: block;
+  margin: 0 0 var(--space-3);
+  color: var(--p2b-accent-hover);
   font-size: 0.6875rem;
-  color: var(--p2b-accent);
-  font-weight: 600;
-  margin-bottom: var(--space-4);
-  padding: var(--space-1) var(--space-3);
-  background: var(--p2b-accent-softer);
-  border-radius: var(--radius-full);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .p2b-badge-row {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: var(--space-3);
+  justify-content: center;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .p2b-nav-link {
-  padding: var(--space-3) var(--space-5);
-  border-radius: var(--radius-full);
-  background: white;
-  color: var(--p2b-accent);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  transition: all var(--transition-base);
-  text-align: center;
   display: inline-block;
+  min-height: 40px;
+  padding: 0.65rem var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--p2b-control-radius);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: border-color var(--transition-base), color var(--transition-base), background var(--transition-base);
 }
 
 .p2b-nav-link:hover {
-  background: var(--p2b-accent);
-  color: white;
   border-color: var(--p2b-accent);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  background: var(--p2b-accent-softer);
+  color: var(--p2b-accent-hover);
 }
 
-/* Form Container */
+.p2b-nav-link:focus-visible {
+  outline: 3px solid var(--p2b-accent-soft);
+  outline-offset: 2px;
+}
+
+/* Linear workflow: preserve original authoring order. */
 .p2b-form-container {
-  display: flex;
-  justify-content: center;
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .p2b-form {
-  width: 100%;
-  max-width: 780px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-7);
+  width: 100%;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .p2b-page,
+  .p2b-panel {
+    animation: none;
+  }
+}

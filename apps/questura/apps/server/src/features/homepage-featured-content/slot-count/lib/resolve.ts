@@ -49,7 +49,7 @@ export function resolveStoredSlotCountForBlockType(
   return Math.min(Math.max(raw, min), max)
 }
 
-/** Slot count accepted by POST /blocks when adding a block (strict for article-grid: 4 or 8 only). */
+/** Slot count accepted by POST /blocks when adding a block (article-grid uses sparse valid counts). */
 export function isValidRequestedSlotCount(blockType: string, n: number): boolean {
   const definition = curatedBlockRegistry.get(blockType)
   if (!definition) return Number.isInteger(n) && n >= 1

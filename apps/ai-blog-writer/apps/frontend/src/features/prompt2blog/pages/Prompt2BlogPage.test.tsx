@@ -216,7 +216,7 @@ describe('Prompt2BlogPage', () => {
     expect(within(easySetupPanel!).getByLabelText('Location')).toBeInTheDocument()
     expect(within(easySetupPanel!).getByLabelText('Approved JSON')).toBeInTheDocument()
     expect(within(easySetupPanel!).getAllByRole('textbox')).toHaveLength(3)
-    expect(within(easySetupPanel!).getByRole('button', { name: 'Confirm Setup' }))
+    expect(within(easySetupPanel!).getByRole('button', { name: 'Generate setup prompt' }))
       .toBeDisabled()
     expect(within(easySetupPanel!).queryByLabelText('Prompt')).not.toBeInTheDocument()
   })
@@ -226,7 +226,7 @@ describe('Prompt2BlogPage', () => {
 
     // The prompt quotes the loaded option catalogs, so wait for them to arrive.
     await screen.findByRole('option', { name: 'Destination Guide' })
-    const confirmSetup = screen.getByRole('button', { name: 'Confirm Setup' })
+    const confirmSetup = screen.getByRole('button', { name: 'Generate setup prompt' })
 
     fireEvent.change(screen.getByLabelText('Title'), {
       target: { value: 'A weekend in Lisbon' },
@@ -278,7 +278,7 @@ describe('Prompt2BlogPage', () => {
     fireEvent.change(screen.getByLabelText('Location'), {
       target: { value: 'Lisbon, Portugal' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm Setup' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Generate setup prompt' }))
 
     const promptValue = (screen.getByLabelText('Prompt') as HTMLTextAreaElement).value
     fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }))
@@ -299,7 +299,7 @@ describe('Prompt2BlogPage', () => {
     fireEvent.change(screen.getByLabelText('Location'), {
       target: { value: 'Lisbon, Portugal' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm Setup' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Generate setup prompt' }))
     fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }))
 
     expect(await screen.findByRole('button', { name: 'Copy failed' })).toBeInTheDocument()

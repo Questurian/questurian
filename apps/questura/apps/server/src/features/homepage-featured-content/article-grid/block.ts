@@ -17,15 +17,15 @@ export const ArticleGridBlock: Block = {
       name: 'slotCount',
       type: 'number',
       required: true,
-      min: 4,
+      min: 3,
       max: 8,
       validate: (value: unknown) => {
-        if (value === 4 || value === 8) return true
-        return 'Must be 4 or 8 cards.'
+        if (value === 3 || value === 4 || value === 8) return true
+        return 'Must be 3, 4, or 8 cards.'
       },
       admin: {
         description:
-          '4 or 8 slots. For 4 slots, pick row vs 2×2 layout below. 8 slots: always four columns × two rows, square images.',
+          '3, 4, or 8 slots. 3 slots: full-width editorial row. For 4 slots, pick row vs 2×2 layout below. 8 slots: four columns × two rows, square images.',
       },
     },
     {
@@ -39,7 +39,7 @@ export const ArticleGridBlock: Block = {
         { label: '2×2 grid — square images', value: 'two-by-two' },
       ],
       admin: {
-        description: 'Applies only when slot count is 4.',
+        description: 'Applies only when slot count is 4; 3 and 8 use fixed layouts.',
       },
     },
     {

@@ -21,7 +21,97 @@ function getAuthorLabel(article: FeaturedArticleTeaser): string {
 }
 
 function getArticleKey(article: FeaturedArticleTeaser, index: number): string {
-  return [article.title, article.imageUrlSquare ?? article.imageUrl ?? index].join(':')
+  return [
+    article.title,
+    article.imageUrlSquare ?? article.imageUrl ?? index,
+  ].join(':')
+}
+
+function ThreeArticleCard({
+  article,
+  index,
+}: {
+  article: FeaturedArticleTeaser
+  index: number
+}): JSX.Element {
+  const imageUrl = article.imageUrl ?? article.imageUrlSquare ?? null
+  const articlePath = article.articlePath ?? null
+  const imageRef = useRef<HTMLImageElement | null>(null)
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
+    imageUrl ? 'loading' : 'failed',
+  )
+
+  useEffect(() => {
+    setImageStatus(imageUrl ? 'loading' : 'failed')
+    const image = imageRef.current
+    if (!imageUrl || !image) return
+    if (image.complete && image.naturalWidth > 0) {
+      setImageStatus('loaded')
+    }
+  }, [imageUrl])
+
+  const isImageLoaded = !imageUrl || imageStatus === 'loaded'
+
+  return (
+    <article
+      className="city-article-card group flex min-w-0 flex-col"
+      data-image-loaded={isImageLoaded ? 'true' : 'false'}
+    >
+      <div className="city-article-image-shell relative aspect-[1.92/1] overflow-hidden bg-[#d7dcde]">
+        {imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            ref={imageRef}
+            src={imageUrl}
+            alt=""
+            className={`relative z-10 h-full w-full object-cover transition-[opacity,transform] duration-300 ease-out motion-reduce:transition-none group-hover:scale-[1.015] ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            decoding="async"
+            fetchPriority={index === 0 ? 'high' : 'auto'}
+            loading={index === 0 ? 'eager' : 'lazy'}
+            onError={() => setImageStatus('failed')}
+            onLoad={() => setImageStatus('loaded')}
+          />
+        ) : null}
+        <NavigableImageTarget
+          href={articlePath}
+          label={`Read ${article.title}`}
+        />
+      </div>
+
+      <div className="flex min-h-[13.5rem] flex-1 flex-col px-4 pb-7 pt-5 1024:px-5 1024:pb-8">
+        <p className="font-[family-name:var(--font-dm-sans)] text-[0.61rem] font-semibold uppercase leading-none tracking-[0.16em] text-accent">
+          {getArticleTypeLabel(article)}
+        </p>
+        <h3 className="mt-3 font-editorial text-[1rem] font-medium uppercase leading-[1.2] tracking-[0.035em] text-foreground 1024:text-[1.08rem]">
+          {articlePath ? (
+            <Link href={articlePath}>{article.title}</Link>
+          ) : (
+            article.title
+          )}
+        </h3>
+        {article.excerpt ? (
+          <p
+            data-article-dek
+            className="mt-4 overflow-hidden font-[family-name:var(--font-dm-sans)] text-[0.78rem] leading-[1.65] text-foreground/58 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] 1024:text-[0.82rem]"
+          >
+            {articlePath ? (
+              <Link href={articlePath}>{article.excerpt}</Link>
+            ) : (
+              article.excerpt
+            )}
+          </p>
+        ) : null}
+        {articlePath ? (
+          <Link
+            href={articlePath}
+            className="mt-auto w-fit pt-6 font-[family-name:var(--font-dm-sans)] text-[0.61rem] font-semibold uppercase tracking-[0.2em] text-foreground underline decoration-foreground/30 underline-offset-4 transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+          >
+            Read more
+          </Link>
+        ) : null}
+      </div>
+    </article>
+  )
 }
 
 type GridArticleCardProps = {
@@ -39,9 +129,9 @@ function GridArticleCard({
     ? (article.imageUrlSquare ?? article.imageUrl ?? null)
     : (article.imageUrl ?? article.imageUrlSquare ?? null)
   const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
-    imageUrl ? 'loading' : 'failed',
-  )
+  const [imageStatus, setImageStatus] = useState<
+    'loading' | 'loaded' | 'failed'
+  >(imageUrl ? 'loading' : 'failed')
 
   // The image is server-rendered at opacity-0 and faded in via onLoad. If it
   // finishes loading (e.g. from cache) before hydration attaches the handler,
@@ -81,7 +171,10 @@ function GridArticleCard({
             onLoad={() => setImageStatus('loaded')}
           />
         ) : null}
-        <NavigableImageTarget href={articlePath} label={`Read ${article.title}`} />
+        <NavigableImageTarget
+          href={articlePath}
+          label={`Read ${article.title}`}
+        />
       </div>
 
       <div className="relative flex flex-col flex-1">
@@ -91,12 +184,23 @@ function GridArticleCard({
           </p>
 
           <h3 className="mt-2 font-editorial text-[1.35rem] font-semibold leading-[1.1] text-[#1a1a1a]">
-            {articlePath ? <Link href={articlePath}>{article.title}</Link> : article.title}
+            {articlePath ? (
+              <Link href={articlePath}>{article.title}</Link>
+            ) : (
+              article.title
+            )}
           </h3>
 
           {excerpt ? (
-            <p data-article-dek className="mt-2 overflow-hidden font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
-              {articlePath ? <Link href={articlePath}>{excerpt}</Link> : excerpt}
+            <p
+              data-article-dek
+              className="mt-2 overflow-hidden font-editorial text-[0.88rem] font-normal leading-[1.5] text-[#3f3a35] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]"
+            >
+              {articlePath ? (
+                <Link href={articlePath}>{excerpt}</Link>
+              ) : (
+                excerpt
+              )}
             </p>
           ) : null}
 
@@ -145,10 +249,30 @@ export function ArticleGridPreview({
 
   if (items.length === 0) return null
 
+  if (block.totalSlots === 3) {
+    return (
+      <BlockSection
+        className="bg-background py-10 768:py-14 1024:py-16"
+        aria-label="Article grid"
+      >
+        <div className="grid grid-cols-1 gap-y-10 768:grid-cols-3 768:gap-x-2 768:gap-y-0">
+          {items.map((article, index) => (
+            <ThreeArticleCard
+              key={getArticleKey(article, index)}
+              article={article}
+              index={index}
+            />
+          ))}
+        </div>
+      </BlockSection>
+    )
+  }
+
   // 4 slots render either a wide four-across strip or a 2×2 square grid
   // (server sends articleGridFourLayout only for 4-slot blocks); 8 slots
   // always render four across, wrapping onto a second row.
-  const isTwoByTwo = block.totalSlots === 4 && block.articleGridFourLayout === 'two-by-two'
+  const isTwoByTwo =
+    block.totalSlots === 4 && block.articleGridFourLayout === 'two-by-two'
   const usesSquareCards = block.totalSlots === 8 || isTwoByTwo
   const gridClass = isTwoByTwo
     ? 'grid grid-cols-1 768:grid-cols-2 gap-x-3 gap-y-8'

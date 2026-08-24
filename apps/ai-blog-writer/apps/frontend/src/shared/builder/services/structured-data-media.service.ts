@@ -11,6 +11,23 @@ type SelectableMediaItem = {
   selectedInstagramPost: number | null
 }
 
+const STRUCTURED_MEDIA_BASE_URL = (
+  import.meta.env.VITE_SCHEMA_MEDIA_BASE_URL || 'https://cms.questurian.com'
+).replace(/\/+$/, '')
+
+function resolvePublicStructuredMediaUrl(value: string): string {
+  try {
+    const parsed = new URL(value)
+    if (parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') {
+      return value
+    }
+
+    return `${STRUCTURED_MEDIA_BASE_URL}${parsed.pathname}${parsed.search}${parsed.hash}`
+  } catch {
+    return value
+  }
+}
+
 /**
  * The operator's chosen photo, falling back to any resolvable related photo so
  * structured data still carries an image when nothing was picked.
@@ -23,7 +40,7 @@ export function resolveSelectedImageUrl(
   getRelatedPhotoObjects(relatedItem).forEach((photo) => {
     const url = resolveImageUrl(photo)
     if (!url) return
-    photoById.set(photo.id, url)
+    photoById.set(photo.id, resolvePublicStructuredMediaUrl(url))
   })
 
   for (const photoId of selectable.selectedPhotos) {

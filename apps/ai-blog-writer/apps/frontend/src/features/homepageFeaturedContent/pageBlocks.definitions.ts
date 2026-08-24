@@ -103,13 +103,13 @@ const PAGE_BLOCK_DEFINITIONS = {
   'article-grid': {
     label: 'Article Grid',
     description:
-      'Four wide-image cards across, or eight square cards in two rows',
+      'Three editorial cards, four wide-image cards, or eight square cards',
     frontendReadySlotCounts: 'all',
-    quickSlotCounts: [4, 8],
+    quickSlotCounts: [3, 4, 8],
     defaultSlotCount: 4,
-    minSlotCount: 4,
+    minSlotCount: 3,
     maxSlotCount: 8,
-    validSlotCounts: [4, 8],
+    validSlotCounts: [3, 4, 8],
     order: 3,
     articlePayload: true,
     convertTarget: true
@@ -269,7 +269,7 @@ export const HOMEPAGE_PAGE_BLOCK_CONFIG = Object.fromEntries(
   ])
 ) as Record<CuratedHomepageBlockType, CuratedHomepageBlockConfig>
 
-/** Validates slot count when adding a block (article-grid allows only 4 or 8). */
+/** Validates slot count when adding a block (article-grid uses sparse counts). */
 export function isValidHomepageBlockSlotCount(
   blockType: CuratedHomepageBlockType,
   slotCount: number

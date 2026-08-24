@@ -83,6 +83,37 @@ function buildRelatedItems(): RelatedItemOption[] {
 }
 
 describe('singleTypeListicles structured data template', () => {
+  it('uses the public CMS origin for locally-served selected photos', () => {
+    const draft = buildDraft()
+    draft.items[0].selectedPhotos = [501]
+
+    const relatedItems: RelatedItemOption[] = [{
+      ...buildRelatedItems()[0],
+      gallery: [{
+        image: {
+          id: 501,
+          variants: {
+            thumbnail: {
+              id: 601,
+              filename: 'blu-thumbnail.webp',
+              url: 'http://localhost:4000/api/media-assets/file/blu-thumbnail.webp',
+            },
+          },
+        },
+      }],
+    }]
+
+    const template = buildSingleTypeListicleStructuredDataTemplate({ draft, relatedItems })
+    const graph = template['@graph'] as Array<Record<string, unknown>>
+    const itemList = graph.find((node) => node['@type'] === 'ItemList')
+    const listItem = (itemList?.itemListElement as Array<Record<string, unknown>>)[0]
+    const entity = listItem.item as Record<string, unknown>
+
+    expect(entity.image).toBe(
+      'https://cms.questurian.com/api/media-assets/file/blu-thumbnail.webp',
+    )
+  })
+
   it('builds valid published structured data with canonical metadata', () => {
     const draft = buildDraft()
     draft.seoSection.openGraph.url = 'https://example.com/best-gelato-lima'

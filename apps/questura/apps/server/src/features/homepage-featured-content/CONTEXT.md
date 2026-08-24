@@ -71,7 +71,7 @@ The discriminant. The authoritative server-side list is `curatedBlockRegistry` i
 
 ### Slot / `slotCount`
 
-How many items a block holds. Each type declares `min`/`max` (and sometimes a fixed count) via `constants.ts` on the server and `minSlotCount`/`maxSlotCount`/`quickSlotCounts` in `pageBlocks.ts`. Some types reject specific counts (e.g. `article-grid` only 4 or 8; `featured-articles` has no 6).
+How many items a block holds. Each type declares `min`/`max` (and sometimes a fixed count) via `constants.ts` on the server and `minSlotCount`/`maxSlotCount`/`quickSlotCounts` in `pageBlocks.ts`. Some types reject specific counts (e.g. `article-grid` only 3, 4, or 8; `featured-articles` has no 6).
 
 ### Item / ref
 
