@@ -8,6 +8,7 @@ import {
   type Prompt2BlogCommissionDraft,
   type Prompt2BlogDirectionOptionId,
   type Prompt2BlogDirectionResponse,
+  type Prompt2BlogEvidencePackage,
   type Prompt2BlogGuidelinePreviewResponse,
   type Prompt2BlogInputOptionsResponse,
 } from '../../api'
@@ -33,6 +34,8 @@ import {
   applyValidatedDirectionResponse,
   approveCommission as storeApprovedCommission,
   clearDirectionWorkflow as resetDirectionWorkflow,
+  clearEvidencePackage,
+  storeEvidencePackage,
   editCommissionDraft,
   selectDirectionOption as selectCommissionDirection,
   startEditorialWorkflow,
@@ -232,6 +235,14 @@ export function usePrompt2BlogComposer() {
     )
   }, [editorialOptions, state.editorial.commissionDraft])
 
+  const storeEvidence = useCallback((evidencePackage: Prompt2BlogEvidencePackage) => {
+    setState(prev => storeEvidencePackage(prev, evidencePackage))
+  }, [])
+
+  const clearEvidence = useCallback(() => {
+    setState(clearEvidencePackage)
+  }, [])
+
   const clearDirectionWorkflow = useCallback(() => {
     setState(resetDirectionWorkflow)
   }, [])
@@ -346,6 +357,8 @@ export function usePrompt2BlogComposer() {
     selectDirectionOption,
     updateCommissionDraft,
     approveCommissionChanges,
+    storeEvidence,
+    clearEvidence,
     clearDirectionWorkflow,
     addBlob,
     removeBlob,
