@@ -5,7 +5,10 @@ import {
   type Prompt2BlogV3Request,
 } from '../../api'
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
-import { PROMPT2BLOG_PIPELINE_STAGES } from '../../types/pipeline.types'
+import {
+  PROMPT2BLOG_PIPELINE_STAGES,
+  PROMPT2BLOG_V3_PIPELINE_STAGES,
+} from '../../types/pipeline.types'
 import type {
   PipelineLogEntry,
   PipelineLogLevel,
@@ -81,14 +84,6 @@ export function usePrompt2BlogPipelineRun({
     reset: resetStartPipeline,
   } = usePrompt2BlogMutation({ v3Payload, v3BlockedReason })
 
-  // Which pipeline's stage list to show. A finished run names its own version;
-  // a run being started is named by the payload that will start it.
-  const pipelineVersion: PipelineVersion = pipelineResult
-    ? pipelineResult.version
-    : v3Payload
-      ? 'v3'
-      : 'v2'
-
   const {
     pipelineStatus,
     pipelineDebugData,
@@ -109,6 +104,24 @@ export function usePrompt2BlogPipelineRun({
     appendPipelineLog,
     isStartingPipeline,
   })
+
+  // Which pipeline's stage list to show. A finished run names its own version.
+  // Nothing else can name one: this app can only start v3 runs, so the list an
+  // operator reads before and during a run is the v3 list. Defaulting to v2
+  // meant every pre-run page described the retired pipeline's stages.
+  //
+  // The exception is a run restored from storage that predates the cutover. It
+  // reports v2 stage names, and reading those against the v3 order would place
+  // every step at -1 and stall the whole list, so it keeps the v2 list.
+  const pipelineVersion: PipelineVersion = useMemo(() => {
+    if (pipelineResult) return pipelineResult.version
+    const stage = pipelineStatus && pipelineStatus.stage !== 'unknown' ? pipelineStatus.stage : null
+    const isLegacyStage =
+      stage !== null
+      && !(PROMPT2BLOG_V3_PIPELINE_STAGES as readonly string[]).includes(stage)
+      && (PROMPT2BLOG_PIPELINE_STAGES as readonly string[]).includes(stage)
+    return isLegacyStage ? 'v2' : 'v3'
+  }, [pipelineResult, pipelineStatus])
 
   const canOpenCleanupModal = useMemo(() => {
     // Cleanup is a v2-only stage; a v3 stage name simply misses the order and
@@ -202,6 +215,9 @@ export function usePrompt2BlogPipelineRun({
   ])
 
   const isLoading = isStartingPipeline || sourceStep === 'pipeline_running'
+  // A `needs_research` answer returns sourceStep to 'edit', which is correct:
+  // nothing was queued, so the stage list goes back to reporting nothing.
+  const hasStartedRun = sourceStep !== 'edit' || isStartingPipeline
 
   return {
     sourceStep,
@@ -214,6 +230,7 @@ export function usePrompt2BlogPipelineRun({
     showPipelineDebug,
     togglePipelineDebug: () => setShowPipelineDebug(prev => !prev),
     isLoading,
+    hasStartedRun,
     loadingLabel,
     error,
     setError,

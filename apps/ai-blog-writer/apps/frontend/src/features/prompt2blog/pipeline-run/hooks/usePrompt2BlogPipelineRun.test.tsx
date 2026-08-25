@@ -75,6 +75,25 @@ describe('usePrompt2BlogPipelineRun submission routing', () => {
     )
     expect(startPrompt2BlogV3RunMock).not.toHaveBeenCalled()
   })
+
+  it('describes the v3 pipeline on an untouched page, and reports no progress', async () => {
+    // Nothing has been filled in, so there is no payload yet. The stage list a
+    // first-time operator reads must still be the pipeline that would actually
+    // run, and it must not claim a step is already running.
+    const { result } = renderRun({ v3Payload: null })
+
+    expect(result.current.pipelineVersion).toBe('v3')
+    expect(result.current.hasStartedRun).toBe(false)
+  })
+
+  it('reports a started run once one is queued', async () => {
+    startPrompt2BlogV3RunMock.mockResolvedValue({ status: 'queued', run_id: 'v3-run' })
+    const { result } = renderRun({ v3Payload })
+
+    act(() => result.current.run())
+
+    await waitFor(() => expect(result.current.hasStartedRun).toBe(true))
+  })
 })
 
 describe('needs_research', () => {
