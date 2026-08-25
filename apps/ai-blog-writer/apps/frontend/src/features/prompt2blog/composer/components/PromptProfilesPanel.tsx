@@ -22,8 +22,8 @@ interface PromptProfilesPanelProps {
 
 export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
   return <Panel
-    title="Prompt Profiles"
-    description="These dropdowns are loaded from markdown option catalogs."
+    title="Writing Profiles"
+    description="Tone, length, brand voice, and creativity for the approved commission."
     onClear={props.onClear}
   >
       <div className="p2b-field-row p2b-field-row--3">

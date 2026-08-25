@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { CleanupDetailsModal } from '../cleanup-details/CleanupDetailsModal'
 import { useCleanupDetailsModal } from '../cleanup-details/hooks/useCleanupDetailsModal'
 import { EasySetupPanel } from '../composer/components/EasySetupPanel'
-import { MiddleSectionsFold } from '../composer/components/MiddleSectionsFold'
+import { FoldedSection } from '../composer/components/FoldedSection'
 import { ModelRoutingPanel } from '../composer/components/ModelRoutingPanel'
 import { StepRail } from '../composer/components/StepRail'
 import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
@@ -85,11 +85,6 @@ export default function Prompt2BlogPage() {
       <main className="p2b-form-container">
         <StepRail steps={steps} />
         <form className="p2b-form" onSubmit={event => event.preventDefault()}>
-          <ModelRoutingPanel
-            modelStackId={state.modelStackId}
-            onChange={composer.applyModelStack}
-            onClear={composer.clearModelRouting}
-          />
           <EasySetupPanel
             activeWorkflow={state.activeWorkflow}
             editorial={state.editorial}
@@ -110,17 +105,15 @@ export default function Prompt2BlogPage() {
             onStoreEvidence={composer.storeEvidence}
             onTitleChange={value => composer.updateField('easySetupTitle', value)}
           />
-          <MiddleSectionsFold>
-            <PromptProfilesPanel
-              brandVoiceId={state.brandVoiceId}
-              creativityLevel={state.creativityLevel}
-              inputOptions={composer.inputOptions}
-              lengthId={state.lengthId}
-              toneId={state.toneId}
-              onChange={composer.updateField}
-              onClear={composer.clearPromptProfiles}
-            />
-          </MiddleSectionsFold>
+          <PromptProfilesPanel
+            brandVoiceId={state.brandVoiceId}
+            creativityLevel={state.creativityLevel}
+            inputOptions={composer.inputOptions}
+            lengthId={state.lengthId}
+            toneId={state.toneId}
+            onChange={composer.updateField}
+            onClear={composer.clearPromptProfiles}
+          />
           <PipelinePanel
             run={pipeline}
             onBackToResearch={handleBackToResearch}
@@ -128,6 +121,17 @@ export default function Prompt2BlogPage() {
             onReset={handleResetRun}
             submissionBlockedReason={composer.submissionBlockedReason}
           />
+
+          <FoldedSection
+            title="Advanced"
+            description="Which models run the pipeline, and what they cost."
+          >
+            <ModelRoutingPanel
+              modelStackId={state.modelStackId}
+              onChange={composer.applyModelStack}
+              onClear={composer.clearModelRouting}
+            />
+          </FoldedSection>
 
           <div className="p2b-submit-row">
             <button type="button" className="p2b-copy-json-btn" onClick={handleCopyJson}>
