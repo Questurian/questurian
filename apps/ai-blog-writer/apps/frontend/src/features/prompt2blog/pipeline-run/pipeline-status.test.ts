@@ -16,9 +16,28 @@ function createStatus(overrides: Partial<Prompt2BlogStatusResponse> = {}): Promp
 }
 
 describe('getPipelineStepStatus', () => {
-  it('marks queued as running before status exists', () => {
+  it('marks queued as running once a run has started but has no status yet', () => {
     expect(getPipelineStepStatus('queued', null)).toBe('running')
     expect(getPipelineStepStatus('stage_input_validate', null)).toBe('pending')
+  })
+
+  it('reports nothing at all before a run exists', () => {
+    // An untouched page that shows `queued` as running tells a first-time
+    // operator something is already happening. Nothing is.
+    expect(
+      getPipelineStepStatus('queued', null, PROMPT2BLOG_STAGE_ORDERS.v3, false)
+    ).toBe('pending')
+    expect(
+      getPipelineStepStatus('stage_v3_compose', null, PROMPT2BLOG_STAGE_ORDERS.v3, false)
+    ).toBe('pending')
+  })
+
+  it('still reports a real run when one has started', () => {
+    const status = createStatus({ state: 'running', stage: 'stage_compose' })
+
+    expect(
+      getPipelineStepStatus('stage_compose', status, PROMPT2BLOG_STAGE_ORDERS.v2, true)
+    ).toBe('running')
   })
 
   it('marks previous, current, and future steps during an in-progress run', () => {

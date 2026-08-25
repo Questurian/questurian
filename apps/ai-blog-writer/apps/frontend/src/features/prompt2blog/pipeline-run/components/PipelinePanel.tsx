@@ -29,6 +29,7 @@ export function PipelinePanel({
     canOpenCleanupModal,
     dismissNeedsResearch,
     error,
+    hasStartedRun,
     isLoading,
     loadingLabel,
     needsResearch,
@@ -78,7 +79,7 @@ export function PipelinePanel({
                 step === CLEANUP_STAGE_KEY && canOpenCleanupModal ? onOpenCleanupModal : undefined
               }
               label={PIPELINE_STAGE_LABELS[step]}
-              status={getPipelineStepStatus(step, pipelineStatus, stageOrder)}
+              status={getPipelineStepStatus(step, pipelineStatus, stageOrder, hasStartedRun)}
             />
           ))}
           {pipelineStatus?.stage === 'unknown' && (

@@ -47,7 +47,12 @@ export function getPipelineStepStatus(
   step: KnownPrompt2BlogPipelineStage,
   status: Prompt2BlogStatusResponse | null,
   stageOrder: readonly string[] = PROMPT2BLOG_PIPELINE_STAGES,
+  hasStartedRun = true,
 ): PipelineStepStatus {
+  // Before a run exists there is no progress to report. Showing `queued` as
+  // running on an untouched page tells a first-time operator that something is
+  // already happening, and the only honest answer is that nothing is.
+  if (!hasStartedRun) return 'pending'
   if (!status) return step === 'queued' ? 'running' : 'pending'
   return getStepStatus({
     step,
