@@ -1,0 +1,313 @@
+"""V3 grounding, audit, repair, and title: evidence-bound and commission-bound."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
+from app.features.prompt2blog.dependencies import PipelineDependencies
+from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
+from app.features.prompt2blog.quality_v3 import (
+    v3_commission_summary,
+    v3_constraint_brief,
+)
+from app.features.prompt2blog.stages.v3.audit_repair import (
+    run_v3_quality_audit_stage,
+    run_v3_quality_settle_stage,
+    run_v3_repair_stage,
+)
+from app.features.prompt2blog.stages.v3.groundedness import run_v3_groundedness_stage
+from app.features.prompt2blog.stages.v3.title import run_v3_title_stage
+
+FIXTURE_PATH = (
+    Path(__file__).parents[3]
+    / "data"
+    / "fixtures"
+    / "prompt2blog"
+    / "lima-scope-drift-v3.json"
+)
+
+
+def _fixture() -> dict:
+    return json.loads(FIXTURE_PATH.read_text())
+
+
+def _supported_evidence() -> dict:
+    evidence = json.loads(json.dumps(_fixture()["evidence_package"]))
+    evidence["claims"].extend(
+        [
+            {
+                "claim_id": "c2",
+                "text": "Current reporting documents Lima's practical tradeoffs.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["r2"],
+                "as_of": "2026-07-01",
+                "confidence": "medium",
+            },
+            {
+                "claim_id": "c3",
+                "text": "Comparable earlier reporting shows how those costs moved.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["r3"],
+                "as_of": "2026-07-01",
+                "confidence": "medium",
+            },
+        ]
+    )
+    evidence["requirements"] = [
+        {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"], "gap": ""},
+        {"requirement_id": "r2", "status": "supported", "claim_ids": ["c2"], "gap": ""},
+        {"requirement_id": "r3", "status": "supported", "claim_ids": ["c3"], "gap": ""},
+    ]
+    evidence["gaps"] = []
+    return evidence
+
+
+def _runtime():
+    return prepare_v3_runtime_request(
+        Prompt2BlogV3Request.model_validate(
+            {
+                "schema_version": 3,
+                "commission": _fixture()["commission"],
+                "evidence_package": _supported_evidence(),
+                "profiles": {
+                    "tone_id": "editorial",
+                    "length_id": "medium",
+                    "creativity_level": "medium",
+                },
+            }
+        )
+    )
+
+
+def _rewrite(title: str = "What Lima costs now") -> dict[str, Any]:
+    return {
+        "improved_title": title,
+        "improved_content": "## What Lima costs now\n\nBody about Lima.",
+        "improvements_applied": [],
+        "remaining_gaps": [],
+    }
+
+
+def _state(**overrides) -> dict[str, Any]:
+    runtime = _runtime()
+    state: dict[str, Any] = {
+        "run_id": "v3-run",
+        "commission": runtime.commission,
+        "evidence": runtime.evidence,
+        "instructions": runtime.instructions,
+        "instruction_text": runtime.instructions["instruction_text"],
+        "headline_instructions": runtime.instructions["headline_instructions"],
+        "option_context": runtime.option_context,
+        "writing_model": "test-writer",
+        "audit_model": "test-auditor",
+        "model_name": "test-model",
+        "compose_temperature": 0.4,
+        "include_debug": True,
+        "trace": [],
+        "rewrite": _rewrite(),
+    }
+    state.update(overrides)
+    return state
+
+
+@dataclass
+class FakeRecorder:
+    started: list[str] = field(default_factory=list)
+    recorded: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+
+    def start_stage(self, _run_id: str, stage: str) -> None:
+        self.started.append(stage)
+
+    def record_stage(self, _run_id: str, stage: str, payload: dict[str, Any]) -> None:
+        self.recorded.append((stage, payload))
+
+
+@dataclass
+class FakeLLM:
+    json_response: dict[str, Any] = field(default_factory=dict)
+    text_response: str = ""
+    prompts: list[str] = field(default_factory=list)
+
+    def invoke_json(self, *, prompt: str, **_kwargs) -> tuple[dict[str, Any], str]:
+        self.prompts.append(prompt)
+        return self.json_response, json.dumps(self.json_response)
+
+    def invoke_text(self, *, prompt: str, **_kwargs) -> str:
+        self.prompts.append(prompt)
+        return self.text_response
+
+    def enforce_anti_ai(self, text: str, **_kwargs) -> str:
+        return text
+
+
+def _dependencies(llm: FakeLLM) -> tuple[PipelineDependencies, FakeRecorder]:
+    recorder = FakeRecorder()
+    return PipelineDependencies(llm=llm, recorder=recorder), recorder
+
+
+def test_grounding_compares_the_draft_with_the_exact_evidence_records():
+    llm = FakeLLM(
+        json_response={
+            "grounded": False,
+            "assessment": "One figure is not in the records.",
+            "unsupported_claims": [
+                {
+                    "claim": "Rent averages 900 dollars.",
+                    "reason": "No record states a rent figure.",
+                    "severity": "high",
+                }
+            ],
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_groundedness_stage(_state(), dependencies)
+
+    prompt = llm.prompts[0]
+    assert "EVIDENCE RECORDS" in prompt
+    assert "Instituto Nacional de Estadística e Informática" in prompt
+    assert "retrieved 2026-08-25" in prompt
+    assert "CLEANED SOURCE MATERIAL" not in prompt
+    assert updates["groundedness"]["grounded"] is False
+    assert recorder.recorded[0][0] == "stage_v3_groundedness"
+
+
+def test_grounding_failure_degrades_to_unchecked_instead_of_failing_the_run():
+    class ExplodingLLM(FakeLLM):
+        def invoke_json(self, *, prompt: str, **_kwargs):
+            self.prompts.append(prompt)
+            raise RuntimeError("provider down")
+
+    dependencies, _recorder = _dependencies(ExplodingLLM())
+
+    updates = run_v3_groundedness_stage(_state(), dependencies)
+
+    assert updates["groundedness"]["checked"] is False
+
+
+def test_the_audit_judges_commission_fidelity_and_keeps_measured_checks():
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 8,
+            "constraint_checks": {"audience_match": True, "tone_match": True},
+            "required_revisions": ["Answer the core reader question directly."],
+            "quality_summary": "Close, needs one fix.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+    state = _state(
+        groundedness={
+            "checked": True,
+            "grounded": True,
+            "unsupported_claims": [],
+            "high_severity_count": 0,
+        }
+    )
+
+    updates = run_v3_quality_audit_stage(state, dependencies)
+
+    prompt = llm.prompts[0]
+    assert "APPROVED COMMISSION" in prompt
+    assert "a context-only reference organizes a section" in prompt
+    assert "ARTICLE TYPE:" not in prompt
+    assert updates["quality_checks"]["claims_grounded"] is True
+    assert updates["quality_checks"]["audience_match"] is True
+    assert updates["best_rewrite"] == state["rewrite"]
+
+
+def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
+    llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "improved_content": "## What Lima costs now\n\nRepaired body.",
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+    state = _state(
+        quality={"required_revisions": ["Tighten the opening."]},
+        groundedness={
+            "checked": True,
+            "grounded": False,
+            "high_severity_count": 1,
+            "unsupported_claims": [
+                {
+                    "claim": "Rent averages 900 dollars.",
+                    "reason": "No record states a rent figure.",
+                    "severity": "high",
+                }
+            ],
+        },
+    )
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    prompt = llm.prompts[0]
+    assert "Repair prose and structure only" in prompt
+    assert "you may not change the commission" in " ".join(prompt.split())
+    assert "Never promote a context-only reference" in prompt
+    assert "Remove or explicitly mark as unconfirmed: Rent averages 900 dollars." in (
+        recorder.recorded[0][1]["required_revisions"][1]
+    )
+    assert updates["repair_attempts"] == 1
+
+
+def test_settling_restores_the_best_draft_and_its_own_grounding_verdict():
+    best_rewrite = _rewrite("Best Lima title")
+    best_quality = {
+        "overall_score": 9,
+        "groundedness": {"checked": True, "grounded": True},
+    }
+    dependencies, _recorder = _dependencies(FakeLLM())
+    state = _state(
+        rewrite=_rewrite("Worse Lima title"),
+        quality={"overall_score": 5},
+        quality_checks={},
+        groundedness={"checked": True, "grounded": False},
+        best_rewrite=best_rewrite,
+        best_quality=best_quality,
+        best_quality_checks={"claims_grounded": True},
+    )
+
+    updates = run_v3_quality_settle_stage(state, dependencies)
+
+    assert updates["rewrite"] == best_rewrite
+    assert updates["groundedness"]["grounded"] is True
+
+
+def test_the_title_stage_sees_the_original_title_and_the_headline_standard():
+    llm = FakeLLM(text_response="Is Lima still worth the move?")
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_title_stage(_state(), dependencies)
+
+    prompt = llm.prompts[0]
+    assert _fixture()["commission"]["original_title"] in prompt
+    assert "HEADLINE STANDARD" in prompt
+    assert "Primary subject: Lima" in prompt
+    assert "Never headline a context-only reference" in prompt
+    assert updates["final_title"] == "Is Lima still worth the move?"
+
+
+def test_the_title_falls_back_to_the_commission_rather_than_to_nothing():
+    dependencies, _recorder = _dependencies(FakeLLM(text_response="  "))
+
+    updates = run_v3_title_stage(
+        _state(rewrite={**_rewrite(), "improved_title": ""}), dependencies
+    )
+
+    assert updates["final_title"] == _fixture()["commission"]["original_title"]
+
+
+def test_the_v3_constraint_brief_invents_no_seo_requirement():
+    runtime = _runtime()
+
+    brief = v3_constraint_brief(runtime.commission, runtime.option_context)
+
+    assert brief["seo"] == {"primary_keyword": "", "secondary_keywords": []}
+    assert brief["must_include"] == []
+    assert brief["formatting"]["target_word_count"] >= 0
+    assert "Primary subject: Lima" in v3_commission_summary(runtime.commission)

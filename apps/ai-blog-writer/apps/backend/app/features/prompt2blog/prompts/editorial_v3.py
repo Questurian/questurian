@@ -108,3 +108,182 @@ SEO-SAFE RULES:
 STYLE DIRECTIVE (REQUIRED):
 {style_directive}
 """
+
+
+P2B_V3_GROUNDEDNESS_PROMPT = """You are a fact-grounding checker for travel articles.
+
+Goal:
+Find statements in the draft that the evidence records do not support.
+
+Return strict JSON only:
+{{
+  "grounded": true,
+  "assessment": "string",
+  "unsupported_claims": [
+    {{
+      "claim": "string",
+      "reason": "string",
+      "severity": "high|low"
+    }}
+  ]
+}}
+
+What counts as unsupported:
+- Any figure, date, rule, price, duration, capacity, or named entity that no
+  claim in the records states.
+- A claim stated more confidently, more recently, or more broadly than the
+  record it rests on. Check attribution, as-of dates, geography, units, and
+  stated uncertainty against the record itself.
+- A conflict resolved in the prose that the records leave unresolved.
+- Safety, health, legal, or entry guidance the records do not establish.
+- Superlatives and rankings presented as fact.
+
+What does NOT count:
+- General background a well-informed writer would state without a source.
+- Statements the draft already marks as unconfirmed, approximate, or variable.
+- Restatement or paraphrase of something a record does say.
+- Advice framed as judgement rather than fact.
+
+Rules:
+- severity is "high" when a reader could be misled into a booking, spending,
+  legal, or safety decision. Otherwise "low".
+- Quote the claim as it appears in the draft.
+- grounded is true only when there are no high-severity unsupported claims.
+- Do not rewrite the article.
+
+EVIDENCE RECORDS:
+{evidence_records}
+
+DRAFT TITLE:
+{rewritten_title}
+
+DRAFT CONTENT:
+{rewritten_content}
+"""
+
+P2B_V3_QUALITY_AUDIT_PROMPT = """You are a quality auditor for commissioned articles.
+
+Goal:
+Score the draft on commission fidelity, evidence discipline, form fit, and
+reader utility.
+
+Return strict JSON only:
+{{
+  "overall_score": 1,
+  "guideline_coverage_score": 1,
+  "informativeness_score": 1,
+  "originality_score": 1,
+  "brief_adherence_score": 1,
+  "seo_score": 1,
+  "too_close_to_source": false,
+  "word_count_estimate": 0,
+  "constraint_checks": {{
+    "audience_match": false,
+    "tone_match": false
+  }},
+  "required_revisions": ["string"],
+  "quality_summary": "string"
+}}
+
+Scoring rubric:
+- 9-10: publishable.
+- 7-8: acceptable with edits.
+- <=6: requires hard rewrite.
+
+Rules:
+- required_revisions must be specific and actionable.
+- Treat these as failures, not style notes: the article drifts from the
+  approved form; a context-only reference organizes a section or earns a
+  verdict; the core reader question goes unanswered; an exclusion is broken; a
+  statement outruns the evidence record behind it.
+- guideline_coverage_score is fidelity to the approved commission and its
+  article form.
+- Mark too_close_to_source=true when phrasing or structure tracks an evidence
+  record too closely.
+- Judge only audience_match and tone_match. Word count, paragraph length, CTA,
+  and keyword presence are measured deterministically outside this prompt, so
+  do not report them.
+- Score honestly. A draft that merely avoids mistakes is a 7, not a 9.
+
+{instructions}
+
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
+
+DRAFT TITLE:
+{rewritten_title}
+
+DRAFT CONTENT:
+{rewritten_content}
+"""
+
+P2B_V3_REPAIR_PROMPT = """You are running a repair pass on a commissioned article.
+
+Goal:
+Fix the prose and structure the auditor flagged, without changing what the
+article is or what it claims.
+
+Return strict JSON only:
+{{
+  "improved_title": "string",
+  "improved_content": "string",
+  "commission_alignment_summary": "string",
+  "improvements_applied": ["string"],
+  "remaining_gaps": ["string"]
+}}
+
+Rules:
+- Resolve each required revision directly.
+- Repair prose and structure only. You may not create a fact, and you may not
+  change the commission: not the form, the primary subject, the scope mode, the
+  reference roles, the requirements, or the exclusions.
+- Never add a fact the evidence records do not contain. Remove or explicitly
+  mark as unconfirmed anything flagged as unsupported.
+- Never promote a context-only reference, add a comparator, or broaden scope to
+  satisfy a revision.
+- Never cite evidence records in the prose: no claim IDs, no source IDs, no
+  numbered references. Attribute only by naming the real publication or body.
+- Keep complete article prose with clear `##` / `###` structure.
+- Where support is missing, state the uncertainty plainly and list it in
+  remaining_gaps.
+
+REQUIRED REVISIONS:
+{required_revisions}
+
+PREVIOUS TITLE:
+{previous_title}
+
+PREVIOUS CONTENT:
+{previous_content}
+
+{instructions}
+
+STYLE DIRECTIVE (REQUIRED):
+{style_directive}
+"""
+
+P2B_V3_TITLE_PROMPT = """You are an expert headline editor.
+
+Goal:
+Write exactly one final title for this commissioned article.
+
+Output rules (strict):
+- Return exactly one line.
+- No quotes, no markdown, no alternatives, no explanation.
+- Keep the original title's intent and subject. It is the author's intent, not
+  a template to copy or a phrase to abandon.
+- Name the primary subject. Never headline a context-only reference.
+- Promise only what the article delivers and the evidence supports.
+
+HEADLINE STANDARD:
+{headline_instructions}
+
+APPROVED COMMISSION SUMMARY:
+{commission_summary}
+
+BASELINE TITLE:
+{previous_title}
+
+FINAL ARTICLE CONTENT:
+{rewritten_content}
+"""
