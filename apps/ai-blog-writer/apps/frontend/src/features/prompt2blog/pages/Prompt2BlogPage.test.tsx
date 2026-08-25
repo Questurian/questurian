@@ -432,6 +432,27 @@ describe('Prompt2BlogPage', () => {
     expect(directionBody).toHaveAttribute('hidden')
   })
 
+  it('teaches the same chatbot round trip in direction and research', async () => {
+    renderPage()
+
+    const directionStep = screen
+      .getByRole('heading', { name: /Step 2: Pick a direction/ })
+      .closest('section')
+    const researchStep = screen
+      .getByRole('heading', { name: /Step 4: Gather the facts/ })
+      .closest('section')
+
+    for (const step of [directionStep, researchStep]) {
+      const roundTrip = within(step!).getByRole('list', {
+        name: 'Chatbot round trip',
+        hidden: true,
+      })
+      expect(within(roundTrip).getByText('Copy prompt')).toBeInTheDocument()
+      expect(within(roundTrip).getByText('Paste into your chatbot')).toBeInTheDocument()
+      expect(within(roundTrip).getByText('Paste the answer here')).toBeInTheDocument()
+    }
+  })
+
   it('lets an operator look ahead into a step they have not reached', async () => {
     // Locking a step nobody has reached punishes curiosity for no safety gain:
     // the controls inside already refuse work that is not ready.

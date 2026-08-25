@@ -351,3 +351,59 @@
 .p2b-step-section-body[hidden] {
   display: none;
 }
+
+/* One repeated transfer slip teaches both chatbot round trips. Numbering and
+   arrows describe real movement out of the app and back, not decoration. */
+.p2b-round-trip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface, white);
+  list-style: none;
+}
+
+.p2b-round-trip li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.p2b-round-trip li + li {
+  border-left: 1px solid var(--border);
+}
+
+.p2b-round-trip li:not(:last-child)::after {
+  content: '→';
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: -0.7rem;
+  width: 1.4rem;
+  background: var(--surface, white);
+  color: var(--p2b-accent);
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.p2b-round-trip-number {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--p2b-accent);
+  border-radius: 50%;
+  color: var(--p2b-accent-hover);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: calc(1.5rem - 2px);
+  text-align: center;
+}
