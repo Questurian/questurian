@@ -206,6 +206,8 @@ class EvidenceRequirement(V3ContractModel):
         _require_unique(self.claim_ids, "requirement claim reference")
         if self.status == "supported" and not self.claim_ids:
             raise ValueError("supported requirements must reference at least one claim")
+        if self.status == "supported" and self.gap:
+            raise ValueError("supported requirements cannot describe a gap")
         if self.status in {"partial", "missing"} and not self.gap:
             raise ValueError("partial and missing requirements must describe the gap")
         if self.status == "missing" and self.claim_ids:
