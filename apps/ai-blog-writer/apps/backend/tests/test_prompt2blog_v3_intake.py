@@ -8,16 +8,16 @@ from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from pydantic import ValidationError
 
 import app.features.prompt2blog.routes as prompt2blog_routes
 from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
 from app.features.prompt2blog.intake_v3 import (
     prepare_v3_runtime_request,
+    v3_intake_result,
     v3_run_input_artifact,
 )
-from tests.prompt2blog_test_support import response_payload
 
 FIXTURE_PATH = (
     Path(__file__).parents[3]
@@ -90,13 +90,8 @@ def _request(**overrides) -> Prompt2BlogV3Request:
 
 
 def _intake(payload: dict) -> dict:
-    return response_payload(
-        asyncio.run(
-            prompt2blog_routes.prepare_pipeline_v3(
-                Prompt2BlogV3Request.model_validate(payload)
-            )
-        )
-    )
+    """Runs the gate-and-assemble step `/pipeline-v3` runs before queueing."""
+    return v3_intake_result(Prompt2BlogV3Request.model_validate(payload))
 
 
 def test_intake_returns_a_versioned_run_input_for_the_approved_commission():
@@ -105,7 +100,6 @@ def test_intake_returns_a_versioned_run_input_for_the_approved_commission():
     payload = _intake(_ready_payload())
     run_input = payload["run_input"]
 
-    assert payload["message"] == "Prompt2Blog v3 run input assembled"
     assert run_input["schema_version"] == 3
     assert run_input["instruction_schema_version"] == 3
     assert (
@@ -160,8 +154,23 @@ def test_intake_rejects_an_unknown_writing_profile_by_name():
     payload = _ready_payload()
     payload["profiles"]["tone_id"] = "not-a-tone"
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(RuntimeError, match="tone_id"):
         _intake(payload)
+
+
+def test_the_run_route_reports_an_unknown_writing_profile_as_a_bad_request():
+    """The route is where an unresolvable profile becomes a 400 rather than a 500."""
+    payload = _ready_payload()
+    payload["profiles"]["tone_id"] = "not-a-tone"
+
+    with pytest.raises(HTTPException) as excinfo:
+        asyncio.run(
+            prompt2blog_routes.start_pipeline_v3(
+                Prompt2BlogV3Request.model_validate(payload),
+                BackgroundTasks(),
+                None,
+            )
+        )
 
     assert excinfo.value.status_code == 400
     assert "tone_id" in str(excinfo.value.detail)

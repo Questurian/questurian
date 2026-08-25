@@ -49,13 +49,6 @@ async def start_pipeline_v2(
     return await _runs_api.start_pipeline_v2(request, background_tasks, staff_user)
 
 
-async def prepare_pipeline_v3(
-    request: Prompt2BlogV3Request,
-    staff_user=None,
-):
-    return await _runs_api.prepare_pipeline_v3(request, staff_user)
-
-
 async def start_pipeline_v3(
     request: Prompt2BlogV3Request,
     background_tasks,
@@ -108,7 +101,6 @@ __all__ = [
     "get_editorial_options",
     "get_article_type_guideline_preview",
     "start_pipeline_v2",
-    "prepare_pipeline_v3",
     "start_pipeline_v3",
     "start_full_run",
     "get_status",

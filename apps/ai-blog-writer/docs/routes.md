@@ -40,17 +40,38 @@ Comprehensive route list for this workspace.
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/prompt2blog/pipeline-v2` | Queue the structured Prompt2Blog run (full LangGraph path) |
-| POST | `/prompt2blog/run` | Queue the one-click Prompt2Blog run (same structured schema as `pipeline-v2`) |
-| GET | `/prompt2blog/input-options` | Load input dropdown catalogs (`article_types`, `tones`, `lengths`, `brand_voices`, defaults) |
-| GET | `/prompt2blog/article-types/{article_type_id}/guideline-preview` | Preview resolved guideline + title guideline markdown for selected article type |
+| POST | `/prompt2blog/pipeline-v3` | Queue a commission-driven run, or return `needs_research` |
+| GET | `/prompt2blog/editorial-options` | Load the v3 catalogs (forms, topic modules, audience tags, scope modes, reference roles) |
+| GET | `/prompt2blog/input-options` | Load writing-profile catalogs (`tones`, `lengths`, `brand_voices`, defaults; also still carries legacy `article_types`) |
 | GET | `/prompt2blog/status/{run_id}` | Get run status |
 | GET | `/prompt2blog/result/{run_id}` | Get run output (`markdown` + `artifact`) |
 | GET | `/prompt2blog/articles` | List completed Prompt2Blog articles |
 | POST | `/prompt2blog/articles/{run_id}/sync` | Mark article as synced to Payload |
 | GET | `/prompt2blog/articles/{run_id}/sync` | Get Payload sync status for article |
+| POST | `/prompt2blog/pipeline-v2` | Legacy fallback: queue the structured v2 run. No UI caller. |
+| POST | `/prompt2blog/run` | Legacy fallback: one-click v2 run (same schema as `pipeline-v2`). No UI caller. |
+| GET | `/prompt2blog/article-types/{article_type_id}/guideline-preview` | Legacy: resolved guideline + title guideline markdown for a shared 42-type id |
 
-Structured Prompt2Blog run input now uses:
+`POST /prompt2blog/pipeline-v3` takes an approved commission and its verified
+evidence package:
+- `commission` (required): fingerprint, original title, location, approved
+  direction, `form_id`, up to four `topic_module_ids`, audience, primary
+  subject, scope mode and reference roles, requirements, exclusions
+- `evidence_package` (required): sources, claims, per-requirement status,
+  conflicts, gaps — its fingerprint must match the commission's, and its
+  requirements must match the commission's exactly
+- `profiles` (required): `tone_id`, `length_id`, optional `brand_voice_id`,
+  `creativity_level`
+- `model_routing`, `include_debug` (optional)
+- `enable_editorial_augmentation` is refused with a 400. See ADR 0029.
+
+It answers with either `{"status": "queued", "run_id"}` or, on a 200,
+`{"status": "needs_research", findings, unresolved_requirements,
+unresolved_conflict_ids, missing_source_requirements,
+follow_up_research_prompt}`. `needs_research` queues nothing and spends no
+writer-model token; it is a result to show, not an error.
+
+Legacy v2 run input (unchanged, still accepted on the two fallback routes):
 - `article_type_id` (required), `source_material` (required array of raw text blocks)
 - `article_goal`, `target_reader`, `destination_context` (required)
 - `tone_id`, `length_id` (required; loaded from `/prompt2blog/input-options`)
