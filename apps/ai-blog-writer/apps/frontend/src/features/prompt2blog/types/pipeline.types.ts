@@ -46,14 +46,7 @@ export type Prompt2BlogInputOption = {
   target_word_count?: number
 }
 
-export type Prompt2BlogArticleTypeOption = {
-  id: number
-  name: string
-  definition: string
-}
-
 export type Prompt2BlogInputOptionsResponse = {
-  article_types: Prompt2BlogArticleTypeOption[]
   tones: Prompt2BlogInputOption[]
   lengths: Prompt2BlogInputOption[]
   brand_voices: Prompt2BlogInputOption[]
@@ -62,15 +55,6 @@ export type Prompt2BlogInputOptionsResponse = {
     length_id: string
     brand_voice_id: string
   }
-}
-
-export type Prompt2BlogGuidelinePreviewResponse = {
-  id: number
-  name: string
-  guideline: string
-  title_guideline: string
-  guideline_file?: string | null
-  title_guideline_file?: string | null
 }
 
 export type Prompt2BlogRunRequest = {

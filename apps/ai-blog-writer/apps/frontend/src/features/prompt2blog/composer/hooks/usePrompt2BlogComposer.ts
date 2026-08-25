@@ -2,14 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   getPrompt2BlogEditorialOptions,
-  getPrompt2BlogGuidelinePreview,
   getPrompt2BlogInputOptions,
   type Prompt2BlogEditorialOptionsResponse,
   type Prompt2BlogCommissionDraft,
   type Prompt2BlogDirectionOptionId,
   type Prompt2BlogDirectionResponse,
   type Prompt2BlogEvidencePackage,
-  type Prompt2BlogGuidelinePreviewResponse,
   type Prompt2BlogInputOptionsResponse,
 } from '../../api'
 import {
@@ -17,17 +15,13 @@ import {
   type Prompt2BlogModelStackId,
 } from '../../constants/prompt2blog.constants'
 import {
-  buildGroupedArticleTypes,
-  findDefaultOption,
-  getArticleTypeQuickPicks,
-} from '../article-type-options'
-import {
   COMPOSER_STORAGE_KEY,
   DEFAULT_COMPOSER_STATE,
   loadSavedComposerState,
   saveComposerState,
 } from '../composer.storage'
 import type { P2BFormState } from '../composer.types'
+import { findDefaultOption } from '../option-defaults'
 import { buildPrompt2BlogPayload } from '../prompt-payload'
 import { buildPrompt2BlogV3Payload, v3SubmissionBlockedReason } from '../v3-payload'
 import { approveCommission as fingerprintApprovedCommission } from '../commission'
@@ -58,9 +52,6 @@ export function usePrompt2BlogComposer() {
   const saved = useRef(loadSavedComposerState())
   const [state, setState] = useState<P2BFormState>(saved.current)
   const [inputOptions, setInputOptions] = useState<Prompt2BlogInputOptionsResponse | null>(null)
-  const [guidelinePreview, setGuidelinePreview] =
-    useState<Prompt2BlogGuidelinePreviewResponse | null>(null)
-  const [guidelineLoading, setGuidelineLoading] = useState(false)
 
   const updateField = useCallback(
     <K extends keyof P2BFormState>(field: K, value: P2BFormState[K]) => {
@@ -125,7 +116,6 @@ export function usePrompt2BlogComposer() {
       .catch(() => {
         if (cancelled) return
         setInputOptions({
-          article_types: [],
           tones: [],
           lengths: [],
           brand_voices: [],
@@ -149,43 +139,6 @@ export function usePrompt2BlogComposer() {
   })
   const editorialOptions = editorialOptionsQuery.data ?? null
 
-  useEffect(() => {
-    if (!state.articleTypeId) {
-      setGuidelinePreview(null)
-      return
-    }
-
-    let cancelled = false
-    setGuidelineLoading(true)
-    getPrompt2BlogGuidelinePreview(state.articleTypeId)
-      .then(payload => {
-        if (!cancelled) setGuidelinePreview(payload)
-      })
-      .catch(() => {
-        if (!cancelled) setGuidelinePreview(null)
-      })
-      .finally(() => {
-        if (!cancelled) setGuidelineLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [state.articleTypeId])
-
-  const articleTypeOptions = useMemo(() => inputOptions?.article_types ?? [], [inputOptions])
-  const groupedArticleTypeOptions = useMemo(
-    () => buildGroupedArticleTypes(articleTypeOptions),
-    [articleTypeOptions],
-  )
-  const articleTypeQuickPicks = useMemo(
-    () => getArticleTypeQuickPicks(articleTypeOptions),
-    [articleTypeOptions],
-  )
-  const selectedArticleType = useMemo(
-    () => articleTypeOptions.find(option => option.id === state.articleTypeId) || null,
-    [articleTypeOptions, state.articleTypeId],
-  )
   const payload = useMemo(() => buildPrompt2BlogPayload(state), [state])
   const v3Payload = useMemo(() => buildPrompt2BlogV3Payload(state), [state])
   // An approved commission with attached research runs on v3. Everything else
@@ -347,11 +300,6 @@ export function usePrompt2BlogComposer() {
     retryEditorialOptions: () => {
       void editorialOptionsQuery.refetch()
     },
-    guidelinePreview,
-    guidelineLoading,
-    groupedArticleTypeOptions,
-    articleTypeQuickPicks,
-    selectedArticleType,
     payload,
     v3Payload,
     submissionBlockedReason,

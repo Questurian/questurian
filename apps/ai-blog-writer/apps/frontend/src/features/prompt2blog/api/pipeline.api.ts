@@ -3,7 +3,6 @@ import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
 import { parseError } from '../../../shared/api/errors/parse-error'
 import type {
   Prompt2BlogDebugResponse,
-  Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOptionsResponse,
   Prompt2BlogPipelineStage,
   Prompt2BlogResultResponse,
@@ -87,20 +86,6 @@ export async function getPrompt2BlogInputOptions(): Promise<Prompt2BlogInputOpti
 
   if (!response.ok) {
     throw await parseError(response, 'Failed to fetch Prompt2Blog input options')
-  }
-
-  return response.json()
-}
-
-export async function getPrompt2BlogGuidelinePreview(
-  articleTypeId: number,
-): Promise<Prompt2BlogGuidelinePreviewResponse> {
-  const response = await apiFetch(
-    `${FEATURE_PREFIX}/article-types/${articleTypeId}/guideline-preview`,
-  )
-
-  if (!response.ok) {
-    throw await parseError(response, 'Failed to fetch Prompt2Blog guideline preview')
   }
 
   return response.json()

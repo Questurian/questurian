@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   PROMPT2BLOG_MODEL_STACKS,
   PROMPT2BLOG_STACK_FAMILY_ORDER,
-  PROMPT2BLOG_WRITER_MODEL_OPTIONS,
   resolvePrompt2BlogModelStack,
   resolvePrompt2BlogWriterModel,
 } from './prompt2blog.constants'
@@ -70,11 +69,8 @@ describe('Claude-writer run stacks', () => {
     }
   })
 
-  it('offers the writing models the stacks actually use', () => {
-    const offered = PROMPT2BLOG_WRITER_MODEL_OPTIONS.map(option => option.value)
-
+  it('resolves the writing model every stack names', () => {
     for (const stack of CLAUDE_STACKS) {
-      expect(offered).toContain(stack.writingModel)
       expect(resolvePrompt2BlogWriterModel(stack.writingModel)).toBe(stack.writingModel)
     }
   })

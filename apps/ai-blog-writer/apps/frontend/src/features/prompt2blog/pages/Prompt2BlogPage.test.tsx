@@ -12,7 +12,6 @@ vi.mock('../api', () => ({
   PROMPT2BLOG_DIRECTION_OPTION_IDS: ['direction-1', 'direction-2', 'direction-3'],
   getPrompt2BlogDebug: vi.fn(),
   getPrompt2BlogEditorialOptions: vi.fn(),
-  getPrompt2BlogGuidelinePreview: vi.fn(),
   getPrompt2BlogInputOptions: vi.fn(),
   getPrompt2BlogResult: vi.fn(),
   getPrompt2BlogStatus: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock('../api', () => ({
 
 const getPrompt2BlogDebugMock = vi.mocked(prompt2blogApi.getPrompt2BlogDebug)
 const getPrompt2BlogEditorialOptionsMock = vi.mocked(prompt2blogApi.getPrompt2BlogEditorialOptions)
-const getPrompt2BlogGuidelinePreviewMock = vi.mocked(prompt2blogApi.getPrompt2BlogGuidelinePreview)
 const getPrompt2BlogInputOptionsMock = vi.mocked(prompt2blogApi.getPrompt2BlogInputOptions)
 const getPrompt2BlogResultMock = vi.mocked(prompt2blogApi.getPrompt2BlogResult)
 const getPrompt2BlogStatusMock = vi.mocked(prompt2blogApi.getPrompt2BlogStatus)
@@ -309,23 +307,6 @@ describe('Prompt2BlogPage', () => {
     })
 
     getPrompt2BlogInputOptionsMock.mockResolvedValue({
-      article_types: [
-        {
-          id: 7,
-          name: 'Destination Guide',
-          definition: 'Comprehensive overview of a place for trip planning.',
-        },
-        {
-          id: 9,
-          name: 'Itinerary Article',
-          definition: 'Day-by-day or stop-by-stop planning format.',
-        },
-        {
-          id: 11,
-          name: 'FAQ Article',
-          definition: 'Question-driven education answering common queries.',
-        },
-      ],
       tones: [{ id: 'balanced', label: 'Balanced' }],
       lengths: [{ id: 'standard', label: 'Standard' }],
       brand_voices: [{ id: 'questurian', label: 'Questurian' }],
@@ -334,14 +315,6 @@ describe('Prompt2BlogPage', () => {
         length_id: 'standard',
         brand_voice_id: 'questurian',
       },
-    })
-    getPrompt2BlogGuidelinePreviewMock.mockResolvedValue({
-      id: 7,
-      name: 'Destination Guide',
-      guideline: 'Lead with practical value.',
-      title_guideline: 'Keep titles clear and useful.',
-      guideline_file: 'Destination Guide.md',
-      title_guideline_file: 'Destination Guide.md',
     })
     startPrompt2BlogRunMock.mockResolvedValue({
       message: 'Prompt2Blog full run queued',
