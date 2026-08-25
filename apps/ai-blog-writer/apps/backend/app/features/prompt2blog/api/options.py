@@ -13,6 +13,7 @@ from ..config import (
     PROMPT2BLOG_TITLE_FILE_ALIASES,
     PROMPT2BLOG_TITLE_GUIDELINES_DIR,
 )
+from ..editorial_catalog import load_editorial_catalog
 from ..options import (
     _default_option,
     _load_prompt2blog_option_catalog,
@@ -21,6 +22,12 @@ from ..options import (
 from ..support import _safe_str
 
 router = APIRouter()
+
+
+@router.get("/editorial-options")
+async def get_editorial_options() -> JSONResponse:
+    """Return Prompt2Blog v3 editorial metadata without legacy article types."""
+    return JSONResponse(load_editorial_catalog().public_metadata())
 
 
 @router.get("/input-options")

@@ -1,6 +1,8 @@
 """Prompt2Blog run lifecycle route contracts."""
 
 import asyncio
+import json
+from pathlib import Path
 
 import pytest
 from fastapi import BackgroundTasks
@@ -15,6 +17,10 @@ from app.features.prompt2blog.models import PipelineV2RuntimeRequest
 
 pytest_plugins = ["tests.prompt2blog_test_fixtures"]
 
+FIXTURE_DIR = (
+    Path(__file__).parents[3] / "data" / "fixtures" / "prompt2blog"
+)
+
 
 def test_completed_run_exposes_status_and_result(completed_prompt2blog_run):
     status_payload = response_payload(
@@ -28,6 +34,30 @@ def test_completed_run_exposes_status_and_result(completed_prompt2blog_run):
     )
     assert result_payload["run_id"] == completed_prompt2blog_run
     assert result_payload["markdown"].startswith("# Persisted Prompt2Blog Title")
+
+
+def test_result_route_preserves_legacy_v2_artifact_shape(monkeypatch):
+    expected = json.loads((FIXTURE_DIR / "legacy-v2-result.json").read_text())
+    monkeypatch.setattr(
+        runs_api,
+        "read_status",
+        lambda _run_id: {"feature": "prompt2blog", "state": "completed"},
+    )
+    monkeypatch.setattr(
+        runs_api,
+        "read_output",
+        lambda _run_id: {
+            "markdown": expected["markdown"],
+            "artifact": expected["artifact"],
+        },
+    )
+    monkeypatch.setattr(runs_api, "_read_langgraph_trace", lambda _run_id: {})
+
+    payload = response_payload(
+        asyncio.run(prompt2blog_routes.get_result(expected["run_id"]))
+    )
+
+    assert payload == expected
 
 
 def test_start_pipeline_v2_queues_background_task(

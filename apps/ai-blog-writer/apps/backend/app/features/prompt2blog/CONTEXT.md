@@ -15,8 +15,8 @@ bounded contexts.
 | Area | Owns |
 | --- | --- |
 | `api/` and `routes.py` | FastAPI handlers and the public router facade |
-| `models.py` | HTTP requests and runtime pipeline input |
-| `config.py`, `options.py` | Feature constants and Markdown-backed catalogs |
+| `models.py`, `contracts_v3.py` | Versioned HTTP requests, editorial contracts, and runtime pipeline input |
+| `config.py`, `options.py`, `editorial_catalog.py` | Feature constants plus legacy and v3 Markdown-backed catalogs |
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |
 | `llm.py`, `dependencies.py` | Shared-LLM adapter and explicit dependency bundle |

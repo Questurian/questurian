@@ -30,6 +30,10 @@ async def get_input_options():
     return await _options_api.get_input_options()
 
 
+async def get_editorial_options():
+    return await _options_api.get_editorial_options()
+
+
 async def get_article_type_guideline_preview(article_type_id: int):
     return await _options_api.get_article_type_guideline_preview(article_type_id)
 
@@ -83,6 +87,7 @@ __all__ = [
     "synthesize_sources",
     "classify_article_type",
     "get_input_options",
+    "get_editorial_options",
     "get_article_type_guideline_preview",
     "start_pipeline_v2",
     "start_full_run",

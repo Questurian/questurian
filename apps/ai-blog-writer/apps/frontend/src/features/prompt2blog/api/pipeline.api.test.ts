@@ -1,5 +1,20 @@
-import { describe, expect, it } from 'vitest'
-import { normalizePrompt2BlogStatusResponse } from './pipeline.api'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import legacyRequestFixture from '../../../../../../data/fixtures/prompt2blog/legacy-v2-request.json'
+import legacyResultFixture from '../../../../../../data/fixtures/prompt2blog/legacy-v2-result.json'
+import type { Prompt2BlogRunRequest } from '../types/pipeline.types'
+import {
+  getPrompt2BlogResult,
+  normalizePrompt2BlogStatusResponse,
+  startPrompt2BlogRun,
+} from './pipeline.api'
+
+const mockFetch = vi.fn()
+
+vi.stubGlobal('fetch', mockFetch)
+
+beforeEach(() => {
+  mockFetch.mockReset()
+})
 
 describe('normalizePrompt2BlogStatusResponse', () => {
   it('keeps a valid status response unchanged', () => {
@@ -69,5 +84,34 @@ describe('normalizePrompt2BlogStatusResponse', () => {
     expect(
       normalizePrompt2BlogStatusResponse({ state: 'paused', stage: 'stage_compose' }, 'run-123').state,
     ).toBe('pending')
+  })
+})
+
+describe('legacy v2 API contracts', () => {
+  it('posts the existing request body to the existing run route unchanged', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'queued', run_id: 'legacy-v2-run' }),
+    })
+
+    await startPrompt2BlogRun(
+      legacyRequestFixture as unknown as Prompt2BlogRunRequest,
+    )
+
+    expect(mockFetch).toHaveBeenCalledOnce()
+    const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('http://localhost:4003/prompt2blog/run')
+    expect(JSON.parse(init.body as string)).toEqual(legacyRequestFixture)
+  })
+
+  it('passes an existing v2 result artifact through unchanged', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => legacyResultFixture,
+    })
+
+    await expect(getPrompt2BlogResult('legacy-v2-run')).resolves.toEqual(
+      legacyResultFixture,
+    )
   })
 })
