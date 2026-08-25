@@ -2,15 +2,20 @@
 
 The writing stages (compose / editorial augmentation) historically ran on a
 pinned Claude model. These constants make that choice a per-run option shared
-by every blog pipeline. Names route via the existing provider dispatch:
-claude-* -> Anthropic, gemini-* -> Vertex.
+by every blog pipeline. Names route via the existing provider dispatch in
+utils.get_vertex_llm: gemini-* to Vertex, claude-* to whichever Claude path is
+switched on.
 """
 
-# Anthropic billing is exhausted. The Claude names stay valid selections so
-# saved runs and existing clients keep working, but utils.resolve_effective_model
-# transparently serves them with a Google model. Restore by setting
-# ANTHROPIC_MODELS_ENABLED=1 and flipping DEFAULT_WRITER_MODEL back.
+# These are always valid selections, so saved runs and existing clients keep
+# working. What actually serves them is decided further down, by
+# utils.resolve_effective_model: with neither Claude path switched on they are
+# transparently served by a Google model, with ANTHROPIC_MODELS_ENABLED=1 they
+# go to the Anthropic API, and with CLAUDE_SUBSCRIPTION_MODELS_ENABLED=1 they go
+# to the Claude Code CLI on this machine. Being on this list is permission to
+# ask for a name, not a claim about which transport answers.
 CLAUDE_WRITER_MODELS = (
+    "claude-opus-5",
     "claude-opus-4-8",
     "claude-opus-4-7",
     "claude-sonnet-5",

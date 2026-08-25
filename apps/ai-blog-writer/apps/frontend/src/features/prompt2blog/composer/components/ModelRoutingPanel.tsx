@@ -1,5 +1,7 @@
 import {
   PROMPT2BLOG_MODEL_STACKS,
+  PROMPT2BLOG_STACK_FAMILY_LABELS,
+  PROMPT2BLOG_STACK_FAMILY_ORDER,
   resolvePrompt2BlogModelStack,
   type Prompt2BlogModelStackId,
 } from '../../constants/prompt2blog.constants'
@@ -26,7 +28,7 @@ export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
 
   return <Panel
     title="Run Stack"
-    description="Select one option. Quality-first appears first; fastest appears last."
+    description="Select one option. Within each group, quality-first appears first and fastest appears last."
     onClear={props.onClear}
   >
     <div className="p2b-field p2b-stack-picker">
@@ -37,12 +39,20 @@ export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
         value={selectedStack.id}
         onChange={event => props.onChange(event.target.value as Prompt2BlogModelStackId)}
       >
-        {PROMPT2BLOG_MODEL_STACKS.map(stack => (
-          <option key={stack.id} value={stack.id}>
-            {stack.priceTier} · {stack.label}
-            {stack.label === stack.speedTier ? '' : ` · ${stack.speedTier}`}
-          </option>
-        ))}
+        {PROMPT2BLOG_STACK_FAMILY_ORDER.map(family => {
+          const stacks = PROMPT2BLOG_MODEL_STACKS.filter(
+            stack => stack.family === family,
+          )
+          if (stacks.length === 0) return null
+          return <optgroup key={family} label={PROMPT2BLOG_STACK_FAMILY_LABELS[family]}>
+            {stacks.map(stack => (
+              <option key={stack.id} value={stack.id}>
+                {stack.priceTier} · {stack.label}
+                {stack.label === stack.speedTier ? '' : ` · ${stack.speedTier}`}
+              </option>
+            ))}
+          </optgroup>
+        })}
       </select>
       <p className="p2b-stack-description">{selectedStack.description}</p>
     </div>
