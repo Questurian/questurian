@@ -105,12 +105,6 @@ export const DEFAULT_COMPOSER_STATE: P2BFormState = {
   editorial: DEFAULT_EDITORIAL_STATE,
   easySetupLocation: '',
   easySetupTitle: '',
-  articleTypeId: null,
-  articleGoal: '',
-  targetReader: '',
-  destinationContext: '',
-  angle: '',
-  callToAction: '',
   modelStackId: DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
   modelName: DEFAULT_MODEL_STACK.modelName,
   writingModel: DEFAULT_MODEL_STACK.writingModel,
@@ -118,26 +112,34 @@ export const DEFAULT_COMPOSER_STATE: P2BFormState = {
   toneId: '',
   lengthId: '',
   brandVoiceId: '',
-  primaryKeyword: '',
-  secondaryKeywords: '',
-  mustInclude: '',
   creativityLevel: 'medium',
-  negativeInstructions: '',
-  enableEditorialAugmentation: false,
-  blobs: [{ id: 1, content: '' }],
 }
 
-function hasMeaningfulLegacyEditorialState(parsed: Partial<P2BFormState>): boolean {
-  return Boolean(
-    parsed.articleTypeId ||
-    parsed.easySetupTitle?.trim() ||
-    parsed.easySetupLocation?.trim() ||
-    parsed.articleGoal?.trim() ||
-    parsed.targetReader?.trim() ||
-    parsed.destinationContext?.trim() ||
-    parsed.angle?.trim() ||
-    parsed.callToAction?.trim(),
-  )
+// The fields these names refer to are gone from the composer, but a draft
+// saved before they went still carries them. Reading them off the raw record
+// is what tells a draft with real work in it from an empty one, so the user is
+// asked to reconfirm rather than silently handed a blank form.
+const LEGACY_BRIEF_KEYS = [
+  'articleTypeId',
+  'easySetupTitle',
+  'easySetupLocation',
+  'articleGoal',
+  'targetReader',
+  'destinationContext',
+  'angle',
+  'callToAction',
+] as const
+
+function hasMeaningfulLegacyEditorialState(parsed: Record<string, unknown>): boolean {
+  return LEGACY_BRIEF_KEYS.some(key => {
+    const value = parsed[key]
+    if (typeof value === 'string') return Boolean(value.trim())
+    return Boolean(value)
+  })
+}
+
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value : ''
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -378,40 +380,16 @@ export function loadSavedComposerState(): P2BFormState {
   try {
     const raw = localStorage.getItem(COMPOSER_STORAGE_KEY)
     if (!raw) return DEFAULT_COMPOSER_STATE
-    const parsed = JSON.parse(raw) as Partial<P2BFormState> & {
-      audienceProfile?: unknown
-      composerStorageVersion?: unknown
-      promptEnhance?: unknown
-    }
+    const parsed = JSON.parse(raw) as Record<string, unknown>
     const savedStorageVersion =
       typeof parsed.composerStorageVersion === 'number' ? parsed.composerStorageVersion : null
     if (savedStorageVersion !== null && savedStorageVersion > COMPOSER_STORAGE_VERSION) {
       return DEFAULT_COMPOSER_STATE
     }
-    const isUnversionedDraft = savedStorageVersion == null
     const isLegacyStorageDraft = savedStorageVersion == null || savedStorageVersion < 3
-    // Fold removed audience detail into the remaining reader field before
-    // stripping legacy keys, so old drafts keep user-authored guidance.
-    const legacyAudienceProfile =
-      typeof parsed.audienceProfile === 'string' ? parsed.audienceProfile.trim() : ''
-    const savedTargetReader =
-      typeof parsed.targetReader === 'string' ? parsed.targetReader.trim() : ''
-    if (legacyAudienceProfile && !savedTargetReader) {
-      parsed.targetReader = legacyAudienceProfile
-    } else if (
-      legacyAudienceProfile &&
-      savedTargetReader.toLocaleLowerCase() !== legacyAudienceProfile.toLocaleLowerCase()
-    ) {
-      parsed.targetReader = `${savedTargetReader} — ${legacyAudienceProfile}`
-    }
-    delete parsed.audienceProfile
-    delete parsed.composerStorageVersion
-    delete parsed.promptEnhance
-    if (isUnversionedDraft) {
-      // Earlier drafts stored `true` as the default, not as explicit consent.
-      parsed.enableEditorialAugmentation = false
-    }
-    const modelStack = resolvePrompt2BlogModelStack(parsed.modelStackId)
+    const modelStack = resolvePrompt2BlogModelStack(
+      typeof parsed.modelStackId === 'string' ? parsed.modelStackId : undefined,
+    )
     const editorial = isLegacyStorageDraft
       ? {
           ...DEFAULT_EDITORIAL_STATE,
@@ -423,19 +401,23 @@ export function loadSavedComposerState(): P2BFormState {
             : ({ status: 'not_started' } as const),
         }
       : normalizeEditorialState(parsed.editorial)
+
+    // Built field by field rather than spread. A draft saved before the v3
+    // cutover carries keys the composer no longer has, and spreading would put
+    // them back into live state where nothing validates or clears them.
     return {
       ...DEFAULT_COMPOSER_STATE,
-      ...parsed,
       activeWorkflow: parsed.activeWorkflow === 'editorial_v3' ? 'editorial_v3' : 'legacy_v2',
       editorial,
+      easySetupLocation: readString(parsed.easySetupLocation),
+      easySetupTitle: readString(parsed.easySetupTitle),
       modelStackId: modelStack.id,
       modelName: resolvePrompt2BlogModelName(modelStack.modelName),
       writingModel: resolvePrompt2BlogWriterModel(modelStack.writingModel),
       auditModel: resolvePrompt2BlogWriterModel(modelStack.auditModel),
-      blobs:
-        Array.isArray(parsed.blobs) && parsed.blobs.length
-          ? parsed.blobs
-          : DEFAULT_COMPOSER_STATE.blobs,
+      toneId: readString(parsed.toneId),
+      lengthId: readString(parsed.lengthId),
+      brandVoiceId: readString(parsed.brandVoiceId),
       creativityLevel:
         parsed.creativityLevel === 'low' || parsed.creativityLevel === 'high'
           ? parsed.creativityLevel

@@ -14,7 +14,6 @@ import '../styles.css'
 export default function Prompt2BlogPage() {
   const composer = usePrompt2BlogComposer()
   const pipeline = usePrompt2BlogPipelineRun({
-    v2Payload: composer.payload,
     v3Payload: composer.v3Payload,
     v3BlockedReason: composer.submissionBlockedReason,
   })
@@ -27,10 +26,8 @@ export default function Prompt2BlogPage() {
   const { state } = composer
 
   const handleCopyJson = useCallback(() => {
-    // Copy whichever request this draft would actually send.
-    const submittedPayload = composer.v3Payload ?? composer.payload
     navigator.clipboard
-      .writeText(JSON.stringify(submittedPayload, null, 2))
+      .writeText(JSON.stringify(composer.v3Payload, null, 2))
       .then(() => {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
@@ -38,7 +35,7 @@ export default function Prompt2BlogPage() {
       .catch(() => {
         pipeline.setError('Unable to copy JSON to clipboard.')
       })
-  }, [composer.payload, composer.v3Payload, pipeline])
+  }, [composer.v3Payload, pipeline])
 
   const handleResetRun = useCallback(() => {
     cleanupModal.close()
@@ -113,10 +110,8 @@ export default function Prompt2BlogPage() {
             <PromptProfilesPanel
               brandVoiceId={state.brandVoiceId}
               creativityLevel={state.creativityLevel}
-              enableEditorialAugmentation={state.enableEditorialAugmentation}
               inputOptions={composer.inputOptions}
               lengthId={state.lengthId}
-              negativeInstructions={state.negativeInstructions}
               toneId={state.toneId}
               onChange={composer.updateField}
               onClear={composer.clearPromptProfiles}

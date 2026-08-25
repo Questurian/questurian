@@ -50,8 +50,6 @@ export type {
   Prompt2BlogResultResponse,
   Prompt2BlogRunArtifact,
   Prompt2BlogRunCost,
-  Prompt2BlogRunRequest,
-  Prompt2BlogRunResponse,
   Prompt2BlogStageTrace,
   Prompt2BlogStatusResponse,
   Prompt2BlogV3InstructionMeta,
@@ -80,7 +78,6 @@ export {
   getPrompt2BlogInputOptions,
   getPrompt2BlogResult,
   getPrompt2BlogStatus,
-  startPrompt2BlogRun,
   startPrompt2BlogV3Run,
 } from './api/pipeline.api'
 export { getArticleSyncStatus, markArticleSynced } from './api/sync.api'

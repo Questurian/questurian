@@ -57,37 +57,6 @@ export type Prompt2BlogInputOptionsResponse = {
   }
 }
 
-export type Prompt2BlogRunRequest = {
-  article_type_id: number
-  source_material: string[]
-  article_goal: string
-  target_reader: string
-  destination_context: string
-  angle?: string
-  tone_id: string
-  length_id: string
-  brand_voice_id?: string
-  primary_keyword?: string
-  secondary_keywords?: string[]
-  call_to_action?: string
-  must_include?: string[]
-  audience_profile?: string
-  prompt_enhance?: boolean
-  creativity_level?: 'low' | 'medium' | 'high'
-  negative_instructions?: string[]
-  include_debug?: boolean
-  enable_editorial_augmentation?: boolean
-  model_name?: Prompt2BlogModelName
-  writing_model?: Prompt2BlogWriterModel
-  audit_model?: Prompt2BlogWriterModel
-  model_stack_id?: string
-}
-
-export type Prompt2BlogRunResponse = {
-  message: string
-  run_id: string
-}
-
 export const PROMPT2BLOG_PIPELINE_STAGES = [
   'queued',
   'stage_input_validate',

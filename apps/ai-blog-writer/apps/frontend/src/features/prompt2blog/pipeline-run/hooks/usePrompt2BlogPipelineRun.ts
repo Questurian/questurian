@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { buildStageArticleUrl } from '../../../blogArticles'
 import {
-  type Prompt2BlogRunRequest,
   type Prompt2BlogV3NeedsResearchResponse,
   type Prompt2BlogV3Request,
 } from '../../api'
@@ -17,13 +16,11 @@ import { usePrompt2BlogMutation } from './usePrompt2BlogMutation'
 import { usePrompt2BlogRunLifecycle } from './usePrompt2BlogRunLifecycle'
 
 type Prompt2BlogPipelineRunOptions = {
-  v2Payload: Prompt2BlogRunRequest | null
   v3Payload: Prompt2BlogV3Request | null
   v3BlockedReason?: string | null
 }
 
 export function usePrompt2BlogPipelineRun({
-  v2Payload,
   v3Payload,
   v3BlockedReason,
 }: Prompt2BlogPipelineRunOptions) {
@@ -82,7 +79,7 @@ export function usePrompt2BlogPipelineRun({
     isPending: isStartingPipeline,
     mutate: startPipeline,
     reset: resetStartPipeline,
-  } = usePrompt2BlogMutation({ v2Payload, v3Payload, v3BlockedReason })
+  } = usePrompt2BlogMutation({ v3Payload, v3BlockedReason })
 
   // Which pipeline's stage list to show. A finished run names its own version;
   // a run being started is named by the payload that will start it.

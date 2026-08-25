@@ -9,11 +9,6 @@ import type {
 } from '../api'
 import type { Prompt2BlogModelStackId } from '../constants/prompt2blog.constants'
 
-export interface RawBlob {
-  id: number
-  content: string
-}
-
 export type P2BActiveWorkflow = 'legacy_v2' | 'editorial_v3'
 
 export type P2BCommissionApproval =
@@ -44,12 +39,6 @@ export interface P2BFormState {
   editorial: P2BEditorialComposerState
   easySetupLocation: string
   easySetupTitle: string
-  articleTypeId: number | null
-  articleGoal: string
-  targetReader: string
-  destinationContext: string
-  angle: string
-  callToAction: string
   modelStackId: Prompt2BlogModelStackId
   modelName: Prompt2BlogModelName
   writingModel: Prompt2BlogWriterModel
@@ -57,11 +46,5 @@ export interface P2BFormState {
   toneId: string
   lengthId: string
   brandVoiceId: string
-  primaryKeyword: string
-  secondaryKeywords: string
-  mustInclude: string
   creativityLevel: 'low' | 'medium' | 'high'
-  negativeInstructions: string
-  enableEditorialAugmentation: boolean
-  blobs: RawBlob[]
 }

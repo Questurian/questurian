@@ -22,7 +22,6 @@ import {
 } from '../composer.storage'
 import type { P2BFormState } from '../composer.types'
 import { findDefaultOption } from '../option-defaults'
-import { buildPrompt2BlogPayload } from '../prompt-payload'
 import { buildPrompt2BlogV3Payload, v3SubmissionBlockedReason } from '../v3-payload'
 import { approveCommission as fingerprintApprovedCommission } from '../commission'
 import {
@@ -44,7 +43,6 @@ function createDefaultComposerState(): P2BFormState {
       directionOptions: [],
       approval: { ...DEFAULT_COMPOSER_STATE.editorial.approval },
     },
-    blobs: DEFAULT_COMPOSER_STATE.blobs.map(blob => ({ ...blob })),
   }
 }
 
@@ -80,17 +78,6 @@ export function usePrompt2BlogComposer() {
     },
     [],
   )
-
-  // The Easy Set Up import lands as one patch so the whole form moves to the
-  // approved brief in a single state change.
-  const applyFields = useCallback((patch: Partial<P2BFormState>) => {
-    setState(prev => ({
-      ...prev,
-      ...patch,
-      activeWorkflow: 'legacy_v2',
-      editorial: { ...DEFAULT_COMPOSER_STATE.editorial },
-    }))
-  }, [])
 
   useEffect(() => {
     saveComposerState(state)
@@ -139,7 +126,6 @@ export function usePrompt2BlogComposer() {
   })
   const editorialOptions = editorialOptionsQuery.data ?? null
 
-  const payload = useMemo(() => buildPrompt2BlogPayload(state), [state])
   const v3Payload = useMemo(() => buildPrompt2BlogV3Payload(state), [state])
   // An approved commission with attached research runs on v3. Everything else
   // in the editorial workflow reports what is still missing; a legacy draft
@@ -202,38 +188,6 @@ export function usePrompt2BlogComposer() {
     setState(resetDirectionWorkflow)
   }, [])
 
-  const addBlob = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      blobs: [...prev.blobs, { id: Date.now(), content: '' }],
-    }))
-  }, [])
-
-  const removeBlob = useCallback((id: number) => {
-    setState(prev =>
-      prev.blobs.length <= 1 ? prev : { ...prev, blobs: prev.blobs.filter(blob => blob.id !== id) },
-    )
-  }, [])
-
-  const updateBlob = useCallback((id: number, content: string) => {
-    setState(prev => ({
-      ...prev,
-      blobs: prev.blobs.map(blob => (blob.id === id ? { ...blob, content } : blob)),
-    }))
-  }, [])
-
-  const clearCoreInputs = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      articleTypeId: DEFAULT_COMPOSER_STATE.articleTypeId,
-      articleGoal: DEFAULT_COMPOSER_STATE.articleGoal,
-      targetReader: DEFAULT_COMPOSER_STATE.targetReader,
-      destinationContext: DEFAULT_COMPOSER_STATE.destinationContext,
-      angle: DEFAULT_COMPOSER_STATE.angle,
-      callToAction: DEFAULT_COMPOSER_STATE.callToAction,
-    }))
-  }, [])
-
   const clearPromptProfiles = useCallback(() => {
     setState(prev => ({
       ...prev,
@@ -245,8 +199,6 @@ export function usePrompt2BlogComposer() {
         ? findDefaultOption(inputOptions.brand_voices)
         : DEFAULT_COMPOSER_STATE.brandVoiceId,
       creativityLevel: DEFAULT_COMPOSER_STATE.creativityLevel,
-      negativeInstructions: DEFAULT_COMPOSER_STATE.negativeInstructions,
-      enableEditorialAugmentation: DEFAULT_COMPOSER_STATE.enableEditorialAugmentation,
     }))
   }, [inputOptions])
 
@@ -271,19 +223,6 @@ export function usePrompt2BlogComposer() {
     }))
   }, [])
 
-  const clearSeoConstraints = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      primaryKeyword: DEFAULT_COMPOSER_STATE.primaryKeyword,
-      secondaryKeywords: DEFAULT_COMPOSER_STATE.secondaryKeywords,
-      mustInclude: DEFAULT_COMPOSER_STATE.mustInclude,
-    }))
-  }, [])
-
-  const clearSourceMaterial = useCallback(() => {
-    setState(prev => ({ ...prev, blobs: createDefaultComposerState().blobs }))
-  }, [])
-
   const clearAll = useCallback(() => {
     localStorage.removeItem(COMPOSER_STORAGE_KEY)
     setState(createDefaultComposerState())
@@ -292,7 +231,6 @@ export function usePrompt2BlogComposer() {
   return {
     state,
     updateField,
-    applyFields,
     inputOptions,
     editorialOptions,
     editorialOptionsError: editorialOptionsQuery.isError,
@@ -300,7 +238,6 @@ export function usePrompt2BlogComposer() {
     retryEditorialOptions: () => {
       void editorialOptionsQuery.refetch()
     },
-    payload,
     v3Payload,
     submissionBlockedReason,
     startDirectionWorkflow,
@@ -311,15 +248,9 @@ export function usePrompt2BlogComposer() {
     storeEvidence,
     clearEvidence,
     clearDirectionWorkflow,
-    addBlob,
-    removeBlob,
-    updateBlob,
-    clearCoreInputs,
     clearModelRouting,
     applyModelStack,
     clearPromptProfiles,
-    clearSeoConstraints,
-    clearSourceMaterial,
     clearAll,
   }
 }
