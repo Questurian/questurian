@@ -49,6 +49,42 @@ def _payload(**overrides) -> dict:
     return payload
 
 
+def _ready_evidence() -> dict:
+    """The fixture package with every locked requirement genuinely supported."""
+    evidence = deepcopy(_fixture()["evidence_package"])
+    evidence["claims"].extend(
+        [
+            {
+                "claim_id": "c2",
+                "text": "Current reporting documents Lima's practical tradeoffs.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["r2"],
+                "as_of": "2026-07-01",
+                "confidence": "medium",
+            },
+            {
+                "claim_id": "c3",
+                "text": "Comparable earlier reporting shows how those costs moved.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["r3"],
+                "as_of": "2026-07-01",
+                "confidence": "medium",
+            },
+        ]
+    )
+    evidence["requirements"] = [
+        {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"], "gap": ""},
+        {"requirement_id": "r2", "status": "supported", "claim_ids": ["c2"], "gap": ""},
+        {"requirement_id": "r3", "status": "supported", "claim_ids": ["c3"], "gap": ""},
+    ]
+    evidence["gaps"] = []
+    return evidence
+
+
+def _ready_payload(**overrides) -> dict:
+    return _payload(evidence_package=_ready_evidence(), **overrides)
+
+
 def _request(**overrides) -> Prompt2BlogV3Request:
     return Prompt2BlogV3Request.model_validate(_payload(**overrides))
 
@@ -66,7 +102,7 @@ def _intake(payload: dict) -> dict:
 def test_intake_returns_a_versioned_run_input_for_the_approved_commission():
     fixture = _fixture()
 
-    payload = _intake(_payload())
+    payload = _intake(_ready_payload())
     run_input = payload["run_input"]
 
     assert payload["message"] == "Prompt2Blog v3 run input assembled"
@@ -86,15 +122,15 @@ def test_intake_returns_a_versioned_run_input_for_the_approved_commission():
 
 
 def test_run_input_records_the_evidence_receipt_and_resolved_profiles():
-    run_input = _intake(_payload())["run_input"]
+    run_input = _intake(_ready_payload())["run_input"]
 
     receipt = run_input["evidence_receipt"]
     assert receipt["requirement_status"] == {
         "r1": "supported",
-        "r2": "missing",
-        "r3": "missing",
+        "r2": "supported",
+        "r3": "supported",
     }
-    assert receipt["unresolved_requirement_ids"] == ["r2", "r3"]
+    assert receipt["unresolved_requirement_ids"] == []
     assert run_input["source_ids"] == receipt["source_ids"]
     assert run_input["profiles"]["tone_id"] == "editorial"
     assert run_input["profiles"]["length_id"] == "medium"
@@ -105,7 +141,7 @@ def test_run_input_records_the_evidence_receipt_and_resolved_profiles():
 def test_runtime_request_keeps_the_commission_and_evidence_whole():
     fixture = _fixture()
 
-    runtime = prepare_v3_runtime_request(_request())
+    runtime = prepare_v3_runtime_request(_request(evidence_package=_ready_evidence()))
 
     assert runtime.commission == fixture["commission"]
     source = runtime.evidence["sources"][0]
@@ -121,7 +157,7 @@ def test_runtime_request_keeps_the_commission_and_evidence_whole():
 
 
 def test_intake_rejects_an_unknown_writing_profile_by_name():
-    payload = _payload()
+    payload = _ready_payload()
     payload["profiles"]["tone_id"] = "not-a-tone"
 
     with pytest.raises(HTTPException) as excinfo:
@@ -153,7 +189,7 @@ def test_intake_cannot_be_used_to_change_the_commission():
     with pytest.raises(ValidationError):
         _intake(payload)
 
-    unchanged = _intake(_payload())["run_input"]
+    unchanged = _intake(_ready_payload())["run_input"]
     assert (
         unchanged["commission_fingerprint"]
         == fixture["commission"]["commission_fingerprint"]
@@ -161,7 +197,7 @@ def test_intake_cannot_be_used_to_change_the_commission():
 
 
 def test_v3_run_input_does_not_reintroduce_v2_shapes():
-    runtime = prepare_v3_runtime_request(_request())
+    runtime = prepare_v3_runtime_request(_request(evidence_package=_ready_evidence()))
 
     artifact = v3_run_input_artifact(runtime)
 
