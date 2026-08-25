@@ -21,6 +21,11 @@ from .llm_model_policy import (  # noqa: F401
     ANTHROPIC_MODELS_ENABLED_DEFAULT as ANTHROPIC_MODELS_ENABLED_DEFAULT,
     ANTHROPIC_MODELS_ENABLED_ENV as ANTHROPIC_MODELS_ENABLED_ENV,
     CLAUDE_GOOGLE_SUBSTITUTES as CLAUDE_GOOGLE_SUBSTITUTES,
+    CLAUDE_PROVIDER_ANTHROPIC_API as CLAUDE_PROVIDER_ANTHROPIC_API,
+    CLAUDE_PROVIDER_NONE as CLAUDE_PROVIDER_NONE,
+    CLAUDE_PROVIDER_SUBSCRIPTION_CLI as CLAUDE_PROVIDER_SUBSCRIPTION_CLI,
+    CLAUDE_SUBSCRIPTION_MODELS_ENABLED_DEFAULT as CLAUDE_SUBSCRIPTION_MODELS_ENABLED_DEFAULT,
+    CLAUDE_SUBSCRIPTION_MODELS_ENABLED_ENV as CLAUDE_SUBSCRIPTION_MODELS_ENABLED_ENV,
     DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE as DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE,
     DEFAULT_LOCATION as DEFAULT_LOCATION,
     DEFAULT_MODEL as DEFAULT_MODEL,
@@ -31,6 +36,9 @@ from .llm_model_policy import (  # noqa: F401
     _resolve_vertex_location,
     _resolve_vertex_project,
     anthropic_models_enabled as anthropic_models_enabled,
+    claude_models_reachable as claude_models_reachable,
+    claude_provider as claude_provider,
+    claude_subscription_models_enabled as claude_subscription_models_enabled,
     is_claude_model as is_claude_model,
     resolve_effective_model as resolve_effective_model,
 )
@@ -74,10 +82,14 @@ class ClaudeTextLLM:
         ) as stream:
             message = stream.get_final_message()
         usage = getattr(message, 'usage', None)
-        self.last_usage_metadata = {
-            'input_tokens': getattr(usage, 'input_tokens', 0),
-            'output_tokens': getattr(usage, 'output_tokens', 0),
-        } if usage is not None else None
+        self.last_usage_metadata = (
+            {
+                'input_tokens': getattr(usage, 'input_tokens', 0),
+                'output_tokens': getattr(usage, 'output_tokens', 0),
+            }
+            if usage is not None
+            else None
+        )
         text = _message_text(message)
         if not text:
             raise _empty_message_error(message)
