@@ -370,12 +370,8 @@ describe('Prompt2BlogPage', () => {
     const profilesPanel = screen
       .getByRole('heading', { name: 'Writing Profiles' })
       .closest('section')
-    const modelRoutingPanel = screen.getByRole('heading', { name: 'Run Stack' }).closest('section')
 
     expect(easySetupPanel).toBeInTheDocument()
-    expect(modelRoutingPanel?.compareDocumentPosition(easySetupPanel!)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    )
     expect(easySetupPanel?.compareDocumentPosition(profilesPanel!)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
@@ -388,6 +384,48 @@ describe('Prompt2BlogPage', () => {
       }),
     ).toBeDisabled()
     expect(within(easySetupPanel!).queryByLabelText('Prompt')).not.toBeInTheDocument()
+  })
+
+  it('puts the work first and the model machinery last', async () => {
+    // The first thing a new operator saw used to be a twelve-preset model and
+    // cost picker, above the two fields that actually start an article.
+    renderPage()
+
+    const easySetupPanel = screen.getByRole('heading', { name: 'Easy Set Up' }).closest('section')
+    const profilesPanel = screen
+      .getByRole('heading', { name: 'Writing Profiles' })
+      .closest('section')
+    const pipelinePanel = screen.getByRole('heading', { name: 'Pipeline' }).closest('section')
+    const advancedPanel = screen.getByRole('heading', { name: 'Advanced' }).closest('section')
+
+    expect(easySetupPanel?.compareDocumentPosition(profilesPanel!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(profilesPanel?.compareDocumentPosition(pipelinePanel!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(pipelinePanel?.compareDocumentPosition(advancedPanel!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+  })
+
+  it('keeps tone and length on the page rather than behind a closed fold', async () => {
+    // They are required to run. A required field inside a collapsed section is
+    // a dead end waiting to happen, even while defaults keep it from firing.
+    renderPage()
+
+    expect(screen.getByLabelText('Tone').closest('details')).toBeNull()
+    expect(screen.getByLabelText('Length').closest('details')).toBeNull()
+  })
+
+  it('folds model routing away without hiding it', async () => {
+    renderPage()
+
+    const advanced = screen.getByRole('heading', { name: 'Advanced' }).closest('details')
+
+    expect(advanced).not.toBeNull()
+    expect(advanced).not.toHaveAttribute('open')
+    expect(within(advanced!).getByRole('heading', { name: 'Run Stack' })).toBeInTheDocument()
   })
 
   it('requires Title and Location before opening an editable prompt block', async () => {
