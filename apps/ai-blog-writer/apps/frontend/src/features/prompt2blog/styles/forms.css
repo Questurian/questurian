@@ -121,6 +121,20 @@
   line-height: 1;
 }
 
+/* A plan-served stack has a phrase where the others have a dollar figure, and
+   the display-size numeral treatment reads as shouting on a sentence. */
+.p2b-stack-cost-headline--plan strong {
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.p2b-stack-cost-plan {
+  margin-top: var(--space-2);
+  color: var(--ink-light);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .p2b-stack-cost-breakdown {
   display: flex;
   flex-wrap: wrap;
