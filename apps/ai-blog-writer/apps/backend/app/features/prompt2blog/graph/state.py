@@ -83,9 +83,17 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     trace: list[dict[str, Any]]
     readiness: dict[str, Any]
     outline: dict[str, Any]
+    outline_accepted: bool
+    outline_text: str
     rewrite: dict[str, Any]
     groundedness: dict[str, Any]
     quality: dict[str, Any]
+    quality_checks: dict[str, Any]
+    repair_applied: bool
+    repair_attempts: int
+    best_rewrite: dict[str, Any]
+    best_quality: dict[str, Any]
+    best_quality_checks: dict[str, Any]
     final_title: str
     final_markdown: str
     response_payload: dict[str, Any]
