@@ -99,3 +99,11 @@
     font-size: 1.125rem;
   }
 }
+
+/* The five steps stop reading as a row long before the phone breakpoint; the
+   names wrap into unreadable slivers first. */
+@media (max-width: 900px) {
+  .p2b-step-rail-list {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,12 +1,14 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CleanupDetailsModal } from '../cleanup-details/CleanupDetailsModal'
 import { useCleanupDetailsModal } from '../cleanup-details/hooks/useCleanupDetailsModal'
 import { EasySetupPanel } from '../composer/components/EasySetupPanel'
 import { MiddleSectionsFold } from '../composer/components/MiddleSectionsFold'
 import { ModelRoutingPanel } from '../composer/components/ModelRoutingPanel'
+import { StepRail } from '../composer/components/StepRail'
 import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
 import { usePrompt2BlogComposer } from '../composer/hooks/usePrompt2BlogComposer'
+import { deriveP2BSteps } from '../composer/step-model'
 import { PipelinePanel } from '../pipeline-run/components/PipelinePanel'
 import { usePrompt2BlogPipelineRun } from '../pipeline-run/hooks/usePrompt2BlogPipelineRun'
 import '../styles.css'
@@ -24,6 +26,7 @@ export default function Prompt2BlogPage() {
   })
   const [copied, setCopied] = useState(false)
   const { state } = composer
+  const steps = useMemo(() => deriveP2BSteps(state), [state])
 
   const handleCopyJson = useCallback(() => {
     navigator.clipboard
@@ -80,6 +83,7 @@ export default function Prompt2BlogPage() {
       </header>
 
       <main className="p2b-form-container">
+        <StepRail steps={steps} />
         <form className="p2b-form" onSubmit={event => event.preventDefault()}>
           <ModelRoutingPanel
             modelStackId={state.modelStackId}
