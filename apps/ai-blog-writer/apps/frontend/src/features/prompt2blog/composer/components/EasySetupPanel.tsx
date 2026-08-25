@@ -5,12 +5,10 @@ import type {
   Prompt2BlogDirectionResponse,
   Prompt2BlogEditorialOptionsResponse,
   Prompt2BlogEvidencePackage,
-  Prompt2BlogInputOptionsResponse,
 } from '../../api'
 import type { P2BEditorialComposerState, P2BFormState } from '../composer.types'
 import { reviewDirectionResponseJson, type DirectionImportReview } from '../direction-import'
 import { buildDirectionPrompt } from '../direction-prompt'
-import { reviewEasySetupJson, type EasySetupImportReview } from '../easy-setup-import'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import { CommissionEditor } from './CommissionEditor'
 import { DirectionCards } from './DirectionCards'
@@ -22,10 +20,8 @@ interface EasySetupPanelProps {
   editorialOptions: Prompt2BlogEditorialOptionsResponse | null
   editorialOptionsError: boolean
   editorialOptionsLoading: boolean
-  inputOptions: Prompt2BlogInputOptionsResponse | null
   location: string
   title: string
-  onApply: (patch: Partial<P2BFormState>) => void
   onApplyDirectionResponse: (response: Prompt2BlogDirectionResponse) => void
   onApproveCommission: () => Promise<void>
   onClearDirectionWorkflow: () => void
@@ -45,10 +41,8 @@ export function EasySetupPanel({
   editorialOptions,
   editorialOptionsError,
   editorialOptionsLoading,
-  inputOptions,
   location,
   title,
-  onApply,
   onApplyDirectionResponse,
   onApproveCommission,
   onClearDirectionWorkflow,
@@ -63,9 +57,6 @@ export function EasySetupPanel({
 }: EasySetupPanelProps) {
   const [prompt, setPrompt] = useState<string | null>(null)
   const directionCopy = useClipboardCopy()
-  const [pastedJson, setPastedJson] = useState('')
-  const [review, setReview] = useState<EasySetupImportReview | null>(null)
-  const [appliedCount, setAppliedCount] = useState<number | null>(null)
   const [directionJson, setDirectionJson] = useState('')
   const [directionReview, setDirectionReview] = useState<DirectionImportReview | null>(null)
   const [directionStatus, setDirectionStatus] = useState<string | null>(null)
@@ -118,26 +109,6 @@ export function EasySetupPanel({
     onApplyDirectionResponse(directionReview.response)
     setDirectionReview(null)
     setDirectionStatus('Three directions are ready for approval.')
-  }
-
-  // The review is tied to the exact text it was run against; editing the box
-  // retracts the approval so nothing unchecked can reach the form.
-  const handlePastedJsonChange = (value: string) => {
-    setPastedJson(value)
-    setReview(null)
-    setAppliedCount(null)
-  }
-
-  const handleCheckJson = () => {
-    setAppliedCount(null)
-    setReview(reviewEasySetupJson(pastedJson, inputOptions))
-  }
-
-  const handleApplyJson = () => {
-    if (!review?.patch) return
-    onApply(review.patch)
-    setAppliedCount(Object.keys(review.patch).length)
-    setReview(null)
   }
 
   return (
@@ -314,93 +285,6 @@ export function EasySetupPanel({
             )}
           </>
         )}
-        <details className="p2b-disclosure">
-          <summary>Legacy v2 brief import</summary>
-          <div className="p2b-disclosure-body">
-            <p className="p2b-field-hint">
-              Temporary compatibility path for saved one-shot briefs.
-            </p>
-            <div className="p2b-field">
-              <label htmlFor="p2b-easy-setup-json">Approved JSON</label>
-              <textarea
-                id="p2b-easy-setup-json"
-                className="p2b-textarea"
-                rows={10}
-                placeholder="Paste the JSON the model returned, then check it before applying."
-                value={pastedJson}
-                onChange={event => handlePastedJsonChange(event.target.value)}
-              />
-            </div>
-            <div className="p2b-panel-actions">
-              <button
-                type="button"
-                className="p2b-copy-json-btn"
-                disabled={!pastedJson.trim()}
-                onClick={handleCheckJson}
-              >
-                Check JSON
-              </button>
-              <button
-                type="button"
-                className="p2b-submit-btn"
-                disabled={!review?.patch}
-                onClick={handleApplyJson}
-              >
-                Apply to form
-              </button>
-            </div>
-            {appliedCount !== null && (
-              <p className="p2b-import-applied" role="status">
-                Applied {appliedCount} fields to the form below.
-              </p>
-            )}
-            {review?.direction && (
-              <div className="p2b-import-direction">
-                <span className="p2b-import-direction-label">Direction</span>
-                <p>{review.direction}</p>
-              </div>
-            )}
-            {review !== null && review.issues.length > 0 && (
-              <div className="p2b-import-report p2b-import-report--blocked">
-                <p className="p2b-import-report-title">
-                  {review.issues.length} problem
-                  {review.issues.length === 1 ? '' : 's'} — nothing was applied.
-                </p>
-                <ul className="p2b-import-list">
-                  {review.issues.map(issue => (
-                    <li key={`${issue.field}-${issue.message}`}>
-                      <code>{issue.field}</code> {issue.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {review?.patch && (
-              <div className="p2b-import-report">
-                <p className="p2b-import-report-title">
-                  Every value matches the loaded options. Review and apply.
-                </p>
-                {review.corrections.length > 0 && (
-                  <ul className="p2b-import-list p2b-import-list--corrections">
-                    {review.corrections.map(correction => (
-                      <li key={`${correction.field}-${correction.message}`}>
-                        <code>{correction.field}</code> {correction.message}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <dl className="p2b-import-rows">
-                  {review.rows.map(row => (
-                    <div key={row.field} className="p2b-import-row">
-                      <dt>{row.field}</dt>
-                      <dd>{row.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            )}
-          </div>
-        </details>
       </div>
     </section>
   )

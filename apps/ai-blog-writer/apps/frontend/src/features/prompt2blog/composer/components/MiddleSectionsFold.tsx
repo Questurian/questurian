@@ -5,8 +5,8 @@ export function MiddleSectionsFold({ children }: { children: ReactNode }) {
     <details className="p2b-middle-fold">
       <summary className="p2b-middle-fold-summary">
         <div className="p2b-panel-header-text">
-          <h2>Article Details</h2>
-          <p>Core inputs, prompt profiles, SEO, source material, and guidelines.</p>
+          <h2>Writing Profiles</h2>
+          <p>Tone, length, brand voice, and creativity for the approved commission.</p>
         </div>
         <span className="p2b-middle-fold-chevron" aria-hidden="true" />
       </summary>

@@ -375,23 +375,45 @@ describe('Prompt2BlogPage', () => {
     })
   })
 
+  it('no longer offers the legacy 42-type selector or its inputs', async () => {
+    renderPage()
+    await waitFor(() => expect(getPrompt2BlogEditorialOptionsMock).toHaveBeenCalled())
+
+    for (const label of [
+      'Article Type',
+      'Article Goal',
+      'Target Reader',
+      'Destination Context',
+      'Editorial Angle (Optional)',
+      'Approved JSON',
+      'Source Block 1',
+      'Secondary Keywords (comma-separated)',
+    ]) {
+      expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
+    }
+    for (const heading of ['Core Inputs', 'SEO + Constraints', 'Source Material', 'Guideline Preview']) {
+      expect(screen.queryByRole('heading', { name: heading })).not.toBeInTheDocument()
+    }
+  })
+
   it('starts with an Easy Set Up block containing Title and Location fields', async () => {
     renderPage()
 
     const easySetupPanel = screen.getByRole('heading', { name: 'Easy Set Up' }).closest('section')
-    const coreInputsPanel = screen.getByRole('heading', { name: 'Core Inputs' }).closest('section')
+    const profilesPanel = screen
+      .getByRole('heading', { name: 'Writing Profiles' })
+      .closest('section')
     const modelRoutingPanel = screen.getByRole('heading', { name: 'Run Stack' }).closest('section')
 
     expect(easySetupPanel).toBeInTheDocument()
     expect(modelRoutingPanel?.compareDocumentPosition(easySetupPanel!)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
-    expect(easySetupPanel?.compareDocumentPosition(coreInputsPanel!)).toBe(
+    expect(easySetupPanel?.compareDocumentPosition(profilesPanel!)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
     expect(within(easySetupPanel!).getByLabelText('Title')).toBeInTheDocument()
     expect(within(easySetupPanel!).getByLabelText('Location')).toBeInTheDocument()
-    expect(within(easySetupPanel!).getByLabelText('Approved JSON')).not.toBeVisible()
     expect(within(easySetupPanel!).queryByLabelText('Direction JSON')).not.toBeInTheDocument()
     expect(
       within(easySetupPanel!).getByRole('button', {
@@ -405,7 +427,7 @@ describe('Prompt2BlogPage', () => {
     renderPage()
 
     // The prompt quotes the loaded option catalogs, so wait for them to arrive.
-    await screen.findByRole('option', { name: 'Destination Guide' })
+    await waitFor(() => expect(getPrompt2BlogEditorialOptionsMock).toHaveBeenCalled())
     const confirmSetup = screen.getByRole('button', {
       name: 'Generate direction prompt',
     })
@@ -450,7 +472,7 @@ describe('Prompt2BlogPage', () => {
     restoreClipboard = stubClipboard(writeText)
 
     renderPage()
-    await screen.findByRole('option', { name: 'Destination Guide' })
+    await waitFor(() => expect(getPrompt2BlogEditorialOptionsMock).toHaveBeenCalled())
 
     fireEvent.change(screen.getByLabelText('Title'), {
       target: { value: 'A weekend in Lisbon' },
@@ -471,7 +493,7 @@ describe('Prompt2BlogPage', () => {
     restoreClipboard = stubClipboard(vi.fn().mockRejectedValue(new Error('denied')))
 
     renderPage()
-    await screen.findByRole('option', { name: 'Destination Guide' })
+    await waitFor(() => expect(getPrompt2BlogEditorialOptionsMock).toHaveBeenCalled())
 
     fireEvent.change(screen.getByLabelText('Title'), {
       target: { value: 'A weekend in Lisbon' },
@@ -483,119 +505,6 @@ describe('Prompt2BlogPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Copy prompt' }))
 
     expect(await screen.findByRole('button', { name: 'Copy failed' })).toBeInTheDocument()
-  })
-
-  it('fills the whole form from an approved JSON brief once it checks out', async () => {
-    renderPage()
-    await screen.findByRole('option', { name: 'Destination Guide' })
-    fireEvent.click(screen.getByText('Legacy v2 brief import'))
-
-    const approved = JSON.stringify({
-      direction: 'A routing piece for a reader who loses their weekend to transit.',
-      title: 'A Weekend in Lisbon',
-      location: 'Lisbon, Portugal',
-      article_type: 'Itinerary Article',
-      article_goal: 'Plan two full days without wasted transit.',
-      target_reader: 'A first-time visitor with 48 hours.',
-      destination_context: 'Lisbon, Portugal, on the Tagus estuary.',
-      angle: 'Neighbourhood-first planning beats landmark ticking.',
-      call_to_action: 'Book the viewpoint slot before arriving.',
-      tone_id: 'balanced',
-      length_id: 'standard',
-      brand_voice_id: 'questurian',
-      creativity_level: 'high',
-      primary_keyword: 'weekend in lisbon',
-      secondary_keywords: ['lisbon itinerary', '48 hours in lisbon'],
-      must_include: ['Tram 28 crowding', 'Airport transfer costs'],
-      negative_instructions: ['No unsourced price claims'],
-      enable_editorial_augmentation: true,
-      source_material: ['RESEARCH NEEDED: current Carris fare'],
-      model_name: 'gemini-2.5-pro',
-      writing_model: 'gemini-2.5-flash',
-    })
-
-    fireEvent.change(screen.getByLabelText('Approved JSON'), {
-      target: { value: approved },
-    })
-    expect(screen.getByRole('button', { name: 'Apply to form' })).toBeDisabled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Check JSON' }))
-
-    expect(
-      screen.getByText('Every value matches the loaded options. Review and apply.'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Itinerary Article (id 9)')).toBeInTheDocument()
-    expect(
-      screen.getByText('A routing piece for a reader who loses their weekend to transit.'),
-    ).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Apply to form' }))
-
-    expect(screen.getByLabelText('Article Type')).toHaveValue('9')
-    expect(screen.getByLabelText('Article Goal')).toHaveValue(
-      'Plan two full days without wasted transit.',
-    )
-    expect(screen.getByLabelText('Target Reader')).toHaveValue(
-      'A first-time visitor with 48 hours.',
-    )
-    expect(screen.getByLabelText('Editorial Angle (Optional)')).toHaveValue(
-      'Neighbourhood-first planning beats landmark ticking.',
-    )
-    expect(screen.getByLabelText('Call to Action (Optional)')).toHaveValue(
-      'Book the viewpoint slot before arriving.',
-    )
-    expect(screen.getByLabelText('Tone')).toHaveValue('balanced')
-    expect(screen.getByLabelText('Creativity Level')).toHaveValue('high')
-    expect(screen.getByLabelText('Pipeline preset')).toHaveValue('editorial-premium')
-    expect(screen.getByLabelText('Primary Keyword')).toHaveValue('weekend in lisbon')
-    expect(screen.getByLabelText('Secondary Keywords (comma-separated)')).toHaveValue(
-      'lisbon itinerary, 48 hours in lisbon',
-    )
-    expect(screen.getByLabelText('Must Include (one per line)')).toHaveValue(
-      'Tram 28 crowding\nAirport transfer costs',
-    )
-    expect(screen.getByLabelText('Negative Instructions (one per line)')).toHaveValue(
-      'No unsourced price claims',
-    )
-    expect(screen.getByLabelText('Add editorial extras')).toBeChecked()
-    expect(screen.getByLabelText('Title')).toHaveValue('A Weekend in Lisbon')
-    expect(screen.getByText('Applied 18 fields to the form below.')).toBeInTheDocument()
-  })
-
-  it('blocks applying a brief whose values are not in the loaded options', async () => {
-    renderPage()
-    await screen.findByRole('option', { name: 'Destination Guide' })
-    fireEvent.click(screen.getByText('Legacy v2 brief import'))
-
-    fireEvent.change(screen.getByLabelText('Approved JSON'), {
-      target: { value: '{"article_type": "Destination Guides"}' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Check JSON' }))
-
-    expect(screen.getByText(/nothing was applied/)).toBeInTheDocument()
-    expect(screen.getByText(/Closest match: "Destination Guide"/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Apply to form' })).toBeDisabled()
-    expect(screen.getByLabelText('Article Goal')).toHaveValue('')
-  })
-
-  it('retracts an approved check as soon as the pasted JSON is edited', async () => {
-    renderPage()
-    await screen.findByRole('option', { name: 'Destination Guide' })
-    fireEvent.click(screen.getByText('Legacy v2 brief import'))
-
-    const box = screen.getByLabelText('Approved JSON')
-    fireEvent.change(box, {
-      target: { value: '{"article_type": "Destination Guides"}' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Check JSON' }))
-    expect(screen.getByText(/nothing was applied/)).toBeInTheDocument()
-
-    fireEvent.change(box, {
-      target: { value: '{"article_type": "Destination Guide"}' },
-    })
-
-    expect(screen.queryByText(/nothing was applied/)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Apply to form' })).toBeDisabled()
   })
 
   it('preserves Easy Set Up values in the composer draft', async () => {
@@ -700,198 +609,6 @@ describe('Prompt2BlogPage', () => {
     expect(editorialExtras).toBeChecked()
   })
 
-  it('folds every middle section behind one Article Details bar', async () => {
-    renderPage()
-
-    const advancedGenerationSummary = await screen.findByText('Advanced generation controls')
-    const advancedGeneration = advancedGenerationSummary.closest('details')
-    const advancedSeoSummary = screen.getByText('Advanced SEO controls')
-    const advancedSeo = advancedSeoSummary.closest('details')
-    const optionalGuidanceSummary = screen.getByText('Optional editorial guidance')
-    const optionalGuidance = optionalGuidanceSummary.closest('details')
-
-    const articleDetailsHeading = screen.getByRole('heading', {
-      name: 'Article Details',
-    })
-    const articleDetails = articleDetailsHeading.closest('details')
-    const middlePanels = [
-      'Core Inputs',
-      'Prompt Profiles',
-      'SEO + Constraints',
-      'Source Material',
-      'Guideline Preview',
-    ].map(title => screen.getByRole('heading', { name: title }).closest('details'))
-
-    expect(screen.getByRole('heading', { name: 'Easy Set Up' }).closest('details')).toBeNull()
-    expect(screen.getByRole('heading', { name: 'Pipeline' }).closest('details')).toBeNull()
-    expect(articleDetails).not.toHaveAttribute('open')
-    middlePanels.forEach(panel => expect(panel).toBe(articleDetails))
-
-    expect(advancedGeneration).not.toHaveAttribute('open')
-    expect(advancedSeo).not.toHaveAttribute('open')
-    expect(optionalGuidance).not.toHaveAttribute('open')
-    for (const label of [
-      'Creativity Level',
-      'Negative Instructions (one per line)',
-      'Add editorial extras',
-    ]) {
-      expect(screen.getByLabelText(label).closest('details')).toBe(advancedGeneration)
-    }
-    expect(screen.getByLabelText('Pipeline preset').closest('details')).toBeNull()
-    expect(screen.queryByLabelText('Audience Profile (Optional)')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('Prompt Enhance')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Secondary Keywords (comma-separated)').closest('details')).toBe(
-      advancedSeo,
-    )
-    expect(screen.getByLabelText('Editorial Angle (Optional)').closest('details')).toBe(
-      optionalGuidance,
-    )
-    expect(screen.getByLabelText('Call to Action (Optional)').closest('details')).toBe(
-      optionalGuidance,
-    )
-
-    fireEvent.click(articleDetailsHeading)
-    fireEvent.click(advancedGenerationSummary)
-    fireEvent.click(advancedSeoSummary)
-    fireEvent.click(optionalGuidanceSummary)
-
-    expect(articleDetails).toHaveAttribute('open')
-    expect(advancedGeneration).toHaveAttribute('open')
-    expect(advancedSeo).toHaveAttribute('open')
-    expect(optionalGuidance).toHaveAttribute('open')
-  })
-
-  it('opens optional editorial guidance when a saved draft uses it', async () => {
-    saveComposerState({
-      ...DEFAULT_COMPOSER_STATE,
-      angle: 'Peru is the better first stop',
-      callToAction: 'Compare fares',
-    })
-
-    renderPage()
-
-    const optionalGuidanceSummary = await screen.findByText('Optional editorial guidance')
-    const optionalGuidance = optionalGuidanceSummary.closest('details')
-
-    expect(optionalGuidance).toHaveAttribute('open')
-    expect(screen.getByLabelText('Editorial Angle (Optional)')).toHaveValue(
-      'Peru is the better first stop',
-    )
-    expect(screen.getByLabelText('Call to Action (Optional)')).toHaveValue('Compare fares')
-  })
-
-  it('preserves optional guidance across toggles and clears it with core inputs', async () => {
-    renderPage()
-
-    const optionalGuidanceSummary = await screen.findByText('Optional editorial guidance')
-    const angle = screen.getByLabelText('Editorial Angle (Optional)')
-    const callToAction = screen.getByLabelText('Call to Action (Optional)')
-
-    fireEvent.click(optionalGuidanceSummary)
-    fireEvent.change(angle, {
-      target: { value: 'Peru is the better first stop' },
-    })
-    fireEvent.change(callToAction, { target: { value: 'Compare fares' } })
-    fireEvent.click(optionalGuidanceSummary)
-    fireEvent.click(optionalGuidanceSummary)
-
-    expect(angle).toHaveValue('Peru is the better first stop')
-    expect(callToAction).toHaveValue('Compare fares')
-
-    const coreInputsPanel = screen.getByRole('heading', { name: 'Core Inputs' }).closest('section')
-    fireEvent.click(within(coreInputsPanel!).getByRole('button', { name: 'Clear section' }))
-
-    expect(angle).toHaveValue('')
-    expect(callToAction).toHaveValue('')
-  })
-
-  it('preserves advanced values across disclosure toggles and clears them by section', async () => {
-    renderPage()
-
-    const advancedGenerationSummary = await screen.findByText('Advanced generation controls')
-    const advancedSeoSummary = screen.getByText('Advanced SEO controls')
-    const negativeInstructions = screen.getByLabelText('Negative Instructions (one per line)')
-    const secondaryKeywords = screen.getByLabelText('Secondary Keywords (comma-separated)')
-
-    fireEvent.click(advancedGenerationSummary)
-    fireEvent.change(negativeInstructions, {
-      target: { value: 'Avoid generic praise' },
-    })
-    fireEvent.click(advancedGenerationSummary)
-    fireEvent.click(advancedGenerationSummary)
-
-    fireEvent.click(advancedSeoSummary)
-    fireEvent.change(secondaryKeywords, {
-      target: { value: 'family hotels, free museums' },
-    })
-    fireEvent.click(advancedSeoSummary)
-    fireEvent.click(advancedSeoSummary)
-
-    expect(negativeInstructions).toHaveValue('Avoid generic praise')
-    expect(secondaryKeywords).toHaveValue('family hotels, free museums')
-
-    const promptProfilesPanel = screen
-      .getByRole('heading', { name: 'Prompt Profiles' })
-      .closest('section')
-    const seoPanel = screen.getByRole('heading', { name: 'SEO + Constraints' }).closest('section')
-
-    fireEvent.click(
-      within(promptProfilesPanel!).getByRole('button', {
-        name: 'Clear section',
-      }),
-    )
-    fireEvent.click(within(seoPanel!).getByRole('button', { name: 'Clear section' }))
-
-    expect(negativeInstructions).toHaveValue('')
-    expect(secondaryKeywords).toHaveValue('')
-  })
-
-  it('sends every model bundled by the selected run stack', async () => {
-    renderPage()
-
-    await waitFor(() => {
-      expect(getPrompt2BlogInputOptionsMock).toHaveBeenCalled()
-    })
-
-    fireEvent.change(screen.getByLabelText('Article Type'), {
-      target: { value: '7' },
-    })
-    fireEvent.change(screen.getByLabelText('Article Goal'), {
-      target: { value: 'Help readers pick the right neighborhoods.' },
-    })
-    fireEvent.change(screen.getByLabelText('Target Reader'), {
-      target: { value: 'First-time visitors' },
-    })
-    fireEvent.change(screen.getByLabelText('Destination Context'), {
-      target: { value: 'Lisbon, Portugal' },
-    })
-    fireEvent.change(screen.getByLabelText('Pipeline preset'), {
-      target: { value: 'best-value' },
-    })
-    fireEvent.change(screen.getByLabelText('Source Block 1'), {
-      target: {
-        value: 'Alfama is historic. Principe Real is calmer and more upscale.',
-      },
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' }))
-
-    await waitFor(() => {
-      expect(startPrompt2BlogRunMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          article_type_id: 7,
-          model_name: 'gemini-3.1-flash-lite',
-          writing_model: 'gemini-3.7-flash',
-          audit_model: 'gemini-3.7-flash',
-          tone_id: 'balanced',
-          length_id: 'standard',
-          enable_editorial_augmentation: false,
-          source_material: ['Alfama is historic. Principe Real is calmer and more upscale.'],
-        }),
-      )
-    })
-  })
-
   it('blocks submission while an editorial v3 direction is unfinished', async () => {
     saveComposerState({
       ...DEFAULT_COMPOSER_STATE,
@@ -988,18 +705,6 @@ describe('Prompt2BlogPage', () => {
 
     expect(screen.getByRole('button', { name: 'Show direction cards' })).toBeDisabled()
     expect(screen.getByLabelText('Direction JSON')).toHaveValue('')
-  })
-
-  it('lets users choose a travel quick pick and shows the selected definition', async () => {
-    renderPage()
-
-    const quickPick = await screen.findByRole('button', {
-      name: 'Itinerary Article',
-    })
-    fireEvent.click(quickPick)
-
-    expect(screen.getByLabelText('Article Type')).toHaveValue('9')
-    expect(screen.getByText('Day-by-day or stop-by-stop planning format.')).toBeInTheDocument()
   })
 
   it('opens cleanup details from the pipeline step', async () => {
