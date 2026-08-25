@@ -1,23 +1,21 @@
-export type {
-  ArticleTypeGuidelines,
-  ArticleTypeOption
-} from './types/article-types.types'
-export type {
-  Prompt2BlogSavedArticle,
-  Prompt2BlogSyncStatusResponse
-} from './types/articles.types'
+export type { ArticleTypeGuidelines, ArticleTypeOption } from './types/article-types.types'
+export type { Prompt2BlogSavedArticle, Prompt2BlogSyncStatusResponse } from './types/articles.types'
 export type {
   Prompt2BlogArticleFormId,
   Prompt2BlogAudienceTagId,
   Prompt2BlogAudienceTagOption,
   Prompt2BlogCommission,
   Prompt2BlogCommissionAudience,
+  Prompt2BlogCommissionDraft,
   Prompt2BlogCommissionReference,
   Prompt2BlogCommissionRequirement,
   Prompt2BlogCommissionScope,
   Prompt2BlogCreativityLevel,
   Prompt2BlogEditorialFormOption,
   Prompt2BlogEditorialOptionsResponse,
+  Prompt2BlogDirectionOption,
+  Prompt2BlogDirectionOptionId,
+  Prompt2BlogDirectionResponse,
   Prompt2BlogEvidenceClaim,
   Prompt2BlogEvidenceConfidence,
   Prompt2BlogEvidenceConflict,
@@ -39,6 +37,7 @@ export type {
   Prompt2BlogV3Request,
   Prompt2BlogWritingProfiles,
 } from './types/editorial.types'
+export { PROMPT2BLOG_DIRECTION_OPTION_IDS } from './types/editorial.types'
 export type {
   Prompt2BlogArticleTypeOption,
   Prompt2BlogDebugResponse,
@@ -56,14 +55,9 @@ export type {
   Prompt2BlogStatusResponse,
   Prompt2BlogWriterModel,
 } from './types/pipeline.types'
-export {
-  PROMPT2BLOG_PIPELINE_STAGES,
-} from './types/pipeline.types'
+export { PROMPT2BLOG_PIPELINE_STAGES } from './types/pipeline.types'
 
-export {
-  fetchArticleTypeGuidelinesById,
-  fetchArticleTypes
-} from './api/article-types.api'
+export { fetchArticleTypeGuidelinesById, fetchArticleTypes } from './api/article-types.api'
 export { deleteArticle, fetchArticles } from './api/articles.api'
 export { getPrompt2BlogEditorialOptions } from './api/editorial-options.api'
 export {
@@ -88,5 +82,5 @@ export {
   rewriteBlockWithAi,
   searchPexelsImages,
   searchUnsplashImages,
-  updateArticle
+  updateArticle,
 } from '../staging/api'

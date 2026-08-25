@@ -38,10 +38,7 @@ export type Prompt2BlogAudienceTagId =
 
 export type Prompt2BlogScopeMode = 'single_subject' | 'head_to_head' | 'ranked_set'
 
-export type Prompt2BlogReferenceRole =
-  | 'primary_subject'
-  | 'context_only'
-  | 'comparator'
+export type Prompt2BlogReferenceRole = 'primary_subject' | 'context_only' | 'comparator'
 
 export type Prompt2BlogEvidenceSourceType =
   | 'official'
@@ -108,6 +105,38 @@ export type Prompt2BlogCommission = {
   exclusions?: string[]
   call_to_action?: string | null
 }
+
+export const PROMPT2BLOG_DIRECTION_OPTION_IDS = [
+  'direction-1',
+  'direction-2',
+  'direction-3',
+] as const
+
+export type Prompt2BlogDirectionOptionId = (typeof PROMPT2BLOG_DIRECTION_OPTION_IDS)[number]
+
+export type Prompt2BlogDirectionOption = {
+  option_id: Prompt2BlogDirectionOptionId
+  direction: string
+  form_id: Prompt2BlogArticleFormId
+  topic_module_ids: Prompt2BlogTopicModuleId[]
+  audience: Prompt2BlogCommissionAudience
+  core_reader_question: string
+  reader_outcome: string
+  primary_subject: string
+  scope: Prompt2BlogCommissionScope
+  requirements: Prompt2BlogCommissionRequirement[]
+  exclusions: string[]
+  rationale: string
+}
+
+export type Prompt2BlogDirectionResponse = {
+  schema_version: 3
+  original_title: string
+  location: string
+  options: [Prompt2BlogDirectionOption, Prompt2BlogDirectionOption, Prompt2BlogDirectionOption]
+}
+
+export type Prompt2BlogCommissionDraft = Omit<Prompt2BlogCommission, 'commission_fingerprint'>
 
 export type Prompt2BlogEvidenceSource = {
   source_id: string
