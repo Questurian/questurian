@@ -92,6 +92,7 @@ export default function Prompt2BlogPage() {
             editorialOptionsError={composer.editorialOptionsError}
             editorialOptionsLoading={composer.editorialOptionsLoading}
             location={state.easySetupLocation}
+            steps={steps}
             title={state.easySetupTitle}
             onApplyDirectionResponse={composer.applyDirectionResponse}
             onApproveCommission={composer.approveCommissionChanges}

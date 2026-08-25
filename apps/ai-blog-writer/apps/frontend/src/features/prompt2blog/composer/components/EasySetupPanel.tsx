@@ -7,12 +7,14 @@ import type {
   Prompt2BlogEvidencePackage,
 } from '../../api'
 import type { P2BEditorialComposerState, P2BFormState } from '../composer.types'
+import type { P2BStep, P2BStepId } from '../step-model'
 import { reviewDirectionResponseJson, type DirectionImportReview } from '../direction-import'
 import { buildDirectionPrompt } from '../direction-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import { CommissionEditor } from './CommissionEditor'
 import { DirectionCards } from './DirectionCards'
 import { ResearchPanel } from './ResearchPanel'
+import { StepSection } from './StepSection'
 
 interface EasySetupPanelProps {
   activeWorkflow: P2BFormState['activeWorkflow']
@@ -21,6 +23,7 @@ interface EasySetupPanelProps {
   editorialOptionsError: boolean
   editorialOptionsLoading: boolean
   location: string
+  steps: readonly P2BStep[]
   title: string
   onApplyDirectionResponse: (response: Prompt2BlogDirectionResponse) => void
   onApproveCommission: () => Promise<void>
@@ -42,6 +45,7 @@ export function EasySetupPanel({
   editorialOptionsError,
   editorialOptionsLoading,
   location,
+  steps,
   title,
   onApplyDirectionResponse,
   onApproveCommission,
@@ -111,19 +115,18 @@ export function EasySetupPanel({
     setDirectionStatus('Three directions are ready for approval.')
   }
 
+  // deriveP2BSteps always returns all five; a missing one means the page handed
+  // this panel something other than the step model, which is a programming
+  // error rather than a state the operator can reach.
+  const stepFor = (id: P2BStepId): P2BStep => {
+    const step = steps.find(candidate => candidate.id === id)
+    if (!step) throw new Error(`Missing step "${id}" in the step model.`)
+    return step
+  }
+
   return (
-    <section className="p2b-panel">
-      <div className="p2b-panel-header">
-        <div className="p2b-panel-header-text">
-          <h2>Easy Set Up</h2>
-          <p>Compare three editorial directions, then approve the commission.</p>
-        </div>
-      </div>
-      <div className="p2b-panel-body">
-        <div className="p2b-subsection-heading">
-          <h3>Generate a direction prompt</h3>
-          <p>Only the working title and location leave the app at this step.</p>
-        </div>
+    <>
+      <StepSection step={stepFor('start')}>
         <div className="p2b-field-row p2b-field-row--2">
           <div className="p2b-field">
             <label htmlFor="p2b-easy-setup-title">Title</label>
@@ -148,6 +151,9 @@ export function EasySetupPanel({
             />
           </div>
         </div>
+        <p className="p2b-field-hint">
+          Only the working title and location leave the app at this step.
+        </p>
         <div className="p2b-panel-actions">
           <button
             type="button"
@@ -168,6 +174,14 @@ export function EasySetupPanel({
               Retry
             </button>
           </div>
+        )}
+      </StepSection>
+
+      <StepSection step={stepFor('direction')}>
+        {prompt === null && !showDirectionStep && (
+          <p className="p2b-field-hint">
+            Finish step 1 and your direction prompt appears here.
+          </p>
         )}
         {prompt !== null && (
           <div className="p2b-field">
@@ -261,31 +275,32 @@ export function EasySetupPanel({
                 }}
               />
             )}
-            {editorialOptions && editorial.commissionDraft && (
-              <CommissionEditor
-                draft={editorial.commissionDraft}
-                editorialOptions={editorialOptions}
-                isApproved={editorial.approval.status === 'approved'}
-                onApprove={() => {
-                  void onApproveCommission().catch(error =>
-                    setDirectionStatus(error instanceof Error ? error.message : 'Approval failed.'),
-                  )
-                }}
-                onChange={onCommissionChange}
-              />
-            )}
-            {editorialOptions && editorial.approval.status === 'approved' && (
-              <ResearchPanel
-                commission={editorial.approval.commission}
-                editorialOptions={editorialOptions}
-                evidencePackage={editorial.evidencePackage}
-                onClearEvidence={onClearEvidence}
-                onStoreEvidence={onStoreEvidence}
-              />
-            )}
           </>
         )}
-      </div>
-    </section>
+      </StepSection>
+
+      {editorialOptions && editorial.commissionDraft && (
+        <CommissionEditor
+          draft={editorial.commissionDraft}
+          editorialOptions={editorialOptions}
+          isApproved={editorial.approval.status === 'approved'}
+          onApprove={() => {
+            void onApproveCommission().catch(error =>
+              setDirectionStatus(error instanceof Error ? error.message : 'Approval failed.'),
+            )
+          }}
+          onChange={onCommissionChange}
+        />
+      )}
+      {editorialOptions && editorial.approval.status === 'approved' && (
+        <ResearchPanel
+          commission={editorial.approval.commission}
+          editorialOptions={editorialOptions}
+          evidencePackage={editorial.evidencePackage}
+          onClearEvidence={onClearEvidence}
+          onStoreEvidence={onStoreEvidence}
+        />
+      )}
+    </>
   )
 }
