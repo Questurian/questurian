@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from copy import deepcopy
 from pathlib import Path
 
 import app.features.prompt2blog.llm as prompt2blog_llm
 from app.features.prompt2blog.graph.state import Prompt2BlogV3GraphState
-import app.features.prompt2blog.routes as prompt2blog_routes
 from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
 from app.features.prompt2blog.evidence_v3 import normalize_evidence
+from app.features.prompt2blog.intake_v3 import v3_intake_result
 from app.features.prompt2blog.research_readiness_v3 import (
     assess_research_readiness,
     build_follow_up_research_prompt,
 )
-from tests.prompt2blog_test_support import response_payload
 
 FIXTURE_PATH = (
     Path(__file__).parents[3]
@@ -170,12 +168,9 @@ def test_intake_terminates_as_needs_research_without_calling_a_model(monkeypatch
                 prompt2blog_llm, attribute, fail_on_model_call, raising=False
             )
 
-    payload = response_payload(
-        asyncio.run(prompt2blog_routes.prepare_pipeline_v3(_request()))
-    )
+    payload = v3_intake_result(_request())
 
     assert payload["status"] == "needs_research"
-    assert payload["message"] == "Prompt2Blog v3 commission needs more research"
     assert "run_input" not in payload
     assert [item["requirement_id"] for item in payload["unresolved_requirements"]] == [
         "r2",
@@ -189,13 +184,7 @@ def test_intake_terminates_as_needs_research_without_calling_a_model(monkeypatch
 
 
 def test_ready_research_reaches_run_input_instead_of_the_gate():
-    payload = response_payload(
-        asyncio.run(
-            prompt2blog_routes.prepare_pipeline_v3(
-                _request(evidence=_supported_evidence())
-            )
-        )
-    )
+    payload = v3_intake_result(_request(evidence=_supported_evidence()))
 
     assert payload["status"] == "ready"
     assert payload["run_input"]["form_id"] == "analysis"

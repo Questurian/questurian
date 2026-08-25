@@ -150,30 +150,6 @@ async def start_full_run(
     return JSONResponse({"message": "Prompt2Blog full run queued", "run_id": run_id})
 
 
-@router.post("/pipeline-v3/intake")
-async def prepare_pipeline_v3(
-    request: Prompt2BlogV3Request,
-    staff_user=Depends(require_staff),
-) -> JSONResponse:
-    """Validate an approved commission, gate it on research, assemble its input.
-
-    Intake is synchronous and starts nothing. Insufficient research terminates
-    here as `needs_research` — a product state, not a failure — before any
-    writing work exists to spend a token on.
-    """
-    try:
-        result = v3_intake_result(request)
-    except (RuntimeError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    message = (
-        "Prompt2Blog v3 run input assembled"
-        if result["status"] == "ready"
-        else "Prompt2Blog v3 commission needs more research"
-    )
-    return JSONResponse({"message": message, **result})
-
-
 @router.post("/pipeline-v3")
 async def start_pipeline_v3(
     request: Prompt2BlogV3Request,
