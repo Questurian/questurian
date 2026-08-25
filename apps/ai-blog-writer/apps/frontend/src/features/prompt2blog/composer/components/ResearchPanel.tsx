@@ -39,6 +39,11 @@ export function ResearchPanel({
   const [status, setStatus] = useState<string | null>(null)
   const researchCopy = useClipboardCopy()
   const followUpCopy = useClipboardCopy()
+  // The attached package is the one thing on this page a user needs *out* of
+  // the app: to keep it, to hand it to someone, or to carry it into a fresh
+  // chat. Without this the only copy of it is buried inside the follow-up
+  // prompt textarea.
+  const evidenceCopy = useClipboardCopy('Copy evidence package')
 
   const fingerprint = commission.commission_fingerprint
 
@@ -182,10 +187,19 @@ export function ResearchPanel({
       )}
       {evidencePackage && (
         <div className="p2b-import-report">
-          <p className="p2b-import-report-title">
-            {evidencePackage.sources?.length ?? 0} sources and{' '}
-            {evidencePackage.claims?.length ?? 0} claims are attached to this commission.
-          </p>
+          <div className="p2b-field-label-row">
+            <p className="p2b-import-report-title">
+              {evidencePackage.sources?.length ?? 0} sources and{' '}
+              {evidencePackage.claims?.length ?? 0} claims are attached to this commission.
+            </p>
+            <button
+              type="button"
+              className="p2b-inline-copy-btn"
+              onClick={() => evidenceCopy.copy(JSON.stringify(evidencePackage, null, 2))}
+            >
+              {evidenceCopy.label}
+            </button>
+          </div>
           <ul className="p2b-requirement-list">
             {evidencePackage.requirements.map(requirement => (
               <li key={requirement.requirement_id} className="p2b-requirement-row">

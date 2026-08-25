@@ -350,6 +350,12 @@
   gap: var(--space-3);
 }
 
+/* The label row also carries a report paragraph next to its copy button; the
+   button must not be squeezed by it. */
+.p2b-field-label-row .p2b-inline-copy-btn {
+  flex-shrink: 0;
+}
+
 .p2b-field-row {
   display: grid;
   gap: var(--space-4);

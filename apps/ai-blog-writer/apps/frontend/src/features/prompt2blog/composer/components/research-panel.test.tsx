@@ -223,6 +223,31 @@ describe('ResearchPanel', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('copies the attached evidence package so it never has to be dug out of a prompt', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+    const attached = evidence()
+    renderPanel(attached)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Copy evidence package' })
+    )
+
+    expect(writeText).toHaveBeenCalledWith(JSON.stringify(attached, null, 2))
+    expect(
+      await screen.findByRole('button', { name: 'Copied!' })
+    ).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('offers nothing to copy before research is attached', () => {
+    renderPanel(null)
+
+    expect(
+      screen.queryByRole('button', { name: 'Copy evidence package' })
+    ).not.toBeInTheDocument()
+  })
+
   it('removes attached research without touching the commission', () => {
     const { onClearEvidence } = renderPanel(evidence())
 
