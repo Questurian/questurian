@@ -6,7 +6,11 @@ import type {
   Prompt2BlogDirectionResponse
 } from '../api'
 import type { P2BEditorialComposerState, P2BFormState } from './composer.types'
-import { createCommissionDraft } from './commission'
+import {
+  commissionMatchesDraft,
+  createCommissionDraft,
+  fingerprintCommissionSync
+} from './commission'
 
 function emptyEditorialState(): P2BEditorialComposerState {
   return {
@@ -110,6 +114,18 @@ export function approveCommission(
   ) {
     throw new Error(
       'Approved commission must keep the app-owned title and location.'
+    )
+  }
+  if (!commissionMatchesDraft(state.editorial.commissionDraft, commission)) {
+    throw new Error(
+      'Approved commission must match the current commission draft.'
+    )
+  }
+  if (
+    fingerprintCommissionSync(commission) !== commission.commission_fingerprint
+  ) {
+    throw new Error(
+      'Approved commission fingerprint does not match its contents.'
     )
   }
 

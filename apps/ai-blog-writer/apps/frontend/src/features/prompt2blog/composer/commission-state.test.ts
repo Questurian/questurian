@@ -14,6 +14,7 @@ import {
   selectDirectionOption,
   startEditorialWorkflow
 } from './commission-state'
+import { fingerprintCommissionSync } from './commission'
 
 const APP_TITLE = "Is Lima still South America's bargain expat capital?"
 const APP_LOCATION = 'Lima, Peru'
@@ -164,7 +165,9 @@ describe('commission state', () => {
     const selected = selectedState()
     const commission: Prompt2BlogCommission = {
       ...selected.editorial.commissionDraft!,
-      commission_fingerprint: 'sha256:commission'
+      commission_fingerprint: fingerprintCommissionSync(
+        selected.editorial.commissionDraft!
+      )
     }
     const approved = approveCommission(selected, commission)
 
@@ -200,12 +203,31 @@ describe('commission state', () => {
     const selected = selectedState()
     const commission: Prompt2BlogCommission = {
       ...selected.editorial.commissionDraft!,
-      commission_fingerprint: 'sha256:commission',
+      commission_fingerprint: fingerprintCommissionSync(
+        selected.editorial.commissionDraft!
+      ),
       original_title: 'Model replacement title'
     }
 
     expect(() => approveCommission(selected, commission)).toThrow(
       'Approved commission must keep the app-owned title and location.'
+    )
+  })
+
+  it('rejects a stale fingerprint result after the commission draft changes', () => {
+    const selected = selectedState()
+    const staleCommission: Prompt2BlogCommission = {
+      ...selected.editorial.commissionDraft!,
+      commission_fingerprint: fingerprintCommissionSync(
+        selected.editorial.commissionDraft!
+      )
+    }
+    const edited = editCommissionDraft(selected, {
+      approved_direction: 'A newly edited direction.'
+    })
+
+    expect(() => approveCommission(edited, staleCommission)).toThrow(
+      'must match the current commission draft'
     )
   })
 

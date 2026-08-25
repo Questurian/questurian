@@ -16,10 +16,79 @@ import {
   type Prompt2BlogDirectionOption,
   type Prompt2BlogDirectionOptionId,
 } from '../api'
+import { commissionMatchesDraft, fingerprintCommissionSync } from './commission'
 
 export const COMPOSER_STORAGE_KEY = 'p2b-form-draft'
 export const COMPOSER_STORAGE_VERSION = 3
 const DEFAULT_MODEL_STACK = resolvePrompt2BlogModelStack(DEFAULT_PROMPT2BLOG_MODEL_STACK_ID)
+const ARTICLE_FORM_IDS = new Set([
+  'news-report',
+  'analysis',
+  'explainer',
+  'feature-profile',
+  'interview-qa',
+  'opinion-column',
+  'personal-essay-travelogue',
+  'destination-guide',
+  'service-guide',
+  'itinerary',
+  'curated-list-best-of',
+  'comparison',
+  'review',
+  'how-to-checklist',
+  'cost-budget-breakdown',
+])
+const TOPIC_MODULE_IDS = new Set([
+  'cost-affordability',
+  'accommodation-neighborhoods',
+  'food-drink',
+  'transportation',
+  'safety',
+  'visa-entry',
+  'seasonality-weather',
+  'adventure-outdoors',
+  'long-stay-remote-work',
+  'culture-etiquette',
+])
+const AUDIENCE_TAG_IDS = new Set([
+  'first-time-visitor',
+  'solo-traveler',
+  'family',
+  'remote-worker-relocator',
+  'accessibility-needs',
+  'budget-focused',
+  'premium-focused',
+])
+const COMMISSION_DRAFT_KEYS = [
+  'schema_version',
+  'original_title',
+  'location',
+  'approved_direction',
+  'form_id',
+  'topic_module_ids',
+  'audience',
+  'core_reader_question',
+  'reader_outcome',
+  'primary_subject',
+  'scope',
+  'requirements',
+  'exclusions',
+  'call_to_action',
+] as const
+const DIRECTION_OPTION_KEYS = [
+  'option_id',
+  'direction',
+  'form_id',
+  'topic_module_ids',
+  'audience',
+  'core_reader_question',
+  'reader_outcome',
+  'primary_subject',
+  'scope',
+  'requirements',
+  'exclusions',
+  'rationale',
+] as const
 
 export const DEFAULT_EDITORIAL_STATE: P2BEditorialComposerState = {
   directionOptions: [],
@@ -76,47 +145,94 @@ function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && Boolean(value.trim())
 }
 
+function hasOnlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const allowed = new Set(keys)
+  return Object.keys(value).every(key => allowed.has(key))
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every(item => typeof item === 'string')
 }
 
-function isCommissionDraft(value: unknown): value is Prompt2BlogCommissionDraft {
+function hasUniqueValues(values: string[]): boolean {
+  return new Set(values.map(value => value.trim().toLocaleLowerCase())).size === values.length
+}
+
+function isCommissionDraft(
+  value: unknown,
+  allowFingerprint = false,
+): value is Prompt2BlogCommissionDraft {
   if (!isRecord(value)) return false
+  const allowedKeys = allowFingerprint
+    ? [...COMMISSION_DRAFT_KEYS, 'commission_fingerprint']
+    : COMMISSION_DRAFT_KEYS
+  if (!hasOnlyKeys(value, allowedKeys)) return false
   const audience = value.audience
   const scope = value.scope
   if (!isRecord(audience) || !isRecord(scope)) return false
+  if (!hasOnlyKeys(audience, ['primary_reader', 'tags'])) return false
+  if (!hasOnlyKeys(scope, ['mode', 'references'])) return false
   const references = scope.references
   const requirements = value.requirements
-  return (
-    value.schema_version === 3 &&
-    isNonEmptyString(value.original_title) &&
-    isNonEmptyString(value.location) &&
-    isNonEmptyString(value.approved_direction) &&
-    isNonEmptyString(value.form_id) &&
-    isStringArray(value.topic_module_ids) &&
-    isNonEmptyString(audience.primary_reader) &&
-    isStringArray(audience.tags) &&
-    (scope.mode === 'single_subject' ||
-      scope.mode === 'head_to_head' ||
-      scope.mode === 'ranked_set') &&
+  const modules = value.topic_module_ids
+  const tags = audience.tags
+  const formId = value.form_id
+  if (!isStringArray(modules) || !isStringArray(tags) || !isNonEmptyString(formId)) {
+    return false
+  }
+  const validReferences =
     Array.isArray(references) &&
-    references.length > 0 &&
     references.every(
       reference =>
         isRecord(reference) &&
+        hasOnlyKeys(reference, ['name', 'role']) &&
         isNonEmptyString(reference.name) &&
         (reference.role === 'primary_subject' ||
           reference.role === 'context_only' ||
           reference.role === 'comparator'),
-    ) &&
+    )
+  if (!validReferences || references.length === 0) return false
+  const primaryReferences = references.filter(reference => reference.role === 'primary_subject')
+  const comparatorCount = references.filter(reference => reference.role === 'comparator').length
+  const validRequirements =
     Array.isArray(requirements) &&
     requirements.length > 0 &&
     requirements.every(
       requirement =>
         isRecord(requirement) &&
+        hasOnlyKeys(requirement, ['requirement_id', 'question']) &&
         isNonEmptyString(requirement.requirement_id) &&
         isNonEmptyString(requirement.question),
-    ) &&
+    )
+  if (!validRequirements) return false
+  return (
+    value.schema_version === 3 &&
+    isNonEmptyString(value.original_title) &&
+    isNonEmptyString(value.location) &&
+    isNonEmptyString(value.approved_direction) &&
+    ARTICLE_FORM_IDS.has(formId) &&
+    modules.length <= 4 &&
+    hasUniqueValues(modules) &&
+    modules.every(moduleId => TOPIC_MODULE_IDS.has(moduleId)) &&
+    isNonEmptyString(audience.primary_reader) &&
+    hasUniqueValues(tags) &&
+    tags.every(tagId => AUDIENCE_TAG_IDS.has(tagId)) &&
+    isNonEmptyString(value.core_reader_question) &&
+    isNonEmptyString(value.reader_outcome) &&
+    isNonEmptyString(value.primary_subject) &&
+    (scope.mode === 'single_subject' ||
+      scope.mode === 'head_to_head' ||
+      scope.mode === 'ranked_set') &&
+    primaryReferences.length === 1 &&
+    primaryReferences[0].name.trim().toLocaleLowerCase() ===
+      value.primary_subject.trim().toLocaleLowerCase() &&
+    hasUniqueValues(references.map(reference => reference.name)) &&
+    (scope.mode !== 'single_subject' || comparatorCount === 0) &&
+    (scope.mode !== 'head_to_head' || comparatorCount >= 1) &&
+    (scope.mode !== 'ranked_set' || comparatorCount >= 2) &&
+    (formId !== 'comparison' || scope.mode !== 'single_subject') &&
+    (scope.mode !== 'head_to_head' || formId === 'comparison') &&
+    hasUniqueValues(requirements.map(requirement => requirement.requirement_id)) &&
     isStringArray(value.exclusions) &&
     (value.call_to_action === null || typeof value.call_to_action === 'string')
   )
@@ -128,47 +244,26 @@ function isApprovedCommission(value: unknown): value is Prompt2BlogCommission {
   return (
     typeof fingerprint === 'string' &&
     /^[a-f0-9]{64}$/.test(fingerprint) &&
-    isCommissionDraft(value)
+    isCommissionDraft(value, true) &&
+    fingerprintCommissionSync(value) === fingerprint
   )
 }
 
 function isDirectionOption(value: unknown): value is Prompt2BlogDirectionOption {
   if (!isRecord(value)) return false
+  if (!hasOnlyKeys(value, DIRECTION_OPTION_KEYS)) return false
+  const { option_id: optionId, direction, rationale, ...commissionFields } = value
   return (
-    PROMPT2BLOG_DIRECTION_OPTION_IDS.includes(value.option_id as Prompt2BlogDirectionOptionId) &&
-    isNonEmptyString(value.direction) &&
-    isNonEmptyString(value.form_id) &&
-    isStringArray(value.topic_module_ids) &&
-    isRecord(value.audience) &&
-    isNonEmptyString(value.audience.primary_reader) &&
-    isStringArray(value.audience.tags) &&
-    isNonEmptyString(value.core_reader_question) &&
-    isNonEmptyString(value.reader_outcome) &&
-    isNonEmptyString(value.primary_subject) &&
-    isRecord(value.scope) &&
-    (value.scope.mode === 'single_subject' ||
-      value.scope.mode === 'head_to_head' ||
-      value.scope.mode === 'ranked_set') &&
-    Array.isArray(value.scope.references) &&
-    value.scope.references.length > 0 &&
-    value.scope.references.every(
-      reference =>
-        isRecord(reference) &&
-        isNonEmptyString(reference.name) &&
-        (reference.role === 'primary_subject' ||
-          reference.role === 'context_only' ||
-          reference.role === 'comparator'),
-    ) &&
-    Array.isArray(value.requirements) &&
-    value.requirements.length > 0 &&
-    value.requirements.every(
-      requirement =>
-        isRecord(requirement) &&
-        isNonEmptyString(requirement.requirement_id) &&
-        isNonEmptyString(requirement.question),
-    ) &&
-    isStringArray(value.exclusions) &&
-    isNonEmptyString(value.rationale)
+    PROMPT2BLOG_DIRECTION_OPTION_IDS.includes(optionId as Prompt2BlogDirectionOptionId) &&
+    isNonEmptyString(rationale) &&
+    isCommissionDraft({
+      ...commissionFields,
+      schema_version: 3,
+      original_title: 'Stored direction',
+      location: 'Stored location',
+      approved_direction: direction,
+      call_to_action: null,
+    })
   )
 }
 
@@ -215,6 +310,10 @@ function normalizeEditorialState(value: unknown): P2BEditorialComposerState {
     !Array.isArray(directionOptions) ||
     !directionOptions.every(isDirectionOption) ||
     (directionOptions.length !== 0 && directionOptions.length !== 3) ||
+    (directionOptions.length === 3 &&
+      directionOptions.some(
+        (option, index) => option.option_id !== PROMPT2BLOG_DIRECTION_OPTION_IDS[index],
+      )) ||
     (selectedOptionId !== null &&
       !PROMPT2BLOG_DIRECTION_OPTION_IDS.includes(
         selectedOptionId as Prompt2BlogDirectionOptionId,
@@ -224,9 +323,7 @@ function normalizeEditorialState(value: unknown): P2BEditorialComposerState {
     (commissionDraft !== null && !isCommissionDraft(commissionDraft)) ||
     (commissionDraft !== null && selectedOptionId === null) ||
     (approval.status === 'approved' &&
-      (commissionDraft === null ||
-        approval.commission.original_title !== commissionDraft.original_title ||
-        approval.commission.location !== commissionDraft.location))
+      (commissionDraft === null || !commissionMatchesDraft(commissionDraft, approval.commission)))
   ) {
     return { ...DEFAULT_EDITORIAL_STATE }
   }
@@ -239,6 +336,17 @@ function normalizeEditorialState(value: unknown): P2BEditorialComposerState {
 }
 
 export function saveComposerState(state: P2BFormState): void {
+  try {
+    const raw = localStorage.getItem(COMPOSER_STORAGE_KEY)
+    const stored = raw ? (JSON.parse(raw) as { composerStorageVersion?: unknown }) : null
+    if (
+      typeof stored?.composerStorageVersion === 'number' &&
+      stored.composerStorageVersion > COMPOSER_STORAGE_VERSION
+    )
+      return
+  } catch {
+    // A malformed draft is safe to replace with the current validated shape.
+  }
   localStorage.setItem(
     COMPOSER_STORAGE_KEY,
     JSON.stringify({
@@ -259,6 +367,9 @@ export function loadSavedComposerState(): P2BFormState {
     }
     const savedStorageVersion =
       typeof parsed.composerStorageVersion === 'number' ? parsed.composerStorageVersion : null
+    if (savedStorageVersion !== null && savedStorageVersion > COMPOSER_STORAGE_VERSION) {
+      return DEFAULT_COMPOSER_STATE
+    }
     const isUnversionedDraft = savedStorageVersion == null
     const isLegacyStorageDraft = savedStorageVersion == null || savedStorageVersion < 3
     // Fold removed audience detail into the remaining reader field before

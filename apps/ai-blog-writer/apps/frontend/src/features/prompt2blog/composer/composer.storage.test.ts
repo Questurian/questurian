@@ -8,6 +8,7 @@ import {
   saveComposerState,
 } from './composer.storage'
 import type { Prompt2BlogCommission, Prompt2BlogCommissionDraft } from '../api'
+import { fingerprintCommissionSync } from './commission'
 
 const APPROVED_COMMISSION: Prompt2BlogCommission = {
   schema_version: 3,
@@ -38,6 +39,10 @@ function withoutFingerprint(commission: Prompt2BlogCommission): Prompt2BlogCommi
   void fingerprint
   return draft
 }
+
+APPROVED_COMMISSION.commission_fingerprint = fingerprintCommissionSync(
+  withoutFingerprint(APPROVED_COMMISSION),
+)
 
 function storedDirectionOptions() {
   return (['direction-1', 'direction-2', 'direction-3'] as const).map((optionId, index) => ({
@@ -149,16 +154,17 @@ describe('loadSavedComposerState', () => {
     })
   })
 
-  it('does not reinterpret a draft written by a newer storage version', () => {
-    localStorage.setItem(
-      COMPOSER_STORAGE_KEY,
-      JSON.stringify({
-        composerStorageVersion: 999,
-        enableEditorialAugmentation: true,
-      }),
-    )
+  it('does not reinterpret or overwrite a draft written by a newer storage version', () => {
+    const futureDraft = JSON.stringify({
+      composerStorageVersion: 999,
+      activeWorkflow: 'future_v4',
+      futureEditorialState: { protected: true },
+    })
+    localStorage.setItem(COMPOSER_STORAGE_KEY, futureDraft)
 
-    expect(loadSavedComposerState().enableEditorialAugmentation).toBe(true)
+    expect(loadSavedComposerState()).toBe(DEFAULT_COMPOSER_STATE)
+    saveComposerState(DEFAULT_COMPOSER_STATE)
+    expect(localStorage.getItem(COMPOSER_STORAGE_KEY)).toBe(futureDraft)
   })
 
   it('migrates a v2 draft without mapping its numeric article type into v3', () => {
@@ -216,6 +222,55 @@ describe('loadSavedComposerState', () => {
       'composerStorageVersion',
       COMPOSER_STORAGE_VERSION,
     )
+  })
+
+  it('discards an approval whose body no longer matches the editable draft', () => {
+    const draft = withoutFingerprint(APPROVED_COMMISSION)
+    const staleCommission: Prompt2BlogCommission = {
+      ...APPROVED_COMMISSION,
+      approved_direction: 'A stale direction from another option',
+      commission_fingerprint: '',
+    }
+    staleCommission.commission_fingerprint = fingerprintCommissionSync(staleCommission)
+    localStorage.setItem(
+      COMPOSER_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_COMPOSER_STATE,
+        composerStorageVersion: 3,
+        activeWorkflow: 'editorial_v3',
+        editorial: {
+          directionOptions: storedDirectionOptions(),
+          selectedOptionId: 'direction-1',
+          commissionDraft: draft,
+          approval: { status: 'approved', commission: staleCommission },
+        },
+      }),
+    )
+
+    expect(loadSavedComposerState().editorial).toEqual(DEFAULT_COMPOSER_STATE.editorial)
+  })
+
+  it('discards restored commissions containing unknown catalog IDs', () => {
+    const malformed = {
+      ...withoutFingerprint(APPROVED_COMMISSION),
+      topic_module_ids: ['invented-module'],
+    }
+    localStorage.setItem(
+      COMPOSER_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_COMPOSER_STATE,
+        composerStorageVersion: 3,
+        activeWorkflow: 'editorial_v3',
+        editorial: {
+          directionOptions: storedDirectionOptions(),
+          selectedOptionId: 'direction-1',
+          commissionDraft: malformed,
+          approval: { status: 'needs_approval' },
+        },
+      }),
+    )
+
+    expect(loadSavedComposerState().editorial).toEqual(DEFAULT_COMPOSER_STATE.editorial)
   })
 
   it('fails closed when a saved approval has no commission fingerprint', () => {

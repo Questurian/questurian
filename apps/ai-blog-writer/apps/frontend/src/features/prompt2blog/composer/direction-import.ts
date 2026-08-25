@@ -25,6 +25,28 @@ function normalizedText(value: string): string {
   return value.replace(/\s+/g, ' ').trim().toLocaleLowerCase()
 }
 
+function meaningfulTokens(value: string): Set<string> {
+  return new Set(
+    normalizedText(value)
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .split(' ')
+      .filter((token) => token && !/^\d+$/.test(token))
+  )
+}
+
+function textSimilarity(left: string, right: string): number {
+  const leftTokens = meaningfulTokens(left)
+  const rightTokens = meaningfulTokens(right)
+  if (leftTokens.size < 4 || rightTokens.size < 4) {
+    return normalizedText(left) === normalizedText(right) ? 1 : 0
+  }
+  const intersection = [...leftTokens].filter((token) =>
+    rightTokens.has(token)
+  ).length
+  const union = new Set([...leftTokens, ...rightTokens]).size
+  return intersection / union
+}
+
 function reportUnexpectedKeys(
   value: JsonObject,
   keys: readonly string[],
@@ -404,6 +426,20 @@ function validateDistinctOptions(
           path: `options[${index}].${field}`,
           message: `Must be materially different from the other option ${field.replace(/_/g, ' ')} values.`
         })
+      }
+      for (let priorIndex = 0; priorIndex < index; priorIndex += 1) {
+        const prior = options[priorIndex]
+        if (
+          isObject(prior) &&
+          typeof prior[field] === 'string' &&
+          textSimilarity(prior[field], option[field]) >= 0.8
+        ) {
+          issues.push({
+            path: `options[${index}].${field}`,
+            message: `Must be materially different from option ${priorIndex + 1}; trivial wording changes do not count.`
+          })
+          break
+        }
       }
       seen.add(normalized)
     })

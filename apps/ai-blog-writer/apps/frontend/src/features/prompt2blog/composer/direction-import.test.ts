@@ -112,17 +112,44 @@ function option(
   optionId: 'direction-1' | 'direction-2' | 'direction-3',
   index: number
 ) {
+  const directions = [
+    "Test Lima's affordability claim against current housing, food, and transport costs.",
+    'Explain which neighborhoods make long stays workable for remote professionals.',
+    'Assess the practical tradeoffs of choosing Lima for a year abroad.'
+  ] as const
+  const questions = [
+    'What does a realistic monthly budget buy in Lima now?',
+    'Where can remote workers build a convenient daily routine?',
+    'Which benefits and frictions matter most over a full year?'
+  ] as const
+  const outcomes = [
+    'Build a current budget and decide whether Lima remains affordable.',
+    'Shortlist neighborhoods using work, housing, and mobility needs.',
+    'Weigh long-term advantages against the costs of living in Lima.'
+  ] as const
+  const requirements = [
+    'What do current housing, food, and transportation costs show?',
+    'Which neighborhoods best combine housing, workspaces, and transport?',
+    'What evidence captures the strongest long-stay benefits and frictions?'
+  ] as const
+  const rationales = [
+    'Grounds the bargain claim in a concrete, current monthly budget.',
+    'Turns a broad relocation question into a practical neighborhood decision.',
+    'Gives readers a balanced decision framework for a year-long move.'
+  ] as const
+  const position = index - 1
+
   return {
     option_id: optionId,
-    direction: `Assess Lima's current long-stay value through editorial take ${index}.`,
+    direction: directions[position],
     form_id: 'analysis',
     topic_module_ids: ['cost-affordability', 'long-stay-remote-work'],
     audience: {
       primary_reader: 'Prospective expats and remote workers',
       tags: ['remote-worker-relocator', 'budget-focused']
     },
-    core_reader_question: `Does Lima still deliver value under scenario ${index}?`,
-    reader_outcome: `Judge Lima's tradeoffs using scenario ${index}.`,
+    core_reader_question: questions[position],
+    reader_outcome: outcomes[position],
     primary_subject: 'Lima',
     scope: {
       mode: 'single_subject',
@@ -135,13 +162,13 @@ function option(
     requirements: [
       {
         requirement_id: 'r1',
-        question: `What current evidence settles scenario ${index}?`
+        question: requirements[position]
       }
     ],
     exclusions: [
       'Do not organize the article as a city-versus-city comparison.'
     ],
-    rationale: `This option tests a distinct value proposition ${index}.`
+    rationale: rationales[position]
   }
 }
 
@@ -327,6 +354,21 @@ describe('reviewDirectionResponseJson', () => {
         'options[0].scope.references',
         'options[0].requirements',
         'options[1].direction'
+      ])
+    )
+  })
+
+  it('rejects options that differ only by trivial suffixes', () => {
+    const nearDuplicates = response()
+    nearDuplicates.options[1].direction = `${nearDuplicates.options[0].direction} Option 2.`
+    nearDuplicates.options[1].core_reader_question = `${nearDuplicates.options[0].core_reader_question} Choice 2?`
+    nearDuplicates.options[1].reader_outcome = `${nearDuplicates.options[0].reader_outcome} Version 2.`
+
+    expect(review(nearDuplicates).issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'options[1].direction' }),
+        expect.objectContaining({ path: 'options[1].core_reader_question' }),
+        expect.objectContaining({ path: 'options[1].reader_outcome' })
       ])
     )
   })
