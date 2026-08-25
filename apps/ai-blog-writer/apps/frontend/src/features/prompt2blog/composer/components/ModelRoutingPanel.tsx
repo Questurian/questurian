@@ -6,6 +6,8 @@ import {
 import {
   estimatePrompt2BlogStackPrice,
   formatPerMillionRate,
+  isPlanAllowanceModel,
+  PROMPT2BLOG_ROLE_LABELS,
 } from '../../constants/prompt2blog-pricing'
 import { Panel } from './Panel'
 
@@ -18,6 +20,9 @@ interface ModelRoutingPanelProps {
 export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
   const selectedStack = resolvePrompt2BlogModelStack(props.modelStackId)
   const priceEstimate = estimatePrompt2BlogStackPrice(selectedStack)
+  const planRoleNames = priceEstimate.planRoles
+    .map(role => PROMPT2BLOG_ROLE_LABELS[role])
+    .join(' and ')
 
   return <Panel
     title="Run Stack"
@@ -46,11 +51,24 @@ export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
       aria-label={`${selectedStack.label} estimated pricing`}
       aria-live="polite"
     >
-      <div className="p2b-stack-cost-headline">
-        <span>Estimated blended rate</span>
-        <strong>{formatPerMillionRate(priceEstimate.mixedPerMillion)}</strong>
-        <span>per 1M mixed tokens</span>
-      </div>
+      {priceEstimate.mixedPerMillion === null ? (
+        <div className="p2b-stack-cost-headline p2b-stack-cost-headline--plan">
+          <strong>Included in your Claude plan</strong>
+          <span>no per-token rate</span>
+        </div>
+      ) : (
+        <div className="p2b-stack-cost-headline">
+          <span>{planRoleNames ? 'Metered part' : 'Estimated blended rate'}</span>
+          <strong>{formatPerMillionRate(priceEstimate.mixedPerMillion)}</strong>
+          <span>per 1M mixed tokens</span>
+        </div>
+      )}
+      {planRoleNames ? (
+        <p className="p2b-stack-cost-plan">
+          {planRoleNames} runs on your Claude plan, so it draws plan usage
+          instead of billing per token. The rate above covers the rest.
+        </p>
+      ) : null}
       <div className="p2b-stack-cost-breakdown">
         <span>Input {formatPerMillionRate(priceEstimate.inputPerMillion)} / 1M</span>
         <span>Output {formatPerMillionRate(priceEstimate.outputPerMillion)} / 1M</span>
@@ -67,23 +85,29 @@ export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
           Standard global Vertex rates checked August 24, 2026. Gemini 3.7 Flash
           introductory pricing ends December 31, 2026.
         </p>
+        <p>
+          Claude roles are left out of the rate rather than given an invented
+          one. Subscription calls draw your plan's allowance, so there is no
+          dollar-per-million figure to quote. What a run actually used shows on
+          the finished article's cost receipt.
+        </p>
       </details>
     </div>
     <details className="p2b-stack-details">
       <summary>See model assignments</summary>
       <div className="p2b-stack-receipt" aria-label={`${selectedStack.label} model assignments`}>
         <StackAssignment
-          label="Research worker"
+          label={PROMPT2BLOG_ROLE_LABELS.modelName}
           model={selectedStack.modelName}
           stages="Cleanup · synthesis · coverage · gap filling"
         />
         <StackAssignment
-          label="Article writer"
+          label={PROMPT2BLOG_ROLE_LABELS.writingModel}
           model={selectedStack.writingModel}
           stages="Outline · draft · repair · extras · title"
         />
         <StackAssignment
-          label="Quality judge"
+          label={PROMPT2BLOG_ROLE_LABELS.auditModel}
           model={selectedStack.auditModel}
           stages="Groundedness · quality audit"
         />
@@ -109,6 +133,14 @@ function StackAssignment({
 }
 
 function formatModelName(model: string): string {
+  if (isPlanAllowanceModel(model)) {
+    return model
+      .replace('claude-', 'Claude ')
+      .replace(/-/g, ' ')
+      .replace(' opus', ' Opus')
+      .replace(' sonnet', ' Sonnet')
+      .replace(' haiku', ' Haiku')
+  }
   return model
     .replace('gemini-', 'Gemini ')
     .replace(/-/g, ' ')
