@@ -284,3 +284,167 @@ def test_structured_calls_use_the_cli_rather_than_an_unconfigured_api_key(
 
 def _unreachable_transport():  # pragma: no cover - must not run
     raise AssertionError("the CLI transport was consulted with no Claude switch on")
+
+
+# --- Phase 4: JSON that is validated rather than parsed ----------------------
+
+
+def test_writer_json_calls_go_through_the_schema_on_a_claude_stack(
+    monkeypatch, subscription_on, connected
+):
+    """The whole point: no ask-politely-and-retry loop on this provider.
+
+    Prompt2Blog's JSON calls are free text plus parse_json_response, retried up
+    to three times. Each of those retries on a compose or repair stage is a
+    full article rewrite on the writer model.
+    """
+    from app.features.prompt2blog import llm as prompt2blog_llm
+    from app.features.prompt2blog.schemas import REWRITE_SCHEMA
+
+    calls = _capture(
+        monkeypatch,
+        json.dumps(
+            {
+                "result": "ignored",
+                "structured_output": {
+                    "improved_title": "Barranco after dark",
+                    "improved_content": "## Where to start\n\nText.",
+                },
+                "is_error": False,
+                "stop_reason": "tool_use",
+                "total_cost_usd": 0.0099,
+                "usage": {"input_tokens": 10, "output_tokens": 900},
+            }
+        ),
+    )
+
+    parsed, raw = prompt2blog_llm._invoke_json_llm(
+        prompt="Rewrite the article.",
+        max_tokens=6144,
+        temperature=0.1,
+        model_name="claude-opus-5",
+        schema=REWRITE_SCHEMA,
+    )
+
+    assert parsed["improved_title"] == "Barranco after dark"
+    # One call, not one plus two retries.
+    assert len(calls) == 1
+    args = calls[0]["args"]
+    assert "--json-schema" in args
+    assert json.loads(args[args.index("--json-schema") + 1]) == REWRITE_SCHEMA
+    # The prompt does not carry the "return only one valid JSON object" plea
+    # any more; the schema is the enforcement.
+    prompt = args[args.index("--print") + 1]
+    assert "CRITICAL OUTPUT RULE" not in prompt
+    # The trace still gets a raw response to record.
+    assert json.loads(raw) == parsed
+
+
+def test_the_schema_reply_comes_from_structured_output_not_the_result_string(
+    monkeypatch, subscription_on, connected
+):
+    """Both hold the same JSON; only one of them was validated."""
+    from app.features.prompt2blog import llm as prompt2blog_llm
+    from app.features.prompt2blog.schemas import REWRITE_SCHEMA
+
+    _capture(
+        monkeypatch,
+        json.dumps(
+            {
+                "result": '{"improved_title":"From the result string"}',
+                "structured_output": {
+                    "improved_title": "From structured_output",
+                    "improved_content": "Text.",
+                },
+                "is_error": False,
+                "usage": {"input_tokens": 10, "output_tokens": 900},
+            }
+        ),
+    )
+
+    parsed, _ = prompt2blog_llm._invoke_json_llm(
+        prompt="Rewrite the article.",
+        max_tokens=6144,
+        temperature=0.1,
+        model_name="claude-opus-5",
+        schema=REWRITE_SCHEMA,
+    )
+
+    assert parsed["improved_title"] == "From structured_output"
+
+
+def test_a_schema_call_records_its_usage_and_price(
+    monkeypatch, subscription_on, connected
+):
+    from app.features.prompt2blog import llm as prompt2blog_llm
+    from app.features.prompt2blog.pricing import Prompt2BlogTokenUsageTracker
+    from app.features.prompt2blog.schemas import REWRITE_SCHEMA
+
+    _capture(
+        monkeypatch,
+        json.dumps(
+            {
+                "structured_output": {
+                    "improved_title": "T",
+                    "improved_content": "C",
+                },
+                "is_error": False,
+                "total_cost_usd": 0.0099,
+                "usage": {"input_tokens": 10, "output_tokens": 900},
+                "modelUsage": {"m": {"canonicalModel": "claude-opus-5"}},
+            }
+        ),
+    )
+    tracker = Prompt2BlogTokenUsageTracker()
+
+    prompt2blog_llm._invoke_json_llm(
+        prompt="Rewrite the article.",
+        max_tokens=6144,
+        temperature=0.1,
+        model_name="claude-opus-5",
+        schema=REWRITE_SCHEMA,
+        usage_recorder=tracker.record,
+    )
+
+    summary = tracker.summary(
+        stack_id="opus-balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="claude-opus-5",
+        audit_model="gemini-3.7-flash",
+    )
+    assert summary["estimated_cost_usd"] == 0.0099
+    assert summary["by_model"][0]["model"] == "claude-opus-5"
+
+
+def test_a_provider_that_cannot_enforce_a_schema_still_asks_in_prose(monkeypatch):
+    """The schema argument is a capability offer, not a requirement.
+
+    Asked of the object the factory returned rather than inferred from the
+    model name, so a Gemini stack is completely unaffected by a call site
+    gaining a schema.
+    """
+    from app.features.prompt2blog import llm as prompt2blog_llm
+    from app.features.prompt2blog.schemas import REWRITE_SCHEMA
+
+    prompts: list[str] = []
+
+    class _ProseLLM:
+        model_name = "gemini-3.7-flash"
+        last_usage_metadata = {"input_tokens": 10, "output_tokens": 20}
+
+        def invoke(self, prompt):  # noqa: ANN001
+            prompts.append(prompt)
+            return '{"improved_title": "T", "improved_content": "C"}'
+
+    monkeypatch.setattr(prompt2blog_llm, "get_vertex_llm", lambda **kwargs: _ProseLLM())
+
+    parsed, _ = prompt2blog_llm._invoke_json_llm(
+        prompt="Rewrite the article.",
+        max_tokens=6144,
+        temperature=0.1,
+        model_name="gemini-3.7-flash",
+        schema=REWRITE_SCHEMA,
+    )
+
+    assert parsed["improved_title"] == "T"
+    assert "CRITICAL OUTPUT RULE" in prompts[0]

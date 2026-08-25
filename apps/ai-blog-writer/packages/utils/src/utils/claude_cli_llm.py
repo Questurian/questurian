@@ -116,9 +116,39 @@ class ClaudeCliTextLLM:
         self.last_cost_usd: Optional[float] = None
 
     def invoke(self, prompt: str) -> str:
+        return self._call(prompt, None)["text"]
+
+    def invoke_json(self, prompt: str, *, input_schema: dict[str, Any]) -> Any:
+        """Ask for JSON the transport validates, rather than JSON to parse.
+
+        Present only on this provider, and callers detect it by asking whether
+        it exists. That is what keeps the schema path opt-in per provider: a
+        caller that finds no such method keeps asking in prose and parsing the
+        answer, exactly as before.
+
+        The reply comes from the CLI's ``structured_output``, which is the
+        object it validated -- not ``result``, which is a string the model
+        wrote. Both carry the same JSON and only one of them is a guarantee.
+        """
+        return self._call(prompt, input_schema)["payload"]
+
+    def _call(
+        self,
+        prompt: str,
+        input_schema: Optional[dict[str, Any]],
+    ) -> dict[str, Any]:
         cli_writer = _transport()
         try:
-            result = cli_writer.invoke_text(prompt=prompt, model_name=self.model_name)
+            if input_schema is None:
+                result = cli_writer.invoke_text(
+                    prompt=prompt, model_name=self.model_name
+                )
+            else:
+                result = cli_writer.invoke_structured(
+                    prompt=prompt,
+                    input_schema=input_schema,
+                    model_name=self.model_name,
+                )
         except cli_writer.ClaudeCliWriterError as error:
             raise ClaudeCliUnavailable(str(error)) from error
 
@@ -128,4 +158,4 @@ class ClaudeCliTextLLM:
         self.model_name = result.get("modelName") or self.model_name
         self.last_usage_metadata = _usage_metadata(result.get("usage"))
         self.last_cost_usd = result.get("costUsd")
-        return result["text"]
+        return result

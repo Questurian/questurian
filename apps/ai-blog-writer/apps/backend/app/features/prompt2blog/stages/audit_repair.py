@@ -10,6 +10,7 @@ from ..observability import _append_stage_trace
 from ..prompts.generation import SEO_SAFE_CONTENT_GENERATION_GUIDELINES
 from ..prompts.quality import P2B_QUALITY_AUDIT_PROMPT, P2B_REPAIR_PROMPT
 from ..policies import is_better_quality
+from ..schemas import REWRITE_SCHEMA
 from ..quality import (
     _build_constraint_checks,
     _sanitize_quality,
@@ -174,6 +175,7 @@ def run_repair_stage(
         max_tokens=6144,
         temperature=0.1,
         model_name=state["writing_model"],
+        schema=REWRITE_SCHEMA,
     )
     repaired = _sanitize_rewrite(
         parsed,
