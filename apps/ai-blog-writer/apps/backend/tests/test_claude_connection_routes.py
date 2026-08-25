@@ -175,8 +175,18 @@ def test_login_is_offered_only_to_a_browser_on_this_machine(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_remote_caller_cannot_start_a_login(monkeypatch):
+@pytest.mark.parametrize("supported", [True, False])
+async def test_remote_caller_cannot_start_a_login(monkeypatch, supported):
+    """Who is asking is settled before what this host can do.
+
+    Parametrized over the launcher rather than left to the machine running the
+    suite: without stubbing it, this asserted a 403 on macOS and a 501 on
+    Linux, and only the platform decided which. A remote caller must be refused
+    the same way on both.
+    """
     monkeypatch.setattr(routes_module, "_client_host", lambda request: "10.0.0.5")
+    monkeypatch.setattr(login_module, "launcher_supported", lambda: supported)
+    monkeypatch.setattr(login_module, "resolve_cli_path", lambda: CLI_PATH)
     monkeypatch.setattr(login_module, "launch_login", _unreachable_launch)
 
     async with _client() as client:
@@ -184,6 +194,34 @@ async def test_remote_caller_cannot_start_a_login(monkeypatch):
 
     assert response.status_code == 403
     assert "machine hosting this backend" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_local_caller_on_an_unsupported_platform_gets_the_command(monkeypatch):
+    monkeypatch.setattr(routes_module, "_client_host", lambda request: "127.0.0.1")
+    monkeypatch.setattr(login_module, "launcher_supported", lambda: False)
+    monkeypatch.setattr(login_module, "resolve_cli_path", lambda: CLI_PATH)
+    monkeypatch.setattr(login_module, "launch_login", _unreachable_launch)
+
+    async with _client() as client:
+        response = await client.post("/claude/login")
+
+    assert response.status_code == 501
+    assert "macOS" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_missing_cli_is_reported_as_missing_rather_than_forbidden(monkeypatch):
+    monkeypatch.setattr(routes_module, "_client_host", lambda request: "127.0.0.1")
+    monkeypatch.setattr(login_module, "launcher_supported", lambda: True)
+    monkeypatch.setattr(login_module, "resolve_cli_path", lambda: None)
+    monkeypatch.setattr(login_module, "launch_login", _unreachable_launch)
+
+    async with _client() as client:
+        response = await client.post("/claude/login")
+
+    assert response.status_code == 501
+    assert "not found on this machine" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
