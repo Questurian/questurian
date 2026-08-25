@@ -99,6 +99,9 @@ def _run_cli(cli_path: str, args: list[str]) -> subprocess.CompletedProcess:
         text=True,
         timeout=CLI_TIMEOUT_SECONDS,
         check=False,
+        # Never let the CLI block on stdin it will not be given. See the same
+        # note in messaging.py -- the wait is silent and costs seconds.
+        stdin=subprocess.DEVNULL,
     )
 
 
