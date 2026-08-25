@@ -234,6 +234,10 @@
   color: var(--ink);
 }
 
+.p2b-step-section-next-action strong {
+  color: var(--p2b-accent);
+}
+
 /* --- Step sections ---------------------------------------------------------
    One numbered step: what it is called, why it exists, and its work. The
    current step is open; finished and upcoming ones are closed but never
@@ -305,11 +309,16 @@
 }
 
 .p2b-step-section-purpose,
-.p2b-step-section-summary {
+.p2b-step-section-summary,
+.p2b-step-section-next-action {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
   color: var(--ink);
+}
+
+.p2b-step-section-purpose,
+.p2b-step-section-summary {
   opacity: 0.8;
 }
 

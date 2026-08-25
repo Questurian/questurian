@@ -1,4 +1,7 @@
 import type { P2BFormState } from './composer.types'
+import { compareEvidenceToCommission } from './evidence-match'
+import { P2B_NEXT_ACTION } from './step-guidance'
+import { prompt2BlogSubmissionBlockedReason } from './v3-payload'
 
 export const P2B_STEP_IDS = [
   'start',
@@ -21,6 +24,8 @@ export interface P2BStep {
   name: string
   /** Why the step exists, in one sentence. */
   purpose: string
+  /** What the operator should do here, in one sentence. */
+  nextAction: string
   state: P2BStepState
   /** A finished step's one-line recap, or null while it is not finished. */
   summary: string | null
@@ -30,6 +35,7 @@ interface StepDefinition {
   id: P2BStepId
   name: string
   purpose: string
+  nextAction: string
 }
 
 /**
@@ -44,30 +50,35 @@ const STEP_DEFINITIONS: readonly StepDefinition[] = [
   {
     id: 'start',
     name: 'Start the article',
-    purpose: 'Name what you are writing and where it is about.'
+    purpose: 'Name what you are writing and where it is about.',
+    nextAction: P2B_NEXT_ACTION.start
   },
   {
     id: 'direction',
     name: 'Pick a direction',
     purpose:
-      'Your chatbot proposes three ways to write it. You choose the one worth commissioning.'
+      'Your chatbot proposes three ways to write it. You choose the one worth commissioning.',
+    nextAction: P2B_NEXT_ACTION.direction
   },
   {
     id: 'commission',
     name: 'Review what you locked',
     purpose:
-      'Choosing a direction locked the commission. Check it now, because research can add facts to it but can never change it.'
+      'Choosing a direction locked the commission. Check it now, because research can add facts to it but can never change it.',
+    nextAction: P2B_NEXT_ACTION.commission
   },
   {
     id: 'research',
     name: 'Gather the facts',
     purpose:
-      'A second chatbot round trip brings back sourced evidence answering the commission’s questions.'
+      'A second chatbot round trip brings back sourced evidence answering the commission’s questions.',
+    nextAction: P2B_NEXT_ACTION.research
   },
   {
     id: 'write',
     name: 'Write it',
-    purpose: 'Set the tone and length, then run the pipeline.'
+    purpose: 'Set the tone and length, then run the pipeline.',
+    nextAction: P2B_NEXT_ACTION.write
   }
 ]
 
@@ -83,12 +94,9 @@ function directionWasChosen(state: P2BFormState): boolean {
 function researchIsAttached(state: P2BFormState): boolean {
   const { approval, evidencePackage } = state.editorial
   if (approval.status !== 'approved' || !evidencePackage) return false
-  // Research imported against a different commission is not this commission's
-  // research, however complete it looks.
-  return (
-    evidencePackage.commission_fingerprint ===
-    approval.commission.commission_fingerprint
-  )
+  // Research for a different commission or set of questions is not finished,
+  // however complete the package looks on its own.
+  return compareEvidenceToCommission(approval.commission, evidencePackage) === 'matches'
 }
 
 function commissionWasReviewed(state: P2BFormState): boolean {
@@ -145,11 +153,14 @@ function summarizeResearch(state: P2BFormState): string | null {
  */
 export function deriveP2BSteps(state: P2BFormState): P2BStep[] {
   const startedDirectionWork = state.activeWorkflow === 'editorial_v3'
+  const identityChanged =
+    state.editorial.approval.status === 'reconfirmation_required' &&
+    state.editorial.approval.reason === 'title_or_location_changed'
   const titleAndLocation =
     state.easySetupTitle.trim() !== '' && state.easySetupLocation.trim() !== ''
 
   const completion: Record<P2BStepId, boolean> = {
-    start: startedDirectionWork && titleAndLocation,
+    start: startedDirectionWork && titleAndLocation && !identityChanged,
     direction: startedDirectionWork && directionWasChosen(state),
     commission: commissionWasReviewed(state),
     research: researchIsAttached(state),
@@ -169,12 +180,18 @@ export function deriveP2BSteps(state: P2BFormState): P2BStep[] {
   const currentIndex = STEP_DEFINITIONS.findIndex(
     (definition) => !completion[definition.id]
   )
+  const blockedReason = prompt2BlogSubmissionBlockedReason(state)
 
   return STEP_DEFINITIONS.map((definition, index) => ({
     id: definition.id,
     number: index + 1,
     name: definition.name,
     purpose: definition.purpose,
+    // The run blocker knows the exact unfinished state. Use that sharper
+    // instruction on the current step; look-ahead steps keep their stable
+    // overview so they still make sense out of sequence.
+    nextAction:
+      index === currentIndex && blockedReason ? blockedReason : definition.nextAction,
     state:
       completion[definition.id] && index < currentIndex
         ? 'done'

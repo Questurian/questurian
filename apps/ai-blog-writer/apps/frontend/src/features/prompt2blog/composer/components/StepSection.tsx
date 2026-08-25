@@ -47,7 +47,14 @@ export function StepSection({ step, fallbackSummary, children }: StepSectionProp
             Step {step.number}: {step.name}
           </h2>
           {isOpen ? (
-            <p className="p2b-step-section-purpose">{step.purpose}</p>
+            <>
+              <p className="p2b-step-section-purpose">{step.purpose}</p>
+              {step.state === 'current' && (
+                <p className="p2b-step-section-next-action">
+                  <strong>Do this next:</strong> {step.nextAction}
+                </p>
+              )}
+            </>
           ) : (
             summary && <p className="p2b-step-section-summary">{summary}</p>
           )}

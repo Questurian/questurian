@@ -68,14 +68,16 @@ describe('deriveP2BSteps', () => {
     const started = inV3()
 
     expect(currentP2BStep(started).id).toBe('direction')
+    expect(currentP2BStep(started).nextAction).toMatch(/Copy the direction prompt/)
     expect(deriveP2BSteps(started)[0].state).toBe('done')
     expect(deriveP2BSteps(started)[0].summary).toContain(commission.original_title)
   })
 
   it('stays on picking a direction while three options wait to be chosen', () => {
-    expect(currentP2BStep(inV3({ approval: { status: 'awaiting_selection' } })).id).toBe(
-      'direction'
-    )
+    const current = currentP2BStep(inV3({ approval: { status: 'awaiting_selection' } }))
+
+    expect(current.id).toBe('direction')
+    expect(current.nextAction).toBe('Choose one of the three directions.')
   })
 
   it('recaps the chosen direction in the operator’s words, not as an option id', () => {
@@ -103,12 +105,22 @@ describe('deriveP2BSteps', () => {
     expect(currentP2BStep(stale).id).toBe('commission')
   })
 
+  it('sends a changed title or location back to the step holding the regenerate button', () => {
+    const retitled = inV3({
+      approval: { status: 'reconfirmation_required', reason: 'title_or_location_changed' }
+    })
+
+    expect(currentP2BStep(retitled).id).toBe('start')
+    expect(currentP2BStep(retitled).nextAction).toMatch(/Generate a new direction prompt/)
+  })
+
   it('stops on the review step when a direction card approved a commission for you', () => {
     // Clicking a card approves outright. That says a click happened, not that
     // a human read what got locked, so the step stays open until they say so.
     const approved = inV3({ approval: { status: 'approved', commission } })
 
     expect(currentP2BStep(approved).id).toBe('commission')
+    expect(currentP2BStep(approved).nextAction).toMatch(/Read the locked commission/)
     expect(deriveP2BSteps(approved)[2].state).toBe('current')
   })
 
@@ -119,6 +131,7 @@ describe('deriveP2BSteps', () => {
     })
 
     expect(currentP2BStep(reviewed).id).toBe('research')
+    expect(currentP2BStep(reviewed).nextAction).toMatch(/Copy the research prompt/)
     expect(deriveP2BSteps(reviewed)[2].summary).toBe(commission.primary_subject)
   })
 
@@ -172,6 +185,20 @@ describe('deriveP2BSteps', () => {
     expect(deriveP2BSteps(mismatched)[3].state).toBe('current')
   })
 
+  it('keeps research open when the attached package answers different questions', () => {
+    const mismatched = inV3({
+      approval: { status: 'approved', commission },
+      reviewedCommissionFingerprint: commission.commission_fingerprint,
+      evidencePackage: {
+        ...evidencePackage,
+        requirements: evidencePackage.requirements.slice(1)
+      }
+    })
+
+    expect(currentP2BStep(mismatched).id).toBe('research')
+    expect(currentP2BStep(mismatched).nextAction).toMatch(/exact questions/)
+  })
+
   it('never marks the writing step done, because a finished run is not composer state', () => {
     const ready = inV3({
       approval: { status: 'approved', commission },
@@ -185,11 +212,13 @@ describe('deriveP2BSteps', () => {
     )
   })
 
-  it('gives every step a name and a reason a non-technical operator can read', () => {
+  it('gives every step a name, reason, and next action a non-technical operator can read', () => {
     for (const step of deriveP2BSteps(state())) {
       expect(step.name.length).toBeGreaterThan(0)
       expect(step.purpose.length).toBeGreaterThan(0)
+      expect(step.nextAction.length).toBeGreaterThan(0)
       expect(step.name).not.toMatch(/_|fingerprint|schema|v3/i)
+      expect(step.nextAction).not.toMatch(/_|fingerprint|schema|v3/i)
     }
   })
 })

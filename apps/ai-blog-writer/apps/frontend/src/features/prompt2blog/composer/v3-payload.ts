@@ -1,17 +1,24 @@
 import type { Prompt2BlogV3Request } from '../api'
 import type { P2BFormState } from './composer.types'
+import { compareEvidenceToCommission } from './evidence-match'
+import { P2B_NEXT_ACTION } from './step-guidance'
 
 const APPROVAL_BLOCKERS: Record<string, string> = {
-  not_started: 'Generate three directions and approve a commission before running.',
-  awaiting_selection: 'Choose one of the three directions before running.',
-  needs_approval: 'Approve the commission before running.',
+  not_started: P2B_NEXT_ACTION.direction,
+  awaiting_selection: P2B_NEXT_ACTION.chooseDirection,
+  needs_approval: P2B_NEXT_ACTION.changedCommission,
 }
 
 const RECONFIRMATION_BLOCKERS: Record<string, string> = {
-  legacy_draft: 'This saved draft predates the commission flow. Reconfirm it before running.',
-  commission_edited: 'The commission changed. Approve it again before running.',
-  title_or_location_changed:
-    'The title or location changed. Generate directions again before running.',
+  legacy_draft: P2B_NEXT_ACTION.savedCommission,
+  commission_edited: P2B_NEXT_ACTION.editedCommission,
+  title_or_location_changed: P2B_NEXT_ACTION.changedIdentity,
+}
+
+/** What must happen before the page can build a v3 run. */
+export function prompt2BlogSubmissionBlockedReason(state: P2BFormState): string | null {
+  if (state.activeWorkflow !== 'editorial_v3') return P2B_NEXT_ACTION.start
+  return v3SubmissionBlockedReason(state)
 }
 
 /**
@@ -33,27 +40,23 @@ export function v3SubmissionBlockedReason(state: P2BFormState): string | null {
   if (approval.status !== 'approved') {
     return APPROVAL_BLOCKERS[approval.status]
   }
+  if (
+    state.editorial.reviewedCommissionFingerprint !== approval.commission.commission_fingerprint
+  ) {
+    return P2B_NEXT_ACTION.commission
+  }
   if (!evidencePackage) {
-    return 'Import the research package for this commission before running.'
+    return P2B_NEXT_ACTION.research
   }
-  if (evidencePackage.commission_fingerprint !== approval.commission.commission_fingerprint) {
-    return 'The attached research belongs to a different commission.'
+  const evidenceMatch = compareEvidenceToCommission(approval.commission, evidencePackage)
+  if (evidenceMatch === 'different_commission') {
+    return P2B_NEXT_ACTION.mismatchedResearch
   }
-
-  const commissionRequirements = approval.commission.requirements.map(
-    requirement => requirement.requirement_id,
-  )
-  const evidenceRequirements = evidencePackage.requirements.map(
-    requirement => requirement.requirement_id,
-  )
-  const sameRequirements =
-    commissionRequirements.length === evidenceRequirements.length &&
-    commissionRequirements.every(requirementId => evidenceRequirements.includes(requirementId))
-  if (!sameRequirements) {
-    return 'The attached research does not answer this commission’s exact requirements.'
+  if (evidenceMatch === 'different_requirements') {
+    return P2B_NEXT_ACTION.incompleteResearch
   }
 
-  if (!state.toneId || !state.lengthId) return 'Tone and length are required.'
+  if (!state.toneId || !state.lengthId) return P2B_NEXT_ACTION.chooseProfiles
 
   return null
 }
