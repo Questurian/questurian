@@ -1,0 +1,93 @@
+{
+  "commission": {
+    "schema_version": 3,
+    "commission_fingerprint": "5f7cb1ce6313526ffc883606650c13851723fd967f5cf6e30d8122ecba65db98",
+    "original_title": "Is Lima still South America's bargain expat capital?",
+    "location": "Lima, Peru",
+    "approved_direction": "Assess whether Lima still offers strong long-stay value without turning the article into a city-versus-city comparison.",
+    "form_id": "analysis",
+    "topic_module_ids": [
+      "cost-affordability",
+      "accommodation-neighborhoods",
+      "safety",
+      "long-stay-remote-work"
+    ],
+    "audience": {
+      "primary_reader": "Prospective expats and remote workers evaluating Lima for a long stay",
+      "tags": ["remote-worker-relocator", "budget-focused"]
+    },
+    "core_reader_question": "Does Lima still offer a compelling balance of cost, quality of life, and practical livability for a long stay?",
+    "reader_outcome": "Readers can judge Lima on current evidence and understand which tradeoffs affect its value.",
+    "primary_subject": "Lima",
+    "scope": {
+      "mode": "single_subject",
+      "references": [
+        {"name": "Lima", "role": "primary_subject"},
+        {"name": "Medellín", "role": "context_only"},
+        {"name": "Buenos Aires", "role": "context_only"}
+      ]
+    },
+    "requirements": [
+      {
+        "requirement_id": "r1",
+        "question": "What do current housing, food, transport, and routine monthly costs show about Lima's affordability?"
+      },
+      {
+        "requirement_id": "r2",
+        "question": "Which quality-of-life and practical tradeoffs materially change the value judgment?"
+      },
+      {
+        "requirement_id": "r3",
+        "question": "How has Lima's value proposition changed over time?"
+      }
+    ],
+    "exclusions": [
+      "Do not organize the article as Lima versus Medellín versus Buenos Aires.",
+      "Do not present context-only cities as co-subjects."
+    ],
+    "call_to_action": null
+  },
+  "evidence_package": {
+    "schema_version": 3,
+    "commission_fingerprint": "5f7cb1ce6313526ffc883606650c13851723fd967f5cf6e30d8122ecba65db98",
+    "sources": [
+      {
+        "source_id": "s1",
+        "title": "Lima consumer price bulletin",
+        "publisher": "Instituto Nacional de Estadística e Informática",
+        "url": "https://www.inei.gob.pe/example-lima-prices",
+        "published_at": "2026-07-01",
+        "retrieved_at": "2026-08-25",
+        "source_type": "official",
+        "material_type": "report",
+        "notes": ["Current price reporting can support a dated affordability baseline."]
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "c1",
+        "text": "Official price reporting provides a current baseline for evaluating Lima's routine costs.",
+        "source_ids": ["s1"],
+        "requirement_ids": ["r1"],
+        "as_of": "2026-07-01",
+        "confidence": "high"
+      }
+    ],
+    "requirements": [
+      {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"], "gap": ""},
+      {"requirement_id": "r2", "status": "missing", "claim_ids": [], "gap": "Current quality-of-life evidence is still needed."},
+      {"requirement_id": "r3", "status": "missing", "claim_ids": [], "gap": "Comparable historical evidence is still needed."}
+    ],
+    "conflicts": [],
+    "gaps": [
+      {"gap_id": "g1", "requirement_ids": ["r2"], "summary": "Find current evidence for Lima's practical quality-of-life tradeoffs."},
+      {"gap_id": "g2", "requirement_ids": ["r3"], "summary": "Find comparable earlier and current evidence for change over time."}
+    ]
+  },
+  "expected": {
+    "form_id": "analysis",
+    "primary_subject": "Lima",
+    "context_only_references": ["Medellín", "Buenos Aires"],
+    "readiness": "needs_research"
+  }
+}

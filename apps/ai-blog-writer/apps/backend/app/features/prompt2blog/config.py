@@ -36,6 +36,14 @@ PROMPT2BLOG_LENGTHS_DIR = PROMPT2BLOG_OPTIONS_DIR / "lengths"
 
 PROMPT2BLOG_BRAND_VOICES_DIR = PROMPT2BLOG_OPTIONS_DIR / "brand-voices"
 
+PROMPT2BLOG_FORMS_DIR = PROMPT2BLOG_OPTIONS_DIR / "forms"
+
+PROMPT2BLOG_TOPIC_MODULES_DIR = PROMPT2BLOG_OPTIONS_DIR / "topic-modules"
+
+PROMPT2BLOG_HOUSE_RULES_FILE = PROMPT2BLOG_OPTIONS_DIR / "house-rules.md"
+
+PROMPT2BLOG_HEADLINES_FILE = PROMPT2BLOG_OPTIONS_DIR / "headlines.md"
+
 # Repair used to be a single unconditional pass whose result was never
 # re-gated. It is now a bounded loop back through the audit.
 P2B_REPAIR_MAX_ATTEMPTS = 2
