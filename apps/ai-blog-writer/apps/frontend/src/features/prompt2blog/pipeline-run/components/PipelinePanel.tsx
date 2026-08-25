@@ -4,6 +4,7 @@ import type { PipelineStepStatus } from '../pipeline-run.types'
 import { PROMPT2BLOG_PIPELINE_STAGES } from '../../types/pipeline.types'
 import { getPipelineStepStatus, PIPELINE_STAGE_LABELS } from '../pipeline-status'
 import { PipelineResult } from './PipelineResult'
+import { PipelineV3Result } from './PipelineV3Result'
 
 interface PipelinePanelProps {
   run: ReturnType<typeof usePrompt2BlogPipelineRun>
@@ -91,13 +92,23 @@ export function PipelinePanel({
         )}
 
         {sourceStep === 'pipeline_complete' && pipelineResult && (
-          <PipelineResult
-            debugData={pipelineDebugData}
-            result={pipelineResult}
-            showDebug={showPipelineDebug}
-            stageArticleUrl={stageArticleUrl}
-            onToggleDebug={togglePipelineDebug}
-          />
+          pipelineResult.version === 'v3' ? (
+            <PipelineV3Result
+              debugData={pipelineDebugData}
+              result={pipelineResult.payload}
+              showDebug={showPipelineDebug}
+              stageArticleUrl={stageArticleUrl}
+              onToggleDebug={togglePipelineDebug}
+            />
+          ) : (
+            <PipelineResult
+              debugData={pipelineDebugData}
+              result={pipelineResult.payload}
+              showDebug={showPipelineDebug}
+              stageArticleUrl={stageArticleUrl}
+              onToggleDebug={togglePipelineDebug}
+            />
+          )
         )}
       </div>
 

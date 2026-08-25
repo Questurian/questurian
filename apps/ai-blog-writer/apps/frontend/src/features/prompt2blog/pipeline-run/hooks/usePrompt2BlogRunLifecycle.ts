@@ -12,10 +12,14 @@ import {
   getPrompt2BlogStatus,
   type Prompt2BlogDebugStages,
   type Prompt2BlogStatusResponse,
-  type Prompt2BlogPipelinePayload,
 } from '../../api'
 import { PIPELINE_STAGE_LABELS } from '../pipeline-status'
-import type { PersistedRunState, PipelineLogLevel, SourceStep } from '../pipeline-run.types'
+import type {
+  PersistedPipelineResult,
+  PersistedRunState,
+  PipelineLogLevel,
+  SourceStep,
+} from '../pipeline-run.types'
 import { loadPrompt2BlogTerminalArtifacts } from './loadPrompt2BlogTerminalArtifacts'
 
 type AppendPipelineLog = (message: string, level?: PipelineLogLevel) => void
@@ -25,7 +29,7 @@ type UsePrompt2BlogRunLifecycleOptions = {
   sourceStep: SourceStep
   setSourceStep: Dispatch<SetStateAction<SourceStep>>
   pipelineRunId: string | null
-  setPipelineResult: Dispatch<SetStateAction<Prompt2BlogPipelinePayload | null>>
+  setPipelineResult: Dispatch<SetStateAction<PersistedPipelineResult | null>>
   appendPipelineLog: AppendPipelineLog
   isStartingPipeline: boolean
 }
@@ -121,9 +125,18 @@ export function usePrompt2BlogRunLifecycle({
     if (status.state === 'completed') {
       const { result, debugPayload } = await loadPrompt2BlogTerminalArtifacts(pipelineRunId)
       if (isCancelled()) return
-      if (result.artifact?.pipeline_v2) {
-        setPipelineResult(result.artifact.pipeline_v2)
-        const traceUrl = result.artifact.pipeline_v2.langsmith_trace_url || result.langsmith_trace_url
+      // A run records exactly one payload, under the key naming the pipeline
+      // that produced it. v3 is checked first so a new run does not have to
+      // fall through the legacy branch, and v2 stays supported forever.
+      const terminalResult: PersistedPipelineResult | null = result.artifact?.pipeline_v3
+        ? { version: 'v3', payload: result.artifact.pipeline_v3 }
+        : result.artifact?.pipeline_v2
+          ? { version: 'v2', payload: result.artifact.pipeline_v2 }
+          : null
+      if (terminalResult) {
+        setPipelineResult(terminalResult)
+        const traceUrl =
+          terminalResult.payload.langsmith_trace_url || result.langsmith_trace_url
         if (traceUrl) appendPipelineLog(`LangSmith trace available: ${traceUrl}`)
       } else {
         setError('Pipeline finished but no final payload was returned.')

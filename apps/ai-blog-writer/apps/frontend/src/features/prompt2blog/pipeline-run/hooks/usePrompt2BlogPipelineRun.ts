@@ -41,13 +41,24 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
 
   const stageArticleUrl = useMemo(() => {
     if (!pipelineResult) return null
-    const runId = pipelineResult.run_id || pipelineRunId
+    const { payload } = pipelineResult
+    const runId = payload.run_id || pipelineRunId
     if (!runId) return null
+
+    // Staging keeps one `article_type` slot. v2 fills it with the shared
+    // 42-type name; v3 fills it with the approved article form's label, which
+    // is the equivalent editorial shape under the new model. Old staging URLs
+    // keep working because the slot and the route are unchanged.
+    const articleType = pipelineResult.version === 'v3'
+      ? pipelineResult.payload.form.label
+        || pipelineResult.payload.instruction_meta.form_label
+        || ''
+      : pipelineResult.payload.article_type.name
 
     return buildStageArticleUrl('prompt2blog', {
       run_id: runId,
-      title: pipelineResult.improved_article.title,
-      article_type: pipelineResult.article_type.name,
+      title: payload.improved_article.title,
+      article_type: articleType,
     })
   }, [pipelineResult, pipelineRunId])
 

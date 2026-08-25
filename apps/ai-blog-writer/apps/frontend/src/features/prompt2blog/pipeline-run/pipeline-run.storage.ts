@@ -1,5 +1,4 @@
-import type { Prompt2BlogPipelinePayload } from '../api'
-import type { PersistedRunState } from './pipeline-run.types'
+import type { PersistedPipelineResult, PersistedRunState } from './pipeline-run.types'
 
 export const RUN_STORAGE_KEY = 'p2b-run-state'
 
@@ -9,11 +8,11 @@ export const RUN_STORAGE_KEY = 'p2b-run-state'
 // it — the debug panel reads the separate /debug endpoint — so it is dropped
 // before persisting.
 function stripDebugPayload(
-  pipelineResult: Prompt2BlogPipelinePayload | null,
-): Prompt2BlogPipelinePayload | null {
+  pipelineResult: PersistedPipelineResult | null,
+): PersistedPipelineResult | null {
   if (!pipelineResult) return null
-  const { debug: _debug, ...persistable } = pipelineResult
-  return persistable
+  const { debug: _debug, ...persistable } = pipelineResult.payload
+  return { version: pipelineResult.version, payload: persistable } as PersistedPipelineResult
 }
 
 function writeRunState(state: PersistedRunState): boolean {
@@ -52,6 +51,29 @@ export function saveRunState(state: PersistedRunState): void {
   clearRunState()
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+/**
+ * Reads a persisted result in either the tagged shape or the untagged v2 shape
+ * written before v3 existed. An untagged entry is a v2 run by definition, so it
+ * is adopted rather than discarded: a completed run in a still-open tab must
+ * survive the upgrade.
+ */
+function normalizePersistedResult(value: unknown): PersistedPipelineResult | null {
+  if (!isRecord(value)) return null
+
+  if (value.version === 'v2' || value.version === 'v3') {
+    const payload = value.payload
+    if (!isRecord(payload) || !payload.quality_review) return null
+    return { version: value.version, payload } as PersistedPipelineResult
+  }
+
+  if (!value.quality_review) return null
+  return { version: 'v2', payload: value } as PersistedPipelineResult
+}
+
 export function loadSavedRunState(): PersistedRunState {
   const fallback: PersistedRunState = {
     sourceStep: 'edit',
@@ -63,11 +85,7 @@ export function loadSavedRunState(): PersistedRunState {
     if (!raw) return fallback
     const parsed = JSON.parse(raw) as Partial<PersistedRunState>
     const pipelineRunId = typeof parsed.pipelineRunId === 'string' ? parsed.pipelineRunId : null
-    const pipelineResult =
-      parsed.pipelineResult && typeof parsed.pipelineResult === 'object'
-      && (parsed.pipelineResult as { quality_review?: unknown }).quality_review
-        ? parsed.pipelineResult as Prompt2BlogPipelinePayload
-        : null
+    const pipelineResult = normalizePersistedResult(parsed.pipelineResult)
     const sourceStep =
       parsed.sourceStep === 'pipeline_running' && pipelineRunId
         ? 'pipeline_running'
