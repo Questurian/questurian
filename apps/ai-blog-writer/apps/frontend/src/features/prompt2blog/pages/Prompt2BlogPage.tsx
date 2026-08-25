@@ -99,6 +99,7 @@ export default function Prompt2BlogPage() {
             onClearDirectionWorkflow={composer.clearDirectionWorkflow}
             onClearEvidence={composer.clearEvidence}
             onCommissionChange={composer.updateCommissionDraft}
+            onConfirmCommissionReview={composer.confirmCommissionReview}
             onLocationChange={value => composer.updateField('easySetupLocation', value)}
             onRetryEditorialOptions={composer.retryEditorialOptions}
             onSelectDirection={composer.selectDirectionOption}

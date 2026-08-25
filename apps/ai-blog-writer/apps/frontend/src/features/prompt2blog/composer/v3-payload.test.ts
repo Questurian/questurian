@@ -23,6 +23,7 @@ function approvedState(overrides: Partial<P2BFormState> = {}): P2BFormState {
       commissionDraft: null,
       approval: { status: 'approved', commission },
       evidencePackage,
+      reviewedCommissionFingerprint: commission.commission_fingerprint,
     },
     ...overrides,
   }

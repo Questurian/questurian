@@ -194,6 +194,7 @@ describe('loadSavedComposerState', () => {
         commissionDraft: withoutFingerprint(APPROVED_COMMISSION),
         approval: { status: 'approved', commission: APPROVED_COMMISSION },
         evidencePackage: null,
+        reviewedCommissionFingerprint: null,
       },
     })
 

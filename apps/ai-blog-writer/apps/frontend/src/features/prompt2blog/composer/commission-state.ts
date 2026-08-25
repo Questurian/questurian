@@ -23,7 +23,8 @@ function emptyEditorialState(): P2BEditorialComposerState {
     selectedOptionId: null,
     commissionDraft: null,
     approval: { status: 'not_started' },
-    evidencePackage: null
+    evidencePackage: null,
+    reviewedCommissionFingerprint: null
   }
 }
 
@@ -87,6 +88,7 @@ export function applyValidatedDirectionResponse(
       selectedOptionId: null,
       commissionDraft: null,
       approval: { status: 'awaiting_selection' },
+      reviewedCommissionFingerprint: null,
       evidencePackage: null
     }
   }
@@ -126,9 +128,18 @@ export function selectDirectionOption(
 }
 
 /** Records a fully fingerprinted snapshot without computing its fingerprint. */
+/**
+ * Approves a commission, and records whether a human deliberately reviewed it.
+ *
+ * `reviewed` is false for the implicit approval a direction card performs, and
+ * true when the operator presses the editor's own approve button or confirms
+ * the review step. The distinction is the whole point: without it, approval by
+ * card click is indistinguishable from approval a person actually read.
+ */
 export function approveCommission(
   state: P2BFormState,
-  commission: Prompt2BlogCommission
+  commission: Prompt2BlogCommission,
+  { reviewed = false }: { reviewed?: boolean } = {}
 ): P2BFormState {
   if (!state.editorial.commissionDraft) {
     throw new Error('A commission draft must be selected before approval.')
@@ -163,7 +174,23 @@ export function approveCommission(
       evidencePackage: retainedEvidencePackage(state.editorial.evidencePackage, {
         status: 'approved',
         commission
-      })
+      }),
+      reviewedCommissionFingerprint: reviewed
+        ? commission.commission_fingerprint
+        : null
+    }
+  }
+}
+
+/** Records that the operator read what a direction card locked for them. */
+export function markCommissionReviewed(state: P2BFormState): P2BFormState {
+  const { approval } = state.editorial
+  if (approval.status !== 'approved') return state
+  return {
+    ...state,
+    editorial: {
+      ...state.editorial,
+      reviewedCommissionFingerprint: approval.commission.commission_fingerprint
     }
   }
 }
@@ -190,7 +217,9 @@ export function editCommissionDraft(
         status: 'reconfirmation_required',
         reason: 'commission_edited'
       },
-      evidencePackage: null
+      evidencePackage: null,
+      // An edited commission is not the one that was read.
+      reviewedCommissionFingerprint: null
     }
   }
 }

@@ -27,6 +27,7 @@ import { approveCommission as fingerprintApprovedCommission } from '../commissio
 import {
   applyValidatedDirectionResponse,
   approveCommission as storeApprovedCommission,
+  markCommissionReviewed,
   clearDirectionWorkflow as resetDirectionWorkflow,
   clearEvidencePackage,
   storeEvidencePackage,
@@ -69,6 +70,8 @@ export function usePrompt2BlogComposer() {
                 status: 'reconfirmation_required',
                 reason: 'title_or_location_changed',
               },
+              // A retitled article is not the commission that was read.
+              reviewedCommissionFingerprint: null,
               evidencePackage: null,
             },
           }
@@ -172,9 +175,17 @@ export function usePrompt2BlogComposer() {
     const draft = state.editorial.commissionDraft
     const commission = await fingerprintApprovedCommission(draft, editorialOptions)
     setState(prev =>
-      prev.editorial.commissionDraft !== draft ? prev : storeApprovedCommission(prev, commission),
+      prev.editorial.commissionDraft !== draft
+        ? prev
+        : // Pressing approve is itself the deliberate read that the review step
+          // asks for, so it does not ask again.
+          storeApprovedCommission(prev, commission, { reviewed: true }),
     )
   }, [editorialOptions, state.editorial.commissionDraft])
+
+  const confirmCommissionReview = useCallback(() => {
+    setState(markCommissionReviewed)
+  }, [])
 
   const storeEvidence = useCallback((evidencePackage: Prompt2BlogEvidencePackage) => {
     setState(prev => storeEvidencePackage(prev, evidencePackage))
@@ -245,6 +256,7 @@ export function usePrompt2BlogComposer() {
     selectDirectionOption,
     updateCommissionDraft,
     approveCommissionChanges,
+    confirmCommissionReview,
     storeEvidence,
     clearEvidence,
     clearDirectionWorkflow,

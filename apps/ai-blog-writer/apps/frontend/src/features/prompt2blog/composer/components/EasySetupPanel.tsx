@@ -30,6 +30,7 @@ interface EasySetupPanelProps {
   onClearDirectionWorkflow: () => void
   onClearEvidence: () => void
   onCommissionChange: (draft: Prompt2BlogCommissionDraft) => void
+  onConfirmCommissionReview: () => void
   onLocationChange: (value: string) => void
   onRetryEditorialOptions: () => void
   onSelectDirection: (optionId: Prompt2BlogDirectionOptionId) => Promise<void>
@@ -52,6 +53,7 @@ export function EasySetupPanel({
   onClearDirectionWorkflow,
   onClearEvidence,
   onCommissionChange,
+  onConfirmCommissionReview,
   onLocationChange,
   onRetryEditorialOptions,
   onSelectDirection,
@@ -118,6 +120,11 @@ export function EasySetupPanel({
   // deriveP2BSteps always returns all five; a missing one means the page handed
   // this panel something other than the step model, which is a programming
   // error rather than a state the operator can reach.
+  const awaitingReview =
+    editorial.approval.status === 'approved'
+    && editorial.reviewedCommissionFingerprint
+      !== editorial.approval.commission.commission_fingerprint
+
   const stepFor = (id: P2BStepId): P2BStep => {
     const step = steps.find(candidate => candidate.id === id)
     if (!step) throw new Error(`Missing step "${id}" in the step model.`)
@@ -279,28 +286,64 @@ export function EasySetupPanel({
         )}
       </StepSection>
 
-      {editorialOptions && editorial.commissionDraft && (
-        <CommissionEditor
-          draft={editorial.commissionDraft}
-          editorialOptions={editorialOptions}
-          isApproved={editorial.approval.status === 'approved'}
-          onApprove={() => {
-            void onApproveCommission().catch(error =>
-              setDirectionStatus(error instanceof Error ? error.message : 'Approval failed.'),
-            )
-          }}
-          onChange={onCommissionChange}
-        />
-      )}
-      {editorialOptions && editorial.approval.status === 'approved' && (
-        <ResearchPanel
-          commission={editorial.approval.commission}
-          editorialOptions={editorialOptions}
-          evidencePackage={editorial.evidencePackage}
-          onClearEvidence={onClearEvidence}
-          onStoreEvidence={onStoreEvidence}
-        />
-      )}
+      <StepSection step={stepFor('commission')}>
+        {!editorial.commissionDraft && (
+          <p className="p2b-field-hint">
+            Choose a direction in step 2 and what you commissioned appears here.
+          </p>
+        )}
+        {editorialOptions && editorial.commissionDraft && (
+          <>
+            {awaitingReview && (
+              <div className="p2b-commission-alert" role="status">
+                <span>
+                  Choosing that direction locked this commission. Research can add facts to
+                  it, but nothing after this point can change what the article is. Read it,
+                  change anything that is wrong, then confirm.
+                </span>
+              </div>
+            )}
+            <CommissionEditor
+              draft={editorial.commissionDraft}
+              editorialOptions={editorialOptions}
+              isApproved={editorial.approval.status === 'approved'}
+              onApprove={() => {
+                void onApproveCommission().catch(error =>
+                  setDirectionStatus(error instanceof Error ? error.message : 'Approval failed.'),
+                )
+              }}
+              onChange={onCommissionChange}
+            />
+            {awaitingReview && (
+              <div className="p2b-panel-actions">
+                <button
+                  type="button"
+                  className="p2b-submit-btn"
+                  onClick={onConfirmCommissionReview}
+                >
+                  This is right — go to research
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </StepSection>
+
+      <StepSection step={stepFor('research')}>
+        {editorialOptions && editorial.approval.status === 'approved' ? (
+          <ResearchPanel
+            commission={editorial.approval.commission}
+            editorialOptions={editorialOptions}
+            evidencePackage={editorial.evidencePackage}
+            onClearEvidence={onClearEvidence}
+            onStoreEvidence={onStoreEvidence}
+          />
+        ) : (
+          <p className="p2b-field-hint">
+            Confirm the commission in step 3 and its research prompt appears here.
+          </p>
+        )}
+      </StepSection>
     </>
   )
 }

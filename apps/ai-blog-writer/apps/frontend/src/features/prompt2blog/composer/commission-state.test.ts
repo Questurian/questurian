@@ -78,7 +78,8 @@ function state(overrides: Partial<P2BFormState> = {}): P2BFormState {
       selectedOptionId: null,
       commissionDraft: null,
       approval: { status: 'not_started' },
-      evidencePackage: null
+      evidencePackage: null,
+      reviewedCommissionFingerprint: null
     },
     easySetupTitle: APP_TITLE,
     easySetupLocation: APP_LOCATION,
@@ -120,6 +121,7 @@ describe('commission state', () => {
     expect(next.activeWorkflow).toBe('editorial_v3')
     expect(next.editorial).toEqual({
       directionOptions: [],
+      reviewedCommissionFingerprint: null,
       selectedOptionId: null,
       commissionDraft: null,
       approval: { status: 'not_started' },
@@ -244,6 +246,7 @@ describe('commission state', () => {
     expect(next.activeWorkflow).toBe('legacy_v2')
     expect(next.editorial).toEqual({
       directionOptions: [],
+      reviewedCommissionFingerprint: null,
       selectedOptionId: null,
       commissionDraft: null,
       approval: { status: 'not_started' },
