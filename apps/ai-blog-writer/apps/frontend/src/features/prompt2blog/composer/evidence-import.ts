@@ -17,6 +17,11 @@ export type EvidenceReadinessFinding = {
   message: string
 }
 
+export type EvidenceImportValidation = {
+  issues: EvidenceImportIssue[]
+  evidencePackage: Prompt2BlogEvidencePackage | null
+}
+
 export type EvidenceImportReview = {
   issues: EvidenceImportIssue[]
   readinessFindings: EvidenceReadinessFinding[]
@@ -607,30 +612,18 @@ function buildReadinessFindings(
   return findings
 }
 
-export function reviewEvidencePackageJson(
-  raw: string,
-  commission: Prompt2BlogCommission,
-  catalog: Prompt2BlogEditorialOptionsResponse
-): EvidenceImportReview {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(raw)
-  } catch {
-    return {
-      issues: [
-        {
-          path: 'json',
-          message: 'Must be one bare JSON object without prose or fences.'
-        }
-      ],
-      readinessFindings: [],
-      evidencePackage: null
-    }
-  }
+/**
+ * Deterministic structural validation of an already-parsed evidence package
+ * against one approved commission. Catalog-free on purpose so stored evidence
+ * can be re-validated before the editorial catalog has loaded.
+ */
+export function validateEvidencePackageValue(
+  parsed: unknown,
+  commission: Prompt2BlogCommission
+): EvidenceImportValidation {
   if (!isObject(parsed)) {
     return {
       issues: [{ path: 'json', message: 'Must be one bare JSON object.' }],
-      readinessFindings: [],
       evidencePackage: null
     }
   }
@@ -808,9 +801,48 @@ export function reviewEvidencePackageJson(
     )
   )
 
-  if (issues.length)
-    return { issues, readinessFindings: [], evidencePackage: null }
-  const evidencePackage = parsed as unknown as Prompt2BlogEvidencePackage
+  if (issues.length) return { issues, evidencePackage: null }
+  return {
+    issues: [],
+    evidencePackage: parsed as unknown as Prompt2BlogEvidencePackage
+  }
+}
+
+/** Recomputes readiness findings for evidence that already validated. */
+export function evidenceReadinessFindings(
+  evidencePackage: Prompt2BlogEvidencePackage,
+  commission: Prompt2BlogCommission,
+  catalog: Prompt2BlogEditorialOptionsResponse
+): EvidenceReadinessFinding[] {
+  return buildReadinessFindings(evidencePackage, commission, catalog)
+}
+
+export function reviewEvidencePackageJson(
+  raw: string,
+  commission: Prompt2BlogCommission,
+  catalog: Prompt2BlogEditorialOptionsResponse
+): EvidenceImportReview {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return {
+      issues: [
+        {
+          path: 'json',
+          message: 'Must be one bare JSON object without prose or fences.'
+        }
+      ],
+      readinessFindings: [],
+      evidencePackage: null
+    }
+  }
+
+  const { issues, evidencePackage } = validateEvidencePackageValue(
+    parsed,
+    commission
+  )
+  if (!evidencePackage) return { issues, readinessFindings: [], evidencePackage }
   return {
     issues: [],
     readinessFindings: buildReadinessFindings(

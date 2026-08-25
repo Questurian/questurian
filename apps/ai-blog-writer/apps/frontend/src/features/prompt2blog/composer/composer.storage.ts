@@ -17,6 +17,8 @@ import {
   type Prompt2BlogDirectionOptionId,
 } from '../api'
 import { commissionMatchesDraft, fingerprintCommissionSync } from './commission'
+import { retainedEvidencePackage } from './commission-state'
+import { validateEvidencePackageValue } from './evidence-import'
 
 export const COMPOSER_STORAGE_KEY = 'p2b-form-draft'
 export const COMPOSER_STORAGE_VERSION = 3
@@ -95,6 +97,7 @@ export const DEFAULT_EDITORIAL_STATE: P2BEditorialComposerState = {
   selectedOptionId: null,
   commissionDraft: null,
   approval: { status: 'not_started' },
+  evidencePackage: null,
 }
 
 export const DEFAULT_COMPOSER_STATE: P2BFormState = {
@@ -297,6 +300,20 @@ function normalizeApproval(value: unknown): P2BCommissionApproval | null {
   return null
 }
 
+/**
+ * Stored evidence is re-validated against the approved commission on every
+ * load. A draft that no longer matches loses its research instead of carrying
+ * unverified sources into a run.
+ */
+function normalizeEvidencePackage(
+  value: unknown,
+  approval: P2BCommissionApproval,
+): P2BEditorialComposerState['evidencePackage'] {
+  if (value == null || approval.status !== 'approved') return null
+  const { evidencePackage } = validateEvidencePackageValue(value, approval.commission)
+  return retainedEvidencePackage(evidencePackage, approval)
+}
+
 function normalizeEditorialState(value: unknown): P2BEditorialComposerState {
   if (!value || typeof value !== 'object') return { ...DEFAULT_EDITORIAL_STATE }
   const candidate = value as Partial<P2BEditorialComposerState>
@@ -332,6 +349,7 @@ function normalizeEditorialState(value: unknown): P2BEditorialComposerState {
     selectedOptionId,
     commissionDraft,
     approval,
+    evidencePackage: normalizeEvidencePackage(candidate.evidencePackage, approval),
   }
 }
 

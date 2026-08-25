@@ -76,6 +76,7 @@ export function usePrompt2BlogComposer() {
                 status: 'reconfirmation_required',
                 reason: 'title_or_location_changed',
               },
+              evidencePackage: null,
             },
           }
         }

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type {
   Prompt2BlogCommission,
   Prompt2BlogDirectionOption,
-  Prompt2BlogDirectionResponse
+  Prompt2BlogDirectionResponse,
+  Prompt2BlogEvidencePackage
 } from '../api'
 import { DEFAULT_COMPOSER_STATE } from './composer.storage'
 import type { P2BFormState } from './composer.types'
@@ -10,9 +11,11 @@ import {
   applyValidatedDirectionResponse,
   approveCommission,
   clearDirectionWorkflow,
+  clearEvidencePackage,
   editCommissionDraft,
   selectDirectionOption,
-  startEditorialWorkflow
+  startEditorialWorkflow,
+  storeEvidencePackage
 } from './commission-state'
 import { fingerprintCommissionSync } from './commission'
 
@@ -74,7 +77,8 @@ function state(overrides: Partial<P2BFormState> = {}): P2BFormState {
       directionOptions: [],
       selectedOptionId: null,
       commissionDraft: null,
-      approval: { status: 'not_started' }
+      approval: { status: 'not_started' },
+      evidencePackage: null
     },
     easySetupTitle: APP_TITLE,
     easySetupLocation: APP_LOCATION,
@@ -118,7 +122,8 @@ describe('commission state', () => {
       directionOptions: [],
       selectedOptionId: null,
       commissionDraft: null,
-      approval: { status: 'not_started' }
+      approval: { status: 'not_started' },
+      evidencePackage: null
     })
     expect(next.modelStackId).toBe('best-value')
     expect(next.toneId).toBe('editorial')
@@ -244,12 +249,111 @@ describe('commission state', () => {
       directionOptions: [],
       selectedOptionId: null,
       commissionDraft: null,
-      approval: { status: 'not_started' }
+      approval: { status: 'not_started' },
+      evidencePackage: null
     })
     expect(next.articleTypeId).toBe(7)
     expect(next.articleGoal).toBe('Retained legacy goal')
     expect(next.blobs).toEqual([{ id: 1, content: 'Retained source' }])
     expect(next.modelStackId).toBe('best-value')
     expect(next.toneId).toBe('editorial')
+  })
+})
+
+function evidence(fingerprint: string): Prompt2BlogEvidencePackage {
+  return {
+    schema_version: 3,
+    commission_fingerprint: fingerprint,
+    sources: [],
+    claims: [],
+    requirements: [
+      { requirement_id: 'r1', status: 'missing', claim_ids: [], gap: 'Open.' }
+    ],
+    conflicts: [],
+    gaps: []
+  }
+}
+
+function approvedState(): {
+  state: P2BFormState
+  commission: Prompt2BlogCommission
+} {
+  const selected = selectedState()
+  const commission: Prompt2BlogCommission = {
+    ...selected.editorial.commissionDraft!,
+    commission_fingerprint: fingerprintCommissionSync(
+      selected.editorial.commissionDraft!
+    )
+  }
+  return { state: approveCommission(selected, commission), commission }
+}
+
+describe('commission evidence state', () => {
+  it('attaches evidence to the approved commission and drops it on edit', () => {
+    const { state: approved, commission } = approvedState()
+
+    const withEvidence = storeEvidencePackage(
+      approved,
+      evidence(commission.commission_fingerprint)
+    )
+    expect(withEvidence.editorial.evidencePackage).not.toBeNull()
+
+    const edited = editCommissionDraft(withEvidence, {
+      approved_direction: 'Edited Lima-centered direction.'
+    })
+    expect(edited.editorial.evidencePackage).toBeNull()
+  })
+
+  it('refuses evidence that belongs to another commission or to no approval', () => {
+    const { state: approved } = approvedState()
+
+    expect(() =>
+      storeEvidencePackage(approved, evidence('f'.repeat(64)))
+    ).toThrow(/currently approved commission/)
+    expect(() =>
+      storeEvidencePackage(selectedState(), evidence('f'.repeat(64)))
+    ).toThrow(/currently approved commission/)
+  })
+
+  it('keeps evidence across a re-approval of the same commission only', () => {
+    const { state: approved, commission } = approvedState()
+    const withEvidence = storeEvidencePackage(
+      approved,
+      evidence(commission.commission_fingerprint)
+    )
+
+    expect(
+      approveCommission(withEvidence, commission).editorial.evidencePackage
+    ).not.toBeNull()
+
+    const edited = editCommissionDraft(withEvidence, {
+      approved_direction: 'A materially different Lima direction.'
+    })
+    const reApproved = approveCommission(
+      { ...edited, editorial: { ...edited.editorial, evidencePackage: withEvidence.editorial.evidencePackage } },
+      {
+        ...edited.editorial.commissionDraft!,
+        commission_fingerprint: fingerprintCommissionSync(
+          edited.editorial.commissionDraft!
+        )
+      }
+    )
+    expect(reApproved.editorial.evidencePackage).toBeNull()
+  })
+
+  it('drops evidence when research or the whole workflow is cleared', () => {
+    const { state: approved, commission } = approvedState()
+    const withEvidence = storeEvidencePackage(
+      approved,
+      evidence(commission.commission_fingerprint)
+    )
+
+    expect(clearEvidencePackage(withEvidence).editorial.evidencePackage).toBeNull()
+    expect(
+      clearEvidencePackage(withEvidence).editorial.approval
+    ).toEqual(withEvidence.editorial.approval)
+    expect(
+      clearDirectionWorkflow(withEvidence).editorial.evidencePackage
+    ).toBeNull()
   })
 })

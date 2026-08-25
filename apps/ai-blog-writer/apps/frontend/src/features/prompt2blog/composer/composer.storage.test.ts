@@ -7,7 +7,11 @@ import {
   loadSavedComposerState,
   saveComposerState,
 } from './composer.storage'
-import type { Prompt2BlogCommission, Prompt2BlogCommissionDraft } from '../api'
+import type {
+  Prompt2BlogCommission,
+  Prompt2BlogCommissionDraft,
+  Prompt2BlogEvidencePackage,
+} from '../api'
 import { fingerprintCommissionSync } from './commission'
 
 const APPROVED_COMMISSION: Prompt2BlogCommission = {
@@ -208,6 +212,7 @@ describe('loadSavedComposerState', () => {
         selectedOptionId: 'direction-1',
         commissionDraft: withoutFingerprint(APPROVED_COMMISSION),
         approval: { status: 'approved', commission: APPROVED_COMMISSION },
+        evidencePackage: null,
       },
     })
 
@@ -292,5 +297,116 @@ describe('loadSavedComposerState', () => {
     )
 
     expect(loadSavedComposerState().editorial).toEqual(DEFAULT_COMPOSER_STATE.editorial)
+  })
+})
+
+function storedEvidence(
+  fingerprint = APPROVED_COMMISSION.commission_fingerprint,
+): Prompt2BlogEvidencePackage {
+  return {
+    schema_version: 3,
+    commission_fingerprint: fingerprint,
+    sources: [
+      {
+        source_id: 's1',
+        title: 'Lima booking guidance',
+        publisher: 'City tourism office',
+        url: 'https://example.com/lima-booking',
+        published_at: '2026-06-01',
+        retrieved_at: '2026-08-25',
+        source_type: 'official',
+        material_type: 'web',
+        notes: ['Names the booking windows that matter first.'],
+      },
+    ],
+    claims: [
+      {
+        claim_id: 'c1',
+        text: 'Airport transfers should be booked before arrival.',
+        source_ids: ['s1'],
+        requirement_ids: ['r1'],
+        as_of: '2026-06-01',
+        confidence: 'high',
+      },
+    ],
+    requirements: [
+      { requirement_id: 'r1', status: 'supported', claim_ids: ['c1'], gap: '' },
+    ],
+    conflicts: [],
+    gaps: [],
+  }
+}
+
+function saveApprovedDraftWithEvidence(evidencePackage: unknown): void {
+  localStorage.setItem(
+    COMPOSER_STORAGE_KEY,
+    JSON.stringify({
+      ...DEFAULT_COMPOSER_STATE,
+      composerStorageVersion: COMPOSER_STORAGE_VERSION,
+      activeWorkflow: 'editorial_v3',
+      editorial: {
+        directionOptions: storedDirectionOptions(),
+        selectedOptionId: 'direction-1',
+        commissionDraft: withoutFingerprint(APPROVED_COMMISSION),
+        approval: { status: 'approved', commission: APPROVED_COMMISSION },
+        evidencePackage,
+      },
+    }),
+  )
+}
+
+describe('stored evidence packages', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('restores evidence that still matches the approved commission', () => {
+    saveApprovedDraftWithEvidence(storedEvidence())
+
+    expect(loadSavedComposerState().editorial.evidencePackage).toEqual(storedEvidence())
+  })
+
+  it('drops evidence fingerprinted for a different commission', () => {
+    saveApprovedDraftWithEvidence(storedEvidence('b'.repeat(64)))
+
+    const loaded = loadSavedComposerState()
+    expect(loaded.editorial.evidencePackage).toBeNull()
+    expect(loaded.editorial.approval).toEqual({
+      status: 'approved',
+      commission: APPROVED_COMMISSION,
+    })
+  })
+
+  it('drops evidence whose stored body no longer validates', () => {
+    const broken = storedEvidence()
+    broken.claims![0].source_ids = ['s404']
+    saveApprovedDraftWithEvidence(broken)
+
+    const loaded = loadSavedComposerState()
+    expect(loaded.editorial.evidencePackage).toBeNull()
+    expect(loaded.editorial.approval).toEqual({
+      status: 'approved',
+      commission: APPROVED_COMMISSION,
+    })
+  })
+
+  it('drops evidence stored against an unapproved commission', () => {
+    localStorage.setItem(
+      COMPOSER_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_COMPOSER_STATE,
+        composerStorageVersion: COMPOSER_STORAGE_VERSION,
+        activeWorkflow: 'editorial_v3',
+        editorial: {
+          directionOptions: storedDirectionOptions(),
+          selectedOptionId: 'direction-1',
+          commissionDraft: withoutFingerprint(APPROVED_COMMISSION),
+          approval: { status: 'needs_approval' },
+          evidencePackage: storedEvidence(),
+        },
+      }),
+    )
+
+    expect(loadSavedComposerState().editorial.evidencePackage).toBeNull()
   })
 })
