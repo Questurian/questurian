@@ -22,6 +22,20 @@ from .editorial_catalog import (
 )
 from .evidence_v3 import NormalizedEvidence, NormalizedSource
 
+# Requirement status and claim confidence answer different questions, and a
+# research desk that conflates them stalls on a question it has in fact
+# answered: an issuing authority whose own site blocks automated retrieval held
+# a real run's requirement at `partial` for three rounds while several
+# independent sources agreed on the figure. Kept verbatim in step with the
+# frontend's `REQUIREMENT_STATUS_RULES`; all three prompts must say the same
+# thing.
+REQUIREMENT_STATUS_RULES = """REQUIREMENT STATUS VERSUS CLAIM CONFIDENCE
+These record two different things. Never conflate them.
+- status describes the QUESTION. supported means linked claims answer the requirement's question; partial means part of that question is still unanswered; missing means none of it is answered.
+- confidence describes the ANSWER. high, medium, or low records how well corroborated that answer is.
+- An answer you found and corroborated stays supported even when you could not reach the ideal primary source, the publisher blocks automated retrieval, or you would have preferred more evidence. Record that reservation as claim confidence medium or low and as a source note. Never downgrade the requirement to partial for it.
+- Reserve partial and missing for a genuinely unanswered question. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims."""
+
 ReadinessStatus = Literal["ready", "needs_research"]
 FindingCode = Literal["requirement_gap", "unresolved_conflict", "source_gate"]
 
@@ -257,10 +271,12 @@ ACTIVE TOPIC MODULES
 REPLACEMENT RULES
 - Do not redo or weaken already supported work. Preserve valid existing sources, claims, requirement links, dates, metadata, and resolved conflicts.
 - Add or revise only what is needed to close the listed requirements, conflicts, findings, and source gates.
-- Use partial or missing honestly when the follow-up still cannot close a gap.
+- Set requirement status and claim confidence by the rules below, including for work this follow-up still cannot close.
 - Keep every locked requirement exactly once in requirements, including already supported requirements.
 - Keep source and claim mappings resolvable in both directions. Web and report sources require publisher and URL.
-- Preserve exact material_type so source-gate readiness stays deterministic."""
+- Preserve exact material_type so source-gate readiness stays deterministic.
+
+{REQUIREMENT_STATUS_RULES}"""
 
 
 def needs_research_payload(

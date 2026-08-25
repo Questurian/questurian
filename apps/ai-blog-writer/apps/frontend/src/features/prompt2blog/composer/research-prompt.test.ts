@@ -93,11 +93,33 @@ describe('buildResearchPrompt', () => {
     expect(prompt).toContain(
       '"material_type": "web|report|transcript|interview-responses|first-person-notes|evaluation-notes|other"'
     )
-    expect(prompt).toContain('Use partial or missing honestly')
+    expect(prompt).toContain(
+      'Set requirement status and claim confidence by the rules below.'
+    )
     expect(prompt).toContain(
       'Every commission requirement ID must appear exactly once'
     )
     expect(prompt).not.toContain('"commission": {')
+  })
+
+  it('separates requirement status from claim confidence so an unreachable primary source cannot stall the loop', () => {
+    const prompt = buildResearchPrompt(commission, catalog)
+
+    expect(prompt).toContain('REQUIREMENT STATUS VERSUS CLAIM CONFIDENCE')
+    expect(prompt).toContain('status describes the QUESTION')
+    expect(prompt).toContain('confidence describes the ANSWER')
+    expect(prompt).toContain(
+      'the publisher blocks automated retrieval, or you would have preferred more evidence'
+    )
+    expect(prompt).toContain(
+      'Never downgrade the requirement to partial for it.'
+    )
+    expect(prompt).toContain(
+      'Reserve partial and missing for a genuinely unanswered question.'
+    )
+    expect(prompt).toContain(
+      'otherwise say exactly which part of the question is still unanswered'
+    )
   })
 
   it('includes only active module metadata and the active form source gate', () => {

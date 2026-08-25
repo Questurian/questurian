@@ -14,6 +14,7 @@ from app.features.prompt2blog.intake_v3 import v3_intake_result
 from app.features.prompt2blog.research_readiness_v3 import (
     assess_research_readiness,
     build_follow_up_research_prompt,
+    REQUIREMENT_STATUS_RULES,
 )
 
 FIXTURE_PATH = (
@@ -154,6 +155,26 @@ def test_the_follow_up_prompt_targets_only_unresolved_work():
     assert "- r2 — " in prompt
     assert "- r3 — " in prompt
     assert "- r1 — " not in prompt
+
+
+def test_the_follow_up_prompt_separates_requirement_status_from_claim_confidence():
+    """An unreachable primary source is a confidence reservation, not a gap.
+
+    Conflating the two is what held a real run's requirement at ``partial``
+    across three research rounds while several independent sources agreed on
+    the answer, so the prompt has to draw the line explicitly.
+    """
+    request = _request()
+    evidence, readiness = _assess(request)
+
+    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+
+    assert REQUIREMENT_STATUS_RULES in prompt
+    assert "status describes the QUESTION" in prompt
+    assert "confidence describes the ANSWER" in prompt
+    assert "the publisher blocks automated retrieval" in prompt
+    assert "Never downgrade the requirement to partial for it." in prompt
+    assert "Use partial or missing honestly" not in prompt
 
 
 def test_intake_terminates_as_needs_research_without_calling_a_model(monkeypatch):

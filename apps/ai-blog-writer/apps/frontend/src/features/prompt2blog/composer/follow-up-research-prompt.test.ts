@@ -6,6 +6,7 @@ import type {
 } from '../api'
 import type { EvidenceReadinessFinding } from './evidence-import'
 import { buildFollowUpResearchPrompt } from './follow-up-research-prompt'
+import { REQUIREMENT_STATUS_RULES } from './research-prompt'
 
 const fingerprint =
   'd1c2c9e041513d1d2b54261f8be5a1a3904a206b9daddf5e392c81b9e7cdcf48'
@@ -234,5 +235,20 @@ describe('buildFollowUpResearchPrompt', () => {
     expect(prompt).toContain(
       '"material_type": "web|report|transcript|interview-responses|first-person-notes|evaluation-notes|other"'
     )
+  })
+
+  it('carries the same status-versus-confidence rules as the initial prompt', () => {
+    const prompt = buildFollowUpResearchPrompt(
+      commission,
+      incompleteEvidence,
+      [],
+      catalog
+    )
+
+    expect(prompt).toContain(REQUIREMENT_STATUS_RULES)
+    expect(prompt).toContain(
+      'Set requirement status and claim confidence by the rules below, including for work this follow-up still cannot close.'
+    )
+    expect(prompt).not.toContain('Use partial or missing honestly')
   })
 })
