@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -87,14 +88,72 @@ def _enforce_anti_ai_markdown_with_model(
 JSON_RETRY_EXCERPT_CHARS = 1_200
 
 
+def _invoke_schema_json_llm(
+    *,
+    prompt: str,
+    max_tokens: int,
+    temperature: float,
+    model_name: str | None,
+    schema: dict[str, Any],
+    usage_recorder: UsageRecorder | None = None,
+) -> tuple[dict[str, Any], str] | None:
+    """One validated call, or None if this provider cannot make one.
+
+    Capability is asked of the object the factory returned rather than inferred
+    from the model name, so the question is "can this thing enforce a schema"
+    and not "do I believe this name is served by something that can". A
+    provider without the method falls through to asking in prose.
+
+    There is no retry here on purpose. The retry loop below exists because a
+    model asked in prose can return something unparseable; a validated call
+    either produced a conforming object or failed for a reason that asking
+    again three times would not fix -- and each of those attempts is a full
+    article rewrite on the writer model.
+    """
+    llm = get_vertex_llm(
+        temperature=temperature,
+        max_tokens=max_tokens,
+        model_name=model_name or DEFAULT_MODEL,
+    )
+    invoke_json = getattr(llm, "invoke_json", None)
+    if not callable(invoke_json):
+        return None
+
+    parsed = invoke_json(prompt, input_schema=schema)
+    if usage_recorder is not None:
+        usage_recorder(
+            str(getattr(llm, "model_name", model_name or DEFAULT_MODEL)),
+            _usage_with_measured_cost(llm),
+        )
+    if not isinstance(parsed, dict):
+        raise RuntimeError("Schema-validated LLM response was not an object")
+    # The trace wants the raw response the stage saw. There was no prose reply
+    # to record, so this is the validated object rendered back -- honest about
+    # what happened rather than an empty string in the trace.
+    return parsed, json.dumps(parsed, ensure_ascii=False)
+
+
 def _invoke_json_llm(
     *,
     prompt: str,
     max_tokens: int,
     temperature: float,
     model_name: str | None,
+    schema: dict[str, Any] | None = None,
     usage_recorder: UsageRecorder | None = None,
 ) -> tuple[dict[str, Any], str]:
+    if schema is not None:
+        validated = _invoke_schema_json_llm(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            model_name=model_name,
+            schema=schema,
+            usage_recorder=usage_recorder,
+        )
+        if validated is not None:
+            return validated
+
     strict_prompt = (
         f"{prompt}\n\n"
         "CRITICAL OUTPUT RULE:\n"

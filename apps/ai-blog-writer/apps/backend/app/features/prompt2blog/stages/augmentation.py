@@ -14,6 +14,7 @@ from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
 from ..policies import evaluate_augmentation
 from ..prompts.editorial import P2B_EDITORIAL_AUGMENTATION_PROMPT
+from ..schemas import EDITORIAL_AUGMENTATION_SCHEMA
 from ..support import _json
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ def run_augmentation_stage(
                 max_tokens=6144,
                 temperature=0.05,
                 model_name=state["writing_model"],
+                schema=EDITORIAL_AUGMENTATION_SCHEMA,
             )
             if isinstance(parsed.get("augmented_content"), str):
                 parsed["augmented_content"] = dependencies.llm.enforce_anti_ai(

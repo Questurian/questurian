@@ -13,6 +13,7 @@ from ..prompts.generation import (
     SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
 )
 from ..quality import _sanitize_rewrite
+from ..schemas import REWRITE_SCHEMA
 from ..support import _json
 
 
@@ -128,6 +129,7 @@ def run_compose_stage(
         max_tokens=6144,
         temperature=state["compose_temperature"],
         model_name=state["writing_model"],
+        schema=REWRITE_SCHEMA,
     )
     rewrite = _sanitize_rewrite(
         parsed,

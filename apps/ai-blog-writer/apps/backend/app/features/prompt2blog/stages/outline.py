@@ -12,6 +12,7 @@ from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
 from ..prompts.generation import P2B_OUTLINE_PROMPT
+from ..schemas import OUTLINE_SCHEMA
 from ..support import _json, _safe_dict, _safe_int
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,7 @@ def run_outline_stage(
             max_tokens=2048,
             temperature=0.1,
             model_name=state["writing_model"],
+            schema=OUTLINE_SCHEMA,
         )
         candidate = _sanitize_outline(parsed)
         accepted, diagnostics = validate_outline(

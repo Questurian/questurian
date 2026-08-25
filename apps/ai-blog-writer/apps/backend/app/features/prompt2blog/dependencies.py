@@ -33,6 +33,10 @@ class Prompt2BlogLLM(Protocol):
         max_tokens: int,
         temperature: float,
         model_name: str | None,
+        # Optional and trailing so every existing double keeps satisfying this.
+        # A provider that can enforce a schema uses it; one that cannot ignores
+        # it and asks in prose exactly as before.
+        schema: dict[str, Any] | None = None,
     ) -> tuple[dict[str, Any], str]: ...
 
     def enforce_anti_ai(
