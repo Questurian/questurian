@@ -216,6 +216,11 @@ def send_test_message(
             timeout=CALL_TIMEOUT_SECONDS,
             check=False,
             cwd=WORKING_DIR,
+            # The CLI waits ~3s for piped stdin before giving up and warning
+            # about it, even when the prompt came in as an argument. Under a
+            # server that inherited stdin from its parent that wait is paid on
+            # every call. Closing it removes about 3.7s of pure latency.
+            stdin=subprocess.DEVNULL,
         )
     except subprocess.TimeoutExpired as error:
         raise TestMessageError(
