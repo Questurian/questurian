@@ -62,20 +62,23 @@ export function DirectionCards({
           )
 
           return (
-            <label
+            <div
               key={option.option_id}
               className={`p2b-direction-card${selected ? ' is-selected' : ''}`}
             >
-              <span className="p2b-direction-card-choice" id={choiceId}>
+              <span className="p2b-direction-card-choice">
                 <input
+                  id={choiceId}
                   type="radio"
                   name="p2b-editorial-direction"
                   value={option.option_id}
                   checked={selected}
-                  aria-labelledby={`${choiceId} ${headingId} ${directionId}`}
+                  aria-labelledby={`${choiceId}-label ${headingId} ${directionId}`}
                   onChange={() => onSelect(option)}
                 />
-                Direction {index + 1}
+                <label id={`${choiceId}-label`} htmlFor={choiceId}>
+                  Direction {index + 1}
+                </label>
               </span>
               <span className="p2b-direction-card-form" id={headingId}>
                 {formLabel}
@@ -134,7 +137,7 @@ export function DirectionCards({
                 <strong>Why this works</strong>
                 {option.rationale}
               </span>
-            </label>
+            </div>
           )
         })}
       </div>

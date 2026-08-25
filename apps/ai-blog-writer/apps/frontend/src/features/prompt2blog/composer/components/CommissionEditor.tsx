@@ -5,6 +5,7 @@ import type {
   Prompt2BlogEditorialOptionsResponse,
   Prompt2BlogReferenceRole
 } from '../../types/editorial.types'
+import { validateCommissionDraft } from '../commission'
 
 interface CommissionEditorProps {
   draft: Prompt2BlogCommissionDraft
@@ -21,70 +22,6 @@ function nextRequirementId(draft: Prompt2BlogCommissionDraft): string {
   return `r${index}`
 }
 
-function getCommissionDraftIssues(draft: Prompt2BlogCommissionDraft): string[] {
-  const issues: string[] = []
-  const references = draft.scope.references
-  const primaryReferences = references.filter(
-    (reference) => reference.role === 'primary_subject'
-  )
-  const comparators = references.filter(
-    (reference) => reference.role === 'comparator'
-  )
-  const normalizedNames = references.map((reference) =>
-    reference.name.trim().toLocaleLowerCase()
-  )
-  const requirementIds = draft.requirements.map((item) =>
-    item.requirement_id.trim()
-  )
-
-  if (!draft.approved_direction.trim()) issues.push('Direction is required.')
-  if (!draft.audience.primary_reader.trim())
-    issues.push('Primary audience is required.')
-  if (!draft.core_reader_question.trim())
-    issues.push('Core reader question is required.')
-  if (!draft.reader_outcome.trim()) issues.push('Reader outcome is required.')
-  if (!draft.primary_subject.trim()) issues.push('Primary subject is required.')
-  if (draft.topic_module_ids && draft.topic_module_ids.length > 4) {
-    issues.push('Choose no more than four topic modules.')
-  }
-  if (primaryReferences.length !== 1) {
-    issues.push('Scope must contain exactly one primary-subject reference.')
-  } else if (
-    primaryReferences[0].name.trim().toLocaleLowerCase() !==
-    draft.primary_subject.trim().toLocaleLowerCase()
-  ) {
-    issues.push('Primary subject and primary reference must match.')
-  }
-  if (normalizedNames.some((name) => !name))
-    issues.push('Every named reference needs a name.')
-  if (new Set(normalizedNames).size !== normalizedNames.length) {
-    issues.push('Named references must be unique.')
-  }
-  if (draft.scope.mode === 'single_subject' && comparators.length > 0) {
-    issues.push('Single-subject scope cannot contain comparators.')
-  }
-  if (draft.scope.mode === 'head_to_head' && comparators.length < 1) {
-    issues.push('Head-to-head scope needs at least one comparator.')
-  }
-  if (draft.scope.mode === 'ranked_set' && comparators.length < 2) {
-    issues.push('Ranked-set scope needs at least two comparators.')
-  }
-  if (draft.requirements.length === 0)
-    issues.push('Add at least one research requirement.')
-  if (
-    draft.requirements.some(
-      (item) => !item.requirement_id.trim() || !item.question.trim()
-    )
-  ) {
-    issues.push('Every research requirement needs an ID and question.')
-  }
-  if (new Set(requirementIds).size !== requirementIds.length) {
-    issues.push('Research requirement IDs must be unique.')
-  }
-
-  return issues
-}
-
 export function CommissionEditor({
   draft,
   editorialOptions,
@@ -95,7 +32,13 @@ export function CommissionEditor({
   const idPrefix = useId().replace(/:/g, '')
   const moduleIds = draft.topic_module_ids ?? []
   const audienceTags = draft.audience.tags ?? []
-  const issues = getCommissionDraftIssues(draft)
+  const issues = [
+    ...new Set(
+      validateCommissionDraft(draft, editorialOptions).map(
+        (issue) => issue.message
+      )
+    )
+  ]
   const primaryReference = draft.scope.references.find(
     (reference) => reference.role === 'primary_subject'
   )

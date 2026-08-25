@@ -962,6 +962,31 @@ describe('Prompt2BlogPage', () => {
     expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeEnabled()
   })
 
+  it('retracts a checked direction response when title identity changes', async () => {
+    renderPage()
+    await waitFor(() => expect(getPrompt2BlogEditorialOptionsMock).toHaveBeenCalled())
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'A weekend in Lisbon' },
+    })
+    fireEvent.change(screen.getByLabelText('Location'), {
+      target: { value: 'Lisbon, Portugal' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate direction prompt' }))
+    fireEvent.change(screen.getByLabelText('Direction JSON'), {
+      target: { value: createDirectionResponseJson() },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Check directions' }))
+    expect(screen.getByRole('button', { name: 'Show direction cards' })).toBeEnabled()
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'Three days in Lisbon' },
+    })
+
+    expect(screen.getByRole('button', { name: 'Show direction cards' })).toBeDisabled()
+    expect(screen.getByLabelText('Direction JSON')).toHaveValue('')
+  })
+
   it('lets users choose a travel quick pick and shows the selected definition', async () => {
     renderPage()
 

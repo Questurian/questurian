@@ -83,6 +83,8 @@ export default function Prompt2BlogPage() {
             activeWorkflow={state.activeWorkflow}
             editorial={state.editorial}
             editorialOptions={composer.editorialOptions}
+            editorialOptionsError={composer.editorialOptionsError}
+            editorialOptionsLoading={composer.editorialOptionsLoading}
             inputOptions={composer.inputOptions}
             location={state.easySetupLocation}
             title={state.easySetupTitle}
@@ -92,6 +94,7 @@ export default function Prompt2BlogPage() {
             onClearDirectionWorkflow={composer.clearDirectionWorkflow}
             onCommissionChange={composer.updateCommissionDraft}
             onLocationChange={value => composer.updateField('easySetupLocation', value)}
+            onRetryEditorialOptions={composer.retryEditorialOptions}
             onSelectDirection={composer.selectDirectionOption}
             onStartDirectionWorkflow={composer.startDirectionWorkflow}
             onTitleChange={value => composer.updateField('easySetupTitle', value)}

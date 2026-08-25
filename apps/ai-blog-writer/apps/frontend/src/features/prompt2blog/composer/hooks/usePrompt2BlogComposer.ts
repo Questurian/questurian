@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   getPrompt2BlogEditorialOptions,
   getPrompt2BlogGuidelinePreview,
@@ -53,8 +54,6 @@ export function usePrompt2BlogComposer() {
   const saved = useRef(loadSavedComposerState())
   const [state, setState] = useState<P2BFormState>(saved.current)
   const [inputOptions, setInputOptions] = useState<Prompt2BlogInputOptionsResponse | null>(null)
-  const [editorialOptions, setEditorialOptions] =
-    useState<Prompt2BlogEditorialOptionsResponse | null>(null)
   const [guidelinePreview, setGuidelinePreview] =
     useState<Prompt2BlogGuidelinePreviewResponse | null>(null)
   const [guidelineLoading, setGuidelineLoading] = useState(false)
@@ -138,20 +137,12 @@ export function usePrompt2BlogComposer() {
     }
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    getPrompt2BlogEditorialOptions()
-      .then(options => {
-        if (!cancelled) setEditorialOptions(options)
-      })
-      .catch(() => {
-        if (!cancelled) setEditorialOptions(null)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const editorialOptionsQuery = useQuery<Prompt2BlogEditorialOptionsResponse>({
+    queryKey: ['prompt2blog', 'editorial-options'],
+    queryFn: getPrompt2BlogEditorialOptions,
+    staleTime: 5 * 60 * 1000,
+  })
+  const editorialOptions = editorialOptionsQuery.data ?? null
 
   useEffect(() => {
     if (!state.articleTypeId) {
@@ -337,6 +328,11 @@ export function usePrompt2BlogComposer() {
     applyFields,
     inputOptions,
     editorialOptions,
+    editorialOptionsError: editorialOptionsQuery.isError,
+    editorialOptionsLoading: editorialOptionsQuery.isPending,
+    retryEditorialOptions: () => {
+      void editorialOptionsQuery.refetch()
+    },
     guidelinePreview,
     guidelineLoading,
     groupedArticleTypeOptions,

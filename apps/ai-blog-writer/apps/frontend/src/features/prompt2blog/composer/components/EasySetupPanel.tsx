@@ -25,6 +25,8 @@ interface EasySetupPanelProps {
   activeWorkflow: P2BFormState['activeWorkflow']
   editorial: P2BEditorialComposerState
   editorialOptions: Prompt2BlogEditorialOptionsResponse | null
+  editorialOptionsError: boolean
+  editorialOptionsLoading: boolean
   inputOptions: Prompt2BlogInputOptionsResponse | null
   location: string
   title: string
@@ -34,6 +36,7 @@ interface EasySetupPanelProps {
   onClearDirectionWorkflow: () => void
   onCommissionChange: (draft: Prompt2BlogCommissionDraft) => void
   onLocationChange: (value: string) => void
+  onRetryEditorialOptions: () => void
   onSelectDirection: (optionId: Prompt2BlogDirectionOptionId) => Promise<void>
   onStartDirectionWorkflow: () => void
   onTitleChange: (value: string) => void
@@ -43,6 +46,8 @@ export function EasySetupPanel({
   activeWorkflow,
   editorial,
   editorialOptions,
+  editorialOptionsError,
+  editorialOptionsLoading,
   inputOptions,
   location,
   title,
@@ -52,6 +57,7 @@ export function EasySetupPanel({
   onClearDirectionWorkflow,
   onCommissionChange,
   onLocationChange,
+  onRetryEditorialOptions,
   onSelectDirection,
   onStartDirectionWorkflow,
   onTitleChange,
@@ -66,12 +72,14 @@ export function EasySetupPanel({
   const [directionStatus, setDirectionStatus] = useState<string | null>(null)
   // The prompt lists the option catalogs verbatim, so a prompt built before
   // they arrived is missing the fields it should have constrained.
-  const catalogsLoaded = Boolean(editorialOptions?.forms.length)
   const showDirectionStep = prompt !== null || activeWorkflow === 'editorial_v3'
 
   useEffect(() => {
     setPrompt(null)
     setCopyStatus('idle')
+    setDirectionJson('')
+    setDirectionReview(null)
+    setDirectionStatus(null)
   }, [location, title])
 
   useEffect(() => {
@@ -194,8 +202,16 @@ export function EasySetupPanel({
             Generate direction prompt
           </button>
         </div>
-        {!catalogsLoaded && (
+        {editorialOptionsLoading && (
           <p className="p2b-field-hint">Editorial forms and topic modules are still loading.</p>
+        )}
+        {editorialOptionsError && (
+          <div className="p2b-commission-alert p2b-commission-alert--error" role="alert">
+            <span>Editorial forms and topic modules could not be loaded.</span>
+            <button type="button" className="p2b-clear-btn" onClick={onRetryEditorialOptions}>
+              Retry
+            </button>
+          </div>
         )}
         {prompt !== null && (
           <div className="p2b-field">

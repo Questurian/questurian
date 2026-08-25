@@ -316,7 +316,7 @@ describe('CommissionEditor', () => {
       'context_only'
     )
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Head-to-head scope needs at least one comparator.'
+      'head_to_head scope requires at least 1 comparator.'
     )
     expect(
       screen.getByRole('button', { name: 'Approve commission' })
@@ -324,6 +324,13 @@ describe('CommissionEditor', () => {
 
     fireEvent.change(screen.getByLabelText('Reference 1 role'), {
       target: { value: 'comparator' }
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'head_to_head scope requires Comparison form.'
+    )
+    fireEvent.change(screen.getByLabelText('Article form'), {
+      target: { value: 'comparison' }
     })
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
