@@ -1,3 +1,12 @@
+import type {
+  Prompt2BlogArticleFormId,
+  Prompt2BlogAudienceTagId,
+  Prompt2BlogCommission,
+  Prompt2BlogEvidenceRequirementStatus,
+  Prompt2BlogSourceRequirement,
+  Prompt2BlogTopicModuleId,
+} from './editorial.types'
+
 export type Prompt2BlogModelName =
   | 'gemini-3.7-flash'
   | 'gemini-3.5-flash'
@@ -116,7 +125,40 @@ export const PROMPT2BLOG_PIPELINE_STAGES = [
   'complete',
 ] as const
 
-export type KnownPrompt2BlogPipelineStage = typeof PROMPT2BLOG_PIPELINE_STAGES[number]
+/**
+ * The v3 graph is shorter than v2 by design: research readiness is settled
+ * before a run starts, so there is no guideline fetch, coverage check, or
+ * supplement stage to show.
+ */
+export const PROMPT2BLOG_V3_PIPELINE_STAGES = [
+  'queued',
+  'stage_v3_outline',
+  'stage_v3_compose',
+  'stage_v3_groundedness',
+  'stage_v3_quality_audit',
+  'stage_v3_repair',
+  'stage_v3_quality_settle',
+  'stage_v3_title',
+  'stage_v3_finalize',
+  'complete',
+] as const
+
+export type KnownPrompt2BlogV2PipelineStage = typeof PROMPT2BLOG_PIPELINE_STAGES[number]
+export type KnownPrompt2BlogV3PipelineStage = typeof PROMPT2BLOG_V3_PIPELINE_STAGES[number]
+
+/**
+ * Every stage name the status endpoint may legitimately report, across both
+ * pipeline versions. Status normalization matches against this so a v3 run
+ * does not render as `unknown` while it is working.
+ */
+export const PROMPT2BLOG_KNOWN_PIPELINE_STAGES = [
+  ...PROMPT2BLOG_PIPELINE_STAGES,
+  ...PROMPT2BLOG_V3_PIPELINE_STAGES,
+] as const
+
+export type KnownPrompt2BlogPipelineStage =
+  | KnownPrompt2BlogV2PipelineStage
+  | KnownPrompt2BlogV3PipelineStage
 export type Prompt2BlogPipelineStage = KnownPrompt2BlogPipelineStage | 'unknown'
 
 export type Prompt2BlogStatusResponse = {
@@ -139,6 +181,60 @@ export type Prompt2BlogStageTrace = {
   output?: unknown
   skipped?: boolean
   error?: string
+}
+
+export type Prompt2BlogGroundedness = {
+  checked: boolean
+  grounded: boolean
+  assessment: string
+  unsupported_claims: Array<{
+    claim: string
+    reason: string
+    severity: 'high' | 'low'
+  }>
+  high_severity_count: number
+}
+
+export type Prompt2BlogRunCost = {
+  stack_id: string
+  models: {
+    worker: string
+    writer: string
+    judge: string
+  }
+  input_tokens: number
+  output_tokens: number
+  // Billed at the output rate, and included in output_tokens.
+  reasoning_tokens?: number
+  cached_input_tokens: number
+  total_tokens: number
+  successful_calls: number
+  measured_calls: number
+  measurement_status: 'complete' | 'partial' | 'unavailable'
+  estimated_cost_usd: number | null
+  currency: 'USD'
+  by_model: Array<{
+    model: string
+    input_tokens: number
+    output_tokens: number
+    reasoning_tokens?: number
+    cached_input_tokens: number
+    total_tokens: number
+    calls: number
+    estimated_cost_usd: number | null
+  }>
+  // Sorted by total tokens descending. Absent on runs recorded before
+  // per-stage attribution existed.
+  by_stage?: Array<{
+    stage: string
+    input_tokens: number
+    output_tokens: number
+    reasoning_tokens: number
+    cached_input_tokens: number
+    total_tokens: number
+    calls: number
+  }>
+  pricing_note: string
 }
 
 export type Prompt2BlogPipelinePayload = {
@@ -171,47 +267,7 @@ export type Prompt2BlogPipelinePayload = {
     content: string
   }
   final_markdown: string
-  run_cost?: {
-    stack_id: string
-    models: {
-      worker: string
-      writer: string
-      judge: string
-    }
-    input_tokens: number
-    output_tokens: number
-    // Billed at the output rate, and included in output_tokens.
-    reasoning_tokens?: number
-    cached_input_tokens: number
-    total_tokens: number
-    successful_calls: number
-    measured_calls: number
-    measurement_status: 'complete' | 'partial' | 'unavailable'
-    estimated_cost_usd: number | null
-    currency: 'USD'
-    by_model: Array<{
-      model: string
-      input_tokens: number
-      output_tokens: number
-      reasoning_tokens?: number
-      cached_input_tokens: number
-      total_tokens: number
-      calls: number
-      estimated_cost_usd: number | null
-    }>
-    // Sorted by total tokens descending. Absent on runs recorded before
-    // per-stage attribution existed.
-    by_stage?: Array<{
-      stage: string
-      input_tokens: number
-      output_tokens: number
-      reasoning_tokens: number
-      cached_input_tokens: number
-      total_tokens: number
-      calls: number
-    }>
-    pricing_note: string
-  }
+  run_cost?: Prompt2BlogRunCost
   quality_review: {
     alignment_summary: string
     improvements_applied: string[]
@@ -237,17 +293,7 @@ export type Prompt2BlogPipelinePayload = {
       claims_grounded: boolean
     }
     readiness_blockers?: string[]
-    groundedness: {
-      checked: boolean
-      grounded: boolean
-      assessment: string
-      unsupported_claims: Array<{
-        claim: string
-        reason: string
-        severity: 'high' | 'low'
-      }>
-      high_severity_count: number
-    }
+    groundedness: Prompt2BlogGroundedness
     secondary_keyword_coverage: number
     must_include_coverage: number
     word_count_estimate: number
@@ -285,15 +331,155 @@ export type Prompt2BlogPipelinePayload = {
   }
 }
 
+/**
+ * The v3 result artifact. It is deliberately not a superset of the v2 payload:
+ * v3 has no article type, no guideline meta, no SEO brief, and no editorial
+ * augmentation, and it carries the approved commission and the evidence
+ * receipt that v2 had no place to put.
+ */
+export type Prompt2BlogV3PipelinePayload = {
+  message: string
+  run_id: string
+  schema_version: 3
+  status: 'completed'
+  langsmith_trace_url?: string
+  langsmith_trace_run_id?: string
+  pipeline_status: 'ready_for_staging' | 'needs_revision'
+  readiness_blockers: string[]
+  commission: Prompt2BlogCommission
+  form: {
+    id: Prompt2BlogArticleFormId | null
+    label: string | null
+  }
+  instruction_meta: Prompt2BlogV3InstructionMeta
+  evidence_receipt: Prompt2BlogEvidenceReceipt
+  improved_article: {
+    title: string
+    content: string
+  }
+  final_markdown: string
+  run_cost?: Prompt2BlogRunCost
+  input_profiles?: {
+    tone?: Record<string, unknown>
+    length?: Record<string, unknown>
+    brand_voice?: Record<string, unknown>
+    creativity_level?: string
+  }
+  quality_review: {
+    alignment_summary: string
+    improvements_applied: string[]
+    remaining_gaps: string[]
+    quality_summary: string
+    quality_scores: {
+      overall: number
+      // The v3 name for what v2 called guideline coverage: how faithfully the
+      // draft answers the approved commission.
+      commission_fidelity: number
+      informativeness: number
+      originality: number
+      brief_adherence: number
+      seo: number
+    }
+    constraint_checks: Record<string, boolean | number>
+    readiness_blockers: string[]
+    word_count_estimate: number
+    repair_applied: boolean
+    repair_attempts: number
+    groundedness: Prompt2BlogGroundedness
+    outline_accepted: boolean
+    outline_section_count: number
+    outline_unsupported_requirements: string[]
+    model_used: string
+    stage_model_overrides?: Record<string, string>
+  }
+  debug?: {
+    pipeline_input: Record<string, unknown>
+    instruction_text: string
+    evidence_records: string
+    pipeline_trace?: Prompt2BlogStageTrace[]
+  }
+}
+
+export type Prompt2BlogV3InstructionMeta = {
+  schema_version?: number
+  form_id?: Prompt2BlogArticleFormId
+  form_label?: string
+  source_requirements?: string[]
+  topic_module_ids?: Prompt2BlogTopicModuleId[]
+  audience_tag_ids?: Prompt2BlogAudienceTagId[]
+  house_rules_id?: string
+  headline_rules_id?: string
+  precedence?: string[]
+  commission_fingerprint?: string
+  evidence_receipt?: Prompt2BlogEvidenceReceipt
+}
+
+export type Prompt2BlogEvidenceReceipt = {
+  source_ids?: string[]
+  claim_ids?: string[]
+  requirement_status?: Record<string, Prompt2BlogEvidenceRequirementStatus>
+  unresolved_requirement_ids?: string[]
+  unresolved_conflict_ids?: string[]
+}
+
+export type Prompt2BlogV3ReadinessFindingCode =
+  | 'requirement_gap'
+  | 'unresolved_conflict'
+  | 'source_gate'
+
+export type Prompt2BlogV3ReadinessFinding = {
+  code: Prompt2BlogV3ReadinessFindingCode
+  requirement_ids: string[]
+  message: string
+}
+
+/**
+ * `needs_research` is a product state, not an error. The run was never queued,
+ * no writer-model token was spent, and the payload carries the prompt that
+ * closes exactly the gaps the deterministic gate found.
+ */
+export type Prompt2BlogV3NeedsResearchResponse = {
+  message?: string
+  status: 'needs_research'
+  commission_fingerprint: string
+  findings: Prompt2BlogV3ReadinessFinding[]
+  unresolved_requirements: Array<{
+    requirement_id: string
+    question: string
+    gap: string
+  }>
+  unresolved_conflict_ids: string[]
+  missing_source_requirements: Prompt2BlogSourceRequirement[]
+  follow_up_research_prompt: string
+}
+
+export type Prompt2BlogV3QueuedResponse = {
+  message?: string
+  status: 'queued'
+  run_id: string
+}
+
+export type Prompt2BlogV3StartResponse =
+  | Prompt2BlogV3QueuedResponse
+  | Prompt2BlogV3NeedsResearchResponse
+
+/**
+ * A run artifact carries exactly one pipeline payload, under the key naming
+ * the version that produced it. Legacy runs keep `pipeline_v2` forever; both
+ * keys stay optional so old result pages continue to open.
+ */
+export type Prompt2BlogRunArtifact = {
+  pipeline_v2?: Prompt2BlogPipelinePayload
+  pipeline_v3?: Prompt2BlogV3PipelinePayload
+  stages?: Record<string, unknown>
+}
+
 export type Prompt2BlogResultResponse = {
   run_id: string
   langsmith_trace_url?: string
   langsmith_trace_run_id?: string
   markdown: string
-  artifact: {
-    pipeline_v2?: Prompt2BlogPipelinePayload
-    stages?: Record<string, unknown>
-  }
+  artifact: Prompt2BlogRunArtifact
 }
 
 export type Prompt2BlogDebugResponse = {
@@ -303,10 +489,7 @@ export type Prompt2BlogDebugResponse = {
   output:
     | {
         markdown: string
-        artifact: {
-          pipeline_v2?: Prompt2BlogPipelinePayload
-          stages?: Record<string, unknown>
-        }
+        artifact: Prompt2BlogRunArtifact
       }
     | null
 }

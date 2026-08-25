@@ -42,6 +42,8 @@ export type {
   Prompt2BlogArticleTypeOption,
   Prompt2BlogDebugResponse,
   Prompt2BlogDebugStages,
+  Prompt2BlogEvidenceReceipt,
+  Prompt2BlogGroundedness,
   Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOption,
   Prompt2BlogInputOptionsResponse,
@@ -49,13 +51,29 @@ export type {
   Prompt2BlogPipelinePayload,
   Prompt2BlogPipelineStage,
   Prompt2BlogResultResponse,
+  Prompt2BlogRunArtifact,
+  Prompt2BlogRunCost,
   Prompt2BlogRunRequest,
   Prompt2BlogRunResponse,
   Prompt2BlogStageTrace,
   Prompt2BlogStatusResponse,
+  Prompt2BlogV3InstructionMeta,
+  Prompt2BlogV3NeedsResearchResponse,
+  Prompt2BlogV3PipelinePayload,
+  Prompt2BlogV3QueuedResponse,
+  Prompt2BlogV3ReadinessFinding,
+  Prompt2BlogV3ReadinessFindingCode,
+  Prompt2BlogV3StartResponse,
   Prompt2BlogWriterModel,
+  KnownPrompt2BlogPipelineStage,
+  KnownPrompt2BlogV2PipelineStage,
+  KnownPrompt2BlogV3PipelineStage,
 } from './types/pipeline.types'
-export { PROMPT2BLOG_PIPELINE_STAGES } from './types/pipeline.types'
+export {
+  PROMPT2BLOG_KNOWN_PIPELINE_STAGES,
+  PROMPT2BLOG_PIPELINE_STAGES,
+  PROMPT2BLOG_V3_PIPELINE_STAGES,
+} from './types/pipeline.types'
 
 export { fetchArticleTypeGuidelinesById, fetchArticleTypes } from './api/article-types.api'
 export { deleteArticle, fetchArticles } from './api/articles.api'
@@ -68,6 +86,7 @@ export {
   getPrompt2BlogResult,
   getPrompt2BlogStatus,
   startPrompt2BlogRun,
+  startPrompt2BlogV3Run,
 } from './api/pipeline.api'
 export { getArticleSyncStatus, markArticleSynced } from './api/sync.api'
 export type { CreateArticlePayload, Location, MediaAsset } from '../staging/api'

@@ -242,9 +242,13 @@ async def get_result(run_id: str) -> JSONResponse:
     trace_payload = _read_langgraph_trace(run_id)
     artifact = output["artifact"]
     if trace_payload and isinstance(artifact, dict):
-        pipeline_payload = artifact.get("pipeline_v2")
-        if isinstance(pipeline_payload, dict):
-            pipeline_payload.update(trace_payload)
+        # A run records exactly one of these keys, named for the pipeline
+        # version that produced it. Both are checked so a v3 result carries its
+        # trace link in the same place a v2 result always has.
+        for artifact_key in ("pipeline_v2", "pipeline_v3"):
+            pipeline_payload = artifact.get(artifact_key)
+            if isinstance(pipeline_payload, dict):
+                pipeline_payload.update(trace_payload)
 
     response_payload: dict[str, Any] = {
         "run_id": run_id,
