@@ -18,6 +18,7 @@ bounded contexts.
 | `models.py`, `contracts_v3.py` | Versioned HTTP requests, editorial contracts, and runtime pipeline input |
 | `config.py`, `options.py`, `editorial_catalog.py` | Feature constants plus legacy and v3 Markdown-backed catalogs |
 | `evidence_v3.py`, `instructions_v3.py` | V3 evidence normalization and the layered instruction stack |
+| `research_readiness_v3.py`, `intake_v3.py` | The v3 research gate, its `needs_research` result, and v3 run input |
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |
 | `llm.py`, `dependencies.py` | Shared-LLM adapter and explicit dependency bundle |

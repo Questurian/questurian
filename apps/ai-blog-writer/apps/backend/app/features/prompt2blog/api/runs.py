@@ -14,7 +14,7 @@ from app.shared.writer_models import resolve_writer_model
 
 from ..config import DEFAULT_MODEL, FEATURE_NAME
 from ..contracts_v3 import Prompt2BlogV3Request
-from ..intake_v3 import prepare_v3_runtime_request, v3_run_input_artifact
+from ..intake_v3 import v3_intake_result
 from ..models import Prompt2BlogInputRequest
 from ..observability import _read_langgraph_trace
 from ..orchestrator import run_full_pipeline
@@ -138,23 +138,23 @@ async def prepare_pipeline_v3(
     request: Prompt2BlogV3Request,
     staff_user=Depends(require_staff),
 ) -> JSONResponse:
-    """Validate an approved commission and assemble its v3 run input.
+    """Validate an approved commission, gate it on research, assemble its input.
 
-    Intake is synchronous and starts nothing. V3 has no terminal state for
-    insufficient research yet, so queueing a run here would leave runs with
-    nowhere to finish; the readiness gate that gives them one lands next.
+    Intake is synchronous and starts nothing. Insufficient research terminates
+    here as `needs_research` — a product state, not a failure — before any
+    writing work exists to spend a token on.
     """
     try:
-        runtime = prepare_v3_runtime_request(request)
+        result = v3_intake_result(request)
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    return JSONResponse(
-        {
-            "message": "Prompt2Blog v3 run input assembled",
-            "run_input": v3_run_input_artifact(runtime),
-        }
+    message = (
+        "Prompt2Blog v3 run input assembled"
+        if result["status"] == "ready"
+        else "Prompt2Blog v3 commission needs more research"
     )
+    return JSONResponse({"message": message, **result})
 
 
 @router.get("/status/{run_id}")

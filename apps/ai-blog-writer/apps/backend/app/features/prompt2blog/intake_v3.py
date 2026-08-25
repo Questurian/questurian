@@ -13,9 +13,14 @@ from typing import Any
 
 from .contracts_v3 import Prompt2BlogV3Request
 from .editorial_catalog import EditorialCatalog
-from .evidence_v3 import normalize_evidence
+from .evidence_v3 import NormalizedEvidence, normalize_evidence
 from .instructions_v3 import INSTRUCTION_SCHEMA_VERSION, assemble_v3_instructions
 from .models import PipelineV3RuntimeRequest
+from .research_readiness_v3 import (
+    ResearchReadiness,
+    assess_research_readiness,
+    needs_research_payload,
+)
 from .options import (
     _default_option,
     _find_option_or_raise,
@@ -124,4 +129,40 @@ def v3_run_input_artifact(runtime: PipelineV3RuntimeRequest) -> dict[str, Any]:
         },
         "include_debug": runtime.include_debug,
         "enable_editorial_augmentation": runtime.enable_editorial_augmentation,
+    }
+
+
+def v3_readiness(
+    request: Prompt2BlogV3Request,
+    *,
+    catalog: EditorialCatalog | None = None,
+) -> tuple[NormalizedEvidence, ResearchReadiness]:
+    """Runs the research gate for one request without touching a model."""
+    evidence = normalize_evidence(request.commission, request.evidence_package)
+    return evidence, assess_research_readiness(
+        request.commission, evidence, catalog=catalog
+    )
+
+
+def v3_intake_result(
+    request: Prompt2BlogV3Request,
+    *,
+    catalog: EditorialCatalog | None = None,
+) -> dict[str, Any]:
+    """Assembles a run input, or reports the research that has to happen first.
+
+    Insufficient research is a product state, not an error: it terminates here,
+    before any instruction assembly or writing work, and reports exactly what
+    is missing plus the prompt that closes it.
+    """
+    evidence, readiness = v3_readiness(request, catalog=catalog)
+    if not readiness.ready:
+        return needs_research_payload(
+            request.commission, evidence, readiness, catalog=catalog
+        )
+
+    runtime = prepare_v3_runtime_request(request, catalog=catalog)
+    return {
+        "status": "ready",
+        "run_input": v3_run_input_artifact(runtime),
     }
