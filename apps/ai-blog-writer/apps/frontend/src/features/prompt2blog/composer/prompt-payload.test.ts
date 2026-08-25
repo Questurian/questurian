@@ -31,6 +31,10 @@ describe('buildPrompt2BlogPayload', () => {
     expect(buildPrompt2BlogPayload(createState({ articleTypeId: null }))).toBeNull()
   })
 
+  it('returns null for editorial v3 even when retained legacy fields are complete', () => {
+    expect(buildPrompt2BlogPayload(createState({ activeWorkflow: 'editorial_v3' }))).toBeNull()
+  })
+
   it('returns a request with the selected article type id', () => {
     expect(buildPrompt2BlogPayload(createState())).toEqual(
       expect.objectContaining({
@@ -46,7 +50,10 @@ describe('buildPrompt2BlogPayload', () => {
 
   it('sends the editorial angle and call to action when supplied', () => {
     const payload = buildPrompt2BlogPayload(
-      createState({ angle: 'Peru is the better first stop', callToAction: 'Compare fares' }),
+      createState({
+        angle: 'Peru is the better first stop',
+        callToAction: 'Compare fares',
+      }),
     )
 
     expect(payload).toEqual(

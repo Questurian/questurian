@@ -1,4 +1,11 @@
-import type { Prompt2BlogModelName, Prompt2BlogWriterModel } from '../api'
+import type {
+  Prompt2BlogCommission,
+  Prompt2BlogCommissionDraft,
+  Prompt2BlogDirectionOption,
+  Prompt2BlogDirectionOptionId,
+  Prompt2BlogModelName,
+  Prompt2BlogWriterModel,
+} from '../api'
 import type { Prompt2BlogModelStackId } from '../constants/prompt2blog.constants'
 
 export interface RawBlob {
@@ -6,7 +13,28 @@ export interface RawBlob {
   content: string
 }
 
+export type P2BActiveWorkflow = 'legacy_v2' | 'editorial_v3'
+
+export type P2BCommissionApproval =
+  | { status: 'not_started' }
+  | { status: 'awaiting_selection' }
+  | { status: 'needs_approval' }
+  | {
+      status: 'reconfirmation_required'
+      reason: 'legacy_draft' | 'commission_edited' | 'title_or_location_changed'
+    }
+  | { status: 'approved'; commission: Prompt2BlogCommission }
+
+export interface P2BEditorialComposerState {
+  directionOptions: Prompt2BlogDirectionOption[]
+  selectedOptionId: Prompt2BlogDirectionOptionId | null
+  commissionDraft: Prompt2BlogCommissionDraft | null
+  approval: P2BCommissionApproval
+}
+
 export interface P2BFormState {
+  activeWorkflow: P2BActiveWorkflow
+  editorial: P2BEditorialComposerState
   easySetupLocation: string
   easySetupTitle: string
   articleTypeId: number | null

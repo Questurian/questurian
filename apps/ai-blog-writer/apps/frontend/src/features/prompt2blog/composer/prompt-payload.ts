@@ -2,14 +2,21 @@ import type { P2BFormState } from './composer.types'
 import type { Prompt2BlogRunRequest } from '../api'
 
 function splitCommaSeparated(value: string): string[] {
-  return value.split(',').map(item => item.trim()).filter(Boolean)
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
 }
 
 function splitLineSeparated(value: string): string[] {
-  return value.split('\n').map(item => item.trim()).filter(Boolean)
+  return value
+    .split('\n')
+    .map(item => item.trim())
+    .filter(Boolean)
 }
 
 export function buildPrompt2BlogPayload(state: P2BFormState): Prompt2BlogRunRequest | null {
+  if (state.activeWorkflow !== 'legacy_v2') return null
   if (!state.articleTypeId) return null
 
   return {
