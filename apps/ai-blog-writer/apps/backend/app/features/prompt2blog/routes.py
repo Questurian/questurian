@@ -5,12 +5,14 @@ from .api import generation as _generation_api
 from .api import options as _options_api
 from .api import runs as _runs_api
 from .api.router import router
+from .contracts_v3 import Prompt2BlogV3Request  # noqa: F401
 from .models import (  # noqa: F401
     ArticleTypeOption,
     ClassificationResult,
     ClassifyRequest,
     ClassifyResponse,
     PipelineV2RuntimeRequest,
+    PipelineV3RuntimeRequest,
     Prompt2BlogInputRequest,
     SynthesizeRequest,
     SynthesizeResponse,
@@ -44,6 +46,13 @@ async def start_pipeline_v2(
     staff_user=None,
 ):
     return await _runs_api.start_pipeline_v2(request, background_tasks, staff_user)
+
+
+async def prepare_pipeline_v3(
+    request: Prompt2BlogV3Request,
+    staff_user=None,
+):
+    return await _runs_api.prepare_pipeline_v3(request, staff_user)
 
 
 async def start_full_run(
@@ -90,6 +99,7 @@ __all__ = [
     "get_editorial_options",
     "get_article_type_guideline_preview",
     "start_pipeline_v2",
+    "prepare_pipeline_v3",
     "start_full_run",
     "get_status",
     "get_result",

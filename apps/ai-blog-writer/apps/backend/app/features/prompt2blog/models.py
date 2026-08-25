@@ -51,6 +51,26 @@ class PipelineV2RuntimeRequest(BaseModel):
     model_stack_id: str | None = None
 
 
+class PipelineV3RuntimeRequest(BaseModel):
+    """Everything a v3 run needs, derived only from an approved commission.
+
+    Deliberately not a flattened v2 request: the commission and the exact
+    evidence records stay whole so no stage has to reconstruct them.
+    """
+
+    schema_version: int = 3
+    commission: dict[str, Any]
+    evidence: dict[str, Any]
+    instructions: dict[str, Any]
+    option_context: dict[str, Any] = Field(default_factory=dict)
+    include_debug: bool = True
+    enable_editorial_augmentation: bool = False
+    model_name: str | None = None
+    writing_model: str | None = None
+    audit_model: str | None = None
+    model_stack_id: str | None = None
+
+
 class Prompt2BlogInputRequest(BaseModel):
     article_type_id: int
     source_material: List[str] = Field(default_factory=list)
