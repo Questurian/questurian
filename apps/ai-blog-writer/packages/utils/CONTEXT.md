@@ -32,7 +32,18 @@ Without this package every feature would re-create Vertex clients and re-impleme
 
 Factory that returns a configured text LLM client. Gemini models use Vertex AI; Claude models route to Anthropic through the same `.invoke(prompt)` surface.
 
-**Anthropic is currently switched off** (no credit). `resolve_effective_model()` runs before dispatch and rewrites every `claude-*` name to its Google counterpart from `CLAUDE_GOOGLE_SUBSTITUTES`, so no call can reach the Anthropic API and fail on billing. The Claude transport is untouched — set `ANTHROPIC_MODELS_ENABLED=1` (plus `ANTHROPIC_API_KEY`) to route back.
+`resolve_effective_model()` runs one line before provider dispatch and is the gate: while it rewrites a name, the Claude branches below it are unreachable no matter what a caller asks for.
+
+There are **two independent switches**, and they differ in who pays:
+
+| switch | transport | pays with |
+|---|---|---|
+| `ANTHROPIC_MODELS_ENABLED=1` (+ `ANTHROPIC_API_KEY`) | Anthropic API | Anthropic Console credit — currently unfunded |
+| `CLAUDE_SUBSCRIPTION_MODELS_ENABLED=1` | the Claude Code CLI this machine is logged into | the plan holder's own subscription allowance |
+
+Both default to off, and with neither on every `claude-*` name is rewritten to its Google counterpart from `CLAUDE_GOOGLE_SUBSTITUTES`. When both are on the API-key path wins, so switching the subscription on cannot re-point a machine that already had a funded key. Ask `claude_provider()` rather than re-reading the environment.
+
+The subscription path is **local authoring only** — Anthropic's terms permit it for the plan holder's own use, not for serving other people's requests, so it must not be set on a shared or serverless deployment.
 
 ### `invoke_structured_tool()`
 
