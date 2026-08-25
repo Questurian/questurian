@@ -978,15 +978,13 @@
   border-radius: var(--p2b-control-radius);
   background: var(--surface);
   color: var(--ink);
-  cursor: pointer;
   transition:
     border-color var(--transition-base),
     background-color var(--transition-base);
 }
 
-.p2b-direction-card:hover {
-  border-color: var(--p2b-accent);
-  background: var(--p2b-accent-softer);
+.p2b-direction-card-choice label {
+  cursor: pointer;
 }
 
 .p2b-direction-card.is-selected {
