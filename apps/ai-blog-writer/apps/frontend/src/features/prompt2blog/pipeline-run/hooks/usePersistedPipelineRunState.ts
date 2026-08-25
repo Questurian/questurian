@@ -5,16 +5,16 @@ import {
   saveRunState,
 } from '../pipeline-run.storage'
 import type {
+  PersistedPipelineResult,
   PersistedRunState,
   SourceStep,
 } from '../pipeline-run.types'
-import type { Prompt2BlogPipelinePayload } from '../../api'
 
 export function usePersistedPipelineRunState() {
   const savedRun = useRef(loadSavedRunState())
   const [sourceStep, setSourceStep] = useState<SourceStep>(savedRun.current.sourceStep)
   const [pipelineRunId, setPipelineRunId] = useState<string | null>(savedRun.current.pipelineRunId)
-  const [pipelineResult, setPipelineResult] = useState<Prompt2BlogPipelinePayload | null>(
+  const [pipelineResult, setPipelineResult] = useState<PersistedPipelineResult | null>(
     savedRun.current.pipelineResult,
   )
 

@@ -19,7 +19,11 @@
         "title": "Is Lima still South America's bargain expat capital?",
         "content": "Legacy article body."
       },
-      "final_markdown": "# Is Lima still South America's bargain expat capital?\n\nLegacy article body."
+      "final_markdown": "# Is Lima still South America's bargain expat capital?\n\nLegacy article body.",
+      "quality_review": {
+        "quality_summary": "Legacy quality summary.",
+        "model_used": "gemini-2.5-pro"
+      }
     },
     "stages": {
       "stage_finalize": {
