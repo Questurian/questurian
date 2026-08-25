@@ -62,10 +62,32 @@ MCP servers, `setting_sources=[]` (no repo `CLAUDE.md`, settings, or skills), an
 
 ## Limits worth knowing
 
-Agent SDK usage on a subscription draws from a per-user monthly credit ($20 on
-Pro) before anything else; overflow bills at standard API rates. Credits do not
-pool across users and do not roll over.
+**The dollar credit does not exist.** Anthropic *paused* the credit plan on
+2026-06-15. The announced Pro $20 / Max5x $100 / Max20x $200 credits are "not
+currently in effect", and `claude -p` usage today draws from the subscription's
+own usage limits — the same pool as Claude.ai and interactive Claude Code.
 See <https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan>.
+
+Three consequences, all of which shaped what got built:
+
+- **There is no dollar balance to track**, and no CLI subcommand exposes one.
+  A budget guard against a monthly credit would have been guarding a number
+  that is not there.
+- **`total_cost_usd` is a notional API-equivalent figure.** It is real, per
+  call, and worth comparing between stacks. It is not money leaving an account.
+  Anything that shows it has to say so.
+- **Overflow to API rates is strictly opt-in.** It goes through "usage credits"
+  which a person enables in Settings → Usage; the docs are explicit that "all
+  transitions to API credit usage require explicit user consent". With that
+  never enabled, a surprise charge is not possible.
+
+### What hitting a limit actually does
+
+It refuses, and it reports `$0.00`. It does not silently bill. That was the
+open question the earlier round could not answer without spending the credit to
+find out; asking for a model this plan cannot serve answered it.
+
+The shape of that refusal is the dangerous part — see below.
 
 Subscription OAuth is for the plan holder's own use. Anthropic does not permit
 routing other people's requests through Pro/Max credentials, or collecting or
@@ -148,6 +170,52 @@ The prefix is only cheap while it is byte-identical, which is why
 `cli_writer.SYSTEM_PROMPT` is a module constant and stage-specific instructions
 go in the prompt body. There is a test pinning that.
 
+### A refusal arrives shaped like a successful answer
+
+This is the one finding that changes what a caller has to do. Asking for a
+model the plan cannot serve returns:
+
+```json
+{
+  "is_error": true,
+  "subtype": "success",
+  "terminal_reason": "api_error",
+  "total_cost_usd": 0,
+  "result": "You've hit your monthly spend limit. Switch to another model, or
+             manage usage credits at claude.ai/settings/usage... to continue."
+}
+```
+
+`subtype` reads `"success"` and the apology sits in `result`. **Anything that
+trusts `subtype` and reads `result` publishes that sentence as article prose.**
+
+`cli_writer._assert_claude_actually_answered` is the guard, at the one
+chokepoint both call shapes go through. It is three checks, and `subtype` is
+not one of them:
+
+- `is_error` — the flag actually set on the observed refusal.
+- **a deny list** of `terminal_reason` values (`api_error`,
+  `budget_exhausted`, `max_turns`, `refusal`, …). A deny list rather than an
+  allow list, so a benign new value on a CLI version bump does not take the
+  pipeline down.
+- **a reported zero generated tokens** — the check that does not depend on
+  guessing which flags a future refusal will carry. If the model wrote nothing,
+  whatever is in `result` came from the harness. Absent usage is not treated as
+  zero, so a CLI that stops reporting it does not break every call.
+
+### There is no output-length flag
+
+The CLI has no `--max-tokens` or equivalent. Claude uses its own default (32k
+output observed on Haiku). The pipeline's stages ask for ~6144 and the shared
+floor in `_resolve_generation_max_tokens` already widens that to 64k, so the
+CLI's default is roomier than anything being asked for. Nothing is being
+silently truncated — there is just no setting, and this is written down so
+nobody goes looking for one.
+
+`--max-budget-usd` does exist and works (`terminal_reason: "budget_exhausted"`),
+but it is **per invocation, not cumulative**, so it is not a spend rail for a
+pipeline that makes many calls per article. It is not wired up.
+
 ### Two things that cost time
 
 - **Close stdin.** The CLI waits ~3s for piped input that is never coming, even
@@ -169,3 +237,72 @@ on the bench because the pipeline makes many calls per article.
 
 Local authoring only, for the licensing reason above. Do not set
 `WRITER_PROVIDER=claude-cli` on the Linux laptop or any shared deployment.
+
+## Claude on the Prompt2Blog writer role
+
+`WRITER_PROVIDER` never reached Prompt2Blog. It only diverts calls routed
+through `app/shared/writer_invocation.py` — editor_assist and
+itineraries_pipeline — and Prompt2Blog calls `utils.get_vertex_llm` directly.
+The pipeline is wired through that factory instead, on its own switch.
+
+### The switch
+
+`CLAUDE_SUBSCRIPTION_MODELS_ENABLED=1` on the backend. It is **not**
+`ANTHROPIC_MODELS_ENABLED`, and the two must not be conflated — they differ in
+who pays:
+
+| switch | transport | pays with |
+|---|---|---|
+| `ANTHROPIC_MODELS_ENABLED` | Anthropic API, needs `ANTHROPIC_API_KEY` | Console credit — unfunded |
+| `CLAUDE_SUBSCRIPTION_MODELS_ENABLED` | the Claude Code CLI on this machine | the plan holder's own allowance |
+
+Both default to off, in which case `claude-*` names are substituted to Google
+exactly as before. When both are on, the API-key path wins, so switching the
+new one on cannot re-point a machine that was already funded. Ask
+`utils.claude_provider()` rather than re-reading the environment.
+
+`.env` edits need a **full process restart**, not `uvicorn --reload` — the
+parent already imported `main.py` and every reloaded child inherits its
+environment.
+
+### What Claude does and does not do
+
+Claude writes. Gemini keeps research and audit. Six run stacks, a 2×3 grid of
+two writers across three research-and-audit tiers, so comparing two runs
+isolates one variable — if Opus + Lean beats Sonnet + Max the writer matters
+more than the research, and if they tie there is no reason to keep paying for
+Pro research. The six Gemini stacks are the control group and are untouched.
+
+Repair stays on the writer model, so on a Claude stack it is Claude. That is
+deliberate: routing it to the cheaper analysis model was tried and downgraded
+every repaired run. Worth measuring whether better first drafts make repair
+fire less often, since repair is up to two full-article rewrites plus a
+house-rules pass, all on the writer.
+
+### What a run costs, and what that number means
+
+The measured figures below are **cold-call overhead** on a trivial "reply OK" —
+pure setup, not article cost:
+
+| model | cost | cache-creation tokens |
+|---|---|---|
+| Haiku | $0.028 | 11.5k |
+| Sonnet | $0.147 | 24.3k |
+| Opus | $0.186 | 18.5k |
+
+A real article has not been measured yet. The run receipt reports the CLI's own
+per-call figure rather than a rate-table estimate, labelled `cost_basis:
+"measured"`, and the pricing note says it is plan usage rather than a charge.
+
+The stack price panel says "Included in your Claude plan" where a plan-served
+role would have had a dollar figure. Claude has no dollar-per-million rate and
+cannot be given one; the blended rate shown covers the Gemini research and
+audit alone.
+
+### JSON
+
+The writer-model JSON stages — outline, compose, repair, editorial
+augmentation — go through `--json-schema` on this provider, so there is no
+ask-politely-and-retry loop. Schemas live in
+`app/features/prompt2blog/schemas.py`. Capability is asked of the LLM object
+rather than inferred from the model name, so a Gemini stack is unaffected.
