@@ -72,10 +72,13 @@ def test_shared_llm_factory_never_uses_small_generation_budget(monkeypatch):
 
 
 def test_claude_models_are_substituted_with_google_by_default(monkeypatch):
-    """Anthropic is unfunded, so claude-* must not reach the Anthropic client."""
+    """With no Claude path on, claude-* must not reach a Claude transport."""
     monkeypatch.delenv("ANTHROPIC_MODELS_ENABLED", raising=False)
+    monkeypatch.delenv("CLAUDE_SUBSCRIPTION_MODELS_ENABLED", raising=False)
 
     assert llm_client.anthropic_models_enabled() is False
+    assert llm_client.claude_provider() == llm_client.CLAUDE_PROVIDER_NONE
+    assert llm_client.claude_models_reachable() is False
     assert llm_client.resolve_effective_model("claude-opus-4-8") == (
         "gemini-3.1-pro-preview"
     )
@@ -95,6 +98,43 @@ def test_claude_models_pass_through_when_switched_back_on(monkeypatch):
     assert llm_client.resolve_effective_model("claude-opus-4-8") == "claude-opus-4-8"
 
 
+def test_subscription_switch_reaches_claude_without_the_api_key_switch(monkeypatch):
+    """The two switches are independent, and the new one alone is enough.
+
+    Asserted through the switch rather than through an absent API key: an
+    environment that happens to carry no credentials is not evidence about
+    routing, and a suite that populates one elsewhere would flip the result.
+    """
+    monkeypatch.delenv("ANTHROPIC_MODELS_ENABLED", raising=False)
+    monkeypatch.setenv("CLAUDE_SUBSCRIPTION_MODELS_ENABLED", "1")
+
+    assert llm_client.anthropic_models_enabled() is False
+    assert llm_client.claude_subscription_models_enabled() is True
+    assert llm_client.claude_provider() == llm_client.CLAUDE_PROVIDER_SUBSCRIPTION_CLI
+    assert llm_client.claude_models_reachable() is True
+    assert llm_client.resolve_effective_model("claude-opus-4-8") == "claude-opus-4-8"
+    # An unmapped Claude name is no longer rewritten either -- the transport
+    # decides what it can serve, not the substitution table.
+    assert llm_client.resolve_effective_model("claude-opus-5") == "claude-opus-5"
+    assert llm_client.resolve_effective_model("gemini-2.5-flash") == "gemini-2.5-flash"
+
+
+def test_api_key_path_wins_when_both_claude_switches_are_on(monkeypatch):
+    """Turning the subscription on must not re-point an already-funded machine."""
+    monkeypatch.setenv("ANTHROPIC_MODELS_ENABLED", "1")
+    monkeypatch.setenv("CLAUDE_SUBSCRIPTION_MODELS_ENABLED", "1")
+
+    assert llm_client.claude_provider() == llm_client.CLAUDE_PROVIDER_ANTHROPIC_API
+
+
+def test_subscription_switch_ignores_non_truthy_values(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_MODELS_ENABLED", raising=False)
+    for value in ("", "  ", "0", "false", "no", "off", "maybe"):
+        monkeypatch.setenv("CLAUDE_SUBSCRIPTION_MODELS_ENABLED", value)
+        assert llm_client.claude_subscription_models_enabled() is False
+        assert llm_client.claude_provider() == llm_client.CLAUDE_PROVIDER_NONE
+
+
 def test_get_vertex_llm_routes_disabled_claude_to_vertex(monkeypatch):
     captured = {}
 
@@ -105,6 +145,7 @@ def test_get_vertex_llm_routes_disabled_claude_to_vertex(monkeypatch):
     monkeypatch.setattr(llm_client, "VertexAI", _VertexLLM)
     monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "test-project")
     monkeypatch.delenv("ANTHROPIC_MODELS_ENABLED", raising=False)
+    monkeypatch.delenv("CLAUDE_SUBSCRIPTION_MODELS_ENABLED", raising=False)
 
     llm = llm_client.get_vertex_llm(model_name="claude-sonnet-5", max_tokens=1024)
 

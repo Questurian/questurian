@@ -332,6 +332,129 @@ def test_model_reported_error_is_raised(monkeypatch, connected, provider_on):
         cli_writer.invoke_text(prompt="write something")
 
 
+def test_a_limit_refusal_never_becomes_prose(monkeypatch, connected, provider_on):
+    """The refusal that arrives shaped like an answer.
+
+    Measured by asking for a model this plan cannot serve: `subtype` reads
+    "success", `total_cost_usd` is 0, and the apology sits in `result` where a
+    trusting caller would read it and publish it as article prose.
+    """
+    _capture(
+        monkeypatch,
+        json.dumps(
+            {
+                "is_error": True,
+                "subtype": "success",
+                "terminal_reason": "api_error",
+                "total_cost_usd": 0,
+                "result": (
+                    "You've hit your monthly spend limit. Switch to another "
+                    "model, or manage usage credits at claude.ai/settings/usage."
+                ),
+            }
+        ),
+    )
+
+    with pytest.raises(cli_writer.ClaudeCliWriterError) as caught:
+        cli_writer.invoke_text(prompt="write something")
+
+    assert "monthly spend limit" not in str(caught.value)
+
+
+@pytest.mark.parametrize("reason", sorted(cli_writer.FAILED_TERMINAL_REASONS))
+def test_a_named_stop_reason_is_refused_even_without_the_error_flag(
+    monkeypatch, connected, provider_on, reason
+):
+    """`is_error` is one signal, not the only one.
+
+    A run that stopped for a named reason did not answer, whatever else the
+    payload claims about itself.
+    """
+    _capture(
+        monkeypatch,
+        json.dumps(
+            {
+                "result": "Sorry, I cannot continue.",
+                "is_error": False,
+                "subtype": "success",
+                "terminal_reason": reason,
+                "usage": {"input_tokens": 10, "output_tokens": 12},
+            }
+        ),
+    )
+
+    with pytest.raises(cli_writer.ClaudeCliWriterError):
+        cli_writer.invoke_text(prompt="write something")
+
+
+def test_zero_generated_tokens_means_the_text_did_not_come_from_claude(
+    monkeypatch, connected, provider_on
+):
+    """The check that does not depend on guessing future refusal flags.
+
+    If the model generated nothing, whatever is sitting in `result` was written
+    by the harness rather than by Claude.
+    """
+    _capture(
+        monkeypatch,
+        json.dumps(
+            {
+                "result": "Switch to another model to continue.",
+                "is_error": False,
+                "subtype": "success",
+                "usage": {"input_tokens": 10, "output_tokens": 0},
+            }
+        ),
+    )
+
+    with pytest.raises(cli_writer.ClaudeCliWriterError):
+        cli_writer.invoke_text(prompt="write something")
+
+
+def test_an_unreported_token_count_is_not_treated_as_zero(
+    monkeypatch, connected, provider_on
+):
+    """Absent is not the same as zero.
+
+    Only a reported zero is evidence that nothing was generated; a payload that
+    omits usage entirely must still be usable, or a CLI version that stops
+    reporting it takes the pipeline down.
+    """
+    _capture(
+        monkeypatch,
+        json.dumps({"result": "Barranco after dark.", "is_error": False}),
+    )
+
+    assert cli_writer.invoke_text(prompt="write something")["text"] == (
+        "Barranco after dark."
+    )
+
+
+def test_an_unrecognised_stop_reason_is_allowed_through(
+    monkeypatch, connected, provider_on
+):
+    """A deny list, not an allow list.
+
+    The CLI is free to add benign `terminal_reason` values, and failing an
+    unrecognised one would break every working call on a version bump.
+    """
+    _capture(
+        monkeypatch,
+        json.dumps(
+            {
+                "result": "Barranco after dark.",
+                "is_error": False,
+                "terminal_reason": "some_new_benign_reason",
+                "usage": {"input_tokens": 10, "output_tokens": 503},
+            }
+        ),
+    )
+
+    assert cli_writer.invoke_text(prompt="write something")["text"] == (
+        "Barranco after dark."
+    )
+
+
 def test_cli_output_is_never_echoed_into_the_error(monkeypatch, connected, provider_on):
     """stderr is the one place a credential could appear, and these strings
     reach an API response."""

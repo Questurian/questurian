@@ -5,6 +5,11 @@ from typing import Any, Optional
 
 from langchain_google_vertexai import ChatVertexAI, VertexAI  # noqa: F401
 
+from .claude_cli_llm import (  # noqa: F401
+    ClaudeCliTextLLM as ClaudeCliTextLLM,
+    ClaudeCliUnavailable as ClaudeCliUnavailable,
+    _transport as _claude_cli_transport,
+)
 from .anthropic_transport import (
     _empty_message_error,
     _get_anthropic_client as _create_anthropic_client,
@@ -21,6 +26,11 @@ from .llm_model_policy import (  # noqa: F401
     ANTHROPIC_MODELS_ENABLED_DEFAULT as ANTHROPIC_MODELS_ENABLED_DEFAULT,
     ANTHROPIC_MODELS_ENABLED_ENV as ANTHROPIC_MODELS_ENABLED_ENV,
     CLAUDE_GOOGLE_SUBSTITUTES as CLAUDE_GOOGLE_SUBSTITUTES,
+    CLAUDE_PROVIDER_ANTHROPIC_API as CLAUDE_PROVIDER_ANTHROPIC_API,
+    CLAUDE_PROVIDER_NONE as CLAUDE_PROVIDER_NONE,
+    CLAUDE_PROVIDER_SUBSCRIPTION_CLI as CLAUDE_PROVIDER_SUBSCRIPTION_CLI,
+    CLAUDE_SUBSCRIPTION_MODELS_ENABLED_DEFAULT as CLAUDE_SUBSCRIPTION_MODELS_ENABLED_DEFAULT,
+    CLAUDE_SUBSCRIPTION_MODELS_ENABLED_ENV as CLAUDE_SUBSCRIPTION_MODELS_ENABLED_ENV,
     DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE as DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE,
     DEFAULT_LOCATION as DEFAULT_LOCATION,
     DEFAULT_MODEL as DEFAULT_MODEL,
@@ -31,6 +41,9 @@ from .llm_model_policy import (  # noqa: F401
     _resolve_vertex_location,
     _resolve_vertex_project,
     anthropic_models_enabled as anthropic_models_enabled,
+    claude_models_reachable as claude_models_reachable,
+    claude_provider as claude_provider,
+    claude_subscription_models_enabled as claude_subscription_models_enabled,
     is_claude_model as is_claude_model,
     resolve_effective_model as resolve_effective_model,
 )
@@ -74,10 +87,14 @@ class ClaudeTextLLM:
         ) as stream:
             message = stream.get_final_message()
         usage = getattr(message, 'usage', None)
-        self.last_usage_metadata = {
-            'input_tokens': getattr(usage, 'input_tokens', 0),
-            'output_tokens': getattr(usage, 'output_tokens', 0),
-        } if usage is not None else None
+        self.last_usage_metadata = (
+            {
+                'input_tokens': getattr(usage, 'input_tokens', 0),
+                'output_tokens': getattr(usage, 'output_tokens', 0),
+            }
+            if usage is not None
+            else None
+        )
         text = _message_text(message)
         if not text:
             raise _empty_message_error(message)
@@ -154,6 +171,40 @@ def _invoke_gemini_structured_tool(
     )
 
 
+def _invoke_claude_cli_structured_tool(
+    *,
+    prompt: str,
+    model_name: str,
+    tool_name: str,
+    tool_description: str,
+    input_schema: dict[str, Any],
+) -> tuple[dict[str, Any], str]:
+    """Forced-tool equivalent on the subscription CLI.
+
+    Routed here so that switching the subscription path on cannot leave a
+    working text call beside a structured one that still tries the Anthropic
+    API and fails on a key that was never configured.
+
+    ``max_tokens`` has no CLI equivalent -- there is no flag for it -- so it is
+    not threaded through rather than being faked.
+    """
+    cli_writer = _claude_cli_transport()
+    framed = cli_writer.frame_schema_prompt(
+        prompt,
+        tool_name=tool_name,
+        tool_description=tool_description,
+    )
+    try:
+        result = cli_writer.invoke_structured(
+            prompt=framed,
+            input_schema=input_schema,
+            model_name=model_name,
+        )
+    except cli_writer.ClaudeCliWriterError as error:
+        raise ClaudeCliUnavailable(str(error)) from error
+    return (result["payload"], result["modelName"])
+
+
 def invoke_structured_tool(
     *,
     prompt: str,
@@ -169,6 +220,14 @@ def invoke_structured_tool(
     regardless of whether Anthropic is switched on."""
     effective_model = resolve_effective_model(model_name) or model_name
     if is_claude_model(effective_model):
+        if claude_provider() == CLAUDE_PROVIDER_SUBSCRIPTION_CLI:
+            return _invoke_claude_cli_structured_tool(
+                prompt=prompt,
+                model_name=effective_model,
+                tool_name=tool_name,
+                tool_description=tool_description,
+                input_schema=input_schema,
+            )
         return invoke_anthropic_structured_tool(
             prompt=prompt,
             model_name=effective_model,
@@ -194,7 +253,7 @@ def get_vertex_llm(
     model_name: Optional[str] = None,
     project: Optional[str] = None,
     location: Optional[str] = None,
-) -> 'VertexAI | ClaudeTextLLM | Gemini3ChatTextLLM':
+) -> 'VertexAI | ClaudeTextLLM | ClaudeCliTextLLM | Gemini3ChatTextLLM':
     """
     Create a configured LLM instance (Vertex AI, or Anthropic for claude-* models).
 
@@ -215,6 +274,17 @@ def get_vertex_llm(
     effective_max_tokens = _resolve_generation_max_tokens(max_tokens)
     model_name = resolve_effective_model(model_name)
     if is_claude_model(model_name):
+        # A claude-* name only survives resolve_effective_model when one of the
+        # two Claude paths is on, so this branch is not reachable by accident.
+        if claude_provider() == CLAUDE_PROVIDER_SUBSCRIPTION_CLI:
+            logger.debug(
+                f'Routing LLM call to the Claude subscription CLI: model={model_name}'
+            )
+            return ClaudeCliTextLLM(
+                model_name=model_name,
+                max_tokens=effective_max_tokens,
+                temperature=temperature,
+            )
         logger.debug(
             f'Routing LLM call to Anthropic: model={model_name}, max_tokens={effective_max_tokens}'
         )
