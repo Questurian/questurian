@@ -8,6 +8,7 @@ from app.shared.text import enforce_anti_ai_tells_markdown
 from utils import get_vertex_llm, parse_json_response
 
 from .config import DEFAULT_MODEL
+from .pricing import MEASURED_COST_KEY
 from .support import _safe_str
 
 logger = logging.getLogger(__name__)
@@ -34,12 +35,28 @@ def _invoke_text_llm(
     if usage_recorder is not None:
         usage_recorder(
             str(getattr(llm, "model_name", resolved_model)),
-            getattr(llm, "last_usage_metadata", None),
+            _usage_with_measured_cost(llm),
         )
     text = _safe_str(result)
     if not text:
         raise RuntimeError("LLM returned empty response")
     return text
+
+
+def _usage_with_measured_cost(llm: Any) -> Any:
+    """Token counts, plus a per-call price when the provider reported one.
+
+    Only the subscription CLI does; Vertex and the Anthropic API report tokens
+    and leave costing to the rate table. Folded into the usage dict rather than
+    threaded through a new recorder argument, so every existing recorder --
+    including the test doubles that take exactly two positionals -- keeps
+    working untouched.
+    """
+    usage = getattr(llm, "last_usage_metadata", None)
+    cost = getattr(llm, "last_cost_usd", None)
+    if cost is None or not isinstance(usage, dict):
+        return usage
+    return {**usage, MEASURED_COST_KEY: cost}
 
 
 def _enforce_anti_ai_markdown_with_model(

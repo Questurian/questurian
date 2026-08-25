@@ -208,12 +208,15 @@ def test_default_prompt2blog_llm_records_each_successful_call(monkeypatch):
     )
     llm = DefaultPrompt2BlogLLM()
 
-    assert llm.invoke_text(
-        prompt="Write",
-        max_tokens=2048,
-        temperature=0.2,
-        model_name="gemini-3.7-flash",
-    ) == "Article"
+    assert (
+        llm.invoke_text(
+            prompt="Write",
+            max_tokens=2048,
+            temperature=0.2,
+            model_name="gemini-3.7-flash",
+        )
+        == "Article"
+    )
     summary = llm.usage_summary(
         stack_id="balanced",
         worker_model="gemini-3.7-flash",
@@ -244,3 +247,210 @@ def test_a_run_with_no_reported_usage_is_unavailable_not_free():
     assert summary["measured_calls"] == 0
     assert summary["by_model"] == []
     assert summary["by_stage"] == []
+
+
+def test_anthropic_cache_reads_are_visible_instead_of_being_clamped_away():
+    """Anthropic and Google report cached input in different shapes.
+
+    Google nests the cached share under `input_token_details` and counts
+    `input_tokens` gross. Anthropic reports the two cache figures flat and
+    alongside, and its `input_tokens` counts only the uncached remainder.
+    Reading only the nested shape left every Claude call looking as though it
+    had cached nothing -- and the clamp at the end of normalize_token_usage
+    then discarded the figure anyway, because a net input count is smaller than
+    the cache read it excludes.
+    """
+    usage = normalize_token_usage(
+        {
+            "input_tokens": 10,
+            "output_tokens": 503,
+            "cache_read_input_tokens": 8741,
+            "cache_creation_input_tokens": 2729,
+        }
+    )
+
+    # The prompt really was 11480 tokens; 10 was only the part not served from
+    # cache, and reporting that as the input count understated the call by 1000x.
+    assert usage["input_tokens"] == 11_480
+    assert usage["cached_input_tokens"] == 8_741
+    assert usage["output_tokens"] == 503
+
+
+def test_google_shaped_cache_reporting_is_unchanged():
+    usage = normalize_token_usage(
+        {
+            "input_tokens": 11_480,
+            "output_tokens": 503,
+            "input_token_details": {"cache_read": 8_741},
+        }
+    )
+
+    assert usage["input_tokens"] == 11_480
+    assert usage["cached_input_tokens"] == 8_741
+
+
+def test_a_price_the_provider_measured_beats_the_rate_table():
+    """Claude has no dollar-per-million rate and cannot have one.
+
+    Without this its calls landed in `unpriced_calls`, which made the whole run
+    read as partially priced and blanked the run's cost even though the
+    transport had reported an exact figure for every call it made.
+    """
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.record(
+        "claude-sonnet-5",
+        {"input_tokens": 10, "output_tokens": 503, "measured_cost_usd": 0.0099},
+    )
+    tracker.record(
+        "claude-sonnet-5",
+        {"input_tokens": 12, "output_tokens": 640, "measured_cost_usd": 0.0101},
+    )
+
+    summary = tracker.summary(
+        stack_id="opus-balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="claude-sonnet-5",
+        audit_model="gemini-3.7-flash",
+    )
+
+    assert summary["measurement_status"] == "complete"
+    assert summary["estimated_cost_usd"] == 0.02
+    row = summary["by_model"][0]
+    assert row["cost_basis"] == "measured"
+    assert row["estimated_cost_usd"] == 0.02
+    # The number is real and comparable between stacks. It is not a charge, and
+    # the note has to say so.
+    assert "not a charge" in summary["pricing_note"]
+
+
+def test_a_mixed_run_prices_each_model_by_its_own_basis():
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.record(
+        "claude-sonnet-5",
+        {"input_tokens": 10, "output_tokens": 503, "measured_cost_usd": 0.0099},
+    )
+    tracker.record("gemini-3.7-flash", {"input_tokens": 1_000, "output_tokens": 200})
+
+    summary = tracker.summary(
+        stack_id="sonnet-balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="claude-sonnet-5",
+        audit_model="gemini-3.7-flash",
+    )
+
+    bases = {row["model"]: row["cost_basis"] for row in summary["by_model"]}
+    assert bases == {
+        "claude-sonnet-5": "measured",
+        "gemini-3.7-flash": "rate-table",
+    }
+    assert summary["measurement_status"] == "complete"
+    assert summary["estimated_cost_usd"] == round(0.0099 + 0.00150, 6)
+
+
+def test_a_gemini_only_run_keeps_the_rate_table_note_alone():
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.record("gemini-3.7-flash", {"input_tokens": 1_000, "output_tokens": 200})
+
+    summary = tracker.summary(
+        stack_id="balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="gemini-3.7-flash",
+        audit_model="gemini-3.7-flash",
+    )
+
+    assert "not a charge" not in summary["pricing_note"]
+
+
+def test_a_nonsense_measured_cost_falls_back_to_the_rate_table():
+    tracker = Prompt2BlogTokenUsageTracker()
+    for bad in (True, "0.01", None, -1):
+        tracker.record(
+            "gemini-3.7-flash",
+            {"input_tokens": 1_000, "output_tokens": 200, "measured_cost_usd": bad},
+        )
+
+    summary = tracker.summary(
+        stack_id="balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="gemini-3.7-flash",
+        audit_model="gemini-3.7-flash",
+    )
+
+    assert summary["by_model"][0]["cost_basis"] == "rate-table"
+
+
+def test_a_provider_reported_price_reaches_the_tracker(monkeypatch):
+    """End to end through the seam, not just the tracker in isolation.
+
+    The subscription CLI is the only provider that reports a per-call price,
+    and it arrives on the LLM object rather than in the usage metadata, so the
+    invocation seam has to fold the two together. Without that the figure
+    exists and never reaches the receipt.
+    """
+
+    class FakeCliLLM:
+        model_name = "claude-sonnet-5"
+        last_usage_metadata = {
+            "input_tokens": 10,
+            "output_tokens": 503,
+            "cache_read_input_tokens": 8_741,
+            "cache_creation_input_tokens": 2_729,
+        }
+        last_cost_usd = 0.0099
+
+        def invoke(self, prompt):  # noqa: ANN001
+            return "Article"
+
+    monkeypatch.setattr(
+        prompt2blog_llm,
+        "get_vertex_llm",
+        lambda **kwargs: FakeCliLLM(),
+    )
+    llm = DefaultPrompt2BlogLLM()
+    llm.invoke_text(
+        prompt="Write",
+        max_tokens=2048,
+        temperature=0.2,
+        model_name="claude-sonnet-5",
+    )
+
+    summary = llm.usage_summary(
+        stack_id="sonnet-balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="claude-sonnet-5",
+        audit_model="gemini-3.7-flash",
+    )
+
+    assert summary["estimated_cost_usd"] == 0.0099
+    assert summary["by_model"][0]["cost_basis"] == "measured"
+    # The cache read is visible rather than clamped away, which is the whole
+    # reason the fixed prompt prefix was worth designing for.
+    assert summary["cached_input_tokens"] == 8_741
+    assert summary["input_tokens"] == 11_480
+
+
+def test_a_provider_without_a_price_is_unaffected_by_the_fold(monkeypatch):
+    class FakeLLM:
+        model_name = "gemini-3.7-flash"
+        last_usage_metadata = {"input_tokens": 400, "output_tokens": 100}
+
+        def invoke(self, prompt):  # noqa: ANN001
+            return "Article"
+
+    monkeypatch.setattr(prompt2blog_llm, "get_vertex_llm", lambda **kwargs: FakeLLM())
+    llm = DefaultPrompt2BlogLLM()
+    llm.invoke_text(
+        prompt="Write",
+        max_tokens=2048,
+        temperature=0.2,
+        model_name="gemini-3.7-flash",
+    )
+
+    summary = llm.usage_summary(
+        stack_id="balanced",
+        worker_model="gemini-3.7-flash",
+        writing_model="gemini-3.7-flash",
+        audit_model="gemini-3.7-flash",
+    )
+
+    assert summary["by_model"][0]["cost_basis"] == "rate-table"
