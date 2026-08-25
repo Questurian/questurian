@@ -3,6 +3,7 @@ import type {
   Prompt2BlogCommissionDraft,
   Prompt2BlogDirectionOption,
   Prompt2BlogDirectionOptionId,
+  Prompt2BlogEvidencePackage,
   Prompt2BlogModelName,
   Prompt2BlogWriterModel,
 } from '../api'
@@ -30,6 +31,12 @@ export interface P2BEditorialComposerState {
   selectedOptionId: Prompt2BlogDirectionOptionId | null
   commissionDraft: Prompt2BlogCommissionDraft | null
   approval: P2BCommissionApproval
+  /**
+   * Imported research for the currently approved commission. Readiness
+   * findings stay derived rather than stored, so they cannot drift from the
+   * commission they describe.
+   */
+  evidencePackage: Prompt2BlogEvidencePackage | null
 }
 
 export interface P2BFormState {

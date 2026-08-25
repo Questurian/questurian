@@ -3,9 +3,14 @@ import type {
   Prompt2BlogCommissionDraft,
   Prompt2BlogDirectionOption,
   Prompt2BlogDirectionOptionId,
-  Prompt2BlogDirectionResponse
+  Prompt2BlogDirectionResponse,
+  Prompt2BlogEvidencePackage
 } from '../api'
-import type { P2BEditorialComposerState, P2BFormState } from './composer.types'
+import type {
+  P2BCommissionApproval,
+  P2BEditorialComposerState,
+  P2BFormState
+} from './composer.types'
 import {
   commissionMatchesDraft,
   createCommissionDraft,
@@ -17,8 +22,26 @@ function emptyEditorialState(): P2BEditorialComposerState {
     directionOptions: [],
     selectedOptionId: null,
     commissionDraft: null,
-    approval: { status: 'not_started' }
+    approval: { status: 'not_started' },
+    evidencePackage: null
   }
+}
+
+/**
+ * Evidence survives only while the exact commission it was researched against
+ * is still approved. Every transition runs through this, so an edit, a new
+ * direction import, or a re-approval with a new fingerprint drops research
+ * instead of silently carrying it forward.
+ */
+export function retainedEvidencePackage(
+  evidencePackage: Prompt2BlogEvidencePackage | null,
+  approval: P2BCommissionApproval
+): Prompt2BlogEvidencePackage | null {
+  if (!evidencePackage || approval.status !== 'approved') return null
+  return evidencePackage.commission_fingerprint ===
+    approval.commission.commission_fingerprint
+    ? evidencePackage
+    : null
 }
 
 function cloneOption(
@@ -63,7 +86,8 @@ export function applyValidatedDirectionResponse(
       directionOptions: response.options.map(cloneOption),
       selectedOptionId: null,
       commissionDraft: null,
-      approval: { status: 'awaiting_selection' }
+      approval: { status: 'awaiting_selection' },
+      evidencePackage: null
     }
   }
 }
@@ -95,7 +119,8 @@ export function selectDirectionOption(
       ...state.editorial,
       selectedOptionId: optionId,
       commissionDraft,
-      approval: { status: 'needs_approval' }
+      approval: { status: 'needs_approval' },
+      evidencePackage: null
     }
   }
 }
@@ -134,7 +159,11 @@ export function approveCommission(
     activeWorkflow: 'editorial_v3',
     editorial: {
       ...state.editorial,
-      approval: { status: 'approved', commission }
+      approval: { status: 'approved', commission },
+      evidencePackage: retainedEvidencePackage(state.editorial.evidencePackage, {
+        status: 'approved',
+        commission
+      })
     }
   }
 }
@@ -160,8 +189,43 @@ export function editCommissionDraft(
       approval: {
         status: 'reconfirmation_required',
         reason: 'commission_edited'
-      }
+      },
+      evidencePackage: null
     }
+  }
+}
+
+/**
+ * Attaches imported research to the approved commission. The caller must have
+ * validated the package first; this only refuses evidence that cannot belong
+ * to what is approved right now.
+ */
+export function storeEvidencePackage(
+  state: P2BFormState,
+  evidencePackage: Prompt2BlogEvidencePackage
+): P2BFormState {
+  const retained = retainedEvidencePackage(
+    evidencePackage,
+    state.editorial.approval
+  )
+  if (!retained) {
+    throw new Error(
+      'Evidence can only be stored against the currently approved commission.'
+    )
+  }
+  return {
+    ...state,
+    activeWorkflow: 'editorial_v3',
+    editorial: { ...state.editorial, evidencePackage: retained }
+  }
+}
+
+/** Drops imported research without disturbing the approved commission. */
+export function clearEvidencePackage(state: P2BFormState): P2BFormState {
+  if (!state.editorial.evidencePackage) return state
+  return {
+    ...state,
+    editorial: { ...state.editorial, evidencePackage: null }
   }
 }
 
