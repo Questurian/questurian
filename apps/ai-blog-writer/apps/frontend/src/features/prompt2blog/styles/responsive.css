@@ -52,6 +52,23 @@
     justify-self: start;
   }
 
+  .p2b-round-trip {
+    grid-template-columns: 1fr;
+  }
+
+  .p2b-round-trip li + li {
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+
+  .p2b-round-trip li:not(:last-child)::after {
+    content: '↓';
+    top: auto;
+    right: 50%;
+    bottom: -0.7rem;
+    transform: translateX(50%);
+  }
+
   .p2b-input,
   .p2b-textarea,
   .p2b-select {

@@ -12,6 +12,7 @@ import { reviewDirectionResponseJson, type DirectionImportReview } from '../dire
 import { buildDirectionPrompt } from '../direction-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import { CommissionEditor } from './CommissionEditor'
+import { ChatbotRoundTrip } from './ChatbotRoundTrip'
 import { DirectionCards } from './DirectionCards'
 import { ResearchPanel } from './ResearchPanel'
 import { StepSection } from './StepSection'
@@ -185,6 +186,7 @@ export function EasySetupPanel({
       </StepSection>
 
       <StepSection step={stepFor('direction')}>
+        <ChatbotRoundTrip />
         {prompt === null && !showDirectionStep && (
           <p className="p2b-field-hint">
             Finish step 1 and your direction prompt appears here.
@@ -330,6 +332,7 @@ export function EasySetupPanel({
       </StepSection>
 
       <StepSection step={stepFor('research')}>
+        <ChatbotRoundTrip />
         {editorialOptions && editorial.approval.status === 'approved' ? (
           <ResearchPanel
             commission={editorial.approval.commission}
