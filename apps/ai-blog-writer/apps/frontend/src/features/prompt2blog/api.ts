@@ -1,4 +1,3 @@
-export type { ArticleTypeGuidelines, ArticleTypeOption } from './types/article-types.types'
 export type { Prompt2BlogSavedArticle, Prompt2BlogSyncStatusResponse } from './types/articles.types'
 export type {
   Prompt2BlogArticleFormId,
@@ -39,12 +38,10 @@ export type {
 } from './types/editorial.types'
 export { PROMPT2BLOG_DIRECTION_OPTION_IDS } from './types/editorial.types'
 export type {
-  Prompt2BlogArticleTypeOption,
   Prompt2BlogDebugResponse,
   Prompt2BlogDebugStages,
   Prompt2BlogEvidenceReceipt,
   Prompt2BlogGroundedness,
-  Prompt2BlogGuidelinePreviewResponse,
   Prompt2BlogInputOption,
   Prompt2BlogInputOptionsResponse,
   Prompt2BlogModelName,
@@ -75,13 +72,11 @@ export {
   PROMPT2BLOG_V3_PIPELINE_STAGES,
 } from './types/pipeline.types'
 
-export { fetchArticleTypeGuidelinesById, fetchArticleTypes } from './api/article-types.api'
 export { deleteArticle, fetchArticles } from './api/articles.api'
 export { getPrompt2BlogEditorialOptions } from './api/editorial-options.api'
 export {
   fetchResult,
   getPrompt2BlogDebug,
-  getPrompt2BlogGuidelinePreview,
   getPrompt2BlogInputOptions,
   getPrompt2BlogResult,
   getPrompt2BlogStatus,

@@ -234,39 +234,6 @@ export const DEFAULT_PROMPT2BLOG_WRITER_MODEL: Prompt2BlogWriterModel = 'gemini-
  * point releases stay out of the picker rather than being offered as choices
  * nobody has a reason to make.
  */
-const CLAUDE_SUBSCRIPTION_WRITER_OPTIONS: Array<{
-  value: Prompt2BlogWriterModel
-  label: string
-}> = [
-  { value: 'claude-opus-5', label: 'Claude Opus 5 (premier writer — your plan)' },
-  { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (faster writer — your plan)' },
-]
-
-/** Offered when the Anthropic API key is funded. It is not. */
-const CLAUDE_PROMPT2BLOG_WRITER_OPTIONS: Array<{
-  value: Prompt2BlogWriterModel
-  label: string
-}> = [
-  { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
-  { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
-  { value: 'claude-sonnet-5', label: 'Claude Sonnet 5 (cheaper, fast writer)' },
-]
-
-export const PROMPT2BLOG_WRITER_MODEL_OPTIONS: Array<{
-  value: Prompt2BlogWriterModel
-  label: string
-}> = [
-  ...(CLAUDE_SUBSCRIPTION_WRITER_ENABLED ? CLAUDE_SUBSCRIPTION_WRITER_OPTIONS : []),
-  ...(CLAUDE_MODELS_ENABLED ? CLAUDE_PROMPT2BLOG_WRITER_OPTIONS : []),
-  { value: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
-  { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
-  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite' },
-  { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite' },
-  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — deep reasoning)' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-]
-
 export function resolvePrompt2BlogWriterModel(value?: string): Prompt2BlogWriterModel {
   // Stored Claude selections fall through to the default while no Claude path
   // is on, so a run saved under one configuration still opens under another.
