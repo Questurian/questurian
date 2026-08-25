@@ -17,6 +17,7 @@ bounded contexts.
 | `api/` and `routes.py` | FastAPI handlers and the public router facade |
 | `models.py`, `contracts_v3.py` | Versioned HTTP requests, editorial contracts, and runtime pipeline input |
 | `config.py`, `options.py`, `editorial_catalog.py` | Feature constants plus legacy and v3 Markdown-backed catalogs |
+| `evidence_v3.py`, `instructions_v3.py` | V3 evidence normalization and the layered instruction stack |
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |
 | `llm.py`, `dependencies.py` | Shared-LLM adapter and explicit dependency bundle |
