@@ -92,11 +92,13 @@ export default function Prompt2BlogPage() {
             onApplyDirectionResponse={composer.applyDirectionResponse}
             onApproveCommission={composer.approveCommissionChanges}
             onClearDirectionWorkflow={composer.clearDirectionWorkflow}
+            onClearEvidence={composer.clearEvidence}
             onCommissionChange={composer.updateCommissionDraft}
             onLocationChange={value => composer.updateField('easySetupLocation', value)}
             onRetryEditorialOptions={composer.retryEditorialOptions}
             onSelectDirection={composer.selectDirectionOption}
             onStartDirectionWorkflow={composer.startDirectionWorkflow}
+            onStoreEvidence={composer.storeEvidence}
             onTitleChange={value => composer.updateField('easySetupTitle', value)}
           />
           <MiddleSectionsFold>

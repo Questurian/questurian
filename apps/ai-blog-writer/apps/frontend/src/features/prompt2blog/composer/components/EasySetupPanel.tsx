@@ -4,22 +4,17 @@ import type {
   Prompt2BlogDirectionOptionId,
   Prompt2BlogDirectionResponse,
   Prompt2BlogEditorialOptionsResponse,
+  Prompt2BlogEvidencePackage,
   Prompt2BlogInputOptionsResponse,
 } from '../../api'
 import type { P2BEditorialComposerState, P2BFormState } from '../composer.types'
 import { reviewDirectionResponseJson, type DirectionImportReview } from '../direction-import'
 import { buildDirectionPrompt } from '../direction-prompt'
 import { reviewEasySetupJson, type EasySetupImportReview } from '../easy-setup-import'
+import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import { CommissionEditor } from './CommissionEditor'
 import { DirectionCards } from './DirectionCards'
-
-type CopyStatus = 'idle' | 'copied' | 'error'
-
-const COPY_LABELS: Record<CopyStatus, string> = {
-  idle: 'Copy prompt',
-  copied: 'Copied!',
-  error: 'Copy failed',
-}
+import { ResearchPanel } from './ResearchPanel'
 
 interface EasySetupPanelProps {
   activeWorkflow: P2BFormState['activeWorkflow']
@@ -34,11 +29,13 @@ interface EasySetupPanelProps {
   onApplyDirectionResponse: (response: Prompt2BlogDirectionResponse) => void
   onApproveCommission: () => Promise<void>
   onClearDirectionWorkflow: () => void
+  onClearEvidence: () => void
   onCommissionChange: (draft: Prompt2BlogCommissionDraft) => void
   onLocationChange: (value: string) => void
   onRetryEditorialOptions: () => void
   onSelectDirection: (optionId: Prompt2BlogDirectionOptionId) => Promise<void>
   onStartDirectionWorkflow: () => void
+  onStoreEvidence: (evidencePackage: Prompt2BlogEvidencePackage) => void
   onTitleChange: (value: string) => void
 }
 
@@ -55,15 +52,17 @@ export function EasySetupPanel({
   onApplyDirectionResponse,
   onApproveCommission,
   onClearDirectionWorkflow,
+  onClearEvidence,
   onCommissionChange,
   onLocationChange,
   onRetryEditorialOptions,
   onSelectDirection,
   onStartDirectionWorkflow,
+  onStoreEvidence,
   onTitleChange,
 }: EasySetupPanelProps) {
   const [prompt, setPrompt] = useState<string | null>(null)
-  const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle')
+  const directionCopy = useClipboardCopy()
   const [pastedJson, setPastedJson] = useState('')
   const [review, setReview] = useState<EasySetupImportReview | null>(null)
   const [appliedCount, setAppliedCount] = useState<number | null>(null)
@@ -74,19 +73,17 @@ export function EasySetupPanel({
   // they arrived is missing the fields it should have constrained.
   const showDirectionStep = prompt !== null || activeWorkflow === 'editorial_v3'
 
+  // The hook object is new on every render; only its stable reset belongs in
+  // the dependency list, or this would wipe the prompt on every keystroke.
+  const resetDirectionCopy = directionCopy.reset
+
   useEffect(() => {
     setPrompt(null)
-    setCopyStatus('idle')
+    resetDirectionCopy()
     setDirectionJson('')
     setDirectionReview(null)
     setDirectionStatus(null)
-  }, [location, title])
-
-  useEffect(() => {
-    if (copyStatus === 'idle') return
-    const timer = setTimeout(() => setCopyStatus('idle'), 2000)
-    return () => clearTimeout(timer)
-  }, [copyStatus])
+  }, [location, resetDirectionCopy, title])
 
   const handleConfirmSetup = () => {
     const confirmedTitle = title.trim()
@@ -95,7 +92,7 @@ export function EasySetupPanel({
     if (!editorialOptions) return
     onStartDirectionWorkflow()
     setPrompt(buildDirectionPrompt(confirmedTitle, confirmedLocation, editorialOptions))
-    setCopyStatus('idle')
+    directionCopy.reset()
   }
 
   const handleDirectionJsonChange = (value: string) => {
@@ -121,18 +118,6 @@ export function EasySetupPanel({
     onApplyDirectionResponse(directionReview.response)
     setDirectionReview(null)
     setDirectionStatus('Three directions are ready for approval.')
-  }
-
-  const handleCopyPrompt = () => {
-    if (prompt === null) return
-    // Clipboard access is missing outside secure contexts, so the button has to
-    // say so rather than silently doing nothing.
-    const copied = navigator.clipboard?.writeText(prompt)
-    if (!copied) {
-      setCopyStatus('error')
-      return
-    }
-    copied.then(() => setCopyStatus('copied')).catch(() => setCopyStatus('error'))
   }
 
   // The review is tied to the exact text it was run against; editing the box
@@ -217,8 +202,12 @@ export function EasySetupPanel({
           <div className="p2b-field">
             <div className="p2b-field-label-row">
               <label htmlFor="p2b-easy-setup-prompt">Prompt</label>
-              <button type="button" className="p2b-inline-copy-btn" onClick={handleCopyPrompt}>
-                {COPY_LABELS[copyStatus]}
+              <button
+                type="button"
+                className="p2b-inline-copy-btn"
+                onClick={() => directionCopy.copy(prompt)}
+              >
+                {directionCopy.label}
               </button>
             </div>
             <textarea
@@ -312,6 +301,15 @@ export function EasySetupPanel({
                   )
                 }}
                 onChange={onCommissionChange}
+              />
+            )}
+            {editorialOptions && editorial.approval.status === 'approved' && (
+              <ResearchPanel
+                commission={editorial.approval.commission}
+                editorialOptions={editorialOptions}
+                evidencePackage={editorial.evidencePackage}
+                onClearEvidence={onClearEvidence}
+                onStoreEvidence={onStoreEvidence}
               />
             )}
           </>
