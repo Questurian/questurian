@@ -1,0 +1,171 @@
+"""Prompt2Blog v3 intake contract."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from copy import deepcopy
+from pathlib import Path
+
+import pytest
+from fastapi import HTTPException
+from pydantic import ValidationError
+
+import app.features.prompt2blog.routes as prompt2blog_routes
+from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
+from app.features.prompt2blog.intake_v3 import (
+    prepare_v3_runtime_request,
+    v3_run_input_artifact,
+)
+from tests.prompt2blog_test_support import response_payload
+
+FIXTURE_PATH = (
+    Path(__file__).parents[3]
+    / "data"
+    / "fixtures"
+    / "prompt2blog"
+    / "lima-scope-drift-v3.json"
+)
+
+
+def _fixture() -> dict:
+    return json.loads(FIXTURE_PATH.read_text())
+
+
+def _payload(**overrides) -> dict:
+    fixture = _fixture()
+    payload = {
+        "schema_version": 3,
+        "commission": fixture["commission"],
+        "evidence_package": fixture["evidence_package"],
+        "profiles": {
+            "tone_id": "editorial",
+            "length_id": "medium",
+            "creativity_level": "medium",
+        },
+        "model_routing": {"writing_model": "test-writer"},
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _request(**overrides) -> Prompt2BlogV3Request:
+    return Prompt2BlogV3Request.model_validate(_payload(**overrides))
+
+
+def _intake(payload: dict) -> dict:
+    return response_payload(
+        asyncio.run(
+            prompt2blog_routes.prepare_pipeline_v3(
+                Prompt2BlogV3Request.model_validate(payload)
+            )
+        )
+    )
+
+
+def test_intake_returns_a_versioned_run_input_for_the_approved_commission():
+    fixture = _fixture()
+
+    payload = _intake(_payload())
+    run_input = payload["run_input"]
+
+    assert payload["message"] == "Prompt2Blog v3 run input assembled"
+    assert run_input["schema_version"] == 3
+    assert run_input["instruction_schema_version"] == 3
+    assert (
+        run_input["commission_fingerprint"]
+        == fixture["commission"]["commission_fingerprint"]
+    )
+    assert run_input["original_title"] == fixture["commission"]["original_title"]
+    assert run_input["location"] == fixture["commission"]["location"]
+    assert run_input["form_id"] == "analysis"
+    assert run_input["scope_mode"] == "single_subject"
+    assert run_input["requirement_ids"] == ["r1", "r2", "r3"]
+    assert run_input["precedence"][0] == "verified evidence"
+    assert run_input["precedence"][-1] == "house style"
+
+
+def test_run_input_records_the_evidence_receipt_and_resolved_profiles():
+    run_input = _intake(_payload())["run_input"]
+
+    receipt = run_input["evidence_receipt"]
+    assert receipt["requirement_status"] == {
+        "r1": "supported",
+        "r2": "missing",
+        "r3": "missing",
+    }
+    assert receipt["unresolved_requirement_ids"] == ["r2", "r3"]
+    assert run_input["source_ids"] == receipt["source_ids"]
+    assert run_input["profiles"]["tone_id"] == "editorial"
+    assert run_input["profiles"]["length_id"] == "medium"
+    assert run_input["profiles"]["brand_voice_id"]
+    assert run_input["model_routing"]["writing_model"] == "test-writer"
+
+
+def test_runtime_request_keeps_the_commission_and_evidence_whole():
+    fixture = _fixture()
+
+    runtime = prepare_v3_runtime_request(_request())
+
+    assert runtime.commission == fixture["commission"]
+    source = runtime.evidence["sources"][0]
+    original = fixture["evidence_package"]["sources"][0]
+    assert source["publisher"] == original["publisher"]
+    assert source["published_at"] == original["published_at"]
+    assert source["retrieved_at"] == original["retrieved_at"]
+    assert source["notes"] == original["notes"]
+    assert original["url"].rstrip("/") in source["url"]
+    # A v2 field must not reappear under a new name.
+    assert "source_material" not in runtime.model_dump()
+    assert "article_type_id" not in runtime.model_dump()
+
+
+def test_intake_rejects_an_unknown_writing_profile_by_name():
+    payload = _payload()
+    payload["profiles"]["tone_id"] = "not-a-tone"
+
+    with pytest.raises(HTTPException) as excinfo:
+        _intake(payload)
+
+    assert excinfo.value.status_code == 400
+    assert "tone_id" in str(excinfo.value.detail)
+
+
+def test_intake_rejects_evidence_from_a_different_commission():
+    payload = _payload()
+    evidence = deepcopy(payload["evidence_package"])
+    evidence["commission_fingerprint"] = "b" * 64
+    payload["evidence_package"] = evidence
+
+    with pytest.raises(ValidationError, match="fingerprint must match commission"):
+        _intake(payload)
+
+
+def test_intake_cannot_be_used_to_change_the_commission():
+    fixture = _fixture()
+    payload = _payload()
+    # A research response that tries to promote a context-only city has to be
+    # refused by the contract, not normalized into an accepted commission.
+    commission = deepcopy(payload["commission"])
+    commission["scope"]["references"][1]["role"] = "comparator"
+    payload["commission"] = commission
+
+    with pytest.raises(ValidationError):
+        _intake(payload)
+
+    unchanged = _intake(_payload())["run_input"]
+    assert (
+        unchanged["commission_fingerprint"]
+        == fixture["commission"]["commission_fingerprint"]
+    )
+
+
+def test_v3_run_input_does_not_reintroduce_v2_shapes():
+    runtime = prepare_v3_runtime_request(_request())
+
+    artifact = v3_run_input_artifact(runtime)
+
+    assert "article_type_id" not in artifact
+    assert "guideline" not in artifact
+    assert artifact["instruction_meta"]["house_rules_id"] == "house-rules"
+    assert artifact["instruction_meta"]["headline_rules_id"] == "headlines"
