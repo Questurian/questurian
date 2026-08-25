@@ -393,10 +393,10 @@ function validateRequirement(
     issues.push({ path: `${path}.gap`, message: 'Must be a string.' })
   }
   const gap = typeof value.gap === 'string' ? value.gap : ''
-  if (status === 'supported' && claimIds.length === 0) {
+  if (status === 'supported' && (claimIds.length === 0 || gap.trim())) {
     issues.push({
       path,
-      message: 'Supported requirements need at least one claim.'
+      message: 'Supported requirements need claims and an empty gap.'
     })
   }
   if (status === 'partial' && !gap.trim()) {
@@ -521,6 +521,18 @@ export function evidenceSatisfiesSourceRequirement(
   requirement: Prompt2BlogSourceRequirement,
   sources: readonly Prompt2BlogEvidenceSource[]
 ): boolean {
+  if (requirement === 'reported-people-scenes-quotations') {
+    const hasAttributableVoice = sources.some(
+      (source) =>
+        source.material_type === 'transcript' ||
+        source.material_type === 'interview-responses'
+    )
+    const hasDocumentedScene = sources.some(
+      (source) =>
+        source.source_type === 'reporting' || source.source_type === 'firsthand'
+    )
+    return hasAttributableVoice && hasDocumentedScene
+  }
   return sources.some((source) => {
     if (requirement === 'attributable-responses') {
       return (
@@ -531,17 +543,9 @@ export function evidenceSatisfiesSourceRequirement(
     if (requirement === 'first-person-material') {
       return source.material_type === 'first-person-notes'
     }
-    if (requirement === 'documented-evaluation') {
-      return (
-        source.material_type === 'evaluation-notes' ||
-        source.source_type === 'firsthand'
-      )
-    }
     return (
-      source.source_type === 'reporting' ||
-      source.source_type === 'firsthand' ||
-      source.material_type === 'transcript' ||
-      source.material_type === 'interview-responses'
+      source.material_type === 'evaluation-notes' ||
+      source.source_type === 'firsthand'
     )
   })
 }
@@ -559,9 +563,7 @@ function sourceGateFindings(
     .filter((gate) => !evidenceSatisfiesSourceRequirement(gate, sources))
     .map((gate) => ({
       code: 'source_gate' as const,
-      requirement_ids: commission.requirements.map(
-        (item) => item.requirement_id
-      ),
+      requirement_ids: [],
       message: `The ${commission.form_id} form still needs ${gate}.`
     }))
 }

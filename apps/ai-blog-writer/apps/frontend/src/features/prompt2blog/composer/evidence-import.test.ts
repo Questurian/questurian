@@ -4,6 +4,7 @@ import type {
   Prompt2BlogEditorialOptionsResponse,
   Prompt2BlogEvidencePackage
 } from '../api'
+import limaFixture from '../../../../../../data/fixtures/prompt2blog/lima-scope-drift-v3.json'
 import { reviewEvidencePackageJson } from './evidence-import'
 
 const fingerprint =
@@ -151,6 +152,20 @@ function review(value: unknown, activeCommission = commission) {
 }
 
 describe('reviewEvidencePackageJson', () => {
+  it('keeps the permanent Lima scope-drift fixture importable with explicit gaps', () => {
+    const result = reviewEvidencePackageJson(
+      JSON.stringify(limaFixture.evidence_package),
+      limaFixture.commission as unknown as Prompt2BlogCommission,
+      catalog
+    )
+
+    expect(result.issues).toEqual([])
+    expect(result.readinessFindings).toHaveLength(2)
+    expect(
+      result.readinessFindings.map((finding) => finding.requirement_ids)
+    ).toEqual([['r2'], ['r3']])
+  })
+
   it('imports honest incomplete evidence and reports readiness without replacing commission', () => {
     const result = review(evidence())
 
@@ -276,7 +291,7 @@ describe('reviewEvidencePackageJson', () => {
   })
 
   it.each([
-    ['supported', [], '', 'Supported requirements need at least one claim.'],
+    ['supported', [], '', 'Supported requirements need claims and an empty gap.'],
     ['partial', ['c1'], '', 'Partial requirements need a non-empty gap.'],
     [
       'missing',
@@ -377,4 +392,31 @@ describe('reviewEvidencePackageJson', () => {
       ).not.toContainEqual(expect.objectContaining({ code: 'source_gate' }))
     }
   )
+
+  it('keeps the feature-profile gate unsatisfied without a reported or firsthand source', () => {
+    const activeCommission: Prompt2BlogCommission = {
+      ...commission,
+      form_id: 'feature-profile'
+    }
+    const value = evidence()
+    value.sources![0].material_type = 'interview-responses'
+    value.sources![0].source_type = 'official'
+
+    expect(review(value, activeCommission).readinessFindings).toContainEqual({
+      code: 'source_gate',
+      requirement_ids: [],
+      message:
+        'The feature-profile form still needs reported-people-scenes-quotations.'
+    })
+  })
+
+  it('rejects a supported requirement that still declares a gap', () => {
+    const value = evidence()
+    value.requirements[0].gap = 'Still missing a second baseline.'
+
+    expect(review(value).issues).toContainEqual({
+      path: 'requirements[0]',
+      message: 'Supported requirements need claims and an empty gap.'
+    })
+  })
 })
