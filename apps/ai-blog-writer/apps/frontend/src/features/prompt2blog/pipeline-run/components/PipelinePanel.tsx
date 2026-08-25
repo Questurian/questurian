@@ -9,9 +9,15 @@ interface PipelinePanelProps {
   run: ReturnType<typeof usePrompt2BlogPipelineRun>
   onOpenCleanupModal: () => void
   onReset: () => void
+  submissionBlockedReason?: string | null
 }
 
-export function PipelinePanel({ run, onOpenCleanupModal, onReset }: PipelinePanelProps) {
+export function PipelinePanel({
+  run,
+  onOpenCleanupModal,
+  onReset,
+  submissionBlockedReason,
+}: PipelinePanelProps) {
   const {
     canOpenCleanupModal,
     error,
@@ -35,26 +41,40 @@ export function PipelinePanel({ run, onOpenCleanupModal, onReset }: PipelinePane
       </div>
       <div className="p2b-panel-body">
         <div className="p2b-button-row">
-          <button type="button" className="p2b-synthesize-btn" onClick={() => void run.run()}>
+          <button
+            type="button"
+            className="p2b-synthesize-btn"
+            disabled={Boolean(submissionBlockedReason)}
+            onClick={() => void run.run()}
+          >
             Run Prompt2Blog Pipeline
           </button>
           <button type="button" className="p2b-rerun-btn" onClick={onReset}>
             Reset Run
           </button>
         </div>
+        {submissionBlockedReason && (
+          <p className="p2b-field-hint" role="status">
+            {submissionBlockedReason}
+          </p>
+        )}
 
         <div className="p2b-progress-grid">
           {PROMPT2BLOG_PIPELINE_STAGES.map(step => (
             <PipelineStageItem
               key={step}
-              action={step === CLEANUP_STAGE_KEY && canOpenCleanupModal ? onOpenCleanupModal : undefined}
+              action={
+                step === CLEANUP_STAGE_KEY && canOpenCleanupModal ? onOpenCleanupModal : undefined
+              }
               label={PIPELINE_STAGE_LABELS[step]}
               status={getPipelineStepStatus(step, pipelineStatus)}
             />
           ))}
           {pipelineStatus?.stage === 'unknown' && (
             <PipelineStageItem
-              label={pipelineStatus.raw_stage ? `Unknown: ${pipelineStatus.raw_stage}` : 'Unknown stage'}
+              label={
+                pipelineStatus.raw_stage ? `Unknown: ${pipelineStatus.raw_stage}` : 'Unknown stage'
+              }
               status={pipelineStatus.state === 'failed' ? 'failed' : 'running'}
             />
           )}
@@ -125,9 +145,5 @@ function PipelineStageItem({
     )
   }
 
-  return (
-    <div className={className}>
-      {content}
-    </div>
-  )
+  return <div className={className}>{content}</div>
 }

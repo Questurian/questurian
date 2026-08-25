@@ -183,7 +183,10 @@
 
 .p2b-stack-assignment {
   display: grid;
-  grid-template-columns: minmax(7.5rem, 0.8fr) minmax(11rem, 1fr) minmax(14rem, 1.5fr);
+  grid-template-columns: minmax(7.5rem, 0.8fr) minmax(11rem, 1fr) minmax(
+      14rem,
+      1.5fr
+    );
   align-items: center;
   gap: var(--space-4);
   min-width: 0;
@@ -236,7 +239,9 @@
   background: var(--panel);
   cursor: pointer;
   list-style: none;
-  transition: background-color var(--transition-base), border-color var(--transition-base);
+  transition:
+    background-color var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .p2b-middle-fold-summary::-webkit-details-marker {
@@ -756,7 +761,8 @@
 }
 
 .p2b-import-list code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;
   font-size: 0.8125rem;
   font-weight: 600;
@@ -936,6 +942,340 @@
   justify-content: flex-end;
   padding: var(--space-5) 0 0;
   border-top: 1px solid var(--border-strong);
+}
+
+/* V3 direction choice and editable commission */
+.p2b-direction-picker,
+.p2b-commission-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.p2b-direction-picker > legend,
+.p2b-commission-fieldset > legend {
+  margin-bottom: var(--space-2);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.p2b-direction-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.p2b-direction-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--p2b-control-radius);
+  background: var(--surface);
+  color: var(--ink);
+  transition:
+    border-color var(--transition-base),
+    background-color var(--transition-base);
+}
+
+.p2b-direction-card-choice label {
+  cursor: pointer;
+}
+
+.p2b-direction-card.is-selected {
+  border-color: var(--p2b-accent);
+  box-shadow: inset 0 0 0 1px var(--p2b-accent);
+  background: var(--p2b-accent-softer);
+}
+
+.p2b-direction-card:has(input:focus-visible) {
+  outline: 3px solid var(--p2b-accent-soft);
+  outline-offset: 2px;
+}
+
+.p2b-direction-card-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--p2b-accent-hover);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.p2b-direction-card-choice input,
+.p2b-commission-checkbox input {
+  flex: 0 0 auto;
+  accent-color: var(--p2b-accent);
+}
+
+.p2b-direction-card-form {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.p2b-direction-card-direction {
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.p2b-direction-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.p2b-direction-card-tags span {
+  padding: 0.25rem 0.45rem;
+  border: 1px solid var(--p2b-accent);
+  border-radius: 999px;
+  color: var(--p2b-accent-hover);
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.p2b-direction-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.p2b-direction-card-details div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.p2b-direction-card-details dt {
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.p2b-direction-card-details dd {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.p2b-direction-card-rationale {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.p2b-direction-card-rationale strong {
+  color: var(--ink);
+}
+
+.p2b-commission-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-strong);
+}
+
+.p2b-commission-editor-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.p2b-commission-editor-header .p2b-eyebrow {
+  margin-bottom: var(--space-1);
+}
+
+.p2b-commission-editor-header h3,
+.p2b-commission-editor-header p {
+  margin: 0;
+}
+
+.p2b-commission-editor-header h3 {
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+
+.p2b-commission-editor-header p:last-child {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.p2b-commission-status {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.p2b-commission-status.is-approved {
+  border-color: var(--success);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.p2b-commission-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--p2b-accent);
+  background: var(--surface);
+}
+
+.p2b-commission-fieldset > legend {
+  padding: 0 var(--space-2);
+}
+
+.p2b-input[readonly],
+.p2b-select:disabled {
+  background-color: var(--panel);
+  color: var(--ink-light);
+  cursor: not-allowed;
+}
+
+.p2b-commission-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.p2b-commission-checkbox-grid--compact {
+  margin-top: var(--space-2);
+}
+
+.p2b-commission-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.p2b-commission-checkbox:has(input:checked) {
+  border-color: var(--p2b-accent);
+  background: var(--p2b-accent-softer);
+}
+
+.p2b-commission-checkbox:has(input:focus-visible) {
+  outline: 3px solid var(--p2b-accent-soft);
+  outline-offset: 1px;
+}
+
+.p2b-commission-checkbox:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.p2b-commission-checkbox span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.p2b-commission-checkbox strong {
+  color: var(--ink);
+  font-size: 0.8125rem;
+}
+
+.p2b-reference-list,
+.p2b-requirement-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.p2b-reference-row,
+.p2b-requirement-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.55fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.p2b-requirement-row {
+  grid-template-columns: minmax(7rem, 0.25fr) minmax(0, 1fr) auto;
+}
+
+.p2b-reference-row--primary {
+  opacity: 0.85;
+}
+
+.p2b-reference-remove {
+  min-height: 42px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--p2b-control-radius);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.p2b-reference-remove:hover {
+  border-color: var(--error);
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.p2b-reference-remove:focus-visible {
+  outline: 3px solid var(--p2b-accent-soft);
+  outline-offset: 2px;
+}
+
+.p2b-commission-alert {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--p2b-control-radius);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.p2b-commission-alert--error {
+  border-color: var(--error);
+  background: var(--error-soft);
+}
+
+.p2b-commission-alert ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
 }
 
 .p2b-source-block {

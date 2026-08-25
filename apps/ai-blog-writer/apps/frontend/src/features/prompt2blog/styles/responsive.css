@@ -37,6 +37,21 @@
     gap: var(--space-1);
   }
 
+  .p2b-direction-grid,
+  .p2b-commission-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .p2b-reference-row,
+  .p2b-requirement-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .p2b-reference-remove {
+    justify-self: start;
+  }
+
   .p2b-input,
   .p2b-textarea,
   .p2b-select {
@@ -69,6 +84,10 @@
   }
 
   .p2b-panel-header {
+    flex-direction: column;
+  }
+
+  .p2b-commission-editor-header {
     flex-direction: column;
   }
 
