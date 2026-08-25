@@ -27,12 +27,15 @@ export default function Prompt2BlogPage() {
   const { state } = composer
 
   const handleCopyJson = useCallback(() => {
-    navigator.clipboard.writeText(JSON.stringify(composer.payload, null, 2)).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }).catch(() => {
-      pipeline.setError('Unable to copy JSON to clipboard.')
-    })
+    navigator.clipboard
+      .writeText(JSON.stringify(composer.payload, null, 2))
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      })
+      .catch(() => {
+        pipeline.setError('Unable to copy JSON to clipboard.')
+      })
   }, [composer.payload, pipeline])
 
   const handleResetRun = useCallback(() => {
@@ -55,28 +58,42 @@ export default function Prompt2BlogPage() {
             <span className="p2b-dot">.</span>
           </h1>
           <p className="p2b-lede">
-            Choose article type, set voice controls, paste source material, and run the full guideline-aware pipeline.
+            Choose article type, set voice controls, paste source material, and run the full
+            guideline-aware pipeline.
           </p>
         </div>
         <div className="p2b-badge-row">
-          <Link to="/" className="p2b-nav-link">&larr; Home</Link>
-          <Link to="/prompt2blog/articles" className="p2b-nav-link">Saved Articles</Link>
+          <Link to="/" className="p2b-nav-link">
+            &larr; Home
+          </Link>
+          <Link to="/prompt2blog/articles" className="p2b-nav-link">
+            Saved Articles
+          </Link>
         </div>
       </header>
 
       <main className="p2b-form-container">
-        <form className="p2b-form" onSubmit={(event) => event.preventDefault()}>
+        <form className="p2b-form" onSubmit={event => event.preventDefault()}>
           <ModelRoutingPanel
             modelStackId={state.modelStackId}
             onChange={composer.applyModelStack}
             onClear={composer.clearModelRouting}
           />
           <EasySetupPanel
+            activeWorkflow={state.activeWorkflow}
+            editorial={state.editorial}
+            editorialOptions={composer.editorialOptions}
             inputOptions={composer.inputOptions}
             location={state.easySetupLocation}
             title={state.easySetupTitle}
             onApply={composer.applyFields}
+            onApplyDirectionResponse={composer.applyDirectionResponse}
+            onApproveCommission={composer.approveCommissionChanges}
+            onClearDirectionWorkflow={composer.clearDirectionWorkflow}
+            onCommissionChange={composer.updateCommissionDraft}
             onLocationChange={value => composer.updateField('easySetupLocation', value)}
+            onSelectDirection={composer.selectDirectionOption}
+            onStartDirectionWorkflow={composer.startDirectionWorkflow}
             onTitleChange={value => composer.updateField('easySetupTitle', value)}
           />
           <MiddleSectionsFold>
@@ -95,7 +112,9 @@ export default function Prompt2BlogPage() {
               onArticleTypeChange={value => composer.updateField('articleTypeId', value)}
               onCallToActionChange={value => composer.updateField('callToAction', value)}
               onClear={composer.clearCoreInputs}
-              onDestinationContextChange={value => composer.updateField('destinationContext', value)}
+              onDestinationContextChange={value =>
+                composer.updateField('destinationContext', value)
+              }
               onTargetReaderChange={value => composer.updateField('targetReader', value)}
             />
             <PromptProfilesPanel
@@ -134,6 +153,7 @@ export default function Prompt2BlogPage() {
             run={pipeline}
             onOpenCleanupModal={() => void cleanupModal.open()}
             onReset={handleResetRun}
+            submissionBlockedReason={composer.submissionBlockedReason}
           />
 
           <div className="p2b-submit-row">
@@ -147,12 +167,14 @@ export default function Prompt2BlogPage() {
         </form>
       </main>
 
-      {cleanupModal.isOpen && <CleanupDetailsModal
-        data={cleanupModal.data}
-        error={cleanupModal.error}
-        loading={cleanupModal.isLoading}
-        onClose={cleanupModal.close}
-      />}
+      {cleanupModal.isOpen && (
+        <CleanupDetailsModal
+          data={cleanupModal.data}
+          error={cleanupModal.error}
+          loading={cleanupModal.isLoading}
+          onClose={cleanupModal.close}
+        />
+      )}
     </div>
   )
 }
