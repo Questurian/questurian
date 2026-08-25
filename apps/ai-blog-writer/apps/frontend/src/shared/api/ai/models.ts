@@ -1,12 +1,35 @@
 /**
- * Anthropic billing is exhausted, so Claude options are hidden from every
- * picker and the defaults point at Google models. The `claude-*` names stay in
- * the unions so saved runs and stored selections still type-check, and the
- * backend substitutes a Google model for them (utils.resolve_effective_model).
- * To restore: set ANTHROPIC_MODELS_ENABLED=1 on the backend and move the
- * entries in CLAUDE_*_OPTIONS back into the exported option lists.
+ * Whether the Anthropic **API-key** path is funded. It is not, so Claude options
+ * stay hidden from these pickers and the defaults point at Google models. The
+ * `claude-*` names stay in the unions so saved runs and stored selections still
+ * type-check, and the backend substitutes a Google model for them
+ * (utils.resolve_effective_model). To restore: fund the account, set
+ * ANTHROPIC_MODELS_ENABLED=1 on the backend, and flip this.
+ *
+ * This is no longer the only way Claude can answer -- see
+ * CLAUDE_SUBSCRIPTION_WRITER_ENABLED below -- so it is now specifically about
+ * the API key, not about Claude in general.
  */
 export const CLAUDE_MODELS_ENABLED = false
+
+/**
+ * Whether Claude may be picked as the **writing model** for a Prompt2Blog run,
+ * served by the Claude Code CLI the authoring machine is logged into.
+ *
+ * A different switch from CLAUDE_MODELS_ENABLED above, with a different payer:
+ * that one spends Anthropic Console credit against an API key, this one draws
+ * the plan holder's own subscription allowance. The backend half is
+ * CLAUDE_SUBSCRIPTION_MODELS_ENABLED.
+ *
+ * Deliberately narrower than app-wide. It reaches the Prompt2Blog writer picker
+ * and the Claude-writer run stacks, and nothing else: research and audit stay
+ * on Gemini, and the other pipelines' pickers are untouched. Anthropic's terms
+ * permit subscription OAuth for the plan holder's own use, not for serving
+ * other people's requests, so a deployment serving anyone but the owner must
+ * leave the backend switch off -- and then a Claude selection is transparently
+ * served by Google exactly as before.
+ */
+export const CLAUDE_SUBSCRIPTION_WRITER_ENABLED = true
 
 export type EditorAssistModelName = 'claude-opus-4-8' | 'claude-sonnet-5' | 'gemini-3.1-pro-preview'
 

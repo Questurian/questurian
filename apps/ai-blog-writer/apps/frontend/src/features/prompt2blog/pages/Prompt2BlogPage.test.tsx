@@ -470,6 +470,12 @@ describe('Prompt2BlogPage', () => {
     const options = within(preset).getAllByRole('option')
     const receipt = screen.getByLabelText('Editorial Premium model assignments')
 
+    // Grouped rather than one price-ordered list: the two families are not
+    // points on one scale, because a Claude-writer stack pays for its writing
+    // out of the subscription instead of per token.
+    expect(
+      within(preset).getAllByRole('group').map(group => group.getAttribute('label')),
+    ).toEqual(['Gemini — billed per token', 'Claude writes — included in your plan'])
     expect(options.map(option => option.textContent)).toEqual([
       '$$$$$$ · Maximum Quality · Slowest',
       '$$$$$ · Premium Review · Slow',
@@ -477,6 +483,12 @@ describe('Prompt2BlogPage', () => {
       '$$$ · Fast + Optimal · Fast',
       '$$ · Best Value · Faster',
       '$ · Fastest',
+      'Plan + $$$ · Opus · Max · Slowest',
+      'Plan + $$ · Opus · Balanced · Slow',
+      'Plan + $ · Opus · Lean · Moderate',
+      'Plan + $$$ · Sonnet · Max · Slow',
+      'Plan + $$ · Sonnet · Balanced · Moderate',
+      'Plan + $ · Sonnet · Lean · Fast',
     ])
     expect(preset).toHaveValue('editorial-premium')
     expect(within(receipt).getByText('Research worker')).toBeInTheDocument()
@@ -487,6 +499,30 @@ describe('Prompt2BlogPage', () => {
     expect(within(pricing).getByText('$2.55')).toBeInTheDocument()
     expect(within(pricing).getByText('Input $1.32 / 1M')).toBeInTheDocument()
     expect(within(pricing).getByText('Output $7.50 / 1M')).toBeInTheDocument()
+  })
+
+  it('prices a Claude-writer stack as plan usage rather than inventing a rate', async () => {
+    renderPage()
+
+    const preset = await screen.findByLabelText('Pipeline preset')
+    fireEvent.change(preset, { target: { value: 'opus-balanced' } })
+
+    // Before this, estimatePrompt2BlogStackPrice threw for any model with no
+    // Vertex rate, and this selection took the whole panel down with it.
+    const pricing = screen.getByLabelText('Opus · Balanced estimated pricing')
+    // The rate covers the metered roles only -- research and audit -- rather
+    // than being diluted by treating the plan-served writer as free.
+    expect(within(pricing).getByText('$1.35')).toBeInTheDocument()
+    expect(within(pricing).getByText('Input $0.75 / 1M')).toBeInTheDocument()
+    expect(within(pricing).getByText('Metered part')).toBeInTheDocument()
+    expect(
+      within(pricing).getByText(/Article writer runs on your Claude plan/),
+    ).toBeInTheDocument()
+
+    const receipt = screen.getByLabelText('Opus · Balanced model assignments')
+    expect(within(receipt).getByText('Claude Opus 5')).toBeInTheDocument()
+    // The grunt work does not move.
+    expect(within(receipt).getAllByText('Gemini 3.7 Flash')).toHaveLength(2)
   })
 
   it('keeps editorial extras off until the operator opts in', async () => {

@@ -14,6 +14,7 @@ export type Prompt2BlogModelName =
 // Writing-quality model for the compose / editorial stages, independent of the
 // base drafting model. Backend allowlist: app/shared/writer_models.py.
 export type Prompt2BlogWriterModel =
+  | 'claude-opus-5'
   | 'claude-opus-4-8'
   | 'claude-opus-4-7'
   | 'claude-sonnet-5'
