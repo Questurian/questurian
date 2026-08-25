@@ -58,6 +58,34 @@ OUTLINE_SCHEMA: dict[str, Any] = {
     },
 }
 
+V3_OUTLINE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": ["working_title", "sections"],
+    "properties": {
+        "working_title": {"type": "string"},
+        "direct_answer_focus": {"type": "string"},
+        "sections": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 12,
+            "items": {
+                "type": "object",
+                "required": ["heading"],
+                "properties": {
+                    "heading": {"type": "string"},
+                    "purpose": {"type": "string"},
+                    "claim_ids": {"type": "array", "items": {"type": "string"}},
+                    "requirement_ids": {"type": "array", "items": {"type": "string"}},
+                    "target_words": {"type": "integer", "minimum": 0},
+                },
+            },
+        },
+        "takeaway_focus": {"type": "string"},
+        "commission_alignment": {"type": "string"},
+        "unsupported_requirements": {"type": "array", "items": {"type": "string"}},
+    },
+}
+
 # Shared by compose and by repair: both return a whole rewritten article, and
 # both go through _sanitize_rewrite.
 REWRITE_SCHEMA: dict[str, Any] = {
