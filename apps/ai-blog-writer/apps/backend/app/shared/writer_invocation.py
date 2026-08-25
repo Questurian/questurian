@@ -171,13 +171,10 @@ def _invoke_structured_via_cli(
     input_schema: dict,
 ) -> StructuredWriterResult:
     cli_writer = _cli_writer()
-    # The CLI has no tool to name, so a prompt that ends "call the emit_seo_patch
-    # tool" would be an instruction about something that does not exist. Restate
-    # it as what the CLI actually does.
-    framed = (
-        f"{prompt}\n\n"
-        f"Return your answer as JSON matching the required schema "
-        f"({tool_name}): {tool_description}"
+    framed = cli_writer.frame_schema_prompt(
+        prompt,
+        tool_name=tool_name,
+        tool_description=tool_description,
     )
     try:
         result = cli_writer.invoke_structured(

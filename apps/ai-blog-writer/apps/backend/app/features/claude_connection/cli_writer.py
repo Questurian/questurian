@@ -128,6 +128,39 @@ DENIED_TOOLS = (
 )
 
 
+# A refusal does not arrive shaped like a refusal.
+#
+# Asking for a model this plan cannot serve returns `subtype: "success"` with
+# the apology sitting in `result` -- "You've hit your monthly spend limit.
+# Switch to another model..." -- alongside `is_error: true`,
+# `terminal_reason: "api_error"` and `total_cost_usd: 0`. A caller that trusts
+# `subtype` and reads `result` publishes that sentence as article prose.
+#
+# So `subtype` is not evidence of anything and is not consulted. Three things
+# are checked instead, at the one chokepoint both call shapes go through:
+#
+#   is_error          the flag that was actually set on the observed refusal.
+#   terminal_reason   named reasons a run stopped without answering. A deny
+#                     list, not an allow list: the CLI is free to add new
+#                     benign values, and failing an unrecognised one would
+#                     break working calls on a version bump.
+#   output tokens     zero generated tokens means the model wrote nothing, so
+#                     whatever is in `result` came from the harness rather than
+#                     from Claude. This is the check that does not depend on
+#                     guessing which flags a future refusal will carry.
+FAILED_TERMINAL_REASONS = frozenset(
+    {
+        "api_error",
+        "budget_exhausted",
+        "error",
+        "error_during_execution",
+        "max_turns",
+        "refusal",
+        "timeout",
+    }
+)
+
+
 class ClaudeCliWriterError(RuntimeError):
     """A writer call that could not be made, or whose output was unusable."""
 
@@ -285,10 +318,33 @@ def _invoke(
         raise ClaudeCliWriterError(
             "Claude answered with output this app could not read."
         )
+    _assert_claude_actually_answered(payload)
+
+    return payload, alias
+
+
+def _assert_claude_actually_answered(payload: dict[str, Any]) -> None:
+    """Reject a reply that carries a refusal instead of an answer.
+
+    See FAILED_TERMINAL_REASONS above for why this is three checks and why
+    ``subtype`` is not one of them.
+    """
     if payload.get("is_error"):
         raise ClaudeCliWriterError("Claude reported an error answering the call.")
 
-    return payload, alias
+    reason = payload.get("terminal_reason")
+    if isinstance(reason, str) and reason.strip().lower() in FAILED_TERMINAL_REASONS:
+        raise ClaudeCliWriterError(
+            "Claude stopped without answering the call, so nothing was used."
+        )
+
+    # Absent rather than zero means the CLI did not report it; only a reported
+    # zero is evidence that nothing was generated.
+    output_tokens = _usage_from(payload).get("outputTokens")
+    if output_tokens == 0:
+        raise ClaudeCliWriterError(
+            "Claude generated no output, so its reply was not used."
+        )
 
 
 def invoke_text(
@@ -310,6 +366,27 @@ def invoke_text(
         "costUsd": _cost_of(payload),
         "usage": _usage_from(payload),
     }
+
+
+def frame_schema_prompt(
+    prompt: str,
+    *,
+    tool_name: str,
+    tool_description: str,
+) -> str:
+    """Restate a forced-tool instruction as something the CLI can honour.
+
+    ``--json-schema`` forces the shape without naming a tool, so a prompt ending
+    "call the emit_seo_patch tool" would be an instruction about something that
+    does not exist. Dropping the caller's wording instead would lose the
+    description, which is often the only place the semantics of the schema are
+    written down.
+    """
+    return (
+        f"{prompt}\n\n"
+        f"Return your answer as JSON matching the required schema "
+        f"({tool_name}): {tool_description}"
+    )
 
 
 def invoke_structured(
