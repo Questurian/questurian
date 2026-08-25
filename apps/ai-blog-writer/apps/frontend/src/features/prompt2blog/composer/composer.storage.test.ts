@@ -76,69 +76,32 @@ describe('loadSavedComposerState', () => {
     localStorage.clear()
   })
 
-  it('preserves the reader while dropping legacy duplicate steering fields', () => {
+  it('drops every field the v2 composer owned instead of restoring it', () => {
     localStorage.setItem(
       COMPOSER_STORAGE_KEY,
       JSON.stringify({
+        composerStorageVersion: 2,
+        articleTypeId: 7,
         targetReader: 'Budget-conscious families',
         audienceProfile: 'Families seeking free activities',
         promptEnhance: true,
+        enableEditorialAugmentation: true,
+        blobs: [{ id: 8, content: 'Saved source' }],
       }),
     )
 
     const state = loadSavedComposerState()
 
-    expect(state.targetReader).toBe('Budget-conscious families — Families seeking free activities')
-    expect(state).not.toHaveProperty('audienceProfile')
-    expect(state).not.toHaveProperty('promptEnhance')
-  })
-
-  it('uses legacy audience detail when the saved target reader is empty', () => {
-    localStorage.setItem(
-      COMPOSER_STORAGE_KEY,
-      JSON.stringify({
-        targetReader: '',
-        audienceProfile: 'Families seeking free activities',
-      }),
-    )
-
-    expect(loadSavedComposerState().targetReader).toBe('Families seeking free activities')
-  })
-
-  it('does not repeat identical legacy audience detail', () => {
-    localStorage.setItem(
-      COMPOSER_STORAGE_KEY,
-      JSON.stringify({
-        targetReader: 'Budget-conscious families',
-        audienceProfile: 'budget-conscious families',
-      }),
-    )
-
-    expect(loadSavedComposerState().targetReader).toBe('Budget-conscious families')
-  })
-
-  it('defaults editorial extras off for a new draft', () => {
-    expect(DEFAULT_COMPOSER_STATE.enableEditorialAugmentation).toBe(false)
-  })
-
-  it('turns off the old unversioned editorial-augmentation default', () => {
-    localStorage.setItem(
-      COMPOSER_STORAGE_KEY,
-      JSON.stringify({
-        enableEditorialAugmentation: true,
-      }),
-    )
-
-    expect(loadSavedComposerState().enableEditorialAugmentation).toBe(false)
-  })
-
-  it('preserves editorial augmentation after a user opts in', () => {
-    saveComposerState({
-      ...DEFAULT_COMPOSER_STATE,
-      enableEditorialAugmentation: true,
-    })
-
-    expect(loadSavedComposerState().enableEditorialAugmentation).toBe(true)
+    for (const key of [
+      'articleTypeId',
+      'targetReader',
+      'audienceProfile',
+      'promptEnhance',
+      'enableEditorialAugmentation',
+      'blobs',
+    ]) {
+      expect(state).not.toHaveProperty(key)
+    }
   })
 
   it('preserves the selected full-pipeline model stack', () => {
@@ -171,7 +134,7 @@ describe('loadSavedComposerState', () => {
     expect(localStorage.getItem(COMPOSER_STORAGE_KEY)).toBe(futureDraft)
   })
 
-  it('migrates a v2 draft without mapping its numeric article type into v3', () => {
+  it('asks a v2 draft to be reconfirmed rather than mapping its numeric type into v3', () => {
     localStorage.setItem(
       COMPOSER_STORAGE_KEY,
       JSON.stringify({
@@ -191,15 +154,33 @@ describe('loadSavedComposerState', () => {
       activeWorkflow: 'legacy_v2',
       easySetupTitle: 'A week in Lima',
       easySetupLocation: 'Lima, Peru',
-      articleTypeId: 7,
-      targetReader: 'First-time visitors',
       toneId: 'balanced',
-      blobs: [{ id: 8, content: 'Saved source' }],
       editorial: {
         directionOptions: [],
         commissionDraft: null,
         approval: { status: 'reconfirmation_required', reason: 'legacy_draft' },
       },
+    })
+  })
+
+  it('leaves an empty v2 draft alone rather than demanding reconfirmation', () => {
+    localStorage.setItem(
+      COMPOSER_STORAGE_KEY,
+      JSON.stringify({ composerStorageVersion: 2, toneId: 'balanced' }),
+    )
+
+    expect(loadSavedComposerState().editorial.approval).toEqual({ status: 'not_started' })
+  })
+
+  it('still detects real work in a draft whose fields the composer no longer has', () => {
+    localStorage.setItem(
+      COMPOSER_STORAGE_KEY,
+      JSON.stringify({ composerStorageVersion: 2, articleGoal: 'Help readers plan a trip.' }),
+    )
+
+    expect(loadSavedComposerState().editorial.approval).toEqual({
+      status: 'reconfirmation_required',
+      reason: 'legacy_draft',
     })
   })
 

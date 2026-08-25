@@ -6,8 +6,6 @@ import type {
   Prompt2BlogInputOptionsResponse,
   Prompt2BlogPipelineStage,
   Prompt2BlogResultResponse,
-  Prompt2BlogRunRequest,
-  Prompt2BlogRunResponse,
   Prompt2BlogStatusResponse,
   Prompt2BlogV3StartResponse,
 } from '../types/pipeline.types'
@@ -35,22 +33,6 @@ export function normalizePrompt2BlogStatusResponse(
   })
 
   return finalizeStatusResponse(normalized, { fallbackRunId, feature: 'prompt2blog' })
-}
-
-export async function startPrompt2BlogRun(
-  payload: Prompt2BlogRunRequest,
-): Promise<Prompt2BlogRunResponse> {
-  const response = await apiFetch(`${FEATURE_PREFIX}/run`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-
-  if (!response.ok) {
-    throw await parseError(response, 'Prompt2Blog run failed to start')
-  }
-
-  return response.json()
 }
 
 /**

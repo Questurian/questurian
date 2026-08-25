@@ -15,7 +15,6 @@ vi.mock('../api', () => ({
   getPrompt2BlogInputOptions: vi.fn(),
   getPrompt2BlogResult: vi.fn(),
   getPrompt2BlogStatus: vi.fn(),
-  startPrompt2BlogRun: vi.fn(),
   startPrompt2BlogV3Run: vi.fn(),
 }))
 
@@ -24,7 +23,6 @@ const getPrompt2BlogEditorialOptionsMock = vi.mocked(prompt2blogApi.getPrompt2Bl
 const getPrompt2BlogInputOptionsMock = vi.mocked(prompt2blogApi.getPrompt2BlogInputOptions)
 const getPrompt2BlogResultMock = vi.mocked(prompt2blogApi.getPrompt2BlogResult)
 const getPrompt2BlogStatusMock = vi.mocked(prompt2blogApi.getPrompt2BlogStatus)
-const startPrompt2BlogRunMock = vi.mocked(prompt2blogApi.startPrompt2BlogRun)
 const startPrompt2BlogV3RunMock = vi.mocked(prompt2blogApi.startPrompt2BlogV3Run)
 
 function renderPage() {
@@ -316,10 +314,6 @@ describe('Prompt2BlogPage', () => {
         brand_voice_id: 'questurian',
       },
     })
-    startPrompt2BlogRunMock.mockResolvedValue({
-      message: 'Prompt2Blog full run queued',
-      run_id: 'run-123',
-    })
     getPrompt2BlogStatusMock.mockResolvedValue({
       run_id: 'run-123',
       feature: 'prompt2blog',
@@ -567,26 +561,10 @@ describe('Prompt2BlogPage', () => {
     expect(within(receipt).getAllByText('Gemini 3.7 Flash')).toHaveLength(2)
   })
 
-  it('keeps editorial extras off until the operator opts in', async () => {
-    renderPage()
-
-    const editorialExtras = await screen.findByLabelText('Add editorial extras')
-
-    expect(editorialExtras).not.toBeChecked()
-    expect(
-      screen.getByText('May add a useful pull quote, callout, FAQ, or takeaway box.'),
-    ).toBeInTheDocument()
-
-    fireEvent.click(editorialExtras)
-
-    expect(editorialExtras).toBeChecked()
-  })
-
   it('blocks submission while an editorial v3 direction is unfinished', async () => {
     saveComposerState({
       ...DEFAULT_COMPOSER_STATE,
       activeWorkflow: 'editorial_v3',
-      articleTypeId: 7,
       editorial: {
         ...DEFAULT_COMPOSER_STATE.editorial,
         approval: { status: 'awaiting_selection' },
@@ -603,7 +581,6 @@ describe('Prompt2BlogPage', () => {
       'Choose one of the three directions before running.',
     )
     fireEvent.click(runButton)
-    expect(startPrompt2BlogRunMock).not.toHaveBeenCalled()
     expect(startPrompt2BlogV3RunMock).not.toHaveBeenCalled()
   })
 

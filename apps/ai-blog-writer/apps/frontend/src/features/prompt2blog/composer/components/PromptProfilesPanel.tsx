@@ -13,10 +13,8 @@ function resolveCreativityLevel(value: string): P2BFormState['creativityLevel'] 
 interface PromptProfilesPanelProps {
   brandVoiceId: string
   creativityLevel: 'low' | 'medium' | 'high'
-  enableEditorialAugmentation: boolean
   inputOptions: Prompt2BlogInputOptionsResponse | null
   lengthId: string
-  negativeInstructions: string
   toneId: string
   onChange: <K extends keyof P2BFormState>(field: K, value: P2BFormState[K]) => void
   onClear: () => void
@@ -40,21 +38,6 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
         </summary>
         <div className="p2b-disclosure-body">
           <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', resolveCreativityLevel(event.target.value))}>{CREATIVITY_LEVELS.map(level => <option key={level} value={level}>{level[0].toUpperCase()}{level.slice(1)}</option>)}</select></div>
-          <div className="p2b-field"><label htmlFor="p2b-negative">Negative Instructions (one per line)</label><textarea id="p2b-negative" className="p2b-textarea" rows={3} value={props.negativeInstructions} onChange={event => props.onChange('negativeInstructions', event.target.value)} placeholder="What to avoid" /></div>
-          <div className="p2b-checkbox-stack">
-            <div className="p2b-checkbox-option">
-              <label className="p2b-debug-checkbox" htmlFor="p2b-editorial-toggle">
-                <input
-                  id="p2b-editorial-toggle"
-                  type="checkbox"
-                  checked={props.enableEditorialAugmentation}
-                  onChange={event => props.onChange('enableEditorialAugmentation', event.target.checked)}
-                />
-                Add editorial extras
-              </label>
-              <p className="p2b-field-hint">May add a useful pull quote, callout, FAQ, or takeaway box.</p>
-            </div>
-          </div>
         </div>
       </details>
   </Panel>

@@ -108,11 +108,6 @@ describe('v3SubmissionBlockedReason', () => {
     expect(v3SubmissionBlockedReason(approvedState({ lengthId: '' }))).toMatch(/Tone and length/)
   })
 
-  it('blocks editorial extras rather than silently dropping them', () => {
-    expect(v3SubmissionBlockedReason(approvedState({ enableEditorialAugmentation: true }))).toMatch(
-      /Editorial extras are not available/,
-    )
-  })
 })
 
 describe('buildPrompt2BlogV3Payload', () => {
@@ -124,9 +119,7 @@ describe('buildPrompt2BlogV3Payload', () => {
 
   it('returns null whenever a blocker is reported', () => {
     expect(buildPrompt2BlogV3Payload(approvedState({ toneId: '' }))).toBeNull()
-    expect(
-      buildPrompt2BlogV3Payload(approvedState({ enableEditorialAugmentation: true })),
-    ).toBeNull()
+    expect(buildPrompt2BlogV3Payload(approvedState({ lengthId: '' }))).toBeNull()
   })
 
   it('sends the approved commission and evidence package whole', () => {

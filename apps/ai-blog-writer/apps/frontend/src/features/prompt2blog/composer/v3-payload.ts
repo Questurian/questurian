@@ -55,13 +55,6 @@ export function v3SubmissionBlockedReason(state: P2BFormState): string | null {
 
   if (!state.toneId || !state.lengthId) return 'Tone and length are required.'
 
-  // v3 refuses this flag with a 400 rather than accepting it and ignoring it:
-  // augmentation rewrites audited prose and has not been re-verified against
-  // the evidence model. Say so here instead of dropping the user's choice.
-  if (state.enableEditorialAugmentation) {
-    return 'Editorial extras are not available on the v3 pipeline. Turn them off to run.'
-  }
-
   return null
 }
 
@@ -97,6 +90,9 @@ export function buildPrompt2BlogV3Payload(state: P2BFormState): Prompt2BlogV3Req
       model_stack_id: state.modelStackId,
     },
     include_debug: true,
+    // v3 refuses this flag with a 400 rather than accepting it and ignoring
+    // it: augmentation rewrites audited prose and has not been re-verified
+    // against the evidence model. The composer no longer offers the toggle.
     enable_editorial_augmentation: false,
   }
 }

@@ -236,11 +236,8 @@ describe('commission state', () => {
     )
   })
 
-  it('clears direction state back to legacy without clearing legacy or profile fields', () => {
+  it('clears direction state back to legacy without clearing the profile fields', () => {
     const current = selectedState()
-    current.articleTypeId = 7
-    current.articleGoal = 'Retained legacy goal'
-    current.blobs = [{ id: 1, content: 'Retained source' }]
 
     const next = clearDirectionWorkflow(current)
 
@@ -252,9 +249,6 @@ describe('commission state', () => {
       approval: { status: 'not_started' },
       evidencePackage: null
     })
-    expect(next.articleTypeId).toBe(7)
-    expect(next.articleGoal).toBe('Retained legacy goal')
-    expect(next.blobs).toEqual([{ id: 1, content: 'Retained source' }])
     expect(next.modelStackId).toBe('best-value')
     expect(next.toneId).toBe('editorial')
   })
