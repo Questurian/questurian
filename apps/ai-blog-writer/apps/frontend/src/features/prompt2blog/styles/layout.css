@@ -233,3 +233,112 @@
   line-height: 1.5;
   color: var(--ink);
 }
+
+/* --- Step sections ---------------------------------------------------------
+   One numbered step: what it is called, why it exists, and its work. The
+   current step is open; finished and upcoming ones are closed but never
+   disabled, so an operator can look ahead or go back without being blocked. */
+
+.p2b-step-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface, white);
+  overflow: hidden;
+}
+
+.p2b-step-section--current {
+  border-color: var(--p2b-accent);
+}
+
+.p2b-step-section--upcoming .p2b-step-section-header {
+  opacity: 0.65;
+}
+
+.p2b-step-section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+
+.p2b-step-section--open .p2b-step-section-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.p2b-step-section-number {
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+
+.p2b-step-section--done .p2b-step-section-number {
+  border-color: var(--p2b-accent);
+  color: var(--p2b-accent);
+}
+
+.p2b-step-section--current .p2b-step-section-number {
+  background: var(--p2b-accent);
+  border-color: var(--p2b-accent);
+  color: white;
+}
+
+.p2b-step-section-heading-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.p2b-step-section-heading-text h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  color: var(--ink);
+}
+
+.p2b-step-section-purpose,
+.p2b-step-section-summary {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--ink);
+  opacity: 0.8;
+}
+
+.p2b-step-section-toggle {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  border: 1px solid var(--border);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: var(--p2b-accent);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.p2b-step-section-toggle:hover {
+  border-color: var(--p2b-accent);
+  background: var(--p2b-accent-softer);
+}
+
+.p2b-step-section-body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.p2b-step-section-body[hidden] {
+  display: none;
+}

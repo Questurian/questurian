@@ -221,6 +221,12 @@ function createDirectionResponseJson() {
   })
 }
 
+function openStep(name: RegExp) {
+  const header = screen.getByRole('heading', { name }).closest('.p2b-step-section-header')
+  const toggle = within(header as HTMLElement).getByRole('button')
+  if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle)
+}
+
 describe('Prompt2BlogPage', () => {
   let restoreClipboard: (() => void) | null = null
 
@@ -363,27 +369,69 @@ describe('Prompt2BlogPage', () => {
     }
   })
 
-  it('starts with an Easy Set Up block containing Title and Location fields', async () => {
+  it('opens on step one, holding only Title and Location', async () => {
     renderPage()
 
-    const easySetupPanel = screen.getByRole('heading', { name: 'Easy Set Up' }).closest('section')
+    const startStep = screen
+      .getByRole('heading', { name: /Step 1: Start the article/ })
+      .closest('section')
     const profilesPanel = screen
       .getByRole('heading', { name: 'Writing Profiles' })
       .closest('section')
 
-    expect(easySetupPanel).toBeInTheDocument()
-    expect(easySetupPanel?.compareDocumentPosition(profilesPanel!)).toBe(
+    expect(startStep).toBeInTheDocument()
+    expect(startStep?.compareDocumentPosition(profilesPanel!)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
-    expect(within(easySetupPanel!).getByLabelText('Title')).toBeInTheDocument()
-    expect(within(easySetupPanel!).getByLabelText('Location')).toBeInTheDocument()
-    expect(within(easySetupPanel!).queryByLabelText('Direction JSON')).not.toBeInTheDocument()
+    expect(within(startStep!).getByLabelText('Title')).toBeInTheDocument()
+    expect(within(startStep!).getByLabelText('Location')).toBeInTheDocument()
+    expect(within(startStep!).queryByLabelText('Direction JSON')).not.toBeInTheDocument()
     expect(
-      within(easySetupPanel!).getByRole('button', {
+      within(startStep!).getByRole('button', {
         name: 'Generate direction prompt',
       }),
     ).toBeDisabled()
-    expect(within(easySetupPanel!).queryByLabelText('Prompt')).not.toBeInTheDocument()
+    expect(within(startStep!).queryByLabelText('Prompt')).not.toBeInTheDocument()
+  })
+
+  it('presents the numbered steps in order, with only the current one open', async () => {
+    renderPage()
+
+    const headings = screen
+      .getAllByRole('heading', { name: /^Step \d:/ })
+      .map(heading => heading.textContent)
+
+    expect(headings).toEqual([
+      'Step 1: Start the article',
+      'Step 2: Pick a direction',
+    ])
+
+    const startBody = screen
+      .getByRole('heading', { name: /Step 1: Start the article/ })
+      .closest('section')
+      ?.querySelector('.p2b-step-section-body')
+    const directionBody = screen
+      .getByRole('heading', { name: /Step 2: Pick a direction/ })
+      .closest('section')
+      ?.querySelector('.p2b-step-section-body')
+
+    expect(startBody).not.toHaveAttribute('hidden')
+    expect(directionBody).toHaveAttribute('hidden')
+  })
+
+  it('lets an operator look ahead into a step they have not reached', async () => {
+    // Locking a step nobody has reached punishes curiosity for no safety gain:
+    // the controls inside already refuse work that is not ready.
+    renderPage()
+
+    openStep(/Step 2: Pick a direction/)
+
+    expect(
+      screen
+        .getByRole('heading', { name: /Step 2: Pick a direction/ })
+        .closest('section')
+        ?.querySelector('.p2b-step-section-body'),
+    ).not.toHaveAttribute('hidden')
   })
 
   it('puts the work first and the model machinery last', async () => {
@@ -391,14 +439,16 @@ describe('Prompt2BlogPage', () => {
     // cost picker, above the two fields that actually start an article.
     renderPage()
 
-    const easySetupPanel = screen.getByRole('heading', { name: 'Easy Set Up' }).closest('section')
+    const startStep = screen
+      .getByRole('heading', { name: /Step 1: Start the article/ })
+      .closest('section')
     const profilesPanel = screen
       .getByRole('heading', { name: 'Writing Profiles' })
       .closest('section')
     const pipelinePanel = screen.getByRole('heading', { name: 'Pipeline' }).closest('section')
     const advancedPanel = screen.getByRole('heading', { name: 'Advanced' }).closest('section')
 
-    expect(easySetupPanel?.compareDocumentPosition(profilesPanel!)).toBe(
+    expect(startStep?.compareDocumentPosition(profilesPanel!)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
     expect(profilesPanel?.compareDocumentPosition(pipelinePanel!)).toBe(
@@ -666,6 +716,7 @@ describe('Prompt2BlogPage', () => {
     ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeDisabled()
 
+    openStep(/Step 2: Pick a direction/)
     fireEvent.click(screen.getByRole('button', { name: 'Clear direction work' }))
     expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeEnabled()
   })
@@ -691,6 +742,7 @@ describe('Prompt2BlogPage', () => {
       target: { value: 'Three days in Lisbon' },
     })
 
+    openStep(/Step 2: Pick a direction/)
     expect(screen.getByRole('button', { name: 'Show direction cards' })).toBeDisabled()
     expect(screen.getByLabelText('Direction JSON')).toHaveValue('')
   })
