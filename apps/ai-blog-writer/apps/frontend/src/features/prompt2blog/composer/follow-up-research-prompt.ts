@@ -7,7 +7,10 @@ import {
   evidenceSatisfiesSourceRequirement,
   type EvidenceReadinessFinding
 } from './evidence-import'
-import { formatEvidencePackageContract } from './research-prompt'
+import {
+  formatEvidencePackageContract,
+  REQUIREMENT_STATUS_RULES
+} from './research-prompt'
 
 function formatActiveModules(
   commission: Prompt2BlogCommission,
@@ -148,10 +151,12 @@ ${formatActiveModules(commission, catalog)}
 REPLACEMENT RULES
 - Do not redo or weaken already supported work. Preserve valid existing sources, claims, requirement links, dates, metadata, and resolved conflicts.
 - Add or revise only what is needed to close the listed requirements, conflicts, findings, and source gates.
-- Use partial or missing honestly when the follow-up still cannot close a gap.
+- Set requirement status and claim confidence by the rules below, including for work this follow-up still cannot close.
 - Keep every locked requirement exactly once in requirements, including already supported requirements.
 - Keep source/claim mappings bidirectional and resolvable. Web and report sources require publisher and URL.
 - Preserve exact material_type so source-gate readiness remains deterministic.
+
+${REQUIREMENT_STATUS_RULES}
 
 OUTPUT
 Return one bare JSON object and nothing else. No Markdown fence, preamble, commentary, or trailing note. Use exactly the shown keys and empty arrays rather than omitted collections. Return the entire replacement package with the locked fingerprint; return no commission object or editorial-authority fields.

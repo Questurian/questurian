@@ -42,6 +42,25 @@ function activeResearchGuidance(
   }
 }
 
+/**
+ * Requirement status and claim confidence answer different questions, and a
+ * research desk that conflates them stalls on a question it has in fact
+ * answered. The real run that motivated this block held a requirement at
+ * `partial` for three rounds because the issuing authority's own site blocks
+ * automated retrieval, even though several independent sources agreed on the
+ * figure. An unreachable primary source is a confidence reservation, not an
+ * unanswered question.
+ *
+ * Shared verbatim with the follow-up prompt and mirrored in the backend's
+ * `build_follow_up_research_prompt`; all three must say the same thing.
+ */
+export const REQUIREMENT_STATUS_RULES = `REQUIREMENT STATUS VERSUS CLAIM CONFIDENCE
+These record two different things. Never conflate them.
+- status describes the QUESTION. supported means linked claims answer the requirement's question; partial means part of that question is still unanswered; missing means none of it is answered.
+- confidence describes the ANSWER. high, medium, or low records how well corroborated that answer is.
+- An answer you found and corroborated stays supported even when you could not reach the ideal primary source, the publisher blocks automated retrieval, or you would have preferred more evidence. Record that reservation as claim confidence medium or low and as a source note. Never downgrade the requirement to partial for it.
+- Reserve partial and missing for a genuinely unanswered question. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims.`
+
 /** Exact bare response shape shared by initial and follow-up research prompts. */
 export function formatEvidencePackageContract(fingerprint: string): string {
   return `{
@@ -75,7 +94,7 @@ export function formatEvidencePackageContract(fingerprint: string): string {
       "requirement_id": "r1",
       "status": "supported|partial|missing",
       "claim_ids": ["c1"],
-      "gap": "Empty only when fully supported; otherwise say exactly what is missing"
+      "gap": "Empty only when the question is answered; otherwise say exactly which part of the question is still unanswered"
     }
   ],
   "conflicts": [
@@ -131,10 +150,12 @@ RESEARCH DISCIPLINE
 - Prefer primary, official, attributable, current sources; preserve publisher, URL, dates, source type, material type, and useful notes.
 - Use separate source and claim IDs. Every claim must cite existing source IDs and one or more locked requirement IDs.
 - Record volatile facts with an as-of date. Explain conflicts instead of choosing silently.
-- Use partial or missing honestly. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims.
+- Set requirement status and claim confidence by the rules below.
 - Every commission requirement ID must appear exactly once in requirements. Do not invent requirement IDs.
 - Web and report material requires publisher and URL. Every source requires at least one useful note.
 - For transcript, interview-response, first-person-note, evaluation-note, or other operator-supplied material, publisher, URL, and published_at may be JSON null.
+
+${REQUIREMENT_STATUS_RULES}
 
 OUTPUT
 Return one bare JSON object and nothing else. No Markdown fence, preamble, commentary, or trailing note. Use exactly the shown keys; use empty arrays rather than omitting collections. Return no commission object or editorial-authority fields.
