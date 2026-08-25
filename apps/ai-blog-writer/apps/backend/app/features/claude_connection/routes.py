@@ -64,6 +64,21 @@ def start_claude_login(
             ),
         )
 
+    # Who is asking is settled before what this host can do. A remote caller is
+    # refused on every platform, not only the one that happens to have a
+    # launcher wired up -- otherwise the same request is a 403 on macOS and a
+    # 501 on Linux, which is both a platform-dependent gate and a needless hint
+    # to a caller that was never going to be allowed through.
+    if not login_module.is_loopback_client(host):
+        raise HTTPException(
+            status_code=403,
+            detail=(
+                "A Claude sign-in can only be started from a browser on the "
+                "machine hosting this backend, because it signs in that machine "
+                f"rather than you. Run `{command}` there instead."
+            ),
+        )
+
     if not login_module.launcher_supported():
         raise HTTPException(
             status_code=501,
@@ -73,13 +88,13 @@ def start_claude_login(
             ),
         )
 
-    if not login_module.login_available(host):
+    if login_module.resolve_cli_path() is None:
         raise HTTPException(
-            status_code=403,
+            status_code=501,
             detail=(
-                "A Claude sign-in can only be started from a browser on the "
-                "machine hosting this backend, because it signs in that machine "
-                f"rather than you. Run `{command}` there instead."
+                "The Claude Code CLI was not found on this machine, so there is "
+                "nothing to open a terminal for. Install it, or set "
+                "ABW_CLAUDE_CLI to its path."
             ),
         )
 
