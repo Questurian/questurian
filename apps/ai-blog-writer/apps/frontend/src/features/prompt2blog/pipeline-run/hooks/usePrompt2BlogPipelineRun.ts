@@ -2,18 +2,31 @@ import { useCallback, useMemo, useState } from 'react'
 import { buildStageArticleUrl } from '../../../blogArticles'
 import {
   type Prompt2BlogRunRequest,
+  type Prompt2BlogV3NeedsResearchResponse,
+  type Prompt2BlogV3Request,
 } from '../../api'
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
 import { PROMPT2BLOG_PIPELINE_STAGES } from '../../types/pipeline.types'
 import type {
   PipelineLogEntry,
   PipelineLogLevel,
+  PipelineVersion,
 } from '../pipeline-run.types'
 import { usePersistedPipelineRunState } from './usePersistedPipelineRunState'
 import { usePrompt2BlogMutation } from './usePrompt2BlogMutation'
 import { usePrompt2BlogRunLifecycle } from './usePrompt2BlogRunLifecycle'
 
-export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null) {
+type Prompt2BlogPipelineRunOptions = {
+  v2Payload: Prompt2BlogRunRequest | null
+  v3Payload: Prompt2BlogV3Request | null
+  v3BlockedReason?: string | null
+}
+
+export function usePrompt2BlogPipelineRun({
+  v2Payload,
+  v3Payload,
+  v3BlockedReason,
+}: Prompt2BlogPipelineRunOptions) {
   const {
     savedRun,
     sourceStep,
@@ -26,6 +39,9 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   } = usePersistedPipelineRunState()
   const [pipelineLogs, setPipelineLogs] = useState<PipelineLogEntry[]>([])
   const [showPipelineDebug, setShowPipelineDebug] = useState(false)
+  const [needsResearch, setNeedsResearch] = useState<Prompt2BlogV3NeedsResearchResponse | null>(
+    null,
+  )
 
   const appendPipelineLog = useCallback((message: string, level: PipelineLogLevel = 'info') => {
     setPipelineLogs(prev => [
@@ -66,7 +82,15 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     isPending: isStartingPipeline,
     mutate: startPipeline,
     reset: resetStartPipeline,
-  } = usePrompt2BlogMutation(payload)
+  } = usePrompt2BlogMutation({ v2Payload, v3Payload, v3BlockedReason })
+
+  // Which pipeline's stage list to show. A finished run names its own version;
+  // a run being started is named by the payload that will start it.
+  const pipelineVersion: PipelineVersion = pipelineResult
+    ? pipelineResult.version
+    : v3Payload
+      ? 'v3'
+      : 'v2'
 
   const {
     pipelineStatus,
@@ -111,13 +135,28 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setLoadingLabel('Starting final article pipeline...')
     setPipelineLogs([])
     setShowPipelineDebug(false)
+    setNeedsResearch(null)
 
     startPipeline(undefined, {
-      onSuccess: (startResponse) => {
+      onSuccess: (outcome) => {
         resetStartPipeline()
-        appendPipelineLog(`Pipeline started. Run ID: ${startResponse.run_id}`)
+        if (outcome.kind === 'needs_research') {
+          // The gate stopped before any writing work existed. Stay on the edit
+          // step so the research panel is still there to take a replacement
+          // package.
+          setNeedsResearch(outcome.payload)
+          appendPipelineLog(
+            `Run not started: research is incomplete (${outcome.payload.findings.length} finding${
+              outcome.payload.findings.length === 1 ? '' : 's'
+            }).`,
+          )
+          setLoadingLabel('')
+          setSourceStep('edit')
+          return
+        }
+        appendPipelineLog(`Pipeline started. Run ID: ${outcome.runId}`)
         setLoadingLabel('Running final article pipeline...')
-        setPipelineRunId(startResponse.run_id)
+        setPipelineRunId(outcome.runId)
         setSourceStep('pipeline_running')
       },
       onError: (err) => {
@@ -151,6 +190,7 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     clearLifecycleState()
     setPipelineLogs([])
     setShowPipelineDebug(false)
+    setNeedsResearch(null)
     resetStatusError()
     clearPersistedRunState()
   }, [
@@ -182,6 +222,9 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
     setError,
     stageArticleUrl,
     canOpenCleanupModal,
+    needsResearch,
+    dismissNeedsResearch: () => setNeedsResearch(null),
+    pipelineVersion,
     run,
     reset,
   }

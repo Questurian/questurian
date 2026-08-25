@@ -17,7 +17,11 @@ import '../styles.css'
 
 export default function Prompt2BlogPage() {
   const composer = usePrompt2BlogComposer()
-  const pipeline = usePrompt2BlogPipelineRun(composer.payload)
+  const pipeline = usePrompt2BlogPipelineRun({
+    v2Payload: composer.payload,
+    v3Payload: composer.v3Payload,
+    v3BlockedReason: composer.submissionBlockedReason,
+  })
   const cleanupModal = useCleanupDetailsModal({
     pipelineRunId: pipeline.pipelineRunId,
     pipelineDebugData: pipeline.pipelineDebugData,
@@ -27,8 +31,10 @@ export default function Prompt2BlogPage() {
   const { state } = composer
 
   const handleCopyJson = useCallback(() => {
+    // Copy whichever request this draft would actually send.
+    const submittedPayload = composer.v3Payload ?? composer.payload
     navigator.clipboard
-      .writeText(JSON.stringify(composer.payload, null, 2))
+      .writeText(JSON.stringify(submittedPayload, null, 2))
       .then(() => {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
@@ -36,12 +42,20 @@ export default function Prompt2BlogPage() {
       .catch(() => {
         pipeline.setError('Unable to copy JSON to clipboard.')
       })
-  }, [composer.payload, pipeline])
+  }, [composer.payload, composer.v3Payload, pipeline])
 
   const handleResetRun = useCallback(() => {
     cleanupModal.close()
     pipeline.reset()
   }, [cleanupModal, pipeline])
+
+  // The research step is already on the page; a stopped run needs the user
+  // taken back to the box that accepts a replacement package, not a new screen.
+  const handleBackToResearch = useCallback(() => {
+    const evidenceField = document.getElementById('p2b-evidence-json')
+    evidenceField?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    if (evidenceField instanceof HTMLTextAreaElement) evidenceField.focus()
+  }, [])
 
   const handleClear = useCallback(() => {
     composer.clearAll()
@@ -156,6 +170,7 @@ export default function Prompt2BlogPage() {
           </MiddleSectionsFold>
           <PipelinePanel
             run={pipeline}
+            onBackToResearch={handleBackToResearch}
             onOpenCleanupModal={() => void cleanupModal.open()}
             onReset={handleResetRun}
             submissionBlockedReason={composer.submissionBlockedReason}

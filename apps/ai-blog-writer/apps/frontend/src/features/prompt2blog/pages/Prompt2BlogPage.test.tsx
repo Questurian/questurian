@@ -17,6 +17,7 @@ vi.mock('../api', () => ({
   getPrompt2BlogResult: vi.fn(),
   getPrompt2BlogStatus: vi.fn(),
   startPrompt2BlogRun: vi.fn(),
+  startPrompt2BlogV3Run: vi.fn(),
 }))
 
 const getPrompt2BlogDebugMock = vi.mocked(prompt2blogApi.getPrompt2BlogDebug)
@@ -26,6 +27,7 @@ const getPrompt2BlogInputOptionsMock = vi.mocked(prompt2blogApi.getPrompt2BlogIn
 const getPrompt2BlogResultMock = vi.mocked(prompt2blogApi.getPrompt2BlogResult)
 const getPrompt2BlogStatusMock = vi.mocked(prompt2blogApi.getPrompt2BlogStatus)
 const startPrompt2BlogRunMock = vi.mocked(prompt2blogApi.startPrompt2BlogRun)
+const startPrompt2BlogV3RunMock = vi.mocked(prompt2blogApi.startPrompt2BlogV3Run)
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -890,7 +892,7 @@ describe('Prompt2BlogPage', () => {
     })
   })
 
-  it('blocks legacy submission while an editorial v3 direction is active', async () => {
+  it('blocks submission while an editorial v3 direction is unfinished', async () => {
     saveComposerState({
       ...DEFAULT_COMPOSER_STATE,
       activeWorkflow: 'editorial_v3',
@@ -908,10 +910,11 @@ describe('Prompt2BlogPage', () => {
     })
     expect(runButton).toBeDisabled()
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Editorial v3 direction work is active. Research import ships next',
+      'Choose one of the three directions before running.',
     )
     fireEvent.click(runButton)
     expect(startPrompt2BlogRunMock).not.toHaveBeenCalled()
+    expect(startPrompt2BlogV3RunMock).not.toHaveBeenCalled()
   })
 
   it('imports three directions, approves an editable commission, and can return to legacy', async () => {
