@@ -18,6 +18,7 @@ from .models import (  # noqa: F401
     SynthesizeResponse,
 )
 from .orchestrator import run_full_pipeline, run_pipeline_v2
+from .orchestrator_v3 import run_pipeline_v3  # noqa: F401
 
 
 async def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
@@ -53,6 +54,14 @@ async def prepare_pipeline_v3(
     staff_user=None,
 ):
     return await _runs_api.prepare_pipeline_v3(request, staff_user)
+
+
+async def start_pipeline_v3(
+    request: Prompt2BlogV3Request,
+    background_tasks,
+    staff_user=None,
+):
+    return await _runs_api.start_pipeline_v3(request, background_tasks, staff_user)
 
 
 async def start_full_run(
@@ -100,6 +109,7 @@ __all__ = [
     "get_article_type_guideline_preview",
     "start_pipeline_v2",
     "prepare_pipeline_v3",
+    "start_pipeline_v3",
     "start_full_run",
     "get_status",
     "get_result",
@@ -109,5 +119,6 @@ __all__ = [
     "mark_article_as_synced",
     "get_sync_status",
     "run_pipeline_v2",
+    "run_pipeline_v3",
     "run_full_pipeline",
 ]

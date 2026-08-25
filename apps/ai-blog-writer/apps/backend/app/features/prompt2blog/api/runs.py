@@ -14,10 +14,16 @@ from app.shared.writer_models import resolve_writer_model
 
 from ..config import DEFAULT_MODEL, FEATURE_NAME
 from ..contracts_v3 import Prompt2BlogV3Request
-from ..intake_v3 import v3_intake_result
+from ..intake_v3 import (
+    prepare_v3_runtime_request,
+    v3_intake_result,
+    v3_run_input_artifact,
+)
 from ..models import Prompt2BlogInputRequest
 from ..observability import _read_langgraph_trace
+from ..models import PipelineV3RuntimeRequest
 from ..orchestrator import run_full_pipeline
+from ..orchestrator_v3 import run_pipeline_v3
 from ..run_recorder import RunRecorder
 from ..support import _clean_string_list, _safe_str
 
@@ -35,6 +41,17 @@ def _run_full_pipeline_background(
         # The orchestrator records the active failed stage and logs the exception.
         # Re-raising from a Starlette background task only adds an unhandled-task
         # error after the HTTP response has already been sent.
+        return
+
+
+def _run_pipeline_v3_background(
+    run_id: str,
+    request: PipelineV3RuntimeRequest,
+) -> None:
+    """Keep background-task failures contained after the graph records them."""
+    try:
+        run_pipeline_v3(run_id, request)
+    except Exception:  # noqa: BLE001
         return
 
 
@@ -157,6 +174,51 @@ async def prepare_pipeline_v3(
     return JSONResponse({"message": message, **result})
 
 
+@router.post("/pipeline-v3")
+async def start_pipeline_v3(
+    request: Prompt2BlogV3Request,
+    background_tasks: BackgroundTasks,
+    staff_user=Depends(require_staff),
+) -> JSONResponse:
+    """Start a v3 run, or stop at the research gate without starting one.
+
+    `needs_research` is returned synchronously and queues nothing: a commission
+    whose evidence cannot support it has no run to make.
+    """
+    try:
+        readiness_result = v3_intake_result(request)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if readiness_result["status"] != "ready":
+        return JSONResponse(
+            {
+                "message": "Prompt2Blog v3 commission needs more research",
+                **readiness_result,
+            }
+        )
+
+    if request.enable_editorial_augmentation:
+        raise HTTPException(
+            status_code=400,
+            detail=("Editorial augmentation is not available on the v3 pipeline yet."),
+        )
+
+    runtime = prepare_v3_runtime_request(request)
+    run_id = str(uuid4())
+    recorder = RunRecorder()
+    recorder.queue(run_id, staff_user_id(staff_user))
+    recorder.record_stage(run_id, "pipeline_input_v3", v3_run_input_artifact(runtime))
+    background_tasks.add_task(_run_pipeline_v3_background, run_id, runtime)
+    return JSONResponse(
+        {
+            "message": "Prompt2Blog pipeline v3 queued",
+            "status": "queued",
+            "run_id": run_id,
+        }
+    )
+
+
 @router.get("/status/{run_id}")
 async def get_status(run_id: str) -> JSONResponse:
     """Get status for a Prompt2Blog pipeline run."""
@@ -217,6 +279,16 @@ async def debug_run(run_id: str) -> JSONResponse:
         "stage_title",
         "stage_finalize",
         "pipeline_v2",
+        "pipeline_input_v3",
+        "stage_v3_outline",
+        "stage_v3_compose",
+        "stage_v3_groundedness",
+        "stage_v3_quality_audit",
+        "stage_v3_repair",
+        "stage_v3_quality_settle",
+        "stage_v3_title",
+        "stage_v3_finalize",
+        "pipeline_v3",
         "langgraph_trace",
     ]:
         stage_data = read_stage_result(run_id, stage_name)
