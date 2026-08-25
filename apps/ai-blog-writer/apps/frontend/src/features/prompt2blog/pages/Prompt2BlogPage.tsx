@@ -2,14 +2,10 @@ import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CleanupDetailsModal } from '../cleanup-details/CleanupDetailsModal'
 import { useCleanupDetailsModal } from '../cleanup-details/hooks/useCleanupDetailsModal'
-import { CoreInputsPanel } from '../composer/components/CoreInputsPanel'
 import { EasySetupPanel } from '../composer/components/EasySetupPanel'
-import { GuidelinePreviewPanel } from '../composer/components/GuidelinePreviewPanel'
 import { MiddleSectionsFold } from '../composer/components/MiddleSectionsFold'
 import { ModelRoutingPanel } from '../composer/components/ModelRoutingPanel'
 import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
-import { SeoConstraintsPanel } from '../composer/components/SeoConstraintsPanel'
-import { SourceMaterialPanel } from '../composer/components/SourceMaterialPanel'
 import { usePrompt2BlogComposer } from '../composer/hooks/usePrompt2BlogComposer'
 import { PipelinePanel } from '../pipeline-run/components/PipelinePanel'
 import { usePrompt2BlogPipelineRun } from '../pipeline-run/hooks/usePrompt2BlogPipelineRun'
@@ -72,8 +68,8 @@ export default function Prompt2BlogPage() {
             <span className="p2b-dot">.</span>
           </h1>
           <p className="p2b-lede">
-            Choose article type, set voice controls, paste source material, and run the full
-            guideline-aware pipeline.
+            Approve one editorial commission, research it, and run the commission-driven
+            pipeline.
           </p>
         </div>
         <div className="p2b-badge-row">
@@ -99,10 +95,8 @@ export default function Prompt2BlogPage() {
             editorialOptions={composer.editorialOptions}
             editorialOptionsError={composer.editorialOptionsError}
             editorialOptionsLoading={composer.editorialOptionsLoading}
-            inputOptions={composer.inputOptions}
             location={state.easySetupLocation}
             title={state.easySetupTitle}
-            onApply={composer.applyFields}
             onApplyDirectionResponse={composer.applyDirectionResponse}
             onApproveCommission={composer.approveCommissionChanges}
             onClearDirectionWorkflow={composer.clearDirectionWorkflow}
@@ -116,26 +110,6 @@ export default function Prompt2BlogPage() {
             onTitleChange={value => composer.updateField('easySetupTitle', value)}
           />
           <MiddleSectionsFold>
-            <CoreInputsPanel
-              angle={state.angle}
-              articleGoal={state.articleGoal}
-              articleTypeId={state.articleTypeId}
-              callToAction={state.callToAction}
-              destinationContext={state.destinationContext}
-              groupedOptions={composer.groupedArticleTypeOptions}
-              quickPicks={composer.articleTypeQuickPicks}
-              selectedArticleType={composer.selectedArticleType}
-              targetReader={state.targetReader}
-              onAngleChange={value => composer.updateField('angle', value)}
-              onArticleGoalChange={value => composer.updateField('articleGoal', value)}
-              onArticleTypeChange={value => composer.updateField('articleTypeId', value)}
-              onCallToActionChange={value => composer.updateField('callToAction', value)}
-              onClear={composer.clearCoreInputs}
-              onDestinationContextChange={value =>
-                composer.updateField('destinationContext', value)
-              }
-              onTargetReaderChange={value => composer.updateField('targetReader', value)}
-            />
             <PromptProfilesPanel
               brandVoiceId={state.brandVoiceId}
               creativityLevel={state.creativityLevel}
@@ -146,26 +120,6 @@ export default function Prompt2BlogPage() {
               toneId={state.toneId}
               onChange={composer.updateField}
               onClear={composer.clearPromptProfiles}
-            />
-            <SeoConstraintsPanel
-              mustInclude={state.mustInclude}
-              primaryKeyword={state.primaryKeyword}
-              secondaryKeywords={state.secondaryKeywords}
-              onClear={composer.clearSeoConstraints}
-              onMustIncludeChange={value => composer.updateField('mustInclude', value)}
-              onPrimaryKeywordChange={value => composer.updateField('primaryKeyword', value)}
-              onSecondaryKeywordsChange={value => composer.updateField('secondaryKeywords', value)}
-            />
-            <SourceMaterialPanel
-              blobs={state.blobs}
-              onAdd={composer.addBlob}
-              onClear={composer.clearSourceMaterial}
-              onRemove={composer.removeBlob}
-              onUpdate={composer.updateBlob}
-            />
-            <GuidelinePreviewPanel
-              loading={composer.guidelineLoading}
-              preview={composer.guidelinePreview}
             />
           </MiddleSectionsFold>
           <PipelinePanel
