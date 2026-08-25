@@ -71,9 +71,7 @@ def normalize_token_usage(value: Any) -> dict[str, int] | None:
             reasoning_tokens,
             _usage_value(value, "thoughts_token_count"),
         )
-        output_tokens = (
-            _usage_value(value, "candidates_token_count") + reasoning_tokens
-        )
+        output_tokens = _usage_value(value, "candidates_token_count") + reasoning_tokens
     total_tokens = _usage_value(value, "total_tokens", "total_token_count")
     input_details = value.get("input_token_details")
     cached_input_tokens = 0
@@ -87,6 +85,19 @@ def normalize_token_usage(value: Any) -> dict[str, int] | None:
         cached_input_tokens,
         _usage_value(value, "cached_input_tokens", "cached_content_token_count"),
     )
+    # Anthropic reports the two cache figures flat and alongside, and its
+    # `input_tokens` counts only the uncached remainder. Google reports
+    # `input_tokens` gross with the cached share nested under
+    # `input_token_details`. Reading only the nested shape left every Claude
+    # call looking as though it had cached nothing -- the totals were right, the
+    # savings were invisible -- and the clamp at the end of this function then
+    # discarded the figure anyway, because a net input count is smaller than
+    # the cache read it excludes.
+    cache_read = _usage_value(value, "cache_read_input_tokens")
+    cache_creation = _usage_value(value, "cache_creation_input_tokens")
+    if cache_read or cache_creation:
+        input_tokens += cache_read + cache_creation
+        cached_input_tokens = max(cached_input_tokens, cache_read)
     if not total_tokens:
         total_tokens = input_tokens + output_tokens
     if not input_tokens and not output_tokens and not total_tokens:
@@ -101,6 +112,32 @@ def normalize_token_usage(value: Any) -> dict[str, int] | None:
         "cached_input_tokens": min(cached_input_tokens, input_tokens),
         "total_tokens": total_tokens,
     }
+
+
+# What a recorded price is, once there is more than one kind.
+COST_BASIS_MEASURED = "measured"
+COST_BASIS_RATE_TABLE = "rate-table"
+
+# Set by app/features/prompt2blog/llm.py when the provider reported a price for
+# the call it just made. Only the subscription CLI does.
+MEASURED_COST_KEY = "measured_cost_usd"
+
+
+def _measured_cost(raw_usage: Any) -> float | None:
+    """A price the provider reported for this exact call, if it reported one.
+
+    Worth preferring over the rate table because it is not an estimate: it is
+    what the transport says the call came to. It is still not money leaving an
+    account -- subscription calls draw plan allowance rather than billing per
+    token -- so it is a notional API-equivalent figure. That distinction belongs
+    in what the UI says about the number, not in whether the number is recorded.
+    """
+    if not isinstance(raw_usage, dict):
+        return None
+    value = raw_usage.get(MEASURED_COST_KEY)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value) if value >= 0 else None
 
 
 def _estimated_cost(
@@ -148,6 +185,37 @@ TOKEN_KEYS = (
 STAGE_USAGE_KEYS = TOKEN_KEYS + ("calls",)
 
 
+RATE_TABLE_NOTE = (
+    "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 "
+    "Flash introductory pricing ends 2026-12-31."
+)
+
+# Subscription calls draw the plan holder's allowance rather than billing per
+# token, so the CLI's per-call figure is a notional API-equivalent price, not a
+# charge. Saying so is the whole point of carrying the basis around: the number
+# is real and worth comparing between stacks, and it is not a bill.
+MEASURED_COST_NOTE = (
+    "Claude figures are the per-call price the Claude Code CLI reported. Those "
+    "calls draw your subscription's allowance rather than billing per token, so "
+    "the amount is a comparable estimate of what the same work would cost at "
+    "API rates -- not a charge."
+)
+
+
+def _cost_basis(bases: set[str]) -> str | None:
+    if not bases:
+        return None
+    if len(bases) == 1:
+        return next(iter(bases))
+    return "mixed"
+
+
+def _pricing_note(measured_models: int) -> str:
+    if measured_models:
+        return f"{RATE_TABLE_NOTE} {MEASURED_COST_NOTE}"
+    return RATE_TABLE_NOTE
+
+
 @dataclass
 class Prompt2BlogTokenUsageTracker:
     successful_calls: int = 0
@@ -173,6 +241,7 @@ class Prompt2BlogTokenUsageTracker:
         usage = normalize_token_usage(raw_usage)
         if usage is None:
             return
+        measured_cost = _measured_cost(raw_usage)
         self.measured_calls += 1
         totals = self.by_model.setdefault(
             model_name,
@@ -185,6 +254,7 @@ class Prompt2BlogTokenUsageTracker:
                 "calls": 0,
                 "estimated_cost_usd": 0.0,
                 "unpriced_calls": 0,
+                "cost_bases": set(),
             },
         )
         totals["calls"] += 1
@@ -196,16 +266,22 @@ class Prompt2BlogTokenUsageTracker:
             "total_tokens",
         ):
             totals[key] += usage[key]
-        call_cost = _estimated_cost(
-            model_name=model_name,
-            input_tokens=usage["input_tokens"],
-            output_tokens=usage["output_tokens"],
-            cached_input_tokens=usage["cached_input_tokens"],
-        )
+        if measured_cost is not None:
+            call_cost: float | None = measured_cost
+            basis = COST_BASIS_MEASURED
+        else:
+            call_cost = _estimated_cost(
+                model_name=model_name,
+                input_tokens=usage["input_tokens"],
+                output_tokens=usage["output_tokens"],
+                cached_input_tokens=usage["cached_input_tokens"],
+            )
+            basis = COST_BASIS_RATE_TABLE
         if call_cost is None:
             totals["unpriced_calls"] += 1
         else:
             totals["estimated_cost_usd"] += call_cost
+            totals["cost_bases"].add(basis)
 
     def summary(
         self,
@@ -215,6 +291,7 @@ class Prompt2BlogTokenUsageTracker:
         writing_model: str,
         audit_model: str,
     ) -> dict[str, Any]:
+        measured_models = 0
         input_tokens = sum(item["input_tokens"] for item in self.by_model.values())
         output_tokens = sum(item["output_tokens"] for item in self.by_model.values())
         reasoning_tokens = sum(
@@ -250,8 +327,13 @@ class Prompt2BlogTokenUsageTracker:
                     "estimated_cost_usd": (
                         round(model_cost, 6) if not usage["unpriced_calls"] else None
                     ),
+                    # Where the figure came from, so a reader can tell a rate
+                    # table applied to token counts from a price the provider
+                    # reported for the call it made.
+                    "cost_basis": _cost_basis(usage["cost_bases"]),
                 }
             )
+            measured_models += 1 if COST_BASIS_MEASURED in usage["cost_bases"] else 0
         # Sorted by spend so the stages worth capping or de-thinking are the
         # ones read first.
         stage_rows = [
@@ -290,8 +372,5 @@ class Prompt2BlogTokenUsageTracker:
             "currency": "USD",
             "by_model": model_rows,
             "by_stage": stage_rows,
-            "pricing_note": (
-                "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 "
-                "Flash introductory pricing ends 2026-12-31."
-            ),
+            "pricing_note": _pricing_note(measured_models),
         }

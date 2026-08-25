@@ -204,8 +204,13 @@ def test_usage_lands_in_the_shape_the_token_tracker_reads(
         "cache_read_input_tokens": 8741,
         "cache_creation_input_tokens": 2729,
     }
+    # The transport's `input_tokens` counts only the uncached remainder, so the
+    # normalizer folds the two cache figures back in to get the real prompt
+    # size. 10 was never the input count -- it was what was not served from
+    # cache.
     normalized = normalize_token_usage(llm.last_usage_metadata)
-    assert normalized["input_tokens"] == 10
+    assert normalized["input_tokens"] == 11_480
+    assert normalized["cached_input_tokens"] == 8_741
     assert normalized["output_tokens"] == 503
 
 
