@@ -60,6 +60,35 @@ def test_result_route_preserves_legacy_v2_artifact_shape(monkeypatch):
     assert payload == expected
 
 
+def test_result_route_attaches_the_trace_to_a_v3_artifact(monkeypatch):
+    """A v3 run must surface its trace where a v2 run always has."""
+    artifact = {"pipeline_v3": {"run_id": "v3-run", "status": "completed"}}
+    monkeypatch.setattr(
+        runs_api,
+        "read_status",
+        lambda _run_id: {"feature": "prompt2blog", "state": "completed"},
+    )
+    monkeypatch.setattr(
+        runs_api,
+        "read_output",
+        lambda _run_id: {"markdown": "# Lima", "artifact": artifact},
+    )
+    monkeypatch.setattr(
+        runs_api,
+        "_read_langgraph_trace",
+        lambda _run_id: {"langsmith_trace_url": "https://trace.example/v3-run"},
+    )
+
+    payload = response_payload(asyncio.run(prompt2blog_routes.get_result("v3-run")))
+
+    assert (
+        payload["artifact"]["pipeline_v3"]["langsmith_trace_url"]
+        == "https://trace.example/v3-run"
+    )
+    assert payload["langsmith_trace_url"] == "https://trace.example/v3-run"
+    assert "pipeline_v2" not in payload["artifact"]
+
+
 def test_start_pipeline_v2_queues_background_task(
     empty_prompt2blog_storage, monkeypatch
 ):

@@ -10,8 +10,10 @@ import type {
   Prompt2BlogRunRequest,
   Prompt2BlogRunResponse,
   Prompt2BlogStatusResponse,
+  Prompt2BlogV3StartResponse,
 } from '../types/pipeline.types'
-import { PROMPT2BLOG_PIPELINE_STAGES } from '../types/pipeline.types'
+import type { Prompt2BlogV3Request } from '../types/editorial.types'
+import { PROMPT2BLOG_KNOWN_PIPELINE_STAGES } from '../types/pipeline.types'
 import { finalizeStatusResponse, normalizePipelineStatus } from '../../pipelineRuns'
 
 export function normalizePrompt2BlogStatusResponse(
@@ -20,7 +22,7 @@ export function normalizePrompt2BlogStatusResponse(
 ): Prompt2BlogStatusResponse {
   const normalized = normalizePipelineStatus({
     value,
-    stages: PROMPT2BLOG_PIPELINE_STAGES,
+    stages: PROMPT2BLOG_KNOWN_PIPELINE_STAGES,
     unknownStage: 'unknown' satisfies Prompt2BlogPipelineStage,
     rawStageField: 'raw_stage',
     defaults: {
@@ -50,6 +52,34 @@ export async function startPrompt2BlogRun(
   }
 
   return response.json()
+}
+
+/**
+ * Starts a v3 run, or reports the research that has to happen first.
+ *
+ * `needs_research` arrives on a 200: the commission was valid and the gate ran,
+ * it just found evidence that cannot support the article. Nothing was queued,
+ * so it is a result to show, not an error to throw.
+ */
+export async function startPrompt2BlogV3Run(
+  payload: Prompt2BlogV3Request,
+): Promise<Prompt2BlogV3StartResponse> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/pipeline-v3`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    throw await parseError(response, 'Prompt2Blog v3 run failed to start')
+  }
+
+  const body = (await response.json()) as Prompt2BlogV3StartResponse
+  if (body?.status === 'queued' && typeof body.run_id === 'string' && body.run_id) {
+    return body
+  }
+  if (body?.status === 'needs_research') return body
+  throw new Error('Prompt2Blog v3 returned an unrecognized start response.')
 }
 
 export async function getPrompt2BlogInputOptions(): Promise<Prompt2BlogInputOptionsResponse> {

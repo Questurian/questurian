@@ -4,7 +4,7 @@ import {
   type Prompt2BlogRunRequest,
 } from '../../api'
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
-import { PROMPT2BLOG_PIPELINE_STAGES, type KnownPrompt2BlogPipelineStage } from '../../types/pipeline.types'
+import { PROMPT2BLOG_PIPELINE_STAGES } from '../../types/pipeline.types'
 import type {
   PipelineLogEntry,
   PipelineLogLevel,
@@ -79,9 +79,12 @@ export function usePrompt2BlogPipelineRun(payload: Prompt2BlogRunRequest | null)
   })
 
   const canOpenCleanupModal = useMemo(() => {
-    const cleanupStageIndex = PROMPT2BLOG_PIPELINE_STAGES.indexOf(CLEANUP_STAGE_KEY)
+    // Cleanup is a v2-only stage; a v3 stage name simply misses the order and
+    // reads as -1, which is what "no cleanup to show" already means here.
+    const v2StageOrder: readonly string[] = PROMPT2BLOG_PIPELINE_STAGES
+    const cleanupStageIndex = v2StageOrder.indexOf(CLEANUP_STAGE_KEY)
     const currentStageIndex = pipelineStatus && pipelineStatus.stage !== 'unknown'
-      ? PROMPT2BLOG_PIPELINE_STAGES.indexOf(pipelineStatus.stage as KnownPrompt2BlogPipelineStage)
+      ? v2StageOrder.indexOf(pipelineStatus.stage)
       : -1
     return Boolean(
       pipelineRunId
