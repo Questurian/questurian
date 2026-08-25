@@ -91,6 +91,14 @@ function researchIsAttached(state: P2BFormState): boolean {
   )
 }
 
+function commissionWasReviewed(state: P2BFormState): boolean {
+  const { approval, reviewedCommissionFingerprint } = state.editorial
+  if (approval.status !== 'approved') return false
+  return (
+    reviewedCommissionFingerprint === approval.commission.commission_fingerprint
+  )
+}
+
 function summarizeCommission(state: P2BFormState): string | null {
   const { approval } = state.editorial
   if (approval.status !== 'approved') return null
@@ -123,15 +131,14 @@ function summarizeResearch(state: P2BFormState): string | null {
 /**
  * Which of the five steps are finished, and where the operator stands.
  *
- * Derived entirely from composer state the page already keeps. Nothing here is
- * stored, so the indicator cannot drift out of step with the work it describes
- * — a rail that disagrees with the page is worse than no rail at all.
+ * Derived entirely from composer state the page already keeps, so the
+ * indicator cannot drift out of step with the work it describes — a rail that
+ * disagrees with the page is worse than no rail at all.
  *
- * Step 3 counts as finished the moment a commission is approved, because that
- * is what the page does today: choosing a direction card approves it outright.
- * Making that a stop the operator consciously passes needs a control to pass
- * it with, which lands together with the step sections rather than ahead of
- * them.
+ * Step 3 needs more than an approved commission. Choosing a direction card
+ * approves one outright, so approval alone says only that a click happened,
+ * not that a human read what got locked. It is finished when the operator has
+ * confirmed this exact commission by fingerprint.
  *
  * Step 5 is never `done` here. Finishing it means a completed run, which lives
  * in the pipeline's own state, not the composer's.
@@ -144,7 +151,7 @@ export function deriveP2BSteps(state: P2BFormState): P2BStep[] {
   const completion: Record<P2BStepId, boolean> = {
     start: startedDirectionWork && titleAndLocation,
     direction: startedDirectionWork && directionWasChosen(state),
-    commission: state.editorial.approval.status === 'approved',
+    commission: commissionWasReviewed(state),
     research: researchIsAttached(state),
     write: false
   }

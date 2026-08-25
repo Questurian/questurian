@@ -26,6 +26,7 @@ function inV3(
       commissionDraft: null,
       approval: { status: 'not_started' },
       evidencePackage: null,
+      reviewedCommissionFingerprint: null,
       ...editorial
     },
     ...overrides
@@ -102,17 +103,39 @@ describe('deriveP2BSteps', () => {
     expect(currentP2BStep(stale).id).toBe('commission')
   })
 
-  it('moves to gathering facts once a commission is approved', () => {
+  it('stops on the review step when a direction card approved a commission for you', () => {
+    // Clicking a card approves outright. That says a click happened, not that
+    // a human read what got locked, so the step stays open until they say so.
     const approved = inV3({ approval: { status: 'approved', commission } })
 
-    expect(currentP2BStep(approved).id).toBe('research')
-    expect(deriveP2BSteps(approved)[2].summary).toBe(commission.primary_subject)
+    expect(currentP2BStep(approved).id).toBe('commission')
+    expect(deriveP2BSteps(approved)[2].state).toBe('current')
+  })
+
+  it('moves to gathering facts once the operator confirms the commission', () => {
+    const reviewed = inV3({
+      approval: { status: 'approved', commission },
+      reviewedCommissionFingerprint: commission.commission_fingerprint
+    })
+
+    expect(currentP2BStep(reviewed).id).toBe('research')
+    expect(deriveP2BSteps(reviewed)[2].summary).toBe(commission.primary_subject)
+  })
+
+  it('ignores a review that names a different commission', () => {
+    const stale = inV3({
+      approval: { status: 'approved', commission },
+      reviewedCommissionFingerprint: 'a-commission-that-was-edited-away'
+    })
+
+    expect(currentP2BStep(stale).id).toBe('commission')
   })
 
   it('reaches the writing step once matching research is attached', () => {
     const ready = inV3({
       approval: { status: 'approved', commission },
-      evidencePackage
+      evidencePackage,
+      reviewedCommissionFingerprint: commission.commission_fingerprint
     })
     const steps = deriveP2BSteps(ready)
 
@@ -126,6 +149,7 @@ describe('deriveP2BSteps', () => {
   it('counts sources and claims in plural when there is more than one', () => {
     const ready = inV3({
       approval: { status: 'approved', commission },
+      reviewedCommissionFingerprint: commission.commission_fingerprint,
       evidencePackage: {
         ...evidencePackage,
         sources: [...(evidencePackage.sources ?? []), ...(evidencePackage.sources ?? [])]
@@ -140,6 +164,7 @@ describe('deriveP2BSteps', () => {
     // however complete it looks, and the run would be refused anyway.
     const mismatched = inV3({
       approval: { status: 'approved', commission },
+      reviewedCommissionFingerprint: commission.commission_fingerprint,
       evidencePackage: { ...evidencePackage, commission_fingerprint: 'someone-else' }
     })
 
@@ -150,7 +175,8 @@ describe('deriveP2BSteps', () => {
   it('never marks the writing step done, because a finished run is not composer state', () => {
     const ready = inV3({
       approval: { status: 'approved', commission },
-      evidencePackage
+      evidencePackage,
+      reviewedCommissionFingerprint: commission.commission_fingerprint
     })
 
     expect(deriveP2BSteps(ready)[4].state).toBe('current')

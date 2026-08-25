@@ -98,6 +98,7 @@ export const DEFAULT_EDITORIAL_STATE: P2BEditorialComposerState = {
   commissionDraft: null,
   approval: { status: 'not_started' },
   evidencePackage: null,
+  reviewedCommissionFingerprint: null,
 }
 
 export const DEFAULT_COMPOSER_STATE: P2BFormState = {
@@ -352,6 +353,13 @@ function normalizeEditorialState(value: unknown): P2BEditorialComposerState {
     commissionDraft,
     approval,
     evidencePackage: normalizeEvidencePackage(candidate.evidencePackage, approval),
+    // A review belongs to one exact commission. A saved value that names any
+    // other one is not a review of what is approved now, so it does not load.
+    reviewedCommissionFingerprint:
+      approval.status === 'approved'
+      && candidate.reviewedCommissionFingerprint === approval.commission.commission_fingerprint
+        ? approval.commission.commission_fingerprint
+        : null,
   }
 }
 

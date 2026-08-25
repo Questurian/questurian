@@ -221,6 +221,13 @@ function createDirectionResponseJson() {
   })
 }
 
+function stepBody(name: RegExp): Element | null | undefined {
+  return screen
+    .getByRole('heading', { name })
+    .closest('section')
+    ?.querySelector('.p2b-step-section-body')
+}
+
 function openStep(name: RegExp) {
   const header = screen.getByRole('heading', { name }).closest('.p2b-step-section-header')
   const toggle = within(header as HTMLElement).getByRole('button')
@@ -404,6 +411,8 @@ describe('Prompt2BlogPage', () => {
     expect(headings).toEqual([
       'Step 1: Start the article',
       'Step 2: Pick a direction',
+      'Step 3: Review what you locked',
+      'Step 4: Gather the facts',
     ])
 
     const startBody = screen
@@ -719,6 +728,83 @@ describe('Prompt2BlogPage', () => {
     openStep(/Step 2: Pick a direction/)
     fireEvent.click(screen.getByRole('button', { name: 'Clear direction work' }))
     expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeEnabled()
+  })
+
+  it('makes approval by direction card a stop the operator passes deliberately', async () => {
+    renderPage()
+    await waitFor(() => expect(getPrompt2BlogEditorialOptionsMock).toHaveBeenCalled())
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'A weekend in Lisbon' },
+    })
+    fireEvent.change(screen.getByLabelText('Location'), {
+      target: { value: 'Lisbon, Portugal' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate direction prompt' }))
+    fireEvent.change(screen.getByLabelText('Direction JSON'), {
+      target: { value: createDirectionResponseJson() },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Check directions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show direction cards' }))
+    fireEvent.click(screen.getAllByRole('radio')[0])
+
+    // The card locked a commission without the operator ever saying so. Step 3
+    // is where they are told that, and step 4 stays closed behind it.
+    expect(await screen.findByText(/Choosing that direction locked this commission/)).toBeInTheDocument()
+    expect(stepBody(/Step 3: Review what you locked/)).not.toHaveAttribute('hidden')
+    expect(stepBody(/Step 4: Gather the facts/)).toHaveAttribute('hidden')
+
+    fireEvent.click(screen.getByRole('button', { name: 'This is right — go to research' }))
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: 'This is right — go to research' }),
+      ).not.toBeInTheDocument(),
+    )
+    // Confirming is what opens the research step, not approval on its own.
+    expect(stepBody(/Step 4: Gather the facts/)).not.toHaveAttribute('hidden')
+    expect(stepBody(/Step 3: Review what you locked/)).toHaveAttribute('hidden')
+    expect(screen.getByLabelText('Research prompt')).toBeInTheDocument()
+  })
+
+  it('reopens the review step when the commission changes after being confirmed', async () => {
+    renderPage()
+    await waitFor(() => expect(getPrompt2BlogEditorialOptionsMock).toHaveBeenCalled())
+
+    fireEvent.change(screen.getByLabelText('Title'), {
+      target: { value: 'A weekend in Lisbon' },
+    })
+    fireEvent.change(screen.getByLabelText('Location'), {
+      target: { value: 'Lisbon, Portugal' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate direction prompt' }))
+    fireEvent.change(screen.getByLabelText('Direction JSON'), {
+      target: { value: createDirectionResponseJson() },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Check directions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show direction cards' }))
+    fireEvent.click(screen.getAllByRole('radio')[0])
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'This is right — go to research' }),
+    )
+
+    fireEvent.change(screen.getByLabelText('Primary subject'), {
+      target: { value: 'Historic Lisbon' },
+    })
+
+    // Editing retracts approval, so what was read is no longer what is locked.
+    expect(screen.getByText('Needs approval')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Research prompt')).not.toBeInTheDocument()
+    expect(stepBody(/Step 3: Review what you locked/)).not.toHaveAttribute('hidden')
+
+    // Pressing approve is itself the deliberate read, so it does not ask twice.
+    fireEvent.click(screen.getByRole('button', { name: 'Approve commission' }))
+    expect(await screen.findByText('Approved')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'This is right — go to research' }),
+    ).not.toBeInTheDocument()
+    expect(stepBody(/Step 4: Gather the facts/)).not.toHaveAttribute('hidden')
+    expect(screen.getByLabelText('Research prompt')).toBeInTheDocument()
   })
 
   it('retracts a checked direction response when title identity changes', async () => {

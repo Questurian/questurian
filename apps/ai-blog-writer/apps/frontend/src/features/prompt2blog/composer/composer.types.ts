@@ -32,6 +32,16 @@ export interface P2BEditorialComposerState {
    * commission they describe.
    */
   evidencePackage: Prompt2BlogEvidencePackage | null
+  /**
+   * The commission the operator has confirmed they read, by fingerprint.
+   *
+   * Choosing a direction card approves a commission outright, so approval on
+   * its own says nothing about whether a human looked at what was locked. This
+   * records that they did. Storing the fingerprint rather than a flag means a
+   * commission that changes cannot inherit the old one's review: the value no
+   * longer matches, and the step reopens on its own.
+   */
+  reviewedCommissionFingerprint: string | null
 }
 
 export interface P2BFormState {
