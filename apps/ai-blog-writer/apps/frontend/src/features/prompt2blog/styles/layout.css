@@ -126,3 +126,110 @@
     animation: none;
   }
 }
+
+/* --- Step rail -------------------------------------------------------------
+   Where the operator stands in the five steps. Sits above the form so the
+   shape of the work is visible before any field is. */
+
+.p2b-step-rail {
+  margin: 0 0 var(--space-6);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface, white);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.p2b-step-rail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.p2b-step-rail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  min-width: 0;
+}
+
+.p2b-step-rail-item--current {
+  border-color: var(--p2b-accent);
+  background: var(--p2b-accent-softer);
+}
+
+.p2b-step-rail-item--upcoming {
+  opacity: 0.55;
+}
+
+.p2b-step-rail-number {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  color: var(--ink);
+}
+
+.p2b-step-rail-item--done .p2b-step-rail-number {
+  border-color: var(--p2b-accent);
+  color: var(--p2b-accent);
+}
+
+.p2b-step-rail-item--current .p2b-step-rail-number {
+  background: var(--p2b-accent);
+  border-color: var(--p2b-accent);
+  color: white;
+}
+
+.p2b-step-rail-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.p2b-step-rail-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--ink);
+}
+
+.p2b-step-rail-state {
+  font-size: 0.75rem;
+  color: var(--muted-ink, var(--ink));
+  opacity: 0.7;
+}
+
+.p2b-step-rail-summary {
+  font-size: 0.75rem;
+  color: var(--ink);
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.p2b-step-rail-purpose {
+  margin: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink);
+}
