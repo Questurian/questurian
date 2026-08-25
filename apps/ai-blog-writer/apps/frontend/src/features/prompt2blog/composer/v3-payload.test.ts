@@ -3,7 +3,11 @@ import limaFixture from '../../../../../../data/fixtures/prompt2blog/lima-scope-
 import type { Prompt2BlogCommission, Prompt2BlogEvidencePackage } from '../api'
 import { DEFAULT_COMPOSER_STATE } from './composer.storage'
 import type { P2BFormState } from './composer.types'
-import { buildPrompt2BlogV3Payload, v3SubmissionBlockedReason } from './v3-payload'
+import {
+  buildPrompt2BlogV3Payload,
+  prompt2BlogSubmissionBlockedReason,
+  v3SubmissionBlockedReason,
+} from './v3-payload'
 
 const commission = limaFixture.commission as unknown as Prompt2BlogCommission
 const evidencePackage = limaFixture.evidence_package as unknown as Prompt2BlogEvidencePackage
@@ -53,18 +57,31 @@ describe('v3SubmissionBlockedReason', () => {
         approvedState({ editorial: { ...approvedState().editorial, approval } }),
       )
 
-    expect(reasonFor({ status: 'not_started' })).toMatch(/approve a commission/)
+    expect(reasonFor({ status: 'not_started' })).toMatch(/Copy the direction prompt/)
     expect(reasonFor({ status: 'awaiting_selection' })).toMatch(/Choose one of the three/)
-    expect(reasonFor({ status: 'needs_approval' })).toMatch(/Approve the commission/)
+    expect(reasonFor({ status: 'needs_approval' })).toMatch(/approve it/)
     expect(reasonFor({ status: 'reconfirmation_required', reason: 'legacy_draft' })).toMatch(
-      /Reconfirm it/,
+      /approve it again/,
     )
     expect(reasonFor({ status: 'reconfirmation_required', reason: 'commission_edited' })).toMatch(
-      /Approve it again/,
+      /approve it again/,
     )
     expect(
       reasonFor({ status: 'reconfirmation_required', reason: 'title_or_location_changed' }),
-    ).toMatch(/Generate directions again/)
+    ).toMatch(/Generate a new direction prompt/)
+  })
+
+  it('keeps a card-approved commission stopped until the operator reviews it', () => {
+    expect(
+      v3SubmissionBlockedReason(
+        approvedState({
+          editorial: {
+            ...approvedState().editorial,
+            reviewedCommissionFingerprint: null,
+          },
+        }),
+      ),
+    ).toMatch(/Read the locked commission/)
   })
 
   it('blocks when no research is attached', () => {
@@ -72,7 +89,7 @@ describe('v3SubmissionBlockedReason', () => {
       v3SubmissionBlockedReason(
         approvedState({ editorial: { ...approvedState().editorial, evidencePackage: null } }),
       ),
-    ).toMatch(/Import the research package/)
+    ).toMatch(/Copy the research prompt/)
   })
 
   it('blocks research belonging to a different commission', () => {
@@ -85,7 +102,7 @@ describe('v3SubmissionBlockedReason', () => {
           },
         }),
       ),
-    ).toMatch(/different commission/)
+    ).toMatch(/Clear the attached research/)
   })
 
   it('blocks research that answers a different requirement set', () => {
@@ -101,14 +118,22 @@ describe('v3SubmissionBlockedReason', () => {
           },
         }),
       ),
-    ).toMatch(/exact requirements/)
+    ).toMatch(/exact questions/)
   })
 
   it('blocks a missing tone or length', () => {
-    expect(v3SubmissionBlockedReason(approvedState({ toneId: '' }))).toMatch(/Tone and length/)
-    expect(v3SubmissionBlockedReason(approvedState({ lengthId: '' }))).toMatch(/Tone and length/)
+    expect(v3SubmissionBlockedReason(approvedState({ toneId: '' }))).toMatch(/tone and length/)
+    expect(v3SubmissionBlockedReason(approvedState({ lengthId: '' }))).toMatch(/tone and length/)
   })
 
+})
+
+describe('prompt2BlogSubmissionBlockedReason', () => {
+  it('points an untouched page to the first step', () => {
+    expect(
+      prompt2BlogSubmissionBlockedReason({ ...approvedState(), activeWorkflow: 'legacy_v2' }),
+    ).toMatch(/Enter a working title and location/)
+  })
 })
 
 describe('buildPrompt2BlogV3Payload', () => {

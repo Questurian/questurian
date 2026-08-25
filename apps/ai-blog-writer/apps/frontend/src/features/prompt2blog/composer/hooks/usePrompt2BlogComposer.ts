@@ -22,7 +22,10 @@ import {
 } from '../composer.storage'
 import type { P2BFormState } from '../composer.types'
 import { findDefaultOption } from '../option-defaults'
-import { buildPrompt2BlogV3Payload, v3SubmissionBlockedReason } from '../v3-payload'
+import {
+  buildPrompt2BlogV3Payload,
+  prompt2BlogSubmissionBlockedReason,
+} from '../v3-payload'
 import { approveCommission as fingerprintApprovedCommission } from '../commission'
 import {
   applyValidatedDirectionResponse,
@@ -133,7 +136,10 @@ export function usePrompt2BlogComposer() {
   // An approved commission with attached research runs on v3. Everything else
   // in the editorial workflow reports what is still missing; a legacy draft
   // keeps the v2 path and its own validation.
-  const submissionBlockedReason = useMemo(() => v3SubmissionBlockedReason(state), [state])
+  const submissionBlockedReason = useMemo(
+    () => prompt2BlogSubmissionBlockedReason(state),
+    [state],
+  )
 
   const startDirectionWorkflow = useCallback(() => {
     setState(startEditorialWorkflow)

@@ -399,6 +399,10 @@ describe('Prompt2BlogPage', () => {
       }),
     ).toBeDisabled()
     expect(within(startStep!).queryByLabelText('Prompt')).not.toBeInTheDocument()
+    expect(
+      within(startStep!).getByText(/Enter a working title and location/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeDisabled()
   })
 
   it('presents the numbered steps in order, with only the current one open', async () => {
@@ -435,12 +439,12 @@ describe('Prompt2BlogPage', () => {
 
     openStep(/Step 2: Pick a direction/)
 
-    expect(
-      screen
-        .getByRole('heading', { name: /Step 2: Pick a direction/ })
-        .closest('section')
-        ?.querySelector('.p2b-step-section-body'),
-    ).not.toHaveAttribute('hidden')
+    const directionStep = screen
+      .getByRole('heading', { name: /Step 2: Pick a direction/ })
+      .closest('section')
+
+    expect(directionStep?.querySelector('.p2b-step-section-body')).not.toHaveAttribute('hidden')
+    expect(within(directionStep!).queryByText(/Do this next/)).not.toBeInTheDocument()
   })
 
   it('puts the work first and the model machinery last', async () => {
@@ -675,7 +679,7 @@ describe('Prompt2BlogPage', () => {
     })
     expect(runButton).toBeDisabled()
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Choose one of the three directions before running.',
+      'Choose one of the three directions.',
     )
     fireEvent.click(runButton)
     expect(startPrompt2BlogV3RunMock).not.toHaveBeenCalled()
@@ -727,7 +731,10 @@ describe('Prompt2BlogPage', () => {
 
     openStep(/Step 2: Pick a direction/)
     fireEvent.click(screen.getByRole('button', { name: 'Clear direction work' }))
-    expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Enter a working title and location, then generate the direction prompt.',
+    )
   })
 
   it('makes approval by direction card a stop the operator passes deliberately', async () => {
