@@ -11,6 +11,7 @@ import type { P2BStep, P2BStepId } from '../step-model'
 import { reviewDirectionResponseJson, type DirectionImportReview } from '../direction-import'
 import { buildDirectionPrompt } from '../direction-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
+import { ArticleFitGuide } from './ArticleFitGuide'
 import { CommissionEditor } from './CommissionEditor'
 import { ChatbotRoundTrip } from './ChatbotRoundTrip'
 import { DirectionCards } from './DirectionCards'
@@ -135,6 +136,7 @@ export function EasySetupPanel({
   return (
     <>
       <StepSection step={stepFor('start')}>
+        <ArticleFitGuide />
         <div className="p2b-field-row p2b-field-row--2">
           <div className="p2b-field">
             <label htmlFor="p2b-easy-setup-title">Title</label>
