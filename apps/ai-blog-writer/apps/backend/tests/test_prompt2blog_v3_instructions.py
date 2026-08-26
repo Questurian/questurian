@@ -163,3 +163,18 @@ def test_supported_requirement_cannot_also_declare_a_gap():
                 "gap": "Still incomplete.",
             }
         )
+
+
+def test_first_hand_material_is_written_as_the_writers_own_knowledge():
+    """The operator answering a question research could not is a fact, not a
+    caveat. Attributing it back to them reintroduces exactly the disclaimer
+    prose the voice rules ban."""
+    from app.features.prompt2blog.instructions_v3 import _evidence_body
+
+    class _Evidence:
+        records_text = "RECORDS"
+
+    body = _evidence_body(_Evidence())
+
+    assert "state it directly, as fact" in body
+    assert "no attribution, no sourcing language" in body

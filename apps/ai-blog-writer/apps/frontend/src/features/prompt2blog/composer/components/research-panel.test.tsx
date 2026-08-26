@@ -279,6 +279,67 @@ describe('ResearchPanel', () => {
     ).toBeInTheDocument()
   })
 
+  it('lets the writer answer a question the research desk could not', () => {
+    const onStoreEvidence = vi.fn()
+    const twoQuestions = makeCommission([
+      { requirement_id: 'r2', question: 'How long does customs take?' }
+    ])
+
+    renderPanel(
+      {
+        ...evidence(),
+        commission_fingerprint: twoQuestions.commission_fingerprint,
+        requirements: [
+          {
+            requirement_id: 'r1',
+            status: 'supported',
+            claim_ids: ['c1'],
+            gap: ''
+          },
+          {
+            requirement_id: 'r2',
+            status: 'unpublished',
+            claim_ids: [],
+            gap: 'Checked the regulator and the operator. Neither publishes it.'
+          }
+        ],
+        gaps: []
+      },
+      { onStoreEvidence },
+      twoQuestions
+    )
+
+    fireEvent.change(screen.getByLabelText('Can you answer this yourself?'), {
+      target: { value: 'Customs took twenty five minutes when I landed.' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Use my answer' }))
+
+    expect(onStoreEvidence).toHaveBeenCalledTimes(1)
+    const stored = onStoreEvidence.mock.calls[0][0]
+    const answered = stored.requirements.find(
+      (item: { requirement_id: string }) => item.requirement_id === 'r2'
+    )
+    expect(answered.status).toBe('supported')
+    expect(answered.gap).toBe('')
+    // First-hand material, not a special override: it is cited like anything
+    // else and it satisfies the question outright.
+    const source = stored.sources.find((item: { title: string }) =>
+      item.title.startsWith('What the writer knows:')
+    )
+    expect(source.material_type).toBe('first-person-notes')
+    expect(source.notes).toEqual([
+      'Customs took twenty five minutes when I landed.'
+    ])
+  })
+
+  it('offers no answer box for a question research already answered', () => {
+    renderPanel(evidence())
+
+    expect(
+      screen.queryByLabelText('Can you answer this yourself?')
+    ).not.toBeInTheDocument()
+  })
+
   it('copies the attached evidence package so it never has to be dug out of a prompt', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('navigator', { clipboard: { writeText } })

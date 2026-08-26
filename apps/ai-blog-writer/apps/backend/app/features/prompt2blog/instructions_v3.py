@@ -114,7 +114,10 @@ def _evidence_body(evidence: NormalizedEvidence) -> str:
         "fact to close it. A requirement marked unpublished was searched for "
         "and no one publishes an answer. Leave it out and write around it. Do "
         "not tell the reader the figure is unpublished, do not explain what "
-        "could not be found, and never estimate the number.\n\n"
+        "could not be found, and never estimate the number. First-hand material "
+        "is the writer's own knowledge: state it directly, as fact, with no "
+        "attribution, no sourcing language, and no note about how it was "
+        "obtained.\n\n"
         f"{evidence.records_text}"
     )
 
