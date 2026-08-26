@@ -71,7 +71,7 @@ describe('PipelineV3Result', () => {
     expect(screen.getByText('Analysis')).toBeTruthy()
     expect(screen.getByText('Lima')).toBeTruthy()
     expect(screen.getByText(/Is Lima still South America/)).toBeTruthy()
-    expect(screen.getByText(/2 sources and 1 claims/)).toBeTruthy()
+    expect(screen.getByText('1 fact from 2 sources.')).toBeTruthy()
     expect(screen.getByText('r1')).toBeTruthy()
     expect(screen.getByText(/Answered/)).toBeTruthy()
   })

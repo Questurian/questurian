@@ -1,5 +1,6 @@
 import type { P2BFormState } from './composer.types'
 import { compareEvidenceToCommission } from './evidence-match'
+import { attachedResearchSummary } from './research-language'
 import { P2B_NEXT_ACTION } from './step-guidance'
 import { prompt2BlogSubmissionBlockedReason } from './v3-payload'
 
@@ -129,11 +130,10 @@ function summarizeDirection(state: P2BFormState): string | null {
 function summarizeResearch(state: P2BFormState): string | null {
   const evidence = state.editorial.evidencePackage
   if (!evidence) return null
-  const sources = evidence.sources?.length ?? 0
-  const claims = evidence.claims?.length ?? 0
-  return `${sources} ${sources === 1 ? 'source' : 'sources'}, ${claims} ${
-    claims === 1 ? 'claim' : 'claims'
-  }`
+  return attachedResearchSummary(
+    evidence.sources?.length ?? 0,
+    evidence.claims?.length ?? 0
+  ).replace(/\.$/, '')
 }
 
 /**

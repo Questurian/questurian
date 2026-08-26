@@ -156,10 +156,10 @@ describe('deriveP2BSteps', () => {
     expect(steps[3].state).toBe('done')
     // The Lima fixture carries exactly one of each, so this also pins the
     // singular wording a one-source package produces.
-    expect(steps[3].summary).toBe('1 source, 1 claim')
+    expect(steps[3].summary).toBe('1 fact from 1 source')
   })
 
-  it('counts sources and claims in plural when there is more than one', () => {
+  it('counts sources and facts in plural when there is more than one', () => {
     const ready = inV3({
       approval: { status: 'approved', commission },
       reviewedCommissionFingerprint: commission.commission_fingerprint,
@@ -169,7 +169,7 @@ describe('deriveP2BSteps', () => {
       }
     })
 
-    expect(deriveP2BSteps(ready)[3].summary).toBe('2 sources, 1 claim')
+    expect(deriveP2BSteps(ready)[3].summary).toBe('1 fact from 2 sources')
   })
 
   it('does not count research imported against another commission', () => {

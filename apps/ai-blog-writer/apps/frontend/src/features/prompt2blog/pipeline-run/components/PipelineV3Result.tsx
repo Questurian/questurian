@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 import type { Prompt2BlogV3PipelinePayload } from '../../api'
-import { researchStatusLabel } from '../../composer/research-language'
+import {
+  attachedResearchSummary,
+  researchStatusLabel,
+} from '../../composer/research-language'
 import { RunCostReceipt } from './RunCostReceipt'
 
 interface PipelineV3ResultProps {
@@ -89,8 +92,10 @@ export function PipelineV3Result({
       {requirementIds.length > 0 && (
         <div className="p2b-import-report">
           <p className="p2b-import-report-title">
-            {result.evidence_receipt.source_ids?.length ?? 0} sources and{' '}
-            {result.evidence_receipt.claim_ids?.length ?? 0} claims backed this article.
+            {attachedResearchSummary(
+              result.evidence_receipt.source_ids?.length ?? 0,
+              result.evidence_receipt.claim_ids?.length ?? 0,
+            )}
           </p>
           <ul className="p2b-requirement-list">
             {requirementIds.map(requirementId => (

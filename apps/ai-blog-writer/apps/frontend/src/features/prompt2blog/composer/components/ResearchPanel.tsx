@@ -20,6 +20,7 @@ import { buildFollowUpResearchPrompt } from '../follow-up-research-prompt'
 import { buildResearchPrompt } from '../research-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import {
+  attachedResearchSummary,
   plainEvidenceIssue,
   researchNotReadyMessage,
   researchQuestionLabel,
@@ -263,8 +264,10 @@ export function ResearchPanel({
         <div className="p2b-import-report">
           <div className="p2b-field-label-row">
             <p className="p2b-import-report-title">
-              {evidencePackage.sources?.length ?? 0} sources and{' '}
-              {evidencePackage.claims?.length ?? 0} claims are attached to this commission.
+              {attachedResearchSummary(
+                evidencePackage.sources?.length ?? 0,
+                evidencePackage.claims?.length ?? 0,
+              )}
             </p>
             <button
               type="button"

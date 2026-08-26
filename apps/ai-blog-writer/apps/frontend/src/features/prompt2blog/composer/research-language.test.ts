@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  attachedResearchSummary,
   plainEvidenceIssue,
   researchFindingLabel,
   researchNotReadyMessage,
@@ -49,6 +50,14 @@ describe('research language', () => {
   })
 })
 
+describe('counting what is attached', () => {
+  it('never says "1 sources", and never says "claims"', () => {
+    expect(attachedResearchSummary(1, 1)).toBe('1 fact from 1 source.')
+    expect(attachedResearchSummary(2, 3)).toBe('3 facts from 2 sources.')
+    expect(attachedResearchSummary(0, 0)).toBe('0 facts from 0 sources.')
+  })
+})
+
 describe('the unpublished verdict in plain words', () => {
   it('says the question is settled rather than outstanding', () => {
     expect(researchStatusLabel('unpublished')).toBe(
@@ -64,7 +73,12 @@ describe('the unpublished verdict in plain words', () => {
 
   it('does not claim every question was answered when one is unpublished', () => {
     expect(researchReadyMessage(0)).toContain('Every question is answered')
-    expect(researchReadyMessage(1)).toContain('no published answer anywhere')
-    expect(researchReadyMessage(3)).toContain('3 of them')
+    expect(researchReadyMessage(1)).toContain(
+      'written around it'
+    )
+    expect(researchReadyMessage(3)).toContain('3 have no published answer')
+    // The article never tells the reader what could not be found, so the
+    // all-clear line must not promise that it will.
+    expect(researchReadyMessage(1)).not.toContain('can say so')
   })
 })
