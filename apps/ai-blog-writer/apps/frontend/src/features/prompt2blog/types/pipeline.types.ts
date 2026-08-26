@@ -372,6 +372,7 @@ export type Prompt2BlogEvidenceReceipt = {
   claim_ids?: string[]
   requirement_status?: Record<string, Prompt2BlogEvidenceRequirementStatus>
   unresolved_requirement_ids?: string[]
+  unpublished_requirement_ids?: string[]
   unresolved_conflict_ids?: string[]
 }
 
@@ -379,6 +380,7 @@ export type Prompt2BlogV3ReadinessFindingCode =
   | 'requirement_gap'
   | 'unresolved_conflict'
   | 'source_gate'
+  | 'nothing_answered'
 
 export type Prompt2BlogV3ReadinessFinding = {
   code: Prompt2BlogV3ReadinessFindingCode
@@ -397,6 +399,11 @@ export type Prompt2BlogV3NeedsResearchResponse = {
   commission_fingerprint: string
   findings: Prompt2BlogV3ReadinessFinding[]
   unresolved_requirements: Array<{
+    requirement_id: string
+    question: string
+    gap: string
+  }>
+  unpublished_requirements?: Array<{
     requirement_id: string
     question: string
     gap: string

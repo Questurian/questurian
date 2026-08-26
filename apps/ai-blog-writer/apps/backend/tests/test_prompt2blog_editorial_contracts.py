@@ -120,6 +120,39 @@ def test_evidence_rejects_inconsistent_claim_requirement_mapping():
         EvidencePackage.model_validate(payload)
 
 
+def test_unpublished_requirement_must_record_what_was_checked():
+    # The gap is the only thing that makes this verdict checkable by a human:
+    # which authorities, which documents, which dates.
+    payload = json.loads(FIXTURE_PATH.read_text())["evidence_package"]
+    payload["requirements"][1] = {
+        "requirement_id": "r2",
+        "status": "unpublished",
+        "claim_ids": [],
+        "gap": "",
+    }
+
+    with pytest.raises(ValidationError, match="must describe the gap"):
+        EvidencePackage.model_validate(payload)
+
+
+def test_unpublished_requirement_may_cite_the_claims_that_prove_the_absence():
+    # "The regulator measures these two steps and no others" is a real claim
+    # with a real source, and it is what separates an established absence from
+    # a research desk that simply gave up.
+    payload = json.loads(FIXTURE_PATH.read_text())["evidence_package"]
+    payload["claims"][0]["requirement_ids"] = ["r1", "r2"]
+    payload["requirements"][1] = {
+        "requirement_id": "r2",
+        "status": "unpublished",
+        "claim_ids": [payload["claims"][0]["claim_id"]],
+        "gap": "Checked the regulator, the operator, and the customs authority.",
+    }
+
+    package = EvidencePackage.model_validate(payload)
+
+    assert package.requirements[1].status == "unpublished"
+
+
 def test_v3_request_requires_matching_fingerprint_and_requirement_set():
     fixture = json.loads(FIXTURE_PATH.read_text())
     payload = {

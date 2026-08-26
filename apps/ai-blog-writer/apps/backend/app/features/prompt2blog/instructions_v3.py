@@ -111,7 +111,11 @@ def _evidence_body(evidence: NormalizedEvidence) -> str:
         "These records are the only permitted source of fact. Use them exactly: "
         "preserve attribution, dates, units, geography, and stated uncertainty. "
         "An unsupported requirement stays a visible gap; never invent a bridge "
-        "fact to close it.\n\n"
+        "fact to close it. A requirement marked unpublished was searched for and "
+        "no one publishes an answer: that absence is itself a fact this article "
+        "may state plainly, in the reader's terms and only where it matters to "
+        "them. Never present an unpublished figure as unknown to you alone, and "
+        "never estimate one.\n\n"
         f"{evidence.records_text}"
     )
 

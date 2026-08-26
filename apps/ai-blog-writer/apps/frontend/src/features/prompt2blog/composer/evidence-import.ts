@@ -12,7 +12,11 @@ export type EvidenceImportIssue = {
 }
 
 export type EvidenceReadinessFinding = {
-  code: 'requirement_gap' | 'unresolved_conflict' | 'source_gate'
+  code:
+    | 'requirement_gap'
+    | 'unresolved_conflict'
+    | 'source_gate'
+    | 'nothing_answered'
   requirement_ids: string[]
   message: string
 }
@@ -47,7 +51,12 @@ const MATERIAL_TYPES = new Set([
   'other'
 ])
 const CONFIDENCE_LEVELS = new Set(['high', 'medium', 'low'])
-const REQUIREMENT_STATUSES = new Set(['supported', 'partial', 'missing'])
+const REQUIREMENT_STATUSES = new Set([
+  'supported',
+  'partial',
+  'missing',
+  'unpublished'
+])
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -416,6 +425,17 @@ function validateRequirement(
       message: 'Missing requirements need no claims and a non-empty gap.'
     })
   }
+  // The gap is what makes an unpublished verdict checkable: it has to name the
+  // authorities, documents and dates that were searched. Claims are allowed and
+  // wanted, because a source stating the limit of what it measures is the best
+  // evidence that the figure is unpublished rather than merely unfound.
+  if (status === 'unpublished' && !gap.trim()) {
+    issues.push({
+      path,
+      message:
+        'Unpublished requirements need a non-empty gap naming what was checked.'
+    })
+  }
   return idIsValid && typeof value.requirement_id === 'string'
     ? { requirementId: value.requirement_id, status, claimIds, gap }
     : null
@@ -580,6 +600,8 @@ function buildReadinessFindings(
 ): EvidenceReadinessFinding[] {
   const findings: EvidenceReadinessFinding[] = []
   for (const requirement of evidencePackage.requirements) {
+    // `unpublished` is a reported result, not a gap to chase. More rounds
+    // return the same sentence, so it must not hold the run.
     if (requirement.status === 'partial' || requirement.status === 'missing') {
       findings.push({
         code: 'requirement_gap',
@@ -606,6 +628,23 @@ function buildReadinessFindings(
       code: 'unresolved_conflict',
       requirement_ids: requirementIds,
       message: conflict.summary
+    })
+  }
+  // Backstop against a research desk that escapes the gate by declaring every
+  // question unpublished: an article where nothing at all was findable has
+  // nothing to write. Mirrors the backend's `nothing_answered` finding.
+  if (
+    evidencePackage.requirements.length > 0 &&
+    !evidencePackage.requirements.some(
+      (requirement) => requirement.status === 'supported'
+    )
+  ) {
+    findings.push({
+      code: 'nothing_answered',
+      requirement_ids: evidencePackage.requirements.map(
+        (requirement) => requirement.requirement_id
+      ),
+      message: 'No question was answered, so there is nothing to write from.'
     })
   }
   findings.push(...sourceGateFindings(evidencePackage, commission, catalog))

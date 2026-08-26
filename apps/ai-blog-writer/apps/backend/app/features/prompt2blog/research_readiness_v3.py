@@ -31,13 +31,19 @@ from .evidence_v3 import NormalizedEvidence, NormalizedSource
 # thing.
 REQUIREMENT_STATUS_RULES = """REQUIREMENT STATUS VERSUS CLAIM CONFIDENCE
 These record two different things. Never conflate them.
-- status describes the QUESTION. supported means linked claims answer the requirement's question; partial means part of that question is still unanswered; missing means none of it is answered.
+- status describes the QUESTION. supported means linked claims answer the requirement's question; partial means part of that question is still unanswered; missing means none of it is answered; unpublished means you searched and no one has published an answer for anyone to find.
 - confidence describes the ANSWER. high, medium, or low records how well corroborated that answer is.
 - An answer you found and corroborated stays supported even when you could not reach the ideal primary source, the publisher blocks automated retrieval, or you would have preferred more evidence. Record that reservation as claim confidence medium or low and as a source note. Never downgrade the requirement to partial for it.
-- Reserve partial and missing for a genuinely unanswered question. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims."""
+- Reserve partial and missing for a question more research could still close. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims.
+- Use unpublished only after real searching, and only when the fact itself is unpublished rather than merely hard for you to reach. Name in gap exactly which authorities, documents, and dates you checked. Where a source states the limit of what it measures, record that as a claim and link it. unpublished does not block the run and will not be sent back to you, so a careless unpublished silently costs the article a fact."""
 
 ReadinessStatus = Literal["ready", "needs_research"]
-FindingCode = Literal["requirement_gap", "unresolved_conflict", "source_gate"]
+FindingCode = Literal[
+    "requirement_gap",
+    "unresolved_conflict",
+    "source_gate",
+    "nothing_answered",
+]
 
 _ATTRIBUTABLE_VOICE = {"transcript", "interview-responses"}
 
@@ -56,6 +62,7 @@ class ResearchReadiness(ReadinessModel):
     status: ReadinessStatus
     findings: list[ReadinessFinding]
     unresolved_requirement_ids: list[str]
+    unpublished_requirement_ids: list[str]
     unresolved_conflict_ids: list[str]
     missing_source_requirements: list[str]
 
@@ -109,7 +116,9 @@ def assess_research_readiness(
 
     findings: list[ReadinessFinding] = []
     for requirement in evidence.requirements:
-        if requirement.status == "supported":
+        # `unpublished` is a reported result, not a gap to chase. It is still
+        # visible to the operator through `unpublished_requirement_ids`.
+        if requirement.status in {"supported", "unpublished"}:
             continue
         findings.append(
             ReadinessFinding(
@@ -143,6 +152,24 @@ def assess_research_readiness(
             )
         )
 
+    # Backstop against a research desk that escapes the gate by declaring every
+    # question unpublished: an article where nothing at all was findable has
+    # nothing to write.
+    if evidence.requirements and not any(
+        requirement.status == "supported" for requirement in evidence.requirements
+    ):
+        findings.append(
+            ReadinessFinding(
+                code="nothing_answered",
+                requirement_ids=[
+                    requirement.requirement_id for requirement in evidence.requirements
+                ],
+                message=(
+                    "No question was answered, so there is nothing to write from."
+                ),
+            )
+        )
+
     missing_gates = [
         requirement
         for requirement in form.source_requirements
@@ -161,6 +188,7 @@ def assess_research_readiness(
         status="needs_research" if findings else "ready",
         findings=findings,
         unresolved_requirement_ids=evidence.unresolved_requirement_ids(),
+        unpublished_requirement_ids=evidence.unpublished_requirement_ids(),
         unresolved_conflict_ids=evidence.unresolved_conflict_ids(),
         missing_source_requirements=list(missing_gates),
     )
@@ -183,6 +211,30 @@ def build_follow_up_research_prompt(
         unresolved_ids.update(finding.requirement_ids)
     for gap in evidence.gaps:
         unresolved_ids.update(gap["requirement_ids"])
+    # Findings and reported gaps can both name a question the desk already
+    # established as unpublished. Re-asking it returns the same sentence and
+    # costs another full-package round, so it never reaches the prompt.
+    unpublished_ids = set(readiness.unpublished_requirement_ids)
+    unresolved_ids -= unpublished_ids
+
+    unpublished_gaps = {
+        requirement.requirement_id: requirement.gap
+        for requirement in evidence.requirements
+        if requirement.status == "unpublished"
+    }
+    unpublished_lines = (
+        "\n".join(
+            f"- {requirement.requirement_id} — {requirement.question}"
+            + (
+                f" [what was checked: {unpublished_gaps[requirement.requirement_id]}]"
+                if unpublished_gaps.get(requirement.requirement_id)
+                else ""
+            )
+            for requirement in commission.requirements
+            if requirement.requirement_id in unpublished_ids
+        )
+        or "- None."
+    )
 
     requirement_lines = (
         "\n".join(
@@ -255,6 +307,10 @@ CURRENT EVIDENCE RECORDS
 UNRESOLVED REQUIREMENTS ONLY
 {requirement_lines}
 
+ALREADY ESTABLISHED AS UNPUBLISHED
+{unpublished_lines}
+Keep these exactly as unpublished with their existing gap text. Do not search them again and do not downgrade them to partial or missing.
+
 UNRESOLVED CONFLICTS ONLY
 {conflict_lines}
 
@@ -307,6 +363,14 @@ def needs_research_payload(
                 "gap": gaps_by_requirement.get(requirement_id, ""),
             }
             for requirement_id in readiness.unresolved_requirement_ids
+        ],
+        "unpublished_requirements": [
+            {
+                "requirement_id": requirement_id,
+                "question": questions[requirement_id],
+                "gap": gaps_by_requirement.get(requirement_id, ""),
+            }
+            for requirement_id in readiness.unpublished_requirement_ids
         ],
         "unresolved_conflict_ids": list(readiness.unresolved_conflict_ids),
         "missing_source_requirements": list(readiness.missing_source_requirements),

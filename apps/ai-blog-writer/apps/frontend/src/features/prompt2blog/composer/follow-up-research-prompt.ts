@@ -61,6 +61,21 @@ export function buildFollowUpResearchPrompt(
       unresolvedRequirementIds.add(requirementId)
     )
   }
+  // Reported gaps and findings can both name a question the desk already
+  // established as unpublished. Re-asking it returns the same sentence and
+  // costs another full-package round, so it never reaches the prompt.
+  const unpublishedRequirements = evidencePackage.requirements.filter(
+    (requirement) => requirement.status === 'unpublished'
+  )
+  for (const requirement of unpublishedRequirements) {
+    unresolvedRequirementIds.delete(requirement.requirement_id)
+  }
+  const unpublishedGaps = new Map(
+    unpublishedRequirements.map((requirement) => [
+      requirement.requirement_id,
+      requirement.gap
+    ])
+  )
 
   const unresolvedRequirements = commission.requirements.filter((requirement) =>
     unresolvedRequirementIds.has(requirement.requirement_id)
@@ -93,6 +108,19 @@ export function buildFollowUpResearchPrompt(
         )
         .join('\n')
     : '- None beyond source-gate or conflict work below.'
+  const unpublishedLines = unpublishedRequirements.length
+    ? commission.requirements
+        .filter((requirement) =>
+          unpublishedGaps.has(requirement.requirement_id)
+        )
+        .map((requirement) => {
+          const checked = unpublishedGaps.get(requirement.requirement_id)?.trim()
+          return `- ${requirement.requirement_id} — ${requirement.question}${
+            checked ? ` [what was checked: ${checked}]` : ''
+          }`
+        })
+        .join('\n')
+    : '- None.'
   const conflictLines = unresolvedConflicts.length
     ? unresolvedConflicts
         .map((conflict) => `- ${conflict.conflict_id} — ${conflict.summary}`)
@@ -134,6 +162,10 @@ ${JSON.stringify(evidencePackage, null, 2)}
 
 UNRESOLVED REQUIREMENTS ONLY
 ${requirementLines}
+
+ALREADY ESTABLISHED AS UNPUBLISHED
+${unpublishedLines}
+Keep these exactly as unpublished with their existing gap text. Do not search them again and do not downgrade them to partial or missing.
 
 UNRESOLVED CONFLICTS ONLY
 ${conflictLines}

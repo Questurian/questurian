@@ -16,6 +16,7 @@ import {
   plainEvidenceIssue,
   researchNotReadyMessage,
   researchQuestionLabel,
+  researchReadyMessage,
   researchStatusLabel,
 } from '../research-language'
 import { PlainResearchFindings } from './PlainResearchFindings'
@@ -77,9 +78,18 @@ export function ResearchPanel({
     [commission, editorialOptions, evidencePackage, findings],
   )
 
+  // A question established as unpublished is not waiting on anyone. Counting it
+  // as unanswered would tell the operator to go and find a number that no one
+  // has ever published.
   const unansweredQuestionCount =
-    evidencePackage?.requirements.filter(requirement => requirement.status !== 'supported').length
-    ?? 0
+    evidencePackage?.requirements.filter(
+      requirement =>
+        requirement.status !== 'supported' && requirement.status !== 'unpublished',
+    ).length ?? 0
+
+  const unpublishedQuestionCount =
+    evidencePackage?.requirements.filter(requirement => requirement.status === 'unpublished')
+      .length ?? 0
 
   const handleEvidenceJsonChange = (value: string) => {
     setEvidenceJson(value)
@@ -228,10 +238,7 @@ export function ResearchPanel({
               <PlainResearchFindings findings={findings} questions={commission.requirements} />
             </>
           ) : (
-            <p className="p2b-field-hint">
-              Every question is answered, and the evidence has no unresolved disagreement or
-              missing first-hand source.
-            </p>
+            <p className="p2b-field-hint">{researchReadyMessage(unpublishedQuestionCount)}</p>
           )}
           {followUpPrompt !== null && (
             <div className="p2b-field">

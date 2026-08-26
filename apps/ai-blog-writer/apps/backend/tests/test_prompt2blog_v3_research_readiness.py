@@ -218,3 +218,122 @@ def test_v3_has_no_supplemental_fact_surface():
     assert "supplemental_content" not in Prompt2BlogV3GraphState.__annotations__
     assert "coverage" not in Prompt2BlogV3GraphState.__annotations__
     assert "readiness" in Prompt2BlogV3GraphState.__annotations__
+
+
+def _unpublished_evidence() -> dict:
+    """One question nobody has ever published an answer to.
+
+    The real case: OSITRAN publishes Lima immigration and baggage minutes and
+    measures no other step, so the customs figure exists nowhere for either
+    terminal. Before `unpublished` this could only be reported as `partial`,
+    which blocked the run and sent the operator back to ask again.
+    """
+    evidence = _supported_evidence()
+    # c3 answered r3; this question is the one nobody publishes, so the only
+    # claim left on it records what the sources say they do not measure.
+    evidence["claims"] = [
+        claim for claim in evidence["claims"] if claim["claim_id"] != "c3"
+    ]
+    evidence["claims"].append(
+        {
+            "claim_id": "c4",
+            "text": (
+                "The regulator's December 2025 measurement covers immigration and "
+                "baggage delivery and no other passenger step."
+            ),
+            "source_ids": ["s1"],
+            "requirement_ids": ["r3"],
+            "as_of": "2025-12-01",
+            "confidence": "high",
+        }
+    )
+    evidence["requirements"][2] = {
+        "requirement_id": "r3",
+        "status": "unpublished",
+        "claim_ids": ["c4"],
+        "gap": (
+            "Checked the regulator's December 2025 report, the operator's 2025 "
+            "service statistics, and the customs authority's published releases. "
+            "None of them measures this step, for either terminal."
+        ),
+    }
+    return evidence
+
+
+def test_an_unpublished_question_does_not_block_the_run():
+    evidence, readiness = _assess(_request(evidence=_unpublished_evidence()))
+
+    assert readiness.status == "ready"
+    assert readiness.findings == []
+    assert readiness.unresolved_requirement_ids == []
+    assert readiness.unpublished_requirement_ids == ["r3"]
+    assert evidence.receipt()["unpublished_requirement_ids"] == ["r3"]
+
+
+def test_an_unpublished_question_reaches_the_writer_as_a_reportable_absence():
+    evidence, _readiness = _assess(_request(evidence=_unpublished_evidence()))
+
+    records = evidence.records_text
+    assert "the article may state this absence" in records
+    assert "None of them measures this step" in records
+
+
+def test_a_follow_up_never_re_asks_an_unpublished_question():
+    evidence_package = _unpublished_evidence()
+    # A still-open question keeps the run blocked, and a reported gap names the
+    # unpublished one as well — the exact shape that used to drag it back into
+    # the prompt round after round.
+    evidence_package["requirements"][1] = {
+        "requirement_id": "r2",
+        "status": "partial",
+        "claim_ids": ["c2"],
+        "gap": "The second half of this question is still unanswered.",
+    }
+    evidence_package["gaps"] = [
+        {
+            "gap_id": "g1",
+            "requirement_ids": ["r2", "r3"],
+            "summary": "Outstanding research.",
+        }
+    ]
+    request = _request(evidence=evidence_package)
+    evidence, readiness = _assess(request)
+
+    assert readiness.status == "needs_research"
+    assert readiness.unresolved_requirement_ids == ["r2"]
+
+    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+    unresolved_block = prompt.split("UNRESOLVED REQUIREMENTS ONLY")[1].split(
+        "ALREADY ESTABLISHED AS UNPUBLISHED"
+    )[0]
+    assert "r2" in unresolved_block
+    assert "r3" not in unresolved_block
+    assert "Do not search them again" in prompt
+    assert "None of them measures this step" in prompt
+
+
+def test_a_package_with_nothing_answered_still_blocks():
+    # The escape hatch a lazy research desk would otherwise have: declare every
+    # question unpublished and the gate opens on an article with no facts.
+    evidence_package = _supported_evidence()
+    evidence_package["requirements"] = [
+        {
+            "requirement_id": requirement["requirement_id"],
+            "status": "unpublished",
+            "claim_ids": [],
+            "gap": "Checked every authority that could publish this.",
+        }
+        for requirement in evidence_package["requirements"]
+    ]
+    evidence_package["claims"] = []
+    evidence_package["conflicts"] = []
+
+    _evidence, readiness = _assess(_request(evidence=evidence_package))
+
+    assert readiness.status == "needs_research"
+    assert [finding.code for finding in readiness.findings] == ["nothing_answered"]
+
+
+def test_the_status_rules_define_the_unpublished_verdict():
+    assert "unpublished means you searched" in REQUIREMENT_STATUS_RULES
+    assert "only after real searching" in REQUIREMENT_STATUS_RULES

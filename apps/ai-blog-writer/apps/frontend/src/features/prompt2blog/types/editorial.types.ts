@@ -58,7 +58,17 @@ export type Prompt2BlogEvidenceMaterialType =
 
 export type Prompt2BlogEvidenceConfidence = 'high' | 'medium' | 'low'
 
-export type Prompt2BlogEvidenceRequirementStatus = 'supported' | 'partial' | 'missing'
+/**
+ * `unpublished` is the exit the research desk did not have. A question nobody
+ * has ever published an answer to could only be reported as `partial`, which
+ * blocked the run and sent the operator back to ask again for a fact that does
+ * not exist. It is a finding the article can report, not a gap to chase.
+ */
+export type Prompt2BlogEvidenceRequirementStatus =
+  | 'supported'
+  | 'partial'
+  | 'missing'
+  | 'unpublished'
 
 export type Prompt2BlogCreativityLevel = 'low' | 'medium' | 'high'
 

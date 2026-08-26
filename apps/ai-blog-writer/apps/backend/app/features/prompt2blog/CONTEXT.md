@@ -82,6 +82,15 @@ API → orchestrator → graph → stages → content / quality
   research, the other decides whether a run may start. They must not drift.
 - Readiness findings are derived, never stored. The composer keeps only the
   evidence package and recomputes.
+- A requirement has four verdicts, and only two of them are work: `supported`
+  and `unpublished` are settled, `partial` and `missing` are open.
+  `unpublished` exists because a fact nobody has ever published had no way to be
+  reported — the desk could only say `partial`, which blocked, which sent the
+  operator back to ask again for the same answer at full package cost. It is not
+  a way past the gate: it needs a `gap` naming the authorities, documents and
+  dates checked, and a package with no `supported` requirement at all is still
+  `needs_research` (`nothing_answered`), because an article with no findable
+  facts has nothing to write from.
 
 ## Internal graphs
 

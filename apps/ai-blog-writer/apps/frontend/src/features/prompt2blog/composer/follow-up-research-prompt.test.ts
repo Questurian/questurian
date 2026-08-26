@@ -237,6 +237,48 @@ describe('buildFollowUpResearchPrompt', () => {
     )
   })
 
+  it('never re-asks a question already established as unpublished', () => {
+    // A reported gap and a readiness finding both named r2 here. Before this,
+    // either one dragged a settled question back into the next round, and the
+    // round returned the same sentence at full package cost.
+    const evidencePackage: Prompt2BlogEvidencePackage = {
+      ...incompleteEvidence,
+      requirements: [
+        incompleteEvidence.requirements[0],
+        {
+          requirement_id: 'r2',
+          status: 'unpublished',
+          claim_ids: [],
+          gap: 'Checked the regulator and the operator. Neither measures it.'
+        }
+      ]
+    }
+    const findings: EvidenceReadinessFinding[] = [
+      {
+        code: 'source_gate',
+        message: 'Feature lacks attributable people.',
+        requirement_ids: ['r2']
+      }
+    ]
+
+    const prompt = buildFollowUpResearchPrompt(
+      commission,
+      evidencePackage,
+      findings,
+      catalog
+    )
+
+    expect(prompt).not.toBeNull()
+    const unresolved = prompt!
+      .split('UNRESOLVED REQUIREMENTS ONLY')[1]
+      .split('ALREADY ESTABLISHED AS UNPUBLISHED')[0]
+    expect(unresolved).not.toContain('r2')
+    expect(prompt).toContain(
+      '- r2 — Which people and scenes show lived context? [what was checked: Checked the regulator and the operator. Neither measures it.]'
+    )
+    expect(prompt).toContain('Do not search them again')
+  })
+
   it('carries the same status-versus-confidence rules as the initial prompt', () => {
     const prompt = buildFollowUpResearchPrompt(
       commission,
