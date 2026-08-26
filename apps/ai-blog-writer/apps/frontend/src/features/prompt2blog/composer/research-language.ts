@@ -14,8 +14,12 @@ const FINDING_LABELS: Record<ResearchFindingCode, string> = {
   source_gate: 'This kind of article needs a first-hand source',
 }
 
-export function researchFindingLabel(code: ResearchFindingCode): string {
-  return FINDING_LABELS[code]
+/**
+ * Falls back rather than rendering an empty label: a finding code this build
+ * has never heard of still has to say that it stopped the run.
+ */
+export function researchFindingLabel(code: string): string {
+  return FINDING_LABELS[code as ResearchFindingCode] ?? 'Still needs attention'
 }
 
 const STATUS_LABELS: Record<string, string> = {

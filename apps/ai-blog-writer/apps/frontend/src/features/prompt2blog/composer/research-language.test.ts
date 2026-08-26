@@ -24,6 +24,10 @@ describe('research language', () => {
     )
   })
 
+  it('still names a finding code it has never seen', () => {
+    expect(researchFindingLabel('some_future_gate')).toBe('Still needs attention')
+  })
+
   it('keeps a half-answered question distinct from an unanswered one', () => {
     expect(researchStatusLabel('supported')).toBe('Answered')
     expect(researchStatusLabel('partial')).toBe('Partly answered')
