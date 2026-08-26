@@ -12,6 +12,13 @@ import {
 import { buildFollowUpResearchPrompt } from '../follow-up-research-prompt'
 import { buildResearchPrompt } from '../research-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
+import {
+  plainEvidenceIssue,
+  researchNotReadyMessage,
+  researchQuestionLabel,
+  researchStatusLabel,
+} from '../research-language'
+import { PlainResearchFindings } from './PlainResearchFindings'
 
 interface ResearchPanelProps {
   commission: Prompt2BlogCommission
@@ -19,12 +26,6 @@ interface ResearchPanelProps {
   evidencePackage: Prompt2BlogEvidencePackage | null
   onClearEvidence: () => void
   onStoreEvidence: (evidencePackage: Prompt2BlogEvidencePackage) => void
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  supported: 'Supported',
-  partial: 'Partial',
-  missing: 'Missing',
 }
 
 export function ResearchPanel({
@@ -75,6 +76,10 @@ export function ResearchPanel({
         : null,
     [commission, editorialOptions, evidencePackage, findings],
   )
+
+  const unansweredQuestionCount =
+    evidencePackage?.requirements.filter(requirement => requirement.status !== 'supported').length
+    ?? 0
 
   const handleEvidenceJsonChange = (value: string) => {
     setEvidenceJson(value)
@@ -177,11 +182,15 @@ export function ResearchPanel({
             Evidence JSON is blocked — nothing was attached.
           </p>
           <ul className="p2b-import-list">
-            {review.issues.map(issue => (
-              <li key={`${issue.path}-${issue.message}`}>
-                <code>{issue.path}</code> {issue.message}
-              </li>
-            ))}
+            {review.issues.map(issue => {
+              const plainIssue = plainEvidenceIssue(issue.path, issue.message)
+              return (
+                <li key={`${issue.path}-${issue.message}`}>
+                  {plainIssue.label && <code>{plainIssue.label}</code>}{' '}
+                  {plainIssue.message}
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}
@@ -203,8 +212,10 @@ export function ResearchPanel({
           <ul className="p2b-requirement-list">
             {evidencePackage.requirements.map(requirement => (
               <li key={requirement.requirement_id} className="p2b-requirement-row">
-                <code>{requirement.requirement_id}</code>{' '}
-                {STATUS_LABELS[requirement.status] ?? requirement.status}
+                <strong>
+                  {researchQuestionLabel(requirement.requirement_id, commission.requirements)}
+                </strong>{' '}
+                {researchStatusLabel(requirement.status)}
                 {requirement.gap ? ` — ${requirement.gap}` : ''}
               </li>
             ))}
@@ -212,20 +223,14 @@ export function ResearchPanel({
           {findings.length > 0 ? (
             <>
               <p className="p2b-import-report-title">
-                {findings.length} readiness {findings.length === 1 ? 'gap' : 'gaps'} remain. The
-                run stays blocked until research closes them.
+                {researchNotReadyMessage(unansweredQuestionCount)}
               </p>
-              <ul className="p2b-import-list">
-                {findings.map(finding => (
-                  <li key={`${finding.code}-${finding.message}`}>
-                    <code>{finding.code}</code> {finding.message}
-                  </li>
-                ))}
-              </ul>
+              <PlainResearchFindings findings={findings} questions={commission.requirements} />
             </>
           ) : (
             <p className="p2b-field-hint">
-              Every locked requirement is supported and no conflict or source gate is open.
+              Every question is answered, and the evidence has no unresolved disagreement or
+              missing first-hand source.
             </p>
           )}
           {followUpPrompt !== null && (
