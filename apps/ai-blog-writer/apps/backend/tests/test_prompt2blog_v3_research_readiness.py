@@ -270,11 +270,11 @@ def test_an_unpublished_question_does_not_block_the_run():
     assert evidence.receipt()["unpublished_requirement_ids"] == ["r3"]
 
 
-def test_an_unpublished_question_reaches_the_writer_as_a_reportable_absence():
+def test_an_unpublished_question_reaches_the_writer_as_a_gap_to_write_around():
     evidence, _readiness = _assess(_request(evidence=_unpublished_evidence()))
 
     records = evidence.records_text
-    assert "the article may state this absence" in records
+    assert "write around it and never mention the absence" in records
     assert "None of them measures this step" in records
 
 

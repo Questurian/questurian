@@ -181,11 +181,11 @@ def _records_text(
         claim_ids = ", ".join(requirement.claim_ids) or "none"
         gap = f" | gap: {requirement.gap}" if requirement.gap else ""
         # The status word alone left the writer to guess what `unpublished`
-        # licensed. Spelled out here, the groundedness check can match a
-        # sentence about the absence to this record.
+        # means for the draft. Spelled out here, because the one thing it must
+        # never produce is prose explaining what could not be found.
         status = (
             "unpublished (searched for and no one publishes an answer; "
-            "the article may state this absence)"
+            "write around it and never mention the absence)"
             if requirement.status == "unpublished"
             else requirement.status
         )
