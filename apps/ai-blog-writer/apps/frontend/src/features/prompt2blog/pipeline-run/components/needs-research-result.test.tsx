@@ -1,8 +1,11 @@
 /* @vitest-environment jsdom */
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import '@testing-library/jest-dom/vitest'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Prompt2BlogV3NeedsResearchResponse } from '../../api'
 import { NeedsResearchResult } from './NeedsResearchResult'
+
+afterEach(cleanup)
 
 const result: Prompt2BlogV3NeedsResearchResponse = {
   status: 'needs_research',
@@ -32,12 +35,14 @@ const result: Prompt2BlogV3NeedsResearchResponse = {
 }
 
 describe('NeedsResearchResult', () => {
-  it('states plainly that nothing was queued and no article was written', () => {
+  it('states plainly that nothing ran or was charged', () => {
     render(
       <NeedsResearchResult result={result} onBackToResearch={() => {}} onDismiss={() => {}} />,
     )
 
-    expect(screen.getByRole('status').textContent).toMatch(/Nothing was queued/)
+    expect(screen.getByText(
+      'Not ready yet — 1 question still needs an answer. Nothing ran and nothing was charged.',
+    )).toBeInTheDocument()
   })
 
   it('lists every reason the gate stopped the run', () => {
@@ -46,9 +51,17 @@ describe('NeedsResearchResult', () => {
     )
 
     expect(screen.getByText(/No evidence covers the livability tradeoffs/)).toBeTruthy()
-    expect(screen.getAllByText(/attributable-responses/).length).toBeGreaterThan(0)
-    expect(screen.getByText(/Which quality-of-life tradeoffs/)).toBeTruthy()
-    expect(screen.getByText(/Unresolved conflicts: k1/)).toBeTruthy()
+    expect(screen.getByText('Still unanswered')).toBeTruthy()
+    expect(
+      screen.getAllByText(/Question 2: Which quality-of-life tradeoffs change the value judgment\?/)
+        .length,
+    ).toBeGreaterThan(0)
+    expect(screen.getAllByText(/This kind of article needs a first-hand source/).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Two sources disagree/)).toBeTruthy()
+    expect(screen.queryByText(/attributable-responses/)).toBeNull()
+    expect(screen.queryByText(/Unresolved conflicts: k1/)).toBeNull()
+    expect(screen.queryByText('requirement_gap')).toBeNull()
+    expect(screen.queryByText('source_gate')).toBeNull()
   })
 
   it('offers the follow-up prompt and a route back into research', () => {

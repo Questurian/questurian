@@ -1,16 +1,12 @@
 import type { Prompt2BlogV3NeedsResearchResponse } from '../../api'
+import { PlainResearchFindings } from '../../composer/components/PlainResearchFindings'
 import { useClipboardCopy } from '../../composer/hooks/useClipboardCopy'
+import { researchNotReadyMessage, researchQuestionLabel } from '../../composer/research-language'
 
 interface NeedsResearchResultProps {
   result: Prompt2BlogV3NeedsResearchResponse
   onBackToResearch: () => void
   onDismiss: () => void
-}
-
-const FINDING_LABELS: Record<string, string> = {
-  requirement_gap: 'Requirement gap',
-  unresolved_conflict: 'Unresolved conflict',
-  source_gate: 'Source gate',
 }
 
 /**
@@ -32,26 +28,26 @@ export function NeedsResearchResult({
   return (
     <div className="p2b-import-report p2b-import-report--blocked" role="status">
       <p className="p2b-import-report-title">
-        The run did not start: this commission’s research is incomplete. Nothing was queued and
-        no article was written.
+        {researchNotReadyMessage(result.unresolved_requirements.length)}
       </p>
 
-      <ul className="p2b-import-list">
-        {result.findings.map(finding => (
-          <li key={`${finding.code}-${finding.message}`}>
-            <code>{FINDING_LABELS[finding.code] ?? finding.code}</code> {finding.message}
-            {finding.requirement_ids.length > 0 && ` (${finding.requirement_ids.join(', ')})`}
-          </li>
-        ))}
-      </ul>
+      <PlainResearchFindings
+        findings={result.findings}
+        questions={result.unresolved_requirements}
+      />
 
       {result.unresolved_requirements.length > 0 && (
         <>
-          <p className="p2b-import-report-title">Requirements still open</p>
+          <p className="p2b-import-report-title">Questions still open</p>
           <ul className="p2b-requirement-list">
             {result.unresolved_requirements.map(requirement => (
               <li key={requirement.requirement_id} className="p2b-requirement-row">
-                <code>{requirement.requirement_id}</code> {requirement.question}
+                <strong>
+                  {researchQuestionLabel(
+                    requirement.requirement_id,
+                    result.unresolved_requirements
+                  )}
+                </strong>
                 {requirement.gap ? ` — ${requirement.gap}` : ''}
               </li>
             ))}
@@ -61,14 +57,14 @@ export function NeedsResearchResult({
 
       {result.unresolved_conflict_ids.length > 0 && (
         <p className="p2b-field-hint">
-          Unresolved conflicts: {result.unresolved_conflict_ids.join(', ')}
+          Two sources disagree. The follow-up prompt asks your chatbot to resolve them.
         </p>
       )}
 
       {result.missing_source_requirements.length > 0 && (
         <p className="p2b-field-hint">
-          This article form still needs {result.missing_source_requirements.join(', ')}. Meet it
-          with genuine matching material — never a simulated interview, scene, or quotation.
+          This kind of article needs a first-hand source. Add genuine matching material — never a
+          simulated interview, scene, or quotation.
         </p>
       )}
 

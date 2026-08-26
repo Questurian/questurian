@@ -166,6 +166,10 @@ describe('ResearchPanel', () => {
     pasteEvidence(evidence({ commission_fingerprint: 'a'.repeat(64) }))
 
     expect(screen.getByText(/nothing was attached/i)).toBeInTheDocument()
+    expect(
+      screen.getByText('This research belongs to a different commission.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('commission_fingerprint')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Attach research' })).toBeDisabled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Attach research' }))
@@ -200,7 +204,14 @@ describe('ResearchPanel', () => {
       })
     )
 
-    expect(screen.getByText(/1 readiness gap remain/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Not ready yet — 1 question still needs an answer. Nothing ran and nothing was charged.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText(/Question 1: What do current costs show\?/).length).toBeGreaterThan(0)
+    expect(screen.getByText('Still unanswered')).toBeInTheDocument()
+    expect(screen.queryByText('requirement_gap')).not.toBeInTheDocument()
     // The gap reads more than once on purpose: as the requirement's status, as
     // the finding that blocks the run, and inside the follow-up prompt.
     expect(
@@ -215,9 +226,7 @@ describe('ResearchPanel', () => {
   it('hides the follow-up prompt once research is ready', () => {
     renderPanel(evidence())
 
-    expect(
-      screen.getByText(/Every locked requirement is supported/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Every question is answered/i)).toBeInTheDocument()
     expect(
       screen.queryByLabelText('Follow-up research prompt')
     ).not.toBeInTheDocument()
