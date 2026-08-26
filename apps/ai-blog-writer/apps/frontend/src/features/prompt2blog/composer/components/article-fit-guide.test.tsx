@@ -26,12 +26,23 @@ describe('ArticleFitGuide', () => {
     expect(dialog).toHaveTextContent('Is Lima worth it?')
   })
 
-  it('says an opinion piece is still allowed, so the rule is not read as a ban', () => {
+  it('names the compound question, which is what actually returns Partly answered', () => {
     render(<ArticleFitGuide />)
     openGuide()
 
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent('is three questions wearing one coat')
+    expect(dialog).toHaveTextContent('Ask one thing at a time.')
+  })
+
+  it('says when trimming questions is free and when it costs the research', () => {
+    render(<ArticleFitGuide />)
+    openGuide()
+
+    // Editing an approved commission changes its fingerprint, and evidence that
+    // names another fingerprint is dropped rather than carried over.
     expect(screen.getByRole('dialog')).toHaveTextContent(
-      'The article can argue that Lima is worth it.',
+      'Once research is attached, changing the commission drops it and the research starts over.',
     )
   })
 

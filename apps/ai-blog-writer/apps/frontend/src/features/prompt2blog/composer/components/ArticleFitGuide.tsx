@@ -123,20 +123,25 @@ export function ArticleFitGuide() {
               </div>
 
               <section>
-                <h4>You can still have a point of view</h4>
+                <h4>One thing per question</h4>
                 <p>
-                  The article can argue that Lima is worth it. Just make the questions you send to
-                  research ones somebody could look up — the judgment goes on top of the facts,
-                  not instead of them.
+                  "What housing, food, and transport cost" is three questions wearing one coat. If
+                  research finds two of them, the whole question comes back{' '}
+                  <strong>Partly answered</strong> and you pay for another round to close the
+                  third. Ask one thing at a time.
                 </p>
               </section>
 
               <section>
                 <h4>Why it matters</h4>
                 <p>
-                  Every question that comes back unanswered sends you to your chatbot for another
-                  round, and each round is a long prompt. Two sharp questions beat five loose
-                  ones. You can add or remove questions in step 3, before any research happens.
+                  Every question that comes back unanswered or partly answered sends you to your
+                  chatbot for another round, and each round is a long prompt. Two sharp questions
+                  beat five loose ones.
+                </p>
+                <p>
+                  Trim them in step 3, <strong>before</strong> you research. Once research is
+                  attached, changing the commission drops it and the research starts over.
                 </p>
               </section>
             </div>
