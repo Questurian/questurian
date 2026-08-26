@@ -55,6 +55,28 @@ export function NeedsResearchResult({
         </>
       )}
 
+      {(result.unpublished_requirements?.length ?? 0) > 0 && (
+        <>
+          {/* Shown next to the open questions so the operator does not send the
+              follow-up prompt back out looking for a figure that was already
+              established as unpublished. */}
+          <p className="p2b-import-report-title">Nobody publishes these — already checked</p>
+          <ul className="p2b-requirement-list">
+            {(result.unpublished_requirements ?? []).map(requirement => (
+              <li key={requirement.requirement_id} className="p2b-requirement-row">
+                <strong>
+                  {researchQuestionLabel(
+                    requirement.requirement_id,
+                    result.unpublished_requirements ?? []
+                  )}
+                </strong>
+                {requirement.gap ? ` — ${requirement.gap}` : ''}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
       {result.unresolved_conflict_ids.length > 0 && (
         <p className="p2b-field-hint">
           Two sources disagree. The follow-up prompt asks your chatbot to resolve them.

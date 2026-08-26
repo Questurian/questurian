@@ -65,7 +65,12 @@ EvidenceMaterialType = Literal[
     "other",
 ]
 EvidenceConfidence = Literal["high", "medium", "low"]
-EvidenceRequirementStatus = Literal["supported", "partial", "missing"]
+# `unpublished` is the exit a research desk previously did not have. A question
+# nobody has ever published an answer to — Lima's customs processing minutes, for
+# either terminal — could only be reported as `partial`, which blocked the run and
+# sent the operator back to ask again for a fact that does not exist. It is a
+# finding, not a failure: the article can say the number is unpublished.
+EvidenceRequirementStatus = Literal["supported", "partial", "missing", "unpublished"]
 CreativityLevel = Literal["low", "medium", "high"]
 
 
@@ -208,10 +213,16 @@ class EvidenceRequirement(V3ContractModel):
             raise ValueError("supported requirements must reference at least one claim")
         if self.status == "supported" and self.gap:
             raise ValueError("supported requirements cannot describe a gap")
-        if self.status in {"partial", "missing"} and not self.gap:
-            raise ValueError("partial and missing requirements must describe the gap")
+        if self.status in {"partial", "missing", "unpublished"} and not self.gap:
+            raise ValueError(
+                "partial, missing, and unpublished requirements must describe the gap"
+            )
         if self.status == "missing" and self.claim_ids:
             raise ValueError("missing requirements cannot reference claims")
+        # `unpublished` keeps claims on purpose: "OSITRAN's December 2025 report
+        # measures immigration and baggage and no other step" is a real claim with
+        # a real source, and it is what makes the absence reportable rather than
+        # merely asserted.
         return self
 
 

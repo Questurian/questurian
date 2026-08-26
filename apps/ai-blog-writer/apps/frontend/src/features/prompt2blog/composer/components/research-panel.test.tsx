@@ -54,7 +54,9 @@ const editorialOptions: Prompt2BlogEditorialOptionsResponse = {
   ]
 }
 
-function makeCommission(): Prompt2BlogCommission {
+function makeCommission(
+  extraRequirements?: Array<{ requirement_id: string; question: string }>
+): Prompt2BlogCommission {
   const draft = {
     schema_version: 3 as const,
     original_title: "Is Lima still South America's bargain expat capital?",
@@ -73,9 +75,12 @@ function makeCommission(): Prompt2BlogCommission {
       mode: 'single_subject' as const,
       references: [{ name: 'Lima', role: 'primary_subject' as const }]
     },
-    requirements: [
-      { requirement_id: 'r1', question: 'What do current costs show?' }
-    ],
+    requirements: extraRequirements
+      ? [
+          { requirement_id: 'r1', question: 'What do current costs show?' },
+          ...extraRequirements
+        ]
+      : [{ requirement_id: 'r1', question: 'What do current costs show?' }],
     exclusions: [],
     call_to_action: null
   }
@@ -127,13 +132,14 @@ function renderPanel(
   handlers: {
     onStoreEvidence?: (value: Prompt2BlogEvidencePackage) => void
     onClearEvidence?: () => void
-  } = {}
+  } = {},
+  activeCommission: Prompt2BlogCommission = commission
 ) {
   const onStoreEvidence = handlers.onStoreEvidence ?? vi.fn()
   const onClearEvidence = handlers.onClearEvidence ?? vi.fn()
   render(
     <ResearchPanel
-      commission={commission}
+      commission={activeCommission}
       editorialOptions={editorialOptions}
       evidencePackage={evidencePackage}
       onClearEvidence={onClearEvidence}
@@ -230,6 +236,47 @@ describe('ResearchPanel', () => {
     expect(
       screen.queryByLabelText('Follow-up research prompt')
     ).not.toBeInTheDocument()
+  })
+
+  it('treats an unpublished question as settled, not as one to go back for', () => {
+    const twoQuestions = makeCommission([
+      { requirement_id: 'r2', question: 'How long is the customs queue?' }
+    ])
+
+    renderPanel(
+      {
+        ...evidence(),
+        commission_fingerprint: twoQuestions.commission_fingerprint,
+        requirements: [
+          {
+            requirement_id: 'r1',
+            status: 'supported',
+            claim_ids: ['c1'],
+            gap: ''
+          },
+          {
+            requirement_id: 'r2',
+            status: 'unpublished',
+            claim_ids: [],
+            gap: 'Checked the regulator and the operator. Neither publishes it.'
+          }
+        ],
+        gaps: []
+      },
+      {},
+      twoQuestions
+    )
+
+    expect(
+      screen.getByText(/Nobody publishes this — it was checked/)
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Not ready yet/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByLabelText('Follow-up research prompt')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/no published answer anywhere/)
+    ).toBeInTheDocument()
   })
 
   it('copies the attached evidence package so it never has to be dug out of a prompt', async () => {

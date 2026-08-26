@@ -45,6 +45,37 @@ describe('NeedsResearchResult', () => {
     )).toBeInTheDocument()
   })
 
+  it('shows what was already established as unpublished so it is not chased again', () => {
+    render(
+      <NeedsResearchResult
+        result={{
+          ...result,
+          unpublished_requirements: [
+            {
+              requirement_id: 'r3',
+              question: 'How long does customs take?',
+              gap: 'Checked the regulator and the operator. Neither measures it.',
+            },
+          ],
+        }}
+        onBackToResearch={() => {}}
+        onDismiss={() => {}}
+      />,
+    )
+
+    expect(screen.getByText('Nobody publishes these — already checked')).toBeInTheDocument()
+    expect(screen.getAllByText(/Question 3: How long does customs take\?/).length).toBeGreaterThan(0)
+    expect(screen.getByText(/Neither measures it/)).toBeTruthy()
+  })
+
+  it('leaves the unpublished list out entirely when there is none', () => {
+    render(
+      <NeedsResearchResult result={result} onBackToResearch={() => {}} onDismiss={() => {}} />,
+    )
+
+    expect(screen.queryByText(/already checked/)).not.toBeInTheDocument()
+  })
+
   it('lists every reason the gate stopped the run', () => {
     render(
       <NeedsResearchResult result={result} onBackToResearch={() => {}} onDismiss={() => {}} />,

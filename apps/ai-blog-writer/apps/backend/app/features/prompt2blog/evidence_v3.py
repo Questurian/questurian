@@ -63,10 +63,23 @@ class NormalizedEvidence(NormalizedModel):
     records_text: str
 
     def unresolved_requirement_ids(self) -> list[str]:
+        """Questions more research could still close.
+
+        `unpublished` is deliberately not one of them. The desk already checked
+        and reported that nobody publishes the answer; asking again returns the
+        same sentence and costs another long prompt.
+        """
         return [
             requirement.requirement_id
             for requirement in self.requirements
-            if requirement.status != "supported"
+            if requirement.status not in {"supported", "unpublished"}
+        ]
+
+    def unpublished_requirement_ids(self) -> list[str]:
+        return [
+            requirement.requirement_id
+            for requirement in self.requirements
+            if requirement.status == "unpublished"
         ]
 
     def unresolved_conflict_ids(self) -> list[str]:
@@ -86,6 +99,7 @@ class NormalizedEvidence(NormalizedModel):
                 for requirement in self.requirements
             },
             "unresolved_requirement_ids": self.unresolved_requirement_ids(),
+            "unpublished_requirement_ids": self.unpublished_requirement_ids(),
             "unresolved_conflict_ids": self.unresolved_conflict_ids(),
         }
 
@@ -166,9 +180,18 @@ def _records_text(
     for requirement in requirements:
         claim_ids = ", ".join(requirement.claim_ids) or "none"
         gap = f" | gap: {requirement.gap}" if requirement.gap else ""
+        # The status word alone left the writer to guess what `unpublished`
+        # means for the draft. Spelled out here, because the one thing it must
+        # never produce is prose explaining what could not be found.
+        status = (
+            "unpublished (searched for and no one publishes an answer; "
+            "write around it and never mention the absence)"
+            if requirement.status == "unpublished"
+            else requirement.status
+        )
         lines.append(
             f"- {requirement.requirement_id} | {requirement.question} "
-            f"| status: {requirement.status} | claims: {claim_ids}{gap}"
+            f"| status: {status} | claims: {claim_ids}{gap}"
         )
 
     lines.append("")

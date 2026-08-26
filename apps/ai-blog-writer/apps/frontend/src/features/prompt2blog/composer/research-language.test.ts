@@ -4,6 +4,7 @@ import {
   researchFindingLabel,
   researchNotReadyMessage,
   researchQuestionLabel,
+  researchReadyMessage,
   researchStatusLabel,
 } from './research-language'
 
@@ -45,5 +46,25 @@ describe('research language', () => {
       label: null,
       message: 'This research belongs to a different commission.',
     })
+  })
+})
+
+describe('the unpublished verdict in plain words', () => {
+  it('says the question is settled rather than outstanding', () => {
+    expect(researchStatusLabel('unpublished')).toBe(
+      'Nobody publishes this — it was checked'
+    )
+  })
+
+  it('names the backstop finding without a schema word', () => {
+    expect(researchFindingLabel('nothing_answered')).toBe(
+      'Nothing came back answered'
+    )
+  })
+
+  it('does not claim every question was answered when one is unpublished', () => {
+    expect(researchReadyMessage(0)).toContain('Every question is answered')
+    expect(researchReadyMessage(1)).toContain('no published answer anywhere')
+    expect(researchReadyMessage(3)).toContain('3 of them')
   })
 })

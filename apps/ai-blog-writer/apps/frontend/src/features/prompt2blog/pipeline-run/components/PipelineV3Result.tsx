@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 import type { Prompt2BlogV3PipelinePayload } from '../../api'
+import { researchStatusLabel } from '../../composer/research-language'
 import { RunCostReceipt } from './RunCostReceipt'
 
 interface PipelineV3ResultProps {
@@ -9,12 +10,6 @@ interface PipelineV3ResultProps {
   showDebug: boolean
   stageArticleUrl: string | null
   onToggleDebug: () => void
-}
-
-const REQUIREMENT_STATUS_LABELS: Record<string, string> = {
-  supported: 'Supported',
-  partial: 'Partial',
-  missing: 'Missing',
 }
 
 /**
@@ -101,8 +96,7 @@ export function PipelineV3Result({
             {requirementIds.map(requirementId => (
               <li key={requirementId} className="p2b-requirement-row">
                 <code>{requirementId}</code>{' '}
-                {REQUIREMENT_STATUS_LABELS[requirementStatus[requirementId]]
-                  ?? requirementStatus[requirementId]}
+                {researchStatusLabel(requirementStatus[requirementId])}
               </li>
             ))}
           </ul>

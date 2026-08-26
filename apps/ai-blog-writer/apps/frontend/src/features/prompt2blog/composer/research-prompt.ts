@@ -56,10 +56,11 @@ function activeResearchGuidance(
  */
 export const REQUIREMENT_STATUS_RULES = `REQUIREMENT STATUS VERSUS CLAIM CONFIDENCE
 These record two different things. Never conflate them.
-- status describes the QUESTION. supported means linked claims answer the requirement's question; partial means part of that question is still unanswered; missing means none of it is answered.
+- status describes the QUESTION. supported means linked claims answer the requirement's question; partial means part of that question is still unanswered; missing means none of it is answered; unpublished means you searched and no one has published an answer for anyone to find.
 - confidence describes the ANSWER. high, medium, or low records how well corroborated that answer is.
 - An answer you found and corroborated stays supported even when you could not reach the ideal primary source, the publisher blocks automated retrieval, or you would have preferred more evidence. Record that reservation as claim confidence medium or low and as a source note. Never downgrade the requirement to partial for it.
-- Reserve partial and missing for a genuinely unanswered question. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims.`
+- Reserve partial and missing for a question more research could still close. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims.
+- Use unpublished only after real searching, and only when the fact itself is unpublished rather than merely hard for you to reach. Name in gap exactly which authorities, documents, and dates you checked. Where a source states the limit of what it measures, record that as a claim and link it. unpublished does not block the run and will not be sent back to you, so a careless unpublished silently costs the article a fact.`
 
 /** Exact bare response shape shared by initial and follow-up research prompts. */
 export function formatEvidencePackageContract(fingerprint: string): string {
@@ -92,9 +93,9 @@ export function formatEvidencePackageContract(fingerprint: string): string {
   "requirements": [
     {
       "requirement_id": "r1",
-      "status": "supported|partial|missing",
+      "status": "supported|partial|missing|unpublished",
       "claim_ids": ["c1"],
-      "gap": "Empty only when the question is answered; otherwise say exactly which part of the question is still unanswered"
+      "gap": "Empty only when the question is answered; otherwise say exactly which part of the question is still unanswered, or for unpublished exactly which authorities, documents, and dates you checked"
     }
   ],
   "conflicts": [

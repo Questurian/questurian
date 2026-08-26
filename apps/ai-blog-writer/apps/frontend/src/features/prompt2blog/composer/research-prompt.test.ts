@@ -115,11 +115,26 @@ describe('buildResearchPrompt', () => {
       'Never downgrade the requirement to partial for it.'
     )
     expect(prompt).toContain(
-      'Reserve partial and missing for a genuinely unanswered question.'
+      'Reserve partial and missing for a question more research could still close.'
     )
     expect(prompt).toContain(
       'otherwise say exactly which part of the question is still unanswered'
     )
+  })
+
+  it('offers the unpublished verdict and demands the search record with it', () => {
+    const prompt = buildResearchPrompt(commission, catalog)
+
+    expect(prompt).toContain(
+      'unpublished means you searched and no one has published an answer'
+    )
+    expect(prompt).toContain(
+      'Use unpublished only after real searching, and only when the fact itself is unpublished'
+    )
+    expect(prompt).toContain(
+      'Name in gap exactly which authorities, documents, and dates you checked.'
+    )
+    expect(prompt).toContain('"status": "supported|partial|missing|unpublished"')
   })
 
   it('includes only active module metadata and the active form source gate', () => {

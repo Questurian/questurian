@@ -73,7 +73,7 @@ describe('PipelineV3Result', () => {
     expect(screen.getByText(/Is Lima still South America/)).toBeTruthy()
     expect(screen.getByText(/2 sources and 1 claims/)).toBeTruthy()
     expect(screen.getByText('r1')).toBeTruthy()
-    expect(screen.getByText(/Supported/)).toBeTruthy()
+    expect(screen.getByText(/Answered/)).toBeTruthy()
   })
 
   it('names what held a run back rather than only reporting the status', () => {

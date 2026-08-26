@@ -14,6 +14,14 @@
   trace to whichever artifact key a run recorded.
 
 ### Changed
+- `POST /prompt2blog/pipeline-v3` accepts a fourth evidence requirement status,
+  `unpublished`: a question the research desk searched for and no one has
+  published an answer to. It does not hold the run, it is never re-asked by the
+  follow-up research prompt, and it reaches the writer as a reportable absence.
+  It requires a `gap` naming what was checked, and a package where no
+  requirement is `supported` still answers `needs_research`. The
+  `needs_research` body gained `unpublished_requirements`, and the finished-run
+  evidence receipt gained `unpublished_requirement_ids`.
 - The Prompt2Blog UI submits only `pipeline-v3`. `POST /prompt2blog/run` and
   `POST /prompt2blog/pipeline-v2` still work and are unchanged, but have no UI
   caller; they remain as a fallback until v3 is proven on a controlled real run.

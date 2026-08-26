@@ -92,6 +92,23 @@ fairly, genuinely, truly, really, simply, just, of course, indeed. Cut "it's \
 worth noting that," "it's important to remember," and any meta-commentary \
 about the writing itself."""
 
+_BANNED_DISCLAIMERS = """\
+Banned disclaimers. State what you know as a plain fact and stop. Do not \
+caveat a fact, attribute it defensively, date it as a shield, or explain how \
+it was established. "Customs took twenty five minutes" is the whole sentence. \
+Cut: "based on my own experience," "anecdotally," "at the time of writing," \
+"your experience may vary," "this is one traveller's experience," "this is \
+not an average," "no official figures exist for," "there is no public data \
+on," "figures could not be verified," and any sentence whose job is to tell \
+the reader how much to trust the previous one. Where research could not \
+establish something, write around it: never narrate the gap. \
+This bans hedging, not first person. In a piece written in first person, \
+"I waited twenty five minutes at customs" is the fact, told plainly, and it \
+stays. A date or a season belongs in the prose when the reader needs it to \
+act — a closure, a season, a change to the place itself — never as armour \
+around a claim. Accuracy is settled before the writing starts; it is not the \
+reader's problem."""
+
 _BANNED_ADJ_STACKING = """\
 Banned adjective stacking. No three-adjective lists ("warm, unfussy, and \
 inviting"). Pick one adjective and make it earn its place, or replace the \
@@ -177,35 +194,41 @@ competent writing on the internet, it is AI prose. The fix is almost always \
 more specificity and less symmetry."""
 
 
-ANTI_AI_TELLS_FULL = "\n\n".join([
-    PRECEDENCE_HEADER,
-    _BANNED_CONSTRUCTIONS,
-    _BANNED_PERSONIFICATIONS,
-    _NO_DASH_SUBSTITUTION,
-    _RHYTHM,
-    _SPECIFICITY_SOFTENED,
-    _BANNED_HEDGES,
-    _SUMMARY_PATTERNS,
-    _BANNED_ADJ_STACKING,
-    _SUPERLATIVE_WITHOUT_ANCHOR,
-    _DICTION,
-    _VOICE,
-    _FINAL_TEST,
-])
+ANTI_AI_TELLS_FULL = "\n\n".join(
+    [
+        PRECEDENCE_HEADER,
+        _BANNED_CONSTRUCTIONS,
+        _BANNED_PERSONIFICATIONS,
+        _NO_DASH_SUBSTITUTION,
+        _RHYTHM,
+        _SPECIFICITY_SOFTENED,
+        _BANNED_HEDGES,
+        _BANNED_DISCLAIMERS,
+        _SUMMARY_PATTERNS,
+        _BANNED_ADJ_STACKING,
+        _SUPERLATIVE_WITHOUT_ANCHOR,
+        _DICTION,
+        _VOICE,
+        _FINAL_TEST,
+    ]
+)
 
 
-ANTI_AI_TELLS_BLURB = "\n\n".join([
-    PRECEDENCE_HEADER,
-    _BANNED_CONSTRUCTIONS,
-    _BANNED_PERSONIFICATIONS,
-    _NO_DASH_SUBSTITUTION,
-    _BLURB_TRIADS,
-    _BLURB_RHYTHM,
-    _BLURB_NO_UNIFORM_KICKERS,
-    _SPECIFICITY_SOFTENED,
-    _BANNED_HEDGES,
-    _BANNED_ADJ_STACKING,
-    _SUPERLATIVE_WITHOUT_ANCHOR,
-    _DICTION,
-    _VOICE,
-])
+ANTI_AI_TELLS_BLURB = "\n\n".join(
+    [
+        PRECEDENCE_HEADER,
+        _BANNED_CONSTRUCTIONS,
+        _BANNED_PERSONIFICATIONS,
+        _NO_DASH_SUBSTITUTION,
+        _BLURB_TRIADS,
+        _BLURB_RHYTHM,
+        _BLURB_NO_UNIFORM_KICKERS,
+        _SPECIFICITY_SOFTENED,
+        _BANNED_HEDGES,
+        _BANNED_DISCLAIMERS,
+        _BANNED_ADJ_STACKING,
+        _SUPERLATIVE_WITHOUT_ANCHOR,
+        _DICTION,
+        _VOICE,
+    ]
+)

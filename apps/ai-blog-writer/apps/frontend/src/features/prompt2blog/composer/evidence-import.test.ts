@@ -181,6 +181,70 @@ describe('reviewEvidencePackageJson', () => {
     ])
   })
 
+  it('lets an unpublished question through the gate with the record of what was checked', () => {
+    // The Lima block: no agency publishes a customs-processing figure, for
+    // either terminal, so `partial` sent the operator back to ask forever.
+    const value = evidence()
+    value.requirements[1] = {
+      requirement_id: 'r2',
+      status: 'unpublished',
+      claim_ids: [],
+      gap: 'Checked the regulator, the operator, and the customs authority. None publishes it.'
+    }
+    value.gaps = []
+
+    const result = review(value)
+
+    expect(result.issues).toEqual([])
+    expect(result.readinessFindings).toEqual([])
+  })
+
+  it('refuses an unpublished question that does not say what was checked', () => {
+    const value = evidence()
+    value.requirements[1] = {
+      requirement_id: 'r2',
+      status: 'unpublished',
+      claim_ids: [],
+      gap: '   '
+    }
+
+    expect(review(value).issues).toContainEqual({
+      path: 'requirements[1]',
+      message:
+        'Unpublished requirements need a non-empty gap naming what was checked.'
+    })
+  })
+
+  it('still blocks a package where nothing at all came back answered', () => {
+    // Otherwise a research desk escapes the gate by declaring every question
+    // unpublished, and the article is written from nothing.
+    const value = evidence()
+    value.claims = []
+    value.requirements = [
+      {
+        requirement_id: 'r1',
+        status: 'unpublished',
+        claim_ids: [],
+        gap: 'Checked every authority that could publish this.'
+      },
+      {
+        requirement_id: 'r2',
+        status: 'unpublished',
+        claim_ids: [],
+        gap: 'Checked every authority that could publish this.'
+      }
+    ]
+    value.gaps = []
+
+    expect(review(value).readinessFindings).toEqual([
+      {
+        code: 'nothing_answered',
+        requirement_ids: ['r1', 'r2'],
+        message: 'No question was answered, so there is nothing to write from.'
+      }
+    ])
+  })
+
   it('requires one bare exact evidence object with the approved fingerprint', () => {
     const fenced = reviewEvidencePackageJson(
       `\`\`\`json\n${JSON.stringify(evidence())}\n\`\`\``,
