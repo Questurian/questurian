@@ -6,7 +6,7 @@ from typing import Any
 from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
-from ..quality import _build_constraint_checks
+from ..quality import CONSTRAINT_MEASUREMENT_KEYS, _build_constraint_checks
 from .groundedness import check_groundedness
 
 logger = logging.getLogger(__name__)
@@ -55,17 +55,12 @@ def run_final_verify_stage(
         rewrite["improved_content"],
         state["writing_brief"],
     )
-    measurements = {
-        "word_count_estimate",
-        "secondary_keyword_coverage",
-        "must_include_coverage",
-    }
     quality_checks = {
         **state["quality_checks"],
         **{
             key: value
             for key, value in final_checks.items()
-            if key not in measurements
+            if key not in CONSTRAINT_MEASUREMENT_KEYS
         },
         "claims_grounded": groundedness["grounded"],
     }

@@ -47,6 +47,24 @@ HARD_CONSTRAINT_CHECK_KEYS = (
     "claims_grounded",
 )
 
+# Keys `_build_constraint_checks` returns that are measurements, not pass/fail
+# verdicts. Every site that merges computed checks over the auditor's own
+# `constraint_checks` has to drop these, or a count lands in a dict whose
+# other values are booleans and reads as a check that failed. The sites used
+# to each carry their own filter -- one by name, one by `_coverage` suffix --
+# which meant a new measurement leaked into whichever list was not updated.
+CONSTRAINT_MEASUREMENT_KEYS = frozenset(
+    {
+        "word_count_estimate",
+        "word_count_delta",
+        "word_count_direction",
+        "word_count_target_min",
+        "word_count_target_max",
+        "secondary_keyword_coverage",
+        "must_include_coverage",
+    }
+)
+
 
 def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
     editorial = _safe_str(writing_brief.get("editorial_instructions"))
@@ -135,12 +153,28 @@ def _build_constraint_checks(
     paragraph_length_pref = _safe_str(formatting.get("paragraph_length"))
     target_word_count = _safe_int(formatting.get("target_word_count"), default=0)
 
+    # The check carries which way it missed, not just that it missed. As a bare
+    # boolean it told the auditor "wrong length" and left the direction to be
+    # guessed; on the Lima restaurant run the guess was "too short" against a
+    # draft 363 words over the ceiling, and both repair passes made the article
+    # longer still. `word_count_delta` is the distance outside the accepted
+    # band, signed: positive is over the ceiling, negative is under the floor.
     target_word_count_met = True
+    word_count_delta = 0
+    word_count_direction = "within"
+    word_count_target_min = 0
+    word_count_target_max = 0
     if target_word_count > 0:
         tolerance = max(100, int(target_word_count * 0.1))
-        target_word_count_met = (
-            target_word_count - tolerance <= word_count <= target_word_count + tolerance
-        )
+        word_count_target_min = target_word_count - tolerance
+        word_count_target_max = target_word_count + tolerance
+        if word_count < word_count_target_min:
+            word_count_delta = word_count - word_count_target_min
+            word_count_direction = "under"
+        elif word_count > word_count_target_max:
+            word_count_delta = word_count - word_count_target_max
+            word_count_direction = "over"
+        target_word_count_met = word_count_direction == "within"
 
     avg_sentences = _estimate_paragraph_sentence_average(content)
     paragraph_length_met = True
@@ -203,6 +237,10 @@ def _build_constraint_checks(
         "must_include_covered": must_include_coverage >= MUST_INCLUDE_COVERAGE_THRESHOLD,
         "must_include_coverage": round(must_include_coverage, 3),
         "target_word_count_met": target_word_count_met,
+        "word_count_delta": word_count_delta,
+        "word_count_direction": word_count_direction,
+        "word_count_target_min": word_count_target_min,
+        "word_count_target_max": word_count_target_max,
         "paragraph_length_met": paragraph_length_met,
         "cta_present": cta_present,
         "primary_keyword_present": primary_keyword_present,
@@ -210,6 +248,79 @@ def _build_constraint_checks(
         "secondary_keyword_coverage": round(secondary_keyword_coverage, 3),
         "word_count_estimate": word_count,
     }
+
+
+def word_count_revision_instruction(checks: dict[str, Any]) -> str | None:
+    """The length revision, stated in words, or None when the length is fine.
+
+    Repair used to receive whatever sentence the auditor wrote about length.
+    The auditor was reading a boolean, so it could only guess a direction, and
+    a wrong guess costs a full writing-model call plus the minutes it takes.
+    This sentence is computed from the same counts the check is, so it cannot
+    disagree with the check that triggered it.
+    """
+    if _safe_bool(checks.get("target_word_count_met"), default=True):
+        return None
+
+    direction = _safe_str(checks.get("word_count_direction"))
+    delta = _safe_int(checks.get("word_count_delta"), default=0)
+    word_count = _safe_int(checks.get("word_count_estimate"), default=0)
+    lower = _safe_int(checks.get("word_count_target_min"), default=0)
+    upper = _safe_int(checks.get("word_count_target_max"), default=0)
+    if direction not in {"over", "under"} or not delta or upper <= 0:
+        return None
+
+    # Rounded to the nearest ten. A writer asked for "363 words" treats the
+    # number as a target to hit exactly and pads or truncates to reach it.
+    amount = max(10, abs(delta) // 10 * 10)
+    band = f"{lower}-{upper} words"
+    if direction == "over":
+        return (
+            f"Length: the draft is {word_count} words, roughly {abs(delta)} over the "
+            f"{band} required for this article. Cut about {amount} words. Tighten "
+            "prose, remove repetition and merge overlapping passages. Do not drop "
+            "a required subject, a section, or a sourced fact to make the count."
+        )
+    return (
+        f"Length: the draft is {word_count} words, roughly {abs(delta)} under the "
+        f"{band} required for this article. Add about {amount} words by developing "
+        "material the draft already covers. Never add a fact the evidence records "
+        "do not contain, and do not pad with restatement."
+    )
+
+
+# Words that mark a revision as being about how long the article is. Used to
+# drop the auditor's own length sentence when the deterministic one exists:
+# two length instructions in one list can point opposite ways, and that is the
+# bug this whole path was built to remove.
+_LENGTH_REVISION_TERMS = (
+    "word count",
+    "word target",
+    "length",
+    "expand",
+    "lengthen",
+    "shorten",
+    "trim",
+    "condense",
+    "too short",
+    "too long",
+    "target_word_count",
+)
+
+
+def drop_length_revisions(revisions: list[str]) -> list[str]:
+    """Remove revisions about length, keeping everything else in order.
+
+    Only called when a computed length instruction is taking their place. The
+    auditor is shown the direction now, but being shown it is not the same as
+    obeying it, and a list holding both "cut about 360 words" and "expand the
+    draft" leaves the repair model to pick. It picked wrong once already.
+    """
+    return [
+        revision
+        for revision in revisions
+        if not any(term in revision.lower() for term in _LENGTH_REVISION_TERMS)
+    ]
 
 
 def _sanitize_coverage(parsed: dict[str, Any]) -> dict[str, Any]:

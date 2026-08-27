@@ -3,6 +3,7 @@ import type { Prompt2BlogEditorialOptionsResponse } from '../api'
 import type { Prompt2BlogInputOption } from '../api'
 import {
   buildDirectionPrompt,
+  researchQuestionCeilingForLength,
   researchQuestionsForLength
 } from './direction-prompt'
 
@@ -145,6 +146,46 @@ describe('buildDirectionPrompt', () => {
     expect(researchQuestionsForLength(0)).toBe(3)
   })
 
+  it('caps the research questions at what the length can absorb', () => {
+    /*
+     * The floor alone only pushed one way. The Lima restaurant run came back
+     * with six questions against a 1400 word target -- about 2100 words of
+     * material for a 1540 word ceiling -- and the article was over length
+     * before a word was written.
+     */
+    expect(researchQuestionCeilingForLength(1400)).toBe(4)
+    expect(researchQuestionCeilingForLength(4000)).toBe(12)
+    // The ceiling can never sit below the floor at any length.
+    expect(researchQuestionCeilingForLength(700)).toBe(
+      researchQuestionsForLength(700)
+    )
+    // No length chosen means no measured band and so no ceiling.
+    expect(researchQuestionCeilingForLength(0)).toBe(0)
+
+    const prompt = buildDirectionPrompt(
+      'Where to eat in Lima right now',
+      'Lima, Peru',
+      catalog,
+      longLength
+    )
+    expect(prompt).toContain('cannot be written to length')
+    /*
+     * The ceiling has to appear in the output contract and the schema
+     * examples, not only in the rules prose. This prompt already lost that
+     * argument once: see 'refuses to teach one question by example' below,
+     * where the rule said "at least one", the example said "one", and the
+     * example won.
+     */
+    const uncapped = prompt.match(/at least 4(?! and at most)/g) ?? []
+    expect(uncapped).toEqual([])
+    expect(prompt).toContain(
+      'needs at least 4 and at most 4 requirements, numbered from r1'
+    )
+    expect(prompt).toContain(
+      '"requirements": ["at least 4 and at most 4, same shape as above"]'
+    )
+  })
+
   it('tells the chooser the working title is a promise it must keep', () => {
     const prompt = buildDirectionPrompt(
       'Where to eat in Lima right now',
@@ -155,7 +196,9 @@ describe('buildDirectionPrompt', () => {
 
     expect(prompt).toContain('THE TITLE IS A PROMISE')
     expect(prompt).toContain('A title containing "right now" is not automatically news.')
-    expect(prompt).toContain('needs at least 4 required research questions')
+    expect(prompt).toContain(
+      'needs at least 4 and at most 4 required research questions'
+    )
     expect(prompt).toContain('"requirement_id": "r4"')
   })
 
@@ -178,7 +221,9 @@ describe('buildDirectionPrompt', () => {
   it('still builds a usable prompt when no length has been chosen', () => {
     const prompt = buildDirectionPrompt('A weekend in Lisbon', 'Lisbon, Portugal', catalog, null)
 
+    // No length chosen means no measured band, so there is no ceiling to state.
     expect(prompt).toContain('needs at least 3 required research questions')
+    expect(prompt).not.toContain('at most')
   })
 
   it('tells the direction model what day it is', () => {

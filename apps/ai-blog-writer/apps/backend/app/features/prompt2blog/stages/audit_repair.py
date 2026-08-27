@@ -12,6 +12,7 @@ from ..prompts.quality import P2B_QUALITY_AUDIT_PROMPT, P2B_REPAIR_PROMPT
 from ..policies import is_better_quality
 from ..schemas import REWRITE_SCHEMA
 from ..quality import (
+    CONSTRAINT_MEASUREMENT_KEYS,
     _build_constraint_checks,
     _sanitize_quality,
     _sanitize_rewrite,
@@ -54,18 +55,13 @@ def _audit_rewrite(
     # The auditor supplies the semantic checks; everything measurable is
     # computed here and wins. Non-boolean measurements are reported alongside
     # the checks rather than inside them.
-    measurements = {
-        "word_count_estimate",
-        "secondary_keyword_coverage",
-        "must_include_coverage",
-    }
     groundedness = state.get("groundedness") or unchecked_groundedness()
     quality_checks = {
         **quality.get("constraint_checks", {}),
         **{
             key: value
             for key, value in computed_checks.items()
-            if key not in measurements
+            if key not in CONSTRAINT_MEASUREMENT_KEYS
         },
         "claims_grounded": groundedness["grounded"],
     }

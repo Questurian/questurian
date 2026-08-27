@@ -241,3 +241,82 @@ class TestSourceAttributionIsNotProse:
         )
         assert "deleting the publication" in prompt
         assert "another attribution verb" in prompt
+
+
+class TestResearchMetaIsNotReaderFacing:
+    """The reader came for the subject, not for a report on the research.
+
+    Every FLAGGED sentence below is verbatim, or near verbatim, from the Lima
+    restaurant run's shipped article. Seven of these reached the reader. The
+    quality audit flagged one, vaguely, and the house rule forbidding them
+    was already in the writer's prompt and had been ignored.
+    """
+
+    FLAGGED = (
+        "Central does not publish its individual course names, so the specific "
+        "dishes served on a given date are not public information.",
+        "Maido does not publish which courses are currently being served.",
+        "Merito's sampled booking flow uses a S/551 guarantee per person.",
+        "The number is an estimate rather than a guaranteed bill.",
+        "Kjolle has not disclosed the autumn menu.",
+        "The tasting price is not publicly available.",
+        "No official figures exist for the wait at either counter.",
+        "There is no public data on the counter seats.",
+        "The closing time could not be confirmed.",
+        "At the time of writing the room seats forty.",
+        "Two data points put the bill near S/500.",
+    )
+
+    # These must stay clean, or the rule costs a repair call on correct prose.
+    ALLOWED = (
+        "Central seats twenty eight and charges S/551 for the tasting menu.",
+        # "sampled" is an ordinary verb in a food article. Only the research
+        # noun phrase it forms in "sampled booking flow" is the tell.
+        "We sampled the ceviche at three counters in Barranco.",
+        "Maido publishes its menu on the day of service.",
+        "The guarantee covers the tasting menu and the pairing.",
+        "Book the 1pm seating; the room fills by Thursday.",
+        "The kitchen opens at noon and stops seating at half past two.",
+        # "release" means putting seats on sale, not publishing research.
+        "The venue does not release tickets until 10am on the day.",
+        "The museum will not release the autumn schedule until August.",
+        # How a reader books is the article doing its job, not a research gap.
+        "Reservations are not available online, so call the counter before noon.",
+        "Rooms are not available online during Fiestas Patrias.",
+        "Tables are not publicly listed; the concierge holds them.",
+    )
+
+    @staticmethod
+    def _research_meta_errors(text: str) -> list[str]:
+        return [
+            error
+            for error in validate_anti_ai_tells_markdown(text).errors
+            if "write around what the research could not establish" in error
+        ]
+
+    def test_research_meta_sentences_fail_validation(self):
+        for sentence in self.FLAGGED:
+            assert self._research_meta_errors(sentence), sentence
+
+    def test_ordinary_prose_about_the_subject_stays_clean(self):
+        for sentence in self.ALLOWED:
+            assert not self._research_meta_errors(sentence), sentence
+
+    def test_the_error_names_the_offending_phrase(self):
+        errors = self._research_meta_errors(self.FLAGGED[0])
+        assert "does not publish" in errors[0]
+        assert "not public information" in errors[0]
+
+    def test_a_link_target_is_not_prose(self):
+        clean = "Book at [Central](https://example.com/no-public-data) early."
+        assert not self._research_meta_errors(clean)
+
+    def test_the_repair_prompt_says_to_delete_not_soften(self):
+        # Softening is how this rule gets defeated: "course names vary" is the
+        # same absence, told at one remove.
+        prompt = build_anti_ai_repair_prompt(
+            self.FLAGGED[0],
+            ["Line 1: write around what the research could not establish"],
+        )
+        assert "reports on the research by deleting it" in prompt
+        assert "Never soften it" in prompt

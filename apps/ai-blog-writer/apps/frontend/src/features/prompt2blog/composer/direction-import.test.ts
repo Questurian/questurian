@@ -459,6 +459,59 @@ describe('direction warnings never block an import', () => {
     expect(reviewWithLength(value, 700).warnings).toEqual([])
   })
 
+  it('says when a direction asks too many questions for the length', () => {
+    /*
+     * The Lima restaurant run: six requirements against a 1400 word target,
+     * whose measured ceiling is 1540. Six questions are worth about 2100
+     * words. It was over length before a word was written, and nothing said
+     * so until two repair passes had been spent trying to cut it back.
+     */
+    const value = response()
+    value.options[0].requirements = Array.from({ length: 6 }, (_unused, index) => ({
+      requirement_id: `r${index + 1}`,
+      question: `What does item ${index + 1} cost a visitor today?`,
+      assumption_ids: ['a1']
+    }))
+
+    const result = reviewWithLength(value, 1400)
+
+    expect(result.issues).toEqual([])
+    expect(result.response).not.toBeNull()
+    const tooMany = result.warnings.filter(warning =>
+      warning.message.includes('Asks 6 questions')
+    )
+    expect(tooMany).toHaveLength(1)
+    expect(tooMany[0].label).toBe('Direction 1')
+    expect(tooMany[0].message).toContain('2100 words of material')
+    expect(tooMany[0].message).toContain('1540 word ceiling')
+    expect(tooMany[0].message).toContain('about 4 questions')
+  })
+
+  it('never fires the too-few and too-many warnings on one direction', () => {
+    // Both are derived from the same 350-words-a-question figure, so a length
+    // that made both true would be arithmetic telling the operator nothing.
+    for (const targetWordCount of [700, 1000, 1400, 2000, 4000]) {
+      for (const questionCount of [1, 3, 4, 6, 9, 14]) {
+        const value = response()
+        value.options[0].requirements = Array.from(
+          { length: questionCount },
+          (_unused, index) => ({
+            requirement_id: `r${index + 1}`,
+            question: `What does item ${index + 1} cost a visitor today?`,
+            assumption_ids: ['a1']
+          })
+        )
+        const messages = reviewWithLength(value, targetWordCount)
+          .warnings.filter(warning => warning.label === 'Direction 1')
+          .map(warning => warning.message)
+
+        expect(
+          messages.filter(message => /^Asks \d+ questions? for an article/.test(message))
+        ).not.toHaveLength(2)
+      }
+    }
+  })
+
   it('flags a question that asks more than one thing', () => {
     const value = response()
     value.options[0].requirements = [

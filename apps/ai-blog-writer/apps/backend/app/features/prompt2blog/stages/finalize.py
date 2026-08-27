@@ -7,7 +7,7 @@ from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
 from ..policies import evaluate_readiness
 from ..pricing import Prompt2BlogTokenUsageTracker
-from ..quality import _build_constraint_checks
+from ..quality import CONSTRAINT_MEASUREMENT_KEYS, _build_constraint_checks
 from ..support import _safe_dict, _safe_str
 
 
@@ -44,7 +44,7 @@ def run_finalize_stage(
         **{
             key: value
             for key, value in final_checks.items()
-            if not key.endswith("_coverage") and key != "word_count_estimate"
+            if key not in CONSTRAINT_MEASUREMENT_KEYS
         },
     }
     # Readiness is one shared decision (see policies.evaluate_readiness), not a

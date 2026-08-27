@@ -384,3 +384,173 @@ def test_the_audit_still_measures_the_checks_it_reports():
     assert updates["quality_checks"]["target_word_count_met"] is False
     # Judged checks stay the auditor's; measured checks stay the code's.
     assert updates["quality_checks"]["tone_match"] is False
+
+
+def test_repair_is_told_to_cut_when_the_draft_overruns_its_length_band():
+    """The Lima restaurant run's dead end, as a test.
+
+    The auditor read `target_word_count_met: false` off a 1903-word draft
+    against a 1260-1540 band, guessed "too short", and told repair to expand.
+    Both repair passes obeyed and both were discarded. The direction now
+    travels with the check, so repair cannot be sent the wrong way.
+    """
+    llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "improved_content": "## What Lima costs now\n\nRepaired body.",
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+    state = _state(
+        quality={
+            "required_revisions": [],
+            "word_count_check": {
+                "target_word_count_met": False,
+                "word_count_estimate": 1903,
+                "word_count_delta": 363,
+                "word_count_direction": "over",
+                "word_count_target_min": 1260,
+                "word_count_target_max": 1540,
+            },
+        },
+        groundedness={
+            "checked": True,
+            "grounded": True,
+            "high_severity_count": 0,
+            "unsupported_claims": [],
+        },
+    )
+
+    run_v3_repair_stage(state, dependencies)
+
+    length_revision = recorder.recorded[0][1]["required_revisions"][0]
+    assert "Cut about 360 words" in length_revision
+    assert "1260-1540 words" in length_revision
+    assert length_revision in llm.prompts[0]
+    assert "Never lengthen a draft asked to be cut" in llm.prompts[0]
+
+
+def test_repair_gets_no_length_revision_when_the_draft_is_within_its_band():
+    llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "improved_content": "## What Lima costs now\n\nRepaired body.",
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+    state = _state(
+        quality={
+            "required_revisions": ["Tighten the opening."],
+            "word_count_check": {
+                "target_word_count_met": True,
+                "word_count_estimate": 1400,
+                "word_count_delta": 0,
+                "word_count_direction": "within",
+                "word_count_target_min": 1260,
+                "word_count_target_max": 1540,
+            },
+        },
+        groundedness={
+            "checked": True,
+            "grounded": True,
+            "high_severity_count": 0,
+            "unsupported_claims": [],
+        },
+    )
+
+    run_v3_repair_stage(state, dependencies)
+
+    assert recorder.recorded[0][1]["required_revisions"] == ["Tighten the opening."]
+
+
+def test_audit_is_shown_the_direction_of_a_length_miss_not_just_the_failure():
+    from app.features.prompt2blog.stages.v3.audit_repair import _measured_checks_block
+
+    block = _measured_checks_block(
+        {
+            "target_word_count_met": False,
+            "cta_present": True,
+            "word_count_estimate": 1903,
+            "word_count_delta": 363,
+            "word_count_direction": "over",
+            "word_count_target_min": 1260,
+            "word_count_target_max": 1540,
+        }
+    )
+
+    assert "target_word_count_met: FAIL" in block
+    assert "word_count_verdict: OVER the required 1260-1540 word band by 363 words" in (
+        block
+    )
+
+
+def test_the_auditors_own_length_sentence_is_replaced_not_kept_beside():
+    """Two length instructions pointing opposite ways is the original bug.
+
+    The auditor is shown the direction now, but shown is not obeyed. If it
+    still writes "expand the draft" against a draft that must be cut, repair
+    must not be handed both and left to choose.
+    """
+    llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "improved_content": "## What Lima costs now\n\nRepaired body.",
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+    state = _state(
+        quality={
+            "required_revisions": [
+                "Expand the draft to fulfill the required Long length profile.",
+                "Name a price for each restaurant.",
+            ],
+            "word_count_check": {
+                "target_word_count_met": False,
+                "word_count_estimate": 1903,
+                "word_count_delta": 363,
+                "word_count_direction": "over",
+                "word_count_target_min": 1260,
+                "word_count_target_max": 1540,
+            },
+        },
+        groundedness={
+            "checked": True,
+            "grounded": True,
+            "high_severity_count": 0,
+            "unsupported_claims": [],
+        },
+    )
+
+    run_v3_repair_stage(state, dependencies)
+
+    revisions = recorder.recorded[0][1]["required_revisions"]
+    assert "Cut about 360 words" in revisions[0]
+    # The unrelated revision survives; only the contradicting one is dropped.
+    assert "Name a price for each restaurant." in revisions
+    assert not any("Expand the draft" in revision for revision in revisions)
+
+
+def test_an_auditor_revision_about_length_survives_when_the_length_is_fine():
+    """Nothing is dropped unless a computed instruction is replacing it."""
+    llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "improved_content": "## What Lima costs now\n\nRepaired body.",
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+    state = _state(
+        quality={"required_revisions": ["Shorten the opening paragraph."]},
+        groundedness={
+            "checked": True,
+            "grounded": True,
+            "high_severity_count": 0,
+            "unsupported_claims": [],
+        },
+    )
+
+    run_v3_repair_stage(state, dependencies)
+
+    assert recorder.recorded[0][1]["required_revisions"] == [
+        "Shorten the opening paragraph."
+    ]
