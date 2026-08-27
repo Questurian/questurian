@@ -50,14 +50,18 @@ const catalog: Prompt2BlogEditorialOptionsResponse = {
       label: 'Feature/Profile',
       description: 'Reported narrative using people, scenes, and quotations.',
       order: 4,
-      source_requirements: ['reported-people-scenes-quotations']
+      source_requirements: ['reported-people-scenes-quotations'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'interview-qa',
       label: 'Interview/Q&A',
       description: 'Attributable interview responses.',
       order: 5,
-      source_requirements: ['attributable-responses']
+      source_requirements: ['attributable-responses'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     }
   ],
   topic_modules: [

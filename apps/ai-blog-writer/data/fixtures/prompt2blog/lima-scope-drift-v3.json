@@ -78,6 +78,7 @@
       {"requirement_id": "r2", "status": "missing", "claim_ids": [], "gap": "Current quality-of-life evidence is still needed."},
       {"requirement_id": "r3", "status": "missing", "claim_ids": [], "gap": "Comparable historical evidence is still needed."}
     ],
+    "premise_findings": [],
     "conflicts": [],
     "gaps": [
       {"gap_id": "g1", "requirement_ids": ["r2"], "summary": "Find current evidence for Lima's practical quality-of-life tradeoffs."},

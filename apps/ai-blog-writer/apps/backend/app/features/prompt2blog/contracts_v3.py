@@ -71,6 +71,14 @@ EvidenceConfidence = Literal["high", "medium", "low"]
 # sent the operator back to ask again for a fact that does not exist. It is a
 # finding, not a failure: the article can say the number is unpublished.
 EvidenceRequirementStatus = Literal["supported", "partial", "missing", "unpublished"]
+# What research found when it went to check what the direction step assumed.
+#
+# `refuted` is the verdict that had nowhere to live. A question about a ranking
+# that has not been published yet is not unpublished — the ranking's prices and
+# dishes are published in abundance — it is a question about something that does
+# not exist. Conflating the two sent an operator looking for a fact instead of
+# a different direction.
+PremiseVerdict = Literal["confirmed", "refuted", "unverified"]
 CreativityLevel = Literal["low", "medium", "high"]
 
 
@@ -126,9 +134,24 @@ class CommissionScope(V3ContractModel):
         return self
 
 
+class CommissionAssumption(V3ContractModel):
+    """One thing the direction step took as true without being able to check it.
+
+    The direction model is forbidden to browse, so every fact it builds on is
+    unverified by construction. Declaring them is what lets a later step refute
+    one instead of discovering the refutation five unanswerable questions in.
+    """
+
+    assumption_id: str = Field(min_length=1)
+    statement: str = Field(min_length=1)
+
+
 class CommissionRequirement(V3ContractModel):
     requirement_id: str = Field(min_length=1)
     question: str = Field(min_length=1)
+    # Empty when the question stands on its own. Every id here must name a
+    # premise the same commission declares.
+    assumption_ids: list[str] = Field(default_factory=list)
 
 
 class Prompt2BlogCommission(V3ContractModel):
@@ -144,6 +167,7 @@ class Prompt2BlogCommission(V3ContractModel):
     reader_outcome: str = Field(min_length=1)
     primary_subject: str = Field(min_length=1)
     scope: CommissionScope
+    premise: list[CommissionAssumption] = Field(default_factory=list)
     requirements: list[CommissionRequirement] = Field(min_length=1)
     exclusions: list[str] = Field(default_factory=list)
     call_to_action: str | None = None
@@ -162,6 +186,18 @@ class Prompt2BlogCommission(V3ContractModel):
             [item.requirement_id for item in self.requirements],
             "requirement_id",
         )
+        _require_unique(
+            [item.assumption_id for item in self.premise],
+            "assumption_id",
+        )
+        declared = {item.assumption_id for item in self.premise}
+        for requirement in self.requirements:
+            unknown = sorted(set(requirement.assumption_ids) - declared)
+            if unknown:
+                raise ValueError(
+                    f"requirement {requirement.requirement_id} depends on "
+                    f"undeclared assumptions: {', '.join(unknown)}"
+                )
         return self
 
 
@@ -226,6 +262,24 @@ class EvidenceRequirement(V3ContractModel):
         return self
 
 
+class EvidencePremiseFinding(V3ContractModel):
+    """One verdict on one thing the direction step assumed without checking."""
+
+    assumption_id: str = Field(min_length=1)
+    verdict: PremiseVerdict
+    basis: str = Field(min_length=1)
+    # Claims are wanted on every verdict, and they are what separates an
+    # established refutation from a desk that simply failed to find the thing:
+    # "the organizers' own news page schedules the reveal for 1 December 2026"
+    # is a source, not an opinion.
+    claim_ids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_claim_links(self) -> "EvidencePremiseFinding":
+        _require_unique(self.claim_ids, "premise finding claim reference")
+        return self
+
+
 class EvidenceConflict(V3ContractModel):
     conflict_id: str = Field(min_length=1)
     claim_ids: list[str] = Field(min_length=2)
@@ -245,6 +299,7 @@ class EvidencePackage(V3ContractModel):
     sources: list[EvidenceSource] = Field(default_factory=list)
     claims: list[EvidenceClaim] = Field(default_factory=list)
     requirements: list[EvidenceRequirement] = Field(min_length=1)
+    premise_findings: list[EvidencePremiseFinding] = Field(default_factory=list)
     conflicts: list[EvidenceConflict] = Field(default_factory=list)
     gaps: list[EvidenceGap] = Field(default_factory=list)
 
@@ -255,12 +310,14 @@ class EvidencePackage(V3ContractModel):
         requirement_ids = [item.requirement_id for item in self.requirements]
         conflict_ids = [item.conflict_id for item in self.conflicts]
         gap_ids = [item.gap_id for item in self.gaps]
+        premise_ids = [item.assumption_id for item in self.premise_findings]
         for values, label in (
             (source_ids, "source_id"),
             (claim_ids, "claim_id"),
             (requirement_ids, "requirement_id"),
             (conflict_ids, "conflict_id"),
             (gap_ids, "gap_id"),
+            (premise_ids, "premise finding assumption_id"),
         ):
             _require_unique(values, label)
 
@@ -278,6 +335,11 @@ class EvidencePackage(V3ContractModel):
             if not set(requirement.claim_ids) <= known_claims:
                 raise ValueError(
                     f"requirement {requirement.requirement_id} references an unknown claim"
+                )
+        for finding in self.premise_findings:
+            if not set(finding.claim_ids) <= known_claims:
+                raise ValueError(
+                    f"premise finding {finding.assumption_id} references an unknown claim"
                 )
         requirement_claims = {
             requirement.requirement_id: set(requirement.claim_ids)
@@ -351,5 +413,24 @@ class Prompt2BlogV3Request(V3ContractModel):
         if commission_requirements != evidence_requirements:
             raise ValueError(
                 "evidence requirements must exactly match commission requirements"
+            )
+
+        # A declared premise nobody checked is worse than no premise at all: it
+        # reads on screen like it was verified. Research must return a verdict
+        # for each one, and may not invent assumptions the commission never
+        # made.
+        commission_assumptions = {
+            item.assumption_id for item in self.commission.premise
+        }
+        evidence_assumptions = {
+            item.assumption_id for item in self.evidence_package.premise_findings
+        }
+        if commission_assumptions and commission_assumptions != evidence_assumptions:
+            raise ValueError(
+                "premise findings must exactly match the commission's premise"
+            )
+        if not commission_assumptions and evidence_assumptions:
+            raise ValueError(
+                "premise findings reference a premise the commission never declared"
             )
         return self

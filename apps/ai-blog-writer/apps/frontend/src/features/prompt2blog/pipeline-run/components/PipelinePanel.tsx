@@ -13,6 +13,7 @@ import { PipelineV3Result } from './PipelineV3Result'
 interface PipelinePanelProps {
   run: ReturnType<typeof usePrompt2BlogPipelineRun>
   onBackToResearch: () => void
+  onBackToDirection?: () => void
   onOpenCleanupModal: () => void
   onReset: () => void
   submissionBlockedReason?: string | null
@@ -21,6 +22,7 @@ interface PipelinePanelProps {
 export function PipelinePanel({
   run,
   onBackToResearch,
+  onBackToDirection,
   onOpenCleanupModal,
   onReset,
   submissionBlockedReason,
@@ -106,6 +108,7 @@ export function PipelinePanel({
           <NeedsResearchResult
             result={needsResearch}
             onBackToResearch={onBackToResearch}
+            onBackToDirection={onBackToDirection}
             onDismiss={dismissNeedsResearch}
           />
         )}

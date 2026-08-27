@@ -33,3 +33,25 @@ def test_the_rule_spares_first_person_writing():
     for rules in (ANTI_AI_TELLS_FULL, ANTI_AI_TELLS_BLURB):
         assert "This bans hedging, not first person." in rules
         assert "I waited twenty five minutes at customs" in rules
+
+
+def test_the_rule_bans_hiding_behind_a_publication():
+    """The Lima food article named an outlet four times and passed every check.
+
+    "Banned disclaimers" already covered hedging about the writer's own
+    confidence. It did not cover putting a publication between the writer and
+    the claim, which is the same move in a press badge.
+    """
+    for rules in (ANTI_AI_TELLS_FULL, ANTI_AI_TELLS_BLURB):
+        assert "sources report," in rules
+        assert "outlets anticipate," in rules
+        assert "the publication noted," in rules
+        assert "according to," in rules
+
+
+def test_the_rule_spares_a_named_actor_in_the_story():
+    # "PromPeru confirmed the date" is the story. "One outlet framed" is not.
+    # Banning the outlet must not ban the institution that acted.
+    for rules in (ANTI_AI_TELLS_FULL, ANTI_AI_TELLS_BLURB):
+        assert "A named person or institution who acts in the story stays" in rules
+        assert "the outlet that wrote it up does not" in rules

@@ -55,6 +55,13 @@ class EditorialRule(CatalogModel):
 
 class ArticleFormRule(EditorialRule):
     source_requirements: list[SourceRequirement] = Field(default_factory=list)
+    # The direction step used to choose a form from `description` alone — one
+    # summary line each. "Where to eat in Lima right now" became a News Report
+    # because "reports a timely development" is a fair reading of "right now",
+    # and the two sections that would have redirected it were sitting unread in
+    # the same file. They ship to the chooser now.
+    use_when: str = Field(min_length=1)
+    do_not_use_when: str = Field(min_length=1)
 
 
 class EditorialMetadataOption(CatalogModel):
@@ -83,6 +90,8 @@ class EditorialCatalog(CatalogModel):
                     "description": item.description,
                     "order": item.order,
                     "source_requirements": item.source_requirements,
+                    "use_when": item.use_when,
+                    "do_not_use_when": item.do_not_use_when,
                 }
                 for item in self.forms
             ],
@@ -97,9 +106,7 @@ class EditorialCatalog(CatalogModel):
             ],
             "audience_tags": [item.model_dump() for item in self.audience_tags],
             "scope_modes": [item.model_dump() for item in self.scope_modes],
-            "reference_roles": [
-                item.model_dump() for item in self.reference_roles
-            ],
+            "reference_roles": [item.model_dump() for item in self.reference_roles],
         }
 
 
@@ -202,6 +209,16 @@ def _parse_rule_file(path: Path) -> tuple[dict[str, str], str]:
     return metadata, parts[2].strip()
 
 
+def _rule_section(body: str, heading: str) -> str:
+    """The prose under one `## Heading`, up to the next one.
+
+    Callers must have already checked the heading exists; `_load_rule_directory`
+    validates every required heading before this runs.
+    """
+    section = body.split(heading, 1)[1]
+    return section.split("\n## ", 1)[0].strip()
+
+
 def _load_rule_directory(
     directory: Path,
     *,
@@ -215,7 +232,9 @@ def _load_rule_directory(
     if actual_filenames != set(expected_ids):
         missing = sorted(set(expected_ids) - actual_filenames)
         extra = sorted(actual_filenames - set(expected_ids))
-        raise ValueError(f"Editorial catalog file mismatch: missing={missing}, extra={extra}")
+        raise ValueError(
+            f"Editorial catalog file mismatch: missing={missing}, extra={extra}"
+        )
 
     rules: list[EditorialRule] = []
     for path in files:
@@ -252,6 +271,8 @@ def _load_rule_directory(
                 ArticleFormRule(
                     **base,
                     source_requirements=[source_gate] if source_gate else [],
+                    use_when=_rule_section(body, "## Use when"),
+                    do_not_use_when=_rule_section(body, "## Do not use when"),
                 )
             )
         else:

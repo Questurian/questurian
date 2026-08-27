@@ -21,6 +21,7 @@ const COMMISSION_KEYS = [
   'reader_outcome',
   'primary_subject',
   'scope',
+  'premise',
   'requirements',
   'exclusions',
   'call_to_action'
@@ -40,8 +41,10 @@ function copyDirectionOption(
       ...option.scope,
       references: option.scope.references.map((reference) => ({ ...reference }))
     },
+    premise: (option.premise ?? []).map((assumption) => ({ ...assumption })),
     requirements: option.requirements.map((requirement) => ({
-      ...requirement
+      ...requirement,
+      assumption_ids: [...(requirement.assumption_ids ?? [])]
     })),
     exclusions: [...option.exclusions]
   }
@@ -65,6 +68,7 @@ export function createCommissionDraft(
     reader_outcome: copied.reader_outcome,
     primary_subject: copied.primary_subject,
     scope: copied.scope,
+    premise: copied.premise,
     requirements: copied.requirements,
     exclusions: copied.exclusions,
     call_to_action: null
@@ -126,6 +130,7 @@ export function validateCommissionDraft(
     reader_outcome: draft.reader_outcome,
     primary_subject: draft.primary_subject,
     scope: draft.scope,
+    premise: draft.premise ?? [],
     requirements: draft.requirements,
     exclusions: draft.exclusions ?? [],
     rationale: draft.approved_direction
@@ -293,7 +298,11 @@ export async function approveCommission(
       ...draft.scope,
       references: draft.scope.references.map((reference) => ({ ...reference }))
     },
-    requirements: draft.requirements.map((requirement) => ({ ...requirement })),
+    premise: (draft.premise ?? []).map((assumption) => ({ ...assumption })),
+    requirements: draft.requirements.map((requirement) => ({
+      ...requirement,
+      assumption_ids: [...(requirement.assumption_ids ?? [])]
+    })),
     exclusions: [...(draft.exclusions ?? [])],
     commission_fingerprint: await fingerprintCommission(draft)
   }

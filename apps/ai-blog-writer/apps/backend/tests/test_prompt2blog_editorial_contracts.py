@@ -177,3 +177,48 @@ def test_v3_request_requires_matching_fingerprint_and_requirement_set():
 
     with pytest.raises(ValidationError, match="exactly match commission"):
         Prompt2BlogV3Request.model_validate(payload)
+
+
+def test_commission_rejects_a_question_resting_on_an_undeclared_premise():
+    """A dependency the commission never declared cannot be refuted later.
+
+    The direction step cannot browse, so its assumptions are only checkable if
+    they are written down. A requirement pointing at an assumption id nobody
+    declared is that link broken at the only place it can still be repaired.
+    """
+    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["commission"])
+    payload["premise"] = [
+        {"assumption_id": "a1", "statement": "Lima publishes current rent data."}
+    ]
+    payload["requirements"][0]["assumption_ids"] = ["a1", "a4"]
+
+    with pytest.raises(ValidationError) as error:
+        Prompt2BlogCommission.model_validate(payload)
+
+    assert "undeclared assumptions: a4" in str(error.value)
+
+
+def test_commission_rejects_duplicate_premise_ids():
+    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["commission"])
+    payload["premise"] = [
+        {"assumption_id": "a1", "statement": "The 2026 ranking is published."},
+        {"assumption_id": "a1", "statement": "The ceremony has taken place."},
+    ]
+
+    with pytest.raises(ValidationError) as error:
+        Prompt2BlogCommission.model_validate(payload)
+
+    assert "assumption_id" in str(error.value)
+
+
+def test_commission_carries_a_declared_premise_through_validation():
+    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["commission"])
+    payload["premise"] = [
+        {"assumption_id": "a1", "statement": "Lima publishes current rent data."}
+    ]
+    payload["requirements"][0]["assumption_ids"] = ["a1"]
+
+    commission = Prompt2BlogCommission.model_validate(payload)
+
+    assert commission.premise[0].statement == "Lima publishes current rent data."
+    assert commission.requirements[0].assumption_ids == ["a1"]

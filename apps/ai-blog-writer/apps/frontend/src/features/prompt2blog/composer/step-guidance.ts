@@ -5,7 +5,7 @@
  * never point at different next actions for the same composer state.
  */
 export const P2B_NEXT_ACTION = {
-  start: 'Enter a working title and location, then generate the direction prompt.',
+  start: 'Enter a working title, location, and how long the article should be, then generate the direction prompt.',
   direction:
     'Copy the direction prompt into your chatbot, then paste its answer here.',
   chooseDirection: 'Choose one of the three directions.',
@@ -20,6 +20,6 @@ export const P2B_NEXT_ACTION = {
   mismatchedResearch: 'Clear the attached research, then gather facts for this commission.',
   incompleteResearch:
     'Replace the attached research with answers to this commission’s exact questions.',
-  write: 'Choose the tone and length, then run the pipeline.',
+  write: 'Choose the tone, then run the pipeline.',
   chooseProfiles: 'Choose a tone and length.',
 } as const

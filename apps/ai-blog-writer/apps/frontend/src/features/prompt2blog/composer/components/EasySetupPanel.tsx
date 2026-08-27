@@ -5,11 +5,16 @@ import type {
   Prompt2BlogDirectionResponse,
   Prompt2BlogEditorialOptionsResponse,
   Prompt2BlogEvidencePackage,
+  Prompt2BlogInputOptionsResponse,
 } from '../../api'
 import type { P2BEditorialComposerState, P2BFormState } from '../composer.types'
 import type { P2BStep, P2BStepId } from '../step-model'
-import { reviewDirectionResponseJson, type DirectionImportReview } from '../direction-import'
-import { buildDirectionPrompt } from '../direction-prompt'
+import {
+  reviewDirectionResponseJson,
+  type DirectionImportReview,
+  type DirectionWarning,
+} from '../direction-import'
+import { buildDirectionPrompt, todayIso, type SettledFalsePremise } from '../direction-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import { ArticleFitGuide } from './ArticleFitGuide'
 import { CommissionEditor } from './CommissionEditor'
@@ -24,7 +29,11 @@ interface EasySetupPanelProps {
   editorialOptions: Prompt2BlogEditorialOptionsResponse | null
   editorialOptionsError: boolean
   editorialOptionsLoading: boolean
+  inputOptions: Prompt2BlogInputOptionsResponse | null
+  lengthId: string
   location: string
+  /** Premises a stopped run already established as false, if one is on screen. */
+  refutedPremise?: readonly SettledFalsePremise[]
   steps: readonly P2BStep[]
   title: string
   onApplyDirectionResponse: (response: Prompt2BlogDirectionResponse) => void
@@ -33,6 +42,7 @@ interface EasySetupPanelProps {
   onClearEvidence: () => void
   onCommissionChange: (draft: Prompt2BlogCommissionDraft) => void
   onConfirmCommissionReview: () => void
+  onLengthChange: (value: string) => void
   onLocationChange: (value: string) => void
   onRetryEditorialOptions: () => void
   onSelectDirection: (optionId: Prompt2BlogDirectionOptionId) => Promise<void>
@@ -47,7 +57,10 @@ export function EasySetupPanel({
   editorialOptions,
   editorialOptionsError,
   editorialOptionsLoading,
+  inputOptions,
+  lengthId,
   location,
+  refutedPremise,
   steps,
   title,
   onApplyDirectionResponse,
@@ -56,6 +69,7 @@ export function EasySetupPanel({
   onClearEvidence,
   onCommissionChange,
   onConfirmCommissionReview,
+  onLengthChange,
   onLocationChange,
   onRetryEditorialOptions,
   onSelectDirection,
@@ -68,9 +82,11 @@ export function EasySetupPanel({
   const [directionJson, setDirectionJson] = useState('')
   const [directionReview, setDirectionReview] = useState<DirectionImportReview | null>(null)
   const [directionStatus, setDirectionStatus] = useState<string | null>(null)
+  const [importedWarnings, setImportedWarnings] = useState<DirectionWarning[]>([])
   // The prompt lists the option catalogs verbatim, so a prompt built before
   // they arrived is missing the fields it should have constrained.
   const showDirectionStep = prompt !== null || activeWorkflow === 'editorial_v3'
+  const length = inputOptions?.lengths.find(option => option.id === lengthId) ?? null
 
   // The hook object is new on every render; only its stable reset belongs in
   // the dependency list, or this would wipe the prompt on every keystroke.
@@ -82,7 +98,8 @@ export function EasySetupPanel({
     setDirectionJson('')
     setDirectionReview(null)
     setDirectionStatus(null)
-  }, [location, resetDirectionCopy, title])
+    setImportedWarnings([])
+  }, [length?.target_word_count, location, resetDirectionCopy, title])
 
   const handleConfirmSetup = () => {
     const confirmedTitle = title.trim()
@@ -90,7 +107,16 @@ export function EasySetupPanel({
     if (!confirmedTitle || !confirmedLocation) return
     if (!editorialOptions) return
     onStartDirectionWorkflow()
-    setPrompt(buildDirectionPrompt(confirmedTitle, confirmedLocation, editorialOptions))
+    setPrompt(
+      buildDirectionPrompt(
+        confirmedTitle,
+        confirmedLocation,
+        editorialOptions,
+        length,
+        todayIso(),
+        refutedPremise,
+      ),
+    )
     directionCopy.reset()
   }
 
@@ -98,6 +124,7 @@ export function EasySetupPanel({
     setDirectionJson(value)
     setDirectionReview(null)
     setDirectionStatus(null)
+    setImportedWarnings([])
   }
 
   const handleCheckDirectionJson = () => {
@@ -106,7 +133,11 @@ export function EasySetupPanel({
     setDirectionReview(
       reviewDirectionResponseJson(
         directionJson,
-        { originalTitle: title.trim(), location: location.trim() },
+        {
+          originalTitle: title.trim(),
+          location: location.trim(),
+          targetWordCount: length?.target_word_count ?? 0,
+        },
         editorialOptions,
       ),
     )
@@ -115,6 +146,7 @@ export function EasySetupPanel({
   const handleApplyDirectionJson = () => {
     if (!directionReview?.response) return
     onApplyDirectionResponse(directionReview.response)
+    setImportedWarnings(directionReview.warnings)
     setDirectionReview(null)
     setDirectionStatus('Three directions are ready for approval.')
   }
@@ -137,7 +169,7 @@ export function EasySetupPanel({
     <>
       <StepSection step={stepFor('start')}>
         <ArticleFitGuide />
-        <div className="p2b-field-row p2b-field-row--2">
+        <div className="p2b-field-row p2b-field-row--3">
           <div className="p2b-field">
             <label htmlFor="p2b-easy-setup-title">Title</label>
             <input
@@ -160,7 +192,29 @@ export function EasySetupPanel({
               placeholder="e.g. Lisbon, Portugal"
             />
           </div>
+          <div className="p2b-field">
+            <label htmlFor="p2b-easy-setup-length">How long</label>
+            <select
+              id="p2b-easy-setup-length"
+              className="p2b-select"
+              value={lengthId}
+              onChange={event => onLengthChange(event.target.value)}
+            >
+              {!lengthId && <option value="">Choose a length</option>}
+              {(inputOptions?.lengths ?? []).map(option => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                  {option.target_word_count ? ` — about ${option.target_word_count} words` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+        <p className="p2b-field-hint">
+          Length is set here because it decides how many questions the research
+          has to answer. A long article built on one question comes back short
+          and thin. You can still change it before you run the pipeline.
+        </p>
         <p className="p2b-field-hint">
           Only the working title and location leave the app at this step.
         </p>
@@ -168,7 +222,9 @@ export function EasySetupPanel({
           <button
             type="button"
             className="p2b-submit-btn"
-            disabled={!title.trim() || !location.trim() || !editorialOptions}
+            disabled={
+              !title.trim() || !location.trim() || !editorialOptions || !lengthId
+            }
             onClick={handleConfirmSetup}
           >
             Generate direction prompt
@@ -259,6 +315,23 @@ export function EasySetupPanel({
               <p className="p2b-import-applied" role="status">
                 {directionStatus}
               </p>
+            )}
+            {(directionReview?.warnings.length || importedWarnings.length > 0) && (
+              <div className="p2b-import-report">
+                <p className="p2b-import-report-title">
+                  Worth a look before you choose. Nothing here stops you.
+                </p>
+                <ul className="p2b-import-list">
+                  {(directionReview?.warnings.length
+                    ? directionReview.warnings
+                    : importedWarnings
+                  ).map(warning => (
+                    <li key={`${warning.label}-${warning.message}`}>
+                      <strong>{warning.label}.</strong> {warning.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             {directionReview && directionReview.issues.length > 0 && (
               <div className="p2b-import-report p2b-import-report--blocked">

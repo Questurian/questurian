@@ -1,5 +1,6 @@
 import type { P2BFormState } from './composer.types'
 import { compareEvidenceToCommission } from './evidence-match'
+import { attachedResearchSummary } from './research-language'
 import { P2B_NEXT_ACTION } from './step-guidance'
 import { prompt2BlogSubmissionBlockedReason } from './v3-payload'
 
@@ -50,7 +51,8 @@ const STEP_DEFINITIONS: readonly StepDefinition[] = [
   {
     id: 'start',
     name: 'Start the article',
-    purpose: 'Name what you are writing and where it is about.',
+    purpose:
+      'Name what you are writing, where it is about, and how long it should be.',
     nextAction: P2B_NEXT_ACTION.start
   },
   {
@@ -77,7 +79,8 @@ const STEP_DEFINITIONS: readonly StepDefinition[] = [
   {
     id: 'write',
     name: 'Write it',
-    purpose: 'Set the tone and length, then run the pipeline.',
+    purpose:
+      'Set the tone, check the length you chose in step 1, then run the pipeline.',
     nextAction: P2B_NEXT_ACTION.write
   }
 ]
@@ -129,11 +132,10 @@ function summarizeDirection(state: P2BFormState): string | null {
 function summarizeResearch(state: P2BFormState): string | null {
   const evidence = state.editorial.evidencePackage
   if (!evidence) return null
-  const sources = evidence.sources?.length ?? 0
-  const claims = evidence.claims?.length ?? 0
-  return `${sources} ${sources === 1 ? 'source' : 'sources'}, ${claims} ${
-    claims === 1 ? 'claim' : 'claims'
-  }`
+  return attachedResearchSummary(
+    evidence.sources?.length ?? 0,
+    evidence.claims?.length ?? 0
+  ).replace(/\.$/, '')
 }
 
 /**

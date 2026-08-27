@@ -21,14 +21,18 @@ const catalog = {
       label: 'Analysis',
       description: 'Focused interpretation.',
       order: 2,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'comparison',
       label: 'Comparison',
       description: 'Approved co-subjects.',
       order: 12,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     }
   ],
   topic_modules: [
@@ -127,8 +131,18 @@ function directionOption(): Prompt2BlogDirectionOption {
         { name: 'Medellín', role: 'context_only' }
       ]
     },
+    premise: [
+      {
+        assumption_id: 'a1',
+        statement: 'Lima is still promoted as an affordable long-stay city.'
+      }
+    ],
     requirements: [
-      { requirement_id: 'r1', question: 'What are current routine costs?' }
+      {
+        requirement_id: 'r1',
+        question: 'What are current routine costs?',
+        assumption_ids: ['a1']
+      }
     ],
     exclusions: ['Do not turn context cities into co-subjects.'],
     rationale: 'Tests the title through a Lima-centered value analysis.'
@@ -156,6 +170,7 @@ describe('Prompt2Blog commission construction', () => {
       reader_outcome: option.reader_outcome,
       primary_subject: option.primary_subject,
       scope: option.scope,
+      premise: option.premise,
       requirements: option.requirements,
       exclusions: option.exclusions,
       call_to_action: null

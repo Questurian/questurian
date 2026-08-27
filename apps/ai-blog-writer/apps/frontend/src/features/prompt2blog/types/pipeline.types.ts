@@ -381,6 +381,8 @@ export type Prompt2BlogV3ReadinessFindingCode =
   | 'unresolved_conflict'
   | 'source_gate'
   | 'nothing_answered'
+  | 'premise_refuted'
+  | 'premise_unverified'
 
 export type Prompt2BlogV3ReadinessFinding = {
   code: Prompt2BlogV3ReadinessFindingCode
@@ -410,7 +412,22 @@ export type Prompt2BlogV3NeedsResearchResponse = {
   }>
   unresolved_conflict_ids: string[]
   missing_source_requirements: Prompt2BlogSourceRequirement[]
+  /**
+   * Whether more research is the wrong thing to send the operator back to.
+   * Only a refuted premise sets this: everything else on this payload is
+   * closed by researching again, and that one never is.
+   */
+  requires_new_direction?: boolean
+  refuted_premise?: Prompt2BlogV3PremiseReport[]
+  unverified_premise?: Prompt2BlogV3PremiseReport[]
   follow_up_research_prompt: string
+}
+
+export type Prompt2BlogV3PremiseReport = {
+  assumption_id: string
+  statement: string
+  basis: string
+  requirement_ids: string[]
 }
 
 export type Prompt2BlogV3QueuedResponse = {

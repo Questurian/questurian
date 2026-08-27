@@ -7,12 +7,25 @@ import type {
 import {
   evidenceReadinessFindings,
   reviewEvidencePackageJson,
+  validateEvidencePackageValue,
   type EvidenceImportReview,
 } from '../evidence-import'
+import {
+  recordWriterAnswer,
+  removeWriterAnswer,
+  writerAnsweredRequirementIds,
+  writerAnswerText,
+} from '../writer-answer'
 import { buildFollowUpResearchPrompt } from '../follow-up-research-prompt'
+import {
+  clearConflictResolution,
+  resolveConflict,
+  unresolvedConflicts,
+} from '../conflict-resolution'
 import { buildResearchPrompt } from '../research-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import {
+  attachedResearchSummary,
   plainEvidenceIssue,
   researchNotReadyMessage,
   researchQuestionLabel,
@@ -39,6 +52,8 @@ export function ResearchPanel({
   const [evidenceJson, setEvidenceJson] = useState('')
   const [review, setReview] = useState<EvidenceImportReview | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const [writerAnswers, setWriterAnswers] = useState<Record<string, string>>({})
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, string>>({})
   const researchCopy = useClipboardCopy()
   const followUpCopy = useClipboardCopy()
   // The attached package is the one thing on this page a user needs *out* of
@@ -55,6 +70,8 @@ export function ResearchPanel({
     setEvidenceJson('')
     setReview(null)
     setStatus(null)
+    setWriterAnswers({})
+    setConflictResolutions({})
   }, [fingerprint])
 
   const researchPrompt = useMemo(
@@ -90,6 +107,86 @@ export function ResearchPanel({
   const unpublishedQuestionCount =
     evidencePackage?.requirements.filter(requirement => requirement.status === 'unpublished')
       .length ?? 0
+
+  const openConflicts = useMemo(
+    () => (evidencePackage ? unresolvedConflicts(evidencePackage) : []),
+    [evidencePackage],
+  )
+
+  const settledConflicts = useMemo(
+    () =>
+      (evidencePackage?.conflicts ?? []).filter(conflict =>
+        conflict.resolution?.trim(),
+      ),
+    [evidencePackage],
+  )
+
+  const writerAnswered = useMemo(
+    () => new Set(evidencePackage ? writerAnsweredRequirementIds(evidencePackage) : []),
+    [evidencePackage],
+  )
+
+  const questionText = (requirementId: string) =>
+    commission.requirements.find(item => item.requirement_id === requirementId)?.question ??
+    requirementId
+
+  /**
+   * The writer's own answer is evidence, so it goes through the same validation
+   * a pasted package does. A malformed one is refused here rather than stored
+   * and rejected later by the run.
+   */
+  const storeAnswerEdit = (next: Prompt2BlogEvidencePackage) => {
+    const checked = validateEvidencePackageValue(next, commission)
+    if (!checked.evidencePackage) {
+      setStatus('That answer could not be recorded. Nothing was changed.')
+      return
+    }
+    onStoreEvidence(checked.evidencePackage)
+  }
+
+  /*
+   * A conflict is not missing evidence: both sides are already found and
+   * already sourced, and what is missing is a decision. Sending the operator
+   * out for another complete replacement package to get that decision costs a
+   * full deep-research round for one sentence.
+   */
+  const handleUseConflictResolution = (conflictId: string) => {
+    if (!evidencePackage) return
+    const resolution = (conflictResolutions[conflictId] ?? '').trim()
+    if (!resolution) return
+    storeAnswerEdit(resolveConflict(evidencePackage, conflictId, resolution))
+    setConflictResolutions(current => ({ ...current, [conflictId]: '' }))
+    setStatus('That disagreement is settled. The article will follow what you said.')
+  }
+
+  const handleReopenConflict = (conflictId: string) => {
+    if (!evidencePackage) return
+    storeAnswerEdit(clearConflictResolution(evidencePackage, conflictId))
+    setStatus('That disagreement is open again.')
+  }
+
+  const handleUseWriterAnswer = (requirementId: string) => {
+    if (!evidencePackage) return
+    const answer = (writerAnswers[requirementId] ?? '').trim()
+    if (!answer) return
+    storeAnswerEdit(
+      recordWriterAnswer(
+        evidencePackage,
+        requirementId,
+        questionText(requirementId),
+        answer,
+        new Date().toISOString().slice(0, 10),
+      ),
+    )
+    setWriterAnswers(current => ({ ...current, [requirementId]: '' }))
+    setStatus('Your answer is attached as first-hand material.')
+  }
+
+  const handleRemoveWriterAnswer = (requirementId: string) => {
+    if (!evidencePackage) return
+    storeAnswerEdit(removeWriterAnswer(evidencePackage, requirementId))
+    setStatus('Your answer was removed. That question is open again.')
+  }
 
   const handleEvidenceJsonChange = (value: string) => {
     setEvidenceJson(value)
@@ -208,8 +305,10 @@ export function ResearchPanel({
         <div className="p2b-import-report">
           <div className="p2b-field-label-row">
             <p className="p2b-import-report-title">
-              {evidencePackage.sources?.length ?? 0} sources and{' '}
-              {evidencePackage.claims?.length ?? 0} claims are attached to this commission.
+              {attachedResearchSummary(
+                evidencePackage.sources?.length ?? 0,
+                evidencePackage.claims?.length ?? 0,
+              )}
             </p>
             <button
               type="button"
@@ -225,11 +324,132 @@ export function ResearchPanel({
                 <strong>
                   {researchQuestionLabel(requirement.requirement_id, commission.requirements)}
                 </strong>{' '}
-                {researchStatusLabel(requirement.status)}
+                {writerAnswered.has(requirement.requirement_id)
+                  ? 'Answered by you'
+                  : researchStatusLabel(requirement.status)}
                 {requirement.gap ? ` — ${requirement.gap}` : ''}
+                {writerAnswered.has(requirement.requirement_id) ? (
+                  <div className="p2b-writer-answer">
+                    <p className="p2b-field-hint">
+                      {writerAnswerText(evidencePackage, requirement.requirement_id)}
+                    </p>
+                    <button
+                      type="button"
+                      className="p2b-clear-btn"
+                      onClick={() => handleRemoveWriterAnswer(requirement.requirement_id)}
+                    >
+                      Remove my answer
+                    </button>
+                  </div>
+                ) : (
+                  requirement.status !== 'supported' && (
+                    // Some facts are real and unpublished at the same time. The
+                    // person writing the article can often just answer them, and
+                    // sending them back to the research desk cannot.
+                    <div className="p2b-writer-answer">
+                      <label htmlFor={`p2b-writer-answer-${requirement.requirement_id}`}>
+                        Can you answer this yourself?
+                      </label>
+                      <textarea
+                        id={`p2b-writer-answer-${requirement.requirement_id}`}
+                        className="p2b-textarea"
+                        rows={2}
+                        value={writerAnswers[requirement.requirement_id] ?? ''}
+                        placeholder="What you know first-hand. Plain words, no need to hedge."
+                        onChange={event =>
+                          setWriterAnswers(current => ({
+                            ...current,
+                            [requirement.requirement_id]: event.target.value,
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="p2b-submit-btn"
+                        disabled={!(writerAnswers[requirement.requirement_id] ?? '').trim()}
+                        onClick={() => handleUseWriterAnswer(requirement.requirement_id)}
+                      >
+                        Use my answer
+                      </button>
+                    </div>
+                  )
+                )}
               </li>
             ))}
           </ul>
+          {openConflicts.length > 0 && (
+            <>
+              <p className="p2b-import-report-title">
+                {openConflicts.length === 1
+                  ? 'One disagreement is holding the run'
+                  : `${openConflicts.length} disagreements are holding the run`}
+              </p>
+              <ul className="p2b-requirement-list">
+                {openConflicts.map(conflict => (
+                  <li key={conflict.conflictId} className="p2b-requirement-row">
+                    <strong>{conflict.summary}</strong>
+                    {conflict.claims.length > 0 && (
+                      <ul className="p2b-requirement-list">
+                        {conflict.claims.map((claim, index) => (
+                          <li key={`${conflict.conflictId}-${index}`}>{claim}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="p2b-writer-answer">
+                      <label htmlFor={`p2b-conflict-${conflict.conflictId}`}>
+                        Which one should the article follow?
+                      </label>
+                      <textarea
+                        id={`p2b-conflict-${conflict.conflictId}`}
+                        className="p2b-textarea"
+                        rows={2}
+                        value={conflictResolutions[conflict.conflictId] ?? ''}
+                        placeholder="Say which is right and why, in the words the article can use."
+                        onChange={event =>
+                          setConflictResolutions(current => ({
+                            ...current,
+                            [conflict.conflictId]: event.target.value,
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="p2b-submit-btn"
+                        disabled={
+                          !(conflictResolutions[conflict.conflictId] ?? '').trim()
+                        }
+                        onClick={() => handleUseConflictResolution(conflict.conflictId)}
+                      >
+                        Settle it
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {settledConflicts.length > 0 && (
+            <>
+              <p className="p2b-import-report-title">Disagreements you settled</p>
+              <ul className="p2b-requirement-list">
+                {settledConflicts.map(conflict => (
+                  <li key={conflict.conflict_id} className="p2b-requirement-row">
+                    <strong>{conflict.summary}</strong>
+                    {` — ${conflict.resolution}`}
+                    <button
+                      type="button"
+                      className="p2b-clear-btn"
+                      onClick={() => handleReopenConflict(conflict.conflict_id)}
+                    >
+                      Change my mind
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           {findings.length > 0 ? (
             <>
               <p className="p2b-import-report-title">

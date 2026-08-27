@@ -38,7 +38,7 @@ export function DirectionCards({
   }
 
   return (
-    <fieldset className="p2b-direction-picker">
+    <fieldset className="p2b-direction-picker" id="p2b-direction-picker">
       <legend>Choose one editorial direction</legend>
       <p className="p2b-field-hint">
         Selection locks the article commission. You can edit it before research.

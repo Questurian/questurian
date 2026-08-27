@@ -28,7 +28,9 @@ def normalize_dashes(text: str) -> str:
 
 _HAS_WORD_CHAR = re.compile(r"[A-Za-z0-9]")
 _FENCE_LINE = re.compile(r"^\s*(```|~~~)")
-_TABLE_DELIMITER_ROW = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$")
+_TABLE_DELIMITER_ROW = re.compile(
+    r"^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$"
+)
 _HORIZONTAL_RULE = re.compile(r"^\s*(?:-{3,}|\*{3,}|_{3,})\s*$")
 _DOUBLE_HYPHEN_PROSE = re.compile(r"(?<=\w)\s*--\s*(?=\w)")
 # Banning the em dash without banning its replacements just moves the tell.
@@ -78,8 +80,69 @@ _COMMA_AS_DASH_ASIDE_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r",\s+(?:and\s+)?quietly\s+so\s*,", re.I),
     re.compile(r",\s+convincingly\s*,", re.I),
     re.compile(r",\s+barely\s+[^,\n]{2,80}\s*,", re.I),
-    re.compile(r",\s+(?:perhaps|arguably|somewhat|rather|quite|truly|really|simply|just)\s*,", re.I),
+    re.compile(
+        r",\s+(?:perhaps|arguably|somewhat|rather|quite|truly|really|simply|just)\s*,",
+        re.I,
+    ),
 )
+
+
+# Sourcing language. The house rule is that attribution lives in the evidence
+# record and never in the prose, but until now nothing checked it: the Lima food
+# article shipped "Travel sources report", "Outlets anticipate", "One outlet
+# framed", and "The publication noted" past a clean validation run.
+#
+# Only high-confidence shapes are listed. A named actor ("PromPerú confirmed",
+# "the mayor said") is the story and must not match; what matters is the
+# anonymous publication standing between the writer and the claim. "the report"
+# matches, "the OSITRAN report" does not, because the intervening proper noun
+# means the document is being named rather than hidden behind.
+_ATTRIBUTION_NOUN = (
+    r"(?:sources?|outlets?|publications?|reports?|reporting|coverage|"
+    r"journalists?|media|stud(?:y|ies))"
+)
+_ATTRIBUTION_VERB = (
+    r"(?:reports?|reported|says?|said|notes?|noted|anticipates?|anticipated|"
+    r"suggests?|suggested|indicates?|indicated|claims?|claimed|frames?|framed|"
+    r"describes?|described|cites?|cited|confirms?|confirmed|warns?|warned|"
+    r"predicts?|predicted|expects?|expected)"
+)
+_SOURCE_ATTRIBUTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(
+            rf"\b(?:travel|industry|local|official|news|multiple|several|some|"
+            rf"various)?\s*{_ATTRIBUTION_NOUN}\s+{_ATTRIBUTION_VERB}\b",
+            re.I,
+        ),
+        "an unnamed publication is credited with the claim",
+    ),
+    (
+        re.compile(
+            r"\b(?:the|one|another)\s+"
+            r"(?:outlet|publication|report|article|paper)\b",
+            re.I,
+        ),
+        "the prose points at a source instead of stating the fact",
+    ),
+    (re.compile(r"\baccording to\b", re.I), '"according to" is sourcing language'),
+    (
+        re.compile(
+            rf"\bas\s+{_ATTRIBUTION_NOUN}\s+(?:have\s+)?{_ATTRIBUTION_VERB}\b", re.I
+        ),
+        "an unnamed publication is credited with the claim",
+    ),
+)
+
+
+def _source_attributions(line: str) -> list[str]:
+    for pattern in _NON_PROSE_SPANS:
+        line = pattern.sub(" ", line)
+    found: list[str] = []
+    for pattern, reason in _SOURCE_ATTRIBUTION_PATTERNS:
+        match = pattern.search(line)
+        if match:
+            found.append(f"{match.group(0).strip()} ({reason})")
+    return found
 
 
 @dataclass(frozen=True)
@@ -151,7 +214,9 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
         if "—" in line:
             errors.append(f"Line {line_number}: em dash is not allowed.")
         if _DOUBLE_HYPHEN_PROSE.search(line):
-            errors.append(f"Line {line_number}: prose double hyphen dash is not allowed.")
+            errors.append(
+                f"Line {line_number}: prose double hyphen dash is not allowed."
+            )
         if _SPACED_HYPHEN_PROSE.search(line):
             errors.append(
                 f"Line {line_number}: spaced hyphen used as a dash is not allowed."
@@ -164,6 +229,12 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
             )
         if _has_non_numeric_en_dash(line):
             errors.append(f"Line {line_number}: non-numeric en dash is not allowed.")
+        attributions = _source_attributions(line)
+        if attributions:
+            errors.append(
+                f"Line {line_number}: attribution belongs in the evidence "
+                f"record, not the prose: {'; '.join(attributions)}"
+            )
         for pattern in _COMMA_AS_DASH_ASIDE_PATTERNS:
             match = pattern.search(line)
             if match:
@@ -183,7 +254,10 @@ def build_anti_ai_repair_prompt(content: str, errors: list[str]) -> str:
         "and source meaning. Do not replace dashes with comma-bracketed asides; "
         "rewrite affected sentences into clean prose. Fix a hyphenated compound "
         "by rephrasing the sentence, never by deleting the hyphen or splitting "
-        "the word in place.\n\n"
+        "the word in place. Fix sourcing language by stating the fact as a "
+        "plain sentence and deleting the publication, not by swapping in "
+        "another attribution verb; if the fact cannot stand without a source "
+        "named in the sentence, delete the sentence.\n\n"
         f"Validation errors:\n{error_lines}\n\n"
         "Previous output:\n"
         "<<<CONTENT>>>\n"
@@ -210,10 +284,14 @@ def enforce_anti_ai_tells_markdown(
     repair_prompt = build_anti_ai_repair_prompt(candidate, result.errors)
     repaired = str(repair(repair_prompt)).strip()
     if not repaired:
-        logger.warning("%s anti-AI repair returned empty output; keeping original", context)
+        logger.warning(
+            "%s anti-AI repair returned empty output; keeping original", context
+        )
         return candidate
 
     repaired_result = validate_anti_ai_tells_markdown(repaired)
     if not repaired_result.valid:
-        logger.warning("%s anti-AI repair still invalid: %s", context, repaired_result.errors)
+        logger.warning(
+            "%s anti-AI repair still invalid: %s", context, repaired_result.errors
+        )
     return repaired

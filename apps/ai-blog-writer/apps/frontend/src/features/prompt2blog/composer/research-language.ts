@@ -3,6 +3,8 @@ export type ResearchFindingCode =
   | 'unresolved_conflict'
   | 'source_gate'
   | 'nothing_answered'
+  | 'premise_refuted'
+  | 'premise_unverified'
 
 export type ResearchQuestion = {
   requirement_id: string
@@ -14,6 +16,8 @@ const FINDING_LABELS: Record<ResearchFindingCode, string> = {
   unresolved_conflict: 'Two sources disagree',
   source_gate: 'This kind of article needs a first-hand source',
   nothing_answered: 'Nothing came back answered',
+  premise_refuted: 'The article was built on something that is not true',
+  premise_unverified: 'Something the article assumes could not be checked',
 }
 
 /**
@@ -88,10 +92,25 @@ export function researchReadyMessage(unpublishedCount: number): string {
   const clean =
     'Every question is answered, and nothing is left disagreeing or missing a first-hand source.'
   if (unpublishedCount === 1) {
-    return 'Every question is settled. One of them has no published answer anywhere — the article can say so.'
+    return 'Every question is settled. One has no published answer anywhere, so the article will be written around it.'
   }
   if (unpublishedCount > 1) {
-    return `Every question is settled. ${unpublishedCount} of them have no published answer anywhere — the article can say so.`
+    return `Every question is settled. ${unpublishedCount} have no published answer anywhere, so the article will be written around them.`
   }
   return clean
+}
+
+/**
+ * What is attached, counted in words a reader of the page already owns.
+ *
+ * `sources` and `claims` are schema nouns, and "1 sources" was on screen. The
+ * operator does not have the schema and should not need it to read a count.
+ */
+export function attachedResearchSummary(
+  sourceCount: number,
+  factCount: number
+): string {
+  const sources = `${sourceCount} ${sourceCount === 1 ? 'source' : 'sources'}`
+  const facts = `${factCount} ${factCount === 1 ? 'fact' : 'facts'}`
+  return `${facts} from ${sources}.`
 }

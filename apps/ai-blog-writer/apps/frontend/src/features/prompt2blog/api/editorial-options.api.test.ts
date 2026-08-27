@@ -13,6 +13,8 @@ const editorialOptions = {
       description: 'Interprets evidence to answer a focused question.',
       order: 2,
       source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.',
     },
     {
       id: 'interview-qa',
@@ -20,6 +22,8 @@ const editorialOptions = {
       description: 'Builds an article from attributable responses.',
       order: 5,
       source_requirements: ['attributable-responses'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.',
     },
   ],
   topic_modules: [

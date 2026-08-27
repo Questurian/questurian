@@ -17,7 +17,7 @@ Preserve original title, location, approved direction, primary subject, scope mo
 
 ## Evidence discipline
 
-Use only claims supported by the evidence package. Preserve source meaning, attribution, dates, geography, units, uncertainty, and conflicts. Never invent a bridge fact, scene, quotation, experience, statistic, price, consensus, or practical detail. Missing support remains a visible gap. Prefer a narrower true article over a complete-looking unsupported one.
+Use only claims supported by the evidence package. Preserve source meaning, dates, geography, units, uncertainty, and conflicts. Attribution is internal to the evidence record: the prose never names a source, outlet, publication, or site. Never invent a bridge fact, scene, quotation, experience, statistic, price, consensus, or practical detail. Missing support remains a visible gap. Prefer a narrower true article over a complete-looking unsupported one.
 
 ## Reader service
 

@@ -35,7 +35,19 @@ These record two different things. Never conflate them.
 - confidence describes the ANSWER. high, medium, or low records how well corroborated that answer is.
 - An answer you found and corroborated stays supported even when you could not reach the ideal primary source, the publisher blocks automated retrieval, or you would have preferred more evidence. Record that reservation as claim confidence medium or low and as a source note. Never downgrade the requirement to partial for it.
 - Reserve partial and missing for a question more research could still close. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims.
-- Use unpublished only after real searching, and only when the fact itself is unpublished rather than merely hard for you to reach. Name in gap exactly which authorities, documents, and dates you checked. Where a source states the limit of what it measures, record that as a claim and link it. unpublished does not block the run and will not be sent back to you, so a careless unpublished silently costs the article a fact."""
+- Use unpublished only after real searching, and only when the fact itself is unpublished rather than merely hard for you to reach. Name in gap exactly which authorities, documents, and dates you checked. Where a source states the limit of what it measures, record that as a claim and link it. unpublished does not block the run and will not be sent back to you, so a careless unpublished silently costs the article a fact.
+- unpublished is about a fact nobody has published. It is not for a question that cannot be answered because the thing it asks about does not exist yet. That is a refuted premise, and the question stays missing."""
+
+# Kept verbatim in step with the frontend's `PREMISE_CHECK_RULES`; the
+# initial prompt, the follow-up prompt and the backend must all say this the
+# same way.
+PREMISE_CHECK_RULES = """PREMISE CHECK — SETTLE THIS BEFORE ANSWERING ANYTHING
+The commission carries a premise: what the editor assumed while unable to check it. Settle every entry before you answer a single question, and return one verdict for each.
+- confirmed — you found it is so. Link the claim that shows it.
+- refuted — you found it is not so. Say what is true instead, with the date where one applies. This is not a failed research round. It is the most useful thing you can return, because it stops an article that cannot be written.
+- unverified — you searched properly and could settle it neither way. Name what you checked.
+- basis is required on every verdict and names the authorities, documents and dates you checked.
+- When a premise is refuted, stop. Do not answer the questions that rest on it, do not mark them unpublished, and do not substitute a nearby year, edition or subject that does exist. Leave those questions missing, and say in the gap which premise took them down."""
 
 ReadinessStatus = Literal["ready", "needs_research"]
 FindingCode = Literal[
@@ -43,6 +55,8 @@ FindingCode = Literal[
     "unresolved_conflict",
     "source_gate",
     "nothing_answered",
+    "premise_refuted",
+    "premise_unverified",
 ]
 
 _ATTRIBUTABLE_VOICE = {"transcript", "interview-responses"}
@@ -65,10 +79,23 @@ class ResearchReadiness(ReadinessModel):
     unpublished_requirement_ids: list[str]
     unresolved_conflict_ids: list[str]
     missing_source_requirements: list[str]
+    refuted_assumption_ids: list[str] = []
+    unverified_assumption_ids: list[str] = []
 
     @property
     def ready(self) -> bool:
         return self.status == "ready"
+
+    @property
+    def requires_new_direction(self) -> bool:
+        """Whether more research is the wrong thing to send the operator back to.
+
+        A refuted premise is the one blocker research cannot clear. Offering a
+        follow-up research prompt here is what made the original dead end feel
+        like a loop: the operator researches, gets the same refutation, and
+        researches again.
+        """
+        return bool(self.refuted_assumption_ids)
 
 
 def evidence_satisfies_source_requirement(
@@ -115,10 +142,52 @@ def assess_research_readiness(
     form = _form_rule(commission, catalog)
 
     findings: list[ReadinessFinding] = []
+
+    statements = {item.assumption_id: item.statement for item in commission.premise}
+    refuted_ids = evidence.refuted_assumption_ids()
+    unverified_ids = evidence.unverified_assumption_ids()
+    basis_by_id = {
+        finding.assumption_id: finding.basis for finding in evidence.premise_findings
+    }
+    # Reported first, because it is the cause and everything below it is the
+    # symptom. Five questions about an unpublished ranking produced five
+    # identical complaints and never once said the ranking was the problem.
+    for assumption_id in refuted_ids:
+        findings.append(
+            ReadinessFinding(
+                code="premise_refuted",
+                requirement_ids=evidence.requirement_ids_resting_on({assumption_id}),
+                message=(
+                    f"{statements.get(assumption_id, assumption_id)} — that is not "
+                    f"so. {basis_by_id.get(assumption_id, '')}".strip()
+                ),
+            )
+        )
+    for assumption_id in unverified_ids:
+        findings.append(
+            ReadinessFinding(
+                code="premise_unverified",
+                requirement_ids=evidence.requirement_ids_resting_on({assumption_id}),
+                message=(
+                    f"{statements.get(assumption_id, assumption_id)} — research "
+                    f"could not settle this either way. "
+                    f"{basis_by_id.get(assumption_id, '')}".strip()
+                ),
+            )
+        )
+
+    # A question left open by a premise that turned out to be false is not its
+    # own problem to solve, and listing it as one is how the operator ends up
+    # researching five dead questions instead of changing direction once.
+    doomed_requirement_ids = set(
+        evidence.requirement_ids_resting_on(set(refuted_ids))
+    )
     for requirement in evidence.requirements:
         # `unpublished` is a reported result, not a gap to chase. It is still
         # visible to the operator through `unpublished_requirement_ids`.
         if requirement.status in {"supported", "unpublished"}:
+            continue
+        if requirement.requirement_id in doomed_requirement_ids:
             continue
         findings.append(
             ReadinessFinding(
@@ -154,9 +223,14 @@ def assess_research_readiness(
 
     # Backstop against a research desk that escapes the gate by declaring every
     # question unpublished: an article where nothing at all was findable has
-    # nothing to write.
-    if evidence.requirements and not any(
-        requirement.status == "supported" for requirement in evidence.requirements
+    # nothing to write. A refuted premise already said why, in words that name
+    # the cause, so this does not pile a second sentence on top of it.
+    if (
+        evidence.requirements
+        and not refuted_ids
+        and not any(
+            requirement.status == "supported" for requirement in evidence.requirements
+        )
     ):
         findings.append(
             ReadinessFinding(
@@ -187,10 +261,20 @@ def assess_research_readiness(
     return ResearchReadiness(
         status="needs_research" if findings else "ready",
         findings=findings,
-        unresolved_requirement_ids=evidence.unresolved_requirement_ids(),
+        # "Unresolved" has always meant work research could still close, which
+        # is why `unpublished` is not in it. A question whose premise turned out
+        # to be false is not closable either, and listing it here sent the
+        # operator back out after five questions that no longer exist.
+        unresolved_requirement_ids=[
+            requirement_id
+            for requirement_id in evidence.unresolved_requirement_ids()
+            if requirement_id not in doomed_requirement_ids
+        ],
         unpublished_requirement_ids=evidence.unpublished_requirement_ids(),
         unresolved_conflict_ids=evidence.unresolved_conflict_ids(),
         missing_source_requirements=list(missing_gates),
+        refuted_assumption_ids=list(refuted_ids),
+        unverified_assumption_ids=list(unverified_ids),
     )
 
 
@@ -216,6 +300,32 @@ def build_follow_up_research_prompt(
     # costs another full-package round, so it never reaches the prompt.
     unpublished_ids = set(readiness.unpublished_requirement_ids)
     unresolved_ids -= unpublished_ids
+    # A question resting on a refuted premise is not unresolved research, it is
+    # a question about something that does not exist. Asking again returns the
+    # same refutation at full package cost, which is the loop this exists to end.
+    refuted_ids = set(readiness.refuted_assumption_ids)
+    unresolved_ids -= set(evidence.requirement_ids_resting_on(refuted_ids))
+
+    statements = {item.assumption_id: item.statement for item in commission.premise}
+    basis_by_id = {
+        finding.assumption_id: finding.basis for finding in evidence.premise_findings
+    }
+    refuted_lines = (
+        "\n".join(
+            f"- {assumption_id} — {statements.get(assumption_id, assumption_id)} "
+            f"[what research found: {basis_by_id.get(assumption_id, 'no basis recorded')}]"
+            for assumption_id in readiness.refuted_assumption_ids
+        )
+        or "- None."
+    )
+    unverified_lines = (
+        "\n".join(
+            f"- {assumption_id} — {statements.get(assumption_id, assumption_id)} "
+            f"[what was checked: {basis_by_id.get(assumption_id, 'no basis recorded')}]"
+            for assumption_id in readiness.unverified_assumption_ids
+        )
+        or "- None."
+    )
 
     unpublished_gaps = {
         requirement.requirement_id: requirement.gap
@@ -307,6 +417,14 @@ CURRENT EVIDENCE RECORDS
 UNRESOLVED REQUIREMENTS ONLY
 {requirement_lines}
 
+SETTLED AS FALSE — DO NOT RESEARCH, DO NOT WORK AROUND
+{refuted_lines}
+Keep these refuted with their existing basis. The questions resting on them stay missing. Do not answer them from a different year, edition, or subject that does exist, and do not mark them unpublished.
+
+STILL UNSETTLED PREMISE
+{unverified_lines}
+These are worth one more attempt. Settle each as confirmed or refuted if you can, and leave it unverified only if you genuinely cannot.
+
 ALREADY ESTABLISHED AS UNPUBLISHED
 {unpublished_lines}
 Keep these exactly as unpublished with their existing gap text. Do not search them again and do not downgrade them to partial or missing.
@@ -329,8 +447,11 @@ REPLACEMENT RULES
 - Add or revise only what is needed to close the listed requirements, conflicts, findings, and source gates.
 - Set requirement status and claim confidence by the rules below, including for work this follow-up still cannot close.
 - Keep every locked requirement exactly once in requirements, including already supported requirements.
+- Keep one premise finding for every entry in the locked premise, including the ones already settled.
 - Keep source and claim mappings resolvable in both directions. Web and report sources require publisher and URL.
 - Preserve exact material_type so source-gate readiness stays deterministic.
+
+{PREMISE_CHECK_RULES}
 
 {REQUIREMENT_STATUS_RULES}"""
 
@@ -374,6 +495,34 @@ def needs_research_payload(
         ],
         "unresolved_conflict_ids": list(readiness.unresolved_conflict_ids),
         "missing_source_requirements": list(readiness.missing_source_requirements),
+        # The operator's route out. More research closes everything else on this
+        # payload; only a different direction closes a refuted premise, and the
+        # page has to be able to tell the two apart.
+        "requires_new_direction": readiness.requires_new_direction,
+        "refuted_premise": [
+            {
+                "assumption_id": finding.assumption_id,
+                "statement": finding.statement,
+                "basis": finding.basis,
+                "requirement_ids": evidence.requirement_ids_resting_on(
+                    {finding.assumption_id}
+                ),
+            }
+            for finding in evidence.premise_findings
+            if finding.verdict == "refuted"
+        ],
+        "unverified_premise": [
+            {
+                "assumption_id": finding.assumption_id,
+                "statement": finding.statement,
+                "basis": finding.basis,
+                "requirement_ids": evidence.requirement_ids_resting_on(
+                    {finding.assumption_id}
+                ),
+            }
+            for finding in evidence.premise_findings
+            if finding.verdict == "unverified"
+        ],
         "follow_up_research_prompt": build_follow_up_research_prompt(
             commission, evidence, readiness, catalog=catalog
         ),

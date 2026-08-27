@@ -27,21 +27,27 @@ const editorialOptions: Prompt2BlogEditorialOptionsResponse = {
       label: 'Analysis',
       description: 'Interprets evidence.',
       order: 1,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'comparison',
       label: 'Comparison',
       description: 'Compares peers.',
       order: 2,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'explainer',
       label: 'Explainer',
       description: 'Explains a question.',
       order: 3,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     }
   ],
   topic_modules: [
@@ -131,8 +137,18 @@ function makeDirection(
         { name: 'Medellín', role: 'context_only' }
       ]
     },
+    premise: [
+      {
+        assumption_id: 'a1',
+        statement: 'Lima housing costs are published by at least one current source.'
+      }
+    ],
     requirements: [
-      { requirement_id: 'r1', question: 'What do current housing costs show?' }
+      {
+        requirement_id: 'r1',
+        question: 'What do current housing costs show?',
+        assumption_ids: ['a1']
+      }
     ],
     exclusions: ['Do not organize the article by city.'],
     rationale: 'Keeps Lima central while allowing limited regional context.'
@@ -174,6 +190,7 @@ const commissionDraft: Prompt2BlogCommissionDraft = {
   reader_outcome: directions[0].reader_outcome,
   primary_subject: 'Lima',
   scope: directions[0].scope,
+  premise: directions[0].premise,
   requirements: directions[0].requirements,
   exclusions: directions[0].exclusions,
   call_to_action: null

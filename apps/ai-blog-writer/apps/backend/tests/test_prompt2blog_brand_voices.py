@@ -65,3 +65,46 @@ def test_every_brand_voice_has_a_dropdown_description():
     for voice in _voices():
         assert voice["description"], voice["id"]
         assert len(voice["description"]) <= 80, voice["id"]
+
+
+def test_no_brand_voice_tells_the_writer_to_name_a_source():
+    """The same sentence had to be fixed in all three voices on 2026-08-27.
+
+    `questurian-default` said an unconfirmed detail is "either attributed in the
+    sentence or cut", `local-insider` carried the identical line, and
+    `news-desk` was built on "according to". That instruction produced four
+    named publications in the Lima food article while the house rules and the
+    voice rules both banned exactly that. Three copies meant fixing one left two
+    live, which is how it survived a rule that already forbade it.
+    """
+    banned = (
+        "attributed in the sentence",
+        "according to",
+        "sources report",
+        "carries its source",
+    )
+    for voice in _voices():
+        body = voice["instructions"].lower()
+        for phrase in banned:
+            # A voice may quote the phrase to ban it; it may not ask for it.
+            if phrase not in body:
+                continue
+            index = body.find(phrase)
+            window = body[max(0, index - 120) : index]
+            assert any(
+                marker in window
+                for marker in ("no ", "never", "not an actor", "cut,", "banned")
+            ), f"{voice['id']} still asks for \"{phrase}\""
+
+
+def test_every_brand_voice_cuts_rather_than_attributes_an_unconfirmed_detail():
+    # The rule only holds if all three say it. One voice quietly keeping the
+    # old branch is the failure mode this pins.
+    for voice in _voices():
+        body = voice["instructions"].lower()
+        assert (
+            "cut" in body
+        ), f"{voice['id']} does not say what happens to an unconfirmed detail"
+        assert "outlet" in body or "publication" in body, (
+            f"{voice['id']} never mentions the outlet it must not name"
+        )

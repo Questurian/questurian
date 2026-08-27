@@ -13,14 +13,18 @@ const catalog = {
       label: 'Analysis',
       description: 'Focused interpretation.',
       order: 2,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'comparison',
       label: 'Comparison',
       description: 'Approved co-subjects.',
       order: 12,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     }
   ],
   topic_modules: [
@@ -159,10 +163,17 @@ function option(
         { name: 'Buenos Aires', role: 'context_only' }
       ]
     },
+    premise: [
+      {
+        assumption_id: 'a1',
+        statement: 'Lima still markets itself as an affordable long-stay city.'
+      }
+    ],
     requirements: [
       {
         requirement_id: 'r1',
-        question: requirements[position]
+        question: requirements[position],
+        assumption_ids: ['a1']
       }
     ],
     exclusions: [
@@ -195,6 +206,41 @@ describe('reviewDirectionResponseJson', () => {
 
     expect(result.issues).toEqual([])
     expect(result.response).toEqual(response())
+  })
+
+  it('refuses an option that declares no premise at all', () => {
+    const value = response()
+    value.options[0].premise = []
+
+    expect(review(value).issues).toContainEqual({
+      path: 'options[0].premise',
+      message:
+        'Must state at least 1 premise. An option that assumes nothing it ' +
+        'cannot check has nothing to declare, which is itself worth saying.'
+    })
+  })
+
+  it('refuses a question that depends on a premise nobody declared', () => {
+    const value = response()
+    value.options[0].requirements[0].assumption_ids = ['a7']
+
+    expect(review(value).issues).toContainEqual({
+      path: 'options[0].requirements[0].assumption_ids[0]',
+      message: 'Unknown assumption ID.'
+    })
+  })
+
+  it('refuses premise IDs outside the stable a1, a2 sequence', () => {
+    const value = response()
+    value.options[0].premise = [
+      { assumption_id: 'assumption-one', statement: 'Something checkable.' }
+    ]
+    value.options[0].requirements[0].assumption_ids = []
+
+    expect(review(value).issues).toContainEqual({
+      path: 'options[0].premise[0].assumption_id',
+      message: 'Must use the stable a1, a2, … format.'
+    })
   })
 
   it('requires a bare strict JSON object with no extra keys', () => {
@@ -371,5 +417,197 @@ describe('reviewDirectionResponseJson', () => {
         expect.objectContaining({ path: 'options[1].reader_outcome' })
       ])
     )
+  })
+})
+
+describe('direction warnings never block an import', () => {
+  function reviewWithLength(value: unknown, targetWordCount: number) {
+    return reviewDirectionResponseJson(
+      JSON.stringify(value),
+      { ...expected, targetWordCount },
+      catalog
+    )
+  }
+
+  it('says when a direction asks too few questions for the length', () => {
+    // The Lima food run asked one question against a 1400 word target and
+    // produced 388 words. Every option in this fixture carries one requirement.
+    const result = reviewWithLength(response(), 1400)
+
+    expect(result.issues).toEqual([])
+    expect(result.response).not.toBeNull()
+    const tooFew = result.warnings.filter(warning =>
+      warning.message.includes('Asks 1 question')
+    )
+    expect(tooFew).toHaveLength(3)
+    expect(tooFew[0].message).toContain('about 1400 words')
+    // The operator reads the words on the card, never the JSON path.
+    expect(tooFew[0].label).toBe('Direction 1')
+    expect(result.warnings.every(warning => !('path' in warning))).toBe(true)
+  })
+
+  it('stays quiet when the question count fits the length', () => {
+    const value = response()
+    value.options.forEach(current => {
+      current.requirements = [
+        { requirement_id: 'r1', question: 'What does a month of rent cost now?' },
+        { requirement_id: 'r2', question: 'Which neighborhoods have coworking desks?' },
+        { requirement_id: 'r3', question: 'What does a daily commute cost?' }
+      ]
+    })
+
+    expect(reviewWithLength(value, 700).warnings).toEqual([])
+  })
+
+  it('flags a question that asks more than one thing', () => {
+    const value = response()
+    value.options[0].requirements = [
+      {
+        requirement_id: 'r1',
+        question:
+          'How long are waits at immigration, at baggage reclaim, and at the exit?'
+      }
+    ]
+
+    const warnings = reviewWithLength(value, 700).warnings
+
+    expect(
+      warnings.some(warning => warning.message.includes('Asks more than one thing'))
+    ).toBe(true)
+  })
+
+  it('flags a primary subject that describes an article instead of naming one', () => {
+    const value = response()
+    value.options[0].primary_subject =
+      "The current shift underway in Lima's dining scene"
+    value.options[0].scope.references[0].name =
+      "The current shift underway in Lima's dining scene"
+
+    const warnings = reviewWithLength(value, 700).warnings
+
+    expect(
+      warnings.some(warning => warning.message.includes('describes an article'))
+    ).toBe(true)
+  })
+
+  it('reads the head noun, not a place name buried in the phrase', () => {
+    // "Lima's dining scene" mentions Lima and is still about nothing lookupable.
+    const value = response()
+    value.options[0].primary_subject = "Lima's dining scene"
+    value.options[0].scope.references[0].name = "Lima's dining scene"
+
+    expect(
+      reviewWithLength(value, 700).warnings.some(warning =>
+        warning.message.includes('describes an article')
+      )
+    ).toBe(true)
+  })
+
+  it('accepts a loose phrasing that still names something researchable', () => {
+    const value = response()
+    value.options[0].primary_subject = 'The shift at Central'
+    value.options[0].scope.references[0].name = 'The shift at Central'
+
+    const warnings = reviewWithLength(value, 700).warnings
+
+    expect(
+      warnings.some(warning => warning.message.includes('describes an article'))
+    ).toBe(false)
+  })
+
+  it('flags a premise that assumes a dated thing already happened', () => {
+    // The run that motivated this: five questions about the 2026 Latin
+    // America's 50 Best list, revealed 1 December 2026, asked in August.
+    const value = response()
+    value.options[0].premise = [
+      {
+        assumption_id: 'a1',
+        statement:
+          "The 2026 Latin America's 50 Best Restaurants list has been published."
+      }
+    ]
+
+    const warnings = reviewDirectionResponseJson(
+      JSON.stringify(value),
+      { ...expected, asOfDate: '2026-08-27' },
+      catalog
+    ).warnings
+
+    expect(
+      warnings.some(warning =>
+        warning.message.includes('assumes something dated has already happened')
+      )
+    ).toBe(true)
+  })
+
+  it('leaves a dated premise alone once its year is behind us', () => {
+    const value = response()
+    value.options[0].premise = [
+      {
+        assumption_id: 'a1',
+        statement:
+          "The 2025 Latin America's 50 Best Restaurants list has been published."
+      }
+    ]
+
+    const warnings = reviewDirectionResponseJson(
+      JSON.stringify(value),
+      { ...expected, asOfDate: '2026-08-27' },
+      catalog
+    ).warnings
+
+    expect(
+      warnings.some(warning =>
+        warning.message.includes('assumes something dated has already happened')
+      )
+    ).toBe(false)
+  })
+
+  it('says so when one premise carries every question in an option', () => {
+    const value = response()
+    value.options[0].premise = [
+      { assumption_id: 'a1', statement: 'The 2026 ranking is out.' }
+    ]
+    value.options[0].requirements = [
+      { requirement_id: 'r1', question: 'Which places were ranked?', assumption_ids: ['a1'] },
+      { requirement_id: 'r2', question: 'What do the ranked places charge?', assumption_ids: ['a1'] },
+      { requirement_id: 'r3', question: 'How long is the wait at each?', assumption_ids: ['a1'] }
+    ]
+
+    const warnings = reviewWithLength(value, 1000).warnings
+
+    expect(
+      warnings.some(warning =>
+        warning.message.includes('All 3 questions depend on')
+      )
+    ).toBe(true)
+  })
+
+  it('stays quiet when a shaky premise carries only part of an option', () => {
+    const value = response()
+    value.options[0].premise = [
+      { assumption_id: 'a1', statement: 'The 2026 ranking is out.' },
+      { assumption_id: 'a2', statement: 'Barranco has published restaurant openings.' }
+    ]
+    value.options[0].requirements = [
+      { requirement_id: 'r1', question: 'Which places were ranked?', assumption_ids: ['a1'] },
+      { requirement_id: 'r2', question: 'What opened in Barranco this year?', assumption_ids: ['a2'] },
+      { requirement_id: 'r3', question: 'What does a tasting menu cost in Barranco?', assumption_ids: [] }
+    ]
+
+    const warnings = reviewWithLength(value, 1000).warnings
+
+    expect(
+      warnings.some(warning => warning.message.includes('questions depend on'))
+    ).toBe(false)
+  })
+
+  it('reports no warnings when no length was set', () => {
+    // A missing length must not invent a question-count complaint.
+    const warnings = review(response()).warnings
+
+    expect(
+      warnings.some(warning => warning.message.includes('Asks 1 question'))
+    ).toBe(false)
   })
 })

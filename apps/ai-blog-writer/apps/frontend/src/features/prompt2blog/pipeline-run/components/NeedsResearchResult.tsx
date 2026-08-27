@@ -6,6 +6,7 @@ import { researchNotReadyMessage, researchQuestionLabel } from '../../composer/r
 interface NeedsResearchResultProps {
   result: Prompt2BlogV3NeedsResearchResponse
   onBackToResearch: () => void
+  onBackToDirection?: () => void
   onDismiss: () => void
 }
 
@@ -15,21 +16,63 @@ interface NeedsResearchResultProps {
  * Insufficient research is a product state, not a failure: the commission was
  * valid, the deterministic gate ran before any writing work existed, and no
  * writer-model token was spent. What it produces is a list of exactly what is
- * missing and the prompt that closes it, so the route out of here is more
- * research — never a retry of the same run.
+ * missing and the route that closes it — never a retry of the same run.
+ *
+ * There are two such routes, and telling them apart is the whole job of this
+ * screen. Almost everything here is closed by researching again. A refuted
+ * premise never is: the article was commissioned about something that is not
+ * so, and the only move is a different direction.
  */
 export function NeedsResearchResult({
   result,
   onBackToResearch,
+  onBackToDirection,
   onDismiss,
 }: NeedsResearchResultProps) {
   const followUpCopy = useClipboardCopy()
+  const refutedPremise = result.refuted_premise ?? []
+  /*
+   * A refuted premise is the one blocker research cannot clear. Offering the
+   * follow-up prompt here is what made the original dead end feel like a loop:
+   * research, get the same refutation, research again. The page has to say so
+   * and point at the only door that opens.
+   */
+  const needsNewDirection = result.requires_new_direction === true
 
   return (
     <div className="p2b-import-report p2b-import-report--blocked" role="status">
       <p className="p2b-import-report-title">
         {researchNotReadyMessage(result.unresolved_requirements.length)}
       </p>
+
+      {refutedPremise.length > 0 && (
+        <>
+          <p className="p2b-import-report-title">
+            {refutedPremise.length === 1
+              ? 'This article is built on something that is not true'
+              : 'This article is built on things that are not true'}
+          </p>
+          <ul className="p2b-requirement-list">
+            {refutedPremise.map(assumption => (
+              <li key={assumption.assumption_id} className="p2b-requirement-row">
+                <strong>{assumption.statement}</strong>
+                {assumption.basis ? ` — ${assumption.basis}` : ''}
+                {assumption.requirement_ids.length > 0
+                  ? ` This is what ${
+                      assumption.requirement_ids.length === 1
+                        ? '1 question'
+                        : `${assumption.requirement_ids.length} questions`
+                    } rested on.`
+                  : ''}
+              </li>
+            ))}
+          </ul>
+          <p className="p2b-field-hint">
+            More research will not change this. Pick a different direction, or start again with
+            one that does not depend on it.
+          </p>
+        </>
+      )}
 
       <PlainResearchFindings
         findings={result.findings}
@@ -60,7 +103,9 @@ export function NeedsResearchResult({
           {/* Shown next to the open questions so the operator does not send the
               follow-up prompt back out looking for a figure that was already
               established as unpublished. */}
-          <p className="p2b-import-report-title">Nobody publishes these — already checked</p>
+          <p className="p2b-import-report-title">
+            No published answer exists — already checked
+          </p>
           <ul className="p2b-requirement-list">
             {(result.unpublished_requirements ?? []).map(requirement => (
               <li key={requirement.requirement_id} className="p2b-requirement-row">
@@ -77,6 +122,23 @@ export function NeedsResearchResult({
         </>
       )}
 
+      {(result.unverified_premise?.length ?? 0) > 0 && (
+        <>
+          <p className="p2b-import-report-title">Could not be checked either way</p>
+          <ul className="p2b-requirement-list">
+            {(result.unverified_premise ?? []).map(assumption => (
+              <li key={assumption.assumption_id} className="p2b-requirement-row">
+                <strong>{assumption.statement}</strong>
+                {assumption.basis ? ` — ${assumption.basis}` : ''}
+              </li>
+            ))}
+          </ul>
+          <p className="p2b-field-hint">
+            The follow-up prompt asks for one more attempt at these.
+          </p>
+        </>
+      )}
+
       {result.unresolved_conflict_ids.length > 0 && (
         <p className="p2b-field-hint">
           Two sources disagree. The follow-up prompt asks your chatbot to resolve them.
@@ -90,6 +152,7 @@ export function NeedsResearchResult({
         </p>
       )}
 
+      {!needsNewDirection && (
       <div className="p2b-field">
         <div className="p2b-field-label-row">
           <label htmlFor="p2b-needs-research-prompt">Follow-up research prompt</label>
@@ -109,11 +172,18 @@ export function NeedsResearchResult({
           value={result.follow_up_research_prompt}
         />
       </div>
+      )}
 
       <div className="p2b-panel-actions">
-        <button type="button" className="p2b-submit-btn" onClick={onBackToResearch}>
-          Back to research
-        </button>
+        {needsNewDirection && onBackToDirection ? (
+          <button type="button" className="p2b-submit-btn" onClick={onBackToDirection}>
+            Choose a different direction
+          </button>
+        ) : (
+          <button type="button" className="p2b-submit-btn" onClick={onBackToResearch}>
+            Back to research
+          </button>
+        )}
         <button type="button" className="p2b-clear-btn" onClick={onDismiss}>
           Dismiss
         </button>

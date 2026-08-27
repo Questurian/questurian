@@ -199,10 +199,17 @@ function createDirectionResponseJson() {
       mode: 'single_subject',
       references: [{ name: 'Lisbon', role: 'primary_subject' }],
     },
+    premise: [
+      {
+        assumption_id: 'a1',
+        statement: `Lisbon direction ${index} rests on published sources.`,
+      },
+    ],
     requirements: [
       {
         requirement_id: `r${index}`,
         question: evidenceQuestions[index - 1],
+        assumption_ids: ['a1'],
       },
     ],
     exclusions: [`Do not drift into direction ${index + 1}`],
@@ -256,6 +263,8 @@ describe('Prompt2BlogPage', () => {
           description: 'Practical guidance for making a trip work.',
           order: 1,
           source_requirements: [],
+          use_when: 'Use when the fixture needs a form.',
+          do_not_use_when: 'Do not use when another form fits better.',
         },
         {
           id: 'comparison',
@@ -263,6 +272,8 @@ describe('Prompt2BlogPage', () => {
           description: 'A scoped comparison between named subjects.',
           order: 2,
           source_requirements: [],
+          use_when: 'Use when the fixture needs a form.',
+          do_not_use_when: 'Do not use when another form fits better.',
         },
       ],
       topic_modules: [
@@ -376,7 +387,7 @@ describe('Prompt2BlogPage', () => {
     }
   })
 
-  it('opens on step one, holding only Title and Location', async () => {
+  it('opens on step one, holding Title, Location and length', async () => {
     renderPage()
 
     const startStep = screen
@@ -392,6 +403,9 @@ describe('Prompt2BlogPage', () => {
     )
     expect(within(startStep!).getByLabelText('Title')).toBeInTheDocument()
     expect(within(startStep!).getByLabelText('Location')).toBeInTheDocument()
+    // Length decides how many research questions the direction step asks for,
+    // so it cannot wait until after the research has been bought.
+    expect(within(startStep!).getByLabelText('How long')).toBeInTheDocument()
     expect(within(startStep!).queryByLabelText('Direction JSON')).not.toBeInTheDocument()
     expect(
       within(startStep!).getByRole('button', {
@@ -400,7 +414,7 @@ describe('Prompt2BlogPage', () => {
     ).toBeDisabled()
     expect(within(startStep!).queryByLabelText('Prompt')).not.toBeInTheDocument()
     expect(
-      within(startStep!).getByText(/Enter a working title and location/),
+      within(startStep!).getByText(/Enter a working title, location, and how long/),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeDisabled()
   })
@@ -499,7 +513,28 @@ describe('Prompt2BlogPage', () => {
     renderPage()
 
     expect(screen.getByLabelText('Tone').closest('details')).toBeNull()
-    expect(screen.getByLabelText('Length').closest('details')).toBeNull()
+    expect(screen.getByLabelText('How long').closest('details')).toBeNull()
+  })
+
+  it('offers exactly one place to set the length', async () => {
+    // Two editable length controls let the operator retarget the article after
+    // the research had already been sized for the old number, which is the
+    // mismatch that produced a 388 word draft against a 1400 word target.
+    renderPage()
+
+    expect(screen.getAllByLabelText('How long')).toHaveLength(1)
+    expect(screen.queryByLabelText('Length')).not.toBeInTheDocument()
+  })
+
+  it('still shows the chosen length beside the run controls', async () => {
+    // Removing the duplicate control must not hide what the article is aimed
+    // at from the step where it gets run.
+    renderPage()
+
+    const recap = await screen.findByTestId('p2b-length-recap')
+
+    expect(recap).toHaveTextContent('Set in step 1')
+    expect(recap.closest('details')).toBeNull()
   })
 
   it('folds model routing away without hiding it', async () => {
@@ -754,7 +789,7 @@ describe('Prompt2BlogPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear direction work' }))
     expect(screen.getByRole('button', { name: 'Run Prompt2Blog Pipeline' })).toBeDisabled()
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Enter a working title and location, then generate the direction prompt.',
+      'Enter a working title, location, and how long the article should be, then generate the direction prompt.',
     )
   })
 

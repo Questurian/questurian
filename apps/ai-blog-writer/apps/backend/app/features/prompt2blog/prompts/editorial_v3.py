@@ -165,7 +165,8 @@ P2B_V3_QUALITY_AUDIT_PROMPT = """You are a quality auditor for commissioned arti
 
 Goal:
 Score the draft on commission fidelity, evidence discipline, form fit, and
-reader utility.
+reader utility — and on whether it delivers the article the working title
+promised.
 
 Return strict JSON only:
 {{
@@ -198,17 +199,36 @@ Rules:
   statement outruns the evidence record behind it.
 - guideline_coverage_score is fidelity to the approved commission and its
   article form.
+- The working title under "Original title" is a promise made to a reader who
+  has not read the article yet. Judge the draft against that promise, not only
+  against the commission. A commission can drift from the title it came from,
+  and a draft that follows a drifted commission faithfully is still the wrong
+  article: "Where to eat in Lima right now" that names no restaurant, dish,
+  price, or neighborhood has failed, however cleanly it executes its form.
+  Where the draft answers a narrower or different question than the title
+  promises, say so in required_revisions, name what the reader came for and did
+  not get, and cap overall_score at 5.
+- originality_score is not a measure of tidiness. Wire copy is tidy. Score it
+  on whether a person would choose to read this over the search results it was
+  built from.
 - Mark too_close_to_source=true when phrasing or structure tracks an evidence
   record too closely.
 - Judge only audience_match and tone_match. Word count, paragraph length, CTA,
   and keyword presence are measured deterministically outside this prompt, so
   do not report them.
 - Score honestly. A draft that merely avoids mistakes is a 7, not a 9.
+- MEASURED CHECKS below are counted outside this prompt and are not opinions.
+  While any of them is false, overall_score may not exceed 6, and the failure
+  must appear in required_revisions. A draft at a third of its target length is
+  not publishable, whatever else it does well.
 
 {instructions}
 
 STYLE DIRECTIVE (REQUIRED):
 {style_directive}
+
+MEASURED CHECKS (counted, not judged):
+{measured_checks}
 
 DRAFT TITLE:
 {rewritten_title}

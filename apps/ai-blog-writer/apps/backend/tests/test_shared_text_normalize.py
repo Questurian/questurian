@@ -172,3 +172,72 @@ def test_the_repair_prompt_says_how_to_fix_a_compound():
 
     assert "rephrasing the sentence" in prompt
     assert "never by deleting the hyphen" in prompt
+
+
+class TestSourceAttributionIsNotProse:
+    """Attribution lives in the evidence record; the article states the fact.
+
+    Every sentence in `FLAGGED` is quoted from the Lima food article, which
+    passed a clean anti-AI validation run with four publications named in it.
+    Rhythm and diction were prompt-only requests the writer ignored; this is the
+    first sourcing rule the validator can actually enforce.
+    """
+
+    FLAGGED = (
+        "Travel sources report this event will drastically intensify demand.",
+        "Outlets anticipate a severe demand spike overlapping the window.",
+        "One outlet framed this revenue as a result of international interest.",
+        "The publication noted that past host cities saw sustained increases.",
+        "The report cited new concepts in the Barranco area as factors.",
+        "According to travel writers, the city is busy in November.",
+    )
+
+    # A named actor is the story. Only the anonymous publication standing
+    # between the writer and the claim is banned, so these must stay clean or
+    # the rule costs a repair call on correct prose.
+    ALLOWED = (
+        "PromPeru acts as the local partner for the ceremony.",
+        "PromPeru confirmed the ceremony date in March 2026.",
+        "The mayor said the street would close for the weekend.",
+        "Time Out named Lima the number one city for food worldwide.",
+        "Central took the position in 2023 and Maido followed in 2025.",
+        "The OSITRAN report lists no customs metric for either terminal.",
+        "Lunch costs PEN 45 and dinner runs closer to PEN 120.",
+        # A guide is a person or a guidebook far more often than a source.
+        "See the guide at https://example.com/long-stay-visa for details.",
+        "The study of the room takes ten minutes.",
+    )
+
+    @staticmethod
+    def _attribution_errors(text: str) -> list[str]:
+        return [
+            error
+            for error in validate_anti_ai_tells_markdown(text).errors
+            if "attribution belongs" in error
+        ]
+
+    def test_sourcing_language_fails_validation(self):
+        for sentence in self.FLAGGED:
+            assert self._attribution_errors(sentence), sentence
+
+    def test_a_named_actor_is_not_an_attribution(self):
+        for sentence in self.ALLOWED:
+            assert not self._attribution_errors(sentence), sentence
+
+    def test_the_error_names_the_offending_phrase(self):
+        errors = self._attribution_errors(self.FLAGGED[0])
+        assert "Travel sources report" in errors[0]
+
+    def test_a_link_target_is_not_prose(self):
+        # Markdown link syntax carries source URLs by design; blanking the
+        # non-prose spans first keeps the check on what the reader sees.
+        clean = "Book at [Central](https://example.com/the-report-cited) early."
+        assert not self._attribution_errors(clean)
+
+    def test_the_repair_prompt_says_to_delete_not_reword(self):
+        prompt = build_anti_ai_repair_prompt(
+            self.FLAGGED[0],
+            ["Line 1: attribution belongs in the evidence record"],
+        )
+        assert "deleting the publication" in prompt
+        assert "another attribution verb" in prompt

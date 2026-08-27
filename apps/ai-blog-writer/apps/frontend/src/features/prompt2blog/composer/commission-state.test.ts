@@ -45,10 +45,17 @@ function directionOption(
         { name: 'Medellín', role: 'context_only' }
       ]
     },
+    premise: [
+      {
+        assumption_id: 'a1',
+        statement: `Scenario ${index} rests on published Lima cost data.`
+      }
+    ],
     requirements: [
       {
         requirement_id: 'r1',
-        question: `What evidence settles scenario ${index}?`
+        question: `What evidence settles scenario ${index}?`,
+        assumption_ids: ['a1']
       }
     ],
     exclusions: ['Do not turn context cities into co-subjects.'],

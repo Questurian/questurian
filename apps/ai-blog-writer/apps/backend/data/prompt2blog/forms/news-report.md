@@ -19,7 +19,7 @@ State what happened, when, where, who is affected, why it matters, and what rema
 
 ## Required evidence
 
-Require at least one authoritative or firsthand source for the central event, plus independent reporting or documentation when available. Preserve timestamps, effective dates, jurisdiction, named speakers, and quotation attribution. For an evolving story, identify the reporting cutoff. Never turn an announcement into an accomplished fact.
+Require at least one authoritative or firsthand source for the central event, plus independent reporting or documentation when available. The evidence record preserves timestamps, effective dates, jurisdiction, named speakers, and quotation attribution. Named people and institutions who act in the story are the story and stay in the prose; the outlet that reported it does not. For an evolving story, identify the reporting cutoff. Never turn an announcement into an accomplished fact.
 
 ## Allowed structures
 

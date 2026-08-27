@@ -52,15 +52,58 @@ class NormalizedRequirement(NormalizedModel):
     status: str
     claim_ids: list[str]
     gap: str
+    assumption_ids: list[str]
+
+
+class NormalizedPremiseFinding(NormalizedModel):
+    assumption_id: str
+    statement: str
+    verdict: str
+    basis: str
+    claim_ids: list[str]
 
 
 class NormalizedEvidence(NormalizedModel):
     sources: list[NormalizedSource]
     claims: list[NormalizedClaim]
     requirements: list[NormalizedRequirement]
+    premise_findings: list[NormalizedPremiseFinding]
     conflicts: list[dict[str, Any]]
     gaps: list[dict[str, Any]]
     records_text: str
+
+    def refuted_assumption_ids(self) -> list[str]:
+        """Premises research established are false.
+
+        No amount of further research closes one of these. The question is not
+        hard, it is about something that does not exist, and the only move left
+        is a different editorial direction.
+        """
+        return [
+            finding.assumption_id
+            for finding in self.premise_findings
+            if finding.verdict == "refuted"
+        ]
+
+    def unverified_assumption_ids(self) -> list[str]:
+        """Premises research could neither confirm nor refute.
+
+        Unlike a refutation these are worth asking again: a second desk, or a
+        source the first could not reach, can still settle them.
+        """
+        return [
+            finding.assumption_id
+            for finding in self.premise_findings
+            if finding.verdict == "unverified"
+        ]
+
+    def requirement_ids_resting_on(self, assumption_ids: set[str]) -> list[str]:
+        """Questions that cannot survive those premises being wrong."""
+        return [
+            requirement.requirement_id
+            for requirement in self.requirements
+            if set(requirement.assumption_ids) & assumption_ids
+        ]
 
     def unresolved_requirement_ids(self) -> list[str]:
         """Questions more research could still close.
@@ -101,6 +144,10 @@ class NormalizedEvidence(NormalizedModel):
             "unresolved_requirement_ids": self.unresolved_requirement_ids(),
             "unpublished_requirement_ids": self.unpublished_requirement_ids(),
             "unresolved_conflict_ids": self.unresolved_conflict_ids(),
+            "premise_verdicts": {
+                finding.assumption_id: finding.verdict
+                for finding in self.premise_findings
+            },
         }
 
 
@@ -147,6 +194,7 @@ def _records_text(
     sources: list[NormalizedSource],
     claims: list[NormalizedClaim],
     requirements: list[NormalizedRequirement],
+    premise_findings: list[NormalizedPremiseFinding],
     conflicts: list[dict[str, Any]],
     gaps: list[dict[str, Any]],
 ) -> str:
@@ -193,6 +241,17 @@ def _records_text(
             f"- {requirement.requirement_id} | {requirement.question} "
             f"| status: {status} | claims: {claim_ids}{gap}"
         )
+
+    if premise_findings:
+        lines.append("")
+        lines.append("WHAT THE COMMISSION ASSUMED, AND WHAT RESEARCH FOUND")
+        for finding in premise_findings:
+            claim_ids = ", ".join(finding.claim_ids) or "none"
+            lines.append(
+                f"- {finding.assumption_id} | {finding.statement} "
+                f"| verdict: {finding.verdict} | basis: {finding.basis} "
+                f"| claims: {claim_ids}"
+            )
 
     lines.append("")
     lines.append("CONFLICTS")
@@ -256,17 +315,39 @@ def normalize_evidence(
             status=status_by_id[requirement.requirement_id].status,
             claim_ids=list(status_by_id[requirement.requirement_id].claim_ids),
             gap=status_by_id[requirement.requirement_id].gap,
+            assumption_ids=list(requirement.assumption_ids),
         )
         for requirement in commission.requirements
     ]
     conflicts = [conflict.model_dump() for conflict in evidence_package.conflicts]
     gaps = [gap.model_dump() for gap in evidence_package.gaps]
 
+    # Commission order again: the premise reads in the order the editor
+    # approved it, whatever order research answered in.
+    verdict_by_id = {
+        finding.assumption_id: finding
+        for finding in evidence_package.premise_findings
+    }
+    premise_findings = [
+        NormalizedPremiseFinding(
+            assumption_id=assumption.assumption_id,
+            statement=assumption.statement,
+            verdict=verdict_by_id[assumption.assumption_id].verdict,
+            basis=verdict_by_id[assumption.assumption_id].basis,
+            claim_ids=list(verdict_by_id[assumption.assumption_id].claim_ids),
+        )
+        for assumption in commission.premise
+        if assumption.assumption_id in verdict_by_id
+    ]
+
     return NormalizedEvidence(
         sources=sources,
         claims=claims,
         requirements=requirements,
+        premise_findings=premise_findings,
         conflicts=conflicts,
         gaps=gaps,
-        records_text=_records_text(sources, claims, requirements, conflicts, gaps),
+        records_text=_records_text(
+            sources, claims, requirements, premise_findings, conflicts, gaps
+        ),
     )
