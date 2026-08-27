@@ -20,7 +20,7 @@ export default function HomepageBlockSettingsModal({
   footer,
   children
 }: Props) {
-  const titleId = useId()
+  const titleId = useId().replace(/:/g, '')
 
   useEffect(() => {
     if (!isOpen) return
