@@ -4,7 +4,13 @@ import {
   type Prompt2BlogDirectionResponse,
   type Prompt2BlogEditorialOptionsResponse
 } from '../api'
-import { todayIso } from './direction-prompt'
+import {
+  WORDS_PER_RESEARCH_QUESTION,
+  lengthCeilingWords,
+  researchQuestionCeilingForLength,
+  researchQuestionsForLength,
+  todayIso
+} from './direction-prompt'
 
 export type DirectionImportIssue = {
   path: string
@@ -545,8 +551,6 @@ function validateDistinctOptions(
   }
 }
 
-/** Words a single answered research question is worth, in finished prose. */
-const WORDS_PER_RESEARCH_QUESTION = 350
 
 /**
  * Nouns that describe an article instead of naming its subject.
@@ -641,9 +645,15 @@ function collectDirectionWarnings(
   asOfDate: string
 ): DirectionWarning[] {
   const warnings: DirectionWarning[] = []
-  const needed = targetWordCount
-    ? Math.min(8, Math.max(3, Math.round(targetWordCount / WORDS_PER_RESEARCH_QUESTION)))
-    : 0
+  /*
+   * Both bounds come from the prompt builder rather than being recomputed
+   * here. The warning has to say what the generated prompt asked for; two
+   * copies of the arithmetic would eventually disagree, and the operator
+   * would be told off for following the instructions this app wrote.
+   */
+  const needed = targetWordCount ? researchQuestionsForLength(targetWordCount) : 0
+  const affordable = researchQuestionCeilingForLength(targetWordCount)
+  const ceiling = lengthCeilingWords(targetWordCount)
 
   options.forEach((option, index) => {
     if (!isObject(option)) return
@@ -657,6 +667,32 @@ function collectDirectionWarnings(
           `Asks ${requirements.length} question${requirements.length === 1 ? '' : 's'} ` +
           `for an article of about ${targetWordCount} words. ${needed} or more is ` +
           'what that length needs. Fewer questions means a shorter, thinner article.'
+      })
+    }
+
+    /*
+     * The mirror of the too-few warning, and the same class of failure as the
+     * premise checks below: a contradiction visible for free here, otherwise
+     * paid for after the run.
+     *
+     * A commission with six requirements against a 1540 word ceiling carries
+     * 2100 words of material. It was over length before a word was written.
+     * The real run found out 28 minutes later, when the length check failed
+     * and two repair passes were spent trying to cut it back.
+     *
+     * Advisory, not blocking, exactly like the too-few warning: 350 words a
+     * question is an average, and a thin question is genuinely cheaper.
+     */
+    if (affordable && requirements.length > affordable) {
+      const material = requirements.length * WORDS_PER_RESEARCH_QUESTION
+      warnings.push({
+        label,
+        message:
+          `Asks ${requirements.length} questions for an article of about ` +
+          `${targetWordCount} words. That is roughly ${material} words of ` +
+          `material against a ${ceiling} word ceiling, so the article cannot ` +
+          `be written to length as commissioned. Cut to about ${affordable} ` +
+          'questions, or raise the length.'
       })
     }
 

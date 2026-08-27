@@ -336,6 +336,16 @@ export type Prompt2BlogV3PipelinePayload = {
     constraint_checks: Record<string, boolean | number>
     readiness_blockers: string[]
     word_count_estimate: number
+    /** Optional: runs stored before this field existed do not carry it. */
+    word_count_check?: {
+      target_word_count_met: boolean
+      word_count_estimate: number
+      /** Words outside the accepted band: positive over, negative under. */
+      word_count_delta: number
+      word_count_direction: 'within' | 'over' | 'under'
+      word_count_target_min: number
+      word_count_target_max: number
+    }
     repair_applied: boolean
     repair_attempts: number
     groundedness: Prompt2BlogGroundedness

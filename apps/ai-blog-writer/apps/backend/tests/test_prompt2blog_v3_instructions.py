@@ -198,3 +198,20 @@ def test_the_writer_is_told_not_to_narrate_the_premise_check():
         in evidence_layer.body
     )
     assert "never mention that it was checked" in evidence_layer.body
+
+
+def test_the_writer_is_told_not_to_narrate_a_resolved_conflict():
+    """The premise line's twin, and the same failure shape.
+
+    Conflict resolution sends the operator's own decision to the writer, and
+    on the run that proved the feature the auditor caught the writer narrating
+    the disagreement itself. The reader wants the settled figure, not the
+    argument that produced it.
+    """
+    instructions = assemble_v3_instructions(_request())
+    evidence_layer = next(
+        layer for layer in instructions.layers if layer.layer == "evidence"
+    )
+
+    assert "A resolved conflict is the same" in evidence_layer.body
+    assert "Never tell the reader that two records disagreed" in evidence_layer.body

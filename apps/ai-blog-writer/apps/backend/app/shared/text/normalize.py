@@ -134,6 +134,113 @@ _SOURCE_ATTRIBUTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
+# Sentences that report on the research instead of on the subject.
+#
+# The house rule already says it in words -- write around an unpublished fact,
+# never announce it -- and a real Lima restaurant run shipped seven of these
+# anyway ("Central does not publish its individual course names, so the
+# specific dishes served on a given date are not public information"). The
+# quality audit caught one of the seven, vaguely. An instruction the writer
+# ignores is not a check, so this is the half that does not depend on the
+# model having listened.
+#
+# The reader came for the subject. What a researcher could or could not
+# establish about it is the pipeline's business, and "sampled booking flow" is
+# internal vocabulary that should never reach a travel article at all.
+#
+# Kept deliberately narrow. A false positive costs a repair call on correct
+# prose and the repair prompt tells the writer to delete the sentence, so an
+# over-broad pattern removes facts a reader needs. Three near misses were cut
+# for that reason: "release" ("the venue does not release tickets until 10am"),
+# "not available online" and "not publicly listed" ("reservations are not
+# available online, so call the counter") all mean booking, not research, in a
+# travel article far more often than they mean a gap in the evidence. The
+# research sense of each is already carried by publish, disclose, "not public
+# information" and "not publicly available".
+_RESEARCH_META_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(
+            r"\b(?:do(?:es)?|did|will)\s+not\s+"
+            r"(?:publish|disclose|make\s+public)\b",
+            re.I,
+        ),
+        "the prose reports what the subject withholds instead of what it does",
+    ),
+    (
+        re.compile(
+            r"\b(?:has|have|had)\s+not\s+"
+            r"(?:published|disclosed|made\s+public)\b",
+            re.I,
+        ),
+        "the prose reports what the subject withholds instead of what it does",
+    ),
+    (
+        re.compile(
+            r"\bnot\s+(?:public\s+information|publicly\s+"
+            r"(?:available|published|disclosed))\b",
+            re.I,
+        ),
+        "the prose narrates a gap in the research",
+    ),
+    (
+        re.compile(
+            r"\bno\s+(?:public\s+(?:data|record|records|information|listing|"
+            r"figure|figures)|published\s+(?:data|figure|figures|price|prices)|"
+            r"official\s+(?:figure|figures|data))\b",
+            re.I,
+        ),
+        "the prose narrates a gap in the research",
+    ),
+    (
+        re.compile(
+            r"\b(?:could|can|would)\s*not\s+be\s+"
+            r"(?:confirmed|verified|established|determined|found)\b",
+            re.I,
+        ),
+        "the prose narrates a gap in the research",
+    ),
+    (
+        re.compile(
+            r"\bat\s+(?:the\s+)?time\s+of\s+(?:writing|research|publication)\b"
+            r"|\bas\s+of\s+this\s+writing\b",
+            re.I,
+        ),
+        "the claim is dated as a shield rather than because the reader needs it",
+    ),
+    (
+        re.compile(
+            r"\bsampled\s+(?:booking|checkout|reservation|reservations|pricing|"
+            r"price|prices|menu|menus|listing|listings|flow|flows|itinerary|"
+            r"rate|rates)\b"
+            r"|\bsample\s+size\b"
+            r"|\bdata\s+points?\b"
+            r"|\b(?:evidence|source)\s+records?\b",
+            re.I,
+        ),
+        "internal research vocabulary has reached the reader",
+    ),
+    (
+        re.compile(
+            r"\b(?:an?\s+)?estimate\s+rather\s+than\b"
+            r"|\brather\s+than\s+an?\s+(?:guaranteed|confirmed|final)\b",
+            re.I,
+        ),
+        "the prose grades its own confidence in the number",
+    ),
+)
+
+
+def _research_meta(line: str) -> list[str]:
+    for pattern in _NON_PROSE_SPANS:
+        line = pattern.sub(" ", line)
+    found: list[str] = []
+    for pattern, reason in _RESEARCH_META_PATTERNS:
+        match = pattern.search(line)
+        if match:
+            found.append(f"{match.group(0).strip()} ({reason})")
+    return found
+
+
 def _source_attributions(line: str) -> list[str]:
     for pattern in _NON_PROSE_SPANS:
         line = pattern.sub(" ", line)
@@ -235,6 +342,12 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
                 f"Line {line_number}: attribution belongs in the evidence "
                 f"record, not the prose: {'; '.join(attributions)}"
             )
+        research_meta = _research_meta(line)
+        if research_meta:
+            errors.append(
+                f"Line {line_number}: write around what the research could not "
+                f"establish, never announce it: {'; '.join(research_meta)}"
+            )
         for pattern in _COMMA_AS_DASH_ASIDE_PATTERNS:
             match = pattern.search(line)
             if match:
@@ -257,7 +370,13 @@ def build_anti_ai_repair_prompt(content: str, errors: list[str]) -> str:
         "the word in place. Fix sourcing language by stating the fact as a "
         "plain sentence and deleting the publication, not by swapping in "
         "another attribution verb; if the fact cannot stand without a source "
-        "named in the sentence, delete the sentence.\n\n"
+        "named in the sentence, delete the sentence.\n"
+        "Fix a sentence that reports on the research by deleting it, or by "
+        "replacing it with what the article does know. \"Central does not "
+        "publish its course names\" becomes a sentence about what Central "
+        "does serve, or it goes. Never soften it into \"course names vary\" "
+        "or \"the menu changes often\": the reader is still being told about "
+        "an absence. Never name the research itself in the prose.\n\n"
         f"Validation errors:\n{error_lines}\n\n"
         "Previous output:\n"
         "<<<CONTENT>>>\n"

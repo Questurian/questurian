@@ -7,7 +7,7 @@ from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
 from ...policies import evaluate_readiness
 from ...pricing import Prompt2BlogTokenUsageTracker
-from ...quality import _build_constraint_checks
+from ...quality import CONSTRAINT_MEASUREMENT_KEYS, _build_constraint_checks
 from ...quality_v3 import v3_constraint_brief
 from ...support import _safe_dict, _safe_str
 
@@ -45,7 +45,7 @@ def run_v3_finalize_stage(
         **{
             key: value
             for key, value in final_checks.items()
-            if not key.endswith("_coverage") and key != "word_count_estimate"
+            if key not in CONSTRAINT_MEASUREMENT_KEYS
         },
     }
     verdict = evaluate_readiness(
@@ -122,6 +122,20 @@ def run_v3_finalize_stage(
             "constraint_checks": settled_checks,
             "readiness_blockers": list(verdict.blockers),
             "word_count_estimate": final_checks["word_count_estimate"],
+            # A length blocker on its own tells the operator nothing about
+            # which way the article missed, which is the only thing they can
+            # act on.
+            "word_count_check": {
+                key: final_checks[key]
+                for key in (
+                    "target_word_count_met",
+                    "word_count_estimate",
+                    "word_count_delta",
+                    "word_count_direction",
+                    "word_count_target_min",
+                    "word_count_target_max",
+                )
+            },
             "repair_applied": state.get("repair_applied", False),
             "repair_attempts": state.get("repair_attempts", 0),
             "groundedness": state["groundedness"],

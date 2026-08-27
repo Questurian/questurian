@@ -13,10 +13,13 @@ from ...prompts.editorial_v3 import (
     P2B_V3_REPAIR_PROMPT,
 )
 from ...quality import (
+    CONSTRAINT_MEASUREMENT_KEYS,
     _build_constraint_checks,
     _sanitize_quality,
     _sanitize_rewrite,
+    drop_length_revisions,
     unchecked_groundedness,
+    word_count_revision_instruction,
 )
 from ...quality_v3 import v3_constraint_brief
 from ...schemas import REWRITE_SCHEMA
@@ -28,6 +31,11 @@ from ...support import _format_style_directive, _json
 # while `target_word_count_met` was false at 388 words against a 1400 target:
 # the auditor could not have known, because the checks it was being scored
 # beside were merged into its answer after it had given one.
+#
+# The later Lima restaurant run failed the same check from the other side --
+# 1903 words against a 1260-1540 band -- and the auditor, reading a bare
+# boolean, wrote "expand the draft". Both repair passes obeyed and both were
+# discarded by keep-best. Hence the direction travels with the check.
 def _measured_checks_block(checks: dict[str, Any]) -> str:
     reported = {key: value for key, value in checks.items() if isinstance(value, bool)}
     if not reported:
@@ -39,6 +47,19 @@ def _measured_checks_block(checks: dict[str, Any]) -> str:
     word_count = checks.get("word_count_estimate")
     if word_count is not None:
         lines.append(f"- word_count_estimate: {word_count}")
+    # A failed length check without its direction is a coin flip for the
+    # auditor, and it called the Lima run wrong: it read "too short" off a
+    # draft 363 words over the ceiling and told repair to expand.
+    if checks.get("target_word_count_met") is False:
+        direction = checks.get("word_count_direction")
+        delta = checks.get("word_count_delta")
+        lower = checks.get("word_count_target_min")
+        upper = checks.get("word_count_target_max")
+        if direction in {"over", "under"} and delta:
+            lines.append(
+                f"- word_count_verdict: {direction.upper()} the required "
+                f"{lower}-{upper} word band by {abs(int(delta))} words"
+            )
     return "\n".join(lines)
 
 
@@ -66,23 +87,31 @@ def _audit_v3_rewrite(
         model_name=state["audit_model"],
     )
     quality = _sanitize_quality(parsed)
-    measurements = {
-        "word_count_estimate",
-        "secondary_keyword_coverage",
-        "must_include_coverage",
-    }
     groundedness = state.get("groundedness") or unchecked_groundedness()
     quality_checks = {
         **quality.get("constraint_checks", {}),
         **{
             key: value
             for key, value in computed_checks.items()
-            if key not in measurements
+            if key not in CONSTRAINT_MEASUREMENT_KEYS
         },
         "claims_grounded": groundedness["grounded"],
     }
     quality["constraint_checks"] = quality_checks
     quality["word_count_estimate"] = computed_checks["word_count_estimate"]
+    # Repair reads this to state the length revision in words. It travels on
+    # `quality` rather than in `constraint_checks`, which holds only verdicts.
+    quality["word_count_check"] = {
+        key: computed_checks[key]
+        for key in (
+            "target_word_count_met",
+            "word_count_estimate",
+            "word_count_delta",
+            "word_count_direction",
+            "word_count_target_min",
+            "word_count_target_max",
+        )
+    }
     quality["secondary_keyword_coverage"] = computed_checks[
         "secondary_keyword_coverage"
     ]
@@ -154,6 +183,22 @@ def run_v3_repair_stage(
 
     groundedness = state.get("groundedness") or unchecked_groundedness()
     required_revisions = list(quality.get("required_revisions", []))
+    # First, and computed rather than written by the auditor: a length miss is
+    # the one revision the auditor cannot get wrong twice, because the counts
+    # that failed the check are the counts that phrase the instruction.
+    #
+    # The auditor's own length sentence is dropped rather than kept alongside
+    # it. The auditor is shown the direction now, but a list carrying both
+    # "cut about 360 words" and "expand the draft" would leave repair to pick
+    # between them, which is the original bug wearing a smaller hat.
+    length_revision = word_count_revision_instruction(
+        quality.get("word_count_check") or {}
+    )
+    if length_revision:
+        required_revisions = [
+            length_revision,
+            *drop_length_revisions(required_revisions),
+        ]
     required_revisions.extend(
         f"Remove or explicitly mark as unconfirmed: {claim['claim']} "
         f"({claim['reason']})"

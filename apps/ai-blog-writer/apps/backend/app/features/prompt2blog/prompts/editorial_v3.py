@@ -219,8 +219,12 @@ Rules:
 - Score honestly. A draft that merely avoids mistakes is a 7, not a 9.
 - MEASURED CHECKS below are counted outside this prompt and are not opinions.
   While any of them is false, overall_score may not exceed 6, and the failure
-  must appear in required_revisions. A draft at a third of its target length is
-  not publishable, whatever else it does well.
+  must appear in required_revisions. Length is a band with two edges: a draft
+  at a third of its target length is not publishable, and neither is one that
+  overruns the band. Never infer which way a length check missed -- when
+  target_word_count_met is FAIL, `word_count_verdict` states the direction and
+  the size of the miss, and your required_revisions must say the same thing it
+  does.
 
 {instructions}
 
@@ -254,6 +258,9 @@ Return strict JSON only:
 
 Rules:
 - Resolve each required revision directly.
+- A revision that states a length change gives the direction and the number of
+  words. Move that way. Never lengthen a draft asked to be cut, or cut one
+  asked to be lengthened.
 - Repair prose and structure only. You may not create a fact, and you may not
   change the commission: not the form, the primary subject, the scope mode, the
   reference roles, the requirements, or the exclusions.

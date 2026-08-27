@@ -123,7 +123,10 @@ def _evidence_body(evidence: NormalizedEvidence) -> str:
         "attribution, no sourcing language, and no note about how it was "
         "obtained. A confirmed premise is simply a fact the article may use; "
         "never mention that it was checked, and never write a sentence about "
-        "what the research established.\n\n"
+        "what the research established. A resolved conflict is the same: the "
+        "resolution is the fact, and the disagreement behind it is internal. "
+        "Write the settled figure as a plain sentence. Never tell the reader "
+        "that two records disagreed, which one was chosen, or why.\n\n"
         f"{evidence.records_text}"
     )
 

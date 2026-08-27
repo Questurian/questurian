@@ -53,7 +53,51 @@ function formatForms(
  */
 export function researchQuestionsForLength(targetWordCount: number): number {
   if (!Number.isFinite(targetWordCount) || targetWordCount <= 0) return 3
-  return Math.min(8, Math.max(3, Math.round(targetWordCount / 350)))
+  return Math.min(
+    8,
+    Math.max(3, Math.round(targetWordCount / WORDS_PER_RESEARCH_QUESTION))
+  )
+}
+
+/** Words a single answered research question is worth, in finished prose. */
+export const WORDS_PER_RESEARCH_QUESTION = 350
+
+/**
+ * The most research questions a target length can absorb.
+ *
+ * The floor above stops a thin article. This is the same arithmetic run
+ * against the ceiling the pipeline actually measures a draft against -- the
+ * target plus `max(100, 10%)`, matching `_build_constraint_checks` in the
+ * backend -- and it stops the opposite failure. A commission carrying six
+ * questions against a 1540 word ceiling is worth about 2100 words of prose:
+ * it cannot be written to length, and the run finds out only after the
+ * writing model has been paid for twice.
+ *
+ * Never below `researchQuestionsForLength`, so the floor and the ceiling
+ * cannot contradict each other at any length.
+ *
+ * Known limit of that clamp: below roughly 1200 words the raw ceiling falls
+ * under the floor of 3, so it is clamped up and this function reports a count
+ * its own arithmetic says will not fit (a 700 word target gets 3 questions,
+ * worth about 1050 words, against an 800 word ceiling). Short commissions are
+ * therefore never warned about. Either 350 words a question is too blunt at
+ * that end, or the floor of 3 is doing something the arithmetic does not
+ * describe; the evidence for the ceiling comes from long articles, so this is
+ * left honest rather than guessed at.
+ */
+export function researchQuestionCeilingForLength(targetWordCount: number): number {
+  if (!Number.isFinite(targetWordCount) || targetWordCount <= 0) return 0
+  const ceiling = targetWordCount + Math.max(100, Math.round(targetWordCount * 0.1))
+  return Math.max(
+    researchQuestionsForLength(targetWordCount),
+    Math.floor(ceiling / WORDS_PER_RESEARCH_QUESTION)
+  )
+}
+
+/** The measured length band's upper edge, for messages that name it. */
+export function lengthCeilingWords(targetWordCount: number): number {
+  if (!Number.isFinite(targetWordCount) || targetWordCount <= 0) return 0
+  return targetWordCount + Math.max(100, Math.round(targetWordCount * 0.1))
 }
 
 /**
@@ -83,6 +127,16 @@ export function buildDirectionPrompt(
   settledFalse: readonly SettledFalsePremise[] = []
 ): string {
   const questionCount = researchQuestionsForLength(length?.target_word_count ?? 0)
+  /*
+   * No chosen length means no measured band, so there is nothing to state a
+   * ceiling against. Saying "at most 0" would be worse than saying nothing.
+   */
+  const questionCeiling = researchQuestionCeilingForLength(
+    length?.target_word_count ?? 0
+  )
+  const questionRange = questionCeiling
+    ? `at least ${questionCount} and at most ${questionCeiling}`
+    : `at least ${questionCount}`
   /*
    * Carried back from a run the gate stopped. Without it the operator returns
    * to this step with nothing but their own memory of what was refuted, and
@@ -125,10 +179,10 @@ The original title is what a reader sees before they read anything. Every option
 Read the USE WHEN and DO NOT USE WHEN lines under every form before choosing one. Pick the form that keeps the promise, not the form the title's mood suggests. A title containing "right now" is not automatically news.
 
 RESEARCH QUESTIONS
-Every option needs at least ${questionCount} required research questions.
+Every option needs ${questionRange} required research questions.
 - One question asks one thing. Split anything joined by "and" into separate questions, because one unanswerable half currently blocks the whole article.
 - No question may depend on another question's answer. "Which restaurants made the list" followed by "what do those restaurants charge" is a chain: nobody can research the second until the first comes back, so a first question that fails silently deletes the rest. Ask each question against something the premise or the subject already names.
-- Questions must be answerable by looking something up, and together they must cover enough ground to fill the target length. A single question yields a single section.
+- Questions must be answerable by looking something up, and together they must cover enough ground to fill the target length without overrunning it. A single question yields a single section of roughly ${WORDS_PER_RESEARCH_QUESTION} words, so more questions than the range above commissions an article that cannot be written to length. Ask fewer, better questions rather than covering everything.
 - Name things. A question about "the current shift in the dining scene" cannot be researched; "which restaurants opened in Barranco in 2026" can, and "what does a tasting menu cost in Barranco in 2026" is a second question that stands without waiting for the first.
 
 EDITORIAL RULES
@@ -144,7 +198,7 @@ EDITORIAL RULES
 - Make options materially distinct in direction, reader question, and outcome. They may share an article form when the editorial takes remain genuinely different.
 
 OUTPUT
-Return one JSON object and nothing else. No Markdown fence, preamble, or trailing note. Echo original_title and location exactly, character for character. Return exactly three options. Use the three fixed option_id values in the shown order. Every object must contain exactly the shown keys. Every option needs at least ${questionCount} requirements, numbered from r1 upward, and at least one premise, numbered from a1 upward. Every id in assumption_ids must name a premise declared by that same option.
+Return one JSON object and nothing else. No Markdown fence, preamble, or trailing note. Echo original_title and location exactly, character for character. Return exactly three options. Use the three fixed option_id values in the shown order. Every object must contain exactly the shown keys. Every option needs ${questionRange} requirements, numbered from r1 upward, and at least one premise, numbered from a1 upward. Every id in assumption_ids must name a premise declared by that same option.
 
 {
   "schema_version": 3,
@@ -192,7 +246,7 @@ ${requirementSample}
         "references": [{ "name": "...", "role": "primary_subject" }]
       },
       "premise": ["at least 1, same shape as above"],
-      "requirements": ["at least ${questionCount}, same shape as above"],
+      "requirements": ["${questionRange}, same shape as above"],
       "exclusions": ["..."],
       "rationale": "..."
     },
@@ -210,7 +264,7 @@ ${requirementSample}
         "references": [{ "name": "...", "role": "primary_subject" }]
       },
       "premise": ["at least 1, same shape as above"],
-      "requirements": ["at least ${questionCount}, same shape as above"],
+      "requirements": ["${questionRange}, same shape as above"],
       "exclusions": ["..."],
       "rationale": "..."
     }

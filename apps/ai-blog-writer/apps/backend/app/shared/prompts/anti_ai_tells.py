@@ -102,6 +102,15 @@ not an average," "no official figures exist for," "there is no public data \
 on," "figures could not be verified," and any sentence whose job is to tell \
 the reader how much to trust the previous one. Where research could not \
 establish something, write around it: never narrate the gap. \
+Saying it about the subject instead of about yourself is the same sentence. \
+Cut: "does not publish," "has not disclosed," "is not public information," \
+"is not publicly available," "could not be confirmed," and any other way of \
+telling the reader that a fact was looked for and not found. Write what the \
+subject does do, or say nothing. \
+Never let the vocabulary of the research reach the page either: no "sampled" \
+booking flows or menus, no "data points," no "sample size," no "evidence \
+records," and no grading your own confidence in a number ("an estimate rather \
+than a guaranteed bill"). Give the number plainly or leave it out. \
 Naming the source is the same disclaimer wearing a press badge. Cut: \
 "sources report," "travel sources," "outlets anticipate," "one outlet," \
 "the publication noted," "the report cited," "according to," "reports \
