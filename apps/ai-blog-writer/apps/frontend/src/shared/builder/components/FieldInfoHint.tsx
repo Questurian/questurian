@@ -5,7 +5,7 @@ type FieldInfoHintProps = {
 }
 
 export function FieldInfoHint({ text }: FieldInfoHintProps) {
-  const tooltipId = useId()
+  const tooltipId = useId().replace(/:/g, '')
 
   return (
     <span

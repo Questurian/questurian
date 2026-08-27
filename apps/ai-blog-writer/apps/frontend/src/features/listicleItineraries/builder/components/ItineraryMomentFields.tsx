@@ -81,7 +81,7 @@ function MomentBadgePicker({
   onSelect: (next: MomentOption | undefined) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const listboxId = useId()
+  const listboxId = useId().replace(/:/g, '')
   const pickerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([])
