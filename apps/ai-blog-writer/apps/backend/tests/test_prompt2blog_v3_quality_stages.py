@@ -311,3 +311,76 @@ def test_the_v3_constraint_brief_invents_no_seo_requirement():
     assert brief["must_include"] == []
     assert brief["formatting"]["target_word_count"] >= 0
     assert "Primary subject: Lima" in v3_commission_summary(runtime.commission)
+
+
+def test_the_audit_is_handed_the_measurements_before_it_scores():
+    """The Lima food article scored 9/10 while it was a third of its length.
+
+    The deterministic checks were merged into the auditor's answer after it had
+    already given one, so it graded a short draft as publishable without ever
+    being told it was short. They go in with the prompt now.
+    """
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 9,
+            "constraint_checks": {"audience_match": True, "tone_match": True},
+            "required_revisions": [],
+            "quality_summary": "Executes the form cleanly.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_quality_audit_stage(_state(), dependencies)
+
+    prompt = llm.prompts[0]
+    assert "MEASURED CHECKS (counted, not judged):" in prompt
+    assert "target_word_count_met: FAIL" in prompt
+    assert "word_count_estimate:" in prompt
+    assert "overall_score may not exceed 6" in prompt
+
+
+def test_the_audit_is_told_the_working_title_is_a_reader_promise():
+    """A commission can drift from the title it came from.
+
+    "Where to eat in Lima right now" produced a faithful news report about an
+    awards ceremony. The auditor scored it 9/10 for executing its form, which
+    was true and beside the point.
+    """
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 7,
+            "constraint_checks": {"audience_match": True, "tone_match": True},
+            "required_revisions": [],
+            "quality_summary": "Fine.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_quality_audit_stage(_state(), dependencies)
+
+    prompt = llm.prompts[0]
+    assert "is a promise made to a reader" in prompt
+    assert "a draft that follows a drifted commission faithfully is still the" in prompt
+    assert "cap overall_score at 5" in prompt
+    # The title it must be judged against has to actually be in the prompt.
+    assert "Original title:" in prompt
+
+
+def test_the_audit_still_measures_the_checks_it_reports():
+    # Moving the computation earlier must not drop it from the result.
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 8,
+            "constraint_checks": {"audience_match": True, "tone_match": False},
+            "required_revisions": [],
+            "quality_summary": "Fine.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_quality_audit_stage(_state(), dependencies)
+
+    assert "word_count_estimate" in updates["quality"]
+    assert updates["quality_checks"]["target_word_count_met"] is False
+    # Judged checks stay the auditor's; measured checks stay the code's.
+    assert updates["quality_checks"]["tone_match"] is False

@@ -51,7 +51,8 @@ const STEP_DEFINITIONS: readonly StepDefinition[] = [
   {
     id: 'start',
     name: 'Start the article',
-    purpose: 'Name what you are writing and where it is about.',
+    purpose:
+      'Name what you are writing, where it is about, and how long it should be.',
     nextAction: P2B_NEXT_ACTION.start
   },
   {
@@ -78,7 +79,8 @@ const STEP_DEFINITIONS: readonly StepDefinition[] = [
   {
     id: 'write',
     name: 'Write it',
-    purpose: 'Set the tone and length, then run the pipeline.',
+    purpose:
+      'Set the tone, check the length you chose in step 1, then run the pipeline.',
     nextAction: P2B_NEXT_ACTION.write
   }
 ]

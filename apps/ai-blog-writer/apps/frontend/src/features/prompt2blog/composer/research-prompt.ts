@@ -60,7 +60,27 @@ These record two different things. Never conflate them.
 - confidence describes the ANSWER. high, medium, or low records how well corroborated that answer is.
 - An answer you found and corroborated stays supported even when you could not reach the ideal primary source, the publisher blocks automated retrieval, or you would have preferred more evidence. Record that reservation as claim confidence medium or low and as a source note. Never downgrade the requirement to partial for it.
 - Reserve partial and missing for a question more research could still close. Do not pad weak evidence, infer missing facts, or mark a requirement supported without linked claims.
-- Use unpublished only after real searching, and only when the fact itself is unpublished rather than merely hard for you to reach. Name in gap exactly which authorities, documents, and dates you checked. Where a source states the limit of what it measures, record that as a claim and link it. unpublished does not block the run and will not be sent back to you, so a careless unpublished silently costs the article a fact.`
+- Use unpublished only after real searching, and only when the fact itself is unpublished rather than merely hard for you to reach. Name in gap exactly which authorities, documents, and dates you checked. Where a source states the limit of what it measures, record that as a claim and link it. unpublished does not block the run and will not be sent back to you, so a careless unpublished silently costs the article a fact.
+- unpublished is about a fact nobody has published. It is not for a question that cannot be answered because the thing it asks about does not exist yet. That is a refuted premise, and the question stays missing.`
+
+/**
+ * What research does before it answers anything.
+ *
+ * The direction step cannot browse, so its premise is unverified by
+ * construction. Until this block existed, the first step allowed to check it
+ * was never asked to, and a brief resting on an unpublished ranking reached
+ * the gate as five separately unanswerable questions.
+ *
+ * Shared verbatim with the follow-up prompt and mirrored in the backend's
+ * `PREMISE_CHECK_RULES`; all three must say the same thing.
+ */
+export const PREMISE_CHECK_RULES = `PREMISE CHECK — SETTLE THIS BEFORE ANSWERING ANYTHING
+The commission carries a premise: what the editor assumed while unable to check it. Settle every entry before you answer a single question, and return one verdict for each.
+- confirmed — you found it is so. Link the claim that shows it.
+- refuted — you found it is not so. Say what is true instead, with the date where one applies. This is not a failed research round. It is the most useful thing you can return, because it stops an article that cannot be written.
+- unverified — you searched properly and could settle it neither way. Name what you checked.
+- basis is required on every verdict and names the authorities, documents and dates you checked.
+- When a premise is refuted, stop. Do not answer the questions that rest on it, do not mark them unpublished, and do not substitute a nearby year, edition or subject that does exist. Leave those questions missing, and say in the gap which premise took them down.`
 
 /** Exact bare response shape shared by initial and follow-up research prompts. */
 export function formatEvidencePackageContract(fingerprint: string): string {
@@ -96,6 +116,14 @@ export function formatEvidencePackageContract(fingerprint: string): string {
       "status": "supported|partial|missing|unpublished",
       "claim_ids": ["c1"],
       "gap": "Empty only when the question is answered; otherwise say exactly which part of the question is still unanswered, or for unpublished exactly which authorities, documents, and dates you checked"
+    }
+  ],
+  "premise_findings": [
+    {
+      "assumption_id": "a1",
+      "verdict": "confirmed|refuted|unverified",
+      "basis": "Which authorities, documents and dates you checked, and for a refutation what is true instead",
+      "claim_ids": ["c1"]
     }
   ],
   "conflicts": [
@@ -147,6 +175,7 @@ ${guidance.modules}
 Use these modules to focus source selection and factual treatment. Do not research inactive modules merely because they appear generally relevant.
 
 RESEARCH DISCIPLINE
+- Settle the locked premise before you answer any question, and return one verdict for every entry in it.
 - Answer only the locked requirement questions.
 - Prefer primary, official, attributable, current sources; preserve publisher, URL, dates, source type, material type, and useful notes.
 - Use separate source and claim IDs. Every claim must cite existing source IDs and one or more locked requirement IDs.
@@ -155,6 +184,8 @@ RESEARCH DISCIPLINE
 - Every commission requirement ID must appear exactly once in requirements. Do not invent requirement IDs.
 - Web and report material requires publisher and URL. Every source requires at least one useful note.
 - For transcript, interview-response, first-person-note, evaluation-note, or other operator-supplied material, publisher, URL, and published_at may be JSON null.
+
+${PREMISE_CHECK_RULES}
 
 ${REQUIREMENT_STATUS_RULES}
 

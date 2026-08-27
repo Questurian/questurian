@@ -22,10 +22,10 @@ def _build_writing_brief_from_input(
     negative_instructions = _clean_string_list(request.negative_instructions)
 
     profile_lines = []
-    # The angle leads the block. Several tones -- editorial-comparison and
-    # practical-authority especially -- require the piece to take a stance, and
-    # until now the brief had nowhere to put one, so the model invented its own
-    # or defaulted to fake balance.
+    # The angle leads the block. Several tones -- practical-authority and
+    # editorial especially -- require the piece to take a stance, and until now
+    # the brief had nowhere to put one, so the model invented its own or
+    # defaulted to fake balance.
     if request.angle:
         profile_lines.append(
             f"Editorial angle - the piece must argue this: {_safe_str(request.angle)}"

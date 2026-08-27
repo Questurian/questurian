@@ -109,7 +109,11 @@ def _commission_body(commission: Prompt2BlogCommission) -> str:
 def _evidence_body(evidence: NormalizedEvidence) -> str:
     return (
         "These records are the only permitted source of fact. Use them exactly: "
-        "preserve attribution, dates, units, geography, and stated uncertainty. "
+        "preserve dates, units, geography, and stated uncertainty. Attribution "
+        "is internal to these records. Never carry it into the prose: no "
+        "\"sources report\", no \"outlets say\", no \"according to\", no "
+        "\"the publication noted\", no naming the outlet, site, or report a "
+        "fact came from. A fact either stands as a plain sentence or is cut. "
         "An unsupported requirement stays a visible gap; never invent a bridge "
         "fact to close it. A requirement marked unpublished was searched for "
         "and no one publishes an answer. Leave it out and write around it. Do "
@@ -117,7 +121,9 @@ def _evidence_body(evidence: NormalizedEvidence) -> str:
         "could not be found, and never estimate the number. First-hand material "
         "is the writer's own knowledge: state it directly, as fact, with no "
         "attribution, no sourcing language, and no note about how it was "
-        "obtained.\n\n"
+        "obtained. A confirmed premise is simply a fact the article may use; "
+        "never mention that it was checked, and never write a sentence about "
+        "what the research established.\n\n"
         f"{evidence.records_text}"
     )
 

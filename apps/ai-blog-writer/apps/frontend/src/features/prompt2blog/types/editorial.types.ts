@@ -96,6 +96,26 @@ export type Prompt2BlogCommissionScope = {
 export type Prompt2BlogCommissionRequirement = {
   requirement_id: string
   question: string
+  /**
+   * Every premise this question stands on. Empty when the question can be
+   * researched on its own. A question that names an assumption dies with it,
+   * which is what makes the damage of a false premise countable before a run.
+   */
+  assumption_ids?: string[]
+}
+
+/**
+ * One fact a direction takes as already true and already published.
+ *
+ * The direction step cannot browse, so everything it assumes is unverified by
+ * construction. Writing the assumption down is what lets a later step refute
+ * it. "Where to eat in Lima right now" produced five questions resting on the
+ * 2026 Latin America's 50 Best list being out; it is not out until 1 December
+ * 2026, and nothing in the pipeline was in a position to notice.
+ */
+export type Prompt2BlogCommissionAssumption = {
+  assumption_id: string
+  statement: string
 }
 
 export type Prompt2BlogCommission = {
@@ -111,6 +131,7 @@ export type Prompt2BlogCommission = {
   reader_outcome: string
   primary_subject: string
   scope: Prompt2BlogCommissionScope
+  premise?: Prompt2BlogCommissionAssumption[]
   requirements: Prompt2BlogCommissionRequirement[]
   exclusions?: string[]
   call_to_action?: string | null
@@ -134,6 +155,7 @@ export type Prompt2BlogDirectionOption = {
   reader_outcome: string
   primary_subject: string
   scope: Prompt2BlogCommissionScope
+  premise: Prompt2BlogCommissionAssumption[]
   requirements: Prompt2BlogCommissionRequirement[]
   exclusions: string[]
   rationale: string
@@ -176,6 +198,23 @@ export type Prompt2BlogEvidenceRequirement = {
   gap?: string
 }
 
+export type Prompt2BlogPremiseVerdict = 'confirmed' | 'refuted' | 'unverified'
+
+/**
+ * What research found when it checked one thing the direction step assumed.
+ *
+ * `refuted` is the verdict that had nowhere to live before. A question about a
+ * ranking that has not been published is not a question with an unpublished
+ * answer — it is a question about something that does not exist, and the two
+ * need different words because they need different next steps.
+ */
+export type Prompt2BlogEvidencePremiseFinding = {
+  assumption_id: string
+  verdict: Prompt2BlogPremiseVerdict
+  basis: string
+  claim_ids?: string[]
+}
+
 export type Prompt2BlogEvidenceConflict = {
   conflict_id: string
   claim_ids: string[]
@@ -195,6 +234,7 @@ export type Prompt2BlogEvidencePackage = {
   sources?: Prompt2BlogEvidenceSource[]
   claims?: Prompt2BlogEvidenceClaim[]
   requirements: Prompt2BlogEvidenceRequirement[]
+  premise_findings?: Prompt2BlogEvidencePremiseFinding[]
   conflicts?: Prompt2BlogEvidenceConflict[]
   gaps?: Prompt2BlogEvidenceGap[]
 }
@@ -229,6 +269,17 @@ export type Prompt2BlogEditorialFormOption = {
   description: string
   order: number
   source_requirements: Prompt2BlogSourceRequirement[]
+  /**
+   * The form's own "when to pick me" and "when not to" prose.
+   *
+   * The direction step chose a form from `description` alone — one summary
+   * line each — and "Where to eat in Lima right now" became a News Report,
+   * because "reports a timely development" is a fair reading of "right now".
+   * News Report's own "do not use for broad destination summaries" was in the
+   * catalog the whole time and never reached the chooser.
+   */
+  use_when: string
+  do_not_use_when: string
 }
 
 export type Prompt2BlogTopicModuleOption = {

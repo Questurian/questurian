@@ -52,35 +52,45 @@ const catalog: Prompt2BlogEditorialOptionsResponse = {
       label: 'Analysis',
       description: 'Evidence-led interpretation.',
       order: 2,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'interview-qa',
       label: 'Interview/Q&A',
       description: 'Attributable answers.',
       order: 5,
-      source_requirements: ['attributable-responses']
+      source_requirements: ['attributable-responses'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'personal-essay-travelogue',
       label: 'Personal Essay/Travelogue',
       description: 'Supplied lived experience.',
       order: 7,
-      source_requirements: ['first-person-material']
+      source_requirements: ['first-person-material'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'review',
       label: 'Review',
       description: 'Documented evaluation.',
       order: 13,
-      source_requirements: ['documented-evaluation']
+      source_requirements: ['documented-evaluation'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     },
     {
       id: 'feature-profile',
       label: 'Feature/Profile',
       description: 'Reported people, scenes, and quotations.',
       order: 4,
-      source_requirements: ['reported-people-scenes-quotations']
+      source_requirements: ['reported-people-scenes-quotations'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     }
   ],
   topic_modules: [
@@ -132,6 +142,7 @@ function evidence(): Prompt2BlogEvidencePackage {
         gap: 'Current quality-of-life evidence is still needed.'
       }
     ],
+    premise_findings: [],
     conflicts: [],
     gaps: [
       {
@@ -150,6 +161,145 @@ function review(value: unknown, activeCommission = commission) {
     catalog
   )
 }
+
+describe('reviewEvidencePackageJson, premise findings', () => {
+  const commissionWithPremise = {
+    ...commission,
+    premise: [
+      {
+        assumption_id: 'a1',
+        statement: "The 2026 Latin America's 50 Best list has been published."
+      }
+    ],
+    requirements: commission.requirements.map((requirement) => ({
+      ...requirement,
+      assumption_ids: ['a1']
+    }))
+  } as Prompt2BlogCommission
+
+  function reviewWithPremise(value: unknown) {
+    return reviewEvidencePackageJson(
+      JSON.stringify(value),
+      commissionWithPremise,
+      catalog
+    )
+  }
+
+  it('refuses a package that never checked a premise the commission declared', () => {
+    // A declared premise nobody checked reads on screen exactly like a
+    // verified one, which is worse than not declaring it at all.
+    const result = reviewWithPremise(evidence())
+
+    expect(result.issues).toContainEqual({
+      path: 'premise_findings',
+      message:
+        'Premise findings must answer exactly the assumptions the approved commission declares.'
+    })
+  })
+
+  it('refuses a verdict with no basis for it', () => {
+    const value = evidence()
+    value.premise_findings = [
+      { assumption_id: 'a1', verdict: 'refuted', basis: '   ', claim_ids: [] }
+    ]
+
+    expect(reviewWithPremise(value).issues).toContainEqual({
+      path: 'premise_findings[0].basis',
+      message: 'Every premise verdict needs a basis naming what was checked.'
+    })
+  })
+
+  it('refuses a verdict word it does not know', () => {
+    const value = evidence()
+    value.premise_findings = [
+      {
+        assumption_id: 'a1',
+        verdict: 'probably' as never,
+        basis: 'Checked the organizers.',
+        claim_ids: []
+      }
+    ]
+
+    expect(reviewWithPremise(value).issues).toContainEqual({
+      path: 'premise_findings[0].verdict',
+      message: 'Unknown premise verdict.'
+    })
+  })
+
+  it('reports a refuted premise as the cause and not the questions it killed', () => {
+    const value = evidence()
+    value.requirements = [
+      {
+        requirement_id: 'r1',
+        status: 'missing',
+        claim_ids: [],
+        gap: 'The premise this rests on is false.'
+      },
+      {
+        requirement_id: 'r2',
+        status: 'missing',
+        claim_ids: [],
+        gap: 'The premise this rests on is false.'
+      }
+    ]
+    value.claims = []
+    value.gaps = []
+    value.premise_findings = [
+      {
+        assumption_id: 'a1',
+        verdict: 'refuted',
+        basis: 'The organizers schedule the reveal for 1 December 2026.',
+        claim_ids: []
+      }
+    ]
+
+    const result = reviewWithPremise(value)
+    const codes = result.readinessFindings.map((finding) => finding.code)
+
+    expect(result.issues).toEqual([])
+    expect(codes).toEqual(['premise_refuted'])
+    expect(result.readinessFindings[0].requirement_ids).toEqual(['r1', 'r2'])
+    expect(result.readinessFindings[0].message).toContain('that is not so')
+  })
+
+  it('leaves an unverified premise blocking but still worth another round', () => {
+    const value = evidence()
+    value.premise_findings = [
+      {
+        assumption_id: 'a1',
+        verdict: 'unverified',
+        basis: 'The organizers site was unreachable on three attempts.',
+        claim_ids: []
+      }
+    ]
+
+    const result = reviewWithPremise(value)
+    const codes = result.readinessFindings.map((finding) => finding.code)
+
+    expect(result.issues).toEqual([])
+    expect(codes).toContain('premise_unverified')
+    expect(codes).toContain('requirement_gap')
+  })
+
+  it('lets a confirmed premise pass without adding a finding', () => {
+    const value = evidence()
+    value.premise_findings = [
+      {
+        assumption_id: 'a1',
+        verdict: 'confirmed',
+        basis: 'The organizers published the list on 2 December 2025.',
+        claim_ids: ['c1']
+      }
+    ]
+
+    const codes = reviewWithPremise(value).readinessFindings.map(
+      (finding) => finding.code
+    )
+
+    expect(codes).not.toContain('premise_refuted')
+    expect(codes).not.toContain('premise_unverified')
+  })
+})
 
 describe('reviewEvidencePackageJson', () => {
   it('keeps the permanent Lima scope-drift fixture importable with explicit gaps', () => {

@@ -3,6 +3,8 @@ export type ResearchFindingCode =
   | 'unresolved_conflict'
   | 'source_gate'
   | 'nothing_answered'
+  | 'premise_refuted'
+  | 'premise_unverified'
 
 export type ResearchQuestion = {
   requirement_id: string
@@ -14,6 +16,8 @@ const FINDING_LABELS: Record<ResearchFindingCode, string> = {
   unresolved_conflict: 'Two sources disagree',
   source_gate: 'This kind of article needs a first-hand source',
   nothing_answered: 'Nothing came back answered',
+  premise_refuted: 'The article was built on something that is not true',
+  premise_unverified: 'Something the article assumes could not be checked',
 }
 
 /**

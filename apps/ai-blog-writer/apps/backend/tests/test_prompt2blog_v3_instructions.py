@@ -178,3 +178,23 @@ def test_first_hand_material_is_written_as_the_writers_own_knowledge():
 
     assert "state it directly, as fact" in body
     assert "no attribution, no sourcing language" in body
+
+
+def test_the_writer_is_told_not_to_narrate_the_premise_check():
+    """Over-transparency is one of the loudest signals a human did not write it.
+
+    The evidence records now carry what the commission assumed and what
+    research found. Without this line that block is an invitation to write
+    "the 2025 ranking, which is the most recent published edition" into a
+    travel piece.
+    """
+    instructions = assemble_v3_instructions(_request())
+    evidence_layer = next(
+        layer for layer in instructions.layers if layer.layer == "evidence"
+    )
+
+    assert (
+        "A confirmed premise is simply a fact the article may use"
+        in evidence_layer.body
+    )
+    assert "never mention that it was checked" in evidence_layer.body

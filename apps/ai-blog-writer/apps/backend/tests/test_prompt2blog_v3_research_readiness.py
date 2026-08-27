@@ -14,6 +14,7 @@ from app.features.prompt2blog.intake_v3 import v3_intake_result
 from app.features.prompt2blog.research_readiness_v3 import (
     assess_research_readiness,
     build_follow_up_research_prompt,
+    PREMISE_CHECK_RULES,
     REQUIREMENT_STATUS_RULES,
 )
 
@@ -337,3 +338,156 @@ def test_a_package_with_nothing_answered_still_blocks():
 def test_the_status_rules_define_the_unpublished_verdict():
     assert "unpublished means you searched" in REQUIREMENT_STATUS_RULES
     assert "only after real searching" in REQUIREMENT_STATUS_RULES
+
+
+def _lima_ranking_commission() -> dict:
+    """The commission shape that produced the dead end, in miniature.
+
+    Every question rests on one premise, and the premise is a ranking whose
+    reveal is still months away.
+    """
+    commission = deepcopy(_fixture()["commission"])
+    commission["premise"] = [
+        {
+            "assumption_id": "a1",
+            "statement": "The 2026 Latin America's 50 Best Restaurants list has been published.",
+        }
+    ]
+    for requirement in commission["requirements"]:
+        requirement["assumption_ids"] = ["a1"]
+    return commission
+
+
+def _refuted_evidence(verdict: str = "refuted") -> dict:
+    evidence = deepcopy(_fixture()["evidence_package"])
+    evidence["requirements"] = [
+        {
+            "requirement_id": requirement["requirement_id"],
+            "status": "missing",
+            "claim_ids": [],
+            "gap": "The premise this question rests on turned out to be false.",
+        }
+        for requirement in _fixture()["commission"]["requirements"]
+    ]
+    evidence["claims"] = []
+    evidence["gaps"] = []
+    evidence["premise_findings"] = [
+        {
+            "assumption_id": "a1",
+            "verdict": verdict,
+            "basis": "The organizers schedule the reveal for 1 December 2026.",
+            "claim_ids": [],
+        }
+    ]
+    return evidence
+
+
+def test_a_refuted_premise_blocks_the_run_and_names_itself_as_the_cause():
+    _evidence, readiness = _assess(
+        _request(commission=_lima_ranking_commission(), evidence=_refuted_evidence())
+    )
+
+    assert readiness.status == "needs_research"
+    assert readiness.refuted_assumption_ids == ["a1"]
+    premise_findings = [
+        finding for finding in readiness.findings if finding.code == "premise_refuted"
+    ]
+    assert len(premise_findings) == 1
+    assert "that is not so" in premise_findings[0].message
+    assert "1 December 2026" in premise_findings[0].message
+
+
+def test_questions_killed_by_a_refuted_premise_are_not_reported_separately():
+    """The original run showed five identical complaints and never the cause."""
+    _evidence, readiness = _assess(
+        _request(commission=_lima_ranking_commission(), evidence=_refuted_evidence())
+    )
+
+    codes = [finding.code for finding in readiness.findings]
+
+    assert codes == ["premise_refuted"]
+    assert "requirement_gap" not in codes
+    assert "nothing_answered" not in codes
+
+
+def test_a_refuted_premise_sends_the_operator_to_a_new_direction():
+    _evidence, readiness = _assess(
+        _request(commission=_lima_ranking_commission(), evidence=_refuted_evidence())
+    )
+
+    assert readiness.requires_new_direction is True
+
+
+def test_an_unverified_premise_blocks_but_stays_worth_asking_again():
+    request = _request(
+        commission=_lima_ranking_commission(),
+        evidence=_refuted_evidence(verdict="unverified"),
+    )
+    evidence, readiness = _assess(request)
+
+    assert readiness.status == "needs_research"
+    assert readiness.unverified_assumption_ids == ["a1"]
+    assert readiness.requires_new_direction is False
+
+    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+
+    assert "STILL UNSETTLED PREMISE" in prompt
+    assert "a1 — The 2026 Latin America's 50 Best Restaurants list" in prompt
+
+
+def test_the_follow_up_prompt_never_re_asks_a_question_a_refutation_killed():
+    request = _request(
+        commission=_lima_ranking_commission(), evidence=_refuted_evidence()
+    )
+    evidence, readiness = _assess(request)
+
+    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+
+    assert "SETTLED AS FALSE — DO NOT RESEARCH" in prompt
+    assert "1 December 2026" in prompt
+    for requirement in request.commission.requirements:
+        assert f"- {requirement.requirement_id} — {requirement.question}" not in prompt
+
+
+def test_a_confirmed_premise_leaves_readiness_exactly_as_it_was():
+    commission = _lima_ranking_commission()
+    evidence = _supported_evidence()
+    evidence["premise_findings"] = [
+        {
+            "assumption_id": "a1",
+            "verdict": "confirmed",
+            "basis": "The organizers published the list on 2 December 2025.",
+            "claim_ids": ["c1"],
+        }
+    ]
+
+    _evidence, readiness = _assess(_request(commission=commission, evidence=evidence))
+
+    assert readiness.status == "ready"
+    assert readiness.findings == []
+    assert readiness.requires_new_direction is False
+
+
+def test_the_premise_verdict_reaches_the_writer_records_and_the_receipt():
+    request = _request(
+        commission=_lima_ranking_commission(),
+        evidence=_refuted_evidence(verdict="confirmed"),
+    )
+    evidence = normalize_evidence(request.commission, request.evidence_package)
+
+    assert "WHAT THE COMMISSION ASSUMED, AND WHAT RESEARCH FOUND" in evidence.records_text
+    assert "verdict: confirmed" in evidence.records_text
+    assert evidence.receipt()["premise_verdicts"] == {"a1": "confirmed"}
+
+
+def test_the_shared_premise_rules_travel_with_both_research_prompts():
+    request = _request(
+        commission=_lima_ranking_commission(),
+        evidence=_refuted_evidence(verdict="unverified"),
+    )
+    evidence, readiness = _assess(request)
+
+    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+
+    assert PREMISE_CHECK_RULES in prompt
+    assert "does not exist yet" in REQUIREMENT_STATUS_RULES

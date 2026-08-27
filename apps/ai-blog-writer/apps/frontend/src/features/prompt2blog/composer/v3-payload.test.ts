@@ -132,7 +132,7 @@ describe('prompt2BlogSubmissionBlockedReason', () => {
   it('points an untouched page to the first step', () => {
     expect(
       prompt2BlogSubmissionBlockedReason({ ...approvedState(), activeWorkflow: 'legacy_v2' }),
-    ).toMatch(/Enter a working title and location/)
+    ).toMatch(/Enter a working title, location, and how long/)
   })
 })
 

@@ -20,7 +20,9 @@ const editorialOptions: Prompt2BlogEditorialOptionsResponse = {
       label: 'Analysis',
       description: 'Interprets evidence.',
       order: 1,
-      source_requirements: []
+      source_requirements: [],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     }
   ],
   topic_modules: [
@@ -121,6 +123,7 @@ function evidence(
     requirements: [
       { requirement_id: 'r1', status: 'supported', claim_ids: ['c1'], gap: '' }
     ],
+    premise_findings: [],
     conflicts: [],
     gaps: [],
     ...overrides
@@ -374,5 +377,86 @@ describe('ResearchPanel', () => {
     expect(
       screen.getByText(/The approved commission is unchanged/i)
     ).toBeInTheDocument()
+  })
+})
+
+describe('ResearchPanel, settling a disagreement', () => {
+  function withConflict() {
+    const value = evidence()
+    value.claims = [
+      ...(value.claims ?? []),
+      {
+        claim_id: 'c9',
+        text: 'Maido asks for reservations 90 days ahead.',
+        source_ids: value.sources?.[0] ? [value.sources[0].source_id] : [],
+        requirement_ids: [commission.requirements[0].requirement_id],
+        as_of: '2026-08-01',
+        confidence: 'medium',
+      },
+    ]
+    // Both directions of the claim/requirement mapping have to agree, or the
+    // package this panel stores would never pass its own validation.
+    value.requirements = value.requirements.map(requirement => ({
+      ...requirement,
+      claim_ids: [...(requirement.claim_ids ?? []), 'c9'],
+    }))
+    value.conflicts = [
+      {
+        conflict_id: 'x1',
+        claim_ids: [value.claims![0].claim_id, 'c9'],
+        summary: "Maido's English and Spanish pages disagree.",
+        resolution: null,
+      },
+    ]
+    return value
+  }
+
+  it('offers a box to settle it instead of another research round', () => {
+    renderPanel(withConflict())
+
+    expect(screen.getByText('One disagreement is holding the run')).toBeInTheDocument()
+    expect(screen.getByLabelText('Which one should the article follow?')).toBeInTheDocument()
+    expect(
+      screen.getByText('Maido asks for reservations 90 days ahead.'),
+    ).toBeInTheDocument()
+  })
+
+  it('stores the decision without adding a source or a claim', () => {
+    const onStoreEvidence = vi.fn()
+    const before = withConflict()
+    renderPanel(before, { onStoreEvidence })
+
+    fireEvent.change(screen.getByLabelText('Which one should the article follow?'), {
+      target: { value: 'The Spanish page is authoritative: 90 days.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Settle it' }))
+
+    expect(onStoreEvidence).toHaveBeenCalledOnce()
+    const stored = onStoreEvidence.mock.calls[0][0]
+    expect(stored.conflicts[0].resolution).toBe(
+      'The Spanish page is authoritative: 90 days.',
+    )
+    expect(stored.sources).toHaveLength(before.sources?.length ?? 0)
+    expect(stored.claims).toHaveLength(before.claims?.length ?? 0)
+  })
+
+  it('keeps the button inert until something is typed', () => {
+    renderPanel(withConflict())
+
+    expect(screen.getByRole('button', { name: 'Settle it' })).toBeDisabled()
+  })
+
+  it('lets the operator change their mind and reopen it', () => {
+    const onStoreEvidence = vi.fn()
+    const settled = withConflict()
+    settled.conflicts = [
+      { ...settled.conflicts![0], resolution: 'Follow the Spanish page.' },
+    ]
+    renderPanel(settled, { onStoreEvidence })
+
+    expect(screen.getByText('Disagreements you settled')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Change my mind' }))
+
+    expect(onStoreEvidence.mock.calls[0][0].conflicts[0].resolution).toBeNull()
   })
 })

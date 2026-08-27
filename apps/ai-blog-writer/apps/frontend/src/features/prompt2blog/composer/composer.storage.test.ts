@@ -33,7 +33,16 @@ const APPROVED_COMMISSION: Prompt2BlogCommission = {
     mode: 'single_subject',
     references: [{ name: 'Lima', role: 'primary_subject' }],
   },
-  requirements: [{ requirement_id: 'r1', question: 'What should I book first?' }],
+  premise: [
+    { assumption_id: 'a1', statement: 'Lima publishes current booking guidance.' },
+  ],
+  requirements: [
+    {
+      requirement_id: 'r1',
+      question: 'What should I book first?',
+      assumption_ids: ['a1'],
+    },
+  ],
   exclusions: [],
   call_to_action: null,
 }
@@ -65,7 +74,16 @@ function storedDirectionOptions() {
       mode: 'single_subject' as const,
       references: [{ name: 'Lima', role: 'primary_subject' as const }],
     },
-    requirements: [{ requirement_id: `r${index + 1}`, question: `Evidence ${index + 1}?` }],
+    premise: [
+      { assumption_id: 'a1', statement: `Premise ${index + 1} is published.` },
+    ],
+    requirements: [
+      {
+        requirement_id: `r${index + 1}`,
+        question: `Evidence ${index + 1}?`,
+        assumption_ids: ['a1'],
+      },
+    ],
     exclusions: [`Exclusion ${index + 1}`],
     rationale: `Rationale ${index + 1}`,
   }))
@@ -313,6 +331,14 @@ function storedEvidence(
     ],
     requirements: [
       { requirement_id: 'r1', status: 'supported', claim_ids: ['c1'], gap: '' },
+    ],
+    premise_findings: [
+      {
+        assumption_id: 'a1',
+        verdict: 'confirmed',
+        basis: 'The city tourism office publishes current booking guidance.',
+        claim_ids: ['c1'],
+      },
     ],
     conflicts: [],
     gaps: [],

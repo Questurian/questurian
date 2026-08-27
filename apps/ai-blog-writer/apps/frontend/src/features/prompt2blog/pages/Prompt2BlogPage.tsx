@@ -53,6 +53,20 @@ export default function Prompt2BlogPage() {
     if (evidenceField instanceof HTMLTextAreaElement) evidenceField.focus()
   }, [])
 
+  /*
+   * The one blocker research cannot clear. A refuted premise means the article
+   * was commissioned about something that is not so, so the operator is sent
+   * back to the direction cards — where the other two options are still sitting
+   * unspent — rather than out for another research round that returns the same
+   * refutation.
+   */
+  const handleBackToDirection = useCallback(() => {
+    const picker = document.getElementById('p2b-direction-picker')
+    picker?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const firstChoice = picker?.querySelector('input[type="radio"]')
+    if (firstChoice instanceof HTMLInputElement) firstChoice.focus()
+  }, [])
+
   const handleClear = useCallback(() => {
     composer.clearAll()
     handleResetRun()
@@ -91,7 +105,10 @@ export default function Prompt2BlogPage() {
             editorialOptions={composer.editorialOptions}
             editorialOptionsError={composer.editorialOptionsError}
             editorialOptionsLoading={composer.editorialOptionsLoading}
+            inputOptions={composer.inputOptions}
+            lengthId={state.lengthId}
             location={state.easySetupLocation}
+            refutedPremise={pipeline.needsResearch?.refuted_premise}
             steps={steps}
             title={state.easySetupTitle}
             onApplyDirectionResponse={composer.applyDirectionResponse}
@@ -100,6 +117,7 @@ export default function Prompt2BlogPage() {
             onClearEvidence={composer.clearEvidence}
             onCommissionChange={composer.updateCommissionDraft}
             onConfirmCommissionReview={composer.confirmCommissionReview}
+            onLengthChange={value => composer.updateField('lengthId', value)}
             onLocationChange={value => composer.updateField('easySetupLocation', value)}
             onRetryEditorialOptions={composer.retryEditorialOptions}
             onSelectDirection={composer.selectDirectionOption}
@@ -119,6 +137,7 @@ export default function Prompt2BlogPage() {
           <PipelinePanel
             run={pipeline}
             onBackToResearch={handleBackToResearch}
+            onBackToDirection={handleBackToDirection}
             onOpenCleanupModal={() => void cleanupModal.open()}
             onReset={handleResetRun}
             submissionBlockedReason={composer.submissionBlockedReason}

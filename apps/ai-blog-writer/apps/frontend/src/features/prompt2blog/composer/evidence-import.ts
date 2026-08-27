@@ -17,6 +17,8 @@ export type EvidenceReadinessFinding = {
     | 'unresolved_conflict'
     | 'source_gate'
     | 'nothing_answered'
+    | 'premise_refuted'
+    | 'premise_unverified'
   requirement_ids: string[]
   message: string
 }
@@ -441,6 +443,56 @@ function validateRequirement(
     : null
 }
 
+type PremiseFindingLinks = {
+  assumptionId: string
+  verdict: string
+  claimIds: string[]
+}
+
+const PREMISE_VERDICTS = new Set(['confirmed', 'refuted', 'unverified'])
+
+function validatePremiseFinding(
+  value: unknown,
+  index: number,
+  issues: EvidenceImportIssue[]
+): PremiseFindingLinks | null {
+  const path = `premise_findings[${index}]`
+  if (!isObject(value)) {
+    issues.push({ path, message: 'Must be an object.' })
+    return null
+  }
+  reportExactKeys(
+    value,
+    ['assumption_id', 'verdict', 'basis', 'claim_ids'],
+    path,
+    issues
+  )
+  const idIsValid = requireString(
+    value.assumption_id,
+    `${path}.assumption_id`,
+    issues
+  )
+  const verdict = typeof value.verdict === 'string' ? value.verdict : ''
+  if (!PREMISE_VERDICTS.has(verdict)) {
+    issues.push({ path: `${path}.verdict`, message: 'Unknown premise verdict.' })
+  }
+  // The basis is what separates an established refutation from a desk that
+  // could not find the thing: it has to name the authorities, documents and
+  // dates that were checked, on every verdict including confirmed.
+  if (typeof value.basis !== 'string' || !value.basis.trim()) {
+    issues.push({
+      path: `${path}.basis`,
+      message: 'Every premise verdict needs a basis naming what was checked.'
+    })
+  }
+  const claimIds = validateStringArray(value.claim_ids, `${path}.claim_ids`, issues, {
+    unique: true
+  })
+  return idIsValid && typeof value.assumption_id === 'string'
+    ? { assumptionId: value.assumption_id, verdict, claimIds }
+    : null
+}
+
 type ConflictLinks = {
   claimIds: string[]
   resolution: string | null
@@ -599,9 +651,46 @@ function buildReadinessFindings(
   catalog: Prompt2BlogEditorialOptionsResponse
 ): EvidenceReadinessFinding[] {
   const findings: EvidenceReadinessFinding[] = []
+  const premiseFindings = evidencePackage.premise_findings ?? []
+  const statements = new Map(
+    (commission.premise ?? []).map((assumption) => [
+      assumption.assumption_id,
+      assumption.statement
+    ])
+  )
+  const refutedIds = new Set(
+    premiseFindings
+      .filter((finding) => finding.verdict === 'refuted')
+      .map((finding) => finding.assumption_id)
+  )
+  const requirementsRestingOn = (assumptionIds: Set<string>) =>
+    commission.requirements
+      .filter((requirement) =>
+        (requirement.assumption_ids ?? []).some((id) => assumptionIds.has(id))
+      )
+      .map((requirement) => requirement.requirement_id)
+
+  // The cause first, then the symptoms. Five questions about an unpublished
+  // ranking produced five identical complaints and never once said the ranking
+  // was the problem.
+  for (const finding of premiseFindings) {
+    if (finding.verdict === 'confirmed') continue
+    const statement = statements.get(finding.assumption_id) ?? finding.assumption_id
+    findings.push({
+      code: finding.verdict === 'refuted' ? 'premise_refuted' : 'premise_unverified',
+      requirement_ids: requirementsRestingOn(new Set([finding.assumption_id])),
+      message:
+        finding.verdict === 'refuted'
+          ? `${statement} — that is not so. ${finding.basis}`.trim()
+          : `${statement} — research could not settle this either way. ${finding.basis}`.trim()
+    })
+  }
+
+  const doomedRequirementIds = new Set(requirementsRestingOn(refutedIds))
   for (const requirement of evidencePackage.requirements) {
     // `unpublished` is a reported result, not a gap to chase. More rounds
     // return the same sentence, so it must not hold the run.
+    if (doomedRequirementIds.has(requirement.requirement_id)) continue
     if (requirement.status === 'partial' || requirement.status === 'missing') {
       findings.push({
         code: 'requirement_gap',
@@ -635,6 +724,7 @@ function buildReadinessFindings(
   // nothing to write. Mirrors the backend's `nothing_answered` finding.
   if (
     evidencePackage.requirements.length > 0 &&
+    refutedIds.size === 0 &&
     !evidencePackage.requirements.some(
       (requirement) => requirement.status === 'supported'
     )
@@ -676,6 +766,7 @@ export function validateEvidencePackageValue(
       'sources',
       'claims',
       'requirements',
+      'premise_findings',
       'conflicts',
       'gaps'
     ],
@@ -729,6 +820,21 @@ export function validateEvidencePackageValue(
     issues
   )
 
+  const premiseFindings = Array.isArray(parsed.premise_findings)
+    ? parsed.premise_findings
+    : []
+  if (parsed.premise_findings !== undefined && !Array.isArray(parsed.premise_findings)) {
+    issues.push({ path: 'premise_findings', message: 'Must be an array.' })
+  }
+  const premiseLinks = premiseFindings
+    .map((finding, index) => validatePremiseFinding(finding, index, issues))
+    .filter(Boolean) as PremiseFindingLinks[]
+  reportDuplicateIds(
+    premiseLinks.map((finding) => finding.assumptionId),
+    'premise_findings',
+    issues
+  )
+
   const conflicts = Array.isArray(parsed.conflicts) ? parsed.conflicts : []
   if (!Array.isArray(parsed.conflicts))
     issues.push({ path: 'conflicts', message: 'Must be an array.' })
@@ -773,6 +879,35 @@ export function validateEvidencePackageValue(
       message: 'Requirement IDs must exactly match the approved commission.'
     })
   }
+
+  const commissionAssumptionIds = new Set(
+    (commission.premise ?? []).map((assumption) => assumption.assumption_id)
+  )
+  const evidenceAssumptionIds = new Set(
+    premiseLinks.map((finding) => finding.assumptionId)
+  )
+  // A declared premise nobody checked reads on screen exactly like a verified
+  // one. Every entry gets a verdict, and research cannot invent an assumption
+  // the editor never approved.
+  if (
+    commissionAssumptionIds.size !== evidenceAssumptionIds.size ||
+    [...commissionAssumptionIds].some((id) => !evidenceAssumptionIds.has(id))
+  ) {
+    issues.push({
+      path: 'premise_findings',
+      message:
+        'Premise findings must answer exactly the assumptions the approved commission declares.'
+    })
+  }
+  premiseLinks.forEach((finding, index) => {
+    reportUnknownLinks(
+      finding.claimIds,
+      knownClaimIds,
+      `premise_findings[${index}].claim_ids`,
+      'claim',
+      issues
+    )
+  })
 
   claimLinks.forEach((claim, index) => {
     reportUnknownLinks(

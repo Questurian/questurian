@@ -23,14 +23,39 @@ from ...schemas import REWRITE_SCHEMA
 from ...support import _format_style_directive, _json
 
 
+# The measurements are deterministic and cheap, so they run before the audit
+# call rather than after it. The Lima food article scored 9/10 on every axis
+# while `target_word_count_met` was false at 388 words against a 1400 target:
+# the auditor could not have known, because the checks it was being scored
+# beside were merged into its answer after it had given one.
+def _measured_checks_block(checks: dict[str, Any]) -> str:
+    reported = {key: value for key, value in checks.items() if isinstance(value, bool)}
+    if not reported:
+        return "None measured."
+    lines = [
+        f"- {key}: {'pass' if value else 'FAIL'}"
+        for key, value in sorted(reported.items())
+    ]
+    word_count = checks.get("word_count_estimate")
+    if word_count is not None:
+        lines.append(f"- word_count_estimate: {word_count}")
+    return "\n".join(lines)
+
+
 def _audit_v3_rewrite(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
     rewrite: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any], str, str, dict[str, Any]]:
+    computed_checks = _build_constraint_checks(
+        rewrite["improved_title"],
+        rewrite["improved_content"],
+        v3_constraint_brief(state["commission"], state["option_context"]),
+    )
     prompt = P2B_V3_QUALITY_AUDIT_PROMPT.format(
         instructions=state["instruction_text"],
         style_directive=_format_style_directive(state["option_context"]),
+        measured_checks=_measured_checks_block(computed_checks),
         rewritten_title=rewrite["improved_title"],
         rewritten_content=rewrite["improved_content"],
     )
@@ -41,11 +66,6 @@ def _audit_v3_rewrite(
         model_name=state["audit_model"],
     )
     quality = _sanitize_quality(parsed)
-    computed_checks = _build_constraint_checks(
-        rewrite["improved_title"],
-        rewrite["improved_content"],
-        v3_constraint_brief(state["commission"], state["option_context"]),
-    )
     measurements = {
         "word_count_estimate",
         "secondary_keyword_coverage",

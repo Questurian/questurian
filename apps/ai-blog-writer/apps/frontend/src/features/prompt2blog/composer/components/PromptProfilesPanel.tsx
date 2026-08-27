@@ -23,14 +23,14 @@ interface PromptProfilesPanelProps {
 export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
   return <Panel
     title="Writing Profiles"
-    description="Tone, length, brand voice, and creativity for the approved commission."
+    description="Tone, brand voice, and creativity for the approved commission."
     onClear={props.onClear}
   >
-      <div className="p2b-field-row p2b-field-row--3">
+      <div className="p2b-field-row p2b-field-row--2">
         <SelectField id="p2b-tone" label="Tone" value={props.toneId} options={props.inputOptions?.tones || []} onChange={value => props.onChange('toneId', value)} />
-        <SelectField id="p2b-length" label="Length" value={props.lengthId} options={props.inputOptions?.lengths || []} onChange={value => props.onChange('lengthId', value)} />
         <SelectField id="p2b-brand-voice" label="Brand Voice" value={props.brandVoiceId} options={props.inputOptions?.brand_voices || []} onChange={value => props.onChange('brandVoiceId', value)} />
       </div>
+      <LengthRecap lengthId={props.lengthId} inputOptions={props.inputOptions} />
       <details className="p2b-disclosure">
         <summary className="p2b-disclosure-summary">
           <span>Advanced generation controls</span>
@@ -41,6 +41,30 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
         </div>
       </details>
   </Panel>
+}
+
+/**
+ * What was chosen in step 1, shown but not editable.
+ *
+ * Length stopped being a writing option when it started deciding how many
+ * research questions get asked. Changing it here would leave the target and
+ * the research that was sized for it disagreeing, silently.
+ */
+function LengthRecap({
+  lengthId,
+  inputOptions,
+}: {
+  lengthId: string
+  inputOptions: Prompt2BlogInputOptionsResponse | null
+}) {
+  const length = inputOptions?.lengths.find(option => option.id === lengthId)
+  if (!length) return null
+  return <p className="p2b-field-hint" data-testid="p2b-length-recap">
+    Length: <strong>{length.label}</strong>
+    {length.target_word_count ? `, about ${length.target_word_count} words` : ''}. Set
+    in step 1, because it decided how many questions the research had to answer.
+    Change it there if you need a different length.
+  </p>
 }
 
 function SelectField({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Array<{ id: string; label: string; description?: string }>; onChange: (value: string) => void }) {

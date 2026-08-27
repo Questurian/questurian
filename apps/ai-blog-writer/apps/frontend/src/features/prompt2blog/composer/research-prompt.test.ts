@@ -48,7 +48,9 @@ const catalog: Prompt2BlogEditorialOptionsResponse = {
       label: 'Feature/Profile',
       description: 'Reported narrative using people, scenes, and quotations.',
       order: 4,
-      source_requirements: ['reported-people-scenes-quotations']
+      source_requirements: ['reported-people-scenes-quotations'],
+      use_when: 'Use when the fixture needs a form.',
+      do_not_use_when: 'Do not use when another form fits better.'
     }
   ],
   topic_modules: [
@@ -151,6 +153,37 @@ describe('buildResearchPrompt', () => {
     )
     expect(prompt).not.toContain(
       'Inactive module that must not broaden this research.'
+    )
+  })
+})
+
+describe('the premise check', () => {
+  it('tells research to settle the premise before answering anything', () => {
+    const prompt = buildResearchPrompt(commission, catalog)
+
+    expect(prompt).toContain('PREMISE CHECK — SETTLE THIS BEFORE ANSWERING ANYTHING')
+    expect(prompt).toContain(
+      'Settle the locked premise before you answer any question'
+    )
+    expect(prompt).toContain('"premise_findings"')
+    expect(prompt).toContain('"verdict": "confirmed|refuted|unverified"')
+  })
+
+  it('stops a refuted premise being reported as an unpublished fact', () => {
+    // The two were the same word, and the run that found it marked five
+    // heavily published facts unpublished because their premise was false.
+    const prompt = buildResearchPrompt(commission, catalog)
+
+    expect(prompt).toContain(
+      'It is not for a question that cannot be answered because the thing it asks about does not exist yet.'
+    )
+  })
+
+  it('forbids quietly substituting a year that does exist', () => {
+    const prompt = buildResearchPrompt(commission, catalog)
+
+    expect(prompt).toContain(
+      'do not substitute a nearby year, edition or subject that does exist'
     )
   })
 })

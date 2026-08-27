@@ -74,6 +74,7 @@ function evidence(): Prompt2BlogEvidencePackage {
         gap: 'Checked the regulator and the operator. Neither measures it.'
       }
     ],
+    premise_findings: [],
     conflicts: [],
     gaps: [
       {

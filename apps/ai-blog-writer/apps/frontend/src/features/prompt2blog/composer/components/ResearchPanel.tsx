@@ -17,6 +17,11 @@ import {
   writerAnswerText,
 } from '../writer-answer'
 import { buildFollowUpResearchPrompt } from '../follow-up-research-prompt'
+import {
+  clearConflictResolution,
+  resolveConflict,
+  unresolvedConflicts,
+} from '../conflict-resolution'
 import { buildResearchPrompt } from '../research-prompt'
 import { useClipboardCopy } from '../hooks/useClipboardCopy'
 import {
@@ -48,6 +53,7 @@ export function ResearchPanel({
   const [review, setReview] = useState<EvidenceImportReview | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [writerAnswers, setWriterAnswers] = useState<Record<string, string>>({})
+  const [conflictResolutions, setConflictResolutions] = useState<Record<string, string>>({})
   const researchCopy = useClipboardCopy()
   const followUpCopy = useClipboardCopy()
   // The attached package is the one thing on this page a user needs *out* of
@@ -65,6 +71,7 @@ export function ResearchPanel({
     setReview(null)
     setStatus(null)
     setWriterAnswers({})
+    setConflictResolutions({})
   }, [fingerprint])
 
   const researchPrompt = useMemo(
@@ -101,6 +108,19 @@ export function ResearchPanel({
     evidencePackage?.requirements.filter(requirement => requirement.status === 'unpublished')
       .length ?? 0
 
+  const openConflicts = useMemo(
+    () => (evidencePackage ? unresolvedConflicts(evidencePackage) : []),
+    [evidencePackage],
+  )
+
+  const settledConflicts = useMemo(
+    () =>
+      (evidencePackage?.conflicts ?? []).filter(conflict =>
+        conflict.resolution?.trim(),
+      ),
+    [evidencePackage],
+  )
+
   const writerAnswered = useMemo(
     () => new Set(evidencePackage ? writerAnsweredRequirementIds(evidencePackage) : []),
     [evidencePackage],
@@ -122,6 +142,27 @@ export function ResearchPanel({
       return
     }
     onStoreEvidence(checked.evidencePackage)
+  }
+
+  /*
+   * A conflict is not missing evidence: both sides are already found and
+   * already sourced, and what is missing is a decision. Sending the operator
+   * out for another complete replacement package to get that decision costs a
+   * full deep-research round for one sentence.
+   */
+  const handleUseConflictResolution = (conflictId: string) => {
+    if (!evidencePackage) return
+    const resolution = (conflictResolutions[conflictId] ?? '').trim()
+    if (!resolution) return
+    storeAnswerEdit(resolveConflict(evidencePackage, conflictId, resolution))
+    setConflictResolutions(current => ({ ...current, [conflictId]: '' }))
+    setStatus('That disagreement is settled. The article will follow what you said.')
+  }
+
+  const handleReopenConflict = (conflictId: string) => {
+    if (!evidencePackage) return
+    storeAnswerEdit(clearConflictResolution(evidencePackage, conflictId))
+    setStatus('That disagreement is open again.')
   }
 
   const handleUseWriterAnswer = (requirementId: string) => {
@@ -336,6 +377,79 @@ export function ResearchPanel({
               </li>
             ))}
           </ul>
+          {openConflicts.length > 0 && (
+            <>
+              <p className="p2b-import-report-title">
+                {openConflicts.length === 1
+                  ? 'One disagreement is holding the run'
+                  : `${openConflicts.length} disagreements are holding the run`}
+              </p>
+              <ul className="p2b-requirement-list">
+                {openConflicts.map(conflict => (
+                  <li key={conflict.conflictId} className="p2b-requirement-row">
+                    <strong>{conflict.summary}</strong>
+                    {conflict.claims.length > 0 && (
+                      <ul className="p2b-requirement-list">
+                        {conflict.claims.map((claim, index) => (
+                          <li key={`${conflict.conflictId}-${index}`}>{claim}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="p2b-writer-answer">
+                      <label htmlFor={`p2b-conflict-${conflict.conflictId}`}>
+                        Which one should the article follow?
+                      </label>
+                      <textarea
+                        id={`p2b-conflict-${conflict.conflictId}`}
+                        className="p2b-textarea"
+                        rows={2}
+                        value={conflictResolutions[conflict.conflictId] ?? ''}
+                        placeholder="Say which is right and why, in the words the article can use."
+                        onChange={event =>
+                          setConflictResolutions(current => ({
+                            ...current,
+                            [conflict.conflictId]: event.target.value,
+                          }))
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="p2b-submit-btn"
+                        disabled={
+                          !(conflictResolutions[conflict.conflictId] ?? '').trim()
+                        }
+                        onClick={() => handleUseConflictResolution(conflict.conflictId)}
+                      >
+                        Settle it
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
+          {settledConflicts.length > 0 && (
+            <>
+              <p className="p2b-import-report-title">Disagreements you settled</p>
+              <ul className="p2b-requirement-list">
+                {settledConflicts.map(conflict => (
+                  <li key={conflict.conflict_id} className="p2b-requirement-row">
+                    <strong>{conflict.summary}</strong>
+                    {` — ${conflict.resolution}`}
+                    <button
+                      type="button"
+                      className="p2b-clear-btn"
+                      onClick={() => handleReopenConflict(conflict.conflict_id)}
+                    >
+                      Change my mind
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+
           {findings.length > 0 ? (
             <>
               <p className="p2b-import-report-title">

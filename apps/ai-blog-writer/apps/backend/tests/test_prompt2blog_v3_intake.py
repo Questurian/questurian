@@ -137,7 +137,14 @@ def test_runtime_request_keeps_the_commission_and_evidence_whole():
 
     runtime = prepare_v3_runtime_request(_request(evidence_package=_ready_evidence()))
 
-    assert runtime.commission == fixture["commission"]
+    # A commission written before the direction step declared its premise still
+    # runs. The empty premise and empty assumption_ids are the defaults filling
+    # in, not the runtime losing anything the fixture carried.
+    expected_commission = deepcopy(fixture["commission"])
+    expected_commission["premise"] = []
+    for requirement in expected_commission["requirements"]:
+        requirement["assumption_ids"] = []
+    assert runtime.commission == expected_commission
     source = runtime.evidence["sources"][0]
     original = fixture["evidence_package"]["sources"][0]
     assert source["publisher"] == original["publisher"]

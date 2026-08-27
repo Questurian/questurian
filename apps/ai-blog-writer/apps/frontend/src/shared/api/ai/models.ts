@@ -107,16 +107,23 @@ export const Y2B_WRITER_MODEL_OPTIONS: Array<{ value: Y2BWriterModel; label: str
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
 ]
 
+/**
+ * The six tones the shared catalog ships, mirroring
+ * `apps/backend/data/prompt2blog/tones`.
+ *
+ * Cut from ten on 2026-08-27. `editorial-comparison` duplicated the Comparison
+ * article form, `street-smart-nomad` duplicated the safety topic module,
+ * `forbes-service-journalism` was Practical Authority with different
+ * adjectives, and `inspirational` asked for the register the voice rules ban.
+ * `resolve_tone_profile` raises on an unknown id, so this union and that
+ * directory have to move together.
+ */
 export type ArticleToneId =
   | 'practical'
-  | 'editorial'
-  | 'inspirational'
   | 'practical-authority'
   | 'no-fluff-field-guide'
-  | 'editorial-comparison'
   | 'experienced-traveler'
-  | 'forbes-service-journalism'
-  | 'street-smart-nomad'
+  | 'editorial'
   | 'aspirational-grounded'
 
 export const DEFAULT_ARTICLE_TONE_ID: ArticleToneId = 'practical'
@@ -126,16 +133,12 @@ export const ARTICLE_TONE_OPTIONS: Array<{
   label: string
   description: string
 }> = [
-  { value: 'practical', label: 'Practical', description: 'Clear, actionable, logistics-first.' },
-  { value: 'editorial', label: 'Editorial', description: 'Polished publication style with strong flow.' },
-  { value: 'inspirational', label: 'Inspirational', description: 'Vivid and motivating while factual.' },
-  { value: 'practical-authority', label: 'Practical Authority', description: 'Clear, useful, confident, low-fluff.' },
-  { value: 'no-fluff-field-guide', label: 'No-Fluff Field Guide', description: 'Direct, blunt, experience-informed.' },
-  { value: 'editorial-comparison', label: 'Editorial Comparison', description: 'Analytical, balanced, opinionated.' },
-  { value: 'experienced-traveler', label: 'Experienced Traveler', description: 'Grounded, observational, lightly personal.' },
-  { value: 'forbes-service-journalism', label: 'Forbes-Style Service Journalism', description: 'Professional, structured, neutral but decisive.' },
-  { value: 'street-smart-nomad', label: 'Street-Smart Nomad', description: 'Realistic, cautionary, slightly blunt.' },
-  { value: 'aspirational-grounded', label: 'Aspirational but Grounded', description: 'Inspiring without brochure language.' },
+  { value: 'practical', label: 'Practical', description: 'Neutral default. Answers the question without taking a side.' },
+  { value: 'practical-authority', label: 'Practical Authority', description: 'Takes a clear side and says who each option suits.' },
+  { value: 'no-fluff-field-guide', label: 'No-Fluff Field Guide', description: 'Operational and blunt. What to do, what to check, what goes wrong.' },
+  { value: 'experienced-traveler', label: 'Experienced Traveler', description: 'Observed and lightly first person. Judgment from having watched it.' },
+  { value: 'editorial', label: 'Editorial', description: 'Long-form. One argument built across the whole piece.' },
+  { value: 'aspirational-grounded', label: 'Aspirational but Grounded', description: 'Makes the case for a place with every claim anchored.' },
 ]
 
 export type ToneProfile = {

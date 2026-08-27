@@ -73,6 +73,7 @@ const COMMISSION_DRAFT_KEYS = [
   'reader_outcome',
   'primary_subject',
   'scope',
+  'premise',
   'requirements',
   'exclusions',
   'call_to_action',
@@ -87,6 +88,7 @@ const DIRECTION_OPTION_KEYS = [
   'reader_outcome',
   'primary_subject',
   'scope',
+  'premise',
   'requirements',
   'exclusions',
   'rationale',
@@ -206,11 +208,32 @@ function isCommissionDraft(
     requirements.every(
       requirement =>
         isRecord(requirement) &&
-        hasOnlyKeys(requirement, ['requirement_id', 'question']) &&
+        hasOnlyKeys(requirement, [
+          'requirement_id',
+          'question',
+          'assumption_ids',
+        ]) &&
         isNonEmptyString(requirement.requirement_id) &&
-        isNonEmptyString(requirement.question),
+        isNonEmptyString(requirement.question) &&
+        (requirement.assumption_ids === undefined ||
+          (Array.isArray(requirement.assumption_ids) &&
+            requirement.assumption_ids.every(isNonEmptyString))),
     )
   if (!validRequirements) return false
+  // A stored draft written before the premise existed still loads: what it
+  // cannot do is carry a malformed one.
+  const premise = value.premise
+  const validPremise =
+    premise === undefined ||
+    (Array.isArray(premise) &&
+      premise.every(
+        assumption =>
+          isRecord(assumption) &&
+          hasOnlyKeys(assumption, ['assumption_id', 'statement']) &&
+          isNonEmptyString(assumption.assumption_id) &&
+          isNonEmptyString(assumption.statement),
+      ))
+  if (!validPremise) return false
   return (
     value.schema_version === 3 &&
     isNonEmptyString(value.original_title) &&

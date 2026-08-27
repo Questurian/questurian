@@ -102,6 +102,12 @@ not an average," "no official figures exist for," "there is no public data \
 on," "figures could not be verified," and any sentence whose job is to tell \
 the reader how much to trust the previous one. Where research could not \
 establish something, write around it: never narrate the gap. \
+Naming the source is the same disclaimer wearing a press badge. Cut: \
+"sources report," "travel sources," "outlets anticipate," "one outlet," \
+"the publication noted," "the report cited," "according to," "reports \
+suggest," and every other construction whose job is to put a publication \
+between you and the claim. A named person or institution who acts in the \
+story stays; the outlet that wrote it up does not. \
 This bans hedging, not first person. In a piece written in first person, \
 "I waited twenty five minutes at customs" is the fact, told plainly, and it \
 stays. A date or a season belongs in the prose when the reader needs it to \

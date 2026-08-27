@@ -63,7 +63,9 @@ describe('NeedsResearchResult', () => {
       />,
     )
 
-    expect(screen.getByText('Nobody publishes these — already checked')).toBeInTheDocument()
+    expect(
+      screen.getByText('No published answer exists — already checked'),
+    ).toBeInTheDocument()
     expect(screen.getAllByText(/Question 3: How long does customs take\?/).length).toBeGreaterThan(0)
     expect(screen.getByText(/Neither measures it/)).toBeTruthy()
   })
@@ -118,5 +120,106 @@ describe('NeedsResearchResult', () => {
     )
 
     expect(screen.queryByRole('button', { name: /Retry|Run again/ })).toBeNull()
+  })
+})
+
+describe('NeedsResearchResult, when the premise itself was refuted', () => {
+  const refuted: Prompt2BlogV3NeedsResearchResponse = {
+    ...result,
+    requires_new_direction: true,
+    findings: [
+      {
+        code: 'premise_refuted',
+        requirement_ids: ['r1', 'r2', 'r3', 'r4', 'r5'],
+        message:
+          "The 2026 Latin America's 50 Best Restaurants list has been published — that is not so. The organizers schedule the reveal for 1 December 2026.",
+      },
+    ],
+    unresolved_requirements: [],
+    refuted_premise: [
+      {
+        assumption_id: 'a1',
+        statement:
+          "The 2026 Latin America's 50 Best Restaurants list has been published.",
+        basis: 'The organizers schedule the reveal for 1 December 2026.',
+        requirement_ids: ['r1', 'r2', 'r3', 'r4', 'r5'],
+      },
+    ],
+  }
+
+  it('leads with the false premise and says how much of the article rested on it', () => {
+    render(
+      <NeedsResearchResult
+        result={refuted}
+        onBackToResearch={() => {}}
+        onBackToDirection={() => {}}
+        onDismiss={() => {}}
+      />,
+    )
+
+    expect(
+      screen.getByText('This article is built on something that is not true'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/This is what 5 questions rested on/)).toBeTruthy()
+    expect(screen.getByText(/More research will not change this/)).toBeTruthy()
+  })
+
+  it('offers a different direction instead of another research round', () => {
+    const onBackToDirection = vi.fn()
+    const onBackToResearch = vi.fn()
+    render(
+      <NeedsResearchResult
+        result={refuted}
+        onBackToResearch={onBackToResearch}
+        onBackToDirection={onBackToDirection}
+        onDismiss={() => {}}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose a different direction' }))
+
+    expect(onBackToDirection).toHaveBeenCalledOnce()
+    expect(onBackToResearch).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Back to research' })).not.toBeInTheDocument()
+  })
+
+  it('hides the follow-up research prompt that cannot help', () => {
+    // Offering it here is what made the dead end feel like a loop: research,
+    // get the same refutation, research again.
+    render(
+      <NeedsResearchResult
+        result={refuted}
+        onBackToResearch={() => {}}
+        onBackToDirection={() => {}}
+        onDismiss={() => {}}
+      />,
+    )
+
+    expect(screen.queryByLabelText('Follow-up research prompt')).not.toBeInTheDocument()
+  })
+
+  it('keeps the research route for a premise that merely could not be checked', () => {
+    render(
+      <NeedsResearchResult
+        result={{
+          ...result,
+          unverified_premise: [
+            {
+              assumption_id: 'a1',
+              statement: 'The airport published a 2026 passenger figure.',
+              basis: 'The operator site was unreachable on three attempts.',
+              requirement_ids: ['r2'],
+            },
+          ],
+        }}
+        onBackToResearch={() => {}}
+        onBackToDirection={() => {}}
+        onDismiss={() => {}}
+      />,
+    )
+
+    expect(screen.getByText('Could not be checked either way')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back to research' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Follow-up research prompt')).toBeInTheDocument()
   })
 })
