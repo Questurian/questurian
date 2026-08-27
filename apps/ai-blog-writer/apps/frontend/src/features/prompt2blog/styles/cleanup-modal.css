@@ -276,3 +276,60 @@
   color: #64748b;
 }
 
+
+/* The article-fit guide is read, not scanned for data, so it is narrower than
+   the cleanup report and its body reads as prose rather than cards. */
+.p2b-modal--guide {
+  width: min(640px, 100%);
+}
+
+.p2b-guide-body {
+  gap: var(--space-5);
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.p2b-guide-body h4 {
+  margin: 0 0 var(--space-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.p2b-guide-body p {
+  margin: 0 0 var(--space-2);
+}
+
+.p2b-guide-body p:last-child {
+  margin-bottom: 0;
+}
+
+.p2b-guide-test {
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--p2b-accent);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+}
+
+.p2b-guide-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.p2b-guide-body ul {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.p2b-guide-body li + li {
+  margin-top: var(--space-1);
+}
+
+@media (max-width: 560px) {
+  .p2b-guide-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
