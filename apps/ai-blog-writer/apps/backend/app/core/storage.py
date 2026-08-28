@@ -21,14 +21,15 @@ def write_status(
         conn.execute(
             """
             INSERT INTO runs (
-                run_id, feature, status, stage, error, owner_staff_id,
-                created_at, updated_at
+                run_id, feature, status, stage, error, failure_kind,
+                owner_staff_id, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(run_id) DO UPDATE SET
                 status = excluded.status,
                 stage = excluded.stage,
                 error = excluded.error,
+                failure_kind = excluded.failure_kind,
                 updated_at = excluded.updated_at
         """,
             (
@@ -37,6 +38,10 @@ def write_status(
                 payload.get("state", "pending"),
                 payload.get("stage", "stage_0"),
                 payload.get("error"),
+                # Written on every status update, not only on failure, so a
+                # stage that starts cleanly clears a kind left by an earlier
+                # attempt rather than leaving it to be read as current.
+                payload.get("failure_kind"),
                 owner_staff_id,
                 payload.get("updated_at", ""),
                 payload.get("updated_at", ""),
@@ -56,6 +61,7 @@ def read_status(run_id: str) -> Optional[Dict[str, Any]]:
             "state": row["status"],
             "stage": row["stage"],
             "error": row["error"],
+            "failure_kind": row["failure_kind"],
             "updated_at": row["updated_at"],
         }
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.shared.provider_faults import is_fatal_provider_fault
+
 from ..dependencies import PipelineDependencies
 from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
@@ -52,6 +54,11 @@ def check_groundedness(
             output=groundedness,
         )
     except Exception as exc:  # noqa: BLE001
+        # A dead account is not a checker outage. Degrading here would record
+        # "the check did not run" -- which reads as a checker problem -- and
+        # then spend the next stage's call on the same exhausted credential.
+        if is_fatal_provider_fault(exc):
+            raise
         logger.warning("Prompt2Blog groundedness check failed: %s", exc)
         groundedness = unchecked_groundedness()
         _append_stage_trace(

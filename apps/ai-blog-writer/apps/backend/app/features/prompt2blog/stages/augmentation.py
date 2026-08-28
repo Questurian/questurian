@@ -5,6 +5,8 @@ from typing import Any
 
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 
+from app.shared.provider_faults import is_fatal_provider_fault
+
 from ..content.editorial_blocks import (
     _normalize_markdown_for_comparison,
     _sanitize_editorial_augmentation,
@@ -90,6 +92,8 @@ def run_augmentation_stage(
                 output=augmentation,
             )
         except Exception as exc:  # noqa: BLE001
+            if is_fatal_provider_fault(exc):
+                raise
             logger.warning("Prompt2Blog editorial augmentation failed: %s", exc)
             _append_stage_trace(
                 state["trace"],

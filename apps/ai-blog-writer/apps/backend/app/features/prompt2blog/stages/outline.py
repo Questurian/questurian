@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.shared.provider_faults import is_fatal_provider_fault
+
 from ..content.outline import (
     _sanitize_outline,
     format_outline_for_prompt,
@@ -101,6 +103,8 @@ def run_outline_stage(
             output={"outline": outline, "accepted": accepted, "checks": diagnostics},
         )
     except Exception as exc:  # noqa: BLE001
+        if is_fatal_provider_fault(exc):
+            raise
         logger.warning("Prompt2Blog outline stage failed: %s", exc)
         _append_stage_trace(
             state["trace"],

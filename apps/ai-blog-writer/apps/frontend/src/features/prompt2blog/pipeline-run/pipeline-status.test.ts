@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { Prompt2BlogPipelineStage, Prompt2BlogStatusResponse } from '../api'
 import { PROMPT2BLOG_V3_PIPELINE_STAGES } from '../types/pipeline.types'
-import { getPipelineStepStatus, PIPELINE_STAGE_LABELS, PROMPT2BLOG_STAGE_ORDERS } from './pipeline-status'
+import {
+  describePipelineFailure,
+  getPipelineStepStatus,
+  PIPELINE_STAGE_LABELS,
+  PROMPT2BLOG_STAGE_ORDERS,
+} from './pipeline-status'
 
 function createStatus(overrides: Partial<Prompt2BlogStatusResponse> = {}): Prompt2BlogStatusResponse {
   return {
@@ -99,5 +104,63 @@ describe('v3 stage progress', () => {
     for (const stage of PROMPT2BLOG_V3_PIPELINE_STAGES) {
       expect(PIPELINE_STAGE_LABELS[stage]).toBeTruthy()
     }
+  })
+})
+
+describe('describePipelineFailure', () => {
+  it('says the account ran out, and that nothing else was tried', () => {
+    // The bug this replaces: the banner read "Grounding check did not run",
+    // which describes a checker problem, for a run that stopped because the
+    // account was exhausted.
+    const message = describePipelineFailure(
+      createStatus({
+        state: 'failed',
+        stage: 'stage_v3_groundedness',
+        error: "Claude's account has hit its usage or spending limit.",
+        failure_kind: 'quota_exhausted',
+      }),
+    )
+
+    expect(message).toContain('limit')
+    expect(message).toContain('made no further calls')
+    expect(message).toContain(PIPELINE_STAGE_LABELS.stage_v3_groundedness)
+  })
+
+  it('separates a temporary problem from an exhausted account', () => {
+    const message = describePipelineFailure(
+      createStatus({
+        state: 'failed',
+        stage: 'stage_v3_compose',
+        error: 'Claude did not answer within 600s.',
+        failure_kind: 'provider_unavailable',
+      }),
+    )
+
+    expect(message).toContain('temporary')
+    expect(message).not.toContain('limit')
+  })
+
+  it('tells an operator to reconnect when Claude was never reachable', () => {
+    const message = describePipelineFailure(
+      createStatus({ state: 'failed', error: 'nope', failure_kind: 'not_connected' }),
+    )
+
+    expect(message).toContain('not connected')
+  })
+
+  it('falls back to the raw error when no kind was recorded', () => {
+    // Ordinary failures -- a bug, a parse error -- carry no kind, and the
+    // backend sentence is still the most useful thing to show.
+    const message = describePipelineFailure(
+      createStatus({ state: 'failed', error: 'Failed to parse JSON LLM response' }),
+    )
+
+    expect(message).toBe('Failed to parse JSON LLM response')
+  })
+
+  it('never shows an empty banner', () => {
+    expect(describePipelineFailure(createStatus({ state: 'failed', error: null }))).toBe(
+      'Pipeline failed.',
+    )
   })
 })

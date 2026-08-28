@@ -45,7 +45,7 @@ import tempfile
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, NoReturn, Optional
 
 from app.features.claude_connection.status import (
     API_BILLED_VARS,
@@ -56,6 +56,17 @@ from app.features.claude_connection.status import (
 
 _PROMPT2BLOG_OAUTH_TOKEN: ContextVar[str | None] = ContextVar(
     "prompt2blog_claude_oauth_token",
+    default=None,
+)
+
+# The run-scoped stop switch. Once one call comes back out of allowance, every
+# later call in the same run is refused before a subprocess is started.
+#
+# A mutable cell rather than a plain bool, because a graph node may run in a
+# copied context: a `.set()` there would be invisible to the next node, while a
+# mutation through the shared cell is visible everywhere the scope reaches.
+_QUOTA_BREAKER: ContextVar[dict[str, bool] | None] = ContextVar(
+    "prompt2blog_claude_quota_breaker",
     default=None,
 )
 
@@ -183,8 +194,68 @@ FAILED_TERMINAL_REASONS = frozenset(
 )
 
 
+# Why a failed call has to say *which* failure it was.
+#
+# Every failure above used to raise the same sentence, so the pipeline could
+# not tell "this account is out of allowance" from "the checker returned
+# nonsense". The grounding stage is built to shrug off the second -- so it
+# shrugged off the first, wrote "grounding check did not run", and the run
+# carried on and spent the next stage's call on the same dead credential.
+#
+# These four are the distinctions a caller can actually act on:
+#
+#   quota_exhausted        stop the run; more calls cannot succeed.
+#   not_connected          stop the run; setup problem, no call was made.
+#   provider_unavailable   a temporary problem; degrading is reasonable.
+#   invalid_response       Claude answered, the answer was unusable.
+FAULT_QUOTA_EXHAUSTED = "quota_exhausted"
+FAULT_NOT_CONNECTED = "not_connected"
+FAULT_PROVIDER_UNAVAILABLE = "provider_unavailable"
+FAULT_INVALID_RESPONSE = "invalid_response"
+
+# Terminal reasons that name exhaustion outright. Structural, so this half of
+# the detection survives any rewording of the apology text.
+QUOTA_TERMINAL_REASONS = frozenset({"budget_exhausted"})
+
+# Terminal reasons that mean the call did not complete for a reason that may
+# not repeat.
+TRANSIENT_TERMINAL_REASONS = frozenset(
+    {"api_error", "error", "error_during_execution", "timeout"}
+)
+
+# Substrings the observed refusal used. Matched only against a reply that has
+# already failed (see `_failure_kind`), never against a successful answer --
+# otherwise an article about Stripe billing could classify itself.
+QUOTA_MARKERS = (
+    "spend limit",
+    "usage limit",
+    "rate limit",
+    "quota",
+    "credit balance",
+    "out of credit",
+    "insufficient credit",
+    "upgrade to",
+    "resets at",
+    "limit will reset",
+    "manage usage credits",
+)
+
+# Only the front of the refusal is scanned. The apology leads with the reason;
+# anything further in is the model's own text and is not evidence.
+REFUSAL_SCAN_CHARS = 400
+
+
 class ClaudeCliWriterError(RuntimeError):
-    """A writer call that could not be made, or whose output was unusable."""
+    """A writer call that could not be made, or whose output was unusable.
+
+    ``kind`` is one of the four ``FAULT_*`` values and is what callers branch
+    on. It defaults to ``invalid_response`` so an unlabelled raise degrades the
+    way every raise here behaved before kinds existed.
+    """
+
+    def __init__(self, message: str, *, kind: str = FAULT_INVALID_RESPONSE) -> None:
+        super().__init__(message)
+        self.kind = kind
 
 
 @contextmanager
@@ -192,12 +263,46 @@ def prompt2blog_credential_scope(token: str):
     """Bind one article run to its Prompt2Blog-only OAuth credential."""
     cleaned = token.strip()
     if not cleaned:
-        raise ClaudeCliWriterError("Prompt2Blog's Claude credential is empty.")
+        raise ClaudeCliWriterError(
+            "Prompt2Blog's Claude credential is empty.",
+            kind=FAULT_NOT_CONNECTED,
+        )
     marker = _PROMPT2BLOG_OAUTH_TOKEN.set(cleaned)
     try:
         yield
     finally:
         _PROMPT2BLOG_OAUTH_TOKEN.reset(marker)
+
+
+@contextmanager
+def quota_breaker_scope():
+    """Arm the run-scoped stop switch for the calls made inside.
+
+    Separate from ``prompt2blog_credential_scope`` on purpose: a run can reach
+    this transport on the machine's own login with no per-run credential, and
+    that run needs the switch just as much.
+    """
+    marker = _QUOTA_BREAKER.set({"tripped": False})
+    try:
+        yield
+    finally:
+        _QUOTA_BREAKER.reset(marker)
+
+
+def _trip_quota_breaker() -> None:
+    cell = _QUOTA_BREAKER.get()
+    if cell is not None:
+        cell["tripped"] = True
+
+
+def _assert_quota_breaker_closed() -> None:
+    cell = _QUOTA_BREAKER.get()
+    if cell is not None and cell["tripped"]:
+        raise ClaudeCliWriterError(
+            "Claude's account already hit its limit earlier in this run, "
+            "so no further calls were made.",
+            kind=FAULT_QUOTA_EXHAUSTED,
+        )
 
 
 def writer_provider() -> str:
@@ -242,7 +347,8 @@ def _assert_billing_to_subscription() -> None:
             raise ClaudeCliWriterError(
                 "Claude credential conflict: "
                 + ", ".join(conflicts)
-                + " could override Prompt2Blog's article account."
+                + " could override Prompt2Blog's article account.",
+                kind=FAULT_NOT_CONNECTED,
             )
         return
 
@@ -250,7 +356,8 @@ def _assert_billing_to_subscription() -> None:
     if snapshot.get("state") != STATE_CONNECTED:
         raise ClaudeCliWriterError(
             snapshot.get("detail")
-            or "Claude is not connected on this machine, so nothing was sent."
+            or "Claude is not connected on this machine, so nothing was sent.",
+            kind=FAULT_NOT_CONNECTED,
         )
 
 
@@ -340,11 +447,17 @@ def _invoke(
     if not cleaned:
         raise ClaudeCliWriterError("Writer call had an empty prompt")
 
+    # Before anything is spawned: a run that already exhausted the account
+    # gets no further subprocesses, whatever stage is asking.
+    _assert_quota_breaker_closed()
     _assert_billing_to_subscription()
 
     cli_path = resolve_cli_path()
     if cli_path is None:
-        raise ClaudeCliWriterError("The Claude Code CLI was not found on this machine.")
+        raise ClaudeCliWriterError(
+            "The Claude Code CLI was not found on this machine.",
+            kind=FAULT_NOT_CONNECTED,
+        )
 
     alias = resolve_alias(model_name)
     effort = resolve_effort(model_name)
@@ -366,11 +479,13 @@ def _invoke(
         )
     except subprocess.TimeoutExpired as error:
         raise ClaudeCliWriterError(
-            f"Claude did not answer within {int(CALL_TIMEOUT_SECONDS)}s."
+            f"Claude did not answer within {int(CALL_TIMEOUT_SECONDS)}s.",
+            kind=FAULT_PROVIDER_UNAVAILABLE,
         ) from error
     except (OSError, subprocess.SubprocessError) as error:
         raise ClaudeCliWriterError(
-            f"Could not run the Claude CLI: {type(error).__name__}"
+            f"Could not run the Claude CLI: {type(error).__name__}",
+            kind=FAULT_PROVIDER_UNAVAILABLE,
         ) from error
 
     # Never surface raw stdout or stderr. On a hard CLI failure stdout is empty
@@ -392,28 +507,97 @@ def _invoke(
     return payload, alias
 
 
+def _quota_markers_present(payload: dict[str, Any]) -> bool:
+    result = payload.get("result")
+    if not isinstance(result, str):
+        return False
+    haystack = result[:REFUSAL_SCAN_CHARS].lower()
+    return any(marker in haystack for marker in QUOTA_MARKERS)
+
+
+def _spent_nothing(payload: dict[str, Any]) -> bool:
+    """Whether a failed call both produced nothing and cost nothing.
+
+    Evidence either way, so a reply that generated tokens or moved money is
+    never read as exhaustion no matter what its text says.
+    """
+    cost = payload.get("total_cost_usd")
+    cost_reported = isinstance(cost, (int, float)) and not isinstance(cost, bool)
+    output_tokens = _usage_from(payload).get("outputTokens")
+
+    if cost_reported and cost > 0:
+        return False
+    if isinstance(output_tokens, int) and output_tokens > 0:
+        return False
+    return (cost_reported and cost == 0) or output_tokens == 0
+
+
+def _failure_kind(payload: dict[str, Any]) -> str:
+    """Name the failure a rejected reply represents.
+
+    Order is the point:
+
+    1. A terminal reason that names exhaustion. Structural, survives rewording.
+    2. The apology's own wording.
+    3. **An unidentified failure that produced nothing and cost nothing is
+       treated as exhaustion.** Deliberate and the cautious side of a real
+       trade: the wording in (2) is Anthropic's to change, and if it changes
+       under us the alternative reading is "temporary problem", which resumes
+       the run and keeps calling a dead account -- the exact bug this whole
+       classification exists to kill. The cost is that a genuine transient
+       server error, which also reports no tokens and no spend, stops the run.
+       A stopped run is cheap to restart.
+    4. Only then, a named transient reason.
+    """
+    reason = str(payload.get("terminal_reason") or "").strip().lower()
+
+    if reason in QUOTA_TERMINAL_REASONS or _quota_markers_present(payload):
+        return FAULT_QUOTA_EXHAUSTED
+    if _spent_nothing(payload):
+        return FAULT_QUOTA_EXHAUSTED
+    if reason in TRANSIENT_TERMINAL_REASONS:
+        return FAULT_PROVIDER_UNAVAILABLE
+    return FAULT_INVALID_RESPONSE
+
+
 def _assert_claude_actually_answered(payload: dict[str, Any]) -> None:
     """Reject a reply that carries a refusal instead of an answer.
 
     See FAILED_TERMINAL_REASONS above for why this is three checks and why
-    ``subtype`` is not one of them.
+    ``subtype`` is not one of them. Each check now raises with the kind
+    ``_failure_kind`` read off the same payload, so the caller learns why the
+    call failed and not merely that it did. The refusal text itself is never
+    surfaced -- these strings reach an API response.
     """
     if payload.get("is_error"):
-        raise ClaudeCliWriterError("Claude reported an error answering the call.")
+        _raise_classified(payload, "Claude reported an error answering the call.")
 
     reason = payload.get("terminal_reason")
     if isinstance(reason, str) and reason.strip().lower() in FAILED_TERMINAL_REASONS:
-        raise ClaudeCliWriterError(
-            "Claude stopped without answering the call, so nothing was used."
+        _raise_classified(
+            payload,
+            "Claude stopped without answering the call, so nothing was used.",
         )
 
     # Absent rather than zero means the CLI did not report it; only a reported
     # zero is evidence that nothing was generated.
     output_tokens = _usage_from(payload).get("outputTokens")
     if output_tokens == 0:
-        raise ClaudeCliWriterError(
-            "Claude generated no output, so its reply was not used."
+        _raise_classified(
+            payload,
+            "Claude generated no output, so its reply was not used.",
         )
+
+
+def _raise_classified(payload: dict[str, Any], message: str) -> NoReturn:
+    kind = _failure_kind(payload)
+    if kind == FAULT_QUOTA_EXHAUSTED:
+        _trip_quota_breaker()
+        message = (
+            "Claude's account has hit its usage or spending limit, "
+            "so the call was not completed."
+        )
+    raise ClaudeCliWriterError(message, kind=kind)
 
 
 def invoke_text(

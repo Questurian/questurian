@@ -129,6 +129,14 @@ def ensure_core_tables() -> None:
             )
         if "owner_staff_id" not in columns:
             conn.execute("ALTER TABLE runs ADD COLUMN owner_staff_id TEXT")
+        # Why a failed run needs a second column beside `error`.
+        #
+        # `error` is a sentence written for a person. Deciding what to show, or
+        # whether a run is worth resuming, means matching on that sentence --
+        # which breaks the moment the wording changes. This holds the machine
+        # half: one of the FAULT_* kinds, or NULL for a run that has not failed.
+        if "failure_kind" not in columns:
+            conn.execute("ALTER TABLE runs ADD COLUMN failure_kind TEXT")
 
         conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_feature ON runs(feature);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);")

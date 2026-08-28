@@ -35,7 +35,18 @@ from typing import Any, Optional
 
 
 class ClaudeCliUnavailable(RuntimeError):
-    """The CLI transport could not be imported or could not answer."""
+    """The CLI transport could not be imported or could not answer.
+
+    ``kind`` carries the transport's own classification through unchanged --
+    ``quota_exhausted``, ``not_connected``, ``provider_unavailable`` or
+    ``invalid_response``. Flattening the transport error to its message, which
+    is what this did before, is what left the pipeline unable to tell an
+    exhausted account from an unusable answer.
+    """
+
+    def __init__(self, message: str, *, kind: str = "invalid_response") -> None:
+        super().__init__(message)
+        self.kind = kind
 
 
 def _transport() -> Any:
@@ -49,7 +60,8 @@ def _transport() -> Any:
         from app.features.claude_connection import cli_writer
     except ImportError as error:  # pragma: no cover - packaging failure
         raise ClaudeCliUnavailable(
-            "The Claude CLI writer transport is not importable here."
+            "The Claude CLI writer transport is not importable here.",
+            kind="not_connected",
         ) from error
     return cli_writer
 
@@ -150,7 +162,10 @@ class ClaudeCliTextLLM:
                     model_name=self.model_name,
                 )
         except cli_writer.ClaudeCliWriterError as error:
-            raise ClaudeCliUnavailable(str(error)) from error
+            raise ClaudeCliUnavailable(
+                str(error),
+                kind=getattr(error, "kind", "invalid_response"),
+            ) from error
 
         # The alias asked for is not the model that answered: 'sonnet' is a
         # moving target, so a spend record keyed on it would not say what it

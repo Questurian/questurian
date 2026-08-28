@@ -13,7 +13,7 @@ import {
   type Prompt2BlogDebugStages,
   type Prompt2BlogStatusResponse,
 } from '../../api'
-import { PIPELINE_STAGE_LABELS } from '../pipeline-status'
+import { PIPELINE_STAGE_LABELS, describePipelineFailure } from '../pipeline-status'
 import type {
   PersistedPipelineResult,
   PersistedRunState,
@@ -149,12 +149,15 @@ export function usePrompt2BlogRunLifecycle({
       return
     }
 
-    const failureMessage = status.error || 'Pipeline failed.'
+    // Two audiences, two strings. The log keeps the backend's own sentence,
+    // which is what a developer needs; the banner gets the plain-language one
+    // built from the failure kind, which is what an operator needs.
+    const loggedMessage = status.error || 'Pipeline failed.'
     appendPipelineLog(
-      `Pipeline failed at ${PIPELINE_STAGE_LABELS[status.stage] || status.stage}: ${failureMessage}`,
+      `Pipeline failed at ${PIPELINE_STAGE_LABELS[status.stage] || status.stage}: ${loggedMessage}`,
       'error',
     )
-    setError(failureMessage)
+    setError(describePipelineFailure(status))
 
     try {
       const { debugPayload } = await loadPrompt2BlogTerminalArtifacts(pipelineRunId, {

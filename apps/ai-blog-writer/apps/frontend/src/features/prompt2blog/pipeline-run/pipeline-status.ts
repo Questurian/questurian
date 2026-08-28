@@ -65,3 +65,44 @@ export const PROMPT2BLOG_STAGE_ORDERS = {
   v2: PROMPT2BLOG_PIPELINE_STAGES,
   v3: PROMPT2BLOG_V3_PIPELINE_STAGES,
 } as const satisfies Record<'v2' | 'v3', readonly KnownPrompt2BlogPipelineStage[]>
+
+/**
+ * The sentence an operator reads when a run stops.
+ *
+ * Built from `failure_kind` rather than from the backend's `error` string, so
+ * it says what happened in the same words every time and never has to be
+ * matched out of prose. The raw `error` still goes to the run log for
+ * debugging -- this replaces what is shown, not what is recorded.
+ */
+export function describePipelineFailure(
+  status: Pick<Prompt2BlogStatusResponse, 'stage' | 'error' | 'failure_kind'>,
+): string {
+  const stageLabel =
+    PIPELINE_STAGE_LABELS[status.stage] || status.stage || 'an early stage'
+
+  switch (status.failure_kind) {
+    case 'quota_exhausted':
+      return (
+        `Claude's account hit its usage or spending limit during "${stageLabel}". ` +
+        'The run stopped there and made no further calls. Try again once the ' +
+        'limit resets, or switch the run to a different model stack.'
+      )
+    case 'not_connected':
+      return (
+        'Claude is not connected on this machine, so nothing was sent. ' +
+        'Reconnect the Claude account and start the run again.'
+      )
+    case 'provider_unavailable':
+      return (
+        `Claude had a temporary problem during "${stageLabel}". ` +
+        'Nothing is wrong with the article inputs -- the run can be retried as is.'
+      )
+    case 'invalid_response':
+      return (
+        `Claude answered during "${stageLabel}" with something the pipeline ` +
+        'could not use. Retrying usually clears it.'
+      )
+    default:
+      return status.error || 'Pipeline failed.'
+  }
+}

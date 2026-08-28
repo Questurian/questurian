@@ -11,7 +11,10 @@ from app.core import (
     read_status,
 )
 from app.core.staff_auth import require_staff, staff_user_id
-from app.features.claude_connection.cli_writer import prompt2blog_credential_scope
+from app.features.claude_connection.cli_writer import (
+    prompt2blog_credential_scope,
+    quota_breaker_scope,
+)
 from app.features.claude_connection.prompt2blog_credential import (
     Prompt2BlogCredential,
     Prompt2BlogCredentialError,
@@ -53,7 +56,10 @@ def _run_full_pipeline_background(
             if credential is not None
             else nullcontext()
         )
-        with scope:
+        # The breaker is armed for every run, credential or not: a run can
+        # reach the CLI transport on the machine's own login, and it needs the
+        # stop switch just as much as one with its own credential.
+        with quota_breaker_scope(), scope:
             run_full_pipeline(run_id, request)
     except Exception:  # noqa: BLE001
         # The orchestrator records the active failed stage and logs the exception.
@@ -74,7 +80,7 @@ def _run_pipeline_v3_background(
             if credential is not None
             else nullcontext()
         )
-        with scope:
+        with quota_breaker_scope(), scope:
             run_pipeline_v3(run_id, request)
     except Exception:  # noqa: BLE001
         return

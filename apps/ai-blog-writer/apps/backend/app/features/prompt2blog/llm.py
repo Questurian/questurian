@@ -165,6 +165,13 @@ def _invoke_json_llm(
     last_error = "Unknown JSON parse failure"
     last_response = ""
 
+    # The retry below is for output that could not be parsed, and nothing else.
+    # `_invoke_text_llm` raises outside the inner `try`, so a provider fault --
+    # an exhausted account above all -- leaves this loop on the first attempt
+    # rather than paying for two more calls that cannot succeed. Keep it that
+    # way: widening the `except` to cover the invoke would re-introduce exactly
+    # the wasted calls this loop's shape prevents.
+
     for attempt in range(1, 4):
         raw_response = _invoke_text_llm(
             prompt=current_prompt,

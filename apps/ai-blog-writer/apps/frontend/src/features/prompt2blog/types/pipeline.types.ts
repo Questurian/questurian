@@ -122,6 +122,22 @@ export type KnownPrompt2BlogPipelineStage =
   | KnownPrompt2BlogV3PipelineStage
 export type Prompt2BlogPipelineStage = KnownPrompt2BlogPipelineStage | 'unknown'
 
+/**
+ * Why a failed run reports two things.
+ *
+ * `error` is the backend's sentence, useful in the log and useless to match
+ * on. `failure_kind` is the machine half: it says whether the account ran out,
+ * whether Claude was never reachable, whether the problem might not repeat, or
+ * whether Claude answered with something unusable. The UI reads the kind and
+ * writes its own sentence, so "fact-check unavailable" can never again be
+ * shown for a run that actually stopped because the account was exhausted.
+ */
+export type Prompt2BlogFailureKind =
+  | 'quota_exhausted'
+  | 'not_connected'
+  | 'provider_unavailable'
+  | 'invalid_response'
+
 export type Prompt2BlogStatusResponse = {
   run_id: string
   feature: string
@@ -129,6 +145,7 @@ export type Prompt2BlogStatusResponse = {
   stage: Prompt2BlogPipelineStage
   raw_stage?: string | null
   error: string | null
+  failure_kind?: Prompt2BlogFailureKind | string | null
   updated_at: string
 }
 

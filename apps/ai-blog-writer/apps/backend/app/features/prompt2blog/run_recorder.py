@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.core import write_artifact, write_stage_result, write_status
+from app.shared.provider_faults import provider_fault_kind
 
 from .config import FEATURE_NAME
 from .observability import _now_iso
@@ -49,6 +50,7 @@ class RunRecorder:
                 "state": "running",
                 "stage": "queued",
                 "error": None,
+                "failure_kind": None,
                 "updated_at": self.clock(),
             },
             feature=FEATURE_NAME,
@@ -98,6 +100,7 @@ class RunRecorder:
                 "state": "running",
                 "stage": stage,
                 "error": None,
+                "failure_kind": None,
                 "updated_at": self.clock(),
             },
             feature=FEATURE_NAME,
@@ -135,6 +138,7 @@ class RunRecorder:
                 "state": "completed",
                 "stage": "complete",
                 "error": None,
+                "failure_kind": None,
                 "updated_at": self.clock(),
             },
             feature=FEATURE_NAME,
@@ -153,6 +157,9 @@ class RunRecorder:
         *,
         debug_data: dict[str, Any] | None = None,
     ) -> None:
+        # Read off the exception rather than passed in, so every caller of
+        # `fail` records the kind without having to remember to.
+        kind = provider_fault_kind(error)
         self.status_writer(
             run_id,
             {
@@ -160,9 +167,25 @@ class RunRecorder:
                 "state": "failed",
                 "stage": stage,
                 "error": str(error),
+                "failure_kind": kind,
                 "updated_at": self.clock(),
             },
             feature=FEATURE_NAME,
+        )
+        # A stage row as well as the status row. The status row is overwritten
+        # by the next run of anything; this one is the durable record of which
+        # stage stopped and why, which is what a resume has to read.
+        self.stage_writer(
+            run_id,
+            "pipeline_failure",
+            {
+                "created_at": self.clock(),
+                "data": {
+                    "failed_stage": stage,
+                    "failure_kind": kind,
+                    "error": str(error),
+                },
+            },
         )
         if debug_data is not None:
             self.record_stage(

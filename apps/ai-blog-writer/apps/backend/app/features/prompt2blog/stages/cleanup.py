@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.shared.provider_faults import is_fatal_provider_fault
+
 from ..config import (
     PROMPT2BLOG_CLEANUP_CHUNKING_CHAR_THRESHOLD,
     PROMPT2BLOG_CLEANUP_CHUNK_TARGET_CHARS,
@@ -123,6 +125,8 @@ def cleanup_source(
             "removed_blocks": removed_blocks,
         }
     except Exception as exc:  # noqa: BLE001
+        if is_fatal_provider_fault(exc):
+            raise
         logger.warning(
             "Prompt2Blog AI cleanup failed for source %d: %s",
             source_index,
