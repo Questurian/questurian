@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from ...config import P2B_V3_GROUNDEDNESS_MODEL
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
 from ...observability import _append_stage_trace
@@ -33,19 +34,22 @@ def check_v3_groundedness(
     )
 
     raw_response = ""
+    groundedness_model = state.get(
+        "groundedness_model", P2B_V3_GROUNDEDNESS_MODEL
+    )
     try:
         parsed, raw_response = dependencies.llm.invoke_json(
             prompt=prompt,
             max_tokens=2048,
             temperature=0.0,
-            model_name=state["audit_model"],
+            model_name=groundedness_model,
         )
         groundedness = _sanitize_groundedness(parsed)
         _append_stage_trace(
             state["trace"],
             state["include_debug"],
             stage=stage,
-            model_name=state["audit_model"],
+            model_name=groundedness_model,
             prompt=prompt,
             raw_response=raw_response,
             parsed=parsed,
@@ -58,7 +62,7 @@ def check_v3_groundedness(
             state["trace"],
             state["include_debug"],
             stage=stage,
-            model_name=state["audit_model"],
+            model_name=groundedness_model,
             prompt=prompt,
             error=str(exc),
         )

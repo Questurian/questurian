@@ -14,6 +14,15 @@ P2B_COMPOSE_MODEL = "gemini-3.1-pro-preview"
 # Used only when an older client does not send its selected stack's audit model.
 P2B_AUDIT_MODEL = "gemini-3.7-flash"
 
+# V3 gives bounded, structured jobs to Sonnet at medium effort. Opus stays on
+# the two stages where prose quality has the largest editing-cost impact:
+# compose and repair. These are fixed independently from the selectable writer
+# and audit roles so choosing a premium prose model cannot silently promote
+# every small pipeline call to the same effort tier.
+P2B_V3_OUTLINE_MODEL = "claude-sonnet-5-medium"
+P2B_V3_GROUNDEDNESS_MODEL = "claude-sonnet-5-medium"
+P2B_V3_TITLE_MODEL = "claude-sonnet-5-medium"
+
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
     "in_the_know_box": "In The Know",

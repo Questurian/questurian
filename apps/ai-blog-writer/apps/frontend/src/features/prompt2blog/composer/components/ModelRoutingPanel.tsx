@@ -1,9 +1,7 @@
 import {
-  PROMPT2BLOG_MODEL_STACKS,
-  PROMPT2BLOG_STACK_FAMILY_LABELS,
-  PROMPT2BLOG_STACK_FAMILY_ORDER,
+  DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
+  PROMPT2BLOG_FIXED_STAGE_MODELS,
   resolvePrompt2BlogModelStack,
-  type Prompt2BlogModelStackId,
 } from '../../constants/prompt2blog.constants'
 import {
   estimatePrompt2BlogStackPrice,
@@ -13,50 +11,21 @@ import {
 } from '../../constants/prompt2blog-pricing'
 import { Panel } from './Panel'
 
-interface ModelRoutingPanelProps {
-  modelStackId: Prompt2BlogModelStackId
-  onChange: (modelStackId: Prompt2BlogModelStackId) => void
-  onClear: () => void
-}
-
-export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
-  const selectedStack = resolvePrompt2BlogModelStack(props.modelStackId)
+export function ModelRoutingPanel() {
+  const selectedStack = resolvePrompt2BlogModelStack(DEFAULT_PROMPT2BLOG_MODEL_STACK_ID)
   const priceEstimate = estimatePrompt2BlogStackPrice(selectedStack)
   const planRoleNames = priceEstimate.planRoles
     .map(role => PROMPT2BLOG_ROLE_LABELS[role])
     .join(' and ')
 
   return <Panel
-    title="Run Stack"
-    description="Select one option. Within each group, effort rises down the list: higher effort is slower and tends to leave less to edit."
-    onClear={props.onClear}
+    title="Article system"
+    description="One fixed route balances writing quality, fact checking, and Claude plan usage."
   >
     <div className="p2b-field p2b-stack-picker">
-      <label htmlFor="p2b-run-stack">Pipeline preset</label>
-      <select
-        id="p2b-run-stack"
-        className="p2b-select"
-        value={selectedStack.id}
-        onChange={event => props.onChange(event.target.value as Prompt2BlogModelStackId)}
-      >
-        {PROMPT2BLOG_STACK_FAMILY_ORDER.map(family => {
-          const stacks = PROMPT2BLOG_MODEL_STACKS.filter(
-            stack => stack.family === family,
-          )
-          if (stacks.length === 0) return null
-          return <optgroup key={family} label={PROMPT2BLOG_STACK_FAMILY_LABELS[family]}>
-            {stacks.map(stack => (
-              <option key={stack.id} value={stack.id}>
-                {stack.label.replace(/^(Opus|Sonnet) · /, '')} · {stack.priceTier}
-                {stack.label === stack.speedTier ? '' : ` · ${stack.speedTier}`}
-                {stack.recommended ? ' · Recommended' : ''}
-              </option>
-            ))}
-          </optgroup>
-        })}
-      </select>
+      <strong>Questurian balanced article route</strong>
       <p className="p2b-stack-description">{selectedStack.description}</p>
-      <p className="p2b-stack-guidance">{selectedStack.guidance}</p>
+      <p className="p2b-stack-guidance">Fixed for every new run. No model choice required.</p>
     </div>
     <div
       className="p2b-stack-cost"
@@ -116,12 +85,17 @@ export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
         <StackAssignment
           label={PROMPT2BLOG_ROLE_LABELS.writingModel}
           model={selectedStack.writingModel}
-          stages="Outline · draft · repair · extras · title"
+          stages="Draft · repair"
         />
         <StackAssignment
           label={PROMPT2BLOG_ROLE_LABELS.auditModel}
           model={selectedStack.auditModel}
-          stages="Groundedness · quality audit"
+          stages="Quality audit"
+        />
+        <StackAssignment
+          label="Pipeline checks"
+          model={PROMPT2BLOG_FIXED_STAGE_MODELS.groundedness}
+          stages="Outline · groundedness · title"
         />
       </div>
     </details>

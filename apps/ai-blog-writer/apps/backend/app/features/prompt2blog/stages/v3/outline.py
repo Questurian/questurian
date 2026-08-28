@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from ...config import P2B_V3_OUTLINE_MODEL
 from ...content.outline_v3 import (
     format_v3_outline_for_prompt,
     sanitize_v3_outline,
@@ -52,6 +53,7 @@ def run_v3_outline_stage(
     diagnostics: dict[str, Any] = {}
     accepted = False
     raw_response = ""
+    outline_model = state.get("outline_model", P2B_V3_OUTLINE_MODEL)
 
     prompt = P2B_V3_OUTLINE_PROMPT.format(
         instructions=state["instruction_text"],
@@ -63,7 +65,7 @@ def run_v3_outline_stage(
             prompt=prompt,
             max_tokens=2048,
             temperature=0.1,
-            model_name=state["writing_model"],
+            model_name=outline_model,
             schema=V3_OUTLINE_SCHEMA,
         )
         candidate = sanitize_v3_outline(parsed)
@@ -87,7 +89,7 @@ def run_v3_outline_stage(
             state["trace"],
             state["include_debug"],
             stage=stage,
-            model_name=state["writing_model"],
+            model_name=outline_model,
             prompt=prompt,
             raw_response=raw_response,
             parsed=parsed,
@@ -99,7 +101,7 @@ def run_v3_outline_stage(
             state["trace"],
             state["include_debug"],
             stage=stage,
-            model_name=state["writing_model"],
+            model_name=outline_model,
             prompt=prompt,
             error=str(exc),
         )

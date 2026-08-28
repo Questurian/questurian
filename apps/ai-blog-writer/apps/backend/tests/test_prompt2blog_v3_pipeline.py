@@ -184,14 +184,22 @@ class RecordingRecorder:
 class ScriptedLLM:
     quality_scores: list[int]
     prompts: list[tuple[str, str]] = field(default_factory=list)
+    models: dict[str, list[str | None]] = field(default_factory=dict)
     grounded: bool = True
 
-    def invoke_json(self, *, prompt: str, **_kwargs) -> tuple[dict[str, Any], str]:
+    def _record_model(self, stage: str, model_name: str | None) -> None:
+        self.models.setdefault(stage, []).append(model_name)
+
+    def invoke_json(
+        self, *, prompt: str, model_name: str | None = None, **_kwargs
+    ) -> tuple[dict[str, Any], str]:
         if "planning an article before it is written" in prompt:
             self.prompts.append(("outline", prompt))
+            self._record_model("outline", model_name)
             return OUTLINE, json.dumps(OUTLINE)
         if "fact-grounding checker" in prompt:
             self.prompts.append(("groundedness", prompt))
+            self._record_model("groundedness", model_name)
             payload = {
                 "grounded": self.grounded,
                 "assessment": "Checked against the records.",
@@ -210,6 +218,7 @@ class ScriptedLLM:
             return payload, json.dumps(payload)
         if "quality auditor" in prompt:
             self.prompts.append(("audit", prompt))
+            self._record_model("audit", model_name)
             score = (
                 self.quality_scores.pop(0)
                 if len(self.quality_scores) > 1
@@ -230,12 +239,17 @@ class ScriptedLLM:
             return payload, json.dumps(payload)
         if "repair pass" in prompt:
             self.prompts.append(("repair", prompt))
+            self._record_model("repair", model_name)
             return DRAFT, json.dumps(DRAFT)
         self.prompts.append(("compose", prompt))
+        self._record_model("compose", model_name)
         return DRAFT, json.dumps(DRAFT)
 
-    def invoke_text(self, *, prompt: str, **_kwargs) -> str:
+    def invoke_text(
+        self, *, prompt: str, model_name: str | None = None, **_kwargs
+    ) -> str:
         self.prompts.append(("title", prompt))
+        self._record_model("title", model_name)
         return "Is Lima still worth a long stay?"
 
     def enforce_anti_ai(self, text: str, **_kwargs) -> str:
@@ -277,6 +291,34 @@ def test_the_lima_commission_runs_end_to_end_through_the_v3_graph():
         "r3": "supported",
     }
     assert state["final_title"] == "Is Lima still worth a long stay?"
+
+
+def test_balanced_route_reserves_opus_for_drafting_and_repair():
+    request = _request(
+        model_routing={
+            "model_name": "gemini-3.1-flash-lite",
+            "writing_model": "claude-opus-5-high",
+            "audit_model": "claude-sonnet-5-high",
+            "model_stack_id": "opus-led-high",
+        }
+    )
+    llm = ScriptedLLM(quality_scores=[6, 9])
+    recorder = RecordingRecorder()
+
+    run_pipeline_v3(
+        "balanced-routing-run",
+        prepare_v3_runtime_request(request),
+        PipelineDependencies(llm=llm, recorder=recorder),
+    )
+
+    assert llm.models == {
+        "outline": ["claude-sonnet-5-medium"],
+        "compose": ["claude-opus-5-high"],
+        "groundedness": ["claude-sonnet-5-medium", "claude-sonnet-5-medium"],
+        "audit": ["claude-sonnet-5-high", "claude-sonnet-5-high"],
+        "repair": ["claude-opus-5-high"],
+        "title": ["claude-sonnet-5-medium"],
+    }
 
 
 def test_the_v3_run_never_reaches_a_guideline_or_supplement_stage():

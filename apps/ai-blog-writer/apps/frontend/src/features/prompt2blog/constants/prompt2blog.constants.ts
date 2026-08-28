@@ -17,8 +17,8 @@ export type Prompt2BlogModelStackId =
   | 'sonnet-led-max'
 
 /**
- * Stack family used by the picker. Claude handles writing and judgment while
- * Flash-Lite remains the cheap research worker.
+ * Stack family used by the picker. Opus-led stacks reserve Opus for prose and
+ * use Sonnet for judgment; Flash-Lite remains the cheap research worker.
  */
 export type Prompt2BlogStackFamily = 'opus' | 'sonnet'
 
@@ -74,12 +74,12 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     label: `Opus · ${effort === 'xhigh' ? 'XHigh' : effort[0].toUpperCase() + effort.slice(1)}`,
     priceTier: 'Plan + $',
     speedTier: 'Slowest' as const,
-    description: `Claude Opus at ${effort} effort writes, repairs, and judges; Gemini Flash-Lite is reserved for cheap research work.`,
+    description: `Claude Opus at ${effort} effort writes and repairs; Claude Sonnet at ${effort} judges; fixed medium-effort Sonnet handles planning, fact checks, and titles.`,
     guidance: STACK_GUIDANCE[effort],
-    recommended: effort === 'max',
+    recommended: effort === 'high',
     modelName: 'gemini-3.1-flash-lite' as const,
     writingModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
-    auditModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel
+    auditModel: `claude-sonnet-5-${effort}` as Prompt2BlogWriterModel
   })),
   ...(['medium', 'high', 'xhigh', 'max'] as const).map(effort => ({
     id: `sonnet-led-${effort}` as Prompt2BlogModelStackId,
@@ -97,7 +97,13 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
 
 export const PROMPT2BLOG_STACK_FAMILY_ORDER: Prompt2BlogStackFamily[] = ['opus', 'sonnet']
 
-export const DEFAULT_PROMPT2BLOG_MODEL_STACK_ID: Prompt2BlogModelStackId = 'opus-led-max'
+export const DEFAULT_PROMPT2BLOG_MODEL_STACK_ID: Prompt2BlogModelStackId = 'opus-led-high'
+
+export const PROMPT2BLOG_FIXED_STAGE_MODELS = {
+  outline: 'claude-sonnet-5-medium',
+  groundedness: 'claude-sonnet-5-medium',
+  title: 'claude-sonnet-5-medium',
+} as const
 
 export function resolvePrompt2BlogModelStack(value?: string): Prompt2BlogModelStack {
   return (

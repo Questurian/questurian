@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...config import P2B_V3_TITLE_MODEL
 from ...content.markdown import _clean_title
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
@@ -10,8 +11,9 @@ from ...prompts.editorial_v3 import P2B_V3_TITLE_PROMPT
 from ...quality_v3 import v3_commission_summary
 
 
-# The title is the highest-leverage single string the pipeline emits, so it is
-# written by the writer model rather than the cheaper analysis model.
+# Title is compact and constrained by headline rules, commission, and settled
+# article. A dedicated medium-effort model avoids paying full drafting effort
+# for one string while keeping it on Claude rather than the research worker.
 def run_v3_title_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
@@ -25,6 +27,7 @@ def run_v3_title_stage(
     stage = "stage_v3_title"
     run_id = state["run_id"]
     rewrite = state["rewrite"]
+    title_model = state.get("title_model", P2B_V3_TITLE_MODEL)
     dependencies.recorder.start_stage(run_id, stage)
 
     prompt = P2B_V3_TITLE_PROMPT.format(
@@ -37,7 +40,7 @@ def run_v3_title_stage(
         prompt=prompt,
         max_tokens=512,
         temperature=0.1,
-        model_name=state["writing_model"],
+        model_name=title_model,
     )
     final_title = (
         _clean_title(raw_response)
@@ -53,7 +56,7 @@ def run_v3_title_stage(
         state["trace"],
         state["include_debug"],
         stage=stage,
-        model_name=state["writing_model"],
+        model_name=title_model,
         prompt=prompt,
         raw_response=raw_response,
         output={"final_title": final_title},

@@ -15,6 +15,9 @@ from .config import (
     DEFAULT_MODEL,
     P2B_AUDIT_MODEL,
     P2B_COMPOSE_MODEL,
+    P2B_V3_GROUNDEDNESS_MODEL,
+    P2B_V3_OUTLINE_MODEL,
+    P2B_V3_TITLE_MODEL,
     PROMPT2BLOG_CREATIVITY_TEMPERATURES,
     PROMPT2BLOG_DEFAULT_COMPOSE_TEMPERATURE,
 )
@@ -62,6 +65,7 @@ def _initial_v3_state(
         "headline_instructions": _safe_str(instructions.get("headline_instructions")),
         "option_context": _safe_dict(request.option_context),
         "model_name": request.model_name or DEFAULT_MODEL,
+        "outline_model": dependencies.resolve_writer_model(P2B_V3_OUTLINE_MODEL),
         "writing_model": dependencies.resolve_writer_model(
             request.writing_model,
             default=P2B_COMPOSE_MODEL,
@@ -70,6 +74,10 @@ def _initial_v3_state(
             request.audit_model,
             default=P2B_AUDIT_MODEL,
         ),
+        "groundedness_model": dependencies.resolve_writer_model(
+            P2B_V3_GROUNDEDNESS_MODEL
+        ),
+        "title_model": dependencies.resolve_writer_model(P2B_V3_TITLE_MODEL),
         "model_stack_id": request.model_stack_id,
         "compose_temperature": PROMPT2BLOG_CREATIVITY_TEMPERATURES.get(
             creativity_level,

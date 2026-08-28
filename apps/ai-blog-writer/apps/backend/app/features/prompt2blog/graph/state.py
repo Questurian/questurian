@@ -73,8 +73,11 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     headline_instructions: str
     option_context: dict[str, Any]
     model_name: str
+    outline_model: str
     writing_model: str
+    groundedness_model: str
     audit_model: str
+    title_model: str
     model_stack_id: str | None
     compose_temperature: float
     include_debug: bool

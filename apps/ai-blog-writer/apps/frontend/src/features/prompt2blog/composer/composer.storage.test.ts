@@ -122,7 +122,7 @@ describe('loadSavedComposerState', () => {
     }
   })
 
-  it('preserves the selected full-pipeline model stack', () => {
+  it('moves a saved premium selection onto the one supported article route', () => {
     saveComposerState({
       ...DEFAULT_COMPOSER_STATE,
       modelStackId: 'sonnet-led-high',
@@ -132,9 +132,9 @@ describe('loadSavedComposerState', () => {
     })
 
     expect(loadSavedComposerState()).toMatchObject({
-      modelStackId: 'sonnet-led-high',
+      modelStackId: 'opus-led-high',
       modelName: 'gemini-3.1-flash-lite',
-      writingModel: 'claude-sonnet-5-high',
+      writingModel: 'claude-opus-5-high',
       auditModel: 'claude-sonnet-5-high',
     })
   })

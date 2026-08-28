@@ -11,10 +11,6 @@ import {
   type Prompt2BlogInputOptionsResponse,
 } from '../../api'
 import {
-  resolvePrompt2BlogModelStack,
-  type Prompt2BlogModelStackId,
-} from '../../constants/prompt2blog.constants'
-import {
   COMPOSER_STORAGE_KEY,
   DEFAULT_COMPOSER_STATE,
   loadSavedComposerState,
@@ -219,27 +215,6 @@ export function usePrompt2BlogComposer() {
     }))
   }, [inputOptions])
 
-  const clearModelRouting = useCallback(() => {
-    setState(prev => ({
-      ...prev,
-      modelStackId: DEFAULT_COMPOSER_STATE.modelStackId,
-      modelName: DEFAULT_COMPOSER_STATE.modelName,
-      writingModel: DEFAULT_COMPOSER_STATE.writingModel,
-      auditModel: DEFAULT_COMPOSER_STATE.auditModel,
-    }))
-  }, [])
-
-  const applyModelStack = useCallback((modelStackId: Prompt2BlogModelStackId) => {
-    const stack = resolvePrompt2BlogModelStack(modelStackId)
-    setState(prev => ({
-      ...prev,
-      modelStackId: stack.id,
-      modelName: stack.modelName,
-      writingModel: stack.writingModel,
-      auditModel: stack.auditModel,
-    }))
-  }, [])
-
   const clearAll = useCallback(() => {
     localStorage.removeItem(COMPOSER_STORAGE_KEY)
     setState(createDefaultComposerState())
@@ -266,8 +241,6 @@ export function usePrompt2BlogComposer() {
     storeEvidence,
     clearEvidence,
     clearDirectionWorkflow,
-    clearModelRouting,
-    applyModelStack,
     clearPromptProfiles,
     clearAll,
   }

@@ -145,13 +145,9 @@ export default function Prompt2BlogPage() {
 
           <FoldedSection
             title="Advanced"
-            description="Which models run the pipeline, and what they cost."
+            description="See how the fixed article system works and what it costs."
           >
-            <ModelRoutingPanel
-              modelStackId={state.modelStackId}
-              onChange={composer.applyModelStack}
-              onClear={composer.clearModelRouting}
-            />
+            <ModelRoutingPanel />
           </FoldedSection>
 
           <div className="p2b-submit-row">

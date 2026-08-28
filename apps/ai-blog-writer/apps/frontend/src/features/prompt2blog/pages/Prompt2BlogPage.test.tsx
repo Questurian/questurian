@@ -582,7 +582,7 @@ describe('Prompt2BlogPage', () => {
 
     expect(advanced).not.toBeNull()
     expect(advanced).not.toHaveAttribute('open')
-    expect(within(advanced!).getByRole('heading', { name: 'Run Stack' })).toBeInTheDocument()
+    expect(within(advanced!).getByRole('heading', { name: 'Article system' })).toBeInTheDocument()
   })
 
   it('requires Title and Location before opening an editable prompt block', async () => {
@@ -694,57 +694,24 @@ describe('Prompt2BlogPage', () => {
     expect(screen.getByLabelText('Location')).toHaveValue('Lisbon, Portugal')
   })
 
-  it('offers price-ordered full-run presets and shows their assignments', async () => {
+  it('shows one fixed article system with no model selector', async () => {
     renderPage()
 
-    const preset = await screen.findByLabelText('Pipeline preset')
-    const options = within(preset).getAllByRole('option')
-    const receipt = screen.getByLabelText('Opus · Max model assignments')
+    expect(await screen.findByText('Questurian balanced article route')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Pipeline preset')).toBeNull()
+    const receipt = screen.getByLabelText('Opus · High model assignments')
 
-    expect(
-      within(preset)
-        .getAllByRole('group')
-        .map(group => group.getAttribute('label')),
-    ).toEqual(['Claude Opus', 'Claude Sonnet'])
-    expect(options.map(option => option.textContent)).toEqual([
-      'Medium · Plan + $ · Slowest',
-      'High · Plan + $ · Slowest',
-      'XHigh · Plan + $ · Slowest',
-      'Max · Plan + $ · Slowest · Recommended',
-      'Medium · Plan + $ · Fast',
-      'High · Plan + $ · Moderate',
-      'XHigh · Plan + $ · Moderate',
-      'Max · Plan + $ · Moderate',
-    ])
-    expect(preset).toHaveValue('opus-led-max')
     expect(within(receipt).getByText('Research worker')).toBeInTheDocument()
     expect(within(receipt).getByText('Article writer')).toBeInTheDocument()
     expect(within(receipt).getByText('Quality judge')).toBeInTheDocument()
     expect(within(receipt).getByText('Gemini 3.1 Flash Lite')).toBeInTheDocument()
-    expect(within(receipt).getAllByText('Claude Opus 5 max')).toHaveLength(2)
-    const pricing = screen.getByLabelText('Opus · Max estimated pricing')
+    expect(within(receipt).getByText('Claude Opus 5 high')).toBeInTheDocument()
+    expect(within(receipt).getByText('Claude Sonnet 5 high')).toBeInTheDocument()
+    expect(within(receipt).getByText('Claude Sonnet 5 medium')).toBeInTheDocument()
+    const pricing = screen.getByLabelText('Opus · High estimated pricing')
     expect(within(pricing).getByText('$0.50')).toBeInTheDocument()
     expect(within(pricing).getByText('Input $0.25 / 1M')).toBeInTheDocument()
     expect(within(pricing).getByText('Output $1.50 / 1M')).toBeInTheDocument()
-  })
-
-  it('prices a Claude-writer stack as plan usage rather than inventing a rate', async () => {
-    renderPage()
-
-    const preset = await screen.findByLabelText('Pipeline preset')
-    fireEvent.change(preset, { target: { value: 'sonnet-led-medium' } })
-
-    // Before this, estimatePrompt2BlogStackPrice threw for any model with no
-    // Vertex rate, and this selection took the whole panel down with it.
-    const pricing = screen.getByLabelText('Sonnet · Medium estimated pricing')
-    expect(within(pricing).getByText('$0.50')).toBeInTheDocument()
-    expect(within(pricing).getByText('Input $0.25 / 1M')).toBeInTheDocument()
-    expect(within(pricing).getByText('Metered part')).toBeInTheDocument()
-    expect(within(pricing).getByText(/Article writer and Quality judge runs/)).toBeInTheDocument()
-
-    const receipt = screen.getByLabelText('Sonnet · Medium model assignments')
-    expect(within(receipt).getAllByText('Claude Sonnet 5 medium')).toHaveLength(2)
-    expect(within(receipt).getByText('Gemini 3.1 Flash Lite')).toBeInTheDocument()
   })
 
   it('blocks submission while an editorial v3 direction is unfinished', async () => {

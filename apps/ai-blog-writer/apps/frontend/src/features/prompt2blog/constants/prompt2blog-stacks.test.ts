@@ -14,7 +14,6 @@ describe('Claude-writer run stacks', () => {
   it('uses only Flash-Lite for metered work', () => {
     for (const stack of CLAUDE_STACKS) {
       expect(stack.modelName).toBe('gemini-3.1-flash-lite')
-      expect(stack.auditModel).toBe(stack.writingModel)
       expect(isPlanAllowanceModel(stack.auditModel)).toBe(true)
     }
   })
@@ -89,9 +88,9 @@ describe('Claude-writer run stacks', () => {
 
     expect(recommended).toHaveLength(1)
     expect(recommended[0]!.id).toBe(DEFAULT_PROMPT2BLOG_MODEL_STACK_ID)
-    // The recommendation has to be the strongest-writing option, not the
-    // cheapest: the weak stack is the one that produced the robotic draft.
-    expect(recommended[0]!.id).toBe('opus-led-max')
+    // High keeps Opus on the prose stages without making maximum-effort
+    // reasoning the default for every article.
+    expect(recommended[0]!.id).toBe('opus-led-high')
   })
 
   it('distinguishes the cheapest stack instead of presenting it as equivalent', () => {

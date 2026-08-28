@@ -418,9 +418,6 @@ export function loadSavedComposerState(): P2BFormState {
       return DEFAULT_COMPOSER_STATE
     }
     const isLegacyStorageDraft = savedStorageVersion == null || savedStorageVersion < 3
-    const modelStack = resolvePrompt2BlogModelStack(
-      typeof parsed.modelStackId === 'string' ? parsed.modelStackId : undefined,
-    )
     const editorial = isLegacyStorageDraft
       ? {
           ...DEFAULT_EDITORIAL_STATE,
@@ -442,10 +439,12 @@ export function loadSavedComposerState(): P2BFormState {
       editorial,
       easySetupLocation: readString(parsed.easySetupLocation),
       easySetupTitle: readString(parsed.easySetupTitle),
-      modelStackId: modelStack.id,
-      modelName: resolvePrompt2BlogModelName(modelStack.modelName),
-      writingModel: resolvePrompt2BlogWriterModel(modelStack.writingModel),
-      auditModel: resolvePrompt2BlogWriterModel(modelStack.auditModel),
+      // Model selection was removed. Old drafts may still carry a premium
+      // stack, but every resumed/new run now uses the one supported route.
+      modelStackId: DEFAULT_MODEL_STACK.id,
+      modelName: resolvePrompt2BlogModelName(DEFAULT_MODEL_STACK.modelName),
+      writingModel: resolvePrompt2BlogWriterModel(DEFAULT_MODEL_STACK.writingModel),
+      auditModel: resolvePrompt2BlogWriterModel(DEFAULT_MODEL_STACK.auditModel),
       toneId: readString(parsed.toneId),
       lengthId: readString(parsed.lengthId),
       brandVoiceId: readString(parsed.brandVoiceId),
