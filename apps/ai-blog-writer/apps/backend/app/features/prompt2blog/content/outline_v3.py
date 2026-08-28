@@ -7,6 +7,8 @@ unsupported sections are caught while they are still cheap to reject.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import Any
 
 from ..support import _safe_dict, _safe_int, _safe_str
@@ -58,7 +60,26 @@ def sanitize_v3_outline(parsed: dict[str, Any]) -> dict[str, Any]:
 
 
 def _mentions(text: str, name: str) -> bool:
-    return name.casefold() in text.casefold()
+    def normalize(value: str) -> str:
+        decomposed = unicodedata.normalize("NFKD", value)
+        unaccented = "".join(
+            character
+            for character in decomposed
+            if not unicodedata.combining(character)
+        )
+        return " ".join(unaccented.casefold().split())
+
+    normalized_text = normalize(text)
+    # A commission stores geography canonically (for example, "Medellín,
+    # Colombia") while natural headings use the locality alone. The leading
+    # comma-delimited name is a valid shorthand; country alone is not.
+    full_name = normalize(name)
+    locality = normalize(name.split(",", maxsplit=1)[0])
+    candidates = {candidate for candidate in (full_name, locality) if candidate}
+    return any(
+        re.search(rf"(?<!\w){re.escape(candidate)}(?!\w)", normalized_text)
+        for candidate in candidates
+    )
 
 
 def validate_v3_outline(
@@ -116,10 +137,24 @@ def validate_v3_outline(
         }
     )
     primary_subject = _safe_str(commission.get("primary_subject"))
+    # A well-built outline often names the subject once in its framing and then
+    # relies on subject-specific detail in the sections ("El Poblado", "Museo de
+    # Antioquia") rather than repeating the city in every heading. Genuine drift
+    # still fails this, because a plan about another subject names that subject
+    # in its framing too.
+    subject_fields = [
+        _safe_str(outline.get("working_title")),
+        _safe_str(outline.get("direct_answer_focus")),
+        _safe_str(outline.get("takeaway_focus")),
+        _safe_str(outline.get("commission_alignment")),
+        *(
+            value
+            for section in sections
+            for value in (section["heading"], section["purpose"])
+        ),
+    ]
     covers_primary_subject = not primary_subject or any(
-        _mentions(section["heading"], primary_subject)
-        or _mentions(section["purpose"], primary_subject)
-        for section in sections
+        _mentions(value, primary_subject) for value in subject_fields
     )
 
     checks = {

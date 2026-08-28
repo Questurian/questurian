@@ -2,43 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   PROMPT2BLOG_MODEL_STACKS,
   PROMPT2BLOG_STACK_FAMILY_ORDER,
+  DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
   resolvePrompt2BlogModelStack,
   resolvePrompt2BlogWriterModel
 } from './prompt2blog.constants'
 import { isPlanAllowanceModel } from './prompt2blog-pricing'
 
-const CLAUDE_STACKS = PROMPT2BLOG_MODEL_STACKS.filter(stack => stack.family === 'claude-writer')
-const CLAUDE_LED_STACKS = CLAUDE_STACKS.filter(stack => stack.id.includes('-led-'))
-const CLAUDE_WRITER_GRID = CLAUDE_STACKS.filter(stack => !stack.id.includes('-led-'))
+const CLAUDE_STACKS = PROMPT2BLOG_MODEL_STACKS
 
 describe('Claude-writer run stacks', () => {
-  it('is a 2x3 grid: two writers across three research tiers', () => {
-    // The grid shape is the point. Comparing two runs is only informative when
-    // exactly one thing differs between them, so every writer must appear
-    // against every research tier.
-    const grid = CLAUDE_WRITER_GRID.map(stack => [stack.writingModel, stack.modelName])
-
-    expect(grid).toEqual([
-      ['claude-opus-5', 'gemini-3.1-pro-preview'],
-      ['claude-opus-5', 'gemini-3.7-flash'],
-      ['claude-opus-5', 'gemini-3.1-flash-lite'],
-      ['claude-sonnet-5', 'gemini-3.1-pro-preview'],
-      ['claude-sonnet-5', 'gemini-3.7-flash'],
-      ['claude-sonnet-5', 'gemini-3.1-flash-lite']
-    ])
-  })
-
-  it('keeps research on Gemini and makes Claude judging explicit', () => {
-    for (const stack of PROMPT2BLOG_MODEL_STACKS) {
-      expect(isPlanAllowanceModel(stack.modelName)).toBe(false)
-    }
-
-    expect(CLAUDE_LED_STACKS).toHaveLength(8)
-    expect(CLAUDE_WRITER_GRID.every(stack => !isPlanAllowanceModel(stack.auditModel))).toBe(true)
-  })
-
-  it('uses only Flash-Lite for metered work on Claude-led stacks', () => {
-    for (const stack of CLAUDE_LED_STACKS) {
+  it('uses only Flash-Lite for metered work', () => {
+    for (const stack of CLAUDE_STACKS) {
       expect(stack.modelName).toBe('gemini-3.1-flash-lite')
       expect(stack.auditModel).toBe(stack.writingModel)
       expect(isPlanAllowanceModel(stack.auditModel)).toBe(true)
@@ -46,7 +20,7 @@ describe('Claude-writer run stacks', () => {
   })
 
   it('offers medium through max effort without exposing low', () => {
-    expect(CLAUDE_LED_STACKS.map(stack => stack.id)).toEqual([
+    expect(PROMPT2BLOG_MODEL_STACKS.map(stack => stack.id)).toEqual([
       'opus-led-medium',
       'opus-led-high',
       'opus-led-xhigh',
@@ -56,27 +30,28 @@ describe('Claude-writer run stacks', () => {
       'sonnet-led-xhigh',
       'sonnet-led-max'
     ])
-    expect(CLAUDE_LED_STACKS.some(stack => stack.id.includes('low'))).toBe(false)
-  })
-
-  it('leaves the Gemini control group untouched', () => {
-    const gemini = PROMPT2BLOG_MODEL_STACKS.filter(stack => stack.family === 'gemini')
-
-    expect(gemini.map(stack => stack.id)).toEqual([
-      'maximum-quality',
-      'premium-review',
-      'editorial-premium',
-      'balanced',
-      'best-value',
-      'economy'
-    ])
-    expect(gemini.every(stack => !isPlanAllowanceModel(stack.writingModel))).toBe(true)
+    expect(PROMPT2BLOG_MODEL_STACKS.some(stack => stack.id.includes('low'))).toBe(false)
+    expect(PROMPT2BLOG_MODEL_STACKS).toHaveLength(8)
   })
 
   it('gives every stack a family the picker knows how to group', () => {
     for (const stack of PROMPT2BLOG_MODEL_STACKS) {
       expect(PROMPT2BLOG_STACK_FAMILY_ORDER).toContain(stack.family)
     }
+  })
+
+  it('groups Opus before Sonnet and orders each by increasing effort', () => {
+    expect(PROMPT2BLOG_STACK_FAMILY_ORDER).toEqual(['opus', 'sonnet'])
+    expect(PROMPT2BLOG_MODEL_STACKS.map(stack => stack.family)).toEqual([
+      'opus',
+      'opus',
+      'opus',
+      'opus',
+      'sonnet',
+      'sonnet',
+      'sonnet',
+      'sonnet'
+    ])
   })
 
   it('has a unique id per stack', () => {
@@ -88,6 +63,43 @@ describe('Claude-writer run stacks', () => {
     for (const id of ids) {
       expect(resolvePrompt2BlogModelStack(id).id).toBe(id)
     }
+  })
+
+  it('gives every stack guidance about the editing burden it leaves', () => {
+    // The mechanical description says which model fills which role. It does not
+    // help an operator choose, and choosing on price alone produced a draft
+    // that needed a rewrite rather than an edit.
+    for (const stack of PROMPT2BLOG_MODEL_STACKS) {
+      expect(stack.guidance.length).toBeGreaterThan(0)
+      expect(stack.guidance).not.toBe(stack.description)
+    }
+  })
+
+  it('does not promise a quality outcome it has not measured', () => {
+    // Two sampled runs are not evidence for a guarantee.
+    const banned = /\bguarantee|\bguaranteed|\bbest quality\b|\bflawless\b|\bperfect\b/i
+    for (const stack of PROMPT2BLOG_MODEL_STACKS) {
+      expect(banned.test(stack.guidance)).toBe(false)
+      expect(banned.test(stack.description)).toBe(false)
+    }
+  })
+
+  it('recommends exactly one stack, and it is the default', () => {
+    const recommended = PROMPT2BLOG_MODEL_STACKS.filter(stack => stack.recommended)
+
+    expect(recommended).toHaveLength(1)
+    expect(recommended[0]!.id).toBe(DEFAULT_PROMPT2BLOG_MODEL_STACK_ID)
+    // The recommendation has to be the strongest-writing option, not the
+    // cheapest: the weak stack is the one that produced the robotic draft.
+    expect(recommended[0]!.id).toBe('opus-led-max')
+  })
+
+  it('distinguishes the cheapest stack instead of presenting it as equivalent', () => {
+    const cheapest = resolvePrompt2BlogModelStack('opus-led-medium')
+    const strongest = resolvePrompt2BlogModelStack('opus-led-max')
+
+    expect(cheapest.guidance).not.toBe(strongest.guidance)
+    expect(cheapest.recommended).toBeFalsy()
   })
 
   it('resolves the writing model every stack names', () => {

@@ -67,6 +67,27 @@ def test_every_brand_voice_has_a_dropdown_description():
         assert len(voice["description"]) <= 80, voice["id"]
 
 
+def test_no_brand_voice_asks_takeaways_to_introduce_new_facts():
+    """All three voices used to demand "new specifics" in the closing section.
+
+    On a Medellin run that produced genuine leftovers -- an annual visitor
+    count for Comuna 13 and arithmetic between two mondongo prices -- facts
+    that are true and sourced but are not the decisions a first-time traveler
+    is making. Takeaways synthesise what the body already supported; a reader
+    should never meet a material fact for the first time in a summary. Three
+    copies of the rule means fixing one leaves two live.
+    """
+    banned = (
+        "new specifics",
+        "new factual specifics",
+    )
+    for voice in _voices():
+        body = voice["instructions"].lower()
+        for phrase in banned:
+            assert phrase not in body, f"{voice['id']} still asks for {phrase!r}"
+        assert "takeaway" in body, f"{voice['id']} lost its takeaways rule"
+
+
 def test_no_brand_voice_tells_the_writer_to_name_a_source():
     """The same sentence had to be fixed in all three voices on 2026-08-27.
 

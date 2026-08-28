@@ -7,26 +7,14 @@ import {
   type Prompt2BlogModelStackShape
 } from './prompt2blog-pricing'
 
-const METERED_STACKS = PROMPT2BLOG_MODEL_STACKS.filter(
-  stack => estimatePrompt2BlogStackPrice(stack).planRoles.length === 0
-)
-
 describe('estimatePrompt2BlogStackPrice', () => {
-  it('calculates price-ordered blended rates for every fully metered stack', () => {
-    expect(
-      METERED_STACKS.map(stack =>
-        formatPerMillionRate(estimatePrompt2BlogStackPrice(stack).mixedPerMillion)
-      )
-    ).toEqual(['$4.00', '$3.04', '$2.55', '$1.35', '$1.04', '$0.50'])
-  })
-
   it('keeps input and output rates visible instead of hiding their difference', () => {
-    const editorial = PROMPT2BLOG_MODEL_STACKS.find(stack => stack.id === 'editorial-premium')!
+    const stack = PROMPT2BLOG_MODEL_STACKS.find(stack => stack.id === 'opus-led-medium')!
 
-    const estimate = estimatePrompt2BlogStackPrice(editorial)
+    const estimate = estimatePrompt2BlogStackPrice(stack)
 
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$1.32')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$7.50')
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.25')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$1.50')
   })
 
   // The estimator used to throw on any model with no rate, which crashed the

@@ -125,17 +125,17 @@ describe('loadSavedComposerState', () => {
   it('preserves the selected full-pipeline model stack', () => {
     saveComposerState({
       ...DEFAULT_COMPOSER_STATE,
-      modelStackId: 'economy',
+      modelStackId: 'sonnet-led-high',
       modelName: 'gemini-3.1-flash-lite',
-      writingModel: 'gemini-3.1-flash-lite',
-      auditModel: 'gemini-3.1-flash-lite',
+      writingModel: 'claude-sonnet-5-high',
+      auditModel: 'claude-sonnet-5-high',
     })
 
     expect(loadSavedComposerState()).toMatchObject({
-      modelStackId: 'economy',
+      modelStackId: 'sonnet-led-high',
       modelName: 'gemini-3.1-flash-lite',
-      writingModel: 'gemini-3.1-flash-lite',
-      auditModel: 'gemini-3.1-flash-lite',
+      writingModel: 'claude-sonnet-5-high',
+      auditModel: 'claude-sonnet-5-high',
     })
   })
 

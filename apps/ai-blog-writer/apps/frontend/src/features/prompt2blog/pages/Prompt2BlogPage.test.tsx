@@ -329,9 +329,27 @@ describe('Prompt2BlogPage', () => {
     })
 
     getPrompt2BlogInputOptionsMock.mockResolvedValue({
-      tones: [{ id: 'balanced', label: 'Balanced' }],
+      tones: [
+        {
+          id: 'balanced',
+          label: 'Balanced',
+          description: 'Neutral and useful.',
+          instructions: 'Answer directly.\n\nKeep judgment measured.',
+        },
+        {
+          id: 'field-guide',
+          label: 'Field Guide',
+          description: 'Operational and blunt.',
+          instructions: 'Lead with what to do.\n\nName common failure modes.',
+        },
+      ],
       lengths: [{ id: 'standard', label: 'Standard' }],
-      brand_voices: [{ id: 'questurian', label: 'Questurian' }],
+      brand_voices: [{
+        id: 'questurian',
+        label: 'Questurian',
+        description: 'House editorial rules.',
+        instructions: 'Use sourced specifics.\n\nCut promotional language.',
+      }],
       defaults: {
         tone_id: 'balanced',
         length_id: 'standard',
@@ -516,6 +534,26 @@ describe('Prompt2BlogPage', () => {
     expect(screen.getByLabelText('How long').closest('details')).toBeNull()
   })
 
+  it('shows selected writing profile rules and updates them with the selection', async () => {
+    renderPage()
+
+    const tone = await screen.findByLabelText('Tone')
+    const balanced = screen.getByLabelText('Tone: Balanced profile')
+
+    expect(within(balanced).getByText('Neutral and useful.')).toBeInTheDocument()
+    expect(within(balanced).getByText('Answer directly.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Brand Voice: Questurian profile')).toHaveTextContent(
+      'House editorial rules.',
+    )
+
+    fireEvent.change(tone, { target: { value: 'field-guide' } })
+
+    const fieldGuide = screen.getByLabelText('Tone: Field Guide profile')
+    expect(within(fieldGuide).getByText('Operational and blunt.')).toBeInTheDocument()
+    expect(within(fieldGuide).getByText('Lead with what to do.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Tone: Balanced profile')).not.toBeInTheDocument()
+  })
+
   it('offers exactly one place to set the length', async () => {
     // Two editable length controls let the operator retarget the article after
     // the research had already been sized for the old number, which is the
@@ -661,61 +699,52 @@ describe('Prompt2BlogPage', () => {
 
     const preset = await screen.findByLabelText('Pipeline preset')
     const options = within(preset).getAllByRole('option')
-    const receipt = screen.getByLabelText('Editorial Premium model assignments')
+    const receipt = screen.getByLabelText('Opus · Max model assignments')
 
-    // Grouped rather than one price-ordered list: the two families are not
-    // points on one scale, because a Claude-writer stack pays for its writing
-    // out of the subscription instead of per token.
     expect(
       within(preset)
         .getAllByRole('group')
         .map(group => group.getAttribute('label')),
-    ).toEqual(['Gemini — billed per token', 'Claude writes — included in your plan'])
+    ).toEqual(['Claude Opus', 'Claude Sonnet'])
     expect(options.map(option => option.textContent)).toEqual([
-      '$$$$$$ · Maximum Quality · Slowest',
-      '$$$$$ · Premium Review · Slow',
-      '$$$$ · Editorial Premium · Moderate',
-      '$$$ · Fast + Optimal · Fast',
-      '$$ · Best Value · Faster',
-      '$ · Fastest',
-      'Plan + $$$ · Opus · Max · Slowest',
-      'Plan + $$ · Opus · Balanced · Slow',
-      'Plan + $ · Opus · Lean · Moderate',
-      'Plan + $$$ · Sonnet · Max · Slow',
-      'Plan + $$ · Sonnet · Balanced · Moderate',
-      'Plan + $ · Sonnet · Lean · Fast',
+      'Medium · Plan + $ · Slowest',
+      'High · Plan + $ · Slowest',
+      'XHigh · Plan + $ · Slowest',
+      'Max · Plan + $ · Slowest · Recommended',
+      'Medium · Plan + $ · Fast',
+      'High · Plan + $ · Moderate',
+      'XHigh · Plan + $ · Moderate',
+      'Max · Plan + $ · Moderate',
     ])
-    expect(preset).toHaveValue('editorial-premium')
+    expect(preset).toHaveValue('opus-led-max')
     expect(within(receipt).getByText('Research worker')).toBeInTheDocument()
     expect(within(receipt).getByText('Article writer')).toBeInTheDocument()
     expect(within(receipt).getByText('Quality judge')).toBeInTheDocument()
-    expect(within(receipt).getByText('Gemini 3.1 Pro Preview')).toBeInTheDocument()
-    const pricing = screen.getByLabelText('Editorial Premium estimated pricing')
-    expect(within(pricing).getByText('$2.55')).toBeInTheDocument()
-    expect(within(pricing).getByText('Input $1.32 / 1M')).toBeInTheDocument()
-    expect(within(pricing).getByText('Output $7.50 / 1M')).toBeInTheDocument()
+    expect(within(receipt).getByText('Gemini 3.1 Flash Lite')).toBeInTheDocument()
+    expect(within(receipt).getAllByText('Claude Opus 5 max')).toHaveLength(2)
+    const pricing = screen.getByLabelText('Opus · Max estimated pricing')
+    expect(within(pricing).getByText('$0.50')).toBeInTheDocument()
+    expect(within(pricing).getByText('Input $0.25 / 1M')).toBeInTheDocument()
+    expect(within(pricing).getByText('Output $1.50 / 1M')).toBeInTheDocument()
   })
 
   it('prices a Claude-writer stack as plan usage rather than inventing a rate', async () => {
     renderPage()
 
     const preset = await screen.findByLabelText('Pipeline preset')
-    fireEvent.change(preset, { target: { value: 'opus-balanced' } })
+    fireEvent.change(preset, { target: { value: 'sonnet-led-medium' } })
 
     // Before this, estimatePrompt2BlogStackPrice threw for any model with no
     // Vertex rate, and this selection took the whole panel down with it.
-    const pricing = screen.getByLabelText('Opus · Balanced estimated pricing')
-    // The rate covers the metered roles only -- research and audit -- rather
-    // than being diluted by treating the plan-served writer as free.
-    expect(within(pricing).getByText('$1.35')).toBeInTheDocument()
-    expect(within(pricing).getByText('Input $0.75 / 1M')).toBeInTheDocument()
+    const pricing = screen.getByLabelText('Sonnet · Medium estimated pricing')
+    expect(within(pricing).getByText('$0.50')).toBeInTheDocument()
+    expect(within(pricing).getByText('Input $0.25 / 1M')).toBeInTheDocument()
     expect(within(pricing).getByText('Metered part')).toBeInTheDocument()
-    expect(within(pricing).getByText(/Article writer runs on your Claude plan/)).toBeInTheDocument()
+    expect(within(pricing).getByText(/Article writer and Quality judge runs/)).toBeInTheDocument()
 
-    const receipt = screen.getByLabelText('Opus · Balanced model assignments')
-    expect(within(receipt).getByText('Claude Opus 5')).toBeInTheDocument()
-    // The grunt work does not move.
-    expect(within(receipt).getAllByText('Gemini 3.7 Flash')).toHaveLength(2)
+    const receipt = screen.getByLabelText('Sonnet · Medium model assignments')
+    expect(within(receipt).getAllByText('Claude Sonnet 5 medium')).toHaveLength(2)
+    expect(within(receipt).getByText('Gemini 3.1 Flash Lite')).toBeInTheDocument()
   })
 
   it('blocks submission while an editorial v3 direction is unfinished', async () => {
@@ -968,7 +997,7 @@ describe('Prompt2BlogPage', () => {
     renderPage()
 
     const receipt = await screen.findByLabelText('Run cost and token usage')
-    expect(within(receipt).getByText('Editorial Premium')).toBeInTheDocument()
+    expect(within(receipt).getByText('Custom stack')).toBeInTheDocument()
     expect(within(receipt).getByText('$0.18')).toBeInTheDocument()
     expect(within(receipt).getByText('146,912')).toBeInTheDocument()
     expect(
