@@ -97,12 +97,26 @@ MODEL_ALIASES: dict[str, str] = {
     "claude-opus-4-8": "opus",
     "claude-opus-4-7": "opus",
     "claude-sonnet-5": "sonnet",
+    "claude-opus-5-medium": "opus",
+    "claude-opus-5-high": "opus",
+    "claude-opus-5-xhigh": "opus",
+    "claude-opus-5-max": "opus",
+    "claude-sonnet-5-medium": "sonnet",
+    "claude-sonnet-5-high": "sonnet",
+    "claude-sonnet-5-xhigh": "sonnet",
+    "claude-sonnet-5-max": "sonnet",
     "claude-haiku-4-5": "haiku",
     "claude-fable-5": "fable",
     "opus": "opus",
     "sonnet": "sonnet",
     "haiku": "haiku",
     "fable": "fable",
+}
+
+MODEL_EFFORTS: dict[str, str] = {
+    f"claude-{family}-5-{effort}": effort
+    for family in ("opus", "sonnet")
+    for effort in ("medium", "high", "xhigh", "max")
 }
 
 # What a non-Claude request maps to when this provider is switched on. The
@@ -183,6 +197,10 @@ def resolve_alias(model_name: Optional[str]) -> str:
     return MODEL_ALIASES.get(str(model_name or "").strip().lower(), DEFAULT_ALIAS)
 
 
+def resolve_effort(model_name: Optional[str]) -> str | None:
+    return MODEL_EFFORTS.get(str(model_name or "").strip().lower())
+
+
 def _assert_billing_to_subscription() -> None:
     """Refuse to spend unless the money lands where the operator thinks it does.
 
@@ -204,6 +222,7 @@ def _build_args(
     prompt: str,
     alias: str,
     input_schema: Optional[dict[str, Any]],
+    effort: str | None = None,
 ) -> list[str]:
     args = [
         cli_path,
@@ -224,6 +243,8 @@ def _build_args(
         "--model",
         alias,
     ]
+    if effort is not None:
+        args += ["--effort", effort]
     if input_schema is not None:
         args += ["--json-schema", json.dumps(input_schema, sort_keys=True)]
     return args
@@ -280,11 +301,12 @@ def _invoke(
         raise ClaudeCliWriterError("The Claude Code CLI was not found on this machine.")
 
     alias = resolve_alias(model_name)
+    effort = resolve_effort(model_name)
     WORKING_DIR.mkdir(parents=True, exist_ok=True)
 
     try:
         completed = subprocess.run(
-            _build_args(cli_path, cleaned, alias, input_schema),
+            _build_args(cli_path, cleaned, alias, input_schema, effort),
             capture_output=True,
             text=True,
             timeout=CALL_TIMEOUT_SECONDS,

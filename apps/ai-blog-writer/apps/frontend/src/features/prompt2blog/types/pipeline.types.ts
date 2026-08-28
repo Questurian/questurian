@@ -24,9 +24,17 @@ export type Prompt2BlogModelName =
 // base drafting model. Backend allowlist: app/shared/writer_models.py.
 export type Prompt2BlogWriterModel =
   | 'claude-opus-5'
+  | 'claude-opus-5-medium'
+  | 'claude-opus-5-high'
+  | 'claude-opus-5-xhigh'
+  | 'claude-opus-5-max'
   | 'claude-opus-4-8'
   | 'claude-opus-4-7'
   | 'claude-sonnet-5'
+  | 'claude-sonnet-5-medium'
+  | 'claude-sonnet-5-high'
+  | 'claude-sonnet-5-xhigh'
+  | 'claude-sonnet-5-max'
   | 'gemini-3.7-flash'
   | 'gemini-3.5-flash'
   | 'gemini-3.5-flash-lite'

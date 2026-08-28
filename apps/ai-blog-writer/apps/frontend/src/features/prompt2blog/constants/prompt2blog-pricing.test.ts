@@ -4,24 +4,24 @@ import {
   estimatePrompt2BlogStackPrice,
   formatPerMillionRate,
   isPlanAllowanceModel,
-  type Prompt2BlogModelStackShape,
+  type Prompt2BlogModelStackShape
 } from './prompt2blog-pricing'
 
-const METERED_STACKS = PROMPT2BLOG_MODEL_STACKS.filter(stack =>
-  estimatePrompt2BlogStackPrice(stack).planRoles.length === 0,
+const METERED_STACKS = PROMPT2BLOG_MODEL_STACKS.filter(
+  stack => estimatePrompt2BlogStackPrice(stack).planRoles.length === 0
 )
 
 describe('estimatePrompt2BlogStackPrice', () => {
   it('calculates price-ordered blended rates for every fully metered stack', () => {
-    expect(METERED_STACKS.map(stack => (
-      formatPerMillionRate(estimatePrompt2BlogStackPrice(stack).mixedPerMillion)
-    ))).toEqual(['$4.00', '$3.04', '$2.55', '$1.35', '$1.04', '$0.50'])
+    expect(
+      METERED_STACKS.map(stack =>
+        formatPerMillionRate(estimatePrompt2BlogStackPrice(stack).mixedPerMillion)
+      )
+    ).toEqual(['$4.00', '$3.04', '$2.55', '$1.35', '$1.04', '$0.50'])
   })
 
   it('keeps input and output rates visible instead of hiding their difference', () => {
-    const editorial = PROMPT2BLOG_MODEL_STACKS.find(
-      stack => stack.id === 'editorial-premium',
-    )!
+    const editorial = PROMPT2BLOG_MODEL_STACKS.find(stack => stack.id === 'editorial-premium')!
 
     const estimate = estimatePrompt2BlogStackPrice(editorial)
 
@@ -45,7 +45,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
     const claudeWriter: Prompt2BlogModelStackShape = {
       modelName: 'gemini-3.7-flash',
       writingModel: 'claude-opus-4-8',
-      auditModel: 'gemini-3.7-flash',
+      auditModel: 'gemini-3.7-flash'
     }
 
     const estimate = estimatePrompt2BlogStackPrice(claudeWriter)
@@ -62,7 +62,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
     const allClaude: Prompt2BlogModelStackShape = {
       modelName: 'claude-sonnet-5',
       writingModel: 'claude-opus-4-8',
-      auditModel: 'claude-sonnet-5',
+      auditModel: 'claude-sonnet-5'
     }
 
     const estimate = estimatePrompt2BlogStackPrice(allClaude)
@@ -70,6 +70,16 @@ describe('estimatePrompt2BlogStackPrice', () => {
     expect(estimate.mixedPerMillion).toBeNull()
     expect(formatPerMillionRate(estimate.mixedPerMillion)).toBe('—')
     expect(estimate.planRoles).toHaveLength(3)
+  })
+
+  it('prices Claude-led stacks from their Flash-Lite worker only', () => {
+    const led = PROMPT2BLOG_MODEL_STACKS.find(stack => stack.id === 'opus-led-high')!
+
+    const estimate = estimatePrompt2BlogStackPrice(led)
+
+    expect(estimate.planRoles).toEqual(['writingModel', 'auditModel'])
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.25')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$1.50')
   })
 
   it('does not mistake a Gemini model for a plan model', () => {

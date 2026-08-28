@@ -19,6 +19,14 @@ CLAUDE_WRITER_MODELS = (
     "claude-opus-4-8",
     "claude-opus-4-7",
     "claude-sonnet-5",
+    "claude-opus-5-medium",
+    "claude-opus-5-high",
+    "claude-opus-5-xhigh",
+    "claude-opus-5-max",
+    "claude-sonnet-5-medium",
+    "claude-sonnet-5-high",
+    "claude-sonnet-5-xhigh",
+    "claude-sonnet-5-max",
 )
 
 GOOGLE_WRITER_MODELS = (

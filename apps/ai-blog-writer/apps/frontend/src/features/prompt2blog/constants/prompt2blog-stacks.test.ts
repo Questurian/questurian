@@ -3,20 +3,20 @@ import {
   PROMPT2BLOG_MODEL_STACKS,
   PROMPT2BLOG_STACK_FAMILY_ORDER,
   resolvePrompt2BlogModelStack,
-  resolvePrompt2BlogWriterModel,
+  resolvePrompt2BlogWriterModel
 } from './prompt2blog.constants'
 import { isPlanAllowanceModel } from './prompt2blog-pricing'
 
-const CLAUDE_STACKS = PROMPT2BLOG_MODEL_STACKS.filter(
-  stack => stack.family === 'claude-writer',
-)
+const CLAUDE_STACKS = PROMPT2BLOG_MODEL_STACKS.filter(stack => stack.family === 'claude-writer')
+const CLAUDE_LED_STACKS = CLAUDE_STACKS.filter(stack => stack.id.includes('-led-'))
+const CLAUDE_WRITER_GRID = CLAUDE_STACKS.filter(stack => !stack.id.includes('-led-'))
 
 describe('Claude-writer run stacks', () => {
   it('is a 2x3 grid: two writers across three research tiers', () => {
     // The grid shape is the point. Comparing two runs is only informative when
     // exactly one thing differs between them, so every writer must appear
     // against every research tier.
-    const grid = CLAUDE_STACKS.map(stack => [stack.writingModel, stack.modelName])
+    const grid = CLAUDE_WRITER_GRID.map(stack => [stack.writingModel, stack.modelName])
 
     expect(grid).toEqual([
       ['claude-opus-5', 'gemini-3.1-pro-preview'],
@@ -24,18 +24,39 @@ describe('Claude-writer run stacks', () => {
       ['claude-opus-5', 'gemini-3.1-flash-lite'],
       ['claude-sonnet-5', 'gemini-3.1-pro-preview'],
       ['claude-sonnet-5', 'gemini-3.7-flash'],
-      ['claude-sonnet-5', 'gemini-3.1-flash-lite'],
+      ['claude-sonnet-5', 'gemini-3.1-flash-lite']
     ])
   })
 
-  it('never puts Claude on research or audit', () => {
-    // Not a UI convention. Claude writes and Gemini does the rest; a stack that
-    // quietly moved the grunt work onto the subscription would spend the
-    // owner's plan allowance on work it was never meant to do.
+  it('keeps research on Gemini and makes Claude judging explicit', () => {
     for (const stack of PROMPT2BLOG_MODEL_STACKS) {
       expect(isPlanAllowanceModel(stack.modelName)).toBe(false)
-      expect(isPlanAllowanceModel(stack.auditModel)).toBe(false)
     }
+
+    expect(CLAUDE_LED_STACKS).toHaveLength(8)
+    expect(CLAUDE_WRITER_GRID.every(stack => !isPlanAllowanceModel(stack.auditModel))).toBe(true)
+  })
+
+  it('uses only Flash-Lite for metered work on Claude-led stacks', () => {
+    for (const stack of CLAUDE_LED_STACKS) {
+      expect(stack.modelName).toBe('gemini-3.1-flash-lite')
+      expect(stack.auditModel).toBe(stack.writingModel)
+      expect(isPlanAllowanceModel(stack.auditModel)).toBe(true)
+    }
+  })
+
+  it('offers medium through max effort without exposing low', () => {
+    expect(CLAUDE_LED_STACKS.map(stack => stack.id)).toEqual([
+      'opus-led-medium',
+      'opus-led-high',
+      'opus-led-xhigh',
+      'opus-led-max',
+      'sonnet-led-medium',
+      'sonnet-led-high',
+      'sonnet-led-xhigh',
+      'sonnet-led-max'
+    ])
+    expect(CLAUDE_LED_STACKS.some(stack => stack.id.includes('low'))).toBe(false)
   })
 
   it('leaves the Gemini control group untouched', () => {
@@ -47,7 +68,7 @@ describe('Claude-writer run stacks', () => {
       'editorial-premium',
       'balanced',
       'best-value',
-      'economy',
+      'economy'
     ])
     expect(gemini.every(stack => !isPlanAllowanceModel(stack.writingModel))).toBe(true)
   })
@@ -77,9 +98,7 @@ describe('Claude-writer run stacks', () => {
 
   it('falls a stored selection back to the default rather than failing', () => {
     // A run saved under one configuration has to still open under another.
-    expect(resolvePrompt2BlogWriterModel('claude-opus-4-8')).toBe(
-      'gemini-3.1-pro-preview',
-    )
+    expect(resolvePrompt2BlogWriterModel('claude-opus-4-8')).toBe('gemini-3.1-pro-preview')
     expect(resolvePrompt2BlogWriterModel('not-a-model')).toBe('gemini-3.1-pro-preview')
   })
 })

@@ -16,6 +16,7 @@ from app.shared.writer_invocation import (
     invoke_anthropic_structured,
     invoke_writer_model,
 )
+from app.shared.writer_models import resolve_writer_model
 
 CLI_PATH = "/fake/bin/claude"
 
@@ -256,6 +257,9 @@ def test_system_prompt_is_constant_across_calls(monkeypatch, connected, provider
     [
         ("claude-sonnet-5", "sonnet"),
         ("claude-opus-5", "opus"),
+        ("claude-opus-5-medium", "opus"),
+        ("claude-opus-5-max", "opus"),
+        ("claude-sonnet-5-xhigh", "sonnet"),
         ("claude-haiku-4-5", "haiku"),
         ("claude-fable-5", "fable"),
         ("CLAUDE-SONNET-5", "sonnet"),
@@ -270,6 +274,14 @@ def test_model_names_resolve_through_an_allow_list(requested, expected):
     assert cli_writer.resolve_alias(requested) == expected
 
 
+@pytest.mark.parametrize("effort", ["medium", "high", "xhigh", "max"])
+@pytest.mark.parametrize("family", ["opus", "sonnet"])
+def test_pipeline_accepts_claude_effort_variants(family, effort):
+    requested = f"claude-{family}-5-{effort}"
+
+    assert resolve_writer_model(requested) == requested
+
+
 def test_a_flag_shaped_model_name_never_reaches_argv(
     monkeypatch, connected, provider_on
 ):
@@ -282,6 +294,27 @@ def test_a_flag_shaped_model_name_never_reaches_argv(
     args = calls[0]["args"]
     assert "--dangerously-skip-permissions" not in args
     assert args[args.index("--model") + 1] == cli_writer.DEFAULT_ALIAS
+
+
+@pytest.mark.parametrize("effort", ["medium", "high", "xhigh", "max"])
+def test_effort_variant_reaches_cli_argv(monkeypatch, connected, provider_on, effort):
+    calls = _capture(monkeypatch, TEXT_JSON)
+
+    cli_writer.invoke_text(
+        prompt="write something", model_name=f"claude-opus-5-{effort}"
+    )
+
+    args = calls[0]["args"]
+    assert args[args.index("--model") + 1] == "opus"
+    assert args[args.index("--effort") + 1] == effort
+
+
+def test_base_model_leaves_effort_at_cli_default(monkeypatch, connected, provider_on):
+    calls = _capture(monkeypatch, TEXT_JSON)
+
+    cli_writer.invoke_text(prompt="write something", model_name="claude-opus-5")
+
+    assert "--effort" not in calls[0]["args"]
 
 
 # --- Reading the reply ------------------------------------------------------
