@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from app.features.prompt2blog.content.outline_v3 import (
     format_v3_outline_for_prompt,
     sanitize_v3_outline,
@@ -181,6 +183,54 @@ def _validate(payload: dict[str, Any], target_word_count: int = 900):
     )
 
 
+@pytest.mark.parametrize("subject_mention", ["Medellín", "MEDELLIN"])
+def test_city_only_outline_wording_covers_city_country_primary_subject(
+    subject_mention: str,
+):
+    runtime = _runtime()
+    commission = json.loads(json.dumps(runtime.commission))
+    commission["primary_subject"] = "Medellín, Colombia"
+    commission["scope"]["references"] = []
+    payload = _outline_payload()
+    payload["sections"][0]["heading"] = f"What {subject_mention} costs now"
+    payload["sections"][0]["purpose"] = (
+        f"Establish the current cost baseline for {subject_mention}."
+    )
+
+    accepted, diagnostics = validate_v3_outline(
+        sanitize_v3_outline(payload),
+        commission=commission,
+        claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
+        requirement_ids={
+            item["requirement_id"] for item in runtime.evidence["requirements"]
+        },
+        target_word_count=900,
+    )
+
+    assert accepted is True
+    assert diagnostics["covers_primary_subject"] is True
+
+
+def test_unrelated_city_does_not_cover_city_country_primary_subject():
+    runtime = _runtime()
+    commission = json.loads(json.dumps(runtime.commission))
+    commission["primary_subject"] = "Medellín, Colombia"
+    commission["scope"]["references"] = []
+
+    accepted, diagnostics = validate_v3_outline(
+        sanitize_v3_outline(_outline_payload()),
+        commission=commission,
+        claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
+        requirement_ids={
+            item["requirement_id"] for item in runtime.evidence["requirements"]
+        },
+        target_word_count=900,
+    )
+
+    assert accepted is False
+    assert diagnostics["covers_primary_subject"] is False
+
+
 def test_a_context_only_place_cannot_organize_a_section():
     drifted = _outline_payload()
     drifted["sections"][2]["heading"] = "How Medellín compares"
@@ -203,15 +253,29 @@ def test_a_plan_cannot_cite_a_claim_the_evidence_does_not_contain():
 
 
 def test_a_plan_must_still_be_about_the_primary_subject():
-    unfocused = _outline_payload()
-    for section in unfocused["sections"]:
-        section["heading"] = section["heading"].replace("Lima", "the city")
-        section["purpose"] = section["purpose"].replace("Lima", "the city")
+    drifted = json.loads(json.dumps(_outline_payload()).replace("Lima", "Quito"))
 
-    accepted, diagnostics = _validate(unfocused)
+    accepted, diagnostics = _validate(drifted)
 
     assert accepted is False
     assert diagnostics["covers_primary_subject"] is False
+
+
+def test_sections_may_carry_the_subject_implicitly_when_the_framing_names_it():
+    """A strong plan names the subject once, then uses subject-specific detail.
+
+    Rejecting this shape discarded an otherwise valid Medellin plan whose seven
+    sections named districts and museums but never repeated the city.
+    """
+    implicit = _outline_payload()
+    for section in implicit["sections"]:
+        section["heading"] = section["heading"].replace("Lima", "the city")
+        section["purpose"] = section["purpose"].replace("Lima", "the city")
+
+    accepted, diagnostics = _validate(implicit)
+
+    assert accepted is True
+    assert diagnostics["covers_primary_subject"] is True
 
 
 def test_a_commission_aligned_plan_is_accepted_and_rendered_for_compose():
