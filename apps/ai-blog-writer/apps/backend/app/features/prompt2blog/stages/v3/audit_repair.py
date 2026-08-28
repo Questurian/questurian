@@ -7,7 +7,8 @@ from app.shared.prompts import ANTI_AI_TELLS_FULL
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
 from ...observability import _append_stage_trace
-from ...policies import is_better_quality
+from ...policies import decide_repair, is_better_quality
+from ...pricing import run_tokens_spent
 from ...prompts.editorial_v3 import (
     P2B_V3_QUALITY_AUDIT_PROMPT,
     P2B_V3_REPAIR_PROMPT,
@@ -144,16 +145,30 @@ def run_v3_quality_audit_stage(
         "current_stage": stage,
         "quality": quality,
         "quality_checks": checks,
+        # Read after the audit call, so the gate below judges the spend the run
+        # has actually reached rather than the one it had before this stage.
+        "tokens_spent": run_tokens_spent(dependencies.llm),
     }
     if is_better_quality(quality, state.get("best_quality")):
         updates["best_rewrite"] = rewrite
         updates["best_quality"] = quality
         updates["best_quality_checks"] = checks
 
+    # The same call the graph's conditional edge makes, on the same state, run
+    # here only to record it. The audit is where the operator's "what is wrong
+    # and what has this cost" answer belongs; the edge itself keeps no history.
+    decision = decide_repair({**state, **updates})
+    updates["repair_decision"] = decision.as_dict()
+
     dependencies.recorder.record_stage(
         run_id,
         stage,
-        {"quality": quality, "raw_response": raw_response, "attempt": attempt},
+        {
+            "quality": quality,
+            "raw_response": raw_response,
+            "attempt": attempt,
+            "repair_decision": decision.as_dict(),
+        },
     )
     _append_stage_trace(
         state["trace"],
@@ -164,7 +179,7 @@ def run_v3_quality_audit_stage(
         prompt=prompt,
         raw_response=raw_response,
         parsed=parsed,
-        output=quality,
+        output={"quality": quality, "repair_decision": decision.as_dict()},
     )
     return updates
 
@@ -287,6 +302,10 @@ def run_v3_quality_settle_stage(
         "reverted_to_earlier_draft": rolled_back,
         "final_overall_score": best_quality.get("overall_score"),
         "last_overall_score": state["quality"].get("overall_score"),
+        # Why the loop stopped here rather than repairing again. A settle that
+        # came of an exhausted budget and one that came of a passing draft are
+        # the same row without it.
+        "repair_decision": state.get("repair_decision"),
     }
     dependencies.recorder.record_stage(run_id, stage, settlement)
     _append_stage_trace(

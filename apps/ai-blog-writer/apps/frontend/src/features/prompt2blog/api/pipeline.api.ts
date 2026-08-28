@@ -6,6 +6,8 @@ import type {
   Prompt2BlogInputOptionsResponse,
   Prompt2BlogPipelineStage,
   Prompt2BlogResultResponse,
+  Prompt2BlogResumePlan,
+  Prompt2BlogResumeResponse,
   Prompt2BlogStatusResponse,
   Prompt2BlogV3StartResponse,
 } from '../types/pipeline.types'
@@ -61,6 +63,34 @@ export async function startPrompt2BlogV3Run(
   }
   if (body?.status === 'needs_research') return body
   throw new Error('Prompt2Blog v3 returned an unrecognized start response.')
+}
+
+/**
+ * Asks what resuming a failed run would do. Free and read-only, so the panel
+ * can decide whether to offer the button and what to say when it cannot.
+ */
+export async function getPrompt2BlogResumePlan(runId: string): Promise<Prompt2BlogResumePlan> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/resume/${runId}`)
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to check whether the run can be resumed')
+  }
+
+  return response.json()
+}
+
+/**
+ * Continues a failed run from the last stage it finished. The run keeps its
+ * id, so the caller keeps polling the status it was already polling.
+ */
+export async function resumePrompt2BlogRun(runId: string): Promise<Prompt2BlogResumeResponse> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/resume/${runId}`, { method: 'POST' })
+
+  if (!response.ok) {
+    throw await parseError(response, 'Failed to resume the run')
+  }
+
+  return response.json()
 }
 
 export async function getPrompt2BlogInputOptions(): Promise<Prompt2BlogInputOptionsResponse> {

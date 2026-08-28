@@ -42,6 +42,10 @@ class Prompt2BlogGraphState(TypedDict, total=False):
     quality_checks: dict[str, Any]
     repair_applied: bool
     repair_attempts: int
+    # Why the quality gate routed the way it did, and the run's spend at that
+    # moment. Written by the audit stage, read by finalize and the operator UI.
+    repair_decision: dict[str, Any]
+    tokens_spent: int | None
     best_rewrite: dict[str, Any]
     best_quality: dict[str, Any]
     best_quality_checks: dict[str, Any]
@@ -66,6 +70,10 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
 
     run_id: str
     request: PipelineV3RuntimeRequest
+    # How many times this run has been resumed after a failure. Zero on a
+    # first attempt; carried through every later leg so the article's own
+    # record says whether it was written in one pass.
+    resume_count: int
     commission: dict[str, Any]
     evidence: dict[str, Any]
     instructions: dict[str, Any]
@@ -94,6 +102,10 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     quality_checks: dict[str, Any]
     repair_applied: bool
     repair_attempts: int
+    # Why the quality gate routed the way it did, and the run's spend at that
+    # moment. Written by the audit stage, read by finalize and the operator UI.
+    repair_decision: dict[str, Any]
+    tokens_spent: int | None
     best_rewrite: dict[str, Any]
     best_quality: dict[str, Any]
     best_quality_checks: dict[str, Any]

@@ -86,6 +86,10 @@ def run_v3_finalize_stage(
         "run_id": run_id,
         "schema_version": 3,
         "status": "completed",
+        # How many times this article had to be picked back up after a failed
+        # leg. A finished run should be able to say whether it was written in
+        # one pass without an operator cross-reading the stage rows.
+        "resume_count": state.get("resume_count", 0),
         "pipeline_status": pipeline_status,
         "readiness_blockers": list(verdict.blockers),
         "commission": commission,
@@ -138,6 +142,10 @@ def run_v3_finalize_stage(
             },
             "repair_applied": state.get("repair_applied", False),
             "repair_attempts": state.get("repair_attempts", 0),
+            # A `needs_revision` article the pipeline chose not to keep paying
+            # for and one the auditor simply failed look identical without
+            # this. It carries the reason, the problems and the spend.
+            "repair_decision": state.get("repair_decision"),
             "groundedness": state["groundedness"],
             "outline_accepted": state.get("outline_accepted", False),
             "outline_section_count": len(

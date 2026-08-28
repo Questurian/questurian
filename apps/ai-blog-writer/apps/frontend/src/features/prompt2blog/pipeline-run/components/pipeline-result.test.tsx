@@ -76,6 +76,68 @@ describe('PipelineV3Result', () => {
     expect(screen.getByText(/Answered/)).toBeTruthy()
   })
 
+  it('says the pipeline stopped paying for repairs rather than only that the article is weak', () => {
+    renderResult(
+      <PipelineV3Result
+        debugData={null}
+        result={{
+          ...v3Payload,
+          pipeline_status: 'needs_revision',
+          readiness_blockers: ['quality_score_below_threshold'],
+          quality_review: {
+            ...v3Payload.quality_review,
+            repair_decision: {
+              route: 'settle',
+              reason: 'token_budget_reached',
+              problems: ['quality_score_below_threshold'],
+              attempts_used: 0,
+              attempts_allowed: 1,
+              tokens_spent: 260_000,
+              tokens_per_attempt: 90_000,
+              token_budget: 320_000,
+            },
+          },
+        }}
+        showDebug={false}
+        stageArticleUrl={null}
+        onToggleDebug={() => {}}
+      />,
+    )
+
+    expect(screen.getByText(/Repair skipped to stay inside the run budget/)).toBeTruthy()
+    expect(screen.getByText(/260,000 of 320,000 tokens spent/)).toBeTruthy()
+    expect(screen.getByText(/need a human edit/)).toBeTruthy()
+  })
+
+  it('does not mention repair on a run the auditor simply passed', () => {
+    renderResult(
+      <PipelineV3Result
+        debugData={null}
+        result={{
+          ...v3Payload,
+          quality_review: {
+            ...v3Payload.quality_review,
+            repair_decision: {
+              route: 'settle',
+              reason: 'draft_passed_audit',
+              problems: [],
+              attempts_used: 0,
+              attempts_allowed: 1,
+              tokens_spent: 120_000,
+              tokens_per_attempt: 90_000,
+              token_budget: 320_000,
+            },
+          },
+        }}
+        showDebug={false}
+        stageArticleUrl={null}
+        onToggleDebug={() => {}}
+      />,
+    )
+
+    expect(screen.queryByText(/Repair:/)).toBeNull()
+  })
+
   it('names what held a run back rather than only reporting the status', () => {
     renderResult(
       <PipelineV3Result

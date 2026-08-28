@@ -37,11 +37,48 @@ from ..models import Prompt2BlogInputRequest
 from ..observability import _read_langgraph_trace
 from ..models import PipelineV3RuntimeRequest
 from ..orchestrator import run_full_pipeline
-from ..orchestrator_v3 import run_pipeline_v3
+from ..orchestrator_v3 import resume_pipeline_v3, run_pipeline_v3
+from ..resume_v3 import plan_resume
 from ..run_recorder import RunRecorder
 from ..support import _clean_string_list, _safe_str
 
 router = APIRouter()
+
+# One sentence per refusal, written for the operator rather than the log. Every
+# key is a `ResumePlan.reason`; a reason with no entry falls back to the generic
+# line, which is why the table can never make a refusal disappear.
+RESUME_REFUSAL_MESSAGES = {
+    "run_not_failed": (
+        "This run has not failed, so there is nothing to resume."
+    ),
+    "no_snapshot": (
+        "This run failed before it finished a single stage, so there is no "
+        "saved work to continue from. Start a new run."
+    ),
+    "snapshot_version_unsupported": (
+        "This run's saved state was written by an older version of the "
+        "pipeline and cannot be trusted. Start a new run."
+    ),
+    "schema_version_unsupported": (
+        "Only v3 runs can be resumed."
+    ),
+    "commission_mismatch": (
+        "The saved state does not match the commission this run started "
+        "with, so resuming it could publish mismatched work. Start a new run."
+    ),
+    "snapshot_unreadable": (
+        "This run's saved state does not name a stage to continue from. "
+        "Start a new run."
+    ),
+    "run_already_finished": (
+        "This run had already finished its article; there is nothing left to "
+        "resume."
+    ),
+    "resume_limit_reached": (
+        "This run has already been resumed the maximum number of times. "
+        "Whatever is failing is not something resuming can fix."
+    ),
+}
 
 
 def _run_full_pipeline_background(
@@ -82,6 +119,23 @@ def _run_pipeline_v3_background(
         )
         with quota_breaker_scope(), scope:
             run_pipeline_v3(run_id, request)
+    except Exception:  # noqa: BLE001
+        return
+
+
+def _resume_pipeline_v3_background(
+    run_id: str,
+    credential: Prompt2BlogCredential | None,
+) -> None:
+    """Keep background-task failures contained after the graph records them."""
+    try:
+        scope = (
+            prompt2blog_credential_scope(credential.token)
+            if credential is not None
+            else nullcontext()
+        )
+        with quota_breaker_scope(), scope:
+            resume_pipeline_v3(run_id)
     except Exception:  # noqa: BLE001
         return
 
@@ -259,6 +313,56 @@ async def start_pipeline_v3(
     )
 
 
+@router.get("/resume/{run_id}", dependencies=[Depends(require_staff)])
+async def preview_resume(run_id: str) -> JSONResponse:
+    """Report whether a failed run can be picked up, and from where.
+
+    Read-only and free. An operator deciding whether to reconnect an account,
+    resume, or start over needs to see what the failed run already produced
+    and what it already cost before spending anything on the answer.
+    """
+    plan = plan_resume(run_id)
+    if plan.reason == "run_not_found":
+        raise HTTPException(status_code=404, detail="Run not found.")
+    if plan.reason == "not_prompt2blog":
+        raise HTTPException(status_code=404, detail="Run not found.")
+    return JSONResponse(plan.as_dict())
+
+
+@router.post("/resume/{run_id}")
+async def resume_run(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    staff_user=Depends(require_staff),
+) -> JSONResponse:
+    """Continue a failed v3 run from the last stage it finished.
+
+    The run keeps its `run_id`, so the status the client is already polling,
+    the stage rows, the token ledger and the finished article all stay on one
+    run. A refusal costs nothing and names the check that failed.
+    """
+    plan = plan_resume(run_id)
+    if plan.reason in {"run_not_found", "not_prompt2blog"}:
+        raise HTTPException(status_code=404, detail="Run not found.")
+    if not plan.resumable:
+        raise HTTPException(
+            status_code=409,
+            detail=RESUME_REFUSAL_MESSAGES.get(
+                plan.reason, "This run cannot be resumed."
+            ),
+        )
+
+    credential = _prompt2blog_credential_for_run()
+    background_tasks.add_task(_resume_pipeline_v3_background, run_id, credential)
+    return JSONResponse(
+        {
+            "message": "Prompt2Blog pipeline v3 resumed",
+            "status": "queued",
+            **plan.as_dict(),
+        }
+    )
+
+
 @router.get("/status/{run_id}")
 async def get_status(run_id: str) -> JSONResponse:
     """Get status for a Prompt2Blog pipeline run."""
@@ -333,6 +437,10 @@ async def debug_run(run_id: str) -> JSONResponse:
         "stage_v3_title",
         "stage_v3_finalize",
         "pipeline_v3",
+        # Not `resume_snapshot`: it holds a whole graph state, and this
+        # endpoint returns every row it names in one response.
+        "pipeline_resume_v3",
+        "pipeline_failure",
         "langgraph_trace",
     ]:
         stage_data = read_stage_result(run_id, stage_name)

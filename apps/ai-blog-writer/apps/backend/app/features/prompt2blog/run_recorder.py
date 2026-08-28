@@ -5,7 +5,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from app.core import write_artifact, write_stage_result, write_status
+from app.core import (
+    delete_stage_result,
+    write_artifact,
+    write_stage_result,
+    write_status,
+)
 from app.shared.provider_faults import provider_fault_kind
 
 from .config import FEATURE_NAME
@@ -14,6 +19,7 @@ from .observability import _now_iso
 logger = logging.getLogger(__name__)
 
 StageWriter = Callable[[str, str, dict[str, Any]], None]
+StageDeleter = Callable[[str, str], None]
 ArtifactWriter = Callable[[str, dict[str, Any]], None]
 
 # The stage row for the run's append-only usage ledger. Written under one name
@@ -45,6 +51,7 @@ class RunRecorder:
 
     status_writer: Callable[..., None] = write_status
     stage_writer: StageWriter = write_stage_result
+    stage_deleter: StageDeleter = delete_stage_result
     artifact_writer: ArtifactWriter = write_artifact
     clock: Callable[[], str] = _now_iso
     # Left unset by the pipeline's own tests and by any caller that builds a
@@ -158,6 +165,23 @@ class RunRecorder:
             },
         )
         self._write_usage_ledger(run_id)
+
+    def discard_stage(self, run_id: str, stage: str) -> None:
+        """Drop one stage row once nothing will read it again.
+
+        Best effort by design. The only caller is the resume snapshot, which
+        is housekeeping: a run that has already produced its article must not
+        fail because the cleanup delete did.
+        """
+        try:
+            self.stage_deleter(run_id, stage)
+        except Exception as exc:  # pragma: no cover -- housekeeping only
+            logger.warning(
+                "Prompt2Blog could not discard stage %s for run %s: %s",
+                stage,
+                run_id,
+                exc,
+            )
 
     def record_artifact(self, run_id: str, artifact: dict[str, Any]) -> None:
         self.artifact_writer(run_id, artifact)

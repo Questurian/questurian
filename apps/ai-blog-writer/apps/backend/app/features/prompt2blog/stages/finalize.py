@@ -135,6 +135,7 @@ def run_finalize_stage(
             "word_count_estimate": final_checks["word_count_estimate"],
             "repair_applied": state["repair_applied"],
             "repair_attempts": state.get("repair_attempts", 0),
+            "repair_decision": state.get("repair_decision"),
             "editorial_augmentation_rolled_back": state.get(
                 "augmentation_rolled_back", False
             ),

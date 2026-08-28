@@ -11,7 +11,12 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from .config import P2B_AUGMENTATION_MIN_RETENTION_RATIO, P2B_REPAIR_MAX_ATTEMPTS
+from .config import (
+    P2B_AUGMENTATION_MIN_RETENTION_RATIO,
+    P2B_REPAIR_ESTIMATED_TOKENS,
+    P2B_REPAIR_MAX_ATTEMPTS,
+    P2B_RUN_TOKEN_BUDGET,
+)
 from .quality import (
     HARD_CONSTRAINT_CHECK_KEYS,
     REPAIR_SCORE_THRESHOLD,
@@ -129,18 +134,95 @@ def is_better_quality(
     return _quality_rank(candidate) > _quality_rank(incumbent)
 
 
-def route_quality_gate(state: dict[str, Any]) -> str:
-    """Decide whether to spend another repair attempt or settle on the best
-    draft seen so far."""
+@dataclass(frozen=True)
+class RepairDecision:
+    """Whether to spend a repair attempt, and everything that decided it.
+
+    The gate used to answer with a bare "repair"/"settle" string, so a run that
+    stopped short left no record of why: an operator reading a `needs_revision`
+    article could not tell a draft the auditor had passed on from one the
+    pipeline refused to keep paying for. The reason, the problems found, and
+    the spend at the moment of the decision all travel together.
+    """
+
+    route: str
+    reason: str
+    problems: tuple[str, ...]
+    attempts_used: int
+    attempts_allowed: int
+    tokens_spent: int | None
+    tokens_per_attempt: int
+    token_budget: int
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "route": self.route,
+            "reason": self.reason,
+            "problems": list(self.problems),
+            "attempts_used": self.attempts_used,
+            "attempts_allowed": self.attempts_allowed,
+            "tokens_spent": self.tokens_spent,
+            "tokens_per_attempt": self.tokens_per_attempt,
+            "token_budget": self.token_budget,
+        }
+
+
+def decide_repair(state: dict[str, Any]) -> RepairDecision:
+    """Decide whether another repair attempt is worth spending.
+
+    Three refusals, in the order they are cheapest to establish:
+
+    1. The draft is good enough -- nothing to repair.
+    2. The attempt allowance is used up. One automatic attempt, not two: the
+       second was buying score points at a whole extra repair chain's price.
+    3. The run has spent so much already that the next attempt would carry it
+       past `P2B_RUN_TOKEN_BUDGET`. Refusing here is what makes a bad run's
+       cost predictable instead of open-ended.
+
+    A run with no token tracker (every test double) skips only the third
+    check; it behaves exactly as it did before the budget existed.
+    """
     quality = _safe_dict(state.get("quality"))
     checks = _safe_dict(state.get("quality_checks"))
     attempts = _safe_int(state.get("repair_attempts"), default=0)
+    tokens_spent = state.get("tokens_spent")
+    tokens_spent = (
+        _safe_int(tokens_spent, default=0) if isinstance(tokens_spent, int) else None
+    )
+    problems = evaluate_readiness(
+        quality=quality,
+        checks=checks,
+        groundedness=_safe_dict(quality.get("groundedness")),
+    ).blockers
+
+    def verdict(route: str, reason: str) -> RepairDecision:
+        return RepairDecision(
+            route=route,
+            reason=reason,
+            problems=problems,
+            attempts_used=attempts,
+            attempts_allowed=P2B_REPAIR_MAX_ATTEMPTS,
+            tokens_spent=tokens_spent,
+            tokens_per_attempt=P2B_REPAIR_ESTIMATED_TOKENS,
+            token_budget=P2B_RUN_TOKEN_BUDGET,
+        )
 
     if not _should_run_repair(quality, checks):
-        return "settle"
+        return verdict("settle", "draft_passed_audit")
     if attempts >= P2B_REPAIR_MAX_ATTEMPTS:
-        return "settle"
-    return "repair"
+        return verdict("settle", "attempt_limit_reached")
+    if (
+        tokens_spent is not None
+        and tokens_spent + P2B_REPAIR_ESTIMATED_TOKENS > P2B_RUN_TOKEN_BUDGET
+    ):
+        return verdict("settle", "token_budget_reached")
+    return verdict("repair", "repairable_problems_found")
+
+
+def route_quality_gate(state: dict[str, Any]) -> str:
+    """Decide whether to spend another repair attempt or settle on the best
+    draft seen so far."""
+    return decide_repair(state).route
 
 
 def _count_section_headings(content: str) -> int:

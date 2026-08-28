@@ -9,7 +9,8 @@ from ..graph.state import Prompt2BlogGraphState
 from ..observability import _append_stage_trace
 from ..prompts.generation import SEO_SAFE_CONTENT_GENERATION_GUIDELINES
 from ..prompts.quality import P2B_QUALITY_AUDIT_PROMPT, P2B_REPAIR_PROMPT
-from ..policies import is_better_quality
+from ..policies import decide_repair, is_better_quality
+from ..pricing import run_tokens_spent
 from ..schemas import REWRITE_SCHEMA
 from ..quality import (
     CONSTRAINT_MEASUREMENT_KEYS,
@@ -96,16 +97,26 @@ def run_quality_audit_stage(
         "current_stage": stage,
         "quality": quality,
         "quality_checks": checks,
+        "tokens_spent": run_tokens_spent(dependencies.llm),
     }
     if is_better_quality(quality, state.get("best_quality")):
         updates["best_rewrite"] = rewrite
         updates["best_quality"] = quality
         updates["best_quality_checks"] = checks
 
+    # Recorded, not routed on: the graph's edge makes this same call itself.
+    decision = decide_repair({**state, **updates})
+    updates["repair_decision"] = decision.as_dict()
+
     dependencies.recorder.record_stage(
         run_id,
         stage,
-        {"quality": quality, "raw_response": raw_response, "attempt": attempt},
+        {
+            "quality": quality,
+            "raw_response": raw_response,
+            "attempt": attempt,
+            "repair_decision": decision.as_dict(),
+        },
     )
     _append_stage_trace(
         state["trace"],
@@ -239,6 +250,7 @@ def run_quality_settle_stage(
         "reverted_to_earlier_draft": rolled_back,
         "final_overall_score": best_quality.get("overall_score"),
         "last_overall_score": state["quality"].get("overall_score"),
+        "repair_decision": state.get("repair_decision"),
     }
     dependencies.recorder.record_stage(run_id, stage, settlement)
     _append_stage_trace(

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { buildStageArticleUrl } from '../../../blogArticles'
 import {
+  resumePrompt2BlogRun,
   type Prompt2BlogV3NeedsResearchResponse,
   type Prompt2BlogV3Request,
 } from '../../api'
@@ -87,6 +88,8 @@ export function usePrompt2BlogPipelineRun({
   const {
     pipelineStatus,
     pipelineDebugData,
+    resumePlan,
+    setResumePlan,
     setPipelineDebugData,
     loadingLabel,
     setLoadingLabel,
@@ -191,6 +194,51 @@ export function usePrompt2BlogPipelineRun({
     startPipeline,
   ])
 
+  /**
+   * Continues the failed run instead of buying it again.
+   *
+   * Deliberately not `run()` with a flag: `run()` starts a new run from the
+   * current form, which is the wrong thing entirely for a run that already has
+   * an outline, a draft and an audit stored against its own id. This keeps the
+   * same run id, so the poller and every link the operator has stay valid.
+   */
+  const resume = useCallback(() => {
+    if (!pipelineRunId) return
+    resetTerminalHandled()
+    resetStatusError()
+    clearLifecycleState()
+    setLoadingLabel('Resuming the run...')
+
+    void resumePrompt2BlogRun(pipelineRunId)
+      .then(plan => {
+        appendPipelineLog(
+          `Resuming run ${pipelineRunId} from ${plan.resume_from_stage}. `
+          + 'Everything before it is kept.',
+        )
+        setLoadingLabel('Running final article pipeline...')
+        setSourceStep('pipeline_running')
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Failed to resume the run'
+        setError(message)
+        appendPipelineLog(`Resume failed: ${message}`, 'error')
+        setLoadingLabel('')
+        // The run is still failed and still the operator's to act on, so the
+        // panel keeps showing why rather than losing the state it just cleared.
+        setResumePlan(null)
+      })
+  }, [
+    appendPipelineLog,
+    clearLifecycleState,
+    pipelineRunId,
+    resetStatusError,
+    resetTerminalHandled,
+    setError,
+    setLoadingLabel,
+    setResumePlan,
+    setSourceStep,
+  ])
+
   const reset = useCallback(() => {
     resetTerminalHandled()
     resetStartPipeline()
@@ -239,7 +287,9 @@ export function usePrompt2BlogPipelineRun({
     needsResearch,
     dismissNeedsResearch: () => setNeedsResearch(null),
     pipelineVersion,
+    resumePlan,
     run,
+    resume,
     reset,
   }
 }

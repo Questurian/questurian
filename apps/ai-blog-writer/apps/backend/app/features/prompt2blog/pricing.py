@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -241,6 +244,85 @@ class Prompt2BlogTokenUsageTracker:
     stage_attempts: dict[str, int] = field(default_factory=dict)
     current_stage: str | None = None
     current_attempt: int = 0
+
+    @classmethod
+    def from_ledger(cls, ledger: Any) -> "Prompt2BlogTokenUsageTracker":
+        """Rebuild a tracker from a ledger an earlier leg of this run wrote.
+
+        A resumed run has to keep counting where the failed one stopped. If it
+        started from zero the repair budget would hand out an attempt the run
+        could not afford, and the finished article's cost receipt would report
+        only the cheap tail rather than what the article really cost.
+
+        The stored call rows are replayed rather than re-priced: each row
+        already carries the cost and the basis that were decided when the call
+        was made, so a rate-table change between the two legs cannot rewrite
+        history. A ledger that is missing or malformed yields an empty tracker,
+        which under-counts -- the same direction `run_tokens_spent` is already
+        allowed to be wrong in.
+        """
+        tracker = cls()
+        rows = ledger.get("calls") if isinstance(ledger, dict) else None
+        if not isinstance(rows, list):
+            return tracker
+        for row in rows:
+            if not isinstance(row, dict):
+                continue
+            stage = str(row.get("stage") or UNATTRIBUTED_STAGE)
+            attempt = _token_count(row.get("attempt")) or 1
+            model = str(row.get("model") or "")
+            cost = row.get("cost_usd")
+            basis = row.get("cost_basis")
+            tracker.calls.append(
+                {
+                    "seq": len(tracker.calls) + 1,
+                    "stage": stage,
+                    "attempt": attempt,
+                    "model": model,
+                    **{key: _token_count(row.get(key)) for key in TOKEN_KEYS},
+                    "calls": 1,
+                    "metered": bool(row.get("metered")),
+                    "cost_usd": cost,
+                    "cost_basis": basis,
+                }
+            )
+            entry = tracker.calls[-1]
+            tracker.successful_calls += 1
+            # The next `begin_stage` for this stage opens the attempt after the
+            # highest one the earlier leg reached, so a stage that ran before
+            # the failure keeps its own row instead of being overwritten.
+            tracker.stage_attempts[stage] = max(
+                tracker.stage_attempts.get(stage, 0), attempt
+            )
+            if not entry["metered"]:
+                continue
+            tracker.measured_calls += 1
+            totals = tracker.by_model.setdefault(
+                model,
+                {
+                    "input_tokens": 0,
+                    "output_tokens": 0,
+                    "reasoning_tokens": 0,
+                    "cached_input_tokens": 0,
+                    "total_tokens": 0,
+                    "calls": 0,
+                    "estimated_cost_usd": 0.0,
+                    "unpriced_calls": 0,
+                    "cost_bases": set(),
+                },
+            )
+            totals["calls"] += 1
+            for key in TOKEN_KEYS:
+                totals[key] += entry[key]
+            if isinstance(cost, (int, float)) and basis in {
+                COST_BASIS_MEASURED,
+                COST_BASIS_RATE_TABLE,
+            }:
+                totals["estimated_cost_usd"] += float(cost)
+                totals["cost_bases"].add(basis)
+            else:
+                totals["unpriced_calls"] += 1
+        return tracker
 
     def totals(self) -> dict[str, int]:
         return {
@@ -532,3 +614,27 @@ class Prompt2BlogTokenUsageTracker:
             "by_attempt": attempt_rows,
             "pricing_note": _pricing_note(measured_models),
         }
+
+
+def run_tokens_spent(llm: Any) -> int | None:
+    """Tokens this run has spent so far, or None when nothing is counting.
+
+    The budget gate reads this. It returns None rather than 0 for a caller
+    with no tracker -- every test double, and any caller that builds its own
+    LLM adapter -- because 0 would read as "nothing spent yet" and hand out an
+    attempt the gate was never asked to judge.
+
+    The figure is a floor, not a total: a provider that reports no usage (the
+    Claude CLI's subscription calls) contributes a metered zero. Under-counting
+    spends an attempt the old code would also have spent, which is the safe
+    direction to be wrong in.
+    """
+    tracker = getattr(llm, "usage_tracker", None)
+    totals = getattr(tracker, "totals", None)
+    if not callable(totals):
+        return None
+    try:
+        return int(totals().get("total_tokens", 0))
+    except Exception as exc:  # pragma: no cover -- telemetry only
+        logger.warning("Prompt2Blog token budget read failed: %s", exc)
+        return None

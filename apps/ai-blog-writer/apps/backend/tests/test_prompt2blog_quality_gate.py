@@ -4,13 +4,16 @@ import pytest
 
 from app.features.prompt2blog.config import (
     P2B_AUGMENTATION_MIN_RETENTION_RATIO,
+    P2B_REPAIR_ESTIMATED_TOKENS,
     P2B_REPAIR_MAX_ATTEMPTS,
+    P2B_RUN_TOKEN_BUDGET,
 )
 from app.features.prompt2blog.graph.topology import (
     GENERATION_NODES,
     build_prompt2blog_graph,
 )
 from app.features.prompt2blog.policies import (
+    decide_repair,
     evaluate_augmentation,
     is_better_quality,
     route_quality_gate,
@@ -60,6 +63,99 @@ def test_gate_stops_spending_attempts_once_the_budget_is_gone():
     }
 
     assert route_quality_gate(state) == "settle"
+
+
+def test_only_one_repair_attempt_is_automatic():
+    # Two automatic attempts made a hard article cost a second whole repair
+    # chain -- rewrite, anti-AI pass, grounding, re-audit -- for a point or
+    # two of score. The second attempt is now the operator's call, not the
+    # pipeline's.
+    assert P2B_REPAIR_MAX_ATTEMPTS == 1
+
+    failing = {
+        "quality": {"audit_complete": True, "overall_score": 3},
+        "quality_checks": PASSING_CHECKS,
+        "repair_attempts": 1,
+    }
+
+    decision = decide_repair(failing)
+    assert decision.route == "settle"
+    assert decision.reason == "attempt_limit_reached"
+
+
+def test_gate_refuses_a_repair_that_would_break_the_token_budget():
+    state = {
+        "quality": {"audit_complete": True, "overall_score": 3},
+        "quality_checks": PASSING_CHECKS,
+        "repair_attempts": 0,
+        "tokens_spent": P2B_RUN_TOKEN_BUDGET - P2B_REPAIR_ESTIMATED_TOKENS + 1,
+    }
+
+    decision = decide_repair(state)
+    assert decision.route == "settle"
+    assert decision.reason == "token_budget_reached"
+    assert route_quality_gate(state) == "settle"
+
+
+def test_gate_still_buys_the_first_repair_inside_the_budget():
+    state = {
+        "quality": {"audit_complete": True, "overall_score": 3},
+        "quality_checks": PASSING_CHECKS,
+        "repair_attempts": 0,
+        "tokens_spent": P2B_RUN_TOKEN_BUDGET - P2B_REPAIR_ESTIMATED_TOKENS,
+    }
+
+    assert decide_repair(state).route == "repair"
+
+
+def test_budget_check_is_skipped_when_nothing_is_counting_tokens():
+    # `tokens_spent` is absent for any caller without a usage tracker. Absent
+    # must not read as "spent nothing" or as "spent everything"; the run
+    # behaves exactly as it did before the budget existed.
+    state = {
+        "quality": {"audit_complete": True, "overall_score": 3},
+        "quality_checks": PASSING_CHECKS,
+        "repair_attempts": 0,
+    }
+
+    decision = decide_repair(state)
+    assert decision.route == "repair"
+    assert decision.tokens_spent is None
+
+
+def test_decision_carries_the_problems_and_the_spend():
+    state = {
+        "quality": {
+            "audit_complete": True,
+            "overall_score": 4,
+            "groundedness": {"checked": True, "grounded": True},
+        },
+        "quality_checks": {**PASSING_CHECKS, "cta_present": False},
+        "repair_attempts": 1,
+        "tokens_spent": 120_000,
+    }
+
+    decision = decide_repair(state).as_dict()
+    assert decision["reason"] == "attempt_limit_reached"
+    assert decision["problems"] == ["quality_score_below_threshold", "cta_present"]
+    assert decision["tokens_spent"] == 120_000
+    assert decision["attempts_used"] == 1
+    assert decision["attempts_allowed"] == P2B_REPAIR_MAX_ATTEMPTS
+
+
+def test_a_passing_draft_settles_without_blaming_the_budget():
+    state = {
+        "quality": {
+            "audit_complete": True,
+            "overall_score": 9,
+            "groundedness": {"checked": True, "grounded": True},
+        },
+        "quality_checks": PASSING_CHECKS,
+        "repair_attempts": 0,
+        "tokens_spent": P2B_RUN_TOKEN_BUDGET * 2,
+    }
+
+    assert decide_repair(state).reason == "draft_passed_audit"
 
 
 def test_keep_best_prefers_the_higher_score():

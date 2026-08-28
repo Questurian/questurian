@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
-import type { Prompt2BlogV3PipelinePayload } from '../../api'
+import type {
+  Prompt2BlogRepairDecision,
+  Prompt2BlogV3PipelinePayload,
+} from '../../api'
 import {
   attachedResearchSummary,
   researchStatusLabel,
@@ -20,6 +23,30 @@ interface PipelineV3ResultProps {
  * evidence it was written from, because that is what makes a finished v3 run
  * auditable without replaying it or trusting the prose.
  */
+/**
+ * What the pipeline decided about repairing this draft, in the operator's
+ * terms. A run that stopped because it had spent enough and one that stopped
+ * because the draft was fine both end in `needs_revision`/`ready_for_staging`
+ * alone, and the difference is the whole point of reading this line.
+ */
+function repairDecisionNote(decision: Prompt2BlogRepairDecision): string | null {
+  const spent =
+    decision.tokens_spent === null
+      ? 'spend not measured'
+      : `${decision.tokens_spent.toLocaleString()} of ${decision.token_budget.toLocaleString()} tokens spent`
+
+  switch (decision.reason) {
+    case 'attempt_limit_reached':
+      return `Stopped after ${decision.attempts_used} of ${decision.attempts_allowed} automatic repair attempts — ${spent}. Remaining problems need a human edit.`
+    case 'token_budget_reached':
+      return `Repair skipped to stay inside the run budget — ${spent}, and another attempt costs about ${decision.tokens_per_attempt.toLocaleString()}. Remaining problems need a human edit.`
+    case 'repairable_problems_found':
+      return `Repair was still running when this was recorded — ${spent}.`
+    default:
+      return null
+  }
+}
+
 export function PipelineV3Result({
   debugData,
   result,
@@ -29,6 +56,8 @@ export function PipelineV3Result({
 }: PipelineV3ResultProps) {
   const requirementStatus = result.evidence_receipt?.requirement_status ?? {}
   const requirementIds = Object.keys(requirementStatus)
+  const repairDecision = result.quality_review.repair_decision
+  const repairNote = repairDecision ? repairDecisionNote(repairDecision) : null
 
   return (
     <div className="p2b-final-result">
@@ -66,6 +95,11 @@ export function PipelineV3Result({
       {result.readiness_blockers.length > 0 && (
         <p>
           <strong>Held back by:</strong> {result.readiness_blockers.join(', ')}
+        </p>
+      )}
+      {repairNote && (
+        <p>
+          <strong>Repair:</strong> {repairNote}
         </p>
       )}
       <p>

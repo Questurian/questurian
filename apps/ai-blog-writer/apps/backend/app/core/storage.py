@@ -109,6 +109,19 @@ def read_stage_result(run_id: str, stage: str) -> Optional[Dict[str, Any]]:
         return json.loads(row["data"])
 
 
+def delete_stage_result(run_id: str, stage: str) -> None:
+    """Drop one stage row, leaving the rest of the run intact.
+
+    Written for the resume snapshot, which is the one stage row that must not
+    outlive the run it describes: it holds a whole graph state, and a finished
+    run has an artifact instead.
+    """
+    with get_db_connection() as conn:
+        conn.execute(
+            "DELETE FROM stages WHERE run_id = ? AND stage = ?", (run_id, stage)
+        )
+
+
 def read_all_stage_results(run_id: str) -> Dict[str, Any]:
     """Read every stored stage result for a run, keyed by stage name."""
     with get_db_connection() as conn:

@@ -9,8 +9,10 @@ import {
 } from 'react'
 import { usePipelineRunPoll, useTerminalPipelineRun } from '../../../pipelineRuns'
 import {
+  getPrompt2BlogResumePlan,
   getPrompt2BlogStatus,
   type Prompt2BlogDebugStages,
+  type Prompt2BlogResumePlan,
   type Prompt2BlogStatusResponse,
 } from '../../api'
 import { PIPELINE_STAGE_LABELS, describePipelineFailure } from '../pipeline-status'
@@ -45,6 +47,10 @@ export function usePrompt2BlogRunLifecycle({
 }: UsePrompt2BlogRunLifecycleOptions) {
   const [pipelineStatus, setPipelineStatus] = useState<Prompt2BlogStatusResponse | null>(null)
   const [pipelineDebugData, setPipelineDebugData] = useState<Prompt2BlogDebugStages | null>(null)
+  // Only ever set from a failed run. A resume is offered because the backend
+  // said this run has stored work to continue from, never because the UI
+  // guessed from the stage it stopped at.
+  const [resumePlan, setResumePlan] = useState<Prompt2BlogResumePlan | null>(null)
   const [loadingLabel, setLoadingLabel] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [terminalResetKey, setTerminalResetKey] = useState(0)
@@ -81,6 +87,7 @@ export function usePrompt2BlogRunLifecycle({
   const clearLifecycleState = useCallback(() => {
     setPipelineStatus(null)
     setPipelineDebugData(null)
+    setResumePlan(null)
     setLoadingLabel('')
     setError(null)
     lastStatusStageRef.current = null
@@ -143,6 +150,7 @@ export function usePrompt2BlogRunLifecycle({
       }
 
       if (debugPayload?.stages) setPipelineDebugData(debugPayload.stages)
+      setResumePlan(null)
       appendPipelineLog('Pipeline completed successfully.')
       setSourceStep('pipeline_complete')
       setLoadingLabel('')
@@ -172,6 +180,27 @@ export function usePrompt2BlogRunLifecycle({
       appendPipelineLog(`Pipeline debug fetch failed: ${message}`, 'error')
     }
 
+    // Asked after the failure is already on screen, and never allowed to
+    // replace it: whether the run can be picked back up is extra information,
+    // not the reason the run stopped.
+    try {
+      const plan = await getPrompt2BlogResumePlan(pipelineRunId)
+      if (isCancelled()) return
+      setResumePlan(plan)
+      if (plan.resumable) {
+        appendPipelineLog(
+          `Saved work found: this run can continue from ${
+            PIPELINE_STAGE_LABELS[plan.resume_from_stage as Prompt2BlogStatusResponse['stage']]
+            || plan.resume_from_stage
+          } instead of starting over.`,
+        )
+      }
+    } catch (err) {
+      if (isCancelled()) return
+      const message = err instanceof Error ? err.message : 'Resume check failed'
+      appendPipelineLog(`Resume check failed: ${message}`, 'error')
+    }
+
     setSourceStep('edit')
     setLoadingLabel('')
   }, [appendPipelineLog, pipelineRunId, setPipelineResult, setSourceStep])
@@ -195,6 +224,8 @@ export function usePrompt2BlogRunLifecycle({
   return {
     pipelineStatus,
     pipelineDebugData,
+    resumePlan,
+    setResumePlan,
     setPipelineDebugData,
     loadingLabel,
     setLoadingLabel,

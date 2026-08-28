@@ -18,7 +18,10 @@ from .models import (  # noqa: F401
     SynthesizeResponse,
 )
 from .orchestrator import run_full_pipeline, run_pipeline_v2
-from .orchestrator_v3 import run_pipeline_v3  # noqa: F401
+from .orchestrator_v3 import (  # noqa: F401
+    resume_pipeline_v3,
+    run_pipeline_v3,
+)
 
 
 async def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
@@ -65,6 +68,14 @@ async def start_full_run(
     return await _runs_api.start_full_run(request, background_tasks, staff_user)
 
 
+async def preview_resume(run_id: str):
+    return await _runs_api.preview_resume(run_id)
+
+
+async def resume_run(run_id: str, background_tasks, staff_user=None):
+    return await _runs_api.resume_run(run_id, background_tasks, staff_user)
+
+
 async def get_status(run_id: str):
     return await _runs_api.get_status(run_id)
 
@@ -103,6 +114,8 @@ __all__ = [
     "start_pipeline_v2",
     "start_pipeline_v3",
     "start_full_run",
+    "preview_resume",
+    "resume_run",
     "get_status",
     "get_result",
     "debug_run",
@@ -112,5 +125,6 @@ __all__ = [
     "get_sync_status",
     "run_pipeline_v2",
     "run_pipeline_v3",
+    "resume_pipeline_v3",
     "run_full_pipeline",
 ]

@@ -16,6 +16,7 @@ from fastapi import BackgroundTasks, HTTPException
 
 import app.features.prompt2blog.api.runs as runs_api
 import app.features.prompt2blog.routes as prompt2blog_routes
+from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
 from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
 from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
@@ -182,11 +183,27 @@ class RecordingRecorder:
 
 
 @dataclass
+class SpentTokens:
+    """Only the half of the tracker the budget gate reads.
+
+    Deliberately not a whole `UsageLedger`: a full one would make
+    `PipelineDependencies` try to wire this run's recorder for per-stage
+    attribution, which the recording fake here does not support.
+    """
+
+    total_tokens: int
+
+    def totals(self) -> dict[str, int]:
+        return {"total_tokens": self.total_tokens}
+
+
+@dataclass
 class ScriptedLLM:
     quality_scores: list[int]
     prompts: list[tuple[str, str]] = field(default_factory=list)
     models: dict[str, list[str | None]] = field(default_factory=dict)
     grounded: bool = True
+    usage_tracker: Any = None
 
     def _record_model(self, stage: str, model_name: str | None) -> None:
         self.models.setdefault(stage, []).append(model_name)
@@ -355,6 +372,47 @@ def test_a_low_score_spends_a_repair_pass_and_re_checks_grounding():
     assert recorder.order.count("stage_v3_quality_audit") == 2
     repair_prompt = next(prompt for kind, prompt in llm.prompts if kind == "repair")
     assert "you may not change the commission" in " ".join(repair_prompt.split())
+
+
+def test_a_weak_draft_buys_one_repair_and_then_asks_for_a_human():
+    # The auditor never passes this draft. The old loop bought two repairs --
+    # each one a rewrite, an anti-AI pass, a grounding re-check and a re-audit
+    # -- before giving up on it anyway.
+    state, recorder, _llm = _run(quality_scores=[4])
+
+    assert recorder.order.count("stage_v3_repair") == 1
+    settle = recorder.stages["stage_v3_quality_settle"]
+    assert settle["repair_attempts"] == 1
+    assert settle["repair_decision"]["reason"] == "attempt_limit_reached"
+
+    review = state["response_payload"]["quality_review"]
+    assert state["response_payload"]["pipeline_status"] == "needs_revision"
+    assert review["repair_decision"]["route"] == "settle"
+    assert review["repair_decision"]["problems"]
+
+
+def test_an_expensive_run_stops_before_buying_a_repair():
+    llm = ScriptedLLM(
+        quality_scores=[4],
+        usage_tracker=SpentTokens(total_tokens=P2B_RUN_TOKEN_BUDGET),
+    )
+    recorder = RecordingRecorder()
+
+    state = run_pipeline_v3(
+        "expensive-v3-run",
+        prepare_v3_runtime_request(_request()),
+        PipelineDependencies(llm=llm, recorder=recorder),
+    )
+
+    assert "stage_v3_repair" not in recorder.order
+    assert recorder.order.count("stage_v3_quality_audit") == 1
+    decision = state["response_payload"]["quality_review"]["repair_decision"]
+    assert decision["reason"] == "token_budget_reached"
+    assert decision["tokens_spent"] == P2B_RUN_TOKEN_BUDGET
+    # The article still comes back -- as the operator's problem, not as a
+    # failure and not as something worth another 90,000 tokens.
+    assert state["response_payload"]["pipeline_status"] == "needs_revision"
+    assert state["response_payload"]["improved_article"]["content"]
 
 
 def test_the_route_queues_a_run_only_when_research_is_ready(monkeypatch):

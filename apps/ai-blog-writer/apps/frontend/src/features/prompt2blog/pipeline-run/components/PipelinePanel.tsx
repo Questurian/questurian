@@ -6,6 +6,7 @@ import {
   PIPELINE_STAGE_LABELS,
   PROMPT2BLOG_STAGE_ORDERS,
 } from '../pipeline-status'
+import type { Prompt2BlogResumePlan } from '../../types/pipeline.types'
 import { NeedsResearchResult } from './NeedsResearchResult'
 import { PipelineResult } from './PipelineResult'
 import { PipelineV3Result } from './PipelineV3Result'
@@ -40,6 +41,7 @@ export function PipelinePanel({
     pipelineResult,
     pipelineStatus,
     pipelineVersion,
+    resumePlan,
     showPipelineDebug,
     sourceStep,
     stageArticleUrl,
@@ -63,10 +65,21 @@ export function PipelinePanel({
           >
             Run Prompt2Blog Pipeline
           </button>
+          {resumePlan?.resumable && (
+            <button
+              type="button"
+              className="p2b-synthesize-btn"
+              disabled={isLoading}
+              onClick={() => run.resume()}
+            >
+              Resume Run
+            </button>
+          )}
           <button type="button" className="p2b-rerun-btn" onClick={onReset}>
             Reset Run
           </button>
         </div>
+        {resumePlan && <ResumeNotice plan={resumePlan} />}
         {submissionBlockedReason && (
           <p className="p2b-field-hint" role="status">
             {submissionBlockedReason}
@@ -143,6 +156,56 @@ export function PipelinePanel({
       )}
     </section>
   )
+}
+
+/**
+ * What the operator needs before deciding: what is already written, what it
+ * cost, and -- when the run cannot be picked back up -- why not. Without the
+ * "why not" a missing button is indistinguishable from a broken page.
+ */
+function ResumeNotice({ plan }: { plan: Prompt2BlogResumePlan }) {
+  const alreadyDone = plan.completed_stages.length
+  const spent = plan.tokens_already_spent
+
+  if (!plan.resumable) {
+    return (
+      <p className="p2b-field-hint" role="status">
+        {RESUME_REFUSAL_HINTS[plan.reason] || 'This run cannot be continued; start a new one.'}
+      </p>
+    )
+  }
+
+  const resumeStageLabel =
+    PIPELINE_STAGE_LABELS[plan.resume_from_stage as keyof typeof PIPELINE_STAGE_LABELS]
+    || plan.resume_from_stage
+
+  return (
+    <p className="p2b-field-hint" role="status">
+      {alreadyDone} stage{alreadyDone === 1 ? '' : 's'} are already written and saved
+      {typeof spent === 'number' && spent > 0
+        ? ` (${spent.toLocaleString()} tokens spent so far)`
+        : ''}
+      {`. Resuming continues at "${resumeStageLabel}" and pays only for what is left.`}
+      {plan.resume_count > 0
+        && ` Resumed ${plan.resume_count} of ${plan.resume_attempts_allowed} times.`}
+    </p>
+  )
+}
+
+const RESUME_REFUSAL_HINTS: Record<string, string> = {
+  no_snapshot:
+    'This run stopped before it finished a single stage, so there is nothing saved to '
+    + 'continue from. Start a new run.',
+  resume_limit_reached:
+    'This run has been resumed as many times as it is allowed. Whatever keeps failing is '
+    + 'not something resuming can fix.',
+  commission_mismatch:
+    'The saved work does not match the commission this run started with, so it is not safe '
+    + 'to continue. Start a new run.',
+  snapshot_version_unsupported:
+    'The saved work was written by an older version of the pipeline. Start a new run.',
+  snapshot_unreadable: 'The saved work does not say where to continue from. Start a new run.',
+  run_already_finished: 'This run had already produced its article.',
 }
 
 function PipelineStageItem({

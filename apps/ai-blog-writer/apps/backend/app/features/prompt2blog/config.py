@@ -55,7 +55,32 @@ PROMPT2BLOG_HEADLINES_FILE = PROMPT2BLOG_OPTIONS_DIR / "headlines.md"
 
 # Repair used to be a single unconditional pass whose result was never
 # re-gated. It is now a bounded loop back through the audit.
-P2B_REPAIR_MAX_ATTEMPTS = 2
+#
+# One automatic attempt, not two. A repair pass is not one call: it rewrites
+# the whole article on the writing model, runs the anti-AI enforcement pass,
+# then re-runs grounding and the audit. On the measured Lima run that chain
+# cost 85,012 tokens -- 35% of the whole run -- and a second attempt would
+# have bought a point or two of score for the same price again. A draft the
+# first repair could not rescue goes back as `needs_revision` instead.
+P2B_REPAIR_MAX_ATTEMPTS = 1
+
+# What one repair attempt is assumed to cost, measured off the Lima run
+# (repair + anti-AI enforcement + groundedness + re-audit).
+P2B_REPAIR_ESTIMATED_TOKENS = 90_000
+
+# The ceiling a run may reach *before* an attempt is spent. Attempts are
+# refused once `tokens_spent + P2B_REPAIR_ESTIMATED_TOKENS` would pass it, so
+# an unusually expensive run stops paying for rescue attempts instead of
+# doubling down. Set above the Lima run's pre-repair spend (~158k) on purpose:
+# the first repair on a normal run must still be affordable.
+P2B_RUN_TOKEN_BUDGET = 320_000
+
+# How many times one run may be resumed after a failure. A resume costs the
+# stages that had not run yet, so a stage that fails for a reason resuming
+# cannot fix -- a commission the model keeps refusing, a permanently dead
+# credential -- would otherwise let an operator buy the same tail repeatedly.
+# Three is enough for a provider blip, a reconnect, and one more.
+P2B_RESUME_MAX_ATTEMPTS = 3
 
 # Editorial augmentation may only add to a draft. If the returned content drops
 # below this share of the pre-augmentation word count, or loses section

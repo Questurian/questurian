@@ -29,11 +29,18 @@ def run_prompt2blog_stage_graph(
     nodes: list[tuple[str, GraphNode]],
     recorder: RunRecorder,
     build_graph: Callable[[dict[str, GraphNode]], Any] | None = None,
+    thread_id: str | None = None,
 ) -> Prompt2BlogGraphState:
     """Compile and invoke a graph whose nodes are the real pipeline stages.
 
     ``build_graph`` declares the topology. Without one the nodes are chained in
     the order given, which remains useful for narrow tests.
+
+    ``thread_id`` names the LangGraph checkpoint thread, defaulting to the run.
+    A resumed leg passes its own, because the failed leg's checkpoints are only
+    discarded when its process lived long enough to run the cleanup: after a
+    crash they are still on disk, and re-entering under the same thread id
+    would replay that stale snapshot instead of the state we restored.
     """
     from langgraph.graph import END, START, StateGraph
 
@@ -51,20 +58,27 @@ def run_prompt2blog_stage_graph(
         if previous_node_name is not None:
             builder.add_edge(previous_node_name, END)
 
+    thread_id = thread_id or run_id
     trace_payload: dict[str, str] = {}
     try:
         with langgraph_trace(
             trace_name=trace_name,
             feature="prompt2blog",
-            thread_id=run_id,
-            app_run_id=run_id,
+            thread_id=thread_id,
+            # LangSmith pins a trace to this id when it parses as a UUID, so a
+            # resumed leg must not offer the run id again: two traces claiming
+            # one id is a collision, not a continuation. A resume gets its own
+            # trace, tied back to the run by `metadata.run_id`.
+            app_run_id=run_id if thread_id == run_id else None,
             tags=["pipeline"],
             metadata={"entrypoint": trace_name},
             inputs={"run_id": run_id},
         ) as (trace_run, trace_metadata):
-            # The run has no resume path, so its snapshots are dropped when
-            # it ends rather than accumulating in the shared database.
-            with langgraph_checkpoint(discard_thread=run_id) as checkpointer:
+            # Dropped when the leg ends rather than accumulating in the
+            # shared database. Resume does not read these: it restores from the
+            # run's own `resume_snapshot` stage row, which survives a crash and
+            # can be inspected, so the checkpoints stay disposable.
+            with langgraph_checkpoint(discard_thread=thread_id) as checkpointer:
                 graph = builder.compile(checkpointer=checkpointer)
                 result = graph.invoke(
                     {
@@ -73,7 +87,7 @@ def run_prompt2blog_stage_graph(
                         "completed": False,
                     },
                     config={
-                        "configurable": {"thread_id": run_id},
+                        "configurable": {"thread_id": thread_id},
                         "tags": ["langgraph", "prompt2blog"],
                         "metadata": {"feature": "prompt2blog", "run_id": run_id},
                         "run_name": trace_name,

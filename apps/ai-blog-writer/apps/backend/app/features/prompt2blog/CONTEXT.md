@@ -43,7 +43,8 @@ them for the v2 fallback. Do not delete or renumber them.
 | `evidence_v3.py`, `instructions_v3.py` | V3 evidence normalization and the layered instruction stack |
 | `research_readiness_v3.py`, `intake_v3.py` | The v3 research gate, its `needs_research` result, and v3 run input |
 | `stages/v3/`, `prompts/editorial_v3.py`, `content/outline_v3.py` | V3 writing stages, their prompts, and pure section-plan scope guards |
-| `orchestrator_v3.py`, `graph/topology_v3.py` | The v3 run entrypoint and its shorter generation topology |
+| `orchestrator_v3.py`, `graph/topology_v3.py` | The v3 run entrypoints and its shorter generation topology |
+| `resume_v3.py` | The state snapshot a failed v3 run is picked back up from |
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |
 | `llm.py`, `dependencies.py` | Shared-LLM adapter and explicit dependency bundle |
@@ -108,11 +109,60 @@ The v3 generation graph, which every real run uses:
 7. title
 8. finalize
 
+The repair loop buys **one** automatic attempt, and only while the run can
+afford it. A repair pass is a whole chain -- full-article rewrite on the
+writing model, anti-AI enforcement, grounding re-check, re-audit -- which cost
+85,012 tokens (35% of the run) on the measured Lima article. `decide_repair`
+in `policies.py` refuses an attempt for one of three reasons and records which:
+the draft passed, the single attempt is used up, or the next attempt would
+carry the run past `P2B_RUN_TOKEN_BUDGET`. A draft that is still weak comes
+back `needs_revision` for a human rather than buying another rewrite. The
+decision travels on the run: stage rows, the settle payload, and
+`quality_review.repair_decision` in the finished article, so an operator can
+tell a draft the auditor failed from one the pipeline stopped paying for.
+
 It is shorter than v2 by design. There is no guideline fetch, no coverage
 check, and no supplement node: research readiness is settled before a run
 starts, and v3 never generates a fact it did not receive. Grounding sits inside
 the repair loop, so a repaired draft is re-checked against the evidence rather
 than trusted. Stage payloads persist as `stage_v3_*`.
+
+## Resuming a failed run
+
+A v3 run can spend most of its tokens before the last stage, so a failure near
+the end used to throw away an outline, a draft, a grounding verdict and an
+audit that were all still correct. Every completed node now writes the whole
+graph state to the run's own `resume_snapshot` stage row, and
+`resume_pipeline_v3` restores it and re-enters the same graph at the node the
+failure interrupted. `POST /prompt2blog/resume/{run_id}` starts that;
+`GET` the same path answers what it would do, for free, before anything is
+spent.
+
+The run keeps its `run_id`. The article, the stage rows, the token ledger and
+any link the operator already has therefore all stay pointed at one run, and
+the client keeps polling the status it was already polling.
+
+Deliberate decisions worth not re-litigating:
+
+- **Not LangGraph's checkpoints.** They exist and are already discarded on the
+  way out of every run. They are shared, opaque, run-sized, and empty in the
+  case that matters most -- a process that died hard never ran the cleanup
+  either. The stage row is this run's own durable record and can be read.
+- **The resumed leg runs on its own LangGraph thread id.** A crashed process
+  leaves its checkpoints on disk; re-entering under the same thread id would
+  replay that stale snapshot instead of the state we restored.
+- **Correctness before saving money.** An unreadable snapshot, one written by a
+  different `RESUME_SNAPSHOT_VERSION`, one whose recorded commissions disagree,
+  or a run that is not actually failed, all refuse -- and a refusal costs
+  nothing, because starting a fresh run is what happens today anyway.
+- **The token ledger carries forward.** A resumed leg starting from zero would
+  report the cheap tail as the cost of the article and would hand the repair
+  gate a budget the run had already spent.
+- **The allowance is counted from the attempt history, not the snapshot.** A
+  resume that dies before finishing a node writes no new snapshot, so counting
+  there would leave the allowance untouched by exactly the failure it bounds.
+- **`finalize` writes no snapshot, and success deletes the row.** A finished
+  run has an article instead, and the state is whole-graph sized.
 
 Editorial augmentation has no v3 node. `POST /pipeline-v3` refuses
 `enable_editorial_augmentation` with a 400 rather than accepting the flag and

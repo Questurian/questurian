@@ -149,6 +149,44 @@ export type Prompt2BlogStatusResponse = {
   updated_at: string
 }
 
+/**
+ * What resuming one failed run would do, answered before anything is spent.
+ *
+ * `reason` is the machine half, the same string the backend refuses with. The
+ * UI writes its own sentence from it, so a run that cannot be resumed says why
+ * rather than just hiding the button.
+ */
+export type Prompt2BlogResumeReason =
+  | 'resumable'
+  | 'run_not_found'
+  | 'not_prompt2blog'
+  | 'run_not_failed'
+  | 'no_snapshot'
+  | 'snapshot_version_unsupported'
+  | 'schema_version_unsupported'
+  | 'commission_mismatch'
+  | 'snapshot_unreadable'
+  | 'run_already_finished'
+  | 'resume_limit_reached'
+
+export type Prompt2BlogResumePlan = {
+  run_id: string
+  resumable: boolean
+  reason: Prompt2BlogResumeReason | string
+  resume_from_stage: Prompt2BlogPipelineStage | string | null
+  failed_stage: Prompt2BlogPipelineStage | string | null
+  failure_kind?: Prompt2BlogFailureKind | string | null
+  completed_stages: string[]
+  tokens_already_spent: number | null
+  resume_count: number
+  resume_attempts_allowed: number
+}
+
+export type Prompt2BlogResumeResponse = Prompt2BlogResumePlan & {
+  message: string
+  status: 'queued'
+}
+
 export type Prompt2BlogStageTrace = {
   stage: string
   model_name?: string
@@ -337,6 +375,29 @@ export type Prompt2BlogPipelinePayload = {
  * augmentation, and it carries the approved commission and the evidence
  * receipt that v2 had no place to put.
  */
+/**
+ * Why the quality gate stopped repairing. A `needs_revision` article that the
+ * auditor failed and one the pipeline refused to keep paying for are the same
+ * result without it.
+ *
+ * Optional: runs stored before the repair budget existed do not carry it.
+ */
+export type Prompt2BlogRepairDecision = {
+  route: 'repair' | 'settle'
+  reason:
+    | 'draft_passed_audit'
+    | 'repairable_problems_found'
+    | 'attempt_limit_reached'
+    | 'token_budget_reached'
+  problems: string[]
+  attempts_used: number
+  attempts_allowed: number
+  /** Null when nothing was counting tokens for this run. */
+  tokens_spent: number | null
+  tokens_per_attempt: number
+  token_budget: number
+}
+
 export type Prompt2BlogV3PipelinePayload = {
   message: string
   run_id: string
@@ -346,6 +407,8 @@ export type Prompt2BlogV3PipelinePayload = {
   langsmith_trace_run_id?: string
   pipeline_status: 'ready_for_staging' | 'needs_revision'
   readiness_blockers: string[]
+  /** How many times this article had to be picked up after a failed leg. */
+  resume_count?: number
   commission: Prompt2BlogCommission
   form: {
     id: Prompt2BlogArticleFormId | null
@@ -395,6 +458,7 @@ export type Prompt2BlogV3PipelinePayload = {
     }
     repair_applied: boolean
     repair_attempts: number
+    repair_decision?: Prompt2BlogRepairDecision | null
     groundedness: Prompt2BlogGroundedness
     outline_accepted: boolean
     outline_section_count: number
