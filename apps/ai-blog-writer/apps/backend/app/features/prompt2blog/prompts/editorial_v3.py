@@ -80,8 +80,10 @@ Hard rules:
 - The evidence records are internal working material. Never cite them in the
   article: no claim IDs, no source IDs, no "(Source 1)", no numbered
   references of any kind. The reader cannot see them.
-- Attribute a fact in prose only by naming the real publication or body it came
-  from, never by its position in the records.
+- Never name the outlet, publication, site, or report a fact came from, and
+  never attribute by its position in the records. Name an actor or institution
+  only when it is part of the story itself -- the ministry that set a fare, the
+  museum that publishes a price -- not because it is where the fact was found.
 - Keep the approved form, primary subject, scope mode, and reference roles. A
   context-only reference may calibrate a fact; it may never become a
   co-subject, a recurring section, a ranking, or a verdict.
@@ -90,7 +92,10 @@ Hard rules:
 - improved_content must not contain a `#` H1.
 - Use at least 3 `##` headings.
 - Include one direct 40-60 word answer near the top.
-- Include a concise takeaway section near the end.
+- Include a concise takeaway section near the end. It synthesises the
+  decisions the article already supported, in fresh wording rather than copied
+  sentences. Never let a material fact, figure, or place appear there for the
+  first time.
 - Follow the STYLE DIRECTIVE exactly. Tone, length, and brand voice are
   requirements, not suggestions.
 - Follow the SECTION PLAN when one is provided: use its headings, in order, and
@@ -269,7 +274,9 @@ Rules:
 - Never promote a context-only reference, add a comparator, or broaden scope to
   satisfy a revision.
 - Never cite evidence records in the prose: no claim IDs, no source IDs, no
-  numbered references. Attribute only by naming the real publication or body.
+  numbered references, and no naming the outlet or publication a fact came
+  from. An actor or institution in the story may be named; the reporter of it
+  may not.
 - Keep complete article prose with clear `##` / `###` structure.
 - Where support is missing, state the uncertainty plainly and list it in
   remaining_gaps.

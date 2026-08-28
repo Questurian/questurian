@@ -18,6 +18,6 @@ Facts: full name and title on first mention, surname alone after. Prices with cu
 
 Sentence construction stays tight: one idea per sentence, subject first, active voice. Passive only when the actor is genuinely unknown. Cut intensifying adverbs. No em-dash asides; end the sentence instead.
 
-Structure: sentence case headings, no terminal punctuation. The opening paragraph carries what happened, where, when, and on whose authority. No one-sentence sections, a closing takeaways section limited to new factual specifics rather than a restatement, lists only for parallel items such as figures or sequences.
+Structure: sentence case headings, no terminal punctuation. The opening paragraph carries what happened, where, when, and on whose authority. No one-sentence sections, a closing takeaways section that condenses what the report means, never new facts, lists only for parallel items such as figures or sequences.
 
 Hedging: name who said it, or leave it out. No "may or may not", no manufactured balance, no two-sided framing where the sources do not actually disagree.
