@@ -14,6 +14,12 @@ export function RunCostReceipt({ cost }: { cost: RunCost }) {
     : cost.measurement_status === 'partial'
       ? `Partial estimate: ${cost.measured_calls} of ${cost.successful_calls} successful calls reported usage.`
       : 'Model APIs did not return token usage for this run.'
+  // Stage rows and the headline total are sums over the same ledger, so they
+  // agree. Saying so where the reader can check it is the point: the receipt
+  // used to lose a repeated stage's first pass, and nothing on screen showed
+  // that anything was missing.
+  const attributed = cost.attributed_total_tokens
+  const ledgerBalances = attributed == null || attributed === cost.total_tokens
 
   return <section className="p2b-run-cost" aria-label="Run cost and token usage">
     <div className="p2b-run-cost__header">
@@ -52,10 +58,31 @@ export function RunCostReceipt({ cost }: { cost: RunCost }) {
             <strong>{formatStageName(row.stage)}</strong>
             <span>{formatTokens(row.total_tokens)} tokens</span>
             <span>{row.calls} {row.calls === 1 ? 'call' : 'calls'}</span>
-            <span>{formatTokens(row.reasoning_tokens)} reasoning</span>
+            <span>{row.attempts != null && row.attempts > 1
+              ? `${row.attempts} attempts`
+              : `${formatTokens(row.reasoning_tokens)} reasoning`}</span>
           </div>)}
         </div>
       </>}
+      {cost.by_attempt != null && cost.by_attempt.length > 0 && <>
+        <span className="p2b-run-cost__eyebrow">By attempt</span>
+        <div className="p2b-run-cost__models">
+          {cost.by_attempt.map(row => <div key={`${row.stage}-${row.attempt}`}>
+            <strong>{formatStageName(row.stage)} · attempt {row.attempt}</strong>
+            <span>{formatTokens(row.total_tokens)} tokens</span>
+            <span>{row.calls} {row.calls === 1 ? 'call' : 'calls'}</span>
+            <span>{formatUsd(row.cost_usd)}</span>
+          </div>)}
+        </div>
+      </>}
+      {!ledgerBalances && <p>
+        Stage rows account for {formatTokens(attributed as number)} of{' '}
+        {formatTokens(cost.total_tokens)} tokens.
+      </p>}
+      {cost.unmetered_calls != null && cost.unmetered_calls > 0 && <p>
+        {cost.unmetered_calls} {cost.unmetered_calls === 1 ? 'call' : 'calls'} returned
+        no usage figures, so this run's tokens are a floor rather than a total.
+      </p>}
       <p>{cost.pricing_note}</p>
       <p>Estimate excludes network, storage, grounding, and other non-token charges.</p>
     </details>

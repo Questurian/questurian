@@ -98,12 +98,13 @@ class PipelineDependencies:
         # each other. A test LLM double carries no tracker, and the recorder
         # then behaves exactly as it did before this existed.
         tracker = getattr(self.llm, "usage_tracker", None)
-        reader = getattr(tracker, "totals", None)
-        writer = getattr(tracker, "record_stage_usage", None)
-        if not callable(reader) or not callable(writer):
+        if not all(
+            callable(getattr(tracker, name, None))
+            for name in ("begin_stage", "attempt_usage", "ledger")
+        ):
             return
         object.__setattr__(
             self,
             "recorder",
-            replace(self.recorder, usage_reader=reader, usage_writer=writer),
+            replace(self.recorder, usage_tracker=tracker),
         )

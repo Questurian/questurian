@@ -245,8 +245,13 @@ def test_a_run_with_no_reported_usage_is_unavailable_not_free():
     assert summary["measurement_status"] == "unavailable"
     assert summary["successful_calls"] == 2
     assert summary["measured_calls"] == 0
+    assert summary["unmetered_calls"] == 2
     assert summary["by_model"] == []
-    assert summary["by_stage"] == []
+    # The two calls happened, so the ledger shows them. They spent an unknown
+    # amount, not nothing -- which is what `measurement_status` says.
+    assert [row["stage"] for row in summary["by_stage"]] == ["unattributed"]
+    assert summary["by_stage"][0]["calls"] == 2
+    assert summary["by_stage"][0]["total_tokens"] == 0
 
 
 def test_anthropic_cache_reads_are_visible_instead_of_being_clamped_away():

@@ -188,6 +188,13 @@ export type Prompt2BlogRunCost = {
   total_tokens: number
   successful_calls: number
   measured_calls: number
+  // Calls the provider reported no usage for. A run with any of these has a
+  // floor, not a total.
+  unmetered_calls?: number
+  // The sum of the stage rows. Published so a reader can check the headline
+  // total rather than trust it; the two are sums over the same ledger.
+  attributed_total_tokens?: number
+  ledger_version?: number
   measurement_status: 'complete' | 'partial' | 'unavailable'
   estimated_cost_usd: number | null
   currency: 'USD'
@@ -211,6 +218,21 @@ export type Prompt2BlogRunCost = {
     cached_input_tokens: number
     total_tokens: number
     calls: number
+    // How many times the pipeline entered this stage.
+    attempts?: number
+  }>
+  // One row per numbered attempt of a stage, in the order the run made them.
+  // A second fact-check adds a row here; it never replaces the first one's.
+  by_attempt?: Array<{
+    stage: string
+    attempt: number
+    input_tokens: number
+    output_tokens: number
+    reasoning_tokens: number
+    cached_input_tokens: number
+    total_tokens: number
+    calls: number
+    cost_usd: number | null
   }>
   pricing_note: string
 }

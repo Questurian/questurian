@@ -299,8 +299,13 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
 
     stage_names = [stage for _run_id, stage, _payload in recorded["stages"]]
     # stage_repair is absent: the graph routes past it when the audit passes,
-    # rather than entering a node that no-ops internally.
-    assert [stage for stage in stage_names if stage != "langgraph_trace"] == [
+    # rather than entering a node that no-ops internally. `usage_ledger` is
+    # written after every stage and is accounting, not a pipeline step.
+    assert [
+        stage
+        for stage in stage_names
+        if stage not in ("langgraph_trace", "usage_ledger")
+    ] == [
         "stage_guideline_fetch",
         "stage_coverage_check",
         "stage_supplement",
@@ -315,7 +320,7 @@ def test_pipeline_contract_preserves_stage_order_and_artifact():
         "stage_finalize",
         "pipeline_v2",
     ]
-    assert stage_names[-1] in {"pipeline_v2", "langgraph_trace"}
+    assert stage_names[-1] in {"pipeline_v2", "langgraph_trace", "usage_ledger"}
 
     # Every stage the run recorded is attributed, including the ones that spend
     # nothing. A stage missing from by_stage would be spend nobody can see.
@@ -641,7 +646,11 @@ def test_full_pipeline_runs_preparation_and_generation_in_one_graph():
 
     result = run_full_pipeline(run_id, request, dependencies)
 
-    recorded_stages = [stage for _run_id, stage, _payload in recorded["stages"]]
+    recorded_stages = [
+        stage
+        for _run_id, stage, _payload in recorded["stages"]
+        if stage != "usage_ledger"
+    ]
     assert recorded_stages[:3] == [
         "stage_input_validate",
         "stage_input_cleanup",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 from app.core import write_artifact, write_stage_result, write_status
 from app.shared.provider_faults import provider_fault_kind
@@ -15,8 +15,28 @@ logger = logging.getLogger(__name__)
 
 StageWriter = Callable[[str, str, dict[str, Any]], None]
 ArtifactWriter = Callable[[str, dict[str, Any]], None]
-UsageReader = Callable[[], dict[str, int]]
-UsageWriter = Callable[[str, dict[str, int]], None]
+
+# The stage row for the run's append-only usage ledger. Written under one name
+# on purpose: the ledger is cumulative, so the upsert that loses a repeated
+# stage's earlier receipt cannot lose anything here -- every rewrite is a
+# superset of the one before it.
+USAGE_LEDGER_STAGE = "usage_ledger"
+
+
+class UsageLedger(Protocol):
+    """The token tracker, as the recorder needs it.
+
+    Attempts are numbered here rather than counted from the stage rows,
+    because the stage rows are keyed `(run_id, stage)` and a second pass
+    overwrites the first. The ledger is the record; the stage rows are a view
+    of the latest pass.
+    """
+
+    def begin_stage(self, stage: str) -> int: ...
+
+    def attempt_usage(self, stage: str, attempt: int) -> dict[str, int]: ...
+
+    def ledger(self) -> dict[str, Any]: ...
 
 
 @dataclass(frozen=True)
@@ -29,14 +49,13 @@ class RunRecorder:
     clock: Callable[[], str] = _now_iso
     # Left unset by the pipeline's own tests and by any caller that builds a
     # recorder without a token tracker; attribution is then simply absent.
-    usage_reader: UsageReader | None = None
-    usage_writer: UsageWriter | None = None
+    usage_tracker: UsageLedger | None = None
     active_stages: dict[str, str] = field(
         default_factory=dict,
         compare=False,
         repr=False,
     )
-    usage_marks: dict[str, dict[str, int]] = field(
+    active_attempts: dict[str, int] = field(
         default_factory=dict,
         compare=False,
         repr=False,
@@ -57,42 +76,55 @@ class RunRecorder:
             owner_staff_id=owner_staff_id,
         )
 
-    def _mark_usage(self, run_id: str) -> None:
-        if self.usage_reader is None:
+    def _open_attempt(self, run_id: str, stage: str) -> None:
+        if self.usage_tracker is None:
             return
         try:
-            self.usage_marks[run_id] = dict(self.usage_reader())
+            self.active_attempts[run_id] = self.usage_tracker.begin_stage(stage)
         except Exception as exc:  # pragma: no cover -- telemetry only
-            logger.warning("Prompt2Blog stage usage snapshot failed: %s", exc)
-            self.usage_marks.pop(run_id, None)
+            logger.warning("Prompt2Blog stage usage attempt failed: %s", exc)
+            self.active_attempts.pop(run_id, None)
 
     def _stage_usage(self, run_id: str, stage: str) -> dict[str, int] | None:
-        # Only the stage that is currently open gets attribution. Debug dumps
-        # like `pipeline_v2` and `langgraph_trace` are written under a name no
-        # `start_stage` ever opened, and they are not stages that spend tokens.
-        if self.usage_reader is None or self.active_stages.get(run_id) != stage:
+        # Only the stage that is currently open gets a receipt on its row.
+        # Debug dumps like `pipeline_v2` and `langgraph_trace` are written
+        # under a name no `start_stage` ever opened. Their tokens are not lost:
+        # whatever was spent is in the ledger under the stage that was open.
+        if self.usage_tracker is None or self.active_stages.get(run_id) != stage:
             return None
-        mark = self.usage_marks.get(run_id)
-        if mark is None:
+        attempt = self.active_attempts.get(run_id)
+        if attempt is None:
             return None
         try:
-            current = dict(self.usage_reader())
+            # Read for this attempt rather than diffed against a running total,
+            # so a stage that records twice reports the same attempt twice
+            # instead of reporting the second write as zero.
+            return dict(self.usage_tracker.attempt_usage(stage, attempt))
         except Exception as exc:  # pragma: no cover -- telemetry only
             logger.warning("Prompt2Blog stage usage read failed: %s", exc)
             return None
-        delta = {
-            key: max(0, value - mark.get(key, 0)) for key, value in current.items()
-        }
-        # `stage_final_verify` records twice: the re-grounding call writes under
-        # the stage name, then the verification summary does. Advancing the mark
-        # on every write keeps the second one from re-charging the first's
-        # tokens.
-        self.usage_marks[run_id] = current
-        return delta
+
+    def _write_usage_ledger(self, run_id: str) -> None:
+        """Persist the whole ledger, so a run that dies still has accounting."""
+        if self.usage_tracker is None:
+            return
+        try:
+            ledger = self.usage_tracker.ledger()
+        except Exception as exc:  # pragma: no cover -- telemetry only
+            logger.warning("Prompt2Blog usage ledger read failed: %s", exc)
+            return
+        try:
+            self.stage_writer(
+                run_id,
+                USAGE_LEDGER_STAGE,
+                {"created_at": self.clock(), "data": ledger},
+            )
+        except Exception as exc:  # pragma: no cover -- telemetry only
+            logger.warning("Prompt2Blog usage ledger write failed: %s", exc)
 
     def start_stage(self, run_id: str, stage: str) -> None:
         self.active_stages[run_id] = stage
-        self._mark_usage(run_id)
+        self._open_attempt(run_id, stage)
         self.status_writer(
             run_id,
             {
@@ -109,15 +141,14 @@ class RunRecorder:
     def record_stage(self, run_id: str, stage: str, data: dict[str, Any]) -> None:
         stage_usage = self._stage_usage(run_id, stage)
         if stage_usage is not None:
-            data = {**data, "stage_usage": stage_usage}
-            if self.usage_writer is not None:
-                try:
-                    self.usage_writer(stage, stage_usage)
-                except Exception as exc:  # pragma: no cover -- telemetry only
-                    logger.warning(
-                        "Prompt2Blog stage usage attribution failed: %s",
-                        exc,
-                    )
+            data = {
+                **data,
+                "stage_usage": stage_usage,
+                # Which pass of this stage the row above is. The row itself is
+                # overwritten by the next pass; the attempt number is what says
+                # so, and the ledger holds the passes it replaced.
+                "stage_attempt": self.active_attempts.get(run_id),
+            }
         self.stage_writer(
             run_id,
             stage,
@@ -126,6 +157,7 @@ class RunRecorder:
                 "data": data,
             },
         )
+        self._write_usage_ledger(run_id)
 
     def record_artifact(self, run_id: str, artifact: dict[str, Any]) -> None:
         self.artifact_writer(run_id, artifact)
@@ -143,8 +175,9 @@ class RunRecorder:
             },
             feature=FEATURE_NAME,
         )
+        self._write_usage_ledger(run_id)
         self.active_stages.pop(run_id, None)
-        self.usage_marks.pop(run_id, None)
+        self.active_attempts.pop(run_id, None)
 
     def active_stage(self, run_id: str, fallback: str = "graph_execution") -> str:
         return self.active_stages.get(run_id, fallback)
@@ -197,5 +230,8 @@ class RunRecorder:
                     **debug_data,
                 },
             )
+        # A failed run spent real tokens. Writing the ledger here is what keeps
+        # a crash from being free in the accounting.
+        self._write_usage_ledger(run_id)
         self.active_stages.pop(run_id, None)
-        self.usage_marks.pop(run_id, None)
+        self.active_attempts.pop(run_id, None)

@@ -216,12 +216,31 @@ def _pricing_note(measured_models: int) -> str:
     return RATE_TABLE_NOTE
 
 
+# Every successful model call appends one entry here and nothing ever replaces
+# one. Stage rows, attempt rows and the run total are all sums over these
+# entries, so a stage that runs twice cannot overwrite its own first receipt --
+# the failure that made a 239,610 token run report 209,545.
+UNATTRIBUTED_STAGE = "unattributed"
+
+LEDGER_VERSION = 1
+
+ATTEMPT_USAGE_KEYS = STAGE_USAGE_KEYS
+
+
+def _empty_usage() -> dict[str, int]:
+    return dict.fromkeys(STAGE_USAGE_KEYS, 0)
+
+
 @dataclass
 class Prompt2BlogTokenUsageTracker:
     successful_calls: int = 0
     measured_calls: int = 0
     by_model: dict[str, dict[str, Any]] = field(default_factory=dict)
-    by_stage: dict[str, dict[str, int]] = field(default_factory=dict)
+    # Append-only. Ordered by the sequence the calls were made in.
+    calls: list[dict[str, Any]] = field(default_factory=list)
+    stage_attempts: dict[str, int] = field(default_factory=dict)
+    current_stage: str | None = None
+    current_attempt: int = 0
 
     def totals(self) -> dict[str, int]:
         return {
@@ -229,17 +248,63 @@ class Prompt2BlogTokenUsageTracker:
             for key in STAGE_USAGE_KEYS
         }
 
-    def record_stage_usage(self, stage: str, usage: dict[str, int]) -> None:
-        row = self.by_stage.setdefault(stage, dict.fromkeys(STAGE_USAGE_KEYS, 0))
-        # Stages repeat: groundedness and the quality audit run once per repair
-        # pass, so a stage's cost is the sum of its passes, not the last one.
-        for key in STAGE_USAGE_KEYS:
-            row[key] += _token_count(usage.get(key))
+    def begin_stage(self, stage: str) -> int:
+        """Open a numbered attempt of `stage`; later calls are filed under it.
+
+        Numbering is per stage and per run: the second time the pipeline enters
+        the quality audit it opens attempt 2, and attempt 1 keeps its own row.
+        """
+        attempt = self.stage_attempts.get(stage, 0) + 1
+        self.stage_attempts[stage] = attempt
+        self.current_stage = stage
+        self.current_attempt = attempt
+        return attempt
+
+    def attempt_usage(self, stage: str, attempt: int) -> dict[str, int]:
+        """What one numbered attempt of one stage spent."""
+        row = _empty_usage()
+        for entry in self.calls:
+            if entry["stage"] != stage or entry["attempt"] != attempt:
+                continue
+            for key in TOKEN_KEYS:
+                row[key] += entry[key]
+            row["calls"] += 1
+        return row
+
+    def ledger(self) -> dict[str, Any]:
+        """The durable record: every call, plus the sums derived from them."""
+        return {
+            "ledger_version": LEDGER_VERSION,
+            "calls": [dict(entry) for entry in self.calls],
+            "by_attempt": self._attempt_rows(),
+            "by_stage": self._stage_rows(),
+            "totals": self.totals(),
+            "successful_calls": self.successful_calls,
+            "unmetered_calls": self.successful_calls - self.measured_calls,
+        }
 
     def record(self, model_name: str, raw_usage: Any) -> None:
         self.successful_calls += 1
         usage = normalize_token_usage(raw_usage)
+        stage = self.current_stage or UNATTRIBUTED_STAGE
+        attempt = self.current_attempt or self.stage_attempts.setdefault(stage, 1)
         if usage is None:
+            # A call that reported nothing is still a call. Recording it keeps
+            # "we spent nothing here" apart from "we were not told", which is
+            # what `measurement_status` is read for.
+            self.calls.append(
+                {
+                    "seq": len(self.calls) + 1,
+                    "stage": stage,
+                    "attempt": attempt,
+                    "model": model_name,
+                    **_empty_usage(),
+                    "calls": 1,
+                    "metered": False,
+                    "cost_usd": None,
+                    "cost_basis": None,
+                }
+            )
             return
         measured_cost = _measured_cost(raw_usage)
         self.measured_calls += 1
@@ -282,6 +347,94 @@ class Prompt2BlogTokenUsageTracker:
         else:
             totals["estimated_cost_usd"] += call_cost
             totals["cost_bases"].add(basis)
+        self.calls.append(
+            {
+                "seq": len(self.calls) + 1,
+                "stage": stage,
+                "attempt": attempt,
+                "model": model_name,
+                **{key: usage[key] for key in TOKEN_KEYS},
+                "calls": 1,
+                "metered": True,
+                "cost_usd": round(call_cost, 6) if call_cost is not None else None,
+                "cost_basis": basis if call_cost is not None else None,
+            }
+        )
+
+    def _attempt_rows(self) -> list[dict[str, Any]]:
+        rows: dict[tuple[str, int], dict[str, Any]] = {}
+        order: list[tuple[str, int]] = []
+        for entry in self.calls:
+            key = (entry["stage"], entry["attempt"])
+            row = rows.get(key)
+            if row is None:
+                row = {
+                    "stage": entry["stage"],
+                    "attempt": entry["attempt"],
+                    **_empty_usage(),
+                    "cost_usd": 0.0,
+                    "unpriced_calls": 0,
+                    "first_seq": entry["seq"],
+                }
+                rows[key] = row
+                order.append(key)
+            for token_key in TOKEN_KEYS:
+                row[token_key] += entry[token_key]
+            row["calls"] += 1
+            if entry["cost_usd"] is None:
+                row["unpriced_calls"] += 1
+            else:
+                row["cost_usd"] += entry["cost_usd"]
+        # Chronological: the receipt reads as the run happened, so a second
+        # attempt sits under the first rather than replacing it.
+        return [
+            {
+                **{
+                    key: value
+                    for key, value in rows[key].items()
+                    if key not in ("cost_usd", "unpriced_calls", "first_seq")
+                },
+                "cost_usd": (
+                    round(rows[key]["cost_usd"], 6)
+                    if not rows[key]["unpriced_calls"]
+                    else None
+                ),
+            }
+            for key in sorted(order, key=lambda item: rows[item]["first_seq"])
+        ]
+
+    def _stage_rows(self) -> list[dict[str, Any]]:
+        rows: dict[str, dict[str, Any]] = {}
+        for entry in self.calls:
+            row = rows.setdefault(
+                entry["stage"],
+                {"stage": entry["stage"], **_empty_usage(), "attempts": 0},
+            )
+            for token_key in TOKEN_KEYS:
+                row[token_key] += entry[token_key]
+            row["calls"] += 1
+        for stage, attempts in self.stage_attempts.items():
+            row = rows.setdefault(
+                stage,
+                {"stage": stage, **_empty_usage(), "attempts": 0},
+            )
+            row["attempts"] = attempts
+        for stage, row in rows.items():
+            if not row["attempts"]:
+                row["attempts"] = max(
+                    (
+                        entry["attempt"]
+                        for entry in self.calls
+                        if entry["stage"] == stage
+                    ),
+                    default=0,
+                )
+        # Sorted by spend so the stages worth capping or de-thinking are the
+        # ones read first.
+        return sorted(
+            rows.values(),
+            key=lambda row: (-row["total_tokens"], row["stage"]),
+        )
 
     def summary(
         self,
@@ -334,15 +487,8 @@ class Prompt2BlogTokenUsageTracker:
                 }
             )
             measured_models += 1 if COST_BASIS_MEASURED in usage["cost_bases"] else 0
-        # Sorted by spend so the stages worth capping or de-thinking are the
-        # ones read first.
-        stage_rows = [
-            {"stage": stage_name, **usage}
-            for stage_name, usage in sorted(
-                self.by_stage.items(),
-                key=lambda item: (-item[1]["total_tokens"], item[0]),
-            )
-        ]
+        stage_rows = self._stage_rows()
+        attempt_rows = self._attempt_rows()
         if self.measured_calls == 0:
             measurement_status = "unavailable"
         elif self.measured_calls < self.successful_calls or not fully_priced:
@@ -363,7 +509,18 @@ class Prompt2BlogTokenUsageTracker:
             "total_tokens": total_tokens,
             "successful_calls": self.successful_calls,
             "measured_calls": self.measured_calls,
+            # A call the provider told us nothing about. Named rather than
+            # folded into the totals, because a run with unmetered calls has a
+            # floor, not a total.
+            "unmetered_calls": self.successful_calls - self.measured_calls,
             "measurement_status": measurement_status,
+            # Both are sums over the same ledger, so they agree by construction.
+            # Published anyway: a reader who adds the stage rows up should be
+            # able to check the headline figure rather than trust it.
+            "attributed_total_tokens": sum(
+                row["total_tokens"] for row in stage_rows
+            ),
+            "ledger_version": LEDGER_VERSION,
             "estimated_cost_usd": (
                 round(estimated_cost_usd, 6)
                 if self.measured_calls and fully_priced
@@ -372,5 +529,6 @@ class Prompt2BlogTokenUsageTracker:
             "currency": "USD",
             "by_model": model_rows,
             "by_stage": stage_rows,
+            "by_attempt": attempt_rows,
             "pricing_note": _pricing_note(measured_models),
         }
