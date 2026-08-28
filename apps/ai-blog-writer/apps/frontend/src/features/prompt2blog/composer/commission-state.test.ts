@@ -92,10 +92,10 @@ function state(overrides: Partial<P2BFormState> = {}): P2BFormState {
     easySetupLocation: APP_LOCATION,
     toneId: 'editorial',
     lengthId: 'long',
-    modelStackId: 'best-value',
+    modelStackId: 'opus-led-medium',
     modelName: 'gemini-3.1-flash-lite',
-    writingModel: 'gemini-3.7-flash',
-    auditModel: 'gemini-3.7-flash',
+    writingModel: 'claude-opus-5-medium',
+    auditModel: 'claude-opus-5-medium',
     ...overrides
   }
 }
@@ -134,7 +134,7 @@ describe('commission state', () => {
       approval: { status: 'not_started' },
       evidencePackage: null
     })
-    expect(next.modelStackId).toBe('best-value')
+    expect(next.modelStackId).toBe('opus-led-medium')
     expect(next.toneId).toBe('editorial')
   })
 
@@ -259,7 +259,7 @@ describe('commission state', () => {
       approval: { status: 'not_started' },
       evidencePackage: null
     })
-    expect(next.modelStackId).toBe('best-value')
+    expect(next.modelStackId).toBe('opus-led-medium')
     expect(next.toneId).toBe('editorial')
   })
 })

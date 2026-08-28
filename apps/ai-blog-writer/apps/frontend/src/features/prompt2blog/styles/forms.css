@@ -97,6 +97,15 @@
   line-height: 1.5;
 }
 
+/* Sits under the mechanical role description and carries the "what is this
+   for" line, so it reads as guidance rather than more specification. */
+.p2b-stack-guidance {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-light);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .p2b-stack-cost {
   padding: var(--space-5);
   border: 1px solid var(--border-strong);
@@ -512,6 +521,37 @@
 
 .p2b-field-hint.is-selected {
   color: var(--ink);
+}
+
+.p2b-profile-reader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--p2b-accent);
+  background: var(--p2b-accent-softer);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.p2b-profile-reader > p,
+.p2b-profile-reader-rules p {
+  margin: 0;
+}
+
+.p2b-profile-reader summary {
+  color: var(--p2b-accent-hover);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.p2b-profile-reader-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  color: var(--ink-light);
 }
 
 /* Progressive disclosure */

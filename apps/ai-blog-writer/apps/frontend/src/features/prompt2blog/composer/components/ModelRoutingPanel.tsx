@@ -28,7 +28,7 @@ export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
 
   return <Panel
     title="Run Stack"
-    description="Select one option. Within each group, quality-first appears first and fastest appears last."
+    description="Select one option. Within each group, effort rises down the list: higher effort is slower and tends to leave less to edit."
     onClear={props.onClear}
   >
     <div className="p2b-field p2b-stack-picker">
@@ -47,14 +47,16 @@ export function ModelRoutingPanel(props: ModelRoutingPanelProps) {
           return <optgroup key={family} label={PROMPT2BLOG_STACK_FAMILY_LABELS[family]}>
             {stacks.map(stack => (
               <option key={stack.id} value={stack.id}>
-                {stack.priceTier} · {stack.label}
+                {stack.label.replace(/^(Opus|Sonnet) · /, '')} · {stack.priceTier}
                 {stack.label === stack.speedTier ? '' : ` · ${stack.speedTier}`}
+                {stack.recommended ? ' · Recommended' : ''}
               </option>
             ))}
           </optgroup>
         })}
       </select>
       <p className="p2b-stack-description">{selectedStack.description}</p>
+      <p className="p2b-stack-guidance">{selectedStack.guidance}</p>
     </div>
     <div
       className="p2b-stack-cost"

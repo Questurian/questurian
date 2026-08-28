@@ -1,4 +1,4 @@
-import type { Prompt2BlogInputOptionsResponse } from '../../api'
+import type { Prompt2BlogInputOption, Prompt2BlogInputOptionsResponse } from '../../api'
 import type { P2BFormState } from '../composer.types'
 import { Panel } from './Panel'
 
@@ -67,14 +67,41 @@ function LengthRecap({
   </p>
 }
 
-function SelectField({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Array<{ id: string; label: string; description?: string }>; onChange: (value: string) => void }) {
-  // The catalogs carry a description per option explaining when to pick it.
-  // Rendering only the label meant that routing was invisible at the point of
-  // choice, which is the only place it is any use.
+function SelectField({ id, label, value, options, onChange }: { id: string; label: string; value: string; options: Prompt2BlogInputOption[]; onChange: (value: string) => void }) {
   const selected = options.find(option => option.id === value)
   return <div className="p2b-field">
     <label htmlFor={id}>{label}</label>
     <select id={id} className="p2b-select" value={value} onChange={event => onChange(event.target.value)}>{options.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
-    {selected?.description && <p className="p2b-field-hint is-selected">{selected.description}</p>}
+    {selected ? <ProfileReader kind={label} profile={selected} /> : null}
+  </div>
+}
+
+function ProfileReader({
+  kind,
+  profile,
+}: {
+  kind: string
+  profile: Prompt2BlogInputOption
+}) {
+  const paragraphs = (profile.instructions || '')
+    .split(/\n\s*\n/)
+    .map(paragraph => paragraph.trim())
+    .filter(paragraph => paragraph && !paragraph.startsWith('#'))
+
+  return <div
+    className="p2b-profile-reader"
+    aria-label={`${kind}: ${profile.label} profile`}
+    aria-live="polite"
+  >
+    <strong>{profile.label}</strong>
+    {profile.description ? <p>{profile.description}</p> : null}
+    {paragraphs.length ? (
+      <details>
+        <summary>Read full {kind.toLowerCase()} profile</summary>
+        <div className="p2b-profile-reader-rules">
+          {paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+        </div>
+      </details>
+    ) : null}
   </div>
 }

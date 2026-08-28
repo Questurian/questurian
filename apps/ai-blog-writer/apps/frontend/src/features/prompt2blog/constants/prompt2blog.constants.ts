@@ -7,39 +7,24 @@ import type { Prompt2BlogModelName, Prompt2BlogWriterModel } from '../types/pipe
 export const FEATURE_PREFIX = '/prompt2blog'
 
 export type Prompt2BlogModelStackId =
-  | 'maximum-quality'
-  | 'premium-review'
-  | 'editorial-premium'
-  | 'balanced'
-  | 'best-value'
-  | 'economy'
-  | 'opus-max'
-  | 'opus-balanced'
-  | 'opus-lean'
   | 'opus-led-medium'
   | 'opus-led-high'
   | 'opus-led-xhigh'
   | 'opus-led-max'
-  | 'sonnet-max'
-  | 'sonnet-balanced'
-  | 'sonnet-lean'
   | 'sonnet-led-medium'
   | 'sonnet-led-high'
   | 'sonnet-led-xhigh'
   | 'sonnet-led-max'
 
 /**
- * Which family a stack belongs to, so the picker can group them. The two are
- * not points on one scale: an all-Gemini stack bills per token, and a
- * Claude-writer stack pays for its writing out of the subscription, so sorting
- * them into one price-ordered list would compare things that are not
- * comparable.
+ * Stack family used by the picker. Claude handles writing and judgment while
+ * Flash-Lite remains the cheap research worker.
  */
-export type Prompt2BlogStackFamily = 'gemini' | 'claude-writer'
+export type Prompt2BlogStackFamily = 'opus' | 'sonnet'
 
 export const PROMPT2BLOG_STACK_FAMILY_LABELS: Record<Prompt2BlogStackFamily, string> = {
-  gemini: 'Gemini — billed per token',
-  'claude-writer': 'Claude writes — included in your plan'
+  opus: 'Claude Opus',
+  sonnet: 'Claude Sonnet'
 }
 
 export interface Prompt2BlogModelStack {
@@ -49,191 +34,70 @@ export interface Prompt2BlogModelStack {
   priceTier: string
   speedTier: 'Slowest' | 'Slow' | 'Moderate' | 'Fast' | 'Faster' | 'Fastest'
   description: string
+  /**
+   * What this stack is for, in terms of the editing burden it tends to leave.
+   * The mechanical description says which model fills which role; it does not
+   * tell an operator which one to pick, and picking on price alone produced a
+   * draft that needed a rewrite rather than an edit.
+   */
+  guidance: string
+  /**
+   * Marks the stack offered as the starting point. Exactly one carries it.
+   */
+  recommended?: boolean
   modelName: Prompt2BlogModelName
   writingModel: Prompt2BlogWriterModel
   auditModel: Prompt2BlogWriterModel
 }
 
+type Prompt2BlogStackEffort = 'medium' | 'high' | 'xhigh' | 'max'
+
+/**
+ * Effort is the only axis that separates these stacks, so it has to carry the
+ * expectation. Wording stays deliberately hedged: the difference between
+ * efforts is real but has been observed over a handful of runs, not measured,
+ * and a picker that promises quality is a picker that will be wrong.
+ */
+const STACK_GUIDANCE: Record<Prompt2BlogStackEffort, string> = {
+  medium: 'Cheapest and quickest. Use it to try a commission out; expect to restructure sections yourself.',
+  high: 'A reasonable default for a routine commission where the shape is already clear.',
+  xhigh: 'For commissions with awkward scope or thin evidence, where drafts tend to come back needing work.',
+  max: 'Aims for the smallest editing burden. Slowest, and the one to reach for when the draft matters.'
+}
+
 export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
-  {
-    id: 'maximum-quality',
-    family: 'gemini',
-    label: 'Maximum Quality',
-    priceTier: '$$$$$$',
-    speedTier: 'Slowest',
-    description: 'Gemini 3.1 Pro handles every model call. Slowest and most expensive.',
-    modelName: 'gemini-3.1-pro-preview',
-    writingModel: 'gemini-3.1-pro-preview',
-    auditModel: 'gemini-3.1-pro-preview'
-  },
-  {
-    id: 'premium-review',
-    family: 'gemini',
-    label: 'Premium Review',
-    priceTier: '$$$$$',
-    speedTier: 'Slow',
-    description: 'Fast research, with Gemini 3.1 Pro writing and judging the finished work.',
-    modelName: 'gemini-3.7-flash',
-    writingModel: 'gemini-3.1-pro-preview',
-    auditModel: 'gemini-3.1-pro-preview'
-  },
-  {
-    id: 'editorial-premium',
-    family: 'gemini',
-    label: 'Editorial Premium',
-    priceTier: '$$$$',
-    speedTier: 'Moderate',
-    description: 'Gemini 3.1 Pro writes; Gemini 3.7 Flash researches and checks quality.',
-    modelName: 'gemini-3.7-flash',
-    writingModel: 'gemini-3.1-pro-preview',
-    auditModel: 'gemini-3.7-flash'
-  },
-  {
-    id: 'balanced',
-    family: 'gemini',
-    label: 'Fast + Optimal',
-    priceTier: '$$$',
-    speedTier: 'Fast',
-    description: 'Gemini 3.7 Flash runs everything. Best speed without dropping to Lite quality.',
-    modelName: 'gemini-3.7-flash',
-    writingModel: 'gemini-3.7-flash',
-    auditModel: 'gemini-3.7-flash'
-  },
-  {
-    id: 'best-value',
-    family: 'gemini',
-    label: 'Best Value',
-    priceTier: '$$',
-    speedTier: 'Faster',
-    description:
-      'Flash-Lite prepares sources; Gemini 3.7 Flash protects writing and review quality.',
-    modelName: 'gemini-3.1-flash-lite',
-    writingModel: 'gemini-3.7-flash',
-    auditModel: 'gemini-3.7-flash'
-  },
-  {
-    id: 'economy',
-    family: 'gemini',
-    label: 'Fastest',
-    priceTier: '$',
-    speedTier: 'Fastest',
-    description: 'Flash-Lite handles everything. Fastest and cheapest, with less refinement.',
-    modelName: 'gemini-3.1-flash-lite',
-    writingModel: 'gemini-3.1-flash-lite',
-    auditModel: 'gemini-3.1-flash-lite'
-  },
-  // A 2x3 grid, on purpose. Two writers across three research-and-audit tiers,
-  // so comparing two runs isolates one variable: if Opus + Lean beats
-  // Sonnet + Max the writer matters more than the research, and if they tie
-  // there is no reason to keep paying for Pro research. The six Gemini stacks
-  // above stay untouched as the control group.
-  //
-  // The original grid keeps research and audit on Gemini. The explicit
-  // Claude-led effort variants below move audit onto the selected Claude model and
-  // reserve Flash-Lite for research, trading independent review for lower
-  // metered spend.
-  //
-  // The price tier reads "Plan + $" because only part of the run is metered:
-  // Claude roles draw the subscription's allowance and have no per-token rate;
-  // the dollars count only whichever Gemini roles remain.
-  {
-    id: 'opus-max',
-    family: 'claude-writer',
-    label: 'Opus · Max',
-    priceTier: 'Plan + $$$',
-    speedTier: 'Slowest',
-    description:
-      'Claude Opus writes; Gemini 3.1 Pro researches and judges. The most thorough combination, and the slowest.',
-    modelName: 'gemini-3.1-pro-preview',
-    writingModel: 'claude-opus-5',
-    auditModel: 'gemini-3.1-pro-preview'
-  },
-  {
-    id: 'opus-balanced',
-    family: 'claude-writer',
-    label: 'Opus · Balanced',
-    priceTier: 'Plan + $$',
-    speedTier: 'Slow',
-    description:
-      'Claude Opus writes; Gemini 3.7 Flash researches and judges. The default Claude stack.',
-    modelName: 'gemini-3.7-flash',
-    writingModel: 'claude-opus-5',
-    auditModel: 'gemini-3.7-flash'
-  },
-  {
-    id: 'opus-lean',
-    family: 'claude-writer',
-    label: 'Opus · Lean',
-    priceTier: 'Plan + $',
-    speedTier: 'Moderate',
-    description:
-      'Claude Opus writes on the cheapest research available. Tests how much the research tier actually matters.',
-    modelName: 'gemini-3.1-flash-lite',
-    writingModel: 'claude-opus-5',
-    auditModel: 'gemini-3.7-flash'
-  },
+  // Claude owns writing, repair, and judgment. Flash-Lite does only worker
+  // tasks, keeping metered spend low. Low effort is intentionally unavailable.
   ...(['medium', 'high', 'xhigh', 'max'] as const).map(effort => ({
     id: `opus-led-${effort}` as Prompt2BlogModelStackId,
-    family: 'claude-writer' as const,
+    family: 'opus' as const,
     label: `Opus · ${effort === 'xhigh' ? 'XHigh' : effort[0].toUpperCase() + effort.slice(1)}`,
     priceTier: 'Plan + $',
     speedTier: 'Slowest' as const,
     description: `Claude Opus at ${effort} effort writes, repairs, and judges; Gemini Flash-Lite is reserved for cheap research work.`,
+    guidance: STACK_GUIDANCE[effort],
+    recommended: effort === 'max',
     modelName: 'gemini-3.1-flash-lite' as const,
     writingModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
     auditModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel
   })),
-  {
-    id: 'sonnet-max',
-    family: 'claude-writer',
-    label: 'Sonnet · Max',
-    priceTier: 'Plan + $$$',
-    speedTier: 'Slow',
-    description:
-      'Claude Sonnet writes; Gemini 3.1 Pro researches and judges. The best research a faster writer can be given.',
-    modelName: 'gemini-3.1-pro-preview',
-    writingModel: 'claude-sonnet-5',
-    auditModel: 'gemini-3.1-pro-preview'
-  },
-  {
-    id: 'sonnet-balanced',
-    family: 'claude-writer',
-    label: 'Sonnet · Balanced',
-    priceTier: 'Plan + $$',
-    speedTier: 'Moderate',
-    description:
-      'Claude Sonnet writes; Gemini 3.7 Flash researches and judges. The quickest Claude stack worth comparing.',
-    modelName: 'gemini-3.7-flash',
-    writingModel: 'claude-sonnet-5',
-    auditModel: 'gemini-3.7-flash'
-  },
-  {
-    id: 'sonnet-lean',
-    family: 'claude-writer',
-    label: 'Sonnet · Lean',
-    priceTier: 'Plan + $',
-    speedTier: 'Fast',
-    description: 'Claude Sonnet writes on the cheapest research available. The floor of the grid.',
-    modelName: 'gemini-3.1-flash-lite',
-    writingModel: 'claude-sonnet-5',
-    auditModel: 'gemini-3.7-flash'
-  },
   ...(['medium', 'high', 'xhigh', 'max'] as const).map(effort => ({
     id: `sonnet-led-${effort}` as Prompt2BlogModelStackId,
-    family: 'claude-writer' as const,
+    family: 'sonnet' as const,
     label: `Sonnet · ${effort === 'xhigh' ? 'XHigh' : effort[0].toUpperCase() + effort.slice(1)}`,
     priceTier: 'Plan + $',
     speedTier: effort === 'medium' ? ('Fast' as const) : ('Moderate' as const),
     description: `Claude Sonnet at ${effort} effort writes, repairs, and judges; Gemini Flash-Lite is reserved for cheap research work.`,
+    guidance: STACK_GUIDANCE[effort],
     modelName: 'gemini-3.1-flash-lite' as const,
     writingModel: `claude-sonnet-5-${effort}` as Prompt2BlogWriterModel,
     auditModel: `claude-sonnet-5-${effort}` as Prompt2BlogWriterModel
   }))
 ]
 
-export const PROMPT2BLOG_STACK_FAMILY_ORDER: Prompt2BlogStackFamily[] = ['gemini', 'claude-writer']
+export const PROMPT2BLOG_STACK_FAMILY_ORDER: Prompt2BlogStackFamily[] = ['opus', 'sonnet']
 
-export const DEFAULT_PROMPT2BLOG_MODEL_STACK_ID: Prompt2BlogModelStackId = 'editorial-premium'
+export const DEFAULT_PROMPT2BLOG_MODEL_STACK_ID: Prompt2BlogModelStackId = 'opus-led-max'
 
 export function resolvePrompt2BlogModelStack(value?: string): Prompt2BlogModelStack {
   return (
