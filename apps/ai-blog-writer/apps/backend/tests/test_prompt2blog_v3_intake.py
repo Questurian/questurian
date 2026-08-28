@@ -101,7 +101,7 @@ def test_intake_returns_a_versioned_run_input_for_the_approved_commission():
     run_input = payload["run_input"]
 
     assert run_input["schema_version"] == 3
-    assert run_input["instruction_schema_version"] == 4
+    assert run_input["instruction_schema_version"] == 5
     assert (
         run_input["commission_fingerprint"]
         == fixture["commission"]["commission_fingerprint"]

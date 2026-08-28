@@ -360,9 +360,13 @@ def test_compose_writes_from_evidence_records_and_never_from_source_prose():
     updates = run_v3_compose_stage(state, dependencies)
 
     prompt = llm.prompts[0]
+    normalized_prompt = " ".join(prompt.split())
     assert "CLEANED SOURCE MATERIAL" not in prompt
     assert "SUPPLEMENTAL MATERIAL" not in prompt
     assert "Never invent a bridge fact" in prompt
+    assert "Omit unsupported points from reader-facing prose" in normalized_prompt
+    assert "`remaining_gaps` as internal metadata only" in normalized_prompt
+    assert "unsupported point stays a visible gap" not in prompt
     assert "STYLE DIRECTIVE (REQUIRED)" in prompt
     assert "Instituto Nacional de Estadística e Informática" in prompt
     assert "HOUSE STYLE" in prompt

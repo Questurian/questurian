@@ -75,8 +75,9 @@ API → orchestrator → graph → stages → content / quality
   removed once the run route made it redundant, and it never had a caller.
 - `run_id`, completed non-debug artifact structure, Markdown output, stage trace
   shape, and option-file semantics are unchanged. Instruction schema v4
-  intentionally replaces v3 debug `instruction_text` with a compact
-  `stage_contexts` manifest; saved snapshot v1 runs must restart.
+  replaced v3 debug `instruction_text` with a compact `stage_contexts`
+  manifest. Schema v5 adds the canonical evidence-disposition policy; saved
+  snapshot versions 1-2 must restart.
 - No new canonical top-level `Stage[N]Output` was introduced.
 - Quality Gate repair still performs a second audit before finalization.
 - The `reported-people-scenes-quotations` source gate is implemented twice on

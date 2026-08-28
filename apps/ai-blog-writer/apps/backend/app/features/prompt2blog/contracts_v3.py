@@ -69,7 +69,7 @@ EvidenceConfidence = Literal["high", "medium", "low"]
 # nobody has ever published an answer to — Lima's customs processing minutes, for
 # either terminal — could only be reported as `partial`, which blocked the run and
 # sent the operator back to ask again for a fact that does not exist. It is a
-# finding, not a failure: the article can say the number is unpublished.
+# finding, not a failure: the article omits the number without narrating the gap.
 EvidenceRequirementStatus = Literal["supported", "partial", "missing", "unpublished"]
 # What research found when it went to check what the direction step assumed.
 #

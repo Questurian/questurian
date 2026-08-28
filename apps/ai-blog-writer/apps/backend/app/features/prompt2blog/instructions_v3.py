@@ -11,7 +11,7 @@ from .contracts_v3 import Prompt2BlogCommission, Prompt2BlogV3Request
 from .editorial_catalog import EditorialCatalog, load_editorial_catalog
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
 
-INSTRUCTION_SCHEMA_VERSION = 4
+INSTRUCTION_SCHEMA_VERSION = 5
 
 PRECEDENCE = (
     "verified evidence",
@@ -29,6 +29,14 @@ _OUTLINE_FORM_HEADINGS = (
     "## Allowed structures",
     "## Failure modes",
 )
+
+EVIDENCE_DISPOSITION_POLICY = """EVIDENCE DISPOSITION POLICY (IMMUTABLE)
+- Unsupported assertion: delete it. Never hedge it, qualify it, or label it
+  unconfirmed. Omit unsupported points from reader-facing prose.
+- Supported uncertainty: preserve its exact scope, confidence, and limits.
+- Unpublished fact: omit it silently. Never narrate research absence.
+- Gap: record it in `remaining_gaps` as internal metadata only. Never put the
+  gap or the research process in reader-facing prose."""
 
 
 class InstructionModel(BaseModel):
@@ -108,17 +116,14 @@ def _commission_body(commission: Prompt2BlogCommission) -> str:
 
 def _evidence_body(evidence: NormalizedEvidence) -> str:
     return (
+        f"{EVIDENCE_DISPOSITION_POLICY}\n\n"
         "These records are the only permitted source of fact. Use them exactly: "
         "preserve dates, units, geography, and stated uncertainty. Attribution "
         "is internal to these records. Never carry it into the prose: no "
         "\"sources report\", no \"outlets say\", no \"according to\", no "
         "\"the publication noted\", no naming the outlet, site, or report a "
-        "fact came from. A fact either stands as a plain sentence or is cut. "
-        "An unsupported requirement stays a visible gap; never invent a bridge "
-        "fact to close it. A requirement marked unpublished was searched for "
-        "and no one publishes an answer. Leave it out and write around it. Do "
-        "not tell the reader the figure is unpublished, do not explain what "
-        "could not be found, and never estimate the number. First-hand material "
+        "fact came from. Never invent a bridge fact to close a gap. First-hand "
+        "material "
         "is the writer's own knowledge: state it directly, as fact, with no "
         "attribution, no sourcing language, and no note about how it was "
         "obtained. A confirmed premise is simply a fact the article may use; "
@@ -429,6 +434,7 @@ def assemble_v3_instructions(
                     "REPAIR AUTHORITY\nExact revisions and unsupported-claim verdicts "
                     "control this pass. This lock is immutable.",
                 ),
+                ("evidence_disposition_policy", EVIDENCE_DISPOSITION_POLICY),
                 (
                     "scope_style_lock",
                     f"COMPACT SCOPE AND STYLE LOCK\n"

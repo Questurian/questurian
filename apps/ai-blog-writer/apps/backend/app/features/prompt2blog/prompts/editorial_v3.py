@@ -71,8 +71,8 @@ Hard rules:
 - Every factual statement must trace to a claim in the evidence records.
   Preserve attribution, dates, units, geography, and stated uncertainty.
 - Never invent a bridge fact, scene, quotation, experience, statistic, price,
-  consensus, or practical detail. An unsupported point stays a visible gap and
-  belongs in remaining_gaps.
+  consensus, or practical detail. Follow the EVIDENCE DISPOSITION POLICY in
+  the compose context exactly.
 - The evidence records are internal working material. Never cite them in the
   article: no claim IDs, no source IDs, no "(Source 1)", no numbered
   references of any kind. The reader cannot see them.
@@ -96,7 +96,8 @@ Hard rules:
   requirements, not suggestions.
 - Follow the SECTION PLAN when one is provided: use its headings, in order, and
   hold each section to roughly its word budget. Depart from it only where the
-  evidence makes a planned section unsupportable, and say so in remaining_gaps.
+  evidence makes a planned section unsupportable. Record that departure in
+  remaining_gaps; never narrate missing research to the reader.
 
 SECTION PLAN:
 {outline}
@@ -141,7 +142,7 @@ What counts as unsupported:
 
 What does NOT count:
 - General background a well-informed writer would state without a source.
-- Statements the draft already marks as unconfirmed, approximate, or variable.
+- Uncertainty or qualification that the evidence record itself states.
 - Restatement or paraphrase of something a record does say.
 - Advice framed as judgement rather than fact.
 
@@ -151,6 +152,8 @@ Rules:
 - Quote the claim as it appears in the draft.
 - grounded is true only when there are no high-severity unsupported claims.
 - Do not rewrite the article.
+
+{evidence_disposition_policy}
 
 EVIDENCE RECORDS:
 {evidence_records}
@@ -290,8 +293,8 @@ Rules:
   change the commission: not the form, the primary subject, the scope mode, the
   reference roles, the requirements, or the exclusions.
 - Never add factual material. Work only with facts already present in the
-  previous draft. Remove or explicitly mark as unconfirmed anything listed
-  under UNSUPPORTED CLAIMS.
+  previous draft. Apply the EVIDENCE DISPOSITION POLICY in the repair lock
+  exactly, including deletion of every assertion under UNSUPPORTED CLAIMS.
 - Never promote a context-only reference, add a comparator, or broaden scope to
   satisfy a revision.
 - Never cite evidence records in the prose: no claim IDs, no source IDs, no
@@ -299,8 +302,6 @@ Rules:
   from. An actor or institution in the story may be named; the reporter of it
   may not.
 - Keep complete article prose with clear `##` / `###` structure.
-- Where support is missing, state the uncertainty plainly and list it in
-  remaining_gaps.
 
 REQUIRED REVISIONS:
 {required_revisions}

@@ -8,6 +8,7 @@ from app.shared.provider_faults import is_fatal_provider_fault
 from ...config import P2B_V3_GROUNDEDNESS_MODEL
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
+from ...instructions_v3 import EVIDENCE_DISPOSITION_POLICY
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_GROUNDEDNESS_PROMPT
 from ...quality import _sanitize_groundedness, unchecked_groundedness
@@ -30,6 +31,7 @@ def check_v3_groundedness(
     """
     run_id = state["run_id"]
     prompt = P2B_V3_GROUNDEDNESS_PROMPT.format(
+        evidence_disposition_policy=EVIDENCE_DISPOSITION_POLICY,
         evidence_records=state["evidence"]["records_text"],
         rewritten_title=rewrite["improved_title"],
         rewritten_content=rewrite["improved_content"],

@@ -12,6 +12,7 @@ from app.features.prompt2blog.contracts_v3 import (
 )
 from app.features.prompt2blog.evidence_v3 import normalize_evidence
 from app.features.prompt2blog.instructions_v3 import (
+    EVIDENCE_DISPOSITION_POLICY,
     PRECEDENCE,
     assemble_v3_instructions,
 )
@@ -59,7 +60,7 @@ def test_instruction_layers_follow_the_fixed_authority_order():
         "house_style",
     ]
     assert instructions.precedence == list(PRECEDENCE)
-    assert instructions.schema_version == 4
+    assert instructions.schema_version == 5
     assert instructions.stage_contexts.compose.included_sections == [
         "compose_authority",
         "evidence",
@@ -94,6 +95,9 @@ def test_stage_contexts_are_deterministic_and_keep_only_job_specific_material():
     assert "Prompt2Blog headline standard" in first.title.text
     assert "FORM HEADLINE NOTE — Analysis" in first.title.text
     assert "VERIFIED EVIDENCE" not in first.title.text
+    assert EVIDENCE_DISPOSITION_POLICY in first.compose.text
+    assert EVIDENCE_DISPOSITION_POLICY in first.repair_lock.text
+    assert EVIDENCE_DISPOSITION_POLICY not in first.audit.text
 
 
 def test_commission_layer_locks_form_subject_scope_and_exclusions():
@@ -143,7 +147,9 @@ def test_evidence_layer_preserves_publisher_url_dates_and_exact_notes():
     assert source["retrieved_at"] in evidence_layer.body
     for note in source["notes"]:
         assert note in evidence_layer.body
-    assert "never invent a bridge" in evidence_layer.body
+    assert "never invent a bridge" in evidence_layer.body.casefold()
+    assert "`remaining_gaps` as internal metadata only" in evidence_layer.body
+    assert "visible gap" not in evidence_layer.body
 
 
 def test_normalized_requirements_keep_commission_order_and_report_gaps():

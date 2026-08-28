@@ -66,7 +66,7 @@ RESUME_HISTORY_STAGE = "pipeline_resume_v3"
 # Bumped whenever the stored shape stops meaning what this code reads. An
 # older snapshot is refused rather than reinterpreted: guessing at a state
 # written by different code is how a resume publishes mismatched work.
-RESUME_SNAPSHOT_VERSION = 2
+RESUME_SNAPSHOT_VERSION = 3
 
 # State entries rebuilt on the way back in rather than stored. `request` is a
 # pydantic model and is written out under its own key; `completed` belongs to

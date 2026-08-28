@@ -222,7 +222,7 @@ def test_a_snapshot_from_older_code_is_refused_rather_than_reinterpreted():
     _start(run_id, TitleFailsLLM(quality_scores=[9]))
 
     snapshot = read_stage_result(run_id, RESUME_SNAPSHOT_STAGE)
-    snapshot["data"]["snapshot_version"] = 1
+    snapshot["data"]["snapshot_version"] = 2
     write_stage_result(run_id, RESUME_SNAPSHOT_STAGE, snapshot)
 
     assert plan_resume(run_id).reason == "snapshot_version_unsupported"

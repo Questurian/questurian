@@ -191,8 +191,8 @@ def run_v3_repair_stage(
     """Repair prose and structure only.
 
     Repair can never create a fact or change the commission, so an unsupported
-    claim is fixed by removing it or marking it unconfirmed — never by finding
-    new material, which by then would have no evidence record behind it.
+    claim is deleted rather than hedged or replaced. Research gaps remain
+    metadata; the reader never sees the pipeline narrate its own absence.
     """
     stage = "stage_v3_repair"
     run_id = state["run_id"]

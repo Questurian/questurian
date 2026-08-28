@@ -170,6 +170,8 @@ def test_grounding_compares_the_draft_with_the_exact_evidence_records():
     assert "EVIDENCE RECORDS" in prompt
     assert "Instituto Nacional de Estadística e Informática" in prompt
     assert "retrieved 2026-08-25" in prompt
+    assert "Unsupported assertion: delete it" in prompt
+    assert "draft already marks as unconfirmed" not in prompt
     assert "CLEANED SOURCE MATERIAL" not in prompt
     assert updates["groundedness"]["grounded"] is False
     assert recorder.recorded[0][0] == "stage_v3_groundedness"
@@ -285,11 +287,19 @@ def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
     updates = run_v3_repair_stage(state, dependencies)
 
     prompt = llm.prompts[0]
+    normalized_prompt = " ".join(prompt.split())
     assert "Repair prose and structure only" in prompt
-    assert "you may not change the commission" in " ".join(prompt.split())
+    assert "you may not change the commission" in normalized_prompt
     assert "Never promote a context-only reference" in prompt
     assert "UNSUPPORTED CLAIMS" in prompt
     assert "Rent averages 900 dollars." in prompt
+    assert "Unsupported assertion: delete it" in prompt
+    assert "Never hedge it, qualify it, or label it unconfirmed" in normalized_prompt
+    assert "`remaining_gaps` as internal metadata only" in prompt
+    assert "Supported uncertainty: preserve its exact scope" in prompt
+    assert "Unpublished fact: omit it silently" in prompt
+    assert "explicitly mark as unconfirmed" not in prompt
+    assert "state the uncertainty plainly" not in prompt
     assert "VERIFIED EVIDENCE" not in prompt
     assert "Prompt2Blog house rules" not in prompt
     assert recorder.recorded[0][1]["required_revisions"] == ["Tighten the opening."]
