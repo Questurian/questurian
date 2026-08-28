@@ -191,9 +191,13 @@ Return strict JSON only:
   "quality_summary": "string"
 }}
 
-Scoring rubric:
-- 9-10: publishable.
-- 7-8: acceptable with edits.
+Scoring rubric — overall_score estimates how much work a human editor still
+has to do before this article is publishable, not how many rules it obeyed:
+- 9-10: an exceptional starting draft. What remains is personalisation and a
+  proofread. Nothing needs restructuring, no section needs re-researching, and
+  no section has to be rewritten before it is useful to a reader.
+- 7-8: acceptable with edits. The structure holds, but at least one section
+  needs rewriting, or leaves a decision it raised unresolved.
 - <=6: requires hard rewrite.
 
 Rules:
@@ -221,7 +225,24 @@ Rules:
 - Judge only audience_match and tone_match. Word count, paragraph length, CTA,
   and keyword presence are measured deterministically outside this prompt, so
   do not report them.
-- Score honestly. A draft that merely avoids mistakes is a 7, not a 9.
+- Score honestly. A draft that merely avoids mistakes is a 7, not a 9. Being
+  grounded, complete, and constraint-compliant is the floor this scale starts
+  from, not what earns the top of it.
+- Reader decision support is a scored dimension, not a nicety. For each
+  section, ask what decision it lets the reader make and whether the draft
+  actually resolves it. A section that lays out options without saying what
+  separates them -- what each is better and worse for, and who should choose
+  which -- has covered its requirement without doing its job. Name any such
+  section in required_revisions.
+- A fact catalog is not coverage. Prose that walks a list of named items with
+  their prices, hours, or figures attached, in sequence, without comparison or
+  judgement, reads as a directory rather than an article. It can be entirely
+  accurate and still leave the reader to do the work. Where a substantial
+  section reads this way, cap overall_score at 7 and say which section and what
+  comparison is missing.
+- The closing takeaways are scored on whether they compress the decisions the
+  article supported. Takeaways that restate the body, or that surface a
+  leftover fact the article never built on, cap overall_score at 8.
 - MEASURED CHECKS below are counted outside this prompt and are not opinions.
   While any of them is false, overall_score may not exceed 6, and the failure
   must appear in required_revisions. Length is a band with two edges: a draft

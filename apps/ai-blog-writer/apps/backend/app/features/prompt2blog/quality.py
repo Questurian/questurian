@@ -66,6 +66,35 @@ CONSTRAINT_MEASUREMENT_KEYS = frozenset(
 )
 
 
+# The auditor is told "overall_score may not exceed 6" while a measured check
+# is failing, and it does not reliably obey: the Medellin run returned 10 with
+# a failing check in the same prompt. Asking a model to cap its own score is a
+# request; this is the enforcement. Only deterministic booleans count here --
+# the auditor's own `audience_match` / `tone_match` judgements are editorial
+# opinion and must not silently cap a score.
+MEASURED_CHECK_SCORE_CEILING = 6
+
+
+def enforce_measured_check_ceiling(
+    quality: dict[str, Any], computed_checks: dict[str, Any]
+) -> list[str]:
+    """Clamp `overall_score` while any measured check is failing.
+
+    Returns the failing check names so callers can report them.
+    """
+    failed = sorted(
+        key
+        for key, value in computed_checks.items()
+        if isinstance(value, bool) and value is False
+    )
+    if failed:
+        current = _safe_int(
+            quality.get("overall_score"), default=MEASURED_CHECK_SCORE_CEILING
+        )
+        quality["overall_score"] = min(current, MEASURED_CHECK_SCORE_CEILING)
+    return failed
+
+
 def _extract_narrative_focus(writing_brief: dict[str, Any]) -> str:
     editorial = _safe_str(writing_brief.get("editorial_instructions"))
     if editorial:

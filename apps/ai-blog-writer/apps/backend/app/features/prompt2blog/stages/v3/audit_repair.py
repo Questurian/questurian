@@ -18,6 +18,7 @@ from ...quality import (
     _sanitize_quality,
     _sanitize_rewrite,
     drop_length_revisions,
+    enforce_measured_check_ceiling,
     unchecked_groundedness,
     word_count_revision_instruction,
 )
@@ -98,6 +99,10 @@ def _audit_v3_rewrite(
         "claims_grounded": groundedness["grounded"],
     }
     quality["constraint_checks"] = quality_checks
+    # The prompt asks the auditor to cap itself at 6 while a measured check is
+    # failing. The Medellin run returned 10 anyway. Enforce it here, where the
+    # measurements are facts rather than a request.
+    enforce_measured_check_ceiling(quality, computed_checks)
     quality["word_count_estimate"] = computed_checks["word_count_estimate"]
     # Repair reads this to state the length revision in words. It travels on
     # `quality` rather than in `constraint_checks`, which holds only verdicts.

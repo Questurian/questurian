@@ -339,6 +339,86 @@ def test_the_audit_is_handed_the_measurements_before_it_scores():
     assert "overall_score may not exceed 6" in prompt
 
 
+def test_a_failing_measured_check_caps_the_score_the_auditor_returned():
+    """The Medellin run returned 10 while a measured check was failing.
+
+    The prompt already said "overall_score may not exceed 6" in the same call.
+    Asking a model to cap its own score is a request, and this one was ignored,
+    so the cap is enforced where the measurements are facts.
+    """
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 10,
+            "constraint_checks": {"audience_match": True, "tone_match": True},
+            "required_revisions": [],
+            "quality_summary": "An exceptional draft.",
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+
+    result = run_v3_quality_audit_stage(_state(), dependencies)
+
+    quality = result["quality"]
+    assert quality["constraint_checks"]["target_word_count_met"] is False
+    assert quality["overall_score"] == 6
+
+
+def test_the_ceiling_leaves_a_clean_draft_alone():
+    # The cap must not quietly become a general downgrade: with every measured
+    # check passing, the auditor's own score stands.
+    from app.features.prompt2blog.quality import enforce_measured_check_ceiling
+
+    quality = {"overall_score": 10}
+    failed = enforce_measured_check_ceiling(
+        quality, {"target_word_count_met": True, "must_include_covered": True}
+    )
+
+    assert failed == []
+    assert quality["overall_score"] == 10
+
+
+def test_the_ceiling_ignores_the_auditors_own_editorial_judgements():
+    # audience_match and tone_match are opinions the auditor returns, not
+    # measurements. They must never silently cap a score.
+    from app.features.prompt2blog.quality import enforce_measured_check_ceiling
+
+    quality = {"overall_score": 9}
+    failed = enforce_measured_check_ceiling(
+        quality, {"word_count_estimate": 1200, "must_include_coverage": 0.5}
+    )
+
+    assert failed == []
+    assert quality["overall_score"] == 9
+
+
+def test_the_audit_scores_editing_burden_not_rule_compliance():
+    """A 10 used to mean grounded and constraint-compliant.
+
+    The Medellin run earned "exceptional draft" while its food section was a
+    menu-price catalog and its takeaways were leftovers. The rubric now defines
+    the top of the scale by what a human editor still has to do.
+    """
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 8,
+            "constraint_checks": {"audience_match": True, "tone_match": True},
+            "required_revisions": [],
+            "quality_summary": "Solid.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_quality_audit_stage(_state(), dependencies)
+
+    prompt = llm.prompts[0]
+    assert "how much work a human editor still" in prompt
+    assert "What remains is personalisation" in prompt
+    assert "A fact catalog is not coverage" in prompt
+    assert "cap overall_score at 7" in prompt
+    assert "Reader decision support is a scored dimension" in prompt
+    assert "is the floor this scale starts" in prompt
+
+
 def test_the_audit_is_told_the_working_title_is_a_reader_promise():
     """A commission can drift from the title it came from.
 
