@@ -1,7 +1,7 @@
 """Prompt2Blog v3 run entrypoint.
 
-Thin by design: the commission, the evidence, and the instruction stack are all
-assembled before a run starts, so the orchestrator only has to build the
+Thin by design: commission, evidence, and stage contexts are assembled before
+a run starts, so the orchestrator only has to build the
 initial state and execute the v3 graph.
 
 Two entrypoints, one graph. `run_pipeline_v3` starts at the outline with a
@@ -103,8 +103,7 @@ def _initial_v3_state(
         "commission": request.commission,
         "evidence": request.evidence,
         "instructions": instructions,
-        "instruction_text": _safe_str(instructions.get("instruction_text")),
-        "headline_instructions": _safe_str(instructions.get("headline_instructions")),
+        "stage_contexts": _safe_dict(instructions.get("stage_contexts")),
         "option_context": _safe_dict(request.option_context),
         "model_name": request.model_name or DEFAULT_MODEL,
         "outline_model": dependencies.resolve_writer_model(P2B_V3_OUTLINE_MODEL),

@@ -5,6 +5,41 @@ import re
 from ..support import _safe_str
 
 
+_MARKDOWN_HEADING = re.compile(r"^\s{0,3}#{2,3}[ \t]+(.+?)\s*$")
+_FENCE_MARKER = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
+
+
+def extract_markdown_headings(content: str) -> list[str]:
+    """Return H2/H3 text while ignoring headings inside fenced code."""
+    headings: list[str] = []
+    fence_character = ""
+    fence_length = 0
+    for line in _safe_str(content).splitlines():
+        fence = _FENCE_MARKER.match(line)
+        if fence:
+            marker = fence.group(1)
+            if not fence_character:
+                fence_character = marker[0]
+                fence_length = len(marker)
+                continue
+            if (
+                marker[0] == fence_character
+                and len(marker) >= fence_length
+                and not fence.group(2).strip()
+            ):
+                fence_character = ""
+                fence_length = 0
+                continue
+        if fence_character:
+            continue
+        heading = _MARKDOWN_HEADING.match(line)
+        if heading:
+            cleaned = re.sub(r"[ \t]+#+[ \t]*$", "", heading.group(1)).strip()
+            if cleaned:
+                headings.append(cleaned)
+    return headings
+
+
 def _ensure_markdown_section_headers(content: str) -> str:
     cleaned = _safe_str(content)
     if not cleaned:

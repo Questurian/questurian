@@ -66,7 +66,7 @@ RESUME_HISTORY_STAGE = "pipeline_resume_v3"
 # Bumped whenever the stored shape stops meaning what this code reads. An
 # older snapshot is refused rather than reinterpreted: guessing at a state
 # written by different code is how a resume publishes mismatched work.
-RESUME_SNAPSHOT_VERSION = 1
+RESUME_SNAPSHOT_VERSION = 2
 
 # State entries rebuilt on the way back in rather than stored. `request` is a
 # pydantic model and is written out under its own key; `completed` belongs to
@@ -352,7 +352,9 @@ def restore_v3_state(
     request = PipelineV3RuntimeRequest.model_validate(_safe_dict(snapshot["request"]))
     resume_count = resume_attempts_used(run_id) + 1
 
-    state: Prompt2BlogV3GraphState = dict(_safe_dict(snapshot.get("state")))  # type: ignore[assignment]
+    state: Prompt2BlogV3GraphState = dict(  # type: ignore[assignment]
+        _safe_dict(snapshot.get("state"))
+    )
     state["run_id"] = run_id
     state["request"] = request
     state["resume_count"] = resume_count

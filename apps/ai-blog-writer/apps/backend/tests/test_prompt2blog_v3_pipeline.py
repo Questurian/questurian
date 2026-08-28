@@ -308,6 +308,11 @@ def test_the_lima_commission_runs_end_to_end_through_the_v3_graph():
         "r2": "supported",
         "r3": "supported",
     }
+    contexts = payload["debug"]["stage_contexts"]
+    assert set(contexts) == {"outline", "compose", "audit", "repair_lock", "title"}
+    assert contexts["compose"]["character_count"] > contexts["audit"]["character_count"]
+    assert len(contexts["compose"]["fingerprint"]) == 64
+    assert "instruction_text" not in payload["debug"]
     assert state["final_title"] == "Is Lima still worth a long stay?"
 
 

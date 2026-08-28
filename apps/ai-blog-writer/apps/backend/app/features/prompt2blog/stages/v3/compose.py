@@ -6,6 +6,7 @@ from app.shared.prompts import ANTI_AI_TELLS_FULL
 
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
+from ...instructions_v3 import stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_COMPOSE_PROMPT
 from ...prompts.generation import SEO_SAFE_CONTENT_GENERATION_GUIDELINES
@@ -18,7 +19,7 @@ def run_v3_compose_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
-    """Write the article from the instruction stack and the evidence records.
+    """Write the article from its compose context and evidence records.
 
     Compose never sees cleaned source prose or supplemental material, because
     v3 has neither. Its only permitted facts are the claims the researcher
@@ -31,7 +32,7 @@ def run_v3_compose_stage(
     style_directive = _format_style_directive(state["option_context"])
     prompt = P2B_V3_COMPOSE_PROMPT.format(
         outline=state["outline_text"],
-        instructions=state["instruction_text"],
+        instructions=stage_context_text(state["stage_contexts"], "compose"),
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
         style_directive=style_directive,
     )

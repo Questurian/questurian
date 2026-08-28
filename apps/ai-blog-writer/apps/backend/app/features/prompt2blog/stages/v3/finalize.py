@@ -5,6 +5,7 @@ from typing import Any
 from ...content.markdown import _build_markdown
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
+from ...instructions_v3 import stage_context_manifest
 from ...policies import evaluate_readiness
 from ...pricing import Prompt2BlogTokenUsageTracker
 from ...quality import CONSTRAINT_MEASUREMENT_KEYS, _build_constraint_checks
@@ -181,7 +182,7 @@ def run_v3_finalize_stage(
                 "include_debug": state["include_debug"],
                 "input_profiles": state["option_context"],
             },
-            "instruction_text": instructions.get("instruction_text", ""),
+            "stage_contexts": stage_context_manifest(state["stage_contexts"]),
             "evidence_records": evidence.get("records_text", ""),
             "pipeline_trace": state["trace"],
         }

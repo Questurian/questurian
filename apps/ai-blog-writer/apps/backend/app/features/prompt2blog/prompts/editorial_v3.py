@@ -1,12 +1,7 @@
-"""Prompt2Blog v3 writing prompts.
+"""Prompt2Blog v3 prompts, each paired with its job-specific context."""
 
-Every v3 prompt is handed one assembled instruction stack instead of a
-guideline pair, and the exact evidence records instead of cleaned source text.
-The authority order is stated in the stack itself, so these templates only have
-to keep the stage honest about what it may add.
-"""
-
-P2B_V3_OUTLINE_PROMPT = """You are a commissioning editor planning an article before it is written.
+P2B_V3_OUTLINE_PROMPT = """\
+You are a commissioning editor planning an article before it is written.
 
 Goal:
 Plan the sections that answer the approved commission using only the verified
@@ -56,7 +51,8 @@ TARGET WORD COUNT:
 {target_word_count}
 """
 
-P2B_V3_COMPOSE_PROMPT = """You are an expert editor writing a publish-ready article from verified evidence.
+P2B_V3_COMPOSE_PROMPT = """\
+You are an expert editor writing a publish-ready article from verified evidence.
 
 Goal:
 Write the article the approved commission describes, using only the evidence
@@ -257,6 +253,9 @@ Rules:
 STYLE DIRECTIVE (REQUIRED):
 {style_directive}
 
+GROUNDING VERDICT (authoritative on factual support):
+{grounding_verdict}
+
 MEASURED CHECKS (counted, not judged):
 {measured_checks}
 
@@ -290,8 +289,9 @@ Rules:
 - Repair prose and structure only. You may not create a fact, and you may not
   change the commission: not the form, the primary subject, the scope mode, the
   reference roles, the requirements, or the exclusions.
-- Never add a fact the evidence records do not contain. Remove or explicitly
-  mark as unconfirmed anything flagged as unsupported.
+- Never add factual material. Work only with facts already present in the
+  previous draft. Remove or explicitly mark as unconfirmed anything listed
+  under UNSUPPORTED CLAIMS.
 - Never promote a context-only reference, add a comparator, or broaden scope to
   satisfy a revision.
 - Never cite evidence records in the prose: no claim IDs, no source IDs, no
@@ -304,6 +304,9 @@ Rules:
 
 REQUIRED REVISIONS:
 {required_revisions}
+
+UNSUPPORTED CLAIMS:
+{unsupported_claims}
 
 PREVIOUS TITLE:
 {previous_title}
@@ -330,15 +333,9 @@ Output rules (strict):
 - Name the primary subject. Never headline a context-only reference.
 - Promise only what the article delivers and the evidence supports.
 
-HEADLINE STANDARD:
-{headline_instructions}
+HEADLINE CONTEXT:
+{headline_context}
 
-APPROVED COMMISSION SUMMARY:
-{commission_summary}
-
-BASELINE TITLE:
-{previous_title}
-
-FINAL ARTICLE CONTENT:
-{rewritten_content}
+ARTICLE SIGNALS:
+{article_signals}
 """

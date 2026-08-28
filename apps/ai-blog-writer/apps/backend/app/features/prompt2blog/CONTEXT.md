@@ -40,7 +40,7 @@ them for the v2 fallback. Do not delete or renumber them.
 | `api/` and `routes.py` | FastAPI handlers and the public router facade |
 | `models.py`, `contracts_v3.py` | Versioned HTTP requests, editorial contracts, and runtime pipeline input |
 | `config.py`, `options.py`, `editorial_catalog.py` | Feature constants plus legacy and v3 Markdown-backed catalogs |
-| `evidence_v3.py`, `instructions_v3.py` | V3 evidence normalization and the layered instruction stack |
+| `evidence_v3.py`, `instructions_v3.py` | V3 evidence normalization, canonical instruction layers, and stage-specific contexts |
 | `research_readiness_v3.py`, `intake_v3.py` | The v3 research gate, its `needs_research` result, and v3 run input |
 | `stages/v3/`, `prompts/editorial_v3.py`, `content/outline_v3.py` | V3 writing stages, their prompts, and pure section-plan scope guards |
 | `orchestrator_v3.py`, `graph/topology_v3.py` | The v3 run entrypoints and its shorter generation topology |
@@ -73,8 +73,10 @@ API → orchestrator → graph → stages → content / quality
 - Every v2 REST path, request shape and persisted stage name is unchanged.
   `POST /pipeline-v3` was added; `POST /pipeline-v3/intake` was added and then
   removed once the run route made it redundant, and it never had a caller.
-- `run_id`, completed artifact structure, Markdown output, debug trace shape,
-  and option-file semantics are unchanged.
+- `run_id`, completed non-debug artifact structure, Markdown output, stage trace
+  shape, and option-file semantics are unchanged. Instruction schema v4
+  intentionally replaces v3 debug `instruction_text` with a compact
+  `stage_contexts` manifest; saved snapshot v1 runs must restart.
 - No new canonical top-level `Stage[N]Output` was introduced.
 - Quality Gate repair still performs a second audit before finalization.
 - The `reported-people-scenes-quotations` source gate is implemented twice on

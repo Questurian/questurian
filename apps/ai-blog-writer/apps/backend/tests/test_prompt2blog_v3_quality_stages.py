@@ -99,8 +99,7 @@ def _state(**overrides) -> dict[str, Any]:
         "commission": runtime.commission,
         "evidence": runtime.evidence,
         "instructions": runtime.instructions,
-        "instruction_text": runtime.instructions["instruction_text"],
-        "headline_instructions": runtime.instructions["headline_instructions"],
+        "stage_contexts": runtime.instructions["stage_contexts"],
         "option_context": runtime.option_context,
         "writing_model": "test-writer",
         "audit_model": "test-auditor",
@@ -213,10 +212,50 @@ def test_the_audit_judges_commission_fidelity_and_keeps_measured_checks():
     prompt = llm.prompts[0]
     assert "APPROVED COMMISSION" in prompt
     assert "a context-only reference organizes a section" in prompt
+    assert "GROUNDING VERDICT" in prompt
+    assert '"grounded": true' in prompt
+    assert "Instituto Nacional de Estadística e Informática" not in prompt
+    assert "VERIFIED EVIDENCE" not in prompt
     assert "ARTICLE TYPE:" not in prompt
+    assert len(prompt) < 25_000
     assert updates["quality_checks"]["claims_grounded"] is True
     assert updates["quality_checks"]["audience_match"] is True
     assert updates["best_rewrite"] == state["rewrite"]
+
+
+def test_the_audit_receives_unsupported_claim_details_without_the_evidence():
+    llm = FakeLLM(
+        json_response={
+            "overall_score": 5,
+            "constraint_checks": {"audience_match": True, "tone_match": True},
+            "required_revisions": ["Remove the unsupported rent figure."],
+            "quality_summary": "One unsupported decision-critical figure.",
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_quality_audit_stage(
+        _state(
+            groundedness={
+                "checked": True,
+                "grounded": False,
+                "unsupported_claims": [
+                    {
+                        "claim": "Rent averages 900 dollars.",
+                        "reason": "No record states a rent figure.",
+                        "severity": "high",
+                    }
+                ],
+                "high_severity_count": 1,
+            }
+        ),
+        dependencies,
+    )
+
+    prompt = llm.prompts[0]
+    assert "Rent averages 900 dollars." in prompt
+    assert "No record states a rent figure." in prompt
+    assert "Instituto Nacional de Estadística e Informática" not in prompt
 
 
 def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
@@ -249,9 +288,13 @@ def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
     assert "Repair prose and structure only" in prompt
     assert "you may not change the commission" in " ".join(prompt.split())
     assert "Never promote a context-only reference" in prompt
-    assert "Remove or explicitly mark as unconfirmed: Rent averages 900 dollars." in (
-        recorder.recorded[0][1]["required_revisions"][1]
-    )
+    assert "UNSUPPORTED CLAIMS" in prompt
+    assert "Rent averages 900 dollars." in prompt
+    assert "VERIFIED EVIDENCE" not in prompt
+    assert "Prompt2Blog house rules" not in prompt
+    assert recorder.recorded[0][1]["required_revisions"] == ["Tighten the opening."]
+    assert recorder.recorded[0][1]["unsupported_claims"][0]["severity"] == "high"
+    assert len(prompt) < 20_000
     assert updates["repair_attempts"] == 1
 
 
@@ -282,13 +325,39 @@ def test_the_title_stage_sees_the_original_title_and_the_headline_standard():
     llm = FakeLLM(text_response="Is Lima still worth the move?")
     dependencies, _recorder = _dependencies(llm)
 
-    updates = run_v3_title_stage(_state(), dependencies)
+    updates = run_v3_title_stage(
+        _state(
+            outline={
+                "direct_answer_focus": "Whether Lima still offers value.",
+                "takeaway_focus": "Who benefits from the tradeoffs.",
+            },
+            rewrite={
+                **_rewrite(),
+                "improved_content": (
+                    "## What Lima costs now\n\nBody-only sentence.\n\n"
+                    "```markdown\n## Not an article heading\n```\n\n"
+                    "## The tradeoffs\n\nMore body-only prose."
+                ),
+            },
+        ),
+        dependencies,
+    )
 
     prompt = llm.prompts[0]
     assert _fixture()["commission"]["original_title"] in prompt
-    assert "HEADLINE STANDARD" in prompt
+    assert "HEADLINE CONTEXT" in prompt
+    assert "Prompt2Blog headline standard" in prompt
     assert "Primary subject: Lima" in prompt
     assert "Never headline a context-only reference" in prompt
+    assert "Whether Lima still offers value." in prompt
+    assert "Who benefits from the tradeoffs." in prompt
+    assert "What Lima costs now" in prompt
+    assert "The tradeoffs" in prompt
+    assert "Not an article heading" not in prompt
+    assert "Body-only sentence." not in prompt
+    assert "More body-only prose." not in prompt
+    assert "FINAL ARTICLE CONTENT" not in prompt
+    assert len(prompt) < 12_000
     assert updates["final_title"] == "Is Lima still worth the move?"
 
 

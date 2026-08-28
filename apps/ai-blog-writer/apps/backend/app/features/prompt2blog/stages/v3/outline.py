@@ -13,6 +13,7 @@ from ...content.outline_v3 import (
 )
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
+from ...instructions_v3 import stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_OUTLINE_PROMPT
 from ...schemas import V3_OUTLINE_SCHEMA
@@ -58,7 +59,7 @@ def run_v3_outline_stage(
     outline_model = state.get("outline_model", P2B_V3_OUTLINE_MODEL)
 
     prompt = P2B_V3_OUTLINE_PROMPT.format(
-        instructions=state["instruction_text"],
+        instructions=stage_context_text(state["stage_contexts"], "outline"),
         target_word_count=target_word_count or "Not specified.",
     )
 

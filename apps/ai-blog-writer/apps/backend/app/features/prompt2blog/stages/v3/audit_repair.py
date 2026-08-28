@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.shared.prompts import ANTI_AI_TELLS_FULL
-
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
+from ...instructions_v3 import stage_context_text
 from ...observability import _append_stage_trace
 from ...policies import decide_repair, is_better_quality
 from ...pricing import run_tokens_spent
@@ -75,9 +74,11 @@ def _audit_v3_rewrite(
         rewrite["improved_content"],
         v3_constraint_brief(state["commission"], state["option_context"]),
     )
+    groundedness = state.get("groundedness") or unchecked_groundedness()
     prompt = P2B_V3_QUALITY_AUDIT_PROMPT.format(
-        instructions=state["instruction_text"],
+        instructions=stage_context_text(state["stage_contexts"], "audit"),
         style_directive=_format_style_directive(state["option_context"]),
+        grounding_verdict=_json(groundedness),
         measured_checks=_measured_checks_block(computed_checks),
         rewritten_title=rewrite["improved_title"],
         rewritten_content=rewrite["improved_content"],
@@ -89,7 +90,6 @@ def _audit_v3_rewrite(
         model_name=state["audit_model"],
     )
     quality = _sanitize_quality(parsed)
-    groundedness = state.get("groundedness") or unchecked_groundedness()
     quality_checks = {
         **quality.get("constraint_checks", {}),
         **{
@@ -219,20 +219,16 @@ def run_v3_repair_stage(
             length_revision,
             *drop_length_revisions(required_revisions),
         ]
-    required_revisions.extend(
-        f"Remove or explicitly mark as unconfirmed: {claim['claim']} "
-        f"({claim['reason']})"
-        for claim in groundedness["unsupported_claims"]
-    )
+    unsupported_claims = list(groundedness["unsupported_claims"])
 
     prompt = P2B_V3_REPAIR_PROMPT.format(
         required_revisions=_json(required_revisions),
+        unsupported_claims=_json(unsupported_claims),
         previous_title=rewrite["improved_title"],
         previous_content=rewrite["improved_content"],
-        instructions=state["instruction_text"],
+        instructions=stage_context_text(state["stage_contexts"], "repair_lock"),
         style_directive=_format_style_directive(state["option_context"]),
     )
-    prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
     # Repair rewrites the whole article, so it runs on the writer model.
     parsed, raw_response = dependencies.llm.invoke_json(
         prompt=prompt,
@@ -271,6 +267,7 @@ def run_v3_repair_stage(
             "attempt": attempt,
             "rewrite": repaired,
             "required_revisions": required_revisions,
+            "unsupported_claims": unsupported_claims,
             "raw_response": raw_response,
         },
     )

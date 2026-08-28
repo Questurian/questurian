@@ -63,8 +63,8 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     """State for the v3 graph.
 
     Kept separate from the v2 state on purpose. The v3 path carries the whole
-    commission, the exact evidence records, and one assembled instruction
-    stack; it has no article type, no guideline pair, and no supplemental
+    commission, the exact evidence records, and stage-specific instruction
+    contexts; it has no article type, no guideline pair, and no supplemental
     content, because v3 never synthesizes a missing fact.
     """
 
@@ -77,8 +77,7 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     commission: dict[str, Any]
     evidence: dict[str, Any]
     instructions: dict[str, Any]
-    instruction_text: str
-    headline_instructions: str
+    stage_contexts: dict[str, Any]
     option_context: dict[str, Any]
     model_name: str
     outline_model: str
