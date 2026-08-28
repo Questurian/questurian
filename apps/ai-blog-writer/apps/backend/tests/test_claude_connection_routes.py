@@ -69,6 +69,108 @@ async def test_subscription_login_reports_connected(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_prompt2blog_credential_can_be_saved_without_returning_token(monkeypatch):
+    secret = "sk-ant-oat01-PROMPT2BLOG-ONLY"
+    saved = {}
+
+    def fake_save(*, label: str, token: str):
+        saved.update(label=label, token=token)
+        return {
+            "configured": True,
+            "label": label,
+            "updatedAt": "2026-08-28T12:00:00+00:00",
+        }
+
+    monkeypatch.setattr(
+        routes_module,
+        "save_prompt2blog_credential",
+        fake_save,
+        raising=False,
+    )
+
+    async with _client() as client:
+        response = await client.put(
+            "/claude/prompt2blog-credential",
+            json={"label": "Article account", "token": secret},
+        )
+
+    assert response.status_code == 200
+    assert saved == {"label": "Article account", "token": secret}
+    assert response.json() == {
+        "configured": True,
+        "label": "Article account",
+        "updatedAt": "2026-08-28T12:00:00+00:00",
+    }
+    assert secret not in response.text
+
+
+@pytest.mark.asyncio
+async def test_prompt2blog_credential_status_contains_metadata_only(monkeypatch):
+    monkeypatch.setattr(
+        routes_module,
+        "read_prompt2blog_credential_status",
+        lambda: {
+            "configured": True,
+            "label": "Article account",
+            "updatedAt": "2026-08-28T12:00:00+00:00",
+        },
+        raising=False,
+    )
+
+    async with _client() as client:
+        response = await client.get("/claude/prompt2blog-credential")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "configured": True,
+        "label": "Article account",
+        "updatedAt": "2026-08-28T12:00:00+00:00",
+    }
+    assert "token" not in response.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_prompt2blog_credential_can_be_disconnected(monkeypatch):
+    monkeypatch.setattr(
+        routes_module,
+        "disconnect_prompt2blog_credential",
+        lambda: {"configured": False, "label": None, "updatedAt": None},
+        raising=False,
+    )
+
+    async with _client() as client:
+        response = await client.delete("/claude/prompt2blog-credential")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "configured": False,
+        "label": None,
+        "updatedAt": None,
+    }
+
+
+@pytest.mark.asyncio
+async def test_remote_browser_cannot_replace_prompt2blog_credential(monkeypatch):
+    secret = "sk-ant-oat01-MUST-NOT-BE-SAVED"
+    monkeypatch.setattr(routes_module, "_client_host", lambda _request: "10.0.0.5")
+    monkeypatch.setattr(
+        routes_module,
+        "save_prompt2blog_credential",
+        lambda **_kwargs: pytest.fail("remote credential must not be saved"),
+    )
+
+    async with _client() as client:
+        response = await client.put(
+            "/claude/prompt2blog-credential",
+            json={"label": "Article account", "token": secret},
+        )
+
+    assert response.status_code == 403
+    assert "machine hosting this backend" in response.json()["detail"]
+    assert secret not in response.text
+
+
+@pytest.mark.asyncio
 async def test_status_returns_only_allow_listed_fields(monkeypatch):
     """A field the CLI grows later must not reach the browser on its own."""
     _stub_cli(

@@ -4,9 +4,41 @@ import type {
   ClaudeConnectionStatus,
   ClaudeLoginStart,
   ClaudeModelChoice,
+  Prompt2BlogCredentialInput,
+  Prompt2BlogCredentialStatus,
   ClaudeTestReply,
   ClaudeTestRequest,
 } from '../claude-connection.types'
+
+export async function fetchPrompt2BlogCredentialStatus(): Promise<Prompt2BlogCredentialStatus> {
+  const response = await apiFetch('/claude/prompt2blog-credential')
+  if (!response.ok) {
+    throw await parseError(response, 'Could not read Prompt2Blog article account')
+  }
+  return (await response.json()) as Prompt2BlogCredentialStatus
+}
+
+export async function savePrompt2BlogCredential(
+  input: Prompt2BlogCredentialInput,
+): Promise<Prompt2BlogCredentialStatus> {
+  const response = await apiFetch('/claude/prompt2blog-credential', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  if (!response.ok) {
+    throw await parseError(response, 'Could not connect Prompt2Blog article account')
+  }
+  return (await response.json()) as Prompt2BlogCredentialStatus
+}
+
+export async function deletePrompt2BlogCredential(): Promise<Prompt2BlogCredentialStatus> {
+  const response = await apiFetch('/claude/prompt2blog-credential', { method: 'DELETE' })
+  if (!response.ok) {
+    throw await parseError(response, 'Could not disconnect Prompt2Blog article account')
+  }
+  return (await response.json()) as Prompt2BlogCredentialStatus
+}
 
 export async function fetchClaudeStatus(): Promise<ClaudeConnectionStatus> {
   const response = await apiFetch('/claude/status')

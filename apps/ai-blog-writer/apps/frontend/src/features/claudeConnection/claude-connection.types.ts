@@ -55,6 +55,17 @@ export type ClaudeLoginStart = {
   detail: string
 }
 
+export type Prompt2BlogCredentialStatus = {
+  configured: boolean
+  label: string | null
+  updatedAt: string | null
+}
+
+export type Prompt2BlogCredentialInput = {
+  label: string
+  token: string
+}
+
 /** Non-green states that mean "signing in again fixes this". */
 export const RESOLVED_BY_SIGNING_IN: readonly ClaudeConnectionState[] = [
   'not_logged_in',

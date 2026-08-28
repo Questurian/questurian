@@ -99,6 +99,12 @@ def ensure_core_tables() -> None:
 
             CREATE INDEX IF NOT EXISTS idx_staged_drafts_key
                 ON staged_drafts(storage_key);
+
+            CREATE TABLE IF NOT EXISTS claude_credentials (
+                slot_id TEXT PRIMARY KEY,
+                label TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             """
         )
 

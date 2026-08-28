@@ -4,12 +4,15 @@ import logging
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, SecretStr
 
-from app.core.staff_auth import require_staff
+from app.core.staff_auth import require_editor, require_staff
 from app.features.claude_connection import login as login_module
 from app.features.claude_connection import messaging
 from app.features.claude_connection.login import ENABLE_LOGIN_ENV
+from app.features.claude_connection.prompt2blog_credential import (
+    Prompt2BlogCredentialError,
+)
 from app.features.claude_connection.status import (
     STATE_CONNECTED,
     read_claude_status,
@@ -20,8 +23,42 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/claude", tags=["claude"])
 
 
+def save_prompt2blog_credential(*, label: str, token: str) -> dict[str, Any]:
+    from app.features.claude_connection.prompt2blog_credential import save_credential
+
+    return save_credential(label=label, token=token)
+
+
+def read_prompt2blog_credential_status() -> dict[str, Any]:
+    from app.features.claude_connection.prompt2blog_credential import (
+        credential_status,
+    )
+
+    return credential_status()
+
+
+def disconnect_prompt2blog_credential() -> dict[str, Any]:
+    from app.features.claude_connection.prompt2blog_credential import (
+        delete_credential,
+    )
+
+    return delete_credential()
+
+
 def _client_host(request: Request) -> Optional[str]:
     return request.client.host if request.client else None
+
+
+def _require_local_credential_management(request: Request) -> None:
+    if login_module.is_loopback_client(_client_host(request)):
+        return
+    raise HTTPException(
+        status_code=403,
+        detail=(
+            "Prompt2Blog's Claude account can only be changed from a browser "
+            "on the machine hosting this backend."
+        ),
+    )
 
 
 @router.get("/status")
@@ -124,6 +161,47 @@ class TestMessageRequest(BaseModel):
     # write, which on a first measurement was the difference between 3.7 and
     # 0.3 cents a message.
     sessionId: Optional[str] = None
+
+
+class Prompt2BlogCredentialRequest(BaseModel):
+    label: str = Field(min_length=1, max_length=80)
+    token: SecretStr = Field(min_length=1)
+
+
+@router.put("/prompt2blog-credential")
+def replace_prompt2blog_credential(
+    body: Prompt2BlogCredentialRequest,
+    request: Request,
+    _staff: Optional[dict[str, Any]] = Depends(require_editor),
+) -> dict[str, Any]:
+    """Save Prompt2Blog's own subscription token without returning it."""
+    _require_local_credential_management(request)
+    try:
+        return save_prompt2blog_credential(
+            label=body.label.strip(),
+            token=body.token.get_secret_value(),
+        )
+    except Prompt2BlogCredentialError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@router.get("/prompt2blog-credential")
+def prompt2blog_credential_status(
+    _staff: Optional[dict[str, Any]] = Depends(require_staff),
+) -> dict[str, Any]:
+    return read_prompt2blog_credential_status()
+
+
+@router.delete("/prompt2blog-credential")
+def delete_prompt2blog_credential(
+    request: Request,
+    _staff: Optional[dict[str, Any]] = Depends(require_editor),
+) -> dict[str, Any]:
+    _require_local_credential_management(request)
+    try:
+        return disconnect_prompt2blog_credential()
+    except Prompt2BlogCredentialError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 @router.get("/models")

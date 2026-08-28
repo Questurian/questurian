@@ -194,6 +194,35 @@
   white-space: nowrap;
 }
 
+.claude-account-explanation,
+.claude-account-current,
+.claude-credential-form > p {
+  max-width: 70ch;
+}
+
+.claude-credential-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.claude-credential-form label {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 540px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.claude-credential-form input {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--cream-dark);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+
 /* --- Test bench ------------------------------------------------------- */
 
 .claude-bench-header {

@@ -221,6 +221,38 @@ def test_text_call_is_isolated_and_carries_no_schema(
     assert kwargs["stdin"] is subprocess.DEVNULL
 
 
+def test_prompt2blog_scope_uses_its_token_only_in_the_child_environment(
+    monkeypatch,
+    provider_on,
+):
+    secret = "sk-ant-oat01-PROMPT2BLOG-ONLY"
+    calls = _capture(monkeypatch, TEXT_JSON)
+
+    with cli_writer.prompt2blog_credential_scope(secret):
+        cli_writer.invoke_text(prompt="write article", model_name="claude-sonnet-5")
+
+    child_env = calls[0]["kwargs"]["env"]
+    assert child_env["CLAUDE_CODE_OAUTH_TOKEN"] == secret
+    assert "CLAUDE_CODE_OAUTH_TOKEN" not in cli_writer.os.environ
+    assert secret not in calls[0]["args"]
+
+
+def test_prompt2blog_scope_refuses_higher_priority_api_credentials(
+    monkeypatch,
+    provider_on,
+):
+    calls = _capture(monkeypatch, TEXT_JSON)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api-MUST-NOT-WIN")
+
+    with cli_writer.prompt2blog_credential_scope("sk-ant-oat01-ARTICLE"):
+        with pytest.raises(cli_writer.ClaudeCliWriterError) as caught:
+            cli_writer.invoke_text(prompt="write article")
+
+    assert "ANTHROPIC_API_KEY" in str(caught.value)
+    assert "sk-ant-api-MUST-NOT-WIN" not in str(caught.value)
+    assert calls == []
+
+
 def test_structured_call_passes_the_schema_verbatim(
     monkeypatch, connected, provider_on
 ):

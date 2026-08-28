@@ -42,13 +42,21 @@ import json
 import os
 import subprocess
 import tempfile
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Optional
 
 from app.features.claude_connection.status import (
+    API_BILLED_VARS,
     STATE_CONNECTED,
     read_claude_status,
     resolve_cli_path,
+)
+
+_PROMPT2BLOG_OAUTH_TOKEN: ContextVar[str | None] = ContextVar(
+    "prompt2blog_claude_oauth_token",
+    default=None,
 )
 
 # What this flag actually reaches, which is less than its name suggests.
@@ -179,6 +187,19 @@ class ClaudeCliWriterError(RuntimeError):
     """A writer call that could not be made, or whose output was unusable."""
 
 
+@contextmanager
+def prompt2blog_credential_scope(token: str):
+    """Bind one article run to its Prompt2Blog-only OAuth credential."""
+    cleaned = token.strip()
+    if not cleaned:
+        raise ClaudeCliWriterError("Prompt2Blog's Claude credential is empty.")
+    marker = _PROMPT2BLOG_OAUTH_TOKEN.set(cleaned)
+    try:
+        yield
+    finally:
+        _PROMPT2BLOG_OAUTH_TOKEN.reset(marker)
+
+
 def writer_provider() -> str:
     return (os.getenv(WRITER_PROVIDER_ENV) or "").strip().lower()
 
@@ -209,12 +230,37 @@ def _assert_billing_to_subscription() -> None:
     instead of the subscription. Same guard the bench uses, for the same reason,
     and it matters more here because the pipeline makes many calls per article.
     """
+    selected_token = _PROMPT2BLOG_OAUTH_TOKEN.get()
+    if selected_token is not None:
+        conflicts = [
+            name
+            for name in API_BILLED_VARS
+            if name != "CLAUDE_CODE_OAUTH_TOKEN"
+            and os.environ.get(name, "").strip()
+        ]
+        if conflicts:
+            raise ClaudeCliWriterError(
+                "Claude credential conflict: "
+                + ", ".join(conflicts)
+                + " could override Prompt2Blog's article account."
+            )
+        return
+
     snapshot = read_claude_status()
     if snapshot.get("state") != STATE_CONNECTED:
         raise ClaudeCliWriterError(
             snapshot.get("detail")
             or "Claude is not connected on this machine, so nothing was sent."
         )
+
+
+def _child_environment() -> dict[str, str] | None:
+    selected_token = _PROMPT2BLOG_OAUTH_TOKEN.get()
+    if selected_token is None:
+        return None
+    environment = dict(os.environ)
+    environment["CLAUDE_CODE_OAUTH_TOKEN"] = selected_token
+    return environment
 
 
 def _build_args(
@@ -316,6 +362,7 @@ def _invoke(
             # the prompt arrived as an argument. Measured at ~3.7s of pure
             # latency per call under a server that inherited stdin.
             stdin=subprocess.DEVNULL,
+            env=_child_environment(),
         )
     except subprocess.TimeoutExpired as error:
         raise ClaudeCliWriterError(

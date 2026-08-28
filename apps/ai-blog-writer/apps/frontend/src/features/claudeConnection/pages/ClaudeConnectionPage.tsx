@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useClaudeStatus } from '../useClaudeStatus'
 import { needsSignIn, severityOf } from '../claude-connection.types'
 import ClaudeTestBench from '../components/ClaudeTestBench'
+import Prompt2BlogCredentialPanel from '../components/Prompt2BlogCredentialPanel'
 
 const SEVERITY_CLASS = {
   ok: 'connected',
@@ -126,6 +127,8 @@ export default function ClaudeConnectionPage() {
         {loginError ? <p className="claude-status-error">{loginError.message}</p> : null}
       </section>
 
+      <Prompt2BlogCredentialPanel />
+
       <ClaudeTestBench
         blockedReason={
           error
@@ -180,9 +183,9 @@ export default function ClaudeConnectionPage() {
         <h2>What this does and does not cover</h2>
         <ul>
           <li>
-            This app never sees, stores, or forwards your Claude credentials. It reads{' '}
-            <code>claude auth status</code> and shows the answer; the token stays in the
-            host machine&rsquo;s Keychain where Claude Code puts it.
+            Normal Claude coding credentials stay private to Claude Code. Prompt2Blog accepts
+            its separate article token once, then stores it in macOS Keychain and never shows it
+            again.
           </li>
           <li>
             Agent SDK usage on a subscription draws a per-user monthly credit before

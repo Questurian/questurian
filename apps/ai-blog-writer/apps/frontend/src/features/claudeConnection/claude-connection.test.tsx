@@ -14,8 +14,11 @@ import type {
   ClaudeTestReply,
 } from './claude-connection.types'
 import {
+  deletePrompt2BlogCredential,
   fetchClaudeModels,
+  fetchPrompt2BlogCredentialStatus,
   fetchClaudeStatus,
+  savePrompt2BlogCredential,
   sendClaudeTestMessage,
   startClaudeLogin,
 } from './api/claude-connection.api'
@@ -25,12 +28,18 @@ vi.mock('./api/claude-connection.api', () => ({
   startClaudeLogin: vi.fn(),
   fetchClaudeModels: vi.fn(),
   sendClaudeTestMessage: vi.fn(),
+  fetchPrompt2BlogCredentialStatus: vi.fn(),
+  savePrompt2BlogCredential: vi.fn(),
+  deletePrompt2BlogCredential: vi.fn(),
 }))
 
 const fetchStatusMock = vi.mocked(fetchClaudeStatus)
 const startLoginMock = vi.mocked(startClaudeLogin)
 const fetchModelsMock = vi.mocked(fetchClaudeModels)
 const sendMessageMock = vi.mocked(sendClaudeTestMessage)
+const fetchPrompt2BlogCredentialMock = vi.mocked(fetchPrompt2BlogCredentialStatus)
+const savePrompt2BlogCredentialMock = vi.mocked(savePrompt2BlogCredential)
+const deletePrompt2BlogCredentialMock = vi.mocked(deletePrompt2BlogCredential)
 
 function makeStatus(overrides: Partial<ClaudeConnectionStatus> = {}): ClaudeConnectionStatus {
   return {
@@ -73,6 +82,14 @@ beforeEach(() => {
   startLoginMock.mockReset()
   fetchModelsMock.mockReset()
   sendMessageMock.mockReset()
+  fetchPrompt2BlogCredentialMock.mockReset()
+  savePrompt2BlogCredentialMock.mockReset()
+  deletePrompt2BlogCredentialMock.mockReset()
+  fetchPrompt2BlogCredentialMock.mockResolvedValue({
+    configured: false,
+    label: null,
+    updatedAt: null,
+  })
   fetchModelsMock.mockResolvedValue([
     { id: 'haiku', label: 'Haiku', note: 'Fastest and cheapest.' },
     { id: 'opus', label: 'Opus', note: 'Most capable.' },
@@ -156,6 +173,35 @@ describe('ClaudeStatusPill', () => {
 })
 
 describe('ClaudeConnectionPage', () => {
+  it('connects a separate Prompt2Blog article account without changing coding login', async () => {
+    const user = userEvent.setup()
+    const secret = 'sk-ant-oat01-PROMPT2BLOG-ONLY'
+    fetchStatusMock.mockResolvedValue(makeStatus({ email: 'coding@example.com' }))
+    savePrompt2BlogCredentialMock.mockResolvedValue({
+      configured: true,
+      label: 'Article account',
+      updatedAt: '2026-08-28T12:00:00+00:00',
+    })
+
+    render(<ClaudeConnectionPage />, { wrapper })
+
+    expect(await screen.findByText('Prompt2Blog article account')).toBeInTheDocument()
+    await user.clear(screen.getByLabelText('Account label'))
+    await user.type(screen.getByLabelText('Account label'), 'Article account')
+    await user.type(screen.getByLabelText('Setup token'), secret)
+    await user.click(screen.getByRole('button', { name: 'Connect article account' }))
+
+    await waitFor(() => {
+      expect(savePrompt2BlogCredentialMock).toHaveBeenCalledWith({
+        label: 'Article account',
+        token: secret,
+      })
+    })
+    expect(await screen.findByText('Article account')).toBeInTheDocument()
+    expect(screen.getByText('coding@example.com')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue(secret)).not.toBeInTheDocument()
+  })
+
   it('names the variables that would move spend onto API billing', async () => {
     fetchStatusMock.mockResolvedValue(
       makeStatus({

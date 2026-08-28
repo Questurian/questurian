@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -367,6 +368,7 @@ def test_the_route_queues_a_run_only_when_research_is_ready(monkeypatch):
             queued[stage] = payload
 
     monkeypatch.setattr(runs_api, "RunRecorder", FakeRecorder)
+    monkeypatch.setattr(runs_api, "_prompt2blog_credential_for_run", lambda: None)
     background = BackgroundTasks()
 
     payload = response_payload(
@@ -377,6 +379,81 @@ def test_the_route_queues_a_run_only_when_research_is_ready(monkeypatch):
     assert payload["run_id"] == queued["run_id"]
     assert queued["pipeline_input_v3"]["form_id"] == "analysis"
     assert len(background.tasks) == 1
+
+
+def test_the_route_binds_the_article_credential_before_queueing(monkeypatch):
+    from app.features.claude_connection.prompt2blog_credential import (
+        Prompt2BlogCredential,
+    )
+
+    credential = Prompt2BlogCredential(
+        label="Article account",
+        token="sk-ant-oat01-PROMPT2BLOG-ONLY",
+        updated_at="2026-08-28T12:00:00+00:00",
+    )
+
+    class FakeRecorder:
+        def queue(self, _run_id: str, _user_id) -> None:
+            return None
+
+        def record_stage(self, _run_id: str, _stage: str, _payload: dict) -> None:
+            return None
+
+    monkeypatch.setattr(runs_api, "RunRecorder", FakeRecorder)
+    monkeypatch.setattr(
+        runs_api,
+        "_prompt2blog_credential_for_run",
+        lambda: credential,
+        raising=False,
+    )
+    background = BackgroundTasks()
+
+    response_payload(
+        asyncio.run(prompt2blog_routes.start_pipeline_v3(_request(), background, None))
+    )
+
+    assert background.tasks[0].args[-1] is credential
+    assert credential.token not in repr(background.tasks[0])
+
+
+def test_the_background_run_keeps_the_bound_credential_for_its_whole_run(monkeypatch):
+    from app.features.claude_connection.prompt2blog_credential import (
+        Prompt2BlogCredential,
+    )
+
+    credential = Prompt2BlogCredential(
+        label="Article account",
+        token="sk-ant-oat01-PROMPT2BLOG-ONLY",
+        updated_at="2026-08-28T12:00:00+00:00",
+    )
+    events = []
+
+    @contextmanager
+    def fake_scope(token: str):
+        events.append(("enter", token))
+        try:
+            yield
+        finally:
+            events.append(("exit", token))
+
+    monkeypatch.setattr(runs_api, "prompt2blog_credential_scope", fake_scope)
+    monkeypatch.setattr(
+        runs_api,
+        "run_pipeline_v3",
+        lambda _run_id, _request: events.append(("run", credential.token)),
+    )
+
+    runs_api._run_pipeline_v3_background(
+        "run-id",
+        prepare_v3_runtime_request(_request()),
+        credential,
+    )
+
+    assert events == [
+        ("enter", credential.token),
+        ("run", credential.token),
+        ("exit", credential.token),
+    ]
 
 
 def test_the_route_returns_needs_research_without_queueing_anything(monkeypatch):
