@@ -87,8 +87,7 @@ def _state(**overrides) -> dict[str, Any]:
         "commission": runtime.commission,
         "evidence": runtime.evidence,
         "instructions": runtime.instructions,
-        "instruction_text": runtime.instructions["instruction_text"],
-        "headline_instructions": runtime.instructions["headline_instructions"],
+        "stage_contexts": runtime.instructions["stage_contexts"],
         "option_context": runtime.option_context,
         "writing_model": "test-writer",
         "model_name": "test-model",
@@ -302,19 +301,42 @@ def test_the_outline_stage_keeps_a_drifted_plan_out_of_compose():
     assert recorder.recorded[0][0] == "stage_v3_outline"
     assert recorder.recorded[0][1]["checks"]["no_context_only_sections"] is False
 
+    compose_llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "improved_content": "## Lima now\n\nBody.",
+        }
+    )
+    compose_dependencies, _compose_recorder = _dependencies(compose_llm)
+    run_v3_compose_stage(
+        _state(
+            outline_text=updates["outline_text"],
+            outline_accepted=updates["outline_accepted"],
+        ),
+        compose_dependencies,
+    )
 
-def test_the_outline_prompt_carries_the_whole_instruction_stack():
+    compose_prompt = compose_llm.prompts[0]
+    assert "No outline was produced." in compose_prompt
+    assert "How Medellín compares" not in compose_prompt
+
+
+def test_the_outline_prompt_gets_planning_context_not_the_whole_stack():
     llm = FakeLLM(json_response=_outline_payload())
     dependencies, _recorder = _dependencies(llm)
 
     run_v3_outline_stage(_state(), dependencies)
 
     prompt = llm.prompts[0]
-    assert "AUTHORITY ORDER" in prompt
-    assert "VERIFIED EVIDENCE" in prompt
+    assert "OUTLINE AUTHORITY" in prompt
+    assert "CLAIM INDEX" in prompt
     assert "APPROVED COMMISSION" in prompt
-    assert "HOUSE STYLE" in prompt
+    assert "## Allowed structures" in prompt
+    assert "Instituto Nacional de Estadística e Informática" not in prompt
+    assert "HOUSE STYLE" not in prompt
+    assert "Prompt2Blog headline standard" not in prompt
     assert "Plan the structure only" in prompt
+    assert len(prompt) < 15_000
 
 
 def test_compose_writes_from_evidence_records_and_never_from_source_prose():
@@ -343,6 +365,14 @@ def test_compose_writes_from_evidence_records_and_never_from_source_prose():
     assert "Never invent a bridge fact" in prompt
     assert "STYLE DIRECTIVE (REQUIRED)" in prompt
     assert "Instituto Nacional de Estadística e Informática" in prompt
+    assert "HOUSE STYLE" in prompt
+    section_plan = prompt.split("SECTION PLAN:", 1)[1].split("COMPOSE AUTHORITY", 1)[0]
+    assert "Evidence claims: c1" in section_plan
+    assert "Requirements served: r1" in section_plan
+    assert section_plan.index("What Lima costs now") < section_plan.index(
+        "The tradeoffs behind the price"
+    )
+    assert len(prompt) < 35_000
     assert updates["rewrite"]["improved_title"] == "What Lima costs now"
     assert recorder.recorded[0][0] == "stage_v3_compose"
 

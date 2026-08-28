@@ -1,18 +1,9 @@
-"""Instruction assembly for Prompt2Blog v3.
-
-Replaces the v2 guideline fetch. Every writing stage reads one assembled stack
-whose precedence is explicit and fixed:
-
-    verified evidence → approved commission → article-form rules
-    → topic modules → audience guidance → house style
-
-A lower layer may refine emphasis. It can never add a subject, comparator,
-fact, or obligation that a higher layer did not authorize.
-"""
+"""Canonical Prompt2Blog v3 instructions and stage-specific projections."""
 
 from __future__ import annotations
 
-from typing import Any
+from hashlib import sha256
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -20,7 +11,7 @@ from .contracts_v3 import Prompt2BlogCommission, Prompt2BlogV3Request
 from .editorial_catalog import EditorialCatalog, load_editorial_catalog
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
 
-INSTRUCTION_SCHEMA_VERSION = 3
+INSTRUCTION_SCHEMA_VERSION = 4
 
 PRECEDENCE = (
     "verified evidence",
@@ -32,6 +23,12 @@ PRECEDENCE = (
 )
 
 _HEADLINE_HEADING = "## Headline note"
+_OUTLINE_FORM_HEADINGS = (
+    "## Reader promise",
+    "## Required evidence",
+    "## Allowed structures",
+    "## Failure modes",
+)
 
 
 class InstructionModel(BaseModel):
@@ -44,26 +41,29 @@ class InstructionLayer(InstructionModel):
     body: str
 
 
+class StageContext(InstructionModel):
+    text: str
+    included_sections: list[str]
+    fingerprint: str
+
+
+class V3StageContexts(InstructionModel):
+    outline: StageContext
+    compose: StageContext
+    audit: StageContext
+    repair_lock: StageContext
+    title: StageContext
+
+
+StageContextName = Literal["outline", "compose", "audit", "repair_lock", "title"]
+
+
 class V3InstructionSet(InstructionModel):
     schema_version: int = INSTRUCTION_SCHEMA_VERSION
     precedence: list[str]
     layers: list[InstructionLayer]
-    instruction_text: str
-    headline_instructions: str
+    stage_contexts: V3StageContexts
     instruction_meta: dict[str, Any]
-
-
-def _precedence_block() -> str:
-    ordered = "\n".join(
-        f"{index}. {label}" for index, label in enumerate(PRECEDENCE, start=1)
-    )
-    return (
-        "AUTHORITY ORDER\n"
-        f"{ordered}\n"
-        "A lower layer may refine emphasis. It may never add a subject, "
-        "comparator, factual claim, or obligation that a higher layer did not "
-        "authorize."
-    )
 
 
 def _commission_body(commission: Prompt2BlogCommission) -> str:
@@ -159,12 +159,148 @@ def _headline_note(form_instructions: str) -> str:
     return section.split("\n## ", 1)[0].strip()
 
 
+def _markdown_section(instructions: str, heading: str) -> str:
+    if heading not in instructions:
+        return ""
+    body = instructions.split(heading, 1)[1].split("\n## ", 1)[0].strip()
+    return f"{heading}\n\n{body}" if body else ""
+
+
+def _form_structure(form_instructions: str) -> str:
+    return "\n\n".join(
+        section
+        for heading in _OUTLINE_FORM_HEADINGS
+        if (section := _markdown_section(form_instructions, heading))
+    )
+
+
+def _claim_requirement_index(evidence: NormalizedEvidence) -> str:
+    lines = ["CLAIM INDEX"]
+    if evidence.claims:
+        for claim in evidence.claims:
+            requirements = ", ".join(claim.requirement_ids) or "none"
+            as_of = f" | as of: {claim.as_of}" if claim.as_of else ""
+            lines.append(
+                f"- {claim.claim_id} — {claim.text} | requirements: "
+                f"{requirements}{as_of} | confidence: {claim.confidence}"
+            )
+    else:
+        lines.append("- None supplied.")
+
+    lines.extend(("", "REQUIREMENT INDEX"))
+    for requirement in evidence.requirements:
+        claims = ", ".join(requirement.claim_ids) or "none"
+        gap = f" | gap: {requirement.gap}" if requirement.gap else ""
+        lines.append(
+            f"- {requirement.requirement_id} — {requirement.question} "
+            f"| status: {requirement.status} | claims: {claims}{gap}"
+        )
+    return "\n".join(lines)
+
+
+def _repair_lock_body(
+    commission: Prompt2BlogCommission,
+    *,
+    form_label: str,
+) -> str:
+    references = "\n".join(
+        f"- {reference.name} — {reference.role}"
+        for reference in commission.scope.references
+    )
+    requirements = "\n".join(
+        f"- {item.requirement_id} — {item.question}" for item in commission.requirements
+    )
+    exclusions = "\n".join(f"- {item}" for item in commission.exclusions)
+    return "\n".join(
+        (
+            f"Original-title promise: {commission.original_title}",
+            f"Article form: {form_label}",
+            f"Primary subject: {commission.primary_subject}",
+            f"Scope mode: {commission.scope.mode}",
+            f"Core reader question: {commission.core_reader_question}",
+            "Reference roles:",
+            references,
+            "Requirements:",
+            requirements,
+            "Exclusions:",
+            exclusions or "- None recorded.",
+            "Keep direct, specific prose for the named reader. Preserve the "
+            "approved form and scope. Do not add factual material.",
+        )
+    )
+
+
+def _title_commission_body(commission: Prompt2BlogCommission) -> str:
+    references = ", ".join(
+        f"{item.name} ({item.role})" for item in commission.scope.references
+    )
+    return "\n".join(
+        (
+            f"Original title: {commission.original_title}",
+            f"Primary subject: {commission.primary_subject}",
+            f"Location: {commission.location}",
+            f"Approved direction: {commission.approved_direction}",
+            f"Core reader question: {commission.core_reader_question}",
+            f"Reader outcome: {commission.reader_outcome}",
+            f"Scope mode: {commission.scope.mode}",
+            f"References: {references}",
+        )
+    )
+
+
+def _stage_context(*, parts: list[tuple[str, str]]) -> StageContext:
+    included_sections = [name for name, body in parts if body]
+    text = "\n\n".join(body for _name, body in parts if body)
+    return StageContext(
+        text=text,
+        included_sections=included_sections,
+        fingerprint=sha256(text.encode("utf-8")).hexdigest(),
+    )
+
+
+def _validated_stage_contexts(
+    stage_contexts: V3StageContexts | dict[str, Any],
+) -> V3StageContexts:
+    if isinstance(stage_contexts, V3StageContexts):
+        return stage_contexts
+    return V3StageContexts.model_validate(stage_contexts)
+
+
+def stage_context_text(
+    stage_contexts: V3StageContexts | dict[str, Any],
+    name: StageContextName,
+) -> str:
+    """Return one required projection; malformed runtime inputs fail loudly."""
+    return getattr(_validated_stage_contexts(stage_contexts), name).text
+
+
+def stage_context_manifest(
+    stage_contexts: V3StageContexts | dict[str, Any],
+) -> dict[str, Any]:
+    """Compact debug receipt for contexts whose full prompts live in traces."""
+    contexts = _validated_stage_contexts(stage_contexts)
+    return {
+        name: {
+            "included_sections": list(context.included_sections),
+            "character_count": len(context.text),
+            "fingerprint": context.fingerprint,
+        }
+        for name, context in (
+            ("outline", contexts.outline),
+            ("compose", contexts.compose),
+            ("audit", contexts.audit),
+            ("repair_lock", contexts.repair_lock),
+            ("title", contexts.title),
+        )
+    }
+
+
 def assemble_v3_instructions(
     request: Prompt2BlogV3Request,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> V3InstructionSet:
-    """Builds the layered instruction stack for one approved commission."""
+    """Build canonical layers and job-specific contexts for one commission."""
     catalog = catalog or load_editorial_catalog()
     commission = request.commission
 
@@ -231,30 +367,100 @@ def assemble_v3_instructions(
         ),
     ]
 
-    instruction_text = "\n\n".join(
-        [_precedence_block()] + [f"{layer.title}\n{layer.body}" for layer in layers]
-    )
     headline_note = _headline_note(form.instructions)
-    headline_instructions = "\n\n".join(
-        part
-        for part in (
-            catalog.headline_rules.instructions,
-            (
-                f"FORM HEADLINE NOTE — {form.label}\n{headline_note}"
-                if headline_note
-                else ""
-            ),
-            f"ORIGINAL TITLE (author intent, not a template)\n"
-            f"{commission.original_title}",
-        )
-        if part
+    form_structure = _form_structure(form.instructions)
+    commission_body = _commission_body(commission)
+    audience_body = _audience_body(commission, catalog)
+    topic_modules_body = (
+        "\n\n".join(module.instructions for module in active_modules)
+        or "No topic module is active for this commission."
+    )
+    stage_contexts = V3StageContexts(
+        outline=_stage_context(
+            parts=[
+                (
+                    "outline_authority",
+                    "OUTLINE AUTHORITY\nThe approved commission controls scope; "
+                    "the claim and requirement index controls available support; "
+                    "the form structure controls organization.",
+                ),
+                ("commission", f"APPROVED COMMISSION\n{commission_body}"),
+                (
+                    "form_structure",
+                    f"ARTICLE FORM STRUCTURE — {form.label}\n{form_structure}",
+                ),
+                ("claim_requirement_index", _claim_requirement_index(evidence)),
+            ]
+        ),
+        compose=_stage_context(
+            parts=[
+                (
+                    "compose_authority",
+                    "COMPOSE AUTHORITY\nVerified evidence controls facts; the approved "
+                    "commission controls scope; form and style rules control "
+                    "expression.",
+                ),
+                ("evidence", f"VERIFIED EVIDENCE\n{_evidence_body(evidence)}"),
+                ("commission", f"APPROVED COMMISSION\n{commission_body}"),
+                ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
+                ("topic_modules", f"TOPIC MODULES\n{topic_modules_body}"),
+                ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
+                ("house_style", f"HOUSE STYLE\n{catalog.house_rules.instructions}"),
+            ]
+        ),
+        audit=_stage_context(
+            parts=[
+                (
+                    "audit_authority",
+                    "AUDIT AUTHORITY\nJudge commission fidelity, form fit, reader "
+                    "service, and style. Treat the grounding verdict as final "
+                    "on support.",
+                ),
+                ("commission", f"APPROVED COMMISSION\n{commission_body}"),
+                ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
+                ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
+                ("house_style", f"HOUSE STYLE\n{catalog.house_rules.instructions}"),
+            ]
+        ),
+        repair_lock=_stage_context(
+            parts=[
+                (
+                    "repair_authority",
+                    "REPAIR AUTHORITY\nExact revisions and unsupported-claim verdicts "
+                    "control this pass. This lock is immutable.",
+                ),
+                (
+                    "scope_style_lock",
+                    f"COMPACT SCOPE AND STYLE LOCK\n"
+                    f"{_repair_lock_body(commission, form_label=form.label)}",
+                ),
+            ]
+        ),
+        title=_stage_context(
+            parts=[
+                (
+                    "title_authority",
+                    "TITLE AUTHORITY\nHeadline rules control phrasing; the commission "
+                    "and supplied article signals control the promise.",
+                ),
+                ("headline_rules", catalog.headline_rules.instructions),
+                (
+                    "form_headline_note",
+                    (
+                        f"FORM HEADLINE NOTE — {form.label}\n{headline_note}"
+                        if headline_note
+                        else ""
+                    ),
+                ),
+                ("commission_summary", _title_commission_body(commission)),
+            ]
+        ),
     )
 
     return V3InstructionSet(
         precedence=list(PRECEDENCE),
         layers=layers,
-        instruction_text=instruction_text,
-        headline_instructions=headline_instructions,
+        stage_contexts=stage_contexts,
         instruction_meta={
             "schema_version": INSTRUCTION_SCHEMA_VERSION,
             "form_id": form.id,

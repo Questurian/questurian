@@ -59,12 +59,41 @@ def test_instruction_layers_follow_the_fixed_authority_order():
         "house_style",
     ]
     assert instructions.precedence == list(PRECEDENCE)
-    positions = [
-        instructions.instruction_text.index(layer.title)
-        for layer in instructions.layers
+    assert instructions.schema_version == 4
+    assert instructions.stage_contexts.compose.included_sections == [
+        "compose_authority",
+        "evidence",
+        "commission",
+        "form",
+        "topic_modules",
+        "audience",
+        "house_style",
     ]
-    assert positions == sorted(positions)
-    assert "may never add a subject" in instructions.instruction_text
+    assert len(instructions.stage_contexts.compose.fingerprint) == 64
+
+
+def test_stage_contexts_are_deterministic_and_keep_only_job_specific_material():
+    fixture = _fixture()
+
+    first = assemble_v3_instructions(_request()).stage_contexts
+    second = assemble_v3_instructions(_request()).stage_contexts
+
+    assert first == second
+    assert "CLAIM INDEX" in first.outline.text
+    assert "## Allowed structures" in first.outline.text
+    assert fixture["evidence_package"]["sources"][0]["url"].rstrip("/") not in (
+        first.outline.text
+    )
+    assert "HOUSE STYLE" not in first.outline.text
+    assert "VERIFIED EVIDENCE" in first.compose.text
+    assert "HOUSE STYLE" in first.compose.text
+    assert "VERIFIED EVIDENCE" not in first.audit.text
+    assert "TOPIC MODULES" not in first.audit.text
+    assert "COMPACT SCOPE AND STYLE LOCK" in first.repair_lock.text
+    assert "VERIFIED EVIDENCE" not in first.repair_lock.text
+    assert "Prompt2Blog headline standard" in first.title.text
+    assert "FORM HEADLINE NOTE — Analysis" in first.title.text
+    assert "VERIFIED EVIDENCE" not in first.title.text
 
 
 def test_commission_layer_locks_form_subject_scope_and_exclusions():
@@ -131,16 +160,15 @@ def test_normalized_requirements_keep_commission_order_and_report_gaps():
     assert receipt["unresolved_requirement_ids"] == ["r2", "r3"]
 
 
-def test_headline_instructions_carry_the_original_title_and_form_note():
+def test_title_context_carries_the_original_title_and_form_note():
     fixture = _fixture()
 
     instructions = assemble_v3_instructions(_request())
 
-    assert fixture["commission"]["original_title"] in (
-        instructions.headline_instructions
-    )
-    assert "FORM HEADLINE NOTE — Analysis" in instructions.headline_instructions
-    assert "author intent, not a template" in instructions.headline_instructions
+    title_context = instructions.stage_contexts.title.text
+    assert fixture["commission"]["original_title"] in title_context
+    assert "FORM HEADLINE NOTE — Analysis" in title_context
+    assert "Primary subject: Lima" in title_context
 
 
 def test_unknown_catalog_ids_fail_instead_of_silently_dropping():

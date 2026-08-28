@@ -3,12 +3,23 @@ from __future__ import annotations
 from typing import Any
 
 from ...config import P2B_V3_TITLE_MODEL
-from ...content.markdown import _clean_title
+from ...content.markdown import _clean_title, extract_markdown_headings
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
+from ...instructions_v3 import stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_TITLE_PROMPT
-from ...quality_v3 import v3_commission_summary
+from ...support import _json, _safe_dict, _safe_str
+
+
+def _title_material(state: Prompt2BlogV3GraphState) -> dict[str, Any]:
+    outline = _safe_dict(state.get("outline"))
+    content = _safe_str(_safe_dict(state.get("rewrite")).get("improved_content"))
+    return {
+        "direct_answer_focus": _safe_str(outline.get("direct_answer_focus")),
+        "takeaway_focus": _safe_str(outline.get("takeaway_focus")),
+        "headings": extract_markdown_headings(content),
+    }
 
 
 # Title is compact and constrained by headline rules, commission, and settled
@@ -31,10 +42,8 @@ def run_v3_title_stage(
     dependencies.recorder.start_stage(run_id, stage)
 
     prompt = P2B_V3_TITLE_PROMPT.format(
-        headline_instructions=state["headline_instructions"],
-        commission_summary=v3_commission_summary(state["commission"]),
-        previous_title=rewrite["improved_title"],
-        rewritten_content=rewrite["improved_content"],
+        headline_context=stage_context_text(state["stage_contexts"], "title"),
+        article_signals=_json(_title_material(state)),
     )
     raw_response = dependencies.llm.invoke_text(
         prompt=prompt,
