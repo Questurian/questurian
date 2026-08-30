@@ -1,7 +1,6 @@
 import type { Prompt2BlogV3NeedsResearchResponse } from '../../api'
-import { PlainResearchFindings } from '../../composer/components/PlainResearchFindings'
-import { useClipboardCopy } from '../../composer/hooks/useClipboardCopy'
-import { researchNotReadyMessage, researchQuestionLabel } from '../../composer/research-language'
+import { PlainResearchFindings } from './PlainResearchFindings'
+import { researchNotReadyMessage, researchQuestionLabel } from '../research-language'
 
 interface NeedsResearchResultProps {
   result: Prompt2BlogV3NeedsResearchResponse
@@ -29,7 +28,6 @@ export function NeedsResearchResult({
   onBackToDirection,
   onDismiss,
 }: NeedsResearchResultProps) {
-  const followUpCopy = useClipboardCopy()
   const refutedPremise = result.refuted_premise ?? []
   /*
    * A refuted premise is the one blocker research cannot clear. Offering the
@@ -100,9 +98,8 @@ export function NeedsResearchResult({
 
       {(result.unpublished_requirements?.length ?? 0) > 0 && (
         <>
-          {/* Shown next to the open questions so the operator does not send the
-              follow-up prompt back out looking for a figure that was already
-              established as unpublished. */}
+          {/* Shown next to the open questions so nobody sends research back out
+              looking for a figure already established as unpublished. */}
           <p className="p2b-import-report-title">
             No published answer exists — already checked
           </p>
@@ -134,14 +131,14 @@ export function NeedsResearchResult({
             ))}
           </ul>
           <p className="p2b-field-hint">
-            The follow-up prompt asks for one more attempt at these.
+            The next research pass makes one more attempt at these.
           </p>
         </>
       )}
 
       {result.unresolved_conflict_ids.length > 0 && (
         <p className="p2b-field-hint">
-          Two sources disagree. The follow-up prompt asks your chatbot to resolve them.
+          Two sources disagree. The next research pass is asked to resolve them.
         </p>
       )}
 
@@ -153,25 +150,16 @@ export function NeedsResearchResult({
       )}
 
       {!needsNewDirection && (
-      <div className="p2b-field">
-        <div className="p2b-field-label-row">
-          <label htmlFor="p2b-needs-research-prompt">Follow-up research prompt</label>
-          <button
-            type="button"
-            className="p2b-inline-copy-btn"
-            onClick={() => followUpCopy.copy(result.follow_up_research_prompt)}
-          >
-            {followUpCopy.label}
-          </button>
+        <div className="p2b-field">
+          <label htmlFor="p2b-needs-research-prompt">Still to find out</label>
+          <textarea
+            id="p2b-needs-research-prompt"
+            className="p2b-textarea"
+            rows={10}
+            readOnly
+            value={result.follow_up_research_prompt}
+          />
         </div>
-        <textarea
-          id="p2b-needs-research-prompt"
-          className="p2b-textarea"
-          rows={10}
-          readOnly
-          value={result.follow_up_research_prompt}
-        />
-      </div>
       )}
 
       <div className="p2b-panel-actions">

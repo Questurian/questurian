@@ -1,76 +1,25 @@
-import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CleanupDetailsModal } from '../cleanup-details/CleanupDetailsModal'
-import { useCleanupDetailsModal } from '../cleanup-details/hooks/useCleanupDetailsModal'
-import { EasySetupPanel } from '../composer/components/EasySetupPanel'
-import { FoldedSection } from '../composer/components/FoldedSection'
-import { ModelRoutingPanel } from '../composer/components/ModelRoutingPanel'
-import { StepRail } from '../composer/components/StepRail'
-import { PromptProfilesPanel } from '../composer/components/PromptProfilesPanel'
-import { usePrompt2BlogComposer } from '../composer/hooks/usePrompt2BlogComposer'
-import { deriveP2BSteps } from '../composer/step-model'
-import { PipelinePanel } from '../pipeline-run/components/PipelinePanel'
-import { usePrompt2BlogPipelineRun } from '../pipeline-run/hooks/usePrompt2BlogPipelineRun'
-import '../styles.css'
+import { BriefScreen } from '../intake/components/BriefScreen'
+import { GrillScreen } from '../intake/components/GrillScreen'
+import { SeedScreen } from '../intake/components/SeedScreen'
+import { WorkOrderScreen } from '../intake/components/WorkOrderScreen'
+import { useIntake } from '../intake/useIntake'
 
-export default function Prompt2BlogPage() {
-  const composer = usePrompt2BlogComposer()
-  const pipeline = usePrompt2BlogPipelineRun({
-    v3Payload: composer.v3Payload,
-    v3BlockedReason: composer.submissionBlockedReason,
-  })
-  const cleanupModal = useCleanupDetailsModal({
-    pipelineRunId: pipeline.pipelineRunId,
-    pipelineDebugData: pipeline.pipelineDebugData,
-    onDebugData: pipeline.setPipelineDebugData,
-  })
-  const [copied, setCopied] = useState(false)
-  const { state } = composer
-  const steps = useMemo(() => deriveP2BSteps(state), [state])
-
-  const handleCopyJson = useCallback(() => {
-    navigator.clipboard
-      .writeText(JSON.stringify(composer.v3Payload, null, 2))
-      .then(() => {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      })
-      .catch(() => {
-        pipeline.setError('Unable to copy JSON to clipboard.')
-      })
-  }, [composer.v3Payload, pipeline])
-
-  const handleResetRun = useCallback(() => {
-    cleanupModal.close()
-    pipeline.reset()
-  }, [cleanupModal, pipeline])
-
-  // The research step is already on the page; a stopped run needs the user
-  // taken back to the box that accepts a replacement package, not a new screen.
-  const handleBackToResearch = useCallback(() => {
-    const evidenceField = document.getElementById('p2b-evidence-json')
-    evidenceField?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    if (evidenceField instanceof HTMLTextAreaElement) evidenceField.focus()
-  }, [])
-
-  /*
-   * The one blocker research cannot clear. A refuted premise means the article
-   * was commissioned about something that is not so, so the operator is sent
-   * back to the direction cards — where the other two options are still sitting
-   * unspent — rather than out for another research round that returns the same
-   * refutation.
-   */
-  const handleBackToDirection = useCallback(() => {
-    const picker = document.getElementById('p2b-direction-picker')
-    picker?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    const firstChoice = picker?.querySelector('input[type="radio"]')
-    if (firstChoice instanceof HTMLInputElement) firstChoice.focus()
-  }, [])
-
-  const handleClear = useCallback(() => {
-    composer.clearAll()
-    handleResetRun()
-  }, [composer, handleResetRun])
+/**
+ * Starting an article.
+ *
+ * One screen at a time, in the order the work actually happens: say what you
+ * want to write about, answer a few questions, approve the brief, cut the
+ * research plan.
+ *
+ * There is no form. The old page asked for a title, a location, a tone, a brand
+ * voice, a creativity level and a direction card before it would do anything,
+ * and never once asked what the article was for.
+ */
+export function Prompt2BlogPage() {
+  const intake = useIntake()
+  const state = intake.state
+  const step = state?.step ?? 'seed'
 
   return (
     <div className="p2b-page">
@@ -78,13 +27,9 @@ export default function Prompt2BlogPage() {
         <div>
           <p className="p2b-eyebrow">Questurian Studio</p>
           <h1>
-            Craft articles from <span className="p2b-underline-text">structured input</span>
+            Write something worth <span className="p2b-underline-text">reading</span>
             <span className="p2b-dot">.</span>
           </h1>
-          <p className="p2b-lede">
-            Approve one editorial commission, research it, and run the commission-driven
-            pipeline.
-          </p>
         </div>
         <div className="p2b-badge-row">
           <Link to="/" className="p2b-nav-link">
@@ -97,81 +42,53 @@ export default function Prompt2BlogPage() {
       </header>
 
       <main className="p2b-form-container">
-        <StepRail steps={steps} />
-        <form className="p2b-form" onSubmit={event => event.preventDefault()}>
-          <EasySetupPanel
-            activeWorkflow={state.activeWorkflow}
-            editorial={state.editorial}
-            editorialOptions={composer.editorialOptions}
-            editorialOptionsError={composer.editorialOptionsError}
-            editorialOptionsLoading={composer.editorialOptionsLoading}
-            inputOptions={composer.inputOptions}
-            lengthId={state.lengthId}
-            location={state.easySetupLocation}
-            refutedPremise={pipeline.needsResearch?.refuted_premise}
-            steps={steps}
-            title={state.easySetupTitle}
-            onApplyDirectionResponse={composer.applyDirectionResponse}
-            onApproveCommission={composer.approveCommissionChanges}
-            onClearDirectionWorkflow={composer.clearDirectionWorkflow}
-            onClearEvidence={composer.clearEvidence}
-            onCommissionChange={composer.updateCommissionDraft}
-            onConfirmCommissionReview={composer.confirmCommissionReview}
-            onLengthChange={value => composer.updateField('lengthId', value)}
-            onLocationChange={value => composer.updateField('easySetupLocation', value)}
-            onRetryEditorialOptions={composer.retryEditorialOptions}
-            onSelectDirection={composer.selectDirectionOption}
-            onStartDirectionWorkflow={composer.startDirectionWorkflow}
-            onStoreEvidence={composer.storeEvidence}
-            onTitleChange={value => composer.updateField('easySetupTitle', value)}
-          />
-          <PromptProfilesPanel
-            brandVoiceId={state.brandVoiceId}
-            creativityLevel={state.creativityLevel}
-            inputOptions={composer.inputOptions}
-            lengthId={state.lengthId}
-            toneId={state.toneId}
-            onChange={composer.updateField}
-            onClear={composer.clearPromptProfiles}
-          />
-          <PipelinePanel
-            run={pipeline}
-            onBackToResearch={handleBackToResearch}
-            onBackToDirection={handleBackToDirection}
-            onOpenCleanupModal={() => void cleanupModal.open()}
-            onReset={handleResetRun}
-            submissionBlockedReason={composer.submissionBlockedReason}
-          />
+        {intake.error && (
+          <p className="p2b-error" role="alert">
+            {intake.error}
+          </p>
+        )}
 
-          <FoldedSection
-            title="Advanced"
-            description="See how the fixed article system works and what it costs."
-          >
-            <ModelRoutingPanel
-              modelStackId={state.modelStackId}
-              onChange={value => composer.updateField('modelStackId', value)}
-            />
-          </FoldedSection>
+        {step === 'seed' && <SeedScreen busy={intake.busy} onStart={intake.start} />}
 
+        {step === 'grill' && state?.grill && (
+          <GrillScreen
+            grill={state.grill}
+            busy={intake.busy}
+            onAnswer={intake.answer}
+            onApprove={intake.approveBrief}
+            onReopen={intake.reopen}
+          />
+        )}
+
+        {step === 'brief' && state?.brief && (
+          <BriefScreen
+            brief={state.brief}
+            busy={intake.busy}
+            onPlanResearch={intake.planResearch}
+            onReopen={intake.reopen}
+          />
+        )}
+
+        {step === 'work_order' && state?.work_order && (
+          <WorkOrderScreen
+            workOrder={state.work_order}
+            warnings={intake.cutWarnings}
+            busy={intake.busy}
+            onCut={intake.cut}
+            onReopen={intake.reopen}
+          />
+        )}
+
+        {state && (
           <div className="p2b-submit-row">
-            <button type="button" className="p2b-copy-json-btn" onClick={handleCopyJson}>
-              {copied ? 'Copied!' : 'Copy JSON'}
-            </button>
-            <button type="button" className="p2b-clear-btn" onClick={handleClear}>
-              Clear All
+            <button type="button" className="p2b-clear-btn" onClick={intake.abandon}>
+              Start something else
             </button>
           </div>
-        </form>
+        )}
       </main>
-
-      {cleanupModal.isOpen && (
-        <CleanupDetailsModal
-          data={cleanupModal.data}
-          error={cleanupModal.error}
-          loading={cleanupModal.isLoading}
-          onClose={cleanupModal.close}
-        />
-      )}
     </div>
   )
 }
+
+export default Prompt2BlogPage

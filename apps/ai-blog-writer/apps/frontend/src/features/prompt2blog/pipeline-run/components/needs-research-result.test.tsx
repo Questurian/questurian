@@ -97,7 +97,7 @@ describe('NeedsResearchResult', () => {
     expect(screen.queryByText('source_gate')).toBeNull()
   })
 
-  it('offers the follow-up prompt and a route back into research', () => {
+  it('shows what is still open and a route back into research', () => {
     const onBackToResearch = vi.fn()
     render(
       <NeedsResearchResult
@@ -107,7 +107,7 @@ describe('NeedsResearchResult', () => {
       />,
     )
 
-    expect(screen.getByLabelText('Follow-up research prompt')).toHaveValue(
+    expect(screen.getByLabelText('Still to find out')).toHaveValue(
       'Close r2 without changing the commission.',
     )
     fireEvent.click(screen.getByRole('button', { name: 'Back to research' }))
@@ -220,6 +220,6 @@ describe('NeedsResearchResult, when the premise itself was refuted', () => {
 
     expect(screen.getByText('Could not be checked either way')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back to research' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Follow-up research prompt')).toBeInTheDocument()
+    expect(screen.getByLabelText('Still to find out')).toBeInTheDocument()
   })
 })

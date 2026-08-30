@@ -9,7 +9,7 @@ import type {
 import {
   attachedResearchSummary,
   researchStatusLabel,
-} from '../../composer/research-language'
+} from '../research-language'
 import { RunCostReceipt } from './RunCostReceipt'
 
 interface PipelineV3ResultProps {
