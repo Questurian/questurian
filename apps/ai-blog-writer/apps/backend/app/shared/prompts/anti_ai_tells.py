@@ -25,6 +25,11 @@ not apply to a single 90-140 word paragraph.
 
 Both are written to be appended *after* any per-article-type guideline, with the
 precedence statement asserting they override conflicting instructions above.
+
+Two families in `_BANNED_CONSTRUCTIONS` are named as shapes rather than listed
+as strings (ADR 0030). A literal list only catches the variants someone thought
+to write down; naming the shape catches the ones they did not. Do not expand
+either family back into individual entries.
 """
 
 PRECEDENCE_HEADER = (
@@ -34,35 +39,41 @@ PRECEDENCE_HEADER = (
 
 
 _BANNED_CONSTRUCTIONS = """\
-Banned constructions. Do not use any of these:
-- "quietly [adjective]" (quietly radical, quietly confident, quietly stunning, quietly devastating)
-- "what happens when X meets Y" or "where X meets Y" or "what happens between X and Y" or "the space between X and Y" — any phrasing that names an abstract interaction between two ingredients, techniques, or cultures instead of describing the result ("refining what happens between Japanese technique and an Amazonian ingredient"). Describe the result, not the interaction.
-- "X territory" as a closer (special-occasion territory, dangerous territory)
-- "It's not just X, it's Y"
-- "more than just a [noun]"
+Banned constructions. Two shapes account for most of these. Learn the shape, \
+not the list: a variant is banned even when it is not written out below.
+
+THE CONTRASTIVE PIVOT — defining a thing by what it is not, or balancing it \
+against a counter-claim in the same breath. "It's not just X, it's Y." "More \
+than just a [noun]." "A working kitchen rather than a monument." "Not X, but \
+Y." "More X than Y." Bare "X, not Y" where Y is abstract or metaphorical ("its \
+own cuisine, not a hyphenated footnote"). "Feels both X and Y." "Deceptively \
+simple." The shape itself is the tell — rewording the metaphor does not fix \
+it. State the thing directly and drop the negation.
+
+THE KICKER THAT IMPLIES A PAYOFF — a closer that gestures at a reason instead \
+of giving it, leaving the reader to fill in the blank. "The line forms early \
+for a reason." "The seating to chase." "Lower-key than the price suggests." \
+"...which is why the 1pm seating fills first." "Special-occasion territory." \
+State the actual reason, name the thing plainly, or cut the sentence.
+
+Also banned, individually:
+- "quietly [adjective]" (quietly radical, quietly confident, quietly stunning)
+- "what happens when X meets Y" or "where X meets Y" or "the space between X and Y" — any phrasing that names an abstract interaction between two ingredients, techniques, or cultures instead of describing the result. Describe the result, not the interaction.
 - "in a world where..."
 - "the [noun] is [verb]-ing" sweeping openers (the city is changing, the menu is evolving)
-- "feels both X and Y" or "reads as both X and Y"
 - "a masterclass in"
 - "punches above its weight"
 - "the kind of [noun] that..."
-- "deceptively simple"
 - "effortlessly [adjective]"
-- "the most X you can Y" or "the X-est you can Y" superlative-of-experience ("the most committed expression of Nikkei you can sit down to," "the tightest fish you can eat in the city," "the smartest pairing you can order"). The shape sounds writerly and commits to nothing concrete. State what the place actually does, or cut the claim.
+- "the most X you can Y" or "the X-est you can Y" superlative-of-experience ("the tightest fish you can eat in the city"). The shape sounds writerly and commits to nothing concrete. State what the place actually does, or cut the claim.
 - "set the bar," "raise the bar," "move the needle"
 - "speaks volumes," "speaks to"
 - "at its core," "at the heart of"
 - "testament to"
-- "X rather than Y" contrastive pivots ("a working kitchen rather than a monument," "a find rather than a scene"). Also any "not X, but Y" or "more X than Y" pivot used to flip an expectation.
-- Bare "X, not Y" contrastive where Y is an abstract or metaphorical noun phrase ("its own cuisine, not a hyphenated footnote"; "a kitchen, not a stage"). The shape itself is the tell — rewording the metaphor does not fix it. State X directly and drop the negation.
-- "for a reason" as a closing kicker ("reservations open weeks ahead for a reason," "the line forms early for a reason"). The phrase signals an unstated payoff the reader is supposed to fill in — state the actual reason or cut the sentence.
-- "the [noun] to chase / to beat / to want / to know" as a kicker noun phrase ("the seating to chase," "the table to want"). Name the thing plainly.
-- "[adj]-er than [noun] suggests / implies / lets on" comparative tells ("lower-key than the price suggests," "smaller than the reputation lets on"). They are kickers in disguise — cut the comparative frame.
-- "X, which is why Y" causal pivots used to justify a recommendation ("low-key for the price tag, which is why the 1pm seating..."). State the recommendation directly.
-- Compound mood adjectives of the form "[noun]-forward" or "[noun]-led" used to describe a room or program ("art-forward," "produce-forward," "vinyl-led"). Name the thing instead.
-- Strained-clever metaphors that sound good on first read and empty on second ("build the case that X deserves its own shelf," "earn its seat at the table," "writes its own chapter"). If you cannot say the thing literally, do not say it figuratively.
-- Two-clause aphoristic closer with abstract nouns — short balanced clauses joined by semicolon, "and," or a comma, with both clauses ending in an abstract or metaphorical noun ("Lunch is the calmer way in; dinner is the full argument." / "The room is the draw, and the food is the proof."). The parallel-with-abstract-noun shape is a strong signal even when each clause would be fine alone. Cut the symmetry or rewrite as two sentences with different shapes.
-- Clipped imperative sign-offs as a closer, whether they end the paragraph or trail a compound sentence as the second clause ("Book weeks out, ideally more." / "Reserve early." / "Go hungry." / "Book months ahead, and treat it as the centerpiece of the trip."). Covers Book, Reserve, Order, Skip, Arrive, Sit, Come, Bring, Go, Stay, Treat. Either fold the practical note into a full sentence earlier, or drop it.
+- Compound mood adjectives of the form "[noun]-forward" or "[noun]-led" used to describe a room or program ("art-forward," "produce-forward"). Name the thing instead.
+- Strained-clever metaphors that sound good on first read and empty on second ("earn its seat at the table," "writes its own chapter"). If you cannot say the thing literally, do not say it figuratively.
+- Two-clause aphoristic closer with abstract nouns — short balanced clauses joined by semicolon, "and," or a comma, with both clauses ending in an abstract or metaphorical noun ("The room is the draw, and the food is the proof."). The parallel-with-abstract-noun shape is a strong signal even when each clause would be fine alone. Cut the symmetry or rewrite as two sentences with different shapes.
+- Clipped imperative sign-offs as a closer, whether they end the paragraph or trail a compound sentence as the second clause ("Book weeks out, ideally more." / "Go hungry."). Covers Book, Reserve, Order, Skip, Arrive, Sit, Come, Bring, Go, Stay, Treat. Either fold the practical note into a full sentence earlier, or drop it.
 - Any sentence ending in a tidy summary that restates the paragraph."""
 
 _BANNED_PERSONIFICATIONS = """\
@@ -92,33 +103,30 @@ fairly, genuinely, truly, really, simply, just, of course, indeed. Cut "it's \
 worth noting that," "it's important to remember," and any meta-commentary \
 about the writing itself."""
 
+# Every phrase the shared validator rejects has to be named here, or a writer
+# is judged against a rule it was never given (see
+# test_every_phrase_the_validator_rejects_is_named_in_the_prompt). That
+# coupling, not verbosity, is why this block is long: it is a phrase list with
+# prose around it. Restructured into four named moves rather than shortened.
 _BANNED_DISCLAIMERS = """\
-Banned disclaimers. State what you know as a plain fact and stop. Do not \
+Banned disclaimers. Never write about the enquiry. The reader is here for the \
+place, not for how we found out about it. State what you know as a plain fact \
+and stop: "Customs took twenty five minutes" is the whole sentence. Do not \
 caveat a fact, attribute it defensively, date it as a shield, or explain how \
-it was established. "Customs took twenty five minutes" is the whole sentence. \
-Cut: "based on my own experience," "anecdotally," "at the time of writing," \
-"your experience may vary," "this is one traveller's experience," "this is \
-not an average," "no official figures exist for," "there is no public data \
-on," "figures could not be verified," and any sentence whose job is to tell \
-the reader how much to trust the previous one. Where research could not \
-establish something, write around it: never narrate the gap. \
-Saying it about the subject instead of about yourself is the same sentence. \
-Cut: "does not publish," "has not disclosed," "is not public information," \
-"is not publicly available," "could not be confirmed," and any other way of \
-telling the reader that a fact was looked for and not found. Write what the \
-subject does do, or say nothing. \
-Never let the vocabulary of the research reach the page either: no "sampled" \
-booking flows or menus, no "data points," no "sample size," no "evidence \
-records," and no grading your own confidence in a number ("an estimate rather \
-than a guaranteed bill"). Give the number plainly or leave it out. \
-Naming the source is the same disclaimer wearing a press badge. Cut: \
-"sources report," "travel sources," "outlets anticipate," "one outlet," \
-"the publication noted," "the report cited," "according to," "reports \
-suggest," and every other construction whose job is to put a publication \
-between you and the claim. A named person or institution who acts in the \
-story stays; the outlet that wrote it up does not. \
-This bans hedging, not first person. In a piece written in first person, \
-"I waited twenty five minutes at customs" is the fact, told plainly, and it \
+it was established.
+
+Four moves are banned, in every wording.
+
+1. Telling the reader how much to trust a claim. Cut: "based on my own experience," "anecdotally," "at the time of writing," "your experience may vary," "this is one traveller's experience," "this is not an average," and any sentence whose job is to tell the reader how much to trust the previous one.
+
+2. Narrating a gap. Cut: "no official figures exist for," "there is no public data on," "figures could not be verified," "does not publish," "has not disclosed," "is not public information," "is not publicly available," "could not be confirmed." Where research could not establish something, write around it: never narrate the gap. Write what the subject does do, or say nothing.
+
+3. Letting the vocabulary of the research onto the page. No "sampled" booking flows or menus, no "data points," no "sample size," no "evidence records," and no grading your own confidence in a number ("an estimate rather than a guaranteed bill"). Give the number plainly or leave it out.
+
+4. Putting a publication between you and the claim. Cut: "sources report," "travel sources," "outlets anticipate," "one outlet," "the publication noted," "the report cited," "according to," "reports suggest." A named person or institution who acts in the story stays; the outlet that wrote it up does not.
+
+This bans hedging, not first person. In a piece written in first person, "I \
+waited twenty five minutes at customs" is the fact, told plainly, and it \
 stays. A date or a season belongs in the prose when the reader needs it to \
 act — a closure, a season, a change to the place itself — never as armour \
 around a claim. Accuracy is settled before the writing starts; it is not the \
@@ -136,21 +144,19 @@ Diction rules. Prefer short Anglo-Saxon words over Latinate ones — "use" not \
 (when not literal)."""
 
 _NO_DASH_SUBSTITUTION = """\
-Do not substitute em-dash cadence with comma-bracketed asides. If you would \
-have written "X — Y — Z" before the no-em-dash rule, do not write "X, Y, Z" \
-instead. Comma-bracketed adverbials like "arguing, convincingly, that" or \
-"the room is warm, and quietly so, throughout" are em dashes in disguise — \
-rewrite the sentence into two shorter sentences, or drop the aside entirely. \
-A comma should join clauses or list items, not impersonate a dash.
-Do not substitute a hyphen either. "The room is warm - and quietly so" is the \
-same dash wearing a different hat, and a spaced hyphen reads as a typewriter \
-artefact rather than punctuation anyone chose. Hyphens do not bracket asides and they do not break sentences.
-Do not use hyphenated compounds at all. "Two-bedroom apartments", \
-"a long-stay visa", "a well-known, family-run spot" -- each is correct \
-English on its own, but a run of them through an article is one of the \
-clearest signals the text was generated. Rephrase instead: "apartments with \
-two bedrooms", "a visa for long stays", "a spot the family runs, and people \
-know it". Proper names keep their hyphens; nothing else does."""
+No em dashes, and no substitutes for them. A comma-bracketed aside is an em \
+dash in disguise: if you would have written "X — Y — Z", do not write "X, Y, \
+Z" instead. Asides like "arguing, convincingly, that" or "the room is warm, \
+and quietly so, throughout" get rewritten as two shorter sentences or dropped. \
+A comma joins clauses or list items; it does not impersonate a dash. A spaced \
+hyphen is the same dash in another hat and reads as a typewriter artefact.
+
+Do not use hyphenated compounds at all. "Two-bedroom apartments", "a long-stay \
+visa", "a well-known, family-run spot" — each is correct English on its own, \
+but a run of them through an article is one of the clearest signals the text \
+was generated. Rephrase: "apartments with two bedrooms", "a visa for long \
+stays", "a spot the family runs, and people know it". Proper names keep their \
+hyphens; nothing else does."""
 
 _VOICE = """\
 Voice rules. Write from a single point of view with an opinion. If the writing \

@@ -52,21 +52,33 @@ def save_credential(*, label: str, token: str) -> dict[str, Any]:
     cleaned_token = token.strip()
     if not cleaned_label or not cleaned_token:
         raise Prompt2BlogCredentialError("Account label and token are required.")
+    if any(character.isspace() for character in cleaned_token):
+        raise Prompt2BlogCredentialError(
+            "That does not look like a Claude setup token: it contains a space "
+            "or a line break."
+        )
 
-    args = [
-        SECURITY_CLI,
-        "add-generic-password",
-        "-a",
-        SLOT_ID,
-        "-s",
-        KEYCHAIN_SERVICE,
-        "-U",
-        "-w",
-    ]
+    # `add-generic-password -w` with no value does not read the password from
+    # stdin -- it PROMPTS for it, twice, on the controlling terminal. A piped
+    # token is therefore either ignored (the item is written with an empty
+    # secret) or never consumed at all, and the call sits until it times out.
+    # Under uvicorn, started from a terminal, it is the second one.
+    #
+    # `security -i` reads the whole command from stdin instead: no prompt, a
+    # real exit code, and the token still never appears in argv, so it cannot
+    # be read out of `ps` -- which is why the prompt was being used at all.
+    args = [SECURITY_CLI, "-i"]
+    command = (
+        "add-generic-password"
+        f" -a {SLOT_ID}"
+        f" -s {KEYCHAIN_SERVICE}"
+        " -U"
+        f" -w {cleaned_token}\n"
+    )
     try:
         completed = subprocess.run(
             args,
-            input=cleaned_token + "\n",
+            input=command,
             capture_output=True,
             text=True,
             timeout=KEYCHAIN_TIMEOUT_SECONDS,

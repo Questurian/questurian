@@ -694,24 +694,99 @@ describe('Prompt2BlogPage', () => {
     expect(screen.getByLabelText('Location')).toHaveValue('Lisbon, Portugal')
   })
 
-  it('shows one fixed article system with no model selector', async () => {
+  it('shows the default route as fully plan-funded, and names every stage', async () => {
     renderPage()
 
-    expect(await screen.findByText('Questurian balanced article route')).toBeInTheDocument()
-    expect(screen.queryByLabelText('Pipeline preset')).toBeNull()
-    const receipt = screen.getByLabelText('Opus · High model assignments')
+    const route = await screen.findByLabelText('Article route')
+    expect(route).toHaveValue('opus-led-high')
 
-    expect(within(receipt).getByText('Research worker')).toBeInTheDocument()
+    const receipt = screen.getByLabelText('Opus · High model assignments')
+    // The research worker is gone from this list: v3 never calls it, and
+    // showing it implied a Gemini model was doing work it never did.
+    expect(within(receipt).queryByText('Research worker')).toBeNull()
     expect(within(receipt).getByText('Article writer')).toBeInTheDocument()
-    expect(within(receipt).getByText('Quality judge')).toBeInTheDocument()
-    expect(within(receipt).getByText('Gemini 3.1 Flash Lite')).toBeInTheDocument()
-    expect(within(receipt).getByText('Claude Opus 5 high')).toBeInTheDocument()
+    expect(within(receipt).getByText('Repair pass')).toBeInTheDocument()
+    expect(within(receipt).getByText('Fact checker')).toBeInTheDocument()
+    // Draft and repair, both on the writer's model here.
+    expect(within(receipt).getAllByText('Claude Opus 5 high')).toHaveLength(2)
     expect(within(receipt).getByText('Claude Sonnet 5 high')).toBeInTheDocument()
-    expect(within(receipt).getByText('Claude Sonnet 5 medium')).toBeInTheDocument()
+    // Outline, groundedness and title all sit on the same model here.
+    expect(within(receipt).getAllByText('Claude Sonnet 5 medium')).toHaveLength(3)
+
+    // Every call this route makes draws plan allowance, so there is no
+    // dollar-per-million figure to quote. It used to show one, priced off a
+    // worker model the pipeline never calls.
     const pricing = screen.getByLabelText('Opus · High estimated pricing')
-    expect(within(pricing).getByText('$0.50')).toBeInTheDocument()
-    expect(within(pricing).getByText('Input $0.25 / 1M')).toBeInTheDocument()
-    expect(within(pricing).getByText('Output $1.50 / 1M')).toBeInTheDocument()
+    expect(within(pricing).getByText('Included in your Claude plan')).toBeInTheDocument()
+  })
+
+  it('offers a route that keeps Claude on prose and moves the checks to Gemini', async () => {
+    renderPage()
+
+    const route = await screen.findByLabelText('Article route')
+    fireEvent.change(route, { target: { value: 'gemini-checked-high' } })
+
+    const receipt = screen.getByLabelText(
+      'Opus · High · Gemini-checked model assignments',
+    )
+    // Claude still drafts and repairs; nothing else is Claude.
+    expect(within(receipt).getAllByText('Claude Opus 5 high')).toHaveLength(2)
+    expect(within(receipt).queryByText(/Claude Sonnet/)).toBeNull()
+    expect(within(receipt).getAllByText('Gemini 3.1 Pro Preview')).toHaveLength(3)
+    expect(within(receipt).getByText('Gemini 3.7 Flash')).toBeInTheDocument()
+
+    const pricing = screen.getByLabelText(
+      'Opus · High · Gemini-checked estimated pricing',
+    )
+    expect(within(pricing).getByText('Input $1.85 / 1M')).toBeInTheDocument()
+    expect(within(pricing).getByText('Output $11.04 / 1M')).toBeInTheDocument()
+  })
+
+  it('offers a route that spends max effort on the repair but not the draft', async () => {
+    renderPage()
+
+    const route = await screen.findByLabelText('Article route')
+    fireEvent.change(route, { target: { value: 'gemini-checked-max-repair' } })
+
+    const receipt = screen.getByLabelText(
+      'Opus · Max repair · Gemini-checked model assignments',
+    )
+    // The two prose stages differ by effort tier, which is the whole route.
+    expect(within(receipt).getByText('Claude Opus 5 high')).toBeInTheDocument()
+    expect(within(receipt).getByText('Claude Opus 5 max')).toBeInTheDocument()
+    expect(within(receipt).getAllByText('Gemini 3.1 Pro Preview')).toHaveLength(3)
+  })
+
+  it('groups the routes by who checks the draft', async () => {
+    renderPage()
+
+    const route = await screen.findByLabelText('Article route')
+    const groups = within(route).getAllByRole('group')
+
+    expect(groups.map(group => group.getAttribute('label'))).toEqual([
+      'Claude checks its own draft',
+      'Gemini Pro checks — independent reader',
+      'Gemini Flash checks — cheapest'
+    ])
+    // The heading carries the checker, so the option text carries only effort.
+    expect(within(groups[2]!).getByRole('option', { name: 'Opus · High effort' }))
+      .toBeInTheDocument()
+  })
+
+  it('offers a Flash-checked route that costs a third of the Pro one', async () => {
+    renderPage()
+
+    const route = await screen.findByLabelText('Article route')
+    fireEvent.change(route, { target: { value: 'flash-checked-high' } })
+
+    const receipt = screen.getByLabelText('Opus · High · Flash-checked model assignments')
+    // Opus still writes and repairs. Every check is Flash.
+    expect(within(receipt).getAllByText('Claude Opus 5 high')).toHaveLength(2)
+    expect(within(receipt).getAllByText('Gemini 3.7 Flash')).toHaveLength(4)
+
+    const pricing = screen.getByLabelText('Opus · High · Flash-checked estimated pricing')
+    expect(within(pricing).getByText('Input $0.75 / 1M')).toBeInTheDocument()
+    expect(within(pricing).getByText('Output $3.75 / 1M')).toBeInTheDocument()
   })
 
   it('blocks submission while an editorial v3 direction is unfinished', async () => {

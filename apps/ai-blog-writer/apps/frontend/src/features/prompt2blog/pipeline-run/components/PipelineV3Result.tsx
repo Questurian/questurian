@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
+import { openPrompt2BlogDrafts } from '../../api'
 import type {
   Prompt2BlogRepairDecision,
   Prompt2BlogV3PipelinePayload,
@@ -58,6 +60,22 @@ export function PipelineV3Result({
   const requirementIds = Object.keys(requirementStatus)
   const repairDecision = result.quality_review.repair_decision
   const repairNote = repairDecision ? repairDecisionNote(repairDecision) : null
+  const [draftsError, setDraftsError] = useState<string | null>(null)
+
+  // The finished article is one of several the run wrote, and which one
+  // shipped is a decision worth being able to check: a repair that scores no
+  // better than the draft it replaced is discarded, so the article here can be
+  // the *earlier* one. The drafts page shows all of them side by side.
+  async function showDrafts() {
+    setDraftsError(null)
+    try {
+      await openPrompt2BlogDrafts(result.run_id)
+    } catch (error) {
+      setDraftsError(
+        error instanceof Error ? error.message : 'Could not open the drafts.',
+      )
+    }
+  }
 
   return (
     <div className="p2b-final-result">
@@ -74,6 +92,9 @@ export function PipelineV3Result({
             Stage in Payload Editor
           </Link>
         )}
+        <button type="button" className="p2b-synthesize-btn" onClick={showDrafts}>
+          Read all drafts
+        </button>
         {result.langsmith_trace_url && (
           <a
             href={result.langsmith_trace_url}
@@ -88,6 +109,11 @@ export function PipelineV3Result({
           View Saved Articles
         </Link>
       </div>
+      {draftsError && (
+        <p className="p2b-error" role="alert">
+          {draftsError}
+        </p>
+      )}
       {result.run_cost && <RunCostReceipt cost={result.run_cost} />}
       <p>
         <strong>Status:</strong> {result.pipeline_status}

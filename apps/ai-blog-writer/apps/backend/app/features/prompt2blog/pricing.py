@@ -486,19 +486,41 @@ class Prompt2BlogTokenUsageTracker:
         ]
 
     def _stage_rows(self) -> list[dict[str, Any]]:
+        # `by_attempt` has carried a per-row price since it was written and this
+        # has not, so a receipt could say what one attempt of repair cost but
+        # never what repair cost -- the exact number anyone deciding whether a
+        # stage is worth its budget wants. Priced the same way, including the
+        # abstention: a stage holding even one call the provider would not
+        # price reports no cost rather than a total that quietly omits it.
         rows: dict[str, dict[str, Any]] = {}
         for entry in self.calls:
             row = rows.setdefault(
                 entry["stage"],
-                {"stage": entry["stage"], **_empty_usage(), "attempts": 0},
+                {
+                    "stage": entry["stage"],
+                    **_empty_usage(),
+                    "attempts": 0,
+                    "cost_usd": 0.0,
+                    "unpriced_calls": 0,
+                },
             )
             for token_key in TOKEN_KEYS:
                 row[token_key] += entry[token_key]
             row["calls"] += 1
+            if entry["cost_usd"] is None:
+                row["unpriced_calls"] += 1
+            else:
+                row["cost_usd"] += entry["cost_usd"]
         for stage, attempts in self.stage_attempts.items():
             row = rows.setdefault(
                 stage,
-                {"stage": stage, **_empty_usage(), "attempts": 0},
+                {
+                    "stage": stage,
+                    **_empty_usage(),
+                    "attempts": 0,
+                    "cost_usd": 0.0,
+                    "unpriced_calls": 0,
+                },
             )
             row["attempts"] = attempts
         for stage, row in rows.items():
@@ -513,10 +535,22 @@ class Prompt2BlogTokenUsageTracker:
                 )
         # Sorted by spend so the stages worth capping or de-thinking are the
         # ones read first.
-        return sorted(
-            rows.values(),
-            key=lambda row: (-row["total_tokens"], row["stage"]),
-        )
+        return [
+            {
+                **{
+                    key: value
+                    for key, value in row.items()
+                    if key not in ("cost_usd", "unpriced_calls")
+                },
+                "cost_usd": (
+                    round(row["cost_usd"], 6) if not row["unpriced_calls"] else None
+                ),
+            }
+            for row in sorted(
+                rows.values(),
+                key=lambda row: (-row["total_tokens"], row["stage"]),
+            )
+        ]
 
     def summary(
         self,

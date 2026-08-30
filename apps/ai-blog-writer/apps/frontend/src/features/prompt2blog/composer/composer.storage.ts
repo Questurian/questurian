@@ -3,6 +3,7 @@ import {
   resolvePrompt2BlogModelStack,
   resolvePrompt2BlogModelName,
   resolvePrompt2BlogWriterModel,
+  resolveOfferedStackId,
 } from '../constants/prompt2blog.constants'
 import type {
   P2BCommissionApproval,
@@ -439,9 +440,11 @@ export function loadSavedComposerState(): P2BFormState {
       editorial,
       easySetupLocation: readString(parsed.easySetupLocation),
       easySetupTitle: readString(parsed.easySetupTitle),
-      // Model selection was removed. Old drafts may still carry a premium
-      // stack, but every resumed/new run now uses the one supported route.
-      modelStackId: DEFAULT_MODEL_STACK.id,
+      // The route is a real choice again, so a saved draft keeps the one it
+      // was saved with -- but only if the picker still offers it. A draft
+      // naming a retired stack falls back to the default rather than pinning
+      // the user to a route they cannot see or switch away from.
+      modelStackId: resolveOfferedStackId(parsed.modelStackId),
       modelName: resolvePrompt2BlogModelName(DEFAULT_MODEL_STACK.modelName),
       writingModel: resolvePrompt2BlogWriterModel(DEFAULT_MODEL_STACK.writingModel),
       auditModel: resolvePrompt2BlogWriterModel(DEFAULT_MODEL_STACK.auditModel),

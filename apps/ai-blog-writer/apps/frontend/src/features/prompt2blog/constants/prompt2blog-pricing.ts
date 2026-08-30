@@ -3,13 +3,25 @@ interface VertexTokenRate {
   output: number
 }
 
-export type Prompt2BlogRoleKey = 'modelName' | 'writingModel' | 'auditModel'
+export type Prompt2BlogRoleKey =
+  | 'writingModel'
+  | 'repairModel'
+  | 'auditModel'
+  | 'groundednessModel'
+  | 'outlineModel'
+  | 'titleModel'
 
 /**
- * Just the three role assignments. Narrower than `Prompt2BlogModelStack` on
- * purpose: pricing reads model names and nothing else, and the role unions
- * differ per role (only the writer union carries Claude names today), so a
- * plain string map is what this function actually needs.
+ * Just the role assignments a v3 run actually calls. Narrower than
+ * `Prompt2BlogModelStack` on purpose: pricing reads model names and nothing
+ * else, and the role unions differ per role, so a plain string map is what this
+ * function actually needs.
+ *
+ * `modelName` -- the research worker -- is deliberately absent. V3 never calls
+ * it; `state["model_name"]` reaches nothing but the run record. It used to
+ * carry the single heaviest weight here, so the headline rate was four
+ * elevenths a price for work that never happened, and the three checking roles
+ * that do run were not priced at all.
  */
 export type Prompt2BlogModelStackShape = Record<Prompt2BlogRoleKey, string>
 
@@ -45,16 +57,33 @@ const VERTEX_TOKEN_RATES: Record<string, VertexTokenRate> = {
   'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
 }
 
+/**
+ * Share of a run's tokens, measured rather than guessed.
+ *
+ * Taken from the Medellin run (250,222 tokens): compose 44,309, repair 57,116,
+ * audit 55,913, groundedness 54,887, outline 21,478, title 16,519.
+ *
+ * Repair is weighted as though it always fires, which on a passing draft it
+ * does not. That overstates a repair-heavy route rather than flattering it --
+ * the safer direction for a number an operator compares routes with. These are
+ * a comparison basis, not a forecast of one run.
+ */
 const ROLE_WEIGHTS: ReadonlyArray<{ key: Prompt2BlogRoleKey; weight: number }> = [
-  { key: 'modelName', weight: 4 },
-  { key: 'writingModel', weight: 5 },
-  { key: 'auditModel', weight: 2 },
+  { key: 'writingModel', weight: 18 },
+  { key: 'repairModel', weight: 23 },
+  { key: 'auditModel', weight: 22 },
+  { key: 'groundednessModel', weight: 22 },
+  { key: 'outlineModel', weight: 9 },
+  { key: 'titleModel', weight: 7 },
 ] as const
 
 export const PROMPT2BLOG_ROLE_LABELS: Record<Prompt2BlogRoleKey, string> = {
-  modelName: 'Research worker',
   writingModel: 'Article writer',
+  repairModel: 'Repair pass',
   auditModel: 'Quality judge',
+  groundednessModel: 'Fact checker',
+  outlineModel: 'Section planner',
+  titleModel: 'Headline writer',
 }
 
 const INPUT_TOKEN_SHARE = 0.8

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.shared.writer_models import temperature_is_honored
+
 from ...content.markdown import _build_markdown
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
@@ -155,11 +157,26 @@ def run_v3_finalize_stage(
             "outline_unsupported_requirements": _safe_dict(state.get("outline")).get(
                 "unsupported_requirements", []
             ),
-            "model_used": state["model_name"],
+            # The model that produced this review. It used to report the
+            # worker model, which v3 never calls at all -- so a review written
+            # by the audit model was filed under a Gemini name that had no part
+            # in it.
+            "model_used": state["audit_model"],
+            # Whether the creativity control reached the stage that writes
+            # prose. It sets `compose_temperature`, and the subscription CLI
+            # has no temperature flag, so on a Claude-written draft the setting
+            # is accepted and dropped. Recorded rather than hidden: a reader
+            # comparing two drafts should not have to guess whether the dial
+            # was connected.
+            "creativity": {
+                "level": _safe_dict(state["option_context"]).get("creativity_level"),
+                "compose_temperature": state["compose_temperature"],
+                "applied_to_compose": temperature_is_honored(state["writing_model"]),
+            },
             "stage_model_overrides": {
                 "stage_v3_outline": state["outline_model"],
                 "stage_v3_compose": state["writing_model"],
-                "stage_v3_repair": state["writing_model"],
+                "stage_v3_repair": state["repair_model"],
                 "stage_v3_title": state["title_model"],
                 "stage_v3_quality_audit": state["audit_model"],
                 "stage_v3_groundedness": state["groundedness_model"],
@@ -175,6 +192,7 @@ def run_v3_finalize_stage(
                 "model_name": state["model_name"],
                 "outline_model": state["outline_model"],
                 "writing_model": state["writing_model"],
+                "repair_model": state["repair_model"],
                 "groundedness_model": state["groundedness_model"],
                 "audit_model": state["audit_model"],
                 "title_model": state["title_model"],

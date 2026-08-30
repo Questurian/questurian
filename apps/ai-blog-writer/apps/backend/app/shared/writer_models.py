@@ -63,3 +63,29 @@ def resolve_writer_model(
     raise ValueError(
         "Invalid writing model. Allowed values: " + ", ".join(WRITER_MODEL_OPTIONS)
     )
+
+
+def temperature_is_honored(model_name: str | None) -> bool:
+    """Whether a sampling temperature actually reaches the model that answers.
+
+    The Claude Code CLI has no temperature flag, so ``ClaudeCliTextLLM`` accepts
+    the value and drops it. Every other transport here -- Vertex, the Anthropic
+    API -- passes it through. That makes the creativity control real on some
+    runs and inert on others, with nothing on the receipt saying which, so a
+    reader comparing two drafts cannot tell whether the setting was part of the
+    difference.
+
+    Asked of the resolved model name rather than of the LLM object, because the
+    callers that need the answer -- the run record, the composer UI -- are
+    deciding what to say about a stage before or after the call, not holding
+    the adapter that made it.
+    """
+    from utils.llm_model_policy import (
+        CLAUDE_PROVIDER_SUBSCRIPTION_CLI,
+        claude_provider,
+        is_claude_model,
+    )
+
+    if not is_claude_model(model_name):
+        return True
+    return claude_provider() != CLAUDE_PROVIDER_SUBSCRIPTION_CLI

@@ -87,6 +87,7 @@ export {
   getPrompt2BlogResult,
   getPrompt2BlogResumePlan,
   getPrompt2BlogStatus,
+  openPrompt2BlogDrafts,
   resumePrompt2BlogRun,
   startPrompt2BlogV3Run,
 } from './api/pipeline.api'

@@ -321,6 +321,43 @@ Rule: a stop carries at most 4 Tour Picks (hard cap, enforced at the schema) and
 Related terms: Itinerary Autobuild (does not pick tours; tours are structured data, not AI prose — ADR 0013).
 Do not confuse with: the `tour-agency` stop (a manual, free-typed itinerary block); Tour Picks ride on an attraction stop and reference Tour records.
 
+### Seed
+
+Definition: the one line an operator types to start a Prompt2Blog article, in place of the v3 title-and-location pair. It is the spark, not a promise: it is kept on the [[Article Brief]] as provenance and is not binding on anything downstream. Creating a run happens here (ADR 0031), before any question is asked.
+Related terms: Grill, Article Brief, Run.
+Do not confuse with: the v3 `original_title`, which was locked on entry and handed to five stages as a promise nobody examined.
+
+### Grill
+
+Definition: the interview that replaces the Prompt2Blog commission form. It researches the seed before asking anything, asks one question at a time with a recommended answer attached to each, pushes back when an answer contradicts the seed or an earlier answer, and stops when the operator agrees with a played-back summary rather than at a question count.
+Rule: the grill is the single exit from every dead end — a refuted premise, a thin dossier, or a brief the operator no longer wants all return here, carrying what was learned. Re-entering revises the brief on the same run and discards downstream work that depended on what changed.
+Rule: first-hand material the operator supplies is recorded verbatim, never paraphrased, because first-hand material is excused from fact-checking by design and a paraphrase would create an unverifiable claim nothing downstream can catch.
+Related terms: Seed, Article Brief, Work Order.
+Do not confuse with: the v3 direction cards (removed in ADR 0030), which offered three model-written variants of a direction nobody had established.
+
+### Article Brief
+
+Definition: the vision for one Prompt2Blog article, produced by the [[Grill]] and approved by the operator. Carries the seed as provenance, the reader outcome, the form, the reader, the spine, what the piece must name, the material by kind (first-hand, interview, research), and a fails-if line naming what failure looks like.
+Rule: the brief is never consumed. It rides the whole run and the finished article is judged against it, including against its fails-if line.
+Rule: the brief is not hand-editable. Changing it means talking to the grill again; typed text would be an untracked instruction injected into every stage downstream.
+Related terms: Grill, Work Order, Questurian Voice.
+Do not confuse with: **Writer Brief** (the listicle blurb pipeline's per-blurb writer payload) or **Generation Brief** (the itinerary autobuild input). Three different objects; only this one is the article's vision. Inside Prompt2Blog "the brief" means the Article Brief.
+
+### Work Order
+
+Definition: the research plan derived from the [[Article Brief]] — the brief's translation into separately checkable questions. Holds premises, requirements, scope and a fingerprint. The eight editorial fields it held in v3 now live on the brief.
+Rule: requirements are split into load-bearing and texture. A missing texture answer costs a flourish; a missing load-bearing one costs the piece.
+Rule: the operator cuts it before research runs. Cutting a load-bearing question is permitted and is answered once with what the article can no longer claim, then obeyed.
+Related terms: Article Brief, Grounded Research.
+Do not confuse with: the Article Brief. The brief persists to the end; the work order persists only until research answers it.
+
+### Questurian Voice
+
+Definition: the single file describing what a Questurian article is like — treats the reader as an adult with a decision to make, isn't selling anything, warmth is attention rather than adjectives, has a view and says it, never talks about itself. Paired with a separate, much shorter file of mechanical rules (price and date format, no fabricated experiences, sentence-case headings, no in-article attribution).
+Rule: there is one voice. The six tone profiles are removed (ADR 0032); per-article variation comes from the Article Brief.
+Related terms: Article Brief, Anti-AI block.
+Do not confuse with: the v3 `questurian-default` brand-voice file, which was a rulebook of prohibitions rather than a description of a voice.
+
 ## Relationships
 
 - A **Run** has one **PipelineMeta** and many **StageResults**, finalized into one **PipelineArtifact**.

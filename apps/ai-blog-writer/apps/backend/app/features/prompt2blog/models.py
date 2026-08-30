@@ -68,6 +68,15 @@ class PipelineV3RuntimeRequest(BaseModel):
     model_name: str | None = None
     writing_model: str | None = None
     audit_model: str | None = None
+    # Repair defaults to the writing model rather than a constant: it rewrites
+    # the same prose, so following the writer is the right default. A route
+    # names it only to spend different effort on the rescue than on the draft.
+    repair_model: str | None = None
+    # The three roles v2 pins and v3 lets a route name. Optional, so a request
+    # that omits them gets the `P2B_V3_*_MODEL` defaults and routes as before.
+    outline_model: str | None = None
+    groundedness_model: str | None = None
+    title_model: str | None = None
     model_stack_id: str | None = None
 
 

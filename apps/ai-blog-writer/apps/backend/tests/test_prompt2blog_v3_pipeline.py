@@ -23,6 +23,7 @@ from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
 from app.features.prompt2blog.orchestrator_v3 import run_pipeline_v3
 from app.features.prompt2blog.run_recorder import RunRecorder
 from tests.prompt2blog_test_support import response_payload
+from utils import llm_model_policy
 
 FIXTURE_PATH = (
     Path(__file__).parents[3]
@@ -342,6 +343,167 @@ def test_balanced_route_reserves_opus_for_drafting_and_repair():
         "repair": ["claude-opus-5-high"],
         "title": ["claude-sonnet-5-medium"],
     }
+
+    # The receipt has to name the same models the run used. `model_used` under
+    # the quality review reported the worker model, which v3 never calls, so a
+    # review written by Sonnet was filed under a Gemini name.
+    review = recorder.stages["pipeline_v3"]["quality_review"]
+    assert review["model_used"] == "claude-sonnet-5-high"
+    assert review["stage_model_overrides"]["stage_v3_compose"] == "claude-opus-5-high"
+
+
+def test_a_route_can_move_the_checking_stages_off_claude():
+    """The Gemini-checked route: Claude drafts and repairs, Gemini checks.
+
+    Outline, groundedness and title were pinned in `config.py` and unreachable
+    from a request, so a route could only move two of the six calls a run
+    makes. The point of moving them is not only metered spend -- it is that a
+    Claude draft graded by a Claude judge is marked by a model that shares its
+    blind spots.
+    """
+    request = _request(
+        model_routing={
+            "model_name": "gemini-3.1-flash-lite",
+            "writing_model": "claude-opus-5-high",
+            "audit_model": "gemini-3.1-pro-preview",
+            "outline_model": "gemini-3.1-pro-preview",
+            "groundedness_model": "gemini-3.1-pro-preview",
+            "title_model": "gemini-3.7-flash",
+            "model_stack_id": "gemini-checked-high",
+        }
+    )
+    llm = ScriptedLLM(quality_scores=[6, 9])
+    recorder = RecordingRecorder()
+
+    run_pipeline_v3(
+        "gemini-checked-run",
+        prepare_v3_runtime_request(request),
+        PipelineDependencies(llm=llm, recorder=recorder),
+    )
+
+    assert llm.models == {
+        "outline": ["gemini-3.1-pro-preview"],
+        "compose": ["claude-opus-5-high"],
+        "groundedness": ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+        "audit": ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+        "repair": ["claude-opus-5-high"],
+        "title": ["gemini-3.7-flash"],
+    }
+
+
+def test_a_route_can_repair_at_a_different_effort_than_it_drafts():
+    """Max effort where it is conditional, not where it is unavoidable.
+
+    Repair only fires on a draft that failed, and the run buys exactly one
+    attempt, so this is the single call whose strength decides whether a weak
+    draft is rescued or handed back. Max on the draft would be paid on every
+    run, including the ones that were going to pass.
+    """
+    request = _request(
+        model_routing={
+            "model_name": "gemini-3.1-flash-lite",
+            "writing_model": "claude-opus-5-high",
+            "repair_model": "claude-opus-5-max",
+            "audit_model": "gemini-3.1-pro-preview",
+            "outline_model": "gemini-3.1-pro-preview",
+            "groundedness_model": "gemini-3.1-pro-preview",
+            "title_model": "gemini-3.7-flash",
+            "model_stack_id": "gemini-checked-max-repair",
+        }
+    )
+    llm = ScriptedLLM(quality_scores=[6, 9])
+    recorder = RecordingRecorder()
+
+    run_pipeline_v3(
+        "max-repair-run",
+        prepare_v3_runtime_request(request),
+        PipelineDependencies(llm=llm, recorder=recorder),
+    )
+
+    assert llm.models["compose"] == ["claude-opus-5-high"]
+    assert llm.models["repair"] == ["claude-opus-5-max"]
+    # The receipt has to name the model that did the rewrite, not the writer it
+    # would have inherited.
+    overrides = recorder.stages["pipeline_v3"]["quality_review"][
+        "stage_model_overrides"
+    ]
+    assert overrides["stage_v3_repair"] == "claude-opus-5-max"
+    assert overrides["stage_v3_compose"] == "claude-opus-5-high"
+
+
+def test_repair_follows_the_writer_when_a_route_does_not_name_it():
+    request = _request(
+        model_routing={
+            "model_name": "gemini-3.1-flash-lite",
+            "writing_model": "claude-opus-5-high",
+            "audit_model": "claude-sonnet-5-high",
+            "model_stack_id": "opus-led-high",
+        }
+    )
+    llm = ScriptedLLM(quality_scores=[6, 9])
+
+    run_pipeline_v3(
+        "inherited-repair-run",
+        prepare_v3_runtime_request(request),
+        PipelineDependencies(llm=llm, recorder=RecordingRecorder()),
+    )
+
+    assert llm.models["repair"] == ["claude-opus-5-high"]
+
+
+def test_a_request_that_names_no_checking_models_keeps_the_pinned_defaults():
+    """An older client sends three roles, not six, and must route as it always did."""
+    request = _request(
+        model_routing={
+            "model_name": "gemini-3.1-flash-lite",
+            "writing_model": "claude-opus-5-high",
+            "audit_model": "claude-sonnet-5-high",
+            "model_stack_id": "opus-led-high",
+        }
+    )
+    llm = ScriptedLLM(quality_scores=[9])
+
+    run_pipeline_v3(
+        "legacy-routing-run",
+        prepare_v3_runtime_request(request),
+        PipelineDependencies(llm=llm, recorder=RecordingRecorder()),
+    )
+
+    assert llm.models["outline"] == ["claude-sonnet-5-medium"]
+    assert llm.models["groundedness"] == ["claude-sonnet-5-medium"]
+    assert llm.models["title"] == ["claude-sonnet-5-medium"]
+
+
+def test_a_claude_written_draft_says_the_creativity_dial_did_not_reach_it(monkeypatch):
+    """The control sets a temperature, and the Claude plan transport has none.
+
+    Silently dropping it is what made two drafts at different creativity levels
+    indistinguishable with nothing on the run saying why.
+    """
+    monkeypatch.setattr(llm_model_policy, "anthropic_models_enabled", lambda: False)
+    monkeypatch.setattr(
+        llm_model_policy, "claude_subscription_models_enabled", lambda: True
+    )
+    request = _request(
+        model_routing={
+            "model_name": "gemini-3.1-flash-lite",
+            "writing_model": "claude-opus-5-high",
+            "audit_model": "claude-sonnet-5-high",
+            "model_stack_id": "opus-led-high",
+        }
+    )
+    recorder = RecordingRecorder()
+
+    run_pipeline_v3(
+        "creativity-honesty-run",
+        prepare_v3_runtime_request(request),
+        PipelineDependencies(llm=ScriptedLLM(quality_scores=[9]), recorder=recorder),
+    )
+
+    creativity = recorder.stages["pipeline_v3"]["quality_review"]["creativity"]
+    assert creativity["applied_to_compose"] is False
+    assert creativity["level"] == "medium"
+    assert creativity["compose_temperature"] == 0.2
 
 
 def test_the_v3_run_never_reaches_a_guideline_or_supplement_stage():

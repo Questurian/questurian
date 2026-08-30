@@ -1,7 +1,16 @@
 /* @vitest-environment jsdom */
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+const openDrafts = vi.hoisted(() => vi.fn())
+vi.mock('../../api/pipeline.api', async () => ({
+  ...(await vi.importActual<typeof import('../../api/pipeline.api')>(
+    '../../api/pipeline.api',
+  )),
+  openPrompt2BlogDrafts: openDrafts,
+}))
 import legacyResultFixture from '../../../../../../../data/fixtures/prompt2blog/legacy-v2-result.json'
 import type { Prompt2BlogPipelinePayload, Prompt2BlogV3PipelinePayload } from '../../api'
 import { PipelineResult } from './PipelineResult'
@@ -156,5 +165,41 @@ describe('PipelineV3Result', () => {
     expect(screen.getByText('needs_revision')).toBeTruthy()
     expect(screen.getByText('claims_grounded')).toBeTruthy()
     expect(screen.queryByRole('link', { name: /Stage in Payload Editor/ })).toBeNull()
+  })
+
+  it('opens the run\'s other drafts, so a discarded repair can still be read', async () => {
+    openDrafts.mockResolvedValueOnce(undefined)
+    renderResult(
+      <PipelineV3Result
+        debugData={null}
+        result={v3Payload}
+        showDebug={false}
+        stageArticleUrl={null}
+        onToggleDebug={() => {}}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Read all drafts' }))
+
+    expect(openDrafts).toHaveBeenCalledWith('v3-run')
+  })
+
+  it('says so in the panel when the drafts cannot be opened', async () => {
+    openDrafts.mockRejectedValueOnce(new Error('Run not found.'))
+    renderResult(
+      <PipelineV3Result
+        debugData={null}
+        result={v3Payload}
+        showDebug={false}
+        stageArticleUrl={null}
+        onToggleDebug={() => {}}
+      />,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Read all drafts' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert').textContent).toBe('Run not found.')
+    })
   })
 })

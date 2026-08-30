@@ -82,6 +82,7 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     model_name: str
     outline_model: str
     writing_model: str
+    repair_model: str
     groundedness_model: str
     audit_model: str
     title_model: str

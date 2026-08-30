@@ -1,6 +1,7 @@
 import {
   DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
-  PROMPT2BLOG_FIXED_STAGE_MODELS,
+  type Prompt2BlogModelStackId,
+  PROMPT2BLOG_ROUTE_GROUPS,
   resolvePrompt2BlogModelStack,
 } from '../../constants/prompt2blog.constants'
 import {
@@ -11,8 +12,15 @@ import {
 } from '../../constants/prompt2blog-pricing'
 import { Panel } from './Panel'
 
-export function ModelRoutingPanel() {
-  const selectedStack = resolvePrompt2BlogModelStack(DEFAULT_PROMPT2BLOG_MODEL_STACK_ID)
+export function ModelRoutingPanel({
+  modelStackId = DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
+  onChange,
+}: {
+  modelStackId?: Prompt2BlogModelStackId
+  /** Omitted on a read-only render; the panel then shows the route in use. */
+  onChange?: (value: Prompt2BlogModelStackId) => void
+} = {}) {
+  const selectedStack = resolvePrompt2BlogModelStack(modelStackId)
   const priceEstimate = estimatePrompt2BlogStackPrice(selectedStack)
   const planRoleNames = priceEstimate.planRoles
     .map(role => PROMPT2BLOG_ROLE_LABELS[role])
@@ -20,12 +28,35 @@ export function ModelRoutingPanel() {
 
   return <Panel
     title="Article system"
-    description="One fixed route balances writing quality, fact checking, and Claude plan usage."
+    description="Who writes the draft, and who checks it. Both routes write on Claude Opus."
   >
     <div className="p2b-field p2b-stack-picker">
-      <strong>Questurian balanced article route</strong>
+      {onChange ? (
+        <>
+          <label htmlFor="p2b-model-stack">Article route</label>
+          <select
+            id="p2b-model-stack"
+            className="p2b-select"
+            value={selectedStack.id}
+            onChange={event =>
+              onChange(event.target.value as Prompt2BlogModelStackId)
+            }
+          >
+            {PROMPT2BLOG_ROUTE_GROUPS.map(group => (
+              <optgroup key={group.label} label={group.label}>
+                {group.ids.map(id => {
+                  const stack = resolvePrompt2BlogModelStack(id)
+                  return <option key={id} value={id}>{stack.shortLabel}</option>
+                })}
+              </optgroup>
+            ))}
+          </select>
+        </>
+      ) : (
+        <strong>{selectedStack.label}</strong>
+      )}
       <p className="p2b-stack-description">{selectedStack.description}</p>
-      <p className="p2b-stack-guidance">Fixed for every new run. No model choice required.</p>
+      <p className="p2b-stack-guidance">{selectedStack.guidance}</p>
     </div>
     <div
       className="p2b-stack-cost"
@@ -58,9 +89,10 @@ export function ModelRoutingPanel() {
       <details className="p2b-stack-cost-method">
         <summary>How this estimate works</summary>
         <p>
-          Comparison estimate: 80% input and 20% output tokens, weighted across
-          4 worker, 5 writer, and 2 judge responsibilities. Actual cost changes
-          with source length, retries, caching, and optional stages.
+          Comparison estimate: 80% input and 20% output tokens, weighted by the
+          share of a run each role actually spent — 41% writer, 22% judge, 22%
+          fact checker, 9% planner, 7% headline, measured on a finished run.
+          Actual cost changes with source length, repairs, and caching.
         </p>
         <p>
           Standard global Vertex rates checked August 24, 2026. Gemini 3.7 Flash
@@ -78,14 +110,14 @@ export function ModelRoutingPanel() {
       <summary>See model assignments</summary>
       <div className="p2b-stack-receipt" aria-label={`${selectedStack.label} model assignments`}>
         <StackAssignment
-          label={PROMPT2BLOG_ROLE_LABELS.modelName}
-          model={selectedStack.modelName}
-          stages="Cleanup · synthesis · coverage · gap filling"
-        />
-        <StackAssignment
           label={PROMPT2BLOG_ROLE_LABELS.writingModel}
           model={selectedStack.writingModel}
-          stages="Draft · repair"
+          stages="First draft"
+        />
+        <StackAssignment
+          label={PROMPT2BLOG_ROLE_LABELS.repairModel}
+          model={selectedStack.repairModel}
+          stages="Rewrite of a draft that failed the audit"
         />
         <StackAssignment
           label={PROMPT2BLOG_ROLE_LABELS.auditModel}
@@ -93,9 +125,19 @@ export function ModelRoutingPanel() {
           stages="Quality audit"
         />
         <StackAssignment
-          label="Pipeline checks"
-          model={PROMPT2BLOG_FIXED_STAGE_MODELS.groundedness}
-          stages="Outline · groundedness · title"
+          label={PROMPT2BLOG_ROLE_LABELS.groundednessModel}
+          model={selectedStack.groundednessModel}
+          stages="Claims checked against the evidence"
+        />
+        <StackAssignment
+          label={PROMPT2BLOG_ROLE_LABELS.outlineModel}
+          model={selectedStack.outlineModel}
+          stages="Section plan"
+        />
+        <StackAssignment
+          label={PROMPT2BLOG_ROLE_LABELS.titleModel}
+          model={selectedStack.titleModel}
+          stages="Headline"
         />
       </div>
     </details>

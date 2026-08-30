@@ -1,4 +1,5 @@
 import type { Prompt2BlogV3Request } from '../api'
+import { resolvePrompt2BlogModelStack } from '../constants/prompt2blog.constants'
 import type { P2BFormState } from './composer.types'
 import { compareEvidenceToCommission } from './evidence-match'
 import { P2B_NEXT_ACTION } from './step-guidance'
@@ -76,6 +77,8 @@ export function buildPrompt2BlogV3Payload(state: P2BFormState): Prompt2BlogV3Req
   const { approval, evidencePackage } = state.editorial
   if (approval.status !== 'approved' || !evidencePackage) return null
 
+  const stack = resolvePrompt2BlogModelStack(state.modelStackId)
+
   return {
     schema_version: 3,
     commission: approval.commission,
@@ -86,11 +89,20 @@ export function buildPrompt2BlogV3Payload(state: P2BFormState): Prompt2BlogV3Req
       brand_voice_id: state.brandVoiceId || null,
       creativity_level: state.creativityLevel,
     },
+    // Read off the stack, not off the mirrored copies in composer state.
+    // State carried three of the six roles while the routing panel read the
+    // stack directly, so a draft saved under one stack id could submit another
+    // stack's models -- the same shape of drift as a receipt naming a model
+    // that did not run. The stack id is the choice; everything else follows.
     model_routing: {
-      model_name: state.modelName,
-      writing_model: state.writingModel,
-      audit_model: state.auditModel,
-      model_stack_id: state.modelStackId,
+      model_name: stack.modelName,
+      writing_model: stack.writingModel,
+      repair_model: stack.repairModel,
+      audit_model: stack.auditModel,
+      outline_model: stack.outlineModel,
+      groundedness_model: stack.groundednessModel,
+      title_model: stack.titleModel,
+      model_stack_id: stack.id,
     },
     include_debug: true,
     // v3 refuses this flag with a 400 rather than accepting it and ignoring
