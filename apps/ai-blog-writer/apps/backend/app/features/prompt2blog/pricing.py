@@ -25,6 +25,10 @@ VERTEX_TOKEN_RATES = {
     "gemini-3.5-flash": VertexTokenRate(1.5, 9.0, 0.15),
     "gemini-3.5-flash-lite": VertexTokenRate(0.3, 2.5, 0.03),
     "gemini-3.1-flash-lite": VertexTokenRate(0.25, 1.5, 0.025),
+    # The model the Search-grounding REST path actually runs on. Without a rate
+    # here every grounded call prices as unknown, and v4 puts two of them on
+    # every run -- the grill's pre-research and the gather pass.
+    "gemini-2.5-flash": VertexTokenRate(0.3, 2.5, 0.03),
 }
 
 
