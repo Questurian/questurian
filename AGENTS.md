@@ -31,6 +31,12 @@
   6. Run `pnpm generate:types`.
 - Never run destructive Payload migrations against existing local data without first checking row counts for critical tables: `locations`, `articles`, `media_assets`, `media_sets`, `users`, `visitor_profiles`, and `visitor_auth_*`.
 - Keep migration verification token-light: redirect noisy command output to `/tmp`, inspect with `tail`, `rg`, `git diff --stat`, and `git diff --numstat`, and only print narrow snippets around intended schema changes.
+- **Prompt2Blog is being rebuilt as v4. Read the decision records before touching it.**
+  - `apps/ai-blog-writer/docs/adr/0030-prompt2blog-v4-grill-and-brief.md` — an interview replaces the commission form; the Article Brief is the vision and is never consumed; one gate blocks before writing and nothing blocks after.
+  - `apps/ai-blog-writer/docs/adr/0031-prompt2blog-run-begins-at-the-seed.md` — a run is created when the seed is typed; v3 and v2 are **deleted, not deprecated**. Do not restore a fallback intake path, and do not add backward compatibility for old runs — the clean break is deliberate.
+  - `apps/ai-blog-writer/docs/adr/0032-one-questurian-voice.md` — one voice file plus one short mechanical-rules file. The six tone profiles are removed, and URL2Blog and YouTube2Blog are switched off until they are rebuilt on this foundation. Do not re-add a tone dropdown or copy the voice rules into another pipeline.
+  - Vocabulary is in `apps/ai-blog-writer/CONTEXT.md` — Seed, Grill, Article Brief, Work Order, Questurian Voice. **Article Brief** is not the listicle pipeline's Writer Brief and not the itinerary Generation Brief; the glossary says so explicitly.
+  - Build order and its hard sequencing constraints: https://claude.ai/code/artifact/9e3322ab-0da7-4a3d-a2c2-b83dd8ae17f6
 - Skills do not expand the user's authorization. Review, audit, explain, and plan requests remain read-only even when a skill suggests scaffolding or writes.
 - For Stripe work, do not generate or scaffold an app during review, and do not replace or initialize an existing app unless the user explicitly requests that change.
 - Get explicit user approval before accepting terms of service, installing or executing newly downloaded skills or code, provisioning external resources, uploading or publishing an app, changing live Stripe configuration, or initiating any financial transaction.

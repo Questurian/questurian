@@ -1,38 +1,38 @@
 ---
 id: analysis
 label: Analysis
-summary: Examines why a development or condition matters and reaches an evidence-led judgment.
+summary: Answers a real question about a place and commits to the answer.
 order: 2
 ---
 
 ## Use when
 
-Use when the commission asks why something is happening, whether a proposition still holds, or what several verified signals mean together. Analysis needs a clear primary subject, a bounded question, and enough evidence to support interpretation rather than description alone.
+Use when the reader has a question with a real answer and wants it settled — is Lisbon actually getting more expensive, has the diving recovered, is the night train worth it over the flight. The grill establishes this: the operator was asked whether they wanted a guide or wanted to make the case, and said the case. Analysis needs one subject, one bounded question, and enough evidence to answer it rather than describe around it.
 
 ## Do not use when
 
-Do not use to disguise unsupported opinion, summarize a destination, or compare multiple co-equal subjects without an approved head-to-head scope. Use News Report for a timely event without substantial interpretation, Explainer for neutral understanding, or Comparison when comparison is the organizing promise.
+Do not use when the operator asked for a guide, an orientation, or a plan — this form is unreachable except through the grill's own question, and a model may not select it from a title. Use News Report for a timely event, Explainer where the reader needs understanding rather than a verdict, or Comparison when weighing two subjects is the promise.
 
 ## Reader promise
 
-Give readers a defensible answer to the core question. Show the strongest evidence, competing explanations, meaningful limits, and consequences. Distinguish observed facts from the article’s interpretation.
+Answer the question the reader actually has, and commit to the answer. Say what the answer costs them — what it changes about where they go, what they book, what they pay. A reader who finishes this should be able to act, not merely to summarise both sides.
 
 ## Required evidence
 
-Require current, relevant evidence for every load-bearing claim and enough context to judge change over time. Define the baseline, period, geography, and measurement behind terms such as affordable, safer, popular, or declining. Context-only places may calibrate a point but cannot become co-subjects, substitute evidence, or organizing sections. Surface conflicting indicators instead of averaging them into certainty.
+Require current, relevant evidence for every load-bearing claim, and enough context to judge change over time. Define the baseline, period, geography and measurement behind words like affordable, safer, busier or declining. Where indicators genuinely conflict, say which one you believe and why, rather than averaging them into a shrug. Context-only places may calibrate a point but never become co-subjects or sections.
 
 ## Allowed structures
 
-1. Direct answer, evidence by factor, counterevidence, qualified conclusion.
-2. What changed, causes, who experiences the change, implications.
-3. Claim under test, evidence for, evidence against, judgment and limits.
+1. The answer, then what makes it true, then what would change it.
+2. What changed, why it changed, and who it changes things for.
+3. The common belief, what the evidence actually shows, and what to do about it.
 
-Organize around the approved question and primary subject, not around sources or incidental comparators.
+Organise around the question and the subject, never around the research that answered it. No section may take scope, limits, method, or the state of the evidence as its subject.
 
 ## Failure modes
 
-Avoid thesis drift, cherry-picking, vague trend language, causal claims from correlation, and conclusions stronger than the evidence. Do not broaden a Lima-centered affordability analysis into a Lima-versus-Medellín-versus-Buenos Aires comparison unless the commission explicitly approves head-to-head scope.
+Avoid thesis drift, cherry-picking, vague trend language, and causal claims from correlation. Do not hedge the answer into uselessness — a qualified answer names the one thing that qualifies it, in a clause, and moves on. Do not widen a single-city question into a three-city comparison. Do not write about the enquiry: the reader came for the place, not for how we found out.
 
 ## Headline note
 
-Frame the tested proposition or central finding. Questions are acceptable when the article gives a clear answer. Do not promise certainty the evidence cannot support.
+Name the finding, not the investigation. "Lima's best food is at the market" is a headline; "What the evidence says about Lima's food scene" is a filing label. A question is acceptable only when the article answers it plainly.
