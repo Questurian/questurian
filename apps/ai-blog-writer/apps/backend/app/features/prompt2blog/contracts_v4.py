@@ -1,12 +1,17 @@
-"""Strict version-three editorial contracts for Prompt2Blog.
+"""Strict version-four editorial contracts for Prompt2Blog.
 
-SUPERSEDED. `contracts_v4.py` holds the shapes v4 is written against, and the
-migration off this file is in progress (#426). Do not add anything here and do
-not import it from new code: the commission is being split into an Article
-Brief and a work order, and everything in this module goes when the last
-consumer moves.
+Two objects replace the v3 commission, because it was doing two jobs. The
+**Article Brief** is the vision: what this piece is for, who reads it, what it
+must name, and what failure looks like. It is written by the grill with a
+person, it is never consumed, and the finished article is judged against it.
+The **work order** is its translation into separately checkable research
+questions, and it persists only until research answers them.
 
-These models establish the domain without adapting it into any legacy flow.
+The evidence model is unchanged from v3. It was the best thing in the pipeline
+and the redesign was never about it.
+
+There is no v3 compatibility. Stored v3 runs do not load, which is deliberate
+(ADR 0031).
 """
 
 from __future__ import annotations
@@ -85,6 +90,14 @@ EvidenceRequirementStatus = Literal["supported", "partial", "missing", "unpublis
 # a different direction.
 PremiseVerdict = Literal["confirmed", "refuted", "unverified"]
 CreativityLevel = Literal["low", "medium", "high"]
+# What a requirement costs when research cannot answer it. Load-bearing means
+# the piece cannot be written without it; texture means the piece is duller.
+RequirementKind = Literal["load_bearing", "texture"]
+# Where the operator's material came from. `firsthand` bypasses fact-checking
+# by design -- nobody can verify someone's lunch -- which is exactly why its
+# statement is stored as the operator typed it and never as a model's
+# paraphrase. A reworded first-hand claim is unverifiable and uncatchable.
+MaterialKind = Literal["firsthand", "interview", "research"]
 
 
 def _require_unique(values: list[str], label: str) -> None:
@@ -92,31 +105,31 @@ def _require_unique(values: list[str], label: str) -> None:
         raise ValueError(f"{label} values must be unique")
 
 
-class V3ContractModel(BaseModel):
+class V4ContractModel(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
-class CommissionAudience(V3ContractModel):
+class BriefReader(V4ContractModel):
     primary_reader: str = Field(min_length=1)
     tags: list[AudienceTagId] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def validate_unique_tags(self) -> "CommissionAudience":
+    def validate_unique_tags(self) -> "BriefReader":
         _require_unique(self.tags, "audience tag")
         return self
 
 
-class CommissionReference(V3ContractModel):
+class WorkOrderReference(V4ContractModel):
     name: str = Field(min_length=1)
     role: ReferenceRole
 
 
-class CommissionScope(V3ContractModel):
+class WorkOrderScope(V4ContractModel):
     mode: ScopeMode
-    references: list[CommissionReference] = Field(min_length=1)
+    references: list[WorkOrderReference] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_roles_for_mode(self) -> "CommissionScope":
+    def validate_roles_for_mode(self) -> "WorkOrderScope":
         _require_unique(
             [reference.name.casefold() for reference in self.references],
             "reference name",
@@ -139,7 +152,7 @@ class CommissionScope(V3ContractModel):
         return self
 
 
-class CommissionAssumption(V3ContractModel):
+class WorkOrderAssumption(V4ContractModel):
     """One thing the direction step took as true without being able to check it.
 
     The direction model is forbidden to browse, so every fact it builds on is
@@ -151,35 +164,92 @@ class CommissionAssumption(V3ContractModel):
     statement: str = Field(min_length=1)
 
 
-class CommissionRequirement(V3ContractModel):
+class WorkOrderRequirement(V4ContractModel):
+    """One separately checkable question, and what it costs to miss.
+
+    `kind` is new in v4. A missing texture answer costs a flourish; a missing
+    load-bearing one costs the piece. v3 could not tell them apart and blocked
+    on both equally, which is how a run died over a scene it could have cut.
+    """
+
     requirement_id: str = Field(min_length=1)
     question: str = Field(min_length=1)
+    kind: RequirementKind
     # Empty when the question stands on its own. Every id here must name a
     # premise the same commission declares.
     assumption_ids: list[str] = Field(default_factory=list)
 
 
-class Prompt2BlogCommission(V3ContractModel):
-    schema_version: Literal[3] = 3
-    commission_fingerprint: str = Field(min_length=1)
-    original_title: str = Field(min_length=1)
+class BriefMaterial(V4ContractModel):
+    """Something the operator has, labelled by where it came from.
+
+    A first-hand statement is stored verbatim. The grill asks what someone
+    *has*, never what they are qualified in, and whatever they answer arrives
+    here in their own words so the brief they approve shows exactly what the
+    system thinks they said.
+    """
+
+    kind: MaterialKind
+    statement: str = Field(min_length=1)
+    note: str = ""
+
+
+class ArticleBrief(V4ContractModel):
+    """The vision for one article. Never consumed.
+
+    Written by the grill and approved by a person. It rides the whole run and
+    the finished article is judged against it, including against `fails_if`,
+    which is the measure the system has never had: every score v3 owned said
+    the Lima article passed.
+
+    `seed` is provenance, not instruction. In v3 the typed title was locked on
+    entry and handed to five stages as a promise nobody examined.
+    """
+
+    schema_version: Literal[4] = 4
+    brief_fingerprint: str = Field(min_length=1)
+    seed: str = Field(min_length=1)
     location: str = Field(min_length=1)
-    approved_direction: str = Field(min_length=1)
     form_id: ArticleFormId
     topic_module_ids: list[TopicModuleId] = Field(default_factory=list, max_length=4)
-    audience: CommissionAudience
-    core_reader_question: str = Field(min_length=1)
-    reader_outcome: str = Field(min_length=1)
-    primary_subject: str = Field(min_length=1)
-    scope: CommissionScope
-    premise: list[CommissionAssumption] = Field(default_factory=list)
-    requirements: list[CommissionRequirement] = Field(min_length=1)
-    exclusions: list[str] = Field(default_factory=list)
-    call_to_action: str | None = None
+    reader: BriefReader
+    reader_question: str = Field(min_length=1)
+    outcome: str = Field(min_length=1)
+    spine: str = Field(min_length=1)
+    must_name: list[str] = Field(default_factory=list)
+    material: list[BriefMaterial] = Field(default_factory=list)
+    fails_if: str = Field(min_length=1)
 
     @model_validator(mode="after")
-    def validate_commission_identity(self) -> "Prompt2BlogCommission":
+    def validate_brief(self) -> "ArticleBrief":
         _require_unique(self.topic_module_ids, "topic module")
+        _require_unique([item.casefold() for item in self.must_name], "must_name entry")
+        return self
+
+
+class Prompt2BlogWorkOrder(V4ContractModel):
+    """The brief translated into separately checkable questions.
+
+    Turning "the market food beats the famous restaurants" into three
+    researchable questions is a real skill and no operator should be doing it,
+    so this stays with the machine. It answers to exactly one brief and it
+    stops mattering the moment research answers it.
+
+    There is no `exclusions` field. A negative instruction is a topic waiting
+    to happen: "do not claim a transformation" became a section called *Scope
+    limits*. The brief's spine and must_name replace it.
+    """
+
+    schema_version: Literal[4] = 4
+    work_order_fingerprint: str = Field(min_length=1)
+    brief_fingerprint: str = Field(min_length=1)
+    primary_subject: str = Field(min_length=1)
+    scope: WorkOrderScope
+    premise: list[WorkOrderAssumption] = Field(default_factory=list)
+    requirements: list[WorkOrderRequirement] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_work_order(self) -> "Prompt2BlogWorkOrder":
         primary_reference = next(
             reference
             for reference in self.scope.references
@@ -203,10 +273,14 @@ class Prompt2BlogCommission(V3ContractModel):
                     f"requirement {requirement.requirement_id} depends on "
                     f"undeclared assumptions: {', '.join(unknown)}"
                 )
+        if not any(item.kind == "load_bearing" for item in self.requirements):
+            raise ValueError(
+                "a work order needs at least one load-bearing requirement"
+            )
         return self
 
 
-class EvidenceSource(V3ContractModel):
+class EvidenceSource(V4ContractModel):
     source_id: str = Field(min_length=1)
     title: str = Field(min_length=1)
     publisher: str | None = None
@@ -226,7 +300,7 @@ class EvidenceSource(V3ContractModel):
         return self
 
 
-class EvidenceClaim(V3ContractModel):
+class EvidenceClaim(V4ContractModel):
     claim_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
     source_ids: list[str] = Field(min_length=1)
@@ -241,7 +315,7 @@ class EvidenceClaim(V3ContractModel):
         return self
 
 
-class EvidenceRequirement(V3ContractModel):
+class EvidenceRequirement(V4ContractModel):
     requirement_id: str = Field(min_length=1)
     status: EvidenceRequirementStatus
     claim_ids: list[str] = Field(default_factory=list)
@@ -267,7 +341,7 @@ class EvidenceRequirement(V3ContractModel):
         return self
 
 
-class EvidencePremiseFinding(V3ContractModel):
+class EvidencePremiseFinding(V4ContractModel):
     """One verdict on one thing the direction step assumed without checking."""
 
     assumption_id: str = Field(min_length=1)
@@ -285,22 +359,22 @@ class EvidencePremiseFinding(V3ContractModel):
         return self
 
 
-class EvidenceConflict(V3ContractModel):
+class EvidenceConflict(V4ContractModel):
     conflict_id: str = Field(min_length=1)
     claim_ids: list[str] = Field(min_length=2)
     summary: str = Field(min_length=1)
     resolution: str | None = None
 
 
-class EvidenceGap(V3ContractModel):
+class EvidenceGap(V4ContractModel):
     gap_id: str = Field(min_length=1)
     requirement_ids: list[str] = Field(min_length=1)
     summary: str = Field(min_length=1)
 
 
-class EvidencePackage(V3ContractModel):
-    schema_version: Literal[3] = 3
-    commission_fingerprint: str = Field(min_length=1)
+class EvidencePackage(V4ContractModel):
+    schema_version: Literal[4] = 4
+    work_order_fingerprint: str = Field(min_length=1)
     sources: list[EvidenceSource] = Field(default_factory=list)
     claims: list[EvidenceClaim] = Field(default_factory=list)
     requirements: list[EvidenceRequirement] = Field(min_length=1)
@@ -376,14 +450,20 @@ class EvidencePackage(V3ContractModel):
         return self
 
 
-class Prompt2BlogWritingProfiles(V3ContractModel):
-    tone_id: str = Field(min_length=1)
+class Prompt2BlogWritingProfiles(V4ContractModel):
+    """What is still selectable about the writing.
+
+    `tone_id` and `brand_voice_id` are gone. Questurian has one voice, sent
+    with one set of writing conventions, and neither is a choice (ADR 0032).
+    Per-article variation comes from the brief, which knows who is reading and
+    what the piece is for.
+    """
+
     length_id: str = Field(min_length=1)
-    brand_voice_id: str | None = None
     creativity_level: CreativityLevel = "medium"
 
 
-class Prompt2BlogModelRouting(V3ContractModel):
+class Prompt2BlogModelRouting(V4ContractModel):
     """Which model answers for each role a v3 run actually calls.
 
     Outline, groundedness and title used to be pinned in ``config.py`` and
@@ -408,9 +488,19 @@ class Prompt2BlogModelRouting(V3ContractModel):
     model_stack_id: str | None = None
 
 
-class Prompt2BlogV3Request(V3ContractModel):
-    schema_version: Literal[3] = 3
-    commission: Prompt2BlogCommission
+class Prompt2BlogV4Request(V4ContractModel):
+    """One run's inputs.
+
+    The brief and the work order are separate objects with their own
+    fingerprints, and the binding between them is checked here rather than
+    trusted: a work order must answer the brief it was derived from, and
+    evidence must answer the work order it was researched for. In v3 one
+    fingerprint carried both jobs, so there was nothing to check.
+    """
+
+    schema_version: Literal[4] = 4
+    brief: ArticleBrief
+    work_order: Prompt2BlogWorkOrder
     evidence_package: EvidencePackage
     profiles: Prompt2BlogWritingProfiles
     model_routing: Prompt2BlogModelRouting = Field(
@@ -420,40 +510,25 @@ class Prompt2BlogV3Request(V3ContractModel):
     enable_editorial_augmentation: bool = False
 
     @model_validator(mode="after")
-    def validate_commission_evidence_identity(self) -> "Prompt2BlogV3Request":
+    def validate_bindings(self) -> "Prompt2BlogV4Request":
+        if self.work_order.brief_fingerprint != self.brief.brief_fingerprint:
+            raise ValueError(
+                "work order answers a different brief than the one supplied"
+            )
         if (
-            self.commission.commission_fingerprint
-            != self.evidence_package.commission_fingerprint
+            self.evidence_package.work_order_fingerprint
+            != self.work_order.work_order_fingerprint
         ):
-            raise ValueError("evidence_package fingerprint must match commission")
-
-        commission_requirements = {
-            item.requirement_id for item in self.commission.requirements
-        }
-        evidence_requirements = {
-            item.requirement_id for item in self.evidence_package.requirements
-        }
-        if commission_requirements != evidence_requirements:
             raise ValueError(
-                "evidence requirements must exactly match commission requirements"
+                "evidence was researched for a different work order"
             )
-
-        # A declared premise nobody checked is worse than no premise at all: it
-        # reads on screen like it was verified. Research must return a verdict
-        # for each one, and may not invent assumptions the commission never
-        # made.
-        commission_assumptions = {
-            item.assumption_id for item in self.commission.premise
-        }
-        evidence_assumptions = {
-            item.assumption_id for item in self.evidence_package.premise_findings
-        }
-        if commission_assumptions and commission_assumptions != evidence_assumptions:
+        declared = {item.requirement_id for item in self.work_order.requirements}
+        answered = {item.requirement_id for item in self.evidence_package.requirements}
+        if declared != answered:
+            missing = sorted(declared - answered)
+            extra = sorted(answered - declared)
             raise ValueError(
-                "premise findings must exactly match the commission's premise"
-            )
-        if not commission_assumptions and evidence_assumptions:
-            raise ValueError(
-                "premise findings reference a premise the commission never declared"
+                "evidence must answer every work order requirement exactly once; "
+                f"missing={missing}, unknown={extra}"
             )
         return self
