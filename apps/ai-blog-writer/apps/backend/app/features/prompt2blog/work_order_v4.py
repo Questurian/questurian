@@ -33,13 +33,14 @@ from .contracts_v4 import (
     WorkOrderScope,
 )
 from .grill_v4 import GrillDependencies
+from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
 logger = logging.getLogger(__name__)
 
 WORK_ORDER_STAGE = "stage_v4_work_order"
 
-WORK_ORDER_SCHEMA = {
+WORK_ORDER_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
         "primary_subject": {"type": "string"},
@@ -81,7 +82,7 @@ WORK_ORDER_SCHEMA = {
         },
     },
     "required": ["primary_subject", "scope_mode", "references", "requirements"],
-}
+})
 
 
 @dataclass(frozen=True)

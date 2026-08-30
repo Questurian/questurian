@@ -32,6 +32,7 @@ from typing import Any, Callable, Protocol
 
 from .config import DEFAULT_MODEL
 from .contracts_v4 import GrillQuestion, GrillState, GrillTurn
+from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
 logger = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ GRILL_RESEARCH_MODEL = "gemini-2.5-flash"
 # real run: `{"done": false}` with nothing else is schema-valid and useless,
 # and the model took that gap. A schema that permits what the code refuses is
 # a schema that has not been written down properly.
-NEXT_TURN_SCHEMA = {
+NEXT_TURN_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
         "done": {"type": "boolean"},
@@ -80,7 +81,7 @@ NEXT_TURN_SCHEMA = {
         "location": {"type": "string"},
     },
     "required": ["done", "question", "consensus"],
-}
+})
 
 
 class GrillLLM(Protocol):
