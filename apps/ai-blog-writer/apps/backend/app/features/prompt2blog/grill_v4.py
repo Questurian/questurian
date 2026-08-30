@@ -30,7 +30,7 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
-from .config import DEFAULT_MODEL
+from .config import P2B_V4_GRILL_MODEL, P2B_V4_GRILL_TEMPERATURE
 from .contracts_v4 import GrillQuestion, GrillState, GrillTurn
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
@@ -98,7 +98,7 @@ class GrillDependencies:
     # Returns (digest, source_urls, total_tokens). Separate from `llm` because
     # this one reaches the web and the other does not.
     research: Callable[[str], tuple[str, list[str], int | None]]
-    model_name: str = DEFAULT_MODEL
+    model_name: str = P2B_V4_GRILL_MODEL
 
 
 def research_seed(dependencies: GrillDependencies, seed: str) -> tuple[str, list[str], int | None]:
@@ -141,7 +141,11 @@ THE INTERVIEW SO FAR:
 
 Decide the single most useful next move.
 
-Rules:
+Output shape (mechanical -- get it right and then forget about it): the reply
+always carries both `question` and `consensus`. Fill the one you are using and
+leave the other empty.
+
+Now the part that matters:
 - Ask ONE question, and only about something you cannot look up. What they
   want, who it is for, what they personally have, what would make it a
   failure. Never ask them to confirm a fact.
@@ -155,10 +159,6 @@ Rules:
   means it is a research-led piece.
 - Set `location` when their line names a place clearly enough to act on. Leave
   it empty only when it is genuinely ambiguous.
-- ALWAYS return both `question` and `consensus`. When you are asking, fill
-  `question` and leave `consensus` an empty string. When you are done, fill
-  `consensus` and leave the question's `ask` and `recommendation` empty. Never
-  return neither.
 - Set `done` true and write `consensus` when you could brief a writer from
   what you have: what the piece is, who reads it, what it should make them do,
   what it is built on, what it must name, and what would make it a failure.
@@ -237,7 +237,7 @@ def _advance_once(
         model_name=dependencies.model_name,
         schema=NEXT_TURN_SCHEMA,
         max_tokens=2_048,
-        temperature=0.3,
+        temperature=P2B_V4_GRILL_TEMPERATURE,
     )
     payload = _safe_dict(parsed)
     location = _safe_str(payload.get("location")) or state.location

@@ -361,5 +361,51 @@ def test_the_prompt_says_to_return_both_and_leave_one_empty():
     )
     flat = " ".join(prompt.split())
 
-    assert "ALWAYS return both `question` and `consensus`" in flat
-    assert "Never return neither." in flat
+    # The rule still holds; it just lives with the output shape rather than in
+    # the list of rules about how to interview well.
+    assert "always carries both `question` and `consensus`" in flat
+    assert "Fill the one you are using and leave the other empty." in flat
+
+
+def test_the_format_rule_is_not_mixed_into_the_interviewing_rules():
+    """A formatting instruction in the list of rules about how to interview
+    well taxes every question with bookkeeping.
+
+    Adding "always return both fields, leave one empty" to that list visibly
+    weakened the recommendations on the next live run: the model was juggling
+    an empty-string chore alongside deciding what to ask.
+    """
+    prompt = build_next_turn_prompt(
+        GrillState(
+            run_id="r",
+            seed=SEED,
+            status="asking",
+            pending=GrillQuestion(
+                question_id="q1", topic="t", ask="a", recommendation="r"
+            ),
+        )
+    )
+
+    shape = prompt.index("Output shape")
+    rules = prompt.index("Now the part that matters")
+    assert shape < rules, "the mechanical part comes first and is done with"
+    assert "ALWAYS return both" not in prompt
+
+
+def test_the_grill_runs_on_its_own_named_model():
+    """One line to change, and not the pipeline default.
+
+    The grill decides what the article is and every later stage inherits that,
+    across about six calls -- the cheapest place in the pipeline to spend on a
+    better model.
+    """
+    from app.features.prompt2blog.config import (
+        P2B_V4_GRILL_MODEL,
+        P2B_V4_GRILL_TEMPERATURE,
+    )
+    from app.features.prompt2blog.pricing import VERTEX_TOKEN_RATES
+
+    assert P2B_V4_GRILL_MODEL in VERTEX_TOKEN_RATES, "an unpriced model hides its cost"
+    # Judgement, not extraction. A low temperature proposes the safe question
+    # rather than the useful one.
+    assert P2B_V4_GRILL_TEMPERATURE >= 0.5
