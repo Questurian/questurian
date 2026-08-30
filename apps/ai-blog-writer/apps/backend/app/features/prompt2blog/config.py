@@ -82,6 +82,22 @@ P2B_REPAIR_ESTIMATED_TOKENS = 90_000
 # the first repair on a normal run must still be affordable.
 P2B_RUN_TOKEN_BUDGET = 320_000
 
+# The hard ceiling. Distinct from P2B_RUN_TOKEN_BUDGET above, which only asks
+# whether one more *rescue* is affordable: this asks whether the run may
+# continue at all, and refuses when it may not.
+#
+# v3 did not need one. Its first model call was the outline, and everything
+# before it happened in a browser on the operator's own chatbot subscription.
+# v4 moves the grill and both research passes in-app, and neither has an upper
+# bound by construction -- the grill stops at agreement rather than at a
+# question count (ADR 0030), and research is grounded web search. A bug that
+# asks forty questions should cost a known amount and then stop.
+#
+# Set at roughly twice the budget above so it never fires on a run that is
+# merely expensive; it exists for runaway, not for costly. The number is here,
+# in one place, so a ceiling set wrong is obvious rather than mysterious.
+P2B_RUN_TOKEN_CEILING = 650_000
+
 # How many times one run may be resumed after a failure. A resume costs the
 # stages that had not run yet, so a stage that fails for a reason resuming
 # cannot fix -- a commission the model keeps refusing, a permanently dead

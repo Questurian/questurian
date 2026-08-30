@@ -30,6 +30,7 @@ from .config import (
 from .dependencies import DefaultPrompt2BlogLLM, PipelineDependencies
 from .graph.runner import GraphNode, run_prompt2blog_stage_graph
 from .graph.state import Prompt2BlogV3GraphState
+from .run_budget import enforce_run_budget
 from .graph.topology_v3 import (
     V3_GENERATION_NODES,
     V3_NODE_STAGE_NAMES,
@@ -162,6 +163,10 @@ def _node(
     dependencies: PipelineDependencies,
 ) -> GraphNode:
     def run(state: Prompt2BlogV3GraphState) -> dict[str, Any]:
+        # Before the stage spends anything. The ceiling exists for runaway, not
+        # for expensive, so checking on entry is what makes it a stop rather
+        # than a post-mortem.
+        enforce_run_budget(state.get("tokens_spent"), stage=V3_NODE_STAGE_NAMES[name])
         updates = stage(state, dependencies)
         updates["trace"] = state["trace"]
         # After the stage has recorded its own payload, so a snapshot never
