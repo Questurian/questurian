@@ -27,6 +27,7 @@ from ..grill_v4 import (
     GRILL_RESEARCH_MAX_TOKENS,
     GRILL_RESEARCH_MODEL,
     GrillDependencies,
+    GrillUnusableResponse,
 )
 from ..intake_v4 import (
     IntakeServices,
@@ -116,6 +117,23 @@ def _handle(action, *args, **kwargs) -> Any:
     """Turn the intake's own failures into answers a page can act on."""
     try:
         return action(*args, **kwargs)
+    except GrillUnusableResponse as error:
+        # 502, not 400: nothing the operator typed caused this, and the reply
+        # travels with it. The first real run died here and left no trace at
+        # all, which made the one failure that most needed explaining the one
+        # with no evidence.
+        logger.error("Grill returned an unusable response: %s", error.raw[:2000])
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "grill_unusable_response",
+                "message": (
+                    "The interviewer did not come back with a question. This is "
+                    "not something you did. Try again."
+                ),
+                "raw": error.raw[:2000],
+            },
+        ) from error
     except RunTokenCeilingReached as error:
         # Not a server fault and not a retry: the run is over its ceiling and
         # says what it spent.
