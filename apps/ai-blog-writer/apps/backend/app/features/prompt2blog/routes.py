@@ -11,13 +11,11 @@ from .models import (  # noqa: F401
     ClassificationResult,
     ClassifyRequest,
     ClassifyResponse,
-    PipelineV2RuntimeRequest,
     PipelineV3RuntimeRequest,
     Prompt2BlogInputRequest,
     SynthesizeRequest,
     SynthesizeResponse,
 )
-from .orchestrator import run_full_pipeline, run_pipeline_v2
 from .orchestrator_v3 import (  # noqa: F401
     resume_pipeline_v3,
     run_pipeline_v3,
@@ -44,28 +42,12 @@ async def get_article_type_guideline_preview(article_type_id: int):
     return await _options_api.get_article_type_guideline_preview(article_type_id)
 
 
-async def start_pipeline_v2(
-    request: Prompt2BlogInputRequest,
-    background_tasks,
-    staff_user=None,
-):
-    return await _runs_api.start_pipeline_v2(request, background_tasks, staff_user)
-
-
 async def start_pipeline_v3(
     request: Prompt2BlogV3Request,
     background_tasks,
     staff_user=None,
 ):
     return await _runs_api.start_pipeline_v3(request, background_tasks, staff_user)
-
-
-async def start_full_run(
-    request: Prompt2BlogInputRequest,
-    background_tasks,
-    staff_user=None,
-):
-    return await _runs_api.start_full_run(request, background_tasks, staff_user)
 
 
 async def preview_resume(run_id: str):
@@ -111,9 +93,7 @@ __all__ = [
     "get_input_options",
     "get_editorial_options",
     "get_article_type_guideline_preview",
-    "start_pipeline_v2",
     "start_pipeline_v3",
-    "start_full_run",
     "preview_resume",
     "resume_run",
     "get_status",
@@ -123,8 +103,6 @@ __all__ = [
     "delete_article",
     "mark_article_as_synced",
     "get_sync_status",
-    "run_pipeline_v2",
     "run_pipeline_v3",
     "resume_pipeline_v3",
-    "run_full_pipeline",
 ]

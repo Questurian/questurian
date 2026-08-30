@@ -456,36 +456,6 @@ async def test_exported_delete_handlers_remain_directly_callable(isolated_db):
 
 
 @pytest.mark.asyncio
-async def test_prompt2blog_start_records_run_owner(monkeypatch, isolated_db):
-    from app.core.storage import read_run_owner
-    from app.features.prompt2blog.api import runs as prompt2blog_runs
-
-    _mock_payload_user(
-        monkeypatch,
-        {"id": 7, "email": "writer@example.com", "role": "writer"},
-    )
-    monkeypatch.setattr(prompt2blog_runs, "run_full_pipeline", lambda *_args: None)
-
-    async with _app_client() as client:
-        response = await client.post(
-            "/prompt2blog/run",
-            headers={"Authorization": "Bearer writer-token"},
-            json={
-                "article_type_id": 1,
-                "source_material": ["Source material"],
-                "article_goal": "Write a useful guide",
-                "target_reader": "Travelers",
-                "destination_context": "Barcelona, Spain",
-                "tone_id": "practical",
-                "length_id": "medium",
-            },
-        )
-
-    assert response.status_code == 200
-    assert read_run_owner(response.json()["run_id"]) == "7"
-
-
-@pytest.mark.asyncio
 async def test_youtube2blog_start_records_run_owner(monkeypatch, isolated_db):
     from app.core.storage import read_run_owner
     from app.features.youtube2blog.api import pipeline as youtube2blog_pipeline

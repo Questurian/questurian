@@ -29,7 +29,7 @@ def test_prompt2blog_result_includes_langgraph_trace_metadata(monkeypatch):
         lambda _run_id: {
             "markdown": "# Prompt2Blog",
             "artifact": {
-                "pipeline_v2": {
+                "pipeline_v3": {
                     "message": "ok",
                     "run_id": _run_id,
                 }
@@ -50,11 +50,11 @@ def test_prompt2blog_result_includes_langgraph_trace_metadata(monkeypatch):
     assert payload["langsmith_trace_url"] == trace_payload["langsmith_trace_url"]
     assert payload["langsmith_trace_run_id"] == trace_payload["langsmith_trace_run_id"]
     assert (
-        payload["artifact"]["pipeline_v2"]["langsmith_trace_url"]
+        payload["artifact"]["pipeline_v3"]["langsmith_trace_url"]
         == trace_payload["langsmith_trace_url"]
     )
     assert (
-        payload["artifact"]["pipeline_v2"]["langsmith_trace_run_id"]
+        payload["artifact"]["pipeline_v3"]["langsmith_trace_run_id"]
         == trace_payload["langsmith_trace_run_id"]
     )
 

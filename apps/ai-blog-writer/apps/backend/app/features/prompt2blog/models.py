@@ -37,20 +37,6 @@ class ClassifyResponse(BaseModel):
     classification: ClassificationResult
 
 
-class PipelineV2RuntimeRequest(BaseModel):
-    cleaned_data: str
-    raw_sources: List[str] = Field(default_factory=list)
-    writing_brief: dict[str, Any] = Field(default_factory=dict)
-    article_type_id: int
-    option_context: dict[str, Any] = Field(default_factory=dict)
-    include_debug: bool = True
-    enable_editorial_augmentation: bool = False
-    model_name: str | None = None
-    writing_model: str | None = None
-    audit_model: str | None = None
-    model_stack_id: str | None = None
-
-
 class PipelineV3RuntimeRequest(BaseModel):
     """Everything a v3 run needs, derived only from an approved commission.
 
