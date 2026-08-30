@@ -1,5 +1,4 @@
 import { apiFetch } from '../../../shared/api/client/apiFetch'
-import { parseError } from '../../../shared/api/errors/parse-error'
 import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
 import type { IntakeState } from './intake.types'
 
@@ -13,6 +12,31 @@ import type { IntakeState } from './intake.types'
 
 const INTAKE = `${FEATURE_PREFIX}/intake`
 
+/**
+ * Read whatever the server actually said.
+ *
+ * The shared `parseError` only reads `detail` when it is a string. Intake
+ * answers a failure with an object -- a message written for a person plus the
+ * raw model reply -- so every one of those messages was being thrown away and
+ * replaced with a generic fallback. The operator saw "That step could not be
+ * completed" while the server was explaining exactly what went wrong.
+ */
+async function readError(response: Response, fallback: string): Promise<Error> {
+  const body = await response.json().catch(() => null)
+  const detail = body?.detail
+
+  if (typeof detail === 'string' && detail) return new Error(detail)
+  if (detail && typeof detail === 'object') {
+    const message = typeof detail.message === 'string' ? detail.message : fallback
+    const error = new Error(message)
+    // Kept on the error so a screen can offer it without the message carrying
+    // a wall of JSON.
+    Object.assign(error, { raw: detail.raw, code: detail.error })
+    return error
+  }
+  return new Error(fallback)
+}
+
 async function post(path: string, body?: unknown): Promise<IntakeState> {
   const response = await apiFetch(path, {
     method: 'POST',
@@ -20,7 +44,7 @@ async function post(path: string, body?: unknown): Promise<IntakeState> {
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   if (!response.ok) {
-    throw await parseError(response, 'That step could not be completed.')
+    throw await readError(response, 'That step could not be completed.')
   }
   return (await response.json()) as IntakeState
 }
@@ -34,7 +58,7 @@ export function openIntake(seed: string): Promise<IntakeState> {
 export async function readIntake(runId: string): Promise<IntakeState> {
   const response = await apiFetch(`${INTAKE}/${runId}`)
   if (!response.ok) {
-    throw await parseError(response, 'Could not read where this article stands.')
+    throw await readError(response, 'Could not read where this article stands.')
   }
   return (await response.json()) as IntakeState
 }
