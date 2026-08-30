@@ -37,6 +37,7 @@ class FakeLLM:
 
 
 def _question(**overrides) -> dict[str, Any]:
+    """The flat shape the schema asks for and models actually produce."""
     payload = {
         "question_id": "q1",
         "topic": "what should this do for the reader",
@@ -57,7 +58,7 @@ def _deps(responses: list[dict[str, Any]], digest: str = "Lima has a food reputa
 def test_the_grill_looks_things_up_before_it_asks_anything():
     # G2. This is what keeps the grill short -- not a question limit. A grill
     # that asks what it could have looked up is a form with extra steps.
-    deps = _deps([{"done": False, "question": _question()}])
+    deps = _deps([{"done": False, **_question()}])
 
     state = start_grill("run-1", SEED, deps)
 
@@ -79,7 +80,7 @@ def test_research_failure_leaves_the_grill_working_but_ungrounded():
 
 def test_every_question_carries_a_recommended_answer():
     # G1. Nobody faces a blank: correcting is easy where composing is not.
-    state = start_grill("run-1", SEED, _deps([{"done": False, "question": _question()}]))
+    state = start_grill("run-1", SEED, _deps([{"done": False, **_question()}]))
 
     assert state.pending is not None
     assert state.pending.recommendation.startswith("My recommendation:")
@@ -94,8 +95,8 @@ def test_a_question_without_a_recommendation_is_refused_rather_than_shown():
     # Twice, because one unusable reply is now retried rather than fatal.
     deps = _deps(
         [
-            {"done": False, "question": _question(recommendation="")},
-            {"done": False, "question": _question(recommendation="")},
+            {"done": False, **_question(recommendation="")},
+            {"done": False, **_question(recommendation="")},
         ]
     )
 
@@ -110,8 +111,8 @@ def test_the_grill_asks_one_question_at_a_time_shaped_by_the_last():
     # are a fixed list wearing a conversation's clothes.
     deps = _deps(
         [
-            {"done": False, "question": _question()},
-            {"done": False, "question": _question(question_id="q2", ask="Who is reading it?")},
+            {"done": False, **_question()},
+            {"done": False, **_question(question_id="q2", ask="Who is reading it?")},
         ]
     )
 
@@ -130,8 +131,8 @@ def test_the_answer_is_kept_exactly_as_it_was_typed():
     typed = "I was there 4 days last year. mostly ate. the ceviche place in Surquillo market was better than any of the fancy ones"
     deps = _deps(
         [
-            {"done": False, "question": _question()},
-            {"done": False, "question": _question(question_id="q2")},
+            {"done": False, **_question()},
+            {"done": False, **_question(question_id="q2")},
         ]
     )
 
@@ -144,7 +145,7 @@ def test_the_grill_pushes_back_when_an_answer_contradicts_the_seed():
     # G4. It does not just collect the answer; it makes the conflict resolve.
     deps = _deps(
         [
-            {"done": False, "question": _question()},
+            {"done": False, **_question()},
             {
                 "done": False,
                 "question": _question(
@@ -166,7 +167,7 @@ def test_the_grill_stops_at_agreement_rather_than_at_a_count():
     # themselves gets eight.
     deps = _deps(
         [
-            {"done": False, "question": _question()},
+            {"done": False, **_question()},
             {"done": True, "consensus": "A first-timer's guide for someone with a Lima layover."},
         ]
     )
@@ -186,8 +187,8 @@ def test_claiming_to_be_done_without_saying_what_was_agreed_is_not_agreement():
     """
     deps = _deps(
         [
-            {"done": False, "question": _question()},
-            {"done": True, "consensus": "", "question": _question(question_id="q2")},
+            {"done": False, **_question()},
+            {"done": True, "consensus": "", **_question(question_id="q2")},
         ]
     )
 
@@ -198,13 +199,13 @@ def test_claiming_to_be_done_without_saying_what_was_agreed_is_not_agreement():
 
 
 def test_location_is_extracted_rather_than_typed_into_a_box():
-    deps = _deps([{"done": False, "question": _question(), "location": "Lima, Peru"}])
+    deps = _deps([{"done": False, **_question(), "location": "Lima, Peru"}])
 
     assert start_grill("run-1", SEED, deps).location == "Lima, Peru"
 
 
 def test_an_ambiguous_line_leaves_the_location_for_a_question():
-    deps = _deps([{"done": False, "question": _question(), "location": ""}])
+    deps = _deps([{"done": False, **_question(), "location": ""}])
 
     assert start_grill("run-1", "a weekend in the valley", deps).location == ""
 
@@ -212,7 +213,7 @@ def test_an_ambiguous_line_leaves_the_location_for_a_question():
 def test_an_agreed_grill_will_not_take_another_answer():
     deps = _deps(
         [
-            {"done": False, "question": _question()},
+            {"done": False, **_question()},
             {"done": True, "consensus": "Settled."},
         ]
     )
@@ -231,9 +232,9 @@ def test_reopening_keeps_what_was_learned_and_drops_the_agreement():
     """
     deps = _deps(
         [
-            {"done": False, "question": _question()},
+            {"done": False, **_question()},
             {"done": True, "consensus": "Settled."},
-            {"done": False, "question": _question(question_id="q3", ask="What changed?")},
+            {"done": False, **_question(question_id="q3", ask="What changed?")},
         ]
     )
     agreed = answer_grill(start_grill("run-1", SEED, deps), "guide", deps)
@@ -247,7 +248,7 @@ def test_reopening_keeps_what_was_learned_and_drops_the_agreement():
 
 
 def test_an_empty_answer_is_refused():
-    deps = _deps([{"done": False, "question": _question()}])
+    deps = _deps([{"done": False, **_question()}])
     state = start_grill("run-1", SEED, deps)
 
     with pytest.raises(ValueError, match="cannot be empty"):
@@ -263,8 +264,8 @@ def test_the_stage_record_is_readable_on_its_own():
     """
     deps = _deps(
         [
-            {"done": False, "question": _question()},
-            {"done": False, "question": _question(question_id="q2")},
+            {"done": False, **_question()},
+            {"done": False, **_question(question_id="q2")},
         ]
     )
     state = answer_grill(start_grill("run-1", SEED, deps), "guide, with a pitch", deps)
@@ -316,7 +317,7 @@ def test_a_reply_with_no_question_and_no_consensus_is_retried_once():
     schema-valid and useless -- and one unusable reply ended the run before it
     had started.
     """
-    deps = _deps([{"done": False}, {"done": False, "question": _question()}])
+    deps = _deps([{"done": False}, {"done": False, **_question()}])
 
     state = start_grill("run-1", SEED, deps)
 
@@ -345,7 +346,12 @@ def test_the_schema_demands_what_the_code_demands():
     # written down properly.
     from app.features.prompt2blog.grill_v4 import NEXT_TURN_SCHEMA
 
-    assert set(NEXT_TURN_SCHEMA["required"]) == {"done", "question", "consensus"}
+    assert set(NEXT_TURN_SCHEMA["required"]) == {
+        "done",
+        "ask",
+        "recommendation",
+        "consensus",
+    }
 
 
 def test_the_prompt_says_to_return_both_and_leave_one_empty():
@@ -363,8 +369,8 @@ def test_the_prompt_says_to_return_both_and_leave_one_empty():
 
     # The rule still holds; it just lives with the output shape rather than in
     # the list of rules about how to interview well.
-    assert "always carries both `question` and `consensus`" in flat
-    assert "Fill the one you are using and leave the other empty." in flat
+    assert "every reply carries `ask`, `recommendation` and `consensus`" in flat
+    assert "leave `consensus` empty" in flat
 
 
 def test_the_format_rule_is_not_mixed_into_the_interviewing_rules():
@@ -409,3 +415,59 @@ def test_the_grill_runs_on_its_own_named_model():
     # Judgement, not extraction. A low temperature proposes the safe question
     # rather than the useful one.
     assert P2B_V4_GRILL_TEMPERATURE >= 0.5
+
+
+def test_a_good_question_is_not_refused_for_its_shape():
+    """This cost two live runs.
+
+    The model returned `question` as the question string with `recommendation`
+    beside it at the top level, while the schema wanted them nested. The words
+    were right both times and were thrown away over punctuation.
+    """
+    as_the_model_sent_it = {
+        "done": False,
+        "question": "What will be the main focus of your article?",
+        "recommendation": "A personal guide focusing on Lima's food culture.",
+        "location": "Lima, Peru",
+    }
+    deps = _deps([as_the_model_sent_it])
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert state.pending is not None
+    assert state.pending.ask == "What will be the main focus of your article?"
+    assert state.pending.recommendation.startswith("A personal guide")
+    assert state.location == "Lima, Peru"
+
+
+def test_the_nested_shape_still_works():
+    # An earlier schema asked for this, and some models will keep producing it.
+    deps = _deps(
+        [
+            {
+                "done": False,
+                "question": {
+                    "question_id": "q1",
+                    "topic": "focus",
+                    "ask": "Guide, or the case?",
+                    "recommendation": "A guide with a point of view.",
+                },
+            }
+        ]
+    )
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert state.pending is not None
+    assert state.pending.ask == "Guide, or the case?"
+
+
+def test_the_schema_has_nothing_left_to_nest():
+    # A flat object has no structure to get wrong.
+    from app.features.prompt2blog.grill_v4 import NEXT_TURN_SCHEMA
+
+    assert set(NEXT_TURN_SCHEMA["required"]) == {"done", "ask", "recommendation", "consensus"}
+    assert all(
+        spec.get("type") in {"string", "boolean"}
+        for spec in NEXT_TURN_SCHEMA["properties"].values()
+    )
