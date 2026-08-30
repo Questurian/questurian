@@ -330,6 +330,11 @@ P2B_V3_TITLE_PROMPT = """You are an expert headline editor.
 Goal:
 Write exactly one final title for this commissioned article.
 
+The brief already made a promise to the reader. Your job is to put that promise
+in a headline, confirmed against what the article actually says -- not to
+summarise the sections. A headline that describes our research instead of the
+place has failed, however accurate it is.
+
 Output rules (strict):
 - Return exactly one line.
 - No quotes, no markdown, no alternatives, no explanation.

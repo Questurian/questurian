@@ -12,10 +12,30 @@ from ...prompts.editorial_v3 import P2B_V3_TITLE_PROMPT
 from ...support import _json, _safe_dict, _safe_str
 
 
+# How much of the article the headline writer actually needs. The direct
+# answer sits near the top by construction, so the opening carries what the
+# piece turned out to be about. Sending the whole article to write one string
+# would be paying drafting prices for a headline.
+TITLE_OPENING_CHARACTERS = 1_200
+
+
 def _title_material(state: Prompt2BlogV3GraphState) -> dict[str, Any]:
+    """What the headline is written from.
+
+    It used to be two summary lines and the headings, and never the article.
+    Handed audit-flavoured headings, it wrote an honest label for them -- which
+    is how a piece about Lima ended up titled after our research.
+
+    It gets the opening now, because the promise the headline has to keep is
+    the brief's, and whether the article kept it is only visible in the prose.
+    """
     outline = _safe_dict(state.get("outline"))
     content = _safe_str(_safe_dict(state.get("rewrite")).get("improved_content"))
+    opening = content[:TITLE_OPENING_CHARACTERS].strip()
     return {
+        "the_promise": _safe_str(_safe_dict(state.get("brief")).get("outcome")),
+        "spine": _safe_str(_safe_dict(state.get("brief")).get("spine")),
+        "article_opening": opening,
         "direct_answer_focus": _safe_str(outline.get("direct_answer_focus")),
         "takeaway_focus": _safe_str(outline.get("takeaway_focus")),
         "headings": extract_markdown_headings(content),
@@ -29,11 +49,13 @@ def run_v3_title_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
-    """Write the headline from the shared standard and the approved brief.
+    """Write the headline the brief already promised.
 
-    The original title reaches this stage as author intent, so the headline can
-    keep what the brief was about instead of re-deriving a subject from
-    the finished prose.
+    The brief holds the promise -- make a layover traveller book two extra
+    nights -- and it has steered the writing since the outline. This stage
+    confirms it against the finished piece rather than inventing a subject
+    here, which is what produced a headline about our research instead of
+    about Lima.
     """
     stage = "stage_v3_title"
     run_id = state["run_id"]

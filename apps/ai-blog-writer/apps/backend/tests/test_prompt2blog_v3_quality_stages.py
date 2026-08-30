@@ -364,9 +364,14 @@ def test_the_title_stage_sees_the_seed_and_the_headline_standard():
     assert "Who benefits from the tradeoffs." in prompt
     assert "What Lima costs now" in prompt
     assert "The tradeoffs" in prompt
-    assert "Not an article heading" not in prompt
-    assert "Body-only sentence." not in prompt
-    assert "More body-only prose." not in prompt
+    # The headline confirms the brief's promise against the finished piece
+    # (#432, A18), so the opening is now in the prompt. Handed only headings,
+    # this stage wrote an honest label for them -- which is how a piece about
+    # Lima ended up titled after our research.
+    assert "Body-only sentence." in prompt
+    assert "The promise to keep" in prompt or "the_promise" in prompt
+    # Only the opening, though. Sending the whole article to write one string
+    # would be paying drafting prices for a headline.
     assert "FINAL ARTICLE CONTENT" not in prompt
     assert len(prompt) < 12_000
     assert updates["final_title"] == "Is Lima still worth the move?"

@@ -14,6 +14,7 @@ import pytest
 from app.features.prompt2blog.api import intake as intake_api
 from app.features.prompt2blog.grill_v4 import GrillDependencies
 from app.features.prompt2blog.intake_v4 import IntakeServices
+from app.features.prompt2blog.research_v4 import ResearchDependencies
 from app.features.prompt2blog.run_recorder import RunRecorder
 
 SEED = "Lima is no longer simply the stopover before Machu Picchu"
@@ -58,11 +59,47 @@ WORK_ORDER = {
 }
 
 
+EVIDENCE = {
+    "sources": [
+        {
+            "source_id": "s1",
+            "title": "Market price survey",
+            "publisher": "Peru Retail",
+            "url": "https://example.pe/prices",
+            "retrieved_at": "2026-08-01",
+            "source_type": "reporting",
+            "material_type": "web",
+            "notes": ["Stall ceviche is far below the tasting menus."],
+        }
+    ],
+    "claims": [
+        {
+            "claim_id": "c1",
+            "text": "Market ceviche is a fraction of the tasting-menu price.",
+            "source_ids": ["s1"],
+            "requirement_ids": ["r1"],
+            "confidence": "high",
+        },
+        {
+            "claim_id": "c2",
+            "text": "The site is floodlit into the evening.",
+            "source_ids": ["s1"],
+            "requirement_ids": ["r2"],
+            "confidence": "medium",
+        },
+    ],
+    "requirements": [
+        {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"]},
+        {"requirement_id": "r2", "status": "supported", "claim_ids": ["c2"]},
+    ],
+}
+
+
 @pytest.fixture
 def scripted(monkeypatch):
-    """Give every route in one test the same scripted model."""
+    """Give every route in one test the same scripted models."""
 
-    def _install(responses: list[dict[str, Any]]) -> None:
+    def _install(responses: list[dict[str, Any]], evidence: dict | None = None) -> None:
         llm = ScriptedLLM(responses)
         monkeypatch.setattr(
             intake_api,
@@ -72,6 +109,10 @@ def scripted(monkeypatch):
                     llm=llm, research=lambda _s: ("Lima has a food reputation.", [], 900)
                 ),
                 recorder=RunRecorder(),
+                research=ResearchDependencies(
+                    gather=lambda _p, _m: ("Notes.", ["https://example.pe/a"], 800),
+                    structure_llm=ScriptedLLM([evidence or EVIDENCE]),
+                ),
             ),
         )
 
@@ -201,6 +242,39 @@ def _json(response) -> dict[str, Any]:
     return json.loads(response.body)
 
 
+@pytest.mark.asyncio
+async def test_a_settled_run_can_be_handed_to_the_writer(isolated_db, scripted, monkeypatch):
+    """Seed to queued article, on one run id.
+
+    The article is written onto the run the seed opened, so the receipt covers
+    intake and writing together instead of splitting one article across two
+    records.
+    """
+    from fastapi import BackgroundTasks
+
+    scripted([QUESTION, AGREED, BRIEF, WORK_ORDER])
+    monkeypatch.setattr(intake_api, "_prompt2blog_credential_for_run", lambda: None)
+
+    run_id = _json(
+        await intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+    )["run_id"]
+    await intake_api.answer_question(
+        run_id, intake_api.AnswerRequest(answer="guide"), _staff={"id": 1}
+    )
+    await intake_api.build_the_brief(run_id, _staff={"id": 1})
+    await intake_api.plan_the_research(run_id, _staff={"id": 1})
+    await intake_api.do_the_research(run_id, _staff={"id": 1})
+
+    response = await intake_api.start_writing(
+        run_id, BackgroundTasks(), _staff={"id": 1}
+    )
+
+    assert response.status_code == 202
+    body = _json(response)
+    assert body["writing"] == "queued"
+    assert body["run_id"] == run_id
+
+
 def test_the_intake_routes_are_actually_mounted():
     """A router nobody included is a feature nobody can reach.
 
@@ -219,4 +293,6 @@ def test_the_intake_routes_are_actually_mounted():
         "/prompt2blog/intake/{run_id}/brief",
         "/prompt2blog/intake/{run_id}/work-order",
         "/prompt2blog/intake/{run_id}/work-order/cut",
+        "/prompt2blog/intake/{run_id}/research",
+        "/prompt2blog/intake/{run_id}/write",
     } <= paths
