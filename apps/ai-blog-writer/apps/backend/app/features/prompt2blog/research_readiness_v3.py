@@ -13,7 +13,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from .contracts_v3 import Prompt2BlogCommission
+from .contracts_v4 import ArticleBrief, Prompt2BlogWorkOrder
 from .editorial_catalog import (
     ArticleFormRule,
     EditorialCatalog,
@@ -42,7 +42,7 @@ These record two different things. Never conflate them.
 # initial prompt, the follow-up prompt and the backend must all say this the
 # same way.
 PREMISE_CHECK_RULES = """PREMISE CHECK — SETTLE THIS BEFORE ANSWERING ANYTHING
-The commission carries a premise: what the editor assumed while unable to check it. Settle every entry before you answer a single question, and return one verdict for each.
+The work order carries a premise: what the direction step assumed while unable to check it. Settle every entry before you answer a single question, and return one verdict for each.
 - confirmed — you found it is so. Link the claim that shows it.
 - refuted — you found it is not so. Say what is true instead, with the date where one applies. This is not a failed research round. It is the most useful thing you can return, because it stops an article that cannot be written.
 - unverified — you searched properly and could settle it neither way. Name what you checked.
@@ -122,28 +122,29 @@ def evidence_satisfies_source_requirement(
 
 
 def _form_rule(
-    commission: Prompt2BlogCommission,
+    brief: ArticleBrief,
     catalog: EditorialCatalog,
 ) -> ArticleFormRule:
-    form = next((item for item in catalog.forms if item.id == commission.form_id), None)
+    form = next((item for item in catalog.forms if item.id == brief.form_id), None)
     if form is None:
-        raise ValueError(f"Unknown article form: {commission.form_id}")
+        raise ValueError(f"Unknown article form: {brief.form_id}")
     return form
 
 
 def assess_research_readiness(
-    commission: Prompt2BlogCommission,
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
     evidence: NormalizedEvidence,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> ResearchReadiness:
-    """Reports every reason this evidence cannot support this commission."""
+    """Reports every reason this evidence cannot support this work order."""
     catalog = catalog or load_editorial_catalog()
-    form = _form_rule(commission, catalog)
+    form = _form_rule(brief, catalog)
 
     findings: list[ReadinessFinding] = []
 
-    statements = {item.assumption_id: item.statement for item in commission.premise}
+    statements = {item.assumption_id: item.statement for item in work_order.premise}
     refuted_ids = evidence.refuted_assumption_ids()
     unverified_ids = evidence.unverified_assumption_ids()
     basis_by_id = {
@@ -279,7 +280,8 @@ def assess_research_readiness(
 
 
 def build_follow_up_research_prompt(
-    commission: Prompt2BlogCommission,
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
     evidence: NormalizedEvidence,
     readiness: ResearchReadiness,
     *,
@@ -287,7 +289,7 @@ def build_follow_up_research_prompt(
 ) -> str:
     """Builds the prompt that closes exactly the gaps the gate reported."""
     catalog = catalog or load_editorial_catalog()
-    form = _form_rule(commission, catalog)
+    form = _form_rule(brief, catalog)
     modules_by_id = {module.id: module for module in catalog.topic_modules}
 
     unresolved_ids = set(readiness.unresolved_requirement_ids)
@@ -306,7 +308,7 @@ def build_follow_up_research_prompt(
     refuted_ids = set(readiness.refuted_assumption_ids)
     unresolved_ids -= set(evidence.requirement_ids_resting_on(refuted_ids))
 
-    statements = {item.assumption_id: item.statement for item in commission.premise}
+    statements = {item.assumption_id: item.statement for item in work_order.premise}
     basis_by_id = {
         finding.assumption_id: finding.basis for finding in evidence.premise_findings
     }
@@ -340,7 +342,7 @@ def build_follow_up_research_prompt(
                 if unpublished_gaps.get(requirement.requirement_id)
                 else ""
             )
-            for requirement in commission.requirements
+            for requirement in work_order.requirements
             if requirement.requirement_id in unpublished_ids
         )
         or "- None."
@@ -349,7 +351,7 @@ def build_follow_up_research_prompt(
     requirement_lines = (
         "\n".join(
             f"- {requirement.requirement_id} — {requirement.question}"
-            for requirement in commission.requirements
+            for requirement in work_order.requirements
             if requirement.requirement_id in unresolved_ids
         )
         or "- None beyond the source-gate or conflict work below."
@@ -390,26 +392,26 @@ def build_follow_up_research_prompt(
         "\n".join(
             f"- {modules_by_id[module_id].id} ({modules_by_id[module_id].label}) — "
             f"{modules_by_id[module_id].description}"
-            for module_id in commission.topic_module_ids
+            for module_id in brief.topic_module_ids
             if module_id in modules_by_id
         )
         or "- None."
     )
-    locked_commission = json.dumps(
-        commission.model_dump(mode="json"), indent=2, ensure_ascii=False
+    locked_work_order = json.dumps(
+        work_order.model_dump(mode="json"), indent=2, ensure_ascii=False
     )
 
-    return f"""You are completing unresolved research for an approved travel commission. Return a complete replacement evidence package, not a patch.
+    return f"""You are completing unresolved research for an approved travel work order. Return a complete replacement evidence package, not a patch.
 
 AUTHORITY LOCK
-The locked commission remains read-only authority.
-- Keep commission_fingerprint exactly as supplied.
+The locked work order remains read-only authority.
+- Keep work_order_fingerprint exactly as supplied.
 - Do not change the form, primary subject, scope, reference roles, requirements, exclusions, audience, title, location, or approved direction.
 - Do not add a comparator, promote a context-only reference, or broaden scope.
 - Research only the unresolved work listed below. Do not write the article.
 
 LOCKED COMMISSION
-{locked_commission}
+{locked_work_order}
 
 CURRENT EVIDENCE RECORDS
 {evidence.records_text}
@@ -457,7 +459,8 @@ REPLACEMENT RULES
 
 
 def needs_research_payload(
-    commission: Prompt2BlogCommission,
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
     evidence: NormalizedEvidence,
     readiness: ResearchReadiness,
     *,
@@ -467,7 +470,7 @@ def needs_research_payload(
     catalog = catalog or load_editorial_catalog()
     questions = {
         requirement.requirement_id: requirement.question
-        for requirement in commission.requirements
+        for requirement in work_order.requirements
     }
     gaps_by_requirement = {
         requirement.requirement_id: requirement.gap
@@ -475,7 +478,7 @@ def needs_research_payload(
     }
     return {
         "status": "needs_research",
-        "commission_fingerprint": commission.commission_fingerprint,
+        "work_order_fingerprint": work_order.work_order_fingerprint,
         "findings": [finding.model_dump() for finding in readiness.findings],
         "unresolved_requirements": [
             {
@@ -524,6 +527,6 @@ def needs_research_payload(
             if finding.verdict == "unverified"
         ],
         "follow_up_research_prompt": build_follow_up_research_prompt(
-            commission, evidence, readiness, catalog=catalog
+            brief, work_order, evidence, readiness, catalog=catalog
         ),
     }

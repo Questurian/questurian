@@ -5,14 +5,13 @@ from .api import generation as _generation_api
 from .api import options as _options_api
 from .api import runs as _runs_api
 from .api.router import router
-from .contracts_v3 import Prompt2BlogV3Request  # noqa: F401
+from .contracts_v4 import Prompt2BlogV4Request  # noqa: F401
 from .models import (  # noqa: F401
     ArticleTypeOption,
     ClassificationResult,
     ClassifyRequest,
     ClassifyResponse,
-    PipelineV3RuntimeRequest,
-    Prompt2BlogInputRequest,
+    PipelineV4RuntimeRequest,
     SynthesizeRequest,
     SynthesizeResponse,
 )
@@ -43,7 +42,7 @@ async def get_article_type_guideline_preview(article_type_id: int):
 
 
 async def start_pipeline_v3(
-    request: Prompt2BlogV3Request,
+    request: Prompt2BlogV4Request,
     background_tasks,
     staff_user=None,
 ):

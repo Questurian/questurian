@@ -2,28 +2,26 @@ from __future__ import annotations
 
 from typing import Any, TypedDict
 
-from ..models import (
-    PipelineV3RuntimeRequest,
-    Prompt2BlogInputRequest,
-)
+from ..models import PipelineV4RuntimeRequest
 
 
 class Prompt2BlogV3GraphState(TypedDict, total=False):
     """State for the v3 graph.
 
     Kept separate from the v2 state on purpose. The v3 path carries the whole
-    commission, the exact evidence records, and stage-specific instruction
+    brief, the work order, the exact evidence records, and stage-specific instruction
     contexts; it has no article type, no guideline pair, and no supplemental
     content, because v3 never synthesizes a missing fact.
     """
 
     run_id: str
-    request: PipelineV3RuntimeRequest
+    request: PipelineV4RuntimeRequest
     # How many times this run has been resumed after a failure. Zero on a
     # first attempt; carried through every later leg so the article's own
     # record says whether it was written in one pass.
     resume_count: int
-    commission: dict[str, Any]
+    brief: dict[str, Any]
+    work_order: dict[str, Any]
     evidence: dict[str, Any]
     instructions: dict[str, Any]
     stage_contexts: dict[str, Any]

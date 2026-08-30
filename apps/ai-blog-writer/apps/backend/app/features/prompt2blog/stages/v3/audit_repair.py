@@ -72,7 +72,7 @@ def _audit_v3_rewrite(
     computed_checks = _build_constraint_checks(
         rewrite["improved_title"],
         rewrite["improved_content"],
-        v3_constraint_brief(state["commission"], state["option_context"]),
+        v3_constraint_brief(state["brief"], state["option_context"]),
     )
     groundedness = state.get("groundedness") or unchecked_groundedness()
     prompt = P2B_V3_QUALITY_AUDIT_PROMPT.format(
@@ -190,7 +190,7 @@ def run_v3_repair_stage(
 ) -> dict[str, Any]:
     """Repair prose and structure only.
 
-    Repair can never create a fact or change the commission, so an unsupported
+    Repair can never create a fact or change the brief, so an unsupported
     claim is deleted rather than hedged or replaced. Research gaps remain
     metadata; the reader never sees the pipeline narrate its own absence.
     """

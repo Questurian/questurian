@@ -9,9 +9,7 @@ from app.shared.text import normalize_dashes
 from app.shared.writer_models import resolve_writer_model
 
 from . import llm
-from .input import _build_writing_brief_from_input
 from .options import _read_article_type_markdown
-from .options import _resolve_input_options
 from .pricing import Prompt2BlogTokenUsageTracker
 from .run_recorder import RunRecorder
 
@@ -88,8 +86,6 @@ class PipelineDependencies:
     read_article_type_markdown: Callable[..., tuple[str, str | None]] = (
         _read_article_type_markdown
     )
-    resolve_input_options: Callable[..., dict[str, Any]] = _resolve_input_options
-    build_writing_brief: Callable[..., dict[str, Any]] = _build_writing_brief_from_input
     resolve_writer_model: Callable[..., str] = resolve_writer_model
     normalize_dashes: Callable[[str], str] = normalize_dashes
 

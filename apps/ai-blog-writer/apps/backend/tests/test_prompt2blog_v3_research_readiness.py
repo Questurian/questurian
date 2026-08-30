@@ -8,7 +8,7 @@ from pathlib import Path
 
 import app.features.prompt2blog.llm as prompt2blog_llm
 from app.features.prompt2blog.graph.state import Prompt2BlogV3GraphState
-from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
+from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.evidence_v3 import normalize_evidence
 from app.features.prompt2blog.intake_v3 import v3_intake_result
 from app.features.prompt2blog.research_readiness_v3 import (
@@ -23,7 +23,7 @@ FIXTURE_PATH = (
     / "data"
     / "fixtures"
     / "prompt2blog"
-    / "lima-scope-drift-v3.json"
+    / "lima-scope-drift-v4.json"
 )
 
 
@@ -31,27 +31,31 @@ def _fixture() -> dict:
     return json.loads(FIXTURE_PATH.read_text())
 
 
-def _payload(commission: dict | None = None, evidence: dict | None = None) -> dict:
+def _payload(
+    brief: dict | None = None,
+    work_order: dict | None = None,
+    evidence: dict | None = None,
+) -> dict:
     fixture = _fixture()
     return {
-        "schema_version": 3,
-        "commission": commission or fixture["commission"],
+        "schema_version": 4,
+        "brief": brief or fixture["brief"],
+        "work_order": work_order or fixture["work_order"],
         "evidence_package": evidence or fixture["evidence_package"],
         "profiles": {
-            "tone_id": "questurian-voice",
             "length_id": "medium",
             "creativity_level": "medium",
         },
     }
 
 
-def _request(**kwargs) -> Prompt2BlogV3Request:
-    return Prompt2BlogV3Request.model_validate(_payload(**kwargs))
+def _request(**kwargs) -> Prompt2BlogV4Request:
+    return Prompt2BlogV4Request.model_validate(_payload(**kwargs))
 
 
-def _assess(request: Prompt2BlogV3Request):
-    evidence = normalize_evidence(request.commission, request.evidence_package)
-    return evidence, assess_research_readiness(request.commission, evidence)
+def _assess(request: Prompt2BlogV4Request):
+    evidence = normalize_evidence(request.work_order, request.evidence_package)
+    return evidence, assess_research_readiness(request.brief, request.work_order, evidence)
 
 
 def _supported_evidence() -> dict:
@@ -130,11 +134,11 @@ def test_an_unresolved_conflict_blocks_a_fully_supported_package():
 
 
 def test_a_source_gated_form_blocks_evidence_without_matching_material():
-    commission = deepcopy(_fixture()["commission"])
-    commission["form_id"] = "interview-qa"
+    brief = deepcopy(_fixture()["brief"])
+    brief["form_id"] = "interview-qa"
 
     _normalized, readiness = _assess(
-        _request(commission=commission, evidence=_supported_evidence())
+        _request(brief=brief, evidence=_supported_evidence())
     )
 
     assert readiness.missing_source_requirements == ["attributable-responses"]
@@ -148,11 +152,11 @@ def test_the_follow_up_prompt_targets_only_unresolved_work():
     request = _request()
     evidence, readiness = _assess(request)
 
-    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+    prompt = build_follow_up_research_prompt(request.brief, request.work_order, evidence, readiness)
 
     assert "Do not redo or weaken already supported work" in prompt
     assert "Do not add a comparator" in prompt
-    assert request.commission.commission_fingerprint in prompt
+    assert request.work_order.work_order_fingerprint in prompt
     assert "- r2 — " in prompt
     assert "- r3 — " in prompt
     assert "- r1 — " not in prompt
@@ -168,7 +172,7 @@ def test_the_follow_up_prompt_separates_requirement_status_from_claim_confidence
     request = _request()
     evidence, readiness = _assess(request)
 
-    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+    prompt = build_follow_up_research_prompt(request.brief, request.work_order, evidence, readiness)
 
     assert REQUIREMENT_STATUS_RULES in prompt
     assert "status describes the QUESTION" in prompt
@@ -303,7 +307,7 @@ def test_a_follow_up_never_re_asks_an_unpublished_question():
     assert readiness.status == "needs_research"
     assert readiness.unresolved_requirement_ids == ["r2"]
 
-    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+    prompt = build_follow_up_research_prompt(request.brief, request.work_order, evidence, readiness)
     unresolved_block = prompt.split("UNRESOLVED REQUIREMENTS ONLY")[1].split(
         "ALREADY ESTABLISHED AS UNPUBLISHED"
     )[0]
@@ -340,22 +344,22 @@ def test_the_status_rules_define_the_unpublished_verdict():
     assert "only after real searching" in REQUIREMENT_STATUS_RULES
 
 
-def _lima_ranking_commission() -> dict:
-    """The commission shape that produced the dead end, in miniature.
+def _lima_ranking_work_order() -> dict:
+    """The work order shape that produced the dead end, in miniature.
 
     Every question rests on one premise, and the premise is a ranking whose
     reveal is still months away.
     """
-    commission = deepcopy(_fixture()["commission"])
-    commission["premise"] = [
+    work_order = deepcopy(_fixture()["work_order"])
+    work_order["premise"] = [
         {
             "assumption_id": "a1",
             "statement": "The 2026 Latin America's 50 Best Restaurants list has been published.",
         }
     ]
-    for requirement in commission["requirements"]:
+    for requirement in work_order["requirements"]:
         requirement["assumption_ids"] = ["a1"]
-    return commission
+    return work_order
 
 
 def _refuted_evidence(verdict: str = "refuted") -> dict:
@@ -367,7 +371,7 @@ def _refuted_evidence(verdict: str = "refuted") -> dict:
             "claim_ids": [],
             "gap": "The premise this question rests on turned out to be false.",
         }
-        for requirement in _fixture()["commission"]["requirements"]
+        for requirement in _fixture()["work_order"]["requirements"]
     ]
     evidence["claims"] = []
     evidence["gaps"] = []
@@ -384,7 +388,7 @@ def _refuted_evidence(verdict: str = "refuted") -> dict:
 
 def test_a_refuted_premise_blocks_the_run_and_names_itself_as_the_cause():
     _evidence, readiness = _assess(
-        _request(commission=_lima_ranking_commission(), evidence=_refuted_evidence())
+        _request(work_order=_lima_ranking_work_order(), evidence=_refuted_evidence())
     )
 
     assert readiness.status == "needs_research"
@@ -400,7 +404,7 @@ def test_a_refuted_premise_blocks_the_run_and_names_itself_as_the_cause():
 def test_questions_killed_by_a_refuted_premise_are_not_reported_separately():
     """The original run showed five identical complaints and never the cause."""
     _evidence, readiness = _assess(
-        _request(commission=_lima_ranking_commission(), evidence=_refuted_evidence())
+        _request(work_order=_lima_ranking_work_order(), evidence=_refuted_evidence())
     )
 
     codes = [finding.code for finding in readiness.findings]
@@ -412,7 +416,7 @@ def test_questions_killed_by_a_refuted_premise_are_not_reported_separately():
 
 def test_a_refuted_premise_sends_the_operator_to_a_new_direction():
     _evidence, readiness = _assess(
-        _request(commission=_lima_ranking_commission(), evidence=_refuted_evidence())
+        _request(work_order=_lima_ranking_work_order(), evidence=_refuted_evidence())
     )
 
     assert readiness.requires_new_direction is True
@@ -420,7 +424,7 @@ def test_a_refuted_premise_sends_the_operator_to_a_new_direction():
 
 def test_an_unverified_premise_blocks_but_stays_worth_asking_again():
     request = _request(
-        commission=_lima_ranking_commission(),
+        work_order=_lima_ranking_work_order(),
         evidence=_refuted_evidence(verdict="unverified"),
     )
     evidence, readiness = _assess(request)
@@ -429,7 +433,7 @@ def test_an_unverified_premise_blocks_but_stays_worth_asking_again():
     assert readiness.unverified_assumption_ids == ["a1"]
     assert readiness.requires_new_direction is False
 
-    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+    prompt = build_follow_up_research_prompt(request.brief, request.work_order, evidence, readiness)
 
     assert "STILL UNSETTLED PREMISE" in prompt
     assert "a1 — The 2026 Latin America's 50 Best Restaurants list" in prompt
@@ -437,20 +441,20 @@ def test_an_unverified_premise_blocks_but_stays_worth_asking_again():
 
 def test_the_follow_up_prompt_never_re_asks_a_question_a_refutation_killed():
     request = _request(
-        commission=_lima_ranking_commission(), evidence=_refuted_evidence()
+        work_order=_lima_ranking_work_order(), evidence=_refuted_evidence()
     )
     evidence, readiness = _assess(request)
 
-    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+    prompt = build_follow_up_research_prompt(request.brief, request.work_order, evidence, readiness)
 
     assert "SETTLED AS FALSE — DO NOT RESEARCH" in prompt
     assert "1 December 2026" in prompt
-    for requirement in request.commission.requirements:
+    for requirement in request.work_order.requirements:
         assert f"- {requirement.requirement_id} — {requirement.question}" not in prompt
 
 
 def test_a_confirmed_premise_leaves_readiness_exactly_as_it_was():
-    commission = _lima_ranking_commission()
+    work_order = _lima_ranking_work_order()
     evidence = _supported_evidence()
     evidence["premise_findings"] = [
         {
@@ -461,7 +465,7 @@ def test_a_confirmed_premise_leaves_readiness_exactly_as_it_was():
         }
     ]
 
-    _evidence, readiness = _assess(_request(commission=commission, evidence=evidence))
+    _evidence, readiness = _assess(_request(work_order=work_order, evidence=evidence))
 
     assert readiness.status == "ready"
     assert readiness.findings == []
@@ -470,10 +474,10 @@ def test_a_confirmed_premise_leaves_readiness_exactly_as_it_was():
 
 def test_the_premise_verdict_reaches_the_writer_records_and_the_receipt():
     request = _request(
-        commission=_lima_ranking_commission(),
+        work_order=_lima_ranking_work_order(),
         evidence=_refuted_evidence(verdict="confirmed"),
     )
-    evidence = normalize_evidence(request.commission, request.evidence_package)
+    evidence = normalize_evidence(request.work_order, request.evidence_package)
 
     assert "WHAT THE COMMISSION ASSUMED, AND WHAT RESEARCH FOUND" in evidence.records_text
     assert "verdict: confirmed" in evidence.records_text
@@ -482,12 +486,12 @@ def test_the_premise_verdict_reaches_the_writer_records_and_the_receipt():
 
 def test_the_shared_premise_rules_travel_with_both_research_prompts():
     request = _request(
-        commission=_lima_ranking_commission(),
+        work_order=_lima_ranking_work_order(),
         evidence=_refuted_evidence(verdict="unverified"),
     )
     evidence, readiness = _assess(request)
 
-    prompt = build_follow_up_research_prompt(request.commission, evidence, readiness)
+    prompt = build_follow_up_research_prompt(request.brief, request.work_order, evidence, readiness)
 
     assert PREMISE_CHECK_RULES in prompt
     assert "does not exist yet" in REQUIREMENT_STATUS_RULES

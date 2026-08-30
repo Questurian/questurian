@@ -12,7 +12,6 @@ from .config import (
     PROMPT2BLOG_LENGTHS_DIR,
     PROMPT2BLOG_VOICE_FILE,
 )
-from .models import Prompt2BlogInputRequest
 from .support import (
     _normalize_article_type_name,
     _safe_bool,
@@ -234,37 +233,3 @@ def _read_article_type_markdown(
             break
 
     return fallback, None
-
-
-def _resolve_input_options(request: Prompt2BlogInputRequest) -> dict[str, Any]:
-    catalog = _load_prompt2blog_option_catalog()
-    tones = catalog.get("tones", [])
-    lengths = catalog.get("lengths", [])
-    brand_voices = catalog.get("brand_voices", [])
-
-    tone = _find_option_or_raise(tones, request.tone_id, field_name="tone_id")
-    length = _find_option_or_raise(lengths, request.length_id, field_name="length_id")
-    if request.brand_voice_id:
-        brand_voice = _find_option_or_raise(
-            brand_voices,
-            request.brand_voice_id,
-            field_name="brand_voice_id",
-        )
-    else:
-        brand_voice = _default_option(brand_voices)
-        if not brand_voice:
-            raise RuntimeError("No brand voice options are configured.")
-
-    creativity_level = _safe_str(request.creativity_level).lower() or "medium"
-    if creativity_level not in PROMPT2BLOG_CREATIVITY_LEVELS:
-        raise RuntimeError(
-            "creativity_level must be one of: "
-            f"{', '.join(sorted(PROMPT2BLOG_CREATIVITY_LEVELS))}"
-        )
-
-    return {
-        "tone": tone,
-        "length": length,
-        "brand_voice": brand_voice,
-        "creativity_level": creativity_level,
-    }

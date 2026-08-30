@@ -63,25 +63,3 @@ def test_result_route_attaches_the_trace_to_a_v3_artifact(monkeypatch):
     assert payload["langsmith_trace_url"] == "https://trace.example/v3-run"
     assert "pipeline_v2" not in payload["artifact"]
 
-
-def test_input_request_rejects_legacy_payload_shape():
-    with pytest.raises(ValidationError):
-        prompt2blog_routes.Prompt2BlogInputRequest.model_validate(
-            {
-                "raw_sources": ["legacy"],
-                "writing_brief": {},
-            }
-        )
-
-
-def test_editorial_augmentation_is_opt_in_by_default():
-    request = prompt2blog_routes.Prompt2BlogInputRequest(
-        article_type_id=1,
-        source_material=["One source blob."],
-        article_goal="Generate a practical article.",
-        target_reader="General readers",
-        destination_context="Barcelona, Spain",
-        tone_id="questurian-voice",
-        length_id="medium",
-    )
-    assert request.enable_editorial_augmentation is False

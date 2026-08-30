@@ -7,12 +7,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from app.features.prompt2blog.contracts_v3 import (
+from app.features.prompt2blog.contracts_v4 import (
+    ArticleBrief,
     EvidencePackage,
-    Prompt2BlogCommission,
-    Prompt2BlogV3Request,
+    Prompt2BlogWorkOrder,
 )
-from app.features.prompt2blog.models import Prompt2BlogInputRequest
 
 
 FIXTURE_PATH = (
@@ -20,32 +19,22 @@ FIXTURE_PATH = (
     / "data"
     / "fixtures"
     / "prompt2blog"
-    / "lima-scope-drift-v3.json"
+    / "lima-scope-drift-v4.json"
 )
 FIXTURE_DIR = FIXTURE_PATH.parent
 
 
-def test_legacy_v2_request_contract_remains_unchanged():
-    payload = json.loads((FIXTURE_DIR / "legacy-v2-request.json").read_text())
+def test_lima_work_order_preserves_primary_subject_and_context_only_cities():
+    fixture = json.loads(FIXTURE_PATH.read_text())
+    brief = ArticleBrief.model_validate(fixture["brief"])
+    work_order = Prompt2BlogWorkOrder.model_validate(fixture["work_order"])
 
-    request = Prompt2BlogInputRequest.model_validate(payload)
-
-    assert request.model_dump(mode="json") == payload
-
-
-def test_lima_commission_preserves_primary_subject_and_context_only_cities():
-    payload = json.loads(FIXTURE_PATH.read_text())["commission"]
-
-    commission = Prompt2BlogCommission.model_validate(payload)
-
-    assert commission.original_title == (
-        "Is Lima still South America's bargain expat capital?"
-    )
-    assert commission.form_id == "analysis"
-    assert commission.primary_subject == "Lima"
-    assert commission.scope.mode == "single_subject"
+    assert brief.seed == "Is Lima still South America's bargain expat capital?"
+    assert brief.form_id == "analysis"
+    assert work_order.primary_subject == "Lima"
+    assert work_order.scope.mode == "single_subject"
     assert [
-        (reference.name, reference.role) for reference in commission.scope.references
+        (reference.name, reference.role) for reference in work_order.scope.references
     ] == [
         ("Lima", "primary_subject"),
         ("Medellín", "context_only"),
@@ -68,40 +57,41 @@ def test_lima_evidence_keeps_source_metadata_and_requirement_links():
     assert evidence.requirements[0].claim_ids == ["c1"]
 
 
-def test_single_subject_commission_rejects_comparator_role():
-    payload = json.loads(FIXTURE_PATH.read_text())["commission"]
+def test_single_subject_work_order_rejects_comparator_role():
+    payload = json.loads(FIXTURE_PATH.read_text())["work_order"]
     payload["scope"]["references"][1]["role"] = "comparator"
 
     with pytest.raises(ValidationError, match="cannot contain comparators"):
-        Prompt2BlogCommission.model_validate(payload)
+        Prompt2BlogWorkOrder.model_validate(payload)
 
 
-def test_commission_rejects_more_than_four_topic_modules():
-    payload = json.loads(FIXTURE_PATH.read_text())["commission"]
+def test_brief_rejects_more_than_four_topic_modules():
+    payload = json.loads(FIXTURE_PATH.read_text())["brief"]
     payload["topic_module_ids"].append("transportation")
 
     with pytest.raises(ValidationError, match="at most 4 items"):
-        Prompt2BlogCommission.model_validate(payload)
+        ArticleBrief.model_validate(payload)
 
 
 @pytest.mark.parametrize(
-    ("path", "value"),
+    ("holder", "path", "value"),
     [
-        (("form_id",), "comparison-article"),
-        (("topic_module_ids", 0), "packing"),
-        (("audience", "tags", 0), "everyone"),
-        (("scope", "references", 1, "role"), "benchmark"),
+        ("brief", ("form_id",), "comparison-article"),
+        ("brief", ("topic_module_ids", 0), "packing"),
+        ("brief", ("reader", "tags", 0), "everyone"),
+        ("work_order", ("scope", "references", 1, "role"), "benchmark"),
     ],
 )
-def test_commission_rejects_unknown_catalog_ids(path, value):
-    payload = json.loads(FIXTURE_PATH.read_text())["commission"]
+def test_contracts_reject_unknown_catalog_ids(holder, path, value):
+    payload = json.loads(FIXTURE_PATH.read_text())[holder]
     target = payload
     for key in path[:-1]:
         target = target[key]
     target[path[-1]] = value
 
+    model = ArticleBrief if holder == "brief" else Prompt2BlogWorkOrder
     with pytest.raises(ValidationError):
-        Prompt2BlogCommission.model_validate(payload)
+        model.model_validate(payload)
 
 
 def test_evidence_rejects_unknown_source_reference():
@@ -153,72 +143,46 @@ def test_unpublished_requirement_may_cite_the_claims_that_prove_the_absence():
     assert package.requirements[1].status == "unpublished"
 
 
-def test_v3_request_requires_matching_fingerprint_and_requirement_set():
-    fixture = json.loads(FIXTURE_PATH.read_text())
-    payload = {
-        "schema_version": 3,
-        "commission": fixture["commission"],
-        "evidence_package": deepcopy(fixture["evidence_package"]),
-        "profiles": {
-            "tone_id": "questurian-voice",
-            "length_id": "long",
-            "brand_voice_id": "questurian-default",
-            "creativity_level": "medium",
-        },
-    }
-    payload["evidence_package"]["commission_fingerprint"] = "wrong"
-
-    with pytest.raises(ValidationError, match="fingerprint must match"):
-        Prompt2BlogV3Request.model_validate(payload)
-
-    payload["evidence_package"] = deepcopy(fixture["evidence_package"])
-    payload["evidence_package"]["requirements"].pop()
-    payload["evidence_package"]["gaps"].pop()
-
-    with pytest.raises(ValidationError, match="exactly match commission"):
-        Prompt2BlogV3Request.model_validate(payload)
-
-
-def test_commission_rejects_a_question_resting_on_an_undeclared_premise():
-    """A dependency the commission never declared cannot be refuted later.
+def test_work_order_rejects_a_question_resting_on_an_undeclared_premise():
+    """A dependency the work order never declared cannot be refuted later.
 
     The direction step cannot browse, so its assumptions are only checkable if
     they are written down. A requirement pointing at an assumption id nobody
     declared is that link broken at the only place it can still be repaired.
     """
-    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["commission"])
+    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["work_order"])
     payload["premise"] = [
         {"assumption_id": "a1", "statement": "Lima publishes current rent data."}
     ]
     payload["requirements"][0]["assumption_ids"] = ["a1", "a4"]
 
     with pytest.raises(ValidationError) as error:
-        Prompt2BlogCommission.model_validate(payload)
+        Prompt2BlogWorkOrder.model_validate(payload)
 
     assert "undeclared assumptions: a4" in str(error.value)
 
 
-def test_commission_rejects_duplicate_premise_ids():
-    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["commission"])
+def test_work_order_rejects_duplicate_premise_ids():
+    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["work_order"])
     payload["premise"] = [
         {"assumption_id": "a1", "statement": "The 2026 ranking is published."},
         {"assumption_id": "a1", "statement": "The ceremony has taken place."},
     ]
 
     with pytest.raises(ValidationError) as error:
-        Prompt2BlogCommission.model_validate(payload)
+        Prompt2BlogWorkOrder.model_validate(payload)
 
     assert "assumption_id" in str(error.value)
 
 
-def test_commission_carries_a_declared_premise_through_validation():
-    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["commission"])
+def test_work_order_carries_a_declared_premise_through_validation():
+    payload = deepcopy(json.loads(FIXTURE_PATH.read_text())["work_order"])
     payload["premise"] = [
         {"assumption_id": "a1", "statement": "Lima publishes current rent data."}
     ]
     payload["requirements"][0]["assumption_ids"] = ["a1"]
 
-    commission = Prompt2BlogCommission.model_validate(payload)
+    work_order = Prompt2BlogWorkOrder.model_validate(payload)
 
-    assert commission.premise[0].statement == "Lima publishes current rent data."
-    assert commission.requirements[0].assumption_ids == ["a1"]
+    assert work_order.premise[0].statement == "Lima publishes current rent data."
+    assert work_order.requirements[0].assumption_ids == ["a1"]

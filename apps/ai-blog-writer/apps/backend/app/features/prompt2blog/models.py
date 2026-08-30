@@ -37,15 +37,18 @@ class ClassifyResponse(BaseModel):
     classification: ClassificationResult
 
 
-class PipelineV3RuntimeRequest(BaseModel):
-    """Everything a v3 run needs, derived only from an approved commission.
+class PipelineV4RuntimeRequest(BaseModel):
+    """Everything a run needs, derived from the brief and its work order.
 
-    Deliberately not a flattened v2 request: the commission and the exact
-    evidence records stay whole so no stage has to reconstruct them.
+    Both stay whole rather than being flattened, so no stage has to
+    reconstruct them. They are separate here for the same reason they are
+    separate in the contract: the brief rides the whole run and is judged
+    against, while the work order stops mattering once research answers it.
     """
 
-    schema_version: int = 3
-    commission: dict[str, Any]
+    schema_version: int = 4
+    brief: dict[str, Any]
+    work_order: dict[str, Any]
     evidence: dict[str, Any]
     instructions: dict[str, Any]
     option_context: dict[str, Any] = Field(default_factory=dict)
@@ -63,30 +66,4 @@ class PipelineV3RuntimeRequest(BaseModel):
     outline_model: str | None = None
     groundedness_model: str | None = None
     title_model: str | None = None
-    model_stack_id: str | None = None
-
-
-class Prompt2BlogInputRequest(BaseModel):
-    article_type_id: int
-    source_material: List[str] = Field(default_factory=list)
-    article_goal: str
-    target_reader: str
-    destination_context: str
-    angle: str | None = None
-    tone_id: str
-    length_id: str
-    brand_voice_id: str | None = None
-    primary_keyword: str | None = None
-    secondary_keywords: List[str] = Field(default_factory=list)
-    call_to_action: str | None = None
-    must_include: List[str] = Field(default_factory=list)
-    audience_profile: str | None = None
-    prompt_enhance: bool = True
-    creativity_level: str = "medium"
-    negative_instructions: List[str] = Field(default_factory=list)
-    include_debug: bool = True
-    enable_editorial_augmentation: bool = False
-    model_name: str | None = None
-    writing_model: str | None = None
-    audit_model: str | None = None
     model_stack_id: str | None = None

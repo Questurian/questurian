@@ -1,0 +1,152 @@
+{
+  "schema_version": 4,
+  "brief": {
+    "schema_version": 4,
+    "seed": "Is Lima still South America's bargain expat capital?",
+    "location": "Lima, Peru",
+    "form_id": "analysis",
+    "topic_module_ids": [
+      "cost-affordability",
+      "accommodation-neighborhoods",
+      "safety",
+      "long-stay-remote-work"
+    ],
+    "reader": {
+      "primary_reader": "Prospective expats and remote workers evaluating Lima for a long stay",
+      "tags": [
+        "remote-worker-relocator",
+        "budget-focused"
+      ]
+    },
+    "reader_question": "Does Lima still offer a compelling balance of cost, quality of life, and practical livability for a long stay?",
+    "outcome": "Readers can judge Lima on current evidence and understand which tradeoffs affect its value.",
+    "spine": "Assess whether Lima still offers strong long-stay value without turning the article into a city-versus-city comparison.",
+    "must_name": [],
+    "material": [],
+    "fails_if": "reads like an evidence review instead of a piece about Lima",
+    "brief_fingerprint": "bf-d328a4e0c359f76d"
+  },
+  "work_order": {
+    "schema_version": 4,
+    "brief_fingerprint": "bf-d328a4e0c359f76d",
+    "primary_subject": "Lima",
+    "scope": {
+      "mode": "single_subject",
+      "references": [
+        {
+          "name": "Lima",
+          "role": "primary_subject"
+        },
+        {
+          "name": "Medellín",
+          "role": "context_only"
+        },
+        {
+          "name": "Buenos Aires",
+          "role": "context_only"
+        }
+      ]
+    },
+    "premise": [],
+    "requirements": [
+      {
+        "requirement_id": "r1",
+        "question": "What do current housing, food, transport, and routine monthly costs show about Lima's affordability?",
+        "kind": "load_bearing"
+      },
+      {
+        "requirement_id": "r2",
+        "question": "Which quality-of-life and practical tradeoffs materially change the value judgment?",
+        "kind": "load_bearing"
+      },
+      {
+        "requirement_id": "r3",
+        "question": "How has Lima's value proposition changed over time?",
+        "kind": "load_bearing"
+      }
+    ],
+    "work_order_fingerprint": "wo-8db80ddf2060efa1"
+  },
+  "evidence_package": {
+    "schema_version": 4,
+    "sources": [
+      {
+        "source_id": "s1",
+        "title": "Lima consumer price bulletin",
+        "publisher": "Instituto Nacional de Estadística e Informática",
+        "url": "https://www.inei.gob.pe/example-lima-prices",
+        "published_at": "2026-07-01",
+        "retrieved_at": "2026-08-25",
+        "source_type": "official",
+        "material_type": "report",
+        "notes": [
+          "Current price reporting can support a dated affordability baseline."
+        ]
+      }
+    ],
+    "claims": [
+      {
+        "claim_id": "c1",
+        "text": "Official price reporting provides a current baseline for evaluating Lima's routine costs.",
+        "source_ids": [
+          "s1"
+        ],
+        "requirement_ids": [
+          "r1"
+        ],
+        "as_of": "2026-07-01",
+        "confidence": "high"
+      }
+    ],
+    "requirements": [
+      {
+        "requirement_id": "r1",
+        "status": "supported",
+        "claim_ids": [
+          "c1"
+        ],
+        "gap": ""
+      },
+      {
+        "requirement_id": "r2",
+        "status": "missing",
+        "claim_ids": [],
+        "gap": "Current quality-of-life evidence is still needed."
+      },
+      {
+        "requirement_id": "r3",
+        "status": "missing",
+        "claim_ids": [],
+        "gap": "Comparable historical evidence is still needed."
+      }
+    ],
+    "premise_findings": [],
+    "conflicts": [],
+    "gaps": [
+      {
+        "gap_id": "g1",
+        "requirement_ids": [
+          "r2"
+        ],
+        "summary": "Find current evidence for Lima's practical quality-of-life tradeoffs."
+      },
+      {
+        "gap_id": "g2",
+        "requirement_ids": [
+          "r3"
+        ],
+        "summary": "Find comparable earlier and current evidence for change over time."
+      }
+    ],
+    "work_order_fingerprint": "wo-8db80ddf2060efa1"
+  },
+  "expected": {
+    "form_id": "analysis",
+    "primary_subject": "Lima",
+    "context_only_references": [
+      "Medellín",
+      "Buenos Aires"
+    ],
+    "readiness": "needs_research"
+  }
+}

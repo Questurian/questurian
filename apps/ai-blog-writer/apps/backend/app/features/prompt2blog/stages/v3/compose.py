@@ -47,10 +47,10 @@ def run_v3_compose_stage(
     )
     rewrite = _sanitize_rewrite(
         parsed,
-        # The commission owns the working title until the title stage runs; the
+        # The brief owns the working title until the title stage runs; the
         # evidence is never a fallback body, because empty prose is honest and
         # pasted records are not.
-        fallback_title=state["commission"]["original_title"],
+        fallback_title=state["brief"]["seed"],
         fallback_content="",
     )
     rewrite["improved_content"] = dependencies.llm.enforce_anti_ai(
@@ -71,8 +71,8 @@ def run_v3_compose_stage(
         stage=stage,
         model_name=state["writing_model"],
         input_payload={
-            "commission_fingerprint": state["commission"]["commission_fingerprint"],
-            "form_id": state["commission"]["form_id"],
+            "brief_fingerprint": state["brief"]["brief_fingerprint"],
+            "form_id": state["brief"]["form_id"],
             "outline_accepted": state.get("outline_accepted", False),
             "style_directive": style_directive,
         },

@@ -1,4 +1,4 @@
-"""V3 outline and compose: commission-first planning, evidence-only prose."""
+"""Outline and compose: brief-first planning, evidence-only prose."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from app.features.prompt2blog.content.outline_v3 import (
     sanitize_v3_outline,
     validate_v3_outline,
 )
-from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
+from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
 from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
 from app.features.prompt2blog.stages.v3.compose import run_v3_compose_stage
@@ -25,7 +25,7 @@ FIXTURE_PATH = (
     / "data"
     / "fixtures"
     / "prompt2blog"
-    / "lima-scope-drift-v3.json"
+    / "lima-scope-drift-v4.json"
 )
 
 
@@ -65,13 +65,13 @@ def _supported_evidence() -> dict:
 
 
 def _runtime():
-    request = Prompt2BlogV3Request.model_validate(
+    request = Prompt2BlogV4Request.model_validate(
         {
-            "schema_version": 3,
-            "commission": _fixture()["commission"],
+            "schema_version": 4,
+            "brief": _fixture()["brief"],
+            "work_order": _fixture()["work_order"],
             "evidence_package": _supported_evidence(),
             "profiles": {
-                "tone_id": "questurian-voice",
                 "length_id": "medium",
                 "creativity_level": "medium",
             },
@@ -84,7 +84,8 @@ def _state(**overrides) -> dict[str, Any]:
     runtime = _runtime()
     state: dict[str, Any] = {
         "run_id": "v3-run",
-        "commission": runtime.commission,
+        "brief": runtime.brief,
+        "work_order": runtime.work_order,
         "evidence": runtime.evidence,
         "instructions": runtime.instructions,
         "stage_contexts": runtime.instructions["stage_contexts"],
@@ -162,7 +163,7 @@ def _outline_payload(**overrides) -> dict[str, Any]:
             },
         ],
         "takeaway_focus": "What decides the answer for a long stay.",
-        "commission_alignment": "Answers the cost question about Lima itself.",
+        "brief_alignment": "Answers the cost question about Lima itself.",
         "unsupported_requirements": [],
     }
     payload.update(overrides)
@@ -173,7 +174,7 @@ def _validate(payload: dict[str, Any], target_word_count: int = 900):
     runtime = _runtime()
     return validate_v3_outline(
         sanitize_v3_outline(payload),
-        commission=runtime.commission,
+        work_order=runtime.work_order,
         claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
         requirement_ids={
             item["requirement_id"] for item in runtime.evidence["requirements"]
@@ -187,9 +188,9 @@ def test_city_only_outline_wording_covers_city_country_primary_subject(
     subject_mention: str,
 ):
     runtime = _runtime()
-    commission = json.loads(json.dumps(runtime.commission))
-    commission["primary_subject"] = "Medellín, Colombia"
-    commission["scope"]["references"] = []
+    work_order = json.loads(json.dumps(runtime.work_order))
+    work_order["primary_subject"] = "Medellín, Colombia"
+    work_order["scope"]["references"] = []
     payload = _outline_payload()
     payload["sections"][0]["heading"] = f"What {subject_mention} costs now"
     payload["sections"][0]["purpose"] = (
@@ -198,7 +199,7 @@ def test_city_only_outline_wording_covers_city_country_primary_subject(
 
     accepted, diagnostics = validate_v3_outline(
         sanitize_v3_outline(payload),
-        commission=commission,
+        work_order=work_order,
         claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
         requirement_ids={
             item["requirement_id"] for item in runtime.evidence["requirements"]
@@ -212,13 +213,13 @@ def test_city_only_outline_wording_covers_city_country_primary_subject(
 
 def test_unrelated_city_does_not_cover_city_country_primary_subject():
     runtime = _runtime()
-    commission = json.loads(json.dumps(runtime.commission))
-    commission["primary_subject"] = "Medellín, Colombia"
-    commission["scope"]["references"] = []
+    work_order = json.loads(json.dumps(runtime.work_order))
+    work_order["primary_subject"] = "Medellín, Colombia"
+    work_order["scope"]["references"] = []
 
     accepted, diagnostics = validate_v3_outline(
         sanitize_v3_outline(_outline_payload()),
-        commission=commission,
+        work_order=work_order,
         claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
         requirement_ids={
             item["requirement_id"] for item in runtime.evidence["requirements"]
@@ -277,7 +278,7 @@ def test_sections_may_carry_the_subject_implicitly_when_the_framing_names_it():
     assert diagnostics["covers_primary_subject"] is True
 
 
-def test_a_commission_aligned_plan_is_accepted_and_rendered_for_compose():
+def test_a_brief_aligned_plan_is_accepted_and_rendered_for_compose():
     accepted, diagnostics = _validate(_outline_payload())
 
     assert accepted is True
@@ -330,7 +331,7 @@ def test_the_outline_prompt_gets_planning_context_not_the_whole_stack():
     prompt = llm.prompts[0]
     assert "OUTLINE AUTHORITY" in prompt
     assert "CLAIM INDEX" in prompt
-    assert "APPROVED COMMISSION" in prompt
+    assert "APPROVED BRIEF" in prompt
     assert "## Allowed structures" in prompt
     assert "Instituto Nacional de Estadística e Informática" not in prompt
     assert "HOUSE STYLE" not in prompt
@@ -344,7 +345,7 @@ def test_compose_writes_from_evidence_records_and_never_from_source_prose():
         json_response={
             "improved_title": "What Lima costs now",
             "improved_content": "## What Lima costs now\n\nBody.",
-            "commission_alignment_summary": "Answers the cost question.",
+            "brief_alignment_summary": "Answers the cost question.",
             "improvements_applied": [],
             "remaining_gaps": [],
         }
@@ -389,4 +390,4 @@ def test_compose_does_not_fall_back_to_pasting_the_evidence():
 
     rewrite = updates["rewrite"]
     assert rewrite["improved_content"] == ""
-    assert rewrite["improved_title"] == _fixture()["commission"]["original_title"]
+    assert rewrite["improved_title"] == _fixture()["brief"]["seed"]

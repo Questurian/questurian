@@ -28,7 +28,7 @@ from utils.llm_model_policy import (
 )
 
 from ..config import DEFAULT_MODEL, FEATURE_NAME
-from ..contracts_v3 import Prompt2BlogV3Request
+from ..contracts_v4 import Prompt2BlogV4Request
 from ..drafts_view import build_drafts_report, render_drafts_page
 from ..intake_v3 import (
     prepare_v3_runtime_request,
@@ -36,7 +36,7 @@ from ..intake_v3 import (
     v3_run_input_artifact,
 )
 from ..observability import _read_langgraph_trace
-from ..models import PipelineV3RuntimeRequest
+from ..models import PipelineV4RuntimeRequest
 from ..orchestrator_v3 import resume_pipeline_v3, run_pipeline_v3
 from ..resume_v3 import plan_resume
 from ..run_recorder import RunRecorder
@@ -83,7 +83,7 @@ RESUME_REFUSAL_MESSAGES = {
 
 def _run_pipeline_v3_background(
     run_id: str,
-    request: PipelineV3RuntimeRequest,
+    request: PipelineV4RuntimeRequest,
     credential: Prompt2BlogCredential | None,
 ) -> None:
     """Keep background-task failures contained after the graph records them."""
@@ -127,7 +127,7 @@ def _prompt2blog_credential_for_run() -> Prompt2BlogCredential | None:
 
 @router.post("/pipeline-v3")
 async def start_pipeline_v3(
-    request: Prompt2BlogV3Request,
+    request: Prompt2BlogV4Request,
     background_tasks: BackgroundTasks,
     staff_user=Depends(require_staff),
 ) -> JSONResponse:

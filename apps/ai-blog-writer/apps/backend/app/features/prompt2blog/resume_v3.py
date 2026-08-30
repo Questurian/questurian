@@ -26,7 +26,7 @@ Correctness before saving money
 A resume that restored the wrong state would publish an article whose prose,
 scores and evidence do not describe each other. Every check here fails closed:
 an unreadable snapshot, a snapshot written by a different version of this code,
-a snapshot whose commission is not the commission the run started with, or a
+a snapshot whose brief is not the brief the run started with, or a
 run that is not actually in a failed state, all refuse the resume and cost
 nothing. Refusing means starting a fresh run, which is exactly what happens
 today.
@@ -49,7 +49,7 @@ from .graph.topology_v3 import (
     next_v3_node,
 )
 from .intake_v3 import RUN_INPUT_STAGE
-from .models import PipelineV3RuntimeRequest
+from .models import PipelineV4RuntimeRequest
 from .observability import _now_iso
 from .run_recorder import USAGE_LEDGER_STAGE
 from .support import _safe_dict, _safe_int, _safe_str
@@ -138,8 +138,8 @@ def snapshot_payload(
         "snapshot_version": RESUME_SNAPSHOT_VERSION,
         "run_id": state["run_id"],
         "schema_version": request.schema_version,
-        "commission_fingerprint": _safe_str(
-            _safe_dict(state.get("commission")).get("commission_fingerprint")
+        "brief_fingerprint": _safe_str(
+            _safe_dict(state.get("brief")).get("brief_fingerprint")
         ),
         "completed_node": completed_node,
         "completed_stage": V3_NODE_STAGE_NAMES[completed_node],
@@ -229,11 +229,11 @@ def completed_stages(run_id: str) -> tuple[str, ...]:
     )
 
 
-def _commission_agrees(run_id: str, snapshot: dict[str, Any]) -> bool:
-    """Do every record of which commission this run is for say the same thing?
+def _brief_agrees(run_id: str, snapshot: dict[str, Any]) -> bool:
+    """Do every record of which brief this run is for say the same thing?
 
     Three witnesses, of which at least two always exist: the snapshot header,
-    the request stored inside it, and the state's own commission. A run started
+    the request stored inside it, and the state's own brief. A run started
     through the API adds a fourth -- the `pipeline_input_v3` row, written
     before the first node and never rewritten. They are compared rather than
     trusted individually, because the failure this guards against is a state
@@ -243,16 +243,16 @@ def _commission_agrees(run_id: str, snapshot: dict[str, Any]) -> bool:
     snapshot_state = _safe_dict(snapshot.get("state"))
     request_payload = _safe_dict(snapshot.get("request"))
     fingerprints = {
-        _safe_str(snapshot.get("commission_fingerprint")),
+        _safe_str(snapshot.get("brief_fingerprint")),
         _safe_str(
-            _safe_dict(snapshot_state.get("commission")).get("commission_fingerprint")
+            _safe_dict(snapshot_state.get("brief")).get("brief_fingerprint")
         ),
         _safe_str(
-            _safe_dict(request_payload.get("commission")).get(
-                "commission_fingerprint"
+            _safe_dict(request_payload.get("brief")).get(
+                "brief_fingerprint"
             )
         ),
-        _safe_str(_stage_data(run_id, RUN_INPUT_STAGE).get("commission_fingerprint")),
+        _safe_str(_stage_data(run_id, RUN_INPUT_STAGE).get("brief_fingerprint")),
     }
     # An absent witness is silence, not disagreement; a run recorded without a
     # fingerprint anywhere is caught by the empty set left behind.
@@ -301,11 +301,11 @@ def plan_resume(run_id: str) -> ResumePlan:
         return refuse("snapshot_version_unsupported")
 
     request_payload = _safe_dict(snapshot.get("request"))
-    if _safe_int(request_payload.get("schema_version"), default=0) != 3:
+    if _safe_int(request_payload.get("schema_version"), default=0) != 4:
         return refuse("schema_version_unsupported")
 
-    if not _commission_agrees(run_id, snapshot):
-        return refuse("commission_mismatch")
+    if not _brief_agrees(run_id, snapshot):
+        return refuse("brief_mismatch")
 
     next_node = snapshot.get("next_node")
     if next_node is None:
@@ -332,7 +332,7 @@ def plan_resume(run_id: str) -> ResumePlan:
 
 def restore_v3_state(
     run_id: str,
-) -> tuple[Prompt2BlogV3GraphState, PipelineV3RuntimeRequest, str, int]:
+) -> tuple[Prompt2BlogV3GraphState, PipelineV4RuntimeRequest, str, int]:
     """Rebuild the state, the request, the entry node and the resume count.
 
     Call only behind a `plan_resume` that said yes; this raises rather than
@@ -349,7 +349,7 @@ def restore_v3_state(
     if entry_node not in V3_GENERATION_NODES:
         raise ValueError(f"Run {run_id} snapshot names no runnable next stage")
 
-    request = PipelineV3RuntimeRequest.model_validate(_safe_dict(snapshot["request"]))
+    request = PipelineV4RuntimeRequest.model_validate(_safe_dict(snapshot["request"]))
     resume_count = resume_attempts_used(run_id) + 1
 
     state: Prompt2BlogV3GraphState = dict(  # type: ignore[assignment]

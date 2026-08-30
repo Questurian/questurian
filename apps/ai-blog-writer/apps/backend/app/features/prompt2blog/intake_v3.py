@@ -1,9 +1,9 @@
 """Prompt2Blog v3 intake.
 
-Turns an approved commission plus its verified evidence into the runtime
+Turns an approved brief and its work order plus verified evidence into the runtime
 request a v3 run will execute, and into the versioned run-input artifact a
 finished run has to be able to show. Nothing here calls a model, and nothing
-here flattens the commission or the evidence into v2 shapes: preserving both
+here flattens the brief, the work order or the evidence: preserving all three
 whole is the point of the migration.
 """
 
@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from .contracts_v3 import Prompt2BlogV3Request
+from .contracts_v4 import Prompt2BlogV4Request
 from .editorial_catalog import EditorialCatalog
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
 from .instructions_v3 import INSTRUCTION_SCHEMA_VERSION, assemble_v3_instructions
-from .models import PipelineV3RuntimeRequest
+from .models import PipelineV4RuntimeRequest
 from .research_readiness_v3 import (
     ResearchReadiness,
     assess_research_readiness,
@@ -32,26 +32,25 @@ from .support import _safe_str
 RUN_INPUT_STAGE = "pipeline_input_v3"
 
 
-def resolve_v3_option_context(request: Prompt2BlogV3Request) -> dict[str, Any]:
-    """Resolves the writing profiles a v3 request names, or fails by name."""
+def resolve_v3_option_context(request: Prompt2BlogV4Request) -> dict[str, Any]:
+    """Resolves what is still selectable about the writing, or fails by name.
+
+    The voice is no longer among it. There is one Questurian voice and one set
+    of writing conventions, both always sent (ADR 0032), so they are loaded
+    rather than chosen -- nothing here can select the wrong one.
+    """
     catalog = _load_prompt2blog_option_catalog()
     profiles = request.profiles
 
-    tone = _find_option_or_raise(
-        catalog.get("tones", []), profiles.tone_id, field_name="tone_id"
-    )
+    voice = _default_option(catalog.get("tones", []))
+    if not voice:
+        raise RuntimeError("The Questurian voice is not configured.")
+    conventions = _default_option(catalog.get("brand_voices", []))
+    if not conventions:
+        raise RuntimeError("The writing conventions are not configured.")
     length = _find_option_or_raise(
         catalog.get("lengths", []), profiles.length_id, field_name="length_id"
     )
-    brand_voices = catalog.get("brand_voices", [])
-    if profiles.brand_voice_id:
-        brand_voice = _find_option_or_raise(
-            brand_voices, profiles.brand_voice_id, field_name="brand_voice_id"
-        )
-    else:
-        brand_voice = _default_option(brand_voices)
-        if not brand_voice:
-            raise RuntimeError("No brand voice options are configured.")
 
     creativity_level = _safe_str(profiles.creativity_level).lower() or "medium"
     if creativity_level not in PROMPT2BLOG_CREATIVITY_LEVELS:
@@ -61,25 +60,28 @@ def resolve_v3_option_context(request: Prompt2BlogV3Request) -> dict[str, Any]:
         )
 
     return {
-        "tone": tone,
+        # Kept under their old keys so every stage that reads a style directive
+        # keeps working; there is simply only ever one of each now.
+        "tone": voice,
         "length": length,
-        "brand_voice": brand_voice,
+        "brand_voice": conventions,
         "creativity_level": creativity_level,
     }
 
 
 def prepare_v3_runtime_request(
-    request: Prompt2BlogV3Request,
+    request: Prompt2BlogV4Request,
     *,
     catalog: EditorialCatalog | None = None,
-) -> PipelineV3RuntimeRequest:
+) -> PipelineV4RuntimeRequest:
     """Assembles one v3 runtime request without running or recording anything."""
     option_context = resolve_v3_option_context(request)
     instructions = assemble_v3_instructions(request, catalog=catalog)
-    evidence = normalize_evidence(request.commission, request.evidence_package)
+    evidence = normalize_evidence(request.work_order, request.evidence_package)
 
-    return PipelineV3RuntimeRequest(
-        commission=request.commission.model_dump(mode="json"),
+    return PipelineV4RuntimeRequest(
+        brief=request.brief.model_dump(mode="json"),
+        work_order=request.work_order.model_dump(mode="json"),
         evidence=evidence.model_dump(mode="json"),
         instructions=instructions.model_dump(mode="json"),
         option_context=option_context,
@@ -96,33 +98,35 @@ def prepare_v3_runtime_request(
     )
 
 
-def v3_run_input_artifact(runtime: PipelineV3RuntimeRequest) -> dict[str, Any]:
+def v3_run_input_artifact(runtime: PipelineV4RuntimeRequest) -> dict[str, Any]:
     """The versioned run-input record; readable without replaying the run."""
-    commission = runtime.commission
+    brief = runtime.brief
+    work_order = runtime.work_order
     instructions = runtime.instructions
     evidence = runtime.evidence
     instruction_meta = instructions.get("instruction_meta", {})
     return {
         "schema_version": runtime.schema_version,
         "instruction_schema_version": INSTRUCTION_SCHEMA_VERSION,
-        "commission_fingerprint": commission["commission_fingerprint"],
-        "original_title": commission["original_title"],
-        "location": commission["location"],
-        "form_id": commission["form_id"],
-        "topic_module_ids": list(commission["topic_module_ids"]),
-        "audience": commission["audience"],
-        "scope_mode": commission["scope"]["mode"],
+        "brief_fingerprint": brief["brief_fingerprint"],
+        "work_order_fingerprint": work_order["work_order_fingerprint"],
+        "seed": brief["seed"],
+        "location": brief["location"],
+        "form_id": brief["form_id"],
+        "topic_module_ids": list(brief["topic_module_ids"]),
+        "reader": brief["reader"],
+        "spine": brief["spine"],
+        "fails_if": brief["fails_if"],
+        "scope_mode": work_order["scope"]["mode"],
         "requirement_ids": [
-            requirement["requirement_id"] for requirement in commission["requirements"]
+            requirement["requirement_id"] for requirement in work_order["requirements"]
         ],
         "precedence": list(instructions.get("precedence", [])),
         "instruction_meta": instruction_meta,
         "evidence_receipt": instruction_meta.get("evidence_receipt", {}),
         "source_ids": [source["source_id"] for source in evidence["sources"]],
         "profiles": {
-            "tone_id": runtime.option_context["tone"]["id"],
             "length_id": runtime.option_context["length"]["id"],
-            "brand_voice_id": runtime.option_context["brand_voice"]["id"],
             "creativity_level": runtime.option_context["creativity_level"],
         },
         "model_routing": {
@@ -141,19 +145,19 @@ def v3_run_input_artifact(runtime: PipelineV3RuntimeRequest) -> dict[str, Any]:
 
 
 def v3_readiness(
-    request: Prompt2BlogV3Request,
+    request: Prompt2BlogV4Request,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> tuple[NormalizedEvidence, ResearchReadiness]:
     """Runs the research gate for one request without touching a model."""
-    evidence = normalize_evidence(request.commission, request.evidence_package)
+    evidence = normalize_evidence(request.work_order, request.evidence_package)
     return evidence, assess_research_readiness(
-        request.commission, evidence, catalog=catalog
+        request.brief, request.work_order, evidence, catalog=catalog
     )
 
 
 def v3_intake_result(
-    request: Prompt2BlogV3Request,
+    request: Prompt2BlogV4Request,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> dict[str, Any]:
@@ -166,7 +170,7 @@ def v3_intake_result(
     evidence, readiness = v3_readiness(request, catalog=catalog)
     if not readiness.ready:
         return needs_research_payload(
-            request.commission, evidence, readiness, catalog=catalog
+            request.brief, request.work_order, evidence, readiness, catalog=catalog
         )
 
     runtime = prepare_v3_runtime_request(request, catalog=catalog)
