@@ -1,7 +1,8 @@
 """The HTTP surface for the four intake stages.
 
 One route per move the operator can make: type a seed, answer a question, go
-back into the grill, approve the brief, plan the research, cut the plan. Each
+back into the grill, approve the brief, plan the research, cut the plan, run
+the research. Each
 one is a turn -- it loads what the run knows, advances it, writes it back -- so
 a page that is reloaded, or reopened tomorrow, asks `GET /intake/{run_id}` and
 carries on.
@@ -20,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff, staff_user_id
 
+from ..config import P2B_V4_RESEARCH_STRUCTURE_MODEL
 from ..dependencies import PipelineDependencies
 from ..grill_v4 import (
     GRILL_RESEARCH_MAX_TOKENS,
@@ -32,10 +34,13 @@ from ..intake_v4 import (
     apply_cut,
     approve_brief,
     begin_intake,
+    do_research,
     intake_state,
     plan_research,
     reopen_intake,
+    writing_request,
 )
+from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies
 from ..run_budget import RunTokenCeilingReached
 
 logger = logging.getLogger(__name__)
@@ -77,11 +82,28 @@ def _ground(prompt: str) -> tuple[str, list[str], int | None]:
     return result.text, list(result.source_urls), result.total_tokens
 
 
+def _gather(prompt: str, model_name: str) -> tuple[str, list[str], int | None]:
+    """One grounded pass, for research rather than for the grill."""
+    from utils import invoke_google_grounded_text
+
+    result = invoke_google_grounded_text(
+        prompt, model_name=model_name, max_tokens=GATHER_MAX_TOKENS
+    )
+    if result is None:
+        return "", [], None
+    return result.text, list(result.source_urls), result.total_tokens
+
+
 def _services() -> IntakeServices:
     pipeline = PipelineDependencies()
     return IntakeServices(
         dependencies=GrillDependencies(llm=pipeline.llm, research=_ground),
         recorder=pipeline.recorder,
+        research=ResearchDependencies(
+            gather=_gather,
+            structure_llm=pipeline.llm,
+            structure_model=P2B_V4_RESEARCH_STRUCTURE_MODEL,
+        ),
     )
 
 
@@ -164,3 +186,28 @@ async def cut_the_work_order(
         added_questions=request.added_questions,
     )
     return JSONResponse({**intake_state(run_id), "cut_warnings": outcome.warnings})
+
+
+@router.post("/{run_id}/research")
+async def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """Both research passes, then the one gate that blocks.
+
+    A run that cannot be written still answers 200: this is a product state,
+    not an error. The page reads `research.coverage` to see whether it may go
+    on, and what is missing if not.
+    """
+    _handle(do_research, run_id, _services())
+    return JSONResponse(intake_state(run_id))
+
+
+@router.get("/{run_id}/writing-request")
+async def read_writing_request(
+    run_id: str, _staff=Depends(require_staff)
+) -> JSONResponse:
+    """What the graph would run, assembled from what intake settled.
+
+    Refuses when research said no -- the same gate, enforced at the hand-off
+    rather than re-decided here.
+    """
+    request = _handle(writing_request, run_id)
+    return JSONResponse(request.model_dump(mode="json"))

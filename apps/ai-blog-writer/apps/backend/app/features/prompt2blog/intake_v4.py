@@ -36,6 +36,18 @@ from .grill_v4 import (
     reopen_grill,
     start_grill,
 )
+from .coverage_v4 import CoverageVerdict, assess_coverage
+from .contracts_v4 import (
+    EvidencePackage,
+    Prompt2BlogV4Request,
+    Prompt2BlogWritingProfiles,
+)
+from .research_v4 import (
+    RESEARCH_STAGE,
+    ResearchDependencies,
+    research_stage_record,
+    run_research,
+)
 from .run_budget import enforce_run_budget
 from .run_recorder import RunRecorder
 from .support import _safe_dict, _safe_str
@@ -57,10 +69,13 @@ STATE_KEY = "state"
 
 @dataclass
 class IntakeServices:
-    """What a turn needs. Both halves are replaceable in tests."""
+    """What a turn needs. Every half is replaceable in tests."""
 
     dependencies: GrillDependencies
     recorder: RunRecorder
+    # Only the research turn needs these, so a test that never researches does
+    # not have to invent them.
+    research: ResearchDependencies | None = None
 
 
 def _stage_data(run_id: str, stage: str) -> dict[str, Any]:
@@ -158,7 +173,7 @@ def reopen_intake(run_id: str, services: IntakeServices) -> GrillState:
     state = _load_grill(run_id)
     reopened = reopen_grill(state, services.dependencies)
 
-    for stage in (BRIEF_STAGE, WORK_ORDER_STAGE):
+    for stage in (BRIEF_STAGE, WORK_ORDER_STAGE, RESEARCH_STAGE):
         if read_stage_result(run_id, stage) is not None:
             services.recorder.discard_stage(run_id, stage)
 
@@ -202,6 +217,9 @@ def apply_cut(
     added_questions: list[str] | None = None,
 ) -> CutOutcome:
     """Apply the operator's cut. No model call; this is their decision, not one."""
+    if read_stage_result(run_id, RESEARCH_STAGE) is not None:
+        # Research answered the questions that were there before the cut.
+        services.recorder.discard_stage(run_id, RESEARCH_STAGE)
     outcome = cut_work_order(
         load_work_order(run_id),
         load_brief(run_id),
@@ -220,16 +238,79 @@ def apply_cut(
     return outcome
 
 
+def load_evidence(run_id: str) -> EvidencePackage:
+    stored = _stage_data(run_id, RESEARCH_STAGE).get(STATE_KEY)
+    if not isinstance(stored, dict):
+        raise LookupError(f"No research for run {run_id}.")
+    return EvidencePackage.model_validate(stored)
+
+
+def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
+    """Run both research passes and decide whether this can be written.
+
+    The verdict is recorded whether or not it passes. A run that stopped here
+    should be able to say why without anyone re-running anything.
+    """
+    if services.research is None:
+        raise ValueError("Research is not configured for this run.")
+    enforce_run_budget(_run_tokens_spent(run_id), stage=RESEARCH_STAGE)
+
+    brief = load_brief(run_id)
+    work_order = load_work_order(run_id)
+    evidence, notes = run_research(brief, work_order, services.research)
+    verdict = assess_coverage(work_order, evidence)
+
+    _record(
+        services,
+        run_id,
+        RESEARCH_STAGE,
+        {
+            **research_stage_record(evidence, notes),
+            "coverage": verdict.as_record(),
+            STATE_KEY: json.loads(evidence.model_dump_json()),
+        },
+    )
+    return verdict
+
+
+def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4Request:
+    """Assemble what the graph runs from, out of what intake settled.
+
+    Refuses if research said no. The gate is decided once, in one place; this
+    is not a second opinion, it is the same one enforced at the hand-off.
+    """
+    brief = load_brief(run_id)
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+
+    verdict = assess_coverage(work_order, evidence)
+    if not verdict.can_write:
+        raise ValueError(
+            f"This run cannot be written yet: {verdict.reason}. "
+            + " ".join(verdict.findings)
+        )
+
+    return Prompt2BlogV4Request(
+        brief=brief,
+        work_order=work_order,
+        evidence_package=evidence,
+        profiles=Prompt2BlogWritingProfiles(length_id=length_id),
+    )
+
+
 def intake_state(run_id: str) -> dict[str, Any]:
     """Where this run stands, for a page that may have been reloaded."""
     grill = _stage_data(run_id, GRILL_STAGE)
     brief = _stage_data(run_id, BRIEF_STAGE)
     work_order = _stage_data(run_id, WORK_ORDER_STAGE)
+    research = _stage_data(run_id, RESEARCH_STAGE)
     grill_state = _safe_dict(grill.get(STATE_KEY))
     return {
         "run_id": run_id,
         "step": (
-            "work_order"
+            "research"
+            if research
+            else "work_order"
             if work_order
             else "brief"
             if brief
@@ -250,5 +331,7 @@ def intake_state(run_id: str) -> dict[str, Any]:
         "work_order": {
             key: value for key, value in work_order.items() if key != STATE_KEY
         }
+        or None,
+        "research": {key: value for key, value in research.items() if key != STATE_KEY}
         or None,
     }
