@@ -1,12 +1,12 @@
 ---
-id: house-rules
-label: House rules
-description: The mechanical rules that cannot be inferred from the voice.
+id: writing-conventions
+label: Writing conventions
+description: The mechanical conventions that cannot be inferred from the voice. Not the pipeline's house-rules.md, which is a different document.
 default: true
 order: 2
 ---
 
-# House rules
+# Writing conventions
 
 These are conventions, not character. The voice document says what Questurian
 is like; this says how it sets things down. Where the two seem to conflict, the

@@ -71,7 +71,7 @@ def _runtime():
             "commission": _fixture()["commission"],
             "evidence_package": _supported_evidence(),
             "profiles": {
-                "tone_id": "editorial",
+                "tone_id": "questurian-voice",
                 "length_id": "medium",
                 "creativity_level": "medium",
             },

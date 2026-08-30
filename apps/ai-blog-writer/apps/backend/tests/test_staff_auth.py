@@ -325,7 +325,7 @@ async def test_guarded_route_rejects_anonymous_requests_when_enabled(monkeypatch
     monkeypatch.setenv(staff_auth.STAFF_AUTH_FLAG, "true")
 
     async with _app_client() as client:
-        response = await client.post("/youtube2blog/clear")
+        response = await client.delete("/staged-drafts?storageKey=test-key")
 
     assert response.status_code == 401
 
@@ -338,8 +338,8 @@ async def test_clear_route_rejects_writer_when_enabled(monkeypatch, isolated_db)
     )
 
     async with _app_client() as client:
-        response = await client.post(
-            "/youtube2blog/clear",
+        response = await client.delete(
+            "/claude/prompt2blog-credential",
             headers={"Authorization": "Bearer writer-token"},
         )
 
@@ -354,8 +354,8 @@ async def test_clear_route_accepts_editor_when_enabled(monkeypatch, isolated_db)
     )
 
     async with _app_client() as client:
-        response = await client.post(
-            "/youtube2blog/clear",
+        response = await client.delete(
+            "/claude/prompt2blog-credential",
             headers={"Authorization": "Bearer editor-token"},
         )
 
@@ -366,9 +366,7 @@ async def test_clear_route_accepts_editor_when_enabled(monkeypatch, isolated_db)
 @pytest.mark.parametrize(
     "feature,path",
     [
-        ("youtube2blog", "/youtube2blog/articles/other-run"),
         ("prompt2blog", "/prompt2blog/articles/other-run"),
-        ("url2blog", "/url2blog/articles/other-run"),
     ],
 )
 async def test_article_delete_routes_reject_non_owner_writer(
@@ -400,9 +398,7 @@ async def test_article_delete_routes_reject_non_owner_writer(
 @pytest.mark.parametrize(
     "feature,path",
     [
-        ("youtube2blog", "/youtube2blog/articles/owned-run"),
         ("prompt2blog", "/prompt2blog/articles/owned-run"),
-        ("url2blog", "/url2blog/articles/owned-run"),
     ],
 )
 async def test_article_delete_routes_accept_owner_writer(
@@ -431,111 +427,6 @@ async def test_article_delete_routes_accept_owner_writer(
 
 
 @pytest.mark.asyncio
-async def test_exported_delete_handlers_remain_directly_callable(isolated_db):
-    from app.core.storage import write_status
-    from app.features.prompt2blog.routes import delete_article as delete_prompt_article
-    from app.features.url2blog.api.articles import delete_article as delete_url_article
-    from app.features.youtube2blog.routes import delete_article as delete_youtube_article
-
-    handlers = (
-        ("youtube2blog", delete_youtube_article),
-        ("prompt2blog", delete_prompt_article),
-        ("url2blog", delete_url_article),
-    )
-    for feature, handler in handlers:
-        run_id = f"direct-{feature}"
-        write_status(
-            run_id,
-            {"state": "completed", "stage": "complete", "updated_at": "2026-08-11"},
-            feature=feature,
-        )
-
-        response = await handler(run_id)
-
-        assert response.status_code == 200
-
-
-@pytest.mark.asyncio
-async def test_youtube2blog_start_records_run_owner(monkeypatch, isolated_db):
-    from app.core.storage import read_run_owner
-    from app.features.youtube2blog.api import pipeline as youtube2blog_pipeline
-    from app.features.youtube2blog.youtube_source import YouTubeVideoSource
-
-    _mock_payload_user(
-        monkeypatch,
-        {"id": 7, "email": "writer@example.com", "role": "writer"},
-    )
-    monkeypatch.setattr(
-        youtube2blog_pipeline,
-        "parse_youtube_video_url",
-        lambda _url: YouTubeVideoSource(
-            video_id="abc123DEF45",
-            canonical_url="https://www.youtube.com/watch?v=abc123DEF45",
-        ),
-    )
-    monkeypatch.setattr(
-        youtube2blog_pipeline,
-        "extract_transcript_sync",
-        lambda _video_id: {"status": "completed", "transcript": "Transcript"},
-    )
-    monkeypatch.setattr(
-        youtube2blog_pipeline,
-        "fetch_oembed_title",
-        lambda _url: "Video title",
-    )
-    monkeypatch.setattr(
-        youtube2blog_pipeline, "process_run", lambda *_args, **_kwargs: None
-    )
-
-    async with _app_client() as client:
-        response = await client.post(
-            "/youtube2blog/from-url",
-            headers={"Authorization": "Bearer writer-token"},
-            json={"url": "https://www.youtube.com/watch?v=abc123DEF45"},
-        )
-
-    assert response.status_code == 200
-    assert read_run_owner(response.json()["run_id"]) == "7"
-
-
-@pytest.mark.asyncio
-async def test_url2blog_start_records_run_owner(monkeypatch, isolated_db):
-    from fastapi.responses import JSONResponse
-
-    from app.core.storage import read_run_owner
-    from app.features.url2blog.api import generation as url2blog_generation
-    from app.features.url2blog.run_recorder import RunRecorder
-
-    async def fake_pipeline(*, request, dependencies, owner_staff_id):
-        recorder = RunRecorder(clock=lambda: "2026-08-11")
-        recorder.mark_running(
-            "url-owned-run", "pipeline_v2", owner_staff_id=owner_staff_id
-        )
-        recorder.mark_completed("url-owned-run")
-        return JSONResponse({"run_id": "url-owned-run"})
-
-    _mock_payload_user(
-        monkeypatch,
-        {"id": 7, "email": "writer@example.com", "role": "writer"},
-    )
-    monkeypatch.setattr(
-        url2blog_generation,
-        "run_url2blog_pipeline_graph",
-        fake_pipeline,
-    )
-
-    async with _app_client() as client:
-        response = await client.post(
-            "/url2blog/pipeline-v2",
-            headers={"Authorization": "Bearer writer-token"},
-            json={"url": "https://example.com/source"},
-        )
-
-    assert response.status_code == 200
-    assert read_run_owner(response.json()["run_id"]) == "7"
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "method,path",
     [
@@ -544,8 +435,6 @@ async def test_url2blog_start_records_run_owner(monkeypatch, isolated_db):
         ("POST", "/images/flux-edit"),
         ("POST", "/prompt2blog/synthesize"),
         ("POST", "/prompt2blog/classify"),
-        ("POST", "/youtube2blog/test"),
-        ("POST", "/youtube2blog/test-stage1"),
         ("DELETE", "/article-types/1"),
         ("DELETE", "/itineraries-pipeline/day-shells/custom-shell"),
         ("DELETE", "/staged-drafts/draft-1?storageKey=prompt2blog"),
@@ -591,7 +480,7 @@ async def test_guarded_route_is_open_when_flag_is_off(monkeypatch, isolated_db):
     monkeypatch.delenv(staff_auth.STAFF_AUTH_FLAG, raising=False)
 
     async with _app_client() as client:
-        response = await client.post("/youtube2blog/clear")
+        response = await client.delete("/staged-drafts?storageKey=test-key")
 
     assert response.status_code != 401
 

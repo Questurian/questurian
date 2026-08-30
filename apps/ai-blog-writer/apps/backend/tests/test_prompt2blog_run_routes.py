@@ -81,7 +81,7 @@ def test_editorial_augmentation_is_opt_in_by_default():
         article_goal="Generate a practical article.",
         target_reader="General readers",
         destination_context="Barcelona, Spain",
-        tone_id="practical",
+        tone_id="questurian-voice",
         length_id="medium",
     )
     assert request.enable_editorial_augmentation is False

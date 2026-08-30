@@ -160,7 +160,7 @@ def test_v3_request_requires_matching_fingerprint_and_requirement_set():
         "commission": fixture["commission"],
         "evidence_package": deepcopy(fixture["evidence_package"]),
         "profiles": {
-            "tone_id": "editorial",
+            "tone_id": "questurian-voice",
             "length_id": "long",
             "brand_voice_id": "questurian-default",
             "creativity_level": "medium",

@@ -39,7 +39,7 @@ def _payload(**overrides) -> dict:
         "commission": fixture["commission"],
         "evidence_package": fixture["evidence_package"],
         "profiles": {
-            "tone_id": "editorial",
+            "tone_id": "questurian-voice",
             "length_id": "medium",
             "creativity_level": "medium",
         },
@@ -126,7 +126,7 @@ def test_run_input_records_the_evidence_receipt_and_resolved_profiles():
     }
     assert receipt["unresolved_requirement_ids"] == []
     assert run_input["source_ids"] == receipt["source_ids"]
-    assert run_input["profiles"]["tone_id"] == "editorial"
+    assert run_input["profiles"]["tone_id"] == "questurian-voice"
     assert run_input["profiles"]["length_id"] == "medium"
     assert run_input["profiles"]["brand_voice_id"]
     assert run_input["model_routing"]["writing_model"] == "test-writer"

@@ -38,7 +38,7 @@ def _request(**overrides) -> Prompt2BlogV3Request:
         "commission": fixture["commission"],
         "evidence_package": fixture["evidence_package"],
         "profiles": {
-            "tone_id": "editorial",
+            "tone_id": "questurian-voice",
             "length_id": "standard",
             "brand_voice_id": None,
             "creativity_level": "medium",

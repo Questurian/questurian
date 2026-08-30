@@ -42,7 +42,7 @@ def _request(**overrides: Any) -> Prompt2BlogInputRequest:
         "article_goal": "Explain Peru entry rules.",
         "target_reader": "First-time visitors",
         "destination_context": "Peru",
-        "tone_id": "practical",
+        "tone_id": "questurian-voice",
         "length_id": "medium",
         "must_include": ["Mention visa on arrival"],
         "negative_instructions": ["Never say hidden gem"],

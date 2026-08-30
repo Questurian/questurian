@@ -38,7 +38,7 @@ def _payload(commission: dict | None = None, evidence: dict | None = None) -> di
         "commission": commission or fixture["commission"],
         "evidence_package": evidence or fixture["evidence_package"],
         "profiles": {
-            "tone_id": "editorial",
+            "tone_id": "questurian-voice",
             "length_id": "medium",
             "creativity_level": "medium",
         },
