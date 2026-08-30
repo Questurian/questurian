@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 from app.core.staff_auth import require_staff, staff_user_id
 
 from ..config import P2B_V4_RESEARCH_STRUCTURE_MODEL
+from ..brief_v4 import BriefIncomplete
 from ..dependencies import PipelineDependencies
 from ..grill_v4 import (
     GRILL_RESEARCH_MAX_TOKENS,
@@ -117,6 +118,21 @@ def _handle(action, *args, **kwargs) -> Any:
     """Turn the intake's own failures into answers a page can act on."""
     try:
         return action(*args, **kwargs)
+    except BriefIncomplete as error:
+        logger.error("Brief incomplete: %s | %s", error.missing, error.raw[:2000])
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "brief_incomplete",
+                "message": (
+                    "The brief came back missing "
+                    + ", ".join(error.missing)
+                    + ". Nothing you said caused this — try approving again, or "
+                    "go back to the grill and say more about it."
+                ),
+                "raw": error.raw[:2000],
+            },
+        ) from error
     except GrillUnusableResponse as error:
         # 502, not 400: nothing the operator typed caused this, and the reply
         # travels with it. The first real run died here and left no trace at

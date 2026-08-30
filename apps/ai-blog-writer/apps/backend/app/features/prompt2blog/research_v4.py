@@ -32,6 +32,7 @@ from .contracts_v4 import (
     Prompt2BlogWorkOrder,
     WorkOrderRequirement,
 )
+from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ STRUCTURE_MAX_TOKENS = 16_384
 GATHER_MODEL = "gemini-2.5-flash"
 
 
-EVIDENCE_SCHEMA = {
+EVIDENCE_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
         "sources": {
@@ -103,7 +104,7 @@ EVIDENCE_SCHEMA = {
         "gaps": {"type": "array", "items": {"type": "object"}},
     },
     "required": ["sources", "claims", "requirements"],
-}
+})
 
 
 @dataclass

@@ -21,13 +21,14 @@ from typing import Any
 
 from .contracts_v4 import ArticleBrief, BriefMaterial, BriefReader, GrillState
 from .grill_v4 import GrillDependencies
+from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
 logger = logging.getLogger(__name__)
 
 BRIEF_STAGE = "stage_v4_brief"
 
-BRIEF_SCHEMA = {
+BRIEF_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
         "form_id": {"type": "string"},
@@ -60,7 +61,7 @@ BRIEF_SCHEMA = {
         "spine",
         "fails_if",
     ],
-}
+})
 
 
 def build_brief_prompt(state: GrillState) -> str:
@@ -134,17 +135,79 @@ def brief_fingerprint(payload: dict[str, Any]) -> str:
     return "bf-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
 
 
+class BriefIncomplete(RuntimeError):
+    """The brief writer left something out that the brief cannot do without.
+
+    Carries what it did return. A run that fails here has already paid for the
+    grill, so the operator should get a sentence about what is missing rather
+    than a Pydantic traceback about string length.
+    """
+
+    def __init__(self, missing: list[str], raw: str) -> None:
+        super().__init__(
+            "The brief came back missing: " + ", ".join(missing) + "."
+        )
+        self.missing = missing
+        self.raw = raw
+
+
+# What a brief cannot be assembled without. Empty is the failure mode that
+# actually happens -- the key is present and the value is "" -- so this checks
+# the value, not the key.
+REQUIRED_BRIEF_FIELDS = (
+    ("form_id", "the kind of article"),
+    ("primary_reader", "who it is for"),
+    ("reader_question", "the question it answers"),
+    ("outcome", "what it should make them do"),
+    ("spine", "what it is built on"),
+    ("fails_if", "what would make it a failure"),
+)
+
+
+def _missing_fields(payload: dict[str, Any]) -> list[str]:
+    return [
+        label
+        for key, label in REQUIRED_BRIEF_FIELDS
+        if not _safe_str(payload.get(key))
+    ]
+
+
 def build_brief(
     state: GrillState,
     dependencies: GrillDependencies,
     *,
     location: str | None = None,
 ) -> ArticleBrief:
-    """Assemble the brief an agreed grill earned."""
+    """Assemble the brief an agreed grill earned.
+
+    Retried once. The grill has already been paid for by this point, and a
+    single thin reply should not cost the operator the whole conversation.
+    """
     if state.status != "agreed":
         raise ValueError("A brief can only be built from a grill that reached agreement.")
 
-    parsed, _raw = dependencies.llm.invoke_json(
+    attempts: list[str] = []
+    for attempt in range(2):
+        try:
+            return _build_brief_once(state, dependencies, location=location)
+        except BriefIncomplete as error:
+            attempts.append(error.raw)
+            logger.warning(
+                "Brief came back incomplete (attempt %s), missing %s",
+                attempt + 1,
+                ", ".join(error.missing),
+            )
+            last = error
+    raise BriefIncomplete(last.missing, "\n---\n".join(attempts))
+
+
+def _build_brief_once(
+    state: GrillState,
+    dependencies: GrillDependencies,
+    *,
+    location: str | None = None,
+) -> ArticleBrief:
+    parsed, raw = dependencies.llm.invoke_json(
         prompt=build_brief_prompt(state),
         model_name=dependencies.model_name,
         schema=BRIEF_SCHEMA,
@@ -152,6 +215,13 @@ def build_brief(
         temperature=0.2,
     )
     payload = _safe_dict(parsed)
+
+    missing = _missing_fields(payload)
+    if missing:
+        # Checked here rather than left to Pydantic, so the operator is told
+        # what is missing in words instead of being shown a string-length
+        # validation error for a field they have never heard of.
+        raise BriefIncomplete(missing, raw or json.dumps(payload))
 
     resolved_location = _safe_str(location or state.location)
     if not resolved_location:

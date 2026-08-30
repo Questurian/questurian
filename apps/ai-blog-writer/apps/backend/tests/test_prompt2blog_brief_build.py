@@ -207,3 +207,72 @@ def test_the_stage_record_shows_material_back_for_approval():
 
     assert record["material"] == [{"kind": "firsthand", "statement": FIRSTHAND}]
     assert record["fails_if"] == "reads like a tourist board"
+
+
+# --- what the first real run hit at the brief step -------------------------
+
+
+def test_required_strings_cannot_be_empty_in_the_schema():
+    """`required` means the key exists, not that the value is useful.
+
+    The first real run returned `primary_reader: ""`, which satisfied the
+    schema completely and then failed Pydantic's own minimum -- a validation
+    error about string length shown to someone who had just approved a brief.
+    """
+    from app.features.prompt2blog.brief_v4 import BRIEF_SCHEMA
+
+    reader = BRIEF_SCHEMA["properties"]["primary_reader"]
+    assert reader["minLength"] == 1
+
+
+def test_every_v4_schema_got_the_same_guard():
+    # It was wrong in the same way in four places, so it is fixed as a shape
+    # rather than as four instances.
+    from app.features.prompt2blog.grill_v4 import NEXT_TURN_SCHEMA
+    from app.features.prompt2blog.research_v4 import EVIDENCE_SCHEMA
+    from app.features.prompt2blog.work_order_v4 import WORK_ORDER_SCHEMA
+
+    assert NEXT_TURN_SCHEMA["properties"]["consensus"]["minLength"] == 1
+    assert WORK_ORDER_SCHEMA["properties"]["primary_subject"]["minLength"] == 1
+    assert (
+        EVIDENCE_SCHEMA["properties"]["sources"]["items"]["properties"]["title"][
+            "minLength"
+        ]
+        == 1
+    )
+
+
+def test_an_empty_field_is_asked_about_again_before_giving_up():
+    from app.features.prompt2blog.brief_v4 import BriefIncomplete
+
+    thin = _payload(primary_reader="")
+    deps = GrillDependencies(
+        llm=FakeLLM(thin), research=lambda _s: ("", [], None)
+    )
+
+    with pytest.raises(BriefIncomplete) as error:
+        build_brief(_agreed(), deps)
+
+    assert len(deps.llm.prompts) == 2, "it should have asked again"
+    assert "who it is for" in error.value.missing
+
+
+def test_the_failure_says_what_is_missing_in_words():
+    """Not a string-length error for a field nobody has heard of.
+
+    The run has already paid for the grill by this point, so the operator is
+    owed a sentence rather than a traceback.
+    """
+    from app.features.prompt2blog.brief_v4 import BriefIncomplete
+
+    deps = GrillDependencies(
+        llm=FakeLLM(_payload(spine="", fails_if="")),
+        research=lambda _s: ("", [], None),
+    )
+
+    with pytest.raises(BriefIncomplete) as error:
+        build_brief(_agreed(), deps)
+
+    assert "what it is built on" in str(error.value)
+    assert "what would make it a failure" in str(error.value)
+    assert error.value.raw, "what came back has to travel with the failure"
