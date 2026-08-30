@@ -18,6 +18,8 @@ from app.features.prompt2blog.brief_v4 import BRIEF_STAGE
 from app.features.prompt2blog.grill_v4 import GRILL_STAGE, GrillDependencies
 from app.features.prompt2blog.intake_v4 import (
     IntakeServices,
+    do_research,
+    writing_request,
     answer_intake,
     apply_cut,
     approve_brief,
@@ -27,6 +29,10 @@ from app.features.prompt2blog.intake_v4 import (
     load_work_order,
     plan_research,
     reopen_intake,
+)
+from app.features.prompt2blog.research_v4 import (
+    RESEARCH_STAGE,
+    ResearchDependencies,
 )
 from app.features.prompt2blog.run_recorder import RunRecorder
 from app.features.prompt2blog.work_order_v4 import WORK_ORDER_STAGE
@@ -241,3 +247,162 @@ def test_the_transcript_is_readable_from_the_state(isolated_db):
     assert grill["status"] == "agreed"
     assert grill["turns"][0]["answer"] == FIRSTHAND
     assert grill["consensus"] == "A guide for a Lima layover."
+
+
+# --- research, and the hand-off to writing --------------------------------
+
+EVIDENCE = {
+    "sources": [
+        {
+            "source_id": "s1",
+            "title": "Market price survey",
+            "publisher": "Peru Retail",
+            "url": "https://example.pe/prices",
+            "retrieved_at": "2026-08-01",
+            "source_type": "reporting",
+            "material_type": "web",
+            "notes": ["Stall ceviche is far below the tasting menus."],
+        }
+    ],
+    "claims": [
+        {
+            "claim_id": "c1",
+            "text": "Market ceviche is a fraction of the tasting-menu price.",
+            "source_ids": ["s1"],
+            "requirement_ids": ["r1"],
+            "confidence": "high",
+        },
+        {
+            "claim_id": "c2",
+            "text": "The site is floodlit into the evening.",
+            "source_ids": ["s1"],
+            "requirement_ids": ["r3"],
+            "confidence": "medium",
+        },
+        {
+            "claim_id": "c3",
+            "text": "Tasting menus run several times the stall price.",
+            "source_ids": ["s1"],
+            "requirement_ids": ["r2"],
+            "confidence": "high",
+        },
+    ],
+    "requirements": [
+        {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"]},
+        {"requirement_id": "r2", "status": "supported", "claim_ids": ["c3"]},
+        {"requirement_id": "r3", "status": "supported", "claim_ids": ["c2"]},
+    ],
+}
+
+
+class StructureLLM:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def invoke_json(self, **_kwargs):
+        return self.payload, "{}"
+
+
+def _with_research(services: IntakeServices, payload=None) -> IntakeServices:
+    services.research = ResearchDependencies(
+        gather=lambda _prompt, _model: ("Notes.", ["https://example.pe/a"], 800),
+        structure_llm=StructureLLM(payload or EVIDENCE),
+    )
+    return services
+
+
+def _to_work_order(services: IntakeServices) -> str:
+    run_id = _to_agreement(services)
+    approve_brief(run_id, services)
+    plan_research(run_id, services)
+    return run_id
+
+
+def test_research_runs_and_says_whether_the_piece_can_be_written(isolated_db):
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    run_id = _to_work_order(services)
+
+    verdict = do_research(run_id, services)
+
+    assert verdict.can_write is True
+    assert _stage_data(run_id, RESEARCH_STAGE)["coverage"]["can_write"] is True
+
+
+def test_a_blocked_run_still_records_why(isolated_db):
+    """A run that stopped should be able to say why without re-running anything."""
+    thin = {
+        **EVIDENCE,
+        "claims": [EVIDENCE["claims"][0], EVIDENCE["claims"][2]],
+        "requirements": [
+            {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"]},
+            {"requirement_id": "r2", "status": "supported", "claim_ids": ["c3"]},
+            {"requirement_id": "r3", "status": "missing", "gap": "Not looked for."},
+        ],
+    }
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD]),
+        thin,
+    )
+    run_id = _to_work_order(services)
+
+    verdict = do_research(run_id, services)
+
+    assert verdict.can_write is False
+    assert verdict.reason == "nothing_worth_reading"
+    assert _stage_data(run_id, RESEARCH_STAGE)["coverage"]["findings"]
+
+
+def test_the_writing_request_is_assembled_from_what_intake_settled(isolated_db):
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+
+    request = writing_request(run_id)
+
+    assert request.schema_version == 4
+    assert request.brief.brief_fingerprint == request.work_order.brief_fingerprint
+    assert (
+        request.evidence_package.work_order_fingerprint
+        == request.work_order.work_order_fingerprint
+    )
+
+
+def test_a_blocked_run_cannot_be_handed_to_the_writer(isolated_db):
+    """The gate is decided once. This is the same decision enforced at the
+    hand-off, not a second opinion."""
+    thin = {
+        **EVIDENCE,
+        "claims": [EVIDENCE["claims"][0], EVIDENCE["claims"][2]],
+        "requirements": [
+            {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"]},
+            {"requirement_id": "r2", "status": "supported", "claim_ids": ["c3"]},
+            {"requirement_id": "r3", "status": "missing", "gap": "Not looked for."},
+        ],
+    }
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD]),
+        thin,
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+
+    with pytest.raises(ValueError, match="cannot be written yet"):
+        writing_request(run_id)
+
+
+def test_recutting_the_plan_discards_the_research_that_answered_the_old_one(isolated_db):
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+
+    apply_cut(run_id, services, struck_ids=["r3"])
+
+    # Research answered the questions that were there before the cut, so
+    # leaving it would attach answers to a plan that no longer asks them.
+    assert read_stage_result(run_id, RESEARCH_STAGE) is None

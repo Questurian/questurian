@@ -70,3 +70,8 @@ export function cutWorkOrder(
     added_questions: addedQuestions,
   })
 }
+
+/** Both research passes, then the one gate that blocks. */
+export function doResearch(runId: string): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/research`)
+}

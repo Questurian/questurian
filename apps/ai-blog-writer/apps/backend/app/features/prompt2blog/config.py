@@ -28,6 +28,12 @@ P2B_V3_OUTLINE_MODEL = "claude-sonnet-5-medium"
 P2B_V3_GROUNDEDNESS_MODEL = "claude-sonnet-5-medium"
 P2B_V3_TITLE_MODEL = "claude-sonnet-5-medium"
 
+# Structuring research is a bounded, schema-enforced job on prose someone else
+# gathered: exactly what Sonnet is for. It is deliberately not the writing
+# model -- this call is about shape, and the expensive model earns its place at
+# compose.
+P2B_V4_RESEARCH_STRUCTURE_MODEL = "claude-sonnet-5-medium"
+
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
     "in_the_know_box": "In The Know",

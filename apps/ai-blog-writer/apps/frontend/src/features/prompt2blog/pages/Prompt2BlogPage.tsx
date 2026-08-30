@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { BriefScreen } from '../intake/components/BriefScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
+import { ResearchScreen } from '../intake/components/ResearchScreen'
 import { SeedScreen } from '../intake/components/SeedScreen'
 import { WorkOrderScreen } from '../intake/components/WorkOrderScreen'
 import { useIntake } from '../intake/useIntake'
@@ -75,6 +76,19 @@ export function Prompt2BlogPage() {
             warnings={intake.cutWarnings}
             busy={intake.busy}
             onCut={intake.cut}
+            onReopen={intake.reopen}
+            onResearch={intake.research}
+          />
+        )}
+
+        {step === 'research' && state?.research && (
+          <ResearchScreen
+            research={state.research}
+            busy={intake.busy}
+            onWrite={() => {
+              // The graph hand-off lands with stage 5; until then this screen
+              // is where a settled run stops.
+            }}
             onReopen={intake.reopen}
           />
         )}

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { BriefScreen } from './components/BriefScreen'
 import { GrillScreen } from './components/GrillScreen'
+import { ResearchScreen } from './components/ResearchScreen'
 import { WorkOrderScreen } from './components/WorkOrderScreen'
 import type { IntakeBrief, IntakeGrill, IntakeWorkOrder } from './intake.types'
 
@@ -160,6 +161,7 @@ describe('the work order screen', () => {
         busy={false}
         onCut={onCut}
         onReopen={vi.fn()}
+        onResearch={vi.fn()}
       />,
     )
 
@@ -177,6 +179,7 @@ describe('the work order screen', () => {
         busy={false}
         onCut={vi.fn()}
         onReopen={vi.fn()}
+        onResearch={vi.fn()}
       />,
     )
 
@@ -194,9 +197,84 @@ describe('the work order screen', () => {
         busy={false}
         onCut={vi.fn()}
         onReopen={vi.fn()}
+        onResearch={vi.fn()}
       />,
     )
 
     expect(screen.getByText(/without it the piece cannot claim/i)).toBeInTheDocument()
+  })
+})
+
+
+describe('the research screen', () => {
+  const research = {
+    work_order_fingerprint: 'wo-1',
+    source_count: 4,
+    claim_count: 9,
+    requirement_status: { r1: 'supported', r2: 'unpublished' },
+    conflicts: [],
+    coverage: {
+      can_write: true,
+      reason: 'ready_to_write',
+      unsupported_load_bearing: [],
+      refuted_assumptions: [],
+      has_texture: true,
+      findings: [],
+    },
+  }
+
+  it('offers to write when research carried the piece', () => {
+    render(
+      <ResearchScreen research={research} busy={false} onWrite={vi.fn()} onReopen={vi.fn()} />,
+    )
+
+    expect(screen.getByRole('button', { name: /write it/i })).toBeInTheDocument()
+  })
+
+  it('sends a thin dossier back to the grill, not to more research', () => {
+    // The grill is the single exit from every dead end.
+    render(
+      <ResearchScreen
+        research={{
+          ...research,
+          coverage: {
+            ...research.coverage,
+            can_write: false,
+            reason: 'nothing_worth_reading',
+            has_texture: false,
+            findings: ['Nothing here would be a pleasure to read.'],
+          },
+        }}
+        busy={false}
+        onWrite={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /back to the grill/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /write it/i })).toBeNull()
+    expect(screen.getByText(/pleasure to read/i)).toBeInTheDocument()
+  })
+
+  it('says plainly when more research cannot help', () => {
+    render(
+      <ResearchScreen
+        research={{
+          ...research,
+          coverage: {
+            ...research.coverage,
+            can_write: false,
+            reason: 'premise_refuted',
+            refuted_assumptions: ['a1'],
+            findings: ['a1 was assumed and turned out not to be so.'],
+          },
+        }}
+        busy={false}
+        onWrite={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/not something more research can fix/i)).toBeInTheDocument()
   })
 })
