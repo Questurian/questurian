@@ -31,6 +31,7 @@ from .contracts_v4 import ArticleBrief, GrillState, Prompt2BlogWorkOrder
 from .grill_v4 import (
     GRILL_STAGE,
     GrillDependencies,
+    GrillUnusableResponse,
     answer_grill,
     grill_stage_record,
     reopen_grill,
@@ -151,7 +152,21 @@ def begin_intake(
     run_id = str(uuid4())
     services.recorder.queue(run_id, owner_staff_id)
     logger.info("Prompt2Blog intake opened", extra={"run_id": run_id, "feature": FEATURE_NAME})
-    return _write_grill(services, start_grill(run_id, cleaned, services.dependencies))
+    try:
+        return _write_grill(
+            services, start_grill(run_id, cleaned, services.dependencies)
+        )
+    except GrillUnusableResponse as error:
+        # The run already exists, so it must be able to say why it is empty. A
+        # run with no stages and no explanation is the worst thing to hand
+        # someone who is trying to work out what happened.
+        _record(
+            services,
+            run_id,
+            GRILL_STAGE,
+            {"status": "failed", "seed": cleaned, "unusable_response": error.raw[:4000]},
+        )
+        raise
 
 
 def answer_intake(run_id: str, answer: str, services: IntakeServices) -> GrillState:

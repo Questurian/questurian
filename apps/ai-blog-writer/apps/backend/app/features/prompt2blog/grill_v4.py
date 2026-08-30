@@ -38,6 +38,13 @@ logger = logging.getLogger(__name__)
 
 GRILL_STAGE = "stage_v4_grill"
 
+
+def _json_or_repr(payload: Any) -> str:
+    try:
+        return json.dumps(payload)
+    except Exception:  # pragma: no cover -- diagnostics only
+        return repr(payload)
+
 # Enough for a dense digest of a city. The helper's own default is 1024, which
 # truncates silently -- the Lima dossier was 12,000 characters.
 GRILL_RESEARCH_MAX_TOKENS = 4_096
@@ -49,6 +56,11 @@ GRILL_RESEARCH_MAX_TOKENS = 4_096
 GRILL_RESEARCH_MODEL = "gemini-2.5-flash"
 
 
+# `question` and `consensus` are both required, and the prompt says to leave
+# the unused one empty. Making only `done` required is what broke the first
+# real run: `{"done": false}` with nothing else is schema-valid and useless,
+# and the model took that gap. A schema that permits what the code refuses is
+# a schema that has not been written down properly.
 NEXT_TURN_SCHEMA = {
     "type": "object",
     "properties": {
@@ -67,7 +79,7 @@ NEXT_TURN_SCHEMA = {
         "consensus": {"type": "string"},
         "location": {"type": "string"},
     },
-    "required": ["done"],
+    "required": ["done", "question", "consensus"],
 }
 
 
@@ -142,6 +154,10 @@ Rules:
   means it is a research-led piece.
 - Set `location` when their line names a place clearly enough to act on. Leave
   it empty only when it is genuinely ambiguous.
+- ALWAYS return both `question` and `consensus`. When you are asking, fill
+  `question` and leave `consensus` an empty string. When you are done, fill
+  `consensus` and leave the question's `ask` and `recommendation` empty. Never
+  return neither.
 - Set `done` true and write `consensus` when you could brief a writer from
   what you have: what the piece is, who reads it, what it should make them do,
   what it is built on, what it must name, and what would make it a failure.
@@ -168,6 +184,21 @@ def _question_from(payload: dict[str, Any], fallback_id: str) -> GrillQuestion |
     )
 
 
+class GrillUnusableResponse(RuntimeError):
+    """The grill answered with something it cannot act on.
+
+    Carries the raw response. The first real run died on exactly this and left
+    nothing behind -- no stage row, no log line -- so the one moment that most
+    needs explaining was the one moment with no evidence.
+    """
+
+    def __init__(self, raw: str) -> None:
+        super().__init__(
+            "The grill returned neither a usable question nor a consensus."
+        )
+        self.raw = raw
+
+
 def advance_grill(
     state: GrillState,
     dependencies: GrillDependencies,
@@ -176,8 +207,31 @@ def advance_grill(
 
     Returns a state that is either asking one more question or agreed. The
     caller records it; nothing is written here.
+
+    Retried once. The writing stages deliberately do not retry a schema call,
+    because each attempt there is a full article rewrite -- but this is a flash
+    model deciding one question, and one unusable reply should not end a run
+    before it has started.
     """
-    parsed, _raw = dependencies.llm.invoke_json(
+    attempts: list[str] = []
+    for attempt in range(2):
+        try:
+            return _advance_once(state, dependencies)
+        except GrillUnusableResponse as error:
+            attempts.append(error.raw)
+            logger.warning(
+                "Grill returned an unusable response (attempt %s): %s",
+                attempt + 1,
+                error.raw[:500],
+            )
+    raise GrillUnusableResponse("\n---\n".join(attempts))
+
+
+def _advance_once(
+    state: GrillState,
+    dependencies: GrillDependencies,
+) -> GrillState:
+    parsed, raw = dependencies.llm.invoke_json(
         prompt=build_next_turn_prompt(state),
         model_name=dependencies.model_name,
         schema=NEXT_TURN_SCHEMA,
@@ -204,7 +258,7 @@ def advance_grill(
 
     question = _question_from(payload, fallback_id=f"q{len(state.turns) + 1}")
     if question is None:
-        raise ValueError("The grill returned neither a usable question nor a consensus.")
+        raise GrillUnusableResponse(raw or _json_or_repr(payload))
     return state.model_copy(
         update={"status": "asking", "pending": question, "location": location}
     )

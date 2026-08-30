@@ -91,9 +91,17 @@ def test_a_question_without_a_recommendation_is_refused_rather_than_shown():
     A question with no proposal attached is exactly the form field the grill
     exists to remove, so it is rejected rather than rendered.
     """
-    deps = _deps([{"done": False, "question": _question(recommendation="")}])
+    # Twice, because one unusable reply is now retried rather than fatal.
+    deps = _deps(
+        [
+            {"done": False, "question": _question(recommendation="")},
+            {"done": False, "question": _question(recommendation="")},
+        ]
+    )
 
-    with pytest.raises(ValueError, match="neither a usable question nor a consensus"):
+    from app.features.prompt2blog.grill_v4 import GrillUnusableResponse
+
+    with pytest.raises(GrillUnusableResponse):
         start_grill("run-1", SEED, deps)
 
 
@@ -296,3 +304,62 @@ def test_the_prompt_forbids_asking_for_credentials():
 
     assert "never about credentials" in prompt.lower()
     assert "what they HAVE" in prompt
+
+
+# --- what the first real run hit ------------------------------------------
+
+
+def test_a_reply_with_no_question_and_no_consensus_is_retried_once():
+    """The first real run died here.
+
+    The schema required only `done`, so `{"done": false}` with nothing else was
+    schema-valid and useless -- and one unusable reply ended the run before it
+    had started.
+    """
+    deps = _deps([{"done": False}, {"done": False, "question": _question()}])
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert state.pending is not None
+    assert len(deps.llm.prompts) == 2, "it should have asked again"
+
+
+def test_two_unusable_replies_carry_what_came_back():
+    """A failure with no evidence is the worst kind.
+
+    The first one left no stage row and no log line, so the one moment that
+    most needed explaining was the one with nothing to look at.
+    """
+    from app.features.prompt2blog.grill_v4 import GrillUnusableResponse
+
+    deps = _deps([{"done": False}, {"done": True, "consensus": ""}])
+
+    with pytest.raises(GrillUnusableResponse) as error:
+        start_grill("run-1", SEED, deps)
+
+    assert error.value.raw, "the raw reply has to travel with the failure"
+
+
+def test_the_schema_demands_what_the_code_demands():
+    # A schema that permits what the code refuses is a schema that was not
+    # written down properly.
+    from app.features.prompt2blog.grill_v4 import NEXT_TURN_SCHEMA
+
+    assert set(NEXT_TURN_SCHEMA["required"]) == {"done", "question", "consensus"}
+
+
+def test_the_prompt_says_to_return_both_and_leave_one_empty():
+    prompt = build_next_turn_prompt(
+        GrillState(
+            run_id="r",
+            seed=SEED,
+            status="asking",
+            pending=GrillQuestion(
+                question_id="q1", topic="t", ask="a", recommendation="r"
+            ),
+        )
+    )
+    flat = " ".join(prompt.split())
+
+    assert "ALWAYS return both `question` and `consensus`" in flat
+    assert "Never return neither." in flat
