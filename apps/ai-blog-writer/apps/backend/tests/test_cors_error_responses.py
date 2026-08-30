@@ -34,8 +34,6 @@ utils_stub.vertex_part_from_data = lambda **kwargs: kwargs
 utils_stub.invoke_vertex_multimodal_text = lambda *args, **kwargs: "stub text"
 sys.modules["utils"] = utils_stub
 
-import app.features.youtube2blog.routes as youtube2blog_routes
-from app.features.youtube2blog.api import testing as youtube2blog_testing
 import app.main as main_module
 
 
@@ -104,56 +102,3 @@ async def test_global_unhandled_exception_can_expose_details_in_debug(monkeypatc
     assert payload["error_id"]
     assert response.headers.get("access-control-allow-origin")
 
-
-@pytest.mark.asyncio
-async def test_youtube_test_stage1_runtime_error_returns_502_with_cors(monkeypatch):
-    app = _build_cors_client(router=youtube2blog_routes.router)
-
-    def _raise_runtime(_record):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(
-        youtube2blog_testing,
-        "stage_1_clean_transcript",
-        _raise_runtime,
-    )
-
-    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://testserver"
-    ) as client:
-        response = await client.post(
-            "/youtube2blog/test-stage1",
-            headers={"Origin": "http://localhost:3003"},
-        )
-
-    assert response.status_code == 502
-    assert response.json()["detail"] == "YouTube2Blog stage 1 test failed"
-    assert response.headers.get("access-control-allow-origin")
-
-
-@pytest.mark.asyncio
-async def test_youtube_test_pipeline_runtime_error_returns_502_with_cors(monkeypatch):
-    app = _build_cors_client(router=youtube2blog_routes.router)
-
-    def _raise_runtime(_record):
-        raise RuntimeError("boom")
-
-    monkeypatch.setattr(
-        youtube2blog_testing,
-        "stage_1_clean_transcript",
-        _raise_runtime,
-    )
-
-    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://testserver"
-    ) as client:
-        response = await client.post(
-            "/youtube2blog/test",
-            headers={"Origin": "http://localhost:3003"},
-        )
-
-    assert response.status_code == 502
-    assert response.json()["detail"] == "YouTube2Blog pipeline test failed"
-    assert response.headers.get("access-control-allow-origin")

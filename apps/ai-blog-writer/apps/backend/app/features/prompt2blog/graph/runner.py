@@ -14,23 +14,23 @@ from app.ai_graph.runtime import (
 )
 
 from ..run_recorder import RunRecorder
-from .state import Prompt2BlogGraphState
+from .state import Prompt2BlogV3GraphState
 
 logger = logging.getLogger(__name__)
 
-GraphNode = Callable[[Prompt2BlogGraphState], dict[str, Any]]
+GraphNode = Callable[[Prompt2BlogV3GraphState], dict[str, Any]]
 
 
 def run_prompt2blog_stage_graph(
     *,
     run_id: str,
     trace_name: str,
-    initial_state: Prompt2BlogGraphState,
+    initial_state: Prompt2BlogV3GraphState,
     nodes: list[tuple[str, GraphNode]],
     recorder: RunRecorder,
     build_graph: Callable[[dict[str, GraphNode]], Any] | None = None,
     thread_id: str | None = None,
-) -> Prompt2BlogGraphState:
+) -> Prompt2BlogV3GraphState:
     """Compile and invoke a graph whose nodes are the real pipeline stages.
 
     ``build_graph`` declares the topology. Without one the nodes are chained in
@@ -47,7 +47,7 @@ def run_prompt2blog_stage_graph(
     if build_graph is not None:
         builder = build_graph(dict(nodes))
     else:
-        builder = StateGraph(Prompt2BlogGraphState)
+        builder = StateGraph(Prompt2BlogV3GraphState)
         previous_node_name: str | None = None
         for node_name, node_fn in nodes:
             builder.add_node(node_name, node_fn)
@@ -102,4 +102,4 @@ def run_prompt2blog_stage_graph(
 
     if trace_payload:
         recorder.record_stage(run_id, "langgraph_trace", trace_payload)
-    return Prompt2BlogGraphState(result)
+    return Prompt2BlogV3GraphState(result)

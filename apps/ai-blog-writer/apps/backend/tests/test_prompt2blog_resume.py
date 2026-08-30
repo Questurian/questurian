@@ -198,10 +198,10 @@ def test_resuming_is_refused_once_the_attempt_allowance_is_gone():
         resume_pipeline_v3(run_id)
 
 
-def test_a_snapshot_for_another_commission_is_refused_rather_than_run():
+def test_a_snapshot_for_another_brief_is_refused_rather_than_run():
     """The refusal that protects the article rather than the token budget.
 
-    Restoring a state that belongs to a different commission would publish
+    Restoring a state that belongs to a different brief would publish
     prose, scores and evidence that do not describe each other. The run input
     row is the independent witness, and it wins.
     """
@@ -209,12 +209,12 @@ def test_a_snapshot_for_another_commission_is_refused_rather_than_run():
     _start(run_id, TitleFailsLLM(quality_scores=[9]))
 
     snapshot = read_stage_result(run_id, RESUME_SNAPSHOT_STAGE)
-    snapshot["data"]["commission_fingerprint"] = "not-this-commission"
+    snapshot["data"]["brief_fingerprint"] = "not-this-brief"
     write_stage_result(run_id, RESUME_SNAPSHOT_STAGE, snapshot)
 
     plan = plan_resume(run_id)
     assert plan.resumable is False
-    assert plan.reason == "commission_mismatch"
+    assert plan.reason == "brief_mismatch"
 
 
 def test_a_snapshot_from_older_code_is_refused_rather_than_reinterpreted():

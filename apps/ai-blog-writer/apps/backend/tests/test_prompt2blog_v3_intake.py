@@ -12,7 +12,7 @@ from fastapi import BackgroundTasks, HTTPException
 from pydantic import ValidationError
 
 import app.features.prompt2blog.routes as prompt2blog_routes
-from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
+from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.intake_v3 import (
     prepare_v3_runtime_request,
     v3_intake_result,
@@ -24,7 +24,7 @@ FIXTURE_PATH = (
     / "data"
     / "fixtures"
     / "prompt2blog"
-    / "lima-scope-drift-v3.json"
+    / "lima-scope-drift-v4.json"
 )
 
 
@@ -35,11 +35,11 @@ def _fixture() -> dict:
 def _payload(**overrides) -> dict:
     fixture = _fixture()
     payload = {
-        "schema_version": 3,
-        "commission": fixture["commission"],
+        "schema_version": 4,
+        "brief": fixture["brief"],
+        "work_order": fixture["work_order"],
         "evidence_package": fixture["evidence_package"],
         "profiles": {
-            "tone_id": "editorial",
             "length_id": "medium",
             "creativity_level": "medium",
         },
@@ -85,29 +85,30 @@ def _ready_payload(**overrides) -> dict:
     return _payload(evidence_package=_ready_evidence(), **overrides)
 
 
-def _request(**overrides) -> Prompt2BlogV3Request:
-    return Prompt2BlogV3Request.model_validate(_payload(**overrides))
+def _request(**overrides) -> Prompt2BlogV4Request:
+    return Prompt2BlogV4Request.model_validate(_payload(**overrides))
 
 
 def _intake(payload: dict) -> dict:
     """Runs the gate-and-assemble step `/pipeline-v3` runs before queueing."""
-    return v3_intake_result(Prompt2BlogV3Request.model_validate(payload))
+    return v3_intake_result(Prompt2BlogV4Request.model_validate(payload))
 
 
-def test_intake_returns_a_versioned_run_input_for_the_approved_commission():
+def test_intake_returns_a_versioned_run_input_for_the_approved_brief():
     fixture = _fixture()
 
     payload = _intake(_ready_payload())
     run_input = payload["run_input"]
 
-    assert run_input["schema_version"] == 3
+    assert run_input["schema_version"] == 4
     assert run_input["instruction_schema_version"] == 5
     assert (
-        run_input["commission_fingerprint"]
-        == fixture["commission"]["commission_fingerprint"]
+        run_input["brief_fingerprint"] == fixture["brief"]["brief_fingerprint"]
     )
-    assert run_input["original_title"] == fixture["commission"]["original_title"]
-    assert run_input["location"] == fixture["commission"]["location"]
+    assert run_input["seed"] == fixture["brief"]["seed"]
+    assert run_input["location"] == fixture["brief"]["location"]
+    assert run_input["spine"] == fixture["brief"]["spine"]
+    assert run_input["fails_if"] == fixture["brief"]["fails_if"]
     assert run_input["form_id"] == "analysis"
     assert run_input["scope_mode"] == "single_subject"
     assert run_input["requirement_ids"] == ["r1", "r2", "r3"]
@@ -126,9 +127,8 @@ def test_run_input_records_the_evidence_receipt_and_resolved_profiles():
     }
     assert receipt["unresolved_requirement_ids"] == []
     assert run_input["source_ids"] == receipt["source_ids"]
-    assert run_input["profiles"]["tone_id"] == "editorial"
     assert run_input["profiles"]["length_id"] == "medium"
-    assert run_input["profiles"]["brand_voice_id"]
+    assert run_input["profiles"]["length_id"] == "medium"
     assert run_input["model_routing"]["writing_model"] == "test-writer"
 
 
@@ -140,11 +140,12 @@ def test_runtime_request_keeps_the_commission_and_evidence_whole():
     # A commission written before the direction step declared its premise still
     # runs. The empty premise and empty assumption_ids are the defaults filling
     # in, not the runtime losing anything the fixture carried.
-    expected_commission = deepcopy(fixture["commission"])
-    expected_commission["premise"] = []
-    for requirement in expected_commission["requirements"]:
+    expected_work_order = deepcopy(fixture["work_order"])
+    expected_work_order["premise"] = []
+    for requirement in expected_work_order["requirements"]:
         requirement["assumption_ids"] = []
-    assert runtime.commission == expected_commission
+    assert runtime.work_order == expected_work_order
+    assert runtime.brief == fixture["brief"]
     source = runtime.evidence["sources"][0]
     original = fixture["evidence_package"]["sources"][0]
     assert source["publisher"] == original["publisher"]
@@ -159,56 +160,56 @@ def test_runtime_request_keeps_the_commission_and_evidence_whole():
 
 def test_intake_rejects_an_unknown_writing_profile_by_name():
     payload = _ready_payload()
-    payload["profiles"]["tone_id"] = "not-a-tone"
+    payload["profiles"]["length_id"] = "not-a-length"
 
-    with pytest.raises(RuntimeError, match="tone_id"):
+    with pytest.raises(RuntimeError, match="length_id"):
         _intake(payload)
 
 
 def test_the_run_route_reports_an_unknown_writing_profile_as_a_bad_request():
     """The route is where an unresolvable profile becomes a 400 rather than a 500."""
     payload = _ready_payload()
-    payload["profiles"]["tone_id"] = "not-a-tone"
+    payload["profiles"]["length_id"] = "not-a-length"
 
     with pytest.raises(HTTPException) as excinfo:
         asyncio.run(
             prompt2blog_routes.start_pipeline_v3(
-                Prompt2BlogV3Request.model_validate(payload),
+                Prompt2BlogV4Request.model_validate(payload),
                 BackgroundTasks(),
                 None,
             )
         )
 
     assert excinfo.value.status_code == 400
-    assert "tone_id" in str(excinfo.value.detail)
+    assert "length_id" in str(excinfo.value.detail)
 
 
-def test_intake_rejects_evidence_from_a_different_commission():
+def test_intake_rejects_evidence_from_a_different_work_order():
     payload = _payload()
     evidence = deepcopy(payload["evidence_package"])
-    evidence["commission_fingerprint"] = "b" * 64
+    evidence["work_order_fingerprint"] = "b" * 64
     payload["evidence_package"] = evidence
 
-    with pytest.raises(ValidationError, match="fingerprint must match commission"):
+    with pytest.raises(ValidationError, match="different work order"):
         _intake(payload)
 
 
-def test_intake_cannot_be_used_to_change_the_commission():
+def test_intake_cannot_be_used_to_change_the_work_order():
     fixture = _fixture()
     payload = _payload()
     # A research response that tries to promote a context-only city has to be
-    # refused by the contract, not normalized into an accepted commission.
-    commission = deepcopy(payload["commission"])
-    commission["scope"]["references"][1]["role"] = "comparator"
-    payload["commission"] = commission
+    # refused by the contract, not normalized into an accepted work order.
+    work_order = deepcopy(payload["work_order"])
+    work_order["scope"]["references"][1]["role"] = "comparator"
+    payload["work_order"] = work_order
 
     with pytest.raises(ValidationError):
         _intake(payload)
 
     unchanged = _intake(_ready_payload())["run_input"]
     assert (
-        unchanged["commission_fingerprint"]
-        == fixture["commission"]["commission_fingerprint"]
+        unchanged["work_order_fingerprint"]
+        == fixture["work_order"]["work_order_fingerprint"]
     )
 
 

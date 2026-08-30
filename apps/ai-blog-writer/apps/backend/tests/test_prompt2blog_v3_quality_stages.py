@@ -7,11 +7,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
+from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
 from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
 from app.features.prompt2blog.quality_v3 import (
-    v3_commission_summary,
+    v3_brief_summary,
     v3_constraint_brief,
 )
 from app.features.prompt2blog.stages.v3.audit_repair import (
@@ -27,7 +27,7 @@ FIXTURE_PATH = (
     / "data"
     / "fixtures"
     / "prompt2blog"
-    / "lima-scope-drift-v3.json"
+    / "lima-scope-drift-v4.json"
 )
 
 
@@ -68,13 +68,13 @@ def _supported_evidence() -> dict:
 
 def _runtime():
     return prepare_v3_runtime_request(
-        Prompt2BlogV3Request.model_validate(
+        Prompt2BlogV4Request.model_validate(
             {
-                "schema_version": 3,
-                "commission": _fixture()["commission"],
+                "schema_version": 4,
+                "brief": _fixture()["brief"],
+            "work_order": _fixture()["work_order"],
                 "evidence_package": _supported_evidence(),
                 "profiles": {
-                    "tone_id": "editorial",
                     "length_id": "medium",
                     "creativity_level": "medium",
                 },
@@ -96,7 +96,8 @@ def _state(**overrides) -> dict[str, Any]:
     runtime = _runtime()
     state: dict[str, Any] = {
         "run_id": "v3-run",
-        "commission": runtime.commission,
+        "brief": runtime.brief,
+        "work_order": runtime.work_order,
         "evidence": runtime.evidence,
         "instructions": runtime.instructions,
         "stage_contexts": runtime.instructions["stage_contexts"],
@@ -212,7 +213,7 @@ def test_the_audit_judges_commission_fidelity_and_keeps_measured_checks():
     updates = run_v3_quality_audit_stage(state, dependencies)
 
     prompt = llm.prompts[0]
-    assert "APPROVED COMMISSION" in prompt
+    assert "APPROVED BRIEF" in prompt
     assert "a context-only reference organizes a section" in prompt
     assert "GROUNDING VERDICT" in prompt
     assert '"grounded": true' in prompt
@@ -289,7 +290,7 @@ def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
     prompt = llm.prompts[0]
     normalized_prompt = " ".join(prompt.split())
     assert "Repair prose and structure only" in prompt
-    assert "you may not change the commission" in normalized_prompt
+    assert "you may not change the brief" in normalized_prompt
     assert "Never promote a context-only reference" in prompt
     assert "UNSUPPORTED CLAIMS" in prompt
     assert "Rent averages 900 dollars." in prompt
@@ -331,7 +332,7 @@ def test_settling_restores_the_best_draft_and_its_own_grounding_verdict():
     assert updates["groundedness"]["grounded"] is True
 
 
-def test_the_title_stage_sees_the_original_title_and_the_headline_standard():
+def test_the_title_stage_sees_the_seed_and_the_headline_standard():
     llm = FakeLLM(text_response="Is Lima still worth the move?")
     dependencies, _recorder = _dependencies(llm)
 
@@ -354,7 +355,7 @@ def test_the_title_stage_sees_the_original_title_and_the_headline_standard():
     )
 
     prompt = llm.prompts[0]
-    assert _fixture()["commission"]["original_title"] in prompt
+    assert _fixture()["brief"]["seed"] in prompt
     assert "HEADLINE CONTEXT" in prompt
     assert "Prompt2Blog headline standard" in prompt
     assert "Primary subject: Lima" in prompt
@@ -371,25 +372,25 @@ def test_the_title_stage_sees_the_original_title_and_the_headline_standard():
     assert updates["final_title"] == "Is Lima still worth the move?"
 
 
-def test_the_title_falls_back_to_the_commission_rather_than_to_nothing():
+def test_the_title_falls_back_to_the_brief_rather_than_to_nothing():
     dependencies, _recorder = _dependencies(FakeLLM(text_response="  "))
 
     updates = run_v3_title_stage(
         _state(rewrite={**_rewrite(), "improved_title": ""}), dependencies
     )
 
-    assert updates["final_title"] == _fixture()["commission"]["original_title"]
+    assert updates["final_title"] == _fixture()["brief"]["seed"]
 
 
 def test_the_v3_constraint_brief_invents_no_seo_requirement():
     runtime = _runtime()
 
-    brief = v3_constraint_brief(runtime.commission, runtime.option_context)
+    brief = v3_constraint_brief(runtime.brief, runtime.option_context)
 
     assert brief["seo"] == {"primary_keyword": "", "secondary_keywords": []}
     assert brief["must_include"] == []
     assert brief["formatting"]["target_word_count"] >= 0
-    assert "Primary subject: Lima" in v3_commission_summary(runtime.commission)
+    assert "Primary subject: Lima" in v3_brief_summary(runtime.brief, runtime.work_order)
 
 
 def test_the_audit_is_handed_the_measurements_before_it_scores():
@@ -518,11 +519,11 @@ def test_the_audit_is_told_the_working_title_is_a_reader_promise():
     run_v3_quality_audit_stage(_state(), dependencies)
 
     prompt = llm.prompts[0]
-    assert "is a promise made to a reader" in prompt
-    assert "a draft that follows a drifted commission faithfully is still the" in prompt
+    assert "is what the reader was promised" in prompt
+    assert "draft that follows a drifted brief faithfully is still the" in prompt
     assert "cap overall_score at 5" in prompt
     # The title it must be judged against has to actually be in the prompt.
-    assert "Original title:" in prompt
+    assert "The promise to keep:" in prompt
 
 
 def test_the_audit_still_measures_the_checks_it_reports():

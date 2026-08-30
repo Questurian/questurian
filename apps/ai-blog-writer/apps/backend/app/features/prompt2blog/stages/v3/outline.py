@@ -26,7 +26,7 @@ EMPTY_OUTLINE: dict[str, Any] = {
     "direct_answer_focus": "",
     "sections": [],
     "takeaway_focus": "",
-    "commission_alignment": "Commission alignment not stated.",
+    "brief_alignment": "Brief alignment not stated.",
     "unsupported_requirements": [],
 }
 
@@ -40,7 +40,7 @@ def run_v3_outline_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
-    """Plan the article against the commission before any prose exists.
+    """Plan the article against the brief before any prose exists.
 
     A plan that drifts from the approved scope, or that cites a claim the
     evidence does not contain, is rejected here rather than turned into prose.
@@ -74,7 +74,7 @@ def run_v3_outline_stage(
         candidate = sanitize_v3_outline(parsed)
         accepted, diagnostics = validate_v3_outline(
             candidate,
-            commission=state["commission"],
+            work_order=state["work_order"],
             claim_ids={claim["claim_id"] for claim in evidence["claims"]},
             requirement_ids={
                 requirement["requirement_id"]

@@ -8,9 +8,9 @@ from app.features.prompt2blog.config import (
     P2B_REPAIR_MAX_ATTEMPTS,
     P2B_RUN_TOKEN_BUDGET,
 )
-from app.features.prompt2blog.graph.topology import (
-    GENERATION_NODES,
-    build_prompt2blog_graph,
+from app.features.prompt2blog.graph.topology_v3 import (
+    V3_GENERATION_NODES,
+    build_prompt2blog_v3_graph,
 )
 from app.features.prompt2blog.policies import (
     decide_repair,
@@ -274,15 +274,15 @@ def test_augmentation_rejected_when_empty():
 
 
 def test_topology_rejects_an_incomplete_node_registry():
-    nodes = {name: (lambda state: {}) for name in GENERATION_NODES if name != "repair"}
+    nodes = {name: (lambda state: {}) for name in V3_GENERATION_NODES if name != "repair"}
 
     with pytest.raises(ValueError, match="missing=\\['repair'\\]"):
-        build_prompt2blog_graph(nodes)
+        build_prompt2blog_v3_graph(nodes)
 
 
 def test_topology_rejects_unknown_nodes():
-    nodes = {name: (lambda state: {}) for name in GENERATION_NODES}
+    nodes = {name: (lambda state: {}) for name in V3_GENERATION_NODES}
     nodes["not_a_stage"] = lambda state: {}
 
     with pytest.raises(ValueError, match="unexpected=\\['not_a_stage'\\]"):
-        build_prompt2blog_graph(nodes)
+        build_prompt2blog_v3_graph(nodes)

@@ -76,8 +76,12 @@ def test_article_types_routes_are_canonical_only(
     ]
     assert set(name_definitions_response.json()[0].keys()) == {'name', 'definition'}
 
+    # The legacy alias lived under YouTube2Blog, which is retired (ADR 0032).
+    # 410 rather than 404: the route existed and was deliberately withdrawn, so
+    # a caller learns to stop asking instead of suspecting a typo.
     legacy_response = client.get('/youtube2blog/article-types')
-    assert legacy_response.status_code == 404
+    assert legacy_response.status_code == 410
+    assert legacy_response.json()['error'] == 'pipeline_retired'
 
 
 def test_update_article_type_uses_id_and_returns_conflict_for_duplicate_name(

@@ -1,6 +1,6 @@
 """Section-plan normalization and scope guards for the v3 outline stage.
 
-Everything here is pure. The plan is checked against the approved commission
+Everything here is pure. The plan is checked against the approved work order
 and the exact evidence records before any prose exists, so scope drift and
 unsupported sections are caught while they are still cheap to reject.
 """
@@ -51,8 +51,8 @@ def sanitize_v3_outline(parsed: dict[str, Any]) -> dict[str, Any]:
         "direct_answer_focus": _safe_str(parsed.get("direct_answer_focus")),
         "sections": sections,
         "takeaway_focus": _safe_str(parsed.get("takeaway_focus")),
-        "commission_alignment": _safe_str(parsed.get("commission_alignment"))
-        or "Commission alignment not stated.",
+        "brief_alignment": _safe_str(parsed.get("brief_alignment"))
+        or "Brief alignment not stated.",
         "unsupported_requirements": _string_list(
             parsed.get("unsupported_requirements")
         ),
@@ -70,7 +70,7 @@ def _mentions(text: str, name: str) -> bool:
         return " ".join(unaccented.casefold().split())
 
     normalized_text = normalize(text)
-    # A commission stores geography canonically (for example, "Medellín,
+    # A work order stores geography canonically (for example, "Medellín,
     # Colombia") while natural headings use the locality alone. The leading
     # comma-delimited name is a valid shorthand; country alone is not.
     full_name = normalize(name)
@@ -85,12 +85,12 @@ def _mentions(text: str, name: str) -> bool:
 def validate_v3_outline(
     outline: dict[str, Any],
     *,
-    commission: dict[str, Any],
+    work_order: dict[str, Any],
     claim_ids: set[str],
     requirement_ids: set[str],
     target_word_count: int,
 ) -> tuple[bool, dict[str, Any]]:
-    """Check a plan against the commission's scope and the real evidence.
+    """Check a plan against the work order's scope and the real evidence.
 
     A plan that drifts is discarded rather than fed to compose: an outline that
     organizes the article around a context-only place, or that cites a claim
@@ -121,7 +121,7 @@ def validate_v3_outline(
         }
     )
 
-    scope = _safe_dict(commission.get("scope"))
+    scope = _safe_dict(work_order.get("scope"))
     references = scope.get("references") or []
     context_only = [
         _safe_str(reference.get("name"))
@@ -136,7 +136,7 @@ def validate_v3_outline(
             if name and _mentions(section["heading"], name)
         }
     )
-    primary_subject = _safe_str(commission.get("primary_subject"))
+    primary_subject = _safe_str(work_order.get("primary_subject"))
     # A well-built outline often names the subject once in its framing and then
     # relies on subject-specific detail in the sections ("El Poblado", "Museo de
     # Antioquia") rather than repeating the city in every heading. Genuine drift
@@ -146,7 +146,7 @@ def validate_v3_outline(
         _safe_str(outline.get("working_title")),
         _safe_str(outline.get("direct_answer_focus")),
         _safe_str(outline.get("takeaway_focus")),
-        _safe_str(outline.get("commission_alignment")),
+        _safe_str(outline.get("brief_alignment")),
         *(
             value
             for section in sections
@@ -187,7 +187,7 @@ def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
     if not sections:
         return (
             "No outline was produced. Structure the article from the approved "
-            "commission and the evidence records only."
+            "brief and the evidence records only."
         )
 
     lines: list[str] = []

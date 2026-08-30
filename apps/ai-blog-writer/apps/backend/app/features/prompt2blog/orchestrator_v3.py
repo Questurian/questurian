@@ -1,6 +1,6 @@
 """Prompt2Blog v3 run entrypoint.
 
-Thin by design: commission, evidence, and stage contexts are assembled before
+Thin by design: the brief, the work order, evidence and stage contexts are assembled before
 a run starts, so the orchestrator only has to build the
 initial state and execute the v3 graph.
 
@@ -30,12 +30,13 @@ from .config import (
 from .dependencies import DefaultPrompt2BlogLLM, PipelineDependencies
 from .graph.runner import GraphNode, run_prompt2blog_stage_graph
 from .graph.state import Prompt2BlogV3GraphState
+from .run_budget import enforce_run_budget
 from .graph.topology_v3 import (
     V3_GENERATION_NODES,
     V3_NODE_STAGE_NAMES,
     build_prompt2blog_v3_graph,
 )
-from .models import PipelineV3RuntimeRequest
+from .models import PipelineV4RuntimeRequest
 from .pricing import Prompt2BlogTokenUsageTracker
 from .resume_v3 import (
     RESUME_HISTORY_STAGE,
@@ -90,7 +91,7 @@ class Prompt2BlogResumeRefused(RuntimeError):
 
 def _initial_v3_state(
     run_id: str,
-    request: PipelineV3RuntimeRequest,
+    request: PipelineV4RuntimeRequest,
     dependencies: PipelineDependencies,
 ) -> Prompt2BlogV3GraphState:
     instructions = _safe_dict(request.instructions)
@@ -100,7 +101,8 @@ def _initial_v3_state(
     return {
         "run_id": run_id,
         "request": request,
-        "commission": request.commission,
+        "brief": request.brief,
+        "work_order": request.work_order,
         "evidence": request.evidence,
         "instructions": instructions,
         "stage_contexts": _safe_dict(instructions.get("stage_contexts")),
@@ -161,6 +163,10 @@ def _node(
     dependencies: PipelineDependencies,
 ) -> GraphNode:
     def run(state: Prompt2BlogV3GraphState) -> dict[str, Any]:
+        # Before the stage spends anything. The ceiling exists for runaway, not
+        # for expensive, so checking on entry is what makes it a stop rather
+        # than a post-mortem.
+        enforce_run_budget(state.get("tokens_spent"), stage=V3_NODE_STAGE_NAMES[name])
         updates = stage(state, dependencies)
         updates["trace"] = state["trace"]
         # After the stage has recorded its own payload, so a snapshot never
@@ -197,7 +203,7 @@ def _v3_nodes(
 def _execute_v3_graph(
     *,
     run_id: str,
-    request: PipelineV3RuntimeRequest,
+    request: PipelineV4RuntimeRequest,
     dependencies: PipelineDependencies,
     initial_state: Prompt2BlogV3GraphState,
     entry_node: str,
@@ -242,7 +248,7 @@ def _execute_v3_graph(
 
 def run_pipeline_v3(
     run_id: str,
-    request: PipelineV3RuntimeRequest,
+    request: PipelineV4RuntimeRequest,
     dependencies: PipelineDependencies | None = None,
 ) -> Prompt2BlogV3GraphState:
     dependencies = dependencies or PipelineDependencies()

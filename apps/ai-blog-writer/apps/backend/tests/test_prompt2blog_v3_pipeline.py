@@ -17,7 +17,7 @@ from fastapi import BackgroundTasks, HTTPException
 import app.features.prompt2blog.api.runs as runs_api
 import app.features.prompt2blog.routes as prompt2blog_routes
 from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
-from app.features.prompt2blog.contracts_v3 import Prompt2BlogV3Request
+from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
 from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
 from app.features.prompt2blog.orchestrator_v3 import run_pipeline_v3
@@ -30,7 +30,7 @@ FIXTURE_PATH = (
     / "data"
     / "fixtures"
     / "prompt2blog"
-    / "lima-scope-drift-v3.json"
+    / "lima-scope-drift-v4.json"
 )
 
 
@@ -69,13 +69,13 @@ def _supported_evidence() -> dict:
     return evidence
 
 
-def _request(**overrides) -> Prompt2BlogV3Request:
+def _request(**overrides) -> Prompt2BlogV4Request:
     payload = {
-        "schema_version": 3,
-        "commission": _fixture()["commission"],
+        "schema_version": 4,
+        "brief": _fixture()["brief"],
+            "work_order": _fixture()["work_order"],
         "evidence_package": _supported_evidence(),
         "profiles": {
-            "tone_id": "editorial",
             "length_id": "medium",
             "creativity_level": "medium",
         },
@@ -86,7 +86,7 @@ def _request(**overrides) -> Prompt2BlogV3Request:
         },
     }
     payload.update(overrides)
-    return Prompt2BlogV3Request.model_validate(payload)
+    return Prompt2BlogV4Request.model_validate(payload)
 
 
 OUTLINE = {
@@ -116,7 +116,7 @@ OUTLINE = {
         },
     ],
     "takeaway_focus": "What decides the answer for a long stay.",
-    "commission_alignment": "Answers the cost question about Lima itself.",
+    "brief_alignment": "Answers the cost question about Lima itself.",
     "unsupported_requirements": [],
 }
 
@@ -149,7 +149,7 @@ DRAFT = {
             ),
         ]
     ),
-    "commission_alignment_summary": "Answers the cost question about Lima.",
+    "brief_alignment_summary": "Answers the cost question about Lima.",
     "improvements_applied": ["Grounded every section in a claim."],
     "remaining_gaps": [],
 }
@@ -287,7 +287,7 @@ def _run(**llm_kwargs) -> tuple[dict[str, Any], RecordingRecorder, ScriptedLLM]:
     return state, recorder, llm
 
 
-def test_the_lima_commission_runs_end_to_end_through_the_v3_graph():
+def test_the_lima_brief_runs_end_to_end_through_the_graph():
     state, recorder, _llm = _run(quality_scores=[9])
 
     assert state["completed"] is True
@@ -303,7 +303,7 @@ def test_the_lima_commission_runs_end_to_end_through_the_v3_graph():
     payload = recorder.stages["pipeline_v3"]
     assert payload["pipeline_status"] == "ready_for_staging"
     assert payload["form"]["id"] == "analysis"
-    assert payload["commission"]["primary_subject"] == "Lima"
+    assert payload["work_order"]["primary_subject"] == "Lima"
     assert payload["evidence_receipt"]["requirement_status"] == {
         "r1": "supported",
         "r2": "supported",
@@ -538,7 +538,7 @@ def test_a_low_score_spends_a_repair_pass_and_re_checks_grounding():
     assert recorder.order.count("stage_v3_groundedness") == 2
     assert recorder.order.count("stage_v3_quality_audit") == 2
     repair_prompt = next(prompt for kind, prompt in llm.prompts if kind == "repair")
-    assert "you may not change the commission" in " ".join(repair_prompt.split())
+    assert "you may not change the brief" in " ".join(repair_prompt.split())
 
 
 def test_a_weak_draft_buys_one_repair_and_then_asks_for_a_human():

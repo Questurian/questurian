@@ -28,17 +28,15 @@ from utils.llm_model_policy import (
 )
 
 from ..config import DEFAULT_MODEL, FEATURE_NAME
-from ..contracts_v3 import Prompt2BlogV3Request
+from ..contracts_v4 import Prompt2BlogV4Request
 from ..drafts_view import build_drafts_report, render_drafts_page
 from ..intake_v3 import (
     prepare_v3_runtime_request,
     v3_intake_result,
     v3_run_input_artifact,
 )
-from ..models import Prompt2BlogInputRequest
 from ..observability import _read_langgraph_trace
-from ..models import PipelineV3RuntimeRequest
-from ..orchestrator import run_full_pipeline
+from ..models import PipelineV4RuntimeRequest
 from ..orchestrator_v3 import resume_pipeline_v3, run_pipeline_v3
 from ..resume_v3 import plan_resume
 from ..run_recorder import RunRecorder
@@ -83,33 +81,9 @@ RESUME_REFUSAL_MESSAGES = {
 }
 
 
-def _run_full_pipeline_background(
-    run_id: str,
-    request: Prompt2BlogInputRequest,
-    credential: Prompt2BlogCredential | None,
-) -> None:
-    """Keep background-task failures contained after the graph records them."""
-    try:
-        scope = (
-            prompt2blog_credential_scope(credential.token)
-            if credential is not None
-            else nullcontext()
-        )
-        # The breaker is armed for every run, credential or not: a run can
-        # reach the CLI transport on the machine's own login, and it needs the
-        # stop switch just as much as one with its own credential.
-        with quota_breaker_scope(), scope:
-            run_full_pipeline(run_id, request)
-    except Exception:  # noqa: BLE001
-        # The orchestrator records the active failed stage and logs the exception.
-        # Re-raising from a Starlette background task only adds an unhandled-task
-        # error after the HTTP response has already been sent.
-        return
-
-
 def _run_pipeline_v3_background(
     run_id: str,
-    request: PipelineV3RuntimeRequest,
+    request: PipelineV4RuntimeRequest,
     credential: Prompt2BlogCredential | None,
 ) -> None:
     """Keep background-task failures contained after the graph records them."""
@@ -151,118 +125,9 @@ def _prompt2blog_credential_for_run() -> Prompt2BlogCredential | None:
         raise HTTPException(status_code=409, detail=str(error)) from error
 
 
-def _validate_prompt2blog_input_request(request: Prompt2BlogInputRequest) -> None:
-    if request.article_type_id <= 0:
-        raise HTTPException(status_code=400, detail="article_type_id is required")
-
-    if not _clean_string_list(request.source_material):
-        raise HTTPException(
-            status_code=400,
-            detail="At least one source_material item is required",
-        )
-
-    required_text_fields = {
-        "article_goal": request.article_goal,
-        "target_reader": request.target_reader,
-        "destination_context": request.destination_context,
-        "tone_id": request.tone_id,
-        "length_id": request.length_id,
-    }
-    for field_name, value in required_text_fields.items():
-        if not _safe_str(value):
-            raise HTTPException(status_code=400, detail=f"{field_name} is required")
-
-    try:
-        resolve_writer_model(request.writing_model)
-        resolve_writer_model(request.audit_model)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-
-@router.post("/pipeline-v2")
-async def start_pipeline_v2(
-    request: Prompt2BlogInputRequest,
-    background_tasks: BackgroundTasks,
-    staff_user=Depends(require_staff),
-) -> JSONResponse:
-    """Start Prompt2Blog pipeline-v2 from structured source input."""
-    _validate_prompt2blog_input_request(request)
-    credential = _prompt2blog_credential_for_run()
-    run_id = str(uuid4())
-    recorder = RunRecorder()
-
-    recorder.queue(run_id, staff_user_id(staff_user))
-    recorder.record_stage(
-        run_id,
-        "pipeline_input",
-        {
-            "article_type_id": request.article_type_id,
-            "source_material_count": len(_clean_string_list(request.source_material)),
-            "tone_id": _safe_str(request.tone_id),
-            "length_id": _safe_str(request.length_id),
-            "brand_voice_id": _safe_str(request.brand_voice_id),
-            "include_debug": request.include_debug,
-            "enable_editorial_augmentation": request.enable_editorial_augmentation,
-            "model_name": request.model_name or DEFAULT_MODEL,
-            "writing_model": request.writing_model,
-            "audit_model": request.audit_model,
-            "model_stack_id": request.model_stack_id,
-            "claude_account_label": credential.label if credential else None,
-        },
-    )
-    background_tasks.add_task(
-        _run_full_pipeline_background,
-        run_id,
-        request,
-        credential,
-    )
-    return JSONResponse({"message": "Prompt2Blog pipeline v2 queued", "run_id": run_id})
-
-
-@router.post("/run")
-async def start_full_run(
-    request: Prompt2BlogInputRequest,
-    background_tasks: BackgroundTasks,
-    staff_user=Depends(require_staff),
-) -> JSONResponse:
-    """Start one-click Prompt2Blog run from source material through final article."""
-    _validate_prompt2blog_input_request(request)
-    credential = _prompt2blog_credential_for_run()
-    run_id = str(uuid4())
-    recorder = RunRecorder()
-
-    recorder.queue(run_id, staff_user_id(staff_user))
-    recorder.record_stage(
-        run_id,
-        "pipeline_input",
-        {
-            "mode": "structured_v2",
-            "article_type_id": request.article_type_id,
-            "source_material_count": len(_clean_string_list(request.source_material)),
-            "tone_id": _safe_str(request.tone_id),
-            "length_id": _safe_str(request.length_id),
-            "brand_voice_id": _safe_str(request.brand_voice_id),
-            "include_debug": request.include_debug,
-            "enable_editorial_augmentation": request.enable_editorial_augmentation,
-            "model_name": request.model_name or DEFAULT_MODEL,
-            "writing_model": request.writing_model,
-            "audit_model": request.audit_model,
-            "model_stack_id": request.model_stack_id,
-            "claude_account_label": credential.label if credential else None,
-        },
-    )
-    background_tasks.add_task(
-        _run_full_pipeline_background,
-        run_id,
-        request,
-        credential,
-    )
-    return JSONResponse({"message": "Prompt2Blog full run queued", "run_id": run_id})
-
-
 @router.post("/pipeline-v3")
 async def start_pipeline_v3(
-    request: Prompt2BlogV3Request,
+    request: Prompt2BlogV4Request,
     background_tasks: BackgroundTasks,
     staff_user=Depends(require_staff),
 ) -> JSONResponse:
@@ -389,12 +254,10 @@ async def get_result(run_id: str) -> JSONResponse:
     artifact = output["artifact"]
     if trace_payload and isinstance(artifact, dict):
         # A run records exactly one of these keys, named for the pipeline
-        # version that produced it. Both are checked so a v3 result carries its
-        # trace link in the same place a v2 result always has.
-        for artifact_key in ("pipeline_v2", "pipeline_v3"):
-            pipeline_payload = artifact.get(artifact_key)
-            if isinstance(pipeline_payload, dict):
-                pipeline_payload.update(trace_payload)
+        # version that produced it.
+        pipeline_payload = artifact.get("pipeline_v3")
+        if isinstance(pipeline_payload, dict):
+            pipeline_payload.update(trace_payload)
 
     response_payload: dict[str, Any] = {
         "run_id": run_id,
@@ -459,7 +322,6 @@ async def debug_run(run_id: str) -> JSONResponse:
         "stage_editorial_augmentation",
         "stage_title",
         "stage_finalize",
-        "pipeline_v2",
         "pipeline_input_v3",
         "stage_v3_outline",
         "stage_v3_compose",

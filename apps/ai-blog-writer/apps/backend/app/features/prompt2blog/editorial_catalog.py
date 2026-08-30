@@ -14,7 +14,7 @@ from .config import (
     PROMPT2BLOG_HOUSE_RULES_FILE,
     PROMPT2BLOG_TOPIC_MODULES_DIR,
 )
-from .contracts_v3 import ArticleFormId, TopicModuleId
+from .contracts_v4 import ArticleFormId, TopicModuleId
 
 
 SourceRequirement = Literal[

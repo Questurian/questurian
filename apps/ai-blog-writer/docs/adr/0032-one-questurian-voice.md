@@ -42,7 +42,7 @@ once, at compose. Every other consumer keeps the enforcement pass, because they
 do not receive the compose-prompt rework that replaces it and would otherwise
 lose a backstop and gain nothing. Edits to the rule text itself are shared.
 
-**URL2Blog and YouTube2Blog are switched off, not left to break.** Removing the
+**URL2Blog and YouTube2Blog are deleted, not left to break.** Removing the
 shared tone list and changing the shared voice rules leaves them looking
 completely usable while failing mid-run or, worse, quietly producing worse
 articles. They are removed from the navigation and return an explicit retired

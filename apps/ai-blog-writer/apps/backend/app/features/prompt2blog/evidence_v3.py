@@ -12,11 +12,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from .contracts_v3 import (
+from .contracts_v4 import (
     EvidenceClaim,
     EvidencePackage,
     EvidenceSource,
-    Prompt2BlogCommission,
+    Prompt2BlogWorkOrder,
 )
 
 
@@ -281,13 +281,13 @@ def _records_text(
 
 
 def normalize_evidence(
-    commission: Prompt2BlogCommission,
+    work_order: Prompt2BlogWorkOrder,
     evidence_package: EvidencePackage,
 ) -> NormalizedEvidence:
     """Reshapes an already-validated package into the records every stage reads."""
     questions = {
         requirement.requirement_id: requirement.question
-        for requirement in commission.requirements
+        for requirement in work_order.requirements
     }
     missing_questions = [
         requirement.requirement_id
@@ -296,13 +296,13 @@ def normalize_evidence(
     ]
     if missing_questions:
         raise ValueError(
-            "evidence requirements are not part of the commission: "
+            "evidence requirements are not part of the work order: "
             f"{sorted(missing_questions)}"
         )
 
     sources = [_normalize_source(source) for source in evidence_package.sources]
     claims = [_normalize_claim(claim) for claim in evidence_package.claims]
-    # Commission order is the authority; a researcher's ordering never
+    # Work order order is the authority; a researcher's ordering never
     # reorders the locked requirements.
     status_by_id = {
         requirement.requirement_id: requirement
@@ -317,12 +317,12 @@ def normalize_evidence(
             gap=status_by_id[requirement.requirement_id].gap,
             assumption_ids=list(requirement.assumption_ids),
         )
-        for requirement in commission.requirements
+        for requirement in work_order.requirements
     ]
     conflicts = [conflict.model_dump() for conflict in evidence_package.conflicts]
     gaps = [gap.model_dump() for gap in evidence_package.gaps]
 
-    # Commission order again: the premise reads in the order the editor
+    # Work order order again: the premise reads in the order the editor
     # approved it, whatever order research answered in.
     verdict_by_id = {
         finding.assumption_id: finding
@@ -336,7 +336,7 @@ def normalize_evidence(
             basis=verdict_by_id[assumption.assumption_id].basis,
             claim_ids=list(verdict_by_id[assumption.assumption_id].claim_ids),
         )
-        for assumption in commission.premise
+        for assumption in work_order.premise
         if assumption.assumption_id in verdict_by_id
     ]
 

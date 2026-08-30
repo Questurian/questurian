@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from .contracts_v3 import Prompt2BlogCommission, Prompt2BlogV3Request
+from .contracts_v4 import ArticleBrief, Prompt2BlogV4Request, Prompt2BlogWorkOrder
 from .editorial_catalog import EditorialCatalog, load_editorial_catalog
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
 
@@ -15,7 +15,7 @@ INSTRUCTION_SCHEMA_VERSION = 5
 
 PRECEDENCE = (
     "verified evidence",
-    "approved commission",
+    "approved brief",
     "article-form rules",
     "topic modules",
     "audience guidance",
@@ -74,43 +74,50 @@ class V3InstructionSet(InstructionModel):
     instruction_meta: dict[str, Any]
 
 
-def _commission_body(commission: Prompt2BlogCommission) -> str:
+def _brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> str:
+    """The brief and its work order, rendered for a prompt.
+
+    The order here is still the v3 order. Leading with the brief, and reframing
+    evidence as the facts you may use rather than the article's reason for
+    existing, is A5 and lands with the compose rework.
+    """
     references = "\n".join(
         f"- {reference.name} — {reference.role}"
-        for reference in commission.scope.references
+        for reference in work_order.scope.references
     )
     requirements = "\n".join(
-        f"- {requirement.requirement_id} — {requirement.question}"
-        for requirement in commission.requirements
+        f"- {requirement.requirement_id} [{requirement.kind}] — {requirement.question}"
+        for requirement in work_order.requirements
     )
-    exclusions = (
-        "\n".join(f"- {item}" for item in commission.exclusions) or "- None recorded."
+    must_name = "\n".join(f"- {item}" for item in brief.must_name) or "- None recorded."
+    material = (
+        "\n".join(f"- [{item.kind}] {item.statement}" for item in brief.material)
+        or "- None; this is a research-led piece."
     )
-    tags = ", ".join(commission.audience.tags) or "none"
+    tags = ", ".join(brief.reader.tags) or "none"
     lines = [
-        f"Original title: {commission.original_title}",
-        f"Location: {commission.location}",
-        f"Approved direction: {commission.approved_direction}",
-        f"Primary subject: {commission.primary_subject}",
-        f"Scope mode: {commission.scope.mode}",
+        f"Seed (provenance only, not a promise to keep): {brief.seed}",
+        f"Location: {brief.location}",
+        f"Spine: {brief.spine}",
+        f"Primary subject: {work_order.primary_subject}",
+        f"Scope mode: {work_order.scope.mode}",
         "References and roles:",
         references,
-        f"Core reader question: {commission.core_reader_question}",
-        f"Reader outcome: {commission.reader_outcome}",
-        f"Primary reader: {commission.audience.primary_reader}",
+        f"Core reader question: {brief.reader_question}",
+        f"The promise to keep: {brief.outcome}",
+        f"Primary reader: {brief.reader.primary_reader}",
         f"Audience tags: {tags}",
+        "Must name:",
+        must_name,
+        "Material the writer has:",
+        material,
         "Requirements:",
         requirements,
-        "Exclusions:",
-        exclusions,
-    ]
-    if commission.call_to_action:
-        lines.append(f"Call to action: {commission.call_to_action}")
-    lines.append(
+        f"This piece fails if: {brief.fails_if}",
         "Context-only references may calibrate a fact or explain significance. "
         "They may never become co-subjects, recurring sections, rankings, or "
-        "verdicts, and the approved form may not change."
-    )
+        "verdicts, and the approved form may not change.",
+    ]
     return "\n".join(lines)
 
 
@@ -137,16 +144,16 @@ def _evidence_body(evidence: NormalizedEvidence) -> str:
 
 
 def _audience_body(
-    commission: Prompt2BlogCommission,
+    brief: ArticleBrief,
     catalog: EditorialCatalog,
 ) -> str:
     tags_by_id = {tag.id: tag for tag in catalog.audience_tags}
-    lines = [f"Primary reader: {commission.audience.primary_reader}"]
-    if commission.audience.tags:
+    lines = [f"Primary reader: {brief.reader.primary_reader}"]
+    if brief.reader.tags:
         lines.append("Emphasis tags:")
         lines.extend(
             f"- {tags_by_id[tag_id].label} — {tags_by_id[tag_id].description}"
-            for tag_id in commission.audience.tags
+            for tag_id in brief.reader.tags
         )
     else:
         lines.append("Emphasis tags: none.")
@@ -204,51 +211,54 @@ def _claim_requirement_index(evidence: NormalizedEvidence) -> str:
 
 
 def _repair_lock_body(
-    commission: Prompt2BlogCommission,
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
     *,
     form_label: str,
 ) -> str:
     references = "\n".join(
         f"- {reference.name} — {reference.role}"
-        for reference in commission.scope.references
+        for reference in work_order.scope.references
     )
     requirements = "\n".join(
-        f"- {item.requirement_id} — {item.question}" for item in commission.requirements
+        f"- {item.requirement_id} — {item.question}" for item in work_order.requirements
     )
-    exclusions = "\n".join(f"- {item}" for item in commission.exclusions)
+    must_name = "\n".join(f"- {item}" for item in brief.must_name)
     return "\n".join(
         (
-            f"Original-title promise: {commission.original_title}",
+            f"The piece promises: {brief.outcome}",
+            f"Spine: {brief.spine}",
             f"Article form: {form_label}",
-            f"Primary subject: {commission.primary_subject}",
-            f"Scope mode: {commission.scope.mode}",
-            f"Core reader question: {commission.core_reader_question}",
+            f"Primary subject: {work_order.primary_subject}",
+            f"Scope mode: {work_order.scope.mode}",
+            f"Core reader question: {brief.reader_question}",
             "Reference roles:",
             references,
             "Requirements:",
             requirements,
-            "Exclusions:",
-            exclusions or "- None recorded.",
+            "Must name:",
+            must_name or "- None recorded.",
+            f"It fails if: {brief.fails_if}",
             "Keep direct, specific prose for the named reader. Preserve the "
             "approved form and scope. Do not add factual material.",
         )
     )
 
 
-def _title_commission_body(commission: Prompt2BlogCommission) -> str:
+def _title_brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> str:
     references = ", ".join(
-        f"{item.name} ({item.role})" for item in commission.scope.references
+        f"{item.name} ({item.role})" for item in work_order.scope.references
     )
     return "\n".join(
         (
-            f"Original title: {commission.original_title}",
-            f"Primary subject: {commission.primary_subject}",
-            f"Location: {commission.location}",
-            f"Approved direction: {commission.approved_direction}",
-            f"Core reader question: {commission.core_reader_question}",
-            f"Reader outcome: {commission.reader_outcome}",
-            f"Scope mode: {commission.scope.mode}",
+            f"The promise to keep: {brief.outcome}",
+            f"Spine: {brief.spine}",
+            f"Primary subject: {work_order.primary_subject}",
+            f"Location: {brief.location}",
+            f"Core reader question: {brief.reader_question}",
+            f"Scope mode: {work_order.scope.mode}",
             f"References: {references}",
+            f"Seed, for provenance only: {brief.seed}",
         )
     )
 
@@ -301,42 +311,43 @@ def stage_context_manifest(
 
 
 def assemble_v3_instructions(
-    request: Prompt2BlogV3Request,
+    request: Prompt2BlogV4Request,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> V3InstructionSet:
-    """Build canonical layers and job-specific contexts for one commission."""
+    """Build canonical layers and job-specific contexts for one brief."""
     catalog = catalog or load_editorial_catalog()
-    commission = request.commission
+    brief = request.brief
+    work_order = request.work_order
 
-    form = next((item for item in catalog.forms if item.id == commission.form_id), None)
+    form = next((item for item in catalog.forms if item.id == brief.form_id), None)
     if form is None:
-        raise ValueError(f"Unknown article form: {commission.form_id}")
+        raise ValueError(f"Unknown article form: {brief.form_id}")
 
     modules_by_id = {module.id: module for module in catalog.topic_modules}
     unknown_modules = [
         module_id
-        for module_id in commission.topic_module_ids
+        for module_id in brief.topic_module_ids
         if module_id not in modules_by_id
     ]
     if unknown_modules:
         raise ValueError(f"Unknown topic modules: {sorted(unknown_modules)}")
     unknown_tags = [
         tag_id
-        for tag_id in commission.audience.tags
+        for tag_id in brief.reader.tags
         if tag_id not in {tag.id for tag in catalog.audience_tags}
     ]
     if unknown_tags:
         raise ValueError(f"Unknown audience tags: {sorted(unknown_tags)}")
 
-    # Catalog order, not commission order, so two runs with the same modules
+    # Catalog order, not brief order, so two runs with the same modules
     # assemble byte-identical instructions.
     active_modules = [
         module
         for module in catalog.topic_modules
-        if module.id in set(commission.topic_module_ids)
+        if module.id in set(brief.topic_module_ids)
     ]
-    evidence = normalize_evidence(commission, request.evidence_package)
+    evidence = normalize_evidence(work_order, request.evidence_package)
 
     layers = [
         InstructionLayer(
@@ -345,9 +356,9 @@ def assemble_v3_instructions(
             body=_evidence_body(evidence),
         ),
         InstructionLayer(
-            layer="commission",
+            layer="brief",
             title="APPROVED COMMISSION",
-            body=_commission_body(commission),
+            body=_brief_body(brief, work_order),
         ),
         InstructionLayer(
             layer="form",
@@ -358,12 +369,12 @@ def assemble_v3_instructions(
             layer="topic_modules",
             title="TOPIC MODULES",
             body="\n\n".join(module.instructions for module in active_modules)
-            or "No topic module is active for this commission.",
+            or "No topic module is active for this brief.",
         ),
         InstructionLayer(
             layer="audience",
             title="AUDIENCE GUIDANCE",
-            body=_audience_body(commission, catalog),
+            body=_audience_body(brief, catalog),
         ),
         InstructionLayer(
             layer="house_style",
@@ -374,22 +385,22 @@ def assemble_v3_instructions(
 
     headline_note = _headline_note(form.instructions)
     form_structure = _form_structure(form.instructions)
-    commission_body = _commission_body(commission)
-    audience_body = _audience_body(commission, catalog)
+    brief_body = _brief_body(brief, work_order)
+    audience_body = _audience_body(brief, catalog)
     topic_modules_body = (
         "\n\n".join(module.instructions for module in active_modules)
-        or "No topic module is active for this commission."
+        or "No topic module is active for this brief."
     )
     stage_contexts = V3StageContexts(
         outline=_stage_context(
             parts=[
                 (
                     "outline_authority",
-                    "OUTLINE AUTHORITY\nThe approved commission controls scope; "
+                    "OUTLINE AUTHORITY\nThe approved brief controls scope; "
                     "the claim and requirement index controls available support; "
                     "the form structure controls organization.",
                 ),
-                ("commission", f"APPROVED COMMISSION\n{commission_body}"),
+                ("brief", f"APPROVED BRIEF\n{brief_body}"),
                 (
                     "form_structure",
                     f"ARTICLE FORM STRUCTURE — {form.label}\n{form_structure}",
@@ -402,11 +413,11 @@ def assemble_v3_instructions(
                 (
                     "compose_authority",
                     "COMPOSE AUTHORITY\nVerified evidence controls facts; the approved "
-                    "commission controls scope; form and style rules control "
+                    "brief controls scope; form and style rules control "
                     "expression.",
                 ),
                 ("evidence", f"VERIFIED EVIDENCE\n{_evidence_body(evidence)}"),
-                ("commission", f"APPROVED COMMISSION\n{commission_body}"),
+                ("brief", f"APPROVED BRIEF\n{brief_body}"),
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("topic_modules", f"TOPIC MODULES\n{topic_modules_body}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
@@ -417,11 +428,11 @@ def assemble_v3_instructions(
             parts=[
                 (
                     "audit_authority",
-                    "AUDIT AUTHORITY\nJudge commission fidelity, form fit, reader "
+                    "AUDIT AUTHORITY\nJudge brief fidelity, form fit, reader "
                     "service, and style. Treat the grounding verdict as final "
                     "on support.",
                 ),
-                ("commission", f"APPROVED COMMISSION\n{commission_body}"),
+                ("brief", f"APPROVED BRIEF\n{brief_body}"),
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
                 ("house_style", f"HOUSE STYLE\n{catalog.house_rules.instructions}"),
@@ -438,7 +449,9 @@ def assemble_v3_instructions(
                 (
                     "scope_style_lock",
                     f"COMPACT SCOPE AND STYLE LOCK\n"
-                    f"{_repair_lock_body(commission, form_label=form.label)}",
+                    f"{_repair_lock_body(
+        brief,
+        work_order, form_label=form.label)}",
                 ),
             ]
         ),
@@ -446,7 +459,7 @@ def assemble_v3_instructions(
             parts=[
                 (
                     "title_authority",
-                    "TITLE AUTHORITY\nHeadline rules control phrasing; the commission "
+                    "TITLE AUTHORITY\nHeadline rules control phrasing; the brief "
                     "and supplied article signals control the promise.",
                 ),
                 ("headline_rules", catalog.headline_rules.instructions),
@@ -458,7 +471,7 @@ def assemble_v3_instructions(
                         else ""
                     ),
                 ),
-                ("commission_summary", _title_commission_body(commission)),
+                ("brief_summary", _title_brief_body(brief, work_order)),
             ]
         ),
     )
@@ -473,11 +486,12 @@ def assemble_v3_instructions(
             "form_label": form.label,
             "source_requirements": list(form.source_requirements),
             "topic_module_ids": [module.id for module in active_modules],
-            "audience_tag_ids": list(commission.audience.tags),
+            "audience_tag_ids": list(brief.reader.tags),
             "house_rules_id": catalog.house_rules.id,
             "headline_rules_id": catalog.headline_rules.id,
             "precedence": list(PRECEDENCE),
-            "commission_fingerprint": commission.commission_fingerprint,
+            "brief_fingerprint": brief.brief_fingerprint,
+            "work_order_fingerprint": work_order.work_order_fingerprint,
             "evidence_receipt": evidence.receipt(),
         },
     )

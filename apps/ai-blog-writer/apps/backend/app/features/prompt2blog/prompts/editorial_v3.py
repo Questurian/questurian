@@ -4,7 +4,7 @@ P2B_V3_OUTLINE_PROMPT = """\
 You are a commissioning editor planning an article before it is written.
 
 Goal:
-Plan the sections that answer the approved commission using only the verified
+Plan the sections that answer the approved brief using only the verified
 evidence records. Plan the structure only. Do not write the article.
 
 Return strict JSON only:
@@ -21,7 +21,7 @@ Return strict JSON only:
     }}
   ],
   "takeaway_focus": "string",
-  "commission_alignment": "string",
+  "brief_alignment": "string",
   "unsupported_requirements": ["string"]
 }}
 
@@ -32,17 +32,17 @@ Rules:
 - Every section must name the claim_ids it rests on, using IDs that exist in
   the evidence records. Never cite a claim the records do not contain.
 - Every section must name the requirement_ids it serves, using the locked
-  commission's requirement IDs.
+  work order's requirement IDs.
 - The primary subject controls the article. A context-only reference may
   calibrate a fact inside a section; it may never be what a section is about,
   and it may never appear as a heading subject.
 - Only an approved comparator may share comparison scope, and only when the
   scope mode allows it.
-- If the commission asks for something the evidence cannot support, list it in
+- If the brief asks for something the evidence cannot support, list it in
   unsupported_requirements instead of planning a section that would need an
   invented fact.
 - target_words across all sections should total roughly the target word count.
-- commission_alignment must explain in one or two sentences how this structure
+- brief_alignment must explain in one or two sentences how this structure
   answers the core reader question for the primary subject.
 
 {instructions}
@@ -55,14 +55,14 @@ P2B_V3_COMPOSE_PROMPT = """\
 You are an expert editor writing a publish-ready article from verified evidence.
 
 Goal:
-Write the article the approved commission describes, using only the evidence
+Write the article the approved brief describes, using only the evidence
 records supplied.
 
 Return strict JSON only:
 {{
   "improved_title": "string",
   "improved_content": "string",
-  "commission_alignment_summary": "string",
+  "brief_alignment_summary": "string",
   "improvements_applied": ["string"],
   "remaining_gaps": ["string"]
 }}
@@ -84,7 +84,7 @@ Hard rules:
   context-only reference may calibrate a fact; it may never become a
   co-subject, a recurring section, a ranking, or a verdict.
 - Answer the core reader question and deliver the stated reader outcome.
-- Honour every exclusion in the commission.
+- Keep to the brief's spine, and name everything under must_name.
 - improved_content must not contain a `#` H1.
 - Use at least 3 `##` headings.
 - Include one direct 40-60 word answer near the top.
@@ -168,7 +168,7 @@ DRAFT CONTENT:
 P2B_V3_QUALITY_AUDIT_PROMPT = """You are a quality auditor for commissioned articles.
 
 Goal:
-Score the draft on commission fidelity, evidence discipline, form fit, and
+Score the draft on brief fidelity, evidence discipline, form fit, and
 reader utility — and on whether it delivers the article the working title
 promised.
 
@@ -205,12 +205,12 @@ Rules:
   approved form; a context-only reference organizes a section or earns a
   verdict; the core reader question goes unanswered; an exclusion is broken; a
   statement outruns the evidence record behind it.
-- guideline_coverage_score is fidelity to the approved commission and its
+- guideline_coverage_score is fidelity to the approved brief and its
   article form.
-- The working title under "Original title" is a promise made to a reader who
+- The line under "The promise to keep" is what the reader was promised, and
   has not read the article yet. Judge the draft against that promise, not only
-  against the commission. A commission can drift from the title it came from,
-  and a draft that follows a drifted commission faithfully is still the wrong
+  against the brief. A brief can drift from the seed it came from, and a
+  draft that follows a drifted brief faithfully is still the wrong
   article: "Where to eat in Lima right now" that names no restaurant, dish,
   price, or neighborhood has failed, however cleanly it executes its form.
   Where the draft answers a narrower or different question than the title
@@ -279,7 +279,7 @@ Return strict JSON only:
 {{
   "improved_title": "string",
   "improved_content": "string",
-  "commission_alignment_summary": "string",
+  "brief_alignment_summary": "string",
   "improvements_applied": ["string"],
   "remaining_gaps": ["string"]
 }}
@@ -290,7 +290,7 @@ Rules:
   words. Move that way. Never lengthen a draft asked to be cut, or cut one
   asked to be lengthened.
 - Repair prose and structure only. You may not create a fact, and you may not
-  change the commission: not the form, the primary subject, the scope mode, the
+  change the brief: not the form, the primary subject, the scope mode, the
   reference roles, the requirements, or the exclusions.
 - Never add factual material. Work only with facts already present in the
   previous draft. Apply the EVIDENCE DISPOSITION POLICY in the repair lock

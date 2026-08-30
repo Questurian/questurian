@@ -1,10 +1,6 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { EditorialStageArticlePageProps } from '../../features/editorial-stage-article/types'
 import { useEditorialStageArticleScreenViewModel } from '../../features/editorial-stage-article/hooks/useEditorialStageArticleScreenViewModel'
-import { parseMarkdownToBlocks } from '../../features/editorial-stage-article/workflow.service'
-import { ArticleExpansionModal } from '../../../../features/youtube2blog/components/ArticleExpansionModal'
-import { useArticleExpansion } from '../../../../features/youtube2blog/hooks/useArticleExpansion'
 import { BlockImageModal } from './BlockImageModal'
 import { EditorialSidebar } from './EditorialSidebar'
 import { EditorialStageLayout } from './EditorialStageLayout'
@@ -32,10 +28,6 @@ export function EditorialStageArticleScreen({
     api,
   })
 
-  const [isExpansionModalOpen, setIsExpansionModalOpen] = useState(false)
-  const runId = status.stagedArticle?.runId ?? null
-  const expansion = useArticleExpansion(runId)
-
   if (status.isLoading || !status.stagedArticle) {
     return (
       <div className="stage-article-page">
@@ -59,32 +51,8 @@ export function EditorialStageArticleScreen({
     )
   }
 
-  const handleDeepExpand = () => {
-    if (!status.stagedArticle) return
-    const article = status.stagedArticle.content
-    const articleType = status.stagedArticle.originalType
-    const title = status.stagedArticle.title || status.stagedArticle.originalTitle
-    expansion.reset()
-    expansion.startExpansion(article, articleType, title)
-    setIsExpansionModalOpen(true)
-  }
 
-  const handleAcceptExpansion = (expandedMarkdown: string) => {
-    if (!sidebarProps) return
-    const blocks = parseMarkdownToBlocks(expandedMarkdown)
-    sidebarProps.onUpdateStagedArticle({
-      blocks,
-      content: expandedMarkdown,
-      lexicalConverted: false,
-    })
-    expansion.reset()
-    setIsExpansionModalOpen(false)
-  }
 
-  const handleCloseExpansion = () => {
-    expansion.reset()
-    setIsExpansionModalOpen(false)
-  }
 
   return (
     <>
@@ -102,7 +70,6 @@ export function EditorialStageArticleScreen({
         sidebarContent={(
           <EditorialSidebar
             {...sidebarProps}
-            onDeepExpand={handleDeepExpand}
           />
         )}
       />
@@ -110,20 +77,6 @@ export function EditorialStageArticleScreen({
       <FeaturedImageModal {...featuredModalProps} />
       <BlockImageModal {...blockModalProps} />
 
-      <ArticleExpansionModal
-        isOpen={isExpansionModalOpen}
-        phase={expansion.phase}
-        expandedArticle={expansion.expandedArticle}
-        expansionPlan={expansion.expansionPlan}
-        error={expansion.error}
-        originalArticle={status.stagedArticle?.content ?? ''}
-        articleType={status.stagedArticle?.originalType ?? ''}
-        title={status.stagedArticle?.title || status.stagedArticle?.originalTitle || ''}
-        listicleDetection={expansion.listicleDetection}
-        onAccept={handleAcceptExpansion}
-        onClose={handleCloseExpansion}
-        onProceed={expansion.proceedWithExpansion}
-      />
     </>
   )
 }

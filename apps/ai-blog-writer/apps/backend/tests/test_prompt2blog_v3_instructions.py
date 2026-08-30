@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from app.features.prompt2blog.contracts_v3 import (
+from app.features.prompt2blog.contracts_v4 import (
     EvidenceRequirement,
-    Prompt2BlogV3Request,
+    Prompt2BlogV4Request,
 )
 from app.features.prompt2blog.evidence_v3 import normalize_evidence
 from app.features.prompt2blog.instructions_v3 import (
@@ -23,7 +23,7 @@ FIXTURE_PATH = (
     / "data"
     / "fixtures"
     / "prompt2blog"
-    / "lima-scope-drift-v3.json"
+    / "lima-scope-drift-v4.json"
 )
 
 
@@ -31,21 +31,20 @@ def _fixture() -> dict:
     return json.loads(FIXTURE_PATH.read_text())
 
 
-def _request(**overrides) -> Prompt2BlogV3Request:
+def _request(**overrides) -> Prompt2BlogV4Request:
     fixture = _fixture()
     payload = {
-        "schema_version": 3,
-        "commission": fixture["commission"],
+        "schema_version": 4,
+        "brief": fixture["brief"],
+        "work_order": fixture["work_order"],
         "evidence_package": fixture["evidence_package"],
         "profiles": {
-            "tone_id": "editorial",
             "length_id": "standard",
-            "brand_voice_id": None,
             "creativity_level": "medium",
         },
     }
     payload.update(overrides)
-    return Prompt2BlogV3Request.model_validate(payload)
+    return Prompt2BlogV4Request.model_validate(payload)
 
 
 def test_instruction_layers_follow_the_fixed_authority_order():
@@ -53,7 +52,7 @@ def test_instruction_layers_follow_the_fixed_authority_order():
 
     assert [layer.layer for layer in instructions.layers] == [
         "evidence",
-        "commission",
+        "brief",
         "form",
         "topic_modules",
         "audience",
@@ -64,7 +63,7 @@ def test_instruction_layers_follow_the_fixed_authority_order():
     assert instructions.stage_contexts.compose.included_sections == [
         "compose_authority",
         "evidence",
-        "commission",
+        "brief",
         "form",
         "topic_modules",
         "audience",
@@ -100,20 +99,23 @@ def test_stage_contexts_are_deterministic_and_keep_only_job_specific_material():
     assert EVIDENCE_DISPOSITION_POLICY not in first.audit.text
 
 
-def test_commission_layer_locks_form_subject_scope_and_exclusions():
+def test_brief_layer_locks_form_subject_and_scope():
     fixture = _fixture()
     instructions = assemble_v3_instructions(_request())
-    commission_layer = next(
-        layer for layer in instructions.layers if layer.layer == "commission"
+    brief_layer = next(
+        layer for layer in instructions.layers if layer.layer == "brief"
     )
 
-    assert fixture["commission"]["original_title"] in commission_layer.body
-    assert "Primary subject: Lima" in commission_layer.body
-    assert "Scope mode: single_subject" in commission_layer.body
-    assert "- Medellín — context_only" in commission_layer.body
-    assert "never become co-subjects" in commission_layer.body
-    for exclusion in fixture["commission"]["exclusions"]:
-        assert exclusion in commission_layer.body
+    assert fixture["brief"]["seed"] in brief_layer.body
+    assert "Primary subject: Lima" in brief_layer.body
+    assert "Scope mode: single_subject" in brief_layer.body
+    assert "- Medellín — context_only" in brief_layer.body
+    assert "never become co-subjects" in brief_layer.body
+    # v4 has no exclusions. The brief's must_name and fails_if carry what the
+    # piece has to do and what counts as failing it (ADR 0030, W7).
+    for name in fixture["brief"]["must_name"]:
+        assert name in brief_layer.body
+    assert fixture["brief"]["fails_if"] in brief_layer.body
     assert instructions.instruction_meta["form_id"] == "analysis"
 
 
@@ -127,7 +129,7 @@ def test_only_the_commissioned_modules_and_tags_reach_the_stack():
     )
 
     assert instructions.instruction_meta["topic_module_ids"] == (
-        _fixture()["commission"]["topic_module_ids"]
+        _fixture()["brief"]["topic_module_ids"]
     )
     assert "## Research questions" in modules_layer.body
     assert "Safety" not in instructions.instruction_meta["topic_module_ids"]
@@ -152,13 +154,13 @@ def test_evidence_layer_preserves_publisher_url_dates_and_exact_notes():
     assert "visible gap" not in evidence_layer.body
 
 
-def test_normalized_requirements_keep_commission_order_and_report_gaps():
+def test_normalized_requirements_keep_work_order_order_and_report_gaps():
     request = _request()
 
-    evidence = normalize_evidence(request.commission, request.evidence_package)
+    evidence = normalize_evidence(request.work_order, request.evidence_package)
 
     assert [item.requirement_id for item in evidence.requirements] == [
-        item.requirement_id for item in request.commission.requirements
+        item.requirement_id for item in request.work_order.requirements
     ]
     assert evidence.unresolved_requirement_ids() == ["r2", "r3"]
     receipt = evidence.receipt()
@@ -172,7 +174,7 @@ def test_title_context_carries_the_original_title_and_form_note():
     instructions = assemble_v3_instructions(_request())
 
     title_context = instructions.stage_contexts.title.text
-    assert fixture["commission"]["original_title"] in title_context
+    assert fixture["brief"]["seed"] in title_context
     assert "FORM HEADLINE NOTE — Analysis" in title_context
     assert "Primary subject: Lima" in title_context
 
@@ -181,7 +183,7 @@ def test_unknown_catalog_ids_fail_instead_of_silently_dropping():
     # The request contract already rejects unknown IDs, so the assembler is
     # forced past it to prove it fails loudly rather than dropping the module.
     broken = _request().model_copy(deep=True)
-    broken.commission.topic_module_ids = ["not-a-module"]
+    broken.brief.topic_module_ids = ["not-a-module"]
 
     with pytest.raises(ValueError, match="Unknown topic modules"):
         assemble_v3_instructions(broken)

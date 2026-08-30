@@ -44,11 +44,13 @@ PROMPT2BLOG_TITLE_GUIDELINES_DIR = PROMPT2BLOG_DATA_DIR / "title"
 
 PROMPT2BLOG_OPTIONS_DIR = PROMPT2BLOG_DATA_DIR / "prompt2blog"
 
-PROMPT2BLOG_TONES_DIR = PROMPT2BLOG_OPTIONS_DIR / "tones"
+PROMPT2BLOG_VOICE_FILE = PROMPT2BLOG_OPTIONS_DIR / "voice" / "questurian-voice.md"
 
 PROMPT2BLOG_LENGTHS_DIR = PROMPT2BLOG_OPTIONS_DIR / "lengths"
 
-PROMPT2BLOG_BRAND_VOICES_DIR = PROMPT2BLOG_OPTIONS_DIR / "brand-voices"
+PROMPT2BLOG_WRITING_CONVENTIONS_FILE = (
+    PROMPT2BLOG_OPTIONS_DIR / "voice" / "writing-conventions.md"
+)
 
 PROMPT2BLOG_FORMS_DIR = PROMPT2BLOG_OPTIONS_DIR / "forms"
 
@@ -79,6 +81,22 @@ P2B_REPAIR_ESTIMATED_TOKENS = 90_000
 # doubling down. Set above the Lima run's pre-repair spend (~158k) on purpose:
 # the first repair on a normal run must still be affordable.
 P2B_RUN_TOKEN_BUDGET = 320_000
+
+# The hard ceiling. Distinct from P2B_RUN_TOKEN_BUDGET above, which only asks
+# whether one more *rescue* is affordable: this asks whether the run may
+# continue at all, and refuses when it may not.
+#
+# v3 did not need one. Its first model call was the outline, and everything
+# before it happened in a browser on the operator's own chatbot subscription.
+# v4 moves the grill and both research passes in-app, and neither has an upper
+# bound by construction -- the grill stops at agreement rather than at a
+# question count (ADR 0030), and research is grounded web search. A bug that
+# asks forty questions should cost a known amount and then stop.
+#
+# Set at roughly twice the budget above so it never fires on a run that is
+# merely expensive; it exists for runaway, not for costly. The number is here,
+# in one place, so a ceiling set wrong is obvious rather than mysterious.
+P2B_RUN_TOKEN_CEILING = 650_000
 
 # How many times one run may be resumed after a failure. A resume costs the
 # stages that had not run yet, so a stage that fails for a reason resuming

@@ -19,9 +19,9 @@ def run_v3_finalize_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
-    """Persist the finished article with the commission it answers.
+    """Persist the finished article with the brief it answers.
 
-    The artifact keeps the commission, the form and modules, the audience, the
+    The artifact keeps the brief, the work order, the form and modules, the audience, the
     evidence receipt, and the readiness outcome, so a finished run can be
     audited later without replaying it or trusting the prose.
     """
@@ -30,7 +30,8 @@ def run_v3_finalize_stage(
     rewrite = state["rewrite"]
     quality = state["quality"]
     quality_checks = state["quality_checks"]
-    commission = state["commission"]
+    brief = state["brief"]
+    work_order = state["work_order"]
     instructions = state["instructions"]
     evidence = state["evidence"]
     dependencies.recorder.start_stage(run_id, stage)
@@ -41,7 +42,7 @@ def run_v3_finalize_stage(
     final_checks = _build_constraint_checks(
         final_title,
         final_content,
-        v3_constraint_brief(commission, state["option_context"]),
+        v3_constraint_brief(brief, state["option_context"]),
     )
     settled_checks = {
         **quality_checks,
@@ -95,7 +96,8 @@ def run_v3_finalize_stage(
         "resume_count": state.get("resume_count", 0),
         "pipeline_status": pipeline_status,
         "readiness_blockers": list(verdict.blockers),
-        "commission": commission,
+        "brief": brief,
+        "work_order": work_order,
         "form": {
             "id": instruction_meta.get("form_id"),
             "label": instruction_meta.get("form_label"),
@@ -120,7 +122,7 @@ def run_v3_finalize_stage(
             "quality_summary": quality["quality_summary"],
             "quality_scores": {
                 "overall": quality["overall_score"],
-                "commission_fidelity": quality["guideline_coverage_score"],
+                "brief_fidelity": quality["guideline_coverage_score"],
                 "informativeness": quality["informativeness_score"],
                 "originality": quality["originality_score"],
                 "brief_adherence": quality["brief_adherence_score"],
@@ -186,9 +188,10 @@ def run_v3_finalize_stage(
     if state["include_debug"]:
         response_payload["debug"] = {
             "pipeline_input": {
-                "commission_fingerprint": commission["commission_fingerprint"],
-                "form_id": commission["form_id"],
-                "topic_module_ids": list(commission["topic_module_ids"]),
+                "brief_fingerprint": brief["brief_fingerprint"],
+                "work_order_fingerprint": work_order["work_order_fingerprint"],
+                "form_id": brief["form_id"],
+                "topic_module_ids": list(brief["topic_module_ids"]),
                 "model_name": state["model_name"],
                 "outline_model": state["outline_model"],
                 "writing_model": state["writing_model"],

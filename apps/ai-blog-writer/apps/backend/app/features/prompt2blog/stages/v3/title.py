@@ -22,17 +22,17 @@ def _title_material(state: Prompt2BlogV3GraphState) -> dict[str, Any]:
     }
 
 
-# Title is compact and constrained by headline rules, commission, and settled
+# Title is compact and constrained by headline rules, the brief, and settled
 # article. A dedicated medium-effort model avoids paying full drafting effort
 # for one string while keeping it on Claude rather than the research worker.
 def run_v3_title_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
 ) -> dict[str, Any]:
-    """Write the headline from the shared standard and the approved commission.
+    """Write the headline from the shared standard and the approved brief.
 
     The original title reaches this stage as author intent, so the headline can
-    keep what the commission was about instead of re-deriving a subject from
+    keep what the brief was about instead of re-deriving a subject from
     the finished prose.
     """
     stage = "stage_v3_title"
@@ -54,7 +54,7 @@ def run_v3_title_stage(
     final_title = (
         _clean_title(raw_response)
         or rewrite["improved_title"]
-        or state["commission"]["original_title"]
+        or state["brief"]["seed"]
     )
     dependencies.recorder.record_stage(
         run_id,

@@ -7,12 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from .config import (
-    PROMPT2BLOG_BRAND_VOICES_DIR,
+    PROMPT2BLOG_WRITING_CONVENTIONS_FILE,
     PROMPT2BLOG_CREATIVITY_LEVELS,
     PROMPT2BLOG_LENGTHS_DIR,
-    PROMPT2BLOG_TONES_DIR,
+    PROMPT2BLOG_VOICE_FILE,
 )
-from .models import Prompt2BlogInputRequest
 from .support import (
     _normalize_article_type_name,
     _safe_bool,
@@ -65,6 +64,23 @@ def _markdown_heading_label(body: str, fallback: str) -> str:
     return fallback
 
 
+def _read_markdown_option_file(path: Path) -> list[dict[str, Any]]:
+    """One file, returned in the shape the catalog expects.
+
+    Questurian has one voice and one set of writing conventions, so these are
+    single files rather than directories of choices. The list wrapper stays
+    because the request contract still validates an id against a list; it just
+    never has more than one member to pick from.
+    """
+    if not path.exists():
+        return []
+    return [
+        option
+        for option in _read_markdown_option_files(path.parent)
+        if option["id"] == path.stem
+    ]
+
+
 def _read_markdown_option_files(directory: Path) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = []
     if not directory.exists():
@@ -108,13 +124,14 @@ def _read_markdown_option_files(directory: Path) -> list[dict[str, Any]]:
 
 
 def _default_prompt2blog_options() -> dict[str, list[dict[str, Any]]]:
+    """Fallbacks used only when the option files cannot be read."""
     return {
         "tones": [
             {
-                "id": "practical",
-                "label": "Practical",
-                "description": "Actionable and direct guidance.",
-                "instructions": "Prioritize practical guidance and clear steps.",
+                "id": "questurian-voice",
+                "label": "Questurian Voice",
+                "description": "What Questurian is like.",
+                "instructions": "Write as Questurian.",
                 "default": True,
                 "order": 1,
             }
@@ -125,7 +142,7 @@ def _default_prompt2blog_options() -> dict[str, list[dict[str, Any]]]:
                 "label": "Medium",
                 "description": "Balanced depth.",
                 "instructions": "Target balanced depth and readability.",
-                "paragraph_length": "Medium (3–5 sentences per paragraph)",
+                "paragraph_length": "Medium (3\u20135 sentences per paragraph)",
                 "target_word_count": 900,
                 "default": True,
                 "order": 1,
@@ -133,10 +150,10 @@ def _default_prompt2blog_options() -> dict[str, list[dict[str, Any]]]:
         ],
         "brand_voices": [
             {
-                "id": "questurian-default",
-                "label": "Questurian Default",
-                "description": "Clear, globally minded editorial voice.",
-                "instructions": "Maintain polished, globally minded editorial voice.",
+                "id": "writing-conventions",
+                "label": "Writing conventions",
+                "description": "Mechanical conventions the voice cannot imply.",
+                "instructions": "Follow the writing conventions.",
                 "default": True,
                 "order": 1,
             }
@@ -147,12 +164,15 @@ def _default_prompt2blog_options() -> dict[str, list[dict[str, Any]]]:
 @lru_cache(maxsize=1)
 def _load_prompt2blog_option_catalog() -> dict[str, list[dict[str, Any]]]:
     defaults = _default_prompt2blog_options()
-    tones = _read_markdown_option_files(PROMPT2BLOG_TONES_DIR) or defaults["tones"]
+    # Questurian has one voice, so "tones" is a single fixed entry rather than
+    # a menu (ADR 0032). The field survives only because the v3 request contract
+    # still requires a tone_id; stage 2 removes it.
+    tones = _read_markdown_option_file(PROMPT2BLOG_VOICE_FILE) or defaults["tones"]
     lengths = (
         _read_markdown_option_files(PROMPT2BLOG_LENGTHS_DIR) or defaults["lengths"]
     )
     brand_voices = (
-        _read_markdown_option_files(PROMPT2BLOG_BRAND_VOICES_DIR)
+        _read_markdown_option_file(PROMPT2BLOG_WRITING_CONVENTIONS_FILE)
         or defaults["brand_voices"]
     )
     return {
@@ -213,37 +233,3 @@ def _read_article_type_markdown(
             break
 
     return fallback, None
-
-
-def _resolve_input_options(request: Prompt2BlogInputRequest) -> dict[str, Any]:
-    catalog = _load_prompt2blog_option_catalog()
-    tones = catalog.get("tones", [])
-    lengths = catalog.get("lengths", [])
-    brand_voices = catalog.get("brand_voices", [])
-
-    tone = _find_option_or_raise(tones, request.tone_id, field_name="tone_id")
-    length = _find_option_or_raise(lengths, request.length_id, field_name="length_id")
-    if request.brand_voice_id:
-        brand_voice = _find_option_or_raise(
-            brand_voices,
-            request.brand_voice_id,
-            field_name="brand_voice_id",
-        )
-    else:
-        brand_voice = _default_option(brand_voices)
-        if not brand_voice:
-            raise RuntimeError("No brand voice options are configured.")
-
-    creativity_level = _safe_str(request.creativity_level).lower() or "medium"
-    if creativity_level not in PROMPT2BLOG_CREATIVITY_LEVELS:
-        raise RuntimeError(
-            "creativity_level must be one of: "
-            f"{', '.join(sorted(PROMPT2BLOG_CREATIVITY_LEVELS))}"
-        )
-
-    return {
-        "tone": tone,
-        "length": length,
-        "brand_voice": brand_voice,
-        "creativity_level": creativity_level,
-    }
