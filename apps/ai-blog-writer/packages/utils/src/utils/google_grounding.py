@@ -32,6 +32,36 @@ class GroundedGenerationResult:
     text: str
     source_urls: list[str]
     model_name: str
+    # What the call cost, straight off the response. Without this a grounded
+    # call is invisible to any caller that meters spend: this path is raw REST,
+    # so it never passes through the LangChain adapters the token ledger
+    # watches. Prompt2Blog v4 puts grounded search on every run, and a per-run
+    # ceiling that cannot see the most expensive stage is not a ceiling.
+    #
+    # None means the response carried no usage block, which is not the same as
+    # zero -- a caller must be able to tell "cost nothing" from "cost unknown".
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+
+
+def _usage_counts(response: Any) -> tuple[int | None, int | None, int | None]:
+    """Read `usageMetadata` off a generateContent response."""
+    if not isinstance(response, dict):
+        return None, None, None
+    usage = response.get("usageMetadata")
+    if not isinstance(usage, dict):
+        return None, None, None
+
+    def _count(key: str) -> int | None:
+        value = usage.get(key)
+        return value if isinstance(value, int) and value >= 0 else None
+
+    return (
+        _count("promptTokenCount"),
+        _count("candidatesTokenCount"),
+        _count("totalTokenCount"),
+    )
 
 
 def _safe_text(value: Any) -> str:
@@ -282,8 +312,12 @@ def invoke_google_grounded_text(
     if response is None:
         return None
 
+    input_tokens, output_tokens, total_tokens = _usage_counts(response)
     return GroundedGenerationResult(
         text=_safe_text(response),
         source_urls=extract_grounded_urls_from_response(response),
         model_name=response.get("modelVersion", effective_model_name),
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens,
     )
