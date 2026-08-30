@@ -180,6 +180,77 @@ class WorkOrderRequirement(V4ContractModel):
     assumption_ids: list[str] = Field(default_factory=list)
 
 
+GrillStatus = Literal["asking", "agreed"]
+
+
+class GrillQuestion(V4ContractModel):
+    """One question, and the answer the grill expects to hear.
+
+    Every question carries a recommendation because nobody should face a blank
+    (ADR 0030, G1). The people using this write about places they may never
+    have been; correcting a proposal is easy where composing one is not.
+
+    `pushback` is set when the answer being questioned contradicts the seed or
+    an earlier answer. The grill says so and makes the operator resolve it
+    rather than collecting the contradiction and writing around it.
+    """
+
+    question_id: str = Field(min_length=1)
+    topic: str = Field(min_length=1)
+    ask: str = Field(min_length=1)
+    recommendation: str = Field(min_length=1)
+    pushback: str = ""
+
+
+class GrillTurn(V4ContractModel):
+    """A question and what the operator actually typed.
+
+    The answer is stored verbatim. It is the source of `BriefMaterial` for
+    anything first-hand, and a paraphrase there would be an unverifiable claim
+    nothing downstream can catch.
+    """
+
+    question: GrillQuestion
+    answer: str = Field(min_length=1)
+
+
+class GrillState(V4ContractModel):
+    """Everything the grill knows, recorded on the run from the first keystroke.
+
+    Persisted per turn rather than held in a browser, so an abandoned grill is
+    resumable and its tokens reach the receipt (ADR 0031).
+    """
+
+    schema_version: Literal[4] = 4
+    run_id: str = Field(min_length=1)
+    seed: str = Field(min_length=1)
+    # What the grill looked up before asking anything. This is what keeps the
+    # grill short -- not a question limit (G2).
+    research_digest: str = ""
+    research_source_urls: list[str] = Field(default_factory=list)
+    location: str = ""
+    turns: list[GrillTurn] = Field(default_factory=list)
+    status: GrillStatus = "asking"
+    pending: GrillQuestion | None = None
+    # The played-back summary the operator approves or corrects. Agreement on
+    # this is the stop condition -- not a question count (G5).
+    consensus: str = ""
+
+    @model_validator(mode="after")
+    def validate_grill_state(self) -> "GrillState":
+        _require_unique(
+            [turn.question.question_id for turn in self.turns], "question_id"
+        )
+        if self.status == "asking" and self.pending is None:
+            raise ValueError("a grill that is still asking must have a pending question")
+        if self.status == "agreed":
+            if self.pending is not None:
+                raise ValueError("an agreed grill cannot still be asking something")
+            if not self.consensus:
+                raise ValueError("an agreed grill must have played back what it agreed")
+        return self
+
+
 class BriefMaterial(V4ContractModel):
     """Something the operator has, labelled by where it came from.
 
