@@ -330,7 +330,9 @@ def test_the_outline_prompt_gets_planning_context_not_the_whole_stack():
 
     prompt = llm.prompts[0]
     assert "OUTLINE AUTHORITY" in prompt
-    assert "CLAIM INDEX" in prompt
+    assert "FACTS AVAILABLE, BY SUBJECT" in prompt
+    # The outline knows which publication it works for now (#432, A1).
+    assert "THE VOICE YOU ARE WRITING IN" in prompt
     assert "APPROVED BRIEF" in prompt
     assert "## Allowed structures" in prompt
     assert "Instituto Nacional de Estadística e Informática" not in prompt

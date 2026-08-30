@@ -12,6 +12,8 @@ from .config import (
     PROMPT2BLOG_FORMS_DIR,
     PROMPT2BLOG_HEADLINES_FILE,
     PROMPT2BLOG_HOUSE_RULES_FILE,
+    PROMPT2BLOG_VOICE_FILE,
+    PROMPT2BLOG_WRITING_CONVENTIONS_FILE,
     PROMPT2BLOG_TOPIC_MODULES_DIR,
 )
 from .contracts_v4 import ArticleFormId, TopicModuleId
@@ -79,6 +81,13 @@ class EditorialCatalog(CatalogModel):
     reference_roles: list[EditorialMetadataOption]
     house_rules: EditorialRule
     headline_rules: EditorialRule
+    # What Questurian is like, and the conventions that cannot be inferred from
+    # it. Both are always loaded and neither is a choice (ADR 0032). Until now
+    # nothing read them: across all the writing instruction in the system there
+    # were 41 prohibitions and not one sentence describing what a good piece
+    # is, which is why bans could never fix the register.
+    voice: EditorialRule
+    writing_conventions: EditorialRule
 
     def public_metadata(self) -> dict[str, Any]:
         return {
@@ -332,5 +341,11 @@ def load_editorial_catalog() -> EditorialCatalog:
         ),
         headline_rules=_load_shared_rule(
             PROMPT2BLOG_HEADLINES_FILE, expected_id="headlines"
+        ),
+        voice=_load_shared_rule(
+            PROMPT2BLOG_VOICE_FILE, expected_id="questurian-voice"
+        ),
+        writing_conventions=_load_shared_rule(
+            PROMPT2BLOG_WRITING_CONVENTIONS_FILE, expected_id="writing-conventions"
         ),
     )

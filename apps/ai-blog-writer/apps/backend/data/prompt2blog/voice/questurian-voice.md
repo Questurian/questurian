@@ -2,6 +2,7 @@
 id: questurian-voice
 label: Questurian Voice
 description: What Questurian is like. The only voice; there is no tone layer (ADR 0032).
+summary: What a Questurian article is like: adult, unsold, warm through attention, opinionated, never about itself.
 default: true
 order: 1
 ---

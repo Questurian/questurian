@@ -60,13 +60,17 @@ def test_instruction_layers_follow_the_fixed_authority_order():
     ]
     assert instructions.precedence == list(PRECEDENCE)
     assert instructions.schema_version == 5
+    # The brief leads and evidence follows it as material (#432, A5), and the
+    # voice is present at all for the first time.
     assert instructions.stage_contexts.compose.included_sections == [
         "compose_authority",
-        "evidence",
+        "voice",
         "brief",
+        "evidence",
         "form",
         "topic_modules",
         "audience",
+        "writing_conventions",
         "house_style",
     ]
     assert len(instructions.stage_contexts.compose.fingerprint) == 64
@@ -79,13 +83,16 @@ def test_stage_contexts_are_deterministic_and_keep_only_job_specific_material():
     second = assemble_v3_instructions(_request()).stage_contexts
 
     assert first == second
-    assert "CLAIM INDEX" in first.outline.text
+    # Facts by subject, not indexed by the question that produced them.
+    assert "FACTS AVAILABLE, BY SUBJECT" in first.outline.text
     assert "## Allowed structures" in first.outline.text
     assert fixture["evidence_package"]["sources"][0]["url"].rstrip("/") not in (
         first.outline.text
     )
     assert "HOUSE STYLE" not in first.outline.text
-    assert "VERIFIED EVIDENCE" in first.compose.text
+    # The outline knows what kind of piece this is now. That is the change.
+    assert "THE VOICE YOU ARE WRITING IN" in first.outline.text
+    assert "THE FACTS YOU MAY USE" in first.compose.text
     assert "HOUSE STYLE" in first.compose.text
     assert "VERIFIED EVIDENCE" not in first.audit.text
     assert "TOPIC MODULES" not in first.audit.text
@@ -251,3 +258,75 @@ def test_the_writer_is_told_not_to_narrate_a_resolved_conflict():
 
     assert "A resolved conflict is the same" in evidence_layer.body
     assert "Never tell the reader that two records disagreed" in evidence_layer.body
+
+
+# --- what each writing step knows (#432) ----------------------------------
+
+
+def _flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+def test_the_outline_is_told_which_publication_it_works_for():
+    """The largest single change in the spec.
+
+    Compose is obedient: give it a good plan and it writes well, give it an
+    audit and it writes an excellent audit. The outline decides which, and it
+    has never been told what kind of piece Questurian makes.
+    """
+    outline = assemble_v3_instructions(_request()).stage_contexts.outline.text
+
+    assert "THE VOICE YOU ARE WRITING IN" in outline
+    assert "It treats you as an adult with a decision to make." in outline
+    assert "AUDIENCE GUIDANCE" in outline
+
+
+def test_the_outline_gets_facts_by_subject_not_by_question():
+    """One section per research question is a research plan, not an article.
+
+    That is exactly what the Lima outline produced, because the ledger it was
+    handed was indexed by requirement id.
+    """
+    outline = assemble_v3_instructions(_request()).stage_contexts.outline.text
+
+    assert "FACTS AVAILABLE, BY SUBJECT" in outline
+    # Coverage still has to be checkable, but it is labelled as bookkeeping so
+    # it cannot be mistaken for a section plan.
+    assert "not a section plan" in outline
+
+
+def test_the_outline_may_not_write_about_the_research():
+    # "Do not claim a transformation" became a section called Scope limits.
+    outline = _flat(assemble_v3_instructions(_request()).stage_contexts.outline.text)
+
+    assert "No section may take scope, limits, method, evidence or the state of our research as its subject." in outline
+
+
+def test_the_outline_budget_leaves_room_for_what_compose_adds():
+    """Every medium run overshot by construction.
+
+    The plan budgeted the full target while compose was separately required to
+    add an opening and takeaways that nobody counted.
+    """
+    outline = _flat(assemble_v3_instructions(_request()).stage_contexts.outline.text)
+
+    assert "roughly 165 words" in outline
+    assert "Budget the sections to the target minus that." in outline
+
+
+def test_compose_leads_with_the_brief_and_treats_evidence_as_material():
+    """Evidence still constrains every fact; it stops being the reason the
+    article exists, which is what produced a piece about its own research."""
+    compose = assemble_v3_instructions(_request()).stage_contexts.compose.text
+
+    assert "WHAT WE ARE MAKING" in compose
+    assert "THE FACTS YOU MAY USE" in compose
+    assert compose.index("WHAT WE ARE MAKING") < compose.index("THE FACTS YOU MAY USE")
+    assert "constrain every factual claim absolutely" in _flat(compose)
+
+
+def test_compose_is_given_the_voice_and_the_conventions():
+    compose = assemble_v3_instructions(_request()).stage_contexts.compose.text
+
+    assert "THE VOICE YOU ARE WRITING IN" in compose
+    assert "WRITING CONVENTIONS" in compose
