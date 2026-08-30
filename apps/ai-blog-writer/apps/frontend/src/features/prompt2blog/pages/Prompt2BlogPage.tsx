@@ -17,6 +17,14 @@ import { useIntake } from '../intake/useIntake'
  * voice, a creativity level and a direction card before it would do anything,
  * and never once asked what the article was for.
  */
+const STEP_LABELS: Record<string, string> = {
+  seed: 'Starting',
+  grill: 'A few questions',
+  brief: 'The brief',
+  work_order: 'The research plan',
+  research: 'What we found',
+}
+
 export function Prompt2BlogPage() {
   const intake = useIntake()
   const state = intake.state
@@ -43,15 +51,21 @@ export function Prompt2BlogPage() {
       </header>
 
       <main className="p2b-form-container">
+        {state && (
+          // Always here, at the top, whatever has or has not gone wrong. The
+          // run is remembered so a closed tab can resume, which means a run
+          // that cannot move forward would trap the page on every reload.
+          <div className="p2b-intake-bar">
+            <span className="p2b-intake-step">{STEP_LABELS[step]}</span>
+            <button type="button" onClick={intake.abandon}>
+              Start over
+            </button>
+          </div>
+        )}
+
         {intake.error && (
           <div className="p2b-error" role="alert">
             <p>{intake.error}</p>
-            {/* A failed step must never be a dead end. The run is remembered
-                so a closed tab can resume, which means a run that cannot move
-                forward would otherwise trap the page on every reload. */}
-            <button type="button" className="p2b-clear-btn" onClick={intake.abandon}>
-              Start over
-            </button>
           </div>
         )}
 
@@ -99,13 +113,6 @@ export function Prompt2BlogPage() {
           />
         )}
 
-        {state && !intake.error && (
-          <div className="p2b-submit-row">
-            <button type="button" className="p2b-clear-btn" onClick={intake.abandon}>
-              Start something else
-            </button>
-          </div>
-        )}
       </main>
     </div>
   )
