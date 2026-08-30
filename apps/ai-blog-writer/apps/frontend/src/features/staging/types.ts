@@ -44,6 +44,15 @@ export type StagedArticle = PayloadSyncStateFields & {
   originalContent: string
   originalType: string
   title: string
+  /**
+   * What this run is called in the drafts list.
+   *
+   * Six attempts at one subject produce roughly the same title, so the title
+   * cannot tell them apart. This is built from what varies -- the form, the
+   * models, the time -- and it is why keeping a failure on purpose is useful
+   * rather than just tidy.
+   */
+  draftName?: string
   content: string
   blocks: ContentBlock[]
   editorialBlocks: EditorialBlock[]

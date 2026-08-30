@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Location, MediaAsset } from '../../../api'
 import type { DraftUserStamp, StagedArticle } from '../../../types'
 import { useAuth } from '../../../../auth'
+import { defaultDraftName } from '../services/draft-name'
 import { createEmptySeoSection } from '../../../../../shared/seo/services/seo-section.service'
 import { getSchemaPublisherConfig } from '../../../../../shared/seo/services/schema-publisher-config.service'
 import type { EditorialStageArticleApi } from '../types'
@@ -265,6 +266,12 @@ export function useEditorialStagePageData({
                   originalContent: extracted.bodyMarkdown,
                   originalType: urlType,
                   title: urlTitle,
+                  // Named at creation from what varies between attempts, so
+                  // six runs of one subject are tellable apart in the list.
+                  draftName: defaultDraftName({
+                    formId: urlType,
+                    models: [DEFAULT_EDITOR_MODEL_NAME],
+                  }),
                   content: composeArticleMarkdown(blocks, editorialBlocks),
                   blocks,
                   editorialBlocks,

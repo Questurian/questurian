@@ -105,7 +105,10 @@ export default function StageListPage({
               >
                 <div className="stage-list-content">
                   <div className="stage-list-header">
-                    <h3>{article.title || 'Untitled'}</h3>
+                    <h3>{article.draftName || article.title || 'Untitled'}</h3>
+                    {article.draftName && article.title && (
+                      <p className="stage-card-title">{article.title}</p>
+                    )}
                     {renderStatusBadge(article, showEditorialBlocking)}
                   </div>
 
