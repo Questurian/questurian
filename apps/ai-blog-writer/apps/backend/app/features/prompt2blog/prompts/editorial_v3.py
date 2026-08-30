@@ -286,6 +286,10 @@ Return strict JSON only:
 
 Rules:
 - Resolve each required revision directly.
+- Change only the sections a revision is about. Return every other section
+  exactly as it was, word for word. A section nobody complained about is
+  working prose, and rewriting it to improve it is how a repair makes an
+  article worse.
 - A revision that states a length change gives the direction and the number of
   words. Move that way. Never lengthen a draft asked to be cut, or cut one
   asked to be lengthened.

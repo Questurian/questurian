@@ -23,6 +23,7 @@ from ...quality import (
     word_count_revision_instruction,
 )
 from ...quality_v3 import v3_constraint_brief
+from ...content.markdown import sections_changed
 from ...schemas import REWRITE_SCHEMA
 from ...support import _format_style_directive, _json
 
@@ -250,6 +251,15 @@ def run_v3_repair_stage(
         fallback_title=rewrite["improved_title"],
         fallback_content=rewrite["improved_content"],
     )
+    # Repair may change what the auditor named and nothing else. Checked rather
+    # than trusted: the point of scoping repair is that it cannot damage
+    # working prose, and a pass that quietly rewrites a section nobody
+    # complained about has done exactly that. Recorded rather than rejected --
+    # keep-best already refuses a worse draft, and refusing here would throw
+    # away a repair that fixed the real problem too.
+    touched = sections_changed(
+        rewrite["improved_content"], repaired["improved_content"]
+    )
     # The same model that just wrote this text: the enforcement pass is another
     # rewrite of it, not a separate judgement.
     repaired["improved_content"] = dependencies.llm.enforce_anti_ai(
@@ -263,7 +273,7 @@ def run_v3_repair_stage(
         state["include_debug"],
         stage=stage,
         model_name=repair_model,
-        input_payload={"attempt": attempt},
+        input_payload={"attempt": attempt, "sections_touched": touched},
         prompt=prompt,
         raw_response=raw_response,
         parsed=parsed,
