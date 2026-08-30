@@ -24,7 +24,6 @@ type EditorialSidebarProps = {
   locations: Location[]
   onUpdateStagedArticle: (updates: Partial<StagedArticle>) => void
   onPublish: (targetStatus: 'draft' | 'published') => void
-  onDeepExpand?: () => void
 }
 
 export function EditorialSidebar({
@@ -41,7 +40,6 @@ export function EditorialSidebar({
   locations,
   onUpdateStagedArticle,
   onPublish,
-  onDeepExpand,
 }: EditorialSidebarProps) {
   const { canManagePublished, role } = usePermissions()
   const isEditingLocked = isStagedArticleEditingLocked(stagedArticle)
@@ -86,7 +84,6 @@ export function EditorialSidebar({
           stagedArticle={stagedArticle}
           isEditingLocked={isEditingLocked}
           onUpdate={onUpdateStagedArticle}
-          onDeepExpand={onDeepExpand}
         />
       </div>
     </aside>

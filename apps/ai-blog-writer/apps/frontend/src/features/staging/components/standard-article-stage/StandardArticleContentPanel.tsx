@@ -11,7 +11,6 @@ type StandardArticleContentPanelProps = {
   onUpdateArticle: (updates: Partial<StagedArticle>) => void
   onContinue: () => void
   onResetToOriginalBlocks: () => void
-  onOpenDeepExpand: () => void
 }
 
 export function StandardArticleContentPanel({
@@ -22,7 +21,6 @@ export function StandardArticleContentPanel({
   onUpdateArticle,
   onContinue,
   onResetToOriginalBlocks,
-  onOpenDeepExpand,
 }: StandardArticleContentPanelProps) {
   return (
     <section className="stl-panel sab-stage-panel sab-stage-panel-content">
@@ -35,9 +33,6 @@ export function StandardArticleContentPanel({
           />
           <button type="button" className="stl-btn stl-btn-secondary" onClick={onResetToOriginalBlocks}>
             Reset to Original
-          </button>
-          <button type="button" className="stl-btn stl-btn-secondary" onClick={onOpenDeepExpand}>
-            Deep Expand
           </button>
           {!isSynced ? (
             isStep3Locked ? (

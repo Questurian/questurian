@@ -8,14 +8,12 @@ type EditorialArticleSettingsProps = {
   stagedArticle: StagedArticle
   isEditingLocked: boolean
   onUpdate: (updates: Partial<StagedArticle>) => void
-  onDeepExpand?: () => void
 }
 
 export function EditorialArticleSettings({
   stagedArticle,
   isEditingLocked,
   onUpdate,
-  onDeepExpand,
 }: EditorialArticleSettingsProps) {
   return (
     <>
@@ -51,22 +49,6 @@ export function EditorialArticleSettings({
           ))}
         </select>
       </div>
-
-      {onDeepExpand && !isEditingLocked && (
-        <div className="stage-article-sidebar-section">
-          <label className="stage-article-label">AI Tools</label>
-          <button
-            type="button"
-            onClick={onDeepExpand}
-            className="stage-article-deep-expand-btn"
-          >
-            Deep Expand Article
-          </button>
-          <p className="stage-article-publish-checklist-more">
-            Adds new sections and deeper content while keeping everything existing intact.
-          </p>
-        </div>
-      )}
 
       <div className="stage-article-sidebar-section stage-article-info-box">
         <p><strong>Run ID:</strong> {stagedArticle.runId}</p>

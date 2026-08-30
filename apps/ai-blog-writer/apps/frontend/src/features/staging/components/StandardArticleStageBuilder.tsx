@@ -6,14 +6,12 @@ import { createEmptySeoSection } from '../../../shared/seo/services/seo-section.
 import type { EditorialStageArticleApi, EditorialStageRoutes } from '../features/editorial-stage-article/types'
 import { useEditorialStageArticleScreenViewModel } from '../features/editorial-stage-article/hooks/useEditorialStageArticleScreenViewModel'
 import { useStandardArticleDerivedState } from '../features/editorial-stage-article/hooks/useStandardArticleDerivedState'
-import { useStandardArticleExpansion } from '../features/editorial-stage-article/hooks/useStandardArticleExpansion'
 import { useStandardArticlePermalink } from '../features/editorial-stage-article/hooks/useStandardArticlePermalink'
 import { useStandardArticleSeoActions } from '../features/editorial-stage-article/hooks/useStandardArticleSeoActions'
 import { useStandardArticleStageActions } from '../features/editorial-stage-article/hooks/useStandardArticleStageActions'
 import { useStandardArticleStructuredData } from '../features/editorial-stage-article/hooks/useStandardArticleStructuredData'
 import { FeaturedImageModal } from './editorial-stage/FeaturedImageModal'
 import { BlockImageModal } from './editorial-stage/BlockImageModal'
-import { ArticleExpansionModal } from '../../youtube2blog/components/ArticleExpansionModal'
 import { StandardArticleBuilderSidebar } from './standard-article-stage/StandardArticleBuilderSidebar'
 import { StandardArticleContentPanel } from './standard-article-stage/StandardArticleContentPanel'
 import { StandardArticleFeaturedImagePanel } from './standard-article-stage/StandardArticleFeaturedImagePanel'
@@ -101,7 +99,6 @@ export function StandardArticleStageBuilder({
     setLocalError,
     setLocalResult,
   })
-  const expansion = useStandardArticleExpansion(stagedArticle, actions.setStageArticle)
 
   const structuredData = useStandardArticleStructuredData({
     stagedArticle,
@@ -203,7 +200,6 @@ export function StandardArticleStageBuilder({
                 onUpdateArticle={actions.setStageArticle}
                 onContinue={actions.continueContent}
                 onResetToOriginalBlocks={layout.onResetToOriginalBlocks}
-                onOpenDeepExpand={expansion.open}
               />
             ) : null}
 
@@ -246,20 +242,6 @@ export function StandardArticleStageBuilder({
 
       <FeaturedImageModal {...featuredModalProps} />
       <BlockImageModal {...blockModalProps} />
-      <ArticleExpansionModal
-        isOpen={expansion.isOpen}
-        phase={expansion.phase}
-        expandedArticle={expansion.expandedArticle}
-        expansionPlan={expansion.expansionPlan}
-        error={expansion.error}
-        originalArticle={stagedArticle.content}
-        articleType={stagedArticle.originalType}
-        title={stagedArticle.title || stagedArticle.originalTitle}
-        listicleDetection={expansion.listicleDetection}
-        onAccept={expansion.accept}
-        onClose={expansion.close}
-        onProceed={expansion.proceedWithExpansion}
-      />
     </>
   )
 }

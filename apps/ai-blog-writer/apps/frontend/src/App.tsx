@@ -5,25 +5,11 @@ import { DashboardPage } from './features/dashboard'
 import { ClaudeConnectionPage } from './features/claudeConnection'
 import Layout from './app/layout'
 import {
-  YouTube2BlogPage,
-  ArticlesPage,
-  ArticleTypesPage,
-  ImagePipelinePage,
-  StagePage,
-  StageArticlePage
-} from './features/youtube2blog'
-import {
   Prompt2BlogPage,
   Prompt2BlogArticlesPage,
   Prompt2BlogStagePage,
   Prompt2BlogStageArticlePage
 } from './features/prompt2blog'
-import {
-  Url2BlogPage,
-  Url2BlogArticlesPage,
-  Url2BlogStagePage,
-  Url2BlogStageArticlePage
-} from './features/url2blog'
 import {
   SingleTypeListiclesPage,
   SingleTypeListicleBuilderPage,
@@ -79,14 +65,6 @@ export default function App() {
               {/* Landing */}
               <Route index element={<DashboardPage />} />
 
-              {/* YouTube2Blog Feature */}
-              <Route path="youtube2blog" element={<YouTube2BlogPage />} />
-              <Route path="youtube2blog/articles" element={<ArticlesPage />} />
-              <Route path="youtube2blog/article-types" element={<ArticleTypesPage />} />
-              <Route path="youtube2blog/image-pipeline" element={<ImagePipelinePage />} />
-              <Route path="youtube2blog/stage" element={<StagePage />} />
-              <Route path="youtube2blog/stage-article" element={<StageArticlePage />} />
-
               {/* Prompt2Blog Feature */}
               <Route path="prompt2blog" element={<Prompt2BlogPage />} />
               <Route path="prompt2blog/articles" element={<Prompt2BlogArticlesPage />} />
@@ -94,10 +72,6 @@ export default function App() {
               <Route path="prompt2blog/stage-article" element={<Prompt2BlogStageArticlePage />} />
 
               {/* URL2Blog Feature */}
-              <Route path="url2blog" element={<Url2BlogPage />} />
-              <Route path="url2blog/articles" element={<Url2BlogArticlesPage />} />
-              <Route path="url2blog/stage" element={<Url2BlogStagePage />} />
-              <Route path="url2blog/stage-article" element={<Url2BlogStageArticlePage />} />
 
               {/* Payload Articles (cross-pipeline editor) */}
               <Route path="payload-articles" element={<PayloadArticlesPage />} />

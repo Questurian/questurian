@@ -5,8 +5,6 @@ import DashboardPage from './DashboardPage'
 import { AuthContext, type AuthContextValue } from '../../auth'
 
 const PRIMARY_CARD_TITLES = [
-  'YouTube → Articles',
-  'URL → Articles',
   'Prompt → Articles',
   'Single Type Listicles',
   'Listicle Itineraries',
