@@ -54,6 +54,17 @@ class StageContext(InstructionModel):
     text: str
     included_sections: list[str]
     fingerprint: str
+    # Characters per section, so a prompt's size can be read off the run
+    # instead of guessed at. The compose call measured 29,218 tokens with only
+    # about 11,000 traceable from stored data; the other 18,000 were invisible,
+    # which made "what should we cut" unanswerable. Characters rather than
+    # tokens because this is assembled before any tokenizer is in reach, and a
+    # four-to-one ratio is close enough to find the big one.
+    section_sizes: dict[str, int] = {}
+
+    @property
+    def characters(self) -> int:
+        return len(self.text)
 
 
 class V3StageContexts(InstructionModel):
@@ -312,12 +323,13 @@ def _title_brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> 
 
 
 def _stage_context(*, parts: list[tuple[str, str]]) -> StageContext:
-    included_sections = [name for name, body in parts if body]
-    text = "\n\n".join(body for _name, body in parts if body)
+    included = [(name, body) for name, body in parts if body]
+    text = "\n\n".join(body for _name, body in included)
     return StageContext(
         text=text,
-        included_sections=included_sections,
+        included_sections=[name for name, _body in included],
         fingerprint=sha256(text.encode("utf-8")).hexdigest(),
+        section_sizes={name: len(body) for name, body in included},
     )
 
 
