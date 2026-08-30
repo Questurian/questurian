@@ -44,9 +44,15 @@ export function Prompt2BlogPage() {
 
       <main className="p2b-form-container">
         {intake.error && (
-          <p className="p2b-error" role="alert">
-            {intake.error}
-          </p>
+          <div className="p2b-error" role="alert">
+            <p>{intake.error}</p>
+            {/* A failed step must never be a dead end. The run is remembered
+                so a closed tab can resume, which means a run that cannot move
+                forward would otherwise trap the page on every reload. */}
+            <button type="button" className="p2b-clear-btn" onClick={intake.abandon}>
+              Start over
+            </button>
+          </div>
         )}
 
         {step === 'seed' && <SeedScreen busy={intake.busy} onStart={intake.start} />}
@@ -93,7 +99,7 @@ export function Prompt2BlogPage() {
           />
         )}
 
-        {state && (
+        {state && !intake.error && (
           <div className="p2b-submit-row">
             <button type="button" className="p2b-clear-btn" onClick={intake.abandon}>
               Start something else
