@@ -6,32 +6,6 @@ from app.core.staff_token import resolve_staff_token
 from fastapi import HTTPException
 
 
-@pytest.fixture(autouse=True)
-def _clear_flag(monkeypatch):
-    monkeypatch.delenv(staff_auth.STAFF_AUTH_FLAG, raising=False)
-    monkeypatch.setenv("PAYLOAD_API_URL", "http://payload.test")
-    # `import app.main` runs _load_local_env_file(), which setdefaults whatever
-    # is in apps/backend/.env. A key there would make require_api_key short
-    # circuit with 401 before routing, so the app-level tests below would pass
-    # for the wrong reason without ever reaching require_staff.
-    monkeypatch.delenv("ABW_API_KEY", raising=False)
-
-
-@pytest.fixture(autouse=True)
-def isolated_db(tmp_path, monkeypatch):
-    """Point every test in this module at a temporary database.
-
-    Routes exercised through the real app run their real handlers, and some of
-    them delete rows. Automatic isolation prevents a new route test from
-    clearing the developer's own
-    pipeline.db. Mirrors the isolation in test_database_concurrency.py.
-    """
-    import app.core.database as database
-
-    monkeypatch.setattr(database, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(database, "DB_PATH", tmp_path / "pipeline.db")
-    database.ensure_core_tables()
-    return tmp_path / "pipeline.db"
 
 
 def test_disabled_by_default():
