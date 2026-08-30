@@ -62,25 +62,28 @@ GRILL_RESEARCH_MODEL = "gemini-2.5-flash"
 # real run: `{"done": false}` with nothing else is schema-valid and useless,
 # and the model took that gap. A schema that permits what the code refuses is
 # a schema that has not been written down properly.
+# Flat on purpose.
+#
+# This was nested -- `question` as an object carrying `ask`, `recommendation`
+# and `pushback` -- and models kept answering flat instead: `question` as the
+# question string, with `recommendation` beside it at the top level. Twice in a
+# row the reply was a good question with a good recommendation, and it was
+# refused for its shape.
+#
+# There is nothing here worth nesting. A flat object has no structure to get
+# wrong, and shape is not worth losing content over.
 NEXT_TURN_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
         "done": {"type": "boolean"},
-        "question": {
-            "type": "object",
-            "properties": {
-                "question_id": {"type": "string"},
-                "topic": {"type": "string"},
-                "ask": {"type": "string"},
-                "recommendation": {"type": "string"},
-                "pushback": {"type": "string"},
-            },
-            "required": ["question_id", "topic", "ask", "recommendation"],
-        },
+        "ask": {"type": "string"},
+        "recommendation": {"type": "string"},
+        "pushback": {"type": "string"},
+        "topic": {"type": "string"},
         "consensus": {"type": "string"},
         "location": {"type": "string"},
     },
-    "required": ["done", "question", "consensus"],
+    "required": ["done", "ask", "recommendation", "consensus"],
 })
 
 
@@ -141,9 +144,10 @@ THE INTERVIEW SO FAR:
 
 Decide the single most useful next move.
 
-Output shape (mechanical -- get it right and then forget about it): the reply
-always carries both `question` and `consensus`. Fill the one you are using and
-leave the other empty.
+Output shape (mechanical -- get it right and then forget about it): every
+reply carries `ask`, `recommendation` and `consensus`. When you are asking,
+fill `ask` and `recommendation` and leave `consensus` empty. When you are done,
+fill `consensus` and leave the other two empty.
 
 Now the part that matters:
 - Ask ONE question, and only about something you cannot look up. What they
@@ -169,19 +173,41 @@ Now the part that matters:
 
 
 def _question_from(payload: dict[str, Any], fallback_id: str) -> GrillQuestion | None:
-    raw = _safe_dict(payload.get("question"))
-    ask = _safe_str(raw.get("ask"))
-    recommendation = _safe_str(raw.get("recommendation"))
+    """Read the question, however the model chose to arrange it.
+
+    Flat is what the schema asks for and what models actually produce. Nested
+    under `question` is what an earlier schema asked for, and some will still
+    do it. A bare `question` string with the recommendation beside it is the
+    third arrangement seen in the wild.
+
+    All three carry the same words. Refusing one of them throws away a
+    perfectly good question over punctuation, which is exactly what happened
+    twice on the first live runs.
+    """
+    nested = _safe_dict(payload.get("question"))
+    question_text = payload.get("question")
+    flat_ask = question_text if isinstance(question_text, str) else ""
+
+    ask = (
+        _safe_str(payload.get("ask"))
+        or _safe_str(nested.get("ask"))
+        or _safe_str(flat_ask)
+    )
+    recommendation = _safe_str(payload.get("recommendation")) or _safe_str(
+        nested.get("recommendation")
+    )
     if not ask or not recommendation:
         # A question with no recommendation is a blank box, which is the thing
         # this replaces. Reject it rather than showing it.
         return None
     return GrillQuestion(
-        question_id=_safe_str(raw.get("question_id")) or fallback_id,
-        topic=_safe_str(raw.get("topic")) or "next",
+        question_id=_safe_str(payload.get("question_id"))
+        or _safe_str(nested.get("question_id"))
+        or fallback_id,
+        topic=_safe_str(payload.get("topic")) or _safe_str(nested.get("topic")) or "next",
         ask=ask,
         recommendation=recommendation,
-        pushback=_safe_str(raw.get("pushback")),
+        pushback=_safe_str(payload.get("pushback")) or _safe_str(nested.get("pushback")),
     )
 
 
