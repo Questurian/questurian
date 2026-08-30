@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { EditorialStageArticlePageProps } from '../../features/editorial-stage-article/types'
 import { useEditorialStageArticleScreenViewModel } from '../../features/editorial-stage-article/hooks/useEditorialStageArticleScreenViewModel'
-import { parseMarkdownToBlocks } from '../../features/editorial-stage-article/workflow.service'
 import { BlockImageModal } from './BlockImageModal'
 import { EditorialSidebar } from './EditorialSidebar'
 import { EditorialStageLayout } from './EditorialStageLayout'
