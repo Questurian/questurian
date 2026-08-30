@@ -34,6 +34,21 @@ P2B_V3_TITLE_MODEL = "claude-sonnet-5-medium"
 # compose.
 P2B_V4_RESEARCH_STRUCTURE_MODEL = "claude-sonnet-5-medium"
 
+# Who runs the interview.
+#
+# The spec chose a flash model for being "short, conversational". In practice
+# the grill is the one place a weak model is most expensive: it decides what
+# the article is, every later stage inherits that, and it is about six calls --
+# so the cheapest thing in the pipeline to make good.
+#
+# Change this one line to move it. Anything in VERTEX_TOKEN_RATES works.
+P2B_V4_GRILL_MODEL = "gemini-3.1-pro-preview"
+
+# Higher than the pipeline default. This call is judgement, not extraction: at
+# a low temperature it proposes the safe question rather than the useful one,
+# and the whole value of the grill is the sharp question nobody expected.
+P2B_V4_GRILL_TEMPERATURE = 0.6
+
 EDITORIAL_COMPONENT_LABELS = {
     "pull_quote": "Pull Quote",
     "in_the_know_box": "In The Know",
