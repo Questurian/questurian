@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -40,7 +40,12 @@ from ..intake_v4 import (
     reopen_intake,
     writing_request,
 )
+from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_input_artifact
 from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies
+from .runs import (
+    _prompt2blog_credential_for_run,
+    _run_pipeline_v3_background as _run_pipeline_v4_background,
+)
 from ..run_budget import RunTokenCeilingReached
 
 logger = logging.getLogger(__name__)
@@ -211,3 +216,39 @@ async def read_writing_request(
     """
     request = _handle(writing_request, run_id)
     return JSONResponse(request.model_dump(mode="json"))
+
+
+@router.post("/{run_id}/write", status_code=202)
+async def start_writing(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """Hand a settled run to the graph.
+
+    The same run id all the way through: the article is written onto the run
+    the seed opened, so the receipt covers intake and writing together rather
+    than splitting one article across two records.
+
+    Refuses when research said no. That is the same gate decided once, not a
+    second opinion.
+    """
+    request = _handle(writing_request, run_id)
+    credential = _prompt2blog_credential_for_run()
+    runtime = prepare_v3_runtime_request(request)
+
+    # The run already exists -- it was opened by the seed -- so this records
+    # what the graph is about to run rather than queueing a new one. That is
+    # the whole point of starting a run at the seed: one article, one record,
+    # one receipt covering intake and writing together.
+    recorder = PipelineDependencies().recorder
+    artifact = v3_run_input_artifact(runtime)
+    artifact["claude_account_label"] = credential.label if credential else None
+    recorder.record_stage(run_id, RUN_INPUT_STAGE, artifact)
+
+    background_tasks.add_task(
+        _run_pipeline_v4_background, run_id, runtime, credential
+    )
+    return JSONResponse(
+        {**intake_state(run_id), "writing": "queued"}, status_code=202
+    )

@@ -38,8 +38,17 @@ NEUTRAL_QUALITY_SCORE = 7
 # `paragraph_length_met` is deliberately absent: it is a soft stylistic
 # preference, it never triggered repair, and promoting it to a blocker would
 # fail runs that nothing in the pipeline is able to fix.
+#
+# `target_word_count_met` was removed for the same reason plus a worse one
+# (#432, A16). A 4% overage is not a failure any editor would recognise, and
+# on the Lima run one four-word overage both capped the score below threshold
+# and raised a separate constraint failure -- the same miss counted twice, and
+# it bought a full regeneration of 1,041 words to trim forty.
+#
+# The measurement stays. A large miss is a symptom worth reporting, and
+# `word_count_severity` below says which kind of miss it is; it is simply no
+# longer a gate.
 HARD_CONSTRAINT_CHECK_KEYS = (
-    "target_word_count_met",
     "cta_present",
     "primary_keyword_present",
     "secondary_keywords_present",
@@ -55,6 +64,7 @@ HARD_CONSTRAINT_CHECK_KEYS = (
 # which meant a new measurement leaked into whichever list was not updated.
 CONSTRAINT_MEASUREMENT_KEYS = frozenset(
     {
+        "word_count_severity",
         "word_count_estimate",
         "word_count_delta",
         "word_count_direction",
@@ -205,6 +215,13 @@ def _build_constraint_checks(
             word_count_direction = "over"
         target_word_count_met = word_count_direction == "within"
 
+    # How badly, not just whether. A handful of words either way is editing; a
+    # third of the article missing is a symptom of thin research and should be
+    # reported as one rather than as a length problem.
+    word_count_severity = _severity(
+        word_count_delta, word_count_target_min, word_count_target_max
+    )
+
     avg_sentences = _estimate_paragraph_sentence_average(content)
     paragraph_length_met = True
     if paragraph_length_pref.lower().startswith("short"):
@@ -276,7 +293,23 @@ def _build_constraint_checks(
         "secondary_keywords_present": secondary_keywords_present,
         "secondary_keyword_coverage": round(secondary_keyword_coverage, 3),
         "word_count_estimate": word_count,
+        "word_count_severity": word_count_severity,
     }
+
+
+# Above this share of the target, a length miss stops being an edit and starts
+# being a symptom -- usually of thin research rather than of bad writing.
+LARGE_LENGTH_MISS_RATIO = 0.15
+
+
+def _severity(delta: int, lower: int, upper: int) -> str:
+    """How badly a draft missed its band: `within`, `slight`, or `large`."""
+    if not delta:
+        return "within"
+    target = (lower + upper) / 2 if upper > 0 else 0
+    if target <= 0:
+        return "slight"
+    return "large" if abs(delta) / target > LARGE_LENGTH_MISS_RATIO else "slight"
 
 
 def word_count_revision_instruction(checks: dict[str, Any]) -> str | None:
@@ -290,13 +323,24 @@ def word_count_revision_instruction(checks: dict[str, Any]) -> str | None:
     """
     if _safe_bool(checks.get("target_word_count_met"), default=True):
         return None
-
     direction = _safe_str(checks.get("word_count_direction"))
     delta = _safe_int(checks.get("word_count_delta"), default=0)
     word_count = _safe_int(checks.get("word_count_estimate"), default=0)
     lower = _safe_int(checks.get("word_count_target_min"), default=0)
     upper = _safe_int(checks.get("word_count_target_max"), default=0)
     if direction not in {"over", "under"} or not delta or upper <= 0:
+        return None
+
+    # A handful of words either way is not worth a writing-model call. The Lima
+    # run spent 11,119 output tokens regenerating 1,041 words to trim forty,
+    # and the keep-best safety net that caught the worse result afterwards is
+    # not the bug -- needing one was.
+    #
+    # Derived here rather than read off the checks so this function stays
+    # self-sufficient: it already has everything the judgement needs, and a
+    # caller that assembles checks by hand should not be able to lose the
+    # threshold by omitting a key.
+    if _severity(delta, lower, upper) != "large":
         return None
 
     # Rounded to the nearest ten. A writer asked for "363 words" treats the
@@ -508,6 +552,26 @@ def unchecked_groundedness() -> dict[str, Any]:
         "unsupported_claims": [],
         "high_severity_count": 0,
     }
+
+
+def looks_truncated(content: str, *, max_output_tokens: int) -> bool:
+    """Did the model stop, or did the transport cut it off? (#432, A17)
+
+    Output is capped, and a response that hit the cap is a transport failure,
+    not a writing one. Repairing it as though the writer chose to stop early
+    asks the wrong model to fix the wrong thing -- and the fix for a cap is a
+    higher cap or a shorter plan, neither of which repair can do.
+
+    Judged on two signals together, because either alone is noisy: the text is
+    close to what the cap allows, and it does not end like finished prose.
+    """
+    if not content or max_output_tokens <= 0:
+        return False
+    # Four characters to a token, near enough to spot a ceiling.
+    near_cap = len(content) >= max_output_tokens * 4 * 0.92
+    stripped = content.rstrip()
+    ends_cleanly = stripped.endswith((".", "!", "?", '"', "'", ")", "`"))
+    return near_cap and not ends_cleanly
 
 
 def _should_run_repair(quality: dict[str, Any], checks: dict[str, Any]) -> bool:

@@ -2,6 +2,7 @@
 id: writing-conventions
 label: Writing conventions
 description: The mechanical conventions that cannot be inferred from the voice. Not the pipeline's house-rules.md, which is a different document.
+summary: The mechanical conventions the voice cannot imply: address, numbers, dates, names, attribution, headings.
 default: true
 order: 2
 ---

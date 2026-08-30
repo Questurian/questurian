@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from .contracts_v4 import ArticleBrief, Prompt2BlogV4Request, Prompt2BlogWorkOrder
 from .editorial_catalog import EditorialCatalog, load_editorial_catalog
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
+from .support import _safe_str
 
 INSTRUCTION_SCHEMA_VERSION = 5
 
@@ -53,6 +54,17 @@ class StageContext(InstructionModel):
     text: str
     included_sections: list[str]
     fingerprint: str
+    # Characters per section, so a prompt's size can be read off the run
+    # instead of guessed at. The compose call measured 29,218 tokens with only
+    # about 11,000 traceable from stored data; the other 18,000 were invisible,
+    # which made "what should we cut" unanswerable. Characters rather than
+    # tokens because this is assembled before any tokenizer is in reach, and a
+    # four-to-one ratio is close enough to find the big one.
+    section_sizes: dict[str, int] = {}
+
+    @property
+    def characters(self) -> int:
+        return len(self.text)
 
 
 class V3StageContexts(InstructionModel):
@@ -186,6 +198,53 @@ def _form_structure(form_instructions: str) -> str:
     )
 
 
+def _facts_by_subject(evidence: NormalizedEvidence) -> str:
+    """The facts, grouped by what they are about.
+
+    The outline used to be handed this ledger indexed by requirement id, and it
+    did the obvious thing: one section per question. That is why the Lima
+    article's spine was its own research plan. Grouping by source subject
+    removes the shape the plan was inheriting -- the outline has to decide what
+    the piece is about instead of transcribing what was asked.
+
+    The requirement index still follows, because coverage has to stay
+    checkable. It is second, and it is labelled as bookkeeping.
+    """
+    by_subject: dict[str, list[str]] = {}
+    for claim in evidence.claims:
+        # The source's own subject line is the best grouping available without
+        # asking a model to classify facts, which would be a call to save a
+        # sort.
+        subject = _safe_str(getattr(claim, "subject", "")) or "General"
+        as_of = f" (as of {claim.as_of})" if claim.as_of else ""
+        by_subject.setdefault(subject, []).append(
+            f"- {claim.claim_id} — {claim.text}{as_of} [{claim.confidence}]"
+        )
+
+    lines = ["FACTS AVAILABLE, BY SUBJECT"]
+    if by_subject:
+        for subject in sorted(by_subject):
+            lines.extend(("", subject, *by_subject[subject]))
+    else:
+        lines.append("- None supplied.")
+
+    lines.extend(
+        (
+            "",
+            "COVERAGE BOOKKEEPING (which question each fact closes — not a "
+            "section plan)",
+        )
+    )
+    for requirement in evidence.requirements:
+        claims = ", ".join(requirement.claim_ids) or "none"
+        gap = f" | gap: {requirement.gap}" if requirement.gap else ""
+        lines.append(
+            f"- {requirement.requirement_id} [{requirement.status}] "
+            f"claims: {claims}{gap}"
+        )
+    return "\n".join(lines)
+
+
 def _claim_requirement_index(evidence: NormalizedEvidence) -> str:
     lines = ["CLAIM INDEX"]
     if evidence.claims:
@@ -264,12 +323,13 @@ def _title_brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> 
 
 
 def _stage_context(*, parts: list[tuple[str, str]]) -> StageContext:
-    included_sections = [name for name, body in parts if body]
-    text = "\n\n".join(body for _name, body in parts if body)
+    included = [(name, body) for name, body in parts if body]
+    text = "\n\n".join(body for _name, body in included)
     return StageContext(
         text=text,
-        included_sections=included_sections,
+        included_sections=[name for name, _body in included],
         fingerprint=sha256(text.encode("utf-8")).hexdigest(),
+        section_sizes={name: len(body) for name, body in included},
     )
 
 
@@ -396,31 +456,68 @@ def assemble_v3_instructions(
             parts=[
                 (
                     "outline_authority",
-                    "OUTLINE AUTHORITY\nThe approved brief controls scope; "
-                    "the claim and requirement index controls available support; "
-                    "the form structure controls organization.",
+                    "OUTLINE AUTHORITY\nThe approved brief controls scope; the "
+                    "facts control available support; the form structure "
+                    "controls organization; the voice controls what kind of "
+                    "piece this is.",
                 ),
+                # The single largest change in the spec. Compose is obedient:
+                # give it a good plan and it writes well, give it an audit and
+                # it writes an excellent audit. This stage decides which.
+                ("voice", f"THE VOICE YOU ARE WRITING IN\n{catalog.voice.instructions}"),
                 ("brief", f"APPROVED BRIEF\n{brief_body}"),
+                ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
                 (
                     "form_structure",
                     f"ARTICLE FORM STRUCTURE — {form.label}\n{form_structure}",
                 ),
-                ("claim_requirement_index", _claim_requirement_index(evidence)),
+                ("facts", _facts_by_subject(evidence)),
+                (
+                    "outline_rules",
+                    "PLANNING RULES\n"
+                    # A3. "Do not claim a transformation" became a section
+                    # called Scope limits: a negative instruction is a topic
+                    # waiting to happen.
+                    "- No section may take scope, limits, method, evidence or "
+                    "the state of our research as its subject. The reader came "
+                    "for the place, not for how we found out about it.\n"
+                    # A4. Compose is separately required to add an opening and
+                    # takeaways -- about 165 words nobody counts -- so a plan
+                    # that budgets the full target overshoots by construction.
+                    "- Your section budgets must leave room for an opening and "
+                    "a closing takeaways section, which you do not plan and "
+                    "which cost roughly 165 words together. Budget the "
+                    "sections to the target minus that.\n"
+                    "- Group sections by subject. One section per research "
+                    "question is a research plan, not an article.",
+                ),
             ]
         ),
         compose=_stage_context(
             parts=[
                 (
                     "compose_authority",
-                    "COMPOSE AUTHORITY\nVerified evidence controls facts; the approved "
-                    "brief controls scope; form and style rules control "
-                    "expression.",
+                    "COMPOSE AUTHORITY\nThe brief says what you are making. The "
+                    "facts below are the material you may make it from, and "
+                    "they constrain every factual claim absolutely. Form and "
+                    "style rules control expression.",
                 ),
-                ("evidence", f"VERIFIED EVIDENCE\n{_evidence_body(evidence)}"),
-                ("brief", f"APPROVED BRIEF\n{brief_body}"),
+                # The brief first, and evidence reframed. Evidence still binds
+                # the facts; it stops being the reason the article exists,
+                # which is what produced a piece about its own research.
+                ("voice", f"THE VOICE YOU ARE WRITING IN\n{catalog.voice.instructions}"),
+                ("brief", f"WHAT WE ARE MAKING\n{brief_body}"),
+                (
+                    "evidence",
+                    f"THE FACTS YOU MAY USE\n{_evidence_body(evidence)}",
+                ),
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("topic_modules", f"TOPIC MODULES\n{topic_modules_body}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
+                (
+                    "writing_conventions",
+                    f"WRITING CONVENTIONS\n{catalog.writing_conventions.instructions}",
+                ),
                 ("house_style", f"HOUSE STYLE\n{catalog.house_rules.instructions}"),
             ]
         ),

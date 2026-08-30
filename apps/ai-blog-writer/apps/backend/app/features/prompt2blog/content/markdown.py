@@ -40,6 +40,42 @@ def extract_markdown_headings(content: str) -> list[str]:
     return headings
 
 
+def split_markdown_sections(content: str) -> dict[str, str]:
+    """Split an article into its `##` sections, keyed by heading.
+
+    Anything before the first heading is kept under an empty key, so the
+    opening is never silently dropped by a round trip.
+    """
+    sections: dict[str, str] = {}
+    heading = ""
+    body: list[str] = []
+    for line in (content or "").split("\n"):
+        if line.startswith("## "):
+            sections[heading] = "\n".join(body).strip()
+            heading = line[3:].strip()
+            body = []
+            continue
+        body.append(line)
+    sections[heading] = "\n".join(body).strip()
+    return sections
+
+
+def sections_changed(before: str, after: str) -> list[str]:
+    """Which sections differ between two drafts.
+
+    Repair is allowed to change what the auditor named and nothing else. This
+    is how that is checked rather than trusted: a repair pass that quietly
+    rewrites a section nobody complained about has damaged working prose, and
+    the whole reason for scoping repair is that it cannot.
+    """
+    old = split_markdown_sections(before)
+    new = split_markdown_sections(after)
+    names = set(old) | set(new)
+    return sorted(
+        name for name in names if old.get(name, "") != new.get(name, "")
+    )
+
+
 def _ensure_markdown_section_headers(content: str) -> str:
     cleaned = _safe_str(content)
     if not cleaned:

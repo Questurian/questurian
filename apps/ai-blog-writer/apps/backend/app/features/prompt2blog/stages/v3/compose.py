@@ -38,6 +38,25 @@ def run_v3_compose_stage(
     )
     prompt = f"{prompt}\n\n{ANTI_AI_TELLS_FULL}"
 
+    # Build-check C2. The compose call measured 29,218 tokens with only about
+    # 11,000 traceable from stored data, which made "what should we cut" an
+    # unanswerable question. Every part of the prompt is measured here, at the
+    # moment it is assembled, so the answer comes off the run instead of an
+    # estimate. Characters rather than tokens: no tokenizer is in reach at this
+    # point, and roughly four-to-one is close enough to find the big one.
+    prompt_sizes = {
+        "outline": len(state["outline_text"]),
+        "stage_context": len(stage_context_text(state["stage_contexts"], "compose")),
+        "seo_guideline": len(SEO_SAFE_CONTENT_GENERATION_GUIDELINES),
+        "style_directive": len(style_directive),
+        "anti_ai_rules": len(ANTI_AI_TELLS_FULL),
+        "total": len(prompt),
+    }
+    # What the template itself costs, once everything it carries is subtracted.
+    prompt_sizes["scaffolding"] = max(
+        0, prompt_sizes["total"] - sum(v for k, v in prompt_sizes.items() if k != "total")
+    )
+
     parsed, raw_response = dependencies.llm.invoke_json(
         prompt=prompt,
         max_tokens=6144,
@@ -75,6 +94,7 @@ def run_v3_compose_stage(
             "form_id": state["brief"]["form_id"],
             "outline_accepted": state.get("outline_accepted", False),
             "style_directive": style_directive,
+            "prompt_sizes": prompt_sizes,
         },
         prompt=prompt,
         raw_response=raw_response,

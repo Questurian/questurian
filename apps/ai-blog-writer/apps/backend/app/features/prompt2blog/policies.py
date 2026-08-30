@@ -87,7 +87,20 @@ def evaluate_readiness(
     return ReadinessVerdict(ready=not blockers, blockers=tuple(blockers))
 
 
-def _quality_rank(quality: dict[str, Any]) -> tuple[int, int, int, int]:
+def _length_distance(quality: dict[str, Any]) -> int:
+    """How far outside its band a draft is, in words. Zero when inside.
+
+    Keep-best used to compare pass/fail and nothing else, so a repaired draft
+    four words over its ceiling and the original forty-one over looked
+    identical -- the comparison called it a tie and the settle node restored
+    the worse one. A tie on everything measurable is broken by which draft is
+    actually closer.
+    """
+    checks = _safe_dict(_safe_dict(quality).get("constraint_checks"))
+    return abs(_safe_int(checks.get("word_count_delta"), default=0))
+
+
+def _quality_rank(quality: dict[str, Any]) -> tuple[int, int, int, int, int]:
     """Rank a draft for keep-best comparison, validity before quality.
 
     Ranking on score alone let an unsafe draft win. A repair pass that fixed
@@ -95,10 +108,15 @@ def _quality_rank(quality: dict[str, Any]) -> tuple[int, int, int, int]:
     9, and the settle node restored the ungrounded one.
 
     So the ordering is: grounded first, then how many readiness blockers the
-    draft carries, and only then the auditor's scores. The blocker count is
-    read from `evaluate_readiness`, the same function finalize ships on, so a
-    draft cannot rank first and then be refused at the gate for a reason
-    ranking never looked at.
+    draft carries, then the auditor's scores, and last -- only as a tie-break
+    -- how far the draft is from its length band. The blocker count is read
+    from `evaluate_readiness`, the same function finalize ships on, so a draft
+    cannot rank first and then be refused at the gate for a reason ranking
+    never looked at.
+
+    Length is last on purpose. It is no longer a gate (#432, A16), and
+    promoting it above the auditor's judgement would let a draft win for being
+    the right size while being worse to read.
     """
     quality = _safe_dict(quality)
     groundedness = _safe_dict(quality.get("groundedness"))
@@ -115,6 +133,7 @@ def _quality_rank(quality: dict[str, Any]) -> tuple[int, int, int, int]:
         -len(verdict.blockers),
         _safe_int(quality.get("overall_score"), default=0),
         _safe_int(quality.get("guideline_coverage_score"), default=0),
+        -_length_distance(quality),
     )
 
 
