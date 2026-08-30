@@ -18,6 +18,7 @@ interface WorkOrderScreenProps {
   busy: boolean
   onCut: (struckIds: string[], added: string[]) => void
   onReopen: () => void
+  onResearch: () => void
 }
 
 export function WorkOrderScreen({
@@ -26,6 +27,7 @@ export function WorkOrderScreen({
   busy,
   onCut,
   onReopen,
+  onResearch,
 }: WorkOrderScreenProps) {
   const [struck, setStruck] = useState<string[]>([])
   const [added, setAdded] = useState('')
@@ -98,17 +100,23 @@ export function WorkOrderScreen({
       )}
 
       <div className="p2b-intake-actions">
-        <button
-          type="button"
-          disabled={busy || remainingLoadBearing === 0}
-          onClick={() => {
-            onCut(struck, added.trim() ? [added.trim()] : [])
-            setStruck([])
-            setAdded('')
-          }}
-        >
-          {struck.length || added.trim() ? 'Apply changes' : 'Looks right'}
-        </button>
+        {struck.length || added.trim() ? (
+          <button
+            type="button"
+            disabled={busy || remainingLoadBearing === 0}
+            onClick={() => {
+              onCut(struck, added.trim() ? [added.trim()] : [])
+              setStruck([])
+              setAdded('')
+            }}
+          >
+            Apply changes
+          </button>
+        ) : (
+          <button type="button" disabled={busy} onClick={onResearch}>
+            Go and find this out
+          </button>
+        )}
         <button type="button" className="p2b-secondary" onClick={onReopen} disabled={busy}>
           Back to the brief
         </button>

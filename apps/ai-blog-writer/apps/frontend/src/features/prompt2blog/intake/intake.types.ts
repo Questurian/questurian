@@ -65,7 +65,27 @@ export interface IntakeWorkOrder {
   cut_warnings: string[]
 }
 
-export type IntakeStep = 'seed' | 'grill' | 'brief' | 'work_order'
+export interface IntakeCoverage {
+  can_write: boolean
+  /** ready_to_write | premise_refuted | load_bearing_unanswered | nothing_worth_reading */
+  reason: string
+  unsupported_load_bearing: string[]
+  refuted_assumptions: string[]
+  /** False when nothing in the dossier would be a pleasure to read. */
+  has_texture: boolean
+  findings: string[]
+}
+
+export interface IntakeResearch {
+  work_order_fingerprint: string
+  source_count: number
+  claim_count: number
+  requirement_status: Record<string, string>
+  conflicts: string[]
+  coverage: IntakeCoverage
+}
+
+export type IntakeStep = 'seed' | 'grill' | 'brief' | 'work_order' | 'research'
 
 export interface IntakeState {
   run_id: string
@@ -73,6 +93,7 @@ export interface IntakeState {
   grill: IntakeGrill | null
   brief: IntakeBrief | null
   work_order: IntakeWorkOrder | null
+  research: IntakeResearch | null
   /** Present only on the response to a cut: what that decision costs. */
   cut_warnings?: string[]
 }

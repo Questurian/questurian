@@ -45,6 +45,7 @@ export interface UseIntake {
   reopen: () => Promise<void>
   approveBrief: () => Promise<void>
   planResearch: () => Promise<void>
+  research: () => Promise<void>
   cut: (struckIds: string[], added: string[]) => Promise<void>
   abandon: () => void
 }
@@ -108,6 +109,7 @@ export function useIntake(): UseIntake {
       () => run(() => api.planResearch(requireRun())),
       [run, requireRun],
     ),
+    research: useCallback(() => run(() => api.doResearch(requireRun())), [run, requireRun]),
     cut: useCallback(
       (struckIds: string[], added: string[]) =>
         run(() => api.cutWorkOrder(requireRun(), struckIds, added)),
