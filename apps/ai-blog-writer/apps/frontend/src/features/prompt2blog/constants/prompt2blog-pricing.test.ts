@@ -7,14 +7,15 @@ import {
   type Prompt2BlogModelStackShape
 } from './prompt2blog-pricing'
 
+const stackById = (id: string) =>
+  PROMPT2BLOG_MODEL_STACKS.find(stack => stack.id === id)!
+
 describe('estimatePrompt2BlogStackPrice', () => {
   it('keeps input and output rates visible instead of hiding their difference', () => {
-    const stack = PROMPT2BLOG_MODEL_STACKS.find(stack => stack.id === 'opus-led-medium')!
+    const estimate = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
 
-    const estimate = estimatePrompt2BlogStackPrice(stack)
-
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.25')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$1.50')
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$1.85')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$11.04')
   })
 
   // The estimator used to throw on any model with no rate, which crashed the
@@ -31,9 +32,12 @@ describe('estimatePrompt2BlogStackPrice', () => {
     // Claude calls draw a plan allowance, so there is no dollar-per-million
     // figure that could be quoted honestly.
     const claudeWriter: Prompt2BlogModelStackShape = {
-      modelName: 'gemini-3.7-flash',
       writingModel: 'claude-opus-4-8',
-      auditModel: 'gemini-3.7-flash'
+      repairModel: 'gemini-3.7-flash',
+      auditModel: 'gemini-3.7-flash',
+      groundednessModel: 'gemini-3.7-flash',
+      outlineModel: 'gemini-3.7-flash',
+      titleModel: 'gemini-3.7-flash'
     }
 
     const estimate = estimatePrompt2BlogStackPrice(claudeWriter)
@@ -47,27 +51,52 @@ describe('estimatePrompt2BlogStackPrice', () => {
   })
 
   it('reports no rate at all when every role is on the plan', () => {
-    const allClaude: Prompt2BlogModelStackShape = {
-      modelName: 'claude-sonnet-5',
-      writingModel: 'claude-opus-4-8',
-      auditModel: 'claude-sonnet-5'
-    }
-
-    const estimate = estimatePrompt2BlogStackPrice(allClaude)
+    // Which is what every Claude-led route now is. The worker model used to
+    // carry a Gemini rate into this answer, so a route whose every real call
+    // draws plan allowance still advertised a dollar figure.
+    const estimate = estimatePrompt2BlogStackPrice(stackById('opus-led-medium'))
 
     expect(estimate.mixedPerMillion).toBeNull()
     expect(formatPerMillionRate(estimate.mixedPerMillion)).toBe('—')
-    expect(estimate.planRoles).toHaveLength(3)
+    expect(estimate.planRoles).toHaveLength(6)
   })
 
-  it('prices Claude-led stacks from their Flash-Lite worker only', () => {
-    const led = PROMPT2BLOG_MODEL_STACKS.find(stack => stack.id === 'opus-led-high')!
+  it('prices the Gemini-checked route from its four checking roles', () => {
+    const estimate = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
 
-    const estimate = estimatePrompt2BlogStackPrice(led)
+    // Only the draft and the repair stay on the plan.
+    expect(estimate.planRoles).toEqual(['writingModel', 'repairModel'])
+    expect(estimate.mixedPerMillion).toBeCloseTo(3.69, 2)
+  })
 
-    expect(estimate.planRoles).toEqual(['writingModel', 'auditModel'])
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.25')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$1.50')
+  it('prices the max-repair route identically, because only effort changed', () => {
+    // Both prose stages stay on the plan either way, so the metered half of
+    // the route is the same four Gemini calls. What the split costs is plan
+    // allowance on the runs that actually repair, which no per-token rate can
+    // express -- so the rate must not imply the two routes differ in dollars.
+    const high = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
+    const maxRepair = estimatePrompt2BlogStackPrice(
+      stackById('gemini-checked-max-repair'),
+    )
+
+    expect(maxRepair.mixedPerMillion).toBeCloseTo(high.mixedPerMillion!, 6)
+    expect(maxRepair.planRoles).toEqual(['writingModel', 'repairModel'])
+  })
+
+  it('never prices the research worker, which v3 does not call', () => {
+    // `state["model_name"]` reaches the run record and nothing else. It used to
+    // carry the heaviest weight in this estimate.
+    const workerOnlyDifference: Prompt2BlogModelStackShape = {
+      writingModel: 'claude-opus-4-8',
+      repairModel: 'claude-opus-4-8',
+      auditModel: 'claude-sonnet-5',
+      groundednessModel: 'claude-sonnet-5',
+      outlineModel: 'claude-sonnet-5',
+      titleModel: 'claude-sonnet-5'
+    }
+
+    expect(estimatePrompt2BlogStackPrice(workerOnlyDifference).mixedPerMillion)
+      .toBeNull()
   })
 
   it('does not mistake a Gemini model for a plan model', () => {

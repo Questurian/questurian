@@ -229,12 +229,20 @@ def run_v3_repair_stage(
         instructions=stage_context_text(state["stage_contexts"], "repair_lock"),
         style_directive=_format_style_directive(state["option_context"]),
     )
-    # Repair rewrites the whole article, so it runs on the writer model.
+    # Repair rewrites the whole article, so it runs on a prose model -- the
+    # writer's, unless the route named a different one.
+    #
+    # Worth being separable from the draft: the two are not the same job. The
+    # draft writes into an open space; repair is handed a list of required
+    # revisions and has to satisfy them without breaking the rest, which is the
+    # kind of work more reasoning effort actually pays for. It is also the
+    # cheaper place to spend it, because it only runs on a draft that failed.
+    repair_model = state.get("repair_model") or state["writing_model"]
     parsed, raw_response = dependencies.llm.invoke_json(
         prompt=prompt,
         max_tokens=6144,
         temperature=0.1,
-        model_name=state["writing_model"],
+        model_name=repair_model,
         schema=REWRITE_SCHEMA,
     )
     repaired = _sanitize_rewrite(
@@ -242,9 +250,11 @@ def run_v3_repair_stage(
         fallback_title=rewrite["improved_title"],
         fallback_content=rewrite["improved_content"],
     )
+    # The same model that just wrote this text: the enforcement pass is another
+    # rewrite of it, not a separate judgement.
     repaired["improved_content"] = dependencies.llm.enforce_anti_ai(
         repaired["improved_content"],
-        model_name=state["writing_model"],
+        model_name=repair_model,
         max_tokens=6144,
         context="prompt2blog v3 repair",
     )
@@ -252,7 +262,7 @@ def run_v3_repair_stage(
         state["trace"],
         state["include_debug"],
         stage=stage,
-        model_name=state["writing_model"],
+        model_name=repair_model,
         input_payload={"attempt": attempt},
         prompt=prompt,
         raw_response=raw_response,

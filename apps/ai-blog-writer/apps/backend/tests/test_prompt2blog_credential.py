@@ -1,3 +1,4 @@
+import pytest
 import sqlite3
 import subprocess
 
@@ -24,17 +25,17 @@ def test_save_credential_keeps_token_out_of_command_and_database(tmp_path, monke
         token=secret,
     )
 
-    assert observed["args"] == [
-        "/usr/bin/security",
-        "add-generic-password",
-        "-a",
-        "prompt2blog",
-        "-s",
-        "com.questurian.prompt2blog.claude",
-        "-U",
-        "-w",
-    ]
-    assert observed["kwargs"]["input"] == secret + "\n"
+    # The token travels on stdin as part of a `security -i` command line, so it
+    # never reaches argv. It must not be handed to the interactive `-w` prompt:
+    # that prompt reads the terminal, not stdin, and the call hangs there.
+    assert observed["args"] == ["/usr/bin/security", "-i"]
+    assert observed["kwargs"]["input"] == (
+        "add-generic-password"
+        " -a prompt2blog"
+        " -s com.questurian.prompt2blog.claude"
+        " -U"
+        f" -w {secret}\n"
+    )
     assert secret not in " ".join(observed["args"])
     assert status["configured"] is True
     assert status["label"] == "Article account"
@@ -93,3 +94,24 @@ def test_load_credential_reads_keychain_and_redacts_its_representation(
     assert credential.label == "Article account"
     assert credential.token == secret
     assert secret not in repr(credential)
+
+
+def test_save_credential_rejects_a_token_with_whitespace(tmp_path, monkeypatch):
+    """A pasted token that wrapped would silently truncate the stdin command."""
+    import app.core.database as database
+    from app.features.claude_connection import prompt2blog_credential
+
+    monkeypatch.setattr(database, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(database, "DB_PATH", tmp_path / "pipeline.db")
+    database.ensure_core_tables()
+
+    def fail_run(args, **kwargs):
+        raise AssertionError("security must not be called for a malformed token")
+
+    monkeypatch.setattr(prompt2blog_credential.subprocess, "run", fail_run)
+
+    with pytest.raises(prompt2blog_credential.Prompt2BlogCredentialError):
+        prompt2blog_credential.save_credential(
+            label="Article account",
+            token="sk-ant-oat01-AAA BBB",
+        )

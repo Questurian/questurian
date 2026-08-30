@@ -113,6 +113,7 @@ def test_a_stage_is_not_charged_for_what_earlier_stages_spent():
             "total_tokens": 3_000,
             "calls": 1,
             "attempts": 1,
+            "cost_usd": 0.00825,
         },
         {
             "stage": "stage_outline",
@@ -123,6 +124,7 @@ def test_a_stage_is_not_charged_for_what_earlier_stages_spent():
             "total_tokens": 500,
             "calls": 1,
             "attempts": 1,
+            "cost_usd": 0.000675,
         },
     ]
 
@@ -234,6 +236,9 @@ def test_a_stage_with_no_llm_call_gets_a_zero_row():
             "total_tokens": 0,
             "calls": 0,
             "attempts": 1,
+            # A stage that made no call spent nothing, which is a price and
+            # not an absence of one.
+            "cost_usd": 0.0,
         }
     ]
 
@@ -328,6 +333,7 @@ def test_pipeline_dependencies_wires_the_recorder_to_the_usage_tracker():
             "total_tokens": 80,
             "calls": 1,
             "attempts": 1,
+            "cost_usd": 0.00012,
         }
     ]
 

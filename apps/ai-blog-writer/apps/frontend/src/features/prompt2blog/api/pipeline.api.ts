@@ -134,6 +134,31 @@ export async function fetchResult(runId: string): Promise<Prompt2BlogResultRespo
   return getPrompt2BlogResult(runId)
 }
 
+/**
+ * Opens the run's drafts page — every version of the article the run produced.
+ *
+ * Fetched and handed to the browser as a blob rather than linked directly at
+ * the backend URL. A plain `<a href>` is a top-level navigation, so it carries
+ * no `X-API-Key`; the link would work in local development, where no key is
+ * set, and 401 anywhere it is. Going through `apiFetch` means the page opens
+ * under whatever credentials the rest of the app already uses.
+ *
+ * The blob URL is revoked on a timer rather than immediately: revoking it
+ * before the new tab has finished loading leaves the operator staring at a
+ * blank page.
+ */
+export async function openPrompt2BlogDrafts(runId: string): Promise<void> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/drafts/${runId}`)
+
+  if (!response.ok) {
+    throw await parseError(response, 'Could not open the drafts for this run')
+  }
+
+  const url = URL.createObjectURL(await response.blob())
+  window.open(url, '_blank', 'noopener')
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 export async function getPrompt2BlogDebug(runId: string): Promise<Prompt2BlogDebugResponse> {
   const response = await apiFetch(`${FEATURE_PREFIX}/debug/${runId}`)
 

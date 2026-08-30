@@ -459,3 +459,43 @@ def test_a_provider_without_a_price_is_unaffected_by_the_fold(monkeypatch):
     )
 
     assert summary["by_model"][0]["cost_basis"] == "rate-table"
+
+
+def test_stage_rows_carry_the_price_of_the_stage():
+    """`by_attempt` could always say what one attempt cost; `by_stage` could not.
+
+    A stage that ran twice is exactly where the question gets asked, so the
+    two repair calls have to add up rather than come back as a token count
+    with no price beside it.
+    """
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.begin_stage("stage_v3_repair")
+    tracker.record(
+        "claude-opus-5",
+        {"input_tokens": 1_000, "output_tokens": 500, "measured_cost_usd": 0.40},
+    )
+    tracker.record(
+        "claude-opus-5",
+        {"input_tokens": 800, "output_tokens": 200, "measured_cost_usd": 0.25},
+    )
+
+    rows = {row["stage"]: row for row in tracker.ledger()["by_stage"]}
+
+    assert rows["stage_v3_repair"]["cost_usd"] == 0.65
+    assert rows["stage_v3_repair"]["calls"] == 2
+
+
+def test_a_stage_holding_an_unpriced_call_reports_no_price():
+    """A partial total reads as a total. Abstaining is the honest answer."""
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.begin_stage("stage_v3_compose")
+    tracker.record(
+        "claude-opus-5",
+        {"input_tokens": 1_000, "output_tokens": 500, "measured_cost_usd": 0.40},
+    )
+    tracker.record("mystery-model", {"input_tokens": 10, "output_tokens": 5})
+
+    rows = {row["stage"]: row for row in tracker.ledger()["by_stage"]}
+
+    assert rows["stage_v3_compose"]["cost_usd"] is None
+    assert rows["stage_v3_compose"]["calls"] == 2

@@ -1,4 +1,8 @@
 import type { Prompt2BlogInputOption, Prompt2BlogInputOptionsResponse } from '../../api'
+import {
+  creativityReachesWriter,
+  DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
+} from '../../constants/prompt2blog.constants'
 import type { P2BFormState } from '../composer.types'
 import { Panel } from './Panel'
 
@@ -21,6 +25,9 @@ interface PromptProfilesPanelProps {
 }
 
 export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
+  const creativityAppliesToWriter = creativityReachesWriter(
+    DEFAULT_PROMPT2BLOG_MODEL_STACK_ID,
+  )
   return <Panel
     title="Writing Profiles"
     description="Tone, brand voice, and creativity for the approved commission."
@@ -37,7 +44,14 @@ export function PromptProfilesPanel(props: PromptProfilesPanelProps) {
           <span className="p2b-disclosure-summary-hint">Creativity and optional steering</span>
         </summary>
         <div className="p2b-disclosure-body">
-          <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', resolveCreativityLevel(event.target.value))}>{CREATIVITY_LEVELS.map(level => <option key={level} value={level}>{level[0].toUpperCase()}{level.slice(1)}</option>)}</select></div>
+          <div className="p2b-field"><label htmlFor="p2b-creativity">Creativity Level</label><select id="p2b-creativity" className="p2b-select" value={props.creativityLevel} onChange={event => props.onChange('creativityLevel', resolveCreativityLevel(event.target.value))}>{CREATIVITY_LEVELS.map(level => <option key={level} value={level}>{level[0].toUpperCase()}{level.slice(1)}</option>)}</select>{creativityAppliesToWriter ? null : (
+            <p className="p2b-field-hint" data-testid="p2b-creativity-inert">
+              Not applied on the current article route. Creativity sets the
+              writing model's sampling temperature, and the Claude plan
+              transport has no temperature control, so this setting is recorded
+              on the run but does not change the draft.
+            </p>
+          )}</div>
         </div>
       </details>
   </Panel>

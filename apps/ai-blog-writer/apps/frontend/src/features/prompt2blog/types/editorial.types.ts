@@ -249,7 +249,11 @@ export type Prompt2BlogWritingProfiles = {
 export type Prompt2BlogModelRouting = {
   model_name?: string | null
   writing_model?: string | null
+  repair_model?: string | null
   audit_model?: string | null
+  outline_model?: string | null
+  groundedness_model?: string | null
+  title_model?: string | null
   model_stack_id?: string | null
 }
 

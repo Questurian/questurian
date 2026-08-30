@@ -420,22 +420,50 @@ def _usage_from(payload: dict[str, Any]) -> dict[str, Optional[int]]:
     }
 
 
-def _canonical_model(payload: dict[str, Any], alias: str) -> str:
-    """The model that actually answered, not the alias that was asked for.
+def _usage_number(entry: dict[str, Any], key: str) -> float:
+    value = entry.get(key)
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0.0
+    return float(value)
 
-    Worth carrying into cost attribution: 'sonnet' is a moving target, so a
-    per-stage spend record keyed on the alias would not say what it paid for.
+
+def _canonical_model(payload: dict[str, Any], alias: str) -> str:
+    """The model that did the work, not the first one the CLI happened to list.
+
+    ``modelUsage`` is a map, not a single entry. A real call routinely lists a
+    small helper model alongside the one that answered, and the key order is
+    the CLI's own -- not a ranking. Reading ``next(iter(...))`` therefore
+    stamped whole runs with the helper's name: every Claude call in this repo's
+    run history is recorded as ``claude-haiku-4-5``, including articles drafted
+    on Opus at high effort. The prices were right and the model names were
+    fiction, which is the worst shape for a spend record to be in.
+
+    Generated output is what separates the two: the helper emits tens of
+    tokens, the model that wrote the article emits thousands. Reported cost
+    breaks a tie when no entry declared its output. Ties keep the CLI's own
+    order, so the choice is deterministic for a given payload.
     """
     model_usage = payload.get("modelUsage")
-    if isinstance(model_usage, dict) and model_usage:
-        first_key = next(iter(model_usage))
-        entry = model_usage[first_key]
-        if isinstance(entry, dict):
-            canonical = entry.get("canonicalModel")
-            if isinstance(canonical, str) and canonical.strip():
-                return canonical.strip()
-        return str(first_key)
-    return alias
+    if not isinstance(model_usage, dict) or not model_usage:
+        return alias
+
+    best_key: Any = None
+    best_rank = (-1.0, -1.0)
+    for key, entry in model_usage.items():
+        row = entry if isinstance(entry, dict) else {}
+        rank = (_usage_number(row, "outputTokens"), _usage_number(row, "costUSD"))
+        if rank > best_rank:
+            best_rank = rank
+            best_key = key
+    if best_key is None:
+        best_key = next(iter(model_usage))
+
+    entry = model_usage[best_key]
+    if isinstance(entry, dict):
+        canonical = entry.get("canonicalModel")
+        if isinstance(canonical, str) and canonical.strip():
+            return canonical.strip()
+    return str(best_key)
 
 
 def _invoke(

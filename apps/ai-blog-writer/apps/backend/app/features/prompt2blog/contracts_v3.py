@@ -379,9 +379,27 @@ class Prompt2BlogWritingProfiles(V3ContractModel):
 
 
 class Prompt2BlogModelRouting(V3ContractModel):
+    """Which model answers for each role a v3 run actually calls.
+
+    Outline, groundedness and title used to be pinned in ``config.py`` and
+    unreachable from a request, so a route could only move the writer and the
+    judge -- two of the six calls a run makes. They are declared per route now,
+    and they are still separate fields rather than "same as the writer": the
+    reason they were pinned was to stop a premium prose model silently
+    promoting every small call to the same tier, and a route that has to name
+    them cannot do that by accident.
+
+    All optional. A request that omits one gets the ``P2B_V3_*_MODEL`` default,
+    so an older client keeps the routing it has always had.
+    """
+
     model_name: str | None = None
     writing_model: str | None = None
+    repair_model: str | None = None
     audit_model: str | None = None
+    outline_model: str | None = None
+    groundedness_model: str | None = None
+    title_model: str | None = None
     model_stack_id: str | None = None
 
 

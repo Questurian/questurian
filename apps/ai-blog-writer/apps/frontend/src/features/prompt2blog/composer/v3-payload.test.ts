@@ -3,6 +3,7 @@ import limaFixture from '../../../../../../data/fixtures/prompt2blog/lima-scope-
 import type { Prompt2BlogCommission, Prompt2BlogEvidencePackage } from '../api'
 import { DEFAULT_COMPOSER_STATE } from './composer.storage'
 import type { P2BFormState } from './composer.types'
+import { resolvePrompt2BlogModelStack } from '../constants/prompt2blog.constants'
 import {
   buildPrompt2BlogV3Payload,
   prompt2BlogSubmissionBlockedReason,
@@ -165,11 +166,18 @@ describe('buildPrompt2BlogV3Payload', () => {
       brand_voice_id: 'questurian',
       creativity_level: 'low',
     })
+    // Read off the stack the draft names, not off mirrored copies in composer
+    // state: state carried three of the six roles, so the two could disagree.
+    const stack = resolvePrompt2BlogModelStack(DEFAULT_COMPOSER_STATE.modelStackId)
     expect(payload?.model_routing).toEqual({
-      model_name: DEFAULT_COMPOSER_STATE.modelName,
-      writing_model: DEFAULT_COMPOSER_STATE.writingModel,
-      audit_model: DEFAULT_COMPOSER_STATE.auditModel,
-      model_stack_id: DEFAULT_COMPOSER_STATE.modelStackId,
+      model_name: stack.modelName,
+      writing_model: stack.writingModel,
+      repair_model: stack.repairModel,
+      audit_model: stack.auditModel,
+      outline_model: stack.outlineModel,
+      groundedness_model: stack.groundednessModel,
+      title_model: stack.titleModel,
+      model_stack_id: stack.id,
     })
   })
 

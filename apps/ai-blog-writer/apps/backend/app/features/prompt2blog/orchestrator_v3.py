@@ -106,19 +106,38 @@ def _initial_v3_state(
         "stage_contexts": _safe_dict(instructions.get("stage_contexts")),
         "option_context": _safe_dict(request.option_context),
         "model_name": request.model_name or DEFAULT_MODEL,
-        "outline_model": dependencies.resolve_writer_model(P2B_V3_OUTLINE_MODEL),
+        # Every role a v3 run calls is now routable. The three that used to be
+        # pinned still default to the same constants, so a request that names
+        # none of them runs exactly as it did before.
+        "outline_model": dependencies.resolve_writer_model(
+            request.outline_model,
+            default=P2B_V3_OUTLINE_MODEL,
+        ),
         "writing_model": dependencies.resolve_writer_model(
             request.writing_model,
             default=P2B_COMPOSE_MODEL,
+        ),
+        # Defaults to whatever the writer resolved to, so a route that says
+        # nothing about repair keeps drafting and repairing on one model.
+        "repair_model": dependencies.resolve_writer_model(
+            request.repair_model,
+            default=dependencies.resolve_writer_model(
+                request.writing_model,
+                default=P2B_COMPOSE_MODEL,
+            ),
         ),
         "audit_model": dependencies.resolve_writer_model(
             request.audit_model,
             default=P2B_AUDIT_MODEL,
         ),
         "groundedness_model": dependencies.resolve_writer_model(
-            P2B_V3_GROUNDEDNESS_MODEL
+            request.groundedness_model,
+            default=P2B_V3_GROUNDEDNESS_MODEL,
         ),
-        "title_model": dependencies.resolve_writer_model(P2B_V3_TITLE_MODEL),
+        "title_model": dependencies.resolve_writer_model(
+            request.title_model,
+            default=P2B_V3_TITLE_MODEL,
+        ),
         "model_stack_id": request.model_stack_id,
         "compose_temperature": PROMPT2BLOG_CREATIVITY_TEMPERATURES.get(
             creativity_level,

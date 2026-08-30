@@ -609,3 +609,41 @@ def test_transport_errors_surface_as_writer_model_errors(
             tool_description="d",
             input_schema=SCHEMA,
         )
+
+
+def test_canonical_model_names_the_model_that_did_the_work():
+    """`modelUsage` lists helpers beside the writer, in the CLI's own order.
+
+    Reading the first key stamped whole runs with the helper's name -- every
+    Claude call in this repo's run history is recorded as `claude-haiku-4-5`,
+    including drafts written by Opus. Output tokens are what tell them apart.
+    """
+    payload = {
+        "modelUsage": {
+            "claude-haiku-4-5-20251001": {
+                "canonicalModel": "claude-haiku-4-5",
+                "outputTokens": 27,
+                "costUSD": 0.0004,
+            },
+            "claude-opus-5": {
+                "canonicalModel": "claude-opus-5",
+                "outputTokens": 5_937,
+                "costUSD": 0.292,
+            },
+        }
+    }
+
+    assert cli_writer._canonical_model(payload, "opus") == "claude-opus-5"
+
+
+def test_canonical_model_falls_back_to_cost_then_to_the_alias():
+    by_cost = {
+        "helper": {"canonicalModel": "claude-haiku-4-5", "costUSD": 0.001},
+        "writer": {"canonicalModel": "claude-sonnet-5", "costUSD": 0.44},
+    }
+
+    assert cli_writer._canonical_model(by_cost, "sonnet") == "sonnet"
+    assert cli_writer._canonical_model({"modelUsage": by_cost}, "sonnet") == (
+        "claude-sonnet-5"
+    )
+    assert cli_writer._canonical_model({"modelUsage": {}}, "sonnet") == "sonnet"

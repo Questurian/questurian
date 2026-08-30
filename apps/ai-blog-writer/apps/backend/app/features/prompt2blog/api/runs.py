@@ -3,9 +3,10 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.core import (
+    read_all_stage_results,
     read_output,
     read_stage_result,
     read_status,
@@ -28,6 +29,7 @@ from utils.llm_model_policy import (
 
 from ..config import DEFAULT_MODEL, FEATURE_NAME
 from ..contracts_v3 import Prompt2BlogV3Request
+from ..drafts_view import build_drafts_report, render_drafts_page
 from ..intake_v3 import (
     prepare_v3_runtime_request,
     v3_intake_result,
@@ -401,6 +403,37 @@ async def get_result(run_id: str) -> JSONResponse:
     }
     response_payload.update(trace_payload)
     return JSONResponse(response_payload)
+
+
+@router.get("/drafts/{run_id}", response_class=HTMLResponse)
+async def drafts_page(run_id: str) -> HTMLResponse:
+    """Every draft this run produced, as a page an operator can read.
+
+    HTML rather than JSON because the answer is prose being compared to other
+    prose: which version shipped, how long each one was, and what the audit
+    said about it. The same page the `scripts/p2b-drafts.py` CLI writes, from
+    the same renderer.
+
+    Read-only, and it reads rows `/debug/{run_id}` already returns, so it adds
+    no exposure beyond that endpoint.
+    """
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Run not found.")
+
+    output = read_output(run_id)
+    report = build_drafts_report(
+        run_id=run_id,
+        status=status,
+        stages=read_all_stage_results(run_id),
+        markdown=(output or {}).get("markdown", ""),
+    )
+    if not report["drafts"]:
+        raise HTTPException(
+            status_code=404,
+            detail="This run has no drafts yet; it may still be composing.",
+        )
+    return HTMLResponse(render_drafts_page(report))
 
 
 @router.get("/debug/{run_id}")

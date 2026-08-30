@@ -147,7 +147,10 @@ export default function Prompt2BlogPage() {
             title="Advanced"
             description="See how the fixed article system works and what it costs."
           >
-            <ModelRoutingPanel />
+            <ModelRoutingPanel
+              modelStackId={state.modelStackId}
+              onChange={value => composer.updateField('modelStackId', value)}
+            />
           </FoldedSection>
 
           <div className="p2b-submit-row">
