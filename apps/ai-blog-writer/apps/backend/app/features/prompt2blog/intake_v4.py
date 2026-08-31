@@ -25,6 +25,8 @@ from uuid import uuid4
 
 from app.core import read_stage_result, read_status
 
+from .graph.topology_v3 import V3_NODE_STAGE_NAMES
+
 from .brief_v4 import (
     BRIEF_STAGE,
     BriefIncomplete,
@@ -44,6 +46,7 @@ from .grill_v4 import (
     start_grill,
 )
 from .coverage_v4 import CoverageVerdict, assess_coverage
+from .gate_v4 import GateAnswerRefused, answer_requirement, mark_unpublished
 from .contracts_v4 import (
     EvidencePackage,
     Prompt2BlogV4Request,
@@ -387,6 +390,107 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     return verdict
 
 
+def settle_gate(
+    run_id: str,
+    services: IntakeServices,
+    *,
+    requirement_id: str,
+    answer: str | None = None,
+    source_url: str | None = None,
+    unpublished_note: str | None = None,
+) -> CoverageVerdict:
+    """Settle one blocking question without re-buying the research.
+
+    A blocked run had one exit, the grill, which discards everything the
+    research pass paid for. Run 76b36468 was stopped by a single co-op that
+    does not publish its price, with six of seven questions answered and ten
+    web searches already spent.
+
+    No model call. This is the operator's decision, recorded, and the coverage
+    verdict is then re-derived by the same function that blocked -- not a
+    second opinion, the same one asked again.
+    """
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+    notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
+
+    if unpublished_note is not None:
+        evidence = mark_unpublished(
+            evidence, requirement_id=requirement_id, note=unpublished_note
+        )
+    else:
+        evidence = answer_requirement(
+            evidence,
+            requirement_id=requirement_id,
+            answer=answer or "",
+            source_url=source_url,
+        )
+
+    verdict = assess_coverage(work_order, evidence)
+    _record(
+        services,
+        run_id,
+        RESEARCH_STAGE,
+        {
+            **research_stage_record(evidence, notes),
+            "coverage": verdict.as_record(),
+            # What the operator settled by hand, kept so a wrong fact in the
+            # article can be traced to a person rather than blamed on the
+            # research that never claimed it.
+            "operator_settled": sorted(
+                {
+                    *(_stage_data(run_id, RESEARCH_STAGE).get("operator_settled") or []),
+                    requirement_id,
+                }
+            ),
+            STATE_KEY: json.loads(evidence.model_dump_json()),
+        },
+    )
+    return verdict
+
+
+def blocking_questions(run_id: str) -> list[dict[str, Any]]:
+    """The questions holding this run up, with what research did find.
+
+    The screen needs the question itself, which lives on the work order, next
+    to the gap, which lives on the evidence. Neither is much use alone.
+    """
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+    verdict = assess_coverage(work_order, evidence)
+    if verdict.can_write:
+        return []
+
+    questions = {
+        item.requirement_id: item for item in work_order.requirements
+    }
+    found = {item.requirement_id: item for item in evidence.requirements}
+    claims = {claim.claim_id: claim for claim in evidence.claims}
+
+    blocking: list[dict[str, Any]] = []
+    for requirement_id in verdict.unsupported_load_bearing:
+        question = questions.get(requirement_id)
+        record = found.get(requirement_id)
+        blocking.append(
+            {
+                "requirement_id": requirement_id,
+                "question": question.question if question else requirement_id,
+                "kind": question.kind if question else "load_bearing",
+                "status": record.status if record else "missing",
+                "gap": record.gap if record else "",
+                # What it did find. A question is rarely a blank: run 76b36468
+                # was stopped holding a name, a URL and two founders, missing
+                # only a price nobody publishes.
+                "found": [
+                    claims[claim_id].text
+                    for claim_id in (record.claim_ids if record else [])
+                    if claim_id in claims
+                ],
+            }
+        )
+    return blocking
+
+
 def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4Request:
     """Assemble what the graph runs from, out of what intake settled.
 
@@ -428,6 +532,17 @@ WRITING_STAGE_LABELS = {
     "complete": "Done",
 }
 
+# The stages that mean the graph is running or has finished. Everything else on
+# a run row -- every `stage_v4_*` intake stage, and `queued` -- belongs to the
+# operator, not the writer.
+#
+# Derived from the topology rather than from the labels above, so a node added
+# to the graph cannot be left out of this by forgetting to label it. The
+# consequence of forgetting would be the page dropping back to the intake
+# screens in the middle of a write, which is the same class of bug this set
+# exists to fix.
+GRAPH_STAGES = frozenset(V3_NODE_STAGE_NAMES.values()) | {"complete"}
+
 
 def writing_state(run_id: str) -> dict[str, Any] | None:
     """What the writer is doing, or what it produced.
@@ -441,10 +556,12 @@ def writing_state(run_id: str) -> dict[str, Any] | None:
         return None
     state = _safe_str(status.get("state"))
     stage = _safe_str(status.get("stage"))
-    # A run is only "writing" once the graph owns it. Intake sets the run
-    # running the moment the seed is typed, so state alone would report every
-    # unanswered grill as an article in progress.
-    if stage in ("queued", "") and state != "completed":
+    # A run is only writing once the graph owns it, and the test has to be a
+    # whitelist. Intake records its own stages on the same run row -- the run
+    # is created at the seed (ADR 0031) -- so excluding only "queued" let
+    # `stage_v4_grill` through, and run 76b36468 answered its first grill
+    # question behind a screen saying the article was being written.
+    if stage not in GRAPH_STAGES:
         return None
 
     finalize = _stage_data(run_id, "stage_v3_finalize")

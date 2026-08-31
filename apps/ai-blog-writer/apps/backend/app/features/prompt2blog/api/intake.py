@@ -30,8 +30,10 @@ from ..grill_v4 import (
     GrillDependencies,
     GrillUnusableResponse,
 )
+from ..gate_v4 import GateAnswerRefused
 from ..intake_v4 import (
     IntakeServices,
+    blocking_questions,
     answer_intake,
     apply_cut,
     approve_brief,
@@ -42,6 +44,7 @@ from ..intake_v4 import (
     intake_state,
     plan_research,
     reopen_intake,
+    settle_gate,
     writing_request,
 )
 from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_input_artifact
@@ -223,6 +226,10 @@ def _handle(action, *args, **kwargs) -> Any:
                 )[:2000],
             },
         ) from error
+    except GateAnswerRefused as error:
+        # The operator asked for something the dossier will not take -- an
+        # empty answer, or a question research already settled.
+        raise HTTPException(status_code=400, detail=str(error)) from error
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
@@ -305,6 +312,51 @@ async def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONRes
     on, and what is missing if not.
     """
     _handle(do_research, run_id, _services())
+    return JSONResponse(intake_state(run_id))
+
+
+class GateAnswerRequest(BaseModel):
+    requirement_id: str = Field(min_length=1)
+    # Exactly one of these. An answer is what the operator found; the note is
+    # what they looked for and could not find anywhere.
+    answer: str | None = None
+    source_url: str | None = None
+    unpublished_note: str | None = None
+
+
+@router.get("/{run_id}/gate")
+async def read_gate(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The questions holding this run up, with what research did find."""
+    return JSONResponse({"blocking": _handle(blocking_questions, run_id)})
+
+
+@router.post("/{run_id}/gate")
+async def settle_the_gate(
+    run_id: str, request: GateAnswerRequest, _staff=Depends(require_staff)
+) -> JSONResponse:
+    """Settle one blocking question without re-buying the research.
+
+    No model call: this is the operator's decision, recorded. The coverage
+    verdict is re-derived afterwards by the function that blocked, so the page
+    reads the same answer it would have got from a fresh research pass.
+    """
+    if (request.answer is None) == (request.unpublished_note is None):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Say either what the answer is, or that it is not published "
+                "anywhere. Not both, and not neither."
+            ),
+        )
+    _handle(
+        settle_gate,
+        run_id,
+        _services(),
+        requirement_id=request.requirement_id,
+        answer=request.answer,
+        source_url=request.source_url,
+        unpublished_note=request.unpublished_note,
+    )
     return JSONResponse(intake_state(run_id))
 
 

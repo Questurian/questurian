@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { BriefScreen } from '../intake/components/BriefScreen'
+import { GateScreen } from '../intake/components/GateScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
 import { ArticleScreen } from '../intake/components/ArticleScreen'
 import { ResearchScreen } from '../intake/components/ResearchScreen'
@@ -133,14 +134,26 @@ export function Prompt2BlogPage() {
           />
         )}
 
-        {step === 'research' && state?.research && (
-          <ResearchScreen
-            research={state.research}
-            busy={intake.busy}
-            onWrite={intake.write}
-            onReopen={intake.reopen}
-          />
-        )}
+        {step === 'research' &&
+          state?.research &&
+          // A blocked run used to show the verdict and one way out, back to
+          // the grill, which discards research already paid for. The gate
+          // screen settles the questions in place instead.
+          (state.research.coverage.can_write ? (
+            <ResearchScreen
+              research={state.research}
+              busy={intake.busy}
+              onWrite={intake.write}
+              onReopen={intake.reopen}
+            />
+          ) : (
+            <GateScreen
+              runId={state.run_id}
+              onSettled={intake.refresh}
+              onReopen={intake.reopen}
+              busy={intake.busy}
+            />
+          ))}
           </>
         )}
       </main>

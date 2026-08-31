@@ -60,10 +60,19 @@ def test_every_graph_stage_has_words_a_person_can_read(run):
         assert label and label != stage, f"{stage} has no readable label"
 
 
-def test_an_unknown_stage_falls_back_to_its_own_name_rather_than_blank(run):
-    _advance(run, state="running", stage="stage_v3_something_new")
+def test_every_graph_node_has_a_label_so_none_can_be_forgotten(run):
+    """`GRAPH_STAGES` is derived from the topology, so a node added to the
+    graph is writing whether or not anyone labelled it. This is the check that
+    it also gets words rather than a stage id on screen."""
+    from app.features.prompt2blog.graph.topology_v3 import V3_NODE_STAGE_NAMES
 
-    assert intake_v4.writing_state(run)["stage_label"] == "stage_v3_something_new"
+    unlabelled = [
+        stage
+        for stage in V3_NODE_STAGE_NAMES.values()
+        if stage not in intake_v4.WRITING_STAGE_LABELS
+    ]
+
+    assert not unlabelled, f"no words for: {', '.join(unlabelled)}"
 
 
 def test_a_finished_run_carries_the_title_and_the_stamp(run, isolated_db):
@@ -244,3 +253,39 @@ def test_a_progress_write_that_fails_does_not_stop_the_research():
     )
 
     assert notes["q1"].text == "notes"
+
+
+# --- run 76b36468 (2026-08-31 18:14Z) --------------------------------------
+
+
+def test_no_intake_stage_is_ever_mistaken_for_writing(run):
+    """The run row carries intake's stages too, because the run is created at
+    the seed (ADR 0031).
+
+    Excluding only "queued" let `stage_v4_grill` through, and a run answering
+    its first grill question showed a screen saying the article was being
+    written. The test has to be a whitelist.
+    """
+    for stage in (
+        "stage_v4_grill",
+        "stage_v4_brief",
+        "stage_v4_work_order",
+        "stage_v4_research",
+        "stage_v4_research_notes",
+        "stage_v4_research_progress",
+        "queued",
+    ):
+        _advance(run, state="running", stage=stage)
+        assert intake_v4.writing_state(run) is None, f"{stage} is not writing"
+
+
+def test_a_failed_intake_stage_is_not_reported_as_a_failed_article(run):
+    _advance(run, state="failed", stage="stage_v4_research", error="the dossier")
+
+    assert intake_v4.writing_state(run) is None
+
+
+def test_every_graph_stage_still_reports(run):
+    for stage in intake_v4.GRAPH_STAGES:
+        _advance(run, state="running", stage=stage)
+        assert intake_v4.writing_state(run) is not None, f"{stage} is the writer"

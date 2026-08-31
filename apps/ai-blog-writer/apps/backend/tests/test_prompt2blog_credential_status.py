@@ -23,6 +23,16 @@ class _Row(dict):
         return dict.__getitem__(self, key)
 
 
+@pytest.fixture(autouse=True)
+def _no_stored_token(tmp_path, monkeypatch):
+    """Point the stored-copy lookup at nothing.
+
+    Without this these tests read the operator's real token file, so they pass
+    or fail depending on whether the machine running them happens to have one.
+    """
+    monkeypatch.setenv(module.TOKEN_FILE_ENV, str(tmp_path / "absent"))
+
+
 def _with_row(monkeypatch, row):
     class _Cursor:
         def fetchone(self):

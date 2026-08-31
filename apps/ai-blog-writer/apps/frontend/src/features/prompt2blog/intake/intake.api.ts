@@ -1,6 +1,6 @@
 import { apiFetch } from '../../../shared/api/client/apiFetch'
 import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
-import type { IntakeArticle, IntakeState } from './intake.types'
+import type { GateQuestion, IntakeArticle, IntakeState } from './intake.types'
 
 /**
  * One call per move the operator can make.
@@ -137,4 +137,31 @@ export async function readPolishPrompt(runId: string): Promise<{ prompt: string 
     throw await readError(response, 'Could not build the polish prompt.')
   }
   return (await response.json()) as { prompt: string }
+}
+
+/** The questions holding this run up, with what research did find. */
+export async function readGate(runId: string): Promise<{ blocking: GateQuestion[] }> {
+  const response = await apiFetch(`${INTAKE}/${runId}/gate`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read what is holding this up.')
+  }
+  return (await response.json()) as { blocking: GateQuestion[] }
+}
+
+/**
+ * Settle one blocking question without re-buying the research.
+ *
+ * Either an answer, or a note saying it is not published anywhere. No model
+ * call: this is the operator's decision, recorded.
+ */
+export function settleGate(
+  runId: string,
+  body: {
+    requirement_id: string
+    answer?: string
+    source_url?: string
+    unpublished_note?: string
+  },
+): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/gate`, body)
 }

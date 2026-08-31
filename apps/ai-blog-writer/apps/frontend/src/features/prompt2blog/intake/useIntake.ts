@@ -61,6 +61,8 @@ export interface UseIntake {
   write: () => Promise<void>
   /** The finished article, once there is one. */
   article: IntakeArticle | null
+  /** Re-read the run. For anything that changed it outside this hook. */
+  refresh: () => void
   abandon: () => void
 }
 
@@ -170,6 +172,11 @@ export function useIntake(): UseIntake {
     ),
     write: useCallback(() => run(() => api.startWriting(requireRun())), [run, requireRun]),
     article,
+    refresh: useCallback(() => {
+      const runId = runIdRef.current
+      if (!runId) return
+      void api.readIntake(runId).then(setState).catch(() => undefined)
+    }, []),
     abandon: useCallback(() => {
       rememberRun(null)
       runIdRef.current = null

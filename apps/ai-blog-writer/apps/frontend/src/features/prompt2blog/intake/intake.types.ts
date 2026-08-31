@@ -132,6 +132,21 @@ export interface IntakeWriting {
   constraint_checks: Record<string, unknown>
 }
 
+/**
+ * One question holding the run up, with what research did find.
+ *
+ * Rarely a blank. Run 76b36468 was stopped holding a name, a URL and two
+ * founders, missing only a price the co-op does not publish.
+ */
+export interface GateQuestion {
+  requirement_id: string
+  question: string
+  kind: string
+  status: string
+  gap: string
+  found: string[]
+}
+
 /** The finished article. Its own call: the state is polled, this is not. */
 export interface IntakeArticle {
   run_id: string
