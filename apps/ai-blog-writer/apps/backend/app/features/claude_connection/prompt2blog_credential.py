@@ -32,18 +32,77 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _keychain_item_present() -> bool:
+    """Is the secret still in the Keychain?
+
+    Asked without `-w`, so this reads the item's metadata and never the token
+    itself. The two halves of this credential can drift apart -- the row saying
+    an account is connected, the Keychain holding nothing -- and only one of
+    them was ever checked.
+    """
+    try:
+        completed = subprocess.run(
+            [
+                SECURITY_CLI,
+                "find-generic-password",
+                "-a",
+                SLOT_ID,
+                "-s",
+                KEYCHAIN_SERVICE,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=KEYCHAIN_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        # Unreachable Keychain is not proof of a missing secret, and calling it
+        # missing would send the operator to reconnect a credential that is
+        # probably fine. Say what is true: this could not be checked.
+        return True
+    return completed.returncode == 0
+
+
 def credential_status() -> dict[str, Any]:
+    """Whether an account is connected, checking both halves.
+
+    The row alone used to answer this. It said "connected, Article account" for
+    two days while the Keychain held nothing, so the first anyone heard of it
+    was a failed hand-off to the writer -- after the grill, the brief, the
+    research plan and twenty minutes of web searches had all been paid for.
+    """
     with get_db_connection() as connection:
         row = connection.execute(
             "SELECT label, updated_at FROM claude_credentials WHERE slot_id = ?",
             (SLOT_ID,),
         ).fetchone()
     if row is None:
-        return {"configured": False, "label": None, "updatedAt": None}
+        return {
+            "configured": False,
+            "label": None,
+            "updatedAt": None,
+            "secretPresent": False,
+        }
+    present = _keychain_item_present()
     return {
-        "configured": True,
+        # Not configured unless it would actually work. A connection that
+        # cannot produce a token is not a connection.
+        "configured": present,
         "label": str(row["label"]),
         "updatedAt": str(row["updated_at"]),
+        "secretPresent": present,
+        **(
+            {}
+            if present
+            else {
+                "message": (
+                    "This account was connected on "
+                    + str(row["updated_at"])
+                    + " but its secret is no longer in the Keychain. "
+                    "Reconnect it before starting a run."
+                )
+            }
+        ),
     }
 
 
@@ -91,6 +150,17 @@ def save_credential(*, label: str, token: str) -> dict[str, Any]:
     if completed.returncode != 0:
         raise Prompt2BlogCredentialError(
             "Could not store Prompt2Blog's Claude account in macOS Keychain."
+        )
+    # Trusting the exit code is not the same as the item being there. The row
+    # and the secret have drifted apart twice, each time leaving a database
+    # saying "connected" with nothing behind it, and the first anyone heard was
+    # a failed hand-off to the writer after a whole intake had been paid for.
+    # If the write did not take, say so now rather than recording a connection
+    # that does not exist.
+    if not _keychain_item_present():
+        raise Prompt2BlogCredentialError(
+            "The Keychain reported success but the account is not there. "
+            "Nothing was saved; try connecting again."
         )
 
     updated_at = _now_iso()
