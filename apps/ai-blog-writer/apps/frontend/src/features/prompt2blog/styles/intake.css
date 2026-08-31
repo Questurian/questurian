@@ -595,3 +595,175 @@
 .p2b-error p {
   margin: 0 0 var(--space-3);
 }
+
+/* ---------- while something is running ---------- */
+
+/*
+ * Research is ten sequential web searches and writing is a whole article. The
+ * page used to say nothing at all for as long as either took, so a run that
+ * looked hung at seven minutes was working, and a write that looked dead had
+ * already finished twenty minutes earlier.
+ */
+
+.p2b-working {
+  max-width: 42rem;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6) clamp(var(--space-4), 4vw, var(--space-7));
+  box-shadow: 0 2px 16px var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.p2b-working-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.p2b-spinner {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--p2b-accent);
+  border-radius: 50%;
+  animation: p2b-spin 0.9s linear infinite;
+}
+
+@keyframes p2b-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Movement is the whole point of the spinner, so where movement is unwelcome
+   the accent ring stands still and still reads as "in progress". */
+@media (prefers-reduced-motion: reduce) {
+  .p2b-spinner { animation: none; }
+}
+
+.p2b-working-heading {
+  margin: 0;
+  font-size: 1.125rem;
+  color: var(--ink);
+}
+
+.p2b-working-detail {
+  margin: 0;
+  color: var(--ink-light);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.p2b-progress {
+  height: 4px;
+  background: var(--cream-dark);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.p2b-progress span {
+  display: block;
+  height: 100%;
+  background: var(--p2b-accent);
+  transition: width var(--transition-base);
+}
+
+.p2b-working-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.p2b-elapsed {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the finished article ---------- */
+
+.p2b-article-title {
+  margin: 0 0 var(--space-5);
+  font-size: 1.5rem;
+  line-height: 1.25;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.p2b-blockers {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  background: var(--accent-softer);
+  border-radius: var(--radius-md);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+}
+
+/* Numbers the run measured about its own prose. Said once; nothing here
+   gates, because once prose exists nothing blocks. */
+.p2b-measured {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+}
+
+.p2b-measured dl {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+
+.p2b-measured dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.p2b-measured dd {
+  margin: var(--space-1) 0 0;
+  color: var(--ink);
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.p2b-measured-note {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.p2b-article-body {
+  margin: 0 0 var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+  line-height: 1.75;
+  color: var(--ink);
+}
+
+.p2b-article-body h3 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: 1.125rem;
+  line-height: 1.3;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.p2b-article-body h3:first-child {
+  margin-top: 0;
+}
+
+.p2b-article-body p {
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+}

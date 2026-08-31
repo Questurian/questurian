@@ -102,6 +102,47 @@ export interface IntakeResearch {
   coverage: IntakeCoverage
 }
 
+/** What the ten searches are doing, while they do it. */
+export interface IntakeResearchProgress {
+  phase: 'gathering' | 'structuring'
+  done: number
+  total: number
+  current_question: string
+}
+
+/**
+ * What the writer is doing, or what it produced.
+ *
+ * Every field here was already on the run and none of it reached the page, so
+ * a write looked dead for five minutes and a finished article then sat unseen
+ * for twenty more.
+ */
+export interface IntakeWriting {
+  state: 'running' | 'completed' | 'failed' | string
+  stage: string
+  /** The stage in words. "Writing the article", not "stage_v3_compose". */
+  stage_label: string
+  error: string | null
+  updated_at: string
+  final_title: string | null
+  word_count: number | null
+  /** ready_for_staging | needs_revision. Advisory; it never blocked. */
+  pipeline_status: string | null
+  readiness_blockers: string[]
+  constraint_checks: Record<string, unknown>
+}
+
+/** The finished article. Its own call: the state is polled, this is not. */
+export interface IntakeArticle {
+  run_id: string
+  title: string
+  markdown: string
+  pipeline_status: string | null
+  readiness_blockers: string[]
+  constraint_checks: Record<string, unknown>
+  word_count: number | null
+}
+
 export type IntakeStep = 'seed' | 'grill' | 'brief' | 'work_order' | 'research'
 
 export interface IntakeState {
@@ -113,4 +154,6 @@ export interface IntakeState {
   research: IntakeResearch | null
   /** Present only on the response to a cut: what that decision costs. */
   cut_warnings?: string[]
+  research_progress: IntakeResearchProgress | null
+  writing: IntakeWriting | null
 }

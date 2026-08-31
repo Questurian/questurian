@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-from app.core import read_stage_result
+from app.core import read_stage_result, read_status
 
 from .brief_v4 import (
     BRIEF_STAGE,
@@ -51,6 +51,7 @@ from .contracts_v4 import (
 )
 from .research_v4 import (
     NOTES_STAGE,
+    PROGRESS_STAGE,
     RESEARCH_STAGE,
     ResearchDependencies,
     ResearchUnusable,
@@ -332,9 +333,17 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     # failure used to buy the searches again -- run 90b3f9bc paid for them
     # twice in one evening. The notes are kept the moment they exist and are
     # reused only when they answer this exact plan.
+    def record_progress(progress: dict[str, Any]) -> None:
+        # Written straight, not through `_record`: that opens a fresh usage
+        # attempt each time, and ten empty attempts would bury the stage's real
+        # receipt in the ledger.
+        services.recorder.record_stage(run_id, PROGRESS_STAGE, progress)
+
     notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order)
     if notes is None:
-        notes = gather_research(brief, work_order, services.research)
+        notes = gather_research(
+            brief, work_order, services.research, record_progress
+        )
         _record(
             services, run_id, NOTES_STAGE, notes_stage_record(work_order, notes)
         )
@@ -344,6 +353,8 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
             extra={"run_id": run_id, "feature": FEATURE_NAME},
         )
 
+    record_progress({"phase": "structuring", "done": len(notes), "total": len(notes),
+                     "current_question": ""})
     try:
         evidence = structure_research(work_order, notes, services.research)
     except ResearchUnusable as error:
@@ -400,6 +411,82 @@ def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4R
     )
 
 
+# What the graph's stage names mean to somebody watching. The run row already
+# carries the current one; it was simply never shown, so a write looked dead
+# for twenty minutes and then a finished article sat unseen for twenty more.
+WRITING_STAGE_LABELS = {
+    "queued": "Getting ready",
+    "stage_v3_outline": "Planning the sections",
+    "stage_v3_compose": "Writing the article",
+    "stage_v3_groundedness": "Checking every claim against the research",
+    "stage_v3_quality_audit": "Reading it back",
+    "stage_v3_repair": "Fixing what the audit named",
+    "stage_v3_quality_settle": "Settling on the best draft",
+    "stage_v3_title": "Writing the headline",
+    "stage_v3_finalize": "Finishing up",
+    "complete": "Done",
+}
+
+
+def writing_state(run_id: str) -> dict[str, Any] | None:
+    """What the writer is doing, or what it produced.
+
+    Everything here was already on the run and none of it was ever sent to the
+    page. `stage` is the live one from the run row, so this answers "is it
+    working" while the graph runs, and "what did it make" once it stops.
+    """
+    status = _safe_dict(read_status(run_id))
+    if not status:
+        return None
+    state = _safe_str(status.get("state"))
+    stage = _safe_str(status.get("stage"))
+    # A run is only "writing" once the graph owns it. Intake sets the run
+    # running the moment the seed is typed, so state alone would report every
+    # unanswered grill as an article in progress.
+    if stage in ("queued", "") and state != "completed":
+        return None
+
+    finalize = _stage_data(run_id, "stage_v3_finalize")
+    return {
+        "state": state,
+        "stage": stage,
+        "stage_label": WRITING_STAGE_LABELS.get(stage, stage),
+        "error": _safe_str(status.get("error")) or None,
+        "updated_at": _safe_str(status.get("updated_at")),
+        "final_title": _safe_str(finalize.get("final_title")) or None,
+        "word_count": finalize.get("word_count_estimate"),
+        "pipeline_status": _safe_str(finalize.get("pipeline_status")) or None,
+        "readiness_blockers": finalize.get("readiness_blockers") or [],
+        "constraint_checks": _safe_dict(finalize.get("constraint_checks")),
+    }
+
+
+def finished_article(run_id: str) -> dict[str, Any]:
+    """The article the run produced, for reading.
+
+    Its own call rather than part of `intake_state`, because the state is
+    polled every few seconds while the graph runs and the article payload is
+    several hundred kilobytes. Fetched once, when there is something to read.
+    """
+    payload = _stage_data(run_id, "pipeline_v3")
+    if not payload:
+        raise LookupError(f"No article written for run {run_id}.")
+    article = _safe_dict(payload.get("improved_article"))
+    finalize = _stage_data(run_id, "stage_v4_finalize") or _stage_data(
+        run_id, "stage_v3_finalize"
+    )
+    return {
+        "run_id": run_id,
+        "title": _safe_str(finalize.get("final_title")) or _safe_str(article.get("title")),
+        "markdown": _safe_str(payload.get("final_markdown"))
+        or _safe_str(article.get("content")),
+        "pipeline_status": _safe_str(finalize.get("pipeline_status")) or None,
+        "readiness_blockers": finalize.get("readiness_blockers") or [],
+        "constraint_checks": _safe_dict(finalize.get("constraint_checks")),
+        "word_count": finalize.get("word_count_estimate"),
+    }
+
+
 def intake_state(run_id: str) -> dict[str, Any]:
     """Where this run stands, for a page that may have been reloaded."""
     grill = _stage_data(run_id, GRILL_STAGE)
@@ -450,4 +537,8 @@ def intake_state(run_id: str) -> dict[str, Any]:
         or None,
         "research": {key: value for key, value in research.items() if key != STATE_KEY}
         or None,
+        # Written as the searches go, so five to ten silent minutes can say
+        # which question it is on.
+        "research_progress": _stage_data(run_id, PROGRESS_STAGE) or None,
+        "writing": writing_state(run_id),
     }

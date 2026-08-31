@@ -37,6 +37,7 @@ from ..intake_v4 import (
     approve_brief,
     begin_intake,
     do_research,
+    finished_article,
     intake_state,
     plan_research,
     reopen_intake,
@@ -304,6 +305,16 @@ async def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONRes
     """
     _handle(do_research, run_id, _services())
     return JSONResponse(intake_state(run_id))
+
+
+@router.get("/{run_id}/article")
+async def read_article(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """What the run wrote, for reading.
+
+    Separate from the state the page polls: that runs every few seconds while
+    the graph works, and this is the whole article.
+    """
+    return JSONResponse(_handle(finished_article, run_id))
 
 
 @router.get("/{run_id}/writing-request")

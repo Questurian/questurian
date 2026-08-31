@@ -1,6 +1,6 @@
 import { apiFetch } from '../../../shared/api/client/apiFetch'
 import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
-import type { IntakeState } from './intake.types'
+import type { IntakeArticle, IntakeState } from './intake.types'
 
 /**
  * One call per move the operator can make.
@@ -109,4 +109,18 @@ export function doResearch(runId: string): Promise<IntakeState> {
  */
 export function startWriting(runId: string): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/write`)
+}
+
+/**
+ * The finished article, for reading.
+ *
+ * Its own call because the state above is polled every few seconds while the
+ * graph runs, and this is several hundred kilobytes.
+ */
+export async function readArticle(runId: string): Promise<IntakeArticle> {
+  const response = await apiFetch(`${INTAKE}/${runId}/article`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the finished article.')
+  }
+  return (await response.json()) as IntakeArticle
 }

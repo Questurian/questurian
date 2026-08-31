@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { BriefScreen } from '../intake/components/BriefScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
+import { ArticleScreen } from '../intake/components/ArticleScreen'
 import { ResearchScreen } from '../intake/components/ResearchScreen'
+import { WorkingScreen } from '../intake/components/WorkingScreen'
 import { SeedScreen } from '../intake/components/SeedScreen'
 import { WorkOrderScreen } from '../intake/components/WorkOrderScreen'
 import { useIntake } from '../intake/useIntake'
@@ -29,6 +31,11 @@ export function Prompt2BlogPage() {
   const intake = useIntake()
   const state = intake.state
   const step = state?.step ?? 'seed'
+  const writing = state?.writing ?? null
+  // Once the graph owns the run there is nothing left to decide here, so the
+  // intake screens step aside rather than offering buttons that would queue a
+  // second article on the same run.
+  const handedToTheWriter = writing !== null
 
   return (
     <div className="p2b-page">
@@ -76,6 +83,23 @@ export function Prompt2BlogPage() {
           </div>
         )}
 
+        {handedToTheWriter ? (
+          writing.state === 'running' ? (
+            <WorkingScreen writing={writing} />
+          ) : (
+            <ArticleScreen
+              writing={writing}
+              article={intake.article}
+              onReopen={intake.reopen}
+              busy={intake.busy}
+            />
+          )
+        ) : intake.busy && step === 'work_order' ? (
+          // Research: ten sequential searches, five to ten minutes, and the
+          // screen used to say nothing at all for the whole of it.
+          <WorkingScreen research={state?.research_progress} />
+        ) : (
+          <>
         {step === 'seed' && <SeedScreen busy={intake.busy} onStart={intake.start} />}
 
         {step === 'grill' && state?.grill && (
@@ -116,7 +140,8 @@ export function Prompt2BlogPage() {
             onReopen={intake.reopen}
           />
         )}
-
+          </>
+        )}
       </main>
     </div>
   )

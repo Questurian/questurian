@@ -629,18 +629,39 @@ Rules:
 """
 
 
+PROGRESS_STAGE = "stage_v4_research_progress"
+
+
 def gather_research(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
     dependencies: ResearchDependencies,
+    on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, GatheredNotes]:
     """One grounded pass per question, texture included.
 
     Texture is researched to the identical standard: a scene we cannot source
     is still cut, so it has to be sourced like anything else.
+
+    `on_progress` is called before each search with what is about to be asked.
+    Ten sequential web searches take five to ten minutes and the screen used to
+    say nothing at all for the whole of it, which reads as a hung request.
     """
     notes: dict[str, GatheredNotes] = {}
-    for requirement in work_order.requirements:
+    total = len(work_order.requirements)
+    for index, requirement in enumerate(work_order.requirements, start=1):
+        if on_progress is not None:
+            try:
+                on_progress(
+                    {
+                        "phase": "gathering",
+                        "done": index - 1,
+                        "total": total,
+                        "current_question": requirement.question,
+                    }
+                )
+            except Exception as exc:  # pragma: no cover -- telemetry only
+                logger.warning("Research progress write failed: %s", exc)
         prompt = build_gather_prompt(brief, requirement)
         try:
             text, urls, tokens = dependencies.gather(prompt, GATHER_MODEL)
@@ -652,6 +673,21 @@ def gather_research(
         notes[requirement.requirement_id] = GatheredNotes(
             text=_safe_str(text), source_urls=list(urls or []), tokens=tokens
         )
+    if on_progress is not None:
+        try:
+            # Structuring is one call and the longest single wait in the run,
+            # so it gets its own phase rather than looking like a stall after
+            # the last search.
+            on_progress(
+                {
+                    "phase": "structuring",
+                    "done": total,
+                    "total": total,
+                    "current_question": "",
+                }
+            )
+        except Exception as exc:  # pragma: no cover -- telemetry only
+            logger.warning("Research progress write failed: %s", exc)
     return notes
 
 
@@ -693,9 +729,15 @@ def run_research(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
     dependencies: ResearchDependencies,
+    on_progress: Callable[[dict[str, Any]], None] | None = None,
+    notes: dict[str, GatheredNotes] | None = None,
 ) -> tuple[EvidencePackage, dict[str, GatheredNotes]]:
-    """Both passes. Returns the evidence and the notes it came from."""
-    notes = gather_research(brief, work_order, dependencies)
+    """Both passes. Returns the evidence and the notes it came from.
+
+    `notes` skips the gathering when a previous attempt already paid for it.
+    """
+    if notes is None:
+        notes = gather_research(brief, work_order, dependencies, on_progress)
     return structure_research(work_order, notes, dependencies), notes
 
 
