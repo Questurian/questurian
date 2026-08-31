@@ -168,6 +168,99 @@ line fixes the flatness while protecting what the article is.
   record stays true. Not pasted back, the published piece and the recorded
   piece diverge, and every diagnosis after that runs against the wrong text.
 
+## Phase 5: where the person comes in
+
+Written 2026-08-31 after run 76b36468, the Medellín piece. The pipeline is
+built to be as autonomous as it can be, and this phase is about the places
+where that is the wrong goal. Three of them showed up in one run.
+
+The through line: the machine should do what machines are good at -- finding,
+checking, structuring, never inventing -- and hand the operator the judgments
+only a person can make. An article that had a person at those points reads as
+made by a person, because it was.
+
+### 5a. Pin the country, in three places
+
+Run 76b36468 asked for "a community-led project offering guided neighborhood
+visits in Buenos Aires" and came back with a garden collective in Puerto
+Madero, Argentina. The article is about Medellín, whose Buenos Aires is the
+neighbourhood the Ayacucho tram runs through.
+
+The chain:
+
+    grill extracted location:  "Medellín"        (no country)
+    brief carries:             "Medellín"
+    gather prompt says:        "a travel article about Medellín"
+    the question said:         "in Buenos Aires in 2024"
+    the search went to:         Argentina
+
+v3 had the operator type a location and the owner always typed "city, country".
+v4 replaced that with a field the grill infers from the seed, with no format
+rule, and nothing replaced the habit. The location is also only a framing line,
+so a place name inside the question outranks it.
+
+Latin America makes this structural rather than unlucky: Buenos Aires, Comuna
+13, La Candelaria, San Antonio, Santa Fe and Bolívar all repeat across a dozen
+countries.
+
+- **The grill asks for a country.** Its instruction says to set `location` when
+  the line names a place clearly enough to act on, and says nothing about
+  format. It should ask for city and country.
+- **The work order writes unambiguous questions.** It had "Location: Medellín"
+  in front of it and still wrote "in Buenos Aires" bare. A place name that
+  exists elsewhere gets qualified.
+- **The search pins it.** The one that actually holds: everything in this
+  question is in `{location}`, and a name that also exists elsewhere is the one
+  in `{location}`. Without this a correct location field still loses to a place
+  name inside the question, which is exactly what happened.
+
+Prompt only. No extra calls.
+
+### 5b. Omit, as the third thing to do with a blocked question
+
+The gate offers two moves: answer it, or say nobody publishes it. A third is
+missing -- drop the question. There is precedent: cutting a load-bearing
+question is already permitted at the work order stage, answered once with what
+the article can no longer claim, then obeyed.
+
+Not tangled. Dropping a requirement means dropping any claim that served only
+it and keeping claims that also served others, which is the same reconciliation
+the evidence reader already does.
+
+The cost is stated the same way the work order cut states it, naming the spine
+the article will no longer be able to rest on.
+
+### 5c. The liveness check
+
+Research found Moravia Tours, its site, and both founders by name, and every
+word was true. What it could not see: last Instagram post 2024, a janky
+checkout, tired photos. A business winding down. That is not on a page, it is
+the absence of recent activity and the feel of a site, and no amount of better
+research closes it.
+
+So before writing, the operator sees only the claims that name somewhere a
+reader could actually go. In run 76b36468 that is five claims out of nineteen,
+two of them the same operator -- a two minute job, not a chore, because most
+claims are facts rather than places.
+
+Each one gets three marks: fine, drop it, or a note in the operator's words
+that travels to the writer.
+
+Two things this is not.
+
+**It is not a second gate.** Exactly one gate blocks in this pipeline
+(ADR 0030) and that is not being changed. This rides on the screen already
+shown before writing, with a "these all look fine" button that clears the whole
+list in one click.
+
+**It is not a quality judgment.** Call it liveness. The operator has not taken
+these tours either and cannot say whether they are good. They can tell alive
+from abandoned, which is exactly what went wrong, and naming it accurately is
+what keeps it a two minute job instead of a review of places nobody has been.
+
+Needs one optional field on a claim, tagged by the structure model when a claim
+names a bookable or visitable place. No extra call.
+
 ## Order, and why
 
 1. **Phase 1** first because it is free, it is small, and the next real article
@@ -180,6 +273,16 @@ line fixes the flatness while protecting what the article is.
 
 Phases 1 and 2 want one real run between them and phase 3, so the rhythm change
 is judged on its own.
+
+**Phase 5 goes before phase 3 and phase 4.** 5a is the only item in the plan
+that fixes a wrong fact rather than a rough edge: run 76b36468 answered a
+question about the wrong country and that answer was marked `supported`, so
+nothing downstream would have caught it. 5b and 5c both unblock work already
+paid for. Phases 3 and 4 improve articles that are already correct.
+
+Within phase 5: 5a first, because it is prompt only and stops the next run
+inheriting the same fault; then 5b, which is small; then 5c, which needs a
+field on the evidence contract.
 
 ## Not in this plan, and deliberately
 
