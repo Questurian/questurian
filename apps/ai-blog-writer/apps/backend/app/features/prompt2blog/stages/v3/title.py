@@ -33,6 +33,17 @@ def _title_material(state: Prompt2BlogV3GraphState) -> dict[str, Any]:
     content = _safe_str(_safe_dict(state.get("rewrite")).get("improved_content"))
     opening = content[:TITLE_OPENING_CHARACTERS].strip()
     return {
+        # The operator's own line, which this stage has never once been shown.
+        # The prompt has always said "keep the original title's intent"; that
+        # named a v3 field v4 removed, so the instruction pointed at nothing
+        # and the stage fell back on search engine instinct. Run 90b3f9bc
+        # turned "Lima is no longer simply the stopover before Cusco" into
+        # "Lima vs. Cusco: Why a 2-3 Day Stopover Beats a Layover Before Machu
+        # Picchu" -- a colon, keywords, and a comparison the article does not
+        # make.
+        "the_authors_own_headline": _safe_str(
+            _safe_dict(state.get("brief")).get("seed")
+        ),
         "the_promise": _safe_str(_safe_dict(state.get("brief")).get("outcome")),
         "spine": _safe_str(_safe_dict(state.get("brief")).get("spine")),
         "article_opening": opening,

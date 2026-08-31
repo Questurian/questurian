@@ -18,6 +18,7 @@ from app.features.prompt2blog.brief_v4 import (
     build_brief_prompt,
 )
 from app.features.prompt2blog.contracts_v4 import (
+    MARKER_KEYS,
     GrillQuestion,
     GrillState,
     GrillTurn,
@@ -57,6 +58,7 @@ def _agreed(**overrides) -> GrillState:
         location="Lima, Peru",
         status="agreed",
         consensus="A first-timer's guide for someone with a Lima layover.",
+        markers_covered=list(MARKER_KEYS),
         turns=[
             _turn("q1", "Guide or the case?", "yeah guide. but a bit of a pitch"),
             _turn("q3", "What have you got that isn't public?", FIRSTHAND),
@@ -257,6 +259,89 @@ def test_an_empty_field_is_asked_about_again_before_giving_up():
     assert "who it is for" in error.value.missing
 
 
+def test_a_repeated_must_name_does_not_take_the_brief_down():
+    """This reached the operator as a raw Pydantic error, mid-flow, after the
+    grill had been paid for: "must_name entry values must be unique".
+
+    The contract is right to refuse a brief that names the same thing twice.
+    Refusing a whole good brief over a duplicated string is not.
+    """
+    deps = _deps(_payload(must_name=["Barranco", "barranco", "Miraflores"]))
+
+    brief = build_brief(_agreed(), deps)
+
+    assert brief.must_name == ["Barranco", "Miraflores"]
+
+
+def test_repeats_are_dropped_from_every_list_the_model_fills():
+    deps = _deps(
+        _payload(
+            reader_tags=["first-time-visitor", "first-time-visitor", "budget-focused"],
+            topic_module_ids=["food-drink", "food-drink"],
+        )
+    )
+
+    brief = build_brief(_agreed(), deps)
+
+    assert brief.reader.tags == ["first-time-visitor", "budget-focused"]
+    assert brief.topic_module_ids == ["food-drink"]
+
+
+def test_an_invented_reader_tag_is_dropped_rather_than_fatal():
+    # A closed vocabulary the model is never shown. Inventing one is normal.
+    deps = _deps(_payload(reader_tags=["first-time-visitor", "food-obsessed"]))
+
+    assert build_brief(_agreed(), deps).reader.tags == ["first-time-visitor"]
+
+
+def test_a_brief_that_cannot_assemble_says_so_in_words_and_keeps_the_payload():
+    """Whatever else fails the contract, the operator gets a sentence and the
+    run keeps what came back."""
+    from app.features.prompt2blog.brief_v4 import BriefUnusable
+
+    deps = _deps(_payload(form_id="not-a-real-form"))
+
+    with pytest.raises(BriefUnusable) as error:
+        build_brief(_agreed(), deps)
+
+    assert "form_id" in error.value.reason
+    assert error.value.raw, "the payload has to travel with the failure"
+
+
+def test_the_prompt_explains_every_field_it_requires():
+    """Run 90b3f9bc (2026-08-30 20:01Z) came back with form, reader and
+    reader-question empty — the exact three fields the rules never mentioned.
+
+    The rules explained spine, outcome, fails-if, must-name and material, and
+    said nothing about the other three. The model left blank what it was never
+    asked for.
+    """
+    from app.features.prompt2blog.brief_v4 import build_brief_prompt
+
+    prompt = " ".join(build_brief_prompt(_agreed()).split())
+
+    assert "`form_id` is the kind of article" in prompt
+    assert "`primary_reader` is who this is for" in prompt
+    assert "`reader_question` is the question in that reader's head" in prompt
+    # The schema cannot carry this on the Gemini path: its translator drops
+    # minLength. So the prompt has to say it in words.
+    assert "an empty string is not an answer" in prompt
+
+
+def test_the_form_vocabulary_travels_in_the_schema():
+    """`enum` is one of the few constraints Gemini's translator keeps.
+
+    A bare string field named `form_id`, with its fifteen legal values stated
+    nowhere, is a field a model is entitled to leave empty.
+    """
+    from typing import get_args
+
+    from app.features.prompt2blog.brief_v4 import BRIEF_SCHEMA
+    from app.features.prompt2blog.contracts_v4 import ArticleFormId
+
+    assert BRIEF_SCHEMA["properties"]["form_id"]["enum"] == list(get_args(ArticleFormId))
+
+
 def test_the_failure_says_what_is_missing_in_words():
     """Not a string-length error for a field nobody has heard of.
 
@@ -273,6 +358,6 @@ def test_the_failure_says_what_is_missing_in_words():
     with pytest.raises(BriefIncomplete) as error:
         build_brief(_agreed(), deps)
 
-    assert "what it is built on" in str(error.value)
+    assert "what the piece is built on" in str(error.value)
     assert "what would make it a failure" in str(error.value)
     assert error.value.raw, "what came back has to travel with the failure"

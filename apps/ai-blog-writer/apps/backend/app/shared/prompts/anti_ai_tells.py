@@ -147,9 +147,14 @@ _NO_DASH_SUBSTITUTION = """\
 No em dashes, and no substitutes for them. A comma-bracketed aside is an em \
 dash in disguise: if you would have written "X — Y — Z", do not write "X, Y, \
 Z" instead. Asides like "arguing, convincingly, that" or "the room is warm, \
-and quietly so, throughout" get rewritten as two shorter sentences or dropped. \
-A comma joins clauses or list items; it does not impersonate a dash. A spaced \
-hyphen is the same dash in another hat and reads as a typewriter artefact.
+and quietly so, throughout" get rewritten as one sentence with a subordinate \
+clause, or as two shorter sentences, or dropped. Reach for the subordinate \
+clause first: "the room is warm throughout, which is what makes the terrace \
+worth booking" keeps the thought whole and needs no dash. Splitting is the \
+last resort, not the house style. None of this bans long sentences: commas \
+joining clauses are correct and wanted, and what is banned is a comma standing \
+in for a dash around an aside. A spaced hyphen is the same dash in another hat \
+and reads as a typewriter artefact.
 
 Do not use hyphenated compounds at all. "Two-bedroom apartments", "a long-stay \
 visa", "a well-known, family-run spot" — each is correct English on its own, \
@@ -175,11 +180,26 @@ is thin on anchors, prefer a shorter paragraph or merge with an adjacent one \
 rather than inventing a dish name, price, year, or quote. Generalizations \
 without anchors are the strongest AI signal, but fabricated anchors are worse."""
 
+# The trigger used to read "if three sentences in a row are 15-25 words". A
+# real article came back averaging 11.3 words with 57% of its sentences inside
+# a five word band, so the condition never fired once: it was written to catch
+# clustering at medium length and the piece clustered short. The rule watched
+# one wall of a room with two doors. The blurb version below already had the
+# better shape, and this now matches it.
 _RHYTHM = """\
-Rhythm rules. Vary sentence length aggressively. If three sentences in a row \
-are 15-25 words, the next one must be under 8 or over 35. Parallel structure \
-("A and B, C and D") is fine once per paragraph, never twice. Do not end \
-paragraphs with a balanced two-clause summary line."""
+Rhythm rules. Vary sentence length aggressively. Clustering at ANY length is \
+the failure: sentences all sitting between 9 and 14 words read as generated \
+just as surely as all sitting between 15 and 25. Every section carries at \
+least one sentence under 8 words and at least one over 25, and three in a row \
+within five words of each other means the next one breaks the pattern hard.
+
+Length comes from subordination, not punctuation. Join clauses with because, \
+which, while, after, so that, and with relative pronouns. Where one fact \
+explains another, carry both in one sentence instead of lining them up one per \
+full stop.
+
+Parallel structure ("A and B, C and D") is fine once per paragraph, never \
+twice. Do not end paragraphs with a balanced two-clause summary line."""
 
 _SUMMARY_PATTERNS = """\
 Banned summary patterns. Do not open with a thesis sentence and close with a \

@@ -15,6 +15,8 @@ export interface IntakeQuestion {
   recommendation: string
   /** Set when this question exists to resolve a contradiction. */
   pushback: string
+  /** Which brief marker this question exists to settle. */
+  asks_about: string
 }
 
 /** A question and what was actually typed, kept word for word. */
@@ -25,6 +27,14 @@ export interface IntakeTurn {
   recommendation: string
   pushback: string
   answer: string
+  /**
+   * Whether the suggestion was sent back untouched.
+   *
+   * The grill is told, because otherwise it reads its own sentence returning
+   * as a confident answer and agrees with itself (ADR 0033). Shown here for
+   * the same reason: accepting is agreement, not something you said.
+   */
+  accepted_as_drafted: boolean
 }
 
 export interface IntakeGrill {
@@ -34,6 +44,13 @@ export interface IntakeGrill {
   pending: IntakeQuestion | null
   /** The played-back summary. Agreeing with it is the stop condition. */
   consensus: string
+  /**
+   * What the brief has and still needs. The grill stops when nothing is
+   * missing, so this is the honest answer to "how far along am I" — which a
+   * question count never was.
+   */
+  markers_covered: string[]
+  markers_missing: string[]
 }
 
 export interface IntakeBrief {
@@ -76,13 +93,103 @@ export interface IntakeCoverage {
   findings: string[]
 }
 
+/** One fact research found, and where it came from. */
+export interface ResearchClaim {
+  claim_id: string
+  text: string
+  confidence: string
+  venue: string
+  venue_note: string
+  sources: { title: string; url: string; source_type: string }[]
+}
+
+/** What came back for one question. */
+export interface ResearchFinding {
+  status: string
+  gap: string
+  claims: ResearchClaim[]
+}
+
 export interface IntakeResearch {
   work_order_fingerprint: string
   source_count: number
   claim_count: number
   requirement_status: Record<string, string>
+  /** What was actually found, per question. */
+  findings: Record<string, ResearchFinding>
   conflicts: string[]
   coverage: IntakeCoverage
+}
+
+/** What the ten searches are doing, while they do it. */
+export interface IntakeResearchProgress {
+  phase: 'gathering' | 'structuring'
+  done: number
+  total: number
+  current_question: string
+}
+
+/**
+ * What the writer is doing, or what it produced.
+ *
+ * Every field here was already on the run and none of it reached the page, so
+ * a write looked dead for five minutes and a finished article then sat unseen
+ * for twenty more.
+ */
+export interface IntakeWriting {
+  state: 'running' | 'completed' | 'failed' | string
+  stage: string
+  /** The stage in words. "Writing the article", not "stage_v3_compose". */
+  stage_label: string
+  error: string | null
+  updated_at: string
+  final_title: string | null
+  word_count: number | null
+  /** ready_for_staging | needs_revision. Advisory; it never blocked. */
+  pipeline_status: string | null
+  readiness_blockers: string[]
+  constraint_checks: Record<string, unknown>
+}
+
+/**
+ * One question holding the run up, with what research did find.
+ *
+ * Rarely a blank. Run 76b36468 was stopped holding a name, a URL and two
+ * founders, missing only a price the co-op does not publish.
+ */
+export interface GateQuestion {
+  requirement_id: string
+  question: string
+  kind: string
+  status: string
+  gap: string
+  found: string[]
+}
+
+/**
+ * Somewhere the article would send a reader.
+ *
+ * Research can confirm a site resolves and a price is published. It cannot see
+ * that the last post was 2024 and the checkout is janky, which is not a fact on
+ * a page but the absence of recent activity.
+ */
+export interface VenueToCheck {
+  claim_id: string
+  venue: string
+  text: string
+  urls: string[]
+  note: string
+}
+
+/** The finished article. Its own call: the state is polled, this is not. */
+export interface IntakeArticle {
+  run_id: string
+  title: string
+  markdown: string
+  pipeline_status: string | null
+  readiness_blockers: string[]
+  constraint_checks: Record<string, unknown>
+  word_count: number | null
 }
 
 export type IntakeStep = 'seed' | 'grill' | 'brief' | 'work_order' | 'research'
@@ -96,4 +203,6 @@ export interface IntakeState {
   research: IntakeResearch | null
   /** Present only on the response to a cut: what that decision costs. */
   cut_warnings?: string[]
+  research_progress: IntakeResearchProgress | null
+  writing: IntakeWriting | null
 }

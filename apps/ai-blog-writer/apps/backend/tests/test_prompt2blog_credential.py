@@ -12,10 +12,13 @@ def test_save_credential_keeps_token_out_of_command_and_database(tmp_path, monke
     database.ensure_core_tables()
 
     secret = "sk-ant-oat01-PROMPT2BLOG-ONLY"
-    observed = {}
+    # Saving makes two calls now: the add, then a lookup confirming the item is
+    # really there. Every call is kept so the assertions below can name the one
+    # they mean rather than whichever happened to run last.
+    calls: list[dict] = []
 
     def fake_run(args, **kwargs):
-        observed.update(args=args, kwargs=kwargs)
+        calls.append({"args": args, "kwargs": kwargs})
         return subprocess.CompletedProcess(args=args, returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(prompt2blog_credential.subprocess, "run", fake_run)
@@ -25,10 +28,14 @@ def test_save_credential_keeps_token_out_of_command_and_database(tmp_path, monke
         token=secret,
     )
 
+    observed = calls[0]
+
     # The token travels on stdin as part of a `security -i` command line, so it
     # never reaches argv. It must not be handed to the interactive `-w` prompt:
     # that prompt reads the terminal, not stdin, and the call hangs there.
     assert observed["args"] == ["/usr/bin/security", "-i"]
+    # And it must not reach argv on any of the other calls either.
+    assert not any(secret in " ".join(call["args"]) for call in calls)
     assert observed["kwargs"]["input"] == (
         "add-generic-password"
         " -a prompt2blog"

@@ -377,6 +377,35 @@ def test_the_title_stage_sees_the_seed_and_the_headline_standard():
     assert updates["final_title"] == "Is Lima still worth the move?"
 
 
+def test_the_headline_writer_is_shown_the_line_the_operator_wrote():
+    """It never was.
+
+    `_title_material` sent the promise, the spine, the opening and the
+    headings, while the prompt said "keep the original title's intent" about a
+    field v3 supplied as `original_title` and v4 removed. Pointed at nothing,
+    the stage fell back on search engine instinct: run 90b3f9bc turned "Lima is
+    no longer simply the stopover before Cusco" into "Lima vs. Cusco: Why a 2-3
+    Day Stopover Beats a Layover Before Machu Picchu".
+    """
+    from app.features.prompt2blog.stages.v3.title import _title_material
+
+    material = _title_material(_state())
+
+    assert material["the_authors_own_headline"] == _fixture()["brief"]["seed"]
+
+
+def test_the_prompt_treats_that_line_as_the_headline_until_proven_otherwise():
+    from app.features.prompt2blog.prompts.editorial_v3 import P2B_V3_TITLE_PROMPT
+
+    flat = " ".join(P2B_V3_TITLE_PROMPT.split())
+
+    assert "already the headline and return it unchanged" in flat
+    assert "merely plainer than you would have written is not a failure" in flat
+    # The exact shape run 90b3f9bc produced.
+    assert "No colon subtitle" in flat
+    assert "no comparison the article does not actually make" in flat
+
+
 def test_the_title_falls_back_to_the_brief_rather_than_to_nothing():
     dependencies, _recorder = _dependencies(FakeLLM(text_response="  "))
 

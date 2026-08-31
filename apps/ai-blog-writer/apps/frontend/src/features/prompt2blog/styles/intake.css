@@ -9,8 +9,8 @@
  * app that already has a look; it should not arrive with its own.
  *
  * The shape is a single reading column, because the grill is a conversation
- * and a conversation is read top to bottom. One question is on screen at a
- * time on purpose.
+ * and a conversation is read top to bottom. The grill itself is a chat thread
+ * (ADR 0033); the screens after it are one decision at a time.
  */
 
 .p2b-intake {
@@ -97,6 +97,214 @@
 
 .p2b-muted {
   color: var(--muted);
+}
+
+/* ---------- the interview, as a chat ---------- */
+
+/*
+ * The grill was a card with one question on it and the exchange summarised
+ * above. It is a conversation, so it reads as one: a thread you scroll, a
+ * composer at the bottom, newest at the end.
+ *
+ * The composer is pre-filled with the grill's suggestion. Accepting it is
+ * marked as accepting rather than answering, because those are worth different
+ * amounts and nothing used to show the difference.
+ */
+
+.p2b-chat {
+  max-width: 42rem;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-6));
+  box-shadow: 0 2px 16px var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* What the brief still needs. An honest progress line -- a question count
+   never was one, because the grill stops when the brief is full. */
+.p2b-chat-progress {
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.8125rem;
+}
+
+.p2b-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: min(58vh, 34rem);
+  overflow-y: auto;
+  padding-right: var(--space-2);
+  scroll-behavior: smooth;
+}
+
+.p2b-exchange {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.p2b-message {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+  max-width: 88%;
+  text-wrap: pretty;
+}
+
+/* The grill's side: plain, on the page's own ground. It does most of the
+   talking, so it should not shout. */
+.p2b-message-theirs {
+  align-self: flex-start;
+  background: var(--cream-dark);
+  color: var(--ink);
+  border-bottom-left-radius: var(--space-1);
+}
+
+/* Yours: kept word for word, and the one thing on this page nobody rewrote.
+   On the page's own blue rather than a second beige — rendered side by side,
+   `--accent-softer` (terracotta at 6%) was indistinguishable from the grill's
+   `--cream-dark`, so the thread read as one voice talking to itself. Which is
+   the exact confusion this screen exists to end. */
+.p2b-message-mine {
+  align-self: flex-end;
+  background: var(--p2b-accent-soft);
+  color: var(--ink);
+  border-bottom-right-radius: var(--space-1);
+}
+
+.p2b-message-seed {
+  font-style: italic;
+  color: var(--ink-light);
+}
+
+/* The played-back agreement. The last thing said, and the one you answer. */
+.p2b-message-consensus {
+  max-width: 100%;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  border-left: 3px solid var(--accent);
+}
+
+.p2b-accepted {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- the composer ---------- */
+
+.p2b-composer {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+.p2b-composer textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.p2b-composer textarea:focus {
+  outline: 2px solid var(--p2b-accent);
+  outline-offset: 1px;
+  border-color: var(--p2b-accent);
+}
+
+.p2b-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.p2b-composer-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  flex: 1 1 14rem;
+}
+
+.p2b-composer-buttons {
+  display: flex;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.p2b-composer-buttons button {
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--p2b-accent);
+  color: white;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.p2b-composer-buttons button:hover:not(:disabled) {
+  background: var(--p2b-accent-hover);
+}
+
+.p2b-composer-buttons button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.p2b-composer-buttons .p2b-secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border-strong);
+}
+
+.p2b-composer-buttons .p2b-secondary:hover:not(:disabled) {
+  background: var(--cream-dark);
+  color: var(--ink);
+}
+
+.p2b-chat .p2b-intake-actions {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+  margin-top: 0;
+}
+
+.p2b-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 34rem) {
+  .p2b-message {
+    max-width: 96%;
+  }
 }
 
 /* ---------- the brief ---------- */
@@ -339,6 +547,19 @@
   gap: var(--space-4);
 }
 
+.p2b-run-id {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted-light);
+  font-size: 0.6875rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-align: center;
+  user-select: all;
+}
+
 .p2b-intake-step {
   color: var(--muted);
   font-size: 0.8125rem;
@@ -373,4 +594,461 @@
 
 .p2b-error p {
   margin: 0 0 var(--space-3);
+}
+
+/* ---------- while something is running ---------- */
+
+/*
+ * Research is ten sequential web searches and writing is a whole article. The
+ * page used to say nothing at all for as long as either took, so a run that
+ * looked hung at seven minutes was working, and a write that looked dead had
+ * already finished twenty minutes earlier.
+ */
+
+.p2b-working {
+  max-width: 42rem;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6) clamp(var(--space-4), 4vw, var(--space-7));
+  box-shadow: 0 2px 16px var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.p2b-working-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.p2b-spinner {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--p2b-accent);
+  border-radius: 50%;
+  animation: p2b-spin 0.9s linear infinite;
+}
+
+@keyframes p2b-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Movement is the whole point of the spinner, so where movement is unwelcome
+   the accent ring stands still and still reads as "in progress". */
+@media (prefers-reduced-motion: reduce) {
+  .p2b-spinner { animation: none; }
+}
+
+.p2b-working-heading {
+  margin: 0;
+  font-size: 1.125rem;
+  color: var(--ink);
+}
+
+.p2b-working-detail {
+  margin: 0;
+  color: var(--ink-light);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.p2b-progress {
+  height: 4px;
+  background: var(--cream-dark);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.p2b-progress span {
+  display: block;
+  height: 100%;
+  background: var(--p2b-accent);
+  transition: width var(--transition-base);
+}
+
+.p2b-working-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.p2b-elapsed {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the finished article ---------- */
+
+.p2b-article-title {
+  margin: 0 0 var(--space-5);
+  font-size: 1.5rem;
+  line-height: 1.25;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.p2b-blockers {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  background: var(--accent-softer);
+  border-radius: var(--radius-md);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+}
+
+/* Numbers the run measured about its own prose. Said once; nothing here
+   gates, because once prose exists nothing blocks. */
+.p2b-measured {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+}
+
+.p2b-measured dl {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+}
+
+.p2b-measured dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.p2b-measured dd {
+  margin: var(--space-1) 0 0;
+  color: var(--ink);
+  font-size: 1.0625rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.p2b-measured-note {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.p2b-article-body {
+  margin: 0 0 var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+  line-height: 1.75;
+  color: var(--ink);
+}
+
+.p2b-article-body h3 {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: 1.125rem;
+  line-height: 1.3;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.p2b-article-body h3:first-child {
+  margin-top: 0;
+}
+
+.p2b-article-body p {
+  margin: 0 0 var(--space-4);
+  text-wrap: pretty;
+}
+
+/* ---------- carrying it to a better editor ---------- */
+
+/*
+ * The run measured everything wrong with its own prose and recorded it where
+ * nobody read it. Copy only: the prompt is generated and never hand edited,
+ * because operator influence belongs in a control with its own validated field
+ * and typed changes leave nothing able to say what was actually asked for.
+ */
+
+.p2b-polish {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5));
+  background: var(--accent-softer);
+  border-radius: var(--radius-md);
+}
+
+.p2b-polish-copy {
+  margin: 0;
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.p2b-polish .p2b-intake-actions {
+  margin-top: var(--space-4);
+}
+
+.p2b-polish .p2b-note {
+  margin-top: var(--space-3);
+}
+
+/* ---------- what is holding the run up ---------- */
+
+/*
+ * A blocked run used to show a verdict and one way out, back to the grill,
+ * which throws away research already paid for. These are the questions
+ * themselves, with what research did find under each one, because a blocking
+ * question is rarely a blank: run 76b36468 was stopped holding a name, a URL
+ * and two founders, missing only a price nobody publishes.
+ */
+
+.p2b-gate-list {
+  list-style: none;
+  margin: var(--space-5) 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.p2b-gate-question {
+  padding: var(--space-5);
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+}
+
+.p2b-gate-ask {
+  margin: 0 0 var(--space-4);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+/* Shown before the gap, because what was found is the larger half of the
+   truth and reading the shortfall first makes it look like nothing. */
+.p2b-gate-found {
+  margin: 0 0 var(--space-4);
+}
+
+.p2b-gate-found ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.p2b-gate-gap {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent-softer);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.p2b-gate-form {
+  margin-top: var(--space-4);
+}
+
+.p2b-gate-error {
+  margin: var(--space-3) 0 0;
+  color: var(--error);
+  font-size: 0.9375rem;
+}
+
+.p2b-gate-question .p2b-intake-actions {
+  margin-top: var(--space-4);
+}
+
+/* ---------- the places, before the article recommends them ---------- */
+
+/*
+ * Research confirmed these exist. It cannot see that the last post was 2024
+ * and the checkout is janky, which is not a fact on a page but the absence of
+ * recent activity. Liveness, not quality, and not a gate: one click clears the
+ * whole list.
+ */
+
+.p2b-venues {
+  margin: var(--space-5) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.p2b-venues-copy {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.p2b-venue-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.p2b-venue {
+  padding: var(--space-4);
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+}
+
+/* Struck rather than removed: it was a real decision and the operator may want
+   to see what they took out. */
+.p2b-venue-dropped {
+  opacity: 0.55;
+}
+
+.p2b-venue-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.p2b-venue-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.p2b-venue-head a {
+  color: var(--accent);
+  font-size: 0.8125rem;
+}
+
+.p2b-venue-claim {
+  margin: 0;
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.p2b-venue-done {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.p2b-venue .p2b-intake-actions {
+  margin-top: var(--space-3);
+}
+
+.p2b-venue .p2b-intake-actions button {
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.875rem;
+}
+
+/* ---------- what research found, question by question ---------- */
+
+/*
+ * This was a list of ids and statuses: "q3, partly answered". It says neither
+ * what was asked nor what came back, and the operator's own decision at the
+ * gate cannot be made from it.
+ */
+
+.p2b-findings {
+  list-style: none;
+  counter-reset: finding;
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.p2b-finding {
+  counter-increment: finding;
+  padding: var(--space-4);
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+}
+
+.p2b-finding-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.p2b-finding-status {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.p2b-finding-ask {
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.p2b-finding-ask::before {
+  content: counter(finding) ". ";
+  color: var(--muted);
+}
+
+.p2b-finding-claims {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* Where it came from, small and after the fact itself. The article never
+   carries attribution; this screen is the one place it belongs. */
+.p2b-finding-source {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.p2b-finding-note {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--accent);
+  font-size: 0.8125rem;
+}
+
+.p2b-finding-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.p2b-finding-gap {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.6;
 }

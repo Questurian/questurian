@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from app.features.prompt2blog.contracts_v4 import MARKER_KEYS
 from app.features.prompt2blog.api import intake as intake_api
 from app.features.prompt2blog.grill_v4 import GrillDependencies
 from app.features.prompt2blog.intake_v4 import IntakeServices
@@ -37,7 +38,13 @@ QUESTION = {
         "recommendation": "My recommendation: a guide with a point of view.",
     },
 }
-AGREED = {"done": True, "consensus": "A guide for a Lima layover.", "location": "Lima, Peru"}
+AGREED = {
+    "done": True,
+    "consensus": "A guide for a Lima layover.",
+    "location": "Lima, Peru",
+    # Agreement needs the brief to be fillable, not just readable (ADR 0033).
+    "markers_covered": list(MARKER_KEYS),
+}
 BRIEF = {
     "form_id": "destination-guide",
     "primary_reader": "layover traveller",
@@ -119,11 +126,10 @@ def scripted(monkeypatch):
     return _install
 
 
-@pytest.mark.asyncio
-async def test_a_seed_opens_a_run_and_returns_where_it_stands(isolated_db, scripted):
+def test_a_seed_opens_a_run_and_returns_where_it_stands(isolated_db, scripted):
     scripted([QUESTION])
 
-    response = await intake_api.open_intake(
+    response = intake_api.open_intake(
         intake_api.SeedRequest(seed=SEED), staff_user={"id": 1}
     )
 
@@ -133,28 +139,26 @@ async def test_a_seed_opens_a_run_and_returns_where_it_stands(isolated_db, scrip
     assert body["grill"]["pending"]["recommendation"].startswith("My recommendation:")
 
 
-@pytest.mark.asyncio
-async def test_a_reloaded_page_can_ask_where_it_stands(isolated_db, scripted):
+def test_a_reloaded_page_can_ask_where_it_stands(isolated_db, scripted):
     scripted([QUESTION])
     run_id = _json(
-        await intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
     )["run_id"]
 
-    body = _json(await intake_api.read_intake(run_id, _staff={"id": 1}))
+    body = _json(intake_api.read_intake(run_id, _staff={"id": 1}))
 
     assert body["run_id"] == run_id
     assert body["grill"]["seed"] == SEED
 
 
-@pytest.mark.asyncio
-async def test_answering_moves_the_grill_on(isolated_db, scripted):
+def test_answering_moves_the_grill_on(isolated_db, scripted):
     scripted([QUESTION, AGREED])
     run_id = _json(
-        await intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
     )["run_id"]
 
     body = _json(
-        await intake_api.answer_question(
+        intake_api.answer_question(
             run_id, intake_api.AnswerRequest(answer="guide, with a pitch"), _staff={"id": 1}
         )
     )
@@ -163,51 +167,48 @@ async def test_answering_moves_the_grill_on(isolated_db, scripted):
     assert body["grill"]["consensus"] == "A guide for a Lima layover."
 
 
-@pytest.mark.asyncio
-async def test_an_unknown_run_is_a_404_not_a_500(isolated_db, scripted):
+def test_an_unknown_run_is_a_404_not_a_500(isolated_db, scripted):
     scripted([])
 
     with pytest.raises(Exception) as error:
-        await intake_api.answer_question(
+        intake_api.answer_question(
             "no-such-run", intake_api.AnswerRequest(answer="hello"), _staff={"id": 1}
         )
 
     assert getattr(error.value, "status_code", None) == 404
 
 
-@pytest.mark.asyncio
-async def test_answering_an_agreed_grill_is_a_400_not_a_500(isolated_db, scripted):
+def test_answering_an_agreed_grill_is_a_400_not_a_500(isolated_db, scripted):
     scripted([QUESTION, AGREED])
     run_id = _json(
-        await intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
     )["run_id"]
-    await intake_api.answer_question(
+    intake_api.answer_question(
         run_id, intake_api.AnswerRequest(answer="guide"), _staff={"id": 1}
     )
 
     with pytest.raises(Exception) as error:
-        await intake_api.answer_question(
+        intake_api.answer_question(
             run_id, intake_api.AnswerRequest(answer="wait"), _staff={"id": 1}
         )
 
     assert getattr(error.value, "status_code", None) == 400
 
 
-@pytest.mark.asyncio
-async def test_the_whole_intake_runs_end_to_end(isolated_db, scripted):
+def test_the_whole_intake_runs_end_to_end(isolated_db, scripted):
     """Seed to a cut research plan, which is what stage 3 owes."""
     scripted([QUESTION, AGREED, BRIEF, WORK_ORDER])
     run_id = _json(
-        await intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
     )["run_id"]
-    await intake_api.answer_question(
+    intake_api.answer_question(
         run_id, intake_api.AnswerRequest(answer="guide, with a pitch"), _staff={"id": 1}
     )
-    await intake_api.build_the_brief(run_id, _staff={"id": 1})
-    await intake_api.plan_the_research(run_id, _staff={"id": 1})
+    intake_api.build_the_brief(run_id, _staff={"id": 1})
+    intake_api.plan_the_research(run_id, _staff={"id": 1})
 
     body = _json(
-        await intake_api.cut_the_work_order(
+        intake_api.cut_the_work_order(
             run_id, intake_api.CutRequest(struck_ids=["r2"]), _staff={"id": 1}
         )
     )
@@ -219,18 +220,17 @@ async def test_the_whole_intake_runs_end_to_end(isolated_db, scripted):
     assert "a detail, not an argument" in body["cut_warnings"][0]
 
 
-@pytest.mark.asyncio
-async def test_reopening_returns_the_run_to_the_grill(isolated_db, scripted):
+def test_reopening_returns_the_run_to_the_grill(isolated_db, scripted):
     scripted([QUESTION, AGREED, BRIEF, {**QUESTION, "question": {**QUESTION["question"], "question_id": "q9"}}])
     run_id = _json(
-        await intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
     )["run_id"]
-    await intake_api.answer_question(
+    intake_api.answer_question(
         run_id, intake_api.AnswerRequest(answer="guide"), _staff={"id": 1}
     )
-    await intake_api.build_the_brief(run_id, _staff={"id": 1})
+    intake_api.build_the_brief(run_id, _staff={"id": 1})
 
-    body = _json(await intake_api.reopen(run_id, _staff={"id": 1}))
+    body = _json(intake_api.reopen(run_id, _staff={"id": 1}))
 
     assert body["step"] == "grill"
     assert body["brief"] is None
@@ -242,8 +242,7 @@ def _json(response) -> dict[str, Any]:
     return json.loads(response.body)
 
 
-@pytest.mark.asyncio
-async def test_a_settled_run_can_be_handed_to_the_writer(isolated_db, scripted, monkeypatch):
+def test_a_settled_run_can_be_handed_to_the_writer(isolated_db, scripted, monkeypatch):
     """Seed to queued article, on one run id.
 
     The article is written onto the run the seed opened, so the receipt covers
@@ -256,16 +255,16 @@ async def test_a_settled_run_can_be_handed_to_the_writer(isolated_db, scripted, 
     monkeypatch.setattr(intake_api, "_prompt2blog_credential_for_run", lambda: None)
 
     run_id = _json(
-        await intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
     )["run_id"]
-    await intake_api.answer_question(
+    intake_api.answer_question(
         run_id, intake_api.AnswerRequest(answer="guide"), _staff={"id": 1}
     )
-    await intake_api.build_the_brief(run_id, _staff={"id": 1})
-    await intake_api.plan_the_research(run_id, _staff={"id": 1})
-    await intake_api.do_the_research(run_id, _staff={"id": 1})
+    intake_api.build_the_brief(run_id, _staff={"id": 1})
+    intake_api.plan_the_research(run_id, _staff={"id": 1})
+    intake_api.do_the_research(run_id, _staff={"id": 1})
 
-    response = await intake_api.start_writing(
+    response = intake_api.start_writing(
         run_id, BackgroundTasks(), _staff={"id": 1}
     )
 

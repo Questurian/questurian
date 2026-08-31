@@ -31,7 +31,13 @@ from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
 from .config import P2B_V4_GRILL_MODEL, P2B_V4_GRILL_TEMPERATURE
-from .contracts_v4 import GrillQuestion, GrillState, GrillTurn
+from .contracts_v4 import (
+    BRIEF_MARKERS,
+    MARKER_KEYS,
+    GrillQuestion,
+    GrillState,
+    GrillTurn,
+)
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
@@ -82,8 +88,17 @@ NEXT_TURN_SCHEMA = require_non_empty({
         "topic": {"type": "string"},
         "consensus": {"type": "string"},
         "location": {"type": "string"},
+        "markers_covered": {"type": "array", "items": {"type": "string"}},
+        "asks_about": {"type": "string"},
     },
-    "required": ["done", "ask", "recommendation", "consensus"],
+    "required": [
+        "done",
+        "ask",
+        "recommendation",
+        "consensus",
+        "markers_covered",
+        "asks_about",
+    ],
 })
 
 
@@ -119,11 +134,45 @@ def research_seed(dependencies: GrillDependencies, seed: str) -> tuple[str, list
 
 
 def _transcript(state: GrillState) -> str:
+    """The whole conversation, including the grill's own half.
+
+    This used to render the question and the answer and drop the draft answer
+    the grill wrote. The screen pre-fills the answer box with that draft, so
+    the most common way to answer is to send it back untouched -- and with the
+    draft missing from the replay, the grill read its own sentence returning as
+    a confident, detailed answer from a writer. Run 1b441532 (2026-08-30
+    15:40Z) agreed after two turns on that basis, having learned nothing.
+
+    A grill that cannot tell "they said it" from "I said it" cannot judge
+    agreement, so it gets told (ADR 0033).
+    """
     if not state.turns:
         return "Nothing asked yet."
-    return "\n\n".join(
-        f"Q{index}. {turn.question.ask}\nThey said: {turn.answer}"
-        for index, turn in enumerate(state.turns, start=1)
+
+    blocks: list[str] = []
+    for index, turn in enumerate(state.turns, start=1):
+        lines = [f"Q{index}. You asked: {turn.question.ask}"]
+        if turn.question.pushback:
+            lines.append(f"You pushed back: {turn.question.pushback}")
+        lines.append(f"You drafted this answer for them: {turn.question.recommendation}")
+        if turn.accepted_as_drafted:
+            lines.append(
+                "They sent your draft back untouched. Those are YOUR words, not "
+                "theirs: it means they did not object, and it tells you nothing "
+                "you did not already believe."
+            )
+        else:
+            lines.append(f"They wrote, in their own words: {turn.answer}")
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+def _marker_status(state: GrillState) -> str:
+    """What the brief still needs, named in plain English."""
+    covered = set(state.markers_covered)
+    return "\n".join(
+        f"- {marker}: {description} — {'COVERED' if marker in covered else 'still missing'}"
+        for marker, _, description in BRIEF_MARKERS
     )
 
 
@@ -142,33 +191,82 @@ WHAT YOU ALREADY LOOKED UP (never ask about anything in here):
 THE INTERVIEW SO FAR:
 {_transcript(state)}
 
+WHAT THE BRIEF STILL NEEDS:
+{_marker_status(state)}
+
 Decide the single most useful next move.
 
 Output shape (mechanical -- get it right and then forget about it): every
-reply carries `ask`, `recommendation` and `consensus`. When you are asking,
-fill `ask` and `recommendation` and leave `consensus` empty. When you are done,
-fill `consensus` and leave the other two empty.
+reply carries `ask`, `recommendation`, `consensus`, `markers_covered` and
+`asks_about`. When you are asking, fill `ask`, `recommendation` and
+`asks_about`, and leave `consensus` empty. When you are done, fill `consensus`
+and leave the others empty. `markers_covered` is always the full list of
+markers you can now fill.
 
 Now the part that matters:
-- Ask ONE question, and only about something you cannot look up. What they
-  want, who it is for, what they personally have, what would make it a
-  failure. Never ask them to confirm a fact.
-- Every question must carry `recommendation`: the answer you actually expect,
-  stated plainly so they can accept it or correct it. Never ask an open
-  question with no proposal attached.
+- Ask about ONE thing. If you are joining two questions with "and", you are
+  asking two: keep the one you need first and save the other for next turn.
+  Only ever ask about something you cannot look up -- what they want, who it
+  is for, what they personally have, what would make it a failure. Never ask
+  them to confirm a fact.
+- `recommendation` is your best answer to your own question, and it goes
+  straight into their answer box for them to accept or correct. Three rules,
+  in order of how badly each one bites.
+
+  STATE THE ANSWER, NOT A SENTENCE ABOUT WHO HOLDS IT. No "you", no "I", no
+  "I'm guessing", no question mark. Just the answer, the way a good editor
+  says it out loud.
+
+  Write: "A first-timer's guide with a point of view, not a ranking."
+  Write: "It fails if it reads like a luxury fine-dining checklist."
+  Never: "I'm guessing you want to build the piece around your own trip."
+
+  MAKE IT YOUR REAL JUDGMENT. This is the expertise they came for, and a
+  recommendation is the one place you get to use it. Think about what would
+  genuinely make the best article, given their line and what you looked up,
+  and propose that -- specifically, and strongly enough to argue with. A
+  hedge, a menu of options, or a restatement of their own words is a wasted
+  turn. Being wrong is fine and easy for them to fix. Being vague hands back
+  the blank you were meant to fill.
+
+  NEVER INVENT A FACT ABOUT THEIR LIFE. You can judge what the article should
+  be. You cannot know where they have been, who they know, or what they ate.
+  For anything only they can answer, do not write them a trip they may never
+  have taken -- an invented experience they accept becomes first-hand material
+  that nothing downstream is allowed to check. Recommend the research-led
+  case, which is both the common one and the safe one, and let them correct it
+  upward.
+
+  Write: "Nothing first-hand -- this is researched rather than reported."
+  Never: "I spent a week there in April and ate at the places I write about."
 - If an answer contradicts their opening line or an earlier answer, set
   `pushback` naming the contradiction, and make the question resolve it.
 - Ask about what they HAVE, never about credentials. "Been there, know
   someone, have an interview?" is the shape. "Nothing" is a fine answer and
   means it is a research-led piece.
-- Set `location` when their line names a place clearly enough to act on. Leave
-  it empty only when it is genuinely ambiguous.
-- Set `done` true and write `consensus` when you could brief a writer from
-  what you have: what the piece is, who reads it, what it should make them do,
-  what it is built on, what it must name, and what would make it a failure.
-  Write the consensus in plain English, addressed to them, so they can say
-  "yes" or "no, less about that". Stop when you have agreement, not at a
-  question count. {asked} questions asked so far.
+- Set `location` to the city AND its country: "Medellin, Colombia", never
+  "Medellin". Everything downstream searches the web with this, and half the
+  place names in Latin America exist in several countries. Medellin has a
+  neighbourhood called Buenos Aires; a bare city name let a search answer about
+  Argentina. Leave it empty only when their line is genuinely ambiguous about
+  which place they mean.
+- Set `asks_about` to the marker your question is meant to settle. Ask about a
+  marker that is still missing. NEVER ask about a marker twice: once they have
+  answered a question, that marker is settled and you move to the next one. If
+  their answer was thin and you want more, that is a different question about
+  something else -- rephrasing the same question is how an interview stops
+  being one.
+- `markers_covered` lists every marker you could now fill. Accepting your draft
+  IS answering: they read it and put their name to it. It is weaker than an
+  answer they wrote themselves, and that difference is worth noticing -- it
+  tells you they are letting you drive, so put more into your next
+  recommendation and be readier to push back. It does NOT mean the marker is
+  unanswered. A marker you asked about and they responded to is settled.
+- Set `done` true and write `consensus` only when every marker is covered. Then
+  play the whole thing back in plain English, addressed to them, so they can
+  say "yes" or "no, less about that". You are not counting questions -- you are
+  filling the brief, and you stop when it is full. {asked} questions asked so
+  far.
 """
 
 
@@ -200,6 +298,9 @@ def _question_from(payload: dict[str, Any], fallback_id: str) -> GrillQuestion |
         # A question with no recommendation is a blank box, which is the thing
         # this replaces. Reject it rather than showing it.
         return None
+    asks_about = _safe_str(payload.get("asks_about")) or _safe_str(
+        nested.get("asks_about")
+    )
     return GrillQuestion(
         question_id=_safe_str(payload.get("question_id"))
         or _safe_str(nested.get("question_id"))
@@ -208,7 +309,34 @@ def _question_from(payload: dict[str, Any], fallback_id: str) -> GrillQuestion |
         ask=ask,
         recommendation=recommendation,
         pushback=_safe_str(payload.get("pushback")) or _safe_str(nested.get("pushback")),
+        asks_about=asks_about if asks_about in MARKER_KEYS else "",
     )
+
+
+def _markers_from(payload: dict[str, Any], state: GrillState) -> list[str]:
+    """Which brief markers are settled: what the grill claims, plus what the
+    conversation shows.
+
+    The claim alone is not enough. Run a9959013 (2026-08-30 19:29Z) asked what
+    would make the article a failure four times, got four usable answers, and
+    never once marked `fails_if` covered -- because every answer was an
+    accepted draft and the grill had been told an accepted draft is weak
+    evidence. It refused to credit its own question, so the checklist never
+    shrank and it asked again. That is a livelock, not caution.
+
+    So a marker a question was asked about, and answered, counts. Accepting a
+    draft is answering: the operator read it and endorsed it. The written-vs-
+    accepted distinction still reaches the grill, and it still shapes how hard
+    it probes -- it just cannot stall progress any more.
+
+    Unknown names in the claim are dropped rather than refused: a model
+    inventing a seventh marker has still told us about the six real ones.
+    """
+    raw = payload.get("markers_covered")
+    claimed = {_safe_str(item) for item in raw} if isinstance(raw, list) else set()
+    answered = {turn.question.asks_about for turn in state.turns}
+    settled = claimed | answered
+    return [key for key in MARKER_KEYS if key in settled]
 
 
 class GrillUnusableResponse(RuntimeError):
@@ -267,27 +395,40 @@ def _advance_once(
     )
     payload = _safe_dict(parsed)
     location = _safe_str(payload.get("location")) or state.location
+    covered = _markers_from(payload, state)
 
     if payload.get("done") is True:
         consensus = _safe_str(payload.get("consensus"))
-        if consensus:
+        missing = [key for key in MARKER_KEYS if key not in covered]
+        if consensus and not missing:
             return state.model_copy(
                 update={
                     "status": "agreed",
                     "pending": None,
                     "consensus": consensus,
+                    "markers_covered": list(covered),
                     "location": location,
                 }
             )
-        # Claiming to be done without saying what was agreed is not agreement.
-        # Fall through and ask again rather than inventing a consensus.
-        logger.warning("Grill reported done with no consensus; asking again")
+        # Claiming to be done without saying what was agreed is not agreement,
+        # and neither is being done with the brief still short of what it needs
+        # (ADR 0033). Either way: keep asking rather than inventing the rest.
+        logger.warning(
+            "Grill reported done but is not finished; consensus=%s missing=%s",
+            bool(consensus),
+            ", ".join(missing) or "none",
+        )
 
     question = _question_from(payload, fallback_id=f"q{len(state.turns) + 1}")
     if question is None:
         raise GrillUnusableResponse(raw or _json_or_repr(payload))
     return state.model_copy(
-        update={"status": "asking", "pending": question, "location": location}
+        update={
+            "status": "asking",
+            "pending": question,
+            "markers_covered": list(covered),
+            "location": location,
+        }
     )
 
 
@@ -372,11 +513,19 @@ def grill_stage_record(state: GrillState) -> dict[str, Any]:
                 "recommendation": turn.question.recommendation,
                 "pushback": turn.question.pushback,
                 "answer": turn.answer,
+                # Whether this was their answer or the grill's draft returned
+                # untouched. Recorded because a transcript that cannot show the
+                # difference is what let the grill agree with itself.
+                "accepted_as_drafted": turn.accepted_as_drafted,
             }
             for turn in state.turns
         ],
         "pending": json.loads(state.pending.model_dump_json()) if state.pending else None,
         "consensus": state.consensus,
+        "markers_covered": list(state.markers_covered),
+        "markers_missing": [
+            marker for marker in MARKER_KEYS if marker not in state.markers_covered
+        ],
         "research": {
             "grounded": bool(state.research_digest),
             "source_urls": list(state.research_source_urls),

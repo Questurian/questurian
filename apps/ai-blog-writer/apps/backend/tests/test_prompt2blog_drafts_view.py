@@ -7,7 +7,6 @@ and the *earlier* draft shipped. Nothing in the run record said so at a glance.
 
 from __future__ import annotations
 
-import asyncio
 from uuid import uuid4
 
 import pytest
@@ -159,7 +158,7 @@ def test_drafts_route_renders_html_for_a_run(empty_prompt2blog_storage):
         },
     )
 
-    response = asyncio.run(runs_api.drafts_page(run_id))
+    response = runs_api.drafts_page(run_id)
 
     assert response.status_code == 200
     assert response.media_type == "text/html"
@@ -168,7 +167,7 @@ def test_drafts_route_renders_html_for_a_run(empty_prompt2blog_storage):
 
 def test_drafts_route_404s_for_an_unknown_run(empty_prompt2blog_storage):
     with pytest.raises(HTTPException) as raised:
-        asyncio.run(runs_api.drafts_page("no-such-run"))
+        runs_api.drafts_page("no-such-run")
 
     assert raised.value.status_code == 404
 
@@ -189,6 +188,6 @@ def test_drafts_route_404s_when_a_run_has_no_draft_yet(empty_prompt2blog_storage
     )
 
     with pytest.raises(HTTPException) as raised:
-        asyncio.run(runs_api.drafts_page(run_id))
+        runs_api.drafts_page(run_id)
 
     assert raised.value.status_code == 404

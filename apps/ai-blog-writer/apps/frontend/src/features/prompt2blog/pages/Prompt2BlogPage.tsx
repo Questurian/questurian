@@ -1,7 +1,10 @@
 import { Link } from 'react-router-dom'
 import { BriefScreen } from '../intake/components/BriefScreen'
+import { GateScreen } from '../intake/components/GateScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
+import { ArticleScreen } from '../intake/components/ArticleScreen'
 import { ResearchScreen } from '../intake/components/ResearchScreen'
+import { WorkingScreen } from '../intake/components/WorkingScreen'
 import { SeedScreen } from '../intake/components/SeedScreen'
 import { WorkOrderScreen } from '../intake/components/WorkOrderScreen'
 import { useIntake } from '../intake/useIntake'
@@ -29,6 +32,11 @@ export function Prompt2BlogPage() {
   const intake = useIntake()
   const state = intake.state
   const step = state?.step ?? 'seed'
+  const writing = state?.writing ?? null
+  // Once the graph owns the run there is nothing left to decide here, so the
+  // intake screens step aside rather than offering buttons that would queue a
+  // second article on the same run.
+  const handedToTheWriter = writing !== null
 
   return (
     <div className="p2b-page">
@@ -57,6 +65,13 @@ export function Prompt2BlogPage() {
           // that cannot move forward would trap the page on every reload.
           <div className="p2b-intake-bar">
             <span className="p2b-intake-step">{STEP_LABELS[step]}</span>
+            {/* On screen so a run can be returned to. Every stage of it lives
+                on the server, so `?run=<id>` reopens it exactly where it
+                stopped — which is what makes an agreed grill a checkpoint you
+                can retest the rest of the pipeline from. */}
+            <code className="p2b-run-id" title="Reopen with ?run=<id>">
+              {state.run_id}
+            </code>
             <button type="button" onClick={intake.abandon}>
               Start over
             </button>
@@ -69,6 +84,24 @@ export function Prompt2BlogPage() {
           </div>
         )}
 
+        {handedToTheWriter ? (
+          writing.state === 'running' ? (
+            <WorkingScreen writing={writing} />
+          ) : (
+            <ArticleScreen
+              runId={state!.run_id}
+              writing={writing}
+              article={intake.article}
+              onReopen={intake.reopen}
+              busy={intake.busy}
+            />
+          )
+        ) : intake.busy && step === 'work_order' ? (
+          // Research: ten sequential searches, five to ten minutes, and the
+          // screen used to say nothing at all for the whole of it.
+          <WorkingScreen research={state?.research_progress} />
+        ) : (
+          <>
         {step === 'seed' && <SeedScreen busy={intake.busy} onStart={intake.start} />}
 
         {step === 'grill' && state?.grill && (
@@ -101,18 +134,38 @@ export function Prompt2BlogPage() {
           />
         )}
 
-        {step === 'research' && state?.research && (
-          <ResearchScreen
-            research={state.research}
-            busy={intake.busy}
-            onWrite={() => {
-              // The graph hand-off lands with stage 5; until then this screen
-              // is where a settled run stops.
-            }}
-            onReopen={intake.reopen}
-          />
+        {step === 'research' &&
+          state?.research &&
+          // A blocked run used to show the verdict and one way out, back to
+          // the grill, which discards research already paid for. The gate
+          // screen settles the questions in place instead.
+          (state.research.coverage.can_write ? (
+            <ResearchScreen
+              runId={state.run_id}
+              // The questions live on the work order and the answers on the
+              // dossier; neither is much use without the other.
+              questions={Object.fromEntries(
+                (state.work_order?.requirements ?? []).map(item => [
+                  item.requirement_id,
+                  { question: item.question, kind: item.kind },
+                ]),
+              )}
+              research={state.research}
+              busy={intake.busy}
+              onWrite={intake.write}
+              onReopen={intake.reopen}
+              onChanged={intake.refresh}
+            />
+          ) : (
+            <GateScreen
+              runId={state.run_id}
+              onSettled={intake.refresh}
+              onReopen={intake.reopen}
+              busy={intake.busy}
+            />
+          ))}
+          </>
         )}
-
       </main>
     </div>
   )

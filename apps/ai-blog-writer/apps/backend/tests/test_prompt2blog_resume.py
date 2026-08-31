@@ -9,7 +9,6 @@ refuses rather than guessing whenever the stored work cannot be trusted.
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 from uuid import uuid4
 
@@ -283,7 +282,7 @@ def test_a_missing_ledger_restores_an_empty_tracker_rather_than_failing():
 
 
 def _preview(run_id: str) -> dict[str, Any]:
-    return response_payload(asyncio.run(prompt2blog_routes.preview_resume(run_id)))
+    return response_payload(prompt2blog_routes.preview_resume(run_id))
 
 
 def test_the_preview_route_reports_what_a_resume_would_skip():
@@ -301,7 +300,7 @@ def test_the_preview_route_reports_what_a_resume_would_skip():
 
 def test_the_preview_route_is_a_404_for_a_run_that_does_not_exist():
     with pytest.raises(HTTPException) as raised:
-        asyncio.run(prompt2blog_routes.preview_resume("no-such-run"))
+        prompt2blog_routes.preview_resume("no-such-run")
     assert raised.value.status_code == 404
 
 
@@ -312,7 +311,7 @@ def test_the_resume_route_queues_the_run_it_was_given(monkeypatch):
     background = BackgroundTasks()
 
     payload = response_payload(
-        asyncio.run(prompt2blog_routes.resume_run(run_id, background, None))
+        prompt2blog_routes.resume_run(run_id, background, None)
     )
 
     assert payload["status"] == "queued"
@@ -329,7 +328,7 @@ def test_the_resume_route_refuses_a_run_that_did_not_fail(monkeypatch):
     monkeypatch.setattr(runs_api, "_prompt2blog_credential_for_run", lambda: None)
 
     with pytest.raises(HTTPException) as raised:
-        asyncio.run(prompt2blog_routes.resume_run(run_id, BackgroundTasks(), None))
+        prompt2blog_routes.resume_run(run_id, BackgroundTasks(), None)
 
     assert raised.value.status_code == 409
     assert "not failed" in raised.value.detail

@@ -90,6 +90,215 @@ def _deps(payload: dict[str, Any]) -> GrillDependencies:
     return GrillDependencies(llm=FakeLLM(payload), research=lambda _s: ("", [], None))
 
 
+# --- the shape the model actually sent (run 90b3f9bc, 2026-08-30 20:52Z) ---
+
+
+# What came back: `questions` instead of `requirements`, `premises` instead of
+# `premise`, `id`/`description` instead of `assumption_id`/`statement`,
+# `premise_ids` instead of `assumption_ids`, no requirement ids at all, and no
+# `primary_subject` or `scope_mode` field. Eight specific, checkable questions
+# and five sound premises -- all discarded because the lists had other names.
+AS_THE_MODEL_SENT_IT: dict[str, Any] = {
+    "references": [
+        {"name": "Lima", "role": "primary_subject"},
+        {"name": "Cusco", "role": "comparator"},
+        {"name": "Machu Picchu", "role": "context_only"},
+    ],
+    "premises": [
+        {
+            "id": "p1",
+            "description": "Lima has globally ranked restaurants needing advance booking.",
+        },
+        {
+            "id": "p2",
+            "description": "Lima's sea-level elevation helps before Cusco's altitude.",
+        },
+    ],
+    "questions": [
+        {
+            "question": "Which three Lima restaurants appear in the World's 50 Best 2024, and how far ahead do bookings open?",
+            "kind": "load_bearing",
+            "premise_ids": ["p1"],
+        },
+        {
+            "question": "What is the elevation difference between Lima and Cusco, and the recommended acclimatisation time?",
+            "kind": "load_bearing",
+            "premise_ids": ["p2"],
+        },
+        {
+            "question": "What is the vine-covered restaurant in the Museo Larco gardens called?",
+            "kind": "texture",
+        },
+    ],
+}
+
+
+def test_the_plan_survives_the_model_naming_the_fields_its_own_way():
+    order = build_work_order(_brief(), _deps(AS_THE_MODEL_SENT_IT))
+
+    assert len(order.requirements) == 3
+    assert [item.requirement_id for item in order.requirements] == ["r1", "r2", "r3"]
+    assert order.requirements[0].assumption_ids == ["p1"]
+    assert [item.kind for item in order.requirements] == [
+        "load_bearing",
+        "load_bearing",
+        "texture",
+    ]
+
+
+def test_premises_survive_their_own_renaming_too():
+    order = build_work_order(_brief(), _deps(AS_THE_MODEL_SENT_IT))
+
+    assert {item.assumption_id for item in order.premise} == {"p1", "p2"}
+    assert order.premise[0].statement.startswith("Lima has globally ranked")
+
+
+def test_the_subject_is_taken_from_the_reference_when_no_field_names_it():
+    order = build_work_order(_brief(), _deps(AS_THE_MODEL_SENT_IT))
+
+    assert order.primary_subject == "Lima"
+    assert order.scope.mode == "head_to_head", "one comparator was listed"
+
+
+def test_a_premise_nothing_rests_on_is_dropped():
+    payload = {
+        **AS_THE_MODEL_SENT_IT,
+        "premises": [
+            *AS_THE_MODEL_SENT_IT["premises"],
+            {"id": "p9", "description": "Nothing asks about this."},
+        ],
+    }
+
+    order = build_work_order(_brief(), _deps(payload))
+
+    assert "p9" not in {item.assumption_id for item in order.premise}
+
+
+def test_a_question_pointing_at_an_undeclared_premise_keeps_the_question():
+    payload = {
+        **AS_THE_MODEL_SENT_IT,
+        "questions": [
+            {
+                "question": "What does a Barranco pisco sour cost?",
+                "kind": "load_bearing",
+                "premise_ids": ["p404"],
+            }
+        ],
+    }
+
+    order = build_work_order(_brief(), _deps(payload))
+
+    assert len(order.requirements) == 1
+    assert order.requirements[0].assumption_ids == []
+
+
+# --- the scope repair (run 90b3f9bc, 2026-08-30) ---------------------------
+
+
+def test_an_empty_reference_list_is_repaired_from_the_named_subject():
+    """This reached the operator as "List should have at least 1 item after
+    validation, not 0", mid-flow, after the grill and brief were both paid for.
+
+    The subject was never in doubt -- it was sitting in `primary_subject`.
+    """
+    order = build_work_order(_brief(), _deps(_payload(references=[])))
+
+    assert [(r.name, r.role) for r in order.scope.references] == [
+        ("Lima", "primary_subject")
+    ]
+    assert order.scope.mode == "single_subject"
+
+
+def test_references_with_no_primary_gain_one():
+    order = build_work_order(
+        _brief(),
+        _deps(_payload(references=[{"name": "Cusco", "role": "context_only"}])),
+    )
+
+    primaries = [r for r in order.scope.references if r.role == "primary_subject"]
+    assert [r.name for r in primaries] == ["Lima"]
+
+
+def test_a_named_subject_already_listed_is_promoted_rather_than_duplicated():
+    order = build_work_order(
+        _brief(),
+        _deps(_payload(references=[{"name": "Lima", "role": "context_only"}])),
+    )
+
+    assert [(r.name, r.role) for r in order.scope.references] == [
+        ("Lima", "primary_subject")
+    ]
+
+
+def test_a_second_primary_subject_is_dropped_rather_than_fatal():
+    order = build_work_order(
+        _brief(),
+        _deps(
+            _payload(
+                references=[
+                    {"name": "Lima", "role": "primary_subject"},
+                    {"name": "Cusco", "role": "primary_subject"},
+                ]
+            )
+        ),
+    )
+
+    assert [(r.name, r.role) for r in order.scope.references] == [
+        ("Lima", "primary_subject")
+    ]
+
+
+def test_an_invented_role_is_dropped_and_repeats_collapse():
+    order = build_work_order(
+        _brief(),
+        _deps(
+            _payload(
+                references=[
+                    {"name": "Lima", "role": "primary_subject"},
+                    {"name": "Arequipa", "role": "rival"},
+                    {"name": "lima", "role": "context_only"},
+                ]
+            )
+        ),
+    )
+
+    assert [r.name for r in order.scope.references] == ["Lima"]
+
+
+def test_the_mode_follows_the_references_that_survived():
+    """The references are the substance; the mode is a label describing them.
+
+    A stated mode that contradicts them is a label that is simply wrong, and
+    used to be a hard failure at the contract.
+    """
+    order = build_work_order(
+        _brief(),
+        _deps(
+            _payload(
+                scope_mode="single_subject",
+                references=[
+                    {"name": "Lima", "role": "primary_subject"},
+                    {"name": "Cusco", "role": "comparator"},
+                ],
+            )
+        ),
+    )
+
+    assert order.scope.mode == "head_to_head"
+
+
+def test_a_plan_naming_no_subject_at_all_says_so_in_words():
+    from app.features.prompt2blog.work_order_v4 import WorkOrderUnusable
+
+    deps = _deps(_payload(primary_subject="", references=[]))
+
+    with pytest.raises(WorkOrderUnusable) as error:
+        build_work_order(_brief(), deps)
+
+    assert "named no subject" in error.value.reason
+    assert error.value.raw
+
+
 def test_the_brief_becomes_separately_checkable_questions():
     work_order = build_work_order(_brief(), _deps(_payload()))
 

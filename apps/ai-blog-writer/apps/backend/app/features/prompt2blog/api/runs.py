@@ -1,3 +1,11 @@
+"""
+Handlers here are `def`, never `async def`. FastAPI runs an `async def` handler
+on the event loop and a `def` handler in a threadpool, and everything below
+blocks: SQLite reads, model calls, pipeline preparation. Declaring them async
+handed the loop to one request and froze the whole server while it ran, which
+is what made a research pass look like an outage.
+"""
+
 from contextlib import nullcontext
 from typing import Any
 from uuid import uuid4
@@ -126,7 +134,7 @@ def _prompt2blog_credential_for_run() -> Prompt2BlogCredential | None:
 
 
 @router.post("/pipeline-v3")
-async def start_pipeline_v3(
+def start_pipeline_v3(
     request: Prompt2BlogV4Request,
     background_tasks: BackgroundTasks,
     staff_user=Depends(require_staff),
@@ -181,7 +189,7 @@ async def start_pipeline_v3(
 
 
 @router.get("/resume/{run_id}", dependencies=[Depends(require_staff)])
-async def preview_resume(run_id: str) -> JSONResponse:
+def preview_resume(run_id: str) -> JSONResponse:
     """Report whether a failed run can be picked up, and from where.
 
     Read-only and free. An operator deciding whether to reconnect an account,
@@ -197,7 +205,7 @@ async def preview_resume(run_id: str) -> JSONResponse:
 
 
 @router.post("/resume/{run_id}")
-async def resume_run(
+def resume_run(
     run_id: str,
     background_tasks: BackgroundTasks,
     staff_user=Depends(require_staff),
@@ -231,7 +239,7 @@ async def resume_run(
 
 
 @router.get("/status/{run_id}")
-async def get_status(run_id: str) -> JSONResponse:
+def get_status(run_id: str) -> JSONResponse:
     """Get status for a Prompt2Blog pipeline run."""
     status = read_status(run_id)
     if not status or status.get("feature") != FEATURE_NAME:
@@ -240,7 +248,7 @@ async def get_status(run_id: str) -> JSONResponse:
 
 
 @router.get("/result/{run_id}")
-async def get_result(run_id: str) -> JSONResponse:
+def get_result(run_id: str) -> JSONResponse:
     """Get final result for a completed Prompt2Blog pipeline run."""
     status = read_status(run_id)
     if not status or status.get("feature") != FEATURE_NAME:
@@ -269,7 +277,7 @@ async def get_result(run_id: str) -> JSONResponse:
 
 
 @router.get("/drafts/{run_id}", response_class=HTMLResponse)
-async def drafts_page(run_id: str) -> HTMLResponse:
+def drafts_page(run_id: str) -> HTMLResponse:
     """Every draft this run produced, as a page an operator can read.
 
     HTML rather than JSON because the answer is prose being compared to other
@@ -300,7 +308,7 @@ async def drafts_page(run_id: str) -> HTMLResponse:
 
 
 @router.get("/debug/{run_id}")
-async def debug_run(run_id: str) -> JSONResponse:
+def debug_run(run_id: str) -> JSONResponse:
     """Debug endpoint for Prompt2Blog run metadata/stages."""
     status = read_status(run_id)
     if not status or status.get("feature") != FEATURE_NAME:

@@ -22,9 +22,10 @@ import hashlib
 import json
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, get_args
 
 from .contracts_v4 import (
+    ReferenceRole,
     ArticleBrief,
     Prompt2BlogWorkOrder,
     WorkOrderAssumption,
@@ -32,6 +33,8 @@ from .contracts_v4 import (
     WorkOrderRequirement,
     WorkOrderScope,
 )
+from pydantic import ValidationError
+
 from .grill_v4 import GrillDependencies
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
@@ -39,6 +42,21 @@ from .support import _safe_dict, _safe_str
 logger = logging.getLogger(__name__)
 
 WORK_ORDER_STAGE = "stage_v4_work_order"
+
+
+class WorkOrderUnusable(RuntimeError):
+    """The research plan came back in a shape that cannot be used.
+
+    Mirrors `BriefUnusable`: the operator gets a sentence and the run keeps
+    what came back, instead of a Pydantic error about list lengths arriving
+    mid-flow after the grill and the brief have both been paid for.
+    """
+
+    def __init__(self, reason: str, raw: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.raw = raw
+
 
 WORK_ORDER_SCHEMA = require_non_empty({
     "type": "object",
@@ -51,7 +69,9 @@ WORK_ORDER_SCHEMA = require_non_empty({
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
-                    "role": {"type": "string"},
+                    # Enum, because it is one of the few constraints that
+                    # survives Gemini's schema translator.
+                    "role": {"type": "string", "enum": list(get_args(ReferenceRole))},
                 },
                 "required": ["name", "role"],
             },
@@ -125,6 +145,12 @@ Rules:
 - Each question must be separately checkable by someone with a search engine.
   "Is Lima good value?" is not a question; "What does a one-bedroom in
   Miraflores rent for, and as of when?" is.
+- Every question names its place unambiguously. Whoever answers it sees the
+  question and little else, so a neighbourhood or district that shares its name
+  with somewhere else carries the city and country: "the Buenos Aires
+  neighbourhood of Medellin, Colombia", never "Buenos Aires". A question that
+  reads correctly only to someone who already knows the subject is a question
+  that gets answered about the wrong place.
 - Mark each `kind`. `load_bearing` means the piece cannot be written without
   the answer. `texture` means the piece is duller without it -- a scene, a
   detail, something that puts the reader somewhere. Ask for texture: a dossier
@@ -135,27 +161,162 @@ Rules:
   with the questions that rest on it listing its id. An assumption nobody wrote
   down cannot be refuted later, and that is how a run dies five unanswerable
   questions in.
-- References: exactly one `primary_subject`. Somewhere mentioned for
-  calibration is `context_only` and can never become a co-subject.
+- `references` must list every place the plan touches, and must include the
+  subject itself. Roles are exactly `primary_subject`, `context_only` and
+  `comparator`. Exactly one entry is the `primary_subject` -- that is the thing
+  the article is about. Somewhere mentioned only for calibration is
+  `context_only` and can never become a co-subject. Somewhere being weighed
+  against the subject is a `comparator`.
 """
 
 
-def _requirements_from(payload: dict[str, Any]) -> list[WorkOrderRequirement]:
-    requirements: list[WorkOrderRequirement] = []
-    for raw in payload.get("requirements") or []:
+def _scope_from(payload: dict[str, Any]) -> WorkOrderScope:
+    """The scope, built from whatever the model managed to say.
+
+    `references` must hold at least one entry and exactly one
+    `primary_subject`, and none of that is stated in the prompt the model
+    reads. Run 90b3f9bc (2026-08-30) came back with the primary subject named
+    in its own top-level field and the references list empty, and the operator
+    got "List should have at least 1 item after validation, not 0" mid-flow.
+
+    The subject was never in doubt -- it was sitting in `primary_subject`. So
+    the scope is repaired from what is known rather than refused:
+
+    - references with an invented role are dropped, not fatal
+    - names are deduplicated, because the contract compares them casefolded
+    - if nothing is marked primary, the named primary subject becomes it
+    - if several are, the first stays and the rest are dropped
+    - the mode is derived from the references that survived, because the
+      references are the substance and the mode is a label describing them.
+      A stated mode that contradicts them is a label that is simply wrong.
+    """
+    roles = set(get_args(ReferenceRole))
+    primary_subject = _safe_str(payload.get("primary_subject"))
+
+    seen: set[str] = set()
+    references: list[WorkOrderReference] = []
+    for raw in payload.get("references") or []:
+        item = _safe_dict(raw)
+        name = _safe_str(item.get("name"))
+        role = _safe_str(item.get("role"))
+        if not name or role not in roles or name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        references.append(WorkOrderReference(name=name, role=role))
+
+    primaries = [r for r in references if r.role == "primary_subject"]
+    if not primaries:
+        if not primary_subject:
+            # Nothing names the subject anywhere. That is not repairable, and
+            # the contract says so with a sentence the route turns into one.
+            raise WorkOrderUnusable(
+                "the plan named no subject to research",
+                json.dumps(payload, ensure_ascii=False)[:4000],
+            )
+        if primary_subject.casefold() in seen:
+            references = [
+                WorkOrderReference(name=r.name, role="primary_subject")
+                if r.name.casefold() == primary_subject.casefold()
+                else r
+                for r in references
+            ]
+        else:
+            references.insert(
+                0, WorkOrderReference(name=primary_subject, role="primary_subject")
+            )
+    elif len(primaries) > 1:
+        keep = primaries[0]
+        references = [
+            r for r in references if r.role != "primary_subject" or r is keep
+        ]
+
+    comparators = sum(r.role == "comparator" for r in references)
+    mode = (
+        "single_subject"
+        if comparators == 0
+        else "head_to_head"
+        if comparators == 1
+        else "ranked_set"
+    )
+    return WorkOrderScope(mode=mode, references=references)
+
+
+def _first(record: dict[str, Any], *names: str) -> Any:
+    """The first of `names` the record actually carries."""
+    for name in names:
+        if name in record and record[name] not in (None, "", []):
+            return record[name]
+    return None
+
+
+def _listed(payload: dict[str, Any], *names: str) -> list[Any]:
+    value = _first(payload, *names)
+    return value if isinstance(value, list) else []
+
+
+def _premise_from(payload: dict[str, Any]) -> list[WorkOrderAssumption]:
+    """The assumptions, under whichever names the model used for them.
+
+    Run 90b3f9bc (2026-08-30 20:52Z) returned `premises` with `id` and
+    `description`, against a schema asking for `premise` with `assumption_id`
+    and `statement`. Same five assumptions, all of them sound.
+    """
+    premise: list[WorkOrderAssumption] = []
+    for raw in _listed(payload, "premise", "premises", "assumptions"):
         record = _safe_dict(raw)
-        question = _safe_str(record.get("question"))
+        assumption_id = _safe_str(_first(record, "assumption_id", "id", "premise_id"))
+        statement = _safe_str(_first(record, "statement", "description", "text"))
+        if not assumption_id or not statement:
+            continue
+        premise.append(
+            WorkOrderAssumption(assumption_id=assumption_id, statement=statement)
+        )
+    return premise
+
+
+def _requirements_from(
+    payload: dict[str, Any],
+    declared: set[str] | None = None,
+) -> list[WorkOrderRequirement]:
+    """The research questions, under whichever names the model used for them.
+
+    The same run returned `questions`, each carrying `question`, `kind` and
+    `premise_ids`, with no id at all -- against a schema asking for
+    `requirements` with `requirement_id` and `assumption_ids`. Eight specific,
+    checkable questions, and every one of them was thrown away because the
+    list had the wrong name.
+
+    A schema exists so the model knows what to send, not so the parser can
+    reject what arrived. If the content is right, take it.
+    """
+    requirements: list[WorkOrderRequirement] = []
+    for raw in _listed(payload, "requirements", "questions"):
+        record = _safe_dict(raw)
+        question = _safe_str(_first(record, "question", "text", "ask"))
         kind = _safe_str(record.get("kind"))
         if not question or kind not in {"load_bearing", "texture"}:
             continue
+        assumption_ids = [
+            _safe_str(item)
+            for item in (
+                _first(record, "assumption_ids", "premise_ids", "premises") or []
+            )
+        ]
         requirements.append(
             WorkOrderRequirement(
-                requirement_id=_safe_str(record.get("requirement_id"))
+                requirement_id=_safe_str(
+                    _first(record, "requirement_id", "id", "question_id")
+                )
                 or f"r{len(requirements) + 1}",
                 question=question,
                 kind=kind,
+                # A reference to an assumption nobody declared is dropped
+                # rather than fatal: the question is still worth asking, and
+                # the contract refuses a dangling id.
                 assumption_ids=[
-                    _safe_str(item) for item in (record.get("assumption_ids") or [])
+                    item
+                    for item in assumption_ids
+                    if item and (declared is None or item in declared)
                 ],
             )
         )
@@ -206,30 +367,40 @@ def build_work_order(
     )
     payload = _safe_dict(parsed)
 
-    references = [
-        WorkOrderReference(name=_safe_str(item.get("name")), role=_safe_str(item.get("role")))
-        for item in (payload.get("references") or [])
-        if _safe_str(_safe_dict(item).get("name"))
-    ]
-    scope = WorkOrderScope(
-        mode=_safe_str(payload.get("scope_mode")) or "single_subject",
-        references=references,
+    scope = _scope_from(payload)
+    premise = _premise_from(payload)
+    requirements = _requirements_from(
+        payload, declared={item.assumption_id for item in premise}
     )
-    premise = [
-        WorkOrderAssumption(
-            assumption_id=_safe_str(_safe_dict(item).get("assumption_id")),
-            statement=_safe_str(_safe_dict(item).get("statement")),
+    # Premises nothing rests on are not assumptions this run makes, and the
+    # contract refuses to carry them.
+    rests_on = {aid for item in requirements for aid in item.assumption_ids}
+    premise = [item for item in premise if item.assumption_id in rests_on]
+    try:
+        return _assemble(
+            brief,
+            # The primary reference is the authority on the name. The contract
+            # requires the two to match, so deriving it removes a whole class
+            # of failure where the model writes "Lima, Peru" in one field and
+            # "Lima" in the other.
+            primary_subject=next(
+                reference.name
+                for reference in scope.references
+                if reference.role == "primary_subject"
+            ),
+            scope=scope,
+            premise=premise,
+            requirements=requirements,
         )
-        for item in (payload.get("premise") or [])
-        if _safe_str(_safe_dict(item).get("assumption_id"))
-    ]
-    return _assemble(
-        brief,
-        primary_subject=_safe_str(payload.get("primary_subject")),
-        scope=scope,
-        premise=premise,
-        requirements=_requirements_from(payload),
-    )
+    except ValidationError as error:
+        raise WorkOrderUnusable(
+            "; ".join(
+                f"{'.'.join(str(part) for part in item['loc']) or 'plan'}: {item['msg']}"
+                for item in error.errors()
+            )
+            or "the research plan did not fit its contract",
+            json.dumps(payload, ensure_ascii=False)[:4000],
+        ) from error
 
 
 def _cost_of_cutting(

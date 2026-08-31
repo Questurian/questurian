@@ -184,11 +184,17 @@ GrillStatus = Literal["asking", "agreed"]
 
 
 class GrillQuestion(V4ContractModel):
-    """One question, and the answer the grill expects to hear.
+    """One question, and the operator's answer to it, written in advance.
 
     Every question carries a recommendation because nobody should face a blank
     (ADR 0030, G1). The people using this write about places they may never
     have been; correcting a proposal is easy where composing one is not.
+
+    `recommendation` is not advice about the answer -- it is the answer, in
+    the operator's own voice. The screen loads it into their answer box and
+    one click sends it unedited, so a recommendation addressed to them ("I'm
+    guessing you spent time there") is recorded as the operator saying it
+    about themselves, and can reach the brief as verbatim first-hand material.
 
     `pushback` is set when the answer being questioned contradicts the seed or
     an earlier answer. The grill says so and makes the operator resolve it
@@ -200,6 +206,12 @@ class GrillQuestion(V4ContractModel):
     ask: str = Field(min_length=1)
     recommendation: str = Field(min_length=1)
     pushback: str = ""
+    # Which of `BRIEF_MARKERS` this question exists to settle. Declared by the
+    # grill so that answering it can count as progress in code, rather than
+    # progress being an opinion the grill is free to withhold -- which is how
+    # run a9959013 (2026-08-30 19:29Z) asked the same failure question four
+    # times and never moved.
+    asks_about: str = ""
 
 
 class GrillTurn(V4ContractModel):
@@ -212,6 +224,36 @@ class GrillTurn(V4ContractModel):
 
     question: GrillQuestion
     answer: str = Field(min_length=1)
+
+    @property
+    def accepted_as_drafted(self) -> bool:
+        """Did they send the grill's own draft back untouched?
+
+        The screen pre-fills the answer box with `recommendation` and one click
+        sends it, so this is the most common way to answer -- and the grill has
+        to be told, because otherwise it reads its own sentence coming back as
+        a confident answer from a writer and concludes it learned something
+        (ADR 0033). Accepting is agreement; it is not new information.
+        """
+        return self.answer.strip() == self.question.recommendation.strip()
+
+
+# The six things a brief cannot be assembled without, and the stop condition
+# for the grill (ADR 0033). One definition with two readers: the grill asks
+# until every marker is covered, and the brief refuses to assemble without the
+# field each one maps to. Kept together so the two cannot drift -- a grill that
+# stops one marker short of what the brief demands is a run that dies at the
+# handoff having already paid for the interview.
+BRIEF_MARKERS: tuple[tuple[str, str, str], ...] = (
+    ("form", "form_id", "the kind of article"),
+    ("reader", "primary_reader", "who it is for"),
+    ("reader_question", "reader_question", "the question it answers for them"),
+    ("outcome", "outcome", "what it should make them do or decide"),
+    ("spine", "spine", "what the piece is built on"),
+    ("fails_if", "fails_if", "what would make it a failure"),
+)
+
+MARKER_KEYS: tuple[str, ...] = tuple(marker for marker, _, _ in BRIEF_MARKERS)
 
 
 class GrillState(V4ContractModel):
@@ -233,8 +275,14 @@ class GrillState(V4ContractModel):
     status: GrillStatus = "asking"
     pending: GrillQuestion | None = None
     # The played-back summary the operator approves or corrects. Agreement on
-    # this is the stop condition -- not a question count (G5).
+    # this is necessary and no longer sufficient: the markers below have to be
+    # covered too, because agreement was being judged by a grill that could not
+    # tell the operator's words from its own (ADR 0033).
     consensus: str = ""
+    # Which of `BRIEF_MARKERS` the grill says it has. Recorded per turn so a
+    # grill that stalls shows what it is still missing, rather than looking
+    # like it is asking at random.
+    markers_covered: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_grill_state(self) -> "GrillState":
@@ -248,6 +296,15 @@ class GrillState(V4ContractModel):
                 raise ValueError("an agreed grill cannot still be asking something")
             if not self.consensus:
                 raise ValueError("an agreed grill must have played back what it agreed")
+            missing = [key for key in MARKER_KEYS if key not in self.markers_covered]
+            if missing:
+                # The code refuses to agree without these, so the contract says
+                # so too. A schema that permits what the code refuses is a
+                # schema that was not written down properly.
+                raise ValueError(
+                    "an agreed grill must cover every brief marker; missing: "
+                    + ", ".join(missing)
+                )
         return self
 
 
@@ -378,6 +435,18 @@ class EvidenceClaim(V4ContractModel):
     requirement_ids: list[str] = Field(min_length=1)
     as_of: date | None = None
     confidence: EvidenceConfidence
+    # The place this claim would send a reader: a tour, a restaurant, a bar, a
+    # museum. Set only when the claim names somewhere bookable or visitable,
+    # so the operator can be shown a short list rather than every fact.
+    #
+    # Research can confirm a site resolves and a price is published. It cannot
+    # see that the last post was 2024 and the checkout is janky. Moravia Tours
+    # came back correct in every word and was a business winding down, which is
+    # not a fact on a page but the absence of recent activity. That judgment
+    # needs a person, and this field is how they are given the short list.
+    venue: str = ""
+    # What the operator said about it after looking. Reaches the writer.
+    venue_note: str = ""
 
     @model_validator(mode="after")
     def validate_unique_links(self) -> "EvidenceClaim":

@@ -39,6 +39,7 @@ from app.features.prompt2blog.research_v4 import (
     gather_research,
     research_stage_record,
     run_research,
+    structure_research,
 )
 
 
@@ -245,6 +246,232 @@ def test_the_structure_prompt_forbids_inventing_and_keeps_detail():
     assert "Add nothing that is not in the notes." in flat
     assert "do not drop it for not being a number" in flat
     assert "different from not having looked" in flat
+
+
+# --- taking the dossier the model actually sends ---------------------------
+
+
+def test_a_one_sided_claim_link_is_reconciled_rather_than_refused():
+    """The contract requires the claim-to-question and question-to-claim links
+    to agree exactly, in both directions.
+
+    That is a consistency property, not information: a model that says c2
+    answers r2, while r2 forgets to list c2, has stated the same fact once.
+    Refusing the whole dossier over it throws away everything research paid
+    for.
+    """
+    payload = _evidence_payload()
+    payload["requirements"] = [
+        {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"]},
+        {"requirement_id": "r2", "status": "supported", "claim_ids": []},
+    ]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    by_id = {item.requirement_id: item for item in evidence.requirements}
+    assert by_id["r2"].claim_ids == ["c2"], "the link the claim asserted survives"
+
+
+def test_the_reconciliation_works_from_the_question_side_too():
+    payload = _evidence_payload()
+    payload["claims"][1]["requirement_ids"] = []
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    by_id = {item.claim_id: item for item in evidence.claims}
+    assert by_id["c2"].requirement_ids == ["r2"]
+
+
+def test_questions_is_read_as_requirements():
+    """The structure prompt says "question" throughout while the schema says
+    `requirements`, and this model renamed exactly that list in the work order
+    an hour before."""
+    payload = _evidence_payload()
+    payload["questions"] = payload.pop("requirements")
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert {item.requirement_id for item in evidence.requirements} == {"r1", "r2"}
+
+
+def test_a_claim_citing_a_source_that_is_not_there_keeps_the_claim():
+    payload = _evidence_payload()
+    payload["claims"][0]["source_ids"] = ["s1", "s404"]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert evidence.claims[0].source_ids == ["s1"]
+
+
+def test_a_leftover_alias_key_is_not_carried_into_the_contract():
+    """`extra="forbid"` makes a stray key fatal on its own, so reading an alias
+    is only half the job -- the alias itself has to not survive."""
+    payload = _evidence_payload()
+    payload["questions"] = payload["requirements"]
+    payload["claims"][0]["premise_ids"] = ["a1"]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert len(evidence.requirements) == 2
+
+
+def test_an_invented_source_vocabulary_falls_back_rather_than_failing():
+    """Run 90b3f9bc (2026-08-30 21:37Z): all ten sources came back as
+    `research_notes` / `synthesized_research_note`.
+
+    One invented vocabulary, applied consistently, because the schema declared
+    plain strings and the prompt listed no values. Both vocabularies carry an
+    "other" member, which is what makes this survivable.
+    """
+    payload = _evidence_payload()
+    payload["sources"][0]["source_type"] = "research_notes"
+    payload["sources"][0]["material_type"] = "synthesized_research_note"
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert evidence.sources[0].source_type == "other"
+    assert evidence.sources[0].material_type == "other"
+
+
+def test_the_vocabularies_travel_in_the_schema():
+    from typing import get_args
+
+    from app.features.prompt2blog.contracts_v4 import EvidenceSourceType
+    from app.features.prompt2blog.research_v4 import EVIDENCE_SCHEMA
+
+    source = EVIDENCE_SCHEMA["properties"]["sources"]["items"]["properties"]
+    assert source["source_type"]["enum"] == list(get_args(EvidenceSourceType))
+
+
+def test_a_conflict_that_names_no_claims_is_dropped_not_fatal():
+    """Eleven arrived at once, none pointing at a real claim.
+
+    Two claims are what makes a conflict a conflict. One that nothing can point
+    at is unusable downstream; dropping it costs a note, refusing it costs ten
+    web searches.
+    """
+    payload = _evidence_payload()
+    payload["conflicts"] = [
+        {"conflict_id": "x1", "claim_ids": [], "summary": "Sources disagree."},
+        {"conflict_id": "x2", "claim_ids": ["c1", "c2"], "summary": "These two do."},
+    ]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert [item.conflict_id for item in evidence.conflicts] == ["x2"]
+
+
+def test_a_guessed_status_still_describes_its_gap():
+    # The contract insists an unsettled question says what is missing, and a
+    # status we had to fall back on is unsettled by definition.
+    payload = _evidence_payload()
+    payload["requirements"][0] = {"requirement_id": "r1", "status": "inconclusive"}
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    by_id = {item.requirement_id: item for item in evidence.requirements}
+    assert by_id["r1"].status == "partial"
+    assert by_id["r1"].gap
+
+
+def test_a_timestamp_where_a_date_belongs_is_trimmed_not_fatal():
+    """Run 90b3f9bc (2026-08-30 22:25Z) died on this, and on nothing else.
+
+    One source out of thirteen carried a full ISO timestamp, and the time of
+    day took down a dossier that cost ten web searches.
+    """
+    payload = _evidence_payload()
+    payload["sources"][0]["published_at"] = "2026-07-14T09:30:00Z"
+    payload["sources"][0]["retrieved_at"] = "2026-08-01 12:00:00"
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert evidence.sources[0].published_at == date(2026, 7, 14)
+    assert evidence.sources[0].retrieved_at == date(2026, 8, 1)
+
+
+def test_an_unreadable_date_is_dropped_rather_than_guessed():
+    payload = _evidence_payload()
+    payload["sources"][0]["published_at"] = "sometime last spring"
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert evidence.sources[0].published_at is None
+
+
+def test_a_source_with_no_link_is_admitted_as_other_not_refused():
+    """Run 90b3f9bc (2026-08-31 01:52Z): 49 of 54 sources had a publisher, a
+    title, and no URL.
+
+    Grounded search does not return per-source URLs -- it returns a dozen
+    opaque redirect blobs per question, which nothing can honestly map onto
+    "How to Peru". The model was right to leave the field empty, and the whole
+    dossier was refused for it. `other` carries no URL requirement, so the
+    source is admitted as what it actually is.
+    """
+    payload = _evidence_payload()
+    payload["sources"][0]["url"] = None
+    payload["sources"][0]["material_type"] = "web"
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert evidence.sources[0].material_type == "other"
+    assert evidence.sources[0].publisher == "Peru Retail"
+
+
+def test_anything_still_called_web_really_does_have_a_link():
+    # The guarantee the demotion exists to preserve.
+    payload = _evidence_payload()
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    for source in evidence.sources:
+        if source.material_type in {"web", "report"}:
+            assert source.url and source.publisher
+
+
+def test_a_claim_left_with_no_usable_source_is_dropped_not_fatal():
+    """Filtering a dangling reference can empty a list the contract requires,
+    so the repair would itself become the failure."""
+    payload = _evidence_payload()
+    payload["claims"][0]["source_ids"] = ["s404"]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert [item.claim_id for item in evidence.claims] == ["c2"]
+
+
+def test_a_question_that_loses_its_claims_stops_calling_itself_supported():
+    payload = _evidence_payload()
+    payload["claims"][0]["source_ids"] = ["s404"]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    by_id = {item.requirement_id: item for item in evidence.requirements}
+    assert by_id["r1"].status == "partial"
+    assert by_id["r1"].gap
+
+
+def test_markup_urls_are_not_offered_as_sources():
+    # Grounded search returns these alongside the real ones.
+    from app.features.prompt2blog.research_v4 import _citable
+
+    assert _citable(["http://www.w3.org/2000/svg", "https://example.pe/a"]) == [
+        "https://example.pe/a"
+    ]
+
+
+def test_a_dossier_that_still_will_not_assemble_keeps_what_came_back():
+    from app.features.prompt2blog.research_v4 import ResearchUnusable
+
+    payload = _evidence_payload()
+    payload["requirements"] = []
+
+    with pytest.raises(ResearchUnusable) as error:
+        structure_research(_work_order(), {}, _deps(payload))
+
+    assert error.value.reason
+    assert error.value.raw, "the payload has to travel with the failure"
 
 
 def test_the_record_shows_what_research_cost_and_found():

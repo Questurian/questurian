@@ -1,6 +1,11 @@
 import { apiFetch } from '../../../shared/api/client/apiFetch'
 import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
-import type { IntakeState } from './intake.types'
+import type {
+  GateQuestion,
+  IntakeArticle,
+  IntakeState,
+  VenueToCheck,
+} from './intake.types'
 
 /**
  * One call per move the operator can make.
@@ -98,4 +103,88 @@ export function cutWorkOrder(
 /** Both research passes, then the one gate that blocks. */
 export function doResearch(runId: string): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/research`)
+}
+
+/**
+ * Hand the settled run to the writer.
+ *
+ * The same run id all the way through: the article is written onto the run the
+ * seed opened, so the receipt covers intake and writing together. Answers 202
+ * — the graph runs in the background and the page follows the run from there.
+ */
+export function startWriting(runId: string): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/write`)
+}
+
+/**
+ * The finished article, for reading.
+ *
+ * Its own call because the state above is polled every few seconds while the
+ * graph runs, and this is several hundred kilobytes.
+ */
+export async function readArticle(runId: string): Promise<IntakeArticle> {
+  const response = await apiFetch(`${INTAKE}/${runId}/article`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the finished article.')
+  }
+  return (await response.json()) as IntakeArticle
+}
+
+/**
+ * The prompt to carry to a flagship model, with the article already in it.
+ *
+ * Generated, never hand edited: operator influence belongs in a control with
+ * its own validated field, or nothing downstream can say what was asked for.
+ */
+export async function readPolishPrompt(runId: string): Promise<{ prompt: string }> {
+  const response = await apiFetch(`${INTAKE}/${runId}/polish-prompt`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not build the polish prompt.')
+  }
+  return (await response.json()) as { prompt: string }
+}
+
+/** The questions holding this run up, with what research did find. */
+export async function readGate(runId: string): Promise<{ blocking: GateQuestion[] }> {
+  const response = await apiFetch(`${INTAKE}/${runId}/gate`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read what is holding this up.')
+  }
+  return (await response.json()) as { blocking: GateQuestion[] }
+}
+
+/**
+ * Settle one blocking question without re-buying the research.
+ *
+ * Either an answer, or a note saying it is not published anywhere. No model
+ * call: this is the operator's decision, recorded.
+ */
+export function settleGate(
+  runId: string,
+  body: {
+    requirement_id: string
+    answer?: string
+    source_url?: string
+    unpublished_note?: string
+    omit?: boolean
+  },
+): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/gate`, body)
+}
+
+/** The places this run would send a reader, for a person to look at. */
+export async function readVenues(runId: string): Promise<{ venues: VenueToCheck[] }> {
+  const response = await apiFetch(`${INTAKE}/${runId}/venues`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the places to check.')
+  }
+  return (await response.json()) as { venues: VenueToCheck[] }
+}
+
+/** Record what the operator saw. Drop it, or say what you found. */
+export function markVenue(
+  runId: string,
+  body: { claim_id: string; drop?: boolean; note?: string },
+): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/venues`, body)
 }

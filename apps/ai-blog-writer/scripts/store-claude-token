@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Put the article account's Claude token where the pipeline can recover it.
+#
+# The macOS Keychain has dropped this secret twice with no cause anyone found,
+# each time stranding a run at the hand-off to the writer after a whole intake
+# had been paid for. This writes the copy the app repairs itself from.
+#
+# The token is typed, never passed as an argument: an argument lands in shell
+# history and in `ps`. `read -rs` does neither.
+#
+# The file is created under `umask 077`, so it is never briefly readable by
+# anyone else -- a chmod after the fact leaves a window where it is.
+
+set -euo pipefail
+
+TOKEN_FILE="${P2B_CLAUDE_TOKEN_FILE:-$HOME/.questurian/prompt2blog-claude-token}"
+
+printf 'Storing the article account token at:\n  %s\n\n' "$TOKEN_FILE"
+
+if [ -f "$TOKEN_FILE" ]; then
+  printf 'A token is already stored there. Replace it? [y/N] '
+  read -r reply
+  case "$reply" in
+    [yY]*) ;;
+    *) printf 'Left alone.\n'; exit 0 ;;
+  esac
+fi
+
+printf 'Paste the token (it will not be shown), then press return.\n'
+printf 'Get one with `claude setup-token` if you no longer have it.\n> '
+read -rs TOKEN
+printf '\n'
+
+if [ -z "$TOKEN" ]; then
+  printf 'Nothing entered. Nothing written.\n' >&2
+  exit 1
+fi
+
+# A pasted token that picked up a space or a line break is not a token, and the
+# CLI answers a broken one with an auth failure that reads like a revoked
+# account. Catch it here instead.
+case "$TOKEN" in
+  *[[:space:]]*)
+    printf 'That contains a space or a line break, so it is not a whole token.\n' >&2
+    printf 'Nothing written.\n' >&2
+    exit 1
+    ;;
+esac
+
+case "$TOKEN" in
+  sk-ant-oat01-*) ;;
+  *)
+    printf 'That does not start with sk-ant-oat01-, which is what `claude\n' >&2
+    printf 'setup-token` produces. Nothing written.\n' >&2
+    exit 1
+    ;;
+esac
+
+# 077 first, so the file is owner-only from the instant it exists.
+umask 077
+mkdir -p "$(dirname "$TOKEN_FILE")"
+printf '%s' "$TOKEN" > "$TOKEN_FILE"
+chmod 600 "$TOKEN_FILE"
+
+MODE="$(stat -f '%Lp' "$TOKEN_FILE")"
+if [ "$MODE" != "600" ]; then
+  printf 'Wrote it, but the mode is %s and the app will refuse to read it.\n' "$MODE" >&2
+  exit 1
+fi
+
+printf 'Stored, mode 600.\n\n'
+printf 'The Keychain is repaired from this automatically on the next run, so a\n'
+printf 'lost item no longer needs a new token.\n\n'
+printf 'One thing this does not do: if the settings page has never had this\n'
+printf 'account connected at all, connect it once at\n'
+printf '  http://localhost:3003/settings/claude\n'
+printf 'so the run has a label to report. After that, this file is enough.\n'

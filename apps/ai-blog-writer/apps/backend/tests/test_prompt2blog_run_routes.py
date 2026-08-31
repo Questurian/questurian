@@ -1,6 +1,5 @@
 """Prompt2Blog run lifecycle route contracts."""
 
-import asyncio
 import json
 from pathlib import Path
 
@@ -23,13 +22,13 @@ FIXTURE_DIR = (
 
 def test_completed_run_exposes_status_and_result(completed_prompt2blog_run):
     status_payload = response_payload(
-        asyncio.run(prompt2blog_routes.get_status(completed_prompt2blog_run))
+        prompt2blog_routes.get_status(completed_prompt2blog_run)
     )
     assert status_payload["feature"] == "prompt2blog"
     assert status_payload["state"] == "completed"
 
     result_payload = response_payload(
-        asyncio.run(prompt2blog_routes.get_result(completed_prompt2blog_run))
+        prompt2blog_routes.get_result(completed_prompt2blog_run)
     )
     assert result_payload["run_id"] == completed_prompt2blog_run
     assert result_payload["markdown"].startswith("# Persisted Prompt2Blog Title")
@@ -54,7 +53,7 @@ def test_result_route_attaches_the_trace_to_a_v3_artifact(monkeypatch):
         lambda _run_id: {"langsmith_trace_url": "https://trace.example/v3-run"},
     )
 
-    payload = response_payload(asyncio.run(prompt2blog_routes.get_result("v3-run")))
+    payload = response_payload(prompt2blog_routes.get_result("v3-run"))
 
     assert (
         payload["artifact"]["pipeline_v3"]["langsmith_trace_url"]

@@ -1,5 +1,21 @@
 """The HTTP surface for the four intake stages.
 
+Every handler below is `def`, never `async def`, and that is load bearing.
+
+FastAPI runs an `async def` handler on the event loop and a `def` handler in a
+threadpool. Every route here does blocking work -- ten sequential web searches,
+a model call that runs for minutes, SQLite reads -- so declaring them `async`
+handed the event loop to one request and froze the entire server for as long as
+it took.
+
+The symptoms did not look like one bug. The Claude status pill hung on
+"checking", links did nothing, and the page forgot which run it was on, because
+its resume read timed out and the code took silence to mean the run was gone.
+All three were requests queued behind a research pass that had the loop.
+
+If a handler here ever needs `await`, it needs its blocking work moved off the
+loop first.
+
 One route per move the operator can make: type a seed, answer a question, go
 back into the grill, approve the brief, plan the research, cut the plan, run
 the research. Each
@@ -17,12 +33,12 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from app.core.staff_auth import require_staff, staff_user_id
 
 from ..config import P2B_V4_RESEARCH_STRUCTURE_MODEL
-from ..brief_v4 import BriefIncomplete
+from ..brief_v4 import BriefIncomplete, BriefUnusable
 from ..dependencies import PipelineDependencies
 from ..grill_v4 import (
     GRILL_RESEARCH_MAX_TOKENS,
@@ -30,20 +46,28 @@ from ..grill_v4 import (
     GrillDependencies,
     GrillUnusableResponse,
 )
+from ..gate_v4 import GateAnswerRefused
 from ..intake_v4 import (
     IntakeServices,
+    blocking_questions,
+    review_venues,
     answer_intake,
     apply_cut,
     approve_brief,
     begin_intake,
     do_research,
+    finished_article,
+    polish_prompt,
     intake_state,
     plan_research,
     reopen_intake,
+    settle_gate,
+    settle_venue,
     writing_request,
 )
 from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_input_artifact
-from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies
+from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies, ResearchUnusable
+from ..work_order_v4 import WorkOrderUnusable
 from .runs import (
     _prompt2blog_credential_for_run,
     _run_pipeline_v3_background as _run_pipeline_v4_background,
@@ -133,6 +157,51 @@ def _handle(action, *args, **kwargs) -> Any:
                 "raw": error.raw[:2000],
             },
         ) from error
+    except BriefUnusable as error:
+        # 502 and a sentence, not a Pydantic traceback. This arrived as
+        # "1 validation error for ArticleBrief ... must_name entry values must
+        # be unique", mid-flow, after the grill had been paid for.
+        logger.error("Brief did not fit its contract: %s | %s", error.reason, error.raw[:2000])
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "brief_unusable",
+                "message": (
+                    "The brief came back in a shape the system cannot use "
+                    "and did not settle on a second try. Nothing you said "
+                    "caused this — try approving again."
+                ),
+                "raw": error.reason,
+            },
+        ) from error
+    except ResearchUnusable as error:
+        logger.error("Dossier did not fit its contract: %s | %s", error.reason, error.raw[:2000])
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "research_unusable",
+                "message": (
+                    "The research came back in a shape the system cannot use. "
+                    "Nothing you said caused this — try researching again."
+                ),
+                "raw": error.reason,
+            },
+        ) from error
+    except WorkOrderUnusable as error:
+        logger.error(
+            "Work order did not fit its contract: %s | %s", error.reason, error.raw[:2000]
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "work_order_unusable",
+                "message": (
+                    "The research plan came back in a shape the system cannot "
+                    "use. Nothing you said caused this — try planning again."
+                ),
+                "raw": error.reason,
+            },
+        ) from error
     except GrillUnusableResponse as error:
         # 502, not 400: nothing the operator typed caused this, and the reply
         # travels with it. The first real run died here and left no trace at
@@ -154,6 +223,31 @@ def _handle(action, *args, **kwargs) -> Any:
         # Not a server fault and not a retry: the run is over its ceiling and
         # says what it spent.
         raise HTTPException(status_code=409, detail=error.status.as_record()) from error
+    except ValidationError as error:
+        # Anything a stage builds and the contracts refuse. Pydantic's own
+        # message is addressed to a developer and it subclasses ValueError, so
+        # without this it fell through to the 400 below and reached the
+        # operator verbatim -- "List should have at least 1 item after
+        # validation, not 0", mid-flow, twice in one evening.
+        logger.error("Intake payload failed its contract: %s", error)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "contract_violation",
+                "message": (
+                    "Something came back in a shape the system cannot use. "
+                    "Nothing you said caused this — try that step again."
+                ),
+                "raw": "; ".join(
+                    f"{'.'.join(str(part) for part in item['loc'])}: {item['msg']}"
+                    for item in error.errors()
+                )[:2000],
+            },
+        ) from error
+    except GateAnswerRefused as error:
+        # The operator asked for something the dossier will not take -- an
+        # empty answer, or a question research already settled.
+        raise HTTPException(status_code=400, detail=str(error)) from error
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:
@@ -161,7 +255,7 @@ def _handle(action, *args, **kwargs) -> Any:
 
 
 @router.post("/seed", status_code=201)
-async def open_intake(
+def open_intake(
     request: SeedRequest, staff_user=Depends(require_staff)
 ) -> JSONResponse:
     """One typed line becomes a run and its first question."""
@@ -175,13 +269,13 @@ async def open_intake(
 
 
 @router.get("/{run_id}")
-async def read_intake(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def read_intake(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Where this run stands. What a reloaded page asks for."""
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/answer")
-async def answer_question(
+def answer_question(
     run_id: str, request: AnswerRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
     _handle(answer_intake, run_id, request.answer, _services())
@@ -189,27 +283,27 @@ async def answer_question(
 
 
 @router.post("/{run_id}/reopen")
-async def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Go back into the grill. The single exit from every dead end."""
     _handle(reopen_intake, run_id, _services())
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/brief")
-async def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Turn an agreed grill into the brief the run answers to."""
     _handle(approve_brief, run_id, _services())
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/work-order")
-async def plan_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def plan_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     _handle(plan_research, run_id, _services())
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/work-order/cut")
-async def cut_the_work_order(
+def cut_the_work_order(
     run_id: str, request: CutRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
     """Apply the operator's cut, and hand back what it cost.
@@ -228,7 +322,7 @@ async def cut_the_work_order(
 
 
 @router.post("/{run_id}/research")
-async def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Both research passes, then the one gate that blocks.
 
     A run that cannot be written still answers 200: this is a product state,
@@ -239,8 +333,116 @@ async def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONRes
     return JSONResponse(intake_state(run_id))
 
 
+class GateAnswerRequest(BaseModel):
+    requirement_id: str = Field(min_length=1)
+    # Exactly one of these. An answer is what the operator found; the note is
+    # what they looked for and could not find anywhere.
+    answer: str | None = None
+    source_url: str | None = None
+    unpublished_note: str | None = None
+    # Drop the question. Permitted for a load-bearing one, and answered once
+    # with what the article can no longer claim (ADR 0030).
+    omit: bool = False
+
+
+@router.get("/{run_id}/gate")
+def read_gate(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The questions holding this run up, with what research did find."""
+    return JSONResponse({"blocking": _handle(blocking_questions, run_id)})
+
+
+@router.post("/{run_id}/gate")
+def settle_the_gate(
+    run_id: str, request: GateAnswerRequest, _staff=Depends(require_staff)
+) -> JSONResponse:
+    """Settle one blocking question without re-buying the research.
+
+    No model call: this is the operator's decision, recorded. The coverage
+    verdict is re-derived afterwards by the function that blocked, so the page
+    reads the same answer it would have got from a fresh research pass.
+    """
+    chosen = [
+        request.answer is not None,
+        request.unpublished_note is not None,
+        request.omit,
+    ]
+    if sum(chosen) != 1:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Say one of three things: what the answer is, that it is not "
+                "published anywhere, or that the question should be dropped."
+            ),
+        )
+    _handle(
+        settle_gate,
+        run_id,
+        _services(),
+        requirement_id=request.requirement_id,
+        answer=request.answer,
+        source_url=request.source_url,
+        unpublished_note=request.unpublished_note,
+        omit=request.omit,
+    )
+    return JSONResponse(intake_state(run_id))
+
+
+class VenueMarkRequest(BaseModel):
+    claim_id: str = Field(min_length=1)
+    # Drop it, or say what you saw. Marking it fine is simply not calling this.
+    drop: bool = False
+    note: str | None = None
+
+
+@router.get("/{run_id}/venues")
+def read_venues(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The places this run would send a reader.
+
+    Only claims naming somewhere bookable or visitable, so the list is short
+    enough to actually look at.
+    """
+    return JSONResponse({"venues": _handle(review_venues, run_id)})
+
+
+@router.post("/{run_id}/venues")
+def mark_venue(
+    run_id: str, request: VenueMarkRequest, _staff=Depends(require_staff)
+) -> JSONResponse:
+    """Record what the operator saw when they looked."""
+    if request.drop == (request.note is not None):
+        raise HTTPException(
+            status_code=400,
+            detail="Either drop it, or say what you saw. Not both, and not neither.",
+        )
+    _handle(
+        settle_venue,
+        run_id,
+        _services(),
+        claim_id=request.claim_id,
+        drop=request.drop,
+        note=request.note,
+    )
+    return JSONResponse(intake_state(run_id))
+
+
+@router.get("/{run_id}/article")
+def read_article(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """What the run wrote, for reading.
+
+    Separate from the state the page polls: that runs every few seconds while
+    the graph works, and this is the whole article.
+    """
+    return JSONResponse(_handle(finished_article, run_id))
+
+
+@router.get("/{run_id}/polish-prompt")
+def read_polish_prompt(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """One prompt to carry to a flagship model, with the article in it."""
+    return JSONResponse(_handle(polish_prompt, run_id))
+
+
 @router.get("/{run_id}/writing-request")
-async def read_writing_request(
+def read_writing_request(
     run_id: str, _staff=Depends(require_staff)
 ) -> JSONResponse:
     """What the graph would run, assembled from what intake settled.
@@ -253,7 +455,7 @@ async def read_writing_request(
 
 
 @router.post("/{run_id}/write", status_code=202)
-async def start_writing(
+def start_writing(
     run_id: str,
     background_tasks: BackgroundTasks,
     _staff=Depends(require_staff),

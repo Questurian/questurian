@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from './intake.api'
-import type { IntakeState } from './intake.types'
+import type { IntakeArticle, IntakeState } from './intake.types'
 
 /**
  * One article's intake, from a typed line to a cut research plan.
@@ -27,6 +27,16 @@ function rememberRun(runId: string | null): void {
 }
 
 function rememberedRun(): string | null {
+  // `?run=<id>` wins over the remembered pointer, so any run is a bookmark.
+  // Starting a second article used to make the first unreachable from the UI
+  // even though every stage of it was still on the server — which meant
+  // re-interviewing from scratch to test anything downstream of the grill.
+  try {
+    const asked = new URLSearchParams(window.location.search).get('run')
+    if (asked) return asked
+  } catch {
+    // A malformed query string is not a reason to lose the remembered run.
+  }
   try {
     return window.localStorage.getItem(RESUME_KEY)
   } catch {
@@ -47,6 +57,12 @@ export interface UseIntake {
   planResearch: () => Promise<void>
   research: () => Promise<void>
   cut: (struckIds: string[], added: string[]) => Promise<void>
+  /** Hand the settled run to the writer. */
+  write: () => Promise<void>
+  /** The finished article, once there is one. */
+  article: IntakeArticle | null
+  /** Re-read the run. For anything that changed it outside this hook. */
+  refresh: () => void
   abandon: () => void
 }
 
@@ -55,6 +71,10 @@ export function useIntake(): UseIntake {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cutWarnings, setCutWarnings] = useState<string[]>([])
+  const [article, setArticle] = useState<IntakeArticle | null>(null)
+  // Held in a ref as well as state so the poll below reads the current run
+  // without restarting its own interval every time the state changes.
+  const runIdRef = useRef<string | null>(null)
 
   const run = useCallback(async (action: () => Promise<IntakeState>) => {
     setBusy(true)
@@ -62,6 +82,7 @@ export function useIntake(): UseIntake {
     try {
       const next = await action()
       setState(next)
+      runIdRef.current = next.run_id
       rememberRun(next.run_id)
       setCutWarnings(next.cut_warnings ?? [])
     } catch (cause) {
@@ -76,7 +97,9 @@ export function useIntake(): UseIntake {
     if (!runId) return
     void (async () => {
       try {
-        setState(await api.readIntake(runId))
+        const restored = await api.readIntake(runId)
+        setState(restored)
+        runIdRef.current = restored.run_id
       } catch {
         // The run is gone, or belongs to someone else. Start clean rather than
         // stranding the page on an error it cannot act on.
@@ -84,6 +107,38 @@ export function useIntake(): UseIntake {
       }
     })()
   }, [])
+
+  // Research is ten sequential web searches and writing is a whole article, and
+  // both used to leave the page silent for as long as they took. The run knows
+  // exactly where it is; this asks.
+  const writingRun = state?.writing?.state === 'running'
+  const researching = busy && state?.step === 'work_order'
+  const shouldPoll = writingRun || researching
+
+  useEffect(() => {
+    if (!shouldPoll) return
+    const timer = window.setInterval(() => {
+      const runId = runIdRef.current
+      if (!runId) return
+      void api
+        .readIntake(runId)
+        .then(setState)
+        // A poll that fails changes nothing on screen. The work is on the
+        // server and the next tick will ask again.
+        .catch(() => undefined)
+    }, 3_000)
+    return () => window.clearInterval(timer)
+  }, [shouldPoll])
+
+  // Fetched once, when there is something to read.
+  const finishedRunId = state?.writing?.state === 'completed' ? state.run_id : null
+  useEffect(() => {
+    if (!finishedRunId) return
+    void api
+      .readArticle(finishedRunId)
+      .then(setArticle)
+      .catch(() => undefined)
+  }, [finishedRunId])
 
   const requireRun = useCallback((): string => {
     if (!state?.run_id) throw new Error('No article in progress.')
@@ -115,9 +170,18 @@ export function useIntake(): UseIntake {
         run(() => api.cutWorkOrder(requireRun(), struckIds, added)),
       [run, requireRun],
     ),
+    write: useCallback(() => run(() => api.startWriting(requireRun())), [run, requireRun]),
+    article,
+    refresh: useCallback(() => {
+      const runId = runIdRef.current
+      if (!runId) return
+      void api.readIntake(runId).then(setState).catch(() => undefined)
+    }, []),
     abandon: useCallback(() => {
       rememberRun(null)
+      runIdRef.current = null
       setState(null)
+      setArticle(null)
       setCutWarnings([])
       setError(null)
     }, []),

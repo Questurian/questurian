@@ -23,9 +23,19 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-from app.core import read_stage_result
+from pydantic import ValidationError
 
-from .brief_v4 import BRIEF_STAGE, brief_stage_record, build_brief
+from app.core import read_stage_result, read_status
+
+from .graph.topology_v3 import V3_NODE_STAGE_NAMES
+
+from .brief_v4 import (
+    BRIEF_STAGE,
+    BriefIncomplete,
+    BriefUnusable,
+    brief_stage_record,
+    build_brief,
+)
 from .config import FEATURE_NAME
 from .contracts_v4 import ArticleBrief, GrillState, Prompt2BlogWorkOrder
 from .grill_v4 import (
@@ -38,23 +48,40 @@ from .grill_v4 import (
     start_grill,
 )
 from .coverage_v4 import CoverageVerdict, assess_coverage
+from .gate_v4 import (
+    GateAnswerRefused,
+    answer_requirement,
+    drop_venue,
+    mark_unpublished,
+    note_venue,
+    omit_requirement,
+    venues_to_check,
+)
 from .contracts_v4 import (
     EvidencePackage,
     Prompt2BlogV4Request,
     Prompt2BlogWritingProfiles,
 )
 from .research_v4 import (
+    NOTES_STAGE,
+    PROGRESS_STAGE,
     RESEARCH_STAGE,
     ResearchDependencies,
+    ResearchUnusable,
+    gather_research,
+    notes_from_record,
+    notes_stage_record,
     research_stage_record,
-    run_research,
+    structure_research,
 )
+from .polish_v4 import build_polish_prompt
 from .run_budget import enforce_run_budget
 from .run_recorder import RunRecorder
 from .support import _safe_dict, _safe_str
 from .work_order_v4 import (
     WORK_ORDER_STAGE,
     CutOutcome,
+    WorkOrderUnusable,
     build_work_order,
     cut_work_order,
     work_order_stage_record,
@@ -188,7 +215,7 @@ def reopen_intake(run_id: str, services: IntakeServices) -> GrillState:
     state = _load_grill(run_id)
     reopened = reopen_grill(state, services.dependencies)
 
-    for stage in (BRIEF_STAGE, WORK_ORDER_STAGE, RESEARCH_STAGE):
+    for stage in (BRIEF_STAGE, WORK_ORDER_STAGE, RESEARCH_STAGE, NOTES_STAGE):
         if read_stage_result(run_id, stage) is not None:
             services.recorder.discard_stage(run_id, stage)
 
@@ -198,7 +225,36 @@ def reopen_intake(run_id: str, services: IntakeServices) -> GrillState:
 def approve_brief(run_id: str, services: IntakeServices) -> ArticleBrief:
     """Turn an agreed grill into the brief the run answers to."""
     enforce_run_budget(_run_tokens_spent(run_id), stage=BRIEF_STAGE)
-    brief = build_brief(_load_grill(run_id), services.dependencies)
+    try:
+        brief = build_brief(_load_grill(run_id), services.dependencies)
+    except BriefUnusable as error:
+        _record(
+            services,
+            run_id,
+            BRIEF_STAGE,
+            {
+                "status": "failed",
+                "reason": error.reason,
+                "unusable_response": error.raw[:4000],
+            },
+        )
+        raise
+    except BriefIncomplete as error:
+        # The grill has already been paid for by this point, so a failure here
+        # has to leave something to read. Run 90b3f9bc (2026-08-30 20:01Z)
+        # failed with three fields empty and wrote no stage row at all, so the
+        # only record of what came back was a log line nobody was watching.
+        _record(
+            services,
+            run_id,
+            BRIEF_STAGE,
+            {
+                "status": "failed",
+                "missing": list(error.missing),
+                "unusable_response": error.raw[:4000],
+            },
+        )
+        raise
     _record(
         services,
         run_id,
@@ -211,7 +267,20 @@ def approve_brief(run_id: str, services: IntakeServices) -> ArticleBrief:
 def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder:
     """Translate the approved brief into checkable questions."""
     enforce_run_budget(_run_tokens_spent(run_id), stage=WORK_ORDER_STAGE)
-    work_order = build_work_order(load_brief(run_id), services.dependencies)
+    try:
+        work_order = build_work_order(load_brief(run_id), services.dependencies)
+    except WorkOrderUnusable as error:
+        _record(
+            services,
+            run_id,
+            WORK_ORDER_STAGE,
+            {
+                "status": "failed",
+                "reason": error.reason,
+                "unusable_response": error.raw[:4000],
+            },
+        )
+        raise
     _record(
         services,
         run_id,
@@ -232,9 +301,10 @@ def apply_cut(
     added_questions: list[str] | None = None,
 ) -> CutOutcome:
     """Apply the operator's cut. No model call; this is their decision, not one."""
-    if read_stage_result(run_id, RESEARCH_STAGE) is not None:
+    for stage in (RESEARCH_STAGE, NOTES_STAGE):
         # Research answered the questions that were there before the cut.
-        services.recorder.discard_stage(run_id, RESEARCH_STAGE)
+        if read_stage_result(run_id, stage) is not None:
+            services.recorder.discard_stage(run_id, stage)
     outcome = cut_work_order(
         load_work_order(run_id),
         load_brief(run_id),
@@ -272,7 +342,49 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
 
     brief = load_brief(run_id)
     work_order = load_work_order(run_id)
-    evidence, notes = run_research(brief, work_order, services.research)
+
+    # Ten sequential web searches, then one structuring call. Every structuring
+    # failure used to buy the searches again -- run 90b3f9bc paid for them
+    # twice in one evening. The notes are kept the moment they exist and are
+    # reused only when they answer this exact plan.
+    def record_progress(progress: dict[str, Any]) -> None:
+        # Written straight, not through `_record`: that opens a fresh usage
+        # attempt each time, and ten empty attempts would bury the stage's real
+        # receipt in the ledger.
+        services.recorder.record_stage(run_id, PROGRESS_STAGE, progress)
+
+    notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order)
+    if notes is None:
+        notes = gather_research(
+            brief, work_order, services.research, record_progress
+        )
+        _record(
+            services, run_id, NOTES_STAGE, notes_stage_record(work_order, notes)
+        )
+    else:
+        logger.info(
+            "Reusing kept research notes",
+            extra={"run_id": run_id, "feature": FEATURE_NAME},
+        )
+
+    record_progress({"phase": "structuring", "done": len(notes), "total": len(notes),
+                     "current_question": ""})
+    try:
+        evidence = structure_research(work_order, notes, services.research)
+    except ResearchUnusable as error:
+        # The most expensive step in intake. A failure here that leaves nothing
+        # behind means the next attempt is another guess.
+        _record(
+            services,
+            run_id,
+            RESEARCH_STAGE,
+            {
+                "status": "failed",
+                "reason": error.reason,
+                "unusable_response": error.raw[:40000],
+            },
+        )
+        raise
     verdict = assess_coverage(work_order, evidence)
 
     _record(
@@ -286,6 +398,170 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
         },
     )
     return verdict
+
+
+def settle_gate(
+    run_id: str,
+    services: IntakeServices,
+    *,
+    requirement_id: str,
+    answer: str | None = None,
+    source_url: str | None = None,
+    unpublished_note: str | None = None,
+    omit: bool = False,
+) -> CoverageVerdict:
+    """Settle one blocking question without re-buying the research.
+
+    A blocked run had one exit, the grill, which discards everything the
+    research pass paid for. Run 76b36468 was stopped by a single co-op that
+    does not publish its price, with six of seven questions answered and ten
+    web searches already spent.
+
+    No model call. This is the operator's decision, recorded, and the coverage
+    verdict is then re-derived by the same function that blocked -- not a
+    second opinion, the same one asked again.
+    """
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+    notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
+
+    if omit:
+        evidence, work_order, cost = omit_requirement(
+            evidence, work_order, requirement_id=requirement_id
+        )
+        # The work order changes too, or the coverage check would go on asking
+        # about a question that no longer exists.
+        _record(
+            services,
+            run_id,
+            WORK_ORDER_STAGE,
+            {
+                **work_order_stage_record(work_order, [cost]),
+                STATE_KEY: json.loads(work_order.model_dump_json()),
+            },
+        )
+    elif unpublished_note is not None:
+        evidence = mark_unpublished(
+            evidence, requirement_id=requirement_id, note=unpublished_note
+        )
+    else:
+        evidence = answer_requirement(
+            evidence,
+            requirement_id=requirement_id,
+            answer=answer or "",
+            source_url=source_url,
+        )
+
+    verdict = assess_coverage(work_order, evidence)
+    _record(
+        services,
+        run_id,
+        RESEARCH_STAGE,
+        {
+            **research_stage_record(evidence, notes),
+            "coverage": verdict.as_record(),
+            # What the operator settled by hand, kept so a wrong fact in the
+            # article can be traced to a person rather than blamed on the
+            # research that never claimed it.
+            "operator_settled": sorted(
+                {
+                    *(_stage_data(run_id, RESEARCH_STAGE).get("operator_settled") or []),
+                    requirement_id,
+                }
+            ),
+            STATE_KEY: json.loads(evidence.model_dump_json()),
+        },
+    )
+    return verdict
+
+
+def review_venues(run_id: str) -> list[dict[str, Any]]:
+    """The places this run would send a reader, for a person to look at."""
+    return venues_to_check(load_evidence(run_id))
+
+
+def settle_venue(
+    run_id: str,
+    services: IntakeServices,
+    *,
+    claim_id: str,
+    drop: bool = False,
+    note: str | None = None,
+) -> CoverageVerdict:
+    """Record what the operator saw when they looked at a place.
+
+    No model call. Dropping one can put the run back behind the gate, when the
+    dropped place was a question's only support -- which is correct: an article
+    must not rest on a claim its operator looked at and rejected.
+    """
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+    notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
+
+    evidence = (
+        drop_venue(evidence, claim_id=claim_id)
+        if drop
+        else note_venue(evidence, claim_id=claim_id, note=note or "")
+    )
+
+    verdict = assess_coverage(work_order, evidence)
+    _record(
+        services,
+        run_id,
+        RESEARCH_STAGE,
+        {
+            **research_stage_record(evidence, notes),
+            "coverage": verdict.as_record(),
+            "operator_settled": _stage_data(run_id, RESEARCH_STAGE).get(
+                "operator_settled"
+            )
+            or [],
+            STATE_KEY: json.loads(evidence.model_dump_json()),
+        },
+    )
+    return verdict
+
+
+def blocking_questions(run_id: str) -> list[dict[str, Any]]:
+    """The questions holding this run up, with what research did find.
+
+    The screen needs the question itself, which lives on the work order, next
+    to the gap, which lives on the evidence. Neither is much use alone.
+    """
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+    verdict = assess_coverage(work_order, evidence)
+    if verdict.can_write:
+        return []
+
+    questions = {
+        item.requirement_id: item for item in work_order.requirements
+    }
+    found = {item.requirement_id: item for item in evidence.requirements}
+    claims = {claim.claim_id: claim for claim in evidence.claims}
+
+    blocking: list[dict[str, Any]] = []
+    for requirement_id in verdict.unsupported_load_bearing:
+        question = questions.get(requirement_id)
+        record = found.get(requirement_id)
+        blocking.append(
+            {
+                "requirement_id": requirement_id,
+                "question": question.question if question else requirement_id,
+                "kind": question.kind if question else "load_bearing",
+                "status": record.status if record else "missing",
+                "gap": record.gap if record else "",
+                # What it did find. A question is rarely a blank: run 76b36468
+                # was stopped holding a name, a URL and two founders, missing
+                # only a price nobody publishes.
+                "found": [
+                    claims[claim_id].text
+                    for claim_id in (record.claim_ids if record else [])
+                    if claim_id in claims
+                ],
+            }
+        )
+    return blocking
 
 
 def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4Request:
@@ -313,6 +589,147 @@ def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4R
     )
 
 
+# What the graph's stage names mean to somebody watching. The run row already
+# carries the current one; it was simply never shown, so a write looked dead
+# for twenty minutes and then a finished article sat unseen for twenty more.
+WRITING_STAGE_LABELS = {
+    "queued": "Getting ready",
+    "stage_v3_outline": "Planning the sections",
+    "stage_v3_compose": "Writing the article",
+    "stage_v3_groundedness": "Checking every claim against the research",
+    "stage_v3_quality_audit": "Reading it back",
+    "stage_v3_repair": "Fixing what the audit named",
+    "stage_v3_quality_settle": "Settling on the best draft",
+    "stage_v3_title": "Writing the headline",
+    "stage_v3_finalize": "Finishing up",
+    "complete": "Done",
+}
+
+# The stages that mean the graph is running or has finished. Everything else on
+# a run row -- every `stage_v4_*` intake stage, and `queued` -- belongs to the
+# operator, not the writer.
+#
+# Derived from the topology rather than from the labels above, so a node added
+# to the graph cannot be left out of this by forgetting to label it. The
+# consequence of forgetting would be the page dropping back to the intake
+# screens in the middle of a write, which is the same class of bug this set
+# exists to fix.
+GRAPH_STAGES = frozenset(V3_NODE_STAGE_NAMES.values()) | {"complete"}
+
+
+def writing_state(run_id: str) -> dict[str, Any] | None:
+    """What the writer is doing, or what it produced.
+
+    Everything here was already on the run and none of it was ever sent to the
+    page. `stage` is the live one from the run row, so this answers "is it
+    working" while the graph runs, and "what did it make" once it stops.
+    """
+    status = _safe_dict(read_status(run_id))
+    if not status:
+        return None
+    state = _safe_str(status.get("state"))
+    stage = _safe_str(status.get("stage"))
+    # A run is only writing once the graph owns it, and the test has to be a
+    # whitelist. Intake records its own stages on the same run row -- the run
+    # is created at the seed (ADR 0031) -- so excluding only "queued" let
+    # `stage_v4_grill` through, and run 76b36468 answered its first grill
+    # question behind a screen saying the article was being written.
+    if stage not in GRAPH_STAGES:
+        return None
+
+    finalize = _stage_data(run_id, "stage_v3_finalize")
+    return {
+        "state": state,
+        "stage": stage,
+        "stage_label": WRITING_STAGE_LABELS.get(stage, stage),
+        "error": _safe_str(status.get("error")) or None,
+        "updated_at": _safe_str(status.get("updated_at")),
+        "final_title": _safe_str(finalize.get("final_title")) or None,
+        "word_count": finalize.get("word_count_estimate"),
+        "pipeline_status": _safe_str(finalize.get("pipeline_status")) or None,
+        "readiness_blockers": finalize.get("readiness_blockers") or [],
+        "constraint_checks": _safe_dict(finalize.get("constraint_checks")),
+    }
+
+
+def finished_article(run_id: str) -> dict[str, Any]:
+    """The article the run produced, for reading.
+
+    Its own call rather than part of `intake_state`, because the state is
+    polled every few seconds while the graph runs and the article payload is
+    several hundred kilobytes. Fetched once, when there is something to read.
+    """
+    payload = _stage_data(run_id, "pipeline_v3")
+    if not payload:
+        raise LookupError(f"No article written for run {run_id}.")
+    article = _safe_dict(payload.get("improved_article"))
+    finalize = _stage_data(run_id, "stage_v4_finalize") or _stage_data(
+        run_id, "stage_v3_finalize"
+    )
+    return {
+        "run_id": run_id,
+        "title": _safe_str(finalize.get("final_title")) or _safe_str(article.get("title")),
+        "markdown": _safe_str(payload.get("final_markdown"))
+        or _safe_str(article.get("content")),
+        "pipeline_status": _safe_str(finalize.get("pipeline_status")) or None,
+        "readiness_blockers": finalize.get("readiness_blockers") or [],
+        "constraint_checks": _safe_dict(finalize.get("constraint_checks")),
+        "word_count": finalize.get("word_count_estimate"),
+    }
+
+
+def polish_prompt(run_id: str) -> dict[str, Any]:
+    """The prompt the operator carries to a flagship model, with the article.
+
+    Assembled from what the run already recorded about its own output. It is
+    generated and never hand edited: operator influence belongs in a control
+    with its own validated field, or nothing downstream can say what was
+    actually asked for.
+    """
+    article = finished_article(run_id)
+    quality = _stage_data(run_id, "stage_v3_quality_audit")
+    audit_problems = [
+        _safe_str(item)
+        for item in (quality.get("required_revisions") or [])
+        if _safe_str(item)
+    ]
+    return {
+        "run_id": run_id,
+        "prompt": build_polish_prompt(
+            brief=load_brief(run_id),
+            article_markdown=article["markdown"],
+            title=article["title"],
+            constraint_checks=article["constraint_checks"],
+            readiness_blockers=article["readiness_blockers"],
+            audit_problems=audit_problems,
+        ),
+    }
+
+
+def _research_view(run_id: str, research: dict[str, Any]) -> dict[str, Any]:
+    """The research row as the page needs it, findings included.
+
+    Derived from the stored evidence when the row predates the findings field,
+    rather than asking the operator to re-run a pass they already paid ten web
+    searches for. The evidence itself has been on the run the whole time; only
+    the summary written beside it was thinner.
+    """
+    view = {key: value for key, value in research.items() if key != STATE_KEY}
+    if not view or view.get("findings"):
+        return view
+    stored = research.get(STATE_KEY)
+    if not isinstance(stored, dict):
+        return view
+    try:
+        evidence = EvidencePackage.model_validate(stored)
+    except ValidationError:
+        # An older dossier that no longer fits the contract still deserves to
+        # show its statuses rather than an empty screen.
+        return view
+    view["findings"] = research_stage_record(evidence, {})["findings"]
+    return view
+
+
 def intake_state(run_id: str) -> dict[str, Any]:
     """Where this run stands, for a page that may have been reloaded."""
     grill = _stage_data(run_id, GRILL_STAGE)
@@ -320,6 +737,15 @@ def intake_state(run_id: str) -> dict[str, Any]:
     work_order = _stage_data(run_id, WORK_ORDER_STAGE)
     research = _stage_data(run_id, RESEARCH_STAGE)
     grill_state = _safe_dict(grill.get(STATE_KEY))
+    # A failed brief leaves a row saying so. It is evidence, not progress, so
+    # the page stays on the grill with the agreement intact and one more
+    # approve to try.
+    if _safe_str(brief.get("status")) == "failed":
+        brief = {}
+    if _safe_str(work_order.get("status")) == "failed":
+        work_order = {}
+    if _safe_str(research.get("status")) == "failed":
+        research = {}
     return {
         "run_id": run_id,
         "step": (
@@ -339,6 +765,11 @@ def intake_state(run_id: str) -> dict[str, Any]:
             "turns": grill.get("transcript") or [],
             "pending": grill.get("pending"),
             "consensus": _safe_str(grill_state.get("consensus")),
+            # What the brief still needs. The grill stops when this is empty
+            # (ADR 0033), so it is also the honest answer to "how far along am
+            # I" -- which a question count never was.
+            "markers_covered": grill.get("markers_covered") or [],
+            "markers_missing": grill.get("markers_missing") or [],
         }
         if grill
         else None,
@@ -347,6 +778,9 @@ def intake_state(run_id: str) -> dict[str, Any]:
             key: value for key, value in work_order.items() if key != STATE_KEY
         }
         or None,
-        "research": {key: value for key, value in research.items() if key != STATE_KEY}
-        or None,
+        "research": _research_view(run_id, research) or None,
+        # Written as the searches go, so five to ten silent minutes can say
+        # which question it is on.
+        "research_progress": _stage_data(run_id, PROGRESS_STAGE) or None,
+        "writing": writing_state(run_id),
     }

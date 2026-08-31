@@ -1,3 +1,11 @@
+"""
+Handlers here are `def`, never `async def`. FastAPI runs an `async def` handler
+on the event loop and a `def` handler in a threadpool, and everything below
+blocks: SQLite reads, model calls, pipeline preparation. Declaring them async
+handed the loop to one request and froze the whole server while it ran, which
+is what made a research pass look like an outage.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -16,13 +24,13 @@ router = APIRouter()
 
 
 @router.get("/articles")
-async def get_articles() -> JSONResponse:
+def get_articles() -> JSONResponse:
     """Get all completed Prompt2Blog articles."""
     return JSONResponse(get_all_completed_articles())
 
 
 @router.delete("/articles/{run_id}")
-async def delete_article(
+def delete_article(
     run_id: str,
     staff_user=Depends(require_staff),
 ) -> JSONResponse:
@@ -40,7 +48,7 @@ async def delete_article(
 
 
 @router.post("/articles/{run_id}/sync")
-async def mark_article_as_synced(run_id: str, request: dict) -> JSONResponse:
+def mark_article_as_synced(run_id: str, request: dict) -> JSONResponse:
     """Mark a Prompt2Blog article as synced to Payload CMS."""
     status = read_status(run_id)
     if not status or status.get("feature") != FEATURE_NAME:
@@ -64,7 +72,7 @@ async def mark_article_as_synced(run_id: str, request: dict) -> JSONResponse:
 
 
 @router.get("/articles/{run_id}/sync")
-async def get_sync_status(run_id: str) -> JSONResponse:
+def get_sync_status(run_id: str) -> JSONResponse:
     """Get Prompt2Blog article sync status."""
     status = read_status(run_id)
     if not status or status.get("feature") != FEATURE_NAME:

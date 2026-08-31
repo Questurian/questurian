@@ -11,7 +11,7 @@ from typing import Any
 
 import pytest
 
-from app.features.prompt2blog.contracts_v4 import GrillQuestion, GrillState
+from app.features.prompt2blog.contracts_v4 import MARKER_KEYS, GrillQuestion, GrillState
 from app.features.prompt2blog.grill_v4 import (
     GrillDependencies,
     advance_grill,
@@ -43,6 +43,21 @@ def _question(**overrides) -> dict[str, Any]:
         "topic": "what should this do for the reader",
         "ask": "Do you want a guide, or do you want to make the case?",
         "recommendation": "My recommendation: a first-timer's guide with a point of view.",
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _done(consensus: str = "A first-timer's guide for someone with a Lima layover.", **overrides) -> dict[str, Any]:
+    """A reply that agrees, with every brief marker covered.
+
+    Agreement needs both halves now: a summary the operator can read, and a
+    brief that can actually be filled (ADR 0033).
+    """
+    payload: dict[str, Any] = {
+        "done": True,
+        "consensus": consensus,
+        "markers_covered": list(MARKER_KEYS),
     }
     payload.update(overrides)
     return payload
@@ -168,7 +183,7 @@ def test_the_grill_stops_at_agreement_rather_than_at_a_count():
     deps = _deps(
         [
             {"done": False, **_question()},
-            {"done": True, "consensus": "A first-timer's guide for someone with a Lima layover."},
+            _done(),
         ]
     )
 
@@ -188,7 +203,7 @@ def test_claiming_to_be_done_without_saying_what_was_agreed_is_not_agreement():
     deps = _deps(
         [
             {"done": False, **_question()},
-            {"done": True, "consensus": "", **_question(question_id="q2")},
+            _done(consensus="", **_question(question_id="q2")),
         ]
     )
 
@@ -214,7 +229,7 @@ def test_an_agreed_grill_will_not_take_another_answer():
     deps = _deps(
         [
             {"done": False, **_question()},
-            {"done": True, "consensus": "Settled."},
+            _done("Settled."),
         ]
     )
     state = answer_grill(start_grill("run-1", SEED, deps), "guide", deps)
@@ -233,7 +248,7 @@ def test_reopening_keeps_what_was_learned_and_drops_the_agreement():
     deps = _deps(
         [
             {"done": False, **_question()},
-            {"done": True, "consensus": "Settled."},
+            _done("Settled."),
             {"done": False, **_question(question_id="q3", ask="What changed?")},
         ]
     )
@@ -307,6 +322,284 @@ def test_the_prompt_forbids_asking_for_credentials():
     assert "what they HAVE" in prompt
 
 
+def test_the_recommendation_is_written_as_the_operator_not_about_them():
+    """The recommendation is the operator's answer, not advice about it.
+
+    Live run cac73671 (2026-08-30 16:42Z) came back with "I'm guessing you
+    recently spent some time there and want to build the piece around your own
+    firsthand experiences". That text is loaded straight into the answer box
+    and sent with one click, so accepting it records the operator saying "I'm
+    guessing you..." about their own trip -- and the brief may then quote it
+    back as verbatim first-hand material, which is excused from fact-checking
+    by design.
+    """
+    prompt = build_next_turn_prompt(
+        GrillState(
+            run_id="r",
+            seed=SEED,
+            status="asking",
+            pending=GrillQuestion(
+                question_id="q1", topic="t", ask="a", recommendation="r"
+            ),
+        )
+    )
+    flat = " ".join(prompt.split())
+
+    assert "STATE THE ANSWER, NOT A SENTENCE ABOUT WHO HOLDS IT" in flat
+    assert "I'm guessing you" in flat, "the failing shape has to be shown, not described"
+    assert 'No "you", no "I"' in flat
+
+
+def test_the_recommendation_may_not_invent_the_operator_s_life():
+    """Writing their answer in first person was the first fix, and it was
+    wrong in one specific way: for a question only they can answer, "write it
+    as them" means inventing a trip they may never have taken.
+
+    An invented experience they accept becomes first-hand material, and
+    first-hand material is exempt from fact-checking by design -- so nothing
+    downstream can catch it.
+    """
+    prompt = build_next_turn_prompt(
+        GrillState(
+            run_id="r",
+            seed=SEED,
+            status="asking",
+            pending=GrillQuestion(
+                question_id="q1", topic="t", ask="a", recommendation="r"
+            ),
+        )
+    )
+    flat = " ".join(prompt.split())
+
+    assert "NEVER INVENT A FACT ABOUT THEIR LIFE" in flat
+    assert "research-led case" in flat
+    assert "Nothing first-hand" in flat
+
+
+def test_the_recommendation_is_asked_for_real_judgment_not_a_hedge():
+    prompt = build_next_turn_prompt(
+        GrillState(
+            run_id="r",
+            seed=SEED,
+            status="asking",
+            pending=GrillQuestion(
+                question_id="q1", topic="t", ask="a", recommendation="r"
+            ),
+        )
+    )
+    flat = " ".join(prompt.split())
+
+    assert "MAKE IT YOUR REAL JUDGMENT" in flat
+    assert "strongly enough to argue with" in flat
+
+
+def test_the_prompt_refuses_two_questions_joined_by_and():
+    """G3 is one question at a time, and the model was packing two.
+
+    Every live grill so far asked double-barrelled questions -- "what angle
+    AND who is it for" -- then declared agreement after two turns, so four
+    things were asked and two were answered.
+    """
+    prompt = build_next_turn_prompt(
+        GrillState(
+            run_id="r",
+            seed=SEED,
+            status="asking",
+            pending=GrillQuestion(
+                question_id="q1", topic="t", ask="a", recommendation="r"
+            ),
+        )
+    )
+    flat = " ".join(prompt.split())
+
+    assert "Ask about ONE thing" in flat
+    assert 'joining two questions with "and", you are asking two' in flat
+
+
+# --- the grill can see its own half now (ADR 0033) -------------------------
+
+
+def test_the_replayed_conversation_carries_the_grill_s_own_draft():
+    """It used to be handed the question and the answer, and nothing else.
+
+    With its own draft missing from the replay it could not tell an answer the
+    operator wrote from its own sentence coming back.
+    """
+    deps = _deps([{"done": False, **_question()}, {"done": False, **_question(question_id="q2")}])
+    state = answer_grill(start_grill("run-1", SEED, deps), "guide, with a pitch", deps)
+
+    replayed = deps.llm.prompts[-1]
+
+    assert "You asked: Do you want a guide" in replayed
+    assert "You drafted this answer for them: My recommendation:" in replayed
+    assert "They wrote, in their own words: guide, with a pitch" in replayed
+    assert state.pending is not None
+
+
+def test_an_accepted_draft_is_shown_back_as_the_grill_s_own_words():
+    """Run 1b441532 (2026-08-30 15:40Z) agreed after two turns on its own
+    guesses, because an accepted draft was indistinguishable from an answer.
+    """
+    draft = _question()["recommendation"]
+    deps = _deps([{"done": False, **_question()}, {"done": False, **_question(question_id="q2")}])
+
+    # The screen pre-fills the box with the draft; one click sends it back.
+    answer_grill(start_grill("run-1", SEED, deps), draft, deps)
+
+    replayed = deps.llm.prompts[-1]
+
+    assert "They sent your draft back untouched" in replayed
+    assert "YOUR words, not theirs" in replayed
+    assert "They wrote, in their own words" not in replayed
+
+
+def test_whitespace_does_not_disguise_an_accepted_draft():
+    draft = _question()["recommendation"]
+    deps = _deps([{"done": False, **_question()}, {"done": False, **_question(question_id="q2")}])
+
+    answer_grill(start_grill("run-1", SEED, deps), f"  {draft}\n", deps)
+
+    assert "They sent your draft back untouched" in deps.llm.prompts[-1]
+
+
+# --- the stop condition is the brief, not a feeling ------------------------
+
+
+def test_agreement_needs_every_marker_not_just_a_summary():
+    """Two turns and a confident summary is not a finished interview.
+
+    The grill stops when the brief can be filled, so a `done` that leaves the
+    brief short asks again instead.
+    """
+    deps = _deps(
+        [
+            {"done": False, **_question()},
+            _done(markers_covered=["form", "reader"], **_question(question_id="q2")),
+            _done(),
+        ]
+    )
+
+    state = answer_grill(start_grill("run-1", SEED, deps), "guide", deps)
+    assert state.status == "asking", "it is short four markers"
+
+    settled = answer_grill(state, "for a first-timer on a layover", deps)
+    assert settled.status == "agreed"
+
+
+def test_the_grill_is_told_which_markers_are_still_missing():
+    deps = _deps([{"done": False, **_question(), "markers_covered": ["form"]}])
+    state = start_grill("run-1", SEED, deps)
+
+    deps.llm.responses.append({"done": False, **_question(question_id="q2")})
+    answer_grill(state, "a guide", deps)
+
+    replayed = deps.llm.prompts[-1]
+    assert "form: the kind of article — COVERED" in replayed
+    assert "fails_if: what would make it a failure — still missing" in replayed
+
+
+def test_marker_progress_is_visible_on_the_run():
+    deps = _deps([{"done": False, **_question(), "markers_covered": ["form", "reader"]}])
+
+    record = grill_stage_record(start_grill("run-1", SEED, deps))
+
+    assert record["markers_covered"] == ["form", "reader"]
+    assert "fails_if" in record["markers_missing"]
+
+
+def test_an_invented_marker_does_not_count_and_does_not_break_anything():
+    # Generous with shape, strict about the six that matter.
+    deps = _deps([{"done": False, **_question(), "markers_covered": ["form", "vibe"]}])
+
+    assert start_grill("run-1", SEED, deps).markers_covered == ["form"]
+
+
+def test_the_grill_and_the_brief_ask_for_the_same_six_things():
+    """A grill that stops one marker short of the brief is a run that dies at
+    the handoff having already paid for the interview.
+    """
+    from app.features.prompt2blog.brief_v4 import REQUIRED_BRIEF_FIELDS
+    from app.features.prompt2blog.contracts_v4 import BRIEF_MARKERS
+
+    assert [field for _, field, _ in BRIEF_MARKERS] == [
+        field for field, _ in REQUIRED_BRIEF_FIELDS
+    ]
+
+
+# --- the livelock run a9959013 hit (2026-08-30 19:29Z) ---------------------
+
+
+def test_answering_a_marker_settles_it_even_when_the_grill_will_not_say_so():
+    """Six turns, four of them the same question about failure.
+
+    Every answer was an accepted draft, and the grill had been told an
+    accepted draft is weak evidence -- so it refused to credit its own
+    question, the checklist never shrank, and it asked again. Progress cannot
+    be an opinion the grill is free to withhold.
+    """
+    deps = _deps(
+        [
+            {"done": False, **_question(asks_about="fails_if")},
+            # It asks again and still claims nothing is covered.
+            {"done": False, **_question(question_id="q2"), "markers_covered": []},
+        ]
+    )
+
+    state = answer_grill(
+        start_grill("run-1", SEED, deps),
+        "It fails if it reads like a top 10 list.",
+        deps,
+    )
+
+    assert "fails_if" in state.markers_covered
+
+
+def test_accepting_a_draft_still_settles_the_marker():
+    # Accepting is answering: they read it and put their name to it.
+    draft = _question()["recommendation"]
+    deps = _deps(
+        [
+            {"done": False, **_question(asks_about="reader")},
+            {"done": False, **_question(question_id="q2"), "markers_covered": []},
+        ]
+    )
+
+    state = answer_grill(start_grill("run-1", SEED, deps), draft, deps)
+
+    assert "reader" in state.markers_covered
+
+
+def test_a_question_still_pending_has_not_settled_anything():
+    # Asked is not answered. Otherwise the grill could clear the whole
+    # checklist by naming markers it never got a reply about.
+    deps = _deps([{"done": False, **_question(asks_about="fails_if"), "markers_covered": []}])
+
+    assert start_grill("run-1", SEED, deps).markers_covered == []
+
+
+def test_an_invented_marker_on_a_question_is_not_carried():
+    deps = _deps([{"done": False, **_question(asks_about="vibe"), "markers_covered": []}])
+
+    assert start_grill("run-1", SEED, deps).pending.asks_about == ""
+
+
+def test_the_prompt_forbids_asking_about_the_same_marker_twice():
+    prompt = build_next_turn_prompt(
+        GrillState(
+            run_id="r",
+            seed=SEED,
+            status="asking",
+            pending=GrillQuestion(
+                question_id="q1", topic="t", ask="a", recommendation="r"
+            ),
+        )
+    )
+    flat = " ".join(prompt.split())
+
+    assert "NEVER ask about a marker twice" in flat
+    assert "Accepting your draft IS answering" in flat
+
+
 # --- what the first real run hit ------------------------------------------
 
 
@@ -333,7 +626,7 @@ def test_two_unusable_replies_carry_what_came_back():
     """
     from app.features.prompt2blog.grill_v4 import GrillUnusableResponse
 
-    deps = _deps([{"done": False}, {"done": True, "consensus": ""}])
+    deps = _deps([{"done": False}, _done(consensus="")])
 
     with pytest.raises(GrillUnusableResponse) as error:
         start_grill("run-1", SEED, deps)
@@ -351,6 +644,8 @@ def test_the_schema_demands_what_the_code_demands():
         "ask",
         "recommendation",
         "consensus",
+        "markers_covered",
+        "asks_about",
     }
 
 
@@ -369,7 +664,10 @@ def test_the_prompt_says_to_return_both_and_leave_one_empty():
 
     # The rule still holds; it just lives with the output shape rather than in
     # the list of rules about how to interview well.
-    assert "every reply carries `ask`, `recommendation` and `consensus`" in flat
+    assert (
+        "every reply carries `ask`, `recommendation`, `consensus`, `markers_covered` "
+        "and `asks_about`" in flat
+    )
     assert "leave `consensus` empty" in flat
 
 
@@ -466,8 +764,15 @@ def test_the_schema_has_nothing_left_to_nest():
     # A flat object has no structure to get wrong.
     from app.features.prompt2blog.grill_v4 import NEXT_TURN_SCHEMA
 
-    assert set(NEXT_TURN_SCHEMA["required"]) == {"done", "ask", "recommendation", "consensus"}
+    assert set(NEXT_TURN_SCHEMA["required"]) == {
+        "done",
+        "ask",
+        "recommendation",
+        "consensus",
+        "markers_covered",
+        "asks_about",
+    }
     assert all(
-        spec.get("type") in {"string", "boolean"}
+        spec.get("type") in {"string", "boolean", "array"}
         for spec in NEXT_TURN_SCHEMA["properties"].values()
     )

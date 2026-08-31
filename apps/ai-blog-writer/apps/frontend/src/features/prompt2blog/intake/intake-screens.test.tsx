@@ -1,10 +1,17 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { BriefScreen } from './components/BriefScreen'
+import { ArticleScreen } from './components/ArticleScreen'
 import { GrillScreen } from './components/GrillScreen'
+import { WorkingScreen } from './components/WorkingScreen'
 import { ResearchScreen } from './components/ResearchScreen'
 import { WorkOrderScreen } from './components/WorkOrderScreen'
-import type { IntakeBrief, IntakeGrill, IntakeWorkOrder } from './intake.types'
+import type {
+  IntakeBrief,
+  IntakeGrill,
+  IntakeWorkOrder,
+  IntakeWriting,
+} from './intake.types'
 
 /**
  * What the intake screens owe the person using them.
@@ -25,11 +32,23 @@ function grill(overrides: Partial<IntakeGrill> = {}): IntakeGrill {
       ask: 'Do you want a guide, or to make the case?',
       recommendation: 'My recommendation: a guide with a point of view.',
       pushback: '',
+      asks_about: 'form',
     },
     consensus: '',
+    markers_covered: [],
+    markers_missing: ['reader', 'fails_if'],
     ...overrides,
   }
 }
+
+describe('the write hand-off', () => {
+  it('actually asks the server to write, rather than doing nothing', async () => {
+    // It was an empty function with a comment saying stage 5 would land it.
+    // Stage 5 shipped, the route existed, and nothing ever called it.
+    const { startWriting } = await import('./intake.api')
+    expect(typeof startWriting).toBe('function')
+  })
+})
 
 describe('the grill screen', () => {
   it('starts with the recommended answer already in the box', () => {
@@ -63,6 +82,102 @@ describe('the grill screen', () => {
     fireEvent.click(screen.getByRole('button', { name: /send/i }))
 
     expect(onAnswer).toHaveBeenCalledWith('guide, but a bit of a pitch')
+  })
+
+  it('reads as a conversation: the seed, then each exchange, then the question', () => {
+    render(
+      <GrillScreen
+        grill={grill({
+          turns: [
+            {
+              question_id: 'q1',
+              topic: 't',
+              ask: 'Who is this for?',
+              recommendation: 'First-timers with three days.',
+              pushback: '',
+              answer: 'people with 3 days and no spanish',
+              accepted_as_drafted: false,
+            },
+          ],
+        })}
+        busy={false}
+        onAnswer={vi.fn()}
+        onApprove={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/lima is no longer simply the stopover/i)).toBeInTheDocument()
+    expect(screen.getByText('Who is this for?')).toBeInTheDocument()
+    expect(screen.getByText(/people with 3 days and no spanish/i)).toBeInTheDocument()
+    expect(screen.getByText(/do you want a guide/i)).toBeInTheDocument()
+  })
+
+  it('marks an accepted suggestion as accepting rather than answering', () => {
+    // The grill agreed with itself after two turns because nothing showed the
+    // difference. It is worth different amounts and it should look different.
+    render(
+      <GrillScreen
+        grill={grill({
+          turns: [
+            {
+              question_id: 'q1',
+              topic: 't',
+              ask: 'Who is this for?',
+              recommendation: 'First-timers with three days.',
+              pushback: '',
+              answer: 'First-timers with three days.',
+              accepted_as_drafted: true,
+            },
+          ],
+        })}
+        busy={false}
+        onAnswer={vi.fn()}
+        onApprove={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/you accepted the suggestion/i)).toBeInTheDocument()
+  })
+
+  it('says what the brief still needs, rather than counting questions', () => {
+    render(
+      <GrillScreen
+        grill={grill({ markers_missing: ['reader', 'fails_if'] })}
+        busy={false}
+        onAnswer={vi.fn()}
+        onApprove={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/who it is for/i)).toBeInTheDocument()
+    expect(screen.getByText(/what would fail/i)).toBeInTheDocument()
+  })
+
+  it('sends on Enter and breaks the line on shift+Enter', () => {
+    const onAnswer = vi.fn()
+    render(
+      <GrillScreen grill={grill()} busy={false} onAnswer={onAnswer} onApprove={vi.fn()} onReopen={vi.fn()} />,
+    )
+    const box = screen.getByRole('textbox')
+
+    fireEvent.keyDown(box, { key: 'Enter', shiftKey: true })
+    expect(onAnswer).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(box, { key: 'Enter' })
+    expect(onAnswer).toHaveBeenCalledWith('My recommendation: a guide with a point of view.')
+  })
+
+  it('lets the suggestion be cleared so the answer can be their own', () => {
+    render(
+      <GrillScreen grill={grill()} busy={false} onAnswer={vi.fn()} onApprove={vi.fn()} onReopen={vi.fn()} />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /clear/i }))
+
+    expect(screen.getByRole('textbox')).toHaveValue('')
   })
 
   it('shows the contradiction above the question that exists to resolve it', () => {
@@ -212,6 +327,7 @@ describe('the research screen', () => {
     source_count: 4,
     claim_count: 9,
     requirement_status: { r1: 'supported', r2: 'unpublished' },
+    findings: {},
     conflicts: [],
     coverage: {
       can_write: true,
@@ -225,7 +341,7 @@ describe('the research screen', () => {
 
   it('offers to write when research carried the piece', () => {
     render(
-      <ResearchScreen research={research} busy={false} onWrite={vi.fn()} onReopen={vi.fn()} />,
+      <ResearchScreen runId="run-1" onChanged={vi.fn()} research={research} busy={false} onWrite={vi.fn()} onReopen={vi.fn()} />,
     )
 
     expect(screen.getByRole('button', { name: /write it/i })).toBeInTheDocument()
@@ -235,6 +351,8 @@ describe('the research screen', () => {
     // The grill is the single exit from every dead end.
     render(
       <ResearchScreen
+        runId="run-1"
+        onChanged={vi.fn()}
         research={{
           ...research,
           coverage: {
@@ -259,6 +377,8 @@ describe('the research screen', () => {
   it('says plainly when more research cannot help', () => {
     render(
       <ResearchScreen
+        runId="run-1"
+        onChanged={vi.fn()}
         research={{
           ...research,
           coverage: {
@@ -276,5 +396,164 @@ describe('the research screen', () => {
     )
 
     expect(screen.getByText(/not something more research can fix/i)).toBeInTheDocument()
+  })
+})
+
+// --- while something is running, and after it stops -----------------------
+
+function writing(overrides: Partial<IntakeWriting> = {}): IntakeWriting {
+  return {
+    state: 'completed',
+    stage: 'complete',
+    stage_label: 'Done',
+    error: null,
+    updated_at: '2026-08-31T04:15:29Z',
+    final_title: 'Lima is no longer simply the stopover before Cusco',
+    word_count: 914,
+    pipeline_status: 'ready_for_staging',
+    readiness_blockers: [],
+    constraint_checks: {},
+    ...overrides,
+  }
+}
+
+describe('the working screen', () => {
+  it('names the question it is searching, and how far along it is', () => {
+    render(
+      <WorkingScreen
+        research={{
+          phase: 'gathering',
+          done: 3,
+          total: 10,
+          current_question: 'What do the tasting menus charge?',
+        }}
+      />,
+    )
+
+    expect(screen.getByText(/searching the web: 4 of 10/i)).toBeInTheDocument()
+    expect(screen.getByText(/what do the tasting menus charge/i)).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3')
+  })
+
+  it('gives structuring its own phase rather than looking like a stall', () => {
+    render(
+      <WorkingScreen
+        research={{ phase: 'structuring', done: 10, total: 10, current_question: '' }}
+      />,
+    )
+
+    expect(screen.getByText(/turning the research into records/i)).toBeInTheDocument()
+  })
+
+  it('says the writing stage in words, not as a stage id', () => {
+    render(
+      <WorkingScreen writing={writing({ state: 'running', stage_label: 'Writing the article' })} />,
+    )
+
+    expect(screen.getByText('Writing the article')).toBeInTheDocument()
+    expect(screen.queryByText(/stage_v3/)).not.toBeInTheDocument()
+  })
+
+  it('says the tab can be closed, because the work is on the server', () => {
+    render(<WorkingScreen writing={writing({ state: 'running' })} />)
+
+    expect(screen.getByText(/you can leave this page/i)).toBeInTheDocument()
+  })
+})
+
+describe('the finished article screen', () => {
+  it('shows the title and the stamp instead of leaving the run invisible', () => {
+    render(<ArticleScreen runId="run-1" writing={writing()} article={null} onReopen={vi.fn()} busy={false} />)
+
+    expect(screen.getByText(/lima is no longer simply the stopover/i)).toBeInTheDocument()
+    expect(screen.getByText(/ready for staging/i)).toBeInTheDocument()
+  })
+
+  it('renders the article once it arrives', () => {
+    render(
+      <ArticleScreen
+        runId="run-1"
+        writing={writing()}
+        article={{
+          run_id: 'r',
+          title: 'T',
+          markdown: '## The elevation contrast\n\nCusco sits at 3,399 meters.',
+          pipeline_status: 'ready_for_staging',
+          readiness_blockers: [],
+          constraint_checks: {},
+          word_count: 914,
+        }}
+        onReopen={vi.fn()}
+        busy={false}
+      />,
+    )
+
+    expect(screen.getByText('The elevation contrast')).toBeInTheDocument()
+    expect(screen.getByText(/cusco sits at 3,399 meters/i)).toBeInTheDocument()
+  })
+
+  it('reports the measured sentence spread and says nothing blocks', () => {
+    render(
+      <ArticleScreen
+        runId="run-1"
+        writing={writing({
+          constraint_checks: {
+            sentence_count: 75,
+            sentence_mean_words: 11.3,
+            sentence_widest_band_share: 0.57,
+            sentences_over_25_words: 1,
+            sentence_variety_note: 'The prose will read as metered. Nothing here blocks.',
+          },
+        })}
+        article={null}
+        onReopen={vi.fn()}
+        busy={false}
+      />,
+    )
+
+    expect(screen.getByText('75')).toBeInTheDocument()
+    expect(screen.getByText('57%')).toBeInTheDocument()
+    expect(screen.getByText(/nothing here blocks/i)).toBeInTheDocument()
+  })
+
+  it('a needs-revision stamp is shown and never obeyed', () => {
+    // ADR 0030: once prose exists nothing blocks. The article is still here.
+    render(
+      <ArticleScreen
+        runId="run-1"
+        writing={writing({
+          pipeline_status: 'needs_revision',
+          readiness_blockers: ['It is forty one words long.'],
+        })}
+        article={null}
+        onReopen={vi.fn()}
+        busy={false}
+      />,
+    )
+
+    expect(screen.getByText(/written, with notes/i)).toBeInTheDocument()
+    expect(screen.getByText(/forty one words long/i)).toBeInTheDocument()
+    expect(screen.getByText(/lima is no longer/i)).toBeInTheDocument()
+  })
+
+  it('a failed run says where it stopped and keeps the way back', () => {
+    const onReopen = vi.fn()
+    render(
+      <ArticleScreen
+        runId="run-1"
+        writing={writing({
+          state: 'failed',
+          stage_label: 'Writing the article',
+          error: 'The writer refused.',
+        })}
+        article={null}
+        onReopen={onReopen}
+        busy={false}
+      />,
+    )
+
+    expect(screen.getByText('The writer refused.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /back to the grill/i }))
+    expect(onReopen).toHaveBeenCalled()
   })
 })
