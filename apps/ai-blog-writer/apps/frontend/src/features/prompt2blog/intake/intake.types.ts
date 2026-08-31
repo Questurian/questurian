@@ -93,11 +93,30 @@ export interface IntakeCoverage {
   findings: string[]
 }
 
+/** One fact research found, and where it came from. */
+export interface ResearchClaim {
+  claim_id: string
+  text: string
+  confidence: string
+  venue: string
+  venue_note: string
+  sources: { title: string; url: string; source_type: string }[]
+}
+
+/** What came back for one question. */
+export interface ResearchFinding {
+  status: string
+  gap: string
+  claims: ResearchClaim[]
+}
+
 export interface IntakeResearch {
   work_order_fingerprint: string
   source_count: number
   claim_count: number
   requirement_status: Record<string, string>
+  /** What was actually found, per question. */
+  findings: Record<string, ResearchFinding>
   conflicts: string[]
   coverage: IntakeCoverage
 }

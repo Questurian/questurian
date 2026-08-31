@@ -774,6 +774,37 @@ def research_stage_record(
         "requirement_status": {
             item.requirement_id: item.status for item in evidence.requirements
         },
+        # What research actually found, per question. The screen used to show
+        # "q3 — partly answered" and nothing else, which tells the operator
+        # neither what was asked nor what came back, and leaves the one
+        # decision they have to make unmakeable.
+        "findings": {
+            item.requirement_id: {
+                "status": item.status,
+                "gap": item.gap,
+                "claims": [
+                    {
+                        "claim_id": claim.claim_id,
+                        "text": claim.text,
+                        "confidence": claim.confidence,
+                        "venue": claim.venue,
+                        "venue_note": claim.venue_note,
+                        "sources": [
+                            {
+                                "title": source.title,
+                                "url": str(source.url) if source.url else "",
+                                "source_type": source.source_type,
+                            }
+                            for source in evidence.sources
+                            if source.source_id in claim.source_ids
+                        ],
+                    }
+                    for claim in evidence.claims
+                    if item.requirement_id in claim.requirement_ids
+                ],
+            }
+            for item in evidence.requirements
+        },
         "conflicts": [item.summary for item in evidence.conflicts],
         "gathered": {
             requirement_id: {

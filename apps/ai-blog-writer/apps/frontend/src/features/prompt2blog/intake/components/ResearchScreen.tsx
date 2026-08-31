@@ -15,6 +15,8 @@ import { VenueCheck } from './VenueCheck'
 
 interface ResearchScreenProps {
   runId: string
+  /** The questions themselves, which live on the work order, not the dossier. */
+  questions?: Record<string, { question: string; kind: string }>
   research: IntakeResearch
   busy: boolean
   onWrite: () => void
@@ -31,6 +33,7 @@ const STATUS_WORDS: Record<string, string> = {
 
 export function ResearchScreen({
   runId,
+  questions,
   research,
   busy,
   onWrite,
@@ -48,14 +51,53 @@ export function ResearchScreen({
         {research.source_count} sources, {research.claim_count} facts.
       </p>
 
-      <ul className="p2b-questions">
-        {Object.entries(research.requirement_status).map(([id, status]) => (
-          <li key={id}>
-            <span className="p2b-question-text">{id}</span>
-            <span className="p2b-kind">{STATUS_WORDS[status] ?? status}</span>
-          </li>
-        ))}
-      </ul>
+      {/* The questions and what came back for each. This was a list of ids
+          and statuses -- "q3, partly answered" -- which says neither what was
+          asked nor what was found, and leaves the operator's own decision
+          unmakeable. */}
+      <ol className="p2b-findings">
+        {Object.entries(research.requirement_status).map(([id, status]) => {
+          const finding = research.findings?.[id]
+          const asked = questions?.[id]
+          return (
+            <li key={id} className="p2b-finding">
+              <div className="p2b-finding-head">
+                <span className={`p2b-kind${asked?.kind === 'load_bearing' ? ' p2b-kind-core' : ''}`}>
+                  {asked?.kind === 'texture' ? 'texture' : 'load-bearing'}
+                </span>
+                <span className="p2b-finding-status">{STATUS_WORDS[status] ?? status}</span>
+              </div>
+
+              <p className="p2b-finding-ask">{asked?.question ?? id}</p>
+
+              {finding?.claims?.length ? (
+                <ul className="p2b-finding-claims">
+                  {finding.claims.map(claim => (
+                    <li key={claim.claim_id}>
+                      {claim.text}
+                      {claim.sources.length > 0 && (
+                        <span className="p2b-finding-source">
+                          {claim.sources
+                            .map(source => source.title)
+                            .filter(Boolean)
+                            .join(', ')}
+                        </span>
+                      )}
+                      {claim.venue_note && (
+                        <span className="p2b-finding-note">You noted: {claim.venue_note}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="p2b-finding-empty">Nothing found.</p>
+              )}
+
+              {finding?.gap && <p className="p2b-finding-gap">{finding.gap}</p>}
+            </li>
+          )
+        })}
+      </ol>
 
       {research.conflicts.length > 0 && (
         <div className="p2b-material">

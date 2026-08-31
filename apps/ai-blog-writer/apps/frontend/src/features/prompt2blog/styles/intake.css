@@ -958,3 +958,97 @@
   padding: var(--space-2) var(--space-4);
   font-size: 0.875rem;
 }
+
+/* ---------- what research found, question by question ---------- */
+
+/*
+ * This was a list of ids and statuses: "q3, partly answered". It says neither
+ * what was asked nor what came back, and the operator's own decision at the
+ * gate cannot be made from it.
+ */
+
+.p2b-findings {
+  list-style: none;
+  counter-reset: finding;
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.p2b-finding {
+  counter-increment: finding;
+  padding: var(--space-4);
+  background: var(--cream-dark);
+  border-radius: var(--radius-md);
+}
+
+.p2b-finding-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.p2b-finding-status {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.p2b-finding-ask {
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.p2b-finding-ask::before {
+  content: counter(finding) ". ";
+  color: var(--muted);
+}
+
+.p2b-finding-claims {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* Where it came from, small and after the fact itself. The article never
+   carries attribution; this screen is the one place it belongs. */
+.p2b-finding-source {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.p2b-finding-note {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--accent);
+  font-size: 0.8125rem;
+}
+
+.p2b-finding-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.p2b-finding-gap {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}

@@ -142,6 +142,14 @@ export function Prompt2BlogPage() {
           (state.research.coverage.can_write ? (
             <ResearchScreen
               runId={state.run_id}
+              // The questions live on the work order and the answers on the
+              // dossier; neither is much use without the other.
+              questions={Object.fromEntries(
+                (state.work_order?.requirements ?? []).map(item => [
+                  item.requirement_id,
+                  { question: item.question, kind: item.kind },
+                ]),
+              )}
               research={state.research}
               busy={intake.busy}
               onWrite={intake.write}

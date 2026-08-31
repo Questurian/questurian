@@ -327,6 +327,7 @@ describe('the research screen', () => {
     source_count: 4,
     claim_count: 9,
     requirement_status: { r1: 'supported', r2: 'unpublished' },
+    findings: {},
     conflicts: [],
     coverage: {
       can_write: true,
