@@ -435,6 +435,18 @@ class EvidenceClaim(V4ContractModel):
     requirement_ids: list[str] = Field(min_length=1)
     as_of: date | None = None
     confidence: EvidenceConfidence
+    # The place this claim would send a reader: a tour, a restaurant, a bar, a
+    # museum. Set only when the claim names somewhere bookable or visitable,
+    # so the operator can be shown a short list rather than every fact.
+    #
+    # Research can confirm a site resolves and a price is published. It cannot
+    # see that the last post was 2024 and the checkout is janky. Moravia Tours
+    # came back correct in every word and was a business winding down, which is
+    # not a fact on a page but the absence of recent activity. That judgment
+    # needs a person, and this field is how they are given the short list.
+    venue: str = ""
+    # What the operator said about it after looking. Reaches the writer.
+    venue_note: str = ""
 
     @model_validator(mode="after")
     def validate_unique_links(self) -> "EvidenceClaim":

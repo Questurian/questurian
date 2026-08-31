@@ -72,7 +72,16 @@ EVIDENCE_SOURCE_FIELDS = frozenset(
      "source_type", "material_type", "notes"}
 )
 EVIDENCE_CLAIM_FIELDS = frozenset(
-    {"claim_id", "text", "source_ids", "requirement_ids", "as_of", "confidence"}
+    {
+        "claim_id",
+        "text",
+        "source_ids",
+        "requirement_ids",
+        "as_of",
+        "confidence",
+        "venue",
+        "venue_note",
+    }
 )
 EVIDENCE_REQUIREMENT_FIELDS = frozenset({"requirement_id", "status", "claim_ids", "gap"})
 EVIDENCE_FINDING_FIELDS = frozenset({"assumption_id", "verdict", "basis", "claim_ids"})
@@ -429,6 +438,7 @@ EVIDENCE_SCHEMA = require_non_empty({
                         "type": "string",
                         "enum": list(get_args(EvidenceConfidence)),
                     },
+                    "venue": {"type": "string"},
                 },
                 "required": ["claim_id", "text", "source_ids", "requirement_ids", "confidence"],
             },
@@ -618,6 +628,12 @@ Rules:
 - `confidence` on a claim is one of: high, medium, low. An answer that is
   genuinely a range is still `supported` at `medium` or `low`; it does not
   become `partial` for being approximate.
+- Set `venue` on a claim that names somewhere a reader could actually go: a
+  tour operator, a restaurant, a bar, a museum, a shop, anything bookable or
+  visitable. Put the name of the place there and nothing else. Leave it empty
+  for a claim that is only a fact -- an elevation, a visitor count, a date. A
+  person checks these before the article recommends them, and a list with every
+  fact in it is a list nobody reads.
 - A `conflict` records two or more claims that disagree, and must list their
   claim ids. If you cannot name at least two claims in conflict, it is not a
   conflict -- leave it out.

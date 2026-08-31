@@ -49,8 +49,11 @@ from .coverage_v4 import CoverageVerdict, assess_coverage
 from .gate_v4 import (
     GateAnswerRefused,
     answer_requirement,
+    drop_venue,
     mark_unpublished,
+    note_venue,
     omit_requirement,
+    venues_to_check,
 )
 from .contracts_v4 import (
     EvidencePackage,
@@ -464,6 +467,53 @@ def settle_gate(
                     requirement_id,
                 }
             ),
+            STATE_KEY: json.loads(evidence.model_dump_json()),
+        },
+    )
+    return verdict
+
+
+def review_venues(run_id: str) -> list[dict[str, Any]]:
+    """The places this run would send a reader, for a person to look at."""
+    return venues_to_check(load_evidence(run_id))
+
+
+def settle_venue(
+    run_id: str,
+    services: IntakeServices,
+    *,
+    claim_id: str,
+    drop: bool = False,
+    note: str | None = None,
+) -> CoverageVerdict:
+    """Record what the operator saw when they looked at a place.
+
+    No model call. Dropping one can put the run back behind the gate, when the
+    dropped place was a question's only support -- which is correct: an article
+    must not rest on a claim its operator looked at and rejected.
+    """
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+    notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
+
+    evidence = (
+        drop_venue(evidence, claim_id=claim_id)
+        if drop
+        else note_venue(evidence, claim_id=claim_id, note=note or "")
+    )
+
+    verdict = assess_coverage(work_order, evidence)
+    _record(
+        services,
+        run_id,
+        RESEARCH_STAGE,
+        {
+            **research_stage_record(evidence, notes),
+            "coverage": verdict.as_record(),
+            "operator_settled": _stage_data(run_id, RESEARCH_STAGE).get(
+                "operator_settled"
+            )
+            or [],
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )

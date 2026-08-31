@@ -34,6 +34,7 @@ from ..gate_v4 import GateAnswerRefused
 from ..intake_v4 import (
     IntakeServices,
     blocking_questions,
+    review_venues,
     answer_intake,
     apply_cut,
     approve_brief,
@@ -45,6 +46,7 @@ from ..intake_v4 import (
     plan_research,
     reopen_intake,
     settle_gate,
+    settle_venue,
     writing_request,
 )
 from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_input_artifact
@@ -365,6 +367,44 @@ async def settle_the_gate(
         source_url=request.source_url,
         unpublished_note=request.unpublished_note,
         omit=request.omit,
+    )
+    return JSONResponse(intake_state(run_id))
+
+
+class VenueMarkRequest(BaseModel):
+    claim_id: str = Field(min_length=1)
+    # Drop it, or say what you saw. Marking it fine is simply not calling this.
+    drop: bool = False
+    note: str | None = None
+
+
+@router.get("/{run_id}/venues")
+async def read_venues(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The places this run would send a reader.
+
+    Only claims naming somewhere bookable or visitable, so the list is short
+    enough to actually look at.
+    """
+    return JSONResponse({"venues": _handle(review_venues, run_id)})
+
+
+@router.post("/{run_id}/venues")
+async def mark_venue(
+    run_id: str, request: VenueMarkRequest, _staff=Depends(require_staff)
+) -> JSONResponse:
+    """Record what the operator saw when they looked."""
+    if request.drop == (request.note is not None):
+        raise HTTPException(
+            status_code=400,
+            detail="Either drop it, or say what you saw. Not both, and not neither.",
+        )
+    _handle(
+        settle_venue,
+        run_id,
+        _services(),
+        claim_id=request.claim_id,
+        drop=request.drop,
+        note=request.note,
     )
     return JSONResponse(intake_state(run_id))
 

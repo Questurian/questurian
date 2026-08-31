@@ -262,6 +262,104 @@ def _cost_of_omitting(work_order: "Prompt2BlogWorkOrder", requirement_id: str) -
     )
 
 
+def venues_to_check(evidence: EvidencePackage) -> list[dict[str, Any]]:
+    """The places the article would send a reader, for a person to look at.
+
+    Only claims that name somewhere bookable or visitable. In run 76b36468 that
+    was five of nineteen claims, two of them the same operator: a two minute
+    job, because most claims are facts rather than places.
+    """
+    seen: set[str] = set()
+    venues: list[dict[str, Any]] = []
+    for claim in evidence.claims:
+        name = _safe_str(claim.venue)
+        if not name or name.casefold() in seen:
+            continue
+        seen.add(name.casefold())
+        urls = [
+            str(source.url)
+            for source in evidence.sources
+            if source.source_id in claim.source_ids and source.url
+        ]
+        venues.append(
+            {
+                "claim_id": claim.claim_id,
+                "venue": name,
+                "text": claim.text,
+                "urls": urls,
+                "note": _safe_str(claim.venue_note),
+            }
+        )
+    return venues
+
+
+def note_venue(
+    evidence: EvidencePackage,
+    *,
+    claim_id: str,
+    note: str,
+) -> EvidencePackage:
+    """Attach what the operator saw. Reaches the writer with the claim."""
+    cleaned = _safe_str(note)
+    if not cleaned:
+        raise GateAnswerRefused("A note cannot be empty.")
+    payload = evidence.model_dump(mode="json")
+    found = False
+    for claim in payload["claims"]:
+        if claim["claim_id"] == claim_id:
+            claim["venue_note"] = cleaned
+            found = True
+    if not found:
+        raise GateAnswerRefused(f"No claim called {claim_id}.")
+    return EvidencePackage.model_validate(payload)
+
+
+def drop_venue(evidence: EvidencePackage, *, claim_id: str) -> EvidencePackage:
+    """Take a place out of the dossier entirely.
+
+    Moravia Tours was correct in every word and was a business winding down.
+    A claim the operator has looked at and rejected must not reach the writer,
+    because the writer has no way to tell.
+
+    A question left with nothing behind it becomes `partial` again rather than
+    silently staying supported, so the gate can say so and the operator decides
+    what to do about it. Quietly leaving it supported would publish an article
+    resting on a claim that was deleted for being wrong.
+    """
+    payload = evidence.model_dump(mode="json")
+    if not any(claim["claim_id"] == claim_id for claim in payload["claims"]):
+        raise GateAnswerRefused(f"No claim called {claim_id}.")
+
+    payload["claims"] = [
+        claim for claim in payload["claims"] if claim["claim_id"] != claim_id
+    ]
+    surviving = {claim["claim_id"] for claim in payload["claims"]}
+    for requirement in payload["requirements"]:
+        kept = [c for c in requirement["claim_ids"] if c in surviving]
+        if kept == requirement["claim_ids"]:
+            continue
+        requirement["claim_ids"] = kept
+        if requirement["status"] == "supported" and not kept:
+            requirement["status"] = "partial"
+            requirement["gap"] = (
+                "Its only support was a place the operator checked and rejected."
+            )
+    payload["conflicts"] = [
+        conflict
+        for conflict in payload.get("conflicts", [])
+        if len([c for c in conflict["claim_ids"] if c in surviving]) >= 2
+    ]
+    for conflict in payload["conflicts"]:
+        conflict["claim_ids"] = [c for c in conflict["claim_ids"] if c in surviving]
+    payload["premise_findings"] = [
+        finding
+        for finding in payload.get("premise_findings", [])
+        if all(c in surviving for c in finding["claim_ids"])
+    ]
+    logger.info("Operator dropped the venue on claim %s", claim_id)
+    return EvidencePackage.model_validate(payload)
+
+
 def mark_unpublished(
     evidence: EvidencePackage,
     *,

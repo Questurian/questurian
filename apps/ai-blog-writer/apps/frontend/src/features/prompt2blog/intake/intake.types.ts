@@ -147,6 +147,21 @@ export interface GateQuestion {
   found: string[]
 }
 
+/**
+ * Somewhere the article would send a reader.
+ *
+ * Research can confirm a site resolves and a price is published. It cannot see
+ * that the last post was 2024 and the checkout is janky, which is not a fact on
+ * a page but the absence of recent activity.
+ */
+export interface VenueToCheck {
+  claim_id: string
+  venue: string
+  text: string
+  urls: string[]
+  note: string
+}
+
 /** The finished article. Its own call: the state is polled, this is not. */
 export interface IntakeArticle {
   run_id: string

@@ -1,4 +1,5 @@
 import type { IntakeResearch } from '../intake.types'
+import { VenueCheck } from './VenueCheck'
 
 /**
  * What research found, and whether it is enough.
@@ -13,10 +14,12 @@ import type { IntakeResearch } from '../intake.types'
  */
 
 interface ResearchScreenProps {
+  runId: string
   research: IntakeResearch
   busy: boolean
   onWrite: () => void
   onReopen: () => void
+  onChanged: () => void
 }
 
 const STATUS_WORDS: Record<string, string> = {
@@ -26,7 +29,14 @@ const STATUS_WORDS: Record<string, string> = {
   unpublished: 'nobody publishes this',
 }
 
-export function ResearchScreen({ research, busy, onWrite, onReopen }: ResearchScreenProps) {
+export function ResearchScreen({
+  runId,
+  research,
+  busy,
+  onWrite,
+  onReopen,
+  onChanged,
+}: ResearchScreenProps) {
   const coverage = research.coverage
   const canWrite = coverage.can_write
 
@@ -76,6 +86,9 @@ export function ResearchScreen({ research, busy, onWrite, onReopen }: ResearchSc
           )}
         </div>
       )}
+
+      {/* Liveness, not a gate. Skippable in one click. */}
+      {canWrite && <VenueCheck runId={runId} onChanged={onChanged} />}
 
       <div className="p2b-intake-actions">
         {canWrite ? (

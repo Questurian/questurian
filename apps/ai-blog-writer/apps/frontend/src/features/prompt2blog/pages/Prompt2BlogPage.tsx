@@ -141,10 +141,12 @@ export function Prompt2BlogPage() {
           // screen settles the questions in place instead.
           (state.research.coverage.can_write ? (
             <ResearchScreen
+              runId={state.run_id}
               research={state.research}
               busy={intake.busy}
               onWrite={intake.write}
               onReopen={intake.reopen}
+              onChanged={intake.refresh}
             />
           ) : (
             <GateScreen

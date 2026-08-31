@@ -340,7 +340,7 @@ describe('the research screen', () => {
 
   it('offers to write when research carried the piece', () => {
     render(
-      <ResearchScreen research={research} busy={false} onWrite={vi.fn()} onReopen={vi.fn()} />,
+      <ResearchScreen runId="run-1" onChanged={vi.fn()} research={research} busy={false} onWrite={vi.fn()} onReopen={vi.fn()} />,
     )
 
     expect(screen.getByRole('button', { name: /write it/i })).toBeInTheDocument()
@@ -350,6 +350,8 @@ describe('the research screen', () => {
     // The grill is the single exit from every dead end.
     render(
       <ResearchScreen
+        runId="run-1"
+        onChanged={vi.fn()}
         research={{
           ...research,
           coverage: {
@@ -374,6 +376,8 @@ describe('the research screen', () => {
   it('says plainly when more research cannot help', () => {
     render(
       <ResearchScreen
+        runId="run-1"
+        onChanged={vi.fn()}
         research={{
           ...research,
           coverage: {

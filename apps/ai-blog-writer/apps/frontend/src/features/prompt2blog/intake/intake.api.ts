@@ -1,6 +1,11 @@
 import { apiFetch } from '../../../shared/api/client/apiFetch'
 import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
-import type { GateQuestion, IntakeArticle, IntakeState } from './intake.types'
+import type {
+  GateQuestion,
+  IntakeArticle,
+  IntakeState,
+  VenueToCheck,
+} from './intake.types'
 
 /**
  * One call per move the operator can make.
@@ -165,4 +170,21 @@ export function settleGate(
   },
 ): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/gate`, body)
+}
+
+/** The places this run would send a reader, for a person to look at. */
+export async function readVenues(runId: string): Promise<{ venues: VenueToCheck[] }> {
+  const response = await apiFetch(`${INTAKE}/${runId}/venues`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the places to check.')
+  }
+  return (await response.json()) as { venues: VenueToCheck[] }
+}
+
+/** Record what the operator saw. Drop it, or say what you found. */
+export function markVenue(
+  runId: string,
+  body: { claim_id: string; drop?: boolean; note?: string },
+): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/venues`, body)
 }
