@@ -99,3 +99,14 @@ export function cutWorkOrder(
 export function doResearch(runId: string): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/research`)
 }
+
+/**
+ * Hand the settled run to the writer.
+ *
+ * The same run id all the way through: the article is written onto the run the
+ * seed opened, so the receipt covers intake and writing together. Answers 202
+ * — the graph runs in the background and the page follows the run from there.
+ */
+export function startWriting(runId: string): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/write`)
+}
