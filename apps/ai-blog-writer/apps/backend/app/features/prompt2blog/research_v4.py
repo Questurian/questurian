@@ -538,6 +538,11 @@ def build_gather_prompt(
     """
     return f"""Research one question for a travel article about {brief.location}.
 
+EVERYTHING BELOW IS IN {brief.location}. If a place named in the question also
+exists somewhere else in the world, it is the one in {brief.location} that is
+meant. Answering about the other one is worse than not answering: it comes back
+looking like a found fact and nothing downstream can tell.
+
 THE QUESTION
 {requirement.question}
 

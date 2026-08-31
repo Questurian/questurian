@@ -161,6 +161,7 @@ export function settleGate(
     answer?: string
     source_url?: string
     unpublished_note?: string
+    omit?: boolean
   },
 ): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/gate`, body)

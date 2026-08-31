@@ -49,6 +49,13 @@ def _evidence(**overrides) -> EvidencePackage:
                 "requirement_ids": ["q1"],
                 "confidence": "high",
             },
+            {
+                "claim_id": "c30",
+                "text": "The Morro is planted with guadua and flowering shrubs.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q5"],
+                "confidence": "medium",
+            },
         ],
         "requirements": [
             {
@@ -58,6 +65,7 @@ def _evidence(**overrides) -> EvidencePackage:
                 "gap": "No per-person price is published on its site.",
             },
             {"requirement_id": "q1", "status": "supported", "claim_ids": ["c20"]},
+            {"requirement_id": "q5", "status": "supported", "claim_ids": ["c30"]},
         ],
     }
     payload.update(overrides)
@@ -214,3 +222,197 @@ def test_the_gate_accepts_unpublished_as_answered():
         _evidence(), requirement_id="q3", note="Not published anywhere."
     )
     assert assess_coverage(work_order, settled).can_write is True
+
+
+# --- dropping the question altogether --------------------------------------
+
+
+def _work_order(*requirements):
+    from app.features.prompt2blog.contracts_v4 import (
+        Prompt2BlogWorkOrder,
+        WorkOrderReference,
+        WorkOrderRequirement,
+        WorkOrderScope,
+    )
+
+    return Prompt2BlogWorkOrder(
+        work_order_fingerprint="wo-1",
+        brief_fingerprint="bf-1",
+        primary_subject="Medellin",
+        scope=WorkOrderScope(
+            mode="single_subject",
+            references=[WorkOrderReference(name="Medellin", role="primary_subject")],
+        ),
+        requirements=[WorkOrderRequirement(**r) for r in requirements],
+    )
+
+
+def _pair():
+    # q1 is texture and answered, as a real work order's would be. Without one
+    # the dossier has nothing a reader would enjoy and the gate blocks for
+    # that instead, which is a different rule doing its own job.
+    return _evidence(), _work_order(
+        {"requirement_id": "q3", "question": "Prices?", "kind": "load_bearing"},
+        {"requirement_id": "q1", "question": "Visitors?", "kind": "load_bearing"},
+        {"requirement_id": "q5", "question": "What grows there?", "kind": "texture"},
+    )
+
+
+def test_omitting_drops_the_question_and_says_what_it_costs():
+    from app.features.prompt2blog.gate_v4 import omit_requirement
+
+    evidence, work_order = _pair()
+    settled, trimmed, cost = omit_requirement(
+        evidence, work_order, requirement_id="q3"
+    )
+
+    assert [r.requirement_id for r in trimmed.requirements] == ["q1", "q5"]
+    assert [r.requirement_id for r in settled.requirements] == ["q1", "q5"]
+    assert "can no longer claim" in cost
+    assert "Prices?" in cost
+
+
+def test_a_claim_that_served_only_the_dropped_question_goes_with_it():
+    from app.features.prompt2blog.gate_v4 import omit_requirement
+
+    evidence, work_order = _pair()
+    settled, _trimmed, _cost = omit_requirement(
+        evidence, work_order, requirement_id="q3"
+    )
+
+    assert "c10" not in {c.claim_id for c in settled.claims}
+    assert "c20" in {c.claim_id for c in settled.claims}
+
+
+def test_a_claim_still_serving_another_question_survives():
+    """The fact is doing work elsewhere, so only the link goes."""
+    from app.features.prompt2blog.gate_v4 import omit_requirement
+
+    evidence = _evidence(
+        claims=[
+            {
+                "claim_id": "c10",
+                "text": "Moravia Tours was co-founded by community leaders.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q3", "q1"],
+                "confidence": "high",
+            }
+        ],
+        requirements=[
+            {"requirement_id": "q3", "status": "partial", "claim_ids": ["c10"], "gap": "No price."},
+            {"requirement_id": "q1", "status": "supported", "claim_ids": ["c10"]},
+        ],
+    )
+    settled, _trimmed, _cost = omit_requirement(
+        evidence,
+        _work_order(
+            {"requirement_id": "q3", "question": "Prices?", "kind": "load_bearing"},
+            {"requirement_id": "q1", "question": "Visitors?", "kind": "load_bearing"},
+        ),
+        requirement_id="q3",
+    )
+
+    survivor = next(c for c in settled.claims if c.claim_id == "c10")
+    assert survivor.requirement_ids == ["q1"]
+
+
+def test_the_last_question_cannot_be_dropped():
+    from app.features.prompt2blog.gate_v4 import omit_requirement
+
+    evidence = _evidence(
+        claims=[
+            {
+                "claim_id": "c10",
+                "text": "Something.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q3"],
+                "confidence": "high",
+            }
+        ],
+        requirements=[{"requirement_id": "q3", "status": "partial", "claim_ids": ["c10"], "gap": "g"}],
+    )
+
+    with pytest.raises(GateAnswerRefused, match="last question"):
+        omit_requirement(
+            evidence,
+            _work_order({"requirement_id": "q3", "question": "Prices?", "kind": "load_bearing"}),
+            requirement_id="q3",
+        )
+
+
+def test_omitting_can_still_leave_a_dossier_with_nothing_worth_reading():
+    """A different rule, doing its own job.
+
+    Dropping the question that carried all the texture leaves a dossier that is
+    all proof, which is exactly what made the audited Lima run unreadable. The
+    gate says so rather than letting it through.
+    """
+    from app.features.prompt2blog.coverage_v4 import assess_coverage
+    from app.features.prompt2blog.gate_v4 import omit_requirement
+
+    evidence = _evidence(
+        claims=[
+            {
+                "claim_id": "c10",
+                "text": "Moravia Tours was co-founded by community leaders.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q3"],
+                "confidence": "high",
+            },
+            {
+                "claim_id": "c20",
+                "text": "Comuna 13 drew a documented visitor count.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q1"],
+                "confidence": "high",
+            },
+        ],
+        requirements=[
+            {"requirement_id": "q3", "status": "partial", "claim_ids": ["c10"], "gap": "No price."},
+            {"requirement_id": "q1", "status": "supported", "claim_ids": ["c20"]},
+        ],
+    )
+    work_order = _work_order(
+        {"requirement_id": "q3", "question": "Prices?", "kind": "texture"},
+        {"requirement_id": "q1", "question": "Visitors?", "kind": "load_bearing"},
+    )
+
+    settled, trimmed, _cost = omit_requirement(
+        evidence, work_order, requirement_id="q3"
+    )
+    verdict = assess_coverage(trimmed, settled)
+
+    assert verdict.can_write is False
+    assert verdict.reason == "nothing_worth_reading"
+
+
+def test_dropping_the_last_load_bearing_question_is_refused():
+    """An all-texture work order is a mood, not a piece, and the contract
+    refuses it anyway."""
+    from app.features.prompt2blog.gate_v4 import omit_requirement
+
+    evidence, _ = _pair()
+
+    with pytest.raises(GateAnswerRefused, match="last load-bearing"):
+        omit_requirement(
+            evidence,
+            _work_order(
+                {"requirement_id": "q3", "question": "Prices?", "kind": "load_bearing"},
+                {"requirement_id": "q1", "question": "Colour?", "kind": "texture"},
+                {"requirement_id": "q5", "question": "Plants?", "kind": "texture"},
+            ),
+            requirement_id="q3",
+        )
+
+
+def test_omitting_unblocks_the_run():
+    from app.features.prompt2blog.coverage_v4 import assess_coverage
+    from app.features.prompt2blog.gate_v4 import omit_requirement
+
+    evidence, work_order = _pair()
+    assert assess_coverage(work_order, evidence).can_write is False
+
+    settled, trimmed, _cost = omit_requirement(
+        evidence, work_order, requirement_id="q3"
+    )
+    assert assess_coverage(trimmed, settled).can_write is True

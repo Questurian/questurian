@@ -35,28 +35,32 @@ function Question({
   question: GateQuestion
   onSettled: () => void
 }) {
-  const [mode, setMode] = useState<'idle' | 'answer' | 'unpublished'>('idle')
+  const [mode, setMode] = useState<'idle' | 'answer' | 'unpublished' | 'omit'>('idle')
   const [text, setText] = useState('')
   const [url, setUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function send() {
-    if (!text.trim()) return
+  async function send(body: Parameters<typeof settleGate>[1]) {
     setSaving(true)
     setError(null)
     try {
-      await settleGate(runId, {
-        requirement_id: question.requirement_id,
-        ...(mode === 'answer'
-          ? { answer: text, source_url: url.trim() || undefined }
-          : { unpublished_note: text }),
-      })
+      await settleGate(runId, body)
       onSettled()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'That could not be saved.')
       setSaving(false)
     }
+  }
+
+  function submit() {
+    if (!text.trim()) return
+    void send({
+      requirement_id: question.requirement_id,
+      ...(mode === 'answer'
+        ? { answer: text, source_url: url.trim() || undefined }
+        : { unpublished_note: text }),
+    })
   }
 
   return (
@@ -88,6 +92,42 @@ function Question({
           >
             Nobody publishes this
           </button>
+          <button
+            type="button"
+            className="p2b-secondary"
+            onClick={() => setMode('omit')}
+          >
+            Drop the question
+          </button>
+        </div>
+      ) : mode === 'omit' ? (
+        <div className="p2b-gate-form">
+          {/* Said once, plainly, then obeyed. Cutting a load-bearing question
+              is a real decision and it is allowed to be wrong (ADR 0030). */}
+          <p className="p2b-gate-gap">
+            Drop this and the article can no longer claim anything that rested on
+            it. Everything else research found is kept.
+          </p>
+          {error && <p className="p2b-gate-error">{error}</p>}
+          <div className="p2b-intake-actions">
+            <button
+              type="button"
+              onClick={() =>
+                void send({ requirement_id: question.requirement_id, omit: true })
+              }
+              disabled={saving}
+            >
+              {saving ? 'Dropping' : 'Drop it and continue'}
+            </button>
+            <button
+              type="button"
+              className="p2b-secondary"
+              onClick={() => setMode('idle')}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       ) : (
         <div className="p2b-gate-form">
@@ -140,7 +180,7 @@ function Question({
           {error && <p className="p2b-gate-error">{error}</p>}
 
           <div className="p2b-intake-actions">
-            <button type="button" onClick={send} disabled={saving || !text.trim()}>
+            <button type="button" onClick={submit} disabled={saving || !text.trim()}>
               {saving ? 'Saving' : 'Save and continue'}
             </button>
             <button

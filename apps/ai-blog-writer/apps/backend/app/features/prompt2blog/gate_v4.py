@@ -31,7 +31,12 @@ import logging
 from datetime import date
 from typing import Any
 
-from .contracts_v4 import EvidenceClaim, EvidencePackage, EvidenceSource
+from .contracts_v4 import (
+    EvidenceClaim,
+    EvidencePackage,
+    EvidenceSource,
+    Prompt2BlogWorkOrder,
+)
 from .support import _safe_str
 
 logger = logging.getLogger(__name__)
@@ -147,6 +152,114 @@ def answer_requirement(
         "Operator answered %s at the research gate", requirement_id
     )
     return EvidencePackage.model_validate(payload)
+
+
+def omit_requirement(
+    evidence: EvidencePackage,
+    work_order: "Prompt2BlogWorkOrder",
+    *,
+    requirement_id: str,
+) -> tuple[EvidencePackage, "Prompt2BlogWorkOrder", str]:
+    """Drop the question. Returns the pair, and what the cut costs.
+
+    Cutting a load-bearing question is already permitted at the work order
+    stage, said once with what the article can no longer claim, then obeyed
+    (ADR 0030). The same decision is allowed here, for the same reason: it is
+    the operator's call and it is allowed to be wrong.
+
+    Dropping a question means dropping any claim that served only it. A claim
+    that also served another question keeps its other links and stays, because
+    the fact is still doing work elsewhere.
+    """
+    _guard(evidence, requirement_id)
+    remaining = [
+        item for item in work_order.requirements if item.requirement_id != requirement_id
+    ]
+    if not remaining:
+        raise GateAnswerRefused(
+            "That is the last question. An article with nothing to stand on is "
+            "not an article; go back to the grill instead."
+        )
+    if not any(item.kind == "load_bearing" for item in remaining):
+        # The contract refuses an all-texture work order, and it is right to:
+        # that is a mood, not a piece.
+        raise GateAnswerRefused(
+            "That is the last load-bearing question. Everything else is "
+            "texture, and texture alone is not an article."
+        )
+
+    cost = _cost_of_omitting(work_order, requirement_id)
+
+    payload = evidence.model_dump(mode="json")
+    payload["requirements"] = [
+        item
+        for item in payload["requirements"]
+        if item["requirement_id"] != requirement_id
+    ]
+    kept_claims = []
+    for claim in payload["claims"]:
+        links = [rid for rid in claim["requirement_ids"] if rid != requirement_id]
+        if not links:
+            # Nothing left for this claim to answer.
+            continue
+        claim["requirement_ids"] = links
+        kept_claims.append(claim)
+    payload["claims"] = kept_claims
+    surviving = {claim["claim_id"] for claim in kept_claims}
+    for item in payload["requirements"]:
+        item["claim_ids"] = [c for c in item["claim_ids"] if c in surviving]
+    payload["gaps"] = [
+        gap
+        for gap in payload.get("gaps", [])
+        if [r for r in gap["requirement_ids"] if r != requirement_id]
+    ]
+    for gap in payload["gaps"]:
+        gap["requirement_ids"] = [
+            r for r in gap["requirement_ids"] if r != requirement_id
+        ]
+    payload["conflicts"] = [
+        conflict
+        for conflict in payload.get("conflicts", [])
+        if len([c for c in conflict["claim_ids"] if c in surviving]) >= 2
+    ]
+    for conflict in payload["conflicts"]:
+        conflict["claim_ids"] = [c for c in conflict["claim_ids"] if c in surviving]
+    payload["premise_findings"] = [
+        finding
+        for finding in payload.get("premise_findings", [])
+        if all(c in surviving for c in finding["claim_ids"])
+    ]
+
+    trimmed = work_order.model_copy(update={"requirements": remaining})
+    logger.info("Operator omitted %s at the research gate", requirement_id)
+    return EvidencePackage.model_validate(payload), trimmed, cost
+
+
+def _cost_of_omitting(work_order: "Prompt2BlogWorkOrder", requirement_id: str) -> str:
+    """What the article can no longer claim, said once and plainly.
+
+    Said rather than asked. The operator should not have to already know which
+    questions are load-bearing to cut safely, and the system does know.
+    """
+    question = next(
+        (
+            item
+            for item in work_order.requirements
+            if item.requirement_id == requirement_id
+        ),
+        None,
+    )
+    if question is None:
+        return ""
+    if question.kind == "texture":
+        return (
+            f'Cut "{question.question}" \u2014 the piece loses a detail, not an '
+            "argument."
+        )
+    return (
+        f'Cut "{question.question}" \u2014 the article can no longer claim '
+        "anything that rested on it."
+    )
 
 
 def mark_unpublished(

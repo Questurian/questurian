@@ -46,7 +46,12 @@ from .grill_v4 import (
     start_grill,
 )
 from .coverage_v4 import CoverageVerdict, assess_coverage
-from .gate_v4 import GateAnswerRefused, answer_requirement, mark_unpublished
+from .gate_v4 import (
+    GateAnswerRefused,
+    answer_requirement,
+    mark_unpublished,
+    omit_requirement,
+)
 from .contracts_v4 import (
     EvidencePackage,
     Prompt2BlogV4Request,
@@ -398,6 +403,7 @@ def settle_gate(
     answer: str | None = None,
     source_url: str | None = None,
     unpublished_note: str | None = None,
+    omit: bool = False,
 ) -> CoverageVerdict:
     """Settle one blocking question without re-buying the research.
 
@@ -414,7 +420,22 @@ def settle_gate(
     evidence = load_evidence(run_id)
     notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
 
-    if unpublished_note is not None:
+    if omit:
+        evidence, work_order, cost = omit_requirement(
+            evidence, work_order, requirement_id=requirement_id
+        )
+        # The work order changes too, or the coverage check would go on asking
+        # about a question that no longer exists.
+        _record(
+            services,
+            run_id,
+            WORK_ORDER_STAGE,
+            {
+                **work_order_stage_record(work_order, [cost]),
+                STATE_KEY: json.loads(work_order.model_dump_json()),
+            },
+        )
+    elif unpublished_note is not None:
         evidence = mark_unpublished(
             evidence, requirement_id=requirement_id, note=unpublished_note
         )

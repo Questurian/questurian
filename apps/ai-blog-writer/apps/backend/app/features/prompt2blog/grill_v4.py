@@ -244,8 +244,12 @@ Now the part that matters:
 - Ask about what they HAVE, never about credentials. "Been there, know
   someone, have an interview?" is the shape. "Nothing" is a fine answer and
   means it is a research-led piece.
-- Set `location` when their line names a place clearly enough to act on. Leave
-  it empty only when it is genuinely ambiguous.
+- Set `location` to the city AND its country: "Medellin, Colombia", never
+  "Medellin". Everything downstream searches the web with this, and half the
+  place names in Latin America exist in several countries. Medellin has a
+  neighbourhood called Buenos Aires; a bare city name let a search answer about
+  Argentina. Leave it empty only when their line is genuinely ambiguous about
+  which place they mean.
 - Set `asks_about` to the marker your question is meant to settle. Ask about a
   marker that is still missing. NEVER ask about a marker twice: once they have
   answered a question, that marker is settled and you move to the next one. If

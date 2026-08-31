@@ -145,6 +145,12 @@ Rules:
 - Each question must be separately checkable by someone with a search engine.
   "Is Lima good value?" is not a question; "What does a one-bedroom in
   Miraflores rent for, and as of when?" is.
+- Every question names its place unambiguously. Whoever answers it sees the
+  question and little else, so a neighbourhood or district that shares its name
+  with somewhere else carries the city and country: "the Buenos Aires
+  neighbourhood of Medellin, Colombia", never "Buenos Aires". A question that
+  reads correctly only to someone who already knows the subject is a question
+  that gets answered about the wrong place.
 - Mark each `kind`. `load_bearing` means the piece cannot be written without
   the answer. `texture` means the piece is duller without it -- a scene, a
   detail, something that puts the reader somewhere. Ask for texture: a dossier

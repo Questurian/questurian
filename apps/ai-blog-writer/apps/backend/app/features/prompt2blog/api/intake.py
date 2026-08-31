@@ -322,6 +322,9 @@ class GateAnswerRequest(BaseModel):
     answer: str | None = None
     source_url: str | None = None
     unpublished_note: str | None = None
+    # Drop the question. Permitted for a load-bearing one, and answered once
+    # with what the article can no longer claim (ADR 0030).
+    omit: bool = False
 
 
 @router.get("/{run_id}/gate")
@@ -340,12 +343,17 @@ async def settle_the_gate(
     verdict is re-derived afterwards by the function that blocked, so the page
     reads the same answer it would have got from a fresh research pass.
     """
-    if (request.answer is None) == (request.unpublished_note is None):
+    chosen = [
+        request.answer is not None,
+        request.unpublished_note is not None,
+        request.omit,
+    ]
+    if sum(chosen) != 1:
         raise HTTPException(
             status_code=400,
             detail=(
-                "Say either what the answer is, or that it is not published "
-                "anywhere. Not both, and not neither."
+                "Say one of three things: what the answer is, that it is not "
+                "published anywhere, or that the question should be dropped."
             ),
         )
     _handle(
@@ -356,6 +364,7 @@ async def settle_the_gate(
         answer=request.answer,
         source_url=request.source_url,
         unpublished_note=request.unpublished_note,
+        omit=request.omit,
     )
     return JSONResponse(intake_state(run_id))
 
