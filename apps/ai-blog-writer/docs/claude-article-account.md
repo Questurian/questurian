@@ -47,18 +47,18 @@ The Keychain has lost this secret twice. Rather than minting a new token each
 time, keep one copy on this machine and let the app repair itself from it:
 
 ```bash
-mkdir -p ~/.questurian
+apps/ai-blog-writer/scripts/store-claude-token
 ```
 
-Then write the token into `~/.questurian/prompt2blog-claude-token` and lock the
-file down:
+It asks for the token, does not echo it, and does not take it as an argument --
+an argument lands in shell history and in `ps`. It creates the file under
+`umask 077` so it is owner only from the instant it exists, rather than being
+world readable for the moment between creation and `chmod`.
 
-```bash
-chmod 600 ~/.questurian/prompt2blog-claude-token
-```
-
-Put the token in with an editor rather than a shell command, so it does not
-land in your shell history. One line, no trailing spaces.
+It refuses a token with a space or a line break in it, and one that does not
+start with `sk-ant-oat01-`. A token broken by a bad paste produces an auth
+failure that reads exactly like a revoked account, which is an hour lost to the
+wrong question.
 
 After that, a missing Keychain item is repaired on the next run: the app reads
 the stored copy, writes it back into the Keychain, and carries on. The settings
