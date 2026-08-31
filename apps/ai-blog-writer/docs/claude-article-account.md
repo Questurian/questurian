@@ -41,13 +41,50 @@ At run time the secret is injected into the CLI subprocess as
 `CLAUDE_CODE_OAUTH_TOKEN`. It never reaches argv, so it cannot be read out of
 `ps`, and it is never written to a file.
 
-## It is not kept in a file, and should not be
+## The stored copy, so a lost Keychain item costs nothing
 
-A plaintext token in the repo is one `git add .` from a public remote, and the
-reflog keeps it after the file is deleted. A token outside the repo is better
-but still a downgrade from the Keychain, which is encrypted at rest and locked
-with the login session. The ceremony of pasting it again is cheaper than the
-morning spent rotating a leaked one.
+The Keychain has lost this secret twice. Rather than minting a new token each
+time, keep one copy on this machine and let the app repair itself from it:
+
+```bash
+mkdir -p ~/.questurian
+```
+
+Then write the token into `~/.questurian/prompt2blog-claude-token` and lock the
+file down:
+
+```bash
+chmod 600 ~/.questurian/prompt2blog-claude-token
+```
+
+Put the token in with an editor rather than a shell command, so it does not
+land in your shell history. One line, no trailing spaces.
+
+After that, a missing Keychain item is repaired on the next run: the app reads
+the stored copy, writes it back into the Keychain, and carries on. The settings
+page says so instead of telling you to reconnect.
+
+**The file is refused unless it is mode 600.** A secret every process on the
+machine can read is not a secret, and using it quietly would hide that. The
+error names the `chmod` to run.
+
+**Nothing in the app ever writes that file.** You create it. Code that wrote
+secrets to disk on its own initiative would be a second place for them to leak
+from, and a test pins that it does not.
+
+**It lives outside the repository, and must.** A token inside it is one
+`git add .` from a remote, and the reflog keeps it after the file is deleted. A
+test pins that the default path is not under the repo.
+
+`P2B_CLAUDE_TOKEN_FILE` overrides the location if you ever need it elsewhere.
+
+## It never falls back to the machine's own Claude login
+
+There are two accounts on this machine and the builder account must always be
+the one that pays. The writer does have a no-credential path that uses whatever
+`claude` is signed into, and Prompt2Blog deliberately never reaches it: if the
+Keychain and the stored copy are both empty, the run is refused with a 409
+rather than silently billing the wrong account. A test pins that too.
 
 ## Checking it without exposing it
 
