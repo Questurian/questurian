@@ -1,5 +1,21 @@
 """The HTTP surface for the four intake stages.
 
+Every handler below is `def`, never `async def`, and that is load bearing.
+
+FastAPI runs an `async def` handler on the event loop and a `def` handler in a
+threadpool. Every route here does blocking work -- ten sequential web searches,
+a model call that runs for minutes, SQLite reads -- so declaring them `async`
+handed the event loop to one request and froze the entire server for as long as
+it took.
+
+The symptoms did not look like one bug. The Claude status pill hung on
+"checking", links did nothing, and the page forgot which run it was on, because
+its resume read timed out and the code took silence to mean the run was gone.
+All three were requests queued behind a research pass that had the loop.
+
+If a handler here ever needs `await`, it needs its blocking work moved off the
+loop first.
+
 One route per move the operator can make: type a seed, answer a question, go
 back into the grill, approve the brief, plan the research, cut the plan, run
 the research. Each
@@ -239,7 +255,7 @@ def _handle(action, *args, **kwargs) -> Any:
 
 
 @router.post("/seed", status_code=201)
-async def open_intake(
+def open_intake(
     request: SeedRequest, staff_user=Depends(require_staff)
 ) -> JSONResponse:
     """One typed line becomes a run and its first question."""
@@ -253,13 +269,13 @@ async def open_intake(
 
 
 @router.get("/{run_id}")
-async def read_intake(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def read_intake(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Where this run stands. What a reloaded page asks for."""
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/answer")
-async def answer_question(
+def answer_question(
     run_id: str, request: AnswerRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
     _handle(answer_intake, run_id, request.answer, _services())
@@ -267,27 +283,27 @@ async def answer_question(
 
 
 @router.post("/{run_id}/reopen")
-async def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Go back into the grill. The single exit from every dead end."""
     _handle(reopen_intake, run_id, _services())
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/brief")
-async def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Turn an agreed grill into the brief the run answers to."""
     _handle(approve_brief, run_id, _services())
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/work-order")
-async def plan_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def plan_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     _handle(plan_research, run_id, _services())
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/work-order/cut")
-async def cut_the_work_order(
+def cut_the_work_order(
     run_id: str, request: CutRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
     """Apply the operator's cut, and hand back what it cost.
@@ -306,7 +322,7 @@ async def cut_the_work_order(
 
 
 @router.post("/{run_id}/research")
-async def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Both research passes, then the one gate that blocks.
 
     A run that cannot be written still answers 200: this is a product state,
@@ -330,13 +346,13 @@ class GateAnswerRequest(BaseModel):
 
 
 @router.get("/{run_id}/gate")
-async def read_gate(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def read_gate(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """The questions holding this run up, with what research did find."""
     return JSONResponse({"blocking": _handle(blocking_questions, run_id)})
 
 
 @router.post("/{run_id}/gate")
-async def settle_the_gate(
+def settle_the_gate(
     run_id: str, request: GateAnswerRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
     """Settle one blocking question without re-buying the research.
@@ -379,7 +395,7 @@ class VenueMarkRequest(BaseModel):
 
 
 @router.get("/{run_id}/venues")
-async def read_venues(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def read_venues(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """The places this run would send a reader.
 
     Only claims naming somewhere bookable or visitable, so the list is short
@@ -389,7 +405,7 @@ async def read_venues(run_id: str, _staff=Depends(require_staff)) -> JSONRespons
 
 
 @router.post("/{run_id}/venues")
-async def mark_venue(
+def mark_venue(
     run_id: str, request: VenueMarkRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
     """Record what the operator saw when they looked."""
@@ -410,7 +426,7 @@ async def mark_venue(
 
 
 @router.get("/{run_id}/article")
-async def read_article(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def read_article(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """What the run wrote, for reading.
 
     Separate from the state the page polls: that runs every few seconds while
@@ -420,13 +436,13 @@ async def read_article(run_id: str, _staff=Depends(require_staff)) -> JSONRespon
 
 
 @router.get("/{run_id}/polish-prompt")
-async def read_polish_prompt(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+def read_polish_prompt(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """One prompt to carry to a flagship model, with the article in it."""
     return JSONResponse(_handle(polish_prompt, run_id))
 
 
 @router.get("/{run_id}/writing-request")
-async def read_writing_request(
+def read_writing_request(
     run_id: str, _staff=Depends(require_staff)
 ) -> JSONResponse:
     """What the graph would run, assembled from what intake settled.
@@ -439,7 +455,7 @@ async def read_writing_request(
 
 
 @router.post("/{run_id}/write", status_code=202)
-async def start_writing(
+def start_writing(
     run_id: str,
     background_tasks: BackgroundTasks,
     _staff=Depends(require_staff),

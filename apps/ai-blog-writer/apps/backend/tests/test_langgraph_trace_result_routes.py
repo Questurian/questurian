@@ -1,4 +1,3 @@
-import asyncio
 import json
 
 import app.features.prompt2blog.routes as prompt2blog_routes
@@ -43,7 +42,7 @@ def test_prompt2blog_result_includes_langgraph_trace_metadata(monkeypatch):
         ),
     )
 
-    response = asyncio.run(prompt2blog_routes.get_result(run_id))
+    response = prompt2blog_routes.get_result(run_id)
     payload = _response_json(response)
 
     assert payload["langsmith_trace_url"] == trace_payload["langsmith_trace_url"]

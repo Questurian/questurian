@@ -1,3 +1,11 @@
+"""
+Handlers here are `def`, never `async def`. FastAPI runs an `async def` handler
+on the event loop and a `def` handler in a threadpool, and everything below
+blocks: SQLite reads, model calls, pipeline preparation. Declaring them async
+handed the loop to one request and froze the whole server while it ran, which
+is what made a research pass look like an outage.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.staff_auth import require_staff
@@ -22,7 +30,7 @@ router = APIRouter()
     response_model=SynthesizeResponse,
     dependencies=[Depends(require_staff)],
 )
-async def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
+def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
     """Take raw source blobs and return a synthesized overview."""
     try:
         combined = "\n\n---\n\n".join(b.strip() for b in req.blobs if b.strip())
@@ -45,7 +53,7 @@ async def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
     response_model=ClassifyResponse,
     dependencies=[Depends(require_staff)],
 )
-async def classify_article_type(req: ClassifyRequest) -> ClassifyResponse:
+def classify_article_type(req: ClassifyRequest) -> ClassifyResponse:
     """Given cleaned data and article types, return best matched type."""
     try:
         cleaned_data = _safe_str(req.cleaned_data)

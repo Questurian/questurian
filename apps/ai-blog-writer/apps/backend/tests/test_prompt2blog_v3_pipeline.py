@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 from contextlib import contextmanager
 from copy import deepcopy
@@ -597,7 +596,7 @@ def test_the_route_queues_a_run_only_when_research_is_ready(monkeypatch):
     background = BackgroundTasks()
 
     payload = response_payload(
-        asyncio.run(prompt2blog_routes.start_pipeline_v3(_request(), background, None))
+        prompt2blog_routes.start_pipeline_v3(_request(), background, None)
     )
 
     assert payload["status"] == "queued"
@@ -634,7 +633,7 @@ def test_the_route_binds_the_article_credential_before_queueing(monkeypatch):
     background = BackgroundTasks()
 
     response_payload(
-        asyncio.run(prompt2blog_routes.start_pipeline_v3(_request(), background, None))
+        prompt2blog_routes.start_pipeline_v3(_request(), background, None)
     )
 
     assert background.tasks[0].args[-1] is credential
@@ -689,13 +688,7 @@ def test_the_route_returns_needs_research_without_queueing_anything(monkeypatch)
     background = BackgroundTasks()
 
     payload = response_payload(
-        asyncio.run(
-            prompt2blog_routes.start_pipeline_v3(
-                _request(evidence_package=_fixture()["evidence_package"]),
-                background,
-                None,
-            )
-        )
+        prompt2blog_routes.start_pipeline_v3( _request(evidence_package=_fixture()["evidence_package"]), background, None, )
     )
 
     assert payload["status"] == "needs_research"
@@ -705,13 +698,7 @@ def test_the_route_returns_needs_research_without_queueing_anything(monkeypatch)
 
 def test_editorial_augmentation_is_refused_rather_than_silently_ignored():
     with pytest.raises(HTTPException) as excinfo:
-        asyncio.run(
-            prompt2blog_routes.start_pipeline_v3(
-                _request(enable_editorial_augmentation=True),
-                BackgroundTasks(),
-                None,
-            )
-        )
+        prompt2blog_routes.start_pipeline_v3( _request(enable_editorial_augmentation=True), BackgroundTasks(), None, )
 
     assert excinfo.value.status_code == 400
     assert "not available on the v3 pipeline" in str(excinfo.value.detail)
