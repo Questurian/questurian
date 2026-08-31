@@ -23,6 +23,8 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
+from pydantic import ValidationError
+
 from app.core import read_stage_result, read_status
 
 from .graph.topology_v3 import V3_NODE_STAGE_NAMES
@@ -704,6 +706,30 @@ def polish_prompt(run_id: str) -> dict[str, Any]:
     }
 
 
+def _research_view(run_id: str, research: dict[str, Any]) -> dict[str, Any]:
+    """The research row as the page needs it, findings included.
+
+    Derived from the stored evidence when the row predates the findings field,
+    rather than asking the operator to re-run a pass they already paid ten web
+    searches for. The evidence itself has been on the run the whole time; only
+    the summary written beside it was thinner.
+    """
+    view = {key: value for key, value in research.items() if key != STATE_KEY}
+    if not view or view.get("findings"):
+        return view
+    stored = research.get(STATE_KEY)
+    if not isinstance(stored, dict):
+        return view
+    try:
+        evidence = EvidencePackage.model_validate(stored)
+    except ValidationError:
+        # An older dossier that no longer fits the contract still deserves to
+        # show its statuses rather than an empty screen.
+        return view
+    view["findings"] = research_stage_record(evidence, {})["findings"]
+    return view
+
+
 def intake_state(run_id: str) -> dict[str, Any]:
     """Where this run stands, for a page that may have been reloaded."""
     grill = _stage_data(run_id, GRILL_STAGE)
@@ -752,8 +778,7 @@ def intake_state(run_id: str) -> dict[str, Any]:
             key: value for key, value in work_order.items() if key != STATE_KEY
         }
         or None,
-        "research": {key: value for key, value in research.items() if key != STATE_KEY}
-        or None,
+        "research": _research_view(run_id, research) or None,
         # Written as the searches go, so five to ten silent minutes can say
         # which question it is on.
         "research_progress": _stage_data(run_id, PROGRESS_STAGE) or None,
