@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import statistics
 from typing import Any
 
 from .content.markdown import _clean_title
@@ -72,6 +73,16 @@ CONSTRAINT_MEASUREMENT_KEYS = frozenset(
         "word_count_target_max",
         "secondary_keyword_coverage",
         "must_include_coverage",
+        # Sentence spread is measured and never gated. Every one of these has
+        # to be listed or a count lands among booleans and reads as a check
+        # that failed.
+        "sentence_count",
+        "sentence_mean_words",
+        "sentence_stdev_words",
+        "sentence_widest_band_share",
+        "sentences_over_25_words",
+        "sentences_under_8_words",
+        "sentence_variety_note",
     }
 )
 
@@ -147,6 +158,81 @@ def _contains_phrase(text: str, phrase: str) -> bool:
         if text_tokens[start : start + window] == phrase_tokens:
             return True
     return False
+
+
+# The width of the band that counts as "the same length". Five words apart is
+# close enough that a reader hears the same beat twice.
+SENTENCE_BAND_WIDTH = 5
+# Above this share of an article inside one band, the prose reads as metered.
+# The first article this pipeline produced sat at 0.57.
+SENTENCE_CLUSTER_SHARE = 0.45
+
+
+def _sentence_lengths(content: str) -> list[int]:
+    """Word counts for every sentence of prose, headings excluded.
+
+    A heading is not a sentence and counting it drags the numbers toward the
+    short end of an article that is merely well sectioned.
+    """
+    body = "\n".join(
+        line for line in content.splitlines() if not line.lstrip().startswith("#")
+    )
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", body)]
+    return [len(_tokenize_words(part)) for part in sentences if len(part.strip()) > 3]
+
+
+def measure_sentence_spread(content: str) -> dict[str, Any]:
+    """How varied the sentences are. Reported, never gated.
+
+    The first article the v4 pipeline wrote averaged 11.3 words with 57% of its
+    seventy five sentences inside a five word band and exactly one past 25. It
+    read as accurate and mechanical, and nothing in the run said so, because
+    nothing was counting. Once prose exists nothing blocks (ADR 0030), so this
+    is a number the operator reads and acts on, not a gate.
+
+    `sentence_widest_band_share` is the share of sentences inside the most
+    crowded five word window. High is bad: it is the metronome, measured.
+    """
+    lengths = _sentence_lengths(content)
+    if not lengths:
+        return {
+            "sentence_count": 0,
+            "sentence_mean_words": 0.0,
+            "sentence_stdev_words": 0.0,
+            "sentence_widest_band_share": 0.0,
+            "sentences_over_25_words": 0,
+            "sentences_under_8_words": 0,
+            "sentence_variety_note": "",
+        }
+
+    mean = statistics.mean(lengths)
+    stdev = statistics.pstdev(lengths) if len(lengths) > 1 else 0.0
+    busiest = max(
+        sum(1 for length in lengths if start <= length < start + SENTENCE_BAND_WIDTH)
+        for start in range(min(lengths), max(lengths) + 1)
+    )
+    share = busiest / len(lengths)
+    long_ones = sum(1 for length in lengths if length > 25)
+    short_ones = sum(1 for length in lengths if length < 8)
+
+    note = ""
+    if share >= SENTENCE_CLUSTER_SHARE or (long_ones == 0 and len(lengths) >= 20):
+        note = (
+            f"{round(share * 100)}% of sentences sit within {SENTENCE_BAND_WIDTH} "
+            f"words of each other and {long_ones} run past 25. The prose will "
+            "read as metered. Joining related facts into longer sentences is "
+            "the fix; nothing here blocks."
+        )
+
+    return {
+        "sentence_count": len(lengths),
+        "sentence_mean_words": round(mean, 1),
+        "sentence_stdev_words": round(stdev, 1),
+        "sentence_widest_band_share": round(share, 3),
+        "sentences_over_25_words": long_ones,
+        "sentences_under_8_words": short_ones,
+        "sentence_variety_note": note,
+    }
 
 
 def _estimate_paragraph_sentence_average(content: str) -> float:
@@ -294,6 +380,7 @@ def _build_constraint_checks(
         "secondary_keyword_coverage": round(secondary_keyword_coverage, 3),
         "word_count_estimate": word_count,
         "word_count_severity": word_count_severity,
+        **measure_sentence_spread(content),
     }
 
 
