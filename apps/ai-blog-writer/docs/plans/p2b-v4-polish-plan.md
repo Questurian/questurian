@@ -128,6 +128,22 @@ from a stage that never read the brief's author.
 Needs a short ADR: ADR 0030 commissioned the title, ADR 0031 made the seed
 provenance only. Both are amended by this.
 
+**Attempted 2026-08-31 and backed out. Do not start this without reading the
+next paragraph.** The blast radius is not the graph, it is the resume suite.
+`TitleFailsLLM` raises on `invoke_text`, and the title stage is the only stage
+in the graph that calls `invoke_text` at all -- so it is the only way eight
+resume tests can simulate a run dying near the end. Removing the model call
+breaks all eight, whether the node is deleted or merely made deterministic.
+
+Those tests protect money: resume exists so a run that dies late is not paid
+for twice. Rewriting them means choosing a new "last fallible stage" (the
+audit, most likely) and re-deriving what a second leg should re-buy from it.
+That is a deliberate change to the safety net, not a mechanical rename, and it
+should be made with the owner awake. Two attempts are recorded in this session:
+a full deletion touching eleven source files and fifteen tests, and a minimal
+version keeping the node and dropping only the model call. Both hit the same
+wall.
+
 ## Phase 4: the copy out polish prompt
 
 Everything the run already knows about its own output (constraint measurements,
