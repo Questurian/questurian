@@ -335,11 +335,21 @@ in a headline, confirmed against what the article actually says -- not to
 summarise the sections. A headline that describes our research instead of the
 place has failed, however accurate it is.
 
+`the_authors_own_headline` is the line the person commissioning this actually
+wrote. Start from the assumption that it is already the headline and return it
+unchanged. Improve on it only when it genuinely fails the article -- when it
+names something the piece does not deliver, or when the piece turned out to be
+about something else. A line that is merely plainer than you would have written
+is not a failure; it is a house style.
+
+If you do change it, keep its stance. A declarative line stays declarative.
+
 Output rules (strict):
 - Return exactly one line.
 - No quotes, no markdown, no alternatives, no explanation.
-- Keep the original title's intent and subject. It is the author's intent, not
-  a template to copy or a phrase to abandon.
+- No colon subtitle. "Subject: Why X Beats Y" is a search engine headline and
+  this publication does not use them.
+- No keyword stuffing, and no comparison the article does not actually make.
 - Name the primary subject. Never headline a context-only reference.
 - Promise only what the article delivers and the evidence supports.
 
