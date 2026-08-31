@@ -767,3 +767,35 @@
   margin: 0 0 var(--space-4);
   text-wrap: pretty;
 }
+
+/* ---------- carrying it to a better editor ---------- */
+
+/*
+ * The run measured everything wrong with its own prose and recorded it where
+ * nobody read it. Copy only: the prompt is generated and never hand edited,
+ * because operator influence belongs in a control with its own validated field
+ * and typed changes leave nothing able to say what was actually asked for.
+ */
+
+.p2b-polish {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5));
+  background: var(--accent-softer);
+  border-radius: var(--radius-md);
+}
+
+.p2b-polish-copy {
+  margin: 0;
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.p2b-polish .p2b-intake-actions {
+  margin-top: var(--space-4);
+}
+
+.p2b-polish .p2b-note {
+  margin-top: var(--space-3);
+}

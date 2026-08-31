@@ -1,0 +1,142 @@
+"""The prompt the operator carries to a flagship model, with the article.
+
+The run already knows everything wrong with what it wrote: the measured
+constraint checks, the sentence spread, the readiness blockers, the problems
+the audit named. All of it is recorded where nobody reads it. This assembles it
+into something a person pastes into Claude or ChatGPT along with the finished
+piece.
+
+Two decisions shape it.
+
+**It carries the brief, not only the complaints.** A model told "the sentences
+are too uniform" smooths the prose and quietly drifts the piece. A model told
+what the article is for, who reads it, and the line that defines failure fixes
+the flatness while protecting what the article is. The `fails_if` line is the
+whole point of the brief and it goes in every time.
+
+**It carries the house rules that are easy to break by accident.** The em dash
+ban and the hyphenated compound ban are deliberate, and a chatbot asked to
+improve rhythm will reach for an em dash within a sentence or two. Telling it
+not to is cheaper than reading the result and finding out.
+
+It is generated, never hand edited. Operator influence belongs in a control
+carrying its own validated field; typed text into a generated prompt leaves
+nothing downstream able to say what was actually asked for.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from .contracts_v4 import ArticleBrief
+from .support import _safe_dict, _safe_str
+
+# Below this, the prose is varied enough that saying so would be noise.
+SPREAD_WORTH_MENTIONING = 0.45
+
+
+def _measured_problems(checks: dict[str, Any]) -> list[str]:
+    """What the run measured about its own prose, as instructions.
+
+    Only what is actually wrong. A clean article should produce a short prompt,
+    not a long one with every measurement in it.
+    """
+    problems: list[str] = []
+
+    share = checks.get("sentence_widest_band_share")
+    count = checks.get("sentence_count")
+    if isinstance(share, (int, float)) and isinstance(count, int) and count:
+        long_ones = checks.get("sentences_over_25_words") or 0
+        if share >= SPREAD_WORTH_MENTIONING or not long_ones:
+            problems.append(
+                f"The sentences are too uniform. {round(share * 100)}% of the "
+                f"{count} sentences sit within five words of each other, and "
+                f"{long_ones} run past 25 words. Join related facts into longer "
+                "sentences where one explains another, and let short sentences "
+                "land the points. Do not cut anything to do it."
+            )
+
+    if checks.get("target_word_count_met") is False:
+        direction = _safe_str(checks.get("word_count_direction"))
+        delta = checks.get("word_count_delta")
+        if direction and isinstance(delta, int) and delta:
+            problems.append(
+                f"The article is {abs(delta)} words {direction} the agreed "
+                "length. Fix it by editing, never by inventing facts."
+            )
+
+    if checks.get("paragraph_length_met") is False:
+        problems.append("The paragraphs are the wrong length for this piece.")
+
+    return problems
+
+
+def build_polish_prompt(
+    *,
+    brief: ArticleBrief,
+    article_markdown: str,
+    title: str,
+    constraint_checks: dict[str, Any],
+    readiness_blockers: list[str],
+    audit_problems: list[str] | None = None,
+) -> str:
+    """One prompt, ready to paste. Returns the whole thing including the article."""
+    checks = _safe_dict(constraint_checks)
+    problems = _measured_problems(checks)
+    problems += [_safe_str(item) for item in readiness_blockers if _safe_str(item)]
+    problems += [_safe_str(item) for item in (audit_problems or []) if _safe_str(item)]
+
+    numbered = (
+        "\n".join(f"{index}. {problem}" for index, problem in enumerate(problems, 1))
+        or "1. Nothing measurable is wrong with it. Improve the prose only where "
+        "you can do so without touching a fact."
+    )
+
+    material = (
+        "\n".join(f"- [{item.kind}] {item.statement}" for item in brief.material)
+        or "- Nothing first hand. This is researched rather than reported."
+    )
+    must_name = "\n".join(f"- {item}" for item in brief.must_name) or "- Nothing named."
+
+    return f"""You are editing a finished article. Fix what is listed and change nothing else.
+
+WHAT THIS ARTICLE IS FOR
+Reader: {brief.reader.primary_reader}
+Their question: {brief.reader_question}
+What it should make them do: {brief.outcome}
+What it is built on: {brief.spine}
+It must name:
+{must_name}
+What the writer actually has:
+{material}
+
+IT FAILS IF: {brief.fails_if}
+
+That last line is the test. An edit that fixes the list below and moves the
+article toward that failure has made things worse, not better.
+
+WHAT TO FIX
+{numbered}
+
+RULES YOU MUST NOT BREAK
+- No em dashes, and no substitutes. A comma bracketed aside is an em dash in
+  disguise. This is deliberate: em dashes now read as a sign of AI writing and
+  this publication does not use them.
+- No hyphenated compounds. "A visa for long stays", never "a long stay visa".
+  Proper names keep their hyphens; nothing else does.
+- Invent nothing. No new places, prices, dates, dishes, names or numbers, and
+  no adjective that implies a fact the article does not already carry. If a
+  sentence cannot be improved without a fact you do not have, leave it alone.
+- Keep every fact, figure and proper noun exactly as it is.
+- Keep the headings and the section order.
+- Do not add a conclusion, a summary, or a line telling the reader what they
+  just read.
+
+Return the complete edited article as markdown, and nothing else. No preamble,
+no notes on what you changed, no list of edits.
+
+TITLE: {title}
+
+ARTICLE
+{article_markdown}
+"""

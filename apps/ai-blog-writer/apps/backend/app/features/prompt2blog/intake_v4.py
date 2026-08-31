@@ -61,6 +61,7 @@ from .research_v4 import (
     research_stage_record,
     structure_research,
 )
+from .polish_v4 import build_polish_prompt
 from .run_budget import enforce_run_budget
 from .run_recorder import RunRecorder
 from .support import _safe_dict, _safe_str
@@ -484,6 +485,34 @@ def finished_article(run_id: str) -> dict[str, Any]:
         "readiness_blockers": finalize.get("readiness_blockers") or [],
         "constraint_checks": _safe_dict(finalize.get("constraint_checks")),
         "word_count": finalize.get("word_count_estimate"),
+    }
+
+
+def polish_prompt(run_id: str) -> dict[str, Any]:
+    """The prompt the operator carries to a flagship model, with the article.
+
+    Assembled from what the run already recorded about its own output. It is
+    generated and never hand edited: operator influence belongs in a control
+    with its own validated field, or nothing downstream can say what was
+    actually asked for.
+    """
+    article = finished_article(run_id)
+    quality = _stage_data(run_id, "stage_v3_quality_audit")
+    audit_problems = [
+        _safe_str(item)
+        for item in (quality.get("required_revisions") or [])
+        if _safe_str(item)
+    ]
+    return {
+        "run_id": run_id,
+        "prompt": build_polish_prompt(
+            brief=load_brief(run_id),
+            article_markdown=article["markdown"],
+            title=article["title"],
+            constraint_checks=article["constraint_checks"],
+            readiness_blockers=article["readiness_blockers"],
+            audit_problems=audit_problems,
+        ),
     }
 
 

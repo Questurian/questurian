@@ -1,4 +1,5 @@
 import type { IntakeArticle, IntakeWriting } from '../intake.types'
+import { PolishPrompt } from './PolishPrompt'
 
 /**
  * The finished article.
@@ -14,6 +15,7 @@ import type { IntakeArticle, IntakeWriting } from '../intake.types'
  */
 
 interface ArticleScreenProps {
+  runId: string
   writing: IntakeWriting
   article: IntakeArticle | null
   onReopen: () => void
@@ -51,7 +53,7 @@ function Measured({ checks }: { checks: Record<string, unknown> }) {
   )
 }
 
-export function ArticleScreen({ writing, article, onReopen, busy }: ArticleScreenProps) {
+export function ArticleScreen({ runId, writing, article, onReopen, busy }: ArticleScreenProps) {
   if (writing.state === 'failed') {
     return (
       <section className="p2b-intake" aria-label="The writing failed">
@@ -104,6 +106,8 @@ export function ArticleScreen({ writing, article, onReopen, busy }: ArticleScree
       ) : (
         <p className="p2b-note">Loading the article…</p>
       )}
+
+      <PolishPrompt runId={runId} />
 
       <div className="p2b-intake-actions">
         <button type="button" className="p2b-secondary" onClick={onReopen} disabled={busy}>

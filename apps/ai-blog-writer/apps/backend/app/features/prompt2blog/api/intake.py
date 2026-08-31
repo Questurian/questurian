@@ -38,6 +38,7 @@ from ..intake_v4 import (
     begin_intake,
     do_research,
     finished_article,
+    polish_prompt,
     intake_state,
     plan_research,
     reopen_intake,
@@ -315,6 +316,12 @@ async def read_article(run_id: str, _staff=Depends(require_staff)) -> JSONRespon
     the graph works, and this is the whole article.
     """
     return JSONResponse(_handle(finished_article, run_id))
+
+
+@router.get("/{run_id}/polish-prompt")
+async def read_polish_prompt(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """One prompt to carry to a flagship model, with the article in it."""
+    return JSONResponse(_handle(polish_prompt, run_id))
 
 
 @router.get("/{run_id}/writing-request")

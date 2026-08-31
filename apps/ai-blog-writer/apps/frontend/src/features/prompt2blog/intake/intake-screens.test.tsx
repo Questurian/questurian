@@ -458,7 +458,7 @@ describe('the working screen', () => {
 
 describe('the finished article screen', () => {
   it('shows the title and the stamp instead of leaving the run invisible', () => {
-    render(<ArticleScreen writing={writing()} article={null} onReopen={vi.fn()} busy={false} />)
+    render(<ArticleScreen runId="run-1" writing={writing()} article={null} onReopen={vi.fn()} busy={false} />)
 
     expect(screen.getByText(/lima is no longer simply the stopover/i)).toBeInTheDocument()
     expect(screen.getByText(/ready for staging/i)).toBeInTheDocument()
@@ -467,6 +467,7 @@ describe('the finished article screen', () => {
   it('renders the article once it arrives', () => {
     render(
       <ArticleScreen
+        runId="run-1"
         writing={writing()}
         article={{
           run_id: 'r',
@@ -489,6 +490,7 @@ describe('the finished article screen', () => {
   it('reports the measured sentence spread and says nothing blocks', () => {
     render(
       <ArticleScreen
+        runId="run-1"
         writing={writing({
           constraint_checks: {
             sentence_count: 75,
@@ -513,6 +515,7 @@ describe('the finished article screen', () => {
     // ADR 0030: once prose exists nothing blocks. The article is still here.
     render(
       <ArticleScreen
+        runId="run-1"
         writing={writing({
           pipeline_status: 'needs_revision',
           readiness_blockers: ['It is forty one words long.'],
@@ -532,6 +535,7 @@ describe('the finished article screen', () => {
     const onReopen = vi.fn()
     render(
       <ArticleScreen
+        runId="run-1"
         writing={writing({
           state: 'failed',
           stage_label: 'Writing the article',

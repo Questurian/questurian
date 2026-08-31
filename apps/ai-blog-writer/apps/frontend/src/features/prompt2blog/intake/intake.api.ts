@@ -124,3 +124,17 @@ export async function readArticle(runId: string): Promise<IntakeArticle> {
   }
   return (await response.json()) as IntakeArticle
 }
+
+/**
+ * The prompt to carry to a flagship model, with the article already in it.
+ *
+ * Generated, never hand edited: operator influence belongs in a control with
+ * its own validated field, or nothing downstream can say what was asked for.
+ */
+export async function readPolishPrompt(runId: string): Promise<{ prompt: string }> {
+  const response = await apiFetch(`${INTAKE}/${runId}/polish-prompt`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not build the polish prompt.')
+  }
+  return (await response.json()) as { prompt: string }
+}

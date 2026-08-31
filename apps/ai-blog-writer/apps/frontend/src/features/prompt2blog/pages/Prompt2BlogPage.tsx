@@ -88,6 +88,7 @@ export function Prompt2BlogPage() {
             <WorkingScreen writing={writing} />
           ) : (
             <ArticleScreen
+              runId={state!.run_id}
               writing={writing}
               article={intake.article}
               onReopen={intake.reopen}
