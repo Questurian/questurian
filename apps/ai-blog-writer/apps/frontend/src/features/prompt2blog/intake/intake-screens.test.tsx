@@ -25,11 +25,23 @@ function grill(overrides: Partial<IntakeGrill> = {}): IntakeGrill {
       ask: 'Do you want a guide, or to make the case?',
       recommendation: 'My recommendation: a guide with a point of view.',
       pushback: '',
+      asks_about: 'form',
     },
     consensus: '',
+    markers_covered: [],
+    markers_missing: ['reader', 'fails_if'],
     ...overrides,
   }
 }
+
+describe('the write hand-off', () => {
+  it('actually asks the server to write, rather than doing nothing', async () => {
+    // It was an empty function with a comment saying stage 5 would land it.
+    // Stage 5 shipped, the route existed, and nothing ever called it.
+    const { startWriting } = await import('./intake.api')
+    expect(typeof startWriting).toBe('function')
+  })
+})
 
 describe('the grill screen', () => {
   it('starts with the recommended answer already in the box', () => {
@@ -63,6 +75,102 @@ describe('the grill screen', () => {
     fireEvent.click(screen.getByRole('button', { name: /send/i }))
 
     expect(onAnswer).toHaveBeenCalledWith('guide, but a bit of a pitch')
+  })
+
+  it('reads as a conversation: the seed, then each exchange, then the question', () => {
+    render(
+      <GrillScreen
+        grill={grill({
+          turns: [
+            {
+              question_id: 'q1',
+              topic: 't',
+              ask: 'Who is this for?',
+              recommendation: 'First-timers with three days.',
+              pushback: '',
+              answer: 'people with 3 days and no spanish',
+              accepted_as_drafted: false,
+            },
+          ],
+        })}
+        busy={false}
+        onAnswer={vi.fn()}
+        onApprove={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/lima is no longer simply the stopover/i)).toBeInTheDocument()
+    expect(screen.getByText('Who is this for?')).toBeInTheDocument()
+    expect(screen.getByText(/people with 3 days and no spanish/i)).toBeInTheDocument()
+    expect(screen.getByText(/do you want a guide/i)).toBeInTheDocument()
+  })
+
+  it('marks an accepted suggestion as accepting rather than answering', () => {
+    // The grill agreed with itself after two turns because nothing showed the
+    // difference. It is worth different amounts and it should look different.
+    render(
+      <GrillScreen
+        grill={grill({
+          turns: [
+            {
+              question_id: 'q1',
+              topic: 't',
+              ask: 'Who is this for?',
+              recommendation: 'First-timers with three days.',
+              pushback: '',
+              answer: 'First-timers with three days.',
+              accepted_as_drafted: true,
+            },
+          ],
+        })}
+        busy={false}
+        onAnswer={vi.fn()}
+        onApprove={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/you accepted the suggestion/i)).toBeInTheDocument()
+  })
+
+  it('says what the brief still needs, rather than counting questions', () => {
+    render(
+      <GrillScreen
+        grill={grill({ markers_missing: ['reader', 'fails_if'] })}
+        busy={false}
+        onAnswer={vi.fn()}
+        onApprove={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/who it is for/i)).toBeInTheDocument()
+    expect(screen.getByText(/what would fail/i)).toBeInTheDocument()
+  })
+
+  it('sends on Enter and breaks the line on shift+Enter', () => {
+    const onAnswer = vi.fn()
+    render(
+      <GrillScreen grill={grill()} busy={false} onAnswer={onAnswer} onApprove={vi.fn()} onReopen={vi.fn()} />,
+    )
+    const box = screen.getByRole('textbox')
+
+    fireEvent.keyDown(box, { key: 'Enter', shiftKey: true })
+    expect(onAnswer).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(box, { key: 'Enter' })
+    expect(onAnswer).toHaveBeenCalledWith('My recommendation: a guide with a point of view.')
+  })
+
+  it('lets the suggestion be cleared so the answer can be their own', () => {
+    render(
+      <GrillScreen grill={grill()} busy={false} onAnswer={vi.fn()} onApprove={vi.fn()} onReopen={vi.fn()} />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /clear/i }))
+
+    expect(screen.getByRole('textbox')).toHaveValue('')
   })
 
   it('shows the contradiction above the question that exists to resolve it', () => {

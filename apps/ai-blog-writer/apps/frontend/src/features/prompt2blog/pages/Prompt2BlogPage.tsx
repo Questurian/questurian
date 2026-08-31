@@ -57,6 +57,13 @@ export function Prompt2BlogPage() {
           // that cannot move forward would trap the page on every reload.
           <div className="p2b-intake-bar">
             <span className="p2b-intake-step">{STEP_LABELS[step]}</span>
+            {/* On screen so a run can be returned to. Every stage of it lives
+                on the server, so `?run=<id>` reopens it exactly where it
+                stopped — which is what makes an agreed grill a checkpoint you
+                can retest the rest of the pipeline from. */}
+            <code className="p2b-run-id" title="Reopen with ?run=<id>">
+              {state.run_id}
+            </code>
             <button type="button" onClick={intake.abandon}>
               Start over
             </button>
@@ -105,10 +112,7 @@ export function Prompt2BlogPage() {
           <ResearchScreen
             research={state.research}
             busy={intake.busy}
-            onWrite={() => {
-              // The graph hand-off lands with stage 5; until then this screen
-              // is where a settled run stops.
-            }}
+            onWrite={intake.write}
             onReopen={intake.reopen}
           />
         )}

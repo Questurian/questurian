@@ -15,6 +15,8 @@ export interface IntakeQuestion {
   recommendation: string
   /** Set when this question exists to resolve a contradiction. */
   pushback: string
+  /** Which brief marker this question exists to settle. */
+  asks_about: string
 }
 
 /** A question and what was actually typed, kept word for word. */
@@ -25,6 +27,14 @@ export interface IntakeTurn {
   recommendation: string
   pushback: string
   answer: string
+  /**
+   * Whether the suggestion was sent back untouched.
+   *
+   * The grill is told, because otherwise it reads its own sentence returning
+   * as a confident answer and agrees with itself (ADR 0033). Shown here for
+   * the same reason: accepting is agreement, not something you said.
+   */
+  accepted_as_drafted: boolean
 }
 
 export interface IntakeGrill {
@@ -34,6 +44,13 @@ export interface IntakeGrill {
   pending: IntakeQuestion | null
   /** The played-back summary. Agreeing with it is the stop condition. */
   consensus: string
+  /**
+   * What the brief has and still needs. The grill stops when nothing is
+   * missing, so this is the honest answer to "how far along am I" — which a
+   * question count never was.
+   */
+  markers_covered: string[]
+  markers_missing: string[]
 }
 
 export interface IntakeBrief {

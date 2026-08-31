@@ -27,6 +27,16 @@ function rememberRun(runId: string | null): void {
 }
 
 function rememberedRun(): string | null {
+  // `?run=<id>` wins over the remembered pointer, so any run is a bookmark.
+  // Starting a second article used to make the first unreachable from the UI
+  // even though every stage of it was still on the server — which meant
+  // re-interviewing from scratch to test anything downstream of the grill.
+  try {
+    const asked = new URLSearchParams(window.location.search).get('run')
+    if (asked) return asked
+  } catch {
+    // A malformed query string is not a reason to lose the remembered run.
+  }
   try {
     return window.localStorage.getItem(RESUME_KEY)
   } catch {
@@ -47,6 +57,8 @@ export interface UseIntake {
   planResearch: () => Promise<void>
   research: () => Promise<void>
   cut: (struckIds: string[], added: string[]) => Promise<void>
+  /** Hand the settled run to the writer. */
+  write: () => Promise<void>
   abandon: () => void
 }
 
@@ -115,6 +127,7 @@ export function useIntake(): UseIntake {
         run(() => api.cutWorkOrder(requireRun(), struckIds, added)),
       [run, requireRun],
     ),
+    write: useCallback(() => run(() => api.startWriting(requireRun())), [run, requireRun]),
     abandon: useCallback(() => {
       rememberRun(null)
       setState(null)
