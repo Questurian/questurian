@@ -17,12 +17,12 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from app.core.staff_auth import require_staff, staff_user_id
 
 from ..config import P2B_V4_RESEARCH_STRUCTURE_MODEL
-from ..brief_v4 import BriefIncomplete
+from ..brief_v4 import BriefIncomplete, BriefUnusable
 from ..dependencies import PipelineDependencies
 from ..grill_v4 import (
     GRILL_RESEARCH_MAX_TOKENS,
@@ -43,7 +43,8 @@ from ..intake_v4 import (
     writing_request,
 )
 from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_input_artifact
-from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies
+from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies, ResearchUnusable
+from ..work_order_v4 import WorkOrderUnusable
 from .runs import (
     _prompt2blog_credential_for_run,
     _run_pipeline_v3_background as _run_pipeline_v4_background,
@@ -133,6 +134,51 @@ def _handle(action, *args, **kwargs) -> Any:
                 "raw": error.raw[:2000],
             },
         ) from error
+    except BriefUnusable as error:
+        # 502 and a sentence, not a Pydantic traceback. This arrived as
+        # "1 validation error for ArticleBrief ... must_name entry values must
+        # be unique", mid-flow, after the grill had been paid for.
+        logger.error("Brief did not fit its contract: %s | %s", error.reason, error.raw[:2000])
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "brief_unusable",
+                "message": (
+                    "The brief came back in a shape the system cannot use "
+                    "and did not settle on a second try. Nothing you said "
+                    "caused this — try approving again."
+                ),
+                "raw": error.reason,
+            },
+        ) from error
+    except ResearchUnusable as error:
+        logger.error("Dossier did not fit its contract: %s | %s", error.reason, error.raw[:2000])
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "research_unusable",
+                "message": (
+                    "The research came back in a shape the system cannot use. "
+                    "Nothing you said caused this — try researching again."
+                ),
+                "raw": error.reason,
+            },
+        ) from error
+    except WorkOrderUnusable as error:
+        logger.error(
+            "Work order did not fit its contract: %s | %s", error.reason, error.raw[:2000]
+        )
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "work_order_unusable",
+                "message": (
+                    "The research plan came back in a shape the system cannot "
+                    "use. Nothing you said caused this — try planning again."
+                ),
+                "raw": error.reason,
+            },
+        ) from error
     except GrillUnusableResponse as error:
         # 502, not 400: nothing the operator typed caused this, and the reply
         # travels with it. The first real run died here and left no trace at
@@ -154,6 +200,27 @@ def _handle(action, *args, **kwargs) -> Any:
         # Not a server fault and not a retry: the run is over its ceiling and
         # says what it spent.
         raise HTTPException(status_code=409, detail=error.status.as_record()) from error
+    except ValidationError as error:
+        # Anything a stage builds and the contracts refuse. Pydantic's own
+        # message is addressed to a developer and it subclasses ValueError, so
+        # without this it fell through to the 400 below and reached the
+        # operator verbatim -- "List should have at least 1 item after
+        # validation, not 0", mid-flow, twice in one evening.
+        logger.error("Intake payload failed its contract: %s", error)
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "contract_violation",
+                "message": (
+                    "Something came back in a shape the system cannot use. "
+                    "Nothing you said caused this — try that step again."
+                ),
+                "raw": "; ".join(
+                    f"{'.'.join(str(part) for part in item['loc'])}: {item['msg']}"
+                    for item in error.errors()
+                )[:2000],
+            },
+        ) from error
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     except ValueError as error:

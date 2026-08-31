@@ -14,6 +14,14 @@ fixes the shape rather than the instances.
 
 Applied at definition, so a schema written later gets it without anyone
 remembering to.
+
+**It does not reach Gemini.** That translator keeps only `type`, `description`,
+`enum`, `format`, `nullable`, `properties`, `required` and `items`, so
+`minLength` is dropped before the call and `required` goes back to meaning "the
+key is present". The v4 grill and brief both run on Gemini, so on that path
+this file buys nothing and the value checks in the calling code are the only
+thing standing between an empty string and the operator. Say it in the prompt,
+and prefer `enum` where the constraint is a vocabulary -- enum survives.
 """
 
 from __future__ import annotations

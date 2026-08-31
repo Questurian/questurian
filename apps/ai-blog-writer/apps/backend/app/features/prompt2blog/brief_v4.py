@@ -17,9 +17,19 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-from typing import Any
+from typing import Any, get_args
 
-from .contracts_v4 import ArticleBrief, BriefMaterial, BriefReader, GrillState
+from pydantic import ValidationError
+
+from .contracts_v4 import (
+    BRIEF_MARKERS,
+    ArticleBrief,
+    ArticleFormId,
+    AudienceTagId,
+    BriefMaterial,
+    BriefReader,
+    GrillState,
+)
 from .grill_v4 import GrillDependencies
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
@@ -28,10 +38,15 @@ logger = logging.getLogger(__name__)
 
 BRIEF_STAGE = "stage_v4_brief"
 
+# `form_id` carries its vocabulary in the schema rather than in prose. Gemini's
+# translator keeps `enum` and drops `minLength`, so an enum is one of the few
+# constraints that actually survives the trip -- and a bare string field named
+# `form_id`, with fifteen legal values stated nowhere, is what run 90b3f9bc
+# (2026-08-30 20:01Z) returned empty.
 BRIEF_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
-        "form_id": {"type": "string"},
+        "form_id": {"type": "string", "enum": list(get_args(ArticleFormId))},
         "topic_module_ids": {"type": "array", "items": {"type": "string"}},
         "primary_reader": {"type": "string"},
         "reader_tags": {"type": "array", "items": {"type": "string"}},
@@ -79,8 +94,19 @@ THE INTERVIEW:
 WHAT YOU BOTH AGREED:
 {state.consensus}
 
-Fill the brief from what was actually said. Rules:
+Fill the brief from what was actually said. Every field below is required and
+must carry a real value -- an empty string is not an answer. Where the
+interview did not settle something outright, decide it from what they did say
+rather than leaving it blank.
 
+- `form_id` is the kind of article, chosen from the list the schema allows.
+  A walk through what a place offers is `destination-guide`; a ranked or
+  grouped set of picks is `curated-list-best-of`; a day-by-day plan is
+  `itinerary`; a how-much-does-it-cost piece is `cost-budget-breakdown`.
+- `primary_reader` is who this is for, in a phrase -- who they are and what
+  situation they are in, not a demographic bracket.
+- `reader_question` is the question in that reader's head, written the way
+  they would ask it.
 - `spine` is the argument the piece is built on, in their words where possible.
 - `outcome` is what the reader should do or decide afterwards.
 - `fails_if` is what would make this a failure, taken from what they said, not
@@ -125,6 +151,51 @@ def _material_from(payload: dict[str, Any], state: GrillState) -> list[BriefMate
     return material
 
 
+def _deduped(values: list[str], *, casefold: bool = False) -> list[str]:
+    """Keep the first of each value, in the order the model gave them.
+
+    Three of the brief's lists carry a uniqueness rule -- `must_name`,
+    `topic_module_ids` and `reader_tags` -- and the model is told about none of
+    them. A repeated entry used to take the whole brief down with a Pydantic
+    error about `must_name` uniqueness, which is a good brief refused over a
+    duplicated string.
+
+    The contract stays strict, because a brief that names the same thing twice
+    is genuinely malformed. What changes is that it is handed clean input,
+    the same way material is filtered before it gets there.
+    """
+    seen: set[str] = set()
+    kept: list[str] = []
+    for value in values:
+        key = value.casefold() if casefold else value
+        if key in seen:
+            continue
+        seen.add(key)
+        kept.append(value)
+    return kept
+
+
+def _reader_from(payload: dict[str, Any]) -> BriefReader:
+    """Who this is for, with tags the contract will actually accept.
+
+    `reader_tags` is a closed vocabulary the model is not shown, so an invented
+    tag is normal and is dropped rather than allowed to take the brief down.
+    The reader themself is required and is not guessed at here -- an empty one
+    is caught by the missing-field check with a sentence about it.
+    """
+    allowed = set(get_args(AudienceTagId))
+    tags = _deduped(
+        [
+            tag
+            for tag in (_safe_str(item) for item in (payload.get("reader_tags") or []))
+            if tag in allowed
+        ]
+    )
+    return BriefReader(
+        primary_reader=_safe_str(payload.get("primary_reader")), tags=tags
+    )
+
+
 def brief_fingerprint(payload: dict[str, Any]) -> str:
     """A stable id for one brief's contents.
 
@@ -151,16 +222,34 @@ class BriefIncomplete(RuntimeError):
         self.raw = raw
 
 
+class BriefUnusable(RuntimeError):
+    """The brief came back complete and still would not assemble.
+
+    A duplicated `must_name` entry reached the operator as a raw Pydantic
+    error about value uniqueness, mid-flow, after the grill had been paid for.
+    The contract is right to refuse a malformed brief; what was wrong is that
+    its complaint was addressed to a developer.
+
+    Carries the reason and the payload, and is retried once -- a duplicate is
+    the kind of fluke a second attempt usually clears.
+    """
+
+    def __init__(self, reason: str, raw: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+        self.raw = raw
+
+
 # What a brief cannot be assembled without. Empty is the failure mode that
 # actually happens -- the key is present and the value is "" -- so this checks
 # the value, not the key.
-REQUIRED_BRIEF_FIELDS = (
-    ("form_id", "the kind of article"),
-    ("primary_reader", "who it is for"),
-    ("reader_question", "the question it answers"),
-    ("outcome", "what it should make them do"),
-    ("spine", "what it is built on"),
-    ("fails_if", "what would make it a failure"),
+#
+# Derived from `BRIEF_MARKERS` rather than typed out again: the same six things
+# are the grill's stop condition (ADR 0033), and a grill that stops one marker
+# short of what the brief demands is a run that dies here having already paid
+# for the whole interview.
+REQUIRED_BRIEF_FIELDS = tuple(
+    (field, description) for _, field, description in BRIEF_MARKERS
 )
 
 
@@ -187,6 +276,8 @@ def build_brief(
         raise ValueError("A brief can only be built from a grill that reached agreement.")
 
     attempts: list[str] = []
+    last: BriefIncomplete | None = None
+    last_unusable: BriefUnusable | None = None
     for attempt in range(2):
         try:
             return _build_brief_once(state, dependencies, location=location)
@@ -198,7 +289,18 @@ def build_brief(
                 ", ".join(error.missing),
             )
             last = error
-    raise BriefIncomplete(last.missing, "\n---\n".join(attempts))
+        except BriefUnusable as error:
+            attempts.append(error.raw)
+            logger.warning(
+                "Brief did not fit its contract (attempt %s): %s",
+                attempt + 1,
+                error.reason,
+            )
+            last_unusable = error
+    if last is not None:
+        raise BriefIncomplete(last.missing, "\n---\n".join(attempts))
+    assert last_unusable is not None
+    raise BriefUnusable(last_unusable.reason, "\n---\n".join(attempts))
 
 
 def _build_brief_once(
@@ -233,17 +335,26 @@ def _build_brief_once(
         "seed": state.seed,
         "location": resolved_location,
         "form_id": _safe_str(payload.get("form_id")),
-        "topic_module_ids": [
-            _safe_str(item) for item in (payload.get("topic_module_ids") or [])
-        ][:4],
-        "reader": BriefReader(
-            primary_reader=_safe_str(payload.get("primary_reader")),
-            tags=[_safe_str(tag) for tag in (payload.get("reader_tags") or [])],
-        ),
+        "topic_module_ids": _deduped(
+            [
+                _safe_str(item)
+                for item in (payload.get("topic_module_ids") or [])
+                if _safe_str(item)
+            ]
+        )[:4],
+        "reader": _reader_from(payload),
         "reader_question": _safe_str(payload.get("reader_question")),
         "outcome": _safe_str(payload.get("outcome")),
         "spine": _safe_str(payload.get("spine")),
-        "must_name": [_safe_str(item) for item in (payload.get("must_name") or []) if _safe_str(item)],
+        # Casefolded, because that is what the contract compares on.
+        "must_name": _deduped(
+            [
+                _safe_str(item)
+                for item in (payload.get("must_name") or [])
+                if _safe_str(item)
+            ],
+            casefold=True,
+        ),
         "material": _material_from(payload, state),
         "fails_if": _safe_str(payload.get("fails_if")),
     }
@@ -258,9 +369,19 @@ def _build_brief_once(
         )
         for key, value in fields.items()
     }
-    return ArticleBrief(
-        brief_fingerprint=brief_fingerprint(fingerprint_source), **fields
-    )
+    try:
+        return ArticleBrief(
+            brief_fingerprint=brief_fingerprint(fingerprint_source), **fields
+        )
+    except ValidationError as error:
+        raise BriefUnusable(
+            "; ".join(
+                f"{'.'.join(str(part) for part in item['loc']) or 'brief'}: {item['msg']}"
+                for item in error.errors()
+            )
+            or "the brief did not fit its contract",
+            json.dumps(payload, ensure_ascii=False)[:4000],
+        ) from error
 
 
 def brief_stage_record(brief: ArticleBrief) -> dict[str, Any]:

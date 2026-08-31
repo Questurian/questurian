@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 
 from app.core import read_stage_result
+from app.features.prompt2blog.contracts_v4 import MARKER_KEYS
 from app.features.prompt2blog.intake_v4 import _stage_data
 from app.features.prompt2blog.brief_v4 import BRIEF_STAGE
 from app.features.prompt2blog.grill_v4 import GRILL_STAGE, GrillDependencies
@@ -64,7 +65,13 @@ def _question(**overrides) -> dict[str, Any]:
     return payload
 
 
-AGREED = {"done": True, "consensus": "A guide for a Lima layover.", "location": "Lima, Peru"}
+AGREED = {
+    "done": True,
+    "consensus": "A guide for a Lima layover.",
+    "location": "Lima, Peru",
+    # Agreement needs the brief to be fillable, not just readable (ADR 0033).
+    "markers_covered": list(MARKER_KEYS),
+}
 
 BRIEF_PAYLOAD = {
     "form_id": "destination-guide",
@@ -316,6 +323,49 @@ def _to_work_order(services: IntakeServices) -> str:
     approve_brief(run_id, services)
     plan_research(run_id, services)
     return run_id
+
+
+def test_the_gathered_notes_are_kept_so_a_retry_does_not_re_buy_them(isolated_db):
+    """Ten sequential web searches, then one structuring call.
+
+    A structuring failure used to buy the searches again; run 90b3f9bc paid
+    for them twice in one evening.
+    """
+    calls: list[str] = []
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    services.research.gather = lambda prompt, _model: (
+        calls.append(prompt) or ("Notes.", ["https://example.pe/a"], 800)
+    )
+    run_id = _to_work_order(services)
+
+    do_research(run_id, services)
+    first = len(calls)
+    assert first == 3, "one grounded pass per question"
+
+    do_research(run_id, services)
+
+    assert len(calls) == first, "the second pass reused the kept notes"
+
+
+def test_recutting_the_plan_throws_the_kept_notes_away(isolated_db):
+    """A re-cut plan asks different questions, and old notes are not answers
+    to them."""
+    calls: list[str] = []
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    services.research.gather = lambda prompt, _model: (
+        calls.append(prompt) or ("Notes.", ["https://example.pe/a"], 800)
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+
+    apply_cut(run_id, services, struck_ids=["r3"])
+    do_research(run_id, services)
+
+    assert len(calls) > 3, "the cut plan was researched again"
 
 
 def test_research_runs_and_says_whether_the_piece_can_be_written(isolated_db):

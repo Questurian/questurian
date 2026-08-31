@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from app.features.prompt2blog.contracts_v4 import MARKER_KEYS
 from app.features.prompt2blog.api import intake as intake_api
 from app.features.prompt2blog.grill_v4 import GrillDependencies
 from app.features.prompt2blog.intake_v4 import IntakeServices
@@ -37,7 +38,13 @@ QUESTION = {
         "recommendation": "My recommendation: a guide with a point of view.",
     },
 }
-AGREED = {"done": True, "consensus": "A guide for a Lima layover.", "location": "Lima, Peru"}
+AGREED = {
+    "done": True,
+    "consensus": "A guide for a Lima layover.",
+    "location": "Lima, Peru",
+    # Agreement needs the brief to be fillable, not just readable (ADR 0033).
+    "markers_covered": list(MARKER_KEYS),
+}
 BRIEF = {
     "form_id": "destination-guide",
     "primary_reader": "layover traveller",

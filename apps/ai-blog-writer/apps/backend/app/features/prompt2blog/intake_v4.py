@@ -25,7 +25,13 @@ from uuid import uuid4
 
 from app.core import read_stage_result
 
-from .brief_v4 import BRIEF_STAGE, brief_stage_record, build_brief
+from .brief_v4 import (
+    BRIEF_STAGE,
+    BriefIncomplete,
+    BriefUnusable,
+    brief_stage_record,
+    build_brief,
+)
 from .config import FEATURE_NAME
 from .contracts_v4 import ArticleBrief, GrillState, Prompt2BlogWorkOrder
 from .grill_v4 import (
@@ -44,10 +50,15 @@ from .contracts_v4 import (
     Prompt2BlogWritingProfiles,
 )
 from .research_v4 import (
+    NOTES_STAGE,
     RESEARCH_STAGE,
     ResearchDependencies,
+    ResearchUnusable,
+    gather_research,
+    notes_from_record,
+    notes_stage_record,
     research_stage_record,
-    run_research,
+    structure_research,
 )
 from .run_budget import enforce_run_budget
 from .run_recorder import RunRecorder
@@ -55,6 +66,7 @@ from .support import _safe_dict, _safe_str
 from .work_order_v4 import (
     WORK_ORDER_STAGE,
     CutOutcome,
+    WorkOrderUnusable,
     build_work_order,
     cut_work_order,
     work_order_stage_record,
@@ -188,7 +200,7 @@ def reopen_intake(run_id: str, services: IntakeServices) -> GrillState:
     state = _load_grill(run_id)
     reopened = reopen_grill(state, services.dependencies)
 
-    for stage in (BRIEF_STAGE, WORK_ORDER_STAGE, RESEARCH_STAGE):
+    for stage in (BRIEF_STAGE, WORK_ORDER_STAGE, RESEARCH_STAGE, NOTES_STAGE):
         if read_stage_result(run_id, stage) is not None:
             services.recorder.discard_stage(run_id, stage)
 
@@ -198,7 +210,36 @@ def reopen_intake(run_id: str, services: IntakeServices) -> GrillState:
 def approve_brief(run_id: str, services: IntakeServices) -> ArticleBrief:
     """Turn an agreed grill into the brief the run answers to."""
     enforce_run_budget(_run_tokens_spent(run_id), stage=BRIEF_STAGE)
-    brief = build_brief(_load_grill(run_id), services.dependencies)
+    try:
+        brief = build_brief(_load_grill(run_id), services.dependencies)
+    except BriefUnusable as error:
+        _record(
+            services,
+            run_id,
+            BRIEF_STAGE,
+            {
+                "status": "failed",
+                "reason": error.reason,
+                "unusable_response": error.raw[:4000],
+            },
+        )
+        raise
+    except BriefIncomplete as error:
+        # The grill has already been paid for by this point, so a failure here
+        # has to leave something to read. Run 90b3f9bc (2026-08-30 20:01Z)
+        # failed with three fields empty and wrote no stage row at all, so the
+        # only record of what came back was a log line nobody was watching.
+        _record(
+            services,
+            run_id,
+            BRIEF_STAGE,
+            {
+                "status": "failed",
+                "missing": list(error.missing),
+                "unusable_response": error.raw[:4000],
+            },
+        )
+        raise
     _record(
         services,
         run_id,
@@ -211,7 +252,20 @@ def approve_brief(run_id: str, services: IntakeServices) -> ArticleBrief:
 def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder:
     """Translate the approved brief into checkable questions."""
     enforce_run_budget(_run_tokens_spent(run_id), stage=WORK_ORDER_STAGE)
-    work_order = build_work_order(load_brief(run_id), services.dependencies)
+    try:
+        work_order = build_work_order(load_brief(run_id), services.dependencies)
+    except WorkOrderUnusable as error:
+        _record(
+            services,
+            run_id,
+            WORK_ORDER_STAGE,
+            {
+                "status": "failed",
+                "reason": error.reason,
+                "unusable_response": error.raw[:4000],
+            },
+        )
+        raise
     _record(
         services,
         run_id,
@@ -232,9 +286,10 @@ def apply_cut(
     added_questions: list[str] | None = None,
 ) -> CutOutcome:
     """Apply the operator's cut. No model call; this is their decision, not one."""
-    if read_stage_result(run_id, RESEARCH_STAGE) is not None:
+    for stage in (RESEARCH_STAGE, NOTES_STAGE):
         # Research answered the questions that were there before the cut.
-        services.recorder.discard_stage(run_id, RESEARCH_STAGE)
+        if read_stage_result(run_id, stage) is not None:
+            services.recorder.discard_stage(run_id, stage)
     outcome = cut_work_order(
         load_work_order(run_id),
         load_brief(run_id),
@@ -272,7 +327,39 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
 
     brief = load_brief(run_id)
     work_order = load_work_order(run_id)
-    evidence, notes = run_research(brief, work_order, services.research)
+
+    # Ten sequential web searches, then one structuring call. Every structuring
+    # failure used to buy the searches again -- run 90b3f9bc paid for them
+    # twice in one evening. The notes are kept the moment they exist and are
+    # reused only when they answer this exact plan.
+    notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order)
+    if notes is None:
+        notes = gather_research(brief, work_order, services.research)
+        _record(
+            services, run_id, NOTES_STAGE, notes_stage_record(work_order, notes)
+        )
+    else:
+        logger.info(
+            "Reusing kept research notes",
+            extra={"run_id": run_id, "feature": FEATURE_NAME},
+        )
+
+    try:
+        evidence = structure_research(work_order, notes, services.research)
+    except ResearchUnusable as error:
+        # The most expensive step in intake. A failure here that leaves nothing
+        # behind means the next attempt is another guess.
+        _record(
+            services,
+            run_id,
+            RESEARCH_STAGE,
+            {
+                "status": "failed",
+                "reason": error.reason,
+                "unusable_response": error.raw[:40000],
+            },
+        )
+        raise
     verdict = assess_coverage(work_order, evidence)
 
     _record(
@@ -320,6 +407,15 @@ def intake_state(run_id: str) -> dict[str, Any]:
     work_order = _stage_data(run_id, WORK_ORDER_STAGE)
     research = _stage_data(run_id, RESEARCH_STAGE)
     grill_state = _safe_dict(grill.get(STATE_KEY))
+    # A failed brief leaves a row saying so. It is evidence, not progress, so
+    # the page stays on the grill with the agreement intact and one more
+    # approve to try.
+    if _safe_str(brief.get("status")) == "failed":
+        brief = {}
+    if _safe_str(work_order.get("status")) == "failed":
+        work_order = {}
+    if _safe_str(research.get("status")) == "failed":
+        research = {}
     return {
         "run_id": run_id,
         "step": (
@@ -339,6 +435,11 @@ def intake_state(run_id: str) -> dict[str, Any]:
             "turns": grill.get("transcript") or [],
             "pending": grill.get("pending"),
             "consensus": _safe_str(grill_state.get("consensus")),
+            # What the brief still needs. The grill stops when this is empty
+            # (ADR 0033), so it is also the honest answer to "how far along am
+            # I" -- which a question count never was.
+            "markers_covered": grill.get("markers_covered") or [],
+            "markers_missing": grill.get("markers_missing") or [],
         }
         if grill
         else None,
