@@ -567,7 +567,15 @@ def start_writing(
     # what the graph is about to run rather than queueing a new one. That is
     # the whole point of starting a run at the seed: one article, one record,
     # one receipt covering intake and writing together.
-    recorder = PipelineDependencies().recorder
+    # Continuing the run's ledger, not a fresh one. `record_stage` writes the
+    # whole ledger at the end of every call, so a recorder built on an empty
+    # tracker does not merely fail to add -- it ERASES what intake spent.
+    #
+    # Measured on run 062c0b86 (2026-09-01): the intake stages had recorded
+    # 105,098 tokens, this line wrote the `pipeline_input_v3` row at 19:29:14,
+    # and the run's finished receipt reported 161,897 -- the writing graph
+    # alone. The ceiling reads that same total.
+    recorder = dependencies_for_run(run_id).recorder
     artifact = v3_run_input_artifact(runtime)
     artifact["claude_account_label"] = credential.label if credential else None
     recorder.record_stage(run_id, RUN_INPUT_STAGE, artifact)
