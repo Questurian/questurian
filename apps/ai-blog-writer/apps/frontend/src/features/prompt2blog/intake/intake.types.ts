@@ -185,6 +185,8 @@ export interface VenueToCheck {
 export interface IntakeArticle {
   run_id: string
   title: string
+  /** The editorial shape, in the words staging labels drafts with. */
+  form_label: string
   markdown: string
   pipeline_status: string | null
   readiness_blockers: string[]

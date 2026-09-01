@@ -36,18 +36,27 @@ def get_all_completed_articles() -> List[Dict[str, Any]]:
         articles: List[Dict[str, Any]] = []
         for row in rows:
             artifact = json.loads(row["artifact"]) if row["artifact"] else {}
-            payload = artifact.get("pipeline_v2") if isinstance(artifact, dict) else {}
+            artifact = artifact if isinstance(artifact, dict) else {}
+            # v3 and v4 runs store the payload under `pipeline_v3`; only v2
+            # ever wrote `pipeline_v2`. Reading one key meant every run since
+            # the v3 cutover listed with a null title and no type, which is
+            # what Saved Articles shows and what the staging link carries.
+            payload = artifact.get("pipeline_v3") or artifact.get("pipeline_v2")
             payload = payload if isinstance(payload, dict) else {}
 
             improved_article = payload.get("improved_article")
             improved_article = (
                 improved_article if isinstance(improved_article, dict) else {}
             )
+            # v2 names the editorial shape `article_type.name`; v3 and v4 call
+            # the same slot `form.label`.
             article_type = payload.get("article_type")
             article_type = article_type if isinstance(article_type, dict) else {}
+            form = payload.get("form")
+            form = form if isinstance(form, dict) else {}
 
             title = improved_article.get("title") or payload.get("final_title")
-            article_type_name = article_type.get("name")
+            article_type_name = article_type.get("name") or form.get("label")
 
             articles.append(
                 {

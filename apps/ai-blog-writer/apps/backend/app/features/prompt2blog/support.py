@@ -143,3 +143,30 @@ def _clean_string_list(items: list[str]) -> list[str]:
         if text:
             cleaned.append(text)
     return cleaned
+
+
+def _safe_str_list(value: Any) -> list[str]:
+    """The strings in a field the model was told to send as a list of strings.
+
+    A bare string is the failure that actually happens. Run b78a9fe8 got a
+    `must_name` of "Standout developments in the hospitality sector..." instead
+    of a list, and every caller iterating it walked it one character at a time:
+    the brief came back naming "S", "t", "a", "n", "d" as things the article
+    had to mention, and the plan built on it was worthless.
+
+    Iterating a string is silent and never raises, so nothing downstream can
+    catch it. It is caught here, once, for every list-of-strings field.
+
+    A multi-line string is one item per line, with a bullet dash stripped --
+    that is a model writing a list in prose rather than in JSON, and the lines
+    are the entries it meant.
+    """
+    if isinstance(value, str):
+        lines = [
+            re.sub(r"^[-*•]\s*", "", line).strip()
+            for line in value.splitlines()
+        ]
+        return [line for line in lines if line]
+    if isinstance(value, list):
+        return _clean_string_list(value)
+    return []

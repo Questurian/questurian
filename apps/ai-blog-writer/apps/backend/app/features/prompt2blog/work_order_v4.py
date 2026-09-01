@@ -37,7 +37,7 @@ from pydantic import ValidationError
 
 from .grill_v4 import GrillDependencies
 from .schema_guards import require_non_empty
-from .support import _safe_dict, _safe_str
+from .support import _safe_dict, _safe_str, _safe_str_list
 
 logger = logging.getLogger(__name__)
 
@@ -286,22 +286,26 @@ def _requirements_from(
     checkable questions, and every one of them was thrown away because the
     list had the wrong name.
 
+    Run b78a9fe8 (2026-09-01) then returned the same list under `questions`
+    with the text under `query`. Six specific, checkable questions, every one
+    dropped, and the operator got "requirements: List should have at least 1
+    item after validation, not 0" -- a plan refused over a synonym.
+
     A schema exists so the model knows what to send, not so the parser can
     reject what arrived. If the content is right, take it.
     """
     requirements: list[WorkOrderRequirement] = []
+    dropped = 0
     for raw in _listed(payload, "requirements", "questions"):
         record = _safe_dict(raw)
-        question = _safe_str(_first(record, "question", "text", "ask"))
+        question = _safe_str(_first(record, "question", "query", "text", "ask"))
         kind = _safe_str(record.get("kind"))
         if not question or kind not in {"load_bearing", "texture"}:
+            dropped += 1
             continue
-        assumption_ids = [
-            _safe_str(item)
-            for item in (
-                _first(record, "assumption_ids", "premise_ids", "premises") or []
-            )
-        ]
+        assumption_ids = _safe_str_list(
+            _first(record, "assumption_ids", "premise_ids", "premises")
+        )
         requirements.append(
             WorkOrderRequirement(
                 requirement_id=_safe_str(
@@ -319,6 +323,15 @@ def _requirements_from(
                     if item and (declared is None or item in declared)
                 ],
             )
+        )
+    if dropped:
+        # Named here rather than left to the empty-list contract error, which
+        # says a plan came back with no questions and not that it came back
+        # with questions this parser did not recognise.
+        logger.warning(
+            "Dropped %s research question(s) the parser could not read; kept %s",
+            dropped,
+            len(requirements),
         )
     return requirements
 
