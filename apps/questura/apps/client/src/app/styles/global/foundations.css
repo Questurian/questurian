@@ -1,6 +1,12 @@
 html {
   background: #F5F0E8 !important;
   color: #1A1A1A !important;
+  /* Lock the rem root. Chrome/Firefox "font size" settings otherwise
+     scale 2.9rem logo + every rem layout at different sizes. Browser
+     zoom (Cmd/Ctrl +/-) still works. */
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 :root {
