@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Callable, get_args
@@ -41,6 +42,7 @@ from .contracts_v4 import (
     Prompt2BlogWorkOrder,
     WorkOrderRequirement,
 )
+from .config import P2B_V4_GATHER_CONCURRENCY
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
@@ -659,30 +661,45 @@ def gather_research(
     dependencies: ResearchDependencies,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, GatheredNotes]:
-    """One grounded pass per question, texture included.
+    """One grounded pass per question, texture included, all at once.
 
     Texture is researched to the identical standard: a scene we cannot source
     is still cut, so it has to be sourced like anything else.
 
-    `on_progress` is called before each search with what is about to be asked.
-    Ten sequential web searches take five to ten minutes and the screen used to
-    say nothing at all for the whole of it, which reads as a hung request.
+    The searches run concurrently because they are independent -- nothing in
+    question four depends on question three -- and sequentially they were about
+    six minutes of run 76b36468's twenty-and-a-half minute research pass. Same
+    prompts, same model, same results; only the waiting changes.
+
+    Bounded at `P2B_V4_GATHER_CONCURRENCY`, because grounded-search rate limits
+    are unknown and the number of questions is set by the work order rather
+    than by us.
+
+    `on_progress` reports **completions**, not position: it fires once when the
+    searches start and once each time one comes back. It cannot say what is
+    being searched now, because several are, so it names the last question to
+    come back instead.
     """
-    notes: dict[str, GatheredNotes] = {}
-    total = len(work_order.requirements)
-    for index, requirement in enumerate(work_order.requirements, start=1):
-        if on_progress is not None:
-            try:
-                on_progress(
-                    {
-                        "phase": "gathering",
-                        "done": index - 1,
-                        "total": total,
-                        "current_question": requirement.question,
-                    }
-                )
-            except Exception as exc:  # pragma: no cover -- telemetry only
-                logger.warning("Research progress write failed: %s", exc)
+    requirements = list(work_order.requirements)
+    total = len(requirements)
+
+    def _emit(phase: str, done: int, last_question_back: str) -> None:
+        if on_progress is None:
+            return
+        try:
+            on_progress(
+                {
+                    "phase": phase,
+                    "done": done,
+                    "total": total,
+                    "last_question_back": last_question_back,
+                }
+            )
+        except Exception as exc:  # pragma: no cover -- telemetry only
+            logger.warning("Research progress write failed: %s", exc)
+
+    def _gather_one(requirement: WorkOrderRequirement) -> GatheredNotes:
+        """Never raises: a hole is survivable, a dead run is not."""
         prompt = build_gather_prompt(brief, requirement)
         try:
             text, urls, tokens = dependencies.gather(prompt, GATHER_MODEL)
@@ -691,24 +708,41 @@ def gather_research(
                 "Gather failed for %s: %s", requirement.requirement_id, exc
             )
             text, urls, tokens = "", [], None
-        notes[requirement.requirement_id] = GatheredNotes(
+        return GatheredNotes(
             text=_safe_str(text), source_urls=list(urls or []), tokens=tokens
         )
-    if on_progress is not None:
-        try:
-            # Structuring is one call and the longest single wait in the run,
-            # so it gets its own phase rather than looking like a stall after
-            # the last search.
-            on_progress(
-                {
-                    "phase": "structuring",
-                    "done": total,
-                    "total": total,
-                    "current_question": "",
-                }
-            )
-        except Exception as exc:  # pragma: no cover -- telemetry only
-            logger.warning("Research progress write failed: %s", exc)
+
+    gathered: dict[str, GatheredNotes] = {}
+    if requirements:
+        # Only once there is something to wait for. A work order with no
+        # questions cannot reach here through the contract, and an empty
+        # "0 of 0" on the screen would be worse than silence if it did.
+        _emit("gathering", 0, "")
+        workers = max(1, min(P2B_V4_GATHER_CONCURRENCY, total))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            pending = {
+                pool.submit(_gather_one, requirement): requirement
+                for requirement in requirements
+            }
+            # Consumed on this thread, so `on_progress` -- which writes a stage
+            # row -- is never called from a worker and needs no lock.
+            for done, future in enumerate(as_completed(pending), start=1):
+                requirement = pending[future]
+                gathered[requirement.requirement_id] = future.result()
+                _emit("gathering", done, requirement.question)
+
+    # Rebuilt in work-order order rather than completion order, so the notes,
+    # the structure prompt built from them and anything diffing two runs do not
+    # change shape with the weather.
+    notes = {
+        requirement.requirement_id: gathered[requirement.requirement_id]
+        for requirement in requirements
+        if requirement.requirement_id in gathered
+    }
+
+    # Structuring is one call and the longest single wait in the run, so it gets
+    # its own phase rather than looking like a stall after the last search.
+    _emit("structuring", total, "")
     return notes
 
 

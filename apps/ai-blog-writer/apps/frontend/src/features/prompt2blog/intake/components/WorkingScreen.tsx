@@ -4,10 +4,14 @@ import type { IntakeResearchProgress, IntakeWriting } from '../intake.types'
 /**
  * What is happening, while it happens.
  *
- * Research is ten sequential web searches and writing is a whole article, and
- * both used to leave the page completely silent for as long as they took. A
- * run that looked hung at seven minutes was working; a write that looked dead
- * had already finished. Both facts were on the run the whole time.
+ * Research is a fan of concurrent web searches and writing is a whole article,
+ * and both used to leave the page completely silent for as long as they took.
+ * A run that looked hung at seven minutes was working; a write that looked
+ * dead had already finished. Both facts were on the run the whole time.
+ *
+ * The searches now go out together, so the count is what has come *back*. It
+ * deliberately does not claim to name what is being searched right now:
+ * several are, and picking one to show would be a comforting fiction.
  *
  * The elapsed clock is here because "is this working" is answered by movement,
  * not by a number. The expected duration is here because five minutes of
@@ -40,13 +44,17 @@ export function WorkingScreen({ research, writing }: WorkingScreenProps) {
   const heading = writing
     ? writing.stage_label
     : gathering
-      ? `Searching the web: ${research!.done + 1} of ${research!.total}`
+      ? research!.done === 0
+        ? `Searching the web: ${research!.total} questions at once`
+        : `Searching the web: ${research!.done} of ${research!.total} back`
       : 'Turning the research into records'
 
   const detail = writing
     ? 'The whole article, then a check of every claim against the research. This usually takes five to ten minutes.'
     : gathering
-      ? research!.current_question
+      ? research!.done === 0
+        ? 'They all go out together, so the wait is the slowest single search.'
+        : `Last back: ${research!.last_question_back}`
       : 'One long call. This is the slowest single step in the run.'
 
   const done = research && !writing ? research.done : 0

@@ -126,7 +126,11 @@ export interface IntakeResearchProgress {
   phase: 'gathering' | 'structuring'
   done: number
   total: number
-  current_question: string
+  /**
+   * The last question to come back, not the one being searched: the searches
+   * run concurrently, so there is no single current one.
+   */
+  last_question_back: string
 }
 
 /**

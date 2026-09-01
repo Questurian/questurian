@@ -11,6 +11,8 @@ re-run. Do not read a green run here as "research works".
 
 from __future__ import annotations
 
+import threading
+import time
 from datetime import date
 from typing import Any
 
@@ -30,6 +32,7 @@ from app.features.prompt2blog.contracts_v4 import (
     WorkOrderRequirement,
     WorkOrderScope,
 )
+from app.features.prompt2blog.config import P2B_V4_GATHER_CONCURRENCY
 from app.features.prompt2blog.coverage_v4 import assess_coverage
 from app.features.prompt2blog.research_v4 import (
     GATHER_MODEL,
@@ -181,8 +184,11 @@ def test_texture_is_researched_like_anything_else():
 
     gather_research(_brief(), _work_order(), deps)
 
-    texture_prompt = deps.gather.calls[1][0]
-    assert "Huaca Pucllana" in texture_prompt
+    # Found rather than indexed: the searches run concurrently, so which one
+    # was recorded second is the network's business.
+    texture_prompt = next(
+        prompt for prompt, _model in deps.gather.calls if "Huaca Pucllana" in prompt
+    )
     assert "with sources" in texture_prompt
 
 
@@ -202,6 +208,117 @@ def test_the_gather_prompt_asks_for_more_than_the_question():
 
     assert "Do not discard it because it was not the question." in flat
     assert "a reader would find interesting" in flat
+
+
+# --- the searches run together -------------------------------------------
+
+
+def _wide_work_order(count: int) -> Prompt2BlogWorkOrder:
+    """More questions than the concurrency bound, so the bound is observable."""
+    return _work_order(
+        requirements=[
+            WorkOrderRequirement(
+                requirement_id=f"r{index}",
+                question=f"Question {index}?",
+                kind="load_bearing",
+            )
+            for index in range(1, count + 1)
+        ]
+    )
+
+
+def test_the_searches_actually_run_at_the_same_time():
+    """The whole point of the change, and the only test that can prove it.
+
+    Both gathers wait on a barrier that only opens when both have arrived. Run
+    sequentially the first one waits alone and the barrier times out, so this
+    fails loudly rather than silently passing on a fast machine.
+    """
+    barrier = threading.Barrier(2, timeout=10)
+
+    def _gather(_prompt: str, _model: str):
+        barrier.wait()
+        return "notes", [], 10
+
+    notes = gather_research(
+        _brief(),
+        _work_order(),
+        ResearchDependencies(gather=_gather, structure_llm=object()),
+    )
+
+    # The text, not the keys. A timed-out barrier raises inside the worker,
+    # `_gather_one` turns that into an empty hole, and the keys are present
+    # either way -- so asserting on the keys alone would pass sequentially.
+    assert notes["r1"].text == "notes"
+    assert notes["r2"].text == "notes"
+
+
+def test_no_more_searches_run_at_once_than_the_bound_allows():
+    """Grounded-search rate limits are unknown, so the fan-out is bounded."""
+    lock = threading.Lock()
+    live = 0
+    peak = 0
+
+    def _gather(_prompt: str, _model: str):
+        nonlocal live, peak
+        with lock:
+            live += 1
+            peak = max(peak, live)
+        time.sleep(0.02)
+        with lock:
+            live -= 1
+        return "notes", [], 10
+
+    gather_research(
+        _brief(),
+        _wide_work_order(P2B_V4_GATHER_CONCURRENCY + 4),
+        ResearchDependencies(gather=_gather, structure_llm=object()),
+    )
+
+    assert peak <= P2B_V4_GATHER_CONCURRENCY
+    # And it really did fan out, rather than passing by staying sequential.
+    assert peak > 1
+
+
+def test_the_notes_keep_work_order_order_whatever_the_network_does():
+    """The structure prompt is built from these notes.
+
+    Ordering them by whichever search returned first would make the prompt --
+    and so the dossier, and so any diff between two runs -- depend on the
+    weather.
+    """
+    def _gather(prompt: str, _model: str):
+        # The last question comes back first.
+        if "Question 3" in prompt:
+            return "third", [], 10
+        time.sleep(0.05)
+        return "other", [], 10
+
+    notes = gather_research(
+        _brief(),
+        _wide_work_order(3),
+        ResearchDependencies(gather=_gather, structure_llm=object()),
+    )
+
+    assert list(notes) == ["r1", "r2", "r3"]
+
+
+def test_one_search_failing_does_not_take_the_others_down_with_it():
+    """Concurrency must not turn one hole into a dead run."""
+    def _gather(prompt: str, _model: str):
+        if "Question 2" in prompt:
+            raise RuntimeError("no network")
+        return "notes", [], 10
+
+    notes = gather_research(
+        _brief(),
+        _wide_work_order(3),
+        ResearchDependencies(gather=_gather, structure_llm=object()),
+    )
+
+    assert notes["r2"].text == ""
+    assert notes["r1"].text == "notes"
+    assert notes["r3"].text == "notes"
 
 
 def test_a_failed_gather_leaves_a_hole_rather_than_killing_the_run():

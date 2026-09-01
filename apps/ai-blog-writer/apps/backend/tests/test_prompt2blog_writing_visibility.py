@@ -139,10 +139,10 @@ def test_asking_for_an_article_that_was_never_written_says_so(run):
         intake_v4.finished_article(run)
 
 
-# --- research, which is ten sequential searches and used to say nothing ------
+# --- research, which is a fan of searches and used to say nothing -----------
 
 
-def test_gathering_reports_which_question_it_is_on():
+def test_gathering_counts_the_searches_that_have_come_back():
     from app.features.prompt2blog.contracts_v4 import (
         ArticleBrief,
         BriefReader,
@@ -189,18 +189,31 @@ def test_gathering_reports_which_question_it_is_on():
 
     gather_research(brief, order, deps, seen.append)
 
-    assert [item["phase"] for item in seen] == ["gathering", "gathering", "structuring"]
+    # One event when the fan goes out, one per search coming back, one for
+    # structuring. `done` counts completions, so it never reports progress the
+    # run has not actually made.
+    assert [item["phase"] for item in seen] == [
+        "gathering",
+        "gathering",
+        "gathering",
+        "structuring",
+    ]
     assert seen[0] == {
         "phase": "gathering",
         "done": 0,
         "total": 2,
-        "current_question": "What do stalls charge?",
+        "last_question_back": "",
     }
-    assert seen[1]["done"] == 1
-    assert seen[1]["current_question"] == "What is it like after dark?"
+    assert [item["done"] for item in seen] == [0, 1, 2, 2]
+    # Which question comes back first is the network's business, so this
+    # asserts the set rather than the order.
+    assert {item["last_question_back"] for item in seen[1:3]} == {
+        "What do stalls charge?",
+        "What is it like after dark?",
+    }
     # Structuring is one call and the longest single wait; it gets its own
     # phase rather than looking like a stall after the last search.
-    assert seen[2]["done"] == seen[2]["total"] == 2
+    assert seen[3]["done"] == seen[3]["total"] == 2
 
 
 def test_a_progress_write_that_fails_does_not_stop_the_research():

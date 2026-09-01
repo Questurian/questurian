@@ -119,6 +119,20 @@ P2B_RUN_TOKEN_BUDGET = 320_000
 # in one place, so a ceiling set wrong is obvious rather than mysterious.
 P2B_RUN_TOKEN_CEILING = 650_000
 
+# How many grounded searches research may have in flight at once.
+#
+# One question per search, and nothing in question four depends on question
+# three, so the sequential loop was only ever the simplest thing to write. On
+# run 76b36468 it cost roughly six minutes of a twenty-and-a-half minute
+# research pass; concurrently that is about the slowest single search.
+#
+# Bounded rather than unbounded because the grounded-search rate limits are
+# unknown and a run fans out as many searches as the work order has questions.
+# Four is a deliberate first guess: enough to collapse most of the wait, small
+# enough that a rate limit shows up as slow rather than as a wall of failures.
+# Lower it here if searches start coming back empty.
+P2B_V4_GATHER_CONCURRENCY = 4
+
 # How many times one run may be resumed after a failure. A resume costs the
 # stages that had not run yet, so a stage that fails for a reason resuming
 # cannot fix -- a commission the model keeps refusing, a permanently dead
