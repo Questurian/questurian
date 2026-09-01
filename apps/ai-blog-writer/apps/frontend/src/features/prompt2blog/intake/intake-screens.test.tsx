@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { BriefScreen } from './components/BriefScreen'
 import { ArticleScreen } from './components/ArticleScreen'
@@ -461,22 +462,27 @@ describe('the working screen', () => {
   })
 })
 
+function renderArticle(ui: React.ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>)
+}
+
 describe('the finished article screen', () => {
   it('shows the title and the stamp instead of leaving the run invisible', () => {
-    render(<ArticleScreen runId="run-1" writing={writing()} article={null} onReopen={vi.fn()} busy={false} />)
+    renderArticle(<ArticleScreen runId="run-1" writing={writing()} article={null} onReopen={vi.fn()} busy={false} />)
 
     expect(screen.getByText(/lima is no longer simply the stopover/i)).toBeInTheDocument()
     expect(screen.getByText(/ready for staging/i)).toBeInTheDocument()
   })
 
   it('renders the article once it arrives', () => {
-    render(
+    renderArticle(
       <ArticleScreen
         runId="run-1"
         writing={writing()}
         article={{
           run_id: 'r',
           title: 'T',
+          form_label: 'Destination Guide',
           markdown: '## The elevation contrast\n\nCusco sits at 3,399 meters.',
           pipeline_status: 'ready_for_staging',
           readiness_blockers: [],
@@ -493,7 +499,7 @@ describe('the finished article screen', () => {
   })
 
   it('reports the measured sentence spread and says nothing blocks', () => {
-    render(
+    renderArticle(
       <ArticleScreen
         runId="run-1"
         writing={writing({
@@ -518,7 +524,7 @@ describe('the finished article screen', () => {
 
   it('a needs-revision stamp is shown and never obeyed', () => {
     // ADR 0030: once prose exists nothing blocks. The article is still here.
-    render(
+    renderArticle(
       <ArticleScreen
         runId="run-1"
         writing={writing({
@@ -538,7 +544,7 @@ describe('the finished article screen', () => {
 
   it('a failed run says where it stopped and keeps the way back', () => {
     const onReopen = vi.fn()
-    render(
+    renderArticle(
       <ArticleScreen
         runId="run-1"
         writing={writing({
@@ -555,5 +561,50 @@ describe('the finished article screen', () => {
     expect(screen.getByText('The writer refused.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /back to the grill/i }))
     expect(onReopen).toHaveBeenCalled()
+  })
+
+  it('a finished article can be kept, not only read', () => {
+    // The screen offered "start again from the grill" and nothing else, so the
+    // one thing anyone wants at the end of a run -- keeping it -- was reachable
+    // only from Saved Articles.
+    renderArticle(
+      <ArticleScreen
+        runId="run-1"
+        writing={writing()}
+        article={{
+          run_id: 'run-1',
+          title: 'T',
+          form_label: 'Destination Guide',
+          markdown: 'Body.',
+          pipeline_status: 'ready_for_staging',
+          readiness_blockers: [],
+          constraint_checks: {},
+          word_count: 914,
+        }}
+        onReopen={vi.fn()}
+        busy={false}
+      />,
+    )
+
+    const link = screen.getByRole('link', { name: /stage in payload editor/i })
+    expect(link).toHaveAttribute('href', expect.stringContaining('/prompt2blog/stage-article'))
+    expect(link).toHaveAttribute('href', expect.stringContaining('runId=run-1'))
+  })
+
+  it('a needs-revision article carries the same staging button as a clean one', () => {
+    renderArticle(
+      <ArticleScreen
+        runId="run-1"
+        writing={writing({
+          pipeline_status: 'needs_revision',
+          readiness_blockers: ['It is forty one words long.'],
+        })}
+        article={null}
+        onReopen={vi.fn()}
+        busy={false}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: /stage in payload editor/i })).toBeInTheDocument()
   })
 })

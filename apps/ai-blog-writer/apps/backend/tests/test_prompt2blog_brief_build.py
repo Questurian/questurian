@@ -273,6 +273,27 @@ def test_a_repeated_must_name_does_not_take_the_brief_down():
     assert brief.must_name == ["Barranco", "Miraflores"]
 
 
+def test_a_must_name_sent_as_one_string_is_not_split_into_letters():
+    """Run b78a9fe8 (2026-09-01) sent `must_name` as a sentence instead of a
+    list, and the parser walked it one character at a time: the brief named
+    "S", "t", "a", "n", "d" as things the article had to mention, the research
+    plan was built on that, and nothing raised.
+    """
+    deps = _deps(_payload(must_name="Standout hospitality in Barranco"))
+
+    brief = build_brief(_agreed(), deps)
+
+    assert brief.must_name == ["Standout hospitality in Barranco"]
+
+
+def test_a_list_written_as_lines_of_prose_becomes_its_entries():
+    deps = _deps(_payload(must_name="- Surquillo market\n- Huaca Pucllana\n"))
+
+    brief = build_brief(_agreed(), deps)
+
+    assert brief.must_name == ["Surquillo market", "Huaca Pucllana"]
+
+
 def test_repeats_are_dropped_from_every_list_the_model_fills():
     deps = _deps(
         _payload(

@@ -32,7 +32,7 @@ from .contracts_v4 import (
 )
 from .grill_v4 import GrillDependencies
 from .schema_guards import require_non_empty
-from .support import _safe_dict, _safe_str
+from .support import _safe_dict, _safe_str, _safe_str_list
 
 logger = logging.getLogger(__name__)
 
@@ -185,11 +185,7 @@ def _reader_from(payload: dict[str, Any]) -> BriefReader:
     """
     allowed = set(get_args(AudienceTagId))
     tags = _deduped(
-        [
-            tag
-            for tag in (_safe_str(item) for item in (payload.get("reader_tags") or []))
-            if tag in allowed
-        ]
+        [tag for tag in _safe_str_list(payload.get("reader_tags")) if tag in allowed]
     )
     return BriefReader(
         primary_reader=_safe_str(payload.get("primary_reader")), tags=tags
@@ -336,11 +332,7 @@ def _build_brief_once(
         "location": resolved_location,
         "form_id": _safe_str(payload.get("form_id")),
         "topic_module_ids": _deduped(
-            [
-                _safe_str(item)
-                for item in (payload.get("topic_module_ids") or [])
-                if _safe_str(item)
-            ]
+            _safe_str_list(payload.get("topic_module_ids"))
         )[:4],
         "reader": _reader_from(payload),
         "reader_question": _safe_str(payload.get("reader_question")),
@@ -348,11 +340,7 @@ def _build_brief_once(
         "spine": _safe_str(payload.get("spine")),
         # Casefolded, because that is what the contract compares on.
         "must_name": _deduped(
-            [
-                _safe_str(item)
-                for item in (payload.get("must_name") or [])
-                if _safe_str(item)
-            ],
+            _safe_str_list(payload.get("must_name")),
             casefold=True,
         ),
         "material": _material_from(payload, state),

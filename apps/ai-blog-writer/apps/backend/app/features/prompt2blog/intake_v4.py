@@ -669,6 +669,10 @@ def finished_article(run_id: str) -> dict[str, Any]:
     return {
         "run_id": run_id,
         "title": _safe_str(finalize.get("final_title")) or _safe_str(article.get("title")),
+        # The editorial shape, in the words staging labels drafts with. Sent
+        # so the finished article can be handed to the editor without the
+        # operator retyping what the brief already settled.
+        "form_label": _safe_str(_safe_dict(payload.get("form")).get("label")),
         "markdown": _safe_str(payload.get("final_markdown"))
         or _safe_str(article.get("content")),
         "pipeline_status": _safe_str(finalize.get("pipeline_status")) or None,

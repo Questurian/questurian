@@ -1,3 +1,6 @@
+import { Link } from 'react-router-dom'
+import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
+import { buildStageArticleUrl } from '../../../blogArticles'
 import type { IntakeArticle, IntakeWriting } from '../intake.types'
 import { PolishPrompt } from './PolishPrompt'
 
@@ -12,6 +15,17 @@ import { PolishPrompt } from './PolishPrompt'
  * (ADR 0030): a run stamped `needs_revision` for being forty one words long is
  * savable in one click, and failures are worth keeping because that is how the
  * next failure gets diagnosed.
+ *
+ * That one click did not exist. v2 and v3 both ended on a result screen
+ * carrying "Stage in Payload Editor"; this screen replaced them and did not
+ * carry it across, so a finished article could be read and not kept -- the
+ * editor was reachable only from Saved Articles, which is not where anyone is
+ * standing when the run ends.
+ *
+ * Same route, same params and same label as the screens it replaced, because
+ * staging is one step in this app and renaming it here would make it look like
+ * two. The stamp is still not obeyed: a `needs_revision` article carries the
+ * same button as a clean one.
  */
 
 interface ArticleScreenProps {
@@ -110,6 +124,22 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
       <PolishPrompt runId={runId} />
 
       <div className="p2b-intake-actions">
+        <Link
+          className="payload-action-btn"
+          to={buildStageArticleUrl('prompt2blog', {
+            run_id: runId,
+            title: writing.final_title || article?.title || '',
+            article_type: article?.form_label || '',
+          })}
+        >
+          <img
+            src={payloadLogoUrl}
+            alt=""
+            aria-hidden="true"
+            className="payload-action-btn-icon"
+          />
+          Stage in Payload Editor
+        </Link>
         <button type="button" className="p2b-secondary" onClick={onReopen} disabled={busy}>
           Start again from the grill
         </button>

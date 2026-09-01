@@ -146,6 +146,37 @@ def test_the_plan_survives_the_model_naming_the_fields_its_own_way():
     ]
 
 
+def test_a_question_sent_under_query_is_still_a_question():
+    """Run b78a9fe8 (2026-09-01): `questions` carrying `query` and `premises`.
+    Six checkable questions, all dropped, and the operator was told the plan
+    came back with none -- which was a synonym, not a bad plan.
+    """
+    order = build_work_order(
+        _brief(),
+        _deps(
+            {
+                "primary_subject": "Lima",
+                "references": [{"name": "Lima", "role": "primary_subject"}],
+                "premises": [
+                    {"id": "premise_1", "description": "Lima's huarique culture stands apart."}
+                ],
+                "questions": [
+                    {
+                        "query": "What does an anticuchos platter cost at Tia Grimanesa, and as of when?",
+                        "kind": "load_bearing",
+                        "premises": ["premise_1"],
+                    }
+                ],
+            }
+        ),
+    )
+
+    assert [item.question for item in order.requirements] == [
+        "What does an anticuchos platter cost at Tia Grimanesa, and as of when?"
+    ]
+    assert order.requirements[0].assumption_ids == ["premise_1"]
+
+
 def test_premises_survive_their_own_renaming_too():
     order = build_work_order(_brief(), _deps(AS_THE_MODEL_SENT_IT))
 
