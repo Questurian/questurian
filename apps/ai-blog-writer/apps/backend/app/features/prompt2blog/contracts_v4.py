@@ -270,6 +270,11 @@ class GrillState(V4ContractModel):
     # grill short -- not a question limit (G2).
     research_digest: str = ""
     research_source_urls: list[str] = Field(default_factory=list)
+    # What it looked up *during* the interview, in order, on top of the seed.
+    # The queries rather than a count, because "it asked the web about the
+    # Ayacucho tram on turn four" is the thing worth reading back later; the
+    # count is just `len`.
+    lookups: list[str] = Field(default_factory=list)
     location: str = ""
     turns: list[GrillTurn] = Field(default_factory=list)
     status: GrillStatus = "asking"

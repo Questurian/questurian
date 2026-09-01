@@ -23,6 +23,8 @@ from app.features.prompt2blog.grill_v4 import (
     start_grill,
 )
 
+from app.features.prompt2blog.config import P2B_V4_GRILL_MAX_LOOKUPS
+
 SEED = "Lima is no longer simply the stopover before Machu Picchu"
 
 
@@ -776,3 +778,174 @@ def test_the_schema_has_nothing_left_to_nest():
         spec.get("type") in {"string", "boolean", "array"}
         for spec in NEXT_TURN_SCHEMA["properties"].values()
     )
+
+
+# --- looking something up mid-interview (G2, after turn one) ---------------
+
+
+class CountingResearch:
+    """A research callable that remembers what it was asked."""
+
+    def __init__(self, digest: str = "The Ayacucho tram runs through it.") -> None:
+        self.queries: list[str] = []
+        self.digest = digest
+
+    def __call__(self, query: str):
+        self.queries.append(query)
+        return self.digest, ["https://example.co/tram"], 400
+
+
+def _lookup(query: str) -> dict[str, Any]:
+    """The move: say what you need to know and nothing else."""
+    return {"done": False, "lookup": query, "ask": "", "recommendation": ""}
+
+
+def _grill_with(responses, research=None):
+    research = research or CountingResearch()
+    deps = GrillDependencies(llm=FakeLLM(responses), research=research)
+    return deps, research
+
+
+def test_the_grill_can_look_something_up_part_way_through():
+    """It used to research the seed once and then go blind.
+
+    By the fourth turn the conversation may have narrowed to one neighbourhood
+    while the grill is still working from the general city briefing. G2 is what
+    keeps the grill short, so a grill that cannot look up where the
+    conversation went is pushed back into asking -- the form-with-extra-steps
+    failure the interview replaced.
+    """
+    deps, research = _grill_with(
+        [_lookup("Buenos Aires neighbourhood Medellin"), {"done": False, **_question()}]
+    )
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert research.queries[1:] == ["Buenos Aires neighbourhood Medellin"]
+    assert state.lookups == ["Buenos Aires neighbourhood Medellin"]
+    # It asks its question with the answer in hand, not on the next turn.
+    assert state.pending is not None
+    assert state.status == "asking"
+
+
+def test_what_it_looked_up_reaches_the_next_call_and_the_state():
+    deps, _research = _grill_with(
+        [_lookup("Ayacucho tram"), {"done": False, **_question()}]
+    )
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert "Looked up mid-interview: Ayacucho tram" in state.research_digest
+    assert "The Ayacucho tram runs through it." in state.research_digest
+    # The second call is the one that has to see it; the first is what asked.
+    assert "The Ayacucho tram runs through it." in deps.llm.prompts[1]
+    assert "https://example.co/tram" in state.research_source_urls
+
+
+def _spends_the_budget() -> list[dict[str, Any]]:
+    """Every lookup the budget allows, then one more asked for beside a
+    question -- which is what a model does once the prompt tells it the
+    budget is gone."""
+    return [
+        *[_lookup(f"thing {index}") for index in range(P2B_V4_GRILL_MAX_LOOKUPS)],
+        {"done": False, "lookup": "one more please", **_question()},
+    ]
+
+
+def test_the_lookups_are_bounded():
+    """The grill stops at agreement, not at a count, so it has no upper bound
+    on turns by construction -- and would have none on searches either."""
+    deps, research = _grill_with(_spends_the_budget())
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert len(state.lookups) == P2B_V4_GRILL_MAX_LOOKUPS
+    assert "one more please" not in state.lookups
+    # The seed lookup, plus the budget. Not one more.
+    assert len(research.queries) == P2B_V4_GRILL_MAX_LOOKUPS + 1
+    # The refused lookup does not cost the turn: the question beside it is used.
+    assert state.pending is not None
+
+
+def test_the_prompt_says_how_many_lookups_are_left():
+    """Otherwise the model asks for one it cannot have, every turn, forever."""
+    deps, _research = _grill_with(_spends_the_budget())
+
+    start_grill("run-1", SEED, deps)
+
+    assert f"{P2B_V4_GRILL_MAX_LOOKUPS} more time(s)" in deps.llm.prompts[0]
+    assert "budget is spent" in deps.llm.prompts[-1]
+
+
+def test_a_retry_does_not_buy_the_lookups_again():
+    """Found by the bounded test above, and it was a real overspend.
+
+    `advance_grill` retries once on an unusable reply. It used to re-enter with
+    the state it was given, so every lookup the first attempt had already paid
+    for was bought again: six searches against a budget of three. The state now
+    travels on the failure.
+    """
+    deps, research = _grill_with(
+        [
+            # First attempt: spends the budget, then returns something that is
+            # neither a question nor a consensus.
+            *[_lookup(f"thing {index}") for index in range(P2B_V4_GRILL_MAX_LOOKUPS)],
+            {"done": False, "ask": "", "recommendation": ""},
+            # Second attempt: asks again, and must be refused. The question
+            # rides beside it, which is what the prompt now tells it to do.
+            {"done": False, "lookup": "sneaking one in", **_question()},
+        ]
+    )
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert len(state.lookups) == P2B_V4_GRILL_MAX_LOOKUPS
+    assert "sneaking one in" not in state.lookups
+    assert len(research.queries) == P2B_V4_GRILL_MAX_LOOKUPS + 1
+
+
+def test_a_failed_lookup_still_costs_its_budget():
+    """A free retry is a loop. The run has no question limit to stop it."""
+
+    class Broken(CountingResearch):
+        def __call__(self, query: str):
+            self.queries.append(query)
+            raise RuntimeError("no network")
+
+    research = Broken()
+    deps = GrillDependencies(
+        llm=FakeLLM([_lookup("something"), {"done": False, **_question()}]),
+        research=research,
+    )
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert state.lookups == ["something"]
+    assert "Nothing came back for this." in state.research_digest
+    assert state.pending is not None
+
+
+def test_a_lookup_is_not_read_as_a_question():
+    """The model is saying "I need to know this first", not answering."""
+    deps, _research = _grill_with(
+        [
+            {**_lookup("something"), "ask": "junk", "recommendation": "junk"},
+            {"done": False, **_question()},
+        ]
+    )
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert state.pending is not None
+    assert state.pending.ask != "junk"
+
+
+def test_a_grill_that_is_done_does_not_look_anything_up_first():
+    """Agreement is the end of the interview, not a reason to spend."""
+    deps, research = _grill_with([{**_done(), "lookup": "one more thing"}])
+
+    state = start_grill("run-1", SEED, deps)
+
+    assert state.status == "agreed"
+    assert state.lookups == []
+    assert len(research.queries) == 1
