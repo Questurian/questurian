@@ -212,3 +212,22 @@ export interface IntakeState {
   research_progress: IntakeResearchProgress | null
   writing: IntakeWriting | null
 }
+
+
+/**
+ * One run, as it appears in the list of runs to go back to.
+ *
+ * A run is created when the seed is typed (ADR 0031), so one that never
+ * reached an article is an ordinary run and appears here beside the ones that
+ * did.
+ */
+export interface IntakeRunSummary {
+  run_id: string
+  /** The line that started it. What makes a run recognisable in a list. */
+  seed: string
+  status: string
+  stage: string
+  /** The stage in words, intake stages included. */
+  stage_label: string
+  updated_at: string
+}

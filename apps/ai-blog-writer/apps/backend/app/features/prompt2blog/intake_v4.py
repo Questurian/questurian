@@ -25,7 +25,7 @@ from uuid import uuid4
 
 from pydantic import ValidationError
 
-from app.core import read_stage_result, read_status
+from app.core import get_all_runs, read_stage_result, read_status
 
 from .graph.topology_v3 import V3_NODE_STAGE_NAMES
 
@@ -626,6 +626,21 @@ WRITING_STAGE_LABELS = {
     "complete": "Done",
 }
 
+# The same, for the stages the operator owns. A run begins at the seed
+# (ADR 0031), so a run that never reached the graph is an ordinary run and has
+# to be nameable in a list beside the ones that did.
+INTAKE_STAGE_LABELS = {
+    "queued": "Getting ready",
+    GRILL_STAGE: "In the grill",
+    BRIEF_STAGE: "Brief written",
+    WORK_ORDER_STAGE: "Research planned",
+    NOTES_STAGE: "Searching the web",
+    RESEARCH_STAGE: "Research done",
+}
+
+RUN_STAGE_LABELS = {**INTAKE_STAGE_LABELS, **WRITING_STAGE_LABELS}
+
+
 # The stages that mean the graph is running or has finished. Everything else on
 # a run row -- every `stage_v4_*` intake stage, and `queued` -- belongs to the
 # operator, not the writer.
@@ -636,6 +651,47 @@ WRITING_STAGE_LABELS = {
 # screens in the middle of a write, which is the same class of bug this set
 # exists to fix.
 GRAPH_STAGES = frozenset(V3_NODE_STAGE_NAMES.values()) | {"complete"}
+
+
+def recent_runs(limit: int = 15) -> list[dict[str, Any]]:
+    """The runs this operator could go back to, newest first.
+
+    The page tracked exactly one run, in `localStorage`. Lose that pointer or
+    start a second article and every earlier run became unreachable from the
+    interface, even though all of it was on the server -- on 2026-08-31 the
+    only way back to a live run was a `?run=<uuid>` URL produced by querying
+    the database by hand.
+
+    Every long step invites the operator to leave the page. That is only safe
+    if leaving does not depend on one browser's memory surviving.
+
+    Runs that never reached an article are listed too. A run is created when
+    the seed is typed (ADR 0031), so one that stopped in the grill is an
+    ordinary run rather than a failure to hide.
+
+    The seed comes from the grill row rather than the run row, which is one
+    extra read per run. Bounded by `limit` and local, and a run without a
+    recognisable name is a list nobody can use.
+    """
+    rows = get_all_runs(FEATURE_NAME)[:max(0, limit)]
+    runs: list[dict[str, Any]] = []
+    for row in rows:
+        run_id = _safe_str(_safe_dict(row).get("run_id"))
+        if not run_id:
+            continue
+        stage = _safe_str(row.get("stage"))
+        grill = _stage_data(run_id, GRILL_STAGE)
+        runs.append(
+            {
+                "run_id": run_id,
+                "seed": _safe_str(grill.get("seed")),
+                "status": _safe_str(row.get("status")),
+                "stage": stage,
+                "stage_label": RUN_STAGE_LABELS.get(stage, stage),
+                "updated_at": _safe_str(row.get("updated_at")),
+            }
+        )
+    return runs
 
 
 def writing_state(run_id: str) -> dict[str, Any] | None:

@@ -3,6 +3,7 @@ import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
 import type {
   GateQuestion,
   IntakeArticle,
+  IntakeRunSummary,
   IntakeState,
   VenueToCheck,
 } from './intake.types'
@@ -25,21 +26,28 @@ const INTAKE = `${FEATURE_PREFIX}/intake`
  * raw model reply -- so every one of those messages was being thrown away and
  * replaced with a generic fallback. The operator saw "That step could not be
  * completed" while the server was explaining exactly what went wrong.
+ *
+ * The status travels on the error too. Without it every failure looked the
+ * same to the caller, and the resume read treated a timeout as proof the run
+ * no longer existed.
  */
 async function readError(response: Response, fallback: string): Promise<Error> {
   const body = await response.json().catch(() => null)
   const detail = body?.detail
 
-  if (typeof detail === 'string' && detail) return new Error(detail)
+  const withStatus = (error: Error): Error =>
+    Object.assign(error, { status: response.status })
+
+  if (typeof detail === 'string' && detail) return withStatus(new Error(detail))
   if (detail && typeof detail === 'object') {
     const message = typeof detail.message === 'string' ? detail.message : fallback
     const error = new Error(message)
     // Kept on the error so a screen can offer it without the message carrying
     // a wall of JSON.
     Object.assign(error, { raw: detail.raw, code: detail.error })
-    return error
+    return withStatus(error)
   }
-  return new Error(fallback)
+  return withStatus(new Error(fallback))
 }
 
 async function post(path: string, body?: unknown): Promise<IntakeState> {
@@ -57,6 +65,22 @@ async function post(path: string, body?: unknown): Promise<IntakeState> {
 /** One typed line becomes a run and its first question. */
 export function openIntake(seed: string): Promise<IntakeState> {
   return post(`${INTAKE}/seed`, { seed })
+}
+
+/**
+ * The runs the operator can go back to.
+ *
+ * Without this the page could only ever reach the one run its browser
+ * remembered, and every earlier one needed a `?run=<id>` URL dug out of the
+ * database by hand.
+ */
+export async function listRuns(): Promise<IntakeRunSummary[]> {
+  const response = await apiFetch(`${INTAKE}/runs`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not list recent articles.')
+  }
+  const body = (await response.json()) as { runs?: IntakeRunSummary[] }
+  return body.runs ?? []
 }
 
 /** What a reloaded page asks for. */

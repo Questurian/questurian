@@ -1,14 +1,22 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+
+const listRuns = vi.fn()
+vi.mock('./intake.api', async importOriginal => ({
+  ...(await importOriginal<typeof import('./intake.api')>()),
+  listRuns: () => listRuns(),
+}))
 import { BriefScreen } from './components/BriefScreen'
 import { ArticleScreen } from './components/ArticleScreen'
 import { GrillScreen } from './components/GrillScreen'
 import { WorkingScreen } from './components/WorkingScreen'
 import { ResearchScreen } from './components/ResearchScreen'
+import { RunList } from './components/RunList'
 import { WorkOrderScreen } from './components/WorkOrderScreen'
 import type {
   IntakeBrief,
+  IntakeRunSummary,
   IntakeGrill,
   IntakeWorkOrder,
   IntakeWriting,
@@ -619,5 +627,77 @@ describe('the finished article screen', () => {
     )
 
     expect(screen.getByRole('link', { name: /stage in payload editor/i })).toBeInTheDocument()
+  })
+})
+
+describe('the list of runs to go back to', () => {
+  function runs(rows: Partial<IntakeRunSummary>[]): IntakeRunSummary[] {
+    return rows.map((row, index) => ({
+      run_id: `run-${index}`,
+      seed: `Seed ${index}`,
+      status: 'completed',
+      stage: 'complete',
+      stage_label: 'Done',
+      updated_at: '2026-08-31T18:13:33',
+      ...row,
+    }))
+  }
+
+  it('names each run by its seed, because a uuid is not a name', async () => {
+    listRuns.mockResolvedValueOnce(runs([{ seed: 'Lima is no longer a stopover' }]))
+
+    render(<RunList onResume={vi.fn()} />)
+
+    expect(await screen.findByText(/lima is no longer a stopover/i)).toBeInTheDocument()
+  })
+
+  it('puts a run somebody is waiting on above the finished ones', async () => {
+    listRuns.mockResolvedValueOnce(
+      runs([
+        { seed: 'Finished piece' },
+        { seed: 'Still searching', status: 'running', stage_label: 'Searching the web' },
+      ]),
+    )
+
+    render(<RunList onResume={vi.fn()} />)
+    await screen.findByText(/still searching/i)
+
+    const seeds = screen.getAllByText(/finished piece|still searching/i)
+    expect(seeds[0]).toHaveTextContent(/still searching/i)
+  })
+
+  it('falls back to the id when a run failed before its seed was recorded', async () => {
+    listRuns.mockResolvedValueOnce(runs([{ seed: '', run_id: 'run-abc' }]))
+
+    render(<RunList onResume={vi.fn()} />)
+
+    expect(await screen.findByText('run-abc')).toBeInTheDocument()
+  })
+
+  it('opens the run that was clicked', async () => {
+    const onResume = vi.fn().mockResolvedValue(undefined)
+    listRuns.mockResolvedValueOnce(runs([{ run_id: 'run-7', seed: 'Pick me' }]))
+
+    render(<RunList onResume={onResume} />)
+    const row = await screen.findByText(/pick me/i)
+    // Opening flips the row's disabled state when the promise settles, which
+    // is a state update the click itself does not wait for.
+    await act(async () => {
+      fireEvent.click(row)
+    })
+
+    expect(onResume).toHaveBeenCalledWith('run-7')
+  })
+
+  it('shows nothing at all when the list cannot be loaded', async () => {
+    // A convenience must not stand between the operator and a new article.
+    listRuns.mockRejectedValueOnce(new Error('offline'))
+
+    let container!: HTMLElement
+    await act(async () => {
+      container = render(<RunList onResume={vi.fn()} />).container
+    })
+
+    await waitFor(() => expect(container.querySelector('.p2b-run-list')).toBeNull())
   })
 })
