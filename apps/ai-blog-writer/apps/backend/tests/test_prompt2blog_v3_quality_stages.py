@@ -1,4 +1,8 @@
-"""V3 grounding, audit, repair, and title: evidence-bound and commission-bound."""
+"""V3 grounding, audit and repair: evidence-bound and commission-bound.
+
+The headline is not here any more. The seed is the title (ADR 0034) and no
+stage writes one; that it reaches the article is pinned in the pipeline tests.
+"""
 
 from __future__ import annotations
 
@@ -20,7 +24,6 @@ from app.features.prompt2blog.stages.v3.audit_repair import (
     run_v3_repair_stage,
 )
 from app.features.prompt2blog.stages.v3.groundedness import run_v3_groundedness_stage
-from app.features.prompt2blog.stages.v3.title import run_v3_title_stage
 
 FIXTURE_PATH = (
     Path(__file__).parents[3]
@@ -330,90 +333,6 @@ def test_settling_restores_the_best_draft_and_its_own_grounding_verdict():
 
     assert updates["rewrite"] == best_rewrite
     assert updates["groundedness"]["grounded"] is True
-
-
-def test_the_title_stage_sees_the_seed_and_the_headline_standard():
-    llm = FakeLLM(text_response="Is Lima still worth the move?")
-    dependencies, _recorder = _dependencies(llm)
-
-    updates = run_v3_title_stage(
-        _state(
-            outline={
-                "direct_answer_focus": "Whether Lima still offers value.",
-                "takeaway_focus": "Who benefits from the tradeoffs.",
-            },
-            rewrite={
-                **_rewrite(),
-                "improved_content": (
-                    "## What Lima costs now\n\nBody-only sentence.\n\n"
-                    "```markdown\n## Not an article heading\n```\n\n"
-                    "## The tradeoffs\n\nMore body-only prose."
-                ),
-            },
-        ),
-        dependencies,
-    )
-
-    prompt = llm.prompts[0]
-    assert _fixture()["brief"]["seed"] in prompt
-    assert "HEADLINE CONTEXT" in prompt
-    assert "Prompt2Blog headline standard" in prompt
-    assert "Primary subject: Lima" in prompt
-    assert "Never headline a context-only reference" in prompt
-    assert "Whether Lima still offers value." in prompt
-    assert "Who benefits from the tradeoffs." in prompt
-    assert "What Lima costs now" in prompt
-    assert "The tradeoffs" in prompt
-    # The headline confirms the brief's promise against the finished piece
-    # (#432, A18), so the opening is now in the prompt. Handed only headings,
-    # this stage wrote an honest label for them -- which is how a piece about
-    # Lima ended up titled after our research.
-    assert "Body-only sentence." in prompt
-    assert "The promise to keep" in prompt or "the_promise" in prompt
-    # Only the opening, though. Sending the whole article to write one string
-    # would be paying drafting prices for a headline.
-    assert "FINAL ARTICLE CONTENT" not in prompt
-    assert len(prompt) < 12_000
-    assert updates["final_title"] == "Is Lima still worth the move?"
-
-
-def test_the_headline_writer_is_shown_the_line_the_operator_wrote():
-    """It never was.
-
-    `_title_material` sent the promise, the spine, the opening and the
-    headings, while the prompt said "keep the original title's intent" about a
-    field v3 supplied as `original_title` and v4 removed. Pointed at nothing,
-    the stage fell back on search engine instinct: run 90b3f9bc turned "Lima is
-    no longer simply the stopover before Cusco" into "Lima vs. Cusco: Why a 2-3
-    Day Stopover Beats a Layover Before Machu Picchu".
-    """
-    from app.features.prompt2blog.stages.v3.title import _title_material
-
-    material = _title_material(_state())
-
-    assert material["the_authors_own_headline"] == _fixture()["brief"]["seed"]
-
-
-def test_the_prompt_treats_that_line_as_the_headline_until_proven_otherwise():
-    from app.features.prompt2blog.prompts.editorial_v3 import P2B_V3_TITLE_PROMPT
-
-    flat = " ".join(P2B_V3_TITLE_PROMPT.split())
-
-    assert "already the headline and return it unchanged" in flat
-    assert "merely plainer than you would have written is not a failure" in flat
-    # The exact shape run 90b3f9bc produced.
-    assert "No colon subtitle" in flat
-    assert "no comparison the article does not actually make" in flat
-
-
-def test_the_title_falls_back_to_the_brief_rather_than_to_nothing():
-    dependencies, _recorder = _dependencies(FakeLLM(text_response="  "))
-
-    updates = run_v3_title_stage(
-        _state(rewrite={**_rewrite(), "improved_title": ""}), dependencies
-    )
-
-    assert updates["final_title"] == _fixture()["brief"]["seed"]
 
 
 def test_the_v3_constraint_brief_invents_no_seo_requirement():

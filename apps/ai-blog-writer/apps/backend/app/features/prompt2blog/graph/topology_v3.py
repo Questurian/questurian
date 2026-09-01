@@ -19,7 +19,6 @@ V3_GENERATION_NODES = (
     "quality_audit",
     "repair",
     "quality_settle",
-    "title",
     "finalize",
 )
 
@@ -38,8 +37,9 @@ V3_NODE_SUCCESSORS = {
     "compose": "groundedness",
     "groundedness": "quality_audit",
     "repair": "groundedness",
-    "quality_settle": "title",
-    "title": "finalize",
+    # The seed is the title (ADR 0034), so nothing writes a headline and
+    # settle runs straight into finalize.
+    "quality_settle": "finalize",
     "finalize": None,
 }
 
@@ -105,7 +105,6 @@ def build_prompt2blog_v3_graph(
         {"repair": "repair", "settle": "quality_settle"},
     )
     builder.add_edge("repair", "groundedness")
-    builder.add_edge("quality_settle", "title")
-    builder.add_edge("title", "finalize")
+    builder.add_edge("quality_settle", "finalize")
     builder.add_edge("finalize", END)
     return builder

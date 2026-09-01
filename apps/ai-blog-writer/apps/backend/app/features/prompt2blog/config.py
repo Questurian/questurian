@@ -26,7 +26,6 @@ P2B_AUDIT_MODEL = "gemini-3.7-flash"
 # accident.
 P2B_V3_OUTLINE_MODEL = "claude-sonnet-5-medium"
 P2B_V3_GROUNDEDNESS_MODEL = "claude-sonnet-5-medium"
-P2B_V3_TITLE_MODEL = "claude-sonnet-5-medium"
 
 # Structuring research is a bounded, schema-enforced job on prose someone else
 # gathered: exactly what Sonnet is for. It is deliberately not the writing

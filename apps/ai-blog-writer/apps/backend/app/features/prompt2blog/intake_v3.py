@@ -93,7 +93,6 @@ def prepare_v3_runtime_request(
         audit_model=request.model_routing.audit_model,
         outline_model=request.model_routing.outline_model,
         groundedness_model=request.model_routing.groundedness_model,
-        title_model=request.model_routing.title_model,
         model_stack_id=request.model_routing.model_stack_id,
     )
 
@@ -136,7 +135,6 @@ def v3_run_input_artifact(runtime: PipelineV4RuntimeRequest) -> dict[str, Any]:
             "audit_model": runtime.audit_model,
             "outline_model": runtime.outline_model,
             "groundedness_model": runtime.groundedness_model,
-            "title_model": runtime.title_model,
             "model_stack_id": runtime.model_stack_id,
         },
         "include_debug": runtime.include_debug,

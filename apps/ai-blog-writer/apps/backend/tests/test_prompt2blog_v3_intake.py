@@ -221,4 +221,7 @@ def test_v3_run_input_does_not_reintroduce_v2_shapes():
     assert "article_type_id" not in artifact
     assert "guideline" not in artifact
     assert artifact["instruction_meta"]["house_rules_id"] == "house-rules"
-    assert artifact["instruction_meta"]["headline_rules_id"] == "headlines"
+    # No headline rules receipt: nothing in the graph writes a headline any
+    # more (ADR 0034), and recording which rules governed the run would be a
+    # receipt for work that did not happen.
+    assert "headline_rules_id" not in artifact["instruction_meta"]

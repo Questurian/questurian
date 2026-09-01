@@ -36,6 +36,8 @@ def run_v3_finalize_stage(
     evidence = state["evidence"]
     dependencies.recorder.start_stage(run_id, stage)
 
+    # The operator's own line, carried from the seed (ADR 0034). No stage
+    # writes a headline; this is the one the run was opened with.
     final_title = dependencies.normalize_dashes(state["final_title"])
     final_content = rewrite["improved_content"]
     final_markdown = _build_markdown(final_title, final_content)
@@ -179,7 +181,6 @@ def run_v3_finalize_stage(
                 "stage_v3_outline": state["outline_model"],
                 "stage_v3_compose": state["writing_model"],
                 "stage_v3_repair": state["repair_model"],
-                "stage_v3_title": state["title_model"],
                 "stage_v3_quality_audit": state["audit_model"],
                 "stage_v3_groundedness": state["groundedness_model"],
             },
@@ -198,7 +199,6 @@ def run_v3_finalize_stage(
                 "repair_model": state["repair_model"],
                 "groundedness_model": state["groundedness_model"],
                 "audit_model": state["audit_model"],
-                "title_model": state["title_model"],
                 "model_stack_id": state.get("model_stack_id"),
                 "include_debug": state["include_debug"],
                 "input_profiles": state["option_context"],
@@ -219,7 +219,6 @@ def run_v3_finalize_stage(
                 "stage_v3_compose": rewrite,
                 "stage_v3_groundedness": state["groundedness"],
                 "stage_v3_quality_audit": quality,
-                "stage_v3_title": {"final_title": final_title},
             },
         },
     )

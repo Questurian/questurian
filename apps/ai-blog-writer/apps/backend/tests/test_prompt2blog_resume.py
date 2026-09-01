@@ -30,6 +30,7 @@ from app.features.prompt2blog.orchestrator_v3 import (
 from app.features.prompt2blog.pricing import Prompt2BlogTokenUsageTracker
 from app.features.prompt2blog.resume_v3 import (
     RESUME_SNAPSHOT_STAGE,
+    RESUME_SNAPSHOT_VERSION,
     plan_resume,
 )
 from app.features.prompt2blog.run_recorder import RunRecorder
@@ -46,11 +47,25 @@ def _quota_fault() -> ClaudeCliUnavailable:
     return ClaudeCliUnavailable("limit reached", kind="quota_exhausted")
 
 
-class TitleFailsLLM(ScriptedLLM):
-    """Everything works up to the headline, which is where the account dies."""
+class AuditFailsLLM(ScriptedLLM):
+    """Everything works up to the audit, which is where the account dies.
 
-    def invoke_text(self, **_kwargs: Any) -> str:
-        raise _quota_fault()
+    The audit is the **last stage in the graph that spends anything**. Settle
+    and finalize make no model call, so nothing after this point can fail for
+    want of an account, and a run that dies here has already paid for the
+    outline, the draft and the grounding verdict -- which is the case resume
+    exists for.
+
+    It used to be the headline (`TitleFailsLLM`, raising on `invoke_text`),
+    because the title stage was the only stage in the whole graph that called
+    `invoke_text` at all. Deleting it (ADR 0034) took the old late-failure
+    simulator with it, so the net had to be re-derived rather than patched.
+    """
+
+    def invoke_json(self, *, prompt: str, **kwargs: Any):
+        if "quality auditor" in prompt:
+            raise _quota_fault()
+        return super().invoke_json(prompt=prompt, **kwargs)
 
 
 class RepairFailsLLM(ScriptedLLM):
@@ -84,15 +99,15 @@ def _stages_called(llm: ScriptedLLM) -> list[str]:
     return [stage for stage, _prompt in llm.prompts]
 
 
-def test_a_run_that_dies_at_the_title_resumes_at_the_title():
+def test_a_run_that_dies_at_the_last_paid_stage_resumes_there():
     run_id = _run_id()
-    _start(run_id, TitleFailsLLM(quality_scores=[9]))
+    _start(run_id, AuditFailsLLM(quality_scores=[9]))
 
     assert read_status(run_id)["state"] == "failed"
     plan = plan_resume(run_id)
     assert plan.resumable is True
-    assert plan.resume_from_stage == "stage_v3_title"
-    assert plan.failed_stage == "stage_v3_title"
+    assert plan.resume_from_stage == "stage_v3_quality_audit"
+    assert plan.failed_stage == "stage_v3_quality_audit"
     assert plan.failure_kind == "quota_exhausted"
 
     second_leg = ScriptedLLM(quality_scores=[9])
@@ -101,8 +116,9 @@ def test_a_run_that_dies_at_the_title_resumes_at_the_title():
         PipelineDependencies(llm=second_leg, recorder=RunRecorder()),
     )
 
-    # The whole point: the second leg buys the headline and nothing else.
-    assert _stages_called(second_leg) == ["title"]
+    # The whole point: the second leg buys the audit and nothing else.
+    # Settle and finalize follow it and neither calls a model.
+    assert _stages_called(second_leg) == ["audit"]
     assert state["completed"] is True
     assert read_status(run_id)["state"] == "completed"
 
@@ -136,7 +152,6 @@ def test_the_resumed_run_re_decides_the_quality_gate_it_died_on():
         "repair",
         "groundedness",
         "audit",
-        "title",
     ]
     assert state["completed"] is True
     # The failed repair call cost the run nothing it cannot try again: the
@@ -160,8 +175,8 @@ def test_a_finished_run_keeps_no_resumable_state():
 
 def test_the_resume_history_names_every_attempt():
     run_id = _run_id()
-    _start(run_id, TitleFailsLLM(quality_scores=[9]))
-    _start_again = TitleFailsLLM(quality_scores=[9])
+    _start(run_id, AuditFailsLLM(quality_scores=[9]))
+    _start_again = AuditFailsLLM(quality_scores=[9])
     with pytest.raises(ClaudeCliUnavailable):
         resume_pipeline_v3(
             run_id,
@@ -170,23 +185,23 @@ def test_the_resume_history_names_every_attempt():
 
     attempts = _stage_data(run_id, "pipeline_resume_v3")["attempts"]
     assert [attempt["resume_count"] for attempt in attempts] == [1]
-    assert attempts[0]["resumed_from_stage"] == "stage_v3_title"
+    assert attempts[0]["resumed_from_stage"] == "stage_v3_quality_audit"
     assert attempts[0]["failure_kind"] == "quota_exhausted"
 
     # A failed resume is itself resumable, and its snapshot has moved on by
-    # exactly nothing -- the title still has not been written.
-    assert plan_resume(run_id).resume_from_stage == "stage_v3_title"
+    # exactly nothing -- the audit still has not returned a score.
+    assert plan_resume(run_id).resume_from_stage == "stage_v3_quality_audit"
 
 
 def test_resuming_is_refused_once_the_attempt_allowance_is_gone():
     run_id = _run_id()
-    _start(run_id, TitleFailsLLM(quality_scores=[9]))
+    _start(run_id, AuditFailsLLM(quality_scores=[9]))
     for _ in range(P2B_RESUME_MAX_ATTEMPTS):
         with pytest.raises(ClaudeCliUnavailable):
             resume_pipeline_v3(
                 run_id,
                 PipelineDependencies(
-                    llm=TitleFailsLLM(quality_scores=[9]), recorder=RunRecorder()
+                    llm=AuditFailsLLM(quality_scores=[9]), recorder=RunRecorder()
                 ),
             )
 
@@ -205,7 +220,7 @@ def test_a_snapshot_for_another_brief_is_refused_rather_than_run():
     row is the independent witness, and it wins.
     """
     run_id = _run_id()
-    _start(run_id, TitleFailsLLM(quality_scores=[9]))
+    _start(run_id, AuditFailsLLM(quality_scores=[9]))
 
     snapshot = read_stage_result(run_id, RESUME_SNAPSHOT_STAGE)
     snapshot["data"]["brief_fingerprint"] = "not-this-brief"
@@ -218,10 +233,10 @@ def test_a_snapshot_for_another_brief_is_refused_rather_than_run():
 
 def test_a_snapshot_from_older_code_is_refused_rather_than_reinterpreted():
     run_id = _run_id()
-    _start(run_id, TitleFailsLLM(quality_scores=[9]))
+    _start(run_id, AuditFailsLLM(quality_scores=[9]))
 
     snapshot = read_stage_result(run_id, RESUME_SNAPSHOT_STAGE)
-    snapshot["data"]["snapshot_version"] = 2
+    snapshot["data"]["snapshot_version"] = RESUME_SNAPSHOT_VERSION - 1
     write_stage_result(run_id, RESUME_SNAPSHOT_STAGE, snapshot)
 
     assert plan_resume(run_id).reason == "snapshot_version_unsupported"
@@ -288,11 +303,11 @@ def _preview(run_id: str) -> dict[str, Any]:
 def test_the_preview_route_reports_what_a_resume_would_skip():
     """Free to ask, so the operator decides with the numbers in front of them."""
     run_id = _run_id()
-    _start(run_id, TitleFailsLLM(quality_scores=[9]))
+    _start(run_id, AuditFailsLLM(quality_scores=[9]))
 
     payload = _preview(run_id)
     assert payload["resumable"] is True
-    assert payload["resume_from_stage"] == "stage_v3_title"
+    assert payload["resume_from_stage"] == "stage_v3_quality_audit"
     assert payload["failure_kind"] == "quota_exhausted"
     assert "stage_v3_compose" in payload["completed_stages"]
     assert payload["resume_count"] == 0
@@ -306,7 +321,7 @@ def test_the_preview_route_is_a_404_for_a_run_that_does_not_exist():
 
 def test_the_resume_route_queues_the_run_it_was_given(monkeypatch):
     run_id = _run_id()
-    _start(run_id, TitleFailsLLM(quality_scores=[9]))
+    _start(run_id, AuditFailsLLM(quality_scores=[9]))
     monkeypatch.setattr(runs_api, "_prompt2blog_credential_for_run", lambda: None)
     background = BackgroundTasks()
 
@@ -318,7 +333,7 @@ def test_the_resume_route_queues_the_run_it_was_given(monkeypatch):
     # Same run, not a new one: the article, the ledger and the operator's link
     # all stay pointed at one place.
     assert payload["run_id"] == run_id
-    assert payload["resume_from_stage"] == "stage_v3_title"
+    assert payload["resume_from_stage"] == "stage_v3_quality_audit"
     assert len(background.tasks) == 1
 
 

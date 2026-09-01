@@ -15,6 +15,7 @@ from app.features.prompt2blog.instructions_v3 import (
     EVIDENCE_DISPOSITION_POLICY,
     PRECEDENCE,
     assemble_v3_instructions,
+    stage_context_manifest,
 )
 
 
@@ -98,9 +99,6 @@ def test_stage_contexts_are_deterministic_and_keep_only_job_specific_material():
     assert "TOPIC MODULES" not in first.audit.text
     assert "COMPACT SCOPE AND STYLE LOCK" in first.repair_lock.text
     assert "VERIFIED EVIDENCE" not in first.repair_lock.text
-    assert "Prompt2Blog headline standard" in first.title.text
-    assert "FORM HEADLINE NOTE — Analysis" in first.title.text
-    assert "VERIFIED EVIDENCE" not in first.title.text
     assert EVIDENCE_DISPOSITION_POLICY in first.compose.text
     assert EVIDENCE_DISPOSITION_POLICY in first.repair_lock.text
     assert EVIDENCE_DISPOSITION_POLICY not in first.audit.text
@@ -175,15 +173,22 @@ def test_normalized_requirements_keep_work_order_order_and_report_gaps():
     assert receipt["unresolved_requirement_ids"] == ["r2", "r3"]
 
 
-def test_title_context_carries_the_original_title_and_form_note():
-    fixture = _fixture()
+def test_there_is_no_headline_context_because_nothing_writes_a_headline():
+    """The seed is the title (ADR 0034).
 
-    instructions = assemble_v3_instructions(_request())
+    The stage that read this context is deleted, so building it would be
+    assembling material for a reader that no longer exists -- and it would
+    still show up in the debug manifest as though something used it.
+    """
+    contexts = assemble_v3_instructions(_request()).stage_contexts
 
-    title_context = instructions.stage_contexts.title.text
-    assert fixture["brief"]["seed"] in title_context
-    assert "FORM HEADLINE NOTE — Analysis" in title_context
-    assert "Primary subject: Lima" in title_context
+    assert not hasattr(contexts, "title")
+    assert set(stage_context_manifest(contexts)) == {
+        "outline",
+        "compose",
+        "audit",
+        "repair_lock",
+    }
 
 
 def test_unknown_catalog_ids_fail_instead_of_silently_dropping():
