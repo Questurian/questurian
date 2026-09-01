@@ -39,7 +39,7 @@ from app.core.staff_auth import require_staff, staff_user_id
 
 from ..config import P2B_V4_RESEARCH_STRUCTURE_MODEL
 from ..brief_v4 import BriefIncomplete, BriefUnusable
-from ..dependencies import PipelineDependencies
+from ..dependencies import PipelineDependencies, dependencies_for_run
 from ..grill_v4 import (
     GRILL_RESEARCH_MAX_TOKENS,
     GRILL_RESEARCH_MODEL,
@@ -92,41 +92,93 @@ class CutRequest(BaseModel):
     added_questions: list[str] = Field(default_factory=list)
 
 
-def _ground(prompt: str) -> tuple[str, list[str], int | None]:
-    """Look something up on the one path in this app that reaches the web.
+def _grounded_call(
+    prompt: str,
+    *,
+    model_name: str,
+    max_tokens: int,
+    usage_recorder: Any | None,
+) -> tuple[str, list[str], int | None]:
+    """A grounded search, counted.
 
-    Search stays off Claude on purpose: its WebSearch denial is a deliberate
-    security boundary, and research is the most token-hungry step there is --
-    spending Claude's budget reading web pages risks running out during the
-    writing, which is the part that actually needs it.
+    Grounded search is raw REST: it never passes through the LangChain
+    adapters the token ledger watches, so every search a run made was
+    invisible to it. Measured on two real runs, that was 27,207 tokens over
+    eight searches (b78a9fe8) and 31,992 over seven (76b36468), and the
+    receipt for both reported zero. The per-run ceiling reads that same total,
+    so it was guarding a number with the most token-hungry step missing.
+
+    A response that carried no usage block is recorded as a call with no
+    measurement rather than a call that cost nothing: `record` files a `None`
+    usage as unmetered, and both real runs had exactly one search like that.
     """
     from utils import invoke_google_grounded_text
 
     result = invoke_google_grounded_text(
-        f"Brief a travel editor on this in a few dense paragraphs. "
-        f"Facts, reputation, neighbourhoods, what it is known for.\n\n{prompt}",
-        model_name=GRILL_RESEARCH_MODEL,
-        max_tokens=GRILL_RESEARCH_MAX_TOKENS,
+        prompt, model_name=model_name, max_tokens=max_tokens
     )
     if result is None:
+        # The call failed rather than returned nothing. There is no successful
+        # call to record.
         return "", [], None
+    if usage_recorder is not None:
+        counts = {
+            "input_tokens": result.input_tokens,
+            "output_tokens": result.output_tokens,
+            "total_tokens": result.total_tokens,
+        }
+        measured = {key: value for key, value in counts.items() if value is not None}
+        try:
+            usage_recorder(
+                str(result.model_name or model_name),
+                measured or None,
+            )
+        except Exception as exc:  # pragma: no cover -- telemetry only
+            logger.warning("Grounded search usage record failed: %s", exc)
     return result.text, list(result.source_urls), result.total_tokens
 
 
-def _gather(prompt: str, model_name: str) -> tuple[str, list[str], int | None]:
-    """One grounded pass, for research rather than for the grill."""
-    from utils import invoke_google_grounded_text
+def _services(run_id: str | None = None) -> IntakeServices:
+    """The intake's dependencies, continuing `run_id`'s ledger where there is one.
 
-    result = invoke_google_grounded_text(
-        prompt, model_name=model_name, max_tokens=GATHER_MAX_TOKENS
+    Built per request. Without the restore each request's tracker held only
+    its own calls, and writing the ledger under one stage name then replaced
+    the run's accounting with that request's slice -- see
+    `dependencies_for_run`.
+    """
+    pipeline = (
+        dependencies_for_run(run_id) if run_id else PipelineDependencies()
     )
-    if result is None:
-        return "", [], None
-    return result.text, list(result.source_urls), result.total_tokens
+    record_usage = getattr(
+        getattr(pipeline.llm, "usage_tracker", None), "record", None
+    )
 
+    def _ground(prompt: str) -> tuple[str, list[str], int | None]:
+        """Look something up on the one path in this app that reaches the web.
 
-def _services() -> IntakeServices:
-    pipeline = PipelineDependencies()
+        Search stays off Claude on purpose: its WebSearch denial is a
+        deliberate security boundary, and research is the most token-hungry
+        step there is -- spending Claude's budget reading web pages risks
+        running out during the writing, which is the part that actually needs
+        it.
+        """
+        return _grounded_call(
+            f"Brief a travel editor on this in a few dense paragraphs. "
+            f"Facts, reputation, neighbourhoods, what it is known for.\n\n{prompt}",
+            model_name=GRILL_RESEARCH_MODEL,
+            max_tokens=GRILL_RESEARCH_MAX_TOKENS,
+            usage_recorder=record_usage,
+        )
+
+    def _gather(prompt: str, model_name: str) -> tuple[str, list[str], int | None]:
+        """One grounded pass, for research rather than for the grill."""
+        return _grounded_call(
+            prompt,
+            model_name=model_name,
+            max_tokens=GATHER_MAX_TOKENS,
+            usage_recorder=record_usage,
+        )
+
     return IntakeServices(
         dependencies=GrillDependencies(llm=pipeline.llm, research=_ground),
         recorder=pipeline.recorder,
@@ -278,27 +330,27 @@ def read_intake(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 def answer_question(
     run_id: str, request: AnswerRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
-    _handle(answer_intake, run_id, request.answer, _services())
+    _handle(answer_intake, run_id, request.answer, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/reopen")
 def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Go back into the grill. The single exit from every dead end."""
-    _handle(reopen_intake, run_id, _services())
+    _handle(reopen_intake, run_id, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/brief")
 def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Turn an agreed grill into the brief the run answers to."""
-    _handle(approve_brief, run_id, _services())
+    _handle(approve_brief, run_id, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/work-order")
 def plan_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
-    _handle(plan_research, run_id, _services())
+    _handle(plan_research, run_id, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 
@@ -314,7 +366,7 @@ def cut_the_work_order(
     outcome = _handle(
         apply_cut,
         run_id,
-        _services(),
+        _services(run_id),
         struck_ids=request.struck_ids,
         added_questions=request.added_questions,
     )
@@ -329,7 +381,7 @@ def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     not an error. The page reads `research.coverage` to see whether it may go
     on, and what is missing if not.
     """
-    _handle(do_research, run_id, _services())
+    _handle(do_research, run_id, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 
@@ -377,7 +429,7 @@ def settle_the_gate(
     _handle(
         settle_gate,
         run_id,
-        _services(),
+        _services(run_id),
         requirement_id=request.requirement_id,
         answer=request.answer,
         source_url=request.source_url,
@@ -417,7 +469,7 @@ def mark_venue(
     _handle(
         settle_venue,
         run_id,
-        _services(),
+        _services(run_id),
         claim_id=request.claim_id,
         drop=request.drop,
         note=request.note,

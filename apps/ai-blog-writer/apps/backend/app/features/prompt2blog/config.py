@@ -101,6 +101,20 @@ P2B_REPAIR_ESTIMATED_TOKENS = 90_000
 # an unusually expensive run stops paying for rescue attempts instead of
 # doubling down. Set above the Lima run's pre-repair spend (~158k) on purpose:
 # the first repair on a normal run must still be affordable.
+#
+# CAVEAT, 2026-09-01: both this number and P2B_REPAIR_ESTIMATED_TOKENS were
+# derived from the Lima run's receipt, and that receipt omitted every grounded
+# search and the whole of intake. Now that those are counted, the same run
+# measures higher against an unchanged threshold. Run b78a9fe8's pre-repair
+# spend was 113,413 by the old count and 140,620 once its searches are
+# included, before the grill, brief, work order and structuring calls are
+# added -- against a refusal line of 320,000 - 90,000 = 230,000.
+#
+# So a run that would have been granted its one repair may now be refused it.
+# Deliberately NOT retuned here: the right number comes from a real run
+# measured with the accounting fixed, not from a guess layered on a guess.
+# Re-derive both after the next article. The hard ceiling below has ample
+# headroom either way and is not affected.
 P2B_RUN_TOKEN_BUDGET = 320_000
 
 # The hard ceiling. Distinct from P2B_RUN_TOKEN_BUDGET above, which only asks

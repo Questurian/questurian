@@ -27,7 +27,11 @@ from .config import (
     PROMPT2BLOG_CREATIVITY_TEMPERATURES,
     PROMPT2BLOG_DEFAULT_COMPOSE_TEMPERATURE,
 )
-from .dependencies import DefaultPrompt2BlogLLM, PipelineDependencies
+from .dependencies import (
+    DefaultPrompt2BlogLLM,
+    PipelineDependencies,
+    dependencies_for_run,
+)
 from .graph.runner import GraphNode, run_prompt2blog_stage_graph
 from .graph.state import Prompt2BlogV3GraphState
 from .run_budget import enforce_run_budget
@@ -251,7 +255,11 @@ def run_pipeline_v3(
     request: PipelineV4RuntimeRequest,
     dependencies: PipelineDependencies | None = None,
 ) -> Prompt2BlogV3GraphState:
-    dependencies = dependencies or PipelineDependencies()
+    # Continues intake's ledger rather than starting a new one. A fresh
+    # tracker here overwrote the grill, brief, work order and research spend
+    # with the graph's own, which is why every finished run reported only its
+    # writing half.
+    dependencies = dependencies or dependencies_for_run(run_id)
     return _execute_v3_graph(
         run_id=run_id,
         request=request,
@@ -270,8 +278,7 @@ def _resume_dependencies(run_id: str) -> PipelineDependencies:
     spent. The ledger the earlier legs wrote is the run's accounting, so the
     resumed leg starts from it.
     """
-    tracker = Prompt2BlogTokenUsageTracker.from_ledger(stored_ledger(run_id))
-    return PipelineDependencies(llm=DefaultPrompt2BlogLLM(usage_tracker=tracker))
+    return dependencies_for_run(run_id)
 
 
 def _record_resume_attempt(

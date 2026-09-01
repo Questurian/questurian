@@ -126,11 +126,25 @@ def _run_tokens_spent(run_id: str) -> int | None:
     return total if isinstance(total, int) else None
 
 
+def _open(services: IntakeServices, run_id: str, stage: str) -> None:
+    """Open the stage before the model call it is going to pay for.
+
+    Usage is attributed to whichever stage was open when the call was made.
+    Every intake stage used to call the model first and open the stage after,
+    so the call landed under `unattributed` and the stage row reported zero.
+    Run cac73671 recorded exactly that: one call, 2,196 tokens, stage
+    `unattributed`, beside a `stage_v4_grill` row claiming nothing was spent.
+    """
+    services.recorder.start_stage(run_id, stage)
+
+
 def _record(services: IntakeServices, run_id: str, stage: str, payload: dict[str, Any]) -> None:
     # start_stage opens a fresh usage attempt, which is what keeps a repeated
     # stage -- and the grill repeats by design -- from overwriting its own
-    # receipt in the ledger.
-    services.recorder.start_stage(run_id, stage)
+    # receipt in the ledger. `_once` because `_open` has usually opened it
+    # already; opening again here would file the row under an attempt the
+    # call was not recorded against.
+    services.recorder.start_stage_once(run_id, stage)
     services.recorder.record_stage(run_id, stage, payload)
 
 
@@ -178,6 +192,7 @@ def begin_intake(
 
     run_id = str(uuid4())
     services.recorder.queue(run_id, owner_staff_id)
+    _open(services, run_id, GRILL_STAGE)
     logger.info("Prompt2Blog intake opened", extra={"run_id": run_id, "feature": FEATURE_NAME})
     try:
         return _write_grill(
@@ -200,6 +215,7 @@ def answer_intake(run_id: str, answer: str, services: IntakeServices) -> GrillSt
     """Record what the operator typed and take the next turn."""
     enforce_run_budget(_run_tokens_spent(run_id), stage=GRILL_STAGE)
     state = _load_grill(run_id)
+    _open(services, run_id, GRILL_STAGE)
     return _write_grill(services, answer_grill(state, answer, services.dependencies))
 
 
@@ -213,6 +229,7 @@ def reopen_intake(run_id: str, services: IntakeServices) -> GrillState:
     """
     enforce_run_budget(_run_tokens_spent(run_id), stage=GRILL_STAGE)
     state = _load_grill(run_id)
+    _open(services, run_id, GRILL_STAGE)
     reopened = reopen_grill(state, services.dependencies)
 
     for stage in (BRIEF_STAGE, WORK_ORDER_STAGE, RESEARCH_STAGE, NOTES_STAGE):
@@ -226,6 +243,7 @@ def approve_brief(run_id: str, services: IntakeServices) -> ArticleBrief:
     """Turn an agreed grill into the brief the run answers to."""
     enforce_run_budget(_run_tokens_spent(run_id), stage=BRIEF_STAGE)
     try:
+        _open(services, run_id, BRIEF_STAGE)
         brief = build_brief(_load_grill(run_id), services.dependencies)
     except BriefUnusable as error:
         _record(
@@ -268,6 +286,7 @@ def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder
     """Translate the approved brief into checkable questions."""
     enforce_run_budget(_run_tokens_spent(run_id), stage=WORK_ORDER_STAGE)
     try:
+        _open(services, run_id, WORK_ORDER_STAGE)
         work_order = build_work_order(load_brief(run_id), services.dependencies)
     except WorkOrderUnusable as error:
         _record(
@@ -355,6 +374,7 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
 
     notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order)
     if notes is None:
+        _open(services, run_id, NOTES_STAGE)
         notes = gather_research(
             brief, work_order, services.research, record_progress
         )
@@ -370,6 +390,7 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     record_progress({"phase": "structuring", "done": len(notes), "total": len(notes),
                      "last_question_back": ""})
     try:
+        _open(services, run_id, RESEARCH_STAGE)
         evidence = structure_research(work_order, notes, services.research)
     except ResearchUnusable as error:
         # The most expensive step in intake. A failure here that leaves nothing

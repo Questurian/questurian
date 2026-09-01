@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -248,6 +249,9 @@ class Prompt2BlogTokenUsageTracker:
     stage_attempts: dict[str, int] = field(default_factory=dict)
     current_stage: str | None = None
     current_attempt: int = 0
+    _lock: Any = field(
+        default_factory=threading.Lock, compare=False, repr=False
+    )
 
     @classmethod
     def from_ledger(cls, ledger: Any) -> "Prompt2BlogTokenUsageTracker":
@@ -370,6 +374,19 @@ class Prompt2BlogTokenUsageTracker:
         }
 
     def record(self, model_name: str, raw_usage: Any) -> None:
+        """Append one successful call. Safe to call from several threads.
+
+        Research runs its grounded searches concurrently, and each of them
+        records here from a worker thread. Every mutation below is a
+        read-modify-write -- the two counters, the `by_model` totals, and an
+        append to `calls` whose `seq` comes from the list's own length -- so
+        two interleaving calls would lose a call or hand two of them the same
+        sequence number.
+        """
+        with self._lock:
+            self._record_call(model_name, raw_usage)
+
+    def _record_call(self, model_name: str, raw_usage: Any) -> None:
         self.successful_calls += 1
         usage = normalize_token_usage(raw_usage)
         stage = self.current_stage or UNATTRIBUTED_STAGE
