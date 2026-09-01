@@ -136,5 +136,12 @@ per-turn form-filling is what goes.
   it may be working from a briefing the conversation has moved past. That is a
   real limitation, it is accepted for now, and it is the next thing to build
   once the conversation itself is right.
+
+  **Built on 2026-09-01 (#447).** The grill can now set `lookup` on any turn to
+  ask the web something before it decides, bounded by
+  `P2B_V4_GRILL_MAX_LOOKUPS` and recorded on the state as the queries it made.
+  It waited on the token accounting (#440): adding unbounded searches to a
+  stage while the run's ceiling could not see grounded search at all would have
+  been spending against a number that did not exist.
 - Nothing here is evidence that articles improve. This makes the interview an
   interview; whether the brief it produces is any good is read by a person.

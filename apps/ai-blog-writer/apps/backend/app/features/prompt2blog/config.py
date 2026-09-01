@@ -132,6 +132,27 @@ P2B_RUN_TOKEN_BUDGET = 320_000
 # in one place, so a ceiling set wrong is obvious rather than mysterious.
 P2B_RUN_TOKEN_CEILING = 650_000
 
+# How many times the grill may look something up *during* the interview, on
+# top of the one lookup it always makes on the seed.
+#
+# G2 (ADR 0030) is what keeps the grill short: anything it can look up, it
+# never asks. It looked the seed up once and then went blind, so by the fourth
+# turn the conversation could be about one neighbourhood while the grill was
+# still working from a general city briefing -- and a grill that cannot look up
+# where the conversation went is forced back into asking, which is the
+# form-with-extra-steps failure the interview replaced (ADR 0033).
+#
+# Bounded because the grill stops at agreement rather than at a question count,
+# so it has no upper bound on turns by construction and would have none on
+# searches either. Three is enough to follow a conversation that narrows twice
+# and still cheap beside a run: a grounded search measured 3-5k tokens on runs
+# b78a9fe8 and 76b36468.
+#
+# This number is only enforceable because the receipt now counts grounded
+# search at all (#440). Before that, adding searches here would have been
+# spending against a ceiling that could not see them.
+P2B_V4_GRILL_MAX_LOOKUPS = 3
+
 # How many grounded searches research may have in flight at once.
 #
 # One question per search, and nothing in question four depends on question

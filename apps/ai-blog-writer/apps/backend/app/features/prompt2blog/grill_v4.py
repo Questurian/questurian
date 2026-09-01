@@ -30,7 +30,11 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
-from .config import P2B_V4_GRILL_MODEL, P2B_V4_GRILL_TEMPERATURE
+from .config import (
+    P2B_V4_GRILL_MAX_LOOKUPS,
+    P2B_V4_GRILL_MODEL,
+    P2B_V4_GRILL_TEMPERATURE,
+)
 from .contracts_v4 import (
     BRIEF_MARKERS,
     MARKER_KEYS,
@@ -90,6 +94,7 @@ NEXT_TURN_SCHEMA = require_non_empty({
         "location": {"type": "string"},
         "markers_covered": {"type": "array", "items": {"type": "string"}},
         "asks_about": {"type": "string"},
+        "lookup": {"type": "string"},
     },
     "required": [
         "done",
@@ -131,6 +136,54 @@ def research_seed(dependencies: GrillDependencies, seed: str) -> tuple[str, list
     except Exception as exc:  # pragma: no cover -- network dependent
         logger.warning("Grill pre-research failed, continuing ungrounded: %s", exc)
         return "", [], None
+
+
+def _lookups_left(state: GrillState) -> int:
+    return max(0, P2B_V4_GRILL_MAX_LOOKUPS - len(state.lookups))
+
+
+def look_up_mid_interview(
+    state: GrillState,
+    dependencies: GrillDependencies,
+    query: str,
+) -> GrillState:
+    """Look something up in the middle of the interview, and remember it.
+
+    The seed lookup happens once, before the first question. After that the
+    grill went blind: by the fourth turn the conversation could have narrowed
+    to one neighbourhood while the grill was still working from the general
+    city briefing it pulled at the start.
+
+    That matters because G2 is what keeps the grill short. A grill that cannot
+    look up what the conversation has moved to is forced back into asking,
+    which is the form-with-extra-steps failure the interview replaced.
+
+    The budget is consumed whether or not the search comes back. A failed
+    lookup that cost nothing to retry is a loop: the model would ask for the
+    same thing again every turn, and the run has no question limit to stop it.
+    What failed is written into the digest so the next call knows not to wait
+    for it.
+    """
+    try:
+        digest, urls, _tokens = dependencies.research(query)
+    except Exception as exc:  # pragma: no cover -- network dependent
+        logger.warning("Grill lookup failed for %r: %s", query, exc)
+        digest, urls = "", []
+
+    body = digest.strip() or "Nothing came back for this."
+    return state.model_copy(
+        update={
+            "research_digest": (
+                f"{state.research_digest}\n\n"
+                f"--- Looked up mid-interview: {query} ---\n{body}"
+            ).strip(),
+            "research_source_urls": [
+                *state.research_source_urls,
+                *[url for url in urls if url not in state.research_source_urls],
+            ],
+            "lookups": [*state.lookups, query],
+        }
+    )
 
 
 def _transcript(state: GrillState) -> str:
@@ -179,6 +232,19 @@ def _marker_status(state: GrillState) -> str:
 def build_next_turn_prompt(state: GrillState) -> str:
     """What the grill is told before it decides its next move."""
     asked = len(state.turns)
+    left = _lookups_left(state)
+    can_look_up = (
+        f"""You may look something up before deciding. Set `lookup` to what you
+want to know, in plain words, and leave everything else empty -- you will be
+asked again with the answer in hand. Use it when the conversation has moved
+somewhere your briefing does not cover: they named a neighbourhood, a festival,
+a business you know nothing about. Do NOT use it to check something you were
+already told, and do NOT use it instead of asking them what only they can say.
+You may do this {left} more time(s) this interview."""
+        if left
+        else """Your lookup budget is spent for this interview. Work from the
+briefing above and ask them; do not set `lookup`."""
+    )
     return f"""You are interviewing a writer about an article they want to commission.
 They are a traveller or researcher, not an editor. Do not use editorial jargon.
 
@@ -187,6 +253,9 @@ THEIR OPENING LINE:
 
 WHAT YOU ALREADY LOOKED UP (never ask about anything in here):
 {state.research_digest or "Nothing; you could not look anything up."}
+
+LOOKING SOMETHING UP:
+{can_look_up}
 
 THE INTERVIEW SO FAR:
 {_transcript(state)}
@@ -347,11 +416,16 @@ class GrillUnusableResponse(RuntimeError):
     needs explaining was the one moment with no evidence.
     """
 
-    def __init__(self, raw: str) -> None:
+    def __init__(self, raw: str, state: "GrillState | None" = None) -> None:
         super().__init__(
             "The grill returned neither a usable question nor a consensus."
         )
         self.raw = raw
+        # The state as it stood when this failed, carrying any lookups the
+        # attempt already paid for. Without it the retry starts from the
+        # original state, the lookup budget resets, and one turn can spend it
+        # twice -- measured at six searches against a budget of three.
+        self.state = state
 
 
 def advance_grill(
@@ -369,31 +443,55 @@ def advance_grill(
     before it has started.
     """
     attempts: list[str] = []
+    # Carried across attempts, so a lookup the first attempt paid for is not
+    # bought again by the second.
+    working = state
     for attempt in range(2):
         try:
-            return _advance_once(state, dependencies)
+            return _advance_once(working, dependencies)
         except GrillUnusableResponse as error:
             attempts.append(error.raw)
+            if error.state is not None:
+                working = error.state
             logger.warning(
                 "Grill returned an unusable response (attempt %s): %s",
                 attempt + 1,
                 error.raw[:500],
             )
-    raise GrillUnusableResponse("\n---\n".join(attempts))
+    raise GrillUnusableResponse("\n---\n".join(attempts), working)
 
 
 def _advance_once(
     state: GrillState,
     dependencies: GrillDependencies,
 ) -> GrillState:
-    parsed, raw = dependencies.llm.invoke_json(
-        prompt=build_next_turn_prompt(state),
-        model_name=dependencies.model_name,
-        schema=NEXT_TURN_SCHEMA,
-        max_tokens=2_048,
-        temperature=P2B_V4_GRILL_TEMPERATURE,
-    )
-    payload = _safe_dict(parsed)
+    # `state` is rebound as lookups land, so the enlarged digest and the record
+    # of what was looked up survive on whatever this returns -- including the
+    # turn where the grill finally asks its question.
+    while True:
+        parsed, raw = dependencies.llm.invoke_json(
+            prompt=build_next_turn_prompt(state),
+            model_name=dependencies.model_name,
+            schema=NEXT_TURN_SCHEMA,
+            max_tokens=2_048,
+            temperature=P2B_V4_GRILL_TEMPERATURE,
+        )
+        payload = _safe_dict(parsed)
+        lookup = _safe_str(payload.get("lookup"))
+        # A lookup is a move, not an answer, so nothing else on the payload is
+        # read: the model is saying "I need to know this before I decide".
+        # Bounded by the budget, and the budget is spent even on a failure, so
+        # this cannot become a turn that never ends.
+        if lookup and payload.get("done") is not True and _lookups_left(state):
+            logger.info("Grill looked up %r mid-interview", lookup)
+            state = look_up_mid_interview(state, dependencies, lookup)
+            continue
+        if lookup and not _lookups_left(state):
+            logger.info(
+                "Grill wanted to look up %r with no budget left; asking instead",
+                lookup,
+            )
+        break
     location = _safe_str(payload.get("location")) or state.location
     covered = _markers_from(payload, state)
 
@@ -421,7 +519,7 @@ def _advance_once(
 
     question = _question_from(payload, fallback_id=f"q{len(state.turns) + 1}")
     if question is None:
-        raise GrillUnusableResponse(raw or _json_or_repr(payload))
+        raise GrillUnusableResponse(raw or _json_or_repr(payload), state)
     return state.model_copy(
         update={
             "status": "asking",
