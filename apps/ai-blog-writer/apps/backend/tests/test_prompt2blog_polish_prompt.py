@@ -68,8 +68,11 @@ def test_the_measured_spread_becomes_an_instruction_with_its_numbers():
 
     assert "57% of the 75 sentences sit within five words" in prompt
     assert "1 run past 25 words" in prompt
-    assert "Join related facts into longer sentences" in prompt
-    assert "Do not cut anything to do it" in prompt
+    # The instruction that follows the numbers is covered by the joining tests
+    # below; what this one holds is that the measurement reaches the prompt as
+    # a sentence with its own figures in it.
+    assert "The sentences are too uniform." in prompt
+    assert "cutting content is never the fix" in prompt
 
 
 def test_varied_prose_is_not_complained_about():
@@ -138,3 +141,111 @@ def test_a_length_miss_says_which_way_it_missed():
 
     assert "180 words under the agreed length" in prompt
     assert "never by inventing facts" in prompt
+
+
+# --- how to lengthen a sentence, not only what it cannot use ---------------
+
+
+def test_the_uniformity_fix_names_joining_and_rules_out_splitting():
+    """Told "vary the rhythm" and "no dashes" in one breath, a model has one
+    tool left: the full stop.
+
+    A version of the Medellin article came back from an outside model with 65
+    sentences where the pipeline wrote 54, a spread of 5.0 where the pipeline
+    had 7.7, and zero sentences over 25 words where the pipeline had six. Every
+    cut landed on a subordinate clause.
+    """
+    prompt = _prompt()
+
+    assert "joining, never by splitting" in prompt
+    assert "Length comes from subordination." in prompt
+    # The connectives, named. "Join related facts" alone leaves the model to
+    # work out how, and splitting is the easier guess.
+    for word in ("because", "which", "while", "after", "so that"):
+        assert word in prompt
+
+
+def test_it_says_a_split_makes_the_measurement_worse():
+    """The instruction and the measurement have to agree.
+
+    Cutting a long sentence in two raises the sentence count and narrows the
+    spread, so a model doing what it was asked would move the number the wrong
+    way and think it had complied.
+    """
+    prompt = _prompt()
+
+    assert "makes this measurement worse" in prompt
+
+
+def test_the_dash_ban_says_what_to_reach_for_instead():
+    """A ban with no replacement is why the full stop won.
+
+    `anti_ai_tells.py` had the same trap until `2bd89fb1`: the only escape it
+    offered from an aside was "split it", and the model generalised that one
+    option into a house style.
+    """
+    prompt = _prompt()
+
+    assert "not a reason to reach for a full stop" in prompt
+    assert "subordinate clause, not two sentences" in prompt
+    # Long sentences are wanted. Without this the ban reads as a length limit.
+    assert "Long sentences are wanted" in prompt
+
+
+def test_a_clean_article_is_not_told_how_to_lengthen_anything():
+    """The advice rides on the complaint. No complaint, no advice."""
+    prompt = _prompt(
+        constraint_checks={
+            "sentence_count": 60,
+            "sentence_widest_band_share": 0.3,
+            "sentences_over_25_words": 6,
+        }
+    )
+
+    assert "joining, never by splitting" not in prompt
+    # The dash rule is a house rule and stays regardless.
+    assert "not a reason to reach for a full stop" in prompt
+
+
+def test_splitting_really_does_make_the_spread_worse():
+    """The prompt tells the model a split moves the number the wrong way.
+
+    That claim has to be true, or the instruction is asking a model to trust
+    an assertion the measurement would contradict. These are the two versions
+    of the same passage from issue #443, joined and then split at the joint,
+    measured by the function that produces the number the prompt quotes.
+
+    Splitting loses on every measure at once: the spread collapses, the long
+    sentence disappears, and the crowding share -- which is the metronome,
+    measured, and where high is bad -- goes UP. A model that split its way
+    through the article would think it had complied.
+    """
+    from app.features.prompt2blog.quality import measure_sentence_spread
+
+    joined = (
+        "Cusco sits at 3,399 meters. "
+        "Lima averages between 101 and 161, which is the difference between "
+        "arriving and arriving able to do anything, because tourists who fly "
+        "straight to the Andes often meet a pounding headache within 6 to 24 "
+        "hours, followed by nausea, dizziness and fatigue that take up to two "
+        "days of rest and water to clear. "
+        "You lose the start of your trip to a hotel bed."
+    )
+    split = (
+        "Cusco sits at 3,399 meters. "
+        "Lima averages between 101 and 161. "
+        "That is the difference between arriving and arriving able to do "
+        "anything. "
+        "Tourists who fly straight to the Andes often meet a pounding headache "
+        "within 6 to 24 hours. "
+        "Nausea, dizziness and fatigue follow. "
+        "These take up to two days of rest and water to clear. "
+        "You lose the start of your trip to a hotel bed."
+    )
+
+    before = measure_sentence_spread(joined)
+    after = measure_sentence_spread(split)
+
+    assert after["sentence_stdev_words"] < before["sentence_stdev_words"]
+    assert after["sentences_over_25_words"] < before["sentences_over_25_words"]
+    assert after["sentence_widest_band_share"] > before["sentence_widest_band_share"]

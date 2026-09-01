@@ -19,6 +19,22 @@ ban and the hyphenated compound ban are deliberate, and a chatbot asked to
 improve rhythm will reach for an em dash within a sentence or two. Telling it
 not to is cheaper than reading the result and finding out.
 
+**And it has to say how to lengthen a sentence, not only what it cannot use.**
+Asked to vary the rhythm and forbidden the dash in the same breath, a model has
+one tool left: the full stop. A version of the Medellin article came back from
+an outside model with 65 sentences where the pipeline wrote 54, a spread of 5.0
+where the pipeline had 7.7, and **zero** sentences over 25 words where the
+pipeline had six. Every cut landed on a subordinate clause -- "667 people per
+day, *which* falls far short of" became two sentences -- which is exactly the
+joint the rhythm fix in `2bd89fb1` had just added.
+
+Not proven to have come from this prompt: the operator had also been editing by
+hand. But the failure matches the prompt's shape precisely, and it is the same
+trap `anti_ai_tells.py` had before that commit, where the only escape offered
+from an aside was "split it". So the wording here now mirrors what those rules
+settled on: length comes from subordination, and splitting is the last resort
+rather than the house style.
+
 It is generated, never hand edited. Operator influence belongs in a control
 carrying its own validated field; typed text into a generated prompt leaves
 nothing downstream able to say what was actually asked for.
@@ -51,9 +67,13 @@ def _measured_problems(checks: dict[str, Any]) -> list[str]:
             problems.append(
                 f"The sentences are too uniform. {round(share * 100)}% of the "
                 f"{count} sentences sit within five words of each other, and "
-                f"{long_ones} run past 25 words. Join related facts into longer "
-                "sentences where one explains another, and let short sentences "
-                "land the points. Do not cut anything to do it."
+                f"{long_ones} run past 25 words. Fix this by joining, never by "
+                "splitting: where one fact explains another, carry both in one "
+                "sentence using because, which, while, after or so that, and "
+                "let short sentences land the points. Length comes from "
+                "subordination. Cutting a long sentence in two makes this "
+                "measurement worse, not better, and cutting content is never "
+                "the fix."
             )
 
     if checks.get("target_word_count_met") is False:
@@ -122,6 +142,11 @@ RULES YOU MUST NOT BREAK
 - No em dashes, and no substitutes. A comma bracketed aside is an em dash in
   disguise. This is deliberate: em dashes now read as a sign of AI writing and
   this publication does not use them.
+  This is not a reason to reach for a full stop. The replacement for a dash is
+  a subordinate clause, not two sentences: "the room is warm throughout, which
+  is what makes the terrace worth booking" keeps the thought whole and needs no
+  dash. Long sentences are wanted, and commas joining clauses are correct. What
+  is banned is a comma standing in for a dash around an aside.
 - No hyphenated compounds. "A visa for long stays", never "a long stay visa".
   Proper names keep their hyphens; nothing else does.
 - Invent nothing. No new places, prices, dates, dishes, names or numbers, and
