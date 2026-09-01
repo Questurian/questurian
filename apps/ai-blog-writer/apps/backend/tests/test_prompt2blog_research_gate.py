@@ -416,3 +416,128 @@ def test_omitting_unblocks_the_run():
         evidence, work_order, requirement_id="q3"
     )
     assert assess_coverage(trimmed, settled).can_write is True
+
+
+# --- the operator re-asks it ----------------------------------------------
+
+
+def _reask(**kwargs):
+    from app.features.prompt2blog.gate_v4 import reask_requirement
+
+    evidence, work_order = _pair()
+    return reask_requirement(evidence, work_order, **kwargs)
+
+
+def test_re_asking_rewrites_the_question_and_keeps_its_id():
+    """The id is what every claim, gap and conflict links to.
+
+    Changing it would leave the work order and the dossier declaring different
+    sets, which the request contract refuses outright.
+    """
+    _settled, rewritten, _note = _reask(
+        requirement_id="q3", question="What does a Moravia Tours walk cost per person?"
+    )
+
+    asked = {item.requirement_id: item.question for item in rewritten.requirements}
+    assert asked["q3"] == "What does a Moravia Tours walk cost per person?"
+    assert asked["q1"] == "Visitors?"
+    assert [item.requirement_id for item in rewritten.requirements] == ["q3", "q1", "q5"]
+
+
+def test_re_asking_puts_the_question_back_to_unanswered():
+    """`missing` is the honest word: nothing answers it right now."""
+    settled, _rewritten, _note = _reask(requirement_id="q3", question="Cost per person?")
+
+    requirement = next(r for r in settled.requirements if r.requirement_id == "q3")
+    assert requirement.status == "missing"
+    assert requirement.claim_ids == []
+
+
+def test_what_the_old_wording_bought_is_discarded():
+    """The Argentina answer must not survive the question that produced it."""
+    settled, _rewritten, note = _reask(
+        requirement_id="q3", question="Cost per person?"
+    )
+
+    assert "c10" not in {claim.claim_id for claim in settled.claims}
+    assert "1 claim(s)" in note
+    assert "Prices?" in note and "Cost per person?" in note
+
+
+def test_a_claim_still_serving_another_question_survives_a_re_ask():
+    from app.features.prompt2blog.gate_v4 import reask_requirement
+
+    evidence = _evidence(
+        claims=[
+            {
+                "claim_id": "c10",
+                "text": "Moravia Tours was co-founded by community leaders.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q3", "q1"],
+                "confidence": "high",
+            }
+        ],
+        requirements=[
+            {"requirement_id": "q3", "status": "partial", "claim_ids": ["c10"], "gap": "No price."},
+            {"requirement_id": "q1", "status": "supported", "claim_ids": ["c10"]},
+        ],
+    )
+    work_order = _work_order(
+        {"requirement_id": "q3", "question": "Prices?", "kind": "load_bearing"},
+        {"requirement_id": "q1", "question": "Visitors?", "kind": "texture"},
+    )
+
+    settled, _rewritten, _note = reask_requirement(
+        evidence, work_order, requirement_id="q3", question="Cost per person?"
+    )
+
+    survivor = next(claim for claim in settled.claims if claim.claim_id == "c10")
+    assert survivor.requirement_ids == ["q1"]
+
+
+def test_a_question_the_research_answered_can_be_re_asked():
+    """The point of the whole move, and the one place `_guard` must not apply.
+
+    Run 76b36468's q6 asked about a project "in Buenos Aires" and research
+    answered about Argentina; the article is about Medellín, whose Buenos
+    Aires is a neighbourhood. It came back marked `supported`, so refusing to
+    touch a supported requirement would refuse exactly the case this exists
+    for.
+    """
+    settled, _rewritten, _note = _reask(
+        requirement_id="q1", question="How many visitors in 2024, in Medellin?"
+    )
+
+    requirement = next(r for r in settled.requirements if r.requirement_id == "q1")
+    assert requirement.status == "missing"
+
+
+def test_the_same_question_is_refused():
+    with pytest.raises(GateAnswerRefused, match="same question"):
+        _reask(requirement_id="q3", question="Prices?")
+
+
+def test_an_empty_rewrite_is_refused():
+    with pytest.raises(GateAnswerRefused, match="cannot be empty"):
+        _reask(requirement_id="q3", question="   ")
+
+
+def test_re_asking_an_unknown_question_is_refused():
+    with pytest.raises(GateAnswerRefused, match="No research question"):
+        _reask(requirement_id="q99", question="Anything at all?")
+
+
+def test_the_pair_stays_bound_to_one_plan():
+    """The fingerprint is the token binding this dossier to this work order.
+
+    Both sides move together in one operation, so it is deliberately left
+    alone -- exactly as `omit` leaves it alone. What changed is in the note.
+    """
+    evidence, work_order = _pair()
+    settled, rewritten, _note = _reask(requirement_id="q3", question="Cost per person?")
+
+    assert rewritten.work_order_fingerprint == work_order.work_order_fingerprint
+    assert settled.work_order_fingerprint == evidence.work_order_fingerprint
+    assert {r.requirement_id for r in rewritten.requirements} == {
+        r.requirement_id for r in settled.requirements
+    }

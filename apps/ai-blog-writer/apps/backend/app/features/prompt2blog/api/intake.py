@@ -60,6 +60,7 @@ from ..intake_v4 import (
     polish_prompt,
     intake_state,
     plan_research,
+    reask_question,
     recent_runs,
     reopen_intake,
     settle_gate,
@@ -407,6 +408,31 @@ class GateAnswerRequest(BaseModel):
     # Drop the question. Permitted for a load-bearing one, and answered once
     # with what the article can no longer claim (ADR 0030).
     omit: bool = False
+
+
+class ReaskRequest(BaseModel):
+    requirement_id: str = Field(min_length=1)
+    question: str = Field(min_length=1)
+
+
+@router.post("/{run_id}/gate/reask")
+def reask_the_question(
+    run_id: str, request: ReaskRequest, _staff=Depends(require_staff)
+) -> JSONResponse:
+    """Rewrite one question and buy one search.
+
+    The only move at the gate that spends money, which is why it is its own
+    route rather than a fourth branch of the settle one: the other three are
+    the operator recording a decision, and this one re-runs research.
+    """
+    _handle(
+        reask_question,
+        run_id,
+        _services(run_id),
+        requirement_id=request.requirement_id,
+        question=request.question,
+    )
+    return JSONResponse(intake_state(run_id))
 
 
 @router.get("/{run_id}/gate")
