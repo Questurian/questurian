@@ -99,22 +99,45 @@ export const PROMPT2BLOG_V3_PIPELINE_STAGES = [
   'stage_v3_quality_audit',
   'stage_v3_repair',
   'stage_v3_quality_settle',
-  'stage_v3_title',
   'stage_v3_finalize',
   'complete',
 ] as const
 
+/**
+ * Stage names no run will ever report again, kept only so a stored one still
+ * reads.
+ *
+ * This list is separate from the order above because the order does two jobs
+ * that stopped agreeing. `PipelinePanel` renders one row per entry, so a stage
+ * left in it shows up as a step of every new run and sits pending forever;
+ * `PROMPT2BLOG_KNOWN_PIPELINE_STAGES` matches reported names, so a stage
+ * dropped from it makes an old run read as `unknown`. A retired stage needs the
+ * second and must not have the first.
+ *
+ * `stage_v3_title` is here because ADR 0034 deleted the title stage -- the seed
+ * is the title -- while runs recorded before that still carry it, which is why
+ * the backend also still names it in `WRITING_STAGE_LABELS` and in the debug
+ * endpoint's stage list.
+ */
+export const PROMPT2BLOG_RETIRED_PIPELINE_STAGES = [
+  'stage_v3_title',
+] as const
+
 export type KnownPrompt2BlogV2PipelineStage = typeof PROMPT2BLOG_PIPELINE_STAGES[number]
-export type KnownPrompt2BlogV3PipelineStage = typeof PROMPT2BLOG_V3_PIPELINE_STAGES[number]
+export type KnownPrompt2BlogV3PipelineStage =
+  | typeof PROMPT2BLOG_V3_PIPELINE_STAGES[number]
+  | typeof PROMPT2BLOG_RETIRED_PIPELINE_STAGES[number]
 
 /**
  * Every stage name the status endpoint may legitimately report, across both
  * pipeline versions. Status normalization matches against this so a v3 run
- * does not render as `unknown` while it is working.
+ * does not render as `unknown` while it is working, and so a run stored before
+ * a stage was retired still names what it was doing.
  */
 export const PROMPT2BLOG_KNOWN_PIPELINE_STAGES = [
   ...PROMPT2BLOG_PIPELINE_STAGES,
   ...PROMPT2BLOG_V3_PIPELINE_STAGES,
+  ...PROMPT2BLOG_RETIRED_PIPELINE_STAGES,
 ] as const
 
 export type KnownPrompt2BlogPipelineStage =

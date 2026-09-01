@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Prompt2BlogPipelineStage, Prompt2BlogStatusResponse } from '../api'
-import { PROMPT2BLOG_V3_PIPELINE_STAGES } from '../types/pipeline.types'
+import {
+  PROMPT2BLOG_KNOWN_PIPELINE_STAGES,
+  PROMPT2BLOG_RETIRED_PIPELINE_STAGES,
+  PROMPT2BLOG_V3_PIPELINE_STAGES,
+} from '../types/pipeline.types'
 import {
   describePipelineFailure,
   getPipelineStepStatus,
@@ -91,7 +95,23 @@ describe('v3 stage progress', () => {
 
     expect(getPipelineStepStatus('stage_v3_compose', status, v3)).toBe('done')
     expect(getPipelineStepStatus('stage_v3_groundedness', status, v3)).toBe('running')
-    expect(getPipelineStepStatus('stage_v3_title', status, v3)).toBe('pending')
+    expect(getPipelineStepStatus('stage_v3_finalize', status, v3)).toBe('pending')
+  })
+
+  it('does not render a retired stage as a step of a new run', () => {
+    // `PipelinePanel` draws one row per entry in this order, so a stage the
+    // graph no longer runs would sit pending for the whole run and the list
+    // would never complete. ADR 0034 deleted the title stage.
+    expect(PROMPT2BLOG_V3_PIPELINE_STAGES).not.toContain('stage_v3_title')
+    expect(PROMPT2BLOG_STAGE_ORDERS.v3).not.toContain('stage_v3_title')
+  })
+
+  it('still reads a retired stage a stored run reports', () => {
+    // The other half: dropping the name entirely would make a run recorded
+    // before the deletion render as an unknown stage.
+    expect(PROMPT2BLOG_RETIRED_PIPELINE_STAGES).toContain('stage_v3_title')
+    expect(PROMPT2BLOG_KNOWN_PIPELINE_STAGES).toContain('stage_v3_title')
+    expect(PIPELINE_STAGE_LABELS.stage_v3_title).toBeTruthy()
   })
 
   it('stalls a v3 stage read against the v2 order, which is why the order is passed', () => {

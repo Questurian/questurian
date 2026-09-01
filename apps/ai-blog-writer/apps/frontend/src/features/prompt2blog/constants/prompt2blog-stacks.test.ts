@@ -23,7 +23,6 @@ describe('Claude-writer run stacks', () => {
       expect(isPlanAllowanceModel(stack.auditModel)).toBe(true)
       expect(isPlanAllowanceModel(stack.groundednessModel)).toBe(true)
       expect(isPlanAllowanceModel(stack.outlineModel)).toBe(true)
-      expect(isPlanAllowanceModel(stack.titleModel)).toBe(true)
     }
   })
 
@@ -83,7 +82,6 @@ describe('Claude-writer run stacks', () => {
     expect(isPlanAllowanceModel(checked.auditModel)).toBe(false)
     expect(isPlanAllowanceModel(checked.groundednessModel)).toBe(false)
     expect(isPlanAllowanceModel(checked.outlineModel)).toBe(false)
-    expect(isPlanAllowanceModel(checked.titleModel)).toBe(false)
   })
 
   it('offers exactly the routes the picker shows, default first', () => {
@@ -134,7 +132,6 @@ describe('Claude-writer run stacks', () => {
     expect(flash.auditModel).toBe('gemini-3.7-flash')
     expect(flash.groundednessModel).toBe('gemini-3.7-flash')
     expect(flash.outlineModel).toBe('gemini-3.7-flash')
-    expect(flash.titleModel).toBe('gemini-3.7-flash')
   })
 
   it('names the weaker checker as a tradeoff rather than only as a saving', () => {
