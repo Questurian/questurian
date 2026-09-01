@@ -126,6 +126,15 @@ def build_work_order_prompt(brief: ArticleBrief) -> str:
     return f"""Plan the research for a commissioned article. You cannot browse; you are
 writing the questions someone else will answer.
 
+THE HEADLINE THIS ARTICLE WILL BE PUBLISHED UNDER
+{brief.seed}
+
+Anything that line asserts as fact is a claim the article has to stand behind,
+and it is load bearing whether or not the brief mentions it again. If it names
+an age, a number, a superlative, a "first", an "oldest", or a comparison, one
+of your questions establishes it. A reader who clicked that headline is owed
+the answer to it.
+
 THE BRIEF
 Location: {brief.location}
 Form: {brief.form_id}

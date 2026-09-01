@@ -50,6 +50,26 @@ from .support import _safe_dict, _safe_str
 # Below this, the prose is varied enough that saying so would be noise.
 SPREAD_WORTH_MENTIONING = 0.45
 
+# One sentence past 25 words for every this-many sentences, as a floor.
+#
+# Crowding alone missed the failure it most needed to catch. Run 062c0b86
+# (2026-09-01) came back with 64 sentences, 2 of them past 25 words and 16
+# under 8, and a crowding share of 0.36 -- comfortably under the threshold, so
+# nothing was said. The prose was choppy: three sentences in the whole article
+# used a subordinating clause.
+#
+# That is the metric and the fault coming apart. Adding very short sentences
+# widens the distribution and *improves* the crowding number while making the
+# writing worse, so an article can chop its way to a passing score.
+#
+# Derived rather than tuned. `anti_ai_tells` already requires every section to
+# carry at least one sentence over 25 words; a section runs 7 to 10 sentences,
+# so one in fifteen is a floor well below what the house rules already demand,
+# and it is not a number picked to fit three articles. It separates them
+# correctly all the same: Lima 1-in-75 and Huaca 1-in-32 both fire, Medellin
+# 1-in-9 stays quiet, and Medellin is the one that read well.
+LONG_SENTENCE_AT_LEAST_EVERY = 15
+
 
 def _measured_problems(checks: dict[str, Any]) -> list[str]:
     """What the run measured about its own prose, as instructions.
@@ -63,17 +83,43 @@ def _measured_problems(checks: dict[str, Any]) -> list[str]:
     count = checks.get("sentence_count")
     if isinstance(share, (int, float)) and isinstance(count, int) and count:
         long_ones = checks.get("sentences_over_25_words") or 0
-        if share >= SPREAD_WORTH_MENTIONING or not long_ones:
+        short_ones = checks.get("sentences_under_8_words") or 0
+        crowded = share >= SPREAD_WORTH_MENTIONING
+        starved = long_ones * LONG_SENTENCE_AT_LEAST_EVERY < count
+        if crowded or starved:
+            # Named for the faults that actually fired, and both when both
+            # did. Telling a choppy article its sentences "sit within five
+            # words of each other" describes something that is not wrong with
+            # it, and an instruction opening on a wrong diagnosis is easy to
+            # dismiss. Picking one when both are true has the same problem in
+            # the other direction, so neither is dropped.
+            if crowded and starved:
+                fault = (
+                    f"The sentences are too uniform and too short. "
+                    f"{round(share * 100)}% of the {count} sentences sit "
+                    f"within five words of each other, only {long_ones} run "
+                    f"past 25 words, and {short_ones} are under 8."
+                )
+            elif starved:
+                fault = (
+                    f"The sentences are too short and too alike. Only "
+                    f"{long_ones} of {count} run past 25 words and "
+                    f"{short_ones} are under 8, so the article moves in short "
+                    "steps with nothing carrying two ideas at once."
+                )
+            else:
+                fault = (
+                    f"The sentences are too uniform. {round(share * 100)}% of "
+                    f"the {count} sentences sit within five words of each "
+                    f"other, and {long_ones} run past 25 words."
+                )
             problems.append(
-                f"The sentences are too uniform. {round(share * 100)}% of the "
-                f"{count} sentences sit within five words of each other, and "
-                f"{long_ones} run past 25 words. Fix this by joining, never by "
-                "splitting: where one fact explains another, carry both in one "
-                "sentence using because, which, while, after or so that, and "
-                "let short sentences land the points. Length comes from "
-                "subordination. Cutting a long sentence in two makes this "
-                "measurement worse, not better, and cutting content is never "
-                "the fix."
+                f"{fault} Fix this by joining, never by splitting: where one "
+                "fact explains another, carry both in one sentence using "
+                "because, which, while, after or so that, and let short "
+                "sentences land the points. Length comes from subordination. "
+                "Cutting a long sentence in two makes this measurement worse, "
+                "not better, and cutting content is never the fix."
             )
 
     if checks.get("target_word_count_met") is False:
