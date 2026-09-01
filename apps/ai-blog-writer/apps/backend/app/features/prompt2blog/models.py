@@ -65,5 +65,4 @@ class PipelineV4RuntimeRequest(BaseModel):
     # that omits them gets the `P2B_V3_*_MODEL` defaults and routes as before.
     outline_model: str | None = None
     groundedness_model: str | None = None
-    title_model: str | None = None
     model_stack_id: str | None = None

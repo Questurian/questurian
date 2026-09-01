@@ -624,7 +624,6 @@ class Prompt2BlogModelRouting(V4ContractModel):
     audit_model: str | None = None
     outline_model: str | None = None
     groundedness_model: str | None = None
-    title_model: str | None = None
     model_stack_id: str | None = None
 
 

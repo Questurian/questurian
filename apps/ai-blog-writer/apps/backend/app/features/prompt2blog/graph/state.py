@@ -32,7 +32,6 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     repair_model: str
     groundedness_model: str
     audit_model: str
-    title_model: str
     model_stack_id: str | None
     compose_temperature: float
     include_debug: bool
@@ -56,6 +55,7 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     best_rewrite: dict[str, Any]
     best_quality: dict[str, Any]
     best_quality_checks: dict[str, Any]
+    # The seed, set before the graph runs (ADR 0034). No stage writes it.
     final_title: str
     final_markdown: str
     response_payload: dict[str, Any]

@@ -23,7 +23,6 @@ from .config import (
     P2B_COMPOSE_MODEL,
     P2B_V3_GROUNDEDNESS_MODEL,
     P2B_V3_OUTLINE_MODEL,
-    P2B_V3_TITLE_MODEL,
     PROMPT2BLOG_CREATIVITY_TEMPERATURES,
     PROMPT2BLOG_DEFAULT_COMPOSE_TEMPERATURE,
 )
@@ -61,7 +60,6 @@ from .stages.v3.compose import run_v3_compose_stage
 from .stages.v3.finalize import run_v3_finalize_stage
 from .stages.v3.groundedness import run_v3_groundedness_stage
 from .stages.v3.outline import run_v3_outline_stage
-from .stages.v3.title import run_v3_title_stage
 from .support import _safe_dict, _safe_str
 
 logger = logging.getLogger(__name__)
@@ -140,10 +138,6 @@ def _initial_v3_state(
             request.groundedness_model,
             default=P2B_V3_GROUNDEDNESS_MODEL,
         ),
-        "title_model": dependencies.resolve_writer_model(
-            request.title_model,
-            default=P2B_V3_TITLE_MODEL,
-        ),
         "model_stack_id": request.model_stack_id,
         "compose_temperature": PROMPT2BLOG_CREATIVITY_TEMPERATURES.get(
             creativity_level,
@@ -151,6 +145,9 @@ def _initial_v3_state(
         ),
         "include_debug": request.include_debug,
         "enable_editorial_augmentation": request.enable_editorial_augmentation,
+        # The title, before a word is written. The seed is the headline
+        # (ADR 0034); nothing in the graph writes one, and finalize reads this.
+        "final_title": _safe_str(_safe_dict(request.brief).get("seed")),
         "current_stage": "stage_v3_outline",
         "resume_count": 0,
         "repair_attempts": 0,
@@ -198,7 +195,6 @@ def _v3_nodes(
         ("quality_audit", run_v3_quality_audit_stage),
         ("repair", run_v3_repair_stage),
         ("quality_settle", run_v3_quality_settle_stage),
-        ("title", run_v3_title_stage),
         ("finalize", run_v3_finalize_stage),
     ]
     return [(name, _node(name, stage, dependencies)) for name, stage in stages]

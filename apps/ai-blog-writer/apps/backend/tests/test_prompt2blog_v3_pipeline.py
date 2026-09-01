@@ -263,13 +263,6 @@ class ScriptedLLM:
         self._record_model("compose", model_name)
         return DRAFT, json.dumps(DRAFT)
 
-    def invoke_text(
-        self, *, prompt: str, model_name: str | None = None, **_kwargs
-    ) -> str:
-        self.prompts.append(("title", prompt))
-        self._record_model("title", model_name)
-        return "Is Lima still worth a long stay?"
-
     def enforce_anti_ai(self, text: str, **_kwargs) -> str:
         return text
 
@@ -296,7 +289,6 @@ def test_the_lima_brief_runs_end_to_end_through_the_graph():
         "stage_v3_groundedness",
         "stage_v3_quality_audit",
         "stage_v3_quality_settle",
-        "stage_v3_title",
         "stage_v3_finalize",
     ]
     payload = recorder.stages["pipeline_v3"]
@@ -309,11 +301,13 @@ def test_the_lima_brief_runs_end_to_end_through_the_graph():
         "r3": "supported",
     }
     contexts = payload["debug"]["stage_contexts"]
-    assert set(contexts) == {"outline", "compose", "audit", "repair_lock", "title"}
+    assert set(contexts) == {"outline", "compose", "audit", "repair_lock"}
     assert contexts["compose"]["character_count"] > contexts["audit"]["character_count"]
     assert len(contexts["compose"]["fingerprint"]) == 64
     assert "instruction_text" not in payload["debug"]
-    assert state["final_title"] == "Is Lima still worth a long stay?"
+    # The seed, not a headline anyone paid for (ADR 0034). No stage writes
+    # one, and the double no longer answers a text call at all.
+    assert state["final_title"] == _fixture()["brief"]["seed"]
 
 
 def test_balanced_route_reserves_opus_for_drafting_and_repair():
@@ -340,7 +334,6 @@ def test_balanced_route_reserves_opus_for_drafting_and_repair():
         "groundedness": ["claude-sonnet-5-medium", "claude-sonnet-5-medium"],
         "audit": ["claude-sonnet-5-high", "claude-sonnet-5-high"],
         "repair": ["claude-opus-5-high"],
-        "title": ["claude-sonnet-5-medium"],
     }
 
     # The receipt has to name the same models the run used. `model_used` under
@@ -367,7 +360,6 @@ def test_a_route_can_move_the_checking_stages_off_claude():
             "audit_model": "gemini-3.1-pro-preview",
             "outline_model": "gemini-3.1-pro-preview",
             "groundedness_model": "gemini-3.1-pro-preview",
-            "title_model": "gemini-3.7-flash",
             "model_stack_id": "gemini-checked-high",
         }
     )
@@ -386,7 +378,6 @@ def test_a_route_can_move_the_checking_stages_off_claude():
         "groundedness": ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
         "audit": ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
         "repair": ["claude-opus-5-high"],
-        "title": ["gemini-3.7-flash"],
     }
 
 
@@ -406,7 +397,6 @@ def test_a_route_can_repair_at_a_different_effort_than_it_drafts():
             "audit_model": "gemini-3.1-pro-preview",
             "outline_model": "gemini-3.1-pro-preview",
             "groundedness_model": "gemini-3.1-pro-preview",
-            "title_model": "gemini-3.7-flash",
             "model_stack_id": "gemini-checked-max-repair",
         }
     )
@@ -470,7 +460,6 @@ def test_a_request_that_names_no_checking_models_keeps_the_pinned_defaults():
 
     assert llm.models["outline"] == ["claude-sonnet-5-medium"]
     assert llm.models["groundedness"] == ["claude-sonnet-5-medium"]
-    assert llm.models["title"] == ["claude-sonnet-5-medium"]
 
 
 def test_a_claude_written_draft_says_the_creativity_dial_did_not_reach_it(monkeypatch):
@@ -708,3 +697,54 @@ def test_the_default_recorder_is_untouched_by_the_v3_entrypoint():
     # The v3 orchestrator must keep using the one adapter that writes runs.
     assert isinstance(PipelineDependencies().recorder, RunRecorder)
     assert uuid4()
+
+
+# --- the seed is the title (ADR 0034) --------------------------------------
+
+
+def test_no_stage_writes_a_headline():
+    """The guard that keeps the deleted stage deleted.
+
+    `invoke_text` was the title stage's call and the only one in the graph.
+    A double that raises on it turns "somebody put a headline writer back"
+    into a failing test rather than a surprise on the next real run.
+    """
+
+    class TextIsForbidden(ScriptedLLM):
+        def invoke_text(self, **_kwargs):
+            raise AssertionError("no stage in the v3 graph may write a headline")
+
+    llm = TextIsForbidden(quality_scores=[9])
+    state = run_pipeline_v3(
+        "lima-no-headline",
+        prepare_v3_runtime_request(_request()),
+        PipelineDependencies(llm=llm, recorder=RecordingRecorder()),
+    )
+
+    assert state["completed"] is True
+
+
+def test_the_operators_line_reaches_the_finished_article():
+    """Not just the state: the markdown and the stored payload carry it."""
+    state, recorder, _llm = _run(quality_scores=[9])
+    seed = _fixture()["brief"]["seed"]
+
+    assert state["final_title"] == seed
+    assert state["final_markdown"].startswith(f"# {seed}")
+    assert recorder.stages["pipeline_v3"]["improved_article"]["title"] == seed
+
+
+def test_the_audit_is_the_last_stage_that_spends_anything():
+    """What the resume net now hangs off (ADR 0034).
+
+    Settle and finalize run after it and neither calls a model, so a failure
+    for want of an account cannot happen later than the audit. If that stops
+    being true the resume suite is simulating the wrong failure.
+    """
+    _state, recorder, llm = _run(quality_scores=[9])
+
+    paid = {stage for stage, _prompt in llm.prompts}
+    after_audit = recorder.order[recorder.order.index("stage_v3_quality_audit") + 1 :]
+
+    assert after_audit == ["stage_v3_quality_settle", "stage_v3_finalize"]
+    assert paid.isdisjoint({"quality_settle", "finalize"})

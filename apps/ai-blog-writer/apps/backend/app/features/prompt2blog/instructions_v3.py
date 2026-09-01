@@ -72,10 +72,9 @@ class V3StageContexts(InstructionModel):
     compose: StageContext
     audit: StageContext
     repair_lock: StageContext
-    title: StageContext
 
 
-StageContextName = Literal["outline", "compose", "audit", "repair_lock", "title"]
+StageContextName = Literal["outline", "compose", "audit", "repair_lock"]
 
 
 class V3InstructionSet(InstructionModel):
@@ -174,13 +173,6 @@ def _audience_body(
         "approved form."
     )
     return "\n".join(lines)
-
-
-def _headline_note(form_instructions: str) -> str:
-    if _HEADLINE_HEADING not in form_instructions:
-        return ""
-    section = form_instructions.split(_HEADLINE_HEADING, 1)[1]
-    return section.split("\n## ", 1)[0].strip()
 
 
 def _markdown_section(instructions: str, heading: str) -> str:
@@ -304,24 +296,6 @@ def _repair_lock_body(
     )
 
 
-def _title_brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> str:
-    references = ", ".join(
-        f"{item.name} ({item.role})" for item in work_order.scope.references
-    )
-    return "\n".join(
-        (
-            f"The promise to keep: {brief.outcome}",
-            f"Spine: {brief.spine}",
-            f"Primary subject: {work_order.primary_subject}",
-            f"Location: {brief.location}",
-            f"Core reader question: {brief.reader_question}",
-            f"Scope mode: {work_order.scope.mode}",
-            f"References: {references}",
-            f"Seed, for provenance only: {brief.seed}",
-        )
-    )
-
-
 def _stage_context(*, parts: list[tuple[str, str]]) -> StageContext:
     included = [(name, body) for name, body in parts if body]
     text = "\n\n".join(body for _name, body in included)
@@ -365,7 +339,6 @@ def stage_context_manifest(
             ("compose", contexts.compose),
             ("audit", contexts.audit),
             ("repair_lock", contexts.repair_lock),
-            ("title", contexts.title),
         )
     }
 
@@ -443,7 +416,6 @@ def assemble_v3_instructions(
         ),
     ]
 
-    headline_note = _headline_note(form.instructions)
     form_structure = _form_structure(form.instructions)
     brief_body = _brief_body(brief, work_order)
     audience_body = _audience_body(brief, catalog)
@@ -552,25 +524,6 @@ def assemble_v3_instructions(
                 ),
             ]
         ),
-        title=_stage_context(
-            parts=[
-                (
-                    "title_authority",
-                    "TITLE AUTHORITY\nHeadline rules control phrasing; the brief "
-                    "and supplied article signals control the promise.",
-                ),
-                ("headline_rules", catalog.headline_rules.instructions),
-                (
-                    "form_headline_note",
-                    (
-                        f"FORM HEADLINE NOTE — {form.label}\n{headline_note}"
-                        if headline_note
-                        else ""
-                    ),
-                ),
-                ("brief_summary", _title_brief_body(brief, work_order)),
-            ]
-        ),
     )
 
     return V3InstructionSet(
@@ -585,7 +538,6 @@ def assemble_v3_instructions(
             "topic_module_ids": [module.id for module in active_modules],
             "audience_tag_ids": list(brief.reader.tags),
             "house_rules_id": catalog.house_rules.id,
-            "headline_rules_id": catalog.headline_rules.id,
             "precedence": list(PRECEDENCE),
             "brief_fingerprint": brief.brief_fingerprint,
             "work_order_fingerprint": work_order.work_order_fingerprint,
