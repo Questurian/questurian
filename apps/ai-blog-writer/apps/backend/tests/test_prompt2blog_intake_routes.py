@@ -111,7 +111,9 @@ def scripted(monkeypatch):
         monkeypatch.setattr(
             intake_api,
             "_services",
-            lambda: IntakeServices(
+            # `run_id` is optional: the route passes it so the real services
+            # can continue that run's ledger. This double has no ledger.
+            lambda run_id=None: IntakeServices(
                 dependencies=GrillDependencies(
                     llm=llm, research=lambda _s: ("Lima has a food reputation.", [], 900)
                 ),

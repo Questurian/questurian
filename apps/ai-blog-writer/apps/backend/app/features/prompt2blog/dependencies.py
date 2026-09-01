@@ -4,14 +4,15 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol
 
-from app.core import get_article_type_by_id
+from app.core import get_article_type_by_id, read_stage_result
 from app.shared.text import normalize_dashes
 from app.shared.writer_models import resolve_writer_model
 
 from . import llm
 from .options import _read_article_type_markdown
 from .pricing import Prompt2BlogTokenUsageTracker
-from .run_recorder import RunRecorder
+from .run_recorder import USAGE_LEDGER_STAGE, RunRecorder
+from .support import _safe_dict
 
 
 class Prompt2BlogLLM(Protocol):
@@ -104,3 +105,26 @@ class PipelineDependencies:
             "recorder",
             replace(self.recorder, usage_tracker=tracker),
         )
+
+
+def dependencies_for_run(run_id: str) -> PipelineDependencies:
+    """Dependencies whose token tracker continues this run's existing ledger.
+
+    Every leg of a run -- each intake request, then the writing graph -- used
+    to build a fresh tracker, and `_write_usage_ledger` writes whatever that
+    tracker holds under one stage name. So each leg did not extend the ledger,
+    it **replaced** it, and the run's receipt ended up being whatever the last
+    leg happened to spend.
+
+    Measured on run b78a9fe8: the final ledger held eight calls, all of them
+    writing-graph stages, and reported 166,027 tokens. The grill, the brief,
+    the work order and the research structuring call had all been written to
+    that row earlier in the run and were gone by the end.
+
+    Restoring first makes the ledger's own promise -- "every rewrite is a
+    superset of the one before it" -- true for ordinary runs rather than only
+    for resumed ones.
+    """
+    stored = _safe_dict(_safe_dict(read_stage_result(run_id, USAGE_LEDGER_STAGE)).get("data"))
+    tracker = Prompt2BlogTokenUsageTracker.from_ledger(stored)
+    return PipelineDependencies(llm=DefaultPrompt2BlogLLM(usage_tracker=tracker))

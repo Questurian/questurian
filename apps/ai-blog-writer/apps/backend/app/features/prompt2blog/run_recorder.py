@@ -145,6 +145,22 @@ class RunRecorder:
             feature=FEATURE_NAME,
         )
 
+    def start_stage_once(self, run_id: str, stage: str) -> None:
+        """Open `stage` unless this recorder already has it open for the run.
+
+        The intake opens a stage *before* its model call, so the call is filed
+        under that stage rather than under `unattributed`, and then records the
+        row when the call comes back. Recording must not open a second attempt:
+        the row would then report an attempt the call was not filed under, and
+        say the stage cost nothing.
+
+        `start_stage` keeps its unconditional meaning, because the writing
+        graph relies on a repeated stage opening a fresh numbered attempt.
+        """
+        if self.active_stages.get(run_id) == stage:
+            return
+        self.start_stage(run_id, stage)
+
     def record_stage(self, run_id: str, stage: str, data: dict[str, Any]) -> None:
         stage_usage = self._stage_usage(run_id, stage)
         if stage_usage is not None:
