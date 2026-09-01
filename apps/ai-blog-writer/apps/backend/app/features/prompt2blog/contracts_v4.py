@@ -335,8 +335,13 @@ class ArticleBrief(V4ContractModel):
     which is the measure the system has never had: every score v3 owned said
     the Lima article passed.
 
-    `seed` is provenance, not instruction. In v3 the typed title was locked on
-    entry and handed to five stages as a promise nobody examined.
+    `seed` was provenance rather than instruction: in v3 the typed title was
+    locked on entry and handed to five stages as a promise nobody examined.
+
+    ADR 0034 changed half of that. The seed is now the published headline, so
+    it is no longer inert -- whatever it asserts is a claim the article has to
+    stand behind. It still does not steer the writing; it does bind the
+    research, which is why the work order is shown it.
     """
 
     schema_version: Literal[4] = 4

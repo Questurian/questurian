@@ -71,7 +71,9 @@ def test_the_measured_spread_becomes_an_instruction_with_its_numbers():
     # The instruction that follows the numbers is covered by the joining tests
     # below; what this one holds is that the measurement reaches the prompt as
     # a sentence with its own figures in it.
-    assert "The sentences are too uniform." in prompt
+    # The fixture is the Lima run: crowded AND starved of long sentences, so
+    # both faults are named rather than one being picked.
+    assert "too uniform and too short" in prompt
     assert "cutting content is never the fix" in prompt
 
 
@@ -249,3 +251,71 @@ def test_splitting_really_does_make_the_spread_worse():
     assert after["sentence_stdev_words"] < before["sentence_stdev_words"]
     assert after["sentences_over_25_words"] < before["sentences_over_25_words"]
     assert after["sentence_widest_band_share"] > before["sentence_widest_band_share"]
+
+
+# --- catching choppy prose, not only crowded prose -------------------------
+
+
+def _checks(*, count: int, share: float, long_ones: int, short_ones: int = 9):
+    return {
+        "sentence_count": count,
+        "sentence_widest_band_share": share,
+        "sentences_over_25_words": long_ones,
+        "sentences_under_8_words": short_ones,
+    }
+
+
+def test_choppy_prose_is_caught_even_when_the_crowding_looks_fine():
+    """Run 062c0b86 (2026-09-01): 64 sentences, 2 past 25 words, 16 under 8,
+    crowding 0.36 -- under the threshold, so nothing was said at all.
+
+    Three sentences in the whole article used a subordinating clause. Adding
+    very short sentences widens the distribution and improves the crowding
+    number while making the writing worse, so an article can chop its way to a
+    passing score.
+    """
+    prompt = _prompt(
+        constraint_checks=_checks(count=64, share=0.36, long_ones=2, short_ones=16)
+    )
+
+    assert "too short and too alike" in prompt
+    assert "Only 2 of 64 run past 25 words and 16 are under 8" in prompt
+    assert "joining, never by splitting" in prompt
+
+
+def test_an_article_that_is_both_crowded_and_choppy_is_told_both():
+    """Run 90b3f9bc (2026-08-30): 75 sentences, 59% inside a five word band,
+    and one solitary sentence past 25 words. Both faults are real."""
+    prompt = _prompt(
+        constraint_checks=_checks(count=75, share=0.59, long_ones=1, short_ones=10)
+    )
+
+    assert "too uniform and too short" in prompt
+    assert "59% of the 75 sentences" in prompt
+    assert "only 1 run past 25 words" in prompt
+
+
+def test_prose_that_actually_varies_is_left_alone():
+    """Run 76b36468 (2026-08-31): 54 sentences, 6 past 25 words, crowding 0.35.
+
+    The one of the three that read well. A trigger that fires on this is a
+    trigger that fires on everything.
+    """
+    prompt = _prompt(
+        constraint_checks=_checks(count=54, share=0.35, long_ones=6, short_ones=9)
+    )
+
+    assert "too uniform" not in prompt
+    assert "too short and too alike" not in prompt
+    assert "Nothing measurable is wrong with it" in prompt
+
+
+def test_the_diagnosis_names_the_fault_that_fired():
+    """An instruction that opens by describing something not wrong with the
+    article is easy to dismiss."""
+    choppy = _prompt(
+        constraint_checks=_checks(count=64, share=0.36, long_ones=2, short_ones=16)
+    )
+
+    # Not told its sentences sit within five words of each other. They do not.
+    assert "sit within five words" not in choppy

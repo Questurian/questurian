@@ -489,3 +489,37 @@ def test_the_stage_record_keeps_why_the_plan_is_the_size_it_is():
     assert record["texture_count"] == 0
     # A thin article later is often explained by a cut made here.
     assert record["cut_warnings"] == outcome.warnings
+
+
+# --- the headline is a claim the article has to stand behind ---------------
+
+
+def test_the_research_plan_is_shown_the_headline_it_has_to_support():
+    """Nothing told the work order what the article would be published under.
+
+    ADR 0034 made the seed the headline, so whatever it asserts now goes out
+    as a claim. Run 062c0b86 (2026-09-01) was titled "Lima Has a Pyramid Older
+    Than the Inca Empire" and asked nine research questions, not one of which
+    established how old the pyramid is. The article never gave a date. The
+    reader who clicked that headline finished the piece without the answer to
+    the exact question that made them click.
+
+    Same shape as the failure ADR 0034 removed from the title stage: the seed
+    existed on the run the whole time and the stage that needed it was never
+    shown it.
+    """
+    prompt = build_work_order_prompt(_brief())
+    flat = " ".join(prompt.split())
+
+    assert "Lima is no longer simply the stopover before Machu Picchu" in flat
+    assert "PUBLISHED UNDER" in prompt
+    assert "load bearing whether or not the brief mentions it again" in flat
+
+
+def test_the_headline_instruction_names_the_kinds_of_claim_to_check():
+    """"Verify the headline" is not actionable. The failure was concrete -- an
+    age -- so the categories are named."""
+    flat = " ".join(build_work_order_prompt(_brief()).split())
+
+    for kind in ("an age", "a superlative", '"oldest"', "a comparison"):
+        assert kind in flat
