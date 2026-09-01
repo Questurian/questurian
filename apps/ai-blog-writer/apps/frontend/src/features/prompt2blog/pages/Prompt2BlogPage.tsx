@@ -4,6 +4,7 @@ import { GateScreen } from '../intake/components/GateScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
 import { ArticleScreen } from '../intake/components/ArticleScreen'
 import { ResearchScreen } from '../intake/components/ResearchScreen'
+import { RunList } from '../intake/components/RunList'
 import { WorkingScreen } from '../intake/components/WorkingScreen'
 import { SeedScreen } from '../intake/components/SeedScreen'
 import { WorkOrderScreen } from '../intake/components/WorkOrderScreen'
@@ -102,7 +103,14 @@ export function Prompt2BlogPage() {
           <WorkingScreen research={state?.research_progress} />
         ) : (
           <>
-        {step === 'seed' && <SeedScreen busy={intake.busy} onStart={intake.start} />}
+        {step === 'seed' && (
+          <>
+            <SeedScreen busy={intake.busy} onStart={intake.start} />
+            {/* Only with no run open: this is the way back in, not a thing to
+                offer somebody who is already mid-article. */}
+            {!state && <RunList onResume={intake.resume} />}
+          </>
+        )}
 
         {step === 'grill' && state?.grill && (
           <GrillScreen

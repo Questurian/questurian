@@ -1052,3 +1052,89 @@
   font-size: 0.875rem;
   line-height: 1.6;
 }
+
+/* ---------- the way back in ---------- */
+
+/* Under the seed box, and only with no run open. The page used to track one
+   run in localStorage, so losing that pointer or starting a second article
+   made every earlier run unreachable from the interface -- the only way back
+   to a live run was a ?run=<uuid> URL dug out of the database by hand. */
+.p2b-run-list {
+  max-width: 42rem;
+  margin: var(--space-6) auto 0;
+}
+
+.p2b-run-list-heading {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.p2b-run-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.p2b-run-list li {
+  border-bottom: 1px solid var(--border);
+}
+
+.p2b-run-open {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.p2b-run-open:hover:not(:disabled) {
+  background: var(--panel);
+  color: var(--accent);
+}
+
+.p2b-run-open:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.p2b-run-seed {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.p2b-run-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  color: var(--muted-light);
+  font-size: 0.75rem;
+}
+
+/* A run somebody is waiting on, told apart from one that has stopped. */
+.p2b-run-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.p2b-run-live .p2b-run-meta {
+  color: var(--accent);
+}

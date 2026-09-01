@@ -60,6 +60,7 @@ from ..intake_v4 import (
     polish_prompt,
     intake_state,
     plan_research,
+    recent_runs,
     reopen_intake,
     settle_gate,
     settle_venue,
@@ -318,6 +319,17 @@ def open_intake(
         owner_staff_id=staff_user_id(staff_user),
     )
     return JSONResponse(intake_state(state.run_id), status_code=201)
+
+
+@router.get("/runs")
+def list_runs(limit: int = 15, _staff=Depends(require_staff)) -> JSONResponse:
+    """The runs the operator can go back to.
+
+    Declared above `/{run_id}` because FastAPI matches in declaration order and
+    a path parameter would otherwise swallow the literal "runs" and try to read
+    a run by that name.
+    """
+    return JSONResponse({"runs": recent_runs(limit)})
 
 
 @router.get("/{run_id}")

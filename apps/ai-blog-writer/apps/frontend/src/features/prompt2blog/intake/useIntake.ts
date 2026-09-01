@@ -63,6 +63,8 @@ export interface UseIntake {
   article: IntakeArticle | null
   /** Re-read the run. For anything that changed it outside this hook. */
   refresh: () => void
+  /** Open an earlier run, and remember it as the current one. */
+  resume: (runId: string) => Promise<void>
   abandon: () => void
 }
 
@@ -100,10 +102,24 @@ export function useIntake(): UseIntake {
         const restored = await api.readIntake(runId)
         setState(restored)
         runIdRef.current = restored.run_id
-      } catch {
-        // The run is gone, or belongs to someone else. Start clean rather than
-        // stranding the page on an error it cannot act on.
-        rememberRun(null)
+      } catch (cause) {
+        // Only a definitive 404 means the run is gone. Anything else -- a
+        // timeout, a restarting dev server, a momentary network fault -- says
+        // nothing about whether the run exists, and this used to treat all of
+        // them as proof it did not.
+        //
+        // On 2026-08-31 the operator left the page during a live research
+        // pass, exactly as the screen invites ("You can leave this page. The
+        // work carries on."), and came back to nothing. The run completed
+        // normally; the resume read had timed out behind the blocking-routes
+        // bug and the pointer was thrown away.
+        //
+        // A fetch that never reached the server throws without a status, so
+        // it falls through here and the pointer survives. The next mount asks
+        // again.
+        if ((cause as { status?: number } | null)?.status === 404) {
+          rememberRun(null)
+        }
       }
     })()
   }, [])
@@ -176,6 +192,18 @@ export function useIntake(): UseIntake {
       const runId = runIdRef.current
       if (!runId) return
       void api.readIntake(runId).then(setState).catch(() => undefined)
+    }, []),
+    resume: useCallback(async (runId: string) => {
+      // Deliberately not `run()`: this is navigation, not a move on the run,
+      // and a failure here must not leave the page holding an error about a
+      // run it never opened.
+      const restored = await api.readIntake(runId)
+      rememberRun(restored.run_id)
+      runIdRef.current = restored.run_id
+      setArticle(null)
+      setCutWarnings([])
+      setError(null)
+      setState(restored)
     }, []),
     abandon: useCallback(() => {
       rememberRun(null)

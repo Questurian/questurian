@@ -297,3 +297,43 @@ def test_the_intake_routes_are_actually_mounted():
         "/prompt2blog/intake/{run_id}/research",
         "/prompt2blog/intake/{run_id}/write",
     } <= paths
+
+
+# --- the way back to a run -------------------------------------------------
+
+
+def test_the_runs_route_lists_what_can_be_picked_back_up(isolated_db, scripted):
+    """The page tracked one run in `localStorage` and nothing else was reachable.
+
+    On 2026-08-31 the only way back to a live run was a `?run=<uuid>` URL
+    produced by querying the database by hand.
+    """
+    scripted([QUESTION])
+    run_id = _json(
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+    )["run_id"]
+
+    runs = _json(intake_api.list_runs(_staff={"id": 1}))["runs"]
+
+    assert [item["run_id"] for item in runs] == [run_id]
+    # The seed is what makes a run recognisable; a uuid is not.
+    assert runs[0]["seed"] == SEED
+    # Named in words, intake stages included -- a run that stopped in the grill
+    # is an ordinary run (ADR 0031), not a failure to hide.
+    assert runs[0]["stage_label"] == "In the grill"
+
+
+def test_the_runs_route_is_declared_before_the_run_id_route():
+    """FastAPI matches in declaration order.
+
+    Declared after `/{run_id}` the literal "runs" is read as a run id and the
+    list comes back as an empty intake state for a run that does not exist.
+    Calling the handler directly cannot catch that, so this reads the router.
+    """
+    paths = [
+        route.path
+        for route in intake_api.router.routes
+        if "GET" in getattr(route, "methods", set())
+    ]
+
+    assert paths.index("/intake/runs") < paths.index("/intake/{run_id}")

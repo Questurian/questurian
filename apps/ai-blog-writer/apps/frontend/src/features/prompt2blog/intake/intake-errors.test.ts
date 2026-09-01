@@ -15,7 +15,7 @@ vi.mock('../../../shared/api/client/apiFetch', () => ({
   apiFetch: (...args: unknown[]) => apiFetch(...args),
 }))
 
-const { answerQuestion } = await import('./intake.api')
+const { answerQuestion, readIntake, listRuns } = await import('./intake.api')
 
 function failWith(body: unknown, status = 502): void {
   apiFetch.mockResolvedValueOnce({
@@ -68,5 +68,53 @@ describe('a failed intake step', () => {
     await expect(answerQuestion('run-1', 'hello')).rejects.toThrow(
       'That step could not be completed.',
     )
+  })
+})
+
+describe('telling "the run is gone" from "the read failed"', () => {
+  /**
+   * The resume read wiped the remembered run on *any* failure. On 2026-08-31
+   * the operator left the page during a live research pass, exactly as the
+   * screen invites, and came back to nothing -- the run had completed
+   * normally and the read had merely timed out.
+   *
+   * The status is what tells those apart, so it has to survive on the error.
+   */
+  it('puts the status on the error so a 404 is distinguishable', async () => {
+    failWith({ detail: 'No such run.' }, 404)
+
+    await expect(readIntake('run-1')).rejects.toMatchObject({ status: 404 })
+  })
+
+  it('puts the status on a failure that says nothing useful', async () => {
+    failWith(null, 504)
+
+    await expect(readIntake('run-1')).rejects.toMatchObject({ status: 504 })
+  })
+
+  it('puts the status on an object-shaped failure too', async () => {
+    failWith({ detail: { error: 'boom', message: 'It broke.' } }, 502)
+
+    await expect(readIntake('run-1')).rejects.toMatchObject({ status: 502 })
+  })
+})
+
+describe('listing the runs to go back to', () => {
+  it('returns the runs the server sent', async () => {
+    apiFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        runs: [{ run_id: 'run-1', seed: 'Lima is no longer a stopover' }],
+      }),
+    })
+
+    await expect(listRuns()).resolves.toMatchObject([{ run_id: 'run-1' }])
+  })
+
+  it('answers with an empty list rather than undefined when there are none', async () => {
+    apiFetch.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({}) })
+
+    await expect(listRuns()).resolves.toEqual([])
   })
 })
