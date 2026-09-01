@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from fastapi import HTTPException
 
 from app.features.prompt2blog.contracts_v4 import MARKER_KEYS
 from app.features.prompt2blog.api import intake as intake_api
@@ -295,6 +296,7 @@ def test_the_intake_routes_are_actually_mounted():
         "/prompt2blog/intake/{run_id}/work-order",
         "/prompt2blog/intake/{run_id}/work-order/cut",
         "/prompt2blog/intake/{run_id}/research",
+        "/prompt2blog/intake/{run_id}/gate/reask",
         "/prompt2blog/intake/{run_id}/write",
     } <= paths
 
@@ -337,3 +339,104 @@ def test_the_runs_route_is_declared_before_the_run_id_route():
     ]
 
     assert paths.index("/intake/runs") < paths.index("/intake/{run_id}")
+
+
+# --- re-asking one question ------------------------------------------------
+
+
+class CountingGather:
+    """A gather that remembers what it was asked."""
+
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+
+    def __call__(self, prompt: str, _model: str):
+        self.prompts.append(prompt)
+        return "Notes.", ["https://example.pe/a"], 800
+
+
+def test_re_asking_buys_one_search_not_a_whole_pass(isolated_db, monkeypatch):
+    """The reason this exists rather than "go back to the grill".
+
+    Run 76b36468 asked about a project "in Buenos Aires" and research answered
+    about Argentina; the article is about Medellín. Dropping the question threw
+    away a good one, and re-running research re-bought every search that was
+    already right.
+    """
+    gather = CountingGather()
+    llm = ScriptedLLM([QUESTION, AGREED, BRIEF, WORK_ORDER])
+    monkeypatch.setattr(
+        intake_api,
+        "_services",
+        lambda run_id=None: IntakeServices(
+            dependencies=GrillDependencies(
+                llm=llm, research=lambda _s: ("Lima has a food reputation.", [], 900)
+            ),
+            recorder=RunRecorder(),
+            research=ResearchDependencies(
+                gather=gather,
+                structure_llm=ScriptedLLM([EVIDENCE, EVIDENCE]),
+            ),
+        ),
+    )
+
+    run_id = _json(
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+    )["run_id"]
+    intake_api.answer_question(
+        run_id, intake_api.AnswerRequest(answer="guide"), _staff={"id": 1}
+    )
+    intake_api.build_the_brief(run_id, _staff={"id": 1})
+    intake_api.plan_the_research(run_id, _staff={"id": 1})
+    intake_api.do_the_research(run_id, _staff={"id": 1})
+    first_pass = len(gather.prompts)
+    assert first_pass >= 1
+
+    body = _json(
+        intake_api.reask_the_question(
+            run_id,
+            intake_api.ReaskRequest(
+                requirement_id="r1",
+                question="What do market stalls charge in Lima, Peru?",
+            ),
+            _staff={"id": 1},
+        )
+    )
+
+    # One search. Not the whole pass again.
+    assert len(gather.prompts) == first_pass + 1
+    assert "in Lima, Peru" in gather.prompts[-1]
+    # And the work order now carries the wording that was actually asked.
+    asked = {
+        item["requirement_id"]: item["question"]
+        for item in body["work_order"]["requirements"]
+    }
+    assert asked["r1"] == "What do market stalls charge in Lima, Peru?"
+
+
+def test_re_asking_the_same_wording_is_refused(isolated_db, scripted):
+    scripted([QUESTION, AGREED, BRIEF, WORK_ORDER])
+    run_id = _json(
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+    )["run_id"]
+    intake_api.answer_question(
+        run_id, intake_api.AnswerRequest(answer="guide"), _staff={"id": 1}
+    )
+    intake_api.build_the_brief(run_id, _staff={"id": 1})
+    intake_api.plan_the_research(run_id, _staff={"id": 1})
+    intake_api.do_the_research(run_id, _staff={"id": 1})
+
+    asked = _json(intake_api.read_intake(run_id, _staff={"id": 1}))["work_order"][
+        "requirements"
+    ][0]
+
+    with pytest.raises(HTTPException) as raised:
+        intake_api.reask_the_question(
+            run_id,
+            intake_api.ReaskRequest(
+                requirement_id=asked["requirement_id"], question=asked["question"]
+            ),
+            _staff={"id": 1},
+        )
+
+    assert raised.value.status_code == 400

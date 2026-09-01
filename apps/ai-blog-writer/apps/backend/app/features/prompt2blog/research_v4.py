@@ -655,6 +655,31 @@ Rules:
 PROGRESS_STAGE = "stage_v4_research_progress"
 
 
+def gather_one_requirement(
+    brief: ArticleBrief,
+    requirement: WorkOrderRequirement,
+    dependencies: ResearchDependencies,
+) -> GatheredNotes:
+    """One question, one grounded pass. Never raises.
+
+    A hole is survivable and a dead run is not, so a failed search comes back
+    empty rather than taking the other searches down with it.
+
+    Module level rather than a closure inside `gather_research`, because the
+    gate re-asks exactly one rewritten question (#446) and re-running the whole
+    pass to do it would re-buy every search that was already right.
+    """
+    prompt = build_gather_prompt(brief, requirement)
+    try:
+        text, urls, tokens = dependencies.gather(prompt, GATHER_MODEL)
+    except Exception as exc:  # pragma: no cover -- network dependent
+        logger.warning("Gather failed for %s: %s", requirement.requirement_id, exc)
+        text, urls, tokens = "", [], None
+    return GatheredNotes(
+        text=_safe_str(text), source_urls=list(urls or []), tokens=tokens
+    )
+
+
 def gather_research(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
@@ -698,20 +723,6 @@ def gather_research(
         except Exception as exc:  # pragma: no cover -- telemetry only
             logger.warning("Research progress write failed: %s", exc)
 
-    def _gather_one(requirement: WorkOrderRequirement) -> GatheredNotes:
-        """Never raises: a hole is survivable, a dead run is not."""
-        prompt = build_gather_prompt(brief, requirement)
-        try:
-            text, urls, tokens = dependencies.gather(prompt, GATHER_MODEL)
-        except Exception as exc:  # pragma: no cover -- network dependent
-            logger.warning(
-                "Gather failed for %s: %s", requirement.requirement_id, exc
-            )
-            text, urls, tokens = "", [], None
-        return GatheredNotes(
-            text=_safe_str(text), source_urls=list(urls or []), tokens=tokens
-        )
-
     gathered: dict[str, GatheredNotes] = {}
     if requirements:
         # Only once there is something to wait for. A work order with no
@@ -721,7 +732,9 @@ def gather_research(
         workers = max(1, min(P2B_V4_GATHER_CONCURRENCY, total))
         with ThreadPoolExecutor(max_workers=workers) as pool:
             pending = {
-                pool.submit(_gather_one, requirement): requirement
+                pool.submit(
+                    gather_one_requirement, brief, requirement, dependencies
+                ): requirement
                 for requirement in requirements
             }
             # Consumed on this thread, so `on_progress` -- which writes a stage

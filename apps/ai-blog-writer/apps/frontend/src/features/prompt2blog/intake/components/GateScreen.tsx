@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { readGate, settleGate } from '../intake.api'
+import { readGate, reaskQuestion, settleGate } from '../intake.api'
 import type { GateQuestion } from '../intake.types'
 
 /**
@@ -12,11 +12,20 @@ import type { GateQuestion } from '../intake.types'
  * publish its price, with six of seven questions answered and ten web searches
  * spent.
  *
- * So each blocking question offers both honest answers. Either you found it,
+ * So each blocking question offers the honest answers. Either you found it,
  * or nobody publishes it. The second is not a workaround: "Moravia Tours takes
  * bookings directly and posts no price" is a sentence that belongs in the
  * article, and the coverage rules have accepted that verdict since the Lima
  * airport run stalled on times no agency publishes.
+ *
+ * The fourth move is asking again. Run 76b36468 asked about a project "in
+ * Buenos Aires" and research answered about Argentina — the article is about
+ * Medellín, whose Buenos Aires is a neighbourhood. The question was fine; the
+ * answer was about the wrong continent. Dropping it threw away a good
+ * question, and answering it by hand meant doing the research yourself.
+ *
+ * It is set apart from the other three because it is the only one that spends
+ * money: it buys one search, not the whole pass again.
  */
 
 interface GateScreenProps {
@@ -35,8 +44,11 @@ function Question({
   question: GateQuestion
   onSettled: () => void
 }) {
-  const [mode, setMode] = useState<'idle' | 'answer' | 'unpublished' | 'omit'>('idle')
+  const [mode, setMode] = useState<'idle' | 'answer' | 'unpublished' | 'omit' | 'reask'>(
+    'idle',
+  )
   const [text, setText] = useState('')
+  const [rewritten, setRewritten] = useState(question.question)
   const [url, setUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -95,10 +107,76 @@ function Question({
           <button
             type="button"
             className="p2b-secondary"
+            onClick={() => setMode('reask')}
+          >
+            Ask it differently
+          </button>
+          <button
+            type="button"
+            className="p2b-secondary"
             onClick={() => setMode('omit')}
           >
             Drop the question
           </button>
+        </div>
+      ) : mode === 'reask' ? (
+        <div className="p2b-gate-form">
+          <label className="p2b-field">
+            <span className="p2b-label">The question, rewritten</span>
+            <textarea
+              value={rewritten}
+              rows={3}
+              onChange={event => setRewritten(event.target.value)}
+              disabled={saving}
+            />
+          </label>
+          {/* The one move here that costs anything, said before they press it
+              rather than after. */}
+          <p className="p2b-note">
+            This buys one new search and re-reads the research. Every other
+            question keeps the answer it already has.
+          </p>
+          {error && <p className="p2b-gate-error">{error}</p>}
+          <div className="p2b-intake-actions">
+            <button
+              type="button"
+              onClick={() => {
+                setSaving(true)
+                setError(null)
+                reaskQuestion(runId, {
+                  requirement_id: question.requirement_id,
+                  question: rewritten,
+                })
+                  .then(onSettled)
+                  .catch((cause: unknown) => {
+                    setError(
+                      cause instanceof Error
+                        ? cause.message
+                        : 'That could not be asked again.',
+                    )
+                    setSaving(false)
+                  })
+              }}
+              disabled={
+                saving ||
+                !rewritten.trim() ||
+                rewritten.trim() === question.question.trim()
+              }
+            >
+              {saving ? 'Searching' : 'Ask it again'}
+            </button>
+            <button
+              type="button"
+              className="p2b-secondary"
+              onClick={() => {
+                setRewritten(question.question)
+                setMode('idle')
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       ) : mode === 'omit' ? (
         <div className="p2b-gate-form">

@@ -196,6 +196,20 @@ export function settleGate(
   return post(`${INTAKE}/${runId}/gate`, body)
 }
 
+/**
+ * Rewrite one research question and buy one search.
+ *
+ * The only move at the gate that spends money. The other three record a
+ * decision the operator already made; this one asks the web again, because the
+ * question was fine and the answer was about the wrong place.
+ */
+export function reaskQuestion(
+  runId: string,
+  body: { requirement_id: string; question: string },
+): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/gate/reask`, body)
+}
+
 /** The places this run would send a reader, for a person to look at. */
 export async function readVenues(runId: string): Promise<{ venues: VenueToCheck[] }> {
   const response = await apiFetch(`${INTAKE}/${runId}/venues`)

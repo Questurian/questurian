@@ -235,6 +235,133 @@ def omit_requirement(
     return EvidencePackage.model_validate(payload), trimmed, cost
 
 
+def reask_requirement(
+    evidence: EvidencePackage,
+    work_order: "Prompt2BlogWorkOrder",
+    *,
+    requirement_id: str,
+    question: str,
+) -> tuple[EvidencePackage, "Prompt2BlogWorkOrder", str]:
+    """Rewrite one question and clear what the old wording bought.
+
+    The third move, and the one run 76b36468 needed. Its q6 asked for a
+    community-led project "in Buenos Aires" and research answered about a
+    garden collective in Puerto Madero, **Argentina** -- the article is about
+    Medellín, whose Buenos Aires is the neighbourhood the Ayacucho tram runs
+    through. It came back marked `supported`, so nothing downstream would have
+    caught it.
+
+    Dropping that throws away a legitimate question. Answering it by hand means
+    doing the research yourself. Neither is right when the question was fine
+    and only the answer was about the wrong continent.
+
+    **`_guard` deliberately does not apply.** It refuses to let a hand-written
+    answer overwrite research, which is correct for the other two moves. Here
+    the operator is not answering; they are saying the research is wrong and
+    asking again. A `supported` requirement is exactly the case this exists
+    for.
+
+    The requirement keeps its id, so every claim, gap and conflict that links
+    to it stays linked and the work order and the dossier still declare the
+    same set. The fingerprint is left alone for the same reason `omit` leaves
+    it alone: it is the token binding this dossier to this plan, and both
+    sides move together in one operation. What changed is recorded in the
+    returned note rather than hidden in a hash.
+
+    Returns the pair with the requirement emptied and back to `unverified`.
+    The caller re-runs the one search and re-structures.
+    """
+    cleaned = _safe_str(question)
+    if not cleaned:
+        raise GateAnswerRefused("A rewritten question cannot be empty.")
+
+    existing = next(
+        (
+            item
+            for item in work_order.requirements
+            if item.requirement_id == requirement_id
+        ),
+        None,
+    )
+    if existing is None:
+        raise GateAnswerRefused(f"No research question called {requirement_id}.")
+    if _safe_str(existing.question) == cleaned:
+        raise GateAnswerRefused(
+            "That is the same question. Change it, or answer it yourself."
+        )
+    # Proves the requirement is one the dossier knows about before anything is
+    # discarded on its behalf.
+    _requirement(evidence, requirement_id)
+
+    was = _safe_str(existing.question)
+    rewritten = [
+        item.model_copy(update={"question": cleaned})
+        if item.requirement_id == requirement_id
+        else item
+        for item in work_order.requirements
+    ]
+
+    payload = evidence.model_dump(mode="json")
+    # Everything the old wording bought goes. A claim that also served another
+    # question keeps its other links and stays, because that fact is still
+    # doing work elsewhere -- the same reconciliation `omit` already does.
+    kept_claims = []
+    dropped: set[str] = set()
+    for claim in payload["claims"]:
+        links = [rid for rid in claim["requirement_ids"] if rid != requirement_id]
+        if not links:
+            dropped.add(claim["claim_id"])
+            continue
+        claim["requirement_ids"] = links
+        kept_claims.append(claim)
+    payload["claims"] = kept_claims
+    surviving = {claim["claim_id"] for claim in kept_claims}
+
+    for item in payload["requirements"]:
+        if item["requirement_id"] == requirement_id:
+            # `missing` rather than a status of its own: nothing answers this
+            # question right now, which is exactly what the word means and
+            # exactly what the coverage gate has to block on until the new
+            # search comes back.
+            item["status"] = "missing"
+            item["claim_ids"] = []
+            item["gap"] = "Re-asked; awaiting research."
+        else:
+            item["claim_ids"] = [c for c in item["claim_ids"] if c in surviving]
+
+    payload["gaps"] = [
+        gap for gap in payload.get("gaps", []) if requirement_id not in gap["requirement_ids"]
+    ]
+    payload["conflicts"] = [
+        conflict
+        for conflict in payload.get("conflicts", [])
+        if len([c for c in conflict["claim_ids"] if c in surviving]) >= 2
+    ]
+    for conflict in payload["conflicts"]:
+        conflict["claim_ids"] = [c for c in conflict["claim_ids"] if c in surviving]
+    payload["premise_findings"] = [
+        finding
+        for finding in payload.get("premise_findings", [])
+        if all(c in surviving for c in finding["claim_ids"])
+    ]
+    payload["sources"] = [
+        source
+        for source in payload["sources"]
+        if any(source["source_id"] in claim["source_ids"] for claim in kept_claims)
+    ]
+
+    note = (
+        f'Re-asked {requirement_id}: "{was}" is now "{cleaned}". '
+        f"{len(dropped)} claim(s) that answered only the old wording were dropped."
+    )
+    logger.info("Operator re-asked %s at the research gate", requirement_id)
+    return (
+        EvidencePackage.model_validate(payload),
+        work_order.model_copy(update={"requirements": rewritten}),
+        note,
+    )
+
+
 def _cost_of_omitting(work_order: "Prompt2BlogWorkOrder", requirement_id: str) -> str:
     """What the article can no longer claim, said once and plainly.
 

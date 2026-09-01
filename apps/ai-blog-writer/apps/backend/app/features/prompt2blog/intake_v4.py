@@ -55,6 +55,7 @@ from .gate_v4 import (
     mark_unpublished,
     note_venue,
     omit_requirement,
+    reask_requirement,
     venues_to_check,
 )
 from .contracts_v4 import (
@@ -68,6 +69,7 @@ from .research_v4 import (
     RESEARCH_STAGE,
     ResearchDependencies,
     ResearchUnusable,
+    gather_one_requirement,
     gather_research,
     notes_from_record,
     notes_stage_record,
@@ -490,6 +492,104 @@ def settle_gate(
                     requirement_id,
                 }
             ),
+            STATE_KEY: json.loads(evidence.model_dump_json()),
+        },
+    )
+    return verdict
+
+
+def reask_question(
+    run_id: str,
+    services: IntakeServices,
+    *,
+    requirement_id: str,
+    question: str,
+) -> CoverageVerdict:
+    """Rewrite one research question and buy one search, not a whole pass.
+
+    Run 76b36468 asked for a community-led project "in Buenos Aires" and got a
+    garden collective in Argentina; the article is about Medellín, whose Buenos
+    Aires is a neighbourhood. The answer came back `supported`, so nothing
+    downstream would have caught it, and the only moves available were to drop
+    a perfectly good question or research it by hand.
+
+    One search, then one structuring call. The other questions keep the notes
+    they already paid for -- which is the whole reason the notes are stored per
+    requirement rather than as one blob.
+
+    The structuring call is not free and is the longest single wait in a run.
+    It is re-run rather than patched because deduplication and conflict
+    detection are cross-question by construction: splicing one requirement's
+    records into a finished dossier would leave the new answer unchecked
+    against everything already in it.
+    """
+    if services.research is None:
+        raise RuntimeError("Research dependencies are not configured.")
+
+    enforce_run_budget(_run_tokens_spent(run_id), stage=NOTES_STAGE)
+
+    brief = load_brief(run_id)
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+
+    evidence, work_order, note = reask_requirement(
+        evidence, work_order, requirement_id=requirement_id, question=question
+    )
+
+    # The work order first: if the search or the structuring fails, the run is
+    # left holding the rewritten question rather than the wording the operator
+    # already rejected.
+    _record(
+        services,
+        run_id,
+        WORK_ORDER_STAGE,
+        {
+            **work_order_stage_record(work_order, [note]),
+            STATE_KEY: json.loads(work_order.model_dump_json()),
+        },
+    )
+
+    requirement = next(
+        item for item in work_order.requirements if item.requirement_id == requirement_id
+    )
+    notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order) or {}
+    _open(services, run_id, NOTES_STAGE)
+    notes = {
+        **notes,
+        requirement_id: gather_one_requirement(brief, requirement, services.research),
+    }
+    _record(services, run_id, NOTES_STAGE, notes_stage_record(work_order, notes))
+
+    _open(services, run_id, RESEARCH_STAGE)
+    try:
+        evidence = structure_research(work_order, notes, services.research)
+    except ResearchUnusable as error:
+        _record(
+            services,
+            run_id,
+            RESEARCH_STAGE,
+            {
+                "status": "failed",
+                "reason": error.reason,
+                "unusable_response": error.raw[:40000],
+            },
+        )
+        raise
+
+    verdict = assess_coverage(work_order, evidence)
+    _record(
+        services,
+        run_id,
+        RESEARCH_STAGE,
+        {
+            **research_stage_record(evidence, notes),
+            "coverage": verdict.as_record(),
+            # Every rewrite, in order. A question the article rests on that was
+            # asked three ways before it answered is worth seeing later.
+            "reasked": [
+                *(_stage_data(run_id, RESEARCH_STAGE).get("reasked") or []),
+                note,
+            ],
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
