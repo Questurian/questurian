@@ -71,14 +71,14 @@ export interface Prompt2BlogModelStack {
   repairModel: Prompt2BlogWriterModel
   auditModel: Prompt2BlogWriterModel
   /**
-   * The three roles that used to be pinned in the backend and unreachable from
-   * a request. Declared per stack now, so a route can move six calls instead of
-   * two. Named explicitly rather than inherited from the writer: inheriting is
-   * what would let a premium prose model promote every small call to its tier.
+   * The two roles that used to be pinned in the backend and unreachable from
+   * a request. Declared per stack now, so a route can move five calls instead
+   * of two. Named explicitly rather than inherited from the writer: inheriting
+   * is what would let a premium prose model promote every small call to its
+   * tier.
    */
   outlineModel: Prompt2BlogWriterModel
   groundednessModel: Prompt2BlogWriterModel
-  titleModel: Prompt2BlogWriterModel
 }
 
 type Prompt2BlogStackEffort = 'medium' | 'high' | 'xhigh' | 'max'
@@ -97,15 +97,14 @@ const STACK_GUIDANCE: Record<Prompt2BlogStackEffort, string> = {
 }
 
 /**
- * What the three checking roles were pinned to before routes could name them,
- * and what the backend still falls back to when a request omits them. Every
+ * What the checking roles were pinned to before routes could name them, and
+ * what the backend still falls back to when a request omits them. Every
  * Claude-led stack spreads this so its routing is written down rather than
  * implied by an omission.
  */
 export const PROMPT2BLOG_FIXED_STAGE_MODELS = {
   outlineModel: 'claude-sonnet-5-medium',
-  groundednessModel: 'claude-sonnet-5-medium',
-  titleModel: 'claude-sonnet-5-medium'
+  groundednessModel: 'claude-sonnet-5-medium'
 } as const
 
 export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
@@ -118,7 +117,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     shortLabel: `Opus · ${effort === 'xhigh' ? 'XHigh' : effort[0].toUpperCase() + effort.slice(1)} effort`,
     priceTier: 'Plan + $',
     speedTier: 'Slowest' as const,
-    description: `Claude Opus at ${effort} effort writes and repairs; Claude Sonnet at ${effort} judges; fixed medium-effort Sonnet handles planning, fact checks, and titles.`,
+    description: `Claude Opus at ${effort} effort writes and repairs; Claude Sonnet at ${effort} judges; fixed medium-effort Sonnet plans the sections and checks the facts.`,
     guidance: STACK_GUIDANCE[effort],
     recommended: effort === 'high',
     modelName: 'gemini-3.1-flash-lite' as const,
@@ -152,8 +151,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
   // worth the swap is independence: a Claude draft graded by a Claude judge is
   // marked by a model that shares its blind spots, and the Medellin audit
   // passed prose its own family had written while missing nothing a different
-  // reader would have caught. Titles go to Flash: it is one line from an
-  // article the run already holds.
+  // reader would have caught.
   ...(['high', 'max'] as const).map(effort => ({
     id: `gemini-checked-${effort}` as Prompt2BlogModelStackId,
     family: 'checked' as const,
@@ -161,7 +159,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     shortLabel: `Opus · ${effort === 'max' ? 'Max' : 'High'} effort`,
     priceTier: 'Plan + $$',
     speedTier: 'Slow' as const,
-    description: `Claude Opus at ${effort} effort writes and repairs; Gemini 3.1 Pro plans, fact checks, and grades the draft; Gemini 3.7 Flash writes the title.`,
+    description: `Claude Opus at ${effort} effort writes and repairs; Gemini 3.1 Pro plans, fact checks, and grades the draft.`,
     guidance:
       'The one to try when Claude-graded drafts keep passing an audit you disagree with. A judge from a different family finds different faults, and the checking stages stop drawing Claude plan usage.',
     modelName: 'gemini-3.1-flash-lite' as const,
@@ -169,8 +167,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     repairModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
     auditModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
     outlineModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    titleModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel
+    groundednessModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel
   })),
   // Max effort where it is conditional, not where it is unavoidable.
   //
@@ -193,7 +190,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     priceTier: 'Plan + $$',
     speedTier: 'Slow' as const,
     description:
-      'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 3.1 Pro plans, fact checks, and grades; Gemini 3.7 Flash writes the title.',
+      'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 3.1 Pro plans, fact checks, and grades.',
     guidance:
       'The one to try when drafts come back close but failing on a listed set of fixes. Spends the heaviest effort only on runs that needed rescuing, and nothing extra on runs that passed.',
     modelName: 'gemini-3.1-flash-lite' as const,
@@ -201,8 +198,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     repairModel: 'claude-opus-5-max' as Prompt2BlogWriterModel,
     auditModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
     outlineModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    titleModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel
+    groundednessModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel
   },
   // The cheapest route that still writes on Opus: Flash does every check.
   //
@@ -222,8 +218,8 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     speedTier: 'Moderate' as const,
     description:
       variant === 'max-repair'
-        ? 'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 3.7 Flash plans, fact checks, grades, and writes the title.'
-        : 'Claude Opus at high effort writes and repairs; Gemini 3.7 Flash plans, fact checks, grades, and writes the title.',
+        ? 'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 3.7 Flash plans, fact checks, and grades.'
+        : 'Claude Opus at high effort writes and repairs; Gemini 3.7 Flash plans, fact checks, and grades.',
     guidance:
       variant === 'max-repair'
         ? 'The cheapest metered route that still spends heavily on rescuing a failed draft. Read the fact checks yourself: Flash is the weaker reader of the two Gemini options.'
@@ -235,8 +231,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
       : 'claude-opus-5-high') as Prompt2BlogWriterModel,
     auditModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel,
     outlineModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel,
-    titleModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel
+    groundednessModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel
   }))
 ]
 

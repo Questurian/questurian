@@ -253,7 +253,6 @@ export type Prompt2BlogModelRouting = {
   audit_model?: string | null
   outline_model?: string | null
   groundedness_model?: string | null
-  title_model?: string | null
   model_stack_id?: string | null
 }
 

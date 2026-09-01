@@ -14,8 +14,8 @@ describe('estimatePrompt2BlogStackPrice', () => {
   it('keeps input and output rates visible instead of hiding their difference', () => {
     const estimate = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
 
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$1.85')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$11.04')
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$2.00')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$12.00')
   })
 
   // The estimator used to throw on any model with no rate, which crashed the
@@ -36,8 +36,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
       repairModel: 'gemini-3.7-flash',
       auditModel: 'gemini-3.7-flash',
       groundednessModel: 'gemini-3.7-flash',
-      outlineModel: 'gemini-3.7-flash',
-      titleModel: 'gemini-3.7-flash'
+      outlineModel: 'gemini-3.7-flash'
     }
 
     const estimate = estimatePrompt2BlogStackPrice(claudeWriter)
@@ -58,20 +57,20 @@ describe('estimatePrompt2BlogStackPrice', () => {
 
     expect(estimate.mixedPerMillion).toBeNull()
     expect(formatPerMillionRate(estimate.mixedPerMillion)).toBe('—')
-    expect(estimate.planRoles).toHaveLength(6)
+    expect(estimate.planRoles).toHaveLength(5)
   })
 
-  it('prices the Gemini-checked route from its four checking roles', () => {
+  it('prices the Gemini-checked route from its three checking roles', () => {
     const estimate = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
 
     // Only the draft and the repair stay on the plan.
     expect(estimate.planRoles).toEqual(['writingModel', 'repairModel'])
-    expect(estimate.mixedPerMillion).toBeCloseTo(3.69, 2)
+    expect(estimate.mixedPerMillion).toBeCloseTo(4.00, 2)
   })
 
   it('prices the max-repair route identically, because only effort changed', () => {
     // Both prose stages stay on the plan either way, so the metered half of
-    // the route is the same four Gemini calls. What the split costs is plan
+    // the route is the same three Gemini calls. What the split costs is plan
     // allowance on the runs that actually repair, which no per-token rate can
     // express -- so the rate must not imply the two routes differ in dollars.
     const high = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
@@ -91,8 +90,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
       repairModel: 'claude-opus-4-8',
       auditModel: 'claude-sonnet-5',
       groundednessModel: 'claude-sonnet-5',
-      outlineModel: 'claude-sonnet-5',
-      titleModel: 'claude-sonnet-5'
+      outlineModel: 'claude-sonnet-5'
     }
 
     expect(estimatePrompt2BlogStackPrice(workerOnlyDifference).mixedPerMillion)

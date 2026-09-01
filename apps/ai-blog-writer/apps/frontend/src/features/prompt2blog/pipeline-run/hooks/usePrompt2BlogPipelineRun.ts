@@ -8,6 +8,7 @@ import {
 import { CLEANUP_STAGE_KEY } from '../../cleanup-details/cleanup-stage.parser'
 import {
   PROMPT2BLOG_PIPELINE_STAGES,
+  PROMPT2BLOG_RETIRED_PIPELINE_STAGES,
   PROMPT2BLOG_V3_PIPELINE_STAGES,
 } from '../../types/pipeline.types'
 import type {
@@ -119,9 +120,14 @@ export function usePrompt2BlogPipelineRun({
   const pipelineVersion: PipelineVersion = useMemo(() => {
     if (pipelineResult) return pipelineResult.version
     const stage = pipelineStatus && pipelineStatus.stage !== 'unknown' ? pipelineStatus.stage : null
+    // Retired v3 stages count as v3 here. A run stored before ADR 0034 deleted
+    // the title stage still reports `stage_v3_title`, which is no longer in the
+    // rendered order, and reading it as v2 would draw the retired pipeline's
+    // step list for a v3 run.
     const isLegacyStage =
       stage !== null
       && !(PROMPT2BLOG_V3_PIPELINE_STAGES as readonly string[]).includes(stage)
+      && !(PROMPT2BLOG_RETIRED_PIPELINE_STAGES as readonly string[]).includes(stage)
       && (PROMPT2BLOG_PIPELINE_STAGES as readonly string[]).includes(stage)
     return isLegacyStage ? 'v2' : 'v3'
   }, [pipelineResult, pipelineStatus])

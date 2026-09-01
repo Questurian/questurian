@@ -9,7 +9,6 @@ export type Prompt2BlogRoleKey =
   | 'auditModel'
   | 'groundednessModel'
   | 'outlineModel'
-  | 'titleModel'
 
 /**
  * Just the role assignments a v3 run actually calls. Narrower than
@@ -60,8 +59,10 @@ const VERTEX_TOKEN_RATES: Record<string, VertexTokenRate> = {
 /**
  * Share of a run's tokens, measured rather than guessed.
  *
- * Taken from the Medellin run (250,222 tokens): compose 44,309, repair 57,116,
- * audit 55,913, groundedness 54,887, outline 21,478, title 16,519.
+ * Taken from the Medellin run: compose 44,309, repair 57,116, audit 55,913,
+ * groundedness 54,887, outline 21,478. That run also spent 16,519 tokens on a
+ * title stage, which ADR 0034 deleted -- the seed is the title now, so no call
+ * writes one and its share is not part of the basis.
  *
  * Repair is weighted as though it always fires, which on a passing draft it
  * does not. That overstates a repair-heavy route rather than flattering it --
@@ -74,7 +75,6 @@ const ROLE_WEIGHTS: ReadonlyArray<{ key: Prompt2BlogRoleKey; weight: number }> =
   { key: 'auditModel', weight: 22 },
   { key: 'groundednessModel', weight: 22 },
   { key: 'outlineModel', weight: 9 },
-  { key: 'titleModel', weight: 7 },
 ] as const
 
 export const PROMPT2BLOG_ROLE_LABELS: Record<Prompt2BlogRoleKey, string> = {
@@ -83,7 +83,6 @@ export const PROMPT2BLOG_ROLE_LABELS: Record<Prompt2BlogRoleKey, string> = {
   auditModel: 'Quality judge',
   groundednessModel: 'Fact checker',
   outlineModel: 'Section planner',
-  titleModel: 'Headline writer',
 }
 
 const INPUT_TOKEN_SHARE = 0.8

@@ -32,8 +32,10 @@ export const PIPELINE_STAGE_LABELS: Record<Prompt2BlogPipelineStage, string> = {
   stage_v3_quality_audit: 'Audit commission fidelity and constraints',
   stage_v3_repair: 'Repair pass (if needed)',
   stage_v3_quality_settle: 'Settle on the best-scoring draft',
-  stage_v3_title: 'Generate the headline',
   stage_v3_finalize: 'Finalize markdown output',
+  // Retired (ADR 0034). Kept so a run stored before the title stage was
+  // deleted still names what it was doing rather than reading as unknown.
+  stage_v3_title: 'Generate the headline',
   complete: 'Complete',
   unknown: 'Unknown pipeline stage',
 }
