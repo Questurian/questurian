@@ -440,3 +440,71 @@ def test_re_asking_the_same_wording_is_refused(isolated_db, scripted):
         )
 
     assert raised.value.status_code == 400
+
+
+def test_handing_the_run_to_the_writer_does_not_erase_what_intake_spent(
+    isolated_db, scripted, monkeypatch
+):
+    """`record_stage` writes the whole ledger, so a recorder built on an empty
+    tracker erases rather than merely failing to add.
+
+    Missed when the ledger restore was first wired in, and it cost a real run.
+    On 062c0b86 (2026-09-01) the intake stages had recorded 105,098 tokens;
+    writing the `pipeline_input_v3` row wiped them, and the finished receipt
+    reported 161,897 -- the writing graph alone. The per-run ceiling reads that
+    same total, so it was guarding a number missing 39% of the run.
+    """
+    from fastapi import BackgroundTasks
+    from app.core import read_stage_result, write_stage_result
+
+    scripted([QUESTION, AGREED, BRIEF, WORK_ORDER])
+    monkeypatch.setattr(intake_api, "_prompt2blog_credential_for_run", lambda: None)
+    monkeypatch.setattr(intake_api, "_run_pipeline_v4_background", lambda *_a: None)
+
+    run_id = _json(
+        intake_api.open_intake(intake_api.SeedRequest(seed=SEED), staff_user={"id": 1})
+    )["run_id"]
+    intake_api.answer_question(
+        run_id, intake_api.AnswerRequest(answer="guide"), _staff={"id": 1}
+    )
+    intake_api.build_the_brief(run_id, _staff={"id": 1})
+    intake_api.plan_the_research(run_id, _staff={"id": 1})
+    intake_api.do_the_research(run_id, _staff={"id": 1})
+
+    # What intake spent, as the real run would have recorded it by this point.
+    write_stage_result(
+        run_id,
+        "usage_ledger",
+        {
+            "created_at": "2026-09-01T19:28:00Z",
+            "data": {
+                "ledger_version": 1,
+                "calls": [
+                    {
+                        "seq": 1,
+                        "stage": "stage_v4_research",
+                        "attempt": 1,
+                        "model": "gemini-3.1-pro-preview",
+                        "input_tokens": 60_000,
+                        "output_tokens": 1_145,
+                        "reasoning_tokens": 0,
+                        "cached_input_tokens": 0,
+                        "total_tokens": 61_145,
+                        "calls": 1,
+                        "metered": True,
+                        "cost_usd": 0.42,
+                        "cost_basis": "rate_table",
+                    }
+                ],
+                "totals": {"total_tokens": 61_145},
+                "successful_calls": 1,
+                "unmetered_calls": 0,
+            },
+        },
+    )
+
+    intake_api.start_writing(run_id, BackgroundTasks(), _staff={"id": 1})
+
+    ledger = (read_stage_result(run_id, "usage_ledger") or {}).get("data") or {}
+    assert ledger.get("totals", {}).get("total_tokens") == 61_145
+    assert ledger.get("successful_calls") == 1
