@@ -419,27 +419,40 @@ function writing(overrides: Partial<IntakeWriting> = {}): IntakeWriting {
 }
 
 describe('the working screen', () => {
-  it('names the question it is searching, and how far along it is', () => {
+  it('counts the searches that have come back, and names the last one', () => {
     render(
       <WorkingScreen
         research={{
           phase: 'gathering',
           done: 3,
           total: 10,
-          current_question: 'What do the tasting menus charge?',
+          last_question_back: 'What do the tasting menus charge?',
         }}
       />,
     )
 
-    expect(screen.getByText(/searching the web: 4 of 10/i)).toBeInTheDocument()
+    // Three back, not "searching number four": they are all in flight, so a
+    // number that claims to be the current one would be a fiction.
+    expect(screen.getByText(/searching the web: 3 of 10 back/i)).toBeInTheDocument()
     expect(screen.getByText(/what do the tasting menus charge/i)).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3')
+  })
+
+  it('says the searches went out together before any has come back', () => {
+    render(
+      <WorkingScreen
+        research={{ phase: 'gathering', done: 0, total: 7, last_question_back: '' }}
+      />,
+    )
+
+    expect(screen.getByText(/7 questions at once/i)).toBeInTheDocument()
+    expect(screen.getByText(/the slowest single search/i)).toBeInTheDocument()
   })
 
   it('gives structuring its own phase rather than looking like a stall', () => {
     render(
       <WorkingScreen
-        research={{ phase: 'structuring', done: 10, total: 10, current_question: '' }}
+        research={{ phase: 'structuring', done: 10, total: 10, last_question_back: '' }}
       />,
     )
 

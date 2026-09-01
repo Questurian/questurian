@@ -368,7 +368,7 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
         )
 
     record_progress({"phase": "structuring", "done": len(notes), "total": len(notes),
-                     "current_question": ""})
+                     "last_question_back": ""})
     try:
         evidence = structure_research(work_order, notes, services.research)
     except ResearchUnusable as error:
