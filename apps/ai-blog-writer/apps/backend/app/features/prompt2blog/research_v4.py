@@ -946,6 +946,54 @@ def gather_research(
     return notes
 
 
+def _reconcile_premise_findings(
+    package: EvidencePackage, work_order: Prompt2BlogWorkOrder
+) -> EvidencePackage:
+    """Every declared assumption gets a verdict, even when research gave none.
+
+    Run b29d66b4 declared three premises, including one that was provably
+    false, and came back with `premise_findings: []`. So `refuted_assumptions`
+    was empty -- which reads as "nothing was refuted" when the truth is
+    "nothing was checked", and the rule that stops a run on a refuted premise
+    could never fire.
+
+    This is the same hazard `groundedness` already guards: `checked` is read
+    before `grounded`, because an outage that degrades to "fine" is worse than
+    one that says it did not run. A missing verdict becomes `unverified` with
+    a basis that says plainly nobody answered, so the operator meets it at the
+    gate rather than never.
+    """
+    declared = [item.assumption_id for item in work_order.premise]
+    if not declared:
+        return package
+    answered = {finding.assumption_id for finding in package.premise_findings}
+    missing = [item for item in declared if item not in answered]
+    if not missing:
+        return package
+
+    logger.warning(
+        "Prompt2Blog research returned no premise verdict for %s", missing
+    )
+    payload = package.model_dump(mode="json")
+    payload["premise_findings"] = [
+        *payload.get("premise_findings", []),
+        *(
+            {
+                "assumption_id": assumption_id,
+                "verdict": "unverified",
+                "basis": (
+                    "The research step returned no verdict for this premise. "
+                    "It was declared and never answered, which is not the same "
+                    "as having been checked and left open."
+                ),
+                "claim_ids": [],
+            }
+            for assumption_id in missing
+        ),
+    ]
+    return EvidencePackage.model_validate(payload)
+
+
 def structure_research(
     work_order: Prompt2BlogWorkOrder,
     notes: dict[str, GatheredNotes],
@@ -971,7 +1019,10 @@ def structure_research(
         # The prompt asks for conflicts and the Lima run did not record the
         # one its own notes had named. The comparison below is the half of
         # that a model cannot forget to do.
-        return record_detected_conflicts(EvidencePackage.model_validate(payload))
+        return _reconcile_premise_findings(
+            record_detected_conflicts(EvidencePackage.model_validate(payload)),
+            work_order,
+        )
     except ValidationError as error:
         raise ResearchUnusable(
             "; ".join(
