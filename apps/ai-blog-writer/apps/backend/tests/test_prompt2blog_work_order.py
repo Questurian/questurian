@@ -668,3 +668,90 @@ def test_the_prompt_names_a_presupposition_as_an_assumption():
     assert "A question that takes something for granted is assuming it." in flat
     assert "write the question so it survives being wrong" in flat
     assert "refuted premise, which is a finding" in flat
+
+
+# --- what a plan is about to cost ------------------------------------------
+#
+# Run b29d66b4 planned fourteen questions, reached the settle node at 370,114
+# tokens against a 320,000 ceiling, and had its one repair attempt refused on
+# a 5/10 draft with four actionable revisions sitting there. The refusal was
+# correct. Nothing said so while the plan could still be changed.
+
+
+def test_the_projection_lands_on_the_run_that_produced_it():
+    """Measured against b29d66b4: 38,308 spent at the cut, fourteen
+    questions, and a real total of 383,407."""
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    projection = budget_projection(14, 38_308)
+
+    assert projection.projected_total == 379_508
+    assert abs(projection.projected_total - 383_407) / 383_407 < 0.02
+
+
+def test_a_plan_that_cannot_repair_itself_says_so():
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    projection = budget_projection(14, 38_308)
+
+    assert projection.repair_affordable is False
+    assert "will not be able to repair itself" in projection.note or (
+        "past the" in projection.note
+    )
+
+
+def test_a_small_plan_on_a_fresh_run_can_afford_its_repair():
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    projection = budget_projection(3, 5_000)
+
+    assert projection.repair_affordable is True
+    assert "leaving room for the one repair attempt" in projection.note
+
+
+def test_the_note_blames_the_ceiling_when_no_workable_plan_fits():
+    """Telling the operator to cut to three questions is not an article, so
+    when nothing workable fits the note says what is actually wrong.
+
+    Driven by a run that has already spent most of the ceiling rather than by
+    the ceiling's current value, so raising the budget does not silently
+    delete the branch this covers."""
+    from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    projection = budget_projection(9, P2B_RUN_TOKEN_BUDGET - 150_000)
+
+    assert projection.repair_affordable is False
+    assert projection.questions_that_fit < 5
+    assert "ceiling being too low" in projection.note
+
+
+def test_a_normal_plan_can_afford_its_repair_at_the_current_ceiling():
+    """The size the pipeline actually plans. b29d66b4 asked fourteen and
+    a2066506 nine; eleven is the middle of what a run costs."""
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    assert budget_projection(11, 38_000).repair_affordable is True
+
+
+def test_a_run_with_no_accounting_gets_no_projection():
+    """`decide_repair` skips its budget check rather than reading an absent
+    count as zero, and this does the same."""
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    assert budget_projection(9, None) is None
+
+
+def test_the_projection_travels_on_the_stage_record():
+    from app.features.prompt2blog.work_order_v4 import work_order_stage_record
+
+    work_order = build_work_order(_brief(), _deps(_payload()))
+    record = work_order_stage_record(work_order, tokens_spent=38_308)
+
+    from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
+
+    assert record["budget_projection"]["question_count"] == len(
+        work_order.requirements
+    )
+    assert record["budget_projection"]["budget"] == P2B_RUN_TOKEN_BUDGET
+    assert work_order_stage_record(work_order)["budget_projection"] is None
