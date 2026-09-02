@@ -710,15 +710,28 @@ def test_a_small_plan_on_a_fresh_run_can_afford_its_repair():
 
 
 def test_the_note_blames_the_ceiling_when_no_workable_plan_fits():
-    """Both fully accounted runs were refused their repair, at 260,586 and
-    370,114. Telling the operator to cut to three questions is not an
-    article, so the note has to say what is actually wrong."""
+    """Telling the operator to cut to three questions is not an article, so
+    when nothing workable fits the note says what is actually wrong.
+
+    Driven by a run that has already spent most of the ceiling rather than by
+    the ceiling's current value, so raising the budget does not silently
+    delete the branch this covers."""
+    from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
     from app.features.prompt2blog.work_order_v4 import budget_projection
 
-    projection = budget_projection(9, 36_997)
+    projection = budget_projection(9, P2B_RUN_TOKEN_BUDGET - 150_000)
 
+    assert projection.repair_affordable is False
     assert projection.questions_that_fit < 5
     assert "ceiling being too low" in projection.note
+
+
+def test_a_normal_plan_can_afford_its_repair_at_the_current_ceiling():
+    """The size the pipeline actually plans. b29d66b4 asked fourteen and
+    a2066506 nine; eleven is the middle of what a run costs."""
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    assert budget_projection(11, 38_000).repair_affordable is True
 
 
 def test_a_run_with_no_accounting_gets_no_projection():
@@ -735,8 +748,10 @@ def test_the_projection_travels_on_the_stage_record():
     work_order = build_work_order(_brief(), _deps(_payload()))
     record = work_order_stage_record(work_order, tokens_spent=38_308)
 
+    from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
+
     assert record["budget_projection"]["question_count"] == len(
         work_order.requirements
     )
-    assert record["budget_projection"]["budget"] == 320_000
+    assert record["budget_projection"]["budget"] == P2B_RUN_TOKEN_BUDGET
     assert work_order_stage_record(work_order)["budget_projection"] is None

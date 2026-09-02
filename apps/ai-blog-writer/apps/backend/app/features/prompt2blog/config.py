@@ -101,20 +101,44 @@ P2B_REPAIR_ESTIMATED_TOKENS = 90_000
 # doubling down. Set above the Lima run's pre-repair spend (~158k) on purpose:
 # the first repair on a normal run must still be affordable.
 #
-# CAVEAT, 2026-09-01: both this number and P2B_REPAIR_ESTIMATED_TOKENS were
-# derived from the Lima run's receipt, and that receipt omitted every grounded
-# search and the whole of intake. Now that those are counted, the same run
-# measures higher against an unchanged threshold. Run b78a9fe8's pre-repair
-# spend was 113,413 by the old count and 140,620 once its searches are
-# included, before the grill, brief, work order and structuring calls are
-# added -- against a refusal line of 320,000 - 90,000 = 230,000.
+# RE-DERIVED, 2026-09-02, from the two runs that have complete accounting.
+# Everything before PR #455 recorded zero for the intake leg, so the earlier
+# number was set against receipts that omitted intake and every grounded
+# search. Measured properly:
 #
-# So a run that would have been granted its one repair may now be refused it.
-# Deliberately NOT retuned here: the right number comes from a real run
-# measured with the accounting fixed, not from a guess layered on a guess.
-# Re-derive both after the next article. The hard ceiling below has ample
-# headroom either way and is not affected.
-P2B_RUN_TOKEN_BUDGET = 320_000
+#   a2066506:  9 questions, 133,882 research tokens, 260,586 pre-repair
+#   b29d66b4: 14 questions, 206,507 research tokens, 370,114 pre-repair
+#
+# Both were refused their one repair against the old 320,000, on drafts
+# scoring 5 and 6 with actionable revisions waiting. The repair path had
+# never once been affordable since the accounting was fixed, which is
+# arithmetic rather than two unlucky runs: research costs about 14,800 a
+# question, writing about 134,000, and a repair 90,000, so 320,000 left room
+# for roughly three questions.
+#
+# 425,000 grants the repair up to about eleven questions, which covers the
+# normal size. The ladder, projected from those rates rather than from any one
+# run's receipt:
+#
+#   380,000 -> repair affordable to ~8 questions
+#   400,000 -> ~9 to 10
+#   425,000 -> ~11          <- set here
+#   470,000 -> 14, the size that broke b29d66b4
+#
+# A fourteen question plan still will not fit, and `budget_projection` says so
+# at the cut step while the plan can still be changed, rather than at the
+# settle node when the money is already spent.
+#
+# Do not set this from a single run's actual pre-repair spend. a2066506
+# finished at 260,586, which suggests 350,000 is enough for nine questions --
+# but its writing leg was 89,707, the cheapest of six, against a median of
+# 134,000. The projection uses the median, which is the honest basis for a
+# plan nobody has run yet.
+#
+# P2B_REPAIR_ESTIMATED_TOKENS above is still untested: no run has repaired
+# since the accounting was fixed, so 90,000 remains a measurement of a repair
+# nobody has watched. Re-derive it the first time one actually runs.
+P2B_RUN_TOKEN_BUDGET = 425_000
 
 # The hard ceiling. Distinct from P2B_RUN_TOKEN_BUDGET above, which only asks
 # whether one more *rescue* is affordable: this asks whether the run may
