@@ -48,6 +48,7 @@ from .grill_v4 import (
     start_grill,
 )
 from .coverage_v4 import CoverageVerdict, assess_coverage
+from .notes_v4 import PUNCH_LIST_STAGE, build_punch_list
 from .gate_v4 import (
     GateAnswerRefused,
     answer_requirement,
@@ -907,6 +908,36 @@ def polish_prompt(run_id: str) -> dict[str, Any]:
             audit_problems=audit_problems,
         ),
     }
+
+
+def punch_list(run_id: str, services: IntakeServices) -> dict[str, Any]:
+    """What a person should fix by hand, computed once and kept.
+
+    Read from the run after the first time, because it is a model call over a
+    finished article and the answer cannot change: nothing downstream of
+    `finalize` edits the piece. Re-deriving it on every page load would charge
+    the run again for the same paragraph.
+
+    Not a stage in the graph. The article is written, stamped and stored before
+    this is asked for, so a failure here loses the notes and not the piece --
+    which is the whole reason it is allowed to run at all (ADR 0030 keeps the
+    one gate before writing, and nothing blocks after it).
+    """
+    stored = _stage_data(run_id, PUNCH_LIST_STAGE)
+    if stored.get("items") is not None:
+        return {"run_id": run_id, **{k: v for k, v in stored.items() if k != STATE_KEY}}
+
+    article = finished_article(run_id)
+    result = build_punch_list(
+        brief=load_brief(run_id),
+        title=article["title"],
+        article_markdown=article["markdown"],
+        evidence=load_evidence(run_id),
+        llm=services.dependencies.llm,
+        model_name=services.dependencies.model_name,
+    )
+    _record(services, run_id, PUNCH_LIST_STAGE, result)
+    return {"run_id": run_id, **result}
 
 
 def _research_view(run_id: str, research: dict[str, Any]) -> dict[str, Any]:

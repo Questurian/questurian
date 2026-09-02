@@ -58,6 +58,7 @@ from ..intake_v4 import (
     do_research,
     finished_article,
     polish_prompt,
+    punch_list,
     intake_state,
     plan_research,
     reask_question,
@@ -538,6 +539,17 @@ def read_article(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     the graph works, and this is the whole article.
     """
     return JSONResponse(_handle(finished_article, run_id))
+
+
+@router.get("/{run_id}/punch-list")
+def read_punch_list(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The short list of edits a person should make by hand.
+
+    One model call the first time it is asked for, then read from the run.
+    Nothing downstream of `finalize` changes the article, so the answer cannot
+    go stale, and paying for it twice would be paying for the same paragraph.
+    """
+    return JSONResponse(_handle(punch_list, run_id, _services(run_id)))
 
 
 @router.get("/{run_id}/polish-prompt")

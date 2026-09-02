@@ -3,6 +3,7 @@ import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 import { buildStageArticleUrl } from '../../../blogArticles'
 import type { IntakeArticle, IntakeWriting } from '../intake.types'
 import { PolishPrompt } from './PolishPrompt'
+import { PunchList } from './PunchList'
 
 /**
  * The finished article.
@@ -120,6 +121,8 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
       ) : (
         <p className="p2b-note">Loading the article…</p>
       )}
+
+      <PunchList runId={runId} />
 
       <PolishPrompt runId={runId} />
 

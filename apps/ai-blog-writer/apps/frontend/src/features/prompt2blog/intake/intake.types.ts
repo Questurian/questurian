@@ -210,6 +210,35 @@ export interface VenueToCheck {
   sole_support_for: string[]
 }
 
+/**
+ * One edit a person should make by hand, and where the fact behind it comes
+ * from.
+ *
+ * `needs` is the whole design. `have_it` means the research already answered
+ * it and the article did not use it, and the claims are quoted from the
+ * dossier rather than written by the read. `not_established` means nothing in
+ * the run answers it — those items say what is missing and never what it is.
+ */
+export interface PunchListItem {
+  kind: 'add_sentence' | 'add_paragraph' | 'move' | 'rephrase' | 'cut'
+  /** A heading from the article. Empty when the item is about the whole piece. */
+  heading: string
+  /** A few words quoted from the article, to find the spot. */
+  where: string
+  note: string
+  needs: 'have_it' | 'not_established'
+  have: { claim_id: string; text: string }[]
+}
+
+export interface PunchList {
+  run_id: string
+  items: PunchListItem[]
+  /** Researched, graded, and never used. Found without a model. */
+  researched_and_unused: { claim_id: string; text: string }[]
+  /** What was thrown away and why — mostly items that reached for a figure. */
+  dropped: string[]
+}
+
 /** The finished article. Its own call: the state is polled, this is not. */
 export interface IntakeArticle {
   run_id: string

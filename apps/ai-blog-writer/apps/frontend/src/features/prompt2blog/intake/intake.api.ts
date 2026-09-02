@@ -5,6 +5,7 @@ import type {
   IntakeArticle,
   IntakeRunSummary,
   IntakeState,
+  PunchList,
   VenueToCheck,
 } from './intake.types'
 
@@ -209,6 +210,20 @@ export function reaskQuestion(
   body: { requirement_id: string; question: string },
 ): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/gate/reask`, body)
+}
+
+/**
+ * The short list of edits a person should make by hand.
+ *
+ * One model call the first time it is asked for, then read from the run, so
+ * this is slow once and instant afterwards.
+ */
+export async function readPunchList(runId: string): Promise<PunchList> {
+  const response = await apiFetch(`${INTAKE}/${runId}/punch-list`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the notes on this article.')
+  }
+  return (await response.json()) as PunchList
 }
 
 /** The places this run would send a reader, for a person to look at. */
