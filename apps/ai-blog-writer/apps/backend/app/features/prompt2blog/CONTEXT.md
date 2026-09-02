@@ -194,3 +194,44 @@ and writes the delta into each stage payload as `stage_usage`, which is also
 what feeds the `by_stage` rows of the `run_cost` receipt. Recorders built
 without a `usage_reader` -- every test that constructs one directly -- behave
 as they did before attribution existed.
+
+## What has been proven, and what has not
+
+Not a warning, and not a to-do. A statement of what is actually known, so a
+green suite is never read as evidence that the product works. Everything here
+was true on 2026-09-01 and needs revising when a real run changes it.
+
+**Proven.** Three articles end to end. Run `90b3f9bc` (Lima, 914 words) and
+`76b36468` (Medellin, 821 words) on 2026-08-31, both `ready_for_staging` with
+no blockers, the second measurably better on sentence variety after the rhythm
+change in `2bd89fb1`. Run `062c0b86` (Huaca Pucllana) on 2026-09-01, which is
+the run most of the current gate and punch-list work came out of.
+
+**Cost per article is measured, end to end.** It was not, and that gap was
+called the blocker for handing this to anyone. The ledger fixes closed it:
+`a2066506` records **$1.38 across 24 calls**, intake included -- grill $0.16,
+brief $0.02, work order $0.05, research $0.66, then the writing graph. Runs
+before that fix report only the writing half ($0.71 to $1.11) because each
+intake leg wiped the run's accounting, so their totals are not comparable and
+must not be quoted as the price of an article.
+
+**Not proven, and each is a different kind of work:**
+
+- **One author, one register, one continent.** Every finished run was
+  commissioned by the owner, about a Latin American city. Behaviour on a food
+  piece, a hotel review, or somebody else's voice is unknown.
+- **No second person has used the interface.** Every UX assumption in it
+  belongs to the owner and the agent that built it.
+- **Article quality is judged by a person and nothing else.** Deliberate --
+  mechanics only through stage 5, an AI-read quality audit is a stage 6
+  question -- but it means a passing suite says nothing about whether an
+  article is good. The punch list writes notes for a person; it does not grade.
+- **The 2026-09-01 gate and planner work has never run.** The venue instruction,
+  the declared shortfall cause, the precision target and the punch list's model
+  read are all proven by tests and by replaying stored runs. None of them can
+  retag evidence that already exists, so the first new run is the only thing
+  that shows whether they work.
+
+The distance between "works for its author" and "works for a stranger" is the
+four points above.
+
