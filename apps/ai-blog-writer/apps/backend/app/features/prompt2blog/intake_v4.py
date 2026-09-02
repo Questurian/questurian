@@ -311,7 +311,9 @@ def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder
         run_id,
         WORK_ORDER_STAGE,
         {
-            **work_order_stage_record(work_order),
+            **work_order_stage_record(
+                work_order, tokens_spent=_run_tokens_spent(run_id)
+            ),
             STATE_KEY: json.loads(work_order.model_dump_json()),
         },
     )
@@ -341,7 +343,11 @@ def apply_cut(
         run_id,
         WORK_ORDER_STAGE,
         {
-            **work_order_stage_record(outcome.work_order, outcome.warnings),
+            **work_order_stage_record(
+                outcome.work_order,
+                outcome.warnings,
+                tokens_spent=_run_tokens_spent(run_id),
+            ),
             STATE_KEY: json.loads(outcome.work_order.model_dump_json()),
         },
     )
@@ -514,7 +520,9 @@ def settle_gate(
             run_id,
             WORK_ORDER_STAGE,
             {
-                **work_order_stage_record(work_order, [cost]),
+                **work_order_stage_record(
+                    work_order, [cost], tokens_spent=_run_tokens_spent(run_id)
+                ),
                 STATE_KEY: json.loads(work_order.model_dump_json()),
             },
         )
@@ -603,7 +611,9 @@ def reask_question(
         run_id,
         WORK_ORDER_STAGE,
         {
-            **work_order_stage_record(work_order, [note]),
+            **work_order_stage_record(
+                work_order, [note], tokens_spent=_run_tokens_spent(run_id)
+            ),
             STATE_KEY: json.loads(work_order.model_dump_json()),
         },
     )
