@@ -180,8 +180,8 @@ export async function readGate(runId: string): Promise<{ blocking: GateQuestion[
 /**
  * Settle one blocking question without re-buying the research.
  *
- * Either an answer, or a note saying it is not published anywhere. No model
- * call: this is the operator's decision, recorded.
+ * An answer, a note saying nobody publishes it, a note saying the thing is not
+ * there, or a drop. No model call: this is the operator's decision, recorded.
  */
 export function settleGate(
   runId: string,
@@ -190,6 +190,7 @@ export function settleGate(
     answer?: string
     source_url?: string
     unpublished_note?: string
+    nonexistent_note?: string
     omit?: boolean
   },
 ): Promise<IntakeState> {

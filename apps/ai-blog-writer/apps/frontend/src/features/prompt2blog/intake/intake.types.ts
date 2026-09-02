@@ -168,6 +168,14 @@ export interface GateQuestion {
   status: string
   gap: string
   found: string[]
+  /** Why research fell short, in its own words. `unknown` on older runs. */
+  cause: string
+  /**
+   * Which move fits, and why, in words meant for the person deciding. Null
+   * when research did not say why — the screen then shows what it always
+   * showed, four moves and no opinion.
+   */
+  suggestion: { move: string; why: string } | null
 }
 
 /**

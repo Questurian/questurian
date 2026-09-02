@@ -80,7 +80,52 @@ EvidenceConfidence = Literal["high", "medium", "low"]
 # either terminal — could only be reported as `partial`, which blocked the run and
 # sent the operator back to ask again for a fact that does not exist. It is a
 # finding, not a failure: the article omits the number without narrating the gap.
-EvidenceRequirementStatus = Literal["supported", "partial", "missing", "unpublished"]
+# `nonexistent` is the other half, and run a2066506 needed it twice in one run.
+# Research asked for three 4-star hotels within five blocks of the Plaza Mayor,
+# found three named properties with rates and distances, and stated plainly that
+# no genuine 4-star exists there -- the nearest being the Sheraton, 1.4 km away.
+# The research did not fail. It answered, and the answer was "that is not
+# there", which no status could record, so the run blocked on a question that
+# was already settled.
+#
+# Distinct from `unpublished`, which means the figure exists and nobody prints
+# it. This means the thing the question presupposes is not there. Both are
+# publishable sentences: "there is no 4-star hotel in the historic centre, the
+# nearest is a fifteen minute walk" is better travel writing than three invented
+# ones.
+EvidenceRequirementStatus = Literal[
+    "supported", "partial", "missing", "unpublished", "nonexistent"
+]
+# Every status that leaves a question unsettled, and therefore has to say what
+# is missing. Named once because coverage, the gate and the contract all ask.
+UNSETTLED_STATUSES = frozenset({"partial", "missing", "unpublished", "nonexistent"})
+# Why research came up short, in its own words rather than the gate's guess.
+#
+# The gate used to show four buttons and no indication which one was right, so
+# the operator read a dozen research bullets and worked out for themselves
+# whether they were looking at a search that went wrong, a number nobody
+# publishes, a thing that is not there, or a question that asked for more
+# precision than the article needed. The diagnosis was already sitting in the
+# notes -- "Booking.com published no separate aggregate figure" -- unread.
+#
+# Declared by research rather than inferred by the gate from that prose. A
+# pattern match over English fails silently on the phrasing nobody wrote it for,
+# and research is the only step that actually knows why it fell short.
+EvidenceShortfallCause = Literal[
+    "unknown",
+    # A source was checked and does not print the figure.
+    "not_published",
+    # The thing the question assumes exists is not there, and research can say
+    # what is there instead.
+    "does_not_exist",
+    # Near-miss numbers found, none exact, because the question asked for more
+    # precision than anyone publishes.
+    "question_too_precise",
+    # The answer is about a different place, period or subject than was asked.
+    "answered_something_else",
+    # Nothing relevant came back at all.
+    "nothing_found",
+]
 # What research found when it went to check what the direction step assumed.
 #
 # `refuted` is the verdict that had nowhere to live. A question about a ranking
@@ -493,6 +538,9 @@ class EvidenceRequirement(V4ContractModel):
     status: EvidenceRequirementStatus
     claim_ids: list[str] = Field(default_factory=list)
     gap: str = ""
+    # Why it fell short, so the gate can suggest a move instead of offering
+    # four buttons and no opinion. Meaningless on a `supported` requirement.
+    cause: EvidenceShortfallCause = "unknown"
 
     @model_validator(mode="after")
     def validate_status_details(self) -> "EvidenceRequirement":
@@ -501,9 +549,10 @@ class EvidenceRequirement(V4ContractModel):
             raise ValueError("supported requirements must reference at least one claim")
         if self.status == "supported" and self.gap:
             raise ValueError("supported requirements cannot describe a gap")
-        if self.status in {"partial", "missing", "unpublished"} and not self.gap:
+        if self.status in UNSETTLED_STATUSES and not self.gap:
             raise ValueError(
-                "partial, missing, and unpublished requirements must describe the gap"
+                "partial, missing, unpublished, and nonexistent requirements "
+                "must describe the gap"
             )
         if self.status == "missing" and self.claim_ids:
             raise ValueError("missing requirements cannot reference claims")
@@ -511,6 +560,18 @@ class EvidenceRequirement(V4ContractModel):
         # measures immigration and baggage and no other step" is a real claim with
         # a real source, and it is what makes the absence reportable rather than
         # merely asserted.
+        #
+        # `nonexistent` goes further and *requires* them. "There is no 4-star
+        # hotel within five blocks" is a finding when three named 3-star
+        # properties and a Sheraton 1.4 km away sit behind it, and an assertion
+        # when nothing does. A search that returned nothing has not established
+        # that a thing is absent -- it has established that it found nothing,
+        # which is `missing`.
+        if self.status == "nonexistent" and not self.claim_ids:
+            raise ValueError(
+                "nonexistent requirements must reference the claims that show "
+                "what is there instead"
+            )
         return self
 
 

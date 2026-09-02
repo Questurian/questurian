@@ -861,6 +861,23 @@
   line-height: 1.6;
 }
 
+/*
+ * What research's own diagnosis implies. Set apart from `p2b-gate-gap`, which
+ * says what is missing: this one says what to do about it, and the suggested
+ * button below it is the only one not styled as secondary.
+ */
+.p2b-gate-suggestion {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.p2b-gate-suggestion .p2b-label {
+  display: block;
+  margin-bottom: var(--space-1);
+}
+
 .p2b-gate-form {
   margin-top: var(--space-4);
 }

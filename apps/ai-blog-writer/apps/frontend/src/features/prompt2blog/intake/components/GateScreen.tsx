@@ -26,6 +26,20 @@ import type { GateQuestion } from '../intake.types'
  *
  * It is set apart from the other three because it is the only one that spends
  * money: it buys one search, not the whole pass again.
+ *
+ * The fifth is "nothing like this exists", and run a2066506 needed it twice.
+ * Research was asked for three 4-star hotels within five blocks of the Plaza
+ * Mayor, came back with three named properties and the finding that no genuine
+ * 4-star is in that radius, and the run blocked — because the system could not
+ * tell "we failed to find it" from "it is not there". Those are opposite
+ * outcomes and they looked identical from the inside.
+ *
+ * And the screen now says which move fits. It used to show the question, what
+ * research found, the gap, and then four buttons with no indication which one
+ * was right, leaving the operator to read a dozen bullets and infer it. The
+ * diagnosis was already in the notes — "Booking.com published no separate
+ * aggregate figure" — so research now declares it and the gate reads it out. A
+ * suggestion, never a decision: every other move stays one click away.
  */
 
 interface GateScreenProps {
@@ -44,9 +58,10 @@ function Question({
   question: GateQuestion
   onSettled: () => void
 }) {
-  const [mode, setMode] = useState<'idle' | 'answer' | 'unpublished' | 'omit' | 'reask'>(
-    'idle',
-  )
+  const [mode, setMode] = useState<
+    'idle' | 'answer' | 'unpublished' | 'nonexistent' | 'omit' | 'reask'
+  >('idle')
+  const suggested = question.suggestion?.move ?? null
   const [text, setText] = useState('')
   const [rewritten, setRewritten] = useState(question.question)
   const [url, setUrl] = useState('')
@@ -71,7 +86,9 @@ function Question({
       requirement_id: question.requirement_id,
       ...(mode === 'answer'
         ? { answer: text, source_url: url.trim() || undefined }
-        : { unpublished_note: text }),
+        : mode === 'nonexistent'
+          ? { nonexistent_note: text }
+          : { unpublished_note: text }),
     })
   }
 
@@ -93,32 +110,51 @@ function Question({
       {question.gap && <p className="p2b-gate-gap">{question.gap}</p>}
 
       {mode === 'idle' ? (
-        <div className="p2b-intake-actions">
-          <button type="button" onClick={() => setMode('answer')}>
-            I&rsquo;ll answer this
-          </button>
-          <button
-            type="button"
-            className="p2b-secondary"
-            onClick={() => setMode('unpublished')}
-          >
-            Nobody publishes this
-          </button>
-          <button
-            type="button"
-            className="p2b-secondary"
-            onClick={() => setMode('reask')}
-          >
-            Ask it differently
-          </button>
-          <button
-            type="button"
-            className="p2b-secondary"
-            onClick={() => setMode('omit')}
-          >
-            Drop the question
-          </button>
-        </div>
+        <>
+          {question.suggestion && (
+            <p className="p2b-gate-suggestion">
+              <span className="p2b-label">What this looks like</span>
+              {question.suggestion.why}
+            </p>
+          )}
+          <div className="p2b-intake-actions">
+            <button
+              type="button"
+              className={suggested && suggested !== 'answer' ? 'p2b-secondary' : undefined}
+              onClick={() => setMode('answer')}
+            >
+              I&rsquo;ll answer this
+            </button>
+            <button
+              type="button"
+              className={suggested === 'unpublished' ? undefined : 'p2b-secondary'}
+              onClick={() => setMode('unpublished')}
+            >
+              Nobody publishes this
+            </button>
+            <button
+              type="button"
+              className={suggested === 'nonexistent' ? undefined : 'p2b-secondary'}
+              onClick={() => setMode('nonexistent')}
+            >
+              Nothing like this exists
+            </button>
+            <button
+              type="button"
+              className={suggested === 'reask' ? undefined : 'p2b-secondary'}
+              onClick={() => setMode('reask')}
+            >
+              Ask it differently
+            </button>
+            <button
+              type="button"
+              className="p2b-secondary"
+              onClick={() => setMode('omit')}
+            >
+              Drop the question
+            </button>
+          </div>
+        </>
       ) : mode === 'reask' ? (
         <div className="p2b-gate-form">
           <label className="p2b-field">
@@ -213,7 +249,9 @@ function Question({
             <span className="p2b-label">
               {mode === 'answer'
                 ? 'Your answer, in your own words'
-                : 'What you looked for, and where'}
+                : mode === 'nonexistent'
+                  ? 'What is there instead'
+                  : 'What you looked for, and where'}
             </span>
             <textarea
               value={text}
@@ -223,7 +261,9 @@ function Question({
               placeholder={
                 mode === 'answer'
                   ? 'They quote COP 60,000 per person, over WhatsApp only.'
-                  : 'Moravia Tours takes bookings directly and posts no price on its site.'
+                  : mode === 'nonexistent'
+                    ? 'No 4-star hotel within five blocks of the Plaza Mayor. The nearest is the Sheraton, 1.4 km away.'
+                    : 'Moravia Tours takes bookings directly and posts no price on its site.'
               }
             />
           </label>
@@ -252,6 +292,17 @@ function Question({
             <p className="p2b-note">
               The article can say this outright. It is a real finding, not a
               workaround.
+            </p>
+          )}
+
+          {mode === 'nonexistent' && (
+            /* The claims research found stay, and they are the point: they are
+               what makes the absence a finding rather than an assertion. */
+            <p className="p2b-note">
+              Use this when research answered and the answer was that the thing
+              is not there. What it found instead stays on the record — that is
+              what lets the article state the absence rather than assert it. If
+              research simply found nothing, answer it or ask it differently.
             </p>
           )}
 

@@ -405,6 +405,10 @@ class GateAnswerRequest(BaseModel):
     answer: str | None = None
     source_url: str | None = None
     unpublished_note: str | None = None
+    # What research found instead, when the thing the question asked about is
+    # not there. Different from the note above: that one says the figure exists
+    # and nobody prints it.
+    nonexistent_note: str | None = None
     # Drop the question. Permitted for a load-bearing one, and answered once
     # with what the article can no longer claim (ADR 0030).
     omit: bool = False
@@ -454,14 +458,16 @@ def settle_the_gate(
     chosen = [
         request.answer is not None,
         request.unpublished_note is not None,
+        request.nonexistent_note is not None,
         request.omit,
     ]
     if sum(chosen) != 1:
         raise HTTPException(
             status_code=400,
             detail=(
-                "Say one of three things: what the answer is, that it is not "
-                "published anywhere, or that the question should be dropped."
+                "Say one of four things: what the answer is, that nobody "
+                "publishes it, that the thing is not there, or that the "
+                "question should be dropped."
             ),
         )
     _handle(
@@ -472,6 +478,7 @@ def settle_the_gate(
         answer=request.answer,
         source_url=request.source_url,
         unpublished_note=request.unpublished_note,
+        nonexistent_note=request.nonexistent_note,
         omit=request.omit,
     )
     return JSONResponse(intake_state(run_id))

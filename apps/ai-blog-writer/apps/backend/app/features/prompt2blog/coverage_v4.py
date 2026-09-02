@@ -31,6 +31,16 @@ from .contracts_v4 import EvidencePackage, Prompt2BlogWorkOrder
 # whether it was interesting.
 ENJOYABLE_STATUSES = {"supported", "partial"}
 
+# The statuses that settle a load-bearing question rather than block on it.
+#
+# `unpublished` and `nonexistent` are findings, not failures, and both are
+# publishable sentences: nobody prints Lima's customs times, and there is no
+# 4-star hotel within five blocks of the Plaza Mayor. Neither is a hole in the
+# article -- they are things the article can say. What they are not is texture,
+# which is why they stay out of ENJOYABLE_STATUSES above: a dossier answering
+# every question with an absence still has nothing a reader would enjoy.
+SETTLED_STATUSES = {"supported", "unpublished", "nonexistent"}
+
 
 @dataclass
 class CoverageVerdict:
@@ -77,7 +87,7 @@ def assess_coverage(
         requirement_id
         for requirement_id, kind in kind_by_id.items()
         if kind == "load_bearing"
-        and status_by_id.get(requirement_id) not in {"supported", "unpublished"}
+        and status_by_id.get(requirement_id) not in SETTLED_STATUSES
     )
     refuted = sorted(
         finding.assumption_id

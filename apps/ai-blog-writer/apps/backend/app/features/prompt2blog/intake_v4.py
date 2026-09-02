@@ -53,10 +53,12 @@ from .gate_v4 import (
     answer_requirement,
     dismiss_venue,
     drop_venue,
+    mark_nonexistent,
     mark_unpublished,
     note_venue,
     omit_requirement,
     reask_requirement,
+    suggested_move,
     venues_to_check,
 )
 from .contracts_v4 import (
@@ -432,6 +434,7 @@ def settle_gate(
     answer: str | None = None,
     source_url: str | None = None,
     unpublished_note: str | None = None,
+    nonexistent_note: str | None = None,
     omit: bool = False,
 ) -> CoverageVerdict:
     """Settle one blocking question without re-buying the research.
@@ -467,6 +470,10 @@ def settle_gate(
     elif unpublished_note is not None:
         evidence = mark_unpublished(
             evidence, requirement_id=requirement_id, note=unpublished_note
+        )
+    elif nonexistent_note is not None:
+        evidence = mark_nonexistent(
+            evidence, requirement_id=requirement_id, note=nonexistent_note
         )
     else:
         evidence = answer_requirement(
@@ -679,6 +686,14 @@ def blocking_questions(run_id: str) -> list[dict[str, Any]]:
                 "kind": question.kind if question else "load_bearing",
                 "status": record.status if record else "missing",
                 "gap": record.gap if record else "",
+                # Why research fell short, and what that implies. A run
+                # recorded before causes existed says nothing here, and the
+                # screen then shows what it always showed.
+                "cause": record.cause if record else "unknown",
+                "suggestion": suggested_move(
+                    record.status if record else "missing",
+                    record.cause if record else "unknown",
+                ),
                 # What it did find. A question is rarely a blank: run 76b36468
                 # was stopped holding a name, a URL and two founders, missing
                 # only a price nobody publishes.

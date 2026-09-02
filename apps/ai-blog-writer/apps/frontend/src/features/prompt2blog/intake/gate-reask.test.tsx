@@ -33,6 +33,11 @@ const QUESTION: GateQuestion = {
   status: 'supported',
   gap: '',
   found: ['A garden collective in Puerto Madero, Argentina.'],
+  cause: 'answered_something_else',
+  suggestion: {
+    move: 'reask',
+    why: 'The answer is about something other than what was asked.',
+  },
 }
 
 beforeEach(() => {

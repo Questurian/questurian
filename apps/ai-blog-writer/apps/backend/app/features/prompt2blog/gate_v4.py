@@ -526,6 +526,113 @@ def drop_venue(evidence: EvidencePackage, *, claim_id: str) -> EvidencePackage:
     return EvidencePackage.model_validate(payload)
 
 
+def mark_nonexistent(
+    evidence: EvidencePackage,
+    *,
+    requirement_id: str,
+    note: str,
+) -> EvidencePackage:
+    """Record that the thing the question asked about is not there.
+
+    Not the same as nobody publishing it. Run a2066506 asked for three 4-star
+    hotels within five blocks of the Plaza Mayor and research answered with
+    three named properties, their distances and their ratings, plus the
+    finding that no genuine 4-star exists in that radius -- the nearest being
+    the Sheraton at 1.4 km. Nothing was missing. The question presupposed
+    something that is not so.
+
+    The claims stay, and the contract insists on them: what research found is
+    what makes the absence a finding rather than an assertion. A search that
+    came back empty has not established that a thing is absent, and belongs in
+    `missing`.
+
+    Left as the operator's click rather than a status research can set itself.
+    "It does not exist" is a strong claim, and a model that looked in the wrong
+    place would make it in exactly the same words as a model that looked
+    properly -- which is the confusion this whole verdict exists to end.
+    """
+    cleaned = _safe_str(note)
+    if not cleaned:
+        raise GateAnswerRefused(
+            "Say what research found instead, so the article can state the "
+            "absence rather than assert it."
+        )
+    _guard(evidence, requirement_id)
+
+    payload = evidence.model_dump(mode="json")
+    for item in payload["requirements"]:
+        if item["requirement_id"] == requirement_id:
+            if not item["claim_ids"]:
+                raise GateAnswerRefused(
+                    "Research found nothing here, so it has not established "
+                    "that the thing is absent -- only that it did not find it. "
+                    "Answer it, ask it differently, or drop it."
+                )
+            item["status"] = "nonexistent"
+            item["gap"] = cleaned
+
+    logger.info("Operator marked %s as a thing that does not exist", requirement_id)
+    return EvidencePackage.model_validate(payload)
+
+
+# What research's own diagnosis implies the operator should do about it. The
+# move names one of the buttons the gate already offers, except `nonexistent`,
+# which is the button this issue added.
+#
+# `why` is written to be read by a person deciding, not to explain the system
+# to itself.
+_MOVE_FOR_CAUSE: dict[str, tuple[str, str]] = {
+    "not_published": (
+        "unpublished",
+        "A source was checked and does not print this. That is a sentence the "
+        "article can say outright.",
+    ),
+    "does_not_exist": (
+        "nonexistent",
+        "Research answered, and the answer was that the thing is not there. "
+        "What it found instead is below, and that is what makes the absence "
+        "reportable.",
+    ),
+    "question_too_precise": (
+        "answer",
+        "The question asked for more precision than anyone publishes. What was "
+        "found is below and is probably what the article needed.",
+    ),
+    "answered_something_else": (
+        "reask",
+        "The answer is about something other than what was asked. The question "
+        "is fine -- the search went somewhere else.",
+    ),
+    "nothing_found": (
+        "answer",
+        "Nothing relevant came back, so there is nothing here to confirm. "
+        "Answer it yourself, or drop it.",
+    ),
+}
+
+
+def suggested_move(status: str, cause: str) -> dict[str, str] | None:
+    """Which of the moves fits, and why, in plain words.
+
+    The gate showed the question, what research found, the gap, and then four
+    buttons with no indication which one was right. Two of the three blockers
+    on run a2066506 were questions research had already answered -- the
+    operator's only real job was confirming that "no such thing" counts -- and
+    working that out meant reading a dozen bullets first.
+
+    A suggestion, never a decision: nothing here settles anything, and every
+    other move stays one click away. Returns None when research did not say
+    why, which is the honest outcome for a run recorded before causes existed.
+    """
+    if status == "supported":
+        return None
+    entry = _MOVE_FOR_CAUSE.get(cause)
+    if entry is None:
+        return None
+    move, why = entry
+    return {"move": move, "why": why}
+
+
 def mark_unpublished(
     evidence: EvidencePackage,
     *,
