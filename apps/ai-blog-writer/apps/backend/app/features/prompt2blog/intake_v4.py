@@ -51,6 +51,7 @@ from .coverage_v4 import CoverageVerdict, assess_coverage
 from .gate_v4 import (
     GateAnswerRefused,
     answer_requirement,
+    dismiss_venue,
     drop_venue,
     mark_unpublished,
     note_venue,
@@ -607,23 +608,29 @@ def settle_venue(
     *,
     claim_id: str,
     drop: bool = False,
+    dismiss: bool = False,
     note: str | None = None,
 ) -> CoverageVerdict:
     """Record what the operator saw when they looked at a place.
 
     No model call. Dropping one can put the run back behind the gate, when the
     dropped place was a question's only support -- which is correct: an article
-    must not rest on a claim its operator looked at and rejected.
+    must not rest on a claim its operator looked at and rejected. The screen
+    says so before the click, rather than after it.
+
+    Dismissing costs nothing by design: it is the move for a place that should
+    never have been on the list, and it leaves the dossier exactly as it was.
     """
     work_order = load_work_order(run_id)
     evidence = load_evidence(run_id)
     notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
 
-    evidence = (
-        drop_venue(evidence, claim_id=claim_id)
-        if drop
-        else note_venue(evidence, claim_id=claim_id, note=note or "")
-    )
+    if drop:
+        evidence = drop_venue(evidence, claim_id=claim_id)
+    elif dismiss:
+        evidence = dismiss_venue(evidence, claim_id=claim_id)
+    else:
+        evidence = note_venue(evidence, claim_id=claim_id, note=note or "")
 
     verdict = assess_coverage(work_order, evidence)
     _record(

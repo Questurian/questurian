@@ -15,6 +15,13 @@ import type { VenueToCheck } from '../intake.types'
  * is exactly what went wrong, and naming it accurately is what keeps this a two
  * minute job instead of a review of places nobody has been.
  *
+ * Three moves, because two were not enough. Run a2066506 listed McDonald's,
+ * Starbucks and KFC — places whose status nobody doubts — and the only way to
+ * clear one was to drop it, which takes the claim out of the dossier and can
+ * put the run back behind the gate. So the obvious move was the costly one.
+ * "Not worth checking" is the free one, and a drop that would cost something
+ * now says so before the click.
+ *
  * Not a gate. Exactly one gate blocks in this pipeline (ADR 0030) and this is
  * not it: everything here is skippable in one click.
  */
@@ -28,22 +35,29 @@ function Venue({
   runId,
   venue,
   onChanged,
+  onSettled,
 }: {
   runId: string
   venue: VenueToCheck
   onChanged: () => void
+  onSettled: () => void
 }) {
   const [noting, setNoting] = useState(false)
   const [note, setNote] = useState(venue.note)
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState<'dropped' | 'noted' | null>(null)
+  const [done, setDone] = useState<'dropped' | 'dismissed' | 'noted' | null>(null)
+  const costsAQuestion = venue.sole_support_for.length > 0
 
-  async function send(body: { drop?: boolean; note?: string }) {
+  async function send(
+    outcome: 'dropped' | 'dismissed' | 'noted',
+    body: { drop?: boolean; dismiss?: boolean; note?: string },
+  ) {
     setBusy(true)
     try {
       await markVenue(runId, { claim_id: venue.claim_id, ...body })
-      setDone(body.drop ? 'dropped' : 'noted')
+      setDone(outcome)
       onChanged()
+      onSettled()
     } finally {
       setBusy(false)
     }
@@ -64,7 +78,11 @@ function Venue({
 
       {done ? (
         <p className="p2b-venue-done">
-          {done === 'dropped' ? 'Dropped. It will not reach the writer.' : `Noted: ${note}`}
+          {done === 'dropped'
+            ? 'Dropped. It will not reach the writer.'
+            : done === 'dismissed'
+              ? 'Left alone. It stays in the dossier; you just will not be asked again.'
+              : `Noted: ${note}`}
         </p>
       ) : noting ? (
         <>
@@ -81,7 +99,7 @@ function Venue({
           <div className="p2b-intake-actions">
             <button
               type="button"
-              onClick={() => void send({ note })}
+              onClick={() => void send('noted', { note })}
               disabled={busy || !note.trim()}
             >
               Save the note
@@ -97,24 +115,44 @@ function Venue({
           </div>
         </>
       ) : (
-        <div className="p2b-intake-actions">
-          <button
-            type="button"
-            className="p2b-secondary"
-            onClick={() => void send({ drop: true })}
-            disabled={busy}
-          >
-            Drop it
-          </button>
-          <button
-            type="button"
-            className="p2b-secondary"
-            onClick={() => setNoting(true)}
-            disabled={busy}
-          >
-            Add a note
-          </button>
-        </div>
+        <>
+          {costsAQuestion ? (
+            <p className="p2b-venue-cost">
+              Dropping this puts{' '}
+              {venue.sole_support_for.length === 1
+                ? 'a question'
+                : `${venue.sole_support_for.length} questions`}{' '}
+              back behind the gate — it is the only thing supporting{' '}
+              {venue.sole_support_for.join(', ')}. A note costs nothing.
+            </p>
+          ) : null}
+          <div className="p2b-intake-actions">
+            <button
+              type="button"
+              className="p2b-secondary"
+              onClick={() => void send('dropped', { drop: true })}
+              disabled={busy}
+            >
+              Drop it
+            </button>
+            <button
+              type="button"
+              className="p2b-secondary"
+              onClick={() => setNoting(true)}
+              disabled={busy}
+            >
+              Add a note
+            </button>
+            <button
+              type="button"
+              className="p2b-secondary"
+              onClick={() => void send('dismissed', { dismiss: true })}
+              disabled={busy}
+            >
+              Not worth checking
+            </button>
+          </div>
+        </>
       )}
     </li>
   )
@@ -129,6 +167,33 @@ export function VenueCheck({ runId, onChanged }: VenueCheckProps) {
       .then(result => setVenues(result.venues))
       .catch(() => setVenues([]))
   }, [runId])
+
+  /**
+   * Re-read what each remaining drop would cost, because one drop changes the
+   * others. Two claims holding up a question both cost nothing to drop until
+   * the first one goes — and then the second is the only support left. Read
+   * once at mount, that second row would still be promising it was free.
+   *
+   * Rows are updated in place rather than replaced: a dropped claim is gone
+   * from the server's list, and the operator should still see that it was
+   * dropped.
+   */
+  function refreshCosts() {
+    void readVenues(runId)
+      .then(result => {
+        const fresh = new Map(result.venues.map(v => [v.claim_id, v.sole_support_for]))
+        setVenues(
+          current =>
+            current?.map(venue => ({
+              ...venue,
+              sole_support_for: fresh.get(venue.claim_id) ?? venue.sole_support_for,
+            })) ?? null,
+        )
+      })
+      .catch(() => {
+        /* The costs stay as last read. Nothing here blocks the run. */
+      })
+  }
 
   if (skipped || venues === null || venues.length === 0) return null
 
@@ -145,7 +210,13 @@ export function VenueCheck({ runId, onChanged }: VenueCheckProps) {
 
       <ul className="p2b-venue-list">
         {venues.map(venue => (
-          <Venue key={venue.claim_id} runId={runId} venue={venue} onChanged={onChanged} />
+          <Venue
+            key={venue.claim_id}
+            runId={runId}
+            venue={venue}
+            onChanged={onChanged}
+            onSettled={refreshCosts}
+          />
         ))}
       </ul>
 

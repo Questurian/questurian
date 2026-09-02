@@ -219,10 +219,13 @@ export async function readVenues(runId: string): Promise<{ venues: VenueToCheck[
   return (await response.json()) as { venues: VenueToCheck[] }
 }
 
-/** Record what the operator saw. Drop it, or say what you found. */
+/**
+ * Record what the operator saw. Exactly one move per call: drop it, dismiss it
+ * as never worth checking, or say what you found.
+ */
 export function markVenue(
   runId: string,
-  body: { claim_id: string; drop?: boolean; note?: string },
+  body: { claim_id: string; drop?: boolean; dismiss?: boolean; note?: string },
 ): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/venues`, body)
 }

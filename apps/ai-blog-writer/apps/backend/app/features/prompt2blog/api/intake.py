@@ -479,8 +479,11 @@ def settle_the_gate(
 
 class VenueMarkRequest(BaseModel):
     claim_id: str = Field(min_length=1)
-    # Drop it, or say what you saw. Marking it fine is simply not calling this.
+    # Three moves, and marking it fine is still simply not calling this.
+    # `drop` takes the claim out of the dossier; `dismiss` takes the question
+    # off the list and leaves the dossier alone; a note says what was seen.
     drop: bool = False
+    dismiss: bool = False
     note: str | None = None
 
 
@@ -499,10 +502,14 @@ def mark_venue(
     run_id: str, request: VenueMarkRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
     """Record what the operator saw when they looked."""
-    if request.drop == (request.note is not None):
+    chosen = [request.drop, request.dismiss, request.note is not None]
+    if sum(1 for move in chosen if move) != 1:
         raise HTTPException(
             status_code=400,
-            detail="Either drop it, or say what you saw. Not both, and not neither.",
+            detail=(
+                "Pick one: drop it, dismiss it as not worth checking, "
+                "or say what you saw."
+            ),
         )
     _handle(
         settle_venue,
@@ -510,6 +517,7 @@ def mark_venue(
         _services(run_id),
         claim_id=request.claim_id,
         drop=request.drop,
+        dismiss=request.dismiss,
         note=request.note,
     )
     return JSONResponse(intake_state(run_id))
