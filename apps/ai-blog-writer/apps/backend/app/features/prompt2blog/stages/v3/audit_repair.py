@@ -14,6 +14,7 @@ from ...prompts.editorial_v3 import (
 )
 from ...quality import (
     CONSTRAINT_MEASUREMENT_KEYS,
+    evaluate_fails_if,
     _build_constraint_checks,
     _sanitize_quality,
     _sanitize_rewrite,
@@ -91,6 +92,25 @@ def _audit_v3_rewrite(
         model_name=state["audit_model"],
     )
     quality = _sanitize_quality(parsed)
+    # The auditor answered with a quote; this is where that becomes a verdict.
+    fails_if = evaluate_fails_if(quality, rewrite["improved_content"])
+    quality["fails_if_check"] = fails_if
+    quality["fails_if_avoided"] = fails_if["verdict"] != "walks_into_it"
+    if fails_if["verdict"] == "walks_into_it":
+        # Repair reads required_revisions, so the sentence has to be in there
+        # whether or not the auditor remembered to put it there.
+        revision = (
+            f"The draft walks into the line the brief says it fails on. "
+            f"Rewrite this sentence: \"{fails_if['matched']}\". "
+            f"{fails_if['why']}".strip()
+        )
+        if not any(
+            fails_if["matched"][:40] in item for item in quality["required_revisions"]
+        ):
+            quality["required_revisions"] = [
+                revision,
+                *quality["required_revisions"],
+            ]
     quality_checks = {
         **quality.get("constraint_checks", {}),
         **{

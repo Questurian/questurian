@@ -358,8 +358,11 @@ def test_the_audit_prompt_asks_whether_the_draft_walks_into_it():
 
     prompt = _flat(P2B_V3_QUALITY_AUDIT_PROMPT)
 
-    assert "fails_if_avoided" in prompt
+    assert "fails_if_quote" in prompt
     assert 'The line under "This piece fails if"' in prompt
+    # Evidence, not a verdict: a boolean here was answered without reading.
+    assert "Do not answer whether the draft avoids it" in prompt
+    assert "the quote is checked against the draft" in prompt
     # Freehand text, so an auditor that cannot apply it must leave it alone
     # rather than invent a reading.
     assert "it is not a gate" in prompt

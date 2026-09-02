@@ -714,13 +714,6 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
     checks = {
         "audience_match": _safe_bool(checks_raw.get("audience_match"), default=True),
         "tone_match": _safe_bool(checks_raw.get("tone_match"), default=True),
-        # The brief's own definition of failure, judged for the first time.
-        # Deliberately not in HARD_CONSTRAINT_CHECK_KEYS: the line is freehand
-        # and a badly worded one must not be able to block a run. It weighs
-        # through the scores and the revisions the auditor writes beside it.
-        "fails_if_avoided": _safe_bool(
-            checks_raw.get("fails_if_avoided"), default=True
-        ),
     }
 
     # A missing or unparseable score used to default to 6, which sits below the
@@ -750,6 +743,12 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
             0, _safe_int(parsed.get("word_count_estimate"), default=0)
         ),
         "constraint_checks": checks,
+        # Evidence, not a verdict. `evaluate_fails_if` turns it into one by
+        # checking the quote is really in the draft; a boolean asked for
+        # directly was answered "avoided" on a draft the same response called
+        # an inventory (run b29d66b4).
+        "fails_if_quote": _safe_str(parsed.get("fails_if_quote")),
+        "fails_if_why": _safe_str(parsed.get("fails_if_why")),
         "required_revisions": required_revisions,
         "quality_summary": _safe_str(parsed.get("quality_summary"))
         or "Quality summary not provided.",
@@ -825,6 +824,69 @@ def looks_truncated(content: str, *, max_output_tokens: int) -> bool:
     stripped = content.rstrip()
     ends_cleanly = stripped.endswith((".", "!", "?", '"', "'", ")", "`"))
     return near_cap and not ends_cleanly
+
+
+# How much of a quoted sentence has to be found in the draft before the quote
+# counts as real. Not an exact match: a model that drops a comma or repairs a
+# dash has still located the sentence, and losing a true finding to punctuation
+# would be the worst way to fail.
+QUOTE_MATCH_THRESHOLD = 0.6
+# An auditor quoting the problem often quotes more than one sentence of it.
+QUOTE_MATCH_MAX_SENTENCES = 3
+
+
+def evaluate_fails_if(quality: dict[str, Any], content: str) -> dict[str, Any]:
+    """Turn the auditor's quote into a verdict, or into a visible shrug.
+
+    Three outcomes, and the third is the point:
+
+    - No quote: the auditor says the draft does not walk into its failure
+      line, and there is nothing to check.
+    - A quote found in the draft: the failure is real and named, and the
+      sentence is on the record for repair to work from.
+    - A quote that is not in the draft: the answer cannot be relied on. It
+      does not become a failure -- inventing one from an unverifiable quote is
+      the same sin in the other direction -- but it is recorded as unjudged
+      rather than banked as a pass.
+    """
+    quote = _safe_str(quality.get("fails_if_quote"))
+    if not quote:
+        return {
+            "quote": "",
+            "why": _safe_str(quality.get("fails_if_why")),
+            "verdict": "avoided",
+            "matched": "",
+            "match_score": 0.0,
+        }
+
+    wanted = _content_words(quote)
+    best, score = "", 0.0
+    if wanted:
+        # Windows of up to three consecutive sentences, because an auditor
+        # quoting the problem often quotes two sentences of it. Scored against
+        # a single sentence, a two sentence quote can never match anything and
+        # a true finding is thrown away for spanning a full stop.
+        for section in _sections(content):
+            for start in range(len(section)):
+                for width in range(1, QUOTE_MATCH_MAX_SENTENCES + 1):
+                    window = section[start : start + width]
+                    if len(window) < width:
+                        break
+                    words = _content_words(" ".join(window))
+                    if not words:
+                        continue
+                    overlap = len(wanted & words) / len(wanted)
+                    if overlap > score:
+                        best, score = " ".join(window), overlap
+
+    found = score >= QUOTE_MATCH_THRESHOLD
+    return {
+        "quote": quote,
+        "why": _safe_str(quality.get("fails_if_why")),
+        "verdict": "walks_into_it" if found else "unjudged",
+        "matched": best if found else "",
+        "match_score": round(score, 3),
+    }
 
 
 def _should_run_repair(quality: dict[str, Any], checks: dict[str, Any]) -> bool:

@@ -45,7 +45,7 @@ from .contracts_v4 import (
     WorkOrderRequirement,
 )
 from .config import P2B_V4_GATHER_CONCURRENCY
-from .evidence_conflicts import record_numeric_conflicts
+from .evidence_conflicts import record_detected_conflicts
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
@@ -971,7 +971,7 @@ def structure_research(
         # The prompt asks for conflicts and the Lima run did not record the
         # one its own notes had named. The comparison below is the half of
         # that a model cannot forget to do.
-        return record_numeric_conflicts(EvidencePackage.model_validate(payload))
+        return record_detected_conflicts(EvidencePackage.model_validate(payload))
     except ValidationError as error:
         raise ResearchUnusable(
             "; ".join(
