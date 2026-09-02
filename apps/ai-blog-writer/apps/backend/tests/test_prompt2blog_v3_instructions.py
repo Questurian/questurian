@@ -335,3 +335,31 @@ def test_compose_is_given_the_voice_and_the_conventions():
 
     assert "THE VOICE YOU ARE WRITING IN" in compose
     assert "WRITING CONVENTIONS" in compose
+
+
+# --- the failure line reaches the stage that can act on it ------------------
+#
+# The line was already in the brief block every stage is shown. What was
+# missing was anyone being asked to read it: run 849ae5aa walked into its own
+# stated failure in the first sentence and the audit scored it 8.
+
+
+def test_the_audit_is_shown_the_line_that_defines_failure():
+    fixture = _fixture()
+    audit = assemble_v3_instructions(_request()).stage_contexts.audit.text
+
+    assert f"This piece fails if: {fixture['brief']['fails_if']}" in audit
+
+
+def test_the_audit_prompt_asks_whether_the_draft_walks_into_it():
+    from app.features.prompt2blog.prompts.editorial_v3 import (
+        P2B_V3_QUALITY_AUDIT_PROMPT,
+    )
+
+    prompt = _flat(P2B_V3_QUALITY_AUDIT_PROMPT)
+
+    assert "fails_if_avoided" in prompt
+    assert 'The line under "This piece fails if"' in prompt
+    # Freehand text, so an auditor that cannot apply it must leave it alone
+    # rather than invent a reading.
+    assert "it is not a gate" in prompt

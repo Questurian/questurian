@@ -555,6 +555,13 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
     checks = {
         "audience_match": _safe_bool(checks_raw.get("audience_match"), default=True),
         "tone_match": _safe_bool(checks_raw.get("tone_match"), default=True),
+        # The brief's own definition of failure, judged for the first time.
+        # Deliberately not in HARD_CONSTRAINT_CHECK_KEYS: the line is freehand
+        # and a badly worded one must not be able to block a run. It weighs
+        # through the scores and the revisions the auditor writes beside it.
+        "fails_if_avoided": _safe_bool(
+            checks_raw.get("fails_if_avoided"), default=True
+        ),
     }
 
     # A missing or unparseable score used to default to 6, which sits below the
