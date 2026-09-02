@@ -91,7 +91,25 @@ WRITER_PROVIDER_ENV = "WRITER_PROVIDER"
 # which is the default -- leaves the Gemini path untouched.
 PROVIDER_CLAUDE_CLI = "claude-cli"
 
-CALL_TIMEOUT_SECONDS = 600.0
+# Ten minutes was the edge of what the work takes, not a limit on a hang. The
+# research structure call generates the whole evidence package in one go --
+# 86,892 in and 32,060 out on run b29d66b4 -- and run 86cfad32 hit this limit
+# twice in a row on a smaller plan, eleven questions against fourteen, while a
+# trivial `claude --print` on the same machine answered in five seconds.
+#
+# So the timeout was killing work that was proceeding. It runs in a background
+# task, and the quota breaker and run budget both still bound the spend, so
+# waiting longer on a genuine hang costs less than cutting off a call that
+# would have finished.
+#
+# This does NOT fix #494. The same call then failed at 1200s too, three times
+# in a row, while a structured call with a tiny schema returned in 3.1s on the
+# same machine. So the call at this size does not complete at all today,
+# whatever the limit is set to. Raising it is still right on its own terms --
+# a call measured at ten minutes should not have a ten minute limit -- but the
+# real shape is one request generating 32k tokens, and that wants a leaner
+# record or a split per requirement. A redesign, not a constant.
+CALL_TIMEOUT_SECONDS = 1200.0
 
 # Stable, and outside the repo so no CLAUDE.md, settings file, or skill is
 # discovered. Stable also because a moving working directory would defeat the
