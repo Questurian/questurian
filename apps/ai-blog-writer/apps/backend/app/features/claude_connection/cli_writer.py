@@ -102,9 +102,13 @@ PROVIDER_CLAUDE_CLI = "claude-cli"
 # waiting longer on a genuine hang costs less than cutting off a call that
 # would have finished.
 #
-# This does not make the structure call fast. Generating 32k tokens in one
-# request is the real shape of #494 and wants a leaner record or a split per
-# requirement, which is a redesign rather than a constant.
+# This does NOT fix #494. The same call then failed at 1200s too, three times
+# in a row, while a structured call with a tiny schema returned in 3.1s on the
+# same machine. So the call at this size does not complete at all today,
+# whatever the limit is set to. Raising it is still right on its own terms --
+# a call measured at ten minutes should not have a ten minute limit -- but the
+# real shape is one request generating 32k tokens, and that wants a leaner
+# record or a split per requirement. A redesign, not a constant.
 CALL_TIMEOUT_SECONDS = 1200.0
 
 # Stable, and outside the repo so no CLAUDE.md, settings file, or skill is
