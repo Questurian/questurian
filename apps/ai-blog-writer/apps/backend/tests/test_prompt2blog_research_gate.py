@@ -15,7 +15,9 @@ from app.features.prompt2blog.contracts_v4 import EvidencePackage
 from app.features.prompt2blog.gate_v4 import (
     GateAnswerRefused,
     answer_requirement,
+    mark_nonexistent,
     mark_unpublished,
+    suggested_move,
 )
 
 
@@ -541,3 +543,155 @@ def test_the_pair_stays_bound_to_one_plan():
     assert {r.requirement_id for r in rewritten.requirements} == {
         r.requirement_id for r in settled.requirements
     }
+
+
+# --- the thing the question asked about is not there -----------------------
+#
+# Run a2066506 (2026-09-01) needed this twice in one run. The gate had four
+# verdicts and none of them meant "we looked properly and it is not there", so
+# a question research had fully answered still blocked.
+
+
+def test_nonexistent_settles_it_and_keeps_what_was_found_instead():
+    """Three named 3-star hotels and a Sheraton 1.4 km away are what make
+    "there is no 4-star in the old town" a fact rather than an assertion."""
+    settled = mark_nonexistent(
+        _evidence(),
+        requirement_id="q3",
+        note="No 4-star within five blocks. Nearest is the Sheraton, 1.4 km.",
+    )
+
+    requirement = next(r for r in settled.requirements if r.requirement_id == "q3")
+    assert requirement.status == "nonexistent"
+    assert requirement.claim_ids == ["c10"]
+    assert "Sheraton" in requirement.gap
+
+
+def test_the_gate_accepts_nonexistent_as_answered():
+    from app.features.prompt2blog.contracts_v4 import (
+        Prompt2BlogWorkOrder,
+        WorkOrderReference,
+        WorkOrderRequirement,
+        WorkOrderScope,
+    )
+    from app.features.prompt2blog.coverage_v4 import assess_coverage
+
+    work_order = Prompt2BlogWorkOrder(
+        work_order_fingerprint="wo-1",
+        brief_fingerprint="bf-1",
+        primary_subject="Lima",
+        scope=WorkOrderScope(
+            mode="single_subject",
+            references=[WorkOrderReference(name="Lima", role="primary_subject")],
+        ),
+        requirements=[
+            WorkOrderRequirement(requirement_id="q3", question="Hotels?", kind="load_bearing"),
+            WorkOrderRequirement(requirement_id="q1", question="Visitors?", kind="texture"),
+        ],
+    )
+
+    assert assess_coverage(work_order, _evidence()).can_write is False
+
+    settled = mark_nonexistent(
+        _evidence(), requirement_id="q3", note="There is no such hotel in that radius."
+    )
+    assert assess_coverage(work_order, settled).can_write is True
+
+
+def test_a_search_that_found_nothing_cannot_declare_a_thing_absent():
+    """"We failed to find it" and "it is not there" are opposite outcomes.
+
+    A question with no claims behind it has established the first and not the
+    second, and letting it through here would publish the confusion this
+    verdict exists to end.
+    """
+    evidence = _evidence(
+        requirements=[
+            {
+                "requirement_id": "q3",
+                "status": "missing",
+                "claim_ids": [],
+                "gap": "Nothing relevant came back.",
+            },
+            {"requirement_id": "q1", "status": "supported", "claim_ids": ["c20"]},
+            {"requirement_id": "q5", "status": "supported", "claim_ids": ["c30"]},
+        ],
+        claims=[
+            {
+                "claim_id": "c20",
+                "text": "Comuna 13 drew a documented visitor count.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q1"],
+                "confidence": "high",
+            },
+            {
+                "claim_id": "c30",
+                "text": "The Morro is planted with guadua.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q5"],
+                "confidence": "medium",
+            },
+        ],
+    )
+
+    with pytest.raises(GateAnswerRefused, match="has not established"):
+        mark_nonexistent(evidence, requirement_id="q3", note="Not there.")
+
+
+def test_nonexistent_needs_a_sentence_the_article_can_use():
+    with pytest.raises(GateAnswerRefused, match="what research found instead"):
+        mark_nonexistent(_evidence(), requirement_id="q3", note="   ")
+
+
+def test_the_contract_refuses_a_nonexistent_verdict_with_no_evidence_behind_it():
+    """The guard is in the contract as well as the move, so no other path can
+    file an absence nothing supports."""
+    import pytest as _pytest
+
+    with _pytest.raises(ValueError, match="what is there instead"):
+        EvidencePackage.model_validate(
+            {
+                "work_order_fingerprint": "wo-1",
+                "sources": [],
+                "claims": [],
+                "requirements": [
+                    {
+                        "requirement_id": "q3",
+                        "status": "nonexistent",
+                        "claim_ids": [],
+                        "gap": "Not there.",
+                    }
+                ],
+            }
+        )
+
+
+# --- saying which move fits ------------------------------------------------
+
+
+def test_each_cause_names_the_move_that_fits():
+    """The gate showed four buttons and no indication which was right, while
+    the diagnosis sat unread in the research notes."""
+    assert suggested_move("partial", "not_published")["move"] == "unpublished"
+    assert suggested_move("partial", "does_not_exist")["move"] == "nonexistent"
+    assert suggested_move("partial", "question_too_precise")["move"] == "answer"
+    assert suggested_move("partial", "answered_something_else")["move"] == "reask"
+    assert suggested_move("missing", "nothing_found")["move"] == "answer"
+
+
+def test_the_reason_is_written_for_the_person_deciding():
+    suggestion = suggested_move("partial", "does_not_exist")
+
+    assert "not there" in suggestion["why"]
+    # Not an id, a status name, or a field name.
+    assert "requirement" not in suggestion["why"].lower()
+
+
+def test_a_run_recorded_before_causes_existed_gets_no_suggestion():
+    """Rather than a confident wrong one. The screen then shows what it always
+    showed."""
+    assert suggested_move("partial", "unknown") is None
+
+
+def test_an_answered_question_is_never_given_a_move():
+    assert suggested_move("supported", "not_published") is None

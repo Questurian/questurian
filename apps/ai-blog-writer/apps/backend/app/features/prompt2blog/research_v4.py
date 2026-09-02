@@ -37,6 +37,7 @@ from .contracts_v4 import (
     EvidenceMaterialType,
     PremiseVerdict,
     EvidenceRequirementStatus,
+    EvidenceShortfallCause,
     EvidenceSourceType,
     EvidencePackage,
     Prompt2BlogWorkOrder,
@@ -88,7 +89,9 @@ EVIDENCE_CLAIM_FIELDS = frozenset(
         "venue_dismissed",
     }
 )
-EVIDENCE_REQUIREMENT_FIELDS = frozenset({"requirement_id", "status", "claim_ids", "gap"})
+EVIDENCE_REQUIREMENT_FIELDS = frozenset(
+    {"requirement_id", "status", "claim_ids", "gap", "cause"}
+)
 EVIDENCE_FINDING_FIELDS = frozenset({"assumption_id", "verdict", "basis", "claim_ids"})
 EVIDENCE_CONFLICT_FIELDS = frozenset({"conflict_id", "claim_ids", "summary", "resolution"})
 EVIDENCE_GAP_FIELDS = frozenset({"gap_id", "requirement_ids", "summary"})
@@ -241,6 +244,13 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
                 **_only(row, EVIDENCE_REQUIREMENT_FIELDS),
                 "requirement_id": requirement_id,
                 "status": status,
+                # A cause we cannot read is `unknown`, which the gate treats as
+                # "no suggestion" rather than as a wrong one.
+                "cause": _one_of(
+                    _first(row, "cause", "shortfall_cause", "reason"),
+                    EvidenceShortfallCause,
+                    "unknown",
+                ),
                 # The contract insists an unsettled question describes its gap,
                 # and a status we had to guess at has one by definition.
                 "gap": ""
@@ -460,6 +470,10 @@ EVIDENCE_SCHEMA = require_non_empty({
                     },
                     "claim_ids": {"type": "array", "items": {"type": "string"}},
                     "gap": {"type": "string"},
+                    "cause": {
+                        "type": "string",
+                        "enum": list(get_args(EvidenceShortfallCause)),
+                    },
                 },
                 "required": ["requirement_id", "status"],
             },
@@ -660,6 +674,20 @@ Rules:
   Use `unpublished` when the notes establish that nobody publishes the answer,
   and say where was checked in `gap`. That is different from not having looked.
 - Anything with a status other than `supported` must describe the gap.
+- On anything other than `supported`, set `cause` to why you fell short. A
+  person reads this to decide what to do about it, so pick the one that is
+  actually true rather than the one that sounds least like a failure:
+  - `not_published` -- you checked a source and it does not print the figure.
+  - `does_not_exist` -- the thing the question assumes exists is not there, and
+    you can say what is there instead. "No genuine 4-star hotel within five
+    blocks; the nearest is the Sheraton at 1.4 km" is this. Only use it when
+    your claims show what you found instead. If you simply did not find
+    anything, that is `nothing_found`, not this.
+  - `question_too_precise` -- you found near-miss figures but not the exact one
+    the question demanded, because nobody publishes it to that precision.
+  - `answered_something_else` -- what came back is about a different place,
+    period or subject than was asked.
+  - `nothing_found` -- nothing relevant came back at all.
 - Record a `premise_findings` verdict for every assumption above: `confirmed`,
   `refuted`, or `unverified`, with the basis.
 - Where the notes say sources disagree, record a conflict rather than picking
