@@ -264,6 +264,21 @@ with nothing checking it.
 
 Any figure you write must already appear in the article or in the dossier. A
 note carrying a number from neither will be thrown away.
+
+WHAT AN ABSENCE IS FOR
+
+Some claims in the dossier record what the research could not establish: that
+nobody publishes a figure, that a list does not exist, that a price is not
+posted anywhere. Those are internal. They never become a reader-facing
+sentence, and an article that leaves them out has done the right thing rather
+than missed something.
+
+Never ask for one to be stated. "State clearly that repeated searches returned
+no official published ranking" is not an edit anyone may make: the house rules
+refuse a sentence that announces what the research could not find, so an
+operator who followed it would write a sentence the pipeline rejects. If an
+absence matters, the item is to cut or rewrite whatever the article built on
+top of it, in terms of what the article does know.
 """
 
 

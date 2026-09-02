@@ -427,6 +427,52 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     return verdict
 
 
+def _strike_must_name(
+    run_id: str, services: IntakeServices, names: list[str]
+) -> ArticleBrief:
+    """Drop an obligation research has just proved cannot be met.
+
+    Run b29d66b4 asked for the shortlist to be cross-checked against "Lima's
+    municipal ranking of cevicherias". Research settled it: the ranking does
+    not exist. `must_name` still carried it, the article named it anyway, and
+    `must_include_covered` scored true -- the check rewarding the piece for
+    naming a thing the run had established is not real.
+
+    The operator says which entries to strike. No matcher tries to guess which
+    `must_name` line a dead question corresponds to: that matcher would be
+    wrong in both directions and would need its own repair later.
+
+    `brief_fingerprint` is deliberately left alone. It binds the work order and
+    the evidence to the brief they were derived from, and re-deriving it here
+    would break both bindings over an operator edit. `omit_requirement` makes
+    the same choice when it trims a work order, for the same reason.
+    """
+    brief = load_brief(run_id)
+    unwanted = {name.strip().casefold() for name in names if name.strip()}
+    kept = [item for item in brief.must_name if item.casefold() not in unwanted]
+    if len(kept) == len(brief.must_name):
+        raise GateAnswerRefused(
+            "None of those are on the brief's must-name list."
+        )
+    struck = brief.model_copy(update={"must_name": kept})
+    logger.info(
+        "Operator struck must_name %s at the research gate",
+        sorted(unwanted),
+        extra={"run_id": run_id},
+    )
+    _record(
+        services,
+        run_id,
+        BRIEF_STAGE,
+        {
+            **brief_stage_record(struck),
+            "struck_must_name": sorted(unwanted),
+            STATE_KEY: json.loads(struck.model_dump_json()),
+        },
+    )
+    return struck
+
+
 def settle_gate(
     run_id: str,
     services: IntakeServices,
@@ -436,6 +482,7 @@ def settle_gate(
     source_url: str | None = None,
     unpublished_note: str | None = None,
     nonexistent_note: str | None = None,
+    strike_must_name: list[str] | None = None,
     omit: bool = False,
 ) -> CoverageVerdict:
     """Settle one blocking question without re-buying the research.
@@ -452,6 +499,9 @@ def settle_gate(
     work_order = load_work_order(run_id)
     evidence = load_evidence(run_id)
     notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
+
+    if strike_must_name:
+        _strike_must_name(run_id, services, strike_must_name)
 
     if omit:
         evidence, work_order, cost = omit_requirement(
@@ -666,6 +716,7 @@ def blocking_questions(run_id: str) -> list[dict[str, Any]]:
     """
     work_order = load_work_order(run_id)
     evidence = load_evidence(run_id)
+    brief = load_brief(run_id)
     verdict = assess_coverage(work_order, evidence)
     if verdict.can_write:
         return []
@@ -703,6 +754,17 @@ def blocking_questions(run_id: str) -> list[dict[str, Any]]:
                     for claim_id in (record.claim_ids if record else [])
                     if claim_id in claims
                 ],
+                # A question that came back `nonexistent` may have a matching
+                # obligation on the brief. b29d66b4 proved a municipal ranking
+                # does not exist and then named it in the article anyway,
+                # because `must_name` still said to. The operator is the one
+                # who can say which line that is, so they are shown the list
+                # rather than a guess at it.
+                "must_name": (
+                    list(brief.must_name)
+                    if (record and record.status == "nonexistent")
+                    else []
+                ),
             }
         )
     return blocking

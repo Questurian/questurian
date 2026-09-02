@@ -111,7 +111,10 @@ rather than leaving it blank.
 - `outcome` is what the reader should do or decide afterwards.
 - `fails_if` is what would make this a failure, taken from what they said, not
   invented. This is the line the finished article gets judged against.
-- `must_name` is only what the piece genuinely has to mention.
+- `must_name` is only what the piece genuinely has to mention, and it is a
+  list: one name per entry, never several in one string separated by commas.
+  A single entry reading "Surquillo market, Miraflores, the municipal ranking"
+  is three obligations the system can then only measure as one.
 - `material` is what they personally have. For each entry, `quoted_answer` must
   be an EXACT copy of one of their answers above -- do not summarise, tidy or
   merge. `kind` is firsthand, interview, or research.

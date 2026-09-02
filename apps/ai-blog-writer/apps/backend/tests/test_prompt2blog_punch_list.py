@@ -431,3 +431,42 @@ def test_the_list_is_read_under_its_other_names_too():
 def test_a_payload_with_nothing_usable_in_it_is_simply_empty():
     assert _run({"summary": "the article is fine"})["items"] == []
 
+
+
+# --- an absence is not a sentence ------------------------------------------
+#
+# Run b29d66b4's punch list said: "State clearly that repeated searches
+# returned no official published municipal ranking of cevicherias." That is
+# the exact sentence `_research_meta` in the anti-AI validator refuses, and
+# the evidence disposition policy forbids twice over. An operator who followed
+# the note would have written a sentence the pipeline rejects.
+
+
+def test_the_punch_list_may_not_ask_for_a_research_absence_to_be_stated():
+    prompt = build_punch_list_prompt(
+        brief=_brief(),
+        title="t",
+        article_markdown=ARTICLE,
+        evidence=_evidence(),
+        unused=[],
+    )
+    flat = " ".join(prompt.split())
+
+    assert "WHAT AN ABSENCE IS FOR" in prompt
+    assert "Never ask for one to be stated" in flat
+    # The offending note quoted back, so nobody re-adds the behaviour.
+    assert "repeated searches returned no official published ranking" in flat
+
+
+def test_an_article_that_leaves_an_absence_out_has_done_the_right_thing():
+    prompt = " ".join(
+        build_punch_list_prompt(
+            brief=_brief(),
+            title="t",
+            article_markdown=ARTICLE,
+            evidence=_evidence(),
+            unused=[],
+        ).split()
+    )
+
+    assert "has done the right thing rather than missed something" in prompt
