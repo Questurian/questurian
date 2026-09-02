@@ -7,7 +7,9 @@ from app.shared.provider_faults import is_fatal_provider_fault
 
 from ...config import P2B_V3_OUTLINE_MODEL
 from ...content.outline_v3 import (
+    drop_context_only_sections,
     format_v3_outline_for_prompt,
+    outline_focus_only,
     sanitize_v3_outline,
     validate_v3_outline,
 )
@@ -55,6 +57,8 @@ def run_v3_outline_stage(
     outline = dict(EMPTY_OUTLINE)
     diagnostics: dict[str, Any] = {}
     accepted = False
+    repaired = False
+    dropped_headings: list[str] = []
     raw_response = ""
     outline_model = state.get("outline_model", P2B_V3_OUTLINE_MODEL)
 
@@ -85,9 +89,50 @@ def run_v3_outline_stage(
         if accepted:
             outline = candidate
         else:
-            logger.warning(
-                "Prompt2Blog v3 outline rejected for run %s: %s", run_id, diagnostics
-            )
+            # One failed check used to delete the whole plan. Repair what can
+            # be repaired first: a context-only heading is fixed by dropping
+            # that section, which is what the check wanted, and leaves the
+            # sections that passed intact.
+            headings = diagnostics.get("context_only_headings") or []
+            if headings:
+                repaired_candidate = drop_context_only_sections(candidate, headings)
+                repaired_accepted, repaired_diagnostics = validate_v3_outline(
+                    repaired_candidate,
+                    work_order=state["work_order"],
+                    claim_ids={claim["claim_id"] for claim in evidence["claims"]},
+                    requirement_ids={
+                        requirement["requirement_id"]
+                        for requirement in evidence["requirements"]
+                    },
+                    target_word_count=target_word_count,
+                )
+                if repaired_accepted:
+                    logger.warning(
+                        "Prompt2Blog v3 outline repaired for run %s by dropping "
+                        "context-only sections %s",
+                        run_id,
+                        headings,
+                    )
+                    accepted = True
+                    repaired = True
+                    dropped_headings = list(headings)
+                    outline = repaired_candidate
+                    diagnostics = {
+                        **repaired_diagnostics,
+                        "repaired": True,
+                        "dropped_headings": dropped_headings,
+                        "original_checks": diagnostics,
+                    }
+            if not accepted:
+                # Still unusable as a plan. The answer and the takeaway are
+                # separately valid and are the most useful lines the stage
+                # produces, so they travel even when the sections cannot.
+                outline = outline_focus_only(candidate)
+                logger.warning(
+                    "Prompt2Blog v3 outline rejected for run %s: %s",
+                    run_id,
+                    diagnostics,
+                )
         _append_stage_trace(
             state["trace"],
             state["include_debug"],
@@ -117,6 +162,10 @@ def run_v3_outline_stage(
         {
             "outline": outline,
             "accepted": accepted,
+            # A plan that needed repair is a signal about the outline model
+            # worth reading later, not something to bury in a log line.
+            "repaired": repaired,
+            "dropped_headings": dropped_headings,
             "checks": diagnostics,
             "raw_response": raw_response,
         },

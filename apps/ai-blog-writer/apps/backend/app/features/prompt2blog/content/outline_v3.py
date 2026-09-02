@@ -181,14 +181,87 @@ def validate_v3_outline(
     return all(checks.values()), diagnostics
 
 
+def drop_context_only_sections(
+    outline: dict[str, Any], headings: list[str]
+) -> dict[str, Any]:
+    """Remove the sections a context-only place was organising, keep the rest.
+
+    Rejecting the whole plan for one bad heading was throwing away six good
+    sections to stop one, and it did not even stop it: run b29d66b4 lost its
+    entire outline over a single heading about a ranking that does not exist,
+    wrote its article with no plan, and discussed the ranking anyway. Dropping
+    the section is what the check actually wanted -- that section never reaches
+    compose -- and it costs nothing and asks no model.
+
+    The dropped word budget is spread across what remains, or the repaired plan
+    would fail `within_word_budget` for the crime of being repaired.
+    """
+    unwanted = {heading.casefold() for heading in headings}
+    kept = [
+        section
+        for section in outline.get("sections") or []
+        if section["heading"].casefold() not in unwanted
+    ]
+    if not kept:
+        return {**outline, "sections": []}
+
+    dropped_words = sum(
+        _safe_int(section.get("target_words"), default=0)
+        for section in outline.get("sections") or []
+        if section["heading"].casefold() in unwanted
+    )
+    share, remainder = divmod(dropped_words, len(kept))
+    repaired = []
+    for index, section in enumerate(kept):
+        extra = share + (1 if index < remainder else 0)
+        repaired.append(
+            {
+                **section,
+                "target_words": _safe_int(section.get("target_words"), default=0)
+                + extra,
+            }
+        )
+    return {**outline, "sections": repaired}
+
+
+def outline_focus_only(outline: dict[str, Any]) -> dict[str, Any]:
+    """What survives when the sections cannot be used.
+
+    `direct_answer_focus` and `takeaway_focus` are separately valid and are the
+    most valuable lines the outline produces -- b29d66b4's named the one stall
+    to send the reader to, with its survival caveat, and it was deleted along
+    with the sections over an unrelated heading. A bad heading is not a reason
+    to throw away the answer.
+    """
+    return {
+        "working_title": _safe_str(outline.get("working_title")),
+        "direct_answer_focus": _safe_str(outline.get("direct_answer_focus")),
+        "sections": [],
+        "takeaway_focus": _safe_str(outline.get("takeaway_focus")),
+        "brief_alignment": "Brief alignment not stated.",
+        "unsupported_requirements": [],
+    }
+
+
 def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
     """Render a validated plan as the section brief compose writes against."""
     sections = outline.get("sections") or []
     if not sections:
-        return (
-            "No outline was produced. Structure the article from the approved "
-            "brief and the evidence records only."
+        # A plan whose sections were unusable can still carry the answer and
+        # the takeaway. Handing compose nothing at all is how b29d66b4 came
+        # back at 502 words against an 800 floor.
+        focus = _safe_str(outline.get("direct_answer_focus"))
+        takeaway = _safe_str(outline.get("takeaway_focus"))
+        salvaged = []
+        if focus:
+            salvaged.append(f"Direct answer near the top should cover: {focus}")
+        if takeaway:
+            salvaged.append(f"The takeaways should land: {takeaway}")
+        opening = (
+            "No usable section plan was produced. Structure the article from "
+            "the approved brief and the evidence records only."
         )
+        return "\n\n".join([opening, *salvaged])
 
     lines: list[str] = []
     direct_answer = _safe_str(outline.get("direct_answer_focus"))
