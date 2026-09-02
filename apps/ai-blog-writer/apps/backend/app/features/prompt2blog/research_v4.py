@@ -26,6 +26,7 @@ import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
+import re
 from datetime import date
 from typing import Any, Callable, get_args
 
@@ -160,6 +161,66 @@ def _rows(payload: dict[str, Any], *names: str) -> list[dict[str, Any]]:
     return [_safe_dict(item) for item in value] if isinstance(value, list) else []
 
 
+def _source_id_for(row: dict[str, Any]) -> str:
+    """A stable id for a source the model described but never named.
+
+    Derived from what it did give -- publisher, then title -- so the same
+    publisher cited by six claims becomes one source rather than six.
+    """
+    label = _safe_str(_first(row, "publisher", "site", "title", "name"))
+    if not label:
+        return ""
+    slug = re.sub(r"[^a-z0-9]+", "_", label.casefold()).strip("_")
+    return f"s_{slug}"[:60] if slug else ""
+
+
+def _sources_inside_claims(
+    payload: dict[str, Any],
+) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
+    """Sources the model nested inside each claim instead of listing at the top.
+
+    Run 849ae5aa (2026-09-01) returned thirteen claims, each carrying its
+    sources as objects -- publisher, source_type, material_type -- and no
+    top-level `sources` array at all. Every claim therefore cited nothing the
+    parser could resolve, all thirteen were dropped as unusable, and twelve
+    answered questions arrived at the gate reading "its supporting claims could
+    not be used". The dossier was complete. It was shaped differently.
+
+    So the sources are lifted out and given ids, and each claim is handed the
+    ids of its own. Same principle as every other repair here: a schema exists
+    so the model knows what to send, not so the parser can reject what arrived.
+    """
+    harvested: dict[str, dict[str, Any]] = {}
+    by_claim: dict[str, list[str]] = {}
+    for row in _rows(payload, "claims"):
+        claim_id = _safe_str(_first(row, "claim_id", "id"))
+        if not claim_id:
+            continue
+        for entry in _first(row, "sources", "source_ids") or []:
+            if not isinstance(entry, dict):
+                continue
+            record = _safe_dict(entry)
+            source_id = _safe_str(_first(record, "source_id", "id")) or _source_id_for(
+                record
+            )
+            if not source_id:
+                continue
+            harvested.setdefault(
+                source_id,
+                {
+                    **record,
+                    "source_id": source_id,
+                    "title": _safe_str(_first(record, "title", "name"))
+                    or _safe_str(_first(record, "publisher", "site"))
+                    or source_id,
+                },
+            )
+            ids = by_claim.setdefault(claim_id, [])
+            if source_id not in ids:
+                ids.append(source_id)
+    return list(harvested.values()), by_claim
+
+
 def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
     """Take the dossier the model sent, whatever it named things.
 
@@ -179,9 +240,11 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
     unioned and written back consistently, so the contract is satisfied by
     construction and keeps its guarantee.
     """
+    embedded, embedded_by_claim = _sources_inside_claims(payload)
     sources: list[dict[str, Any]] = []
     seen_sources: set[str] = set()
-    for row in _rows(payload, "sources"):
+    # Declared first, so a top-level entry wins over one lifted out of a claim.
+    for row in [*_rows(payload, "sources"), *embedded]:
         source_id = _safe_str(_first(row, "source_id", "id"))
         if not source_id or source_id in seen_sources:
             continue
@@ -191,9 +254,15 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
                 **_only(row, EVIDENCE_SOURCE_FIELDS),
                 "source_id": source_id,
                 "title": _safe_str(_first(row, "title", "name")) or source_id,
+                # Today when the model gave nothing, which is not a guess:
+                # these pages were read during this run. Run 849ae5aa
+                # (2026-09-01) came back with eleven sources and not one
+                # retrieval date, and the whole dossier was refused over a
+                # field the parser was in a position to know.
                 "retrieved_at": _as_date(
                     _first(row, "retrieved_at", "retrieved", "accessed_at")
-                ),
+                )
+                or date.today().isoformat(),
                 "published_at": _as_date(_first(row, "published_at", "published"))
                 or None,
                 # Both vocabularies carry an "other" member, which is what
@@ -226,7 +295,13 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
                     _safe_str(row.get("url")),
                     _safe_str(_first(row, "publisher", "site")),
                 ),
-                "notes": _id_list(row, "notes"),
+                # The contract wants every source to carry a note, and the
+                # same run returned eleven sources with none. Said plainly
+                # rather than invented: a sentence about what the record does
+                # not contain is honest, and a sentence about the world would
+                # not be.
+                "notes": _id_list(row, "notes")
+                or ["No note recorded for this source."],
             }
         )
 
@@ -244,6 +319,13 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
                 **_only(row, EVIDENCE_REQUIREMENT_FIELDS),
                 "requirement_id": requirement_id,
                 "status": status,
+                # Read under its aliases here, because the union below reads
+                # this dict and not the raw row -- and the field allowlist has
+                # already stripped whatever the model called it. Run 849ae5aa
+                # said `claims`, so every question arrived linked to nothing,
+                # every claim was dropped for answering nothing, and a complete
+                # dossier reached the gate with twelve empty questions.
+                "claim_ids": _id_list(row, "claim_ids", "claims"),
                 # A cause we cannot read is `unknown`, which the gate treats as
                 # "no suggestion" rather than as a wrong one.
                 "cause": _one_of(
@@ -272,9 +354,19 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
                 **_only(row, EVIDENCE_CLAIM_FIELDS),
                 "claim_id": claim_id,
                 "text": text,
+                # Declared ids first, and the ones minted from this claim's
+                # own nested sources when none of the declared ones resolve --
+                # a claim citing "s1" against a dossier that never listed a
+                # top-level source has told us nothing, while the objects
+                # hanging off it name a real publisher.
                 "source_ids": [
                     item
                     for item in _id_list(row, "source_ids", "sources")
+                    if item in seen_sources
+                ]
+                or [
+                    item
+                    for item in embedded_by_claim.get(claim_id, [])
                     if item in seen_sources
                 ],
                 "requirement_ids": [
