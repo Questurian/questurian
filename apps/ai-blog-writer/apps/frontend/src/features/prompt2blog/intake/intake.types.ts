@@ -70,6 +70,17 @@ export interface IntakeRequirement {
   requirement_id: string
   question: string
   kind: 'load_bearing' | 'texture'
+  /**
+   * How exact the article needs this. `exact` for a figure a reader acts on,
+   * `approximate` for one they only need the size of.
+   */
+  precision: 'exact' | 'approximate'
+  /**
+   * Set when the question reads as two questions bundled into one. Advisory —
+   * whether two clauses have two answers is a judgement, and the operator is
+   * the one who can tell.
+   */
+  bundled_note: string
 }
 
 export interface IntakeWorkOrder {

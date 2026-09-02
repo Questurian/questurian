@@ -26,6 +26,7 @@ from typing import Any, get_args
 
 from .contracts_v4 import (
     ReferenceRole,
+    RequirementPrecision,
     ArticleBrief,
     Prompt2BlogWorkOrder,
     WorkOrderAssumption,
@@ -95,6 +96,10 @@ WORK_ORDER_SCHEMA = require_non_empty({
                     "requirement_id": {"type": "string"},
                     "question": {"type": "string"},
                     "kind": {"type": "string"},
+                    "precision": {
+                        "type": "string",
+                        "enum": list(get_args(RequirementPrecision)),
+                    },
                     "assumption_ids": {"type": "array", "items": {"type": "string"}},
                 },
                 "required": ["requirement_id", "question", "kind"],
@@ -154,6 +159,21 @@ Rules:
 - Each question must be separately checkable by someone with a search engine.
   "Is Lima good value?" is not a question; "What does a one-bedroom in
   Miraflores rent for, and as of when?" is.
+- One question, one fact. If a question has two separate answers, it gets two
+  ids. "What is the travel time in minutes and the current fare in PEN?" is two
+  questions, and asking it as one holds the answered half hostage to the
+  unanswered half -- the fare is published and the journey time is not, and
+  that question can only come back half right. A question that asks a value and
+  the date it was true is still one question; a question that asks for two
+  different values is not.
+- Set `precision` to what the ARTICLE needs, not to what sounds rigorous.
+  `exact` when a reader acts on the number: a fare they hand over in coins, an
+  opening time they turn up for, an address. `approximate` when a reader only
+  needs the size of the thing: how long a bus takes, how many places are in a
+  district, how far something is. Asking for "the exact travel time in minutes"
+  on a route nobody times produces a question that cannot be answered however
+  good the research is, and blocks a run over a number no reader wanted.
+  `exact` is the default, so mark the ones that do not need it.
 - Every question names its place unambiguously. Whoever answers it sees the
   question and little else, so a neighbourhood or district that shares its name
   with somewhere else carries the city and country: "the Buenos Aires
@@ -170,6 +190,18 @@ Rules:
   with the questions that rest on it listing its id. An assumption nobody wrote
   down cannot be refuted later, and that is how a run dies five unanswerable
   questions in.
+- A question that takes something for granted is assuming it. "What are the
+  names and rates of three 4-star hotels within five blocks of the Plaza
+  Mayor?" assumes 4-star hotels are there; "how many listings does Booking.com
+  show for Miraflores?" assumes Booking.com publishes that. When the assumption
+  turns out to be false the question cannot be satisfied however good the
+  research is, and a good answer gets recorded as a failure.
+  So write the question so it survives being wrong, and declare what it assumed:
+  "the best-rated hotels within five blocks of the Plaza Mayor, with their
+  ratings and rates", assuming "hotels rated 4-star or better exist within five
+  blocks of the Plaza Mayor". A false premise then comes back as a refuted
+  premise, which is a finding, instead of as a failed question, which is a dead
+  end.
 - `references` must list every place the plan touches, and must include the
   subject itself. Roles are exactly `primary_subject`, `context_only` and
   `comparator`. Exactly one entry is the `primary_subject` -- that is the thing
@@ -315,6 +347,11 @@ def _requirements_from(
         assumption_ids = _safe_str_list(
             _first(record, "assumption_ids", "premise_ids", "premises")
         )
+        # A precision we cannot read is `exact`, which is how every question
+        # behaved before this field existed. Loosening has to be deliberate.
+        precision = _safe_str(_first(record, "precision", "exactness"))
+        if precision not in set(get_args(RequirementPrecision)):
+            precision = "exact"
         requirements.append(
             WorkOrderRequirement(
                 requirement_id=_safe_str(
@@ -323,6 +360,7 @@ def _requirements_from(
                 or f"r{len(requirements) + 1}",
                 question=question,
                 kind=kind,
+                precision=precision,
                 # A reference to an assumption nobody declared is dropped
                 # rather than fatal: the question is still worth asking, and
                 # the contract refuses a dangling id.
@@ -511,6 +549,73 @@ def cut_work_order(
     )
 
 
+# Words that name a thing with its own answer. Two of them on opposite sides of
+# an "and" is the shape of a question that will come back half right.
+#
+# Deliberately does not include a date or an "as of when", because "What does a
+# one-bedroom in Miraflores rent for, and as of when?" is one question -- a
+# value and the date it was true always travel together, and that phrasing is
+# the model answer in the prompt above.
+_MEASURED_THINGS = (
+    "fare",
+    "price",
+    "cost",
+    "rate",
+    "rent",
+    "time",
+    "minutes",
+    "hours",
+    "duration",
+    "distance",
+    "kilometres",
+    "kilometers",
+    "miles",
+    "temperature",
+    "population",
+    "altitude",
+    "elevation",
+    "capacity",
+    "count",
+    "number of",
+    "how many",
+    "how long",
+    "how far",
+    "how much",
+)
+
+
+def bundled_question_note(question: str) -> str:
+    """Say when a question looks like two, without refusing it.
+
+    Run a2066506 asked for "the exact travel time in minutes AND the current
+    fare in PEN". The fare is published; the journey time is not. One question,
+    two facts, one status -- so the answered half was held hostage by the
+    unanswered half, and the operator had to settle a question that was already
+    half correct.
+
+    Advisory, and it stays advisory. Whether two clauses have two answers is a
+    judgement, and a check that refused a plan on a heuristic would reject good
+    questions in a stage the operator is already reading line by line. They can
+    strike this one and add two, which is the move the screen already offers.
+    """
+    lowered = question.casefold()
+    halves = lowered.split(" and ")
+    if len(halves) < 2:
+        return ""
+    measured = [
+        half
+        for half in halves
+        if any(thing in half for thing in _MEASURED_THINGS)
+    ]
+    if len(measured) < 2:
+        return ""
+    return (
+        "This asks for two things at once. One of them may be published and the "
+        "other not, and a single question can only come back one way -- strike "
+        "it and add the two halves separately."
+    )
+
+
 def work_order_stage_record(
     work_order: Prompt2BlogWorkOrder,
     warnings: list[str] | None = None,
@@ -525,6 +630,11 @@ def work_order_stage_record(
                 "requirement_id": item.requirement_id,
                 "question": item.question,
                 "kind": item.kind,
+                "precision": item.precision,
+                # Empty for a question that reads as one. Shown beside the
+                # question rather than counted, because the operator is the one
+                # who can tell.
+                "bundled_note": bundled_question_note(item.question),
             }
             for item in work_order.requirements
         ],

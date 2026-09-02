@@ -426,6 +426,20 @@
 
 /* Said once, after the fact. Not a warning to acknowledge — the cut already
    happened. */
+/*
+ * A question that looks like two, said beside the question rather than in the
+ * warnings block at the foot. It is about this line, and it is advisory: the
+ * operator strikes it and adds two if they agree.
+ */
+.p2b-question-note {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  border-left: 2px solid var(--accent);
+  padding-left: var(--space-3);
+}
+
 .p2b-cut-warnings {
   margin: var(--space-4) 0 0;
   padding: var(--space-4) var(--space-5);
