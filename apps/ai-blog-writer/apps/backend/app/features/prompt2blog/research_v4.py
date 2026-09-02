@@ -45,6 +45,7 @@ from .contracts_v4 import (
     WorkOrderRequirement,
 )
 from .config import P2B_V4_GATHER_CONCURRENCY
+from .evidence_conflicts import record_numeric_conflicts
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
 
@@ -821,7 +822,18 @@ Rules:
 - Record a `premise_findings` verdict for every assumption above: `confirmed`,
   `refuted`, or `unverified`, with the basis.
 - Where the notes say sources disagree, record a conflict rather than picking
-  silently.
+  silently. The notes rarely use the word "conflict". A section headed
+  "Discrepancies", a figure called an outlier, a sentence saying one source is
+  inconsistent with the others, or two numbers you are about to write into two
+  claims that do not agree -- each of those is a conflict, and each has to be
+  recorded as one. Two claims answering the same question with figures that
+  disagree, and no conflict naming them, is the failure this is here to stop.
+- Where the notes weigh the disagreement and say which figure to prefer, put
+  that in the conflict's `resolution`, in their reasoning. A conflict recorded
+  without it leaves the writer choosing between two numbers with nothing to
+  choose on. Leave `resolution` empty when the notes do not settle it: an
+  unresolved conflict is a question for a person, and inventing a resolution
+  takes it away from them.
 - Keep the interesting detail. A note that puts a reader somewhere belongs in a
   claim as much as a price does; do not drop it for not being a number.
 """
@@ -956,7 +968,10 @@ def structure_research(
     payload["schema_version"] = 4
     payload["work_order_fingerprint"] = work_order.work_order_fingerprint
     try:
-        return EvidencePackage.model_validate(payload)
+        # The prompt asks for conflicts and the Lima run did not record the
+        # one its own notes had named. The comparison below is the half of
+        # that a model cannot forget to do.
+        return record_numeric_conflicts(EvidencePackage.model_validate(payload))
     except ValidationError as error:
         raise ResearchUnusable(
             "; ".join(
