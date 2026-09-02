@@ -3,6 +3,7 @@ from app.shared.text import (
     enforce_anti_ai_tells_markdown,
     normalize_dashes,
     normalize_dashes_markdown,
+    strip_prompt_delimiters,
     validate_anti_ai_tells_markdown,
 )
 
@@ -320,3 +321,79 @@ class TestResearchMetaIsNotReaderFacing:
         )
         assert "reports on the research by deleting it" in prompt
         assert "Never soften it" in prompt
+
+
+# --- prompt delimiters that came back with the article ---------------------
+#
+# Run 849ae5aa shipped a `ready_for_staging` article whose body was wrapped in
+# the literal `<<<CONTENT>>>` and `<<<END_CONTENT>>>` lines the repair prompt
+# had shown it. Nothing stripped them and nothing looked for them.
+
+
+WRAPPED = "<<<CONTENT>>>\nThe room has six tables.\n<<<END_CONTENT>>>"
+
+
+def test_a_prompt_delimiter_in_the_output_fails_validation():
+    result = validate_anti_ai_tells_markdown(WRAPPED)
+
+    assert not result.valid
+    assert any("prompt delimiter left in the output" in error for error in result.errors)
+    assert any("<<<CONTENT>>>" in error for error in result.errors)
+
+
+def test_stripping_returns_what_it_removed():
+    cleaned, found = strip_prompt_delimiters(WRAPPED)
+
+    assert cleaned == "The room has six tables."
+    assert found == ["<<<CONTENT>>>", "<<<END_CONTENT>>>"]
+
+
+def test_stripping_leaves_ordinary_prose_alone():
+    text = "The room has six tables.\n\nBook before noon."
+
+    assert strip_prompt_delimiters(text) == (text, [])
+
+
+def test_an_angle_bracketed_phrase_inside_a_sentence_is_not_a_delimiter():
+    # The rule is a whole line that is only a marker. A sentence that happens
+    # to contain one is prose with a typo in it, not a wrapper.
+    text = "The sign reads <<<CONTENT>>> and nobody knows why."
+
+    assert strip_prompt_delimiters(text) == (text, [])
+
+
+def test_a_repair_that_echoes_the_wrapper_never_ships_it():
+    result = enforce_anti_ai_tells_markdown(
+        "The room is small — barely six tables.",
+        repair=lambda _prompt: WRAPPED,
+        context="test",
+    )
+
+    assert result == "The room has six tables."
+
+
+def test_a_repair_that_echoes_the_wrapper_and_stays_dirty_is_discarded():
+    # Stripping alone would hand back a repair that ignored its instructions
+    # and call it a success. The original is at least uncorrupted.
+    original = "The room is small — barely six tables."
+
+    result = enforce_anti_ai_tells_markdown(
+        original,
+        repair=lambda _prompt: "<<<CONTENT>>>\nStill dirty — no rewrite.\n<<<END_CONTENT>>>",
+        context="test",
+    )
+
+    assert result == original
+
+
+def test_the_echoed_wrapper_is_logged_even_when_the_repair_is_kept(caplog):
+    import logging
+
+    with caplog.at_level(logging.WARNING):
+        enforce_anti_ai_tells_markdown(
+            "The room is small — barely six tables.",
+            repair=lambda _prompt: WRAPPED,
+            context="test",
+        )
+
+    assert "echoed its prompt wrapper" in caplog.text

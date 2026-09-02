@@ -299,6 +299,29 @@ def _iter_markdown_prose_lines(text: str) -> list[tuple[int, str]]:
     return prose_lines
 
 
+# A prompt wrapper the model handed back with the article still inside it.
+# `build_anti_ai_repair_prompt` shows the draft between `<<<CONTENT>>>` and
+# `<<<END_CONTENT>>>`; run 849ae5aa shipped both lines to staging, wrapping
+# the whole body, because nothing stripped them and nothing looked for them.
+# The pattern is deliberately generic: every prompt in this codebase that
+# frames its input uses the same `<<<NAME>>>` on its own line.
+_PROMPT_DELIMITER_LINE = re.compile(
+    r"^[ \t]*<<<[^<>\n]{1,64}>>>[ \t]*\n?", re.MULTILINE
+)
+
+
+def strip_prompt_delimiters(text: str) -> tuple[str, list[str]]:
+    """Remove whole-line prompt wrappers, and say what was removed.
+
+    Returns the cleaned text and the markers found, so a caller can decide
+    what an echoed wrapper means rather than only quietly deleting it.
+    """
+    found = [match.group(0).strip() for match in _PROMPT_DELIMITER_LINE.finditer(text)]
+    if not found:
+        return text, []
+    return _PROMPT_DELIMITER_LINE.sub("", text).strip(), found
+
+
 def _has_non_numeric_en_dash(line: str) -> bool:
     for match in re.finditer("–", line):
         before = line[: match.start()].rstrip()
@@ -318,6 +341,12 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
     """
     errors: list[str] = []
     for line_number, line in _iter_markdown_prose_lines(text):
+        if _PROMPT_DELIMITER_LINE.match(line):
+            errors.append(
+                f"Line {line_number}: prompt delimiter left in the output: "
+                f"{line.strip()}"
+            )
+            continue
         if "—" in line:
             errors.append(f"Line {line_number}: em dash is not allowed.")
         if _DOUBLE_HYPHEN_PROSE.search(line):
@@ -408,7 +437,31 @@ def enforce_anti_ai_tells_markdown(
         )
         return candidate
 
+    # A repair that echoes the frame it was shown did not follow the
+    # instruction it was given. Stripping alone would hide that, and only the
+    # obvious half of it is visible: the delimiters are what can be seen of a
+    # response that may have ignored the rest of the prompt too. So the
+    # wrapper never ships, and the repair stops counting as a success -- it is
+    # kept only if the stripped text validates clean on its own.
+    repaired, leaked = strip_prompt_delimiters(repaired)
     repaired_result = validate_anti_ai_tells_markdown(repaired)
+    if leaked:
+        logger.warning(
+            "%s anti-AI repair echoed its prompt wrapper (%s); "
+            "the repair is not trusted",
+            context,
+            ", ".join(sorted(set(leaked))),
+        )
+        if not repaired_result.valid:
+            logger.warning(
+                "%s anti-AI repair still invalid after stripping the wrapper: "
+                "%s; keeping original",
+                context,
+                repaired_result.errors,
+            )
+            return candidate
+        return repaired
+
     if not repaired_result.valid:
         logger.warning(
             "%s anti-AI repair still invalid: %s", context, repaired_result.errors
