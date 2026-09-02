@@ -99,6 +99,7 @@ def test_audit_keeps_only_semantic_constraint_checks():
     assert quality["constraint_checks"] == {
         "audience_match": False,
         "tone_match": True,
+        "fails_if_avoided": True,
     }
 
 
@@ -226,3 +227,55 @@ def test_length_measurements_never_land_among_the_pass_fail_verdicts():
 
     # A count sitting in a dict of booleans reads as a check that failed.
     assert all(isinstance(value, bool) for value in verdicts.values())
+
+
+# --- the line that defines failure ----------------------------------------
+#
+# `fails_if` is the operator's own definition of failure, written in their
+# words. Run 849ae5aa named "describes the projects in the present tense when
+# nobody has confirmed they are still running", opened with "Hundreds of fog
+# nets built in Lima are standing and functioning in 2026", and the audit
+# passed it: the line was in the brief the auditor was shown, and nothing had
+# ever asked it to read it.
+
+
+def test_the_auditor_is_asked_whether_the_draft_walks_into_the_failure():
+    quality = _sanitize_quality(
+        {
+            "overall_score": 8,
+            "constraint_checks": {"fails_if_avoided": False},
+        }
+    )
+
+    assert quality["constraint_checks"]["fails_if_avoided"] is False
+
+
+def test_an_auditor_that_omits_the_verdict_does_not_manufacture_a_failure():
+    quality = _sanitize_quality({"overall_score": 8, "constraint_checks": {}})
+
+    assert quality["constraint_checks"]["fails_if_avoided"] is True
+
+
+def test_walking_into_the_failure_does_not_block_the_run():
+    """Freehand text must never gain the power to block. It weighs through
+    the scores the auditor sets beside it, per ADR 0030."""
+    from app.features.prompt2blog.policies import evaluate_readiness
+
+    verdict = evaluate_readiness(
+        quality={"audit_complete": True, "overall_score": 8},
+        checks={"fails_if_avoided": False},
+        groundedness={"checked": True, "grounded": True},
+    )
+
+    assert verdict.ready
+    assert "fails_if_avoided" not in verdict.blockers
+
+
+def test_walking_into_the_failure_does_not_by_itself_buy_a_repair():
+    assert (
+        _should_run_repair(
+            {"audit_complete": True, "overall_score": 8},
+            {"fails_if_avoided": False},
+        )
+        is False
+    )

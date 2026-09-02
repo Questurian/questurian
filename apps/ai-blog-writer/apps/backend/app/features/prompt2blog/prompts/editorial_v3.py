@@ -184,7 +184,8 @@ Return strict JSON only:
   "word_count_estimate": 0,
   "constraint_checks": {{
     "audience_match": false,
-    "tone_match": false
+    "tone_match": false,
+    "fails_if_avoided": false
   }},
   "required_revisions": ["string"],
   "quality_summary": "string"
@@ -221,9 +222,22 @@ Rules:
   built from.
 - Mark too_close_to_source=true when phrasing or structure tracks an evidence
   record too closely.
-- Judge only audience_match and tone_match. Word count, paragraph length, CTA,
-  and keyword presence are measured deterministically outside this prompt, so
-  do not report them.
+- Judge only audience_match, tone_match and fails_if_avoided. Word count,
+  paragraph length, CTA, and keyword presence are measured deterministically
+  outside this prompt, so do not report them.
+- The line under "This piece fails if" is the operator's own definition of
+  failure for this piece, written in their words before anything was
+  researched. It is the one criterion nobody else can supply. Read the draft
+  against that sentence and set fails_if_avoided accordingly. Where the draft
+  walks into it, name the sentence that does in required_revisions, quoting
+  it, and let it weigh on brief_adherence_score and overall_score the way any
+  other failure of the brief does. Run 849ae5aa was told the piece fails if it
+  "describes the projects in the present tense when nobody has confirmed they
+  are still running", opened with "Hundreds of fog nets built in Lima are
+  standing and functioning in 2026", and passed.
+- The line is freehand and it is not a gate. A sentence you cannot apply is a
+  sentence you leave alone: set fails_if_avoided true and say nothing rather
+  than inventing a reading of it.
 - Score honestly. A draft that merely avoids mistakes is a 7, not a 9. Being
   grounded, complete, and constraint-compliant is the floor this scale starts
   from, not what earns the top of it.
