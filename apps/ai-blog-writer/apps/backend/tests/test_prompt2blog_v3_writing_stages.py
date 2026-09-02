@@ -290,6 +290,9 @@ def test_a_brief_aligned_plan_is_accepted_and_rendered_for_compose():
 
 
 def test_the_outline_stage_keeps_a_drifted_plan_out_of_compose():
+    """Dropping the drifted section here would leave two, below the minimum,
+    so the plan is still unusable and compose is told so. What compose is no
+    longer denied is the answer the plan reached."""
     drifted = _outline_payload()
     drifted["sections"][2]["heading"] = "How Medellín compares"
     llm = FakeLLM(json_response=drifted)
@@ -318,8 +321,10 @@ def test_the_outline_stage_keeps_a_drifted_plan_out_of_compose():
     )
 
     compose_prompt = compose_llm.prompts[0]
-    assert "No outline was produced." in compose_prompt
+    assert "No usable section plan was produced." in compose_prompt
     assert "How Medellín compares" not in compose_prompt
+    # The sections were unusable; the answer the plan reached was not.
+    assert "Whether Lima still offers long-stay value." in compose_prompt
 
 
 def test_the_outline_prompt_gets_planning_context_not_the_whole_stack():
@@ -393,3 +398,95 @@ def test_compose_does_not_fall_back_to_pasting_the_evidence():
     rewrite = updates["rewrite"]
     assert rewrite["improved_content"] == ""
     assert rewrite["improved_title"] == _fixture()["brief"]["seed"]
+
+
+# --- a bad heading is not a reason to delete the plan -----------------------
+#
+# Run b29d66b4 produced a seven section plan, failed one check of seven over a
+# single heading, lost the whole outline, and compose wrote 502 words against
+# an 800 floor with no plan at all. The heading it lost the plan over was
+# about a municipal ranking that does not exist, and the article discussed the
+# ranking anyway -- so the discard did not even buy what the check wanted.
+
+
+def _five_section_payload() -> dict[str, Any]:
+    payload = _outline_payload()
+    payload["sections"] = payload["sections"] + [
+        {
+            "heading": "Where the money actually goes",
+            "purpose": "Break the monthly figure into what a resident pays.",
+            "claim_ids": ["c1"],
+            "requirement_ids": ["r1"],
+            "target_words": 150,
+        },
+        {
+            "heading": "What a long stay commits you to",
+            "purpose": "Say what the decision costs beyond money.",
+            "claim_ids": ["c2"],
+            "requirement_ids": ["r2"],
+            "target_words": 150,
+        },
+    ]
+    return payload
+
+
+def test_one_drifted_heading_drops_its_section_and_keeps_the_rest():
+    drifted = _five_section_payload()
+    drifted["sections"][2]["heading"] = "How Medellín compares"
+    llm = FakeLLM(json_response=drifted)
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_outline_stage(_state(), dependencies)
+
+    assert updates["outline_accepted"] is True
+    headings = [section["heading"] for section in updates["outline"]["sections"]]
+    assert "How Medellín compares" not in headings
+    assert len(headings) == 4
+    assert recorder.recorded[0][1]["repaired"] is True
+    assert recorder.recorded[0][1]["dropped_headings"] == ["How Medellín compares"]
+
+
+def test_the_dropped_section_budget_is_spread_over_what_remains():
+    """A repaired plan must not fail `within_word_budget` for the crime of
+    being repaired."""
+    drifted = _five_section_payload()
+    planned_before = sum(item["target_words"] for item in drifted["sections"])
+    drifted["sections"][2]["heading"] = "How Medellín compares"
+    dependencies, _recorder = _dependencies(FakeLLM(json_response=drifted))
+
+    updates = run_v3_outline_stage(_state(), dependencies)
+
+    planned_after = sum(
+        section["target_words"] for section in updates["outline"]["sections"]
+    )
+    assert planned_after == planned_before
+
+
+def test_a_plan_that_cannot_be_repaired_still_hands_over_its_answer():
+    """`direct_answer_focus` is separately valid and is the most useful line
+    the stage produces. b29d66b4's named the one stall to send the reader to,
+    with its survival caveat, and it was deleted along with the sections."""
+    drifted = _outline_payload(working_title="How Medellín compares")
+    drifted["sections"][2]["heading"] = "How Medellín compares"
+    dependencies, _recorder = _dependencies(FakeLLM(json_response=drifted))
+
+    updates = run_v3_outline_stage(_state(), dependencies)
+
+    assert updates["outline_accepted"] is False
+    assert updates["outline"]["sections"] == []
+    assert (
+        updates["outline"]["direct_answer_focus"]
+        == "Whether Lima still offers long-stay value."
+    )
+    assert "Whether Lima still offers long-stay value." in updates["outline_text"]
+
+
+def test_a_plan_that_passes_is_not_touched():
+    dependencies, recorder = _dependencies(FakeLLM(json_response=_outline_payload()))
+
+    updates = run_v3_outline_stage(_state(), dependencies)
+
+    assert updates["outline_accepted"] is True
+    assert recorder.recorded[0][1]["repaired"] is False
+    assert recorder.recorded[0][1]["dropped_headings"] == []
+    assert len(updates["outline"]["sections"]) == 3
