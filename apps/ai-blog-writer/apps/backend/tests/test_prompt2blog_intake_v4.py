@@ -456,3 +456,97 @@ def test_recutting_the_plan_discards_the_research_that_answered_the_old_one(isol
     # Research answered the questions that were there before the cut, so
     # leaving it would attach answers to a plan that no longer asks them.
     assert read_stage_result(run_id, RESEARCH_STAGE) is None
+
+
+# --- an obligation research proved cannot be met ---------------------------
+#
+# Run b29d66b4 asked for the shortlist to be cross-checked against "Lima's
+# municipal ranking of cevicherias". Research settled it: it does not exist.
+# `must_name` still carried it, the article named it anyway, and
+# `must_include_covered` scored true.
+
+
+def _brief_with(*names: str) -> dict[str, Any]:
+    return {**BRIEF_PAYLOAD, "must_name": list(names)}
+
+
+def _run_with_brief(isolated, *names: str) -> tuple[str, IntakeServices]:
+    services = _services(
+        [{"done": False, "question": _question()}, AGREED, _brief_with(*names)]
+    )
+    run_id = _to_agreement(services)
+    approve_brief(run_id, services)
+    return run_id, services
+
+
+def test_a_struck_must_name_leaves_the_brief(isolated_db):
+    from app.features.prompt2blog.intake_v4 import _strike_must_name
+
+    run_id, services = _run_with_brief(
+        isolated_db, "Surquillo market", "the municipal ranking of cevicherias"
+    )
+
+    struck = _strike_must_name(
+        run_id, services, ["the municipal ranking of cevicherias"]
+    )
+
+    assert struck.must_name == ["Surquillo market"]
+    assert load_brief(run_id).must_name == ["Surquillo market"]
+
+
+def test_striking_keeps_the_fingerprint_that_binds_the_work_order(isolated_db):
+    """The fingerprint binds the work order and the evidence to the brief they
+    were derived from. Re-deriving it on an operator edit would break both
+    bindings; `omit_requirement` makes the same choice when it trims a work
+    order."""
+    from app.features.prompt2blog.intake_v4 import _strike_must_name
+
+    run_id, services = _run_with_brief(
+        isolated_db, "Surquillo market", "the municipal ranking of cevicherias"
+    )
+    before = load_brief(run_id).brief_fingerprint
+
+    struck = _strike_must_name(
+        run_id, services, ["the municipal ranking of cevicherias"]
+    )
+
+    assert struck.brief_fingerprint == before
+
+
+def test_striking_a_name_that_is_not_there_is_refused(isolated_db):
+    from app.features.prompt2blog.gate_v4 import GateAnswerRefused
+    from app.features.prompt2blog.intake_v4 import _strike_must_name
+
+    run_id, services = _run_with_brief(isolated_db, "Surquillo market")
+
+    with pytest.raises(GateAnswerRefused, match="must-name"):
+        _strike_must_name(run_id, services, ["something else entirely"])
+
+
+def test_the_strike_is_recorded_on_the_run(isolated_db):
+    from app.features.prompt2blog.intake_v4 import _strike_must_name
+
+    run_id, services = _run_with_brief(
+        isolated_db, "Surquillo market", "the municipal ranking of cevicherias"
+    )
+
+    _strike_must_name(run_id, services, ["the municipal ranking of cevicherias"])
+
+    assert _stage_data(run_id, BRIEF_STAGE)["struck_must_name"] == [
+        "the municipal ranking of cevicherias"
+    ]
+
+
+def test_the_brief_writer_is_told_one_name_per_entry(isolated_db):
+    """b29d66b4's brief recorded three names in one string, so coverage was
+    measured against a blob and one missing name could not be told from
+    three."""
+    from app.features.prompt2blog.brief_v4 import build_brief_prompt
+    from app.features.prompt2blog.intake_v4 import _load_grill
+
+    services = _services([{"done": False, "question": _question()}, AGREED])
+    run_id = _to_agreement(services)
+
+    prompt = build_brief_prompt(_load_grill(run_id))
+
+    assert "one name per entry" in prompt
