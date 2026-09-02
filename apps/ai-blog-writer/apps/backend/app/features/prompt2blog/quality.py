@@ -83,6 +83,10 @@ CONSTRAINT_MEASUREMENT_KEYS = frozenset(
         "sentences_over_25_words",
         "sentences_under_8_words",
         "sentence_variety_note",
+        # Repetition is measured and never gated, same as sentence spread.
+        "repeated_sentence_pairs",
+        "repeated_sentence_overlap",
+        "repeated_sentence_note",
     }
 )
 
@@ -235,6 +239,160 @@ def measure_sentence_spread(content: str) -> dict[str, Any]:
     }
 
 
+# Two sentences this close are the same sentence written twice. Set high on
+# purpose: a piece is allowed to restate its spine, and the cost of a wrong
+# accusation is an operator who stops reading these notes.
+#
+# Tuned against the twenty four stored articles rather than picked. Two fire:
+# 849ae5aa at 0.61, and a restaurant run whose five pairs each state the same
+# booking terms in two sections. The nearest thing below the line is 0.44 --
+# a stay-length figure given in the opening and again in its own section,
+# which is an article restating its spine and not a duplicate. The gap
+# between 0.58 and 0.44 is where this sits.
+REPEATED_SENTENCE_OVERLAP = 0.5
+# Below this many content words a sentence has too little of its own to
+# compare. "The nets are maintained by volunteers" shares almost everything
+# with any other short sentence about the nets.
+REPEATED_SENTENCE_MIN_WORDS = 7
+
+# Words that carry no subject of their own. A pair whose overlap is built out
+# of these is not a repetition.
+_FUNCTION_WORDS = frozenset(
+    """a about above across after all also although among an and another any are
+    around as at back be because been before being below between both but by
+    came can come could did do does doing down during each either else even
+    ever every few for from further get given go goes going got had has have
+    having he her here hers herself him himself his how however if in inside
+    into is it its itself just like made make many may me might more most much
+    must my near need no nor not now of off on once one only onto or other our
+    out over own per rather said same see seen several shall she should since
+    so some still such than that the their theirs them themselves then there
+    these they this those though through to too under until up upon us use
+    used very was way we well were what when where whether which while who
+    whom whose why will with within without would yet you your yours""".split()
+)
+
+
+def _content_words(sentence: str) -> set[str]:
+    """What a sentence is about, minus the names it happens to share.
+
+    A shared proper noun is not a duplicate: "Villa Maria del Triunfo" in six
+    sentences is an article staying on its subject. Capitalised words after
+    the first are dropped for that reason, along with the function words that
+    every sentence carries.
+    """
+    names = {
+        token.lower().strip(".,;:!?\u2019's")
+        for token in sentence.split()[1:]
+        if token[:1].isupper()
+    }
+    return {
+        token
+        for token in _canonical_tokens(sentence)
+        if token not in _FUNCTION_WORDS and token not in names and len(token) > 2
+    }
+
+
+# A bullet, a takeaway and an FAQ answer restate the body on purpose. Reading
+# those as duplicates would fire on every article with a takeaways block,
+# which is the wrong refusal this check cannot afford to make. Compare running
+# prose against running prose.
+_NOT_RUNNING_PROSE = re.compile(r"^\s*(?:>|[-*+]\s|\d+[.)]\s)")
+
+
+def _sections(content: str) -> list[list[str]]:
+    """Prose sentences, grouped by the heading they sit under."""
+    sections: list[list[str]] = [[]]
+    for line in content.splitlines():
+        if line.lstrip().startswith("#"):
+            sections.append([])
+            continue
+        if _NOT_RUNNING_PROSE.match(line):
+            continue
+        sections[-1].append(line)
+    grouped: list[list[str]] = []
+    for block in sections:
+        body = "\n".join(block).strip()
+        if not body:
+            continue
+        grouped.append(
+            [
+                part.strip()
+                for part in re.split(r"(?<=[.!?])\s+", body)
+                if len(part.strip()) > 3
+            ]
+        )
+    return grouped
+
+
+def measure_repetition(content: str) -> dict[str, Any]:
+    """The same sentence said twice, in two different sections.
+
+    Run 849ae5aa opened with "over 600 collectors were built historically in
+    the district of Villa Maria del Triunfo, currently, hundreds of these nets
+    are actively maintained and functioning across Lima as a whole" and, two
+    paragraphs later under its own heading, said it again almost word for
+    word. In an 845 word article that is a noticeable share of the piece spent
+    saying one thing twice, and nothing noticed: the run was stamped
+    ready_for_staging with no blockers, and the post-hoc punch list caught it
+    after the article was finished.
+
+    A comparison, not a judgement, so it cannot invent anything. Advisory on
+    the same reasoning as the bundled-question check: it is a heuristic, the
+    operator is reading the article anyway, and a wrong refusal is worse than
+    a missed duplicate. Nothing blocks after writing (ADR 0030).
+    """
+    sections = [
+        [
+            (sentence, _content_words(sentence))
+            for sentence in section
+            if len(_content_words(sentence)) >= REPEATED_SENTENCE_MIN_WORDS
+        ]
+        for section in _sections(content)
+    ]
+
+    worst = 0.0
+    worst_pair: tuple[str, str] | None = None
+    pairs = 0
+    for index, section in enumerate(sections):
+        for other in sections[index + 1 :]:
+            for sentence, words in section:
+                for candidate, candidate_words in other:
+                    overlap = len(words & candidate_words) / len(
+                        words | candidate_words
+                    )
+                    if overlap < REPEATED_SENTENCE_OVERLAP:
+                        continue
+                    pairs += 1
+                    if overlap > worst:
+                        worst = overlap
+                        worst_pair = (sentence, candidate)
+
+    note = ""
+    if worst_pair:
+        note = (
+            f"Two sentences in different sections share "
+            f"{round(worst * 100)}% of their content words: "
+            f"\u201c{_shorten(worst_pair[0])}\u201d and "
+            f"\u201c{_shorten(worst_pair[1])}\u201d. Deliberate restatement "
+            "is allowed and this does not block; where it is not deliberate, "
+            "one of them is paying for words the article needs elsewhere."
+        )
+
+    return {
+        "repeated_sentence_pairs": pairs,
+        "repeated_sentence_overlap": round(worst, 3),
+        "repeated_sentence_note": note,
+    }
+
+
+def _shorten(sentence: str, limit: int = 90) -> str:
+    collapsed = " ".join(sentence.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return f"{collapsed[:limit].rstrip()}..."
+
+
 def _estimate_paragraph_sentence_average(content: str) -> float:
     # Headings are not paragraphs. They used to be counted as one-sentence
     # blocks, so every `##` dragged the average down and a well-sectioned
@@ -381,6 +539,7 @@ def _build_constraint_checks(
         "word_count_estimate": word_count,
         "word_count_severity": word_count_severity,
         **measure_sentence_spread(content),
+        **measure_repetition(content),
     }
 
 
