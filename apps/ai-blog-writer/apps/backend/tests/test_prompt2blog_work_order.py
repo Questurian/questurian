@@ -21,6 +21,7 @@ from app.features.prompt2blog.grill_v4 import GrillDependencies
 from app.features.prompt2blog.work_order_v4 import (
     build_work_order,
     build_work_order_prompt,
+    bundled_question_note,
     cut_work_order,
     work_order_stage_record,
 )
@@ -523,3 +524,147 @@ def test_the_headline_instruction_names_the_kinds_of_claim_to_check():
 
     for kind in ("an age", "a superlative", '"oldest"', "a comparison"):
         assert kind in flat
+
+
+# --- what the article needs, rather than what the wording demands -----------
+#
+# Every blocked question on run a2066506 (2026-09-01) had research that
+# answered what a reader needs and failed what the question literally asked
+# for. Three for three, from one stage.
+
+
+def test_a_question_carries_what_the_article_needs():
+    payload = _payload()
+    payload["requirements"][0]["precision"] = "approximate"
+
+    work_order = build_work_order(_brief(), _deps(payload))
+
+    needs = {item.requirement_id: item.precision for item in work_order.requirements}
+    assert needs == {"r1": "approximate", "r2": "exact", "r3": "exact"}
+
+
+def test_a_plan_that_says_nothing_about_precision_behaves_as_it_always_did():
+    """`exact` is the default on purpose. Loosening is a choice the planner
+    makes, never something that happens by omission."""
+    work_order = build_work_order(_brief(), _deps(_payload()))
+
+    assert all(item.precision == "exact" for item in work_order.requirements)
+
+
+def test_an_unreadable_precision_falls_back_to_exact_rather_than_failing():
+    payload = _payload()
+    payload["requirements"][0]["precision"] = "ballpark-ish"
+
+    work_order = build_work_order(_brief(), _deps(payload))
+
+    assert work_order.requirements[0].precision == "exact"
+
+
+def test_the_prompt_says_precision_is_about_the_reader_not_about_rigour():
+    flat = " ".join(build_work_order_prompt(_brief()).split())
+
+    assert "Set `precision` to what the ARTICLE needs" in flat
+    assert "a fare they hand over in coins" in flat
+
+
+def test_research_is_told_what_each_question_needs():
+    """Otherwise the target is recorded and never read, and a bounded answer
+    still comes back `partial`."""
+    from app.features.prompt2blog.research_v4 import (
+        build_gather_prompt,
+        build_structure_prompt,
+    )
+
+    payload = _payload()
+    payload["requirements"][0]["precision"] = "approximate"
+    work_order = build_work_order(_brief(), _deps(payload))
+    loose = work_order.requirements[0]
+
+    gather = " ".join(build_gather_prompt(_brief(), loose).split())
+    assert "A range or an order of magnitude is what the article needs" in gather
+    # The line that must not move.
+    assert "This is not permission to estimate" in gather
+    assert "state it as a found fact" in gather
+
+    strict = " ".join(
+        build_gather_prompt(_brief(), work_order.requirements[1]).split()
+    )
+    assert "the actual figure" in strict
+    assert "not permission to estimate" not in strict
+
+    structure = " ".join(build_structure_prompt(work_order, {}).split())
+    assert "[needs: approximate]" in structure
+    assert "Judge each question against what it says it `needs`" in structure
+
+
+# --- one question, one fact ------------------------------------------------
+
+
+def test_a_question_asking_for_two_measured_things_is_flagged():
+    """Run a2066506's q6 asked for the exact travel time AND the fare. The fare
+    is published; the journey time is not. One question, two facts, one status,
+    and the answered half held hostage by the other."""
+    note = bundled_question_note(
+        "What is the exact travel time in minutes and the current fare in PEN "
+        "to ride the Metropolitano from Estacion Central to Estacion Bulevar?"
+    )
+
+    assert "two things at once" in note
+
+
+def test_a_value_and_the_date_it_was_true_is_still_one_question():
+    """This phrasing is the model answer in the prompt itself. A check that
+    flagged it would be teaching the planner to avoid good questions."""
+    assert (
+        bundled_question_note(
+            "What does a one-bedroom in Miraflores rent for, and as of when?"
+        )
+        == ""
+    )
+
+
+def test_a_list_of_places_with_their_rates_is_one_question():
+    assert (
+        bundled_question_note(
+            "What are the names and approximate nightly rates in USD of three "
+            "highly-rated hotels within five blocks of the Plaza Mayor?"
+        )
+        == ""
+    )
+
+
+def test_the_flag_reaches_the_screen_beside_the_question_it_is_about():
+    payload = _payload()
+    payload["requirements"][1]["question"] = (
+        "What are the opening hours and the ticket price for Huaca Pucllana?"
+    )
+    work_order = build_work_order(_brief(), _deps(payload))
+
+    record = work_order_stage_record(work_order)
+    notes = {item["requirement_id"]: item["bundled_note"] for item in record["requirements"]}
+
+    assert notes["r2"]
+    assert notes["r1"] == ""
+    assert record["requirements"][0]["precision"] == "exact"
+
+
+def test_the_prompt_says_one_question_one_fact_with_the_case_that_broke():
+    flat = " ".join(build_work_order_prompt(_brief()).split())
+
+    assert "One question, one fact." in flat
+    assert "holds the answered half hostage" in flat
+
+
+# --- a premise declared instead of buried ----------------------------------
+
+
+def test_the_prompt_names_a_presupposition_as_an_assumption():
+    """"Three 4-star hotels within five blocks" assumes such hotels exist. The
+    contract has modelled premises as separately refutable since v4; the
+    planner was burying them in the question text, where nothing can check
+    them, so a false premise failed a whole question instead."""
+    flat = " ".join(build_work_order_prompt(_brief()).split())
+
+    assert "A question that takes something for granted is assuming it." in flat
+    assert "write the question so it survives being wrong" in flat
+    assert "refuted premise, which is a finding" in flat

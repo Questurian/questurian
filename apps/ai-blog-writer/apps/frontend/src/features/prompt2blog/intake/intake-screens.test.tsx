@@ -266,8 +266,20 @@ const WORK_ORDER: IntakeWorkOrder = {
   brief_fingerprint: 'bf-1',
   primary_subject: 'Lima',
   requirements: [
-    { requirement_id: 'r1', question: 'What do stalls charge?', kind: 'load_bearing' },
-    { requirement_id: 'r2', question: 'What is it like at night?', kind: 'texture' },
+    {
+      requirement_id: 'r1',
+      question: 'What do stalls charge?',
+      kind: 'load_bearing',
+      precision: 'exact',
+      bundled_note: '',
+    },
+    {
+      requirement_id: 'r2',
+      question: 'What is it like at night?',
+      kind: 'texture',
+      precision: 'approximate',
+      bundled_note: '',
+    },
   ],
   load_bearing_count: 1,
   texture_count: 1,

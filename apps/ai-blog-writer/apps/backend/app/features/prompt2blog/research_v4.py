@@ -554,6 +554,33 @@ def notes_from_record(
     return notes
 
 
+def _precision_brief(precision: str) -> str:
+    """What the article needs, and what that does not license.
+
+    A loosened target says how exact the ARTICLE must be. It never says how
+    freely the model may estimate. "Under 55 minutes for the full line, five
+    intermediate stops, so allow about half an hour" is built from published
+    numbers and shows its working. "About 25 minutes" is arithmetic printed as
+    fact, and a reader cannot tell it from the S/3.20 fare beside it.
+    """
+    if precision == "approximate":
+        return (
+            "A range or an order of magnitude is what the article needs. If "
+            "nobody publishes the precise figure, say so, then give the "
+            "bounded answer and show the published numbers you bounded it "
+            "with -- that is a complete answer, not a partial one.\n"
+            "This is not permission to estimate. Never derive a number and "
+            "state it as a found fact. A figure with its working shown is an "
+            "answer; a figure you calculated and presented bare is a "
+            "fabrication a reader cannot tell from a real one."
+        )
+    return (
+        "The article needs the actual figure, because a reader acts on it. If "
+        "nobody publishes it, say so plainly and say where you looked, rather "
+        "than approximating it."
+    )
+
+
 def build_gather_prompt(
     brief: ArticleBrief,
     requirement: WorkOrderRequirement,
@@ -574,6 +601,9 @@ looking like a found fact and nothing downstream can tell.
 
 THE QUESTION
 {requirement.question}
+
+HOW EXACT THE ARTICLE NEEDS THIS
+{_precision_brief(requirement.precision)}
 
 Answer it as fully as you can, with sources. Then keep going:
 
@@ -611,7 +641,8 @@ def build_structure_prompt(
 ) -> str:
     """Turn free notes into evidence records. Records nothing new."""
     questions = "\n".join(
-        f"- {item.requirement_id} [{item.kind}] {item.question}"
+        f"- {item.requirement_id} [{item.kind}] [needs: {item.precision}] "
+        f"{item.question}"
         for item in work_order.requirements
     )
     gathered = "\n\n".join(
@@ -647,6 +678,13 @@ Rules:
 - `confidence` on a claim is one of: high, medium, low. An answer that is
   genuinely a range is still `supported` at `medium` or `low`; it does not
   become `partial` for being approximate.
+- Judge each question against what it says it `needs`, not against its wording.
+  A question marked `approximate` is `supported` by a bounded answer that shows
+  the published numbers behind it -- "the full 16-mile line runs about 55
+  minutes at peak and this segment passes five stops" answers "roughly how
+  long" completely, and marking it `partial` because no one publishes the exact
+  minute blocks a run over a number the article never needed. A question marked
+  `exact` is not settled by a range.
 - Set `venue` only on a claim that sends a reader to a place whose survival is
   genuinely in doubt: an independent tour operator, a small guesthouse, one
   restaurant, a bar, a family business, a tour run by a few people. Put the

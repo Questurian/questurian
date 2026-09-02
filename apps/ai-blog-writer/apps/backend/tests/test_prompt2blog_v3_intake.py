@@ -138,12 +138,15 @@ def test_runtime_request_keeps_the_commission_and_evidence_whole():
     runtime = prepare_v3_runtime_request(_request(evidence_package=_ready_evidence()))
 
     # A commission written before the direction step declared its premise still
-    # runs. The empty premise and empty assumption_ids are the defaults filling
-    # in, not the runtime losing anything the fixture carried.
+    # runs. The empty premise, the empty assumption_ids and the `exact`
+    # precision are the defaults filling in, not the runtime losing anything
+    # the fixture carried. `exact` is the default on purpose: a plan that never
+    # said how precise it needed to be behaves as it always did.
     expected_work_order = deepcopy(fixture["work_order"])
     expected_work_order["premise"] = []
     for requirement in expected_work_order["requirements"]:
         requirement["assumption_ids"] = []
+        requirement["precision"] = "exact"
     assert runtime.work_order == expected_work_order
     assert runtime.brief == fixture["brief"]
     source = runtime.evidence["sources"][0]

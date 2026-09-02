@@ -138,6 +138,19 @@ CreativityLevel = Literal["low", "medium", "high"]
 # What a requirement costs when research cannot answer it. Load-bearing means
 # the piece cannot be written without it; texture means the piece is duller.
 RequirementKind = Literal["load_bearing", "texture"]
+# How exact the ARTICLE needs this answer to be. Never how freely the model may
+# estimate -- see the research prompt, where that line is held.
+#
+# Run a2066506 asked for "the exact travel time in minutes" on a bus route
+# nobody times. Research bounded it instead -- 55 minutes for the full 16-mile
+# line, five intermediate stops on this segment -- and blocked, because the
+# question demanded a number that does not exist. A reader does not need it: a
+# fare they hand over in coins is `exact`, how long a bus takes is
+# `approximate`.
+#
+# Defaults to `exact`, so a plan that says nothing behaves exactly as it did
+# before. Loosening is a thing the planner has to choose.
+RequirementPrecision = Literal["exact", "approximate"]
 # Where the operator's material came from. `firsthand` bypasses fact-checking
 # by design -- nobody can verify someone's lunch -- which is exactly why its
 # statement is stored as the operator typed it and never as a model's
@@ -220,6 +233,9 @@ class WorkOrderRequirement(V4ContractModel):
     requirement_id: str = Field(min_length=1)
     question: str = Field(min_length=1)
     kind: RequirementKind
+    # What the article needs, which is not always what the question's wording
+    # demands. Research is judged against this rather than against the phrasing.
+    precision: RequirementPrecision = "exact"
     # Empty when the question stands on its own. Every id here must name a
     # premise the same commission declares.
     assumption_ids: list[str] = Field(default_factory=list)

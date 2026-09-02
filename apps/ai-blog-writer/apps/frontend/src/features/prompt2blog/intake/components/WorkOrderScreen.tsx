@@ -66,6 +66,15 @@ export function WorkOrderScreen({
               >
                 {item.kind === 'load_bearing' ? 'the piece rests on this' : 'colour'}
               </span>
+              {item.precision === 'approximate' && (
+                /* Said out loud so a loosened target is a visible choice. A
+                   question that only needs the size of a thing will not block
+                   the run for want of a figure nobody publishes. */
+                <span className="p2b-kind">roughly is enough</span>
+              )}
+              {item.bundled_note && !isStruck && (
+                <p className="p2b-question-note">{item.bundled_note}</p>
+              )}
             </li>
           )
         })}
