@@ -745,3 +745,93 @@ def test_the_verdict_record_says_what_a_page_has_to_show():
         "has_texture",
         "findings",
     }
+
+
+# --- the shapes run 849ae5aa actually sent (2026-09-01) ---------------------
+#
+# One real run, four ways of losing a complete dossier. It came back with
+# thirteen good claims and every one was thrown away.
+
+
+def test_a_question_linking_its_claims_under_claims_still_links_them():
+    """The one that cost the run.
+
+    The model wrote `{"id": "q1", "claims": ["c1"], "status": "supported"}`.
+    The field allowlist strips `claims` before the two-way union reads it, and
+    the union reads the normalised dict rather than the raw row -- so every
+    question arrived linked to nothing, every claim was dropped for answering
+    nothing, and twelve answered questions reached the gate saying "its
+    supporting claims could not be used".
+    """
+    payload = _evidence_payload()
+    for row in payload["requirements"]:
+        row["claims"] = row.pop("claim_ids")
+    for claim in payload["claims"]:
+        claim.pop("requirement_ids", None)
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert len(evidence.claims) == len(payload["claims"])
+    by_id = {item.requirement_id: item for item in evidence.requirements}
+    assert by_id["r1"].claim_ids
+    assert by_id["r1"].status == "supported"
+
+
+def test_sources_nested_inside_a_claim_are_lifted_out_and_kept():
+    """The same run described its sources inside each claim -- publisher,
+    source_type, material_type -- and sent no top-level `sources` at all."""
+    payload = _evidence_payload()
+    payload.pop("sources")
+    for claim in payload["claims"]:
+        claim["sources"] = [
+            {
+                "publisher": "Movimiento Peruano Sin Agua",
+                "source_type": "official",
+                "material_type": "web",
+            }
+        ]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert evidence.sources, "a described source is still a source"
+    assert len(evidence.claims) == len(payload["claims"])
+    assert all(claim.source_ids for claim in evidence.claims)
+
+
+def test_one_publisher_cited_by_every_claim_becomes_one_source():
+    payload = _evidence_payload()
+    payload.pop("sources")
+    for claim in payload["claims"]:
+        claim["sources"] = [{"publisher": "SENAMHI", "source_type": "official"}]
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert len(evidence.sources) == 1
+
+
+def test_a_source_with_no_retrieval_date_is_dated_by_the_run_that_read_it():
+    """Eleven sources, not one date, and the whole dossier refused over a field
+    the parser was in a position to know: these pages were read today."""
+    from datetime import date
+
+    payload = _evidence_payload()
+    for source in payload["sources"]:
+        source["retrieved_at"] = ""
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert all(item.retrieved_at == date.today() for item in evidence.sources)
+
+
+def test_a_source_with_no_note_says_so_rather_than_being_refused():
+    """The contract wants a note on every source. Saying the record has none is
+    honest; writing a sentence about the world would not be."""
+    payload = _evidence_payload()
+    for source in payload["sources"]:
+        source["notes"] = []
+
+    evidence = structure_research(_work_order(), {}, _deps(payload))
+
+    assert all(item.notes for item in evidence.sources)
+    assert "No note recorded" in evidence.sources[0].notes[0]
+

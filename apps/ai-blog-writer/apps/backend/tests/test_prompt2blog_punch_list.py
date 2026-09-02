@@ -407,3 +407,27 @@ def test_the_read_is_given_the_headline_as_a_promise_to_the_reader():
 
     assert "is a promise to a reader who clicked it" in flat
     assert "an age, a number, a superlative, a first or an oldest" in flat
+
+
+# --- the shape the read actually came back in ------------------------------
+
+
+def test_a_bare_list_of_items_is_still_a_punch_list():
+    """Run 849ae5aa returned four good items as a bare array against a schema
+    asking for {"items": [...]} -- including the one that caught the article
+    contradicting its own headline on rainfall. All four were thrown away and
+    the operator got an empty list on an article with real problems in it."""
+    result = _run([_item(note="First thing."), _item(note="Second thing.")])
+
+    assert [item["note"] for item in result["items"]] == ["First thing.", "Second thing."]
+
+
+def test_the_list_is_read_under_its_other_names_too():
+    for name in ("edits", "notes", "punch_list", "fixes"):
+        result = _run({name: [_item(note=f"Found under {name}.")]})
+        assert result["items"], f"a list named {name} was dropped"
+
+
+def test_a_payload_with_nothing_usable_in_it_is_simply_empty():
+    assert _run({"summary": "the article is fine"})["items"] == []
+

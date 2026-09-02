@@ -267,8 +267,29 @@ note carrying a number from neither will be thrown away.
 """
 
 
+def _items_in(payload: Any) -> list[Any]:
+    """The list of edits, under whichever shape the read came back in.
+
+    Run 849ae5aa returned a bare array of four good items -- including the one
+    that caught the article's own rainfall contradiction -- against a schema
+    asking for `{"items": [...]}`. All four were thrown away, and the operator
+    got an empty list on an article with real problems in it.
+
+    Same lesson the evidence parser has learned three times: a schema exists so
+    the model knows what to send, not so the parser can reject what arrived.
+    """
+    if isinstance(payload, list):
+        return payload
+    record = _safe_dict(payload)
+    for name in ("items", "edits", "notes", "punch_list", "fixes"):
+        value = record.get(name)
+        if isinstance(value, list):
+            return value
+    return []
+
+
 def _valid_items(
-    payload: dict[str, Any],
+    payload: Any,
     *,
     article_markdown: str,
     evidence: EvidencePackage,
@@ -285,7 +306,7 @@ def _valid_items(
 
     items: list[dict[str, Any]] = []
     dropped: list[str] = []
-    for raw in payload.get("items") or []:
+    for raw in _items_in(payload):
         record = _safe_dict(raw)
         note = _safe_str(record.get("note"))
         kind = _safe_str(record.get("kind"))
@@ -370,7 +391,7 @@ def build_punch_list(
         temperature=0.0,
     )
     items, dropped = _valid_items(
-        _safe_dict(parsed),
+        parsed,
         article_markdown=article_markdown,
         evidence=evidence,
     )
