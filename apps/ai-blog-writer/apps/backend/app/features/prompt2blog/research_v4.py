@@ -45,6 +45,7 @@ from .contracts_v4 import (
     WorkOrderRequirement,
 )
 from .config import P2B_V4_GATHER_CONCURRENCY
+from .research_readiness_v3 import PREMISE_CHECK_RULES
 from .evidence_conflicts import record_detected_conflicts
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str
@@ -499,6 +500,28 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
 GATHER_MAX_TOKENS = 8_192
 STRUCTURE_MAX_TOKENS = 16_384
 
+# A few questions' worth. Ignored on the Claude CLI, which takes no output
+# cap, and honoured on Gemini.
+ONE_QUESTION_MAX_TOKENS = 8_192
+
+# How many questions go into one structuring call.
+#
+# The whole dossier in one call stopped converging: a schema failure anywhere
+# in one large object throws all of it away and it is silently regenerated,
+# and on 2026-09-02 three attempts died at 600s, 600s and 1200s.
+#
+# One question per call fixed that and cost four times as much. Measured on
+# run 86cfad32: twelve calls, 345,315 input tokens against 86,892 for the
+# single call it replaced. Every CLI call carries about 28,000 tokens of the
+# tool's own prefix -- 18,132 of it showed up as cached from the second call
+# onwards -- and that overhead is per call, not per question. Twelve calls pay
+# it twelve times.
+#
+# Four is the middle: three calls on an eleven question plan rather than
+# twelve, each object small enough to come back first time, and a failure
+# costs a third of the questions instead of all of them.
+STRUCTURE_BATCH_SIZE = 4
+
 # What the live grounding path runs on. Not a 3.x model: `editor_assist` has
 # grounded on this in production since ADR 0003, and the REST grounding
 # endpoint is not the place to discover a version does not work.
@@ -571,9 +594,53 @@ EVIDENCE_SCHEMA = require_non_empty({
                 "required": ["requirement_id", "status"],
             },
         },
-        "premise_findings": {"type": "array", "items": {"type": "object"}},
-        "conflicts": {"type": "array", "items": {"type": "object"}},
-        "gaps": {"type": "array", "items": {"type": "object"}},
+        # Declared with their fields, because an array of unspecified objects
+        # is an array nothing fills. Every stored run -- 062c0b86, 90b3f9bc,
+        # a2066506, b29d66b4, all of them -- came back with premise_findings,
+        # conflicts and gaps all empty, on prompts that asked for each of them
+        # in as many words. The model was not ignoring the instruction; the
+        # shape it was being asked to return had no shape.
+        "premise_findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "assumption_id": {"type": "string"},
+                    "verdict": {
+                        "type": "string",
+                        "enum": list(get_args(PremiseVerdict)),
+                    },
+                    "basis": {"type": "string"},
+                    "claim_ids": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["assumption_id", "verdict", "basis"],
+            },
+        },
+        "conflicts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "conflict_id": {"type": "string"},
+                    "claim_ids": {"type": "array", "items": {"type": "string"}},
+                    "summary": {"type": "string"},
+                    "resolution": {"type": "string"},
+                },
+                "required": ["conflict_id", "claim_ids", "summary"],
+            },
+        },
+        "gaps": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "gap_id": {"type": "string"},
+                    "requirement_ids": {"type": "array", "items": {"type": "string"}},
+                    "summary": {"type": "string"},
+                },
+                "required": ["gap_id", "requirement_ids", "summary"],
+            },
+        },
     },
     "required": ["sources", "claims", "requirements"],
 })
@@ -728,37 +795,7 @@ def _citable(urls: list[str]) -> list[str]:
     ]
 
 
-def build_structure_prompt(
-    work_order: Prompt2BlogWorkOrder,
-    notes: dict[str, GatheredNotes],
-) -> str:
-    """Turn free notes into evidence records. Records nothing new."""
-    questions = "\n".join(
-        f"- {item.requirement_id} [{item.kind}] [needs: {item.precision}] "
-        f"{item.question}"
-        for item in work_order.requirements
-    )
-    gathered = "\n\n".join(
-        f"=== {requirement_id} ===\n{note.text}\n"
-        f"Sources seen: {', '.join(_citable(note.source_urls)) or 'none recorded'}"
-        for requirement_id, note in notes.items()
-    )
-    premise = (
-        "\n".join(f"- {item.assumption_id}: {item.statement}" for item in work_order.premise)
-        or "- None declared."
-    )
-    return f"""Turn research notes into evidence records. Add nothing that is not in the notes.
-
-THE QUESTIONS
-{questions}
-
-WHAT WAS ASSUMED WITHOUT BEING CHECKED
-{premise}
-
-THE NOTES
-{gathered}
-
-Rules:
+STRUCTURE_RULES = """Rules:
 - Every claim cites at least one source and at least one question it answers.
   Every question lists the claims that answer it. The two must agree.
 - A source needs a publisher and a URL when it is a web page or a report.
@@ -835,7 +872,40 @@ Rules:
   unresolved conflict is a question for a person, and inventing a resolution
   takes it away from them.
 - Keep the interesting detail. A note that puts a reader somewhere belongs in a
-  claim as much as a price does; do not drop it for not being a number.
+  claim as much as a price does; do not drop it for not being a number."""
+
+
+def build_structure_prompt(
+    work_order: Prompt2BlogWorkOrder,
+    notes: dict[str, GatheredNotes],
+) -> str:
+    """Turn free notes into evidence records. Records nothing new."""
+    questions = "\n".join(
+        f"- {item.requirement_id} [{item.kind}] [needs: {item.precision}] "
+        f"{item.question}"
+        for item in work_order.requirements
+    )
+    gathered = "\n\n".join(
+        f"=== {requirement_id} ===\n{note.text}\n"
+        f"Sources seen: {', '.join(_citable(note.source_urls)) or 'none recorded'}"
+        for requirement_id, note in notes.items()
+    )
+    premise = (
+        "\n".join(f"- {item.assumption_id}: {item.statement}" for item in work_order.premise)
+        or "- None declared."
+    )
+    return f"""Turn research notes into evidence records. Add nothing that is not in the notes.
+
+THE QUESTIONS
+{questions}
+
+WHAT WAS ASSUMED WITHOUT BEING CHECKED
+{premise}
+
+THE NOTES
+{gathered}
+
+{STRUCTURE_RULES}
 """
 
 
@@ -994,31 +1064,185 @@ def _reconcile_premise_findings(
     return EvidencePackage.model_validate(payload)
 
 
-def structure_research(
-    work_order: Prompt2BlogWorkOrder,
-    notes: dict[str, GatheredNotes],
-    dependencies: ResearchDependencies,
-) -> EvidencePackage:
-    """Turn the notes into the evidence package the writing stages read.
+BATCH_SCHEMA = require_non_empty({
+    "type": "object",
+    "properties": {
+        "sources": EVIDENCE_SCHEMA["properties"]["sources"],
+        "claims": EVIDENCE_SCHEMA["properties"]["claims"],
+        "requirements": EVIDENCE_SCHEMA["properties"]["requirements"],
+        "gaps": EVIDENCE_SCHEMA["properties"]["gaps"],
+    },
+    "required": ["sources", "claims", "requirements"],
+})
 
-    The shape is forced at the transport rather than asked for, so a malformed
-    dossier is a transport error here instead of a confusing failure four
-    stages later.
+PREMISE_SCHEMA = require_non_empty({
+    "type": "object",
+    "properties": {
+        "premise_findings": EVIDENCE_SCHEMA["properties"]["premise_findings"],
+        "conflicts": EVIDENCE_SCHEMA["properties"]["conflicts"],
+    },
+    "required": ["premise_findings"],
+})
+
+
+def build_batch_prompt(
+    work_order: Prompt2BlogWorkOrder,
+    requirements: list[WorkOrderRequirement],
+    notes: dict[str, GatheredNotes],
+) -> str:
+    """Structure a few questions' notes. The same rules, a fraction of the work.
+
+    The dossier used to be built in a single call: every note in, one large
+    object out. On the Claude CLI that generated three to four times what it
+    delivered -- 32,060 and 39,139 billed tokens against a 36 KB record --
+    because a schema failure anywhere in the object throws all of it away and
+    it is silently produced again. On 2026-09-02 it stopped converging and
+    three attempts died, at 600s, 600s and 1200s.
+
+    A handful of questions at a time is small enough to come back first time,
+    and a failure costs a third of the plan instead of the whole run.
     """
-    parsed, _raw = dependencies.structure_llm.invoke_json(
-        prompt=build_structure_prompt(work_order, notes),
-        model_name=dependencies.structure_model,
-        schema=EVIDENCE_SCHEMA,
-        max_tokens=STRUCTURE_MAX_TOKENS,
-        temperature=0.0,
+    listed = "\n".join(
+        f"- {item.requirement_id} [{item.kind}] [needs: {item.precision}] "
+        f"{item.question}"
+        for item in requirements
     )
-    payload = _normalised_evidence(_safe_dict(parsed))
+    gathered = "\n\n".join(
+        f"=== {item.requirement_id} ===\n{notes[item.requirement_id].text}\n"
+        f"Sources seen: "
+        f"{', '.join(_citable(notes[item.requirement_id].source_urls)) or 'none recorded'}"
+        for item in requirements
+        if item.requirement_id in notes
+    )
+    ids = ", ".join(item.requirement_id for item in requirements)
+    return f"""Turn these questions' research notes into evidence records. Add nothing that is not in the notes.
+
+THE QUESTIONS
+{listed}
+
+THE NOTES
+{gathered}
+
+{STRUCTURE_RULES}
+- One claim per distinct fact. Do not split a fact across several claims, and
+  do not repeat the same fact once per source that mentions it: a claim cites
+  all of its sources. Two or three claims answer most questions well, and a
+  question with ten is the same answer written out at length.
+
+Return records for these questions only: {ids}. Every claim lists at least one
+of them in its requirement_ids, and the requirements array holds one entry for
+each."""
+
+
+def build_premise_prompt(
+    work_order: Prompt2BlogWorkOrder, claims: list[dict[str, Any]]
+) -> str:
+    """Settle the premise, and name conflicts that span two questions.
+
+    The only two jobs a per-question pass cannot do, so they get one small
+    call of their own that sees the claim texts and nothing else.
+    """
+    premise = (
+        "\n".join(
+            f"- {item.assumption_id}: {item.statement}" for item in work_order.premise
+        )
+        or "- None declared."
+    )
+    listed = "\n".join(
+        f"- [{claim['claim_id']}] {claim['text']}" for claim in claims
+    ) or "- Nothing was established."
+    return f"""Settle what the plan assumed, against what research found.
+
+WHAT WAS ASSUMED WITHOUT BEING CHECKED
+{premise}
+
+WHAT RESEARCH ESTABLISHED
+{listed}
+
+{PREMISE_CHECK_RULES}
+
+Also record a `conflict` for any two claims above that disagree with each
+other, listing their claim ids and summarising the disagreement. A conflict
+records two or more claims that disagree; if you cannot name at least two, it
+is not a conflict. Where the notes settled which side is right, put that in
+`resolution`, and leave it empty when they did not: an unresolved conflict is
+a question for a person, and inventing a resolution takes it away from them.
+
+Return premise_findings for every assumption above, and conflicts, and nothing
+else."""
+
+
+def _namespaced(payload: dict[str, Any], requirement_id: str) -> dict[str, Any]:
+    """Prefix this call's ids so eleven calls cannot collide.
+
+    Two questions answered separately both produce a claim called `c1`. The
+    prefix is applied to the ids and to every reference to them, so the
+    contract's link checks still hold after the merge.
+    """
+    tag = f"{requirement_id}:"
+    sources = _rows(payload, "sources")
+    claims = _rows(payload, "claims")
+    for source in sources:
+        source["source_id"] = f"{tag}{_safe_str(source.get('source_id'))}"
+    for claim in claims:
+        claim["claim_id"] = f"{tag}{_safe_str(claim.get('claim_id'))}"
+        claim["source_ids"] = [
+            f"{tag}{item}" for item in _id_list(claim, "source_ids")
+        ]
+    for requirement in _rows(payload, "requirements"):
+        requirement["claim_ids"] = [
+            f"{tag}{item}" for item in _id_list(requirement, "claim_ids")
+        ]
+    for gap in _rows(payload, "gaps"):
+        gap.setdefault("gap_id", f"{tag}gap")
+        gap["gap_id"] = f"{tag}{_safe_str(gap.get('gap_id'))}"
+    return {
+        "sources": sources,
+        "claims": claims,
+        "requirements": _rows(payload, "requirements"),
+        "gaps": _rows(payload, "gaps"),
+    }
+
+
+def _merge_sources(parts: list[dict[str, Any]]) -> tuple[list[dict], dict[str, str]]:
+    """One entry per real source, and a map from every id that meant it.
+
+    The same page answers three questions and is described three times, once
+    per call. Merged on url, then on title, because a dossier listing the same
+    site under three ids is not wrong so much as unreadable.
+    """
+    merged: list[dict[str, Any]] = []
+    by_key: dict[str, str] = {}
+    remap: dict[str, str] = {}
+    for part in parts:
+        for source in part["sources"]:
+            key = (
+                _safe_str(source.get("url")).strip().rstrip("/").lower()
+                or _safe_str(source.get("title")).strip().lower()
+            )
+            source_id = _safe_str(source.get("source_id"))
+            if key and key in by_key:
+                remap[source_id] = by_key[key]
+                continue
+            merged.append(source)
+            if key:
+                by_key[key] = source_id
+            remap[source_id] = source_id
+    return merged, remap
+
+
+def assemble_evidence(
+    work_order: Prompt2BlogWorkOrder, payload: dict[str, Any]
+) -> EvidencePackage:
+    """Normalise what the model sent, then hold it to the contract.
+
+    Separate from the calls that produce it, because what arrives is repaired
+    the same way whether it came back in one piece or eleven.
+    """
+    payload = _normalised_evidence(_safe_dict(payload))
     payload["schema_version"] = 4
     payload["work_order_fingerprint"] = work_order.work_order_fingerprint
     try:
-        # The prompt asks for conflicts and the Lima run did not record the
-        # one its own notes had named. The comparison below is the half of
-        # that a model cannot forget to do.
         return _reconcile_premise_findings(
             record_detected_conflicts(EvidencePackage.model_validate(payload)),
             work_order,
@@ -1032,6 +1256,141 @@ def structure_research(
             or "the dossier did not fit its contract",
             json.dumps(payload, ensure_ascii=False)[:40000],
         ) from error
+
+
+def _structure_batch(
+    work_order: Prompt2BlogWorkOrder,
+    requirements: list[WorkOrderRequirement],
+    notes: dict[str, GatheredNotes],
+    dependencies: ResearchDependencies,
+) -> dict[str, Any]:
+    """A few questions structured together. Never raises.
+
+    A batch whose structuring fails comes back recorded as unanswered, with a
+    gap saying so, because the alternative is one bad call taking the other
+    eight down with it. The operator meets it at the gate like any other hole.
+    """
+    ids = [item.requirement_id for item in requirements]
+    try:
+        parsed, _raw = dependencies.structure_llm.invoke_json(
+            prompt=build_batch_prompt(work_order, requirements, notes),
+            model_name=dependencies.structure_model,
+            schema=BATCH_SCHEMA,
+            max_tokens=ONE_QUESTION_MAX_TOKENS,
+            temperature=0.0,
+        )
+    except Exception as exc:  # noqa: BLE001 -- one hole beats the whole plan
+        logger.warning("Structuring failed for %s: %s", ", ".join(ids), exc)
+        return {
+            "sources": [],
+            "claims": [],
+            "requirements": [
+                {
+                    "requirement_id": requirement_id,
+                    "status": "missing",
+                    "cause": "nothing_found",
+                    "gap": (
+                        "The research notes for this question could not be "
+                        "turned into records. The notes are kept, so this is "
+                        "one call to retry rather than a lost search."
+                    ),
+                    "claim_ids": [],
+                }
+                for requirement_id in ids
+            ],
+            "gaps": [],
+        }
+    return _namespaced(_safe_dict(parsed), ids[0])
+
+
+def _settle_premise(
+    work_order: Prompt2BlogWorkOrder,
+    claims: list[dict[str, Any]],
+    dependencies: ResearchDependencies,
+) -> dict[str, Any]:
+    """The two jobs a per-question pass cannot do. Never raises.
+
+    A premise verdict is about the whole dossier, and a conflict between two
+    questions is invisible to a call that sees one. `_reconcile_premise_findings`
+    fills in anything missing afterwards, so a failure here degrades rather
+    than blocks.
+    """
+    if not work_order.premise and len(claims) < 2:
+        return {"premise_findings": [], "conflicts": []}
+    try:
+        parsed, _raw = dependencies.structure_llm.invoke_json(
+            prompt=build_premise_prompt(work_order, claims),
+            model_name=dependencies.structure_model,
+            schema=PREMISE_SCHEMA,
+            max_tokens=ONE_QUESTION_MAX_TOKENS,
+            temperature=0.0,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Premise pass failed: %s", exc)
+        return {"premise_findings": [], "conflicts": []}
+    payload = _safe_dict(parsed)
+    return {
+        "premise_findings": _rows(
+            payload, "premise_findings", "premise", "assumptions", "findings"
+        ),
+        "conflicts": _rows(payload, "conflicts", "conflict"),
+    }
+
+
+def structure_research(
+    work_order: Prompt2BlogWorkOrder,
+    notes: dict[str, GatheredNotes],
+    dependencies: ResearchDependencies,
+) -> EvidencePackage:
+    """Turn the notes into the evidence package the writing stages read.
+
+    A few questions per call, then one small call for the premise and any
+    conflict that spans two of them.
+
+    It used to be a single call: every note in, the whole dossier out. On the
+    Claude CLI that generated three to four times what it delivered, because a
+    schema failure anywhere in one large object throws all of it away and it is
+    silently produced again. On 2026-09-02 it stopped converging and took three
+    attempts down with it, at 600s, 600s and 1200s, on a plan smaller than the
+    one that had worked the day before. The CLI takes no output cap -- it
+    accepts `max_tokens` and drops it -- so nothing bounded what that call
+    could spend.
+
+    Smaller calls are not a workaround for that. They are the shape that makes
+    a failure cost one question instead of the run.
+    """
+    requirements = [
+        item for item in work_order.requirements if item.requirement_id in notes
+    ]
+    batches = [
+        requirements[start : start + STRUCTURE_BATCH_SIZE]
+        for start in range(0, len(requirements), STRUCTURE_BATCH_SIZE)
+    ]
+    parts = [
+        _structure_batch(work_order, batch, notes, dependencies) for batch in batches
+    ]
+
+    sources, remap = _merge_sources(parts)
+    claims = [claim for part in parts for claim in part["claims"]]
+    for claim in claims:
+        claim["source_ids"] = sorted(
+            {remap.get(item, item) for item in _id_list(claim, "source_ids")}
+        )
+    settled = _settle_premise(work_order, claims, dependencies)
+
+    return assemble_evidence(
+        work_order,
+        {
+            "sources": sources,
+            "claims": claims,
+            "requirements": [
+                item for part in parts for item in part["requirements"]
+            ],
+            "gaps": [gap for part in parts for gap in part["gaps"]],
+            "premise_findings": settled["premise_findings"],
+            "conflicts": settled["conflicts"],
+        },
+    )
 
 
 def run_research(

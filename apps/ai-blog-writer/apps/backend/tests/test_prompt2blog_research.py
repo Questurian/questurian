@@ -42,6 +42,9 @@ from app.features.prompt2blog.research_v4 import (
     gather_research,
     research_stage_record,
     run_research,
+    STRUCTURE_BATCH_SIZE,
+    GatheredNotes,
+    assemble_evidence,
     structure_research,
 )
 
@@ -102,9 +105,13 @@ class StructureLLM:
     def __init__(self, payload: dict[str, Any]):
         self.payload = payload
         self.kwargs: dict[str, Any] = {}
+        # Every call, because structuring is one call per question now and the
+        # last one is the premise pass rather than a question.
+        self.calls: list[dict[str, Any]] = []
 
     def invoke_json(self, **kwargs) -> tuple[dict[str, Any], str]:
         self.kwargs = kwargs
+        self.calls.append(kwargs)
         return self.payload, "{}"
 
 
@@ -341,12 +348,13 @@ def test_structuring_forces_the_shape_rather_than_asking_for_it():
 
     run_research(_brief(), _work_order(), deps)
 
-    assert deps.structure_llm.kwargs["schema"]["required"] == [
-        "sources",
-        "claims",
-        "requirements",
-    ]
-    assert deps.structure_llm.kwargs["temperature"] == 0.0
+    question_call, premise_call = deps.structure_llm.calls[0], deps.structure_llm.calls[-1]
+    assert question_call["schema"]["required"] == ["sources", "claims", "requirements"]
+    # The pass that settles the premise and any cross-question conflict has
+    # its shape forced too.
+    assert premise_call["schema"]["required"] == ["premise_findings"]
+    assert question_call["temperature"] == 0.0
+    assert premise_call["temperature"] == 0.0
 
 
 def test_the_structured_package_is_bound_to_the_work_order_it_answers():
@@ -383,7 +391,7 @@ def test_a_one_sided_claim_link_is_reconciled_rather_than_refused():
         {"requirement_id": "r2", "status": "supported", "claim_ids": []},
     ]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     by_id = {item.requirement_id: item for item in evidence.requirements}
     assert by_id["r2"].claim_ids == ["c2"], "the link the claim asserted survives"
@@ -393,7 +401,7 @@ def test_the_reconciliation_works_from_the_question_side_too():
     payload = _evidence_payload()
     payload["claims"][1]["requirement_ids"] = []
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     by_id = {item.claim_id: item for item in evidence.claims}
     assert by_id["c2"].requirement_ids == ["r2"]
@@ -406,7 +414,7 @@ def test_questions_is_read_as_requirements():
     payload = _evidence_payload()
     payload["questions"] = payload.pop("requirements")
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert {item.requirement_id for item in evidence.requirements} == {"r1", "r2"}
 
@@ -415,7 +423,7 @@ def test_a_claim_citing_a_source_that_is_not_there_keeps_the_claim():
     payload = _evidence_payload()
     payload["claims"][0]["source_ids"] = ["s1", "s404"]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert evidence.claims[0].source_ids == ["s1"]
 
@@ -427,7 +435,7 @@ def test_a_leftover_alias_key_is_not_carried_into_the_contract():
     payload["questions"] = payload["requirements"]
     payload["claims"][0]["premise_ids"] = ["a1"]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert len(evidence.requirements) == 2
 
@@ -444,7 +452,7 @@ def test_an_invented_source_vocabulary_falls_back_rather_than_failing():
     payload["sources"][0]["source_type"] = "research_notes"
     payload["sources"][0]["material_type"] = "synthesized_research_note"
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert evidence.sources[0].source_type == "other"
     assert evidence.sources[0].material_type == "other"
@@ -473,7 +481,7 @@ def test_a_conflict_that_names_no_claims_is_dropped_not_fatal():
         {"conflict_id": "x2", "claim_ids": ["c1", "c2"], "summary": "These two do."},
     ]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert [item.conflict_id for item in evidence.conflicts] == ["x2"]
 
@@ -484,7 +492,7 @@ def test_a_guessed_status_still_describes_its_gap():
     payload = _evidence_payload()
     payload["requirements"][0] = {"requirement_id": "r1", "status": "inconclusive"}
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     by_id = {item.requirement_id: item for item in evidence.requirements}
     assert by_id["r1"].status == "partial"
@@ -501,7 +509,7 @@ def test_a_timestamp_where_a_date_belongs_is_trimmed_not_fatal():
     payload["sources"][0]["published_at"] = "2026-07-14T09:30:00Z"
     payload["sources"][0]["retrieved_at"] = "2026-08-01 12:00:00"
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert evidence.sources[0].published_at == date(2026, 7, 14)
     assert evidence.sources[0].retrieved_at == date(2026, 8, 1)
@@ -511,7 +519,7 @@ def test_an_unreadable_date_is_dropped_rather_than_guessed():
     payload = _evidence_payload()
     payload["sources"][0]["published_at"] = "sometime last spring"
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert evidence.sources[0].published_at is None
 
@@ -530,7 +538,7 @@ def test_a_source_with_no_link_is_admitted_as_other_not_refused():
     payload["sources"][0]["url"] = None
     payload["sources"][0]["material_type"] = "web"
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert evidence.sources[0].material_type == "other"
     assert evidence.sources[0].publisher == "Peru Retail"
@@ -540,7 +548,7 @@ def test_anything_still_called_web_really_does_have_a_link():
     # The guarantee the demotion exists to preserve.
     payload = _evidence_payload()
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     for source in evidence.sources:
         if source.material_type in {"web", "report"}:
@@ -553,7 +561,7 @@ def test_a_claim_left_with_no_usable_source_is_dropped_not_fatal():
     payload = _evidence_payload()
     payload["claims"][0]["source_ids"] = ["s404"]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert [item.claim_id for item in evidence.claims] == ["c2"]
 
@@ -562,7 +570,7 @@ def test_a_question_that_loses_its_claims_stops_calling_itself_supported():
     payload = _evidence_payload()
     payload["claims"][0]["source_ids"] = ["s404"]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     by_id = {item.requirement_id: item for item in evidence.requirements}
     assert by_id["r1"].status == "partial"
@@ -585,7 +593,7 @@ def test_a_dossier_that_still_will_not_assemble_keeps_what_came_back():
     payload["requirements"] = []
 
     with pytest.raises(ResearchUnusable) as error:
-        structure_research(_work_order(), {}, _deps(payload))
+        assemble_evidence(_work_order(), payload)
 
     assert error.value.reason
     assert error.value.raw, "the payload has to travel with the failure"
@@ -769,7 +777,7 @@ def test_a_question_linking_its_claims_under_claims_still_links_them():
     for claim in payload["claims"]:
         claim.pop("requirement_ids", None)
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert len(evidence.claims) == len(payload["claims"])
     by_id = {item.requirement_id: item for item in evidence.requirements}
@@ -791,7 +799,7 @@ def test_sources_nested_inside_a_claim_are_lifted_out_and_kept():
             }
         ]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert evidence.sources, "a described source is still a source"
     assert len(evidence.claims) == len(payload["claims"])
@@ -804,7 +812,7 @@ def test_one_publisher_cited_by_every_claim_becomes_one_source():
     for claim in payload["claims"]:
         claim["sources"] = [{"publisher": "SENAMHI", "source_type": "official"}]
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert len(evidence.sources) == 1
 
@@ -818,7 +826,7 @@ def test_a_source_with_no_retrieval_date_is_dated_by_the_run_that_read_it():
     for source in payload["sources"]:
         source["retrieved_at"] = ""
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert all(item.retrieved_at == date.today() for item in evidence.sources)
 
@@ -830,8 +838,217 @@ def test_a_source_with_no_note_says_so_rather_than_being_refused():
     for source in payload["sources"]:
         source["notes"] = []
 
-    evidence = structure_research(_work_order(), {}, _deps(payload))
+    evidence = assemble_evidence(_work_order(), payload)
 
     assert all(item.notes for item in evidence.sources)
     assert "No note recorded" in evidence.sources[0].notes[0]
 
+
+
+# --- one call per question -------------------------------------------------
+#
+# The dossier used to be built in a single call: every note in, the whole
+# object out. On the Claude CLI that generated three to four times what it
+# delivered -- 32,060 and 39,139 billed tokens against a 36 KB record -- and on
+# 2026-09-02 it stopped converging, taking three attempts down at 600s, 600s
+# and 1200s, on a plan smaller than the one that had worked the day before.
+
+
+class PerQuestionLLM:
+    """Answers whichever questions a batch asked about, and counts calls.
+
+    A batch call gets records for every question in it, which is what the real
+    model returns and what the merge downstream has to cope with.
+    """
+
+    def __init__(self, by_requirement: dict[str, dict[str, Any]]):
+        self.by_requirement = by_requirement
+        self.prompts: list[str] = []
+
+    def invoke_json(self, *, prompt: str, **_kwargs):
+        self.prompts.append(prompt)
+        asked = [
+            requirement_id
+            for requirement_id in self.by_requirement
+            if f"- {requirement_id} [" in prompt
+        ]
+        if not asked:
+            return {"premise_findings": [], "conflicts": []}, "{}"
+        merged: dict[str, Any] = {"sources": [], "claims": [], "requirements": []}
+        for index, requirement_id in enumerate(asked):
+            payload = self.by_requirement[requirement_id]
+            for source in payload["sources"]:
+                merged["sources"].append({**source, "source_id": f"s{index}"})
+            for claim in payload["claims"]:
+                merged["claims"].append(
+                    {**claim, "claim_id": f"c{index}", "source_ids": [f"s{index}"]}
+                )
+            for item in payload["requirements"]:
+                merged["requirements"].append({**item, "claim_ids": [f"c{index}"]})
+        return merged, "{}"
+
+
+def _one_question_payload(requirement_id: str, url: str) -> dict[str, Any]:
+    return {
+        "sources": [
+            {
+                "source_id": "s1",
+                "title": "A page",
+                "publisher": "Peru Retail",
+                "url": url,
+                "retrieved_at": "2026-09-01",
+                "source_type": "reporting",
+                "material_type": "web",
+                "notes": ["Something."],
+            }
+        ],
+        "claims": [
+            {
+                "claim_id": "c1",
+                "text": f"Something established for {requirement_id}.",
+                "source_ids": ["s1"],
+                "requirement_ids": [requirement_id],
+                "confidence": "high",
+            }
+        ],
+        "requirements": [
+            {
+                "requirement_id": requirement_id,
+                "status": "supported",
+                "claim_ids": ["c1"],
+            }
+        ],
+    }
+
+
+def _per_question_deps(by_requirement):
+    llm = PerQuestionLLM(by_requirement)
+    return ResearchDependencies(gather=RecordingGather(), structure_llm=llm), llm
+
+
+def _wide_work_order(count: int) -> Prompt2BlogWorkOrder:
+    return _work_order(
+        requirements=[
+            WorkOrderRequirement(
+                requirement_id=f"r{index}",
+                question=f"Question {index}?",
+                kind="load_bearing" if index == 1 else "texture",
+            )
+            for index in range(1, count + 1)
+        ]
+    )
+
+
+def test_questions_are_structured_a_few_at_a_time():
+    """Not one call, which stopped converging, and not one per question, which
+    paid the CLI's 28,000 token per-call prefix twelve times over."""
+    count = STRUCTURE_BATCH_SIZE * 2 + 1
+    deps, llm = _per_question_deps(
+        {
+            f"r{index}": _one_question_payload(f"r{index}", f"https://example.pe/{index}")
+            for index in range(1, count + 1)
+        }
+    )
+    notes = {f"r{index}": GatheredNotes("Notes.") for index in range(1, count + 1)}
+
+    structure_research(_wide_work_order(count), notes, deps)
+
+    # Three batches over nine questions, plus the premise pass.
+    assert len(llm.prompts) == 4
+
+
+def test_every_question_reaches_a_batch():
+    count = STRUCTURE_BATCH_SIZE * 2 + 1
+    deps, _llm = _per_question_deps(
+        {
+            f"r{index}": _one_question_payload(f"r{index}", f"https://example.pe/{index}")
+            for index in range(1, count + 1)
+        }
+    )
+    notes = {f"r{index}": GatheredNotes("Notes.") for index in range(1, count + 1)}
+
+    evidence = structure_research(_wide_work_order(count), notes, deps)
+
+    assert {item.requirement_id for item in evidence.requirements} == {
+        f"r{index}" for index in range(1, count + 1)
+    }
+
+
+def test_two_batches_that_both_call_a_claim_c1_do_not_collide():
+    """Answered in separate calls, both name their first claim `c1`."""
+    deps, _llm = _per_question_deps(
+        {
+            "r1": _one_question_payload("r1", "https://example.pe/a"),
+            "r2": _one_question_payload("r2", "https://example.pe/b"),
+        }
+    )
+    notes = {"r1": GatheredNotes("Notes one."), "r2": GatheredNotes("Notes two.")}
+
+    evidence = structure_research(_work_order(), notes, deps)
+
+    assert len(evidence.claims) == 2
+    assert len({claim.claim_id for claim in evidence.claims}) == 2
+
+
+def test_the_same_page_answering_two_questions_is_listed_once():
+    """A source described once per call is still one source. A dossier listing
+    the same site under three ids is not wrong so much as unreadable."""
+    shared = "https://example.pe/same"
+    deps, _llm = _per_question_deps(
+        {
+            "r1": _one_question_payload("r1", shared),
+            "r2": _one_question_payload("r2", shared + "/"),
+        }
+    )
+    notes = {"r1": GatheredNotes("Notes one."), "r2": GatheredNotes("Notes two.")}
+
+    evidence = structure_research(_work_order(), notes, deps)
+
+    assert len(evidence.sources) == 1
+    # Both claims still resolve to it, which the contract checks.
+    assert {claim.source_ids[0] for claim in evidence.claims} == {
+        evidence.sources[0].source_id
+    }
+
+
+def test_one_batch_failing_does_not_take_the_others_down():
+    """The whole point of the split. One bad call used to be the run."""
+    count = STRUCTURE_BATCH_SIZE * 2
+    failing = f"r{count}"
+
+    class HalfBrokenLLM(PerQuestionLLM):
+        def invoke_json(self, *, prompt: str, **kwargs):
+            if f"- {failing} [" in prompt:
+                raise RuntimeError("Claude did not answer within 600s.")
+            return super().invoke_json(prompt=prompt, **kwargs)
+
+    llm = HalfBrokenLLM(
+        {
+            f"r{index}": _one_question_payload(f"r{index}", f"https://example.pe/{index}")
+            for index in range(1, count + 1)
+        }
+    )
+    deps = ResearchDependencies(gather=RecordingGather(), structure_llm=llm)
+    notes = {f"r{index}": GatheredNotes("Notes.") for index in range(1, count + 1)}
+
+    evidence = structure_research(_wide_work_order(count), notes, deps)
+
+    by_id = {item.requirement_id: item for item in evidence.requirements}
+    assert by_id["r1"].status == "supported"
+    assert by_id[failing].status == "missing"
+    assert "one call to retry" in by_id[failing].gap
+    # The other batch is untouched, which is the property being bought here.
+    assert by_id["r1"].claim_ids
+
+
+def test_the_premise_pass_sees_the_claims_and_nothing_else():
+    deps, llm = _per_question_deps(
+        {"r1": _one_question_payload("r1", "https://example.pe/a")}
+    )
+
+    structure_research(_work_order(), {"r1": GatheredNotes("Notes one.")}, deps)
+
+    premise_prompt = llm.prompts[-1]
+    assert "WHAT RESEARCH ESTABLISHED" in premise_prompt
+    assert "Something established for r1." in premise_prompt
+    assert "Notes one." not in premise_prompt
