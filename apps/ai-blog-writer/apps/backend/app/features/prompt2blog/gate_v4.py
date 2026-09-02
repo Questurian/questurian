@@ -392,15 +392,21 @@ def _cost_of_omitting(work_order: "Prompt2BlogWorkOrder", requirement_id: str) -
 def venues_to_check(evidence: EvidencePackage) -> list[dict[str, Any]]:
     """The places the article would send a reader, for a person to look at.
 
-    Only claims that name somewhere bookable or visitable. In run 76b36468 that
-    was five of nineteen claims, two of them the same operator: a two minute
-    job, because most claims are facts rather than places.
+    Only claims naming somewhere whose survival is in doubt. In run 76b36468
+    that was five of nineteen claims, two of them the same operator: a two
+    minute job, because most claims are facts rather than places.
+
+    `sole_support_for` names the questions that would be left with nothing if
+    this place were dropped. Dropping is the one move here that costs
+    something, and run a2066506 is why it has to be said in advance: an
+    operator clearing three irrelevant chains out of the list could push their
+    own run back behind the gate without being told.
     """
     seen: set[str] = set()
     venues: list[dict[str, Any]] = []
     for claim in evidence.claims:
         name = _safe_str(claim.venue)
-        if not name or name.casefold() in seen:
+        if not name or claim.venue_dismissed or name.casefold() in seen:
             continue
         seen.add(name.casefold())
         urls = [
@@ -415,9 +421,42 @@ def venues_to_check(evidence: EvidencePackage) -> list[dict[str, Any]]:
                 "text": claim.text,
                 "urls": urls,
                 "note": _safe_str(claim.venue_note),
+                "sole_support_for": _questions_resting_on(evidence, claim.claim_id),
             }
         )
     return venues
+
+
+def _questions_resting_on(evidence: EvidencePackage, claim_id: str) -> list[str]:
+    """Questions this claim is the last thing holding up."""
+    return sorted(
+        requirement.requirement_id
+        for requirement in evidence.requirements
+        if requirement.claim_ids == [claim_id]
+    )
+
+
+def dismiss_venue(evidence: EvidencePackage, *, claim_id: str) -> EvidencePackage:
+    """Take a place off the list without touching the dossier.
+
+    The answer to a place that should never have been asked about. The claim
+    keeps its questions, its sources and its place in what the writer is given
+    -- all that changes is that nobody is asked about it again.
+
+    Separate from `drop_venue` because the two mean opposite things. Dropping
+    says the research is wrong and the article must not rest on it. This says
+    the research is fine and the question was never worth a person's time.
+    """
+    payload = evidence.model_dump(mode="json")
+    found = False
+    for claim in payload["claims"]:
+        if claim["claim_id"] == claim_id:
+            claim["venue_dismissed"] = True
+            found = True
+    if not found:
+        raise GateAnswerRefused(f"No claim called {claim_id}.")
+    logger.info("Operator dismissed the venue on claim %s as not worth checking", claim_id)
+    return EvidencePackage.model_validate(payload)
 
 
 def note_venue(

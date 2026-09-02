@@ -17,6 +17,7 @@ import pytest
 from app.features.prompt2blog.contracts_v4 import EvidencePackage
 from app.features.prompt2blog.gate_v4 import (
     GateAnswerRefused,
+    dismiss_venue,
     drop_venue,
     note_venue,
     venues_to_check,
@@ -251,5 +252,106 @@ def test_the_schema_asks_for_the_venue_and_the_prompt_explains_it():
     )
     flat = " ".join(build_structure_prompt(work_order, {}).split())
 
-    assert "somewhere a reader could actually go" in flat
+    assert "sends a reader to a place whose survival is genuinely in doubt" in flat
     assert "a list with every fact in it is a list nobody reads" in flat
+    # The two faults from run a2066506, named in the instruction itself.
+    assert "Nobody doubts the place is still there" in flat
+    assert "names the place as evidence rather than as a destination" in flat
+
+
+# --- what does not belong on the list at all --------------------------------
+
+
+def test_a_place_the_operator_dismissed_leaves_the_list():
+    """Run a2066506 put McDonald's, Starbucks and KFC in front of the operator.
+
+    Nobody needs to confirm McDonald's is still trading, and clearing one has
+    to be free -- the whole point is that it should never have been asked.
+    """
+    evidence = dismiss_venue(_evidence(), claim_id="c11")
+
+    assert [v["venue"] for v in venues_to_check(evidence)] == ["Real City Tours"]
+
+
+def test_dismissing_leaves_the_dossier_exactly_as_it_was():
+    """The research was right. Only the question was not worth asking."""
+    evidence = dismiss_venue(_evidence(), claim_id="c11")
+
+    claim = next(c for c in evidence.claims if c.claim_id == "c11")
+    assert claim.text == "Moravia Tours was co-founded by community leaders."
+    assert claim.requirement_ids == ["q3"]
+    requirement = next(r for r in evidence.requirements if r.requirement_id == "q3")
+    assert requirement.status == "supported"
+    assert requirement.claim_ids == ["c10", "c11"]
+
+
+def test_a_dismissal_survives_a_re_parse_of_stored_evidence():
+    """Otherwise the same three chains come back on the next page load."""
+    from app.features.prompt2blog.research_v4 import _normalised_evidence
+
+    dismissed = dismiss_venue(_evidence(), claim_id="c11")
+    stored = dismissed.model_dump(mode="json")
+    reparsed = EvidencePackage.model_validate(
+        {
+            **_normalised_evidence(stored),
+            "work_order_fingerprint": stored["work_order_fingerprint"],
+        }
+    )
+
+    claim = next(c for c in reparsed.claims if c.claim_id == "c11")
+    assert claim.venue_dismissed is True
+
+
+def test_dismissing_an_unknown_claim_says_so():
+    with pytest.raises(GateAnswerRefused, match="No claim called"):
+        dismiss_venue(_evidence(), claim_id="c999")
+
+
+# --- saying what a drop will cost, before the click -------------------------
+
+
+def test_the_list_says_which_questions_rest_on_this_place_alone():
+    """The trap in run a2066506: clearing an irrelevant entry could push the
+    run back behind the gate with no warning."""
+    evidence = _evidence(
+        claims=[
+            {
+                "claim_id": "c11",
+                "text": "Moravia Tours runs weekly tours.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q3"],
+                "confidence": "high",
+                "venue": "Moravia Tours",
+            },
+            {
+                "claim_id": "c10",
+                "text": "Real City Tours costs COP 100,000.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q1"],
+                "confidence": "high",
+                "venue": "Real City Tours",
+            },
+            {
+                "claim_id": "c4",
+                "text": "The Graffitour draws 7,000 daily.",
+                "source_ids": ["s1"],
+                "requirement_ids": ["q1"],
+                "confidence": "high",
+            },
+        ],
+        requirements=[
+            {"requirement_id": "q3", "status": "supported", "claim_ids": ["c11"]},
+            {"requirement_id": "q1", "status": "supported", "claim_ids": ["c10", "c4"]},
+        ],
+    )
+
+    by_name = {v["venue"]: v for v in venues_to_check(evidence)}
+    assert by_name["Moravia Tours"]["sole_support_for"] == ["q3"]
+    # q1 keeps c4 whatever happens to this one, so dropping it costs nothing.
+    assert by_name["Real City Tours"]["sole_support_for"] == []
+
+
+def test_nothing_rests_on_a_place_a_second_claim_also_supports():
+    by_name = {v["venue"]: v for v in venues_to_check(_evidence())}
+
+    assert by_name["Moravia Tours"]["sole_support_for"] == []

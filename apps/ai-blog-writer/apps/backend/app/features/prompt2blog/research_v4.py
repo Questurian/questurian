@@ -83,6 +83,9 @@ EVIDENCE_CLAIM_FIELDS = frozenset(
         "confidence",
         "venue",
         "venue_note",
+        # Operator-set, like `venue_note`. It survives a re-parse of stored
+        # evidence, so a place already cleared off the list stays cleared.
+        "venue_dismissed",
     }
 )
 EVIDENCE_REQUIREMENT_FIELDS = frozenset({"requirement_id", "status", "claim_ids", "gap"})
@@ -630,12 +633,26 @@ Rules:
 - `confidence` on a claim is one of: high, medium, low. An answer that is
   genuinely a range is still `supported` at `medium` or `low`; it does not
   become `partial` for being approximate.
-- Set `venue` on a claim that names somewhere a reader could actually go: a
-  tour operator, a restaurant, a bar, a museum, a shop, anything bookable or
-  visitable. Put the name of the place there and nothing else. Leave it empty
-  for a claim that is only a fact -- an elevation, a visitor count, a date. A
-  person checks these before the article recommends them, and a list with every
-  fact in it is a list nobody reads.
+- Set `venue` only on a claim that sends a reader to a place whose survival is
+  genuinely in doubt: an independent tour operator, a small guesthouse, one
+  restaurant, a bar, a family business, a tour run by a few people. Put the
+  name of the place there and nothing else. A person looks these up before the
+  article recommends them, and they are looking for one thing -- whether it is
+  still going.
+  Leave it empty in all three of these cases:
+  - The claim is only a fact: an elevation, a visitor count, a date.
+  - Nobody doubts the place is still there: a chain, a plaza, a park, a metro
+    station, a cathedral, a museum that has been open for decades. Asking about
+    one of these is a question the person can never learn anything from, and it
+    buries the two or three worth their time.
+  - The claim names the place as evidence rather than as a destination.
+    "Parque Kennedy is surrounded by McDonald's, Starbucks and KFC" names three
+    venues and sends a reader to none of them -- it describes what an area has
+    become, and that is a good sentence to write. Tag the place the article
+    points at, never the place it merely mentions.
+  Most claims should have no venue. On a run with nineteen claims, three or
+  four is a normal count, and a list with every fact in it is a list nobody
+  reads.
 - A `conflict` records two or more claims that disagree, and must list their
   claim ids. If you cannot name at least two claims in conflict, it is not a
   conflict -- leave it out.

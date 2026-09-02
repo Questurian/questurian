@@ -183,6 +183,12 @@ export interface VenueToCheck {
   text: string
   urls: string[]
   note: string
+  /**
+   * Questions this place is the last thing holding up. Dropping it puts them
+   * back behind the gate, which the screen has to say before the click rather
+   * than after it.
+   */
+  sole_support_for: string[]
 }
 
 /** The finished article. Its own call: the state is polled, this is not. */

@@ -950,6 +950,20 @@
   font-size: 0.875rem;
 }
 
+/*
+ * What a drop would cost, said before the click. The one destructive move on
+ * this screen sits next to two free ones, so the difference has to be visible
+ * rather than discovered.
+ */
+.p2b-venue-cost {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  border-left: 2px solid var(--accent);
+  padding-left: var(--space-3);
+}
+
 .p2b-venue .p2b-intake-actions {
   margin-top: var(--space-3);
 }

@@ -445,18 +445,41 @@ class EvidenceClaim(V4ContractModel):
     requirement_ids: list[str] = Field(min_length=1)
     as_of: date | None = None
     confidence: EvidenceConfidence
-    # The place this claim would send a reader: a tour, a restaurant, a bar, a
-    # museum. Set only when the claim names somewhere bookable or visitable,
-    # so the operator can be shown a short list rather than every fact.
+    # A place this claim sends a reader to, whose survival is genuinely in
+    # doubt: an independent operator, a small guesthouse, one restaurant, a
+    # tour run by a few people.
     #
     # Research can confirm a site resolves and a price is published. It cannot
     # see that the last post was 2024 and the checkout is janky. Moravia Tours
     # came back correct in every word and was a business winding down, which is
     # not a fact on a page but the absence of recent activity. That judgment
     # needs a person, and this field is how they are given the short list.
+    #
+    # Two things this is not, both from run a2066506, which put McDonald's,
+    # Starbucks and KFC in front of the operator:
+    #
+    # A place nobody doubts is not worth a person's eye. A chain, a plaza, a
+    # metro station, a museum that has been open for forty years -- confirming
+    # any of them is a decision the operator can never learn anything from, and
+    # it dilutes the two or three that matter.
+    #
+    # Naming a place is not recommending it. "Parque Kennedy is surrounded by
+    # McDonald's, Starbucks and KFC" names three venues and sends a reader to
+    # none of them; it is a sentence about the character of an area, and on
+    # that run it was one of the better lines available. Only a claim that
+    # actually points a reader somewhere carries the risk this field exists to
+    # catch.
     venue: str = ""
     # What the operator said about it after looking. Reaches the writer.
     venue_note: str = ""
+    # The operator said this one never needed checking. The claim is untouched
+    # and still supports whatever it supported -- it only leaves the list.
+    #
+    # Dropping is the move that costs something, because it takes the claim out
+    # of the dossier and can put a question back behind the gate. Making that
+    # the only way to clear an irrelevant entry meant the obvious move and the
+    # safe move were different, which is the wrong way round.
+    venue_dismissed: bool = False
 
     @model_validator(mode="after")
     def validate_unique_links(self) -> "EvidenceClaim":
