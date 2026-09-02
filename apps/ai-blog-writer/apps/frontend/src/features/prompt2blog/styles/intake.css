@@ -791,6 +791,104 @@
  * and typed changes leave nothing able to say what was actually asked for.
  */
 
+/* ---------- what to fix by hand ---------- */
+
+/*
+ * A worklist, not a report. It is read standing up, with the article open, so
+ * the rank and the place come before the reasoning and the items are separated
+ * by rules rather than boxed -- a card each would make six items look like six
+ * decisions.
+ */
+.p2b-punch {
+  margin: var(--space-5) 0 0;
+}
+
+.p2b-punch-list {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.p2b-punch-item {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border);
+}
+
+.p2b-punch-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+
+.p2b-punch-rank {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.p2b-punch-where {
+  color: var(--ink-light);
+  font-size: 0.875rem;
+}
+
+.p2b-punch-quote {
+  margin-left: var(--space-2);
+  font-style: italic;
+}
+
+.p2b-punch-note {
+  margin: var(--space-2) 0 0;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/*
+ * The one distinction the screen exists to make. A fact the run already holds
+ * is quoted and actionable now; a fact nobody established is stated as absent
+ * and never filled in, because filling it in here would be inventing it after
+ * every check in the pipeline has run.
+ */
+.p2b-punch-have,
+.p2b-punch-unused {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent-softer);
+  border-radius: var(--radius-md);
+}
+
+.p2b-punch-have ul,
+.p2b-punch-unused ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.p2b-punch-missing {
+  margin: var(--space-3) 0 0;
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  border-left: 2px solid var(--accent);
+  padding-left: var(--space-3);
+}
+
+.p2b-punch-unused {
+  margin-top: var(--space-5);
+}
+
+.p2b-punch-dropped {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-4);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
 .p2b-polish {
   margin: var(--space-5) 0 0;
   padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5));
