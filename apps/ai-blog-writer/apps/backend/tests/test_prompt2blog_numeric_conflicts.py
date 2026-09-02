@@ -21,7 +21,7 @@ from app.features.prompt2blog.contracts_v4 import EvidencePackage
 from app.features.prompt2blog.evidence_conflicts import (
     detect_numeric_disagreements,
     quantities,
-    record_numeric_conflicts,
+    record_detected_conflicts,
 )
 
 
@@ -104,7 +104,7 @@ def test_the_rainfall_claims_are_seen_to_disagree():
 
 
 def test_the_disagreement_is_recorded_as_an_unresolved_conflict():
-    package = record_numeric_conflicts(_package(RAINFALL))
+    package = record_detected_conflicts(_package(RAINFALL))
 
     assert len(package.conflicts) == 1
     conflict = package.conflicts[0]
@@ -188,13 +188,13 @@ def test_a_conflict_research_already_recorded_is_not_duplicated():
     )
 
     assert detect_numeric_disagreements(package) == []
-    assert len(record_numeric_conflicts(package).conflicts) == 1
+    assert len(record_detected_conflicts(package).conflicts) == 1
 
 
 def test_a_clean_dossier_is_returned_untouched():
     package = _package([_claim("c1", "The nets are maintained by volunteers.")])
 
-    assert record_numeric_conflicts(package) is package
+    assert record_detected_conflicts(package) is package
 
 
 # --- the prompt still asks for the half a comparison cannot do -------------

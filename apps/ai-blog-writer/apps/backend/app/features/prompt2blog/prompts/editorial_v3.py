@@ -184,9 +184,10 @@ Return strict JSON only:
   "word_count_estimate": 0,
   "constraint_checks": {{
     "audience_match": false,
-    "tone_match": false,
-    "fails_if_avoided": false
+    "tone_match": false
   }},
+  "fails_if_quote": "string",
+  "fails_if_why": "string",
   "required_revisions": ["string"],
   "quality_summary": "string"
 }}
@@ -222,22 +223,32 @@ Rules:
   built from.
 - Mark too_close_to_source=true when phrasing or structure tracks an evidence
   record too closely.
-- Judge only audience_match, tone_match and fails_if_avoided. Word count,
-  paragraph length, CTA, and keyword presence are measured deterministically
-  outside this prompt, so do not report them.
+- Judge only audience_match and tone_match. Word count, paragraph length, CTA,
+  and keyword presence are measured deterministically outside this prompt, so
+  do not report them.
 - The line under "This piece fails if" is the operator's own definition of
   failure for this piece, written in their words before anything was
-  researched. It is the one criterion nobody else can supply. Read the draft
-  against that sentence and set fails_if_avoided accordingly. Where the draft
-  walks into it, name the sentence that does in required_revisions, quoting
-  it, and let it weigh on brief_adherence_score and overall_score the way any
-  other failure of the brief does. Run 849ae5aa was told the piece fails if it
-  "describes the projects in the present tense when nobody has confirmed they
-  are still running", opened with "Hundreds of fog nets built in Lima are
-  standing and functioning in 2026", and passed.
+  researched. It is the one criterion nobody else can supply.
+  Do not answer whether the draft avoids it. Answer with evidence:
+  fails_if_quote is the sentence copied out of the draft, word for word, that
+  walks into that line, and fails_if_why is one line saying how it does. If
+  the draft does not walk into it, fails_if_quote is an empty string and
+  fails_if_why says why the line does not apply. Copy the sentence exactly;
+  the quote is checked against the draft, and a sentence that is not in it
+  tells us the answer cannot be relied on.
+  A quoted sentence also belongs in required_revisions, and it weighs on
+  brief_adherence_score and overall_score the way any other failure of the
+  brief does.
+  Two runs walked into their own line and reported otherwise. 849ae5aa was
+  told the piece fails if it "describes the projects in the present tense when
+  nobody has confirmed they are still running", opened with "Hundreds of fog
+  nets built in Lima are standing and functioning in 2026", and passed.
+  b29d66b4 was told it fails if it walks the stalls one after another and
+  never says which to go to, wrote a section this audit itself called an
+  inventory, and still answered that the failure was avoided.
 - The line is freehand and it is not a gate. A sentence you cannot apply is a
-  sentence you leave alone: set fails_if_avoided true and say nothing rather
-  than inventing a reading of it.
+  sentence you leave alone: return an empty quote and say so rather than
+  inventing a reading of it.
 - Score honestly. A draft that merely avoids mistakes is a 7, not a 9. Being
   grounded, complete, and constraint-compliant is the floor this scale starts
   from, not what earns the top of it.

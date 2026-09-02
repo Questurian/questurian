@@ -99,7 +99,6 @@ def test_audit_keeps_only_semantic_constraint_checks():
     assert quality["constraint_checks"] == {
         "audience_match": False,
         "tone_match": True,
-        "fails_if_avoided": True,
     }
 
 
@@ -239,21 +238,110 @@ def test_length_measurements_never_land_among_the_pass_fail_verdicts():
 # ever asked it to read it.
 
 
-def test_the_auditor_is_asked_whether_the_draft_walks_into_the_failure():
+def test_the_auditor_answers_with_a_sentence_not_a_checkbox():
+    """A boolean can be answered without reading. On b29d66b4 it was: the
+    audit reported the failure avoided in the same response where it called
+    the section an inventory and told repair to rewrite it."""
+    from app.features.prompt2blog.quality import evaluate_fails_if
+
+    content = (
+        "## Where to eat\n\nNorma Cevicheria receives the most acclaim and "
+        "serves a fish ceviche with fried pork rinds.\n\n## The cost\n\n"
+        "Punto Azul charges 51 soles for a classic fish ceviche."
+    )
     quality = _sanitize_quality(
         {
             "overall_score": 8,
-            "constraint_checks": {"fails_if_avoided": False},
+            "fails_if_quote": (
+                "Norma Cevicheria receives the most acclaim and serves a fish "
+                "ceviche with fried pork rinds."
+            ),
+            "fails_if_why": "It lists a stall without saying to go there.",
         }
     )
 
-    assert quality["constraint_checks"]["fails_if_avoided"] is False
+    result = evaluate_fails_if(quality, content)
+
+    assert result["verdict"] == "walks_into_it"
+    assert "Norma Cevicheria" in result["matched"]
 
 
-def test_an_auditor_that_omits_the_verdict_does_not_manufacture_a_failure():
-    quality = _sanitize_quality({"overall_score": 8, "constraint_checks": {}})
+def test_a_quote_that_is_not_in_the_draft_is_recorded_as_unjudged():
+    """An invented quote must not become a failure -- that is the same sin in
+    the other direction -- but it must not be banked as a pass either."""
+    from app.features.prompt2blog.quality import evaluate_fails_if
 
-    assert quality["constraint_checks"]["fails_if_avoided"] is True
+    quality = _sanitize_quality(
+        {
+            "overall_score": 8,
+            "fails_if_quote": "The tram runs every eleven minutes from the plaza.",
+            "fails_if_why": "Present tense about a service nobody confirmed.",
+        }
+    )
+
+    result = evaluate_fails_if(quality, "## Cost\n\nA plate runs 25 soles.")
+
+    assert result["verdict"] == "unjudged"
+    assert result["matched"] == ""
+
+
+def test_a_quote_that_lost_its_punctuation_still_counts():
+    """A model that repairs a dash has still located the sentence. Losing a
+    true finding to punctuation would be the worst way to fail."""
+    from app.features.prompt2blog.quality import evaluate_fails_if
+
+    content = (
+        "## Stalls\n\nDon Danilo operates from stall 486, and you will sit "
+        "on plastic stools if you eat at El Rey Luhcin."
+    )
+    quality = _sanitize_quality(
+        {
+            "overall_score": 8,
+            "fails_if_quote": (
+                "Don Danilo operates from stall 486 and you will sit on plastic "
+                "stools if you eat at El Rey Luhcin"
+            ),
+        }
+    )
+
+    assert evaluate_fails_if(quality, content)["verdict"] == "walks_into_it"
+
+
+def test_a_quote_spanning_two_sentences_still_matches():
+    """An auditor quoting the problem often quotes two sentences of it.
+    Scored against single sentences, such a quote can never match anything and
+    a true finding is thrown away for spanning a full stop."""
+    from app.features.prompt2blog.quality import evaluate_fails_if
+
+    content = (
+        "## Stalls\n\nYou will sit on plastic stools if you eat at El Rey "
+        "Luhcin. Don Danilo operates from stall 486. Al Toke Pez sits nearby."
+    )
+    quality = _sanitize_quality(
+        {
+            "overall_score": 8,
+            "fails_if_quote": (
+                "You will sit on plastic stools if you eat at El Rey Luhcin. "
+                "Don Danilo operates from stall 486."
+            ),
+        }
+    )
+
+    assert evaluate_fails_if(quality, content)["verdict"] == "walks_into_it"
+
+
+def test_an_auditor_that_answers_with_no_quote_does_not_manufacture_a_failure():
+    from app.features.prompt2blog.quality import evaluate_fails_if
+
+    quality = _sanitize_quality({"overall_score": 8})
+
+    assert evaluate_fails_if(quality, "## Cost\n\nA plate runs 25 soles.") == {
+        "quote": "",
+        "why": "",
+        "verdict": "avoided",
+        "matched": "",
+        "match_score": 0.0,
+    }
 
 
 def test_walking_into_the_failure_does_not_block_the_run():
