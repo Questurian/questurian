@@ -17,9 +17,10 @@ interface AddInstagramEmbedFormProps {
   locationId?: number;
   locationLabel?: string;
   onQueueEmbed?: (payload: QueuedInstagramEmbedPayload) => void;
+  quota?: { limit: number | null; remaining: number | null };
 }
 
-export function AddInstagramEmbedForm({ category, locationId, locationLabel, onQueueEmbed }: AddInstagramEmbedFormProps) {
+export function AddInstagramEmbedForm({ category, locationId, locationLabel, onQueueEmbed, quota }: AddInstagramEmbedFormProps) {
   const { showToast } = useToast();
   const isUploadMode = typeof locationId === 'number' && !!category;
 
@@ -78,6 +79,11 @@ export function AddInstagramEmbedForm({ category, locationId, locationLabel, onQ
         {isUploadMode ? 'Add Instagram Embed' : 'Queue Instagram Embed'}
         {!isUploadMode && <Clock3 className="h-3.5 w-3.5 text-muted-foreground" />}
       </h4>
+      {quota?.remaining !== null && quota?.remaining !== undefined && (
+        <p className="text-xs font-medium text-muted-foreground">
+          Instagram API: {quota.remaining}{quota.limit !== null ? `/${quota.limit}` : ""} requests remaining
+        </p>
+      )}
       {isUploadMode && (
         <p className="text-xs text-muted-foreground">
           Target: #{locationId}{locationLabel ? ` ${locationLabel}` : ""}

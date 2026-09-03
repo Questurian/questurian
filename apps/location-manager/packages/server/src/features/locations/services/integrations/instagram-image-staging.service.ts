@@ -12,6 +12,7 @@ import {
 } from "../../repositories/content";
 import { InstagramApiClient, InstagramApiError, type InstagramMediaItem } from "./clients/instagram-api.client";
 import { ImageStorageService } from "../storage/image-storage.service";
+import { setInstagramApiQuota } from "@server/shared/settings/instagram-api-quota";
 
 const BACKFILL_INTERVAL_MS = 20_000;
 const RATE_LIMIT_RETRY_MS = 60 * 60 * 1000;
@@ -38,6 +39,7 @@ export class InstagramImageStagingService {
 
     try {
       const media = await this.apiClient.fetchMediaUrls(embed.url);
+      setInstagramApiQuota(media.quota);
       embed.media_item_count = media.items.length;
       await this.ensurePrivatePreview(embed, location.name, media.imageUrls);
 
@@ -68,6 +70,7 @@ export class InstagramImageStagingService {
       this.touchLocationUpdatedAt(embed.location_id);
       return embed;
     } catch (error) {
+      if (error instanceof InstagramApiError) setInstagramApiQuota(error.quota);
       const rateLimited = error instanceof InstagramApiError && error.status === 429;
       embed.media_staging_status = rateLimited ? "pending" : "failed";
       embed.media_staging_version = rateLimited ? null : CURRENT_INSTAGRAM_MEDIA_STAGING_VERSION;

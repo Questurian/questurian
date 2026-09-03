@@ -2,6 +2,7 @@
 
 import logging
 import os
+from collections.abc import Callable
 
 from vertexai.generative_models import GenerativeModel, Part
 
@@ -21,6 +22,42 @@ from vertex_runtime import (
 
 
 logger = logging.getLogger("vertex_alt_text")
+
+
+def _response_text(response: object) -> str:
+    return (getattr(response, "text", "") or "").strip()
+
+
+def _describe_empty_response(response: object) -> str:
+    candidates = list(getattr(response, "candidates", []) or [])
+    candidate = candidates[0] if candidates else None
+    details = [
+        f"finish_reason={getattr(candidate, 'finish_reason', None)}",
+        f"finish_message={getattr(candidate, 'finish_message', None)}",
+        f"prompt_feedback={getattr(response, 'prompt_feedback', None)}",
+        f"response_id={getattr(response, 'response_id', None)}",
+    ]
+    return ", ".join(details)
+
+
+def _generate_content_with_empty_response_retry(
+    generate: Callable[[], object],
+) -> object:
+    response = generate()
+    if _response_text(response):
+        return response
+
+    first_detail = _describe_empty_response(response)
+    logger.warning("Vertex AI returned empty content; retrying once (%s)", first_detail)
+
+    response = generate()
+    if _response_text(response):
+        return response
+
+    raise RuntimeError(
+        "Vertex AI returned empty JSON after one retry "
+        f"({_describe_empty_response(response)})."
+    )
 
 
 def generate_alt_text_from_data(image_data: bytes, content_type: str) -> str:
@@ -56,14 +93,16 @@ def generate_grounded_json_from_prompt(prompt: str, model_name: str) -> dict:
         from google.genai.types import GenerateContentConfig, GoogleSearch, Tool
 
         client = genai.Client(vertexai=True, project=project, location=location)
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-            config=GenerateContentConfig(tools=[Tool(google_search=GoogleSearch())]),
+        response = _generate_content_with_empty_response_retry(
+            lambda: client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+                config=GenerateContentConfig(
+                    tools=[Tool(google_search=GoogleSearch())]
+                ),
+            )
         )
-        text = (response.text or "").strip()
-        if not text:
-            raise RuntimeError("Vertex AI returned empty JSON.")
+        text = _response_text(response)
         parsed = parse_json_object(text)
         return merge_grounded_snippets(parsed, response)
     except ImportError:

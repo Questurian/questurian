@@ -12,6 +12,7 @@ import { PayloadMediaSetsGallery } from "./PayloadMediaSetsGallery";
 import { REQUIRED_VARIANT_COUNT } from "./location-media-gallery.utils";
 import { UploadedImageSetsGallery } from "./UploadedImageSetsGallery";
 import { useLocationMediaGallery } from "./useLocationMediaGallery";
+import { useInstagramApiQuota } from "@client/shared/services/api/hooks";
 
 interface LocationMediaGalleryProps {
   locationDetail: LocationResponse;
@@ -25,6 +26,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
   const hasActiveInstagramStaging = (locationDetail.instagram_embeds || []).some((embed) =>
     embed.media_staging_status === "pending" || embed.media_staging_status === "processing"
   );
+  const instagramQuota = useInstagramApiQuota(hasActiveInstagramStaging);
   return (
     <>
       {(gallery.uploadsWithPreview.length > 0 || stagedSourceCount > 0 || hasActiveInstagramStaging || !!locationDetail.placeId || gallery.isAttraction) && (
@@ -49,7 +51,7 @@ export function LocationMediaGallery({ locationDetail }: LocationMediaGalleryPro
       )}
       <InstagramEmbedsGallery embeds={gallery.instagramEmbedsWithPreview} onOpen={gallery.openInstagram} onDelete={(id) => gallery.setDeleteConfirm({ type: "instagram", id })} onRetry={(id) => gallery.retryInstagramStaging.mutate(id)} retrying={gallery.retryInstagramStaging.isPending} />
       <div className="flex gap-4">
-        <div className="flex-1"><AddInstagramEmbedForm category={locationDetail.category} locationId={locationDetail.id} locationLabel={locationDetail.title || locationDetail.source?.name || ""} /></div>
+        <div className="flex-1"><AddInstagramEmbedForm category={locationDetail.category} locationId={locationDetail.id} locationLabel={locationDetail.title || locationDetail.source?.name || ""} quota={instagramQuota.data} /></div>
         <div className="flex-1"><AddUploadFilesForm category={locationDetail.category} locationId={locationDetail.id} /></div>
       </div>
       <GalleryDialogs

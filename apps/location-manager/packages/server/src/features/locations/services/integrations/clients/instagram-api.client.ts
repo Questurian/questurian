@@ -5,6 +5,15 @@ export interface InstagramMediaResponse {
   mediaType: "single" | "carousel";
   eligibility: "photos-only" | "video" | "mixed" | "unknown";
   items: InstagramMediaItem[];
+  quota: {
+    limit: number | null;
+    remaining: number | null;
+  };
+}
+
+export interface InstagramApiQuota {
+  limit: number | null;
+  remaining: number | null;
 }
 
 export interface InstagramMediaItem {
@@ -15,7 +24,11 @@ export interface InstagramMediaItem {
 }
 
 export class InstagramApiError extends Error {
-  constructor(public readonly status: number, message: string) {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly quota: InstagramApiQuota = { limit: null, remaining: null },
+  ) {
     super(message);
     this.name = "InstagramApiError";
   }
@@ -23,7 +36,7 @@ export class InstagramApiError extends Error {
 
 export class InstagramApiClient {
   private readonly apiKey: string;
-  private readonly apiHost = "instagram120.p.rapidapi.com";
+  private readonly apiHost = "instagram-downloader-v2-scraper-reels-igtv-posts-stories.p.rapidapi.com";
 
   constructor(config: EnvConfig) {
     this.apiKey = config.RAPID_API_KEY;
@@ -38,33 +51,44 @@ export class InstagramApiClient {
       throw new Error("Instagram API not configured - RAPID_API_KEY missing");
     }
 
-    const response = await fetch(
-      `https://${this.apiHost}/api/instagram/links`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-rapidapi-host": this.apiHost,
-          "x-rapidapi-key": this.apiKey,
-        },
-        body: JSON.stringify({ url: postUrl }),
-      }
-    );
+    const endpoint = new URL(`https://${this.apiHost}/get-post`);
+    endpoint.searchParams.set("url", postUrl);
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "x-rapidapi-host": this.apiHost,
+        "x-rapidapi-key": this.apiKey,
+      },
+    });
+
+    const quota = {
+      limit: this.parseQuotaHeader(response.headers.get("x-ratelimit-requests-limit")),
+      remaining: this.parseQuotaHeader(response.headers.get("x-ratelimit-requests-remaining")),
+    };
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new InstagramApiError(response.status, `Instagram API error: ${response.status} - ${errorText}`);
+      throw new InstagramApiError(response.status, `Instagram API error: ${response.status} - ${errorText}`, quota);
     }
 
     const data: any = await response.json();
-    const parsed = this.parseMediaResponse(data);
+    const parsed = {
+      ...this.parseMediaResponse(data),
+      quota,
+    };
     if (parsed.items.length === 0) {
       throw new Error("Instagram API returned no image URLs for this post");
     }
     return parsed;
   }
 
-  private parseMediaResponse(data: any): InstagramMediaResponse {
+  private parseQuotaHeader(value: string | null): number | null {
+    if (value === null) return null;
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  private parseMediaResponse(data: any): Omit<InstagramMediaResponse, "quota"> {
     const getBestUrl = (candidates: Array<{ url: string }> | undefined) => {
       if (!candidates || candidates.length === 0) return null;
       return candidates[0]!.url;
@@ -84,7 +108,20 @@ export class InstagramApiClient {
     };
 
     let items: InstagramMediaItem[] = [];
-    if (data?.media?.carousel_media && Array.isArray(data.media.carousel_media)) {
+    if (Array.isArray(data?.media)) {
+      items = data.media.map((item: any, position: number) => {
+        const video = item?.is_video === true;
+        const imageUrl = video
+          ? item?.thumb ?? undefined
+          : item?.url ?? item?.thumb ?? undefined;
+        return {
+          key: String(item?.id ?? `position-${position}`),
+          position,
+          mediaType: video ? "video" as const : "photo" as const,
+          ...(imageUrl ? { imageUrl } : {}),
+        };
+      });
+    } else if (data?.media?.carousel_media && Array.isArray(data.media.carousel_media)) {
       items = data.media.carousel_media.map(toItem);
     } else if (data?.media) {
       items = [toItem(data.media, 0)];

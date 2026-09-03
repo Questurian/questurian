@@ -3,6 +3,7 @@ import { successResponse } from "@shared/types/api-response";
 import type { AddInstagramDto, AddInstagramParamsDto, DeleteInstagramEmbedParams } from "../../validation/schemas/instagram.schemas";
 import type { AddInstagramRequest } from "../../models/location";
 import { getInstagramControllerDeps } from "../dependencies";
+import { getInstagramApiQuota } from "@server/shared/settings/instagram-api-quota";
 
 const { instagram } = getInstagramControllerDeps();
 
@@ -36,4 +37,8 @@ export async function retryInstagramMediaStaging(c: Context) {
   const { id } = c.get("validatedParams") as DeleteInstagramEmbedParams;
   const entry = await instagram.retryMediaStaging(id);
   return c.json(successResponse({ entry }));
+}
+
+export async function getInstagramApiQuotaStatus(c: Context) {
+  return c.json(successResponse(getInstagramApiQuota()));
 }

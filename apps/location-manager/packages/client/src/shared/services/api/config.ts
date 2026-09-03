@@ -31,6 +31,7 @@ export const API_ENDPOINTS = {
   ADD_INSTAGRAM: (category: Category, locationId: number) => `/api/${category}/${locationId}/instagram`,
   DELETE_INSTAGRAM_EMBED: (embedId: number) => `/api/instagram-embeds/${embedId}`,
   RETRY_INSTAGRAM_STAGING: (embedId: number) => `/api/instagram-embeds/${embedId}/staging/retry`,
+  INSTAGRAM_API_QUOTA: "/api/instagram/quota",
   ADD_UPLOAD: (category: Category, locationId: number) => `/api/${category}/${locationId}/uploads`,
   ADD_UPLOAD_IMAGESET: (category: Category, locationId: number) => `/api/${category}/${locationId}/uploads/imageset`,
   GENERATE_ALT_TEXT: "/api/generate-alt-text",

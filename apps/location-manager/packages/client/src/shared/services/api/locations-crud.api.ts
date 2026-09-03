@@ -155,6 +155,10 @@ export const locationsCrudApi = {
     return unwrapEntry(response);
   },
 
+  async getInstagramApiQuota(): Promise<{ limit: number | null; remaining: number | null }> {
+    return apiGet(API_ENDPOINTS.INSTAGRAM_API_QUOTA);
+  },
+
   async getLocationByCategoryAndId(category: Category, id: number): Promise<LocationResponse> {
     return apiGet<LocationResponse>(API_ENDPOINTS.GET_LOCATION_BY_ID(category, id));
   },

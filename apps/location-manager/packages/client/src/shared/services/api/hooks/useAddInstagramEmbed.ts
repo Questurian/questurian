@@ -4,6 +4,7 @@ import { LOCATIONS_BASIC_QUERY_KEY } from "./useLocationsBasic";
 import { LOCATION_DETAIL_QUERY_KEY } from "./location-query-keys";
 import { photoImportKeys } from "./usePhotoImport";
 import type { Category, InstagramEmbed } from "@client/shared/services/api/types";
+import { INSTAGRAM_API_QUOTA_QUERY_KEY } from "./useInstagramApiQuota";
 
 interface UseAddInstagramEmbedOptions {
   onSuccess?: (data: InstagramEmbed) => void;
@@ -32,6 +33,7 @@ export function useAddInstagramEmbed(
       queryClient.invalidateQueries({ queryKey: ["locations"] });
       queryClient.invalidateQueries({ queryKey: LOCATIONS_BASIC_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: photoImportKeys.sources(locationId) });
+      queryClient.invalidateQueries({ queryKey: INSTAGRAM_API_QUOTA_QUERY_KEY });
       options?.onSuccess?.(data);
     },
     onError: (error) => {

@@ -29,6 +29,7 @@ export { useReplaceUploadVariants } from "./useReplaceUploadVariants";
 export { usePayloadMediaSets } from "./usePayloadMediaSets";
 export { useGenerateAltText } from "./useGenerateAltText";
 export { useRetryInstagramStaging } from "./useRetryInstagramStaging";
+export { useInstagramApiQuota, INSTAGRAM_API_QUOTA_QUERY_KEY } from "./useInstagramApiQuota";
 export {
   usePhotoImportPreview,
   usePhotoImportPreviewByPlace,

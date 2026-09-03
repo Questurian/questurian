@@ -31,3 +31,9 @@ class FieldSuggestionPromptTests(unittest.TestCase):
         self.assertIn("absolute http:// or https:// URL", prompt)
         self.assertNotIn("allowed_options", prompt)
         self.assertIn("Maido", prompt)
+
+    def test_field_suggestion_prompt_leaves_sources_to_grounding_metadata(self) -> None:
+        prompt = app.build_field_suggestion_prompt(make_url_field_suggestion_request())
+
+        self.assertNotIn('"sources"', prompt)
+        self.assertNotIn("sources[].snippet", prompt)

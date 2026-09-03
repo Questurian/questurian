@@ -52,6 +52,7 @@ let mediaResponse: InstagramMediaResponse = {
     { key: "a", position: 0, mediaType: "photo" as const, imageUrl: "https://cdn.test/a.jpg" },
     { key: "b", position: 1, mediaType: "photo" as const, imageUrl: "https://cdn.test/b.jpg" },
   ],
+  quota: { limit: null, remaining: null },
 };
 let failingUrl: string | null = null;
 let apiError: Error | null = null;
@@ -142,6 +143,7 @@ describe("InstagramImageStagingService", () => {
       mediaType: "single",
       eligibility: "photos-only",
       items: [{ key: "missing", position: 0, mediaType: "photo" }],
+      quota: { limit: null, remaining: null },
     };
     const result = await new InstagramImageStagingService(api as never, storage as never).stageEmbedMedia(42);
 
