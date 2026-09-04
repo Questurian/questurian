@@ -1,0 +1,147 @@
+"""Starting and advancing a listicle interview.
+
+Everything mechanical about the interview -- the loop, the single retry, the
+mid-interview lookup budget, the pushback, the "accepted draft is not new
+information" rule, the stop condition -- comes from
+`prompt2blog.grill_v4` untouched. This module supplies the two things that
+make it a listicle: the checklist it has to settle, and the prompt it asks
+with.
+
+That split is the point. Every bug worth fixing in the article grill lived in
+the loop, and a forked copy of it would have to be fixed twice and would be
+fixed once.
+"""
+
+from __future__ import annotations
+
+import uuid
+
+from ..prompt2blog.contracts_v4 import GrillState
+from ..prompt2blog.grill_v4 import (
+    GrillDependencies,
+    answer_grill,
+    reopen_grill,
+    start_grill,
+)
+from . import spec, store
+from .contracts import LISTICLE_MARKER_KEYS
+from .prompts import build_listicle_turn_prompt
+from .search import run_search_order
+
+# gemini-2.5-flash: the model the live grounding path already runs on, and
+# cheap enough that the interview is not the expensive part of a run.
+LISTICLE_GRILL_MODEL = "gemini-2.5-flash"
+
+
+def _dependencies(base: GrillDependencies) -> GrillDependencies:
+    """The article grill's dependencies, pointed at the listicle prompt."""
+    return GrillDependencies(
+        llm=base.llm,
+        research=base.research,
+        model_name=base.model_name,
+        build_prompt=build_listicle_turn_prompt,
+    )
+
+
+def start(seed: str, base: GrillDependencies) -> GrillState:
+    run_id = uuid.uuid4().hex[:8]
+    state = start_grill(
+        run_id=run_id,
+        seed=seed,
+        dependencies=_dependencies(base),
+        marker_keys=LISTICLE_MARKER_KEYS,
+    )
+    store.save(state)
+    return state
+
+
+def answer(run_id: str, text: str, base: GrillDependencies) -> GrillState:
+    state = store.load(run_id)
+    if state is None:
+        raise LookupError(f"No listicle interview with id {run_id}")
+    state = answer_grill(state, text, _dependencies(base))
+    store.save(state)
+    return state
+
+
+def reopen(run_id: str, base: GrillDependencies) -> GrillState:
+    """Not quite -- keep talking. Sends an agreed interview back to asking."""
+    state = store.load(run_id)
+    if state is None:
+        raise LookupError(f"No listicle interview with id {run_id}")
+    state = reopen_grill(state, _dependencies(base))
+    store.save(state)
+    return state
+
+
+def get(run_id: str) -> GrillState | None:
+    return store.load(run_id)
+
+
+def search(run_id: str, research) -> dict:
+    """Run the agreed search order and pool what comes back.
+
+    Refuses to run before the interview has agreed. A half-settled order is
+    missing the angles, and searching without them is six searches for whatever
+    the seed happened to say -- which is the single-search failure the split
+    exists to avoid, at six times the cost.
+    """
+    state = store.load(run_id)
+    if state is None:
+        raise LookupError(f"No listicle interview with id {run_id}")
+    if state.status != "agreed":
+        raise ValueError(
+            "This interview has not agreed a search order yet, so there is "
+            "nothing to search for."
+        )
+
+    angles = spec.angles_from(state)
+    if not angles:
+        raise ValueError("The agreed interview carries no angles to search.")
+
+    target = spec.count_from(state)
+    candidates, results = run_search_order(
+        angles,
+        kind=spec.kind_from(state),
+        place=spec.place_from(state),
+        target_items=target,
+        exclusions=spec.exclusions_from(state),
+        standard=spec.standard_from(state),
+        research=research,
+    )
+    payload = {
+        "run_id": run_id,
+        "target": target,
+        # Said plainly rather than left to be worked out from the list length.
+        # Whether the order filled the list is the only question this step was
+        # built to answer.
+        "found": len(candidates),
+        "shortfall": max(0, target - len(candidates)),
+        "rows_returned": sum(result.rows for result in results),
+        "angles": [
+            {
+                "angle": r.angle,
+                "rows": r.rows,
+                "sources": r.sources,
+                "failed": r.failed,
+                "reason": r.reason,
+            }
+            for r in results
+        ],
+        "candidates": [
+            {
+                "name": c.name,
+                "district": c.district,
+                "evidence": c.evidence,
+                "found_by": list(c.found_by),
+                "overlap": c.overlap,
+            }
+            for c in candidates
+        ],
+    }
+    store.save_results(run_id, payload)
+    return payload
+
+
+def results(run_id: str) -> dict | None:
+    return store.load_results(run_id)

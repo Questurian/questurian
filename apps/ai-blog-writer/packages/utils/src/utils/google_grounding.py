@@ -219,6 +219,7 @@ def _generate_with_google_search(
     model_name: str,
     max_tokens: int,
     temperature: float,
+    timeout_seconds: int = DEFAULT_REQUEST_TIMEOUT_SECONDS,
 ) -> dict[str, Any] | None:
     session, project, location = _get_authorized_grounding_session()
     if session is None or not project or not location:
@@ -247,7 +248,7 @@ def _generate_with_google_search(
         response = session.post(
             url,
             json=payload,
-            timeout=DEFAULT_REQUEST_TIMEOUT_SECONDS,
+            timeout=timeout_seconds,
         )
     except Exception:  # pragma: no cover - network/runtime dependent
         logger.warning(
@@ -289,6 +290,11 @@ def invoke_google_grounded_text(
     max_tokens: int = 1024,
     temperature: float = 0.05,
     dynamic_threshold: float = DEFAULT_DYNAMIC_THRESHOLD,
+    # Raised by callers whose searches are long. A listicle angle asks for a
+    # dozen named places with evidence for each, and the default 60s cut one
+    # of seven searches off entirely -- a whole angle missing from the list,
+    # reported as an empty result rather than as a timeout.
+    timeout_seconds: int = DEFAULT_REQUEST_TIMEOUT_SECONDS,
 ) -> GroundedGenerationResult | None:
     del dynamic_threshold
 
@@ -300,6 +306,7 @@ def invoke_google_grounded_text(
             model_name=resolved_model_name,
             max_tokens=max_tokens,
             temperature=temperature,
+            timeout_seconds=timeout_seconds,
         )
 
     response = _generate_with_model(model_name)

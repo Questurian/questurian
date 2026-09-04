@@ -1,0 +1,548 @@
+/*
+ * Listicle pipeline — the seed box and the interview.
+ *
+ * The chat shape is carried over from the article grill on purpose: a thread
+ * read top to bottom, newest at the end, composer underneath. What a
+ * conversation looks like is not the part worth reinventing.
+ */
+
+/* ---------- the seed box ---------- */
+
+.lp-intake {
+  max-width: 42rem;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6) clamp(var(--space-4), 4vw, var(--space-7));
+  box-shadow: 0 2px 16px var(--shadow-soft);
+}
+
+.lp-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 var(--space-3);
+}
+
+.lp-field {
+  display: block;
+  margin: 0 0 var(--space-3);
+}
+
+.lp-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.lp-field textarea,
+.lp-composer textarea {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.lp-field textarea:focus,
+.lp-composer textarea:focus {
+  outline: 2px solid var(--lp-accent);
+  outline-offset: 1px;
+  border-color: var(--lp-accent);
+}
+
+.lp-note {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ---------- the interview, as a chat ---------- */
+
+.lp-chat {
+  max-width: 42rem;
+  margin: 0 auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-6));
+  box-shadow: 0 2px 16px var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.lp-thread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-height: min(58vh, 34rem);
+  overflow-y: auto;
+  padding-right: var(--space-2);
+  scroll-behavior: smooth;
+}
+
+.lp-exchange {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lp-message {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  line-height: 1.5;
+  max-width: 88%;
+  text-wrap: pretty;
+}
+
+/* The grill's side: plain, on the page's own ground. It does most of the
+   talking, so it should not shout. */
+.lp-message-theirs {
+  align-self: flex-start;
+  background: var(--cream-dark);
+  color: var(--ink);
+  border-bottom-left-radius: var(--space-1);
+}
+
+/* Yours: kept word for word, and set on the section's accent rather than a
+   second beige, so the thread does not read as one voice talking to itself. */
+.lp-message-mine {
+  align-self: flex-end;
+  background: var(--lp-accent-soft);
+  color: var(--ink);
+  border-bottom-right-radius: var(--space-1);
+}
+
+.lp-message-seed {
+  font-style: italic;
+  color: var(--ink-light);
+}
+
+.lp-message-consensus {
+  max-width: 100%;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  border-left: 3px solid var(--lp-accent);
+}
+
+.lp-accepted {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---------- the composer ---------- */
+
+.lp-composer {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+.lp-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.lp-composer-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  flex: 1 1 14rem;
+}
+
+.lp-composer-buttons {
+  display: flex;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.lp-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-5);
+}
+
+.lp-chat-actions {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+  margin-top: 0;
+}
+
+.lp-composer-buttons button,
+.lp-actions button {
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--lp-accent);
+  color: white;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-base);
+}
+
+.lp-composer-buttons button:hover:not(:disabled),
+.lp-actions button:hover:not(:disabled) {
+  background: var(--lp-accent-hover);
+}
+
+.lp-composer-buttons button:disabled,
+.lp-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.lp-composer-buttons .lp-secondary,
+.lp-actions .lp-secondary {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border-strong);
+}
+
+.lp-composer-buttons .lp-secondary:hover:not(:disabled),
+.lp-actions .lp-secondary:hover:not(:disabled) {
+  background: var(--cream-dark);
+  color: var(--ink);
+}
+
+.lp-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .lp-message {
+    max-width: 96%;
+  }
+}
+
+/* ---------- progress, pushback, failure ---------- */
+
+/* What the specification still needs. A question count never was progress:
+   the interview stops when the spec is full, not after N turns. */
+.lp-chat-progress {
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-light);
+  font-size: 0.8125rem;
+}
+
+.lp-muted {
+  color: var(--muted);
+}
+
+/* Shown above the question it exists to resolve, so the contradiction reads as
+   the reason for asking rather than as a complaint. */
+.lp-pushback {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--lp-accent-softer);
+  border-left: 3px solid var(--lp-accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--ink-light);
+  font-size: 0.9375rem;
+}
+
+/* A failed turn leaves the interview exactly where it was. That has to look
+   different from a turn that simply had nothing to ask. */
+.lp-error {
+  max-width: 42rem;
+  margin: 0 auto var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: rgba(180, 35, 24, 0.07);
+  border-left: 3px solid #b42318;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+
+/* ---------- the angle picker ----------
+ *
+ * The one question answered by choosing. It sits where the composer sits, in
+ * the same box, because it is still the operator's turn -- it is a different
+ * control, not a different part of the screen.
+ */
+
+.lp-picker {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.lp-picker-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.lp-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lp-picker-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--cream);
+}
+
+.lp-picker-row input[type='checkbox'] {
+  margin-top: 0.55rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--lp-accent);
+  flex: none;
+}
+
+.lp-picker-row textarea {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: var(--space-2) 0;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.lp-picker-row textarea:focus {
+  outline: none;
+}
+
+.lp-picker-row:focus-within {
+  border-color: var(--lp-accent);
+  box-shadow: 0 0 0 1px var(--lp-accent);
+}
+
+/* An unticked angle stays readable -- it is a search you may put back, not a
+   thing you deleted. */
+.lp-picker-row-off {
+  opacity: 0.5;
+}
+
+.lp-picker-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lp-picker-count {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-picker-heading {
+  margin: var(--space-2) 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The collision group, sitting quietly at the end of the row. It only matters
+   when two of them are ticked, and then the warning below says so. */
+.lp-picker-group {
+  align-self: center;
+  flex: none;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.1rem 0.4rem;
+}
+
+.lp-picker-warning {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--lp-accent);
+  background: var(--lp-accent-soft);
+  color: var(--ink);
+  font-size: 0.875rem;
+}
+
+/* ---------- what the searches found ---------- */
+
+.lp-results {
+  max-width: 46rem;
+  margin: var(--space-5) auto 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-6));
+  box-shadow: 0 2px 16px var(--shadow-soft);
+}
+
+.lp-search-cta {
+  justify-content: center;
+  margin-top: var(--space-4);
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lp-results-head {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.lp-results-score {
+  margin: 0;
+  font-size: 1.375rem;
+  color: var(--ink);
+}
+
+.lp-results-score strong {
+  font-size: 1.75rem;
+}
+
+.lp-results-sub {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8125rem;
+}
+
+.lp-results-short {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--lp-accent);
+  background: var(--lp-accent-soft);
+  font-size: 0.875rem;
+}
+
+/* Per angle, so a short list can be traced to the search that came up empty
+   rather than read as a general failure. */
+.lp-angle-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--space-5);
+  font-size: 0.8125rem;
+}
+
+.lp-angle-table td {
+  padding: var(--space-2) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.lp-angle-count {
+  width: 2.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.lp-angle-note {
+  width: 30%;
+}
+
+.lp-angle-failed .lp-angle-count {
+  color: var(--lp-accent);
+}
+
+.lp-candidates {
+  list-style: none;
+  counter-reset: candidate;
+  margin: 0;
+  padding: 0;
+}
+
+.lp-candidate {
+  counter-increment: candidate;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--space-2) 0 var(--space-2) var(--space-6);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.lp-candidate::before {
+  content: counter(candidate);
+  position: absolute;
+  left: 0;
+  top: var(--space-2);
+  width: var(--space-5);
+  text-align: right;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lp-candidate-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.lp-candidate-name {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.lp-candidate-district {
+  font-size: 0.8125rem;
+}
+
+/* The ranking signal, and the only one the pipeline has actually earned. */
+.lp-candidate-overlap {
+  margin-left: auto;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--lp-accent);
+  border: 1px solid var(--lp-accent);
+  border-radius: var(--radius-sm, 4px);
+  padding: 0.05rem 0.4rem;
+}
+
+.lp-candidate-evidence {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
