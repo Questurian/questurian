@@ -408,9 +408,9 @@ def test_a_schema_call_records_its_usage_and_price(
 
     summary = tracker.summary(
         stack_id="opus-balanced",
-        worker_model="gemini-3.7-flash",
+        worker_model="gemini-2.5-flash",
         writing_model="claude-opus-5",
-        audit_model="gemini-3.7-flash",
+        audit_model="gemini-2.5-flash",
     )
     assert summary["estimated_cost_usd"] == 0.0099
     assert summary["by_model"][0]["model"] == "claude-opus-5"
@@ -429,7 +429,7 @@ def test_a_provider_that_cannot_enforce_a_schema_still_asks_in_prose(monkeypatch
     prompts: list[str] = []
 
     class _ProseLLM:
-        model_name = "gemini-3.7-flash"
+        model_name = "gemini-2.5-flash"
         last_usage_metadata = {"input_tokens": 10, "output_tokens": 20}
 
         def invoke(self, prompt):  # noqa: ANN001
@@ -442,7 +442,7 @@ def test_a_provider_that_cannot_enforce_a_schema_still_asks_in_prose(monkeypatch
         prompt="Rewrite the article.",
         max_tokens=6144,
         temperature=0.1,
-        model_name="gemini-3.7-flash",
+        model_name="gemini-2.5-flash",
         schema=REWRITE_SCHEMA,
     )
 

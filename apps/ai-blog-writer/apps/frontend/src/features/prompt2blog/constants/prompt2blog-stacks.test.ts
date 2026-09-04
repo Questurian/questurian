@@ -129,9 +129,9 @@ describe('Claude-writer run stacks', () => {
 
     expect(flash.writingModel).toBe('claude-opus-5-high')
     expect(flash.repairModel).toBe('claude-opus-5-high')
-    expect(flash.auditModel).toBe('gemini-3.7-flash')
-    expect(flash.groundednessModel).toBe('gemini-3.7-flash')
-    expect(flash.outlineModel).toBe('gemini-3.7-flash')
+    expect(flash.auditModel).toBe('gemini-2.5-flash')
+    expect(flash.groundednessModel).toBe('gemini-2.5-flash')
+    expect(flash.outlineModel).toBe('gemini-2.5-flash')
   })
 
   it('names the weaker checker as a tradeoff rather than only as a saving', () => {
@@ -230,7 +230,7 @@ describe('Claude-writer run stacks', () => {
 
   it('falls a stored selection back to the default rather than failing', () => {
     // A run saved under one configuration has to still open under another.
-    expect(resolvePrompt2BlogWriterModel('claude-opus-4-8')).toBe('gemini-3.1-pro-preview')
-    expect(resolvePrompt2BlogWriterModel('not-a-model')).toBe('gemini-3.1-pro-preview')
+    expect(resolvePrompt2BlogWriterModel('claude-opus-4-8')).toBe('gemini-2.5-pro')
+    expect(resolvePrompt2BlogWriterModel('not-a-model')).toBe('gemini-2.5-pro')
   })
 })

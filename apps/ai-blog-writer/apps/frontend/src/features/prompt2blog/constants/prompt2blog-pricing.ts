@@ -49,11 +49,11 @@ export interface Prompt2BlogStackPriceEstimate {
 }
 
 // Standard global PayGo rates in USD per 1M tokens, checked 2026-08-24.
-// Gemini 3.7 Flash uses introductory pricing through 2026-12-31.
+// Gemini 2.5 Flash uses introductory pricing through 2026-12-31.
 const VERTEX_TOKEN_RATES: Record<string, VertexTokenRate> = {
-  'gemini-3.1-pro-preview': { input: 2, output: 12 },
-  'gemini-3.7-flash': { input: 0.75, output: 3.75 },
-  'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
+  'gemini-2.5-pro': { input: 2, output: 12 },
+  'gemini-2.5-flash': { input: 0.75, output: 3.75 },
+  'gemini-2.5-flash-lite': { input: 0.25, output: 1.5 },
 }
 
 /**

@@ -6,9 +6,9 @@ export type ItineraryTitleModelName =
   | 'claude-opus-4-8'
   | 'claude-opus-4-7'
   | 'claude-sonnet-5'
-  | 'gemini-3.1-pro-preview'
+  | 'gemini-2.5-pro'
 
-export const DEFAULT_ITINERARY_TITLE_MODEL: ItineraryTitleModelName = 'gemini-3.1-pro-preview'
+export const DEFAULT_ITINERARY_TITLE_MODEL: ItineraryTitleModelName = 'gemini-2.5-pro'
 
 const CLAUDE_ITINERARY_TITLE_OPTIONS: Array<{
   value: ItineraryTitleModelName
@@ -24,7 +24,7 @@ export const ITINERARY_TITLE_MODEL_OPTIONS: Array<{
   label: string
 }> = [
   ...(CLAUDE_MODELS_ENABLED ? CLAUDE_ITINERARY_TITLE_OPTIONS : []),
-  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — deep reasoning)' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (deep reasoning)' },
 ]
 
 export function resolveItineraryTitleModelName(value?: string): ItineraryTitleModelName {
@@ -32,6 +32,6 @@ export function resolveItineraryTitleModelName(value?: string): ItineraryTitleMo
   if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-8') return value
   if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-7') return value
   if (CLAUDE_MODELS_ENABLED && value === 'claude-sonnet-5') return value
-  if (value === 'gemini-3.1-pro-preview') return value
+  if (value === 'gemini-2.5-pro') return value
   return DEFAULT_ITINERARY_TITLE_MODEL
 }

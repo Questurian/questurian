@@ -31,9 +31,9 @@ export const CLAUDE_MODELS_ENABLED = false
  */
 export const CLAUDE_SUBSCRIPTION_WRITER_ENABLED = true
 
-export type EditorAssistModelName = 'claude-opus-4-8' | 'claude-sonnet-5' | 'gemini-3.1-pro-preview'
+export type EditorAssistModelName = 'claude-opus-4-8' | 'claude-sonnet-5' | 'gemini-2.5-pro'
 
-export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'gemini-3.1-pro-preview'
+export const DEFAULT_EDITOR_ASSIST_MODEL: EditorAssistModelName = 'gemini-2.5-pro'
 
 const CLAUDE_EDITOR_ASSIST_OPTIONS: Array<{ value: EditorAssistModelName; label: string }> = [
   {
@@ -49,8 +49,8 @@ const CLAUDE_EDITOR_ASSIST_OPTIONS: Array<{ value: EditorAssistModelName; label:
 export const EDITOR_ASSIST_MODEL_OPTIONS: Array<{ value: EditorAssistModelName; label: string }> = [
   ...(CLAUDE_MODELS_ENABLED ? CLAUDE_EDITOR_ASSIST_OPTIONS : []),
   {
-    value: 'gemini-3.1-pro-preview',
-    label: 'Gemini 3.1 Pro (Preview — deep reasoning writer)',
+    value: 'gemini-2.5-pro',
+    label: 'Gemini 2.5 Pro (Preview — deep reasoning writer)',
   },
 ]
 
@@ -64,11 +64,9 @@ export type EditorBlockRewriteModelName =
   | 'claude-opus-4-8'
   | 'claude-opus-4-7'
   | 'claude-sonnet-5'
-  | 'gemini-3.1-pro-preview'
-  | 'gemini-3.1-flash-lite-preview'
-  | 'gemini-3.1-flash-image-preview'
-  | 'gemini-2.5-flash'
   | 'gemini-2.5-pro'
+  | 'gemini-2.5-flash-lite'
+  | 'gemini-2.5-flash'
   | 'gemini-2.0-flash'
 
 export type Y2BModelName = 'gemini-2.5-flash-lite'
@@ -88,11 +86,11 @@ export type Y2BWriterModel =
   | 'claude-opus-4-8'
   | 'claude-opus-4-7'
   | 'claude-sonnet-5'
-  | 'gemini-3.1-pro-preview'
+  | 'gemini-2.5-pro'
   | 'gemini-2.5-pro'
   | 'gemini-2.5-flash'
 
-export const DEFAULT_Y2B_WRITER_MODEL: Y2BWriterModel = 'gemini-3.1-pro-preview'
+export const DEFAULT_Y2B_WRITER_MODEL: Y2BWriterModel = 'gemini-2.5-pro'
 
 const CLAUDE_Y2B_WRITER_OPTIONS: Array<{ value: Y2BWriterModel; label: string }> = [
   { value: 'claude-opus-4-8', label: 'Claude Opus 4.8 (premier writer)' },
@@ -102,8 +100,7 @@ const CLAUDE_Y2B_WRITER_OPTIONS: Array<{ value: Y2BWriterModel; label: string }>
 
 export const Y2B_WRITER_MODEL_OPTIONS: Array<{ value: Y2BWriterModel; label: string }> = [
   ...(CLAUDE_MODELS_ENABLED ? CLAUDE_Y2B_WRITER_OPTIONS : []),
-  { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Preview — deep reasoning)' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (deep reasoning)' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
 ]
 
@@ -154,6 +151,6 @@ export function resolveEditorAssistModelName(value?: string): EditorAssistModelN
   // Stored Claude selections fall through to the default while Claude is off.
   if (CLAUDE_MODELS_ENABLED && value === 'claude-sonnet-5') return value
   if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-8') return value
-  if (value === 'gemini-3.1-pro-preview') return value
+  if (value === 'gemini-2.5-pro') return value
   return DEFAULT_EDITOR_ASSIST_MODEL
 }

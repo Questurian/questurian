@@ -484,7 +484,7 @@ def test_handing_the_run_to_the_writer_does_not_erase_what_intake_spent(
                         "seq": 1,
                         "stage": "stage_v4_research",
                         "attempt": 1,
-                        "model": "gemini-3.1-pro-preview",
+                        "model": "gemini-2.5-pro",
                         "input_tokens": 60_000,
                         "output_tokens": 1_145,
                         "reasoning_tokens": 0,

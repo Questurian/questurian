@@ -38,11 +38,11 @@ CLAUDE_PROVIDER_NONE = "none"
 CLAUDE_PROVIDER_ANTHROPIC_API = "anthropic-api"
 CLAUDE_PROVIDER_SUBSCRIPTION_CLI = "subscription-cli"
 CLAUDE_GOOGLE_SUBSTITUTES = {
-    "claude-opus-4-8": "gemini-3.1-pro-preview",
-    "claude-opus-4-7": "gemini-3.1-pro-preview",
+    "claude-opus-4-8": "gemini-2.5-pro",
+    "claude-opus-4-7": "gemini-2.5-pro",
     "claude-sonnet-5": "gemini-2.5-pro",
 }
-DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE = "gemini-3.1-pro-preview"
+DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE = "gemini-2.5-pro"
 MIN_GENERATION_MAX_TOKENS = 64_000
 _TRUTHY = {"1", "true", "yes", "on"}
 

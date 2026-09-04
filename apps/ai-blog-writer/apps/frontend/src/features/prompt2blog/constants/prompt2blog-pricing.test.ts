@@ -33,10 +33,10 @@ describe('estimatePrompt2BlogStackPrice', () => {
     // figure that could be quoted honestly.
     const claudeWriter: Prompt2BlogModelStackShape = {
       writingModel: 'claude-opus-4-8',
-      repairModel: 'gemini-3.7-flash',
-      auditModel: 'gemini-3.7-flash',
-      groundednessModel: 'gemini-3.7-flash',
-      outlineModel: 'gemini-3.7-flash'
+      repairModel: 'gemini-2.5-flash',
+      auditModel: 'gemini-2.5-flash',
+      groundednessModel: 'gemini-2.5-flash',
+      outlineModel: 'gemini-2.5-flash'
     }
 
     const estimate = estimatePrompt2BlogStackPrice(claudeWriter)
@@ -98,7 +98,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
   })
 
   it('does not mistake a Gemini model for a plan model', () => {
-    expect(isPlanAllowanceModel('gemini-3.7-flash')).toBe(false)
+    expect(isPlanAllowanceModel('gemini-2.5-flash')).toBe(false)
     expect(isPlanAllowanceModel('claude-opus-4-8')).toBe(true)
   })
 })
