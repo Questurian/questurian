@@ -505,6 +505,45 @@ def _markers_from(
     return [key for key in keys if key in settled]
 
 
+def _consensus_text(raw: Any) -> str:
+    """The agreement, whether it arrived as prose or as the object it describes.
+
+    The schema asks for a string and the prompt says to play the whole thing
+    back in plain sentences. Models still send the structured version -- run
+    a5858d6e (2026-09-04) returned `{"kind": "Pisco Sour bars", "place": "Lima,
+    Peru", "count": 30, ...}`, which was a complete, correct agreement with
+    every marker covered.
+
+    `_safe_str` reads a dict as the empty string, so that agreement was
+    discarded as "done with nothing agreed" and the interview asked two more
+    questions to arrive back where it already was. Two model calls and forty
+    seconds, thrown away over the shape of a field whose content was right.
+
+    Rendered rather than refused, for the same reason `_question_from` accepts
+    three arrangements of a question: the words are what matter and they were
+    all there.
+    """
+    text = _safe_str(raw)
+    if text:
+        return text
+    if isinstance(raw, dict):
+        lines = []
+        for key, value in raw.items():
+            label = str(key).replace("_", " ").strip()
+            if isinstance(value, (list, tuple)):
+                rendered = "\n".join(f"  - {item}" for item in value if item)
+                if rendered:
+                    lines.append(f"{label}:\n{rendered}")
+                continue
+            if value in (None, "", [], {}):
+                continue
+            lines.append(f"{label}: {value}")
+        return "\n".join(lines)
+    if isinstance(raw, (list, tuple)):
+        return "\n".join(f"- {item}" for item in raw if item)
+    return ""
+
+
 class GrillUnusableResponse(RuntimeError):
     """The grill answered with something it cannot act on.
 
@@ -593,7 +632,7 @@ def _advance_once(
     covered = _markers_from(payload, state)
 
     if payload.get("done") is True:
-        consensus = _safe_str(payload.get("consensus"))
+        consensus = _consensus_text(payload.get("consensus"))
         missing = [key for key in state.marker_keys if key not in covered]
         if consensus and not missing:
             return state.model_copy(
