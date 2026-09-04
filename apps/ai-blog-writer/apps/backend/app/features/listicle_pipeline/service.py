@@ -14,9 +14,11 @@ fixed once.
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from ..prompt2blog.contracts_v4 import GrillState
+from .profiles import PlaceProfile
 from ..prompt2blog.grill_v4 import (
     GrillDependencies,
     answer_grill,
@@ -31,6 +33,8 @@ from .search import run_search_order
 # gemini-2.5-flash: the model the live grounding path already runs on, and
 # cheap enough that the interview is not the expensive part of a run.
 LISTICLE_GRILL_MODEL = "gemini-2.5-flash"
+
+logger = logging.getLogger(__name__)
 
 
 def _dependencies(base: GrillDependencies) -> GrillDependencies:
@@ -145,3 +149,76 @@ def search(run_id: str, research) -> dict:
 
 def results(run_id: str) -> dict | None:
     return store.load_results(run_id)
+
+
+def build_profile(
+    *,
+    name: str,
+    city: str,
+    district: str = "",
+    angles: list[str] | None = None,
+    run_id: str = "",
+    research=None,
+    resolve_identity: bool = True,
+) -> "PlaceProfile":
+    """Open this place's profile, anchor it, and gather what has been said.
+
+    Deliberately not called by the search step. A profile is worth building for
+    a candidate that survives, and which candidates survive is what the gate --
+    not yet built -- decides. Wiring this into the pipeline before that gate
+    exists would research every row returned, including the ones the gate is
+    there to throw away.
+
+    Running it twice on the same place is safe and is the normal case: the
+    profile is found rather than created, claims already held are not added
+    again, and a sighting from a run already recorded is ignored.
+    """
+    from .profiles import Sighting
+    from . import identity, profile_research, profile_store
+
+    place_id = ""
+    if resolve_identity:
+        resolved = identity.resolve(name, city)
+        if resolved is not None:
+            place_id = resolved.place_id
+            if resolved.permanently_closed:
+                # Recorded rather than acted on. Whether a closed place stays
+                # on a list is the gate's decision and the operator's, not
+                # this step's.
+                logger.warning("%r resolves to a permanently closed place", name)
+
+    profile = profile_store.open_profile(
+        name=name, city=city, district=district, place_id=place_id
+    )
+
+    for angle in angles or []:
+        if run_id:
+            profile_store.add_sighting(
+                profile.profile_id, Sighting(angle=angle, run_id=run_id)
+            )
+
+    if research is not None:
+        result = profile_research.research_place(
+            name, city, list(angles or []), research
+        )
+        if result.failed:
+            # Raised rather than logged. A profile recorded as having nothing
+            # written about it, when the truth is the call never ran, is a
+            # place the gate will drop for the network's mistake.
+            raise RuntimeError(
+                f"Research for {name!r} failed ({result.reason}); the profile "
+                "was left as it was rather than recorded as empty."
+            )
+        added = profile_store.add_claims(profile.profile_id, result.claims)
+        logger.info(
+            "Profile %s: %s claims found, %s new%s",
+            profile.profile_id,
+            len(result.claims),
+            added,
+            f" -- {result.reason}" if result.reason else "",
+        )
+
+    refreshed = profile_store.find(
+        place_id=profile.place_id, name=name, city=city
+    )
+    return refreshed or profile
