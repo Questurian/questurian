@@ -111,6 +111,26 @@ const LANDING_CARDS: LandingCardConfig[] = [
     ),
   },
   {
+    id: 'listicle-pipeline',
+    title: 'Listicle Pipeline',
+    description:
+      'Interview-led listicles: say what the list is, and research finds the places, checks the evidence and files what is missing.',
+    to: '/listicle-pipeline',
+    section: 'article-generation',
+    priority: 5,
+    accentClass: 'landing-card--listicle-pipeline',
+    actionLabel: 'Get Started',
+    icon: (
+      <path
+        d="M4 6h16M4 12h16M4 18h10M18 15v6M15 18h6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    ),
+  },
+  {
     id: 'single-type-listicles',
     title: 'Single Type Listicles',
     description: 'Build and stage Single Type Listicles directly with full Payload field and block control.',

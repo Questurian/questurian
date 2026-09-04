@@ -1,0 +1,128 @@
+/*
+ * Listicle pipeline — page shell.
+ *
+ * Built on the app's existing tokens (css/base.css) rather than new ones, the
+ * same way Prompt2Blog was: this is one section of an app that already has a
+ * look, and it should not arrive with its own.
+ *
+ * The one deliberate difference is the accent. Prompt2Blog owns the blue.
+ * This owns a teal, so the operator can tell which section they are in
+ * without reading the heading — the point made in issue #449 about a mode
+ * wanting its own screen treatment.
+ */
+
+.lp-page {
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: var(--space-7) clamp(var(--space-4), 4vw, var(--space-8)) var(--space-10);
+  animation: lpFadeIn 0.35s ease-out;
+
+  --lp-accent: #0f766e;
+  --lp-accent-hover: #115e59;
+  --lp-accent-soft: rgba(15, 118, 110, 0.12);
+  --lp-accent-softer: rgba(15, 118, 110, 0.06);
+}
+
+@keyframes lpFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lp-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  max-width: 1240px;
+  margin: 0 auto var(--space-8);
+  padding: 0 0 var(--space-6);
+  border-bottom: 1px solid var(--border-strong);
+  text-align: center;
+}
+
+.lp-hero h1 {
+  max-width: 800px;
+  margin: 0 auto;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(2.35rem, 4.5vw, 4.35rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.98;
+}
+
+.lp-underline-text {
+  text-decoration: underline;
+  text-decoration-color: var(--lp-accent);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 8px;
+}
+
+.lp-dot {
+  color: var(--lp-accent);
+  font-weight: 700;
+}
+
+.lp-badge-row {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.lp-nav-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-base), background var(--transition-base);
+}
+
+.lp-nav-link:hover {
+  color: var(--ink);
+  background: var(--cream-dark);
+}
+
+.lp-container {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* Said on the screen because a reader should not have to open the source to
+   learn that nothing behind this runs yet. Delete it when it stops being
+   true. */
+.lp-scaffold-banner {
+  max-width: 42rem;
+  margin: 0 auto var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  background: var(--lp-accent-softer);
+  border-left: 3px solid var(--lp-accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.lp-step-bar {
+  max-width: 42rem;
+  margin: 0 auto var(--space-4);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* The interview lives on the run, not in this tab, so the id is on screen. */
+.lp-run-id {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.lp-step {
+  font-size: 0.75rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}

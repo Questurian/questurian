@@ -38,12 +38,13 @@ from .config import (
 from .contracts_v4 import (
     BRIEF_MARKERS,
     MARKER_KEYS,
+    GrillOption,
     GrillQuestion,
     GrillState,
     GrillTurn,
 )
 from .schema_guards import require_non_empty
-from .support import _safe_dict, _safe_str
+from .support import _safe_dict, _safe_str, _safe_str_list
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +95,18 @@ NEXT_TURN_SCHEMA = require_non_empty({
         "location": {"type": "string"},
         "markers_covered": {"type": "array", "items": {"type": "string"}},
         "asks_about": {"type": "string"},
+        "options": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "recommended": {"type": "boolean"},
+                    "group": {"type": "string"},
+                },
+                "required": ["text", "recommended"],
+            },
+        },
         "lookup": {"type": "string"},
     },
     "required": [
@@ -122,6 +135,16 @@ class GrillDependencies:
     # this one reaches the web and the other does not.
     research: Callable[[str], tuple[str, list[str], int | None]]
     model_name: str = P2B_V4_GRILL_MODEL
+    # What the grill is told before it decides its next move. The five rules in
+    # this module are about how an interview behaves and hold whatever is being
+    # commissioned; the wording of the questions is not, and belongs to the
+    # thing doing the commissioning. A listicle grill passes its own and gets
+    # the loop, the retry, the lookup budget, the pushback and the stop
+    # condition unchanged -- which is the whole point of putting it here rather
+    # than forking the file.
+    # None means the article interview, whose prompt is defined further down
+    # this module and so cannot be named as a default here.
+    build_prompt: Callable[[GrillState], str] | None = None
 
 
 def research_seed(dependencies: GrillDependencies, seed: str) -> tuple[str, list[str], int | None]:
@@ -207,25 +230,42 @@ def _transcript(state: GrillState) -> str:
         lines = [f"Q{index}. You asked: {turn.question.ask}"]
         if turn.question.pushback:
             lines.append(f"You pushed back: {turn.question.pushback}")
-        lines.append(f"You drafted this answer for them: {turn.question.recommendation}")
-        if turn.accepted_as_drafted:
-            lines.append(
-                "They sent your draft back untouched. Those are YOUR words, not "
-                "theirs: it means they did not object, and it tells you nothing "
-                "you did not already believe."
-            )
+        if turn.question.options:
+            # A question answered by picking is not a draft they let stand.
+            # Ticking six boxes out of twenty is a decision, and the
+            # accepted-draft warning below says the opposite -- it tells the
+            # grill it learned nothing, and a grill that believes it learned
+            # nothing asks again. A live listicle run asked its angle question
+            # twice in a row on exactly this, which is the single most
+            # expensive question in that interview.
+            offered = len(turn.question.options)
+            lines.append(f"You offered them {offered} options to choose from.")
+            lines.append(f"They chose these, and this is SETTLED:\n{turn.answer}")
         else:
-            lines.append(f"They wrote, in their own words: {turn.answer}")
+            lines.append(
+                f"You drafted this answer for them: {turn.question.recommendation}"
+            )
+            if turn.accepted_as_drafted:
+                lines.append(
+                    "They sent your draft back untouched. Those are YOUR words, not "
+                    "theirs: it means they did not object, and it tells you nothing "
+                    "you did not already believe."
+                )
+            else:
+                lines.append(f"They wrote, in their own words: {turn.answer}")
         blocks.append("\n".join(lines))
     return "\n\n".join(blocks)
 
 
-def _marker_status(state: GrillState) -> str:
+def _marker_status(
+    state: GrillState,
+    markers: tuple[tuple[str, str, str], ...] = BRIEF_MARKERS,
+) -> str:
     """What the brief still needs, named in plain English."""
     covered = set(state.markers_covered)
     return "\n".join(
         f"- {marker}: {description} — {'COVERED' if marker in covered else 'still missing'}"
-        for marker, _, description in BRIEF_MARKERS
+        for marker, _, description in markers
     )
 
 
@@ -339,7 +379,11 @@ Now the part that matters:
 """
 
 
-def _question_from(payload: dict[str, Any], fallback_id: str) -> GrillQuestion | None:
+def _question_from(
+    payload: dict[str, Any],
+    fallback_id: str,
+    marker_keys: tuple[str, ...] = MARKER_KEYS,
+) -> GrillQuestion | None:
     """Read the question, however the model chose to arrange it.
 
     Flat is what the schema asks for and what models actually produce. Nested
@@ -360,8 +404,16 @@ def _question_from(payload: dict[str, Any], fallback_id: str) -> GrillQuestion |
         or _safe_str(nested.get("ask"))
         or _safe_str(flat_ask)
     )
-    recommendation = _safe_str(payload.get("recommendation")) or _safe_str(
-        nested.get("recommendation")
+    # A recommendation that is a list of lines rather than a string is what a
+    # model sends when the answer IS a list -- the angle question, where the
+    # recommendation is the picked lines. `_safe_str` returns "" for a list, a
+    # question with no recommendation is refused, and a live run spent a whole
+    # retry on that. The lines are the answer; joining them loses nothing.
+    recommendation = (
+        _safe_str(payload.get("recommendation"))
+        or _safe_str(nested.get("recommendation"))
+        or "\n".join(_safe_str_list(payload.get("recommendation")))
+        or "\n".join(_safe_str_list(nested.get("recommendation")))
     )
     if not ask or not recommendation:
         # A question with no recommendation is a blank box, which is the thing
@@ -378,11 +430,55 @@ def _question_from(payload: dict[str, Any], fallback_id: str) -> GrillQuestion |
         ask=ask,
         recommendation=recommendation,
         pushback=_safe_str(payload.get("pushback")) or _safe_str(nested.get("pushback")),
-        asks_about=asks_about if asks_about in MARKER_KEYS else "",
+        asks_about=asks_about if asks_about in marker_keys else "",
+        options=_options_from(payload.get("options") or nested.get("options")),
     )
 
 
-def _markers_from(payload: dict[str, Any], state: GrillState) -> list[str]:
+def _options_from(raw: Any) -> list[GrillOption]:
+    """The choices, however the model chose to arrange them.
+
+    Objects are what the schema asks for. A bare list of strings is what a
+    model that skimmed the schema sends, and it carries the only part that
+    cannot be reconstructed -- the wording. Refusing it would throw away the
+    whole answer over its shape, which is the mistake this module has already
+    made twice.
+
+    A plain string is read as recommended, because a model that sent no flag
+    sent only the ones it meant.
+    """
+    if isinstance(raw, str):
+        return [
+            GrillOption(text=text, recommended=True) for text in _safe_str_list(raw)
+        ]
+    if not isinstance(raw, list):
+        return []
+    options: list[GrillOption] = []
+    seen: set[str] = set()
+    for item in raw:
+        if isinstance(item, str):
+            text, recommended, group = _safe_str(item), True, ""
+        elif isinstance(item, dict):
+            text = _safe_str(item.get("text")) or _safe_str(item.get("angle"))
+            recommended = item.get("recommended") is True
+            group = _safe_str(item.get("group"))
+        else:
+            continue
+        # Duplicates are the failure this question exists to avoid: the same
+        # search offered twice is the same search run twice.
+        key = text.lower()
+        if not text or key in seen:
+            continue
+        seen.add(key)
+        options.append(GrillOption(text=text, recommended=recommended, group=group))
+    return options
+
+
+def _markers_from(
+    payload: dict[str, Any],
+    state: GrillState,
+    marker_keys: tuple[str, ...] | None = None,
+) -> list[str]:
     """Which brief markers are settled: what the grill claims, plus what the
     conversation shows.
 
@@ -405,7 +501,47 @@ def _markers_from(payload: dict[str, Any], state: GrillState) -> list[str]:
     claimed = {_safe_str(item) for item in raw} if isinstance(raw, list) else set()
     answered = {turn.question.asks_about for turn in state.turns}
     settled = claimed | answered
-    return [key for key in MARKER_KEYS if key in settled]
+    keys = marker_keys if marker_keys is not None else state.marker_keys
+    return [key for key in keys if key in settled]
+
+
+def _consensus_text(raw: Any) -> str:
+    """The agreement, whether it arrived as prose or as the object it describes.
+
+    The schema asks for a string and the prompt says to play the whole thing
+    back in plain sentences. Models still send the structured version -- run
+    a5858d6e (2026-09-04) returned `{"kind": "Pisco Sour bars", "place": "Lima,
+    Peru", "count": 30, ...}`, which was a complete, correct agreement with
+    every marker covered.
+
+    `_safe_str` reads a dict as the empty string, so that agreement was
+    discarded as "done with nothing agreed" and the interview asked two more
+    questions to arrive back where it already was. Two model calls and forty
+    seconds, thrown away over the shape of a field whose content was right.
+
+    Rendered rather than refused, for the same reason `_question_from` accepts
+    three arrangements of a question: the words are what matter and they were
+    all there.
+    """
+    text = _safe_str(raw)
+    if text:
+        return text
+    if isinstance(raw, dict):
+        lines = []
+        for key, value in raw.items():
+            label = str(key).replace("_", " ").strip()
+            if isinstance(value, (list, tuple)):
+                rendered = "\n".join(f"  - {item}" for item in value if item)
+                if rendered:
+                    lines.append(f"{label}:\n{rendered}")
+                continue
+            if value in (None, "", [], {}):
+                continue
+            lines.append(f"{label}: {value}")
+        return "\n".join(lines)
+    if isinstance(raw, (list, tuple)):
+        return "\n".join(f"- {item}" for item in raw if item)
+    return ""
 
 
 class GrillUnusableResponse(RuntimeError):
@@ -470,7 +606,7 @@ def _advance_once(
     # turn where the grill finally asks its question.
     while True:
         parsed, raw = dependencies.llm.invoke_json(
-            prompt=build_next_turn_prompt(state),
+            prompt=(dependencies.build_prompt or build_next_turn_prompt)(state),
             model_name=dependencies.model_name,
             schema=NEXT_TURN_SCHEMA,
             max_tokens=2_048,
@@ -496,8 +632,8 @@ def _advance_once(
     covered = _markers_from(payload, state)
 
     if payload.get("done") is True:
-        consensus = _safe_str(payload.get("consensus"))
-        missing = [key for key in MARKER_KEYS if key not in covered]
+        consensus = _consensus_text(payload.get("consensus"))
+        missing = [key for key in state.marker_keys if key not in covered]
         if consensus and not missing:
             return state.model_copy(
                 update={
@@ -517,7 +653,11 @@ def _advance_once(
             ", ".join(missing) or "none",
         )
 
-    question = _question_from(payload, fallback_id=f"q{len(state.turns) + 1}")
+    question = _question_from(
+        payload,
+        fallback_id=f"q{len(state.turns) + 1}",
+        marker_keys=state.marker_keys,
+    )
     if question is None:
         raise GrillUnusableResponse(raw or _json_or_repr(payload), state)
     return state.model_copy(
@@ -534,12 +674,19 @@ def start_grill(
     run_id: str,
     seed: str,
     dependencies: GrillDependencies,
+    marker_keys: tuple[str, ...] = MARKER_KEYS,
 ) -> GrillState:
-    """Open a grill on one typed line."""
+    """Open a grill on one typed line.
+
+    `marker_keys` is what this interview has to settle before it may agree.
+    It defaults to the article brief's, and is carried on the state from here
+    so every later turn is judged against the checklist the run opened with.
+    """
     digest, source_urls, _tokens = research_seed(dependencies, seed)
     opening = GrillState(
         run_id=run_id,
         seed=seed,
+        marker_keys=marker_keys,
         research_digest=digest,
         research_source_urls=source_urls,
         # `pending` is filled by advance_grill; the contract forbids an asking

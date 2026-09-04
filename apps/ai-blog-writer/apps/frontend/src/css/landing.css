@@ -294,6 +294,14 @@
   --card-accent-softer: rgba(75, 85, 99, 0.06);
 }
 
+/* Teal, matching the section's own accent, so the card and the page it opens
+   read as the same thing. Deliberately not the Prompt2Blog blue. */
+.landing-card--listicle-pipeline {
+  --card-accent: #0f766e;
+  --card-accent-soft: rgba(15, 118, 110, 0.14);
+  --card-accent-softer: rgba(15, 118, 110, 0.06);
+}
+
 .landing-card--single-listicles {
   --card-accent: #b7791f;
   --card-accent-soft: rgba(183, 121, 31, 0.14);

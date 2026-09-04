@@ -244,6 +244,25 @@ class WorkOrderRequirement(V4ContractModel):
 GrillStatus = Literal["asking", "agreed"]
 
 
+class GrillOption(V4ContractModel):
+    """One choice on a question answered by picking rather than by writing.
+
+    `recommended` is what arrives ticked. The rest are offered unticked, which
+    is the difference between a recommendation and a menu: a screen showing
+    only what was chosen cannot be argued with, because there is nothing
+    visible to swap in.
+
+    `group` names a set whose members answer each other -- ticking two of them
+    runs two searches that return the same places. The screen says so; it does
+    not enforce it, because the operator knows the city and the rule is a
+    default, not a law.
+    """
+
+    text: str = Field(min_length=1)
+    recommended: bool = False
+    group: str = ""
+
+
 class GrillQuestion(V4ContractModel):
     """One question, and the operator's answer to it, written in advance.
 
@@ -273,6 +292,16 @@ class GrillQuestion(V4ContractModel):
     # run a9959013 (2026-08-30 19:29Z) asked the same failure question four
     # times and never moved.
     asks_about: str = ""
+    # A question whose answer is a choice rather than a sentence. The screen
+    # renders these as a list to tick and edit; the answer that comes back is
+    # still the text of what was kept, so the transcript, the contract and the
+    # loop are unchanged and only the input control differs.
+    #
+    # Empty for almost every question. Filled for the listicle grill's angle
+    # question, where each entry becomes a literal web search and prose would
+    # have to be re-parsed into lines -- which is exactly where wording gets
+    # mangled, and wording is the thing that empties a search.
+    options: list[GrillOption] = Field(default_factory=list)
 
 
 class GrillTurn(V4ContractModel):
@@ -349,6 +378,14 @@ class GrillState(V4ContractModel):
     # grill that stalls shows what it is still missing, rather than looking
     # like it is asking at random.
     markers_covered: list[str] = Field(default_factory=list)
+    # What this interview is trying to settle, so the same loop can run an
+    # interview that is not about an article. An article grill leaves this
+    # alone and gets `MARKER_KEYS`; the listicle grill passes its own.
+    # Carried on the state rather than read from the module so the stop
+    # condition travels with the run it belongs to -- a resumed grill must be
+    # judged against the checklist it started with, not whichever one the
+    # process happens to import.
+    marker_keys: tuple[str, ...] = MARKER_KEYS
 
     @model_validator(mode="after")
     def validate_grill_state(self) -> "GrillState":
@@ -362,7 +399,9 @@ class GrillState(V4ContractModel):
                 raise ValueError("an agreed grill cannot still be asking something")
             if not self.consensus:
                 raise ValueError("an agreed grill must have played back what it agreed")
-            missing = [key for key in MARKER_KEYS if key not in self.markers_covered]
+            missing = [
+                key for key in self.marker_keys if key not in self.markers_covered
+            ]
             if missing:
                 # The code refuses to agree without these, so the contract says
                 # so too. A schema that permits what the code refuses is a

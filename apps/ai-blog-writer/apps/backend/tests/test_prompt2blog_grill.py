@@ -949,3 +949,36 @@ def test_a_grill_that_is_done_does_not_look_anything_up_first():
     assert state.status == "agreed"
     assert state.lookups == []
     assert len(research.queries) == 1
+
+
+def test_a_structured_consensus_is_read_rather_than_discarded():
+    """Run a5858d6e agreed with every marker covered and sent the consensus as
+    the object it describes rather than as prose. Reading a dict as the empty
+    string threw that agreement away and cost two more model calls to arrive
+    back at it."""
+    from app.features.prompt2blog.grill_v4 import _consensus_text
+
+    rendered = _consensus_text(
+        {
+            "kind": "Pisco Sour bars",
+            "place": "Lima, Peru",
+            "count": 30,
+            "angles": ["bars open for decades", "rooftop bars"],
+            "cut": "",
+        }
+    )
+
+    assert "Pisco Sour bars" in rendered
+    assert "Lima, Peru" in rendered
+    assert "30" in rendered
+    assert "bars open for decades" in rendered
+    assert "rooftop bars" in rendered
+    # An empty field is left out rather than played back as a blank line.
+    assert "cut" not in rendered
+
+
+def test_prose_consensus_is_untouched():
+    from app.features.prompt2blog.grill_v4 import _consensus_text
+
+    assert _consensus_text("  The list is about ceviche.  ") == "The list is about ceviche."
+    assert _consensus_text(None) == ""

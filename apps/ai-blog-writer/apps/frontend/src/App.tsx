@@ -19,6 +19,7 @@ import {
   ListicleItineraryBuilderPage,
 } from './features/listicleItineraries'
 import { ItinerariesPipelinePage } from './features/itinerariesPipeline'
+import { ListiclePipelinePage } from './features/listiclePipeline'
 import {
   PayloadArticlesPage,
   PayloadArticleStagePage,
@@ -87,6 +88,9 @@ export default function App() {
 
               {/* Itineraries Pipeline */}
               <Route path="itineraries-pipeline" element={<ItinerariesPipelinePage />} />
+
+              {/* Listicle Pipeline */}
+              <Route path="listicle-pipeline" element={<ListiclePipelinePage />} />
 
               {/* Location Images */}
               <Route path="location-documents" element={<LocationDocumentsPage />} />
