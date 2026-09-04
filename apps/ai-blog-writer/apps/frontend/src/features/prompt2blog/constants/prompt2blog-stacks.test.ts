@@ -230,7 +230,7 @@ describe('Claude-writer run stacks', () => {
 
   it('falls a stored selection back to the default rather than failing', () => {
     // A run saved under one configuration has to still open under another.
-    expect(resolvePrompt2BlogWriterModel('claude-opus-4-8')).toBe('gemini-2.5-pro')
-    expect(resolvePrompt2BlogWriterModel('not-a-model')).toBe('gemini-2.5-pro')
+    expect(resolvePrompt2BlogWriterModel('claude-opus-4-8')).toBe('gemini-2.5-flash')
+    expect(resolvePrompt2BlogWriterModel('not-a-model')).toBe('gemini-2.5-flash')
   })
 })

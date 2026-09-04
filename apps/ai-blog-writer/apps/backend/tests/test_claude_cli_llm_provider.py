@@ -137,7 +137,7 @@ def test_claude_names_still_reach_vertex_with_no_switch_on(monkeypatch):
     llm = llm_client.get_vertex_llm(model_name="claude-sonnet-5", max_tokens=1024)
 
     assert not isinstance(llm, llm_client.ClaudeCliTextLLM)
-    assert captured["model_name"] == "gemini-2.5-pro"
+    assert captured["model_name"] == "gemini-2.5-flash"
 
 
 def test_the_api_key_path_still_wins_over_the_subscription(monkeypatch):

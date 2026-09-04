@@ -9,7 +9,7 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 # The reader-facing compose and augmentation stages use the selected writer
 # model, defaulting to this stronger model. This was "claude-opus-4-8" while
 # Anthropic was funded; shared model resolution still supports that selection.
-P2B_COMPOSE_MODEL = "gemini-2.5-pro"
+P2B_COMPOSE_MODEL = "gemini-2.5-flash"
 
 # Used only when an older client does not send its selected stack's audit model.
 P2B_AUDIT_MODEL = "gemini-2.5-flash"
@@ -41,7 +41,7 @@ P2B_V4_RESEARCH_STRUCTURE_MODEL = "claude-sonnet-5-medium"
 # so the cheapest thing in the pipeline to make good.
 #
 # Change this one line to move it. Anything in VERTEX_TOKEN_RATES works.
-P2B_V4_GRILL_MODEL = "gemini-2.5-pro"
+P2B_V4_GRILL_MODEL = "gemini-2.5-flash"
 
 # Higher than the pipeline default. This call is judgement, not extraction: at
 # a low temperature it proposes the safe question rather than the useful one,

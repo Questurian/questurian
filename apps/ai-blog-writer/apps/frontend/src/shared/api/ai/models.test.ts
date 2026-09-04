@@ -11,12 +11,13 @@ describe('editor assist models', () => {
   it('hides Claude options while Anthropic is switched off', () => {
     expect(CLAUDE_MODELS_ENABLED).toBe(false)
     expect(EDITOR_ASSIST_MODEL_OPTIONS.map((option) => option.value)).toEqual([
+      'gemini-2.5-flash',
       'gemini-2.5-pro',
     ])
   })
 
   it('defaults to a Google writer', () => {
-    expect(DEFAULT_EDITOR_ASSIST_MODEL).toBe('gemini-2.5-pro')
+    expect(DEFAULT_EDITOR_ASSIST_MODEL).toBe('gemini-2.5-flash')
   })
 
   it('preserves supported selections and defaults unknown values', () => {

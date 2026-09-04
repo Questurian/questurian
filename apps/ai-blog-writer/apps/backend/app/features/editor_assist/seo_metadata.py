@@ -25,7 +25,7 @@ SEO_PATCH_TOOL_NAME = "emit_seo_patch"
 # Forced-tool calls now dispatch per provider (see utils.invoke_structured_tool),
 # so this endpoint accepts Gemini writers too. While Anthropic is switched off a
 # claude-* default would just be substituted, so pin the Google writer directly.
-SEO_STRUCTURED_DEFAULT_MODEL = "gemini-2.5-pro"
+SEO_STRUCTURED_DEFAULT_MODEL = "gemini-2.5-flash"
 
 SEO_PATCH_INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",

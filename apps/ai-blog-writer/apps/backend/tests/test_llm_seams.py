@@ -80,9 +80,9 @@ def test_claude_models_are_substituted_with_google_by_default(monkeypatch):
     assert llm_client.claude_provider() == llm_client.CLAUDE_PROVIDER_NONE
     assert llm_client.claude_models_reachable() is False
     assert llm_client.resolve_effective_model("claude-opus-4-8") == (
-        "gemini-2.5-pro"
+        "gemini-2.5-flash"
     )
-    assert llm_client.resolve_effective_model("claude-sonnet-5") == "gemini-2.5-pro"
+    assert llm_client.resolve_effective_model("claude-sonnet-5") == "gemini-2.5-flash"
     # An unmapped Claude name still must not fall through to Anthropic.
     assert not llm_client.is_claude_model(
         llm_client.resolve_effective_model("claude-something-new")
@@ -150,7 +150,7 @@ def test_get_vertex_llm_routes_disabled_claude_to_vertex(monkeypatch):
     llm = llm_client.get_vertex_llm(model_name="claude-sonnet-5", max_tokens=1024)
 
     assert not isinstance(llm, llm_client.ClaudeTextLLM)
-    assert captured["model_name"] == "gemini-2.5-pro"
+    assert captured["model_name"] == "gemini-2.5-flash"
 
 
 def test_gemini_tool_schema_drops_unsupported_keywords():

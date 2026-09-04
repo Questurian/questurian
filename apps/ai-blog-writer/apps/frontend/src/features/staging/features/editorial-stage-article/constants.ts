@@ -32,7 +32,7 @@ const CLAUDE_EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string
 
 export const EDITOR_MODEL_OPTIONS: Array<{ value: EditorModelName; label: string }> = [
   ...(CLAUDE_MODELS_ENABLED ? CLAUDE_EDITOR_MODEL_OPTIONS : []),
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (best Gemini quality)' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (best quality; several times the cost)' },
   { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (fast & cheap)' },
   { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },

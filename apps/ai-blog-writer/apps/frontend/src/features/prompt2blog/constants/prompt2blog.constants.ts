@@ -165,9 +165,9 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     modelName: 'gemini-2.5-flash-lite' as const,
     writingModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
     repairModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
-    auditModel: 'gemini-2.5-pro' as Prompt2BlogWriterModel,
-    outlineModel: 'gemini-2.5-pro' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-2.5-pro' as Prompt2BlogWriterModel
+    auditModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    outlineModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    groundednessModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel
   })),
   // Max effort where it is conditional, not where it is unavoidable.
   //
@@ -196,9 +196,9 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     modelName: 'gemini-2.5-flash-lite' as const,
     writingModel: 'claude-opus-5-high' as Prompt2BlogWriterModel,
     repairModel: 'claude-opus-5-max' as Prompt2BlogWriterModel,
-    auditModel: 'gemini-2.5-pro' as Prompt2BlogWriterModel,
-    outlineModel: 'gemini-2.5-pro' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-2.5-pro' as Prompt2BlogWriterModel
+    auditModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    outlineModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    groundednessModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel
   },
   // The cheapest route that still writes on Opus: Flash does every check.
   //
@@ -328,7 +328,7 @@ export const PROMPT2BLOG_MODEL_OPTIONS: Array<{
   { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Lightweight fallback)' }
 ]
 
-export const DEFAULT_PROMPT2BLOG_WRITER_MODEL: Prompt2BlogWriterModel = 'gemini-2.5-pro'
+export const DEFAULT_PROMPT2BLOG_WRITER_MODEL: Prompt2BlogWriterModel = 'gemini-2.5-flash'
 
 /**
  * Offered when the subscription path is on. The two current models are the ones

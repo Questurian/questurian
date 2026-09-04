@@ -14,8 +14,8 @@ describe('estimatePrompt2BlogStackPrice', () => {
   it('keeps input and output rates visible instead of hiding their difference', () => {
     const estimate = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
 
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$2.00')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$12.00')
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.30')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$2.50')
   })
 
   // The estimator used to throw on any model with no rate, which crashed the
@@ -45,8 +45,8 @@ describe('estimatePrompt2BlogStackPrice', () => {
     expect(estimate.unratedRoles).toEqual([])
     // Averaged over the roles that are metered, not diluted by treating the
     // unpriced writer as free.
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.75')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$3.75')
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.30')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$2.50')
   })
 
   it('reports no rate at all when every role is on the plan', () => {
@@ -65,7 +65,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
 
     // Only the draft and the repair stay on the plan.
     expect(estimate.planRoles).toEqual(['writingModel', 'repairModel'])
-    expect(estimate.mixedPerMillion).toBeCloseTo(4.00, 2)
+    expect(estimate.mixedPerMillion).toBeCloseTo(0.74, 2)
   })
 
   it('prices the max-repair route identically, because only effort changed', () => {
