@@ -56,12 +56,17 @@ from pydantic import BaseModel, ConfigDict, Field
 ClaimKind = Literal[
     "award",         # a named prize or guide listing, usually with a year
     "recognition",   # standing reputation, no single award behind it
-    "review",        # a critic or publication writing about it
+    "review",        # a critic, a publication, or a customer writing about it
     "history",       # when it opened, who founded it, what changed
     "person",        # a named chef, bartender or owner
     "signature",     # the one dish or drink it is known for
     "setting",       # the room, the view, the building
     "practice",      # how it works -- lunch only, no reservations, cash only
+    # What it costs. Its own kind rather than a `practice`, because a whole
+    # class of list is about nothing else -- cheap eats, the splurge, good and
+    # cheap -- and those lists need to find this claim without reading every
+    # other thing said about the place.
+    "price",
     "other",
 ]
 
@@ -80,6 +85,7 @@ CLAIM_SHELF_LIFE_DAYS: dict[str, int | None] = {
     "recognition": 545,   # a standing reputation stops being said quietly
     "review": 1095,       # ages into history rather than expiring
     "practice": 365,      # opening patterns change with a season
+    "price": 365,         # rots fast, and a wrong price is worse than none
     "other": 365,
 }
 
@@ -143,6 +149,30 @@ class Sighting(BaseModel):
     seen_at: datetime = Field(default_factory=_now)
 
 
+class PastBlurb(BaseModel):
+    """Something already written about this place, and where it ran.
+
+    Kept so the next blurb is DIFFERENT, not so it can be reused. Two
+    Questurian articles carrying the same paragraph compete with each other in
+    search, and a place that earns a spot on four lists would otherwise be
+    described in the same words four times.
+
+    So this is read by the writer as a list of sentences already spent. It is
+    not a library to draw from.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str = Field(min_length=1)
+    # The run that produced it, and the angle it was written for. The angle
+    # matters most: the same bar on a cheap-eats list and on a history list
+    # should read as two different places to go, and knowing which angle was
+    # already used is what makes that possible.
+    run_id: str = ""
+    angle: str = ""
+    written_at: datetime = Field(default_factory=_now)
+
+
 class PlaceProfile(BaseModel):
     """One place, everything said about it, and every list that found it."""
 
@@ -172,6 +202,7 @@ class PlaceProfile(BaseModel):
 
     claims: list[Claim] = Field(default_factory=list)
     sightings: list[Sighting] = Field(default_factory=list)
+    past_blurbs: list[PastBlurb] = Field(default_factory=list)
 
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
@@ -207,3 +238,13 @@ class PlaceProfile(BaseModel):
 
     def fresh_claims(self, *, as_of: datetime | None = None) -> list[Claim]:
         return [claim for claim in self.claims if not claim.is_stale(as_of=as_of)]
+
+    def claims_for(self, kinds: tuple[str, ...]) -> list[Claim]:
+        """The material a particular kind of list is written from.
+
+        A cheap-eats piece wants the price and what people say they paid; a
+        history piece wants the founding and the family. One bag of claims,
+        filtered -- rather than a separate profile, or a separate research
+        pass, per angle.
+        """
+        return [claim for claim in self.claims if claim.kind in kinds]

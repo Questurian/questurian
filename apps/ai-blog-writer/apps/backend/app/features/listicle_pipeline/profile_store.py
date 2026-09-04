@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 
 from app.core.database import get_db_connection
 
-from .profiles import Claim, PlaceProfile, Sighting
+from .profiles import Claim, PastBlurb, PlaceProfile, Sighting
 
 _PROFILES = """
 CREATE TABLE IF NOT EXISTS listicle_place_profiles (
@@ -81,6 +81,21 @@ CREATE TABLE IF NOT EXISTS listicle_profile_sightings (
     -- same sighting, and a sighting counted twice inflates the one signal this
     -- pipeline gets for free.
     PRIMARY KEY (profile_id, run_id, angle)
+)
+"""
+
+_BLURBS = """
+CREATE TABLE IF NOT EXISTS listicle_profile_blurbs (
+    blurb_id   TEXT PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    run_id     TEXT NOT NULL DEFAULT '',
+    angle      TEXT NOT NULL DEFAULT '',
+    text       TEXT NOT NULL,
+    written_at TEXT NOT NULL,
+    -- Hash of the words. Writing the same sentence twice is the thing this
+    -- table exists to prevent, so storing it twice would be absurd.
+    text_key   TEXT NOT NULL,
+    UNIQUE (profile_id, text_key)
 )
 """
 
@@ -145,6 +160,7 @@ def ensure_tables() -> None:
         conn.execute(_PROFILES)
         conn.execute(_CLAIMS)
         conn.execute(_SIGHTINGS)
+        conn.execute(_BLURBS)
         for statement in _INDEXES:
             conn.execute(statement)
 
@@ -198,6 +214,19 @@ def _hydrate(conn: sqlite3.Connection, row: sqlite3.Row) -> PlaceProfile:
             (profile_id,),
         )
     ]
+    past_blurbs = [
+        PastBlurb(
+            text=b["text"],
+            run_id=b["run_id"],
+            angle=b["angle"],
+            written_at=_parse(b["written_at"]),
+        )
+        for b in conn.execute(
+            "SELECT * FROM listicle_profile_blurbs WHERE profile_id = ? "
+            "ORDER BY written_at",
+            (profile_id,),
+        )
+    ]
     return PlaceProfile(
         profile_id=profile_id,
         place_id=row["place_id"] or "",
@@ -207,6 +236,7 @@ def _hydrate(conn: sqlite3.Connection, row: sqlite3.Row) -> PlaceProfile:
         district=row["district"],
         claims=claims,
         sightings=sightings,
+        past_blurbs=past_blurbs,
         created_at=_parse(row["created_at"]),
         updated_at=_parse(row["updated_at"]),
     )
@@ -349,3 +379,30 @@ def unresolved(limit: int = 100) -> list[PlaceProfile]:
             (limit,),
         ).fetchall()
         return [_hydrate(conn, row) for row in rows]
+
+
+def add_blurb(profile_id: str, blurb: PastBlurb) -> bool:
+    """Record what was written about this place, so it is not written again.
+
+    False when this exact text is already on the profile. Returning that rather
+    than silently succeeding matters: a writer handed the same sentence back
+    twice has not written a second blurb.
+    """
+    ensure_tables()
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            "INSERT OR IGNORE INTO listicle_profile_blurbs (blurb_id, "
+            "profile_id, run_id, angle, text, written_at, text_key) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                uuid.uuid4().hex[:12],
+                profile_id,
+                blurb.run_id,
+                blurb.angle,
+                blurb.text,
+                _iso(blurb.written_at),
+                claim_text_key(blurb.text),
+            ),
+        )
+    _touch(profile_id)
+    return bool(cursor.rowcount)

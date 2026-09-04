@@ -322,3 +322,39 @@ def test_google_says_whether_a_row_is_somewhere_you_can_be_served():
     market = ResolvedPlace("id", "Terminal Pesquero", "", ("establishment", "point_of_interest"))
     assert bar.is_venue is True
     assert market.is_venue is False
+
+
+def test_a_blurb_is_recorded_so_the_next_one_differs():
+    """Two Questurian articles carrying the same paragraph compete with each
+    other in search. Past blurbs are a list of sentences already spent, not a
+    library to draw from."""
+    from app.features.listicle_pipeline.profiles import PastBlurb
+
+    profile = profile_store.open_profile(name="Bar Rovira", city="Lima, Peru")
+    first = PastBlurb(text="The oldest bar in Callao.", run_id="r1", angle="decades")
+
+    assert profile_store.add_blurb(profile.profile_id, first) is True
+    # The same sentence again is not a second blurb.
+    assert profile_store.add_blurb(profile.profile_id, first) is False
+
+    stored = profile_store.find(name="Bar Rovira", city="Lima, Peru")
+    assert len(stored.past_blurbs) == 1
+    assert stored.past_blurbs[0].angle == "decades"
+
+
+def test_blurbs_from_different_lists_stack_up():
+    """The same bar on a cheap-eats list and a history list should read as two
+    different places to go."""
+    from app.features.listicle_pipeline.profiles import PastBlurb
+
+    profile = profile_store.open_profile(name="Museo del Pisco", city="Lima, Peru")
+    for text, angle in (
+        ("Where Lima drinks its pisco sour straight.", "traditional recipe"),
+        ("A rooftop over the Presidential Palace.", "the view"),
+    ):
+        profile_store.add_blurb(
+            profile.profile_id, PastBlurb(text=text, run_id="r", angle=angle)
+        )
+
+    stored = profile_store.find(name="Museo del Pisco", city="Lima, Peru")
+    assert {b.angle for b in stored.past_blurbs} == {"traditional recipe", "the view"}

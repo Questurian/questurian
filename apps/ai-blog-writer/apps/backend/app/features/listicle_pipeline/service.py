@@ -174,7 +174,7 @@ def build_profile(
     again, and a sighting from a run already recorded is ignored.
     """
     from .profiles import Sighting
-    from . import identity, profile_research, profile_store
+    from . import identity, places, profile_research, profile_store
 
     place_id = ""
     address = ""
@@ -209,6 +209,21 @@ def build_profile(
             profile_store.add_sighting(
                 profile.profile_id, Sighting(angle=angle, run_id=run_id)
             )
+
+    # What Google holds, before anything a model read. Cheap, factual, and the
+    # only material in a profile no model wrote -- and the only source of the
+    # customer voice a cheap-eats or value angle is written from.
+    if place_id:
+        details = places.fetch_details(place_id)
+        if details.failed:
+            logger.warning(
+                "Place details unavailable for %r: %s", name, details.reason
+            )
+        else:
+            added = profile_store.add_claims(
+                profile.profile_id, places.claims_from(details)
+            )
+            logger.info("Profile %s: %s claims from Places", profile.profile_id, added)
 
     if research is not None:
         result = profile_research.research_place(
