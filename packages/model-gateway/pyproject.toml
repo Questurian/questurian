@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "questurian-model-gateway"
+version = "0.1.0"
+description = "One place that decides which model a job runs on, for every Python process in the Questurian monorepo."
+requires-python = ">=3.10"
+# Deliberately empty. This package is imported by two services with unlike
+# dependency sets; anything added here is added to both. It talks to the
+# dashboard over the standard library and leaves provider SDKs to the caller.
+dependencies = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/model_gateway"]
