@@ -97,6 +97,12 @@ class Claim(BaseModel):
     # One sentence. Long enough to be usable in a blurb without going back to
     # the source, short enough that a gate can count what it has.
     text: str = Field(min_length=1, max_length=600)
+    # Who published it -- "El Comercio", "Publimetro", "Summum". The durable
+    # half of the attribution: grounded search returns its sources as opaque
+    # `vertexaisearch.cloud.google.com/grounding-api-redirect/...` links that
+    # name no publisher and do not last, so a claim held for two years would
+    # otherwise become a sentence nobody can place.
+    source_name: str = ""
     # Where it was published. Empty is allowed and is itself a finding: a claim
     # nobody can point at is weaker than one that cites a newspaper.
     source_url: str = ""

@@ -265,3 +265,60 @@ def test_a_place_nobody_has_written_about_says_so_after_trying():
     result = research_place("Somewhere Obscure", "Lima, Peru", [], research)
     assert result.failed is False
     assert "found nothing published" in result.reason
+
+
+def test_the_publisher_name_is_kept_beside_the_link():
+    """Grounded search returns opaque redirect links that name nobody and do
+    not outlive the claim. The publication name is the half that still means
+    something in two years."""
+    claims = parse_claims(
+        "award | Won best classic restaurant | 2023 | Premios Summum | https://s.pe/x"
+    )
+    assert claims[0].source_name == "Premios Summum"
+    assert claims[0].source_url == "https://s.pe/x"
+
+
+def test_the_publication_and_the_link_may_arrive_in_either_order():
+    both_ways = parse_claims(
+        "history | Founded 1907 | 1907 | https://elcomercio.pe/a | El Comercio\n"
+        "history | Founded 1907 too | 1907 | El Comercio | https://elcomercio.pe/a"
+    )
+    assert {c.source_name for c in both_ways} == {"El Comercio"}
+    assert {c.source_url for c in both_ways} == {"https://elcomercio.pe/a"}
+
+
+def test_a_claim_may_name_a_publication_with_no_link_at_all():
+    claims = parse_claims("history | Opened in 1880 | 1880 | El Comercio |")
+    assert claims[0].source_name == "El Comercio"
+    assert claims[0].source_url == ""
+
+
+def test_the_publisher_name_survives_a_round_trip_through_the_store():
+    profile = profile_store.open_profile(name="Bar Cordano", city="Lima, Peru")
+    profile_store.add_claims(
+        profile.profile_id,
+        [Claim(kind="history", text="Opened 1905.", source_name="El Comercio")],
+    )
+    stored = profile_store.find(name="Bar Cordano", city="Lima, Peru")
+    assert stored.claims[0].source_name == "El Comercio"
+
+
+def test_the_address_pins_a_lookup_to_one_building():
+    """Museo del Pisco has branches in Arequipa and Cusco. A lookup on the bare
+    name spread across all three and came back with almost nothing."""
+    prompt = build_research_prompt(
+        "MUSEO DEL PISCO - LIMA", "Lima, Peru", [], "Jr. Junín 201, Lima 15001"
+    )
+    assert "Jr. Junín 201" in prompt
+
+
+def test_google_says_whether_a_row_is_somewhere_you_can_be_served():
+    """The search runner refuses rows that name a market or a street by
+    wording, and still let a fish terminal onto a pisco sour list. Refusing by
+    name only catches the wordings you thought of."""
+    from app.features.listicle_pipeline.identity import ResolvedPlace
+
+    bar = ResolvedPlace("id", "Museo del Pisco", "", ("bar", "establishment", "food"))
+    market = ResolvedPlace("id", "Terminal Pesquero", "", ("establishment", "point_of_interest"))
+    assert bar.is_venue is True
+    assert market.is_venue is False

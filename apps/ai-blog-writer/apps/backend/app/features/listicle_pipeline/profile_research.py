@@ -48,7 +48,9 @@ _KINDS: tuple[tuple[str, str], ...] = (
 _VALID_KINDS = {key for key, _ in _KINDS}
 
 
-def build_research_prompt(name: str, city: str, angles: list[str]) -> str:
+def build_research_prompt(
+    name: str, city: str, angles: list[str], address: str = ""
+) -> str:
     """What one place is looked up with.
 
     The angles are included because they are why this place is on this list,
@@ -58,9 +60,14 @@ def build_research_prompt(name: str, city: str, angles: list[str]) -> str:
     """
     kinds = "\n".join(f"  {key} -- {description}" for key, description in _KINDS)
     reasons = "\n".join(f"  - {angle}" for angle in angles) or "  - (none recorded)"
+    # The resolved street address, when identity has found one. Museo del Pisco
+    # has branches in Arequipa and Cusco, and a lookup on the bare name spread
+    # itself across all three and came back with almost nothing about any of
+    # them. An address pins the search to one building.
+    at = f"\n  {address}" if address else ""
     return f"""Find what has been published about this place:
 
-  {name}, {city}
+  {name}, {city}{at}
 
 It came up in a search for a list because of these:
 {reasons}
@@ -82,8 +89,13 @@ fact.
 Use only these kinds:
 {kinds}
 
+Name the publication for every line -- "El Comercio", "Publimetro", "Summum",
+"TripAdvisor". The name, not a URL. A finding nobody can attribute is weaker
+than one that names a newspaper, and the name is what still means something in
+two years.
+
 Write ONLY the list. One finding per line, in exactly this format:
-KIND | what was said, in one sentence | year or blank | source url
+KIND | what was said, in one sentence | year or blank | publication | url
 
 No preamble, no numbering, no closing line."""
 
@@ -105,14 +117,19 @@ def parse_claims(text: str) -> list[Claim]:
         if not body or body.lower() in {"what was said", "claim"}:
             continue
         year_text = parts[2] if len(parts) > 2 else ""
-        source = parts[3] if len(parts) > 3 else ""
+        # The publication and the URL may arrive in either order, or with only
+        # one of them present. Whichever looks like a link is the link.
+        tail = [part for part in parts[3:] if part]
+        source_url = next((part for part in tail if part.startswith("http")), "")
+        source_name = next((part for part in tail if not part.startswith("http")), "")
         years = re.findall(r"\b(1[6-9]\d{2}|20\d{2})\b", year_text)
         resolved: ClaimKind = kind if kind in _VALID_KINDS else "other"  # type: ignore[assignment]
         claims.append(
             Claim(
                 kind=resolved,
                 text=body[:600],
-                source_url=source if source.startswith("http") else "",
+                source_name=source_name[:120],
+                source_url=source_url,
                 about_year=int(years[0]) if years else None,
             )
         )
@@ -179,9 +196,10 @@ def research_place(
     city: str,
     angles: list[str],
     research: Callable[[str], tuple[str, list[str], int | None]],
+    address: str = "",
 ) -> ResearchResult:
     """Look one place up, more than once if the first answer was thin."""
-    prompt = build_research_prompt(name, city, angles)
+    prompt = build_research_prompt(name, city, angles, address)
     claims: list[Claim] = []
     urls: list[str] = []
     seen: set[str] = set()

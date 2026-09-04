@@ -36,6 +36,16 @@ _TEXT_SEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 RESOLVE_TIMEOUT_SECONDS = 15
 
 
+# Google's `types` for a place, and what they tell us. A real bar or
+# restaurant carries `bar`, `restaurant`, `food` or `cafe`. A row that resolves
+# with none of them is not a business a reader can walk into and order in --
+# "Terminal Pesquero" resolved as `establishment, point_of_interest`, which is
+# a fish market, and it reached the pisco sour list as if it were a bar.
+VENUE_TYPES = frozenset(
+    {"bar", "restaurant", "food", "cafe", "night_club", "lodging", "bakery"}
+)
+
+
 @dataclass(frozen=True)
 class ResolvedPlace:
     place_id: str
@@ -47,6 +57,17 @@ class ResolvedPlace:
     # resolve at all is the junk the search runner could not filter by name.
     types: tuple[str, ...] = ()
     permanently_closed: bool = False
+
+    @property
+    def is_venue(self) -> bool:
+        """Is this somewhere a reader could actually go and be served?
+
+        Cheaper and firmer than anything a search prompt can be told. The
+        search runner already refuses rows that name a market or a street, and
+        it still let a fish terminal through, because refusing by name only
+        catches the wordings you thought of.
+        """
+        return bool(VENUE_TYPES & set(self.types))
 
 
 def api_key() -> str:

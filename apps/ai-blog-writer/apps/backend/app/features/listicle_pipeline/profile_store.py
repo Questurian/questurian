@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS listicle_profile_claims (
     profile_id TEXT NOT NULL,
     kind       TEXT NOT NULL,
     text       TEXT NOT NULL,
+    -- Who published it. Kept beside the URL rather than instead of it: the
+    -- URL is a grounding redirect that names nobody and will not outlive the
+    -- claim, and the name is what still means something in two years.
+    source_name TEXT NOT NULL DEFAULT '',
     source_url TEXT NOT NULL DEFAULT '',
     found_at   TEXT NOT NULL,
     about_year INTEGER,
@@ -175,6 +179,7 @@ def _hydrate(conn: sqlite3.Connection, row: sqlite3.Row) -> PlaceProfile:
         Claim(
             kind=c["kind"],
             text=c["text"],
+            source_name=c["source_name"],
             source_url=c["source_url"],
             found_at=_parse(c["found_at"]),
             about_year=c["about_year"],
@@ -303,13 +308,14 @@ def add_claims(profile_id: str, claims: list[Claim]) -> int:
         for claim in claims:
             cursor = conn.execute(
                 "INSERT OR IGNORE INTO listicle_profile_claims (claim_id, "
-                "profile_id, kind, text, source_url, found_at, about_year, "
-                "text_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                "profile_id, kind, text, source_name, source_url, found_at, "
+                "about_year, text_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     uuid.uuid4().hex[:12],
                     profile_id,
                     claim.kind,
                     claim.text,
+                    claim.source_name,
                     claim.source_url,
                     _iso(claim.found_at),
                     claim.about_year,

@@ -177,15 +177,28 @@ def build_profile(
     from . import identity, profile_research, profile_store
 
     place_id = ""
+    address = ""
+    lookup_name = name
     if resolve_identity:
         resolved = identity.resolve(name, city)
         if resolved is not None:
             place_id = resolved.place_id
+            address = resolved.address
+            # The name Google holds, not the one a search happened to write.
+            # "Bar Rovira del Callao" is really "Tradición Chalaca Rovira
+            # 1907", and looking a place up under a name it does not use is
+            # how a lookup comes back thin.
+            lookup_name = resolved.name or name
             if resolved.permanently_closed:
                 # Recorded rather than acted on. Whether a closed place stays
                 # on a list is the gate's decision and the operator's, not
                 # this step's.
                 logger.warning("%r resolves to a permanently closed place", name)
+            if not resolved.is_venue:
+                logger.warning(
+                    "%r resolves to %s, which is not somewhere a reader can be "
+                    "served", name, ", ".join(resolved.types) or "nothing",
+                )
 
     profile = profile_store.open_profile(
         name=name, city=city, district=district, place_id=place_id
@@ -199,7 +212,7 @@ def build_profile(
 
     if research is not None:
         result = profile_research.research_place(
-            name, city, list(angles or []), research
+            lookup_name, city, list(angles or []), research, address=address
         )
         if result.failed:
             # Raised rather than logged. A profile recorded as having nothing
