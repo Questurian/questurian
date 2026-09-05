@@ -30,6 +30,7 @@ from .contracts_v4 import (
     BriefReader,
     GrillState,
 )
+from .editorial_catalog import EditorialCatalog, load_editorial_catalog
 from .grill_v4 import GrillDependencies
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str, _safe_str_list
@@ -79,7 +80,36 @@ BRIEF_SCHEMA = require_non_empty({
 })
 
 
-def build_brief_prompt(state: GrillState) -> str:
+def _form_exclusions(catalog: EditorialCatalog) -> str:
+    """Each form's own "Do not use when" clause, at the moment a form is chosen.
+
+    The forms carry these clauses and nothing has ever read them. Outline and
+    compose are projected only Reader promise, Required evidence, Allowed
+    structures and Failure modes, so a form chosen wrongly is invisible from
+    there on -- and it must stay invisible, because a writer free to depart
+    from an approved form is the thing approving one prevents.
+
+    So the clause belongs here, where the choice is still being made. Run
+    95a74dce called a single morning's walk a `destination-guide`, whose clause
+    reads "Do not use for a single practical problem, a day-by-day plan, or a
+    ranked list."
+    """
+    lines = []
+    for form in catalog.forms:
+        body = form.instructions.split("## Do not use when", 1)
+        if len(body) < 2:
+            continue
+        clause = body[1].split("\n## ", 1)[0].strip().replace("\n", " ")
+        if clause:
+            lines.append(f"- {form.id}: {clause}")
+    return "\n".join(lines)
+
+
+def build_brief_prompt(
+    state: GrillState, *, catalog: EditorialCatalog | None = None
+) -> str:
+    catalog = catalog or load_editorial_catalog()
+    form_exclusions = _form_exclusions(catalog)
     transcript = "\n\n".join(
         f"Q. {turn.question.ask}\nThey said: {turn.answer}" for turn in state.turns
     )
@@ -103,6 +133,9 @@ rather than leaving it blank.
   A walk through what a place offers is `destination-guide`; a ranked or
   grouped set of picks is `curated-list-best-of`; a day-by-day plan is
   `itinerary`; a how-much-does-it-cost piece is `cost-budget-breakdown`.
+  Each form says what it is NOT for. Read these before choosing, and do not
+  pick a form whose exclusion describes this piece:
+{form_exclusions}
 - `primary_reader` is who this is for, in a phrase -- who they are and what
   situation they are in, not a demographic bracket.
 - `reader_question` is the question in that reader's head, written the way
@@ -133,8 +166,28 @@ def _material_from(payload: dict[str, Any], state: GrillState) -> list[BriefMate
     does not match a real answer is dropped and logged: a "first-hand" claim
     the operator never made is worse than no material at all, because nothing
     downstream will ever check it.
+
+    An answer that became one of the brief's own fields is a commissioning
+    decision, not evidence, and is dropped too. Run 95a74dce filed six of them
+    as `interview` -- the reader, the spine, the outcome and the failure line,
+    1,349 characters of instructions restated as facts. `interview` is the one
+    kind the evidence policy lets the writer assert with no source ("First-hand
+    material is the writer's own knowledge: state it directly, as fact"), so
+    the misfiling hands editorial intent the standing of reported fact. Those
+    answers already reach every stage as the fields they became.
+
+    The exact-quote check stays exactly as it was. This only removes answers
+    the brief is already carrying.
     """
     answers = {turn.answer for turn in state.turns}
+    # These are the payload's own key names -- BRIEF_SCHEMA keeps
+    # `primary_reader` at the top level, not nested under a reader object.
+    commissioned = {
+        _safe_str(payload.get(key))
+        for key in ("primary_reader", "reader_question", "outcome", "spine", "fails_if")
+    }
+    commissioned.discard("")
+
     material: list[BriefMaterial] = []
     for raw in payload.get("material") or []:
         record = _safe_dict(raw)
@@ -145,6 +198,13 @@ def _material_from(payload: dict[str, Any], state: GrillState) -> list[BriefMate
         if quoted not in answers:
             logger.warning(
                 "Dropping brief material that does not quote a real answer: %r",
+                quoted[:80],
+            )
+            continue
+        if quoted in commissioned:
+            logger.info(
+                "Dropping brief material that is a commissioning decision, not "
+                "evidence: %r",
                 quoted[:80],
             )
             continue

@@ -392,3 +392,47 @@ def test_the_failure_says_what_is_missing_in_words():
     assert "what the piece is built on" in str(error.value)
     assert "what would make it a failure" in str(error.value)
     assert error.value.raw, "what came back has to travel with the failure"
+
+
+def test_a_commissioning_answer_is_not_filed_as_evidence():
+    """Run 95a74dce filed six of them as `interview`, 1,349 characters.
+
+    `interview` is the one kind the evidence policy lets the writer assert with
+    no source, so an editorial instruction filed there gains the standing of a
+    reported fact. Those answers already reach every stage as the brief fields
+    they became.
+    """
+    from app.features.prompt2blog.brief_v4 import _material_from
+
+    spine = "The walk itself, north to south, in the order your feet meet it."
+    state = _agreed(
+        turns=[
+            _turn("q1", "What is the spine?", spine),
+            _turn("q2", "Anything of your own?", FIRSTHAND),
+        ]
+    )
+    payload = {
+        "spine": spine,
+        "material": [
+            {"kind": "interview", "quoted_answer": spine},
+            {"kind": "firsthand", "quoted_answer": FIRSTHAND},
+        ],
+    }
+
+    material = _material_from(payload, state)
+
+    assert [item.statement for item in material] == [FIRSTHAND], (
+        "the spine is an instruction the brief already carries, not evidence"
+    )
+
+
+def test_the_exact_quote_safeguard_is_untouched():
+    """A paraphrase of a real answer is still dropped."""
+    from app.features.prompt2blog.brief_v4 import _material_from
+
+    state = _agreed(turns=[_turn("q1", "Anything of your own?", FIRSTHAND)])
+    payload = {
+        "material": [{"kind": "firsthand", "quoted_answer": FIRSTHAND[:-1] + " roughly."}]
+    }
+
+    assert _material_from(payload, state) == []

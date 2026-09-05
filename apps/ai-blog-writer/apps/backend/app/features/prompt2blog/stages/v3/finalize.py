@@ -15,6 +15,33 @@ from ...quality_v3 import v3_constraint_brief
 from ...support import _safe_dict, _safe_str
 
 
+_REPAIR_REASONS = {
+    "draft_passed_audit": "Repair did not run: the draft passed the audit.",
+    "attempt_limit_reached": "Repair ran out of attempts.",
+    "token_budget_reached": (
+        "Repair was skipped: the run's token budget was already spent before "
+        "the writing graph reached it. This is an accounting outcome, not a "
+        "judgement about the draft."
+    ),
+    "repairable_problems_found": "Repair ran.",
+}
+
+
+def _repair_outcome(state: dict[str, Any]) -> dict[str, Any]:
+    """What happened to repair, in words the receipt can carry."""
+    decision = _safe_dict(state.get("repair_decision"))
+    reason = _safe_str(decision.get("reason"))
+    return {
+        "route": _safe_str(decision.get("route")),
+        "reason": reason,
+        "attempts_used": decision.get("attempts_used"),
+        "ran": bool(state.get("repair_applied")),
+        "explanation": _REPAIR_REASONS.get(
+            reason, "Repair's outcome was not recorded."
+        ),
+    }
+
+
 def run_v3_finalize_stage(
     state: Prompt2BlogV3GraphState,
     dependencies: PipelineDependencies,
@@ -98,6 +125,13 @@ def run_v3_finalize_stage(
         "resume_count": state.get("resume_count", 0),
         "pipeline_status": pipeline_status,
         "readiness_blockers": list(verdict.blockers),
+        # Why the article stopped where it did. `needs_revision` with no repair
+        # attempt reads like a quality verdict and on run 95a74dce was an
+        # accounting one: the run had spent 444,405 tokens against a 425,000
+        # budget before the writing graph started, so repair was skipped
+        # outright. An operator reading the receipt could not tell that the
+        # article was never offered a repair pass.
+        "repair_outcome": _repair_outcome(state),
         "brief": brief,
         "work_order": work_order,
         "form": {

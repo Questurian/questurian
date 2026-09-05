@@ -190,6 +190,34 @@ def _form_structure(form_instructions: str) -> str:
     )
 
 
+def _support_status(evidence: NormalizedEvidence) -> str:
+    """Which questions the evidence actually answered.
+
+    The audit sees the work order's questions and a single grounding verdict,
+    and cannot tell a draft that forgot available material from one that
+    correctly omitted a question nothing supports. On run 95a74dce it read
+    `water_refill_points` in the requirements, did not know research had
+    filed it unsupported, and told repair to add water-fountain information --
+    which repair is forbidden to invent. The revision could not be satisfied
+    by the stage it was addressed to, in any run.
+
+    A status line answers that. The evidence ledger itself is 66,000
+    characters and is not the way to tell the audit this.
+    """
+    lines = ["SUPPORT AND OMISSION"]
+    for requirement in evidence.requirements:
+        gap = f" — {requirement.gap}" if requirement.gap else ""
+        lines.append(f"- {requirement.requirement_id}: {requirement.status}{gap}")
+    lines.append(
+        "\nA question whose status is not `supported` has no evidence behind it. "
+        "A draft that omits it is correct, and asking for it in "
+        "required_revisions asks repair for a fact it is forbidden to invent. "
+        "If the omission matters, say the article needs more research rather "
+        "than more writing."
+    )
+    return "\n".join(lines)
+
+
 def _facts_by_subject(
     evidence: NormalizedEvidence, work_order: Prompt2BlogWorkOrder
 ) -> str:
@@ -531,6 +559,7 @@ def assemble_v3_instructions(
                     "on support.",
                 ),
                 ("brief", f"APPROVED BRIEF\n{brief_body}"),
+                ("support", _support_status(evidence)),
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
                 ("house_style", f"HOUSE STYLE\n{catalog.house_rules.instructions}"),

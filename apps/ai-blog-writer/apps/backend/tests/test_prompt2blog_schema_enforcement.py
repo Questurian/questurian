@@ -131,3 +131,54 @@ def test_facts_reach_the_outline_under_more_than_one_heading():
         "if a real subject field is added, group on it directly rather than "
         "through the work order's search groups"
     )
+
+
+# --- Phase 2: the pipeline stops arguing with itself -----------------------
+
+
+def test_the_audit_is_told_which_questions_the_evidence_answered():
+    """It asked repair to add water-fountain information that research had
+    already filed unsupported, and repair is forbidden to invent facts."""
+    from app.features.prompt2blog.instructions_v3 import _support_status
+
+    class _Requirement:
+        def __init__(self, rid, status, gap=""):
+            self.requirement_id, self.status, self.gap = rid, status, gap
+
+    class _Evidence:
+        requirements = [
+            _Requirement("r1", "supported"),
+            _Requirement("water_refill_points", "unpublished", "No public fountains found."),
+        ]
+
+    text = _support_status(_Evidence())
+
+    assert "r1: supported" in text
+    assert "water_refill_points: unpublished — No public fountains found." in text
+    assert "forbidden to invent" in text
+
+
+def test_a_skipped_repair_says_why_rather_than_only_needs_revision():
+    from app.features.prompt2blog.stages.v3.finalize import _repair_outcome
+
+    skipped = _repair_outcome(
+        {"repair_decision": {"route": "settle", "reason": "token_budget_reached"}}
+    )
+    assert skipped["ran"] is False
+    assert "token budget was already spent" in skipped["explanation"]
+
+    passed = _repair_outcome(
+        {"repair_decision": {"route": "settle", "reason": "draft_passed_audit"}}
+    )
+    assert "passed the audit" in passed["explanation"]
+    assert skipped["explanation"] != passed["explanation"]
+
+
+def test_the_brief_writer_is_shown_what_each_form_is_not_for():
+    from app.features.prompt2blog.brief_v4 import _form_exclusions
+    from app.features.prompt2blog.editorial_catalog import load_editorial_catalog
+
+    exclusions = _form_exclusions(load_editorial_catalog())
+
+    assert "destination-guide: Do not use for a single practical problem" in exclusions
+    assert len(exclusions.splitlines()) >= 10
