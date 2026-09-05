@@ -376,7 +376,18 @@ def test_compose_writes_from_evidence_records_and_never_from_source_prose():
     assert "`remaining_gaps` as internal metadata only" in normalized_prompt
     assert "unsupported point stays a visible gap" not in prompt
     assert "STYLE DIRECTIVE (REQUIRED)" in prompt
-    assert "Instituto Nacional de Estadística e Informática" in prompt
+    # Compose used to receive the whole bibliography and is forbidden, in the
+    # same prompt, to use any of it: "Attribution is internal to these records.
+    # Never carry it into the prose." On run 95a74dce that was 12,299
+    # characters of per-claim source lists against 13,906 of claim prose, plus
+    # 12,564 characters of grounding-redirect URLs it cannot open (#516).
+    #
+    # The publisher goes with it. That is a real trade: compose can no longer
+    # weigh a fact by who published it. `confidence` on the claim is the
+    # channel for that, and it survives. Groundedness still receives the full
+    # rendering, because checking a claim against its provenance is the entire
+    # reason that stage exists.
+    assert "Instituto Nacional de Estadística e Informática" not in prompt
     assert "HOUSE STYLE" in prompt
     section_plan = prompt.split("SECTION PLAN:", 1)[1].split("COMPOSE AUTHORITY", 1)[0]
     assert "Evidence claims: c1" in section_plan
