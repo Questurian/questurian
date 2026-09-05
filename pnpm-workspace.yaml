@@ -1,4 +1,5 @@
 packages:
+  - "packages/*"
   - "apps/dashboard"
   - "apps/ai-blog-writer"
   - "apps/ai-blog-writer/apps/*"
