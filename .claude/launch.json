@@ -30,6 +30,17 @@
         "dev"
       ],
       "port": 3003
+    },
+    {
+      "name": "dashboard",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@questurian/dashboard",
+        "run",
+        "dev"
+      ],
+      "port": 4500
     }
   ]
 }

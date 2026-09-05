@@ -14,7 +14,7 @@ def test_generate_seo_metadata_returns_structured_patch():
             "seoTitle": "Two Days in Lima: Food, Art & Coastline",
             "metaDescription": "A compact two-day Lima plan.",
         }
-        model_name = seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
+        model_name = "gemini-2.5-flash"
 
     def _fake_structured(**kwargs):
         captured.update(kwargs)
@@ -34,8 +34,10 @@ def test_generate_seo_metadata_returns_structured_patch():
     assert response.status_code == 200
     payload = response.json()
     assert payload["seo_patch"]["seoTitle"].startswith("Two Days in Lima")
-    assert payload["model_used"] == seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
-    assert captured["model_name"] == seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
+    assert payload["model_used"] == "gemini-2.5-flash"
+    # The route names its job and pins no model.
+    assert captured["job_id"] == "editor.seo_metadata"
+    assert captured["model_name"] is None
     assert captured["tool_name"] == seo_metadata.SEO_PATCH_TOOL_NAME
     assert "<<<CURRENT_SEO>>>" in captured["prompt"]
     assert "<<<ARTICLE_CONTEXT>>>" in captured["prompt"]
@@ -44,7 +46,7 @@ def test_generate_seo_metadata_returns_structured_patch():
 def test_generate_seo_metadata_empty_patch_is_502():
     class _EmptyResult:
         payload: dict = {}
-        model_name = seo_metadata.SEO_STRUCTURED_DEFAULT_MODEL
+        model_name = "gemini-2.5-flash"
 
     client = build_editor_assist_client(
         structured_writer=lambda **_kwargs: _EmptyResult()

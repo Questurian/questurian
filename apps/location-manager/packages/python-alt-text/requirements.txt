@@ -3,3 +3,9 @@ uvicorn==0.30.1
 python-multipart==0.0.9
 google-cloud-aiplatform==1.59.0
 google-genai==1.12.1
+
+# Which model each job runs on. Editable and outside this directory: the
+# gateway is shared with ai-blog-writer's backend, so a model decision
+# cannot be changed for one service and missed in the other. Relative to
+# the working directory the install runs from, which is this package.
+-e ../../../../packages/model-gateway

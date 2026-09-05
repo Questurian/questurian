@@ -11,7 +11,7 @@ def test_generate_title_uses_injected_writer():
     client = build_editor_assist_client(
         writer=lambda **_kwargs: FakeWriterResult(
             text="A Better Lima Headline",
-            model_name=editorial_actions.DEFAULT_MODEL,
+            model_name="gemini-2.5-flash-lite",
         )
     )
 
@@ -35,7 +35,7 @@ def test_rewrite_block_returns_envelope_content():
                 "## Getting Around\n\nUpdated block text.\n"
                 "<<<END_BLOCK>>>"
             ),
-            model_name=editorial_actions.DEFAULT_MODEL,
+            model_name="gemini-2.5-flash-lite",
         )
     )
 
@@ -50,4 +50,4 @@ def test_rewrite_block_returns_envelope_content():
     assert response.status_code == 200
     payload = response.json()
     assert payload["rewritten_content"] == "## Getting Around\n\nUpdated block text."
-    assert payload["model_used"] == editorial_actions.DEFAULT_MODEL
+    assert payload["model_used"] == "gemini-2.5-flash-lite"

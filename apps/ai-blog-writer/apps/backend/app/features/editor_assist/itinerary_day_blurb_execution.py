@@ -8,9 +8,9 @@ from uuid import uuid4
 from fastapi import HTTPException
 
 from app.shared.text import enforce_anti_ai_tells_markdown
+from app.shared.model_calls import resolve
 from app.shared.writer_invocation import WriterModelError
 
-from .contracts import DEFAULT_MODEL
 from .dependencies import EditorAssistDependencies
 from .itinerary_composition_contracts import (
     ComposeDayBlurbResult,
@@ -28,6 +28,8 @@ from .listicle_writer_validation import (
 )
 
 logger = logging.getLogger(__name__)
+
+JOB = "editor.itinerary_day_blurb"
 
 BLURB_ENVELOPE_PATTERN = re.compile(
     r"<<<BLURB:(?P<tid>[^>]+)>>>(?P<body>.*?)<<<END>>>", flags=re.S
@@ -76,10 +78,13 @@ def _compose_day_blurbs_impl(
         )
     ]
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    # An operator's own choice, or None so the gateway decides.
+    chosen_model = (request.model_name or "").strip() or None
+    model_used = resolve(JOB, chosen_model)
     writer_started = time.monotonic()
     try:
         writer_result = dependencies.invoke_writer(
+            job_id=JOB,
             prompt=prompt.text,
             model_name=model_used,
             max_tokens=8192,
@@ -148,6 +153,7 @@ def _compose_day_blurbs_impl(
         blurb = enforce_anti_ai_tells_markdown(
             strip_generation_fence(body),
             repair=lambda repair_prompt: dependencies.invoke_writer(
+            job_id=JOB,
                 prompt=repair_prompt,
                 model_name=model_used,
                 max_tokens=2048,

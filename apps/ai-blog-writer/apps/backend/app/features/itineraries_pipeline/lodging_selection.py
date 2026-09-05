@@ -5,7 +5,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from .candidate_scoring import SCORING_MODEL, score_for_slot
+from model_gateway import model_for
+
+from .candidate_scoring import JOB as SCORING_JOB, score_for_slot
 from .pipeline_state import ItineraryState
 from .reporting import elapsed_ms
 from .schemas import (
@@ -82,7 +84,7 @@ def select_lodging(state: ItineraryState) -> ScoredCandidate | None:
             label="Lodging anchor",
             status="failed" if anchor is None else ("warning" if low_fit else "ok"),
             duration_ms=elapsed_ms(started),
-            model=SCORING_MODEL if lodging_pool else None,
+            model=model_for(SCORING_JOB) if lodging_pool else None,
             prompt=scores.prompt,
             output=scores.output,
             details=details,

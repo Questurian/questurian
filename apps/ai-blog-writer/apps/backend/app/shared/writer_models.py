@@ -30,19 +30,15 @@ CLAUDE_WRITER_MODELS = (
 )
 
 GOOGLE_WRITER_MODELS = (
-    "gemini-3.7-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
-    "gemini-3.1-pro-preview",
-    "gemini-2.5-pro",
     "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
 )
 
 WRITER_MODEL_OPTIONS = CLAUDE_WRITER_MODELS + GOOGLE_WRITER_MODELS
 
 # Was "claude-opus-4-8" while Anthropic was funded.
-DEFAULT_WRITER_MODEL = "gemini-3.1-pro-preview"
+DEFAULT_WRITER_MODEL = "gemini-2.5-flash"
 
 
 def resolve_writer_model(

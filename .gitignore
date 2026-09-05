@@ -103,3 +103,6 @@ apps/questurian-leads/apps/client/vite.config.js.timestamp-*.mjs
 
 # Local teach-skill learning records (never sync)
 learning-records/
+
+# API usage monitor database (dashboard collector)
+apps/dashboard/data/

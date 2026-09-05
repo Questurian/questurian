@@ -393,6 +393,7 @@ def build_punch_list(
     """One model call over a finished article, plus the checks that are free."""
     unused = unused_claims(evidence, article_markdown)
     parsed, _raw = llm.invoke_json(
+            job_id="p2b.notes",
         prompt=build_punch_list_prompt(
             brief=brief,
             title=title,

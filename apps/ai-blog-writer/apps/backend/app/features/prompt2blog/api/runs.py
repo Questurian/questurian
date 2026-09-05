@@ -35,7 +35,7 @@ from utils.llm_model_policy import (
     claude_provider,
 )
 
-from ..config import DEFAULT_MODEL, FEATURE_NAME
+from ..config import FEATURE_NAME
 from ..contracts_v4 import Prompt2BlogV4Request
 from ..drafts_view import build_drafts_report, render_drafts_page
 from ..intake_v3 import (

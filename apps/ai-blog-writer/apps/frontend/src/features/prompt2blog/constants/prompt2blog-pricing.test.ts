@@ -14,8 +14,8 @@ describe('estimatePrompt2BlogStackPrice', () => {
   it('keeps input and output rates visible instead of hiding their difference', () => {
     const estimate = estimatePrompt2BlogStackPrice(stackById('gemini-checked-high'))
 
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$2.00')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$12.00')
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.30')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$2.50')
   })
 
   // The estimator used to throw on any model with no rate, which crashed the
@@ -33,10 +33,10 @@ describe('estimatePrompt2BlogStackPrice', () => {
     // figure that could be quoted honestly.
     const claudeWriter: Prompt2BlogModelStackShape = {
       writingModel: 'claude-opus-4-8',
-      repairModel: 'gemini-3.7-flash',
-      auditModel: 'gemini-3.7-flash',
-      groundednessModel: 'gemini-3.7-flash',
-      outlineModel: 'gemini-3.7-flash'
+      repairModel: 'gemini-2.5-flash',
+      auditModel: 'gemini-2.5-flash',
+      groundednessModel: 'gemini-2.5-flash',
+      outlineModel: 'gemini-2.5-flash'
     }
 
     const estimate = estimatePrompt2BlogStackPrice(claudeWriter)
@@ -45,8 +45,8 @@ describe('estimatePrompt2BlogStackPrice', () => {
     expect(estimate.unratedRoles).toEqual([])
     // Averaged over the roles that are metered, not diluted by treating the
     // unpriced writer as free.
-    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.75')
-    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$3.75')
+    expect(formatPerMillionRate(estimate.inputPerMillion)).toBe('$0.30')
+    expect(formatPerMillionRate(estimate.outputPerMillion)).toBe('$2.50')
   })
 
   it('reports no rate at all when every role is on the plan', () => {
@@ -65,7 +65,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
 
     // Only the draft and the repair stay on the plan.
     expect(estimate.planRoles).toEqual(['writingModel', 'repairModel'])
-    expect(estimate.mixedPerMillion).toBeCloseTo(4.00, 2)
+    expect(estimate.mixedPerMillion).toBeCloseTo(0.74, 2)
   })
 
   it('prices the max-repair route identically, because only effort changed', () => {
@@ -98,7 +98,7 @@ describe('estimatePrompt2BlogStackPrice', () => {
   })
 
   it('does not mistake a Gemini model for a plan model', () => {
-    expect(isPlanAllowanceModel('gemini-3.7-flash')).toBe(false)
+    expect(isPlanAllowanceModel('gemini-2.5-flash')).toBe(false)
     expect(isPlanAllowanceModel('claude-opus-4-8')).toBe(true)
   })
 })

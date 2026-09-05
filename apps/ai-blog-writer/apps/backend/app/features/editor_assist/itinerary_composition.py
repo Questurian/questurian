@@ -7,7 +7,7 @@ remain valid.
 
 from app.shared.writer_invocation import WriterModelError
 
-from .contracts import DEFAULT_MODEL, MAX_ARTICLE_TITLE_CHARS, ListTone
+from .contracts import MAX_ARTICLE_TITLE_CHARS, ListTone
 from .itinerary_brief import (
     COMPOSE_BRIEF_PROMPT,
     _clean_profile_options,
@@ -80,7 +80,6 @@ __all__ = [
     "ComposeItineraryIntroStop",
     "ComposeStopReasonRequest",
     "ComposeStopReasonResponse",
-    "DEFAULT_MODEL",
     "ListTone",
     "MAX_ARTICLE_TITLE_CHARS",
     "MAX_DAY_BLURB_STOPS",

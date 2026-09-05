@@ -4,9 +4,9 @@ import logging
 
 from fastapi import HTTPException
 
+from app.shared.model_calls import resolve
 from app.shared.writer_invocation import WriterModelError
 
-from .contracts import DEFAULT_MODEL
 from .dependencies import EditorAssistDependencies
 from .itinerary_composition_contracts import (
     ComposeStopReasonRequest,
@@ -16,6 +16,8 @@ from .listicle_prompt_policy import LISTICLE_ANGLE_GUIDANCE
 from .listicle_writer_validation import strip_generation_fence
 
 logger = logging.getLogger(__name__)
+
+JOB = "editor.itinerary_stop_reason"
 
 COMPOSE_STOP_REASON_PROMPT = """You are refining an operator's rough note on why \
 they chose a specific venue for a stop in a travel itinerary, so a later writer \
@@ -76,9 +78,12 @@ def _compose_stop_reason_impl(
         + f"\n\nOperator's rough note:\n{rough_reason}"
     )
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    # An operator's own choice, or None so the gateway decides.
+    chosen_model = (request.model_name or "").strip() or None
+    model_used = resolve(JOB, chosen_model)
     try:
         writer_result = dependencies.invoke_writer(
+            job_id=JOB,
             prompt=llm_prompt,
             model_name=model_used,
             max_tokens=1024,

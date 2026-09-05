@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff
+from app.shared.model_calls import resolve
 from app.shared.writer_invocation import WriterModelError
 
 from .contracts import (
@@ -25,7 +26,7 @@ SEO_PATCH_TOOL_NAME = "emit_seo_patch"
 # Forced-tool calls now dispatch per provider (see utils.invoke_structured_tool),
 # so this endpoint accepts Gemini writers too. While Anthropic is switched off a
 # claude-* default would just be substituted, so pin the Google writer directly.
-SEO_STRUCTURED_DEFAULT_MODEL = "gemini-3.1-pro-preview"
+JOB = "editor.seo_metadata"
 
 SEO_PATCH_INPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
@@ -121,9 +122,10 @@ def _generate_seo_metadata_impl(
     if not seed:
         raise HTTPException(status_code=400, detail="seed is required")
 
-    model_used = (
-        request.model_name or SEO_STRUCTURED_DEFAULT_MODEL
-    ).strip() or SEO_STRUCTURED_DEFAULT_MODEL
+    # An operator's explicit choice, if the UI offered one. None means the
+    # gateway decides, and `structured_result.model_name` below reports what
+    # actually answered.
+    chosen_model = (request.model_name or "").strip() or None
 
     llm_prompt = f"{prompt}\n\n" f"Article title (reference only):\n{article_title}\n\n"
     if article_context:
@@ -145,8 +147,9 @@ def _generate_seo_metadata_impl(
 
     try:
         structured_result = dependencies.invoke_structured_writer(
+            job_id=JOB,
             prompt=llm_prompt,
-            model_name=model_used,
+            model_name=chosen_model,
             tool_name=SEO_PATCH_TOOL_NAME,
             tool_description=(
                 "Emit the generated SEO metadata patch. Include only the "

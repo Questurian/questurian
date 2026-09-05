@@ -297,7 +297,7 @@ def test_system_prompt_is_constant_across_calls(monkeypatch, connected, provider
         ("CLAUDE-SONNET-5", "sonnet"),
         # Unknown names -- including a Gemini one the pipeline pins, and a flag
         # -- fall back rather than reaching argv.
-        ("gemini-3.1-pro-preview", cli_writer.DEFAULT_ALIAS),
+        ("gemini-2.5-pro", cli_writer.DEFAULT_ALIAS),
         ("--dangerously-skip-permissions", cli_writer.DEFAULT_ALIAS),
         (None, cli_writer.DEFAULT_ALIAS),
     ],

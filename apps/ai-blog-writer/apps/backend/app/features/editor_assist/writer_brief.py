@@ -12,6 +12,8 @@ import logging
 
 from .angle_assignment import ListicleAngle
 from .research_profile import ResearchProfile
+from app.shared.model_calls import writer_text
+
 from .writer_brief_contracts import (  # noqa: F401
     MAX_SOURCE_FACTS,
     MIN_SOURCE_FACTS,
@@ -37,23 +39,30 @@ from .writer_brief_rendering import render_source_facts_block
 logger = logging.getLogger(__name__)
 
 
+JOB = "editor.writer_brief"
+
+
 def _invoke_curator_model(
     *,
     prompt: str,
-    model_name: str,
+    model_name: str | None,
     max_tokens: int,
     temperature: float,
 ) -> tuple[str, str]:
-    from utils import get_vertex_llm  # type: ignore
+    """The real curator call. The seam above it stays injectable for tests.
 
-    llm = get_vertex_llm(
-        temperature=temperature,
+    Returns the model that actually answered rather than the one asked for,
+    so a trace cannot claim a model the gateway did not pick.
+    """
+    result = writer_text(
+        JOB,
+        prompt=prompt,
+        model=model_name,
         max_tokens=max_tokens,
-        model_name=model_name,
+        temperature=temperature,
+        endpoint="writer_brief",
     )
-    raw = llm.invoke(prompt)
-    text = raw if isinstance(raw, str) else str(raw)
-    return text, model_name
+    return result.text, result.model_name
 
 
 def run_writer_brief(
@@ -63,7 +72,7 @@ def run_writer_brief(
     category: str,
     angle: ListicleAngle | None,
     research_profile: ResearchProfile,
-    model_name: str = "gemini-2.5-flash",
+    model_name: str | None = None,
     max_tokens: int = 10240,
     temperature: float = 0.1,
 ) -> tuple[WriterBrief, WriterBriefTrace]:

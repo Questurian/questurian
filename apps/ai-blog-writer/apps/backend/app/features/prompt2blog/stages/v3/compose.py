@@ -58,6 +58,7 @@ def run_v3_compose_stage(
     )
 
     parsed, raw_response = dependencies.llm.invoke_json(
+            job_id="p2b.compose",
         prompt=prompt,
         max_tokens=6144,
         temperature=state["compose_temperature"],

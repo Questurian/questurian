@@ -118,27 +118,45 @@ export const PROJECTS: ProjectConfig[] = [
   },
   {
     name: "Dashboard",
-    description: "CLI dashboard for monitoring all Questurian services",
+    description: "Service monitor and API usage monitor for all Questurian apps",
     path: "apps/dashboard",
+    client: {
+      url: "http://localhost:3500",
+      port: 3500,
+      type: "vite",
+      description: "React + Vite web UI: service status and API usage",
+    },
     server: {
       url: "http://localhost:4500",
       healthPath: "/health",
       port: 4500,
       type: "bun",
-      description: "Bun + Hono + Ink terminal UI dashboard",
+      description: "Bun + Hono API, Ink terminal UI, API usage collector",
     },
     commands: {
       dev: {
         cmd: "cd apps/dashboard && pnpm run dev",
-        description: "Start dashboard with hot reload",
+        description: "Start the API (4500) and the web UI (3500)",
       },
       devClean: {
         cmd: "cd apps/dashboard && pnpm run dev:clean",
-        description: "Install deps and start dashboard",
+        description: "Install deps, then start the API and web UI",
+      },
+      "dev:tui": {
+        cmd: "cd apps/dashboard && pnpm run dev:tui",
+        description: "Start the API with the terminal UI instead of the web UI",
       },
       build: {
         cmd: "cd apps/dashboard && pnpm run build",
-        description: "Bundle dashboard for production",
+        description: "Bundle the dashboard server for production",
+      },
+      "build:web": {
+        cmd: "cd apps/dashboard && pnpm run build:web",
+        description: "Bundle the web UI into dist/web (served at /app)",
+      },
+      "seed:usage": {
+        cmd: "cd apps/dashboard && pnpm run seed:usage",
+        description: "Fill the usage database with synthetic events",
       },
     },
   },

@@ -38,7 +38,6 @@ def execute_research_profile(
         result = invoke_grounded(
             prompt,
             model_name=grounded_model,
-            fallback_model_name="gemini-2.5-flash",
             max_tokens=16384,
             temperature=0.1,
         )

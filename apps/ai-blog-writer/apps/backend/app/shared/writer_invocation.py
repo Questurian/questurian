@@ -129,7 +129,16 @@ def invoke_writer_model(
         raise WriterModelError("Writer model returned empty content")
 
     resolved_model = getattr(llm, "model_name", None) or model_name
-    return WriterResult(text=text, model_name=resolved_model)
+    # Ask the object that just answered. The Vertex wrapper keeps the counts
+    # LangChain's `invoke` throws away, so this is no longer always None on
+    # the Gemini path -- which is what left every writer call reporting a
+    # duration and no tokens.
+    return WriterResult(
+        text=text,
+        model_name=resolved_model,
+        usage=getattr(llm, "last_usage_metadata", None),
+        cost_usd=getattr(llm, "last_cost_usd", None),
+    )
 
 
 def _cli_writer():

@@ -35,7 +35,7 @@ describe('the default draft name', () => {
 
   it('drops the vendor prefix and the effort suffix', () => {
     // Every row carries the same vendor, so it earns no space in a list.
-    expect(defaultDraftName({ models: ['gemini-3.7-flash'], at: AT })).toContain('3.7-flash')
+    expect(defaultDraftName({ models: ['gemini-2.5-flash'], at: AT })).toContain('2.5-flash')
     expect(defaultDraftName({ models: ['claude-sonnet-5-medium'], at: AT })).toContain('sonnet-5')
   })
 

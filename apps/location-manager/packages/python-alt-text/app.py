@@ -5,7 +5,9 @@ import logging
 import os
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from model_gateway import APP_LM, get_settings, model_for, status_payload
 
+import generation
 from generation import (
     generate_alt_text_from_data as generate_alt_text_from_data,
     generate_field_suggestion as _generate_field_suggestion,
@@ -33,10 +35,7 @@ from prompts import (
     build_url_field_suggestion_prompt as build_url_field_suggestion_prompt,
 )
 from vertex_runtime import (
-    ACCOMMODATIONS_FIELD_SUGGESTION_MODEL as ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
-    ALT_TEXT_MODEL as ALT_TEXT_MODEL,
     DEFAULT_LOCATION as DEFAULT_LOCATION,
-    NEIGHBORHOOD_DESCRIPTION_MODEL as NEIGHBORHOOD_DESCRIPTION_MODEL,
     ensure_vertex_initialized as ensure_vertex_initialized,
     load_local_env_files as load_local_env_files,
 )
@@ -60,8 +59,32 @@ def generate_accommodations_field_suggestion(
     return generate_field_suggestion(request.to_generic())
 
 
+# Where the model table and the usage collector live when nobody says
+# otherwise. Everything in this repo runs on one machine, and a service that
+# only reports its calls when someone remembers to export two variables is a
+# service that reports nothing -- which is exactly the state this one was in.
+# Both are overridable, and both fail soft: an unreachable dashboard leaves the
+# gateway on its checked-in defaults and drops usage events on the floor.
+DEFAULT_DASHBOARD = "http://localhost:4500"
+
+
 @app.on_event("startup")
 def startup() -> None:
+    os.environ.setdefault(
+        "MODEL_GATEWAY_SETTINGS_URL", f"{DEFAULT_DASHBOARD}/api/settings/v1/models"
+    )
+    os.environ.setdefault(
+        "USAGE_MONITOR_URL", f"{DEFAULT_DASHBOARD}/api/usage/v1/events"
+    )
+
+    pinned = get_settings().pinned_jobs()
+    if pinned:
+        # A pinned job ignores the dashboard, so someone changing a model there
+        # and seeing nothing happen deserves to have been told why at boot.
+        logger.warning(
+            "Pinned by environment, so the dashboard cannot change these: %s", pinned
+        )
+
     project = (os.getenv("GOOGLE_CLOUD_PROJECT") or "").strip()
     if not project:
         logger.warning(
@@ -74,16 +97,41 @@ def startup() -> None:
         logger.warning("Vertex initialization deferred until first request: %s", exc)
 
 
+@app.get("/model-gateway/status")
+def model_gateway_status() -> dict:
+    """Whether this service is really reading the dashboard's model table.
+
+    The dashboard shows this next to the Models tab, because a table that is
+    served and a table that is read are different facts and only one of them
+    used to be visible.
+    """
+    return status_payload(APP_LM)
+
+
 @app.get("/test")
 async def test_endpoint():
     logger.info("Test endpoint called")
+    # Resolved rather than recited. This endpoint is what an operator checks
+    # after changing a model, so it has to answer with what the next call will
+    # really use -- including a pin from the environment, which beats the
+    # dashboard and is otherwise invisible.
+    settings = get_settings()
     return {
         "status": "ok",
         "message": "Server is working",
         "provider": "vertex-gemini",
-        "model": ALT_TEXT_MODEL,
-        "neighborhood_description_model": NEIGHBORHOOD_DESCRIPTION_MODEL,
-        "field_suggestion_model": ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
+        "model": model_for(generation.JOB_ALT_TEXT),
+        "neighborhood_description_model": model_for(
+            generation.JOB_NEIGHBORHOOD_DESCRIPTION
+        ),
+        "field_suggestion_model": model_for(
+            generation.JOB_ACCOMMODATIONS_FIELD_SUGGESTION
+        ),
+        "dining_field_suggestion_model": model_for(
+            generation.JOB_DINING_FIELD_SUGGESTION
+        ),
+        "model_table_source": settings.table().source,
+        "pinned_by_environment": settings.pinned_jobs(),
     }
 
 
@@ -118,7 +166,6 @@ async def neighborhood_description(request: NeighborhoodDescriptionRequest):
         description = await asyncio.to_thread(
             generate_text_from_prompt,
             build_neighborhood_description_prompt(request),
-            NEIGHBORHOOD_DESCRIPTION_MODEL,
         )
         logger.info("Generated neighborhood description: %s", description)
         return {"description": description}

@@ -4,11 +4,15 @@ import asyncio
 import logging
 from functools import partial
 
-from utils import invoke_vertex_multimodal_text, vertex_part_from_data
+from utils import vertex_part_from_data
+
+from app.shared.model_calls import multimodal_text
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+# What this call is, to the gateway that picks its model and the dashboard
+# that records what it cost.
+JOB = "images.alt_text"
 
 
 def _generate_sync(
@@ -37,11 +41,12 @@ def _generate_sync(
             "Do not invent anything not visible in the image."
         )
 
-    logger.info("Generating alt text with %s", DEFAULT_MODEL)
+    logger.info("Generating alt text for %s", JOB)
     alt_text = (
-        invoke_vertex_multimodal_text(
+        multimodal_text(
+            JOB,
             [image_part, prompt],
-            model_name=DEFAULT_MODEL,
+            endpoint="alt_text",
         )
         .strip('"')
         .strip("'")

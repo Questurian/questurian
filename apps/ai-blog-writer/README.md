@@ -135,11 +135,6 @@ GOOGLE_CLOUD_LOCATION=us-central1
 PAYLOAD_API_URL=http://localhost:4000
 ```
 
-If the backend runs inside Docker while Payload runs on your host machine, set:
-```bash
-PAYLOAD_API_URL=http://host.docker.internal:4000
-```
-
 **Additional Resources:**
 - [Vertex AI Documentation](https://cloud.google.com/vertex-ai/docs)
 - [Enable Vertex AI API](https://console.cloud.google.com/apis/library/aiplatform.googleapis.com)
@@ -162,19 +157,6 @@ On first run, this command may do a one-time local dependency bootstrap for `nod
 Access the application at:
 - **Frontend**: http://localhost:3003
 - **Backend API**: http://localhost:4003
-
-## Docker Setup (Alternative)
-
-For a fully containerized environment:
-
-```bash
-pnpm run dev:docker
-```
-
-This starts all services:
-- FastAPI backend (:4003)
-- React frontend (:3003)
-- Weaviate vector database (:8080)
 
 ## Usage
 
@@ -250,7 +232,6 @@ The AI processing pipeline consists of 5 sequential stages:
 pnpm run dev              # Starts backend + frontend + converter via Nx
 pnpm run dev:local:full   # Alias of pnpm run dev
 pnpm run dev:clean        # Kills ports, reinstalls deps, then starts local dev
-pnpm run dev:docker       # Containerized dev (builds images)
 
 # Development servers
 pnpm nx serve backend      # FastAPI dev server

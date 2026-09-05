@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff
 from app.core.staff_token import staff_token
-from app.shared.writer_invocation import invoke_writer_model
+from app.shared.model_calls import writer_text
 
 from .day_shells import BUILT_IN_DAY_SHELL_IDS
 from .graph import run_itinerary_pipeline
@@ -25,9 +25,10 @@ from .shell_library import (
 router = APIRouter(prefix="/itineraries-pipeline", tags=["itineraries-pipeline"])
 logger = logging.getLogger(__name__)
 
-# Was "claude-opus-4-8" until Anthropic billing ran out; restore that value
-# (and set ANTHROPIC_MODELS_ENABLED=1) once it is funded again.
-DEFAULT_MODEL = "gemini-3.1-pro-preview"
+# Was "claude-opus-4-8" until Anthropic billing ran out. Restoring it is now a
+# dashboard change rather than a code change, and turning the Claude path back
+# on is ANTHROPIC_MODELS_ENABLED=1.
+JOB = "itinerary.title"
 MAX_PROMPT_CHARS = 120_000
 
 
@@ -61,20 +62,23 @@ async def generate_itinerary_titles(
     """Run the full itineraries title prompt through the writer-model router.
 
     Defaults to Claude; ``claude*`` model names route to Anthropic and any Gemini
-    name falls back to Vertex (see ``invoke_writer_model``).
+    name falls back to Vertex (see ``model_calls.writer_text``).
     """
     prompt = request.prompt.strip()
     if len(prompt) < 20:
         raise HTTPException(status_code=400, detail="prompt is too short")
 
-    model_name = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
 
     try:
-        result = invoke_writer_model(
+        result = writer_text(
+            JOB,
             prompt=prompt,
-            model_name=model_name,
+            # An operator's own choice from the title dropdown, if they made
+            # one. Otherwise the gateway decides.
+            model=(request.model_name or "").strip() or None,
             temperature=0.35,
             max_tokens=16384,
+            endpoint="generate-titles",
         )
     except Exception as exc:  # noqa: BLE001
         logger.exception("Itineraries pipeline generate-titles failed: %s", exc)

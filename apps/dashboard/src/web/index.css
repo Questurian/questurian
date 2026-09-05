@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/*
+ * An internal operator tool, deliberately not styled like Questura's public
+ * site: this is a dense dark console meant to be read at a glance while
+ * something else is running, and the warm editorial palette in the client
+ * app's foundations.css belongs to reader-facing pages only.
+ */
+@theme {
+  --color-ground: #0b0f14;
+  --color-surface: #121821;
+  --color-surface-raised: #182231;
+  --color-line: #223044;
+  --color-line-soft: #1a2432;
+
+  --color-ink: #e6edf6;
+  --color-ink-muted: #93a4bb;
+  --color-ink-faint: #64748b;
+
+  --color-accent: #4c8dff;
+  --color-accent-soft: #1e3a63;
+
+  --color-ok: #35c88f;
+  --color-warn: #e8b33c;
+  --color-bad: #f2585b;
+  --color-idle: #46566d;
+
+  /* Chart series. Ordered so neighbours stay distinguishable when stacked. */
+  --color-series-1: #4c8dff;
+  --color-series-2: #35c88f;
+  --color-series-3: #e8b33c;
+  --color-series-4: #b57bff;
+  --color-series-5: #4bd4d4;
+  --color-series-6: #f2858a;
+  --color-series-7: #8fa8c8;
+  --color-series-8: #d98b4a;
+  --color-series-9: #7f8ea3;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Numbers are read in columns here, so they get tabular figures everywhere. */
+.numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-ground);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-idle);
+}

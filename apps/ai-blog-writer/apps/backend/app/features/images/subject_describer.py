@@ -4,11 +4,15 @@ import asyncio
 import logging
 from functools import partial
 
-from utils import invoke_vertex_multimodal_text, vertex_part_from_data
+from utils import vertex_part_from_data
+
+from app.shared.model_calls import multimodal_text
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+# What this call is, to the gateway that picks its model and the dashboard
+# that records what it cost.
+JOB = "images.subject_description"
 
 
 def _describe_sync(image_bytes: bytes, content_type: str) -> str:
@@ -33,11 +37,12 @@ def _describe_sync(image_bytes: bytes, content_type: str) -> str:
         "Return ONLY the description — no headings, no preamble, no bullet points."
     )
 
-    logger.info("Generating subject description with %s", DEFAULT_MODEL)
+    logger.info("Generating subject description for %s", JOB)
     description = (
-        invoke_vertex_multimodal_text(
+        multimodal_text(
+            JOB,
             [image_part, prompt],
-            model_name=DEFAULT_MODEL,
+            endpoint="subject_description",
         )
         .strip('"')
         .strip("'")

@@ -5,13 +5,13 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "dashboard": "turbo run dev --concurrency=20 --filter=@questurian/dashboard",
+    "dashboard": "turbo run dev:tui --concurrency=20 --filter=@questurian/dashboard",
+    "dashboard:web": "turbo run dev --concurrency=20 --filter=@questurian/dashboard",
     "dashboard:clean": "turbo run dev:clean --concurrency=20 --filter=@questurian/dashboard",
     "questura": "turbo run dev --concurrency=20 --filter=@questura/client --filter=@questura/server",
     "questura:client": "turbo run dev --concurrency=20 --filter=@questura/client",
     "questura:server": "turbo run dev --concurrency=20 --filter=@questura/server",
     "dev": "turbo run dev --concurrency=20 --filter=!@questurian/abw-converter",
-    "dev:docker": "turbo run dev:docker --concurrency=20 --filter=@questurian/ai-blog-writer",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test"

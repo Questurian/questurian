@@ -30,6 +30,8 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from app.shared.api_usage import observe_external_call
+
 from .identity import api_key
 from .profiles import Claim
 
@@ -83,18 +85,29 @@ def fetch_details(place_id: str) -> PlaceDetails:
     import requests
 
     try:
-        response = requests.get(
-            _DETAILS,
-            params={
-                "place_id": place_id,
-                "fields": DETAILS_FIELDS,
-                "key": key,
-                "reviews_sort": "most_relevant",
-            },
-            timeout=DETAILS_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        body = response.json()
+        # Reported because it is billed. No tokens and no model -- the cost is
+        # per call and per field group -- so the dashboard sees a call with a
+        # duration and a status and no price, which is the honest shape for a
+        # spend this module cannot compute.
+        with observe_external_call(
+            provider="google-places",
+            feature="listicle.place_details",
+            endpoint="place/details",
+        ) as observed:
+            response = requests.get(
+                _DETAILS,
+                params={
+                    "place_id": place_id,
+                    "fields": DETAILS_FIELDS,
+                    "key": key,
+                    "reviews_sort": "most_relevant",
+                },
+                timeout=DETAILS_TIMEOUT_SECONDS,
+            )
+            observed.http_status = response.status_code
+            response.raise_for_status()
+            body = response.json()
+            observed.add_metadata(status=body.get("status"))
     except Exception as exc:  # pragma: no cover -- network dependent
         logger.warning("Place details failed for %s: %s", place_id, exc)
         return PlaceDetails(place_id, failed=True, reason=f"{type(exc).__name__}")

@@ -120,7 +120,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     description: `Claude Opus at ${effort} effort writes and repairs; Claude Sonnet at ${effort} judges; fixed medium-effort Sonnet plans the sections and checks the facts.`,
     guidance: STACK_GUIDANCE[effort],
     recommended: effort === 'high',
-    modelName: 'gemini-3.1-flash-lite' as const,
+    modelName: 'gemini-2.5-flash-lite' as const,
     writingModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
     repairModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
     auditModel: `claude-sonnet-5-${effort}` as Prompt2BlogWriterModel,
@@ -135,7 +135,7 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     speedTier: effort === 'medium' ? ('Fast' as const) : ('Moderate' as const),
     description: `Claude Sonnet at ${effort} effort writes, repairs, and judges; Gemini Flash-Lite is reserved for cheap research work.`,
     guidance: STACK_GUIDANCE[effort],
-    modelName: 'gemini-3.1-flash-lite' as const,
+    modelName: 'gemini-2.5-flash-lite' as const,
     writingModel: `claude-sonnet-5-${effort}` as Prompt2BlogWriterModel,
     repairModel: `claude-sonnet-5-${effort}` as Prompt2BlogWriterModel,
     auditModel: `claude-sonnet-5-${effort}` as Prompt2BlogWriterModel,
@@ -159,15 +159,15 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     shortLabel: `Opus · ${effort === 'max' ? 'Max' : 'High'} effort`,
     priceTier: 'Plan + $$',
     speedTier: 'Slow' as const,
-    description: `Claude Opus at ${effort} effort writes and repairs; Gemini 3.1 Pro plans, fact checks, and grades the draft.`,
+    description: `Claude Opus at ${effort} effort writes and repairs; Gemini 2.5 Pro plans, fact checks, and grades the draft.`,
     guidance:
       'The one to try when Claude-graded drafts keep passing an audit you disagree with. A judge from a different family finds different faults, and the checking stages stop drawing Claude plan usage.',
-    modelName: 'gemini-3.1-flash-lite' as const,
+    modelName: 'gemini-2.5-flash-lite' as const,
     writingModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
     repairModel: `claude-opus-5-${effort}` as Prompt2BlogWriterModel,
-    auditModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    outlineModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel
+    auditModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    outlineModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    groundednessModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel
   })),
   // Max effort where it is conditional, not where it is unavoidable.
   //
@@ -190,15 +190,15 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     priceTier: 'Plan + $$',
     speedTier: 'Slow' as const,
     description:
-      'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 3.1 Pro plans, fact checks, and grades.',
+      'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 2.5 Pro plans, fact checks, and grades.',
     guidance:
       'The one to try when drafts come back close but failing on a listed set of fixes. Spends the heaviest effort only on runs that needed rescuing, and nothing extra on runs that passed.',
-    modelName: 'gemini-3.1-flash-lite' as const,
+    modelName: 'gemini-2.5-flash-lite' as const,
     writingModel: 'claude-opus-5-high' as Prompt2BlogWriterModel,
     repairModel: 'claude-opus-5-max' as Prompt2BlogWriterModel,
-    auditModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    outlineModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-3.1-pro-preview' as Prompt2BlogWriterModel
+    auditModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    outlineModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    groundednessModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel
   },
   // The cheapest route that still writes on Opus: Flash does every check.
   //
@@ -218,20 +218,20 @@ export const PROMPT2BLOG_MODEL_STACKS: Prompt2BlogModelStack[] = [
     speedTier: 'Moderate' as const,
     description:
       variant === 'max-repair'
-        ? 'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 3.7 Flash plans, fact checks, and grades.'
-        : 'Claude Opus at high effort writes and repairs; Gemini 3.7 Flash plans, fact checks, and grades.',
+        ? 'Claude Opus at high effort writes; a failed draft is repaired at max effort; Gemini 2.5 Flash plans, fact checks, and grades.'
+        : 'Claude Opus at high effort writes and repairs; Gemini 2.5 Flash plans, fact checks, and grades.',
     guidance:
       variant === 'max-repair'
         ? 'The cheapest metered route that still spends heavily on rescuing a failed draft. Read the fact checks yourself: Flash is the weaker reader of the two Gemini options.'
         : 'The cheapest route on this list. Good for drafts you plan to fact-read yourself, since a weaker checker is likelier to pass a claim the evidence does not support.',
-    modelName: 'gemini-3.1-flash-lite' as const,
+    modelName: 'gemini-2.5-flash-lite' as const,
     writingModel: 'claude-opus-5-high' as Prompt2BlogWriterModel,
     repairModel: (variant === 'max-repair'
       ? 'claude-opus-5-max'
       : 'claude-opus-5-high') as Prompt2BlogWriterModel,
-    auditModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel,
-    outlineModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel,
-    groundednessModel: 'gemini-3.7-flash' as Prompt2BlogWriterModel
+    auditModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    outlineModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel,
+    groundednessModel: 'gemini-2.5-flash' as Prompt2BlogWriterModel
   }))
 ]
 
@@ -316,41 +316,19 @@ export function resolvePrompt2BlogModelStack(value?: string): Prompt2BlogModelSt
   )
 }
 
-export const DEFAULT_PROMPT2BLOG_MODEL: Prompt2BlogModelName = 'gemini-3.7-flash'
+export const DEFAULT_PROMPT2BLOG_MODEL: Prompt2BlogModelName = 'gemini-2.5-flash'
 
 export const PROMPT2BLOG_MODEL_OPTIONS: Array<{
   value: Prompt2BlogModelName
   label: string
 }> = [
-  { value: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
-  { value: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash' },
-  { value: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash-Lite' },
-  { value: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash-Lite' },
-  {
-    value: 'gemini-3.1-pro-preview',
-    label: 'Gemini 3.1 Pro (Preview — best quality)'
-  },
-  {
-    value: 'gemini-3.1-flash-lite-preview',
-    label: 'Gemini 3.1 Flash Lite (Preview — fast & cheap)'
-  },
-  {
-    value: 'gemini-3.1-flash-image-preview',
-    label: 'Gemini 3.1 Flash Image (Preview — multimodal)'
-  },
-  {
-    value: 'gemini-2.5-flash-lite',
-    label: 'Gemini 2.5 Flash Lite (Default, fastest)'
-  },
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Stronger drafting)' },
+  { value: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash Lite (Default, fastest)' },
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
   { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Deepest, slowest)' },
-  {
-    value: 'gemini-2.0-flash',
-    label: 'Gemini 2.0 Flash (Lightweight fallback)'
-  }
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Lightweight fallback)' }
 ]
 
-export const DEFAULT_PROMPT2BLOG_WRITER_MODEL: Prompt2BlogWriterModel = 'gemini-3.1-pro-preview'
+export const DEFAULT_PROMPT2BLOG_WRITER_MODEL: Prompt2BlogWriterModel = 'gemini-2.5-flash'
 
 /**
  * Offered when the subscription path is on. The two current models are the ones
@@ -372,27 +350,13 @@ export function resolvePrompt2BlogWriterModel(value?: string): Prompt2BlogWriter
   if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-8') return value
   if (CLAUDE_MODELS_ENABLED && value === 'claude-opus-4-7') return value
   if (CLAUDE_MODELS_ENABLED && value === 'claude-sonnet-5') return value
-  if (value === 'gemini-3.7-flash') return value
-  if (value === 'gemini-3.5-flash') return value
-  if (value === 'gemini-3.5-flash-lite') return value
-  if (value === 'gemini-3.1-flash-lite') return value
-  if (value === 'gemini-3.1-pro-preview') return value
-  if (value === 'gemini-2.5-pro') return value
   if (value === 'gemini-2.5-flash') return value
+  if (value === 'gemini-2.5-flash-lite') return value
+  if (value === 'gemini-2.5-pro') return value
   return DEFAULT_PROMPT2BLOG_WRITER_MODEL
 }
 
 export function resolvePrompt2BlogModelName(value?: string): Prompt2BlogModelName {
-  if (value === 'gemini-3.7-flash') return value
-  if (value === 'gemini-3.5-flash') return value
-  if (value === 'gemini-3.5-flash-lite') return value
-  if (value === 'gemini-3.1-flash-lite') return value
-  if (value === 'gemini-3.1-pro-preview') return value
-  if (value === 'gemini-3.1-flash-lite-preview') return value
-  if (value === 'gemini-3.1-flash-image-preview') return value
-  if (value === 'gemini-2.5-flash-lite') return value
-  if (value === 'gemini-2.5-flash') return value
-  if (value === 'gemini-2.5-pro') return value
   if (value === 'gemini-2.0-flash') return value
   return DEFAULT_PROMPT2BLOG_MODEL
 }

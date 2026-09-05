@@ -9,7 +9,7 @@ from app.features.prompt2blog.dependencies import (
 from app.features.prompt2blog.pricing import Prompt2BlogTokenUsageTracker
 from app.features.prompt2blog.run_recorder import USAGE_LEDGER_STAGE, RunRecorder
 
-MODEL = "gemini-3.7-flash"
+MODEL = "gemini-2.5-flash"
 
 
 def _usage(input_tokens: int, output_tokens: int) -> dict[str, int]:
@@ -113,7 +113,7 @@ def test_a_stage_is_not_charged_for_what_earlier_stages_spent():
             "total_tokens": 3_000,
             "calls": 1,
             "attempts": 1,
-            "cost_usd": 0.00825,
+            "cost_usd": 0.0053,
         },
         {
             "stage": "stage_outline",
@@ -124,7 +124,7 @@ def test_a_stage_is_not_charged_for_what_earlier_stages_spent():
             "total_tokens": 500,
             "calls": 1,
             "attempts": 1,
-            "cost_usd": 0.000675,
+            "cost_usd": 0.00037,
         },
     ]
 
@@ -333,7 +333,7 @@ def test_pipeline_dependencies_wires_the_recorder_to_the_usage_tracker():
             "total_tokens": 80,
             "calls": 1,
             "attempts": 1,
-            "cost_usd": 0.00012,
+            "cost_usd": 6.8e-05,
         }
     ]
 

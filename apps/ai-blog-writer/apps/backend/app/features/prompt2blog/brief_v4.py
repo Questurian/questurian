@@ -309,6 +309,7 @@ def _build_brief_once(
     location: str | None = None,
 ) -> ArticleBrief:
     parsed, raw = dependencies.llm.invoke_json(
+            job_id="p2b.brief",
         prompt=build_brief_prompt(state),
         model_name=dependencies.model_name,
         schema=BRIEF_SCHEMA,

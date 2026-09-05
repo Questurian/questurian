@@ -420,6 +420,7 @@ def build_work_order(
 ) -> Prompt2BlogWorkOrder:
     """Turn the brief into checkable questions. One structured call, no browsing."""
     parsed, _raw = dependencies.llm.invoke_json(
+            job_id="p2b.work_order",
         prompt=build_work_order_prompt(brief),
         model_name=dependencies.model_name,
         schema=WORK_ORDER_SCHEMA,

@@ -1,0 +1,12 @@
+{
+  "name": "@questurian/model-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "py:ensure": "UV_CACHE_DIR=../../.uv-cache uv venv --python \"$(command -v python3)\" --allow-existing .venv && (.venv/bin/python -c \"import model_gateway\" >/dev/null 2>&1 || UV_CACHE_DIR=../../.uv-cache uv pip install --python .venv/bin/python -e .)",
+    "py:install": "UV_CACHE_DIR=../../.uv-cache uv venv --python \"$(command -v python3)\" --clear .venv && UV_CACHE_DIR=../../.uv-cache uv pip install --python .venv/bin/python -e .",
+    "test": "pnpm run py:ensure && .venv/bin/python -m unittest discover -s tests -q",
+    "lint": "pnpm run py:ensure && .venv/bin/python -m compileall -q src/model_gateway tests",
+    "build": "echo 'No build step for Python'"
+  }
+}

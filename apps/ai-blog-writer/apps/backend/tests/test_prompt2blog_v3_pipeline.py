@@ -313,7 +313,7 @@ def test_the_lima_brief_runs_end_to_end_through_the_graph():
 def test_balanced_route_reserves_opus_for_drafting_and_repair():
     request = _request(
         model_routing={
-            "model_name": "gemini-3.1-flash-lite",
+            "model_name": "gemini-2.5-flash-lite",
             "writing_model": "claude-opus-5-high",
             "audit_model": "claude-sonnet-5-high",
             "model_stack_id": "opus-led-high",
@@ -328,10 +328,14 @@ def test_balanced_route_reserves_opus_for_drafting_and_repair():
         PipelineDependencies(llm=llm, recorder=recorder),
     )
 
+    # What a route names is what an operator chose. The three stages a route
+    # does not name are None here on purpose: they ask the gateway for their
+    # own job, which is what makes them changeable from the dashboard rather
+    # than from four constants in `config`.
     assert llm.models == {
-        "outline": ["claude-sonnet-5-medium"],
+        "outline": [None],
         "compose": ["claude-opus-5-high"],
-        "groundedness": ["claude-sonnet-5-medium", "claude-sonnet-5-medium"],
+        "groundedness": [None, None],
         "audit": ["claude-sonnet-5-high", "claude-sonnet-5-high"],
         "repair": ["claude-opus-5-high"],
     }
@@ -355,11 +359,11 @@ def test_a_route_can_move_the_checking_stages_off_claude():
     """
     request = _request(
         model_routing={
-            "model_name": "gemini-3.1-flash-lite",
+            "model_name": "gemini-2.5-flash-lite",
             "writing_model": "claude-opus-5-high",
-            "audit_model": "gemini-3.1-pro-preview",
-            "outline_model": "gemini-3.1-pro-preview",
-            "groundedness_model": "gemini-3.1-pro-preview",
+            "audit_model": "gemini-2.5-pro",
+            "outline_model": "gemini-2.5-pro",
+            "groundedness_model": "gemini-2.5-pro",
             "model_stack_id": "gemini-checked-high",
         }
     )
@@ -373,10 +377,10 @@ def test_a_route_can_move_the_checking_stages_off_claude():
     )
 
     assert llm.models == {
-        "outline": ["gemini-3.1-pro-preview"],
+        "outline": ["gemini-2.5-pro"],
         "compose": ["claude-opus-5-high"],
-        "groundedness": ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
-        "audit": ["gemini-3.1-pro-preview", "gemini-3.1-pro-preview"],
+        "groundedness": ["gemini-2.5-pro", "gemini-2.5-pro"],
+        "audit": ["gemini-2.5-pro", "gemini-2.5-pro"],
         "repair": ["claude-opus-5-high"],
     }
 
@@ -391,12 +395,12 @@ def test_a_route_can_repair_at_a_different_effort_than_it_drafts():
     """
     request = _request(
         model_routing={
-            "model_name": "gemini-3.1-flash-lite",
+            "model_name": "gemini-2.5-flash-lite",
             "writing_model": "claude-opus-5-high",
             "repair_model": "claude-opus-5-max",
-            "audit_model": "gemini-3.1-pro-preview",
-            "outline_model": "gemini-3.1-pro-preview",
-            "groundedness_model": "gemini-3.1-pro-preview",
+            "audit_model": "gemini-2.5-pro",
+            "outline_model": "gemini-2.5-pro",
+            "groundedness_model": "gemini-2.5-pro",
             "model_stack_id": "gemini-checked-max-repair",
         }
     )
@@ -423,7 +427,7 @@ def test_a_route_can_repair_at_a_different_effort_than_it_drafts():
 def test_repair_follows_the_writer_when_a_route_does_not_name_it():
     request = _request(
         model_routing={
-            "model_name": "gemini-3.1-flash-lite",
+            "model_name": "gemini-2.5-flash-lite",
             "writing_model": "claude-opus-5-high",
             "audit_model": "claude-sonnet-5-high",
             "model_stack_id": "opus-led-high",
@@ -444,7 +448,7 @@ def test_a_request_that_names_no_checking_models_keeps_the_pinned_defaults():
     """An older client sends three roles, not six, and must route as it always did."""
     request = _request(
         model_routing={
-            "model_name": "gemini-3.1-flash-lite",
+            "model_name": "gemini-2.5-flash-lite",
             "writing_model": "claude-opus-5-high",
             "audit_model": "claude-sonnet-5-high",
             "model_stack_id": "opus-led-high",
@@ -458,8 +462,9 @@ def test_a_request_that_names_no_checking_models_keeps_the_pinned_defaults():
         PipelineDependencies(llm=llm, recorder=RecordingRecorder()),
     )
 
-    assert llm.models["outline"] == ["claude-sonnet-5-medium"]
-    assert llm.models["groundedness"] == ["claude-sonnet-5-medium"]
+    # An older client that names neither leaves both to the gateway.
+    assert llm.models["outline"] == [None]
+    assert llm.models["groundedness"] == [None]
 
 
 def test_a_claude_written_draft_says_the_creativity_dial_did_not_reach_it(monkeypatch):
@@ -474,7 +479,7 @@ def test_a_claude_written_draft_says_the_creativity_dial_did_not_reach_it(monkey
     )
     request = _request(
         model_routing={
-            "model_name": "gemini-3.1-flash-lite",
+            "model_name": "gemini-2.5-flash-lite",
             "writing_model": "claude-opus-5-high",
             "audit_model": "claude-sonnet-5-high",
             "model_stack_id": "opus-led-high",

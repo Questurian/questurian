@@ -5,7 +5,6 @@ from typing import Any
 
 from app.shared.provider_faults import is_fatal_provider_fault
 
-from ...config import P2B_V3_OUTLINE_MODEL
 from ...content.outline_v3 import (
     drop_context_only_sections,
     format_v3_outline_for_prompt,
@@ -60,7 +59,7 @@ def run_v3_outline_stage(
     repaired = False
     dropped_headings: list[str] = []
     raw_response = ""
-    outline_model = state.get("outline_model", P2B_V3_OUTLINE_MODEL)
+    outline_model = state.get("outline_model")
 
     prompt = P2B_V3_OUTLINE_PROMPT.format(
         instructions=stage_context_text(state["stage_contexts"], "outline"),
@@ -69,6 +68,7 @@ def run_v3_outline_stage(
 
     try:
         parsed, raw_response = dependencies.llm.invoke_json(
+            job_id="p2b.outline",
             prompt=prompt,
             max_tokens=2048,
             temperature=0.1,

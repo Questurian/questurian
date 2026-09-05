@@ -28,7 +28,7 @@ PY
 
 missing_runtime_dependency() {
   "$ROOT_DIR/.venv/bin/python" - <<'PY' >/dev/null 2>&1
-required_modules = ("fastapi", "uvicorn", "langgraph")
+required_modules = ("fastapi", "uvicorn", "langgraph", "model_gateway")
 for module_name in required_modules:
     __import__(module_name)
 PY

@@ -59,7 +59,10 @@ def _grounded(monkeypatch, result: Any) -> Prompt2BlogTokenUsageTracker:
     tracker.begin_stage("stage_v4_research_notes")
     intake_api._grounded_call(
         "What do the stalls charge?",
-        model_name="gemini-3.7-flash",
+        # The call names its job; the model is the gateway's answer. An
+        # explicit model here would be an operator override, which this
+        # search does not have.
+        job_id="p2b.research_gather",
         max_tokens=4_000,
         usage_recorder=tracker.record,
     )

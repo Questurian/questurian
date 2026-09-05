@@ -4,11 +4,15 @@ import asyncio
 import logging
 from functools import partial
 
-from utils import invoke_vertex_multimodal_text, vertex_part_from_data
+from utils import vertex_part_from_data
+
+from app.shared.model_calls import multimodal_text
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+# What this call is, to the gateway that picks its model and the dashboard
+# that records what it cost.
+JOB = "images.edit_prompt"
 
 
 def _build_sync(
@@ -54,11 +58,12 @@ def _build_sync(
         "Return ONLY the edit prompt text."
     )
 
-    logger.info("Building edit prompt with %s", DEFAULT_MODEL)
+    logger.info("Building edit prompt for %s", JOB)
     edit_prompt = (
-        invoke_vertex_multimodal_text(
+        multimodal_text(
+            JOB,
             [image_part, prompt],
-            model_name=DEFAULT_MODEL,
+            endpoint="edit_prompt",
         )
         .strip('"')
         .strip("'")

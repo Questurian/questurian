@@ -42,15 +42,7 @@ Then ensure project is correct:
 gcloud config set project circular-symbol-484517-g2
 ```
 
-## 4) Docker note
-
-Docker is already wired to reuse this machine's credentials:
-
-- `apps/backend/.env` is loaded via `docker-compose.yml`
-- Host gcloud creds are mounted into container:
-  - `~/.config/gcloud:/root/.config/gcloud:ro`
-
-## 5) Security rules for this workstation
+## 4) Security rules for this workstation
 
 - Do not move or commit credential files.
 - Do not paste credential JSON in docs/chat.

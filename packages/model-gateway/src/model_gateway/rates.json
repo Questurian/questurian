@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "note": "What each model costs, and the evidence that it costs that. One table, read by the Python that prices a call and by the dashboard that publishes the card. There were three of these and they disagreed: the 3.x-to-2.5 sweep left one holding 3.x prices under 2.5 names, quoting $2.00 per million for a model that costs $1.25, and nothing caught it because nothing compared them. inUse is false for models nothing calls any more, kept because stored runs were priced with them and a rate table that forgets is a receipt that changes after the fact.",
+  "verifiedOn": "2026-09-04",
+  "models": [
+    {
+      "model": "gemini-2.5-pro",
+      "input": 1.25,
+      "output": 10.0,
+      "cachedInput": 0.125,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": true,
+      "largeInput": 2.5,
+      "largeOutput": 15.0,
+      "largeCachedInput": 0.25,
+      "largeContextThreshold": 200000
+    },
+    {
+      "model": "gemini-2.5-flash",
+      "input": 0.3,
+      "output": 2.5,
+      "cachedInput": 0.03,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": true
+    },
+    {
+      "model": "gemini-2.5-flash-lite",
+      "input": 0.1,
+      "output": 0.4,
+      "cachedInput": 0.01,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": true
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "input": 2.0,
+      "output": 12.0,
+      "cachedInput": 0.2,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": false,
+      "largeInput": 4.0,
+      "largeOutput": 18.0,
+      "largeCachedInput": 0.4,
+      "largeContextThreshold": 200000
+    },
+    {
+      "model": "gemini-3.7-flash",
+      "input": 0.75,
+      "output": 3.75,
+      "cachedInput": 0.075,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": false,
+      "note": "Introductory rate. Doubles to $1.50 / $7.50 on 2027-01-01."
+    },
+    {
+      "model": "gemini-3.5-flash",
+      "input": 1.5,
+      "output": 9.0,
+      "cachedInput": 0.15,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": false
+    },
+    {
+      "model": "gemini-3.5-flash-lite",
+      "input": 0.3,
+      "output": 2.5,
+      "cachedInput": 0.03,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": false
+    },
+    {
+      "model": "gemini-3.1-flash-lite",
+      "input": 0.25,
+      "output": 1.5,
+      "cachedInput": 0.025,
+      "verifiedOn": "2026-09-04",
+      "source": "https://ai.google.dev/gemini-api/docs/pricing",
+      "inUse": false
+    }
+  ],
+  "unpriceable": [
+    {
+      "provider": "google-places",
+      "reason": "Billed per request and per field group, not per token. Atmosphere fields (rating, reviews, price_level) are charged on top of the basic lookup.",
+      "source": "https://developers.google.com/maps/billing-and-pricing/pricing"
+    },
+    {
+      "provider": "claude-cli",
+      "reason": "Runs on a Claude subscription, not per-token billing. The CLI reports a cost figure that does not correspond to money owed, so it is ignored.",
+      "source": ""
+    }
+  ]
+}

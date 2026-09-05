@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff
+from app.shared.api_usage import observe_external_call
 
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
@@ -47,15 +48,19 @@ def _search_call(prompt: str) -> tuple[str, list[str], int | None]:
     dozen named places with evidence for each. The default 60 seconds cut one
     of seven searches off the first real run.
     """
-    from utils import invoke_google_grounded_text
+    from app.shared.model_calls import grounded_text
 
-    from .search import SEARCH_MAX_TOKENS, SEARCH_MODEL, SEARCH_TIMEOUT_SECONDS
+    from .search import SEARCH_MAX_TOKENS, SEARCH_TIMEOUT_SECONDS
 
-    result = invoke_google_grounded_text(
+    # The hand-rolled observation this replaced was correct, and that was the
+    # problem: it had to be written out here, and the two Prompt2Blog searches
+    # that nobody wrote it for reported nothing at all.
+    result = grounded_text(
+        "listicle.search",
         prompt,
-        model_name=SEARCH_MODEL,
         max_tokens=SEARCH_MAX_TOKENS,
         timeout_seconds=SEARCH_TIMEOUT_SECONDS,
+        endpoint="generateContent:googleSearch",
     )
     if result is None:
         # A helper that returns None swallowed its own failure. Raised here so
@@ -69,14 +74,18 @@ def _search_call(prompt: str) -> tuple[str, list[str], int | None]:
 def _base_dependencies() -> GrillDependencies:
     """The live model and the one path in this app that reaches the web."""
     from ..prompt2blog.api.intake import _grounded_call
-    from ..prompt2blog.grill_v4 import GRILL_RESEARCH_MAX_TOKENS, GRILL_RESEARCH_MODEL
+    from ..prompt2blog.grill_v4 import GRILL_RESEARCH_MAX_TOKENS
 
     def research(prompt: str) -> tuple[str, list[str], int | None]:
+        # Reported separately from the search: a lookup during the interview
+        # and a search that fills the list are different spends against the
+        # same model, and a dashboard that cannot tell them apart cannot say
+        # which half of a run is expensive.
         return _grounded_call(
             "Brief a travel editor on this in a few dense paragraphs. How many "
-            "places of this kind the city plausibly has, which neighbourhoods "
-            "matter, and what it is known for.\n\n" + prompt,
-            model_name=GRILL_RESEARCH_MODEL,
+            "places of this kind the city plausibly has, which "
+            "neighbourhoods matter, and what it is known for.\n\n" + prompt,
+            job_id="listicle.grill_lookup",
             max_tokens=GRILL_RESEARCH_MAX_TOKENS,
             usage_recorder=None,
         )
@@ -84,7 +93,11 @@ def _base_dependencies() -> GrillDependencies:
     return GrillDependencies(
         llm=DefaultPrompt2BlogLLM(),
         research=research,
-        model_name=service.LISTICLE_GRILL_MODEL,
+        # The grill runs on this pipeline's engine but is its own job, so it
+        # stops reporting itself as `prompt2blog` -- which it has been doing
+        # since it borrowed that code.
+        job_id="listicle.grill",
+        model_name=None,
     )
 
 

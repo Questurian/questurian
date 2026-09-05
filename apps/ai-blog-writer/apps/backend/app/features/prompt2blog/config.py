@@ -4,48 +4,18 @@ from pathlib import Path
 
 FEATURE_NAME = "prompt2blog"
 
-DEFAULT_MODEL = "gemini-3.7-flash"
-
-# The reader-facing compose and augmentation stages use the selected writer
-# model, defaulting to this stronger model. This was "claude-opus-4-8" while
-# Anthropic was funded; shared model resolution still supports that selection.
-P2B_COMPOSE_MODEL = "gemini-3.1-pro-preview"
-
-# Used only when an older client does not send its selected stack's audit model.
-P2B_AUDIT_MODEL = "gemini-3.7-flash"
-
-# Defaults for the three roles a route does not have to name. V3 gives bounded,
-# structured jobs to Sonnet at medium effort, and Opus stays on the two stages
-# where prose quality has the largest editing-cost impact: compose and repair.
+# The models these stages run on moved to the gateway's registry, where the
+# dashboard can change them without a code edit. What was worth saying about
+# each choice is worth saying there, so the reasoning went with the values:
+# compose and repair earn the stronger model, the small structured calls do
+# not, and the grill is the cheapest thing in the pipeline to make good
+# because every later stage inherits what it decides.
 #
-# These were pinned rather than defaulted until routes could name them, which
-# meant a route could only move two of the six calls a run makes. They are
-# still separate from the writer and audit roles: the reason for pinning them
-# was that a premium prose model must not silently promote every small call to
-# the same effort tier, and a route that has to name each one cannot do that by
-# accident.
-P2B_V3_OUTLINE_MODEL = "claude-sonnet-5-medium"
-P2B_V3_GROUNDEDNESS_MODEL = "claude-sonnet-5-medium"
+# The temperature stayed. It is a property of the call, not of the model.
 
-# Structuring research is a bounded, schema-enforced job on prose someone else
-# gathered: exactly what Sonnet is for. It is deliberately not the writing
-# model -- this call is about shape, and the expensive model earns its place at
-# compose.
-P2B_V4_RESEARCH_STRUCTURE_MODEL = "claude-sonnet-5-medium"
-
-# Who runs the interview.
-#
-# The spec chose a flash model for being "short, conversational". In practice
-# the grill is the one place a weak model is most expensive: it decides what
-# the article is, every later stage inherits that, and it is about six calls --
-# so the cheapest thing in the pipeline to make good.
-#
-# Change this one line to move it. Anything in VERTEX_TOKEN_RATES works.
-P2B_V4_GRILL_MODEL = "gemini-3.1-pro-preview"
-
-# Higher than the pipeline default. This call is judgement, not extraction: at
+# Higher than the pipeline default. The grill is judgement, not extraction: at
 # a low temperature it proposes the safe question rather than the useful one,
-# and the whole value of the grill is the sharp question nobody expected.
+# and the whole value of the interview is the sharp question nobody expected.
 P2B_V4_GRILL_TEMPERATURE = 0.6
 
 EDITORIAL_COMPONENT_LABELS = {

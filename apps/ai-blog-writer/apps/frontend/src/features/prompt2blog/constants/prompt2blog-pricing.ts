@@ -48,12 +48,20 @@ export interface Prompt2BlogStackPriceEstimate {
   unratedRoles: Prompt2BlogRoleKey[]
 }
 
-// Standard global PayGo rates in USD per 1M tokens, checked 2026-08-24.
-// Gemini 3.7 Flash uses introductory pricing through 2026-12-31.
+// Standard global PayGo rates in USD per 1M tokens, verified 2026-09-04 against
+// https://ai.google.dev/gemini-api/docs/pricing
+//
+// This is the third copy of these numbers -- the backend prices calls from
+// `app/shared/token_usage.py` and the dashboard publishes them from
+// `apps/dashboard/src/usage/rates.ts`. This one exists only to label a routing
+// choice in the UI and never touches a receipt, but three tables of the same
+// figures drift, and this one already has: a model rename left Gemini 3.x
+// prices sitting under 2.5 names here, quoting $2.00 for a model that costs
+// $1.25. Numbers below are the verified ones.
 const VERTEX_TOKEN_RATES: Record<string, VertexTokenRate> = {
-  'gemini-3.1-pro-preview': { input: 2, output: 12 },
-  'gemini-3.7-flash': { input: 0.75, output: 3.75 },
-  'gemini-3.1-flash-lite': { input: 0.25, output: 1.5 },
+  'gemini-2.5-pro': { input: 1.25, output: 10 },
+  'gemini-2.5-flash': { input: 0.3, output: 2.5 },
+  'gemini-2.5-flash-lite': { input: 0.1, output: 0.4 },
 }
 
 /**
