@@ -23,8 +23,10 @@ writing, which is the part that actually needs it.
 from __future__ import annotations
 
 import json
+import hashlib
+import copy
 import logging
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from dataclasses import dataclass, field
 import re
 from datetime import date
@@ -663,6 +665,21 @@ class GatheredNotes:
 
 
 NOTES_STAGE = "stage_v4_research_notes"
+BATCHES_STAGE = "stage_v4_research_batches"
+
+
+def _fingerprint(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def requirement_fingerprint(work_order: Prompt2BlogWorkOrder, requirement: WorkOrderRequirement) -> str:
+    return _fingerprint({
+        "brief": work_order.brief_fingerprint,
+        "subject": work_order.primary_subject,
+        "scope": work_order.scope.model_dump(mode="json"),
+        "premise": [item.model_dump(mode="json") for item in work_order.premise],
+        "requirement": requirement.model_dump(mode="json", exclude={"search_group"}),
+    })
 
 
 def notes_stage_record(
@@ -671,13 +688,13 @@ def notes_stage_record(
 ) -> dict[str, Any]:
     """The raw gather, kept so a failure downstream is not re-bought.
 
-    Gathering is ten sequential web searches and structuring is one call, so
-    every structuring failure used to cost the searches again. The notes are
-    bound to the work order they answer, because a re-cut plan asks different
-    questions and old notes are not answers to them.
+    Persist after each completed search. Per-question fingerprints include
+    brief, scope, and premise so cuts retain unrelated work while a changed
+    question or changed editorial context cannot reuse stale answers.
     """
     return {
         "work_order_fingerprint": work_order.work_order_fingerprint,
+        "requirement_fingerprints": {item.requirement_id: requirement_fingerprint(work_order, item) for item in work_order.requirements if item.requirement_id in notes},
         "notes": {
             requirement_id: {
                 "text": item.text,
@@ -694,13 +711,20 @@ def notes_from_record(
     work_order: Prompt2BlogWorkOrder,
 ) -> dict[str, GatheredNotes] | None:
     """The kept notes, when they answer this exact plan. Otherwise nothing."""
-    if record.get("work_order_fingerprint") != work_order.work_order_fingerprint:
+    fingerprints = record.get("requirement_fingerprints", {})
+    if not fingerprints and record.get("work_order_fingerprint") != work_order.work_order_fingerprint:
         return None
     stored = record.get("notes")
     if not isinstance(stored, dict) or not stored:
         return None
     notes: dict[str, GatheredNotes] = {}
-    for requirement_id, raw in stored.items():
+    for requirement in work_order.requirements:
+        requirement_id = requirement.requirement_id
+        if requirement_id not in stored:
+            continue
+        if fingerprints and fingerprints.get(requirement_id) != requirement_fingerprint(work_order, requirement):
+            continue
+        raw = stored[requirement_id]
         item = _safe_dict(raw)
         notes[_safe_str(requirement_id)] = GatheredNotes(
             text=_safe_str(item.get("text")),
@@ -867,6 +891,9 @@ STRUCTURE_RULES = """Rules:
   choose on. Leave `resolution` empty when the notes do not settle it: an
   unresolved conflict is a question for a person, and inventing a resolution
   takes it away from them.
+- Keep records concise: source metadata once per URL, short source IDs, and
+  one claim per distinct fact. Do not copy the research narrative into records.
+  A source's notes should contain only a caveat needed to interpret it.
 - Keep the interesting detail. A note that puts a reader somewhere belongs in a
   claim as much as a price does; do not drop it for not being a number."""
 
@@ -935,21 +962,49 @@ def gather_one_requirement(
     )
 
 
+def gather_requirement_group(
+    brief: ArticleBrief, requirements: list[WorkOrderRequirement], dependencies: ResearchDependencies,
+) -> dict[str, GatheredNotes]:
+    if len(requirements) == 1:
+        item = requirements[0]
+        return {item.requirement_id: gather_one_requirement(brief, item, dependencies)}
+    prompt = (
+        "Research these related questions together using shared sources. "
+        "Keep each question's precision and scope. Return concise cited facts under "
+        "each question ID; explicitly say when a question could not be answered. "
+        "Do not repeat the same background or source description.\n\n"
+        + "\n\n".join(f"QUESTION {item.requirement_id}\n{build_gather_prompt(brief, item)}" for item in requirements)
+    )
+    try:
+        text, urls, tokens = dependencies.gather(prompt, None)
+    except Exception as exc:
+        logger.warning("Grouped research failed: %s", exc)
+        text, urls, tokens = "", [], None
+    # All questions retain the original cited response; attribution happens in
+    # structuring. Only one note carries call tokens so totals do not multiply.
+    return {item.requirement_id: GatheredNotes(_safe_str(text), list(urls or []), tokens if index == 0 else None)
+            for index, item in enumerate(requirements)}
+
+
 def gather_research(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
     dependencies: ResearchDependencies,
     on_progress: Callable[[dict[str, Any]], None] | None = None,
+    *,
+    kept_notes: dict[str, GatheredNotes] | None = None,
+    checkpoint: Callable[[dict[str, GatheredNotes]], None] | None = None,
+    before_call: Callable[[], None] | None = None,
 ) -> dict[str, GatheredNotes]:
-    """One grounded pass per question, texture included, all at once.
+    """Bounded concurrent searches, sharing retrieval for related questions.
 
     Texture is researched to the identical standard: a scene we cannot source
     is still cut, so it has to be sourced like anything else.
 
-    The searches run concurrently because they are independent -- nothing in
-    question four depends on question three -- and sequentially they were about
-    six minutes of run 76b36468's twenty-and-a-half minute research pass. Same
-    prompts, same model, same results; only the waiting changes.
+    The work order may group related questions; each request holds at most
+    four, while coverage still judges every question separately. Complete
+    results are checkpointed before another request is dispatched. An error
+    stops new submissions but lets in-flight work finish and be saved.
 
     Bounded at `P2B_V4_GATHER_CONCURRENCY`, because grounded-search rate limits
     are unknown and the number of questions is set by the work order rather
@@ -978,26 +1033,46 @@ def gather_research(
         except Exception as exc:  # pragma: no cover -- telemetry only
             logger.warning("Research progress write failed: %s", exc)
 
-    gathered: dict[str, GatheredNotes] = {}
-    if requirements:
-        # Only once there is something to wait for. A work order with no
-        # questions cannot reach here through the contract, and an empty
-        # "0 of 0" on the screen would be worse than silence if it did.
-        _emit("gathering", 0, "")
-        workers = max(1, min(P2B_V4_GATHER_CONCURRENCY, total))
+    gathered = {key: note for key, note in (kept_notes or {}).items() if note.text.strip()}
+    missing = [item for item in requirements if item.requirement_id not in gathered]
+    grouped: dict[str, list[WorkOrderRequirement]] = {}
+    for item in missing:
+        grouped.setdefault(item.search_group or f"single:{item.requirement_id}", []).append(item)
+    groups = [items[start:start + STRUCTURE_BATCH_SIZE] for items in grouped.values()
+              for start in range(0, len(items), STRUCTURE_BATCH_SIZE)]
+    if missing:
+        _emit("gathering", len(gathered), "")
+        workers = max(1, min(P2B_V4_GATHER_CONCURRENCY, len(groups)))
+        remaining = iter(groups)
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            pending = {
-                pool.submit(
-                    gather_one_requirement, brief, requirement, dependencies
-                ): requirement
-                for requirement in requirements
-            }
-            # Consumed on this thread, so `on_progress` -- which writes a stage
-            # row -- is never called from a worker and needs no lock.
-            for done, future in enumerate(as_completed(pending), start=1):
-                requirement = pending[future]
-                gathered[requirement.requirement_id] = future.result()
-                _emit("gathering", done, requirement.question)
+            pending = {}
+            stopped: Exception | None = None
+            while True:
+                while stopped is None and len(pending) < workers:
+                    requirement = next(remaining, None)
+                    if requirement is None:
+                        break
+                    try:
+                        if before_call:
+                            before_call()
+                    except Exception as error:
+                        stopped = error
+                        break
+                    pending[pool.submit(gather_requirement_group, brief, requirement, dependencies)] = requirement
+                if not pending:
+                    break
+                completed, _ = wait(pending, return_when=FIRST_COMPLETED)
+                for future in completed:
+                    requirement = pending.pop(future)
+                    try:
+                        gathered.update(future.result())
+                        if checkpoint:
+                            checkpoint(dict(gathered))
+                    except Exception as error:
+                        stopped = error
+                    _emit("gathering", len(gathered), requirement[-1].question)
+            if stopped is not None:
+                raise stopped
 
     # Rebuilt in work-order order rather than completion order, so the notes,
     # the structure prompt built from them and anything diffing two runs do not
@@ -1008,8 +1083,7 @@ def gather_research(
         if requirement.requirement_id in gathered
     }
 
-    # Structuring is one call and the longest single wait in the run, so it gets
-    # its own phase rather than looking like a stall after the last search.
+    # Structuring has its own progress phase after the last search.
     _emit("structuring", total, "")
     return notes
 
@@ -1083,6 +1157,43 @@ PREMISE_SCHEMA = require_non_empty({
 })
 
 
+def _batch_source_table(
+    requirements: list[WorkOrderRequirement], notes: dict[str, GatheredNotes],
+) -> dict[str, str]:
+    """Keep opaque grounding redirect URLs out of generated JSON (#499).
+
+    The model copies short handles; the application restores exact URLs.
+    Includes URLs embedded in prose as well as the grounding metadata.
+    """
+    urls: set[str] = set()
+    for item in requirements:
+        if item.requirement_id not in notes:
+            continue
+        note = notes[item.requirement_id]
+        urls.update(_citable(note.source_urls))
+        urls.update(match.rstrip(".,;:") for match in re.findall(r'https?://[^\s<>"\]\)\}]+', note.text))
+    return {f"URL{index}": url for index, url in enumerate(sorted(urls), start=1)}
+
+
+def _compact_batch_notes(
+    requirements: list[WorkOrderRequirement], notes: dict[str, GatheredNotes],
+) -> dict[str, GatheredNotes]:
+    table = _batch_source_table(requirements, notes)
+    replacements = sorted(table.items(), key=lambda pair: len(pair[1]), reverse=True)
+    compact = {}
+    for item in requirements:
+        if item.requirement_id not in notes:
+            continue
+        note = notes[item.requirement_id]
+        text = note.text
+        for handle, url in replacements:
+            text = text.replace(url, handle)
+        compact[item.requirement_id] = GatheredNotes(
+            text, [handle for handle, url in table.items() if url in note.source_urls], note.tokens,
+        )
+    return compact
+
+
 def build_batch_prompt(
     work_order: Prompt2BlogWorkOrder,
     requirements: list[WorkOrderRequirement],
@@ -1100,17 +1211,25 @@ def build_batch_prompt(
     A handful of questions at a time is small enough to come back first time,
     and a failure costs a third of the plan instead of the whole run.
     """
+    notes = _compact_batch_notes(requirements, notes)
     listed = "\n".join(
         f"- {item.requirement_id} [{item.kind}] [needs: {item.precision}] "
         f"{item.question}"
         for item in requirements
     )
+    shared_notes: dict[str, tuple[list[str], GatheredNotes]] = {}
+    for item in requirements:
+        if item.requirement_id not in notes:
+            continue
+        note = notes[item.requirement_id]
+        key = _fingerprint({"text": note.text, "urls": note.source_urls})
+        if key not in shared_notes:
+            shared_notes[key] = ([], note)
+        shared_notes[key][0].append(item.requirement_id)
     gathered = "\n\n".join(
-        f"=== {item.requirement_id} ===\n{notes[item.requirement_id].text}\n"
-        f"Sources seen: "
-        f"{', '.join(_citable(notes[item.requirement_id].source_urls)) or 'none recorded'}"
-        for item in requirements
-        if item.requirement_id in notes
+        f"=== {', '.join(question_ids)} ===\n{note.text}\n"
+        f"Sources seen: {', '.join(_citable(note.source_urls)) or 'none recorded'}"
+        for question_ids, note in shared_notes.values()
     )
     ids = ", ".join(item.requirement_id for item in requirements)
     return f"""Turn these questions' research notes into evidence records. Add nothing that is not in the notes.
@@ -1120,6 +1239,10 @@ THE QUESTIONS
 
 THE NOTES
 {gathered}
+
+URL1, URL2, etc. are exact source references. Copy the relevant handle into
+source.url. The application restores the original URL. Never expand a handle
+or invent a URL. Use short source_id values; the URL handle is not a claim.
 
 {STRUCTURE_RULES}
 - One claim per distinct fact. Do not split a fact across several claims, and
@@ -1278,9 +1401,35 @@ def _structure_batch(
             max_tokens=ONE_QUESTION_MAX_TOKENS,
             temperature=0.0,
         )
+        parsed = copy.deepcopy(_safe_dict(parsed))
+        source_table = _batch_source_table(requirements, notes)
+        unresolved: list[str] = []
+        for source in _rows(parsed, "sources"):
+            given = source.get("url")
+            resolved = source_table.get(given, given)
+            # A handle it never saw, or a bare host it typed from memory. Both
+            # mean this source was not retrieved, and "not a valid URL" from the
+            # model further down does not say which value caused it.
+            if isinstance(resolved, str) and resolved and not resolved.startswith(
+                ("http://", "https://")
+            ):
+                unresolved.append(resolved)
+            source["url"] = resolved
+        if unresolved:
+            raise ResearchUnusable(
+                "Structuring returned source URLs that are not links: "
+                + ", ".join(sorted(set(unresolved))[:5]),
+                _raw,
+            )
+        part = _namespaced(parsed, ids[0])
+        package = assemble_evidence(work_order, part)
+        if {item.requirement_id for item in package.requirements} != set(ids):
+            raise ResearchUnusable("Structuring did not return exactly the requested questions", _raw)
+        return package.model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001 -- one hole beats the whole plan
         logger.warning("Structuring failed for %s: %s", ", ".join(ids), exc)
         return {
+            "_retryable": True,
             "sources": [],
             "claims": [],
             "requirements": [
@@ -1299,7 +1448,6 @@ def _structure_batch(
             ],
             "gaps": [],
         }
-    return _namespaced(_safe_dict(parsed), ids[0])
 
 
 def _settle_premise(
@@ -1327,7 +1475,7 @@ def _settle_premise(
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Premise pass failed: %s", exc)
-        return {"premise_findings": [], "conflicts": []}
+        return {"premise_findings": [], "conflicts": [], "_retryable": True}
     payload = _safe_dict(parsed)
     return {
         "premise_findings": _rows(
@@ -1341,6 +1489,10 @@ def structure_research(
     work_order: Prompt2BlogWorkOrder,
     notes: dict[str, GatheredNotes],
     dependencies: ResearchDependencies,
+    *,
+    kept_batches: dict[str, Any] | None = None,
+    checkpoint: Callable[[dict[str, Any]], None] | None = None,
+    before_call: Callable[[], None] | None = None,
 ) -> EvidencePackage:
     """Turn the notes into the evidence package the writing stages read.
 
@@ -1366,9 +1518,25 @@ def structure_research(
         requirements[start : start + STRUCTURE_BATCH_SIZE]
         for start in range(0, len(requirements), STRUCTURE_BATCH_SIZE)
     ]
-    parts = [
-        _structure_batch(work_order, batch, notes, dependencies) for batch in batches
-    ]
+    cache = copy.deepcopy(kept_batches or {})
+    parts = []
+    batch_keys: list[str] = []
+    for batch in batches:
+        prompt = build_batch_prompt(work_order, batch, notes)
+        key = _fingerprint({"prompt": prompt, "sources": _batch_source_table(batch, notes), "schema": BATCH_SCHEMA, "version": 2})
+        batch_keys.append(key)
+        if key not in cache:
+            if before_call:
+                before_call()
+            part = _structure_batch(work_order, batch, notes, dependencies)
+            if not part.get("_retryable"):
+                cache[key] = part
+            # Persist usage even when this paid response was unusable.
+            if checkpoint:
+                checkpoint(copy.deepcopy(cache))
+        else:
+            part = cache[key]
+        parts.append(copy.deepcopy(part))
 
     sources, remap = _merge_sources(parts)
     claims = [claim for part in parts for claim in part["claims"]]
@@ -1376,7 +1544,23 @@ def structure_research(
         claim["source_ids"] = sorted(
             {remap.get(item, item) for item in _id_list(claim, "source_ids")}
         )
-    settled = _settle_premise(work_order, claims, dependencies)
+    premise_key = _fingerprint({"prompt": build_premise_prompt(work_order, claims), "schema": PREMISE_SCHEMA, "version": 1})
+    if premise_key in cache:
+        settled = cache[premise_key]
+    else:
+        if before_call:
+            before_call()
+        settled = _settle_premise(work_order, claims, dependencies)
+        if not settled.get("_retryable"):
+            cache[premise_key] = settled
+
+    # A cut question, an edited one or a re-gathered note all change the key
+    # its batch answers under, and nothing will ever hit the old entry again.
+    # Dropping them here is what stops the saved cache growing with every cut.
+    live = set(batch_keys) | {premise_key}
+    cache = {key: value for key, value in cache.items() if key in live}
+    if checkpoint:
+        checkpoint(copy.deepcopy(cache))
 
     return assemble_evidence(
         work_order,

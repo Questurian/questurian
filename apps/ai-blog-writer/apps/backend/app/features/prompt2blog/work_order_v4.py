@@ -96,6 +96,7 @@ WORK_ORDER_SCHEMA = require_non_empty({
                 "properties": {
                     "requirement_id": {"type": "string"},
                     "question": {"type": "string"},
+                    "search_group": {"type": "string"},
                     "kind": {"type": "string"},
                     "precision": {
                         "type": "string",
@@ -157,6 +158,13 @@ It fails if: {brief.fails_if}
 Write the questions that have to be answered before this can be written.
 
 Rules:
+- Assign the same short `search_group` to related questions that can be
+  researched from the same sources: one bus route's stations, fare and duration;
+  one museum's hours and admission; one restaurant shortlist's prices and hours.
+  These share retrieval, but remain separate questions and coverage decisions.
+  Do not group unrelated places or subjects. Leave it empty for a standalone question.
+- Research only facts the brief needs. Do not expand a two-day guide into an
+  exhaustive directory of alternatives. Prefer a focused shortlist.
 - Each question must be separately checkable by someone with a search engine.
   "Is Lima good value?" is not a question; "What does a one-bedroom in
   Miraflores rent for, and as of when?" is.
@@ -362,6 +370,7 @@ def _requirements_from(
                 question=question,
                 kind=kind,
                 precision=precision,
+                search_group=_safe_str(record.get("search_group")),
                 # A reference to an assumption nobody declared is dropped
                 # rather than fatal: the question is still worth asking, and
                 # the contract refuses a dangling id.

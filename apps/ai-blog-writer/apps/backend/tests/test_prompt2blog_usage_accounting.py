@@ -270,3 +270,15 @@ def test_recording_is_mutually_exclusive():
     assert ledger["successful_calls"] == 80
     assert len({call["seq"] for call in ledger["calls"]}) == 80
     assert ledger["totals"]["total_tokens"] == 80 * 15
+
+
+def test_grounded_thinking_is_billed_at_output_rate(monkeypatch):
+    result = _Result(input_tokens=100, output_tokens=50, total_tokens=350)
+    result.reasoning_tokens = 200
+    result.cached_input_tokens = 20
+    tracker = _grounded(monkeypatch, result)
+    totals = tracker.totals()
+    assert totals["output_tokens"] == 250
+    assert totals["reasoning_tokens"] == 200
+    assert totals["cached_input_tokens"] == 20
+    assert totals["total_tokens"] == 350

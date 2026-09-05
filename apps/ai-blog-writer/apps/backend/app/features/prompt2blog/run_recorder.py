@@ -130,6 +130,8 @@ class RunRecorder:
             logger.warning("Prompt2Blog usage ledger write failed: %s", exc)
 
     def start_stage(self, run_id: str, stage: str) -> None:
+        if self.usage_tracker is not None:
+            self.usage_tracker.run_id = run_id
         self.active_stages[run_id] = stage
         self._open_attempt(run_id, stage)
         self.status_writer(

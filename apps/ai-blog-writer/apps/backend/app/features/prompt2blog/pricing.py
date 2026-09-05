@@ -105,6 +105,7 @@ def _empty_usage() -> dict[str, int]:
 
 @dataclass
 class Prompt2BlogTokenUsageTracker:
+    run_id: str | None = None
     successful_calls: int = 0
     measured_calls: int = 0
     by_model: dict[str, dict[str, Any]] = field(default_factory=dict)

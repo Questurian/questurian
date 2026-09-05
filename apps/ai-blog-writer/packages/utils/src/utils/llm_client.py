@@ -1,6 +1,7 @@
 """Public provider-agnostic LLM facade."""
 
 import logging
+import json
 from typing import Any, Optional
 
 from langchain_google_vertexai import ChatVertexAI, VertexAI  # noqa: F401
@@ -17,6 +18,7 @@ from .anthropic_transport import (
 )
 from .gemini_tools import (  # noqa: F401
     Gemini3ChatTextLLM as Gemini3ChatTextLLM,
+    validate_json_shape,
     _gemini_chat_text as _gemini_chat_text,
     _gemini_tool_schema as _sanitize_gemini_tool_schema,
     _invoke_gemini_structured_tool as _invoke_gemini_tool,
@@ -262,11 +264,8 @@ class VertexTextLLM:
     in the spellings ``normalize_token_usage`` reads, thinking tokens and
     cached tokens included.
 
-    Deliberately narrow. It exposes ``invoke`` and ``model_name`` because that
-    is the entire surface every caller in this repo uses -- nothing chains
-    this as a Runnable -- and it deliberately does *not* expose ``invoke_json``,
-    so the schema-validated path keeps falling through to asking in prose for
-    providers that cannot enforce a schema.
+    JSON calls send the response schema to Gemini; text calls keep their
+    existing behavior and output ceiling.
     """
 
     def __init__(self, llm: Any, model_name: str) -> None:
@@ -279,6 +278,22 @@ class VertexTextLLM:
         self.last_usage_metadata = _usage_from_generation(result)
         generations = result.generations[0] if result.generations else []
         return str(generations[0].text if generations else '') or ''
+
+    def invoke_json(self, prompt: str, *, input_schema: dict[str, Any],
+                    thinking_budget: int | None = None) -> dict[str, Any]:
+        options: dict[str, Any] = {
+            "response_mime_type": "application/json",
+            "response_schema": _sanitize_gemini_tool_schema(input_schema),
+        }
+        if thinking_budget is not None and self.model_name == "gemini-2.5-flash":
+            options["thinking_budget"] = thinking_budget
+        result = self._llm.generate([prompt], **options)
+        self.last_usage_metadata = _usage_from_generation(result)
+        parsed = json.loads(result.generations[0][0].text)
+        if not isinstance(parsed, dict):
+            raise ValueError("Structured Gemini response must be an object")
+        validate_json_shape(parsed, input_schema)
+        return parsed
 
 
 def _usage_from_generation(result: Any) -> Optional[dict[str, Any]]:

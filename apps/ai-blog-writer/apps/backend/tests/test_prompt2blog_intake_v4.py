@@ -349,9 +349,8 @@ def test_the_gathered_notes_are_kept_so_a_retry_does_not_re_buy_them(isolated_db
     assert len(calls) == first, "the second pass reused the kept notes"
 
 
-def test_recutting_the_plan_throws_the_kept_notes_away(isolated_db):
-    """A re-cut plan asks different questions, and old notes are not answers
-    to them."""
+def test_recutting_the_plan_keeps_unchanged_notes(isolated_db):
+    """Removing a question does not change the answers to the others."""
     calls: list[str] = []
     services = _with_research(
         _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
@@ -365,7 +364,7 @@ def test_recutting_the_plan_throws_the_kept_notes_away(isolated_db):
     apply_cut(run_id, services, struck_ids=["r3"])
     do_research(run_id, services)
 
-    assert len(calls) > 3, "the cut plan was researched again"
+    assert len(calls) == 3, "unchanged questions must not buy another search"
 
 
 def test_research_runs_and_says_whether_the_piece_can_be_written(isolated_db):

@@ -53,6 +53,7 @@ def _invoke_text_llm(
     model_name: str | None,
     usage_recorder: UsageRecorder | None = None,
     job_id: str | None = None,
+    correlation_id: str | None = None,
 ) -> str:
     resolved_model = _resolved_model(job_id, model_name)
     # get_vertex_llm routes claude-* models to the Anthropic API.
@@ -69,6 +70,7 @@ def _invoke_text_llm(
         provider=provider_for_llm(llm, reported_model),
         feature=job_id or USAGE_FEATURE,
         model=reported_model,
+        correlation_id=correlation_id,
         endpoint="invoke_text",
     ) as observed:
         result = llm.invoke(prompt)
@@ -110,6 +112,7 @@ def _enforce_anti_ai_markdown_with_model(
     context: str,
     usage_recorder: UsageRecorder | None = None,
     job_id: str | None = None,
+    correlation_id: str | None = None,
 ) -> str:
     return enforce_anti_ai_tells_markdown(
         text,
@@ -120,6 +123,7 @@ def _enforce_anti_ai_markdown_with_model(
             model_name=model_name,
             usage_recorder=usage_recorder,
             job_id=job_id,
+            correlation_id=correlation_id,
         ),
         context=context,
     )
@@ -141,6 +145,7 @@ def _invoke_schema_json_llm(
     schema: dict[str, Any],
     usage_recorder: UsageRecorder | None = None,
     job_id: str | None = None,
+    correlation_id: str | None = None,
 ) -> tuple[dict[str, Any], str] | None:
     """One validated call, or None if this provider cannot make one.
 
@@ -170,13 +175,19 @@ def _invoke_schema_json_llm(
         provider=provider_for_llm(llm, reported_model),
         feature=job_id or USAGE_FEATURE,
         model=reported_model,
+        correlation_id=correlation_id,
         endpoint="invoke_json",
     ) as observed:
-        parsed = invoke_json(prompt, input_schema=schema)
-        usage = _usage_with_measured_cost(llm)
-        observed.record_usage(usage)
-    if usage_recorder is not None:
-        usage_recorder(reported_model, usage)
+        options = {"input_schema": schema}
+        if job_id == "p2b.research_structure" and reported_model == "gemini-2.5-flash":
+            options["thinking_budget"] = 0
+        try:
+            parsed = invoke_json(prompt, **options)
+        finally:
+            usage = _usage_with_measured_cost(llm)
+            observed.record_usage(usage)
+            if usage_recorder is not None and usage is not None:
+                usage_recorder(reported_model, usage)
     if not isinstance(parsed, dict):
         raise RuntimeError("Schema-validated LLM response was not an object")
     # The trace wants the raw response the stage saw. There was no prose reply
@@ -194,6 +205,7 @@ def _invoke_json_llm(
     schema: dict[str, Any] | None = None,
     usage_recorder: UsageRecorder | None = None,
     job_id: str | None = None,
+    correlation_id: str | None = None,
 ) -> tuple[dict[str, Any], str]:
     if schema is not None:
         validated = _invoke_schema_json_llm(
@@ -204,9 +216,13 @@ def _invoke_json_llm(
             schema=schema,
             usage_recorder=usage_recorder,
             job_id=job_id,
+            correlation_id=correlation_id,
         )
         if validated is not None:
             return validated
+
+    if schema is not None:
+        prompt += "\nREQUIRED JSON SCHEMA:\n" + json.dumps(schema)
 
     strict_prompt = (
         f"{prompt}\n\n"
@@ -234,6 +250,7 @@ def _invoke_json_llm(
             model_name=model_name,
             usage_recorder=usage_recorder,
             job_id=job_id,
+            correlation_id=correlation_id,
         )
         last_response = raw_response
 

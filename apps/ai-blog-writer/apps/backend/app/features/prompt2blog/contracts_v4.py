@@ -236,6 +236,8 @@ class WorkOrderRequirement(V4ContractModel):
     # What the article needs, which is not always what the question's wording
     # demands. Research is judged against this rather than against the phrasing.
     precision: RequirementPrecision = "exact"
+    # Related facts can share retrieval while keeping separate coverage verdicts.
+    search_group: str = ""
     # Empty when the question stands on its own. Every id here must name a
     # premise the same commission declares.
     assumption_ids: list[str] = Field(default_factory=list)
