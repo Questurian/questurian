@@ -81,3 +81,26 @@ def test_the_voice_says_what_a_good_piece_is_rather_than_only_what_is_banned():
     body = _voice()
     positives = ("It treats you", "Its warmth", "It has a view")
     assert all(phrase in body for phrase in positives)
+
+
+def test_the_anti_ai_enforcement_pass_is_still_wired_in():
+    """ADR 0032 said this was dropped for Prompt2Blog. It never was.
+
+    The pass is what removes "mosaic-covered" and "six-month" from a draft
+    before anyone sees it, and it stopped working once already when the model
+    gateway migration left these calls without a job id. If it is ever removed
+    deliberately, amend ADR 0032 again and delete this test in the same change
+    -- do not delete it to make a cleanup pass go green.
+    """
+    from pathlib import Path
+
+    stages = Path(__file__).resolve().parents[1] / "app/features/prompt2blog/stages/v3"
+    compose = (stages / "compose.py").read_text()
+    repair = (stages / "audit_repair.py").read_text()
+
+    assert "enforce_anti_ai(" in compose
+    assert "enforce_anti_ai(" in repair
+    # And each still names its job, which is what broke in 3bdaef2f.
+    for source in (compose, repair):
+        call = source.split("enforce_anti_ai(", 1)[1].split("\n    )", 1)[0]
+        assert "job_id=" in call
