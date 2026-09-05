@@ -82,3 +82,27 @@ def test_every_model_call_in_the_writing_graph_names_a_job(path):
             f"{path.name}: {call.group(1)} names no job, so the dashboard cannot "
             "route it and it fails outright when no model is picked"
         )
+
+
+# --- compose is told the whole-article target, not only section budgets -----
+
+
+def test_compose_and_outline_read_the_same_word_target():
+    from app.features.prompt2blog.support import _target_word_count
+
+    assert _target_word_count({"length": {"target_word_count": 900}}) == 900
+    assert _target_word_count({"length": {}}) == 0
+    assert _target_word_count({}) == 0
+
+
+def test_the_compose_prompt_carries_the_target_word_count():
+    from app.features.prompt2blog.prompts.editorial_v3 import (
+        P2B_V3_COMPOSE_PROMPT,
+        P2B_V3_OUTLINE_PROMPT,
+    )
+
+    # Outline always had this. Compose saw only the per-section budgets inside
+    # the plan, and wrote 377 words against a 900 target on run 95a74dce.
+    for prompt in (P2B_V3_COMPOSE_PROMPT, P2B_V3_OUTLINE_PROMPT):
+        assert "TARGET WORD COUNT:" in prompt
+        assert "{target_word_count}" in prompt

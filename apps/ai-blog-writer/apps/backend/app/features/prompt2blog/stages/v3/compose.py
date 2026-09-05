@@ -12,7 +12,7 @@ from ...prompts.editorial_v3 import P2B_V3_COMPOSE_PROMPT
 from ...prompts.generation import SEO_SAFE_CONTENT_GENERATION_GUIDELINES
 from ...quality import _sanitize_rewrite
 from ...schemas import REWRITE_SCHEMA
-from ...support import _format_style_directive
+from ...support import _format_style_directive, _safe_dict, _target_word_count
 
 
 def run_v3_compose_stage(
@@ -32,6 +32,8 @@ def run_v3_compose_stage(
     style_directive = _format_style_directive(state["option_context"])
     prompt = P2B_V3_COMPOSE_PROMPT.format(
         outline=state["outline_text"],
+        target_word_count=_target_word_count(_safe_dict(state["option_context"]))
+        or "Not specified.",
         instructions=stage_context_text(state["stage_contexts"], "compose"),
         seo_guideline=SEO_SAFE_CONTENT_GENERATION_GUIDELINES,
         style_directive=style_directive,

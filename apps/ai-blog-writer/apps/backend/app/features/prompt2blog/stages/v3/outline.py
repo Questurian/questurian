@@ -18,7 +18,7 @@ from ...instructions_v3 import stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_OUTLINE_PROMPT
 from ...schemas import V3_OUTLINE_SCHEMA
-from ...support import _safe_dict, _safe_int
+from ...support import _safe_dict, _target_word_count
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +30,6 @@ EMPTY_OUTLINE: dict[str, Any] = {
     "brief_alignment": "Brief alignment not stated.",
     "unsupported_requirements": [],
 }
-
-
-def _target_word_count(state: Prompt2BlogV3GraphState) -> int:
-    length = _safe_dict(_safe_dict(state["option_context"]).get("length"))
-    return _safe_int(length.get("target_word_count"), default=0)
 
 
 def run_v3_outline_stage(
@@ -52,7 +47,7 @@ def run_v3_outline_stage(
     dependencies.recorder.start_stage(run_id, stage)
 
     evidence = state["evidence"]
-    target_word_count = _target_word_count(state)
+    target_word_count = _target_word_count(_safe_dict(state["option_context"]))
     outline = dict(EMPTY_OUTLINE)
     diagnostics: dict[str, Any] = {}
     accepted = False
