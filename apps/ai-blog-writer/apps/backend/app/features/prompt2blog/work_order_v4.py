@@ -211,6 +211,18 @@ Rules:
   blocks of the Plaza Mayor". A false premise then comes back as a refuted
   premise, which is a finding, instead of as a failed question, which is a dead
   end.
+- **One claim per assumption.** An assumption is a thing that is true or false;
+  a sentence carrying three claims has no single answer, and one wrong part
+  refutes all of it. Run b88081a0 died on "the claims regarding a motorway at
+  the bottom of cliffs, a six-mile park on top, and the walk being the best
+  free thing to do are factually accurate" -- the park was confirmed, the
+  motorway was confirmed, and the whole assumption was refuted over a length
+  nobody had claimed. Split them: one statement, one fact, one verdict.
+- **Only write down what evidence could settle.** "The best free thing to do in
+  the city" is an opinion, and an opinion in `premise` can never come back
+  confirmed, so it blocks the article permanently. Taste, ranking and
+  significance belong in the brief, not here. If you cannot describe the search
+  that would prove an assumption wrong, it is not an assumption.
 - `references` must list every place the plan touches, and must include the
   subject itself. Roles are exactly `primary_subject`, `context_only` and
   `comparator`. Exactly one entry is the `primary_subject` -- that is the thing

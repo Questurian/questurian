@@ -205,3 +205,37 @@ def test_a_source_url_that_is_not_a_link_names_itself_in_the_failure(caplog):
         research.ResearchDependencies(None, StructureLLM(payload)))
     assert result["_retryable"] is True
     assert "www.example.pe" in caplog.text
+
+
+def test_withdrawing_an_unrelated_assumption_keeps_the_searches_it_never_touched():
+    """Striking one misread assumption used to discard every saved search.
+
+    `requirement_fingerprint` hashed the whole premise, so a question that
+    never declared an assumption still lost its answer when that assumption
+    was withdrawn. Run b88081a0 lost eighteen paid searches that way.
+    """
+    from app.features.prompt2blog.contracts_v4 import WorkOrderAssumption
+
+    work = _work_order(
+        premise=[
+            WorkOrderAssumption(assumption_id="a1", statement="Prices are published."),
+            WorkOrderAssumption(assumption_id="a2", statement="The bridge is open."),
+        ]
+    )
+    notes = {q.requirement_id: research.GatheredNotes("cited notes") for q in work.requirements}
+    stored = research.notes_stage_record(work, notes)
+
+    # r1 declares a1; r2 declares nothing. Withdraw a2, which neither uses.
+    without_a2 = work.model_copy(
+        update={"premise": [item for item in work.premise if item.assumption_id != "a2"]}
+    )
+
+    kept = research.notes_from_record(stored, without_a2)
+
+    assert set(kept) == {"r1", "r2"}, "an assumption nobody declared invalidated everything"
+
+    # Withdrawing a1 still invalidates r1, which does declare it.
+    without_a1 = work.model_copy(
+        update={"premise": [item for item in work.premise if item.assumption_id != "a1"]}
+    )
+    assert set(research.notes_from_record(stored, without_a1)) == {"r2"}

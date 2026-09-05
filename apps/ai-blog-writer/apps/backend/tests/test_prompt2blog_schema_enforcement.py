@@ -250,3 +250,78 @@ def test_the_openings_are_measurements_and_never_gate_a_run():
     for key in measure_sentence_openings("A sentence about Lima."):
         assert key in CONSTRAINT_MEASUREMENT_KEYS
         assert key not in HARD_CONSTRAINT_CHECK_KEYS
+
+
+# --- a refuted assumption is a decision, not a dead end (#526) -------------
+
+
+def test_the_work_order_is_told_one_claim_per_assumption():
+    """Run b88081a0 died on an assumption carrying three claims: a park length
+    research confirmed, a motorway length nobody claimed, and an opinion the
+    research itself called unconfirmable."""
+    from app.features.prompt2blog.work_order_v4 import build_work_order_prompt
+
+    prompt = build_work_order_prompt.__doc__ or ""
+    from app.features.prompt2blog import work_order_v4
+
+    source = work_order_v4.WORK_ORDER_PROMPT if hasattr(
+        work_order_v4, "WORK_ORDER_PROMPT"
+    ) else ""
+    text = (prompt + source).lower()
+    if not text.strip():
+        import inspect
+
+        text = inspect.getsource(build_work_order_prompt).lower()
+
+    assert "one claim per assumption" in text
+    assert "opinion" in text
+
+
+def test_an_operator_can_withdraw_an_assumption_and_the_facts_survive():
+    from app.features.prompt2blog.gate_v4 import strike_assumption
+    from test_prompt2blog_v3_instructions import _fixture
+    from app.features.prompt2blog.contracts_v4 import (
+        EvidencePackage,
+        Prompt2BlogWorkOrder,
+    )
+    import json as _json
+
+    fixture = _fixture()
+    order_payload = _json.loads(_json.dumps(fixture["work_order"]))
+    # The fixture predates premise; give it one, the way a real plan carries it.
+    order_payload["premise"] = [
+        {"assumption_id": "a1", "statement": "The market publishes its prices."}
+    ]
+    order_payload["requirements"][0]["assumption_ids"] = ["a1"]
+    work_order = Prompt2BlogWorkOrder.model_validate(order_payload)
+    evidence = EvidencePackage.model_validate(fixture["evidence_package"])
+    assumption = "a1"
+    claims_before = [claim.claim_id for claim in evidence.claims]
+
+    evidence, work_order = strike_assumption(
+        evidence, work_order, assumption_id=assumption
+    )
+
+    assert assumption not in {item.assumption_id for item in work_order.premise}
+    # The questions that rested on it keep their answers: withdrawing a claim
+    # about the world does not unmake the facts that were found.
+    assert [claim.claim_id for claim in evidence.claims] == claims_before
+    for requirement in work_order.requirements:
+        assert assumption not in requirement.assumption_ids
+
+
+def test_withdrawing_an_assumption_nobody_declared_is_refused():
+    from app.features.prompt2blog.gate_v4 import GateAnswerRefused, strike_assumption
+    from test_prompt2blog_v3_instructions import _fixture
+    from app.features.prompt2blog.contracts_v4 import (
+        EvidencePackage,
+        Prompt2BlogWorkOrder,
+    )
+
+    fixture = _fixture()
+    with pytest.raises(GateAnswerRefused, match="not an assumption"):
+        strike_assumption(
+            EvidencePackage.model_validate(fixture["evidence_package"]),
+            Prompt2BlogWorkOrder.model_validate(fixture["work_order"]),
+            assumption_id="never-declared",
+        )

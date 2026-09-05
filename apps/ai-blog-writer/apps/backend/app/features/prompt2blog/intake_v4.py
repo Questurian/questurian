@@ -58,6 +58,7 @@ from .gate_v4 import (
     mark_unpublished,
     note_venue,
     omit_requirement,
+    strike_assumption,
     reask_requirement,
     suggested_move,
     venues_to_check,
@@ -663,6 +664,84 @@ def reask_question(
                 *(_stage_data(run_id, RESEARCH_STAGE).get("reasked") or []),
                 note,
             ],
+            STATE_KEY: json.loads(evidence.model_dump_json()),
+        },
+    )
+    return verdict
+
+
+def settle_premise(
+    run_id: str,
+    services: IntakeServices,
+    *,
+    assumption_id: str,
+    note: str,
+) -> CoverageVerdict:
+    """Withdraw an assumption research refuted. The operator's call, recorded.
+
+    No model call. A refuted premise is the one block with no exit: the error
+    says more research will not clear it, which is true, and leaves the run
+    permanently unwritable. Run b88081a0 hit it on an assumption bundling a
+    confirmed park length, a motorway length nobody claimed, and an opinion the
+    research itself called unconfirmable -- see #526.
+
+    The note is required. Withdrawing an assumption is a claim about the world
+    the operator is making instead of the research, and a wrong fact in the
+    finished article has to be traceable to the person who allowed it.
+    """
+    if not _safe_str(note):
+        raise ValueError(
+            "Say why the assumption is being withdrawn. This is a decision "
+            "about what is true, and it has to be attributable."
+        )
+
+    work_order = load_work_order(run_id)
+    evidence = load_evidence(run_id)
+    notes = _stage_data(run_id, RESEARCH_STAGE).get("notes") or {}
+
+    evidence, work_order = strike_assumption(
+        evidence, work_order, assumption_id=assumption_id
+    )
+    _record(
+        services,
+        run_id,
+        WORK_ORDER_STAGE,
+        {
+            **work_order_stage_record(
+                work_order, [], tokens_spent=_run_tokens_spent(run_id)
+            ),
+            STATE_KEY: json.loads(work_order.model_dump_json()),
+        },
+    )
+
+    verdict = assess_coverage(work_order, evidence)
+    _record(
+        services,
+        run_id,
+        RESEARCH_STAGE,
+        {
+            **research_stage_record(evidence, notes),
+            "coverage": verdict.as_record(),
+            "struck_assumptions": sorted(
+                {
+                    *(
+                        _stage_data(run_id, RESEARCH_STAGE).get("struck_assumptions")
+                        or []
+                    ),
+                    assumption_id,
+                }
+            ),
+            "struck_assumption_notes": {
+                **(
+                    _stage_data(run_id, RESEARCH_STAGE).get("struck_assumption_notes")
+                    or {}
+                ),
+                assumption_id: _safe_str(note),
+            },
+            # `research_stage_record` writes the summary, not the dossier.
+            # Omitting this wipes the evidence `load_evidence` reads and costs
+            # the run everything research paid for -- which is exactly what it
+            # did to run b88081a0 before this line existed.
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
