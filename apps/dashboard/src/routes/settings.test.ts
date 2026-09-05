@@ -188,12 +188,23 @@ describe("the Claude substitution", () => {
 
 describe("whether the apps are actually reading this table", () => {
   it("says so plainly when an app is not running", async () => {
-    // Nothing on port 4003 in a test run, which is the normal case here.
-    const call = routes();
-    const { body } = await call("/v1/listeners");
-    const abw = body.apps.find((entry: { app: string }) => entry.app === "ai-blog-writer");
-    expect(abw.reachable).toBe(false);
-    expect(abw.url).toContain("/model-gateway/status");
+    // Pointed at a port nothing can be on, rather than assuming the developer
+    // does not happen to have the app running. A test whose result depends on
+    // what is up on this machine tells you about the machine, not the code.
+    const previous = process.env.ABW_BASE_URL;
+    process.env.ABW_BASE_URL = "http://127.0.0.1:9";
+    try {
+      const call = routes();
+      const { body } = await call("/v1/listeners");
+      const abw = body.apps.find(
+        (entry: { app: string }) => entry.app === "ai-blog-writer",
+      );
+      expect(abw.reachable).toBe(false);
+      expect(abw.url).toContain("/model-gateway/status");
+    } finally {
+      if (previous === undefined) delete process.env.ABW_BASE_URL;
+      else process.env.ABW_BASE_URL = previous;
+    }
   });
 
   it("asks both apps, not just the one that was wired first", async () => {

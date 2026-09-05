@@ -1,10 +1,16 @@
 import { initDb } from "../shared/db/client";
+import { installUsageReporting } from "../shared/usage/reported-fetch";
 import { app } from "../shared/http/server";
 import "../features/locations/routes/location.routes";
 import "../features/scrape/routes/scrape.routes";
 import { ServiceContainer } from "../features/locations/container/service-container";
 
 export function startServer(port = Number(process.env.PORT || 4317)) {
+  // Before anything else makes a call. Wrapping `fetch` once here is what
+  // keeps the eleven external clients from each having to remember to report
+  // themselves -- which is how the other app ended up reporting five call
+  // paths out of thirty-nine.
+  installUsageReporting();
   initDb();
   void ServiceContainer.getInstance().content.instagram.backfillExistingMedia();
 
