@@ -953,6 +953,12 @@ def finished_article(run_id: str) -> dict[str, Any]:
         or _safe_str(article.get("content")),
         "pipeline_status": _safe_str(finalize.get("pipeline_status")) or None,
         "readiness_blockers": finalize.get("readiness_blockers") or [],
+        # `needs_revision` alone cannot say whether repair looked and found
+        # nothing or was never offered the chance. On run 95a74dce it was the
+        # second: the budget was spent before the writing graph reached it.
+        "repair_outcome": _safe_dict(
+            _stage_data(run_id, "pipeline_v3").get("repair_outcome")
+        ),
         "constraint_checks": _safe_dict(finalize.get("constraint_checks")),
         "word_count": finalize.get("word_count_estimate"),
     }
