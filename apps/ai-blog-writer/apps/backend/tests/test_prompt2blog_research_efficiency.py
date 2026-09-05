@@ -241,9 +241,14 @@ def test_withdrawing_an_unrelated_assumption_keeps_the_searches_it_never_touched
     assert set(research.notes_from_record(stored, without_a1)) == {"r2"}
 
 
-def test_the_output_ceiling_reaches_gemini_and_a_cut_off_reply_says_so():
-    """Callers passed `max_tokens` and `invoke_json` swallowed it, so
-    structuring ran on the provider default and came back cut off mid-string."""
+def test_the_per_call_ceiling_is_not_sent_and_a_cut_off_reply_still_says_so():
+    """The ceiling is set when the model is built, not per call.
+
+    `get_vertex_llm` runs the caller's number through
+    `_resolve_generation_max_tokens`, which raises it to a floor. Sending the
+    caller's own smaller number again per call lowers it -- which cut an
+    outline call to 255 characters of unterminated JSON.
+    """
     requests = []
 
     class Provider:
@@ -258,4 +263,6 @@ def test_the_output_ceiling_reaches_gemini_and_a_cut_off_reply_says_so():
     with pytest.raises(ValueError, match="stops mid-value"):
         adapter.invoke_json("notes", input_schema={"type": "object"}, max_tokens=8192)
 
-    assert requests[0]["max_output_tokens"] == 8192
+    assert "max_output_tokens" not in requests[0], (
+        "sending this per call lowers the ceiling the model was built with"
+    )

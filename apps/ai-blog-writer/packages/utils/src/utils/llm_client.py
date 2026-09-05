@@ -284,11 +284,18 @@ class VertexTextLLM:
                     max_tokens: int | None = None) -> dict[str, Any]:
         """One schema-enforced JSON call.
 
-        `max_tokens` has to be forwarded. Callers pass an output ceiling and
-        this method used to swallow it, so structuring ran on the provider
-        default and returned JSON cut off mid-string -- run a3c20e41 lost four
-        questions to "Unterminated string starting at line 468", 16,640
-        characters into a call whose caller had asked for 8,192 tokens.
+        `max_tokens` is accepted and deliberately NOT sent. The ceiling is
+        already set when the model is built: `get_vertex_llm` passes it through
+        `_resolve_generation_max_tokens`, which raises it to a floor. Sending
+        the caller's own smaller number per call therefore *lowers* the
+        ceiling, and doing that cut the outline call to 255 characters of
+        unterminated JSON against a limit it never came close to.
+
+        This method forwarded it for one commit, and that is why the argument
+        is still in the signature rather than removed: callers pass it, the
+        Claude adapter accepts it, and a reader deserves to find out here that
+        it is intentionally dropped rather than discover it again the way I
+        did.
         """
         options: dict[str, Any] = {
             "response_mime_type": "application/json",
@@ -296,8 +303,6 @@ class VertexTextLLM:
         }
         if thinking_budget is not None and self.model_name == "gemini-2.5-flash":
             options["thinking_budget"] = thinking_budget
-        if max_tokens is not None:
-            options["max_output_tokens"] = max_tokens
         result = self._llm.generate([prompt], **options)
         self.last_usage_metadata = _usage_from_generation(result)
         text = result.generations[0][0].text
@@ -309,8 +314,7 @@ class VertexTextLLM:
             # prompt.
             raise ValueError(
                 f"Gemini returned JSON that stops mid-value after {len(text)} "
-                f"characters ({error}). The output ceiling was "
-                f"{max_tokens or 'the provider default'}."
+                f"characters ({error})."
             ) from error
         if not isinstance(parsed, dict):
             raise ValueError("Structured Gemini response must be an object")
