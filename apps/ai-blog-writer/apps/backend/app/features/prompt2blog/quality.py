@@ -87,6 +87,13 @@ CONSTRAINT_MEASUREMENT_KEYS = frozenset(
         "repeated_sentence_pairs",
         "repeated_sentence_overlap",
         "repeated_sentence_note",
+        # Sentence openings, same rule: reported so an operator can look at the
+        # passage, never gated. A walking guide legitimately repeats place
+        # names and a threshold here would fight the form.
+        "opening_proper_noun_share",
+        "opening_longest_same_kind_run",
+        "opening_run_example",
+        "opening_kinds",
     }
 )
 
@@ -172,17 +179,142 @@ SENTENCE_BAND_WIDTH = 5
 SENTENCE_CLUSTER_SHARE = 0.45
 
 
+# Abbreviations whose full stop does not end a sentence. Without these a
+# splitter cuts "9:00 a.m. to 9:00 p.m." into three, which is how one count of
+# the same article reached 68 units and another 59 -- and why no number from
+# either was worth reporting.
+_ABBREVIATIONS = (
+    "a.m.",
+    "p.m.",
+    "e.g.",
+    "i.e.",
+    "etc.",
+    "vs.",
+    "approx.",
+    "St.",
+    "Mt.",
+    "Av.",
+    "No.",
+)
+
+
+def _sentences(content: str) -> list[str]:
+    """Every sentence of prose, headings and list markers excluded.
+
+    One splitter, shared by everything that counts sentences, because two
+    splitters produce two different articles' worth of numbers from the same
+    text and neither can be argued with.
+    """
+    body = "\n".join(
+        line for line in content.splitlines() if not line.lstrip().startswith("#")
+    )
+    guarded = body
+    for index, abbreviation in enumerate(_ABBREVIATIONS):
+        guarded = guarded.replace(abbreviation, f"\x00{index}\x00")
+    parts = re.split(r"(?<=[.!?])\s+", guarded)
+    sentences = []
+    for part in parts:
+        for index, abbreviation in enumerate(_ABBREVIATIONS):
+            part = part.replace(f"\x00{index}\x00", abbreviation)
+        part = part.strip().lstrip("*-\u2022 ").strip()
+        if len(part) > 3:
+            sentences.append(part)
+    return sentences
+
+
 def _sentence_lengths(content: str) -> list[int]:
     """Word counts for every sentence of prose, headings excluded.
 
     A heading is not a sentence and counting it drags the numbers toward the
     short end of an article that is merely well sectioned.
     """
-    body = "\n".join(
-        line for line in content.splitlines() if not line.lstrip().startswith("#")
-    )
-    sentences = [part.strip() for part in re.split(r"(?<=[.!?])\s+", body)]
-    return [len(_tokenize_words(part)) for part in sentences if len(part.strip()) > 3]
+    return [len(_tokenize_words(part)) for part in _sentences(content)]
+
+
+def measure_sentence_openings(content: str) -> dict[str, Any]:
+    """How many sentences begin the same way. Reported, never gated.
+
+    Run 95a74dce's article kept every surface anti-AI check at zero -- no em
+    dashes, no stock phrasing, no brochure adjectives -- and still read as a
+    machine wrote it, because almost every sentence opened by naming a place.
+    Four in a row were `[Park name], [description]`. A human writer tires of
+    their own rhythm; a model does not, and nothing here was counting.
+
+    Deliberately not a threshold. A walking guide legitimately repeats place
+    names, and an earlier "85% of sentences" figure came from an unspecified
+    splitter that another splitter disagreed with. This reports the share and
+    the longest run, and quotes the run so a person can look at the actual
+    passage and decide.
+    """
+    sentences = _sentences(content)
+    if not sentences:
+        return {
+            "opening_proper_noun_share": 0.0,
+            "opening_longest_same_kind_run": 0,
+            "opening_run_example": "",
+            "opening_kinds": {},
+        }
+
+    kinds = [_opening_kind(sentence) for sentence in sentences]
+    longest = current = 1
+    longest_end = 0
+    for index in range(1, len(kinds)):
+        if kinds[index] == kinds[index - 1] == "proper_noun":
+            current += 1
+            if current > longest:
+                longest, longest_end = current, index
+        else:
+            current = 1
+    example = ""
+    if longest > 1:
+        window = sentences[longest_end - longest + 1 : longest_end + 1]
+        example = " ".join(window)[:400]
+
+    counts: dict[str, int] = {}
+    for kind in kinds:
+        counts[kind] = counts.get(kind, 0) + 1
+    return {
+        "opening_proper_noun_share": round(
+            counts.get("proper_noun", 0) / len(sentences), 3
+        ),
+        "opening_longest_same_kind_run": longest if longest > 1 else 0,
+        "opening_run_example": example,
+        "opening_kinds": counts,
+    }
+
+
+_OPENING_FUNCTION_WORDS = {
+    "the", "a", "an", "this", "that", "these", "those", "it", "its", "they",
+    "there", "here", "you", "your", "we", "our", "i", "he", "she", "his", "her",
+    "if", "when", "while", "after", "before", "from", "at", "on", "in", "for",
+    "to", "by", "with", "about", "further", "continuing", "starting", "walking",
+    "most", "many", "some", "several", "both", "each", "every", "no", "not",
+    "and", "but", "or", "so", "because", "although", "though", "since",
+}
+
+
+def _opening_kind(sentence: str) -> str:
+    """What kind of word a sentence starts with.
+
+    A capitalised first word is not evidence of anything -- every sentence has
+    one. A proper noun opener is a capitalised word that is not a function word
+    and not a bare pronoun, which is what "Parque Bernales offers..." is and
+    "The path continues..." is not.
+    """
+    words = sentence.split()
+    if not words:
+        return "other"
+    first = words[0].strip("\"'\u201c\u2018([")
+    lowered = first.casefold().strip(".,;:")
+    if not first:
+        return "other"
+    if lowered in _OPENING_FUNCTION_WORDS:
+        return "function_word"
+    if first[0].isdigit():
+        return "number"
+    if first[0].isupper():
+        return "proper_noun"
+    return "other"
 
 
 def measure_sentence_spread(content: str) -> dict[str, Any]:
@@ -539,6 +671,7 @@ def _build_constraint_checks(
         "word_count_estimate": word_count,
         "word_count_severity": word_count_severity,
         **measure_sentence_spread(content),
+        **measure_sentence_openings(content),
         **measure_repetition(content),
     }
 

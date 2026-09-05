@@ -182,3 +182,71 @@ def test_the_brief_writer_is_shown_what_each_form_is_not_for():
 
     assert "destination-guide: Do not use for a single practical problem" in exclusions
     assert len(exclusions.splitlines()) >= 10
+
+
+# --- Phase 4: sentence openings, measured the same way twice ---------------
+
+
+def test_the_splitter_does_not_cut_an_article_at_every_abbreviation():
+    """Two splitters gave 59 and 68 units for the same article, which is why
+    neither number was worth reporting."""
+    from app.features.prompt2blog.quality import _sentences
+
+    text = "The park is open 9:00 a.m. to 9:00 p.m. daily. Entry is free."
+
+    assert len(_sentences(text)) == 2
+
+
+def test_headings_and_list_markers_are_not_sentences():
+    from app.features.prompt2blog.quality import _sentences
+
+    text = "# A Heading\n\nThe path runs south.\n\n*   Malecon Pazos\n\n## Another\n"
+
+    assert _sentences(text) == ["The path runs south.", "Malecon Pazos"]
+
+
+def test_a_run_of_place_name_openings_is_reported_with_the_passage():
+    from app.features.prompt2blog.quality import measure_sentence_openings
+
+    metronome = (
+        "Parque de la Pera has a play area. Parque Bernales is wooded. "
+        "Parque Gandhi sits on the cliff. Parque Bicentenario opened in 2020."
+    )
+    varied = (
+        "The path has a play area. It runs on through woodland. "
+        "Further south the cliff drops away. You reach the 2020 park last."
+    )
+
+    flagged = measure_sentence_openings(metronome)
+    clean = measure_sentence_openings(varied)
+
+    assert flagged["opening_proper_noun_share"] == 1.0
+    assert flagged["opening_longest_same_kind_run"] == 4
+    assert "Parque de la Pera" in flagged["opening_run_example"]
+
+    assert clean["opening_proper_noun_share"] == 0.0
+    assert clean["opening_longest_same_kind_run"] == 0
+
+
+def test_a_capitalised_first_word_is_not_by_itself_a_place_name():
+    """Every sentence starts with a capital. Counting that would report 100%
+    for any prose and mean nothing."""
+    from app.features.prompt2blog.quality import measure_sentence_openings
+
+    result = measure_sentence_openings(
+        "The walk begins here. It ends there. You will want water."
+    )
+
+    assert result["opening_proper_noun_share"] == 0.0
+
+
+def test_the_openings_are_measurements_and_never_gate_a_run():
+    from app.features.prompt2blog.quality import (
+        CONSTRAINT_MEASUREMENT_KEYS,
+        HARD_CONSTRAINT_CHECK_KEYS,
+        measure_sentence_openings,
+    )
+
+    for key in measure_sentence_openings("A sentence about Lima."):
+        assert key in CONSTRAINT_MEASUREMENT_KEYS
+        assert key not in HARD_CONSTRAINT_CHECK_KEYS
