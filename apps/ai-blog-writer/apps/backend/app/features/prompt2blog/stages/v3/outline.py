@@ -68,7 +68,7 @@ def run_v3_outline_stage(
 
     try:
         parsed, raw_response = dependencies.llm.invoke_json(
-        job_id="p2b.outline",
+            job_id="p2b.outline",
             prompt=prompt,
             max_tokens=2048,
             temperature=0.1,
