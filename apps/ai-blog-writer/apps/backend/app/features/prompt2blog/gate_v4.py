@@ -154,6 +154,64 @@ def answer_requirement(
     return EvidencePackage.model_validate(payload)
 
 
+def strike_assumption(
+    evidence: EvidencePackage,
+    work_order: "Prompt2BlogWorkOrder",
+    *,
+    assumption_id: str,
+) -> tuple[EvidencePackage, "Prompt2BlogWorkOrder"]:
+    """Withdraw an assumption the operator has read and rejected.
+
+    A refuted assumption blocks writing permanently -- correctly, when the
+    article really was commissioned about something that is not so. But run
+    b88081a0 was blocked by an assumption that bundled three claims: a park
+    length that research confirmed, a motorway length nobody had claimed, and
+    "the best free thing to do in Lima", which the research itself said was
+    subjective and could not be confirmed or refuted. One misread sub-claim,
+    and an article whose real premise had been confirmed twice could never be
+    written.
+
+    A blocked question already has five exits -- answer it, mark it
+    unpublished, mark it nonexistent, strike a must_name, omit it. A refuted
+    assumption had none, and the error told the operator that more research
+    would not help, which was true and useless.
+
+    So this is the same move at the same gate: the operator's call, recorded,
+    allowed to be wrong. The questions that rested on the assumption keep their
+    answers -- withdrawing a claim about the world does not unmake the facts
+    that were found -- and the finding is dropped so the same coverage function
+    that blocked can be asked again.
+    """
+    declared = {item.assumption_id for item in work_order.premise}
+    if assumption_id not in declared:
+        raise GateAnswerRefused(
+            f"{assumption_id} is not an assumption this work order declared."
+        )
+
+    order_payload = work_order.model_dump(mode="json")
+    order_payload["premise"] = [
+        item
+        for item in order_payload["premise"]
+        if item["assumption_id"] != assumption_id
+    ]
+    for requirement in order_payload["requirements"]:
+        requirement["assumption_ids"] = [
+            item for item in requirement["assumption_ids"] if item != assumption_id
+        ]
+
+    evidence_payload = evidence.model_dump(mode="json")
+    evidence_payload["premise_findings"] = [
+        item
+        for item in evidence_payload.get("premise_findings") or []
+        if item["assumption_id"] != assumption_id
+    ]
+
+    return (
+        EvidencePackage.model_validate(evidence_payload),
+        type(work_order).model_validate(order_payload),
+    )
+
+
 def omit_requirement(
     evidence: EvidencePackage,
     work_order: "Prompt2BlogWorkOrder",

@@ -698,11 +698,24 @@ def _fingerprint(value: Any) -> str:
 
 
 def requirement_fingerprint(work_order: Prompt2BlogWorkOrder, requirement: WorkOrderRequirement) -> str:
+    """What this question was asked under, so a changed context cannot reuse it.
+
+    Only the assumptions this question actually rests on. Fingerprinting the
+    whole premise meant withdrawing one misread assumption threw away every
+    saved search in the run, including searches for questions that never
+    depended on it -- run b88081a0 lost eighteen. An assumption a question does
+    not declare cannot have changed what its answer means.
+    """
+    depends_on = set(requirement.assumption_ids)
     return _fingerprint({
         "brief": work_order.brief_fingerprint,
         "subject": work_order.primary_subject,
         "scope": work_order.scope.model_dump(mode="json"),
-        "premise": [item.model_dump(mode="json") for item in work_order.premise],
+        "premise": [
+            item.model_dump(mode="json")
+            for item in work_order.premise
+            if item.assumption_id in depends_on
+        ],
         "requirement": requirement.model_dump(mode="json", exclude={"search_group"}),
     })
 
