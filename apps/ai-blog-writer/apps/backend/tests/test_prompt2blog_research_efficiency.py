@@ -239,3 +239,23 @@ def test_withdrawing_an_unrelated_assumption_keeps_the_searches_it_never_touched
         update={"premise": [item for item in work.premise if item.assumption_id != "a1"]}
     )
     assert set(research.notes_from_record(stored, without_a1)) == {"r2"}
+
+
+def test_the_output_ceiling_reaches_gemini_and_a_cut_off_reply_says_so():
+    """Callers passed `max_tokens` and `invoke_json` swallowed it, so
+    structuring ran on the provider default and came back cut off mid-string."""
+    requests = []
+
+    class Provider:
+        def generate(self, prompts, **kwargs):
+            requests.append(kwargs)
+            return SimpleNamespace(
+                generations=[[SimpleNamespace(text='{"a": "unterminat',
+                                              generation_info={})]]
+            )
+
+    adapter = VertexTextLLM(Provider(), "gemini-2.5-flash")
+    with pytest.raises(ValueError, match="stops mid-value"):
+        adapter.invoke_json("notes", input_schema={"type": "object"}, max_tokens=8192)
+
+    assert requests[0]["max_output_tokens"] == 8192

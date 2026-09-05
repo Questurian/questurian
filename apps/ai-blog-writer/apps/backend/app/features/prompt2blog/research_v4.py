@@ -1195,6 +1195,11 @@ PREMISE_SCHEMA = require_non_empty({
 })
 
 
+# The shape `_batch_source_table` mints. A value matching it is a stand-in
+# for a link, never a fact about the source.
+_HANDLE = re.compile(r"URL\d+")
+
+
 def _batch_source_table(
     requirements: list[WorkOrderRequirement], notes: dict[str, GatheredNotes],
 ) -> dict[str, str]:
@@ -1453,6 +1458,13 @@ def _structure_batch(
             ):
                 unresolved.append(resolved)
             source["url"] = resolved
+            # The model reads `URL7` where a link used to be and reasonably
+            # uses it as the source's name too. Restoring only the url left 429
+            # of 543 titles in run 95a74dce reading "URL1", "URL2" -- a
+            # bibliography with no identifying information in it at all. A
+            # handle is never a title; say so rather than shipping one.
+            if _HANDLE.fullmatch(_safe_str(source.get("title"))):
+                source["title"] = "Untitled source"
         if unresolved:
             raise ResearchUnusable(
                 "Structuring returned source URLs that are not links: "
