@@ -1,4 +1,17 @@
-"""Environment loading and lazy Vertex initialization."""
+"""Environment loading and lazy Vertex initialization.
+
+The model constants that used to live here are gone. Which model each job runs
+on is the model gateway's answer now, taken from the dashboard's table and
+falling back to the gateway's own registry -- see `generation.py`. The three
+environment variables that pinned them still work exactly as they did; the
+gateway reads them (`model_gateway.settings.LEGACY_ENV_OVERRIDES`), and a job
+pinned that way still ignores the dashboard.
+
+Leaving the constants here would have been worse than deleting them: they
+would have read as the authority while deciding nothing, which is the precise
+failure that let this service sit on 2.5 Pro through a sweep that moved
+everything else.
+"""
 
 import logging
 import os
@@ -10,9 +23,6 @@ from vertexai import init as vertex_init
 
 logger = logging.getLogger("vertex_alt_text")
 
-DEFAULT_MODEL = "gemini-2.5-pro"
-DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL = "gemini-2.5-flash"
-DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = "gemini-2.5-flash"
 DEFAULT_LOCATION = "us-central1"
 
 
@@ -41,21 +51,6 @@ def load_local_env_files() -> None:
 
 load_local_env_files()
 
-ALT_TEXT_MODEL = os.getenv("ALT_TEXT_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL
-NEIGHBORHOOD_DESCRIPTION_MODEL = (
-    os.getenv(
-        "NEIGHBORHOOD_DESCRIPTION_MODEL",
-        DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL,
-    ).strip()
-    or DEFAULT_NEIGHBORHOOD_DESCRIPTION_MODEL
-)
-ACCOMMODATIONS_FIELD_SUGGESTION_MODEL = (
-    os.getenv(
-        "ACCOMMODATIONS_FIELD_SUGGESTION_MODEL",
-        DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL,
-    ).strip()
-    or DEFAULT_ACCOMMODATIONS_FIELD_SUGGESTION_MODEL
-)
 _vertex_initialized = False
 _vertex_init_lock = threading.Lock()
 
