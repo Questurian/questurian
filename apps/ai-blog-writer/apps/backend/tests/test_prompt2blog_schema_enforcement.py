@@ -362,3 +362,34 @@ def test_the_subject_is_recognised_by_its_leading_word():
     assert _names_subject("Walking the Malecon", "The Malecon")
     assert _names_subject("Medellin After Dark", "Medellin, Colombia")
     assert not _names_subject("Getting There by Taxi", "Chifa cuisine")
+
+
+# --- a question is researched alone, so it must stand alone ----------------
+
+
+def test_a_question_pointing_at_another_question_is_dropped():
+    """Run 36ade5ea asked "the atmosphere of the restaurant identified in
+    'req_restaurant_1_name'" three times, got `missing` three times, and was
+    refused for having nothing worth reading."""
+    from app.features.prompt2blog.work_order_v4 import _answerable_alone
+
+    assert not _answerable_alone(
+        "Describe the atmosphere of the restaurant identified in 'req_restaurant_1_name'."
+    )
+    assert not _answerable_alone("What does the dish named in question 2 cost?")
+    assert not _answerable_alone(
+        "What are the opening hours of [RECOMMENDED CHIFA RESTAURANT NAME]?"
+    )
+    assert not _answerable_alone("The price of the hotel selected in req_hotel_pick.")
+
+
+def test_a_question_that_stands_on_its_own_is_kept():
+    from app.features.prompt2blog.work_order_v4 import _answerable_alone
+
+    assert _answerable_alone(
+        "What do the dining rooms of the best regarded chifa restaurants in San "
+        "Isidro and Miraflores look like, and who eats in them?"
+    )
+    assert _answerable_alone("What does a plate of lomo saltado cost in Lima in 2026?")
+    # A bracketed aside is not a placeholder.
+    assert _answerable_alone("What are the hours of Chifa Titi [San Isidro]?")

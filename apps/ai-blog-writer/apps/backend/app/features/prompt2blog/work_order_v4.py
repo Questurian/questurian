@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import asdict, dataclass
 from typing import Any, get_args
 
@@ -194,6 +195,18 @@ Rules:
   detail, something that puts the reader somewhere. Ask for texture: a dossier
   with nothing a reader would enjoy is a real gap, not a success.
 - At least one question must be load_bearing.
+- **Every question is researched on its own, by someone who cannot see the
+  others.** So a question may never point at another question, and may never
+  carry a blank for somebody to fill in. Both come back unanswered, every time:
+  run 36ade5ea asked "the general atmosphere of the restaurant identified in
+  'req_restaurant_1_name'" three times and got `missing` three times, which
+  left the dossier with no texture at all and blocked the article. Run 90f348df
+  wrote "[RECOMMENDED CHIFA RESTAURANT NAME]" into its own questions and
+  declared, as an assumption, that someone would replace it.
+  If you do not yet know which restaurant, ask for the thing itself -- "the
+  dining rooms of the best regarded chifa restaurants in San Isidro and
+  Miraflores, and who eats in them" -- not for a detail about an answer you
+  have not got.
 - Do not write a question whose answer the writer already has above.
 - Anything you are assuming without being able to check it goes in `premise`,
   with the questions that rest on it listing its id. An assumption nobody wrote
@@ -350,6 +363,29 @@ def _premise_from(payload: dict[str, Any]) -> list[WorkOrderAssumption]:
     return premise
 
 
+# A blank for somebody to fill in, and a pointer at another question. Both
+# describe an answer this question does not have, and every question is
+# researched alone by someone who cannot see the others, so both come back
+# `missing`. Run 36ade5ea lost all three of its texture questions to the second
+# form and was refused for having nothing worth reading; run 90f348df wrote the
+# first form into its questions and then declared, as an assumption, that
+# someone would replace it.
+_PLACEHOLDER = re.compile(r"\[[A-Z0-9 _\-]{3,}\]")
+_POINTS_AT_ANOTHER_QUESTION = re.compile(
+    r"\b(?:identified|named|found|listed|determined|selected|chosen)\s+in\b"
+    r"|\b(?:from|in)\s+(?:question|requirement)\b"
+    r"|\breq_[a-z0-9_]+\b",
+    re.IGNORECASE,
+)
+
+
+def _answerable_alone(question: str) -> bool:
+    """Whether one researcher, seeing only this question, could answer it."""
+    return not (
+        _PLACEHOLDER.search(question) or _POINTS_AT_ANOTHER_QUESTION.search(question)
+    )
+
+
 def _requirements_from(
     payload: dict[str, Any],
     declared: set[str] | None = None,
@@ -377,6 +413,16 @@ def _requirements_from(
         question = _safe_str(_first(record, "question", "query", "text", "ask"))
         kind = _safe_str(record.get("kind"))
         if not question or kind not in {"load_bearing", "texture"}:
+            dropped += 1
+            continue
+        if not _answerable_alone(question):
+            # Dropped rather than repaired: the question is about an answer
+            # nobody has yet, and guessing which one would invent the plan.
+            logger.warning(
+                "Dropping a question that depends on another question's "
+                "answer: %r",
+                question[:120],
+            )
             dropped += 1
             continue
         assumption_ids = _safe_str_list(
