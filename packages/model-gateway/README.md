@@ -87,8 +87,31 @@ None, on purpose. This package is imported by two services with unlike
 dependency sets; anything added here is added to both. It talks to the
 dashboard over the standard library and leaves provider SDKs to the caller.
 
-## Status
+## What is in it
 
-Phase 0: the packaging skeleton. It installs and imports in both venvs and
-nothing imports it yet. The job registry, rate table, settings client and usage
-reporting land next.
+| File | What it decides |
+|---|---|
+| `jobs.json` | Every job, its app, and what it runs on by default. Read by Python and by the dashboard's TypeScript — one source, two runtimes. |
+| `rates.json` | What each model costs, with the date and source for each rate. |
+| `substitution.json` | What a Claude name is really served with while no Claude path is on. |
+| `settings.py` | Fetches the dashboard's table, caches it, falls back to the registry. |
+| `usage.py` | Reports one call: tokens, cost, duration, failure kind. |
+| `vertex.py` | Makes the call, for callers that use the Vertex SDK directly. |
+
+`app/shared/model_calls.py` in ai-blog-writer is that backend's equivalent of
+`vertex.py`: its calls go through LangChain, a forced-tool path, a REST
+grounding path and a Claude CLI transport, carrying accumulated policy that
+does not belong in a package with no dependencies. The gateway decides the
+model there too; only the transport differs.
+
+## The guard
+
+`tests/test_nothing_names_a_model.py` fails when a file outside its allow-list
+names a model or reaches a provider directly, across both apps. Every
+exemption carries its reason, and a reason that has stopped being true is a bug
+even while the test is green.
+
+It exists because the repo reached its previous state one reasonable commit at
+a time. Nobody decided to spread a model decision across 22 files; each
+addition was small and sensible, and the sum was a sweep that missed a whole
+service for days.

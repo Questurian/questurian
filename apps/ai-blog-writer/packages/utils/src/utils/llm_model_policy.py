@@ -4,9 +4,18 @@ import logging
 import os
 from typing import Optional
 
+from model_gateway import substitution as _substitution
+from model_gateway.substitution import (  # noqa: F401  (re-exported)
+    CLAUDE_GOOGLE_SUBSTITUTES,
+    DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE,
+)
+
 
 logger = logging.getLogger(__name__)
 
+# The last resort when a caller names no model at all. Every caller in this
+# repo now names a job instead, which is what the gateway answers for; this
+# survives for the utils-level API, which has callers outside it.
 DEFAULT_MODEL = "gemini-2.5-flash-lite"
 DEFAULT_LOCATION = "us-central1"
 GEMINI3_LOCATION = "global"
@@ -37,12 +46,6 @@ CLAUDE_SUBSCRIPTION_MODELS_ENABLED_DEFAULT = False
 CLAUDE_PROVIDER_NONE = "none"
 CLAUDE_PROVIDER_ANTHROPIC_API = "anthropic-api"
 CLAUDE_PROVIDER_SUBSCRIPTION_CLI = "subscription-cli"
-CLAUDE_GOOGLE_SUBSTITUTES = {
-    "claude-opus-4-8": "gemini-2.5-flash",
-    "claude-opus-4-7": "gemini-2.5-flash",
-    "claude-sonnet-5": "gemini-2.5-flash",
-}
-DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE = "gemini-2.5-flash"
 MIN_GENERATION_MAX_TOKENS = 64_000
 _TRUTHY = {"1", "true", "yes", "on"}
 
@@ -56,12 +59,11 @@ def _env_flag(name: str, default: bool) -> bool:
 
 def anthropic_models_enabled() -> bool:
     """Whether claude-* names may reach the Anthropic API on an API key."""
-    return _env_flag(ANTHROPIC_MODELS_ENABLED_ENV, ANTHROPIC_MODELS_ENABLED_DEFAULT)
+    return _substitution.anthropic_models_enabled()
 
 
 def claude_subscription_models_enabled() -> bool:
-    """Whether claude-* names may reach the Claude Code CLI on the machine's
-    subscription login.
+    """Whether claude-* names may reach the Claude Code CLI's subscription.
 
     Deliberately a separate switch from ``anthropic_models_enabled``: that one
     spends API credit against a key, this one spends the plan holder's own
@@ -69,18 +71,19 @@ def claude_subscription_models_enabled() -> bool:
     plan holder's own use, so it is local-authoring only -- do not set it on a
     shared or serverless deployment.
     """
-    return _env_flag(
-        CLAUDE_SUBSCRIPTION_MODELS_ENABLED_ENV,
-        CLAUDE_SUBSCRIPTION_MODELS_ENABLED_DEFAULT,
-    )
+    return _substitution.claude_subscription_models_enabled()
 
 
 def claude_provider() -> str:
     """Which transport, if any, will serve a claude-* name.
 
-    The API-key path takes precedence so that switching the subscription path on
-    cannot silently re-point a machine that already had a funded key configured.
+    The API-key path takes precedence so that switching the subscription path
+    on cannot silently re-point a machine that already had a funded key.
     """
+    # Asks this module's own two functions rather than the gateway's, so a
+    # caller that replaces one of them -- which the tests do, to exercise a
+    # path this machine cannot reach -- still changes the answer. The rule for
+    # reading the environment is the gateway's; the seam is this module's.
     if anthropic_models_enabled():
         return CLAUDE_PROVIDER_ANTHROPIC_API
     if claude_subscription_models_enabled():
@@ -94,19 +97,18 @@ def claude_models_reachable() -> bool:
 
 
 def is_claude_model(model_name: Optional[str]) -> bool:
-    return str(model_name or '').lower().startswith('claude')
+    return _substitution.is_claude_model(model_name)
 
 
 def resolve_effective_model(model_name: Optional[str]) -> Optional[str]:
     """Map a requested model to the one that will actually serve the call.
 
-    Non-Claude names pass through unchanged. A claude-* name passes through when
-    *either* Claude path is switched on, and is substituted to its Google
-    counterpart only when neither is.
-
-    This runs one line before provider dispatch, so it is the gate: while it
-    rewrites the name, the Claude branches downstream are unreachable no matter
-    what a caller asks for.
+    The rule and the map are the gateway's -- the dashboard shows an operator
+    that a job asking for Claude is really running on Gemini, and it can only
+    do that if there is one map rather than two. This runs one line before
+    provider dispatch, so it is still the gate: while it rewrites the name, the
+    Claude branches downstream are unreachable no matter what a caller asks
+    for.
     """
     if not is_claude_model(model_name) or claude_models_reachable():
         return model_name

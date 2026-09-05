@@ -24,6 +24,7 @@ This file is the **context map**. It tells future readers where each bounded con
 | `apps/questura` | **Questura** (nested monorepo) | Public travel platform. Payload CMS backend + Next.js public site. Serves public location pages, attractions, dining, accommodations, nightlife, tours, currencies, paid content. | Enrichment workflow (delegated to Location Manager); article body generation (delegated to AI Blog Writer). | [apps/questura/CONTEXT.md](./apps/questura/CONTEXT.md) |
 | `apps/questura/apps/server` | Questura Server | Payload 3 collections, GraphQL + REST, public view-models, auth, payments. | UI rendering. | [.../server/CONTEXT.md](./apps/questura/apps/server/CONTEXT.md) |
 | `apps/questura/apps/client` | Questura Client | Next.js public site, SSR, i18n, Stripe checkout UI, maps. | Data ownership; CMS state. | [.../client/CONTEXT.md](./apps/questura/apps/client/CONTEXT.md) |
+| `packages/model-gateway` | **Model Gateway** (shared Python package) | Which model each job runs on, the rate table, the Claude substitution map, and usage reporting. Imported by both Python processes that call Gemini. | Making business decisions; storing anything; being a service (it is a library, and a model call must never depend on another process being up). | [packages/model-gateway/README.md](./packages/model-gateway/README.md) |
 | `apps/dashboard` | **Dashboard** (single app) | Terminal CLI + web UI + Hono service. Monitors dev services (health, port, type), and collects reports of every external API call the other apps make (duration, tokens, cost, errors). Observer. | Any business data; launching services; proxying or pricing anybody's API calls. | [apps/dashboard/CONTEXT.md](./apps/dashboard/CONTEXT.md) |
 
 ## Context Reading Order
@@ -67,7 +68,8 @@ Public-image vocabulary. Defined authoritatively in `apps/questura/docs/adr/0001
 One external API call, as reported by the app that made it: `ts`, `service` (which of ours called out), `provider` (what was called), and `status`, plus optional `feature`, `endpoint`, `model`, `durationMs`, `tokens`, `costUsd`, `costBasis`, `correlationId`, `errorKind`.
 
 - **Owner of the shape:** Dashboard (`apps/dashboard/src/usage/contract.ts`, documented in `apps/dashboard/docs/api-usage-contract.md`).
-- **Producers:** any app that calls an external service. Today: AI Blog Writer's Prompt2Blog model calls.
+- **Producers:** any app that calls an external service. Today: every model call in AI Blog Writer and Location Manager, reported by the model gateway rather than by each call site — which is why forgetting is no longer possible.
+- **`feature` is a job id.** The gateway's registry (`packages/model-gateway/src/model_gateway/jobs.json`) defines them, and the Dashboard's Models tab changes what each one runs on. The settings table and the usage chart therefore line up on the same word.
 - **Consumer:** the Dashboard's API Usage tab.
 - **Bridge:** `POST /api/usage/v1/events`. HTTP only — emitters are copied into each producer, never imported, and each one is fire-and-forget.
 - Reporting is **observation, not participation**: the Dashboard never sits in the path of a call, and it never computes a cost. See `apps/dashboard/docs/adr/0001-observability-not-gateway.md`.
