@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff
+from app.shared.api_usage import observe_external_call
 
 from ..prompt2blog.contracts_v4 import GrillState
 from ..prompt2blog.dependencies import DefaultPrompt2BlogLLM
@@ -51,12 +52,28 @@ def _search_call(prompt: str) -> tuple[str, list[str], int | None]:
 
     from .search import SEARCH_MAX_TOKENS, SEARCH_MODEL, SEARCH_TIMEOUT_SECONDS
 
-    result = invoke_google_grounded_text(
-        prompt,
-        model_name=SEARCH_MODEL,
-        max_tokens=SEARCH_MAX_TOKENS,
-        timeout_seconds=SEARCH_TIMEOUT_SECONDS,
-    )
+    with observe_external_call(
+        provider="vertex",
+        feature="listicle.search",
+        model=SEARCH_MODEL,
+        endpoint="generateContent:googleSearch",
+    ) as observed:
+        result = invoke_google_grounded_text(
+            prompt,
+            model_name=SEARCH_MODEL,
+            max_tokens=SEARCH_MAX_TOKENS,
+            timeout_seconds=SEARCH_TIMEOUT_SECONDS,
+        )
+        if result is not None:
+            observed.record_usage(
+                {
+                    "input_tokens": result.input_tokens,
+                    "output_tokens": result.output_tokens,
+                    "total_tokens": result.total_tokens,
+                }
+            )
+            observed.set_model(result.model_name or SEARCH_MODEL)
+            observed.add_metadata(sources=len(result.source_urls))
     if result is None:
         # A helper that returns None swallowed its own failure. Raised here so
         # the runner's retry can see it; a silent empty string would be
@@ -72,14 +89,30 @@ def _base_dependencies() -> GrillDependencies:
     from ..prompt2blog.grill_v4 import GRILL_RESEARCH_MAX_TOKENS, GRILL_RESEARCH_MODEL
 
     def research(prompt: str) -> tuple[str, list[str], int | None]:
-        return _grounded_call(
+        # Reported separately from the search: a lookup during the interview
+        # and a search that fills the list are different spends against the
+        # same model, and a dashboard that cannot tell them apart cannot say
+        # which half of a run is expensive.
+        with observe_external_call(
+            provider="vertex",
+            feature="listicle.grill_lookup",
+            model=GRILL_RESEARCH_MODEL,
+            endpoint="generateContent:googleSearch",
+        ) as observed:
+            text, urls, tokens = _grounded_call(
             "Brief a travel editor on this in a few dense paragraphs. How many "
-            "places of this kind the city plausibly has, which neighbourhoods "
-            "matter, and what it is known for.\n\n" + prompt,
-            model_name=GRILL_RESEARCH_MODEL,
-            max_tokens=GRILL_RESEARCH_MAX_TOKENS,
-            usage_recorder=None,
-        )
+                "places of this kind the city plausibly has, which "
+                "neighbourhoods matter, and what it is known for.\n\n" + prompt,
+                model_name=GRILL_RESEARCH_MODEL,
+                max_tokens=GRILL_RESEARCH_MAX_TOKENS,
+                usage_recorder=None,
+            )
+            # `_grounded_call` reports only a total, so input and output are
+            # not separable here. Recorded as a total rather than guessed at a
+            # split, which would price the call wrongly in both directions.
+            observed.record_usage({"total_tokens": tokens})
+            observed.add_metadata(sources=len(urls))
+        return text, urls, tokens
 
     return GrillDependencies(
         llm=DefaultPrompt2BlogLLM(),

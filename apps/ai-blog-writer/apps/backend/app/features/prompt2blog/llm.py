@@ -5,6 +5,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
+from app.shared.api_usage import observe_external_call, provider_for_llm
 from app.shared.text import enforce_anti_ai_tells_markdown
 from utils import get_vertex_llm, parse_json_response
 
@@ -15,6 +16,11 @@ from .support import _safe_str
 logger = logging.getLogger(__name__)
 
 UsageRecorder = Callable[[str, Any], None]
+
+# What the dashboard's API-usage monitor calls this work. The run id is not
+# available here, so calls are correlated by run at the stage level instead --
+# see `pricing.py` for the per-run ledger that does know it.
+USAGE_FEATURE = "prompt2blog"
 
 
 def _invoke_text_llm(
@@ -32,12 +38,25 @@ def _invoke_text_llm(
         max_tokens=max_tokens,
         model_name=resolved_model,
     )
-    result = llm.invoke(prompt)
+    reported_model = str(getattr(llm, "model_name", resolved_model))
+    # The observation wraps the provider call and nothing else, so the duration
+    # is the call's and a raised exception is recorded as a failed call before
+    # it reaches the stage that catches it.
+    with observe_external_call(
+        provider=provider_for_llm(llm, reported_model),
+        feature=USAGE_FEATURE,
+        model=reported_model,
+        endpoint="invoke_text",
+    ) as observed:
+        result = llm.invoke(prompt)
+        # Reading the usage metadata is pure attribute access on the object the
+        # call just filled in, so it belongs inside. Handing it to the run
+        # ledger does not: a recorder that raised would otherwise be reported
+        # as a failed provider call, which it is not.
+        usage = _usage_with_measured_cost(llm)
+        observed.record_usage(usage)
     if usage_recorder is not None:
-        usage_recorder(
-            str(getattr(llm, "model_name", resolved_model)),
-            _usage_with_measured_cost(llm),
-        )
+        usage_recorder(reported_model, usage)
     text = _safe_str(result)
     if not text:
         raise RuntimeError("LLM returned empty response")
@@ -119,12 +138,18 @@ def _invoke_schema_json_llm(
     if not callable(invoke_json):
         return None
 
-    parsed = invoke_json(prompt, input_schema=schema)
+    reported_model = str(getattr(llm, "model_name", model_name or DEFAULT_MODEL))
+    with observe_external_call(
+        provider=provider_for_llm(llm, reported_model),
+        feature=USAGE_FEATURE,
+        model=reported_model,
+        endpoint="invoke_json",
+    ) as observed:
+        parsed = invoke_json(prompt, input_schema=schema)
+        usage = _usage_with_measured_cost(llm)
+        observed.record_usage(usage)
     if usage_recorder is not None:
-        usage_recorder(
-            str(getattr(llm, "model_name", model_name or DEFAULT_MODEL)),
-            _usage_with_measured_cost(llm),
-        )
+        usage_recorder(reported_model, usage)
     if not isinstance(parsed, dict):
         raise RuntimeError("Schema-validated LLM response was not an object")
     # The trace wants the raw response the stage saw. There was no prose reply

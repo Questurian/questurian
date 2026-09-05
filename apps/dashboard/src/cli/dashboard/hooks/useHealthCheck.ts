@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { ProjectConfig, ProjectStatus, ServiceStatus, ServiceConfig } from "../types";
+import { ProjectConfig, ProjectStatus } from "../types";
 import { HEALTH_CHECK_INTERVAL } from "../config";
-import { checkHealth, isPortInUse } from "../utils";
+import { checkProjectStatus, PROCESS_START_TIME } from "../utils";
 
 interface UseHealthCheckResult {
   statuses: Map<string, ProjectStatus>;
@@ -13,10 +13,6 @@ interface UseHealthCheckResult {
 // Module-level flag to prevent double initialization across component remounts
 let healthCheckStarted = false;
 let healthCheckInterval: ReturnType<typeof setInterval> | null = null;
-
-// Track when the dashboard started for grace period calculations
-const dashboardStartTime = Date.now();
-const DEFAULT_GRACE_PERIOD_MS = 60000; // 60 seconds default grace period
 
 // Helper to compare status maps
 function statusesEqual(
@@ -31,44 +27,6 @@ function statusesEqual(
     }
   }
   return true;
-}
-
-/**
- * Check service status with "starting" detection
- * If health check fails but port is in use, the service is starting up
- * For slow-startup services, show "starting" during grace period even if port isn't bound yet
- */
-async function checkServiceStatus(
-  serviceConfig: ServiceConfig | undefined
-): Promise<ServiceStatus> {
-  if (!serviceConfig?.url || !serviceConfig?.port) {
-    return "offline";
-  }
-
-  const { url, healthPath, port, slowStartup, startupGracePeriodMs } = serviceConfig;
-  const healthStatus = await checkHealth(url, healthPath);
-
-  if (healthStatus === "online") {
-    return "online";
-  }
-
-  // Health check failed - check if port is in use (service starting)
-  const portInUse = await isPortInUse(port);
-  if (portInUse) {
-    return "starting";
-  }
-
-  // For slow-startup services, show "starting" during grace period
-  // even if the port isn't bound yet (e.g., Python loading ML models)
-  if (slowStartup) {
-    const gracePeriod = startupGracePeriodMs ?? DEFAULT_GRACE_PERIOD_MS;
-    const elapsed = Date.now() - dashboardStartTime;
-    if (elapsed < gracePeriod) {
-      return "starting";
-    }
-  }
-
-  return "offline";
 }
 
 export function useHealthCheck(projects: ProjectConfig[]): UseHealthCheckResult {
@@ -95,14 +53,13 @@ export function useHealthCheck(projects: ProjectConfig[]): UseHealthCheckResult 
     const checkAllStatuses = async () => {
       const results = await Promise.all(
         projectsRef.current.map(async (project) => {
-          const [clientStatus, serverStatus] = await Promise.all([
-            checkServiceStatus(project.client),
-            checkServiceStatus(project.server),
-          ]);
+          // The status rule itself lives in utils/serviceStatus so the web UI
+          // reports the same states this terminal view does.
+          const status = await checkProjectStatus(project, PROCESS_START_TIME);
           return {
             name: project.name,
-            client: clientStatus,
-            server: serverStatus,
+            client: status.client,
+            server: status.server,
           };
         })
       );

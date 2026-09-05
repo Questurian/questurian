@@ -30,6 +30,8 @@ import logging
 import os
 from dataclasses import dataclass
 
+from app.shared.api_usage import observe_external_call
+
 logger = logging.getLogger(__name__)
 
 _TEXT_SEARCH = "https://maps.googleapis.com/maps/api/place/textsearch/json"
@@ -95,13 +97,20 @@ def resolve(name: str, city: str) -> ResolvedPlace | None:
 
     query = f"{name} {city}".strip()
     try:
-        response = requests.get(
-            _TEXT_SEARCH,
-            params={"query": query, "key": key},
-            timeout=RESOLVE_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
-        body = response.json()
+        with observe_external_call(
+            provider="google-places",
+            feature="listicle.resolve_place",
+            endpoint="place/textsearch",
+        ) as observed:
+            response = requests.get(
+                _TEXT_SEARCH,
+                params={"query": query, "key": key},
+                timeout=RESOLVE_TIMEOUT_SECONDS,
+            )
+            observed.http_status = response.status_code
+            response.raise_for_status()
+            body = response.json()
+            observed.add_metadata(status=body.get("status"))
     except Exception as exc:  # pragma: no cover -- network dependent
         logger.warning("Place lookup failed for %r: %s", query, exc)
         return None

@@ -74,6 +74,12 @@ Definition: post-compose stage that adds pull quotes, key takeaways, FAQ blocks,
 Definition: a row in the `article_types` table. Fields: `id`, `name`, `definition`, `guideline`, `title_guideline`, timestamps.
 Do not confuse with: `ArticleTypeOption` (the DTO sent to UI).
 
+### API usage report
+
+A one-line report of one external call, sent to the Dashboard's collector (`apps/dashboard`) after the call has already happened. Emitted by `app/shared/api_usage.py` via `observe_external_call(...)`, which times the call, counts its tokens, prices it when it can be priced, and records a failure with its classified fault kind before the exception reaches the caller.
+
+Distinct from the **usage ledger** (`features/prompt2blog/pricing.py`), which is this app's own per-run receipt with per-stage attribution. Both see the same model call and neither replaces the other: the ledger answers "what did this run cost", the report answers "how is this provider behaving over time". The ledger is the source of truth for a run's cost.
+
 ### `ArticleTypeOption`
 
 Definition: the Pydantic shape exposed to clients for selection UI. Subset of the table row.
@@ -83,6 +89,7 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 - A **Pipeline Route** owns one **Running Pipeline** at a time per `run_id`.
 - A **Running Pipeline** writes one **StageResult** per stage to SQLite; the final state assembles a **PipelineArtifact**.
 - A **Classification** binds a run to one **`ArticleType`** row, which provides the `guideline` consumed by compose.
+- Prompt2Blog's model calls each produce two records: an entry in the run's **usage ledger** and an **API usage report** to the Dashboard. The report is fire-and-forget; the ledger is not.
 
 ## Domain Rules
 
@@ -93,6 +100,10 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
   runs; editors/admins may delete any run. Unowned runs are editor/admin-only.
   See ADR 0027.
 - A Quality Gate failure must trigger at least one repair attempt before the run is marked `failed`.
+- **Telemetry may never affect a run.** `app/shared/api_usage.py` does nothing without `USAGE_MONITOR_URL`, queues rather than blocks, drops rather than waits, and swallows every error. A collector that is down, slow or absent changes nothing about a pipeline.
+- **Report the provider, not the model name.** `provider_for_llm` reads the class of the object `get_vertex_llm` returned, because `claude-opus-5` runs on the subscription CLI or the Anthropic API and only the object knows which.
+- **One token normaliser.** `app/shared/token_usage.py` owns `normalize_token_usage`, the Vertex rate table and `estimated_vertex_cost`; both the run ledger and the usage monitor read it. Never write a second one — the second one got thinking tokens and Anthropic cache reads wrong, in the undercounting direction, and nothing caught it because both numbers looked plausible.
+- **A flat-rate subscription is never priced in a usage report.** The Claude CLI's `total_cost_usd` is a hypothetical API price, not money owed. The ledger may record it (a run receipt is a fair use); the dashboard must not (a cost chart answers "what will I be billed").
 - StageResult writes are idempotent, last-wins upserts keyed by `run_id + stage`: re-running a stage (e.g. a LangGraph resume) replaces its stored payload rather than appending. Payload shapes are intentionally feature-specific — `StageResult.data` is untyped (`Dict[str, object]`) and the storage adapter does not validate against `Stage[N]Output`.
 - `ArticleType` rows are mutable from admin tooling but should not be deleted while runs reference them.
 
@@ -114,6 +125,8 @@ Definition: the Pydantic shape exposed to clients for selection UI. Subset of th
 - **Inspect first:** the feature folder for the route you're touching (`app/features/<feature>/`), then `Stage*Output` in `packages/shared`, then `packages/utils`.
 - **Preserve verbatim:** `run_id`, `Stage[N]Output`, `Coverage Analysis`, `Quality Gate`, `Editorial Augmentation`, `Pipeline Route`.
 - **Do not** call Vertex directly — go through utils.
+- **Do not** put new shared helpers in `packages/utils`. Tests install a process-global `utils` stub in `sys.modules`; a new name there breaks unrelated tests. Use `app/shared/` — see `provider_faults.py` and `api_usage.py`.
+- **Do not** let a usage report raise or slow a call. If you instrument a new seam, wrap the provider call and nothing else.
 - **Do not** add a new top-level Stage to the 0–4 chain without an ADR; it's a contract change for the frontend mirror.
 - **Do not** modify `ArticleType` row shape without coordinating with the frontend (uses `ArticleTypeOption`).
 - Ask before merging two feature folders — the storage layout depends on the boundary.

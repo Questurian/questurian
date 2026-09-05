@@ -1,19 +1,20 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "module": "ESNext",
     "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "strict": true,
     "skipLibCheck": true,
-    "types": ["bun"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "react"
+    "jsxImportSource": "react",
+    "types": ["vite/client"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "dist", "src/web"]
+  "include": ["src/web/**/*.ts", "src/web/**/*.tsx", "src/usage/contract.ts", "src/usage/types.ts"],
+  "exclude": ["node_modules", "dist"]
 }

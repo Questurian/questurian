@@ -24,7 +24,7 @@ This file is the **context map**. It tells future readers where each bounded con
 | `apps/questura` | **Questura** (nested monorepo) | Public travel platform. Payload CMS backend + Next.js public site. Serves public location pages, attractions, dining, accommodations, nightlife, tours, currencies, paid content. | Enrichment workflow (delegated to Location Manager); article body generation (delegated to AI Blog Writer). | [apps/questura/CONTEXT.md](./apps/questura/CONTEXT.md) |
 | `apps/questura/apps/server` | Questura Server | Payload 3 collections, GraphQL + REST, public view-models, auth, payments. | UI rendering. | [.../server/CONTEXT.md](./apps/questura/apps/server/CONTEXT.md) |
 | `apps/questura/apps/client` | Questura Client | Next.js public site, SSR, i18n, Stripe checkout UI, maps. | Data ownership; CMS state. | [.../client/CONTEXT.md](./apps/questura/apps/client/CONTEXT.md) |
-| `apps/dashboard` | **Dashboard** (single app) | Terminal CLI + Hono service to monitor dev services (health, port, type) across the meta-monorepo. Passive observer. | Any business data; launching services. | [apps/dashboard/CONTEXT.md](./apps/dashboard/CONTEXT.md) |
+| `apps/dashboard` | **Dashboard** (single app) | Terminal CLI + web UI + Hono service. Monitors dev services (health, port, type), and collects reports of every external API call the other apps make (duration, tokens, cost, errors). Observer. | Any business data; launching services; proxying or pricing anybody's API calls. | [apps/dashboard/CONTEXT.md](./apps/dashboard/CONTEXT.md) |
 
 ## Context Reading Order
 
@@ -61,6 +61,17 @@ Public-image vocabulary. Defined authoritatively in `apps/questura/docs/adr/0001
 - **Producer of source images:** Location Manager (uploads source + focal point via Questura's `POST /api/media-sets/from-source`; does **not** crop locally).
 - Variant nomenclature follows Questura's `MEDIA_VARIANT_KEYS` (`thumbnail`, `square`, `wide`, `portrait`, `hero`, `open_graph`, `editorial`). LM's `'social'` is renamed to `'open_graph'`.
 - Do **not** treat `MediaSetStatus` as a public-readiness gate; placement readiness is decided per-placement.
+
+### ApiUsageEvent
+
+One external API call, as reported by the app that made it: `ts`, `service` (which of ours called out), `provider` (what was called), and `status`, plus optional `feature`, `endpoint`, `model`, `durationMs`, `tokens`, `costUsd`, `costBasis`, `correlationId`, `errorKind`.
+
+- **Owner of the shape:** Dashboard (`apps/dashboard/src/usage/contract.ts`, documented in `apps/dashboard/docs/api-usage-contract.md`).
+- **Producers:** any app that calls an external service. Today: AI Blog Writer's Prompt2Blog model calls.
+- **Consumer:** the Dashboard's API Usage tab.
+- **Bridge:** `POST /api/usage/v1/events`. HTTP only — emitters are copied into each producer, never imported, and each one is fire-and-forget.
+- Reporting is **observation, not participation**: the Dashboard never sits in the path of a call, and it never computes a cost. See `apps/dashboard/docs/adr/0001-observability-not-gateway.md`.
+- Not the same thing as Prompt2Blog's **usage ledger**, which is a per-run receipt owned by AI Blog Writer. The ledger answers "what did this run cost"; the ApiUsageEvent history answers "what have we been calling, and how is it behaving". Both read the same call; neither replaces the other.
 
 ### LexicalJSON
 
@@ -99,7 +110,14 @@ An optional reader-facing cue attached to a non-lodging stop in a Listicle Itine
 
                        ┌─────────────────────┐
                        │      Dashboard      │  observes ports/health of all of the above
-                       │  (Ink + Hono TUI)   │  (no inbound dependency from anyone else)
+                       │ (Ink + web + Hono)  │  and receives ApiUsageEvent reports from them
+                       └─────────────────────┘
+                                  ▲
+                                  │ ApiUsageEvent (HTTP, fire-and-forget)
+                                  │ every external call: duration, tokens, cost, errors
+                       ┌──────────┴──────────┐
+                       │  every app that     │
+                       │  calls out          │
                        └─────────────────────┘
 ```
 
@@ -107,7 +125,7 @@ An optional reader-facing cue attached to a non-lodging stop in a Listicle Itine
 - **Location Manager is the source of truth** for enrichment workflow state (review fetching, taxonomy corrections, pre-sync checklists).
 - **AI Blog Writer is the source of truth** for the run lifecycle (`run_id`, stages, artifacts) and for generated Markdown/LexicalJSON.
 - **Questura Server owns the Itinerary Moment vocabulary.** AI Blog Writer may select only accepted Moment keys; Questura Client presents the same vocabulary to readers.
-- **Dashboard owns nothing**; it only reads.
+- **Dashboard owns nothing anybody else needs.** It reads health, and it stores its own observations of other apps' external calls. Nothing reads those back, and no app cares whether the Dashboard is up.
 
 ## Cross-Repo Rules
 
@@ -116,6 +134,7 @@ An optional reader-facing cue attached to a non-lodging stop in a Listicle Itine
 - **Domain terms must not be redefined with different meanings inside a context.** When a term crosses a boundary, the consumer adopts the producer's definition and references the producing context in its glossary. Example: Questura is the owning context for `MediaSet`; Location Manager must conform.
 - **"Article" is overloaded.** AI Blog Writer's `Article` (Markdown output of a pipeline run) is **not** the same as Questura's `Articles` collection (a Payload record with editorial lifecycle). Each context defines it locally; never assume parity.
 - **Itinerary Moment vocabulary changes are cross-context changes.** Questura Server publishes the accepted Moment keys; AI Blog Writer and Questura Client must adopt the same vocabulary together.
+- **The API-usage contract is a cross-context contract.** Add optional fields; never repurpose or remove one. An emitter newer than the collector must not lose data, which is why unknown fields are preserved rather than rejected.
 - **Generated code must not define new domain language.** Payload's generated `payload-types.ts` reflects the collection schema; new vocabulary belongs in the schema first.
 - **The pipeline contract (`Stage[N]Output`, `PipelineArtifact`) is Python-side only.** TypeScript frontends mirror the shape; they do not import it.
 
