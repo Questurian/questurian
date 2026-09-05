@@ -11,7 +11,7 @@ def test_compose_itinerary_brief_uses_injected_writer():
     client = build_editor_assist_client(
         writer=lambda **_kwargs: FakeWriterResult(
             text="A food-led Lima trip for curious couples.",
-            model_name=editorial_actions.DEFAULT_MODEL,
+            model_name="gemini-2.5-flash-lite",
         )
     )
 

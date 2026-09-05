@@ -7,9 +7,9 @@ from fastapi import HTTPException
 
 from app.shared.prompts import ANTI_AI_TELLS_FULL
 from app.shared.text import enforce_anti_ai_tells_markdown
+from app.shared.model_calls import resolve
 from app.shared.writer_invocation import WriterModelError
 
-from .contracts import DEFAULT_MODEL
 from .dependencies import EditorAssistDependencies
 from .itinerary_composition_contracts import (
     ComposeIntroStepEvent,
@@ -21,6 +21,8 @@ from .listicle_prompt_policy import LIST_TONE_GUIDANCE
 from .listicle_writer_validation import strip_generation_fence
 
 logger = logging.getLogger(__name__)
+
+JOB = "editor.itinerary_intro"
 
 COMPOSE_INTRO_PROMPT = """You are an expert travel-editorial writer composing the \
 opening of a published listicle itinerary.
@@ -130,10 +132,13 @@ def _compose_itinerary_intro_impl(
         )
     ]
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    # An operator's own choice, or None so the gateway decides.
+    chosen_model = (request.model_name or "").strip() or None
+    model_used = resolve(JOB, chosen_model)
     writer_started = time.monotonic()
     try:
         writer_result = dependencies.invoke_writer(
+            job_id=JOB,
             prompt=llm_prompt,
             model_name=model_used,
             max_tokens=2048,
@@ -163,6 +168,7 @@ def _compose_itinerary_intro_impl(
     intro = enforce_anti_ai_tells_markdown(
         strip_generation_fence(raw_text),
         repair=lambda repair_prompt: dependencies.invoke_writer(
+            job_id=JOB,
             prompt=repair_prompt,
             model_name=model_used,
             max_tokens=2048,

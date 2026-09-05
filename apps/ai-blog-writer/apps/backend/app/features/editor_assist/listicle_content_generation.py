@@ -6,7 +6,8 @@ import logging
 
 from fastapi import HTTPException
 
-from .contracts import DEFAULT_MODEL
+from app.shared.model_calls import resolve
+
 from .dependencies import EditorAssistDependencies
 from .listicle_content_batch import prepare_listicle_batch
 from .listicle_content_contracts import (
@@ -17,6 +18,8 @@ from .listicle_content_contracts import (
 from .listicle_content_target import generate_listicle_target
 
 logger = logging.getLogger(__name__)
+
+JOB = "editor.listicle_blurb"
 
 
 def generate_listicle_content(
@@ -37,7 +40,9 @@ def generate_listicle_content(
     if not request.targets:
         raise HTTPException(status_code=400, detail="At least one target is required")
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    # An operator's own choice, or None so the gateway decides.
+    chosen_model = (request.model_name or "").strip() or None
+    model_used = resolve(JOB, chosen_model)
     prepared = prepare_listicle_batch(
         request.targets,
         article_location=article_location,

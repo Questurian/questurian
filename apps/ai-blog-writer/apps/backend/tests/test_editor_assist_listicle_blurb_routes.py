@@ -44,10 +44,13 @@ ATTRACTIONS_CURATOR = build_fake_curator(
 
 
 def _build_prompt_capturing_writer(captured: dict[str, str], *, word_count: int = 100):
-    def _fake_writer(*, prompt, model_name, max_tokens, temperature):
+    def _fake_writer(*, job_id, prompt, model_name, max_tokens, temperature):
         del max_tokens, temperature
         captured["prompt"] = prompt
-        return FakeWriterResult(paragraph(word_count), model_name)
+        captured["job_id"] = job_id
+        # The route names a job and leaves the model to the gateway, so the
+        # double answers as whatever the gateway would have picked.
+        return FakeWriterResult(paragraph(word_count), model_name or "gemini-2.5-flash-lite")
 
     return _fake_writer
 

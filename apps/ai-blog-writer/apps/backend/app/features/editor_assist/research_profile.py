@@ -33,15 +33,32 @@ from .research_profile_parsing import (  # noqa: F401
     extract_json as _extract_json,
     parse_research_profile_response as _parse_research_profile_response,
 )
+from app.shared.model_calls import grounded_text
+
 from .research_profile_prompt import build_research_profile_prompt
 
 logger = logging.getLogger(__name__)
 
 
-def _invoke_grounded(*args: Any, **kwargs: Any) -> Any:
-    from utils import invoke_google_grounded_text as _invoke
+JOB = "editor.research_profile"
 
-    return _invoke(*args, **kwargs)
+
+def _invoke_grounded(prompt: Any, **kwargs: Any) -> Any:
+    """The real grounded call, named by its job and reported.
+
+    `model_name` arrives here as the caller's choice and is passed through as
+    an override; None -- the usual case -- lets the gateway decide.
+    """
+    return grounded_text(
+        JOB,
+        prompt,
+        model=kwargs.pop("model_name", None),
+        fallback_model=kwargs.pop("fallback_model_name", None),
+        max_tokens=kwargs.pop("max_tokens", 1024),
+        temperature=kwargs.pop("temperature", 0.05),
+        timeout_seconds=kwargs.pop("timeout_seconds", None),
+        endpoint="research_profile",
+    )
 
 
 def run_research_profile(
@@ -50,7 +67,7 @@ def run_research_profile(
     location_label: str,
     category: str,
     requested_angle: ListicleAngle | None,
-    grounded_model: str = "gemini-2.5-flash",
+    grounded_model: str | None = None,
 ) -> tuple[ResearchProfile, ResearchProfileTrace]:
     return execute_research_profile(
         venue_name=venue_name,
@@ -66,7 +83,7 @@ def run_research_profile(
 def run_research_profiles_concurrently(
     requests: list[ResearchProfileRequest],
     *,
-    grounded_model: str = "gemini-2.5-flash",
+    grounded_model: str | None = None,
     max_workers: int | None = None,
 ) -> dict[str, tuple[ResearchProfile, ResearchProfileTrace]]:
     return execute_research_profiles_concurrently(

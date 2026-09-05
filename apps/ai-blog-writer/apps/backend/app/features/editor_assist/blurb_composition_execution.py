@@ -27,6 +27,8 @@ from .listicle_writer_validation import strip_generation_fence
 
 logger = logging.getLogger(__name__)
 
+JOB = "editor.listicle_blurb"
+
 
 def _elapsed_ms(start: float) -> int:
     return int((time.perf_counter() - start) * 1000)
@@ -65,6 +67,7 @@ def execute_writer_plan(
     writer_start = time.perf_counter()
     try:
         writer_result = deps.invoke_writer(
+            job_id=JOB,
             prompt=plan.prompt,
             model_name=settings.model_name,
             max_tokens=8192,
@@ -136,6 +139,7 @@ def execute_writer_plan(
         )
         try:
             retry_result = deps.invoke_writer(
+            job_id=JOB,
                 prompt=retry_prompt,
                 model_name=settings.model_name,
                 max_tokens=8192,

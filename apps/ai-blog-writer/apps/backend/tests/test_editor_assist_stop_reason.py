@@ -24,7 +24,7 @@ def _writer_returning(text: str):
     class _WriterResult:
         def __init__(self) -> None:
             self.text = text
-            self.model_name = itinerary_composition.DEFAULT_MODEL
+            self.model_name = "gemini-2.5-flash-lite"
 
     return lambda **_kwargs: _WriterResult()
 
@@ -36,7 +36,7 @@ def _capturing_writer(text: str, sink: dict):
         class _WriterResult:
             def __init__(self) -> None:
                 self.text = text
-                self.model_name = itinerary_composition.DEFAULT_MODEL
+                self.model_name = "gemini-2.5-flash-lite"
 
         return _WriterResult()
 
@@ -68,7 +68,7 @@ def test_stop_reason_refines_rough_note(monkeypatch):
     assert response.status_code == 200
     payload = response.json()
     assert payload["reason"] == refined
-    assert payload["model_used"] == itinerary_composition.DEFAULT_MODEL
+    assert payload["model_used"] == "gemini-2.5-flash-lite"
 
 
 def test_stop_reason_passes_rough_note_and_context_to_writer(monkeypatch):

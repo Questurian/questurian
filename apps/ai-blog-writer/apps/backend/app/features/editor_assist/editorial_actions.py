@@ -9,11 +9,11 @@ from pydantic import BaseModel, Field
 
 from app.core.staff_auth import require_staff
 from app.shared.prompts import ANTI_AI_TELLS_FULL
+from app.shared.model_calls import resolve
 from app.shared.text import enforce_anti_ai_tells_markdown
 from app.shared.writer_invocation import WriterModelError
 
 from .contracts import (
-    DEFAULT_MODEL,
     MAX_ARTICLE_CONTEXT_CHARS,
     MAX_ARTICLE_TITLE_CHARS,
     MAX_BLOCK_CHARS,
@@ -24,6 +24,11 @@ from .dependencies import EditorAssistDependencies, get_editor_assist_dependenci
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# Two routes, two jobs: proposing a title and rewriting a block are
+# separately worth costing and separately worth tuning.
+JOB_TITLE = "editor.generate_title"
+JOB_REWRITE = "editor.rewrite_block"
 
 BLOCK_REWRITE_PROMPT = """You are an expert editorial rewriting assistant.
 
@@ -150,7 +155,8 @@ def _generate_title_impl(
     if not prompt:
         raise HTTPException(status_code=400, detail="prompt is required")
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    chosen_model = (request.model_name or "").strip() or None
+    model_used = resolve(JOB_TITLE, chosen_model)
     llm_prompt = (
         f"{TITLE_IMPROVE_PROMPT}\n\n"
         f"Current title: {current_title}\n\n"
@@ -159,6 +165,7 @@ def _generate_title_impl(
 
     try:
         writer_result = dependencies.invoke_writer(
+            job_id=JOB_TITLE,
             prompt=llm_prompt,
             model_name=model_used,
             max_tokens=2048,
@@ -226,7 +233,8 @@ def _rewrite_block_impl(
     if not block_content:
         raise HTTPException(status_code=400, detail="block_content is required")
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    chosen_model = (request.model_name or "").strip() or None
+    model_used = resolve(JOB_REWRITE, chosen_model)
     llm_prompt = (
         f"{BLOCK_REWRITE_PROMPT}\n\n"
         f"Editor instruction:\n{prompt}\n\n"
@@ -252,6 +260,7 @@ def _rewrite_block_impl(
 
     try:
         writer_result = dependencies.invoke_writer(
+            job_id=JOB_REWRITE,
             prompt=llm_prompt,
             model_name=model_used,
             max_tokens=8192,
@@ -277,6 +286,7 @@ def _rewrite_block_impl(
     rewritten_content = enforce_anti_ai_tells_markdown(
         rewritten_content,
         repair=lambda repair_prompt: dependencies.invoke_writer(
+            job_id=JOB_REWRITE,
             prompt=repair_prompt,
             model_name=model_used,
             max_tokens=8192,

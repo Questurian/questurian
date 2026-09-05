@@ -5,9 +5,9 @@ import logging
 from fastapi import HTTPException
 
 from app.shared.text import normalize_dashes
+from app.shared.model_calls import resolve
 from app.shared.writer_invocation import WriterModelError
 
-from .contracts import DEFAULT_MODEL
 from .dependencies import EditorAssistDependencies
 from .itinerary_composition_contracts import (
     MAX_PROFILE_OPTION_CHARS,
@@ -16,6 +16,8 @@ from .itinerary_composition_contracts import (
 )
 
 logger = logging.getLogger(__name__)
+
+JOB = "editor.itinerary_brief"
 
 COMPOSE_BRIEF_PROMPT = """You are an expert travel-editorial planner writing an itinerary generation brief.
 
@@ -94,9 +96,12 @@ def _compose_itinerary_brief_impl(
     if context_lines:
         llm_prompt += "\n\nTrip context:\n" + "\n".join(context_lines)
 
-    model_used = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    # An operator's own choice, or None so the gateway decides.
+    chosen_model = (request.model_name or "").strip() or None
+    model_used = resolve(JOB, chosen_model)
     try:
         writer_result = dependencies.invoke_writer(
+            job_id=JOB,
             prompt=llm_prompt,
             model_name=model_used,
             max_tokens=2048,

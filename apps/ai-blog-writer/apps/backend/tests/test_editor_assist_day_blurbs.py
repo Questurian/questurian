@@ -28,7 +28,7 @@ def _writer_returning(text: str):
     class _WriterResult:
         def __init__(self) -> None:
             self.text = text
-            self.model_name = itinerary_composition.DEFAULT_MODEL
+            self.model_name = "gemini-2.5-flash-lite"
 
     return lambda **_kwargs: _WriterResult()
 
@@ -37,7 +37,7 @@ def _writer_capturing(text: str, sink: dict):
     class _WriterResult:
         def __init__(self) -> None:
             self.text = text
-            self.model_name = itinerary_composition.DEFAULT_MODEL
+            self.model_name = "gemini-2.5-flash-lite"
 
     def _invoke(**kwargs):
         sink["prompt"] = kwargs.get("prompt", "")
@@ -87,7 +87,7 @@ def test_day_blurbs_composes_one_paragraph_per_stop(monkeypatch):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["model_used"] == itinerary_composition.DEFAULT_MODEL
+    assert payload["model_used"] == "gemini-2.5-flash-lite"
 
     results = payload["results"]
     assert results["ws-1_blurb"]["status"] == "generated"

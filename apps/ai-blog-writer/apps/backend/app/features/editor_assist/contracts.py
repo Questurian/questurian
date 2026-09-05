@@ -2,7 +2,6 @@
 
 from typing import Literal
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
 MAX_PROMPT_CHARS = 10000
 MAX_BLOCK_CHARS = 24000
 MAX_ARTICLE_TITLE_CHARS = 300
