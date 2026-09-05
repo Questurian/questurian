@@ -1,0 +1,15 @@
+{
+  "run_id": "95a74dce-fa41-4bbb-b7a5-2e4e8d417dfe",
+  "ledger_sha256": "5e45e12b146aa0595817f24b437239eaf2c9acb32f53afe6a0441a35b81022e7",
+  "ledger_chars": 66172,
+  "projection_chars": 31015,
+  "saved_chars": 35157,
+  "old_full_prompt_chars": 105385,
+  "projected_full_prompt_chars": 70228,
+  "duplicate_voice_conventions_chars": 3474,
+  "claims_preserved": 80,
+  "coverage_conflicts_premises_gaps_byte_identical": true,
+  "token_estimate_method": "characters / 4; not provider tokenizer",
+  "historical_marginal_input_rate_usd_per_million": 0.3,
+  "historical_estimated_compose_saving_usd": 0.002636775
+}
