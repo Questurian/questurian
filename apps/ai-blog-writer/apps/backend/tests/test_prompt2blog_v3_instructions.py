@@ -312,11 +312,23 @@ def test_the_outline_budget_leaves_room_for_what_compose_adds():
 
     The plan budgeted the full target while compose was separately required to
     add an opening and takeaways that nobody counted.
+
+    The reserve is now subtracted before the prompt is built rather than asked
+    for in prose. The old wording survived beside the template rule that
+    contradicted it, and run 95a74dce planned 730 against a 900 target twice --
+    900 - 165 -- because it obeyed the more specific of the two.
     """
+    from app.features.prompt2blog.support import UNPLANNED_WORDS, _section_budget
+
+    assert _section_budget({"length": {"target_word_count": 900}}) == 900 - UNPLANNED_WORDS
+    assert _section_budget({"length": {"target_word_count": 0}}) == 0
+    assert _section_budget({}) == 0
+
     outline = _flat(assemble_v3_instructions(_request()).stage_contexts.outline.text)
 
-    assert "roughly 165 words" in outline
-    assert "Budget the sections to the target minus that." in outline
+    # The model is given the reserved number, never the subtraction.
+    assert "do not subtract anything further" in outline.lower()
+    assert "target minus that" not in outline
 
 
 def test_compose_leads_with_the_brief_and_treats_evidence_as_material():
@@ -366,3 +378,67 @@ def test_the_audit_prompt_asks_whether_the_draft_walks_into_it():
     # Freehand text, so an auditor that cannot apply it must leave it alone
     # rather than invent a reading.
     assert "it is not a gate" in prompt
+
+
+def test_the_outline_gets_its_facts_under_more_than_one_heading():
+    """The grouping existed and never ran.
+
+    `_facts_by_subject` read `claim.subject` through a getattr default, and
+    `NormalizedClaim` has no such field, so every fact in every run landed
+    under "General" -- the exact shape the function was written to prevent.
+    It now groups on the work order's own search groups, which say which
+    questions share sources rather than which question was asked.
+    """
+    fixture = _fixture()
+    package = json.loads(json.dumps(fixture["evidence_package"]))
+    # The shared fixture has one claim against one question, so it cannot show
+    # a split. Give it a second fact against a second question rather than
+    # editing a file the other tests in here read.
+    first = package["claims"][0]
+    second = dict(first, claim_id="c2", requirement_ids=["r2"])
+    package["claims"].append(second)
+    for requirement in package["requirements"]:
+        if requirement["requirement_id"] == "r2":
+            requirement.update(status="supported", claim_ids=["c2"], gap="")
+
+    work_order = json.loads(json.dumps(fixture["work_order"]))
+    for requirement in work_order["requirements"]:
+        requirement["search_group"] = (
+            "getting around" if requirement["requirement_id"] == "r1" else "prices"
+        )
+
+    request = _request(work_order=work_order, evidence_package=package)
+    facts = assemble_v3_instructions(request).stage_contexts.outline.text
+    block = facts[facts.index("FACTS AVAILABLE, BY SUBJECT"):]
+    block = block[: block.index("COVERAGE BOOKKEEPING")]
+
+    headings = [
+        line
+        for line in block.splitlines()
+        if line and not line.startswith("- ") and line != "FACTS AVAILABLE, BY SUBJECT"
+    ]
+
+    assert headings == ["getting around", "prices"]
+    assert "General" not in headings
+
+
+def test_a_fact_answering_no_grouped_question_still_appears():
+    """Grouping must never be a filter.
+
+    A work order planned before #500 carries no search groups at all, so this
+    is also the honest description of what those runs still get: one bucket,
+    every fact present.
+    """
+    request = _request()
+    stripped = request.model_copy(deep=True)
+    for requirement in stripped.work_order.requirements:
+        requirement.search_group = ""
+
+    facts = assemble_v3_instructions(stripped).stage_contexts.outline.text
+    block = facts[facts.index("FACTS AVAILABLE, BY SUBJECT"):]
+    block = block[: block.index("COVERAGE BOOKKEEPING")]
+
+    assert "General" in block
+    assert len([line for line in block.splitlines() if line.startswith("- ")]) == len(
+        normalize_evidence(stripped.work_order, stripped.evidence_package).claims
+    )

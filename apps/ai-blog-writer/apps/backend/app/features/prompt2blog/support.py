@@ -109,6 +109,27 @@ def _format_hard_constraints(writing_brief: dict[str, Any]) -> str:
     return "\n\n".join(sections)
 
 
+# Compose writes an opening and a closing takeaways section that the outline
+# does not plan and nobody budgets. The outline used to be told to subtract
+# this itself, in a rule that contradicted its own template -- see
+# `_section_budget`.
+UNPLANNED_WORDS = 165
+
+
+def _section_budget(option_context: dict[str, Any]) -> int:
+    """What the outline's sections must total, reserve already removed.
+
+    The outline template asked for section budgets totalling the target while
+    the injected planning rules asked for the target minus the reserve. Run
+    95a74dce planned 730 against a 900 target in both passes -- 900 - 165 = 735
+    -- so it was obeying the more specific of two conflicting instructions and
+    getting it right. Doing the subtraction here leaves one number in the
+    prompt and none of the arithmetic with the model.
+    """
+    target = _target_word_count(option_context)
+    return max(0, target - UNPLANNED_WORDS) if target else 0
+
+
 def _target_word_count(option_context: dict[str, Any]) -> int:
     """The whole-article word target the outline plans to and compose writes to.
 
@@ -120,13 +141,23 @@ def _target_word_count(option_context: dict[str, Any]) -> int:
     return _safe_int(_safe_dict(option_context.get("length")).get("target_word_count"))
 
 
-def _format_style_directive(option_context: dict[str, Any]) -> str:
+def _format_style_directive(
+    option_context: dict[str, Any], *, keys: tuple[str, ...] | None = None
+) -> str:
     """Render the resolved tone, length, and brand voice guides as a required
     style block. These used to travel inside ``editorial_instructions``, which
     every prompt renders under the header "NARRATIVE FOCUS (OPTIONAL)" -- so the
     whole tone guide reached the model labelled optional. Built from
     ``option_context`` rather than the writing brief so the runtime-run path
-    gets the same directive as a full run."""
+    gets the same directive as a full run.
+
+    ``keys`` narrows what is rendered. Compose passes ``("length",)`` because
+    its stage context already carries the voice and the writing conventions as
+    their own sections, and this block was repeating both of them -- 3,474
+    duplicated characters in run 95a74dce. Audit and repair pass nothing and
+    keep the whole directive: neither has a `voice` section, so for those two
+    this block is the only place the voice reaches the model at all.
+    """
     context = _safe_dict(option_context)
 
     sections: list[str] = []
@@ -135,6 +166,8 @@ def _format_style_directive(option_context: dict[str, Any]) -> str:
         ("length", "Length"),
         ("brand_voice", "Brand voice"),
     ):
+        if keys is not None and key not in keys:
+            continue
         option = _safe_dict(context.get(key))
         instructions = _safe_str(option.get("instructions"))
         if not instructions:

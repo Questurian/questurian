@@ -190,7 +190,9 @@ def _form_structure(form_instructions: str) -> str:
     )
 
 
-def _facts_by_subject(evidence: NormalizedEvidence) -> str:
+def _facts_by_subject(
+    evidence: NormalizedEvidence, work_order: Prompt2BlogWorkOrder
+) -> str:
     """The facts, grouped by what they are about.
 
     The outline used to be handed this ledger indexed by requirement id, and it
@@ -202,12 +204,35 @@ def _facts_by_subject(evidence: NormalizedEvidence) -> str:
     The requirement index still follows, because coverage has to stay
     checkable. It is second, and it is labelled as bookkeeping.
     """
+    # The work order's own search groups. They were written to say which
+    # questions can be answered from the same sources -- one route's stations,
+    # fare and duration; one museum's hours and admission -- so they already
+    # name subjects rather than questions, and no model call is needed to sort.
+    #
+    # This replaces `getattr(claim, "subject", "")`, which read a field
+    # `NormalizedClaim` has never had. The default swallowed it, every fact in
+    # every run landed under "General", and the grouping this function exists
+    # for has never once happened.
+    #
+    # It is not a perfect subject index: a group is still derived from what was
+    # researched together, so a plan with one group per section would come back
+    # coarser rather than differently shaped. It is the only real signal
+    # available without a classification call, and it beats one bucket.
+    group_of_requirement = {
+        item.requirement_id: _safe_str(item.search_group).replace("_", " ").strip()
+        for item in work_order.requirements
+    }
+
     by_subject: dict[str, list[str]] = {}
     for claim in evidence.claims:
-        # The source's own subject line is the best grouping available without
-        # asking a model to classify facts, which would be a call to save a
-        # sort.
-        subject = _safe_str(getattr(claim, "subject", "")) or "General"
+        subject = next(
+            (
+                group_of_requirement[requirement_id]
+                for requirement_id in claim.requirement_ids
+                if group_of_requirement.get(requirement_id)
+            ),
+            "",
+        ) or "General"
         as_of = f" (as of {claim.as_of})" if claim.as_of else ""
         by_subject.setdefault(subject, []).append(
             f"- {claim.claim_id} — {claim.text}{as_of} [{claim.confidence}]"
@@ -443,7 +468,7 @@ def assemble_v3_instructions(
                     "form_structure",
                     f"ARTICLE FORM STRUCTURE — {form.label}\n{form_structure}",
                 ),
-                ("facts", _facts_by_subject(evidence)),
+                ("facts", _facts_by_subject(evidence, work_order)),
                 (
                     "outline_rules",
                     "PLANNING RULES\n"
@@ -456,10 +481,14 @@ def assemble_v3_instructions(
                     # A4. Compose is separately required to add an opening and
                     # takeaways -- about 165 words nobody counts -- so a plan
                     # that budgets the full target overshoots by construction.
-                    "- Your section budgets must leave room for an opening and "
-                    "a closing takeaways section, which you do not plan and "
-                    "which cost roughly 165 words together. Budget the "
-                    "sections to the target minus that.\n"
+                    # The reserve is now subtracted before the prompt is built
+                    # and arrives as SECTION BUDGET: this rule and the template
+                    # used to give the model two different totals and ask it to
+                    # reconcile them, which is why run 95a74dce planned 730
+                    # against a 900 target, twice.
+                    "- The SECTION BUDGET already excludes the opening and the "
+                    "closing takeaways, which you do not plan. Budget to it "
+                    "exactly; do not subtract anything further.\n"
                     "- Group sections by subject. One section per research "
                     "question is a research plan, not an article.",
                 ),

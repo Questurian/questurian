@@ -29,7 +29,9 @@ def run_v3_compose_stage(
     run_id = state["run_id"]
     dependencies.recorder.start_stage(run_id, stage)
 
-    style_directive = _format_style_directive(state["option_context"])
+    style_directive = _format_style_directive(
+        state["option_context"], keys=("length",)
+    )
     prompt = P2B_V3_COMPOSE_PROMPT.format(
         outline=state["outline_text"],
         target_word_count=_target_word_count(_safe_dict(state["option_context"]))
