@@ -82,6 +82,30 @@ def _mentions(text: str, name: str) -> bool:
     )
 
 
+_SUBJECT_LEAD_SKIP = {"the", "a", "an"}
+
+
+def _names_subject(heading: str, primary_subject: str) -> bool:
+    """Whether a heading names the article's own subject.
+
+    `_mentions` wants the whole phrase, with a comma shorthand for geography
+    ("Medellin, Colombia" matches a heading saying "Medellin"). A subject that
+    is not a place does not decompose that way: `primary_subject` was "Chifa
+    cuisine" and every heading said "Chifa", so nothing matched and headings
+    that plainly named the subject read as drift.
+
+    So the leading word counts too. "Chifa cuisine" is named by "Chifa";
+    "The Malecon" by "Malecon". An article is a poor fit for this check if its
+    subject's first word is a bare category noun, which is why it is only ever
+    used to *permit* a heading, never to condemn one.
+    """
+    if _mentions(heading, primary_subject):
+        return True
+    locality = primary_subject.split(",", maxsplit=1)[0]
+    words = [word for word in locality.split() if word.casefold() not in _SUBJECT_LEAD_SKIP]
+    return bool(words) and _mentions(heading, words[0])
+
+
 def validate_v3_outline(
     outline: dict[str, Any],
     *,
@@ -128,15 +152,26 @@ def validate_v3_outline(
         for reference in references
         if reference.get("role") == "context_only"
     ]
+    primary_subject = _safe_str(work_order.get("primary_subject"))
+    # A context-only place may be discussed inside a section and may not be
+    # what the section is about. Mentioning it is not being about it: a heading
+    # that names the subject as well is contrasting, not drifting.
+    #
+    # Run 90f348df was commissioned on the spine "the chifa worth eating is not
+    # in Barrio Chino", and the heading that states exactly that -- "Beyond
+    # Barrio Chino: Where Lima's Best Chifa Resides" -- was struck for naming
+    # Barrio Chino, along with three more. Four sections deleted and an article
+    # written round the holes. The rule was reading any mention as ownership.
     context_only_headings = sorted(
         {
             section["heading"]
             for section in sections
             for name in context_only
-            if name and _mentions(section["heading"], name)
+            if name
+            and _mentions(section["heading"], name)
+            and not _names_subject(section["heading"], primary_subject)
         }
     )
-    primary_subject = _safe_str(work_order.get("primary_subject"))
     # A well-built outline often names the subject once in its framing and then
     # relies on subject-specific detail in the sections ("El Poblado", "Museo de
     # Antioquia") rather than repeating the city in every heading. Genuine drift

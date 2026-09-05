@@ -325,3 +325,40 @@ def test_withdrawing_an_assumption_nobody_declared_is_refused():
             Prompt2BlogWorkOrder.model_validate(fixture["work_order"]),
             assumption_id="never-declared",
         )
+
+
+# --- a context-only place may be named in a heading, not owned by one ------
+
+
+def test_a_heading_may_contrast_with_a_context_only_place():
+    """Run 90f348df's spine was "the chifa worth eating is not in Barrio
+    Chino", and the heading saying exactly that was struck for naming Barrio
+    Chino. Four sections were deleted and the article written round the holes.
+    """
+    from app.features.prompt2blog.content.outline_v3 import _mentions, _names_subject
+
+    contexts = ["Barrio Chino, Lima, Peru", "Lima, Peru"]
+
+    def flagged(heading: str, subject: str = "Chifa cuisine") -> bool:
+        return any(_mentions(heading, c) for c in contexts) and not _names_subject(
+            heading, subject
+        )
+
+    # Names the context-only place AND the subject: contrast, not drift.
+    assert not flagged("Beyond Barrio Chino: Where Lima's Best Chifa Resides")
+    assert not flagged("Chifa's Prominence in Lima's Culinary Landscape")
+
+    # Genuinely about the context-only place. Still refused.
+    assert flagged("A History of Barrio Chino")
+    assert flagged("Where to Eat in Barrio Chino")
+
+
+def test_the_subject_is_recognised_by_its_leading_word():
+    """`_mentions` wants the whole phrase. `primary_subject` was "Chifa
+    cuisine" and every heading said "Chifa", so nothing matched."""
+    from app.features.prompt2blog.content.outline_v3 import _names_subject
+
+    assert _names_subject("Where the Best Chifa Is", "Chifa cuisine")
+    assert _names_subject("Walking the Malecon", "The Malecon")
+    assert _names_subject("Medellin After Dark", "Medellin, Colombia")
+    assert not _names_subject("Getting There by Taxi", "Chifa cuisine")
