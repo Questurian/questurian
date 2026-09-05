@@ -25,6 +25,7 @@ import {
   UnknownJobError,
   type SettingsStore,
 } from "../settings/store";
+import { listenerStatuses } from "../settings/listeners";
 import { servedBy } from "../settings/substitution";
 import { modelRates } from "../usage/rates";
 
@@ -50,6 +51,7 @@ export function createSettingsRoutes(options: SettingsRouteOptions = {}): Hono {
       schemaVersion: SETTINGS_SCHEMA_VERSION,
       table: "GET /api/settings/v1/models",
       jobs: "GET /api/settings/v1/jobs",
+      listeners: "GET /api/settings/v1/listeners",
       change: "PUT /api/settings/v1/models/:jobId",
       reset: "DELETE /api/settings/v1/models/:jobId",
     }),
@@ -120,6 +122,11 @@ export function createSettingsRoutes(options: SettingsRouteOptions = {}): Hono {
     const cleared = store().clear(jobId);
     return c.json({ jobId, cleared, model: job.defaultModel });
   });
+
+  // Asked of the apps rather than of this dashboard's own state, because
+  // serving a table and having it read are different facts and only the first
+  // was ever visible here.
+  settings.get("/v1/listeners", async (c) => c.json({ apps: await listenerStatuses() }));
 
   // Named separately because "how many of these can actually be changed" is
   // the first question a settings screen has to answer honestly.

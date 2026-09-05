@@ -333,3 +333,36 @@ def set_settings(settings: Optional[Settings]) -> None:
     global _settings
     with _settings_lock:
         _settings = settings
+
+
+def status_payload(app: str) -> dict[str, Any]:
+    """Whether this process is actually reading the dashboard, and what pins it.
+
+    Exists because the answer was silently "no" for ai-blog-writer for an
+    entire rollout. Location Manager was wired to the dashboard and this app
+    was not, so the Models tab appeared to change 39 jobs and changed none of
+    them -- the settings saved, the screen updated, and the running backend
+    went on reading the models compiled into it.
+
+    Nothing in the dashboard could have told you that, because a table that is
+    served and a table that is read are different facts and only one of them
+    was visible. This is the other one.
+    """
+    from .jobs import jobs_for_app
+
+    settings = get_settings()
+    table = settings.table()
+    return {
+        "app": app,
+        "settingsUrl": settings.config.url,
+        # "dashboard" means this process has successfully read the live table.
+        # "defaults" means it is running on what is compiled into it, whether
+        # because nothing is configured or because the fetch has never worked.
+        "tableSource": table.source,
+        "failedFetches": settings.failed_fetches,
+        # Jobs an environment variable is holding. A pinned job ignores the
+        # dashboard, so a change there does nothing and the screen should say
+        # so rather than let someone wonder.
+        "pinnedJobs": settings.pinned_jobs(),
+        "jobs": [entry.job_id for entry in jobs_for_app(app)],
+    }

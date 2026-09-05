@@ -185,3 +185,26 @@ describe("the Claude substitution", () => {
     expect(compose.servedBy).toBeNull();
   });
 });
+
+describe("whether the apps are actually reading this table", () => {
+  it("says so plainly when an app is not running", async () => {
+    // Nothing on port 4003 in a test run, which is the normal case here.
+    const call = routes();
+    const { body } = await call("/v1/listeners");
+    const abw = body.apps.find((entry: { app: string }) => entry.app === "ai-blog-writer");
+    expect(abw.reachable).toBe(false);
+    expect(abw.url).toContain("/model-gateway/status");
+  });
+
+  it("asks both apps, not just the one that was wired first", async () => {
+    // The bug this endpoint exists for: Location Manager was wired to this
+    // dashboard and ai-blog-writer was not, so the Models tab appeared to
+    // change 39 jobs and changed none of them.
+    const call = routes();
+    const { body } = await call("/v1/listeners");
+    expect(body.apps.map((entry: { app: string }) => entry.app).sort()).toEqual([
+      "ai-blog-writer",
+      "location-manager",
+    ]);
+  });
+});

@@ -60,6 +60,7 @@ from .settings import (
     Settings,
     get_settings,
     set_settings,
+    status_payload,
 )
 from .substitution import effective_model, substitution_report
 from .tokens import normalize_token_usage
@@ -115,6 +116,7 @@ __all__ = [
     "Settings",
     "get_settings",
     "set_settings",
+    "status_payload",
     # rates
     "MODEL_RATES",
     "ModelRate",

@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchJobSettings, resetJobModel, setJobModel, type JobSetting } from "../lib/api";
+import {
+  fetchJobSettings,
+  fetchListeners,
+  resetJobModel,
+  setJobModel,
+  type JobSetting,
+  type ListenerStatus,
+} from "../lib/api";
 import { Panel } from "../components/primitives";
 
 /**
@@ -20,6 +27,52 @@ import { Panel } from "../components/primitives";
  * Prompt2Blog stage on the wrong model produces a worse article, and a Location
  * Manager job on the wrong model quietly costs eight times as much per image.
  */
+
+/**
+ * Whether an app is really reading this table.
+ *
+ * Serving a table and having it read are different facts. For an entire
+ * rollout only the first was visible here, and one app was quietly ignoring
+ * everything this screen did.
+ */
+function ListenerBanner({ status }: { status: ListenerStatus | undefined }) {
+  if (!status) return null;
+
+  if (!status.reachable) {
+    return (
+      <p className="px-3 py-2 text-[11px] text-ink-faint">
+        Not running. It will read this table when it next starts; until then
+        nothing here reaches it.
+      </p>
+    );
+  }
+
+  if (status.tableSource !== "dashboard") {
+    return (
+      <p className="px-3 py-2 text-[11px] text-bad">
+        Running, but <b>not reading this table</b> — it is using the models
+        compiled into it, so changes here will not reach it.
+        {status.settingsUrl
+          ? ` It is pointed at ${status.settingsUrl}.`
+          : " No settings URL is configured for it."}
+      </p>
+    );
+  }
+
+  const pinned = Object.keys(status.pinnedJobs ?? {});
+  return (
+    <p className="px-3 py-2 text-[11px] text-ink-faint">
+      Reading this table.
+      {pinned.length > 0 ? (
+        <span className="text-warn">
+          {" "}
+          {pinned.length} job{pinned.length === 1 ? "" : "s"} pinned by an
+          environment variable, which this dashboard cannot change.
+        </span>
+      ) : null}
+    </p>
+  );
+}
 
 function noteFor(jobs: JobSetting[]) {
   const moved = jobs.filter((job) => job.overridden).length;
@@ -42,12 +95,14 @@ function JobRow({
   onChange,
   onReset,
   busy,
+  pinnedTo,
 }: {
   job: JobSetting;
   offered: string[];
   onChange: (model: string) => void;
   onReset: () => void;
   busy: boolean;
+  pinnedTo?: string;
 }) {
   // A model somebody set by hand that is not on the offered list still has to
   // appear in the dropdown, or opening the row would silently propose changing
@@ -82,8 +137,8 @@ function JobRow({
       </td>
       <td className="px-3 py-2 align-top">
         <select
-          value={job.model ?? ""}
-          disabled={busy}
+          value={pinnedTo ?? job.model ?? ""}
+          disabled={busy || pinnedTo !== undefined}
           onChange={(event) => onChange(event.target.value)}
           className="numeric w-full rounded border border-line bg-surface-raised px-2 py-1 text-[12px] text-ink disabled:opacity-50"
         >
@@ -95,6 +150,16 @@ function JobRow({
         </select>
       </td>
       <td className="px-3 py-2 align-top text-[11px]">
+        {pinnedTo ? (
+          <div className="mb-1 text-warn">
+            pinned to <span className="numeric">{pinnedTo}</span> by an
+            environment variable on that machine
+            <span className="text-ink-faint">
+              {" "}
+              — this dashboard cannot change it
+            </span>
+          </div>
+        ) : null}
         {job.servedBy ? (
           <div className="mb-1 text-warn">
             really runs on <span className="numeric">{job.servedBy}</span>
@@ -127,6 +192,11 @@ function JobRow({
 export function ModelsTab() {
   const queryClient = useQueryClient();
   const settings = useQuery({ queryKey: ["job-settings"], queryFn: fetchJobSettings });
+  const listeners = useQuery({
+    queryKey: ["job-listeners"],
+    queryFn: fetchListeners,
+    refetchInterval: 15_000,
+  });
   const [failure, setFailure] = useState<string | null>(null);
 
   const change = useMutation({
@@ -187,6 +257,9 @@ export function ModelsTab() {
           title={app}
           note={noteFor(jobs)}
         >
+          <ListenerBanner
+            status={listeners.data?.apps.find((entry) => entry.app === app)}
+          />
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] border-collapse text-left">
               <thead>
@@ -203,6 +276,10 @@ export function ModelsTab() {
                     job={job}
                     offered={settings.data.offeredModels}
                     busy={busy}
+                    pinnedTo={
+                      listeners.data?.apps.find((entry) => entry.app === app)
+                        ?.pinnedJobs?.[job.id]
+                    }
                     onChange={(model) => change.mutate({ jobId: job.id, model })}
                     onReset={() => reset.mutate(job.id)}
                   />

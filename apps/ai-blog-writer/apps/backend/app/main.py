@@ -35,6 +35,22 @@ def _load_local_env_file() -> None:
 
 _load_local_env_file()
 
+
+# Where the model table and the usage collector live when nobody says
+# otherwise. Everything in this repo runs on one machine, and a backend that
+# only reads the dashboard when someone remembers to export a variable is a
+# backend that does not read it -- which is exactly what happened here:
+# Location Manager was wired and this was not, so the Models tab appeared to
+# change all 39 of this app's jobs and silently changed none of them.
+#
+# Both fail soft. An unreachable dashboard leaves the gateway on the models
+# checked into the registry and drops usage events on the floor.
+DEFAULT_DASHBOARD = "http://localhost:4500"
+os.environ.setdefault(
+    "MODEL_GATEWAY_SETTINGS_URL", f"{DEFAULT_DASHBOARD}/api/settings/v1/models"
+)
+os.environ.setdefault("USAGE_MONITOR_URL", f"{DEFAULT_DASHBOARD}/api/usage/v1/events")
+
 for rel_path in ("packages/shared/src", "packages/utils/src"):
     path = str(ROOT / rel_path)
     if path not in sys.path:

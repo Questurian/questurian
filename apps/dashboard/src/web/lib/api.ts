@@ -157,3 +157,20 @@ export function resetJobModel(jobId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+/** Whether an app is actually reading the table this dashboard serves. */
+export interface ListenerStatus {
+  app: string;
+  url: string;
+  reachable: boolean;
+  tableSource?: string;
+  settingsUrl?: string | null;
+  failedFetches?: number;
+  pinnedJobs?: Record<string, string>;
+  jobs?: string[];
+  detail?: string;
+}
+
+export function fetchListeners(): Promise<{ apps: ListenerStatus[] }> {
+  return getJson("/api/settings/v1/listeners");
+}

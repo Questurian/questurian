@@ -5,7 +5,7 @@ import logging
 import os
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from model_gateway import get_settings, model_for
+from model_gateway import APP_LM, get_settings, model_for, status_payload
 
 import generation
 from generation import (
@@ -95,6 +95,17 @@ def startup() -> None:
         ensure_vertex_initialized()
     except Exception as exc:
         logger.warning("Vertex initialization deferred until first request: %s", exc)
+
+
+@app.get("/model-gateway/status")
+def model_gateway_status() -> dict:
+    """Whether this service is really reading the dashboard's model table.
+
+    The dashboard shows this next to the Models tab, because a table that is
+    served and a table that is read are different facts and only one of them
+    used to be visible.
+    """
+    return status_payload(APP_LM)
 
 
 @app.get("/test")
