@@ -50,6 +50,7 @@ class Prompt2BlogLLM(Protocol):
 
 @dataclass(frozen=True)
 class DefaultPrompt2BlogLLM:
+    run_id: str | None = None
     usage_tracker: Prompt2BlogTokenUsageTracker = field(
         default_factory=Prompt2BlogTokenUsageTracker,
         compare=False,
@@ -60,12 +61,14 @@ class DefaultPrompt2BlogLLM:
         return llm._invoke_text_llm(
             **kwargs,
             usage_recorder=self.usage_tracker.record,
+            correlation_id=self.run_id or self.usage_tracker.run_id,
         )
 
     def invoke_json(self, **kwargs: Any) -> tuple[dict[str, Any], str]:
         return llm._invoke_json_llm(
             **kwargs,
             usage_recorder=self.usage_tracker.record,
+            correlation_id=self.run_id or self.usage_tracker.run_id,
         )
 
     def enforce_anti_ai(self, text: str, **kwargs: Any) -> str:
@@ -73,6 +76,7 @@ class DefaultPrompt2BlogLLM:
             text,
             **kwargs,
             usage_recorder=self.usage_tracker.record,
+            correlation_id=self.run_id or self.usage_tracker.run_id,
         )
 
     def usage_summary(self, **kwargs: Any) -> dict[str, Any]:
@@ -127,4 +131,4 @@ def dependencies_for_run(run_id: str) -> PipelineDependencies:
     """
     stored = _safe_dict(_safe_dict(read_stage_result(run_id, USAGE_LEDGER_STAGE)).get("data"))
     tracker = Prompt2BlogTokenUsageTracker.from_ledger(stored)
-    return PipelineDependencies(llm=DefaultPrompt2BlogLLM(usage_tracker=tracker))
+    return PipelineDependencies(llm=DefaultPrompt2BlogLLM(usage_tracker=tracker, run_id=run_id))

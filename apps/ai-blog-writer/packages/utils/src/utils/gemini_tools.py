@@ -187,3 +187,35 @@ def _invoke_gemini_structured_tool(
     raise RuntimeError(
         f"Gemini structured writer returned no '{tool_name}' tool call (response_metadata={getattr(message, 'response_metadata', None)!r})"
     )
+
+
+def validate_json_shape(value: Any, schema: dict[str, Any], path: str = "response") -> None:
+    """Check the object/array/scalar contract after generation.
+
+    This checks the shape used by our hand-written response schemas, not the
+    entire JSON Schema language. Domain constraints remain Pydantic's job.
+    """
+    if value is None and schema.get("nullable"):
+        return
+    kind = schema.get("type")
+    types = {"object": dict, "array": list, "string": str, "boolean": bool,
+             "integer": int, "number": (int, float), "null": type(None)}
+    if kind in types and (not isinstance(value, types[kind]) or
+                          (kind in ("integer", "number") and isinstance(value, bool))):
+        raise ValueError(f"{path}: expected {kind}")
+    if "enum" in schema and value not in schema["enum"]:
+        raise ValueError(f"{path}: value outside enum")
+    if isinstance(value, dict):
+        missing = set(schema.get("required", [])) - value.keys()
+        if missing:
+            raise ValueError(f"{path}: missing required fields {sorted(missing)}")
+        for key, child in schema.get("properties", {}).items():
+            if key in value:
+                validate_json_shape(value[key], child, f"{path}.{key}")
+    elif isinstance(value, list):
+        if len(value) < schema.get("minItems", 0):
+            raise ValueError(f"{path}: too few items")
+        for index, item in enumerate(value):
+            validate_json_shape(item, schema.get("items", {}), f"{path}[{index}]")
+    elif isinstance(value, str) and len(value) < schema.get("minLength", 0):
+        raise ValueError(f"{path}: too short")

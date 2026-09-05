@@ -147,6 +147,7 @@ def test_runtime_request_keeps_the_commission_and_evidence_whole():
     for requirement in expected_work_order["requirements"]:
         requirement["assumption_ids"] = []
         requirement["precision"] = "exact"
+        requirement["search_group"] = ""
     assert runtime.work_order == expected_work_order
     assert runtime.brief == fixture["brief"]
     source = runtime.evidence["sources"][0]

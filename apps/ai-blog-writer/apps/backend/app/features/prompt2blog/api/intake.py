@@ -37,6 +37,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.core.staff_auth import require_staff, staff_user_id
 
+from ..intake_lock import exclusive_run
 from ..brief_v4 import BriefIncomplete, BriefUnusable
 from ..dependencies import PipelineDependencies, dependencies_for_run
 from ..grill_v4 import (
@@ -100,6 +101,7 @@ def _grounded_call(
     model_name: str | None = None,
     max_tokens: int,
     usage_recorder: Any | None,
+    correlation_id: str | None = None,
 ) -> tuple[str, list[str], int | None]:
     """A grounded search, counted.
 
@@ -116,11 +118,15 @@ def _grounded_call(
     """
     from app.shared.model_calls import grounded_text
 
+    if correlation_id is None:
+        correlation_id = getattr(getattr(usage_recorder, "__self__", None), "run_id", None)
+
     # Reported here for the first time. These two searches are the most
     # token-hungry step in a run and neither has ever reached the dashboard,
     # because reporting was wired per call site and these sites were missed.
     result = grounded_text(
-        job_id, prompt, model=model_name, max_tokens=max_tokens, endpoint="grounded"
+        job_id, prompt, model=model_name, max_tokens=max_tokens, endpoint="grounded",
+        correlation_id=correlation_id
     )
     if result is None:
         # The call failed rather than returned nothing. There is no successful
@@ -133,6 +139,9 @@ def _grounded_call(
             "total_tokens": result.total_tokens,
         }
         measured = {key: value for key, value in counts.items() if value is not None}
+        if measured:
+            measured["output_token_details"] = {"reasoning": getattr(result, "reasoning_tokens", 0) or 0}
+            measured["cached_input_tokens"] = getattr(result, "cached_input_tokens", 0) or 0
         try:
             usage_recorder(
                 str(result.model_name or model_name),
@@ -173,6 +182,7 @@ def _services(run_id: str | None = None) -> IntakeServices:
             job_id="p2b.grill_research",
             max_tokens=GRILL_RESEARCH_MAX_TOKENS,
             usage_recorder=record_usage,
+            correlation_id=run_id,
         )
 
     def _gather(prompt: str, model_name: str | None = None) -> tuple[str, list[str], int | None]:
@@ -182,6 +192,7 @@ def _services(run_id: str | None = None) -> IntakeServices:
             job_id="p2b.research_gather",
             max_tokens=GATHER_MAX_TOKENS,
             usage_recorder=record_usage,
+            correlation_id=run_id,
         )
 
     return IntakeServices(
@@ -345,6 +356,7 @@ def read_intake(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 
 
 @router.post("/{run_id}/answer")
+@exclusive_run
 def answer_question(
     run_id: str, request: AnswerRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
@@ -353,6 +365,7 @@ def answer_question(
 
 
 @router.post("/{run_id}/reopen")
+@exclusive_run
 def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Go back into the grill. The single exit from every dead end."""
     _handle(reopen_intake, run_id, _services(run_id))
@@ -360,6 +373,7 @@ def reopen(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 
 
 @router.post("/{run_id}/brief")
+@exclusive_run
 def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Turn an agreed grill into the brief the run answers to."""
     _handle(approve_brief, run_id, _services(run_id))
@@ -367,12 +381,14 @@ def build_the_brief(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 
 
 @router.post("/{run_id}/work-order")
+@exclusive_run
 def plan_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     _handle(plan_research, run_id, _services(run_id))
     return JSONResponse(intake_state(run_id))
 
 
 @router.post("/{run_id}/work-order/cut")
+@exclusive_run
 def cut_the_work_order(
     run_id: str, request: CutRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
@@ -392,6 +408,7 @@ def cut_the_work_order(
 
 
 @router.post("/{run_id}/research")
+@exclusive_run
 def do_the_research(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
     """Both research passes, then the one gate that blocks.
 
@@ -425,6 +442,7 @@ class ReaskRequest(BaseModel):
 
 
 @router.post("/{run_id}/gate/reask")
+@exclusive_run
 def reask_the_question(
     run_id: str, request: ReaskRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
@@ -451,6 +469,7 @@ def read_gate(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 
 
 @router.post("/{run_id}/gate")
+@exclusive_run
 def settle_the_gate(
     run_id: str, request: GateAnswerRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
@@ -510,6 +529,7 @@ def read_venues(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
 
 
 @router.post("/{run_id}/venues")
+@exclusive_run
 def mark_venue(
     run_id: str, request: VenueMarkRequest, _staff=Depends(require_staff)
 ) -> JSONResponse:
@@ -576,6 +596,7 @@ def read_writing_request(
 
 
 @router.post("/{run_id}/write", status_code=202)
+@exclusive_run
 def start_writing(
     run_id: str,
     background_tasks: BackgroundTasks,

@@ -75,6 +75,7 @@ from .research_v4 import (
     ResearchUnusable,
     gather_one_requirement,
     gather_research,
+    BATCHES_STAGE,
     notes_from_record,
     notes_stage_record,
     research_stage_record,
@@ -328,7 +329,7 @@ def apply_cut(
     added_questions: list[str] | None = None,
 ) -> CutOutcome:
     """Apply the operator's cut. No model call; this is their decision, not one."""
-    for stage in (RESEARCH_STAGE, NOTES_STAGE):
+    for stage in (RESEARCH_STAGE,):
         # Research answered the questions that were there before the cut.
         if read_stage_result(run_id, stage) is not None:
             services.recorder.discard_stage(run_id, stage)
@@ -374,36 +375,34 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     brief = load_brief(run_id)
     work_order = load_work_order(run_id)
 
-    # Ten sequential web searches, then one structuring call. Every structuring
-    # failure used to buy the searches again -- run 90b3f9bc paid for them
-    # twice in one evening. The notes are kept the moment they exist and are
-    # reused only when they answer this exact plan.
     def record_progress(progress: dict[str, Any]) -> None:
-        # Written straight, not through `_record`: that opens a fresh usage
-        # attempt each time, and ten empty attempts would bury the stage's real
-        # receipt in the ledger.
         services.recorder.record_stage(run_id, PROGRESS_STAGE, progress)
 
-    notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order)
-    if notes is None:
+    def check_budget() -> None:
+        enforce_run_budget(_run_tokens_spent(run_id), stage=RESEARCH_STAGE)
+
+    def save_notes(notes: dict[str, Any]) -> None:
+        services.recorder.record_stage(run_id, NOTES_STAGE, notes_stage_record(work_order, notes))
+
+    notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order) or {}
+    if len(notes) < len(work_order.requirements) or any(not note.text.strip() for note in notes.values()):
         _open(services, run_id, NOTES_STAGE)
         notes = gather_research(
-            brief, work_order, services.research, record_progress
+            brief, work_order, services.research, record_progress,
+            kept_notes=notes, checkpoint=save_notes, before_call=check_budget,
         )
-        _record(
-            services, run_id, NOTES_STAGE, notes_stage_record(work_order, notes)
-        )
-    else:
-        logger.info(
-            "Reusing kept research notes",
-            extra={"run_id": run_id, "feature": FEATURE_NAME},
-        )
+        save_notes(notes)
 
     record_progress({"phase": "structuring", "done": len(notes), "total": len(notes),
                      "last_question_back": ""})
     try:
         _open(services, run_id, RESEARCH_STAGE)
-        evidence = structure_research(work_order, notes, services.research)
+        evidence = structure_research(
+            work_order, notes, services.research,
+            kept_batches=_stage_data(run_id, BATCHES_STAGE).get("batches", {}),
+            checkpoint=lambda batches: services.recorder.record_stage(run_id, BATCHES_STAGE, {"batches": batches}),
+            before_call=lambda: enforce_run_budget(_run_tokens_spent(run_id), stage=RESEARCH_STAGE),
+        )
     except ResearchUnusable as error:
         # The most expensive step in intake. A failure here that leaves nothing
         # behind means the next attempt is another guess.
@@ -631,7 +630,12 @@ def reask_question(
 
     _open(services, run_id, RESEARCH_STAGE)
     try:
-        evidence = structure_research(work_order, notes, services.research)
+        evidence = structure_research(
+            work_order, notes, services.research,
+            kept_batches=_stage_data(run_id, BATCHES_STAGE).get("batches", {}),
+            checkpoint=lambda batches: services.recorder.record_stage(run_id, BATCHES_STAGE, {"batches": batches}),
+            before_call=lambda: enforce_run_budget(_run_tokens_spent(run_id), stage=RESEARCH_STAGE),
+        )
     except ResearchUnusable as error:
         _record(
             services,

@@ -165,6 +165,7 @@ def grounded_text(
     fallback_model: Optional[str] = None,
     model: Optional[str] = None,
     endpoint: str = "grounded",
+    correlation_id: str | None = None,
 ) -> Any:
     """A Google Search grounded call, reported under its job.
 
@@ -191,6 +192,7 @@ def grounded_text(
         model=resolved,
         endpoint=endpoint,
         grounded=True,
+        correlation_id=correlation_id,
     ) as observed:
         result = invoke_google_grounded_text(prompt, **kwargs)
         if result is not None:
@@ -202,6 +204,8 @@ def grounded_text(
                     "input_tokens": getattr(result, "input_tokens", 0) or 0,
                     "output_tokens": getattr(result, "output_tokens", 0) or 0,
                     "total_tokens": getattr(result, "total_tokens", 0) or 0,
+                    "output_token_details": {"reasoning": getattr(result, "reasoning_tokens", 0) or 0},
+                    "cached_input_tokens": getattr(result, "cached_input_tokens", 0) or 0,
                 }
             )
         else:

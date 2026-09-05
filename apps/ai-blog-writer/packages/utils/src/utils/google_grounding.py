@@ -43,6 +43,8 @@ class GroundedGenerationResult:
     input_tokens: int | None = None
     output_tokens: int | None = None
     total_tokens: int | None = None
+    reasoning_tokens: int | None = None
+    cached_input_tokens: int | None = None
 
 
 def _usage_counts(response: Any) -> tuple[int | None, int | None, int | None]:
@@ -327,4 +329,6 @@ def invoke_google_grounded_text(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         total_tokens=total_tokens,
+        reasoning_tokens=response.get("usageMetadata", {}).get("thoughtsTokenCount"),
+        cached_input_tokens=response.get("usageMetadata", {}).get("cachedContentTokenCount"),
     )
