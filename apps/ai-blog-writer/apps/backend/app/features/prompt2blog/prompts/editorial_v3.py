@@ -41,14 +41,19 @@ Rules:
 - If the brief asks for something the evidence cannot support, list it in
   unsupported_requirements instead of planning a section that would need an
   invented fact.
-- target_words across all sections should total roughly the target word count.
+- target_words across all sections should total roughly the SECTION BUDGET
+  below, which is already the target minus the opening and takeaways you
+  do not plan. Do not subtract anything yourself.
 - brief_alignment must explain in one or two sentences how this structure
   answers the core reader question for the primary subject.
 
 {instructions}
 
-TARGET WORD COUNT:
+TARGET WORD COUNT (the whole article):
 {target_word_count}
+
+SECTION BUDGET (what your sections must total):
+{section_budget}
 """
 
 P2B_V3_COMPOSE_PROMPT = """\

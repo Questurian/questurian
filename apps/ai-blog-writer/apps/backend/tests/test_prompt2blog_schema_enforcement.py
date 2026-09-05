@@ -104,5 +104,30 @@ def test_the_compose_prompt_carries_the_target_word_count():
     # Outline always had this. Compose saw only the per-section budgets inside
     # the plan, and wrote 377 words against a 900 target on run 95a74dce.
     for prompt in (P2B_V3_COMPOSE_PROMPT, P2B_V3_OUTLINE_PROMPT):
-        assert "TARGET WORD COUNT:" in prompt
+        assert "TARGET WORD COUNT" in prompt
         assert "{target_word_count}" in prompt
+
+    # The outline also gets the reserved figure its sections must total, so it
+    # is never asked to reconcile two numbers.
+    assert "{section_budget}" in P2B_V3_OUTLINE_PROMPT
+    assert "{section_budget}" not in P2B_V3_COMPOSE_PROMPT
+
+
+# --- the outline's facts arrive grouped, and the grouping is a real field ---
+
+
+def test_facts_reach_the_outline_under_more_than_one_heading():
+    """`getattr(claim, "subject", "")` read a field that has never existed.
+
+    `NormalizedClaim` carries claim_id, text, source_ids, requirement_ids,
+    as_of and confidence. The default swallowed the miss, so every fact in
+    every run landed under "General" and the grouping this function exists for
+    never once happened.
+    """
+    from app.features.prompt2blog.evidence_v3 import NormalizedClaim
+
+    assert not hasattr(NormalizedClaim, "subject")
+    assert "subject" not in NormalizedClaim.model_fields, (
+        "if a real subject field is added, group on it directly rather than "
+        "through the work order's search groups"
+    )

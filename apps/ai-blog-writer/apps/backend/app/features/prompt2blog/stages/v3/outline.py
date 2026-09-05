@@ -18,7 +18,7 @@ from ...instructions_v3 import stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_OUTLINE_PROMPT
 from ...schemas import V3_OUTLINE_SCHEMA
-from ...support import _safe_dict, _target_word_count
+from ...support import _safe_dict, _section_budget, _target_word_count
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,8 @@ def run_v3_outline_stage(
     prompt = P2B_V3_OUTLINE_PROMPT.format(
         instructions=stage_context_text(state["stage_contexts"], "outline"),
         target_word_count=target_word_count or "Not specified.",
+        section_budget=_section_budget(_safe_dict(state["option_context"]))
+        or "Not specified.",
     )
 
     try:
