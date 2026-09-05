@@ -384,7 +384,13 @@ def test_compose_writes_from_evidence_records_and_never_from_source_prose():
     assert section_plan.index("What Lima costs now") < section_plan.index(
         "The tradeoffs behind the price"
     )
-    assert len(prompt) < 35_000
+    # A canary for prompt bloat, not a hard budget. Raised from 35,000 when
+    # compose was given the TARGET WORD COUNT block that outline already had:
+    # compose could see only the per-section budgets, and on run 95a74dce it
+    # wrote 377 words against a 900 target. The block and its one rule cost
+    # about 160 characters. Anything that moves this by thousands is the thing
+    # this line is watching for.
+    assert len(prompt) < 36_000
     assert updates["rewrite"]["improved_title"] == "What Lima costs now"
     assert recorder.recorded[0][0] == "stage_v3_compose"
 

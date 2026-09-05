@@ -109,6 +109,17 @@ def _format_hard_constraints(writing_brief: dict[str, Any]) -> str:
     return "\n\n".join(sections)
 
 
+def _target_word_count(option_context: dict[str, Any]) -> int:
+    """The whole-article word target the outline plans to and compose writes to.
+
+    Both stages need the same number from the same place. Compose used to see
+    only the per-section budgets inside the plan, and on run 95a74dce it wrote
+    377 words against a 900 target -- roughly half of every section -- leaving
+    repair to finish the article instead of improve it.
+    """
+    return _safe_int(_safe_dict(option_context.get("length")).get("target_word_count"))
+
+
 def _format_style_directive(option_context: dict[str, Any]) -> str:
     """Render the resolved tone, length, and brand voice guides as a required
     style block. These used to travel inside ``editorial_instructions``, which

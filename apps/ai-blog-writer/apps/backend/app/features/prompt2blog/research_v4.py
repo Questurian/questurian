@@ -347,12 +347,20 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
 
     claims: list[dict[str, Any]] = []
     seen_claims: set[str] = set()
+    # What each claim asked for, kept aside because both lists below are
+    # filtered here and `requirement_ids` is rewritten again by the union.
+    # Without this a dropped claim can only be counted, never explained.
+    cited: dict[str, tuple[list[str], list[str]]] = {}
     for row in _rows(payload, "claims"):
         claim_id = _safe_str(_first(row, "claim_id", "id"))
         text = _safe_str(_first(row, "text", "statement", "claim"))
         if not claim_id or not text or claim_id in seen_claims:
             continue
         seen_claims.add(claim_id)
+        cited[claim_id] = (
+            _id_list(row, "source_ids", "sources"),
+            _id_list(row, "requirement_ids", "question_ids", "questions"),
+        )
         claims.append(
             {
                 **_only(row, EVIDENCE_CLAIM_FIELDS),
@@ -409,6 +417,23 @@ def _normalised_evidence(payload: dict[str, Any]) -> dict[str, Any]:
         if claim["source_ids"] and claim["requirement_ids"]
     ]
     if len(kept) != len(claims):
+        # Name what was lost. A count alone cannot tell a claim that cited a
+        # source the model never declared from one that answered a question in
+        # another batch, and those want opposite fixes. The dropped claim is
+        # gone from every stored artefact by the time anyone looks.
+        for claim in claims:
+            if claim["source_ids"] and claim["requirement_ids"]:
+                continue
+            claim_sources, claim_requirements = cited.get(claim["claim_id"], ([], []))
+            logger.warning(
+                "Dropped claim %s: cited sources %s, kept %s; "
+                "cited questions %s, kept %s",
+                claim["claim_id"],
+                sorted(claim_sources) or "none",
+                sorted(claim["source_ids"]) or "none",
+                sorted(claim_requirements) or "none",
+                sorted(claim["requirement_ids"]) or "none",
+            )
         logger.warning(
             "Dropped %s claim(s) with no usable source or question",
             len(claims) - len(kept),

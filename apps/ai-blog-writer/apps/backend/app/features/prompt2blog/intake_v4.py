@@ -1004,6 +1004,10 @@ def punch_list(run_id: str, services: IntakeServices) -> dict[str, Any]:
         return {"run_id": run_id, **{k: v for k, v in stored.items() if k != STATE_KEY}}
 
     article = finished_article(run_id)
+    # Open before the call, like every other stage: usage is filed against
+    # whichever stage is open when the model answers, and this one used to
+    # bill to `unattributed` while its own row claimed it cost nothing.
+    _open(services, run_id, PUNCH_LIST_STAGE)
     result = build_punch_list(
         brief=load_brief(run_id),
         title=article["title"],

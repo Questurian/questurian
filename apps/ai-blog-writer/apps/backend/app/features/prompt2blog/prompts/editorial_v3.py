@@ -98,6 +98,11 @@ Hard rules:
   hold each section to roughly its word budget. Depart from it only where the
   evidence makes a planned section unsupportable. Record that departure in
   remaining_gaps; never narrate missing research to the reader.
+- Write to the TARGET WORD COUNT below. The section budgets are how that total
+  is spent, not a smaller target: half the count is unfinished, not short.
+
+TARGET WORD COUNT:
+{target_word_count}
 
 SECTION PLAN:
 {outline}
