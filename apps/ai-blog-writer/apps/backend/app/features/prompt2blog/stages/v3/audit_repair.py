@@ -86,7 +86,7 @@ def _audit_v3_rewrite(
         rewritten_content=rewrite["improved_content"],
     )
     parsed, raw_response = dependencies.llm.invoke_json(
-            job_id="p2b.audit",
+        job_id="p2b.audit",
         prompt=prompt,
         max_tokens=1536,
         temperature=0.05,
@@ -261,7 +261,7 @@ def run_v3_repair_stage(
     # cheaper place to spend it, because it only runs on a draft that failed.
     repair_model = state.get("repair_model") or state["writing_model"]
     parsed, raw_response = dependencies.llm.invoke_json(
-            job_id="p2b.repair",
+        job_id="p2b.repair",
         prompt=prompt,
         max_tokens=6144,
         temperature=0.1,
@@ -286,6 +286,7 @@ def run_v3_repair_stage(
     # rewrite of it, not a separate judgement.
     repaired["improved_content"] = dependencies.llm.enforce_anti_ai(
         repaired["improved_content"],
+        job_id="p2b.repair",
         model_name=repair_model,
         max_tokens=6144,
         context="prompt2blog v3 repair",

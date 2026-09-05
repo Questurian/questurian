@@ -71,6 +71,14 @@ GRILL_RESEARCH_MAX_TOKENS = 4_096
 # real run: `{"done": false}` with nothing else is schema-valid and useless,
 # and the model took that gap. A schema that permits what the code refuses is
 # a schema that has not been written down properly.
+#
+# The reverse is a fault too, and this schema had it. `require_non_empty`
+# floors every required string at one character, so the same schema that
+# tells the model to leave `consensus` empty while asking also declared an
+# empty `consensus` invalid. Nothing enforced it until Gemini started being
+# sent the schema, and then the first turn of the first real run died on
+# `response.consensus: too short`. The state-dependent fields carry an
+# explicit `minLength: 0` below.
 # Flat on purpose.
 #
 # This was nested -- `question` as an object carrying `ask`, `recommendation`
@@ -85,14 +93,25 @@ NEXT_TURN_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
         "done": {"type": "boolean"},
-        "ask": {"type": "string"},
-        "recommendation": {"type": "string"},
+        # Required so the model always accounts for them, but explicitly
+        # allowed to be empty: which of these carries content depends on the
+        # turn, and `require_non_empty` would otherwise floor every one of
+        # them at a character. Asking fills `ask`; finishing fills
+        # `consensus`; neither is wrong to leave blank in the other state.
+        # "Exactly one of these is filled" is not a thing a JSON schema can
+        # say, so `_advance_once` is what refuses a turn that answers with
+        # nothing -- see the guard that raises on neither question nor
+        # consensus.
+        "ask": {"type": "string", "minLength": 0},
+        "recommendation": {"type": "string", "minLength": 0},
         "pushback": {"type": "string"},
         "topic": {"type": "string"},
-        "consensus": {"type": "string"},
+        "consensus": {"type": "string", "minLength": 0},
         "location": {"type": "string"},
         "markers_covered": {"type": "array", "items": {"type": "string"}},
-        "asks_about": {"type": "string"},
+        # Empty is the honest answer when the operator's line is genuinely
+        # ambiguous about what it asks about.
+        "asks_about": {"type": "string", "minLength": 0},
         "options": {
             "type": "array",
             "items": {
