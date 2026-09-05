@@ -229,6 +229,20 @@ Rules:
   the article is about. Somewhere mentioned only for calibration is
   `context_only` and can never become a co-subject. Somewhere being weighed
   against the subject is a `comparator`.
+- **`primary_subject` is the thing the article is about, not the city it is
+  in.** The city is already in `Location` above. A piece about one clifftop
+  path has that path as its primary subject, not the capital it runs through.
+  Run a3c20e41 set `primary_subject` to "Lima, Peru" and filed the Malecón
+  itself, plus every district the walk crosses, as `context_only`. A
+  context-only reference may never be what a section is about, so the outline
+  was forbidden from naming the path or any district in a heading, all three of
+  its sections were rejected, and the article was written with no plan at all.
+- **A place inside the subject is part of it, not context.** The districts a
+  route crosses, the neighbourhoods an area guide covers, the rooms of a
+  building: those are the subject's own parts and the article is expected to
+  structure around them, so they are not `context_only`. Reserve
+  `context_only` for somewhere genuinely outside the piece that a fact is
+  measured against -- another city's rent, a nearby town's opening hours.
 """
 
 

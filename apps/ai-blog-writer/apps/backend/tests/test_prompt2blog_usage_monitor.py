@@ -182,7 +182,17 @@ def test_with_no_monitor_configured_nothing_is_reported(monkeypatch):
 
 
 class _SchemaVertexAI(VertexAI):
-    def invoke_json(self, prompt: str, input_schema: dict[str, Any]) -> dict[str, Any]:
+    # Same signature the real adapters carry. A double that accepts less than
+    # the real thing hides a caller passing more -- which is how a dropped
+    # output ceiling truncated structuring for a day.
+    def invoke_json(
+        self,
+        prompt: str,
+        *,
+        input_schema: dict[str, Any],
+        max_tokens: int | None = None,
+        thinking_budget: int | None = None,
+    ) -> dict[str, Any]:
         return {"title": "ok"}
 
 

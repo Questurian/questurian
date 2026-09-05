@@ -280,16 +280,38 @@ class VertexTextLLM:
         return str(generations[0].text if generations else '') or ''
 
     def invoke_json(self, prompt: str, *, input_schema: dict[str, Any],
-                    thinking_budget: int | None = None) -> dict[str, Any]:
+                    thinking_budget: int | None = None,
+                    max_tokens: int | None = None) -> dict[str, Any]:
+        """One schema-enforced JSON call.
+
+        `max_tokens` has to be forwarded. Callers pass an output ceiling and
+        this method used to swallow it, so structuring ran on the provider
+        default and returned JSON cut off mid-string -- run a3c20e41 lost four
+        questions to "Unterminated string starting at line 468", 16,640
+        characters into a call whose caller had asked for 8,192 tokens.
+        """
         options: dict[str, Any] = {
             "response_mime_type": "application/json",
             "response_schema": _sanitize_gemini_tool_schema(input_schema),
         }
         if thinking_budget is not None and self.model_name == "gemini-2.5-flash":
             options["thinking_budget"] = thinking_budget
+        if max_tokens is not None:
+            options["max_output_tokens"] = max_tokens
         result = self._llm.generate([prompt], **options)
         self.last_usage_metadata = _usage_from_generation(result)
-        parsed = json.loads(result.generations[0][0].text)
+        text = result.generations[0][0].text
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError as error:
+            # A truncated response is an output-ceiling problem, not a bad
+            # model. Say which, so the next person does not go looking at the
+            # prompt.
+            raise ValueError(
+                f"Gemini returned JSON that stops mid-value after {len(text)} "
+                f"characters ({error}). The output ceiling was "
+                f"{max_tokens or 'the provider default'}."
+            ) from error
         if not isinstance(parsed, dict):
             raise ValueError("Structured Gemini response must be an object")
         validate_json_shape(parsed, input_schema)

@@ -130,8 +130,23 @@ class ClaudeCliTextLLM:
     def invoke(self, prompt: str) -> str:
         return self._call(prompt, None)["text"]
 
-    def invoke_json(self, prompt: str, *, input_schema: dict[str, Any]) -> Any:
+    def invoke_json(
+        self,
+        prompt: str,
+        *,
+        input_schema: dict[str, Any],
+        max_tokens: int | None = None,
+        thinking_budget: int | None = None,
+    ) -> Any:
         """Ask for JSON the transport validates, rather than JSON to parse.
+
+        `max_tokens` and `thinking_budget` are accepted and ignored. The CLI
+        takes neither: it has no output ceiling flag and no temperature or
+        thinking control. Accepting them keeps one call signature across
+        providers, so the caller does not have to know which provider it got --
+        and silently dropping an output ceiling is exactly what truncated
+        structuring on the Gemini path, so it is written down here rather than
+        discovered again.
 
         Present only on this provider, and callers detect it by asking whether
         it exists. That is what keeps the schema path opt-in per provider: a

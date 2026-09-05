@@ -178,7 +178,7 @@ def _invoke_schema_json_llm(
         correlation_id=correlation_id,
         endpoint="invoke_json",
     ) as observed:
-        options = {"input_schema": schema}
+        options = {"input_schema": schema, "max_tokens": max_tokens}
         if job_id == "p2b.research_structure" and reported_model == "gemini-2.5-flash":
             options["thinking_budget"] = 0
         try:
