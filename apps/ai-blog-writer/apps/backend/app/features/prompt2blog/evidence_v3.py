@@ -71,6 +71,8 @@ class NormalizedEvidence(NormalizedModel):
     conflicts: list[dict[str, Any]]
     gaps: list[dict[str, Any]]
     records_text: str
+    # The same dossier without the bibliography compose may not quote.
+    compose_records_text: str = ""
 
     def refuted_assumption_ids(self) -> list[str]:
         """Premises research established are false.
@@ -188,6 +190,95 @@ def _normalize_claim(claim: EvidenceClaim) -> NormalizedClaim:
         as_of=claim.as_of.isoformat() if claim.as_of else None,
         confidence=claim.confidence,
     )
+
+
+# What `research_v4` writes when a source carried nothing worth recording. A
+# source whose only note is this one tells the writer nothing it is allowed to
+# use, and there were 55 of them in run 95a74dce.
+PLACEHOLDER_SOURCE_NOTE = "No note recorded for this source."
+
+
+def _has_substantive_note(source: NormalizedSource) -> bool:
+    return any(
+        note.strip() and note.strip() != PLACEHOLDER_SOURCE_NOTE
+        for note in source.notes
+    )
+
+
+def _compose_records_text(
+    sources: list[NormalizedSource],
+    claims: list[NormalizedClaim],
+    requirements: list[NormalizedRequirement],
+    premise_findings: list[NormalizedPremiseFinding],
+    conflicts: list[dict[str, Any]],
+    gaps: list[dict[str, Any]],
+) -> str:
+    """The same dossier, rendered for the stage forbidden to cite it.
+
+    Compose is told, in the same prompt, "Attribution is internal to these
+    records. Never carry it into the prose" -- and then handed a bibliography.
+    On run 95a74dce that was 12,299 characters of per-claim source lists
+    against 13,906 characters of actual claim prose, plus 12,564 characters of
+    Google grounding-redirect URLs it may not name and cannot open, plus the
+    placeholder note 55 times.
+
+    `_records_text` is unchanged and still feeds groundedness and the readiness
+    follow-up, which exist to check claims against their provenance and need
+    every one of those fields. This is a second projection of one dossier, not
+    a second dossier.
+
+    What survives here is what a writer may actually use: every claim, exactly
+    as written, with its date, confidence and questions; every requirement
+    status and gap; every premise verdict; every conflict, resolved or not.
+    Sources survive only where they carry a note somebody wrote -- an operator
+    settlement, a caveat, a limitation -- because that note changes how a fact
+    reads, and the claims that rest on them keep their link.
+    """
+    kept = {source.source_id for source in sources if _has_substantive_note(source)}
+
+    lines: list[str] = ["SOURCE NOTES"]
+    if kept:
+        for source in sources:
+            if source.source_id not in kept:
+                continue
+            lines.append(
+                f"- {source.source_id} | type: {source.source_type} "
+                f"| material: {source.material_type}"
+            )
+            lines.extend(f"    note: {note}" for note in source.notes)
+    else:
+        lines.append(
+            "- None. No source carried a caveat or a limitation that changes "
+            "how a fact below should be read."
+        )
+
+    lines.append("")
+    lines.append("CLAIMS")
+    if claims:
+        for claim in claims:
+            as_of = f" | as of {claim.as_of}" if claim.as_of else ""
+            # Only links to a source note the writer can read. An ordinary
+            # citation list has no reader-facing use and it may not be quoted.
+            noted = [item for item in claim.source_ids if item in kept]
+            note_link = f" | source notes: {', '.join(noted)}" if noted else ""
+            lines.append(
+                f"- {claim.claim_id} | {claim.text}"
+                f"{note_link}"
+                f" | requirements: {', '.join(claim.requirement_ids)}"
+                f"{as_of} | confidence: {claim.confidence}"
+            )
+    else:
+        lines.append("- None supplied.")
+
+    # Everything from requirement coverage onward is rendered by the canonical
+    # writer and spliced in unchanged, so the two projections cannot drift on
+    # the parts they share. Sources and claims are passed empty because this
+    # function has already written its own.
+    tail = _records_text([], [], requirements, premise_findings, conflicts, gaps)
+    heading = "REQUIREMENT COVERAGE"
+    lines.append("")
+    lines.append(heading + tail.split(heading, 1)[1])
+    return "\n".join(lines)
 
 
 def _records_text(
@@ -348,6 +439,9 @@ def normalize_evidence(
         conflicts=conflicts,
         gaps=gaps,
         records_text=_records_text(
+            sources, claims, requirements, premise_findings, conflicts, gaps
+        ),
+        compose_records_text=_compose_records_text(
             sources, claims, requirements, premise_findings, conflicts, gaps
         ),
     )

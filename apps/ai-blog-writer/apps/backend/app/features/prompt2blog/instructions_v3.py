@@ -132,7 +132,14 @@ def _brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> str:
     return "\n".join(lines)
 
 
-def _evidence_body(evidence: NormalizedEvidence) -> str:
+def _evidence_body(evidence: NormalizedEvidence, *, for_compose: bool = False) -> str:
+    """The policy, then the records.
+
+    `for_compose` selects the projection without the bibliography. The
+    canonical layer keeps the full rendering, because that layer is the run's
+    own record of what the evidence was, and groundedness and the readiness
+    follow-up read `records_text` directly and are untouched by this.
+    """
     return (
         f"{EVIDENCE_DISPOSITION_POLICY}\n\n"
         "These records are the only permitted source of fact. Use them exactly: "
@@ -150,7 +157,7 @@ def _evidence_body(evidence: NormalizedEvidence) -> str:
         "resolution is the fact, and the disagreement behind it is internal. "
         "Write the settled figure as a plain sentence. Never tell the reader "
         "that two records disagreed, which one was chosen, or why.\n\n"
-        f"{evidence.records_text}"
+        f"{evidence.compose_records_text if for_compose else evidence.records_text}"
     )
 
 
@@ -538,7 +545,7 @@ def assemble_v3_instructions(
                 ("brief", f"WHAT WE ARE MAKING\n{brief_body}"),
                 (
                     "evidence",
-                    f"THE FACTS YOU MAY USE\n{_evidence_body(evidence)}",
+                    f"THE FACTS YOU MAY USE\n{_evidence_body(evidence, for_compose=True)}",
                 ),
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("topic_modules", f"TOPIC MODULES\n{topic_modules_body}"),
