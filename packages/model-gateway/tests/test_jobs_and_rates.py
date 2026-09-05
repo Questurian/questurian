@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import re
 import unittest
 from pathlib import Path
 
 from model_gateway import jobs, rates
 from model_gateway.settings import load_defaults
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
-
 
 class JobRegistry(unittest.TestCase):
     def test_every_job_id_is_namespaced_by_its_area(self):
@@ -61,6 +57,8 @@ class JobRegistry(unittest.TestCase):
 
 
 class CheckedInDefaults(unittest.TestCase):
+    """The registry carries its own fallback, so the two cannot disagree."""
+
     def test_defaults_name_every_job_and_nothing_else(self):
         table = load_defaults()
         self.assertEqual(set(table.models), set(jobs.JOBS_BY_ID))
@@ -150,61 +148,75 @@ class RateTable(unittest.TestCase):
         self.assertAlmostEqual(priced, 10_000_000 * 0.3 / 1_000_000)
 
 
-class RateTableAgreesWithTheCodeItReplaces(unittest.TestCase):
-    """Temporary bridge, and deliberately so.
+class TheCataloguesRefuseToLoadSomethingWrong(unittest.TestCase):
+    """Strict on the way in.
 
-    ``token_usage.py`` in ai-blog-writer still holds its own copy of these
-    numbers and still prices every call that has not moved to the gateway yet.
-    Two tables of the same numbers drift, and the drift is invisible -- costs
-    stay plausible while being wrong in one consistent direction. This fails
-    the moment they part company.
-
-    It goes away when that module becomes a re-export of this one, which is
-    the step that also repoints the dashboard's own drift test.
+    These files are what every call site resolves against and what the
+    fallback is built from, so they are the last place a silent gap should be
+    tolerated. Each of these has to fail at import, not at 3am on a run.
     """
 
-    TOKEN_USAGE_PY = (
-        REPO_ROOT
-        / "apps/ai-blog-writer/apps/backend/app/shared/token_usage.py"
-    )
+    def _catalogue(self, tmp_body: dict):
+        import json
+        import tempfile
 
-    def _rates_in_the_old_table(self) -> dict[str, list[float]]:
-        source = self.TOKEN_USAGE_PY.read_text(encoding="utf-8")
-        table = source[source.index("VERTEX_TOKEN_RATES = {"):]
-        found: dict[str, list[float]] = {}
-        for name, args in re.findall(
-            r'"([a-z0-9.\-]+)":\s*VertexTokenRate\(([^)]*)\)', table
-        ):
-            found[name] = [float(part) for part in args.split(",") if part.strip()]
-        return found
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "jobs.json"
+            path.write_text(json.dumps(tmp_body), encoding="utf-8")
+            return jobs._load(path)
 
-    def test_the_parse_found_something_to_compare(self):
-        # A regex that silently matched nothing would make the comparison
-        # below pass without comparing anything.
-        self.assertGreater(len(self._rates_in_the_old_table()), 3)
-
-    def test_the_two_tables_name_the_same_models(self):
-        self.assertEqual(
-            sorted(self._rates_in_the_old_table()),
-            sorted(rates.MODEL_RATES),
-        )
-
-    def test_the_two_tables_agree_on_every_number(self):
-        for model, numbers in self._rates_in_the_old_table().items():
-            rate = rates.MODEL_RATES[model]
-            expected = [
-                rate.input_per_million,
-                rate.output_per_million,
-                rate.cached_input_per_million,
-                rate.large_input_per_million,
-                rate.large_output_per_million,
-                rate.large_cached_input_per_million,
-            ]
-            self.assertEqual(
-                numbers,
-                [value for value in expected if value is not None],
-                f"{model} disagrees with token_usage.py",
+    def test_a_job_with_no_default_model_is_refused(self):
+        with self.assertRaises(ValueError):
+            self._catalogue(
+                {"jobs": [{"id": "lm.x", "app": jobs.APP_LM, "call": jobs.CALL_TEXT,
+                           "defaultModel": None}]}
             )
+
+    def test_a_places_job_is_allowed_to_have_no_model(self):
+        loaded = self._catalogue(
+            {"jobs": [{"id": "listicle.x", "app": jobs.APP_ABW, "call": jobs.CALL_PLACES,
+                       "defaultModel": None}]}
+        )
+        self.assertIsNone(loaded[0].default_model)
+
+    def test_a_duplicate_id_is_refused(self):
+        row = {"id": "lm.x", "app": jobs.APP_LM, "call": jobs.CALL_TEXT,
+               "defaultModel": "gemini-2.5-flash"}
+        with self.assertRaises(ValueError):
+            self._catalogue({"jobs": [row, dict(row)]})
+
+    def test_an_unknown_app_or_call_kind_is_refused(self):
+        for bad in ({"app": "somewhere-else"}, {"call": "telepathy"}):
+            row = {"id": "lm.x", "app": jobs.APP_LM, "call": jobs.CALL_TEXT,
+                   "defaultModel": "gemini-2.5-flash", **bad}
+            with self.assertRaises(ValueError):
+                self._catalogue({"jobs": [row]})
+
+    def test_a_rate_with_no_verification_date_is_refused(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "rates.json"
+            path.write_text(json.dumps({"models": [{
+                "model": "gemini-x", "input": 1, "output": 1, "cachedInput": 0,
+                "source": "https://example.test", "verifiedOn": "sometime",
+            }]}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                rates._load(path)
+
+    def test_a_rate_with_no_source_to_recheck_is_refused(self):
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "rates.json"
+            path.write_text(json.dumps({"models": [{
+                "model": "gemini-x", "input": 1, "output": 1, "cachedInput": 0,
+                "source": "", "verifiedOn": "2026-09-04",
+            }]}), encoding="utf-8")
+            with self.assertRaises(ValueError):
+                rates._load(path)
 
 
 if __name__ == "__main__":

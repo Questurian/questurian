@@ -1,6 +1,6 @@
 # ADR 0001: The API usage monitor observes; it does not sit in the path
 
-- **Status:** accepted
+- **Status:** accepted; amended 2026-09-05 (see *Amendment: the dashboard owns the model table*)
 - **Date:** 2026-09-04
 
 ## Context
@@ -65,9 +65,15 @@ and no price are counted and shown as *unpriced*.
 The alternative was a rate table in the dashboard. Rejected: the repo already
 owns one, complete with large-context tiers, and a second table would guarantee
 two different answers to "what did that run cost" with no way to tell which was
-right. It now lives in `app/shared/token_usage.py`, where both the run ledger
-and the emitter read it, and its figures were checked against Google's
-published pricing on 2026-09-04.
+right. It lived in `app/shared/token_usage.py`, where both the run ledger and
+the emitter read it, and its figures were checked against Google's published
+pricing on 2026-09-04.
+
+*Since amended.* The single table now lives in the model gateway
+(`packages/model-gateway/src/model_gateway/rates.json`) and is read by the
+Python that prices a call and by this dashboard that publishes it. The decision
+is unchanged — one table, owned where it is applied — but it is no longer
+inside one app, because two apps price calls now.
 
 **Flat-rate subscriptions are never priced.** The Claude Code CLI reports a
 `total_cost_usd` per call. That number is what the tokens would have cost on
@@ -119,3 +125,57 @@ duration, tokens, provider-reported cost and exceptions are all in scope.
 Not yet emitting, and deliberately named so they are not forgotten: lm-server's
 nine provider clients, Questura's Stripe/Bunny/Resend, the ABW images tree,
 the listicle pipeline's uncounted Vertex calls, and the LM alt-text sidecar.
+
+
+## Amendment: the dashboard owns the model table (2026-09-05)
+
+The collector still observes and still never sits in the path. One thing has
+been added on purpose, and the line is worth stating exactly.
+
+### What changed
+
+The dashboard now serves `GET /api/settings/v1/models`: which model each of the
+repo's 42 jobs runs on. An operator can change one, and the running apps follow
+within about a minute.
+
+### Why this is not the gateway this ADR rejected
+
+The objection in decision 1 was making a local dev tool a **single point of
+failure for every external call in the repo**. That objection is about the call
+path, and this change stays off it:
+
+- Nothing routes through the dashboard. Apps call Vertex directly, exactly as
+  before.
+- Each app embeds the gateway as a library. It reads this table at startup,
+  caches it, and refreshes on a timer.
+- When the dashboard is unreachable, apps keep running on the last table they
+  read; a fresh process falls back to the models checked into the gateway's own
+  registry. Dashboard down means "keep running on what we last read", never
+  "stop".
+- Latency is unaffected. A model call never waits on this.
+
+So the dashboard owns a *setting*, not a *step*. Deleting the dashboard
+entirely would change which model a job runs on only to the extent that its
+checked-in default differs from the last override — it would not stop a single
+call.
+
+### Why the dashboard and not somewhere else
+
+Because the question an operator asks is "this job is costing too much, what is
+it running on" — and the cost chart that provokes the question is already here.
+Putting the answer in a different tool would mean reading a number in one place
+and acting on it in another, which is how the 22 scattered constants happened
+in the first place.
+
+The job ids are also the `feature` values on usage events, so the table and the
+chart line up on the same word: change `lm.alt_text` on the Models tab, then
+filter the usage chart by `lm.alt_text` to see what the change did.
+
+### What this costs
+
+The dashboard now stores something an app depends on, which its context
+previously said it never would. The honest statement is narrower than the old
+one: **the dashboard stores its own observations, and one table of settings it
+publishes but does not enforce.** The settings file
+(`data/model-settings.json`) holds only the jobs somebody has changed, so
+losing it returns every job to its checked-in default rather than to nothing.

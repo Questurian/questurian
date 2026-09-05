@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "note": "What a Claude model name is actually served with while no Claude path is switched on. Three Prompt2Blog jobs still ask for a Claude model and none of them has run on Claude for months; the rewrite was real and invisible, because nothing naming a Gemini model anywhere in the repo revealed it. Read by the Python that performs the substitution and by the dashboard that shows it, so the map an operator reads is the map that runs. A name not listed falls through to defaultSubstitute -- which is how claude-sonnet-5-medium, the name three stages actually ask for, ends up on Flash.",
+  "enabledBy": [
+    "ANTHROPIC_MODELS_ENABLED",
+    "CLAUDE_SUBSCRIPTION_MODELS_ENABLED"
+  ],
+  "defaultSubstitute": "gemini-2.5-flash",
+  "substitutes": {
+    "claude-opus-4-8": "gemini-2.5-flash",
+    "claude-opus-4-7": "gemini-2.5-flash",
+    "claude-sonnet-5": "gemini-2.5-flash"
+  }
+}

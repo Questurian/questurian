@@ -33,11 +33,15 @@ funded key configured.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+MAP_PATH = Path(__file__).with_name("substitution.json")
 
 ANTHROPIC_MODELS_ENABLED_ENV = "ANTHROPIC_MODELS_ENABLED"
 CLAUDE_SUBSCRIPTION_MODELS_ENABLED_ENV = "CLAUDE_SUBSCRIPTION_MODELS_ENABLED"
@@ -46,17 +50,24 @@ PROVIDER_NONE = "none"
 PROVIDER_ANTHROPIC_API = "anthropic-api"
 PROVIDER_SUBSCRIPTION_CLI = "subscription-cli"
 
-# What each Claude name is served with while no Claude path is on. Anything
-# not listed falls through to the default below, which is how
-# ``claude-sonnet-5-medium`` -- an effort-tagged name nobody added here --
-# ends up on Flash.
-CLAUDE_GOOGLE_SUBSTITUTES: dict[str, str] = {
-    "claude-opus-4-8": "gemini-2.5-flash",
-    "claude-opus-4-7": "gemini-2.5-flash",
-    "claude-sonnet-5": "gemini-2.5-flash",
-}
+def _load(path: Path = MAP_PATH) -> tuple[dict[str, str], str]:
+    """The map, from the file the dashboard also reads.
 
-DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE = "gemini-2.5-flash"
+    JSON rather than a Python dict for the same reason the registry is: the
+    dashboard has to show an operator that a job asking for Claude is really
+    running on Gemini, and it cannot import Python to find out.
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    fallback = payload.get("defaultSubstitute")
+    if not isinstance(fallback, str) or not fallback:
+        raise ValueError(f"{path.name} has no defaultSubstitute")
+    substitutes = payload.get("substitutes")
+    if not isinstance(substitutes, dict):
+        raise ValueError(f"{path.name} has no substitutes map")
+    return {str(k).lower(): str(v) for k, v in substitutes.items()}, fallback
+
+
+CLAUDE_GOOGLE_SUBSTITUTES, DEFAULT_CLAUDE_GOOGLE_SUBSTITUTE = _load()
 
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 

@@ -9,7 +9,7 @@ import type {
   UsageSummary,
 } from "../../usage/types";
 import type { ProjectConfig, ProjectStatus } from "../../cli/dashboard/types";
-import type { ratesPayload } from "../../usage/rates";
+import type { RatesPayload } from "../../usage/rate-types";
 
 /**
  * Typed fetchers for the collector's own routes.
@@ -98,6 +98,62 @@ export const fetchGlobalCommands = () =>
   );
 
 /** The published rate card: what each model costs, checked and dated. */
-export function fetchRates(): Promise<ReturnType<typeof ratesPayload>> {
+export function fetchRates(): Promise<RatesPayload> {
   return getJson("/api/usage/v1/rates");
+}
+
+/** One job as the settings screen sees it: the model, and enough to explain it. */
+export interface JobSetting {
+  id: string;
+  app: string;
+  call: string;
+  summary: string;
+  site: string;
+  /** What it runs on right now. Null for the jobs with no model behind them. */
+  model: string | null;
+  /** What really serves it, when that is not what it asks for. */
+  servedBy: string | null;
+  /** What it would run on if the override were removed. */
+  defaultModel: string | null;
+  overridden: boolean;
+  changedAt: string | null;
+  note: string | null;
+  configurable: boolean;
+}
+
+export interface JobSettingsPayload {
+  version: number;
+  offeredModels: string[];
+  jobs: JobSetting[];
+}
+
+export function fetchJobSettings(): Promise<JobSettingsPayload> {
+  return getJson("/api/settings/v1/jobs");
+}
+
+async function sendJson(path: string, init: RequestInit): Promise<void> {
+  const response = await fetch(new URL(path, window.location.origin), {
+    headers: { "content-type": "application/json" },
+    ...init,
+  });
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((body: { error?: string }) => body.error)
+      .catch(() => undefined);
+    throw new ApiError(detail ?? `${response.status} ${response.statusText}`);
+  }
+}
+
+export function setJobModel(jobId: string, model: string): Promise<void> {
+  return sendJson(`/api/settings/v1/models/${encodeURIComponent(jobId)}`, {
+    method: "PUT",
+    body: JSON.stringify({ model }),
+  });
+}
+
+export function resetJobModel(jobId: string): Promise<void> {
+  return sendJson(`/api/settings/v1/models/${encodeURIComponent(jobId)}`, {
+    method: "DELETE",
+  });
 }

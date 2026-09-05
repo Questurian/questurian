@@ -8,6 +8,7 @@ import projects from "./routes/projects";
 import health from "./routes/health";
 import commands from "./routes/commands";
 import usage from "./routes/usage";
+import settings from "./routes/settings";
 import { startRetentionSweep } from "./usage/retention";
 import { getUsageStore, usageDatabasePath } from "./usage/store";
 
@@ -25,6 +26,7 @@ app.get("/", (c) => {
       health: "/health",
       commands: "/commands",
       usage: "/api/usage/v1",
+      settings: "/api/settings/v1",
       web: "/app",
     },
   });
@@ -34,6 +36,7 @@ app.route("/projects", projects);
 app.route("/health", health);
 app.route("/commands", commands);
 app.route("/api/usage", usage);
+app.route("/api/settings", settings);
 
 // The built web UI, when there is one. In development Vite serves it on its
 // own port and proxies /api here, so this path only matters after a build.

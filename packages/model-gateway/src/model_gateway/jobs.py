@@ -13,19 +13,26 @@ grill reports ``prompt2blog`` too, because it borrows that pipeline's code.
 Rows recorded before the migration keep the old coarse feature; nothing
 rewrites history.
 
-This file is the catalogue: which jobs exist, in which app, and what shape of
-call each one makes. It deliberately does **not** say which model a job runs
-on. That lives in ``defaults.json`` next to it, in the same shape the
-dashboard serves, so the fallback and the live table cannot drift apart by
-being different kinds of thing.
+The catalogue itself is ``jobs.json``, not this file. The dashboard owns the
+live job-to-model table and has to render a settings screen from the same list
+of jobs this package resolves against -- and the dashboard is TypeScript.
+Holding the list in Python and a copy of it in TypeScript would rebuild, in a
+new place, exactly the drift this package was written to end. So the data is
+JSON, both runtimes read it, and this module is the Python reader.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
+
+CATALOGUE_PATH = Path(__file__).with_name("jobs.json")
 
 APP_ABW = "ai-blog-writer"
 APP_LM = "location-manager"
+APPS = frozenset({APP_ABW, APP_LM})
 
 # The shape of the provider call, which decides how the gateway makes it.
 CALL_TEXT = "text"
@@ -73,6 +80,9 @@ class Job:
     # Where the call is made today. Kept because a job id is only useful if
     # you can find the code it names, and these move.
     site: str
+    # What it runs on when nothing overrides it. The dashboard's table and an
+    # operator's own choice both sit above this; see `settings.py`.
+    default_model: Optional[str]
 
     @property
     def is_model_call(self) -> bool:
@@ -80,310 +90,62 @@ class Job:
         return self.call != CALL_PLACES
 
 
-JOBS: tuple[Job, ...] = (
-    # ---- Prompt2Blog -----------------------------------------------------
-    Job(
-        "p2b.compose",
-        APP_ABW,
-        CALL_JSON,
-        "Write the article. The one call whose prose a reader sees.",
-        "features/prompt2blog/stages/v3/compose.py",
-    ),
-    Job(
-        "p2b.outline",
-        APP_ABW,
-        CALL_JSON,
-        "Turn the work order into a section plan before anything is written.",
-        "features/prompt2blog/stages/v3/outline.py",
-    ),
-    Job(
-        "p2b.audit",
-        APP_ABW,
-        CALL_JSON,
-        "Read the draft against the constraints and say what it breaks.",
-        "features/prompt2blog/stages/v3/audit_repair.py",
-    ),
-    Job(
-        "p2b.repair",
-        APP_ABW,
-        CALL_JSON,
-        "Rewrite the draft to fix what the audit found. A full article rewrite.",
-        "features/prompt2blog/stages/v3/audit_repair.py",
-    ),
-    Job(
-        "p2b.groundedness",
-        APP_ABW,
-        CALL_JSON,
-        "Check each claim in the draft against the evidence gathered for it.",
-        "features/prompt2blog/stages/v3/groundedness.py",
-    ),
-    Job(
-        "p2b.classify",
-        APP_ABW,
-        CALL_JSON,
-        "Decide what kind of article the seed is asking for.",
-        "features/prompt2blog/classification.py",
-    ),
-    Job(
-        "p2b.grill",
-        APP_ABW,
-        CALL_JSON,
-        "Interview the operator. Decides what the article is; every later stage inherits it.",
-        "features/prompt2blog/grill_v4.py",
-    ),
-    Job(
-        "p2b.grill_research",
-        APP_ABW,
-        CALL_GROUNDED_TEXT,
-        "Look up the subject mid-interview so the next question can be sharp.",
-        "features/prompt2blog/api/intake.py",
-    ),
-    Job(
-        "p2b.brief",
-        APP_ABW,
-        CALL_JSON,
-        "Write the Article Brief: the vision, never consumed by a later stage.",
-        "features/prompt2blog/brief_v4.py",
-    ),
-    Job(
-        "p2b.work_order",
-        APP_ABW,
-        CALL_JSON,
-        "Turn the brief into the instructions the writing stages actually read.",
-        "features/prompt2blog/work_order_v4.py",
-    ),
-    Job(
-        "p2b.notes",
-        APP_ABW,
-        CALL_JSON,
-        "Capture the operator's own notes into the run's record.",
-        "features/prompt2blog/notes_v4.py",
-    ),
-    Job(
-        "p2b.research_gather",
-        APP_ABW,
-        CALL_GROUNDED_TEXT,
-        "Search for evidence the article will be written from.",
-        "features/prompt2blog/research_v4.py",
-    ),
-    Job(
-        "p2b.research_structure",
-        APP_ABW,
-        CALL_JSON,
-        "Shape gathered prose into sources and claims. Shape, not judgement.",
-        "features/prompt2blog/research_v4.py",
-    ),
-    # ---- Listicle pipeline -----------------------------------------------
-    Job(
-        "listicle.search",
-        APP_ABW,
-        CALL_GROUNDED_TEXT,
-        "Search one angle for places worth listing, with evidence for each.",
-        "features/listicle_pipeline/api.py",
-    ),
-    Job(
-        "listicle.grill",
-        APP_ABW,
-        CALL_JSON,
-        "Interview the operator about the list, using the article grill's engine.",
-        "features/listicle_pipeline/service.py",
-    ),
-    Job(
-        "listicle.grill_research",
-        APP_ABW,
-        CALL_GROUNDED_TEXT,
-        "Look the subject up mid-interview, as the article grill does.",
-        "features/listicle_pipeline/api.py",
-    ),
-    Job(
-        "listicle.profile_research",
-        APP_ABW,
-        CALL_GROUNDED_TEXT,
-        "Look one named place up and bring back claims with their sources.",
-        "features/listicle_pipeline/profile_research.py",
-    ),
-    Job(
-        "listicle.identity",
-        APP_ABW,
-        CALL_PLACES,
-        "Resolve a written name to the place Google actually holds.",
-        "features/listicle_pipeline/identity.py",
-    ),
-    Job(
-        "listicle.place_details",
-        APP_ABW,
-        CALL_PLACES,
-        "Fetch what Google holds about a place, before any model reads it.",
-        "features/listicle_pipeline/places.py",
-    ),
-    # ---- Itineraries pipeline --------------------------------------------
-    Job(
-        "itinerary.intent",
-        APP_ABW,
-        CALL_TEXT,
-        "Read the brief for keywords, price bounds and lodging hints.",
-        "features/itineraries_pipeline/llm_stages.py",
-    ),
-    Job(
-        "itinerary.scoring",
-        APP_ABW,
-        CALL_TEXT,
-        "Score one slot's whole candidate pool against the intent.",
-        "features/itineraries_pipeline/llm_stages.py",
-    ),
-    Job(
-        "itinerary.reasons",
-        APP_ABW,
-        CALL_TEXT,
-        "Say why each chosen stop earns its place in the day.",
-        "features/itineraries_pipeline/llm_stages.py",
-    ),
-    Job(
-        "itinerary.title",
-        APP_ABW,
-        CALL_TEXT,
-        "Name the itinerary.",
-        "features/itineraries_pipeline/routes.py",
-    ),
-    # ---- Editor assist ---------------------------------------------------
-    Job(
-        "editor.writer_brief",
-        APP_ABW,
-        CALL_TEXT,
-        "Draft the brief an editor hands a writer.",
-        "features/editor_assist/writer_brief.py",
-    ),
-    Job(
-        "editor.research_profile",
-        APP_ABW,
-        CALL_GROUNDED_TEXT,
-        "Research one place for the editor, grounded in search.",
-        "features/editor_assist/research_profile.py",
-    ),
-    Job(
-        "editor.seo_metadata",
-        APP_ABW,
-        CALL_STRUCTURED,
-        "Produce title, description and slug under a forced schema.",
-        "features/editor_assist/seo_metadata.py",
-    ),
-    Job(
-        "editor.listicle_blurb",
-        APP_ABW,
-        CALL_TEXT,
-        "Write one listicle entry, then rewrite it if validation rejects it.",
-        "features/editor_assist/blurb_composition_execution.py",
-    ),
-    Job(
-        "editor.generate_title",
-        APP_ABW,
-        CALL_TEXT,
-        "Propose a title for an article already written.",
-        "features/editor_assist/editorial_actions.py",
-    ),
-    Job(
-        "editor.rewrite_block",
-        APP_ABW,
-        CALL_TEXT,
-        "Rewrite one block an editor selected, with a repair pass behind it.",
-        "features/editor_assist/editorial_actions.py",
-    ),
-    Job(
-        "editor.itinerary_intro",
-        APP_ABW,
-        CALL_TEXT,
-        "Write the opening of an itinerary article.",
-        "features/editor_assist/itinerary_intro.py",
-    ),
-    Job(
-        "editor.itinerary_brief",
-        APP_ABW,
-        CALL_TEXT,
-        "Write the brief that frames an itinerary.",
-        "features/editor_assist/itinerary_brief.py",
-    ),
-    Job(
-        "editor.itinerary_day_blurb",
-        APP_ABW,
-        CALL_TEXT,
-        "Write one day's summary, with a repair pass behind it.",
-        "features/editor_assist/itinerary_day_blurb_execution.py",
-    ),
-    Job(
-        "editor.itinerary_stop_reason",
-        APP_ABW,
-        CALL_TEXT,
-        "Say why one stop belongs on the itinerary.",
-        "features/editor_assist/itinerary_stop_reason.py",
-    ),
-    # ---- Images ----------------------------------------------------------
-    Job(
-        "images.alt_text",
-        APP_ABW,
-        CALL_MULTIMODAL,
-        "Describe an image for a reader who cannot see it.",
-        "features/images/alt_text_generator.py",
-    ),
-    Job(
-        "images.scene_description",
-        APP_ABW,
-        CALL_MULTIMODAL,
-        "Describe what is happening in an image.",
-        "features/images/scene_describer.py",
-    ),
-    Job(
-        "images.subject_description",
-        APP_ABW,
-        CALL_MULTIMODAL,
-        "Describe the subject of an image, for re-creation.",
-        "features/images/subject_describer.py",
-    ),
-    Job(
-        "images.edit_prompt",
-        APP_ABW,
-        CALL_MULTIMODAL,
-        "Write the prompt that edits an existing image.",
-        "features/images/edit_prompt_builder.py",
-    ),
-    Job(
-        "images.insert_prompt",
-        APP_ABW,
-        CALL_MULTIMODAL,
-        "Write the prompt that inserts a subject into a scene.",
-        "features/images/insert_prompt_builder.py",
-    ),
-    # ---- Location Manager ------------------------------------------------
-    Job(
-        "lm.alt_text",
-        APP_LM,
-        CALL_MULTIMODAL,
-        "Describe a location photograph for a reader who cannot see it.",
-        "packages/python-alt-text/generation.py",
-    ),
-    Job(
-        "lm.neighborhood_description",
-        APP_LM,
-        CALL_TEXT,
-        "Write a paragraph of prose about a neighborhood.",
-        "packages/python-alt-text/generation.py",
-    ),
-    Job(
-        "lm.accommodations_field_suggestion",
-        APP_LM,
-        CALL_GROUNDED_JSON,
-        "Suggest one accommodations field from an image and grounded search.",
-        "packages/python-alt-text/generation.py",
-    ),
-    Job(
-        "lm.dining_field_suggestion",
-        APP_LM,
-        CALL_GROUNDED_JSON,
-        "Suggest one dining field from an image and grounded search.",
-        "packages/python-alt-text/generation.py",
-    ),
-)
+def _load(path: Path = CATALOGUE_PATH) -> tuple[Job, ...]:
+    """Read the catalogue, refusing anything malformed.
 
-JOBS_BY_ID: dict[str, Job] = {job.job_id: job for job in JOBS}
+    Strict on the way in. This list is what every call site resolves against
+    and what the fallback is built from, so it is the last place a silent gap
+    should be tolerated.
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw = payload.get("jobs")
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"{path.name} has no jobs")
+
+    loaded: list[Job] = []
+    seen: set[str] = set()
+    for entry in raw:
+        job_id = entry.get("id")
+        if not isinstance(job_id, str) or "." not in job_id:
+            raise ValueError(f"{path.name}: {job_id!r} is not an `area.job` id")
+        if job_id in seen:
+            raise ValueError(f"{path.name}: {job_id!r} is listed twice")
+        seen.add(job_id)
+
+        app = entry.get("app")
+        if app not in APPS:
+            raise ValueError(f"{path.name}: {job_id} belongs to unknown app {app!r}")
+
+        call = entry.get("call")
+        if call not in CALL_KINDS:
+            raise ValueError(f"{path.name}: {job_id} has unknown call kind {call!r}")
+
+        model = entry.get("defaultModel")
+        if model is not None and not isinstance(model, str):
+            raise ValueError(f"{path.name}: {job_id} has a non-string default model")
+        if model is None and call != CALL_PLACES:
+            raise ValueError(f"{path.name}: {job_id} makes a model call with no default")
+
+        loaded.append(
+            Job(
+                job_id=job_id,
+                app=app,
+                call=call,
+                summary=str(entry.get("summary", "")),
+                site=str(entry.get("site", "")),
+                default_model=model,
+            )
+        )
+    return tuple(loaded)
+
+
+JOBS: tuple[Job, ...] = _load()
+
+JOBS_BY_ID: dict[str, Job] = {entry.job_id: entry for entry in JOBS}
+
+DEFAULT_MODELS: dict[str, Optional[str]] = {
+    entry.job_id: entry.default_model for entry in JOBS
+}
 
 
 class UnknownJob(KeyError):
@@ -412,3 +174,21 @@ def job(job_id: str) -> Job:
 def jobs_for_app(app: str) -> tuple[Job, ...]:
     """Every job one app is responsible for."""
     return tuple(entry for entry in JOBS if entry.app == app)
+
+
+def catalogue_payload() -> dict:
+    """The catalogue as the dashboard serves it, for a settings screen."""
+    return {
+        "version": 1,
+        "jobs": [
+            {
+                "id": entry.job_id,
+                "app": entry.app,
+                "call": entry.call,
+                "summary": entry.summary,
+                "site": entry.site,
+                "defaultModel": entry.default_model,
+            }
+            for entry in JOBS
+        ],
+    }

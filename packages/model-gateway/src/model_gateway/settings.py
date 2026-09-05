@@ -9,8 +9,8 @@ The failure behaviour is the design, not an afterthought:
 
 * **The dashboard being down never stops a model call.** Every read falls back
   to the last table successfully fetched, and before any fetch has succeeded,
-  to ``defaults.json`` -- the models every job ran on the day the gateway was
-  built. Dashboard down means "keep running on what we last read", never
+  to the registry's own defaults -- the models every job ran on the day the
+  gateway was built. Dashboard down means "keep running on what we last read", never
   "stop".
 * **A fetch failure is logged, not raised.** A settings bug must not become a
   pipeline bug, for the same reason usage reporting swallows its own errors.
@@ -27,7 +27,7 @@ Resolution order for one job, highest first:
 1. an explicit ``model`` argument at the call site (the operator dropdowns);
 2. a per-job environment override, when one is set;
 3. the dashboard's table;
-4. ``defaults.json``.
+4. the registry's checked-in default.
 
 The environment override sits above the dashboard on purpose: it is what
 Location Manager's ``ALT_TEXT_MODEL`` and friends already do, and an env var
@@ -37,7 +37,7 @@ is worth knowing before wondering why a flip did nothing -- ``pinned_jobs()``
 reports exactly that.
 
 Configuration, all optional. With no URL set this never makes a request and
-every job resolves from ``defaults.json``:
+every job resolves from the registry's own defaults:
 
 ``MODEL_GATEWAY_SETTINGS_URL``      where the table is served, e.g.
                                     ``http://localhost:4500/api/settings/v1/models``
@@ -56,14 +56,11 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Callable, Mapping, Optional
 
-from .jobs import JOBS_BY_ID, Job, job as lookup_job
+from .jobs import DEFAULT_MODELS, JOBS_BY_ID, Job, job as lookup_job
 
 logger = logging.getLogger(__name__)
-
-DEFAULTS_PATH = Path(__file__).with_name("defaults.json")
 
 SOURCE_DASHBOARD = "dashboard"
 SOURCE_DEFAULTS = "defaults"
@@ -114,17 +111,19 @@ class ModelTable:
         return self.models.get(job_id)
 
 
-def load_defaults(path: Path = DEFAULTS_PATH) -> ModelTable:
-    """The checked-in table. Read once at import and never mutated."""
-    payload = json.loads(path.read_text(encoding="utf-8"))
+def load_defaults() -> ModelTable:
+    """The checked-in table: what each job runs on with nothing overriding it.
+
+    Comes from the registry itself rather than a second file. Two files would
+    need a test to keep them in step, and would still drift in the window
+    between one changing and anyone running it.
+    """
     return ModelTable(
-        models=_models_from_payload(payload, strict=True),
-        source=SOURCE_DEFAULTS,
-        fetched_at=0.0,
+        models=dict(DEFAULT_MODELS), source=SOURCE_DEFAULTS, fetched_at=0.0
     )
 
 
-def _models_from_payload(payload: Any, *, strict: bool = False) -> dict[str, Optional[str]]:
+def _models_from_payload(payload: Any) -> dict[str, Optional[str]]:
     """Read ``{"jobs": {id: {"model": ...}}}`` into a flat mapping.
 
     Unknown job ids are dropped with a warning rather than accepted: the
@@ -140,10 +139,7 @@ def _models_from_payload(payload: Any, *, strict: bool = False) -> dict[str, Opt
     models: dict[str, Optional[str]] = {}
     for job_id, entry in raw_jobs.items():
         if job_id not in JOBS_BY_ID:
-            message = "model table names unknown job %r; ignoring it"
-            if strict:
-                raise ValueError(f"defaults.json names unknown job {job_id!r}")
-            logger.warning(message, job_id)
+            logger.warning("model table names unknown job %r; ignoring it", job_id)
             continue
         model = entry.get("model") if isinstance(entry, dict) else entry
         if model is not None and not isinstance(model, str):
@@ -151,12 +147,6 @@ def _models_from_payload(payload: Any, *, strict: bool = False) -> dict[str, Opt
             continue
         models[job_id] = model.strip() if isinstance(model, str) else None
 
-    if strict:
-        missing = sorted(set(JOBS_BY_ID) - set(models))
-        if missing:
-            raise ValueError(
-                "defaults.json is missing a model for: " + ", ".join(missing)
-            )
     return models
 
 

@@ -1,0 +1,343 @@
+{
+  "version": 1,
+  "note": "Every model call this monorepo makes, and what each one runs on when nothing overrides it. This file is the registry AND the checked-in fallback, in one place, because two files would need a test to keep them in step and would still drift between the moment one changed and the moment anyone ran it. Read by model_gateway/jobs.py in Python and by the dashboard in TypeScript -- one source, two runtimes. defaultModel null means the job reaches an API with no model behind it.",
+  "capturedOn": "2026-09-04",
+  "jobs": [
+    {
+      "id": "p2b.compose",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Write the article. The one call whose prose a reader sees.",
+      "site": "features/prompt2blog/stages/v3/compose.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.outline",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Turn the work order into a section plan before anything is written.",
+      "site": "features/prompt2blog/stages/v3/outline.py",
+      "defaultModel": "claude-sonnet-5-medium"
+    },
+    {
+      "id": "p2b.audit",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Read the draft against the constraints and say what it breaks.",
+      "site": "features/prompt2blog/stages/v3/audit_repair.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.repair",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Rewrite the draft to fix what the audit found. A full article rewrite.",
+      "site": "features/prompt2blog/stages/v3/audit_repair.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.groundedness",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Check each claim in the draft against the evidence gathered for it.",
+      "site": "features/prompt2blog/stages/v3/groundedness.py",
+      "defaultModel": "claude-sonnet-5-medium"
+    },
+    {
+      "id": "p2b.classify",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Decide what kind of article the seed is asking for.",
+      "site": "features/prompt2blog/classification.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.grill",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Interview the operator. Decides what the article is; every later stage inherits it.",
+      "site": "features/prompt2blog/grill_v4.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.grill_research",
+      "app": "ai-blog-writer",
+      "call": "grounded_text",
+      "summary": "Look up the subject mid-interview so the next question can be sharp.",
+      "site": "features/prompt2blog/api/intake.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.brief",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Write the Article Brief: the vision, never consumed by a later stage.",
+      "site": "features/prompt2blog/brief_v4.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.work_order",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Turn the brief into the instructions the writing stages actually read.",
+      "site": "features/prompt2blog/work_order_v4.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.notes",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Capture the operator's own notes into the run's record.",
+      "site": "features/prompt2blog/notes_v4.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.research_gather",
+      "app": "ai-blog-writer",
+      "call": "grounded_text",
+      "summary": "Search for evidence the article will be written from.",
+      "site": "features/prompt2blog/research_v4.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.research_structure",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Shape gathered prose into sources and claims. Shape, not judgement.",
+      "site": "features/prompt2blog/research_v4.py",
+      "defaultModel": "claude-sonnet-5-medium"
+    },
+    {
+      "id": "listicle.search",
+      "app": "ai-blog-writer",
+      "call": "grounded_text",
+      "summary": "Search one angle for places worth listing, with evidence for each.",
+      "site": "features/listicle_pipeline/api.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "listicle.grill",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Interview the operator about the list, using the article grill's engine.",
+      "site": "features/listicle_pipeline/service.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "listicle.grill_research",
+      "app": "ai-blog-writer",
+      "call": "grounded_text",
+      "summary": "Look the subject up mid-interview, as the article grill does.",
+      "site": "features/listicle_pipeline/api.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "listicle.profile_research",
+      "app": "ai-blog-writer",
+      "call": "grounded_text",
+      "summary": "Look one named place up and bring back claims with their sources.",
+      "site": "features/listicle_pipeline/profile_research.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "listicle.identity",
+      "app": "ai-blog-writer",
+      "call": "places",
+      "summary": "Resolve a written name to the place Google actually holds.",
+      "site": "features/listicle_pipeline/identity.py",
+      "defaultModel": null
+    },
+    {
+      "id": "listicle.place_details",
+      "app": "ai-blog-writer",
+      "call": "places",
+      "summary": "Fetch what Google holds about a place, before any model reads it.",
+      "site": "features/listicle_pipeline/places.py",
+      "defaultModel": null
+    },
+    {
+      "id": "itinerary.intent",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Read the brief for keywords, price bounds and lodging hints.",
+      "site": "features/itineraries_pipeline/llm_stages.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "itinerary.scoring",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Score one slot's whole candidate pool against the intent.",
+      "site": "features/itineraries_pipeline/llm_stages.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "itinerary.reasons",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Say why each chosen stop earns its place in the day.",
+      "site": "features/itineraries_pipeline/llm_stages.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "itinerary.title",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Name the itinerary.",
+      "site": "features/itineraries_pipeline/routes.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "editor.writer_brief",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Draft the brief an editor hands a writer.",
+      "site": "features/editor_assist/writer_brief.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "editor.research_profile",
+      "app": "ai-blog-writer",
+      "call": "grounded_text",
+      "summary": "Research one place for the editor, grounded in search.",
+      "site": "features/editor_assist/research_profile.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "editor.seo_metadata",
+      "app": "ai-blog-writer",
+      "call": "structured",
+      "summary": "Produce title, description and slug under a forced schema.",
+      "site": "features/editor_assist/seo_metadata.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "editor.listicle_blurb",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Write one listicle entry, then rewrite it if validation rejects it.",
+      "site": "features/editor_assist/blurb_composition_execution.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "editor.generate_title",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Propose a title for an article already written.",
+      "site": "features/editor_assist/editorial_actions.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "editor.rewrite_block",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Rewrite one block an editor selected, with a repair pass behind it.",
+      "site": "features/editor_assist/editorial_actions.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "editor.itinerary_intro",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Write the opening of an itinerary article.",
+      "site": "features/editor_assist/itinerary_intro.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "editor.itinerary_brief",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Write the brief that frames an itinerary.",
+      "site": "features/editor_assist/itinerary_brief.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "editor.itinerary_day_blurb",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Write one day's summary, with a repair pass behind it.",
+      "site": "features/editor_assist/itinerary_day_blurb_execution.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "editor.itinerary_stop_reason",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Say why one stop belongs on the itinerary.",
+      "site": "features/editor_assist/itinerary_stop_reason.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "images.alt_text",
+      "app": "ai-blog-writer",
+      "call": "multimodal",
+      "summary": "Describe an image for a reader who cannot see it.",
+      "site": "features/images/alt_text_generator.py",
+      "defaultModel": "gemini-2.5-flash-lite"
+    },
+    {
+      "id": "images.scene_description",
+      "app": "ai-blog-writer",
+      "call": "multimodal",
+      "summary": "Describe what is happening in an image.",
+      "site": "features/images/scene_describer.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "images.subject_description",
+      "app": "ai-blog-writer",
+      "call": "multimodal",
+      "summary": "Describe the subject of an image, for re-creation.",
+      "site": "features/images/subject_describer.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "images.edit_prompt",
+      "app": "ai-blog-writer",
+      "call": "multimodal",
+      "summary": "Write the prompt that edits an existing image.",
+      "site": "features/images/edit_prompt_builder.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "images.insert_prompt",
+      "app": "ai-blog-writer",
+      "call": "multimodal",
+      "summary": "Write the prompt that inserts a subject into a scene.",
+      "site": "features/images/insert_prompt_builder.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "lm.alt_text",
+      "app": "location-manager",
+      "call": "multimodal",
+      "summary": "Describe a location photograph for a reader who cannot see it.",
+      "site": "packages/python-alt-text/generation.py",
+      "defaultModel": "gemini-2.5-pro"
+    },
+    {
+      "id": "lm.neighborhood_description",
+      "app": "location-manager",
+      "call": "text",
+      "summary": "Write a paragraph of prose about a neighborhood.",
+      "site": "packages/python-alt-text/generation.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "lm.accommodations_field_suggestion",
+      "app": "location-manager",
+      "call": "grounded_json",
+      "summary": "Suggest one accommodations field from an image and grounded search.",
+      "site": "packages/python-alt-text/generation.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "lm.dining_field_suggestion",
+      "app": "location-manager",
+      "call": "grounded_json",
+      "summary": "Suggest one dining field from an image and grounded search.",
+      "site": "packages/python-alt-text/generation.py",
+      "defaultModel": "gemini-2.5-flash"
+    }
+  ]
+}

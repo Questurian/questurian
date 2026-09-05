@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { ServicesTab } from "./services/ServicesTab";
+import { ModelsTab } from "./models/ModelsTab";
 import { RatesTab } from "./rates/RatesTab";
 import { UsageTab } from "./usage/UsageTab";
 
 /**
  * The shell: what the terminal dashboard shows, plus the API monitor built on
- * top of it. Two tabs, no router -- the tab is the only navigation state, and
+ * top of it. A handful of tabs, no router -- the tab is the only navigation
+ * state, and
  * it is kept in the URL hash so a reload and a bookmark both land where the
  * operator was.
  */
@@ -13,6 +15,7 @@ import { UsageTab } from "./usage/UsageTab";
 const TABS = [
   { id: "services", label: "Services" },
   { id: "usage", label: "API Usage" },
+  { id: "models", label: "Models" },
   { id: "rates", label: "Rates" },
 ] as const;
 
@@ -76,6 +79,7 @@ export function App() {
       <main className="mx-auto max-w-[1600px] px-4 py-4">
         {tab === "services" ? <ServicesTab /> : null}
         {tab === "usage" ? <UsageTab /> : null}
+        {tab === "models" ? <ModelsTab /> : null}
         {tab === "rates" ? <RatesTab /> : null}
       </main>
     </div>

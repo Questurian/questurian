@@ -21,15 +21,25 @@ Two caveats that outlive any single verification:
   under its own SKUs. The two have matched for these models but are not
   guaranteed to.
 
-Rates that nothing calls any more stay here, marked ``in_use=False``. Stored
+The numbers themselves are in ``rates.json`` beside this file, because the
+dashboard publishes the same table and reads it from TypeScript. One source,
+two runtimes. This module is the Python reader and the thing that applies
+them.
+
+Rates that nothing calls any more stay in the table, marked ``in_use=False``. Stored
 runs were priced with them, and a rate table that forgets is a receipt that
 changes after the fact.
 """
 
 from __future__ import annotations
 
+import json
+import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+
+TABLE_PATH = Path(__file__).with_name("rates.json")
 
 GEMINI_API_PRICING = "https://ai.google.dev/gemini-api/docs/pricing"
 GOOGLE_MAPS_PRICING = "https://developers.google.com/maps/billing-and-pricing/pricing"
@@ -62,75 +72,6 @@ class ModelRate:
     note: str | None = None
 
 
-_RATES: tuple[ModelRate, ...] = (
-    ModelRate(
-        model="gemini-2.5-pro",
-        input_per_million=1.25,
-        output_per_million=10.0,
-        cached_input_per_million=0.125,
-        large_input_per_million=2.5,
-        large_output_per_million=15.0,
-        large_cached_input_per_million=0.25,
-        large_context_threshold=LARGE_CONTEXT_THRESHOLD,
-    ),
-    ModelRate(
-        model="gemini-2.5-flash",
-        input_per_million=0.3,
-        output_per_million=2.5,
-        cached_input_per_million=0.03,
-    ),
-    ModelRate(
-        model="gemini-2.5-flash-lite",
-        input_per_million=0.1,
-        output_per_million=0.4,
-        cached_input_per_million=0.01,
-    ),
-    # Below here: nothing calls these any more.
-    ModelRate(
-        model="gemini-3.1-pro-preview",
-        input_per_million=2.0,
-        output_per_million=12.0,
-        cached_input_per_million=0.2,
-        large_input_per_million=4.0,
-        large_output_per_million=18.0,
-        large_cached_input_per_million=0.4,
-        large_context_threshold=LARGE_CONTEXT_THRESHOLD,
-        in_use=False,
-    ),
-    ModelRate(
-        model="gemini-3.7-flash",
-        input_per_million=0.75,
-        output_per_million=3.75,
-        cached_input_per_million=0.075,
-        in_use=False,
-        note="Introductory rate. Doubles to $1.50 / $7.50 on 2027-01-01.",
-    ),
-    ModelRate(
-        model="gemini-3.5-flash",
-        input_per_million=1.5,
-        output_per_million=9.0,
-        cached_input_per_million=0.15,
-        in_use=False,
-    ),
-    ModelRate(
-        model="gemini-3.5-flash-lite",
-        input_per_million=0.3,
-        output_per_million=2.5,
-        cached_input_per_million=0.03,
-        in_use=False,
-    ),
-    ModelRate(
-        model="gemini-3.1-flash-lite",
-        input_per_million=0.25,
-        output_per_million=1.5,
-        cached_input_per_million=0.025,
-        in_use=False,
-    ),
-)
-
-MODEL_RATES: dict[str, ModelRate] = {rate.model: rate for rate in _RATES}
-
-
 @dataclass(frozen=True)
 class UnpriceableProvider:
     """A provider whose calls are reported with a duration and no cost.
@@ -144,25 +85,59 @@ class UnpriceableProvider:
     source: str = ""
 
 
-UNPRICEABLE_PROVIDERS: tuple[UnpriceableProvider, ...] = (
-    UnpriceableProvider(
-        provider="google-places",
-        reason=(
-            "Billed per request and per field group, not per token. Atmosphere "
-            "fields (rating, reviews, price_level) are charged on top of the "
-            "basic lookup."
-        ),
-        source=GOOGLE_MAPS_PRICING,
-    ),
-    UnpriceableProvider(
-        provider="claude-cli",
-        reason=(
-            "Runs on a Claude subscription, not per-token billing. The CLI "
-            "reports a cost figure that does not correspond to money owed, so "
-            "it is ignored."
-        ),
-    ),
-)
+def _load(path: Path = TABLE_PATH) -> tuple[tuple[ModelRate, ...], tuple["UnpriceableProvider", ...]]:
+    """Read the table, refusing a row that cannot be checked.
+
+    Every rate must carry the date it was verified and the page it was
+    verified against. A rate nobody has checked is a number that looks like
+    evidence, and an unverified rate that happens to be wrong makes every cost
+    built on it wrong in the same direction, silently.
+    """
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    loaded: list[ModelRate] = []
+    for row in payload.get("models", []):
+        model = row.get("model")
+        if not isinstance(model, str) or not model:
+            raise ValueError(f"{path.name}: a rate has no model name")
+        verified = row.get("verifiedOn", "")
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(verified)):
+            raise ValueError(f"{path.name}: {model} has no verification date")
+        source = str(row.get("source", ""))
+        if not source.startswith("https://"):
+            raise ValueError(f"{path.name}: {model} has no source to re-check")
+        loaded.append(
+            ModelRate(
+                model=model,
+                input_per_million=float(row["input"]),
+                output_per_million=float(row["output"]),
+                cached_input_per_million=float(row["cachedInput"]),
+                large_input_per_million=row.get("largeInput"),
+                large_output_per_million=row.get("largeOutput"),
+                large_cached_input_per_million=row.get("largeCachedInput"),
+                large_context_threshold=row.get("largeContextThreshold"),
+                verified_on=str(verified),
+                source=source,
+                in_use=bool(row.get("inUse", True)),
+                note=row.get("note"),
+            )
+        )
+    if not loaded:
+        raise ValueError(f"{path.name} lists no models")
+
+    providers = tuple(
+        UnpriceableProvider(
+            provider=str(row["provider"]),
+            reason=str(row.get("reason", "")),
+            source=str(row.get("source", "")),
+        )
+        for row in payload.get("unpriceable", [])
+    )
+    return tuple(loaded), providers
+
+
+_RATES, UNPRICEABLE_PROVIDERS = _load()
+
+MODEL_RATES: dict[str, ModelRate] = {rate.model: rate for rate in _RATES}
 
 UNPRICEABLE_PROVIDER_NAMES = frozenset(
     entry.provider for entry in UNPRICEABLE_PROVIDERS
@@ -247,5 +222,5 @@ def rates_payload() -> dict[str, Any]:
             }
             for entry in UNPRICEABLE_PROVIDERS
         ],
-        "appliedBy": "packages/model-gateway/src/model_gateway/rates.py",
+        "appliedBy": "packages/model-gateway/src/model_gateway/rates.json",
     }
