@@ -58,7 +58,7 @@ def run_v3_compose_stage(
     )
 
     parsed, raw_response = dependencies.llm.invoke_json(
-            job_id="p2b.compose",
+        job_id="p2b.compose",
         prompt=prompt,
         max_tokens=6144,
         temperature=state["compose_temperature"],
@@ -75,6 +75,7 @@ def run_v3_compose_stage(
     )
     rewrite["improved_content"] = dependencies.llm.enforce_anti_ai(
         rewrite["improved_content"],
+        job_id="p2b.compose",
         model_name=state["writing_model"],
         max_tokens=6144,
         context="prompt2blog v3 compose",

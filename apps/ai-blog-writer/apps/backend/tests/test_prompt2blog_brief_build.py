@@ -230,11 +230,21 @@ def test_required_strings_cannot_be_empty_in_the_schema():
 def test_every_v4_schema_got_the_same_guard():
     # It was wrong in the same way in four places, so it is fixed as a shape
     # rather than as four instances.
+    #
+    # `consensus` used to be asserted here too, and that was the wrong field to
+    # generalise to. A brief's `primary_reader` is empty only when the model
+    # failed; the grill's `consensus` is empty on every turn it is still
+    # asking, because the prompt tells it to leave it so. The floor was
+    # harmless while nothing checked it and fatal the moment Gemini started
+    # being sent the schema -- the first real v4 run died on turn one with
+    # `response.consensus: too short`. The state-dependent fields are asserted
+    # in test_prompt2blog_schema_enforcement.py, which pins them open.
     from app.features.prompt2blog.grill_v4 import NEXT_TURN_SCHEMA
     from app.features.prompt2blog.research_v4 import EVIDENCE_SCHEMA
     from app.features.prompt2blog.work_order_v4 import WORK_ORDER_SCHEMA
 
-    assert NEXT_TURN_SCHEMA["properties"]["consensus"]["minLength"] == 1
+    options = NEXT_TURN_SCHEMA["properties"]["options"]["items"]
+    assert options["properties"]["text"]["minLength"] == 1
     assert WORK_ORDER_SCHEMA["properties"]["primary_subject"]["minLength"] == 1
     assert (
         EVIDENCE_SCHEMA["properties"]["sources"]["items"]["properties"]["title"][
