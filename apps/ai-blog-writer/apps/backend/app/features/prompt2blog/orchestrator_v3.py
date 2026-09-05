@@ -18,11 +18,6 @@ from functools import partial
 from typing import Any
 
 from .config import (
-    DEFAULT_MODEL,
-    P2B_AUDIT_MODEL,
-    P2B_COMPOSE_MODEL,
-    P2B_V3_GROUNDEDNESS_MODEL,
-    P2B_V3_OUTLINE_MODEL,
     PROMPT2BLOG_CREATIVITY_TEMPERATURES,
     PROMPT2BLOG_DEFAULT_COMPOSE_TEMPERATURE,
 )
@@ -109,17 +104,19 @@ def _initial_v3_state(
         "instructions": instructions,
         "stage_contexts": _safe_dict(instructions.get("stage_contexts")),
         "option_context": _safe_dict(request.option_context),
-        "model_name": request.model_name or DEFAULT_MODEL,
+        # An operator's choice from the stack they picked, or None so each
+        # stage asks the gateway for its own job.
+        "model_name": request.model_name or None,
         # Every role a v3 run calls is now routable. The three that used to be
         # pinned still default to the same constants, so a request that names
         # none of them runs exactly as it did before.
         "outline_model": dependencies.resolve_writer_model(
             request.outline_model,
-            default=P2B_V3_OUTLINE_MODEL,
+            default=None,
         ),
         "writing_model": dependencies.resolve_writer_model(
             request.writing_model,
-            default=P2B_COMPOSE_MODEL,
+            default=None,
         ),
         # Defaults to whatever the writer resolved to, so a route that says
         # nothing about repair keeps drafting and repairing on one model.
@@ -127,16 +124,16 @@ def _initial_v3_state(
             request.repair_model,
             default=dependencies.resolve_writer_model(
                 request.writing_model,
-                default=P2B_COMPOSE_MODEL,
+                default=None,
             ),
         ),
         "audit_model": dependencies.resolve_writer_model(
             request.audit_model,
-            default=P2B_AUDIT_MODEL,
+            default=None,
         ),
         "groundedness_model": dependencies.resolve_writer_model(
             request.groundedness_model,
-            default=P2B_V3_GROUNDEDNESS_MODEL,
+            default=None,
         ),
         "model_stack_id": request.model_stack_id,
         "compose_temperature": PROMPT2BLOG_CREATIVITY_TEMPERATURES.get(

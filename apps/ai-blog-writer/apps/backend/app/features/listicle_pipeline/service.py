@@ -30,10 +30,6 @@ from .contracts import LISTICLE_MARKER_KEYS
 from .prompts import build_listicle_turn_prompt
 from .search import run_search_order
 
-# gemini-2.5-flash: the model the live grounding path already runs on, and
-# cheap enough that the interview is not the expensive part of a run.
-LISTICLE_GRILL_MODEL = "gemini-2.5-flash"
-
 logger = logging.getLogger(__name__)
 
 

@@ -86,6 +86,7 @@ def _audit_v3_rewrite(
         rewritten_content=rewrite["improved_content"],
     )
     parsed, raw_response = dependencies.llm.invoke_json(
+            job_id="p2b.audit",
         prompt=prompt,
         max_tokens=1536,
         temperature=0.05,
@@ -260,6 +261,7 @@ def run_v3_repair_stage(
     # cheaper place to spend it, because it only runs on a draft that failed.
     repair_model = state.get("repair_model") or state["writing_model"]
     parsed, raw_response = dependencies.llm.invoke_json(
+            job_id="p2b.repair",
         prompt=prompt,
         max_tokens=6144,
         temperature=0.1,

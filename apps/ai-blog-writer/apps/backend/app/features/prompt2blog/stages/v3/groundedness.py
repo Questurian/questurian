@@ -5,7 +5,6 @@ from typing import Any
 
 from app.shared.provider_faults import is_fatal_provider_fault
 
-from ...config import P2B_V3_GROUNDEDNESS_MODEL
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
 from ...instructions_v3 import EVIDENCE_DISPOSITION_POLICY
@@ -39,10 +38,11 @@ def check_v3_groundedness(
 
     raw_response = ""
     groundedness_model = state.get(
-        "groundedness_model", P2B_V3_GROUNDEDNESS_MODEL
+        "groundedness_model"
     )
     try:
         parsed, raw_response = dependencies.llm.invoke_json(
+            job_id="p2b.groundedness",
             prompt=prompt,
             max_tokens=2048,
             temperature=0.0,

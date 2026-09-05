@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 RESEARCH_MAX_TOKENS = 3_072
 RESEARCH_TIMEOUT_SECONDS = 120
-RESEARCH_MODEL = "gemini-2.5-flash"
 
 # Offered to the model as a closed vocabulary. An open one produces a different
 # taxonomy for every place, and a taxonomy nobody applies consistently cannot

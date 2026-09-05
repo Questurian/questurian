@@ -243,7 +243,7 @@ class ResolvingThroughThePackage(unittest.TestCase):
         )
         model_gateway.set_settings(settings)
         try:
-            self.assertIsNone(model_gateway.model_for("listicle.identity"))
+            self.assertIsNone(model_gateway.model_for("listicle.resolve_place"))
         finally:
             model_gateway.set_settings(None)
 

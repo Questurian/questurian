@@ -698,22 +698,23 @@ def test_the_format_rule_is_not_mixed_into_the_interviewing_rules():
     assert "ALWAYS return both" not in prompt
 
 
-def test_the_grill_runs_on_its_own_named_model():
-    """One line to change, and not the pipeline default.
+def test_the_grill_runs_on_its_own_named_job():
+    """One place to change, and not the pipeline default.
 
     The grill decides what the article is and every later stage inherits that,
     across about six calls -- the cheapest place in the pipeline to spend on a
-    better model.
+    better model. It used to be one constant in `config`; it is now one row in
+    the gateway's registry, which the dashboard can change without a deploy.
     """
-    from app.features.prompt2blog.config import (
-        P2B_V4_GRILL_MODEL,
-        P2B_V4_GRILL_TEMPERATURE,
-    )
+    import model_gateway
+    from app.features.prompt2blog.config import P2B_V4_GRILL_TEMPERATURE
     from app.features.prompt2blog.pricing import VERTEX_TOKEN_RATES
 
-    assert P2B_V4_GRILL_MODEL in VERTEX_TOKEN_RATES, "an unpriced model hides its cost"
+    served = model_gateway.model_for("p2b.grill")
+    assert served in VERTEX_TOKEN_RATES, "an unpriced model hides its cost"
     # Judgement, not extraction. A low temperature proposes the safe question
-    # rather than the useful one.
+    # rather than the useful one. Temperature stayed in config because it is a
+    # property of the call, not of the model.
     assert P2B_V4_GRILL_TEMPERATURE >= 0.5
 
 

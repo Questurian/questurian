@@ -35,7 +35,6 @@ from app.features.prompt2blog.contracts_v4 import (
 from app.features.prompt2blog.config import P2B_V4_GATHER_CONCURRENCY
 from app.features.prompt2blog.coverage_v4 import assess_coverage
 from app.features.prompt2blog.research_v4 import (
-    GATHER_MODEL,
     ResearchDependencies,
     build_gather_prompt,
     build_structure_prompt,
@@ -94,9 +93,11 @@ def _work_order(**overrides) -> Prompt2BlogWorkOrder:
 
 class RecordingGather:
     def __init__(self) -> None:
-        self.calls: list[tuple[str, str]] = []
+        self.calls: list[tuple[str, str | None]] = []
 
-    def __call__(self, prompt: str, model: str) -> tuple[str, list[str], int | None]:
+    def __call__(
+        self, prompt: str, model: str | None = None
+    ) -> tuple[str, list[str], int | None]:
         self.calls.append((prompt, model))
         return f"Notes for: {prompt[:40]}", ["https://example.pe/a"], 1_200
 
@@ -199,12 +200,18 @@ def test_texture_is_researched_like_anything_else():
     assert "with sources" in texture_prompt
 
 
-def test_gathering_runs_on_the_model_the_grounding_path_actually_uses():
+def test_gathering_names_no_model_of_its_own():
+    """The stage used to pin the grounding model here.
+
+    It names the job `p2b.research_gather` instead, and which model that runs
+    on is the gateway's answer -- so this asserts the absence of a pin rather
+    than the presence of a particular name.
+    """
     deps = _deps()
 
     gather_research(_brief(), _work_order(), deps)
 
-    assert {model for _prompt, model in deps.gather.calls} == {GATHER_MODEL}
+    assert {model for _prompt, model in deps.gather.calls} == {None}
 
 
 def test_the_gather_prompt_asks_for_more_than_the_question():

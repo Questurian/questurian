@@ -44,6 +44,14 @@
       "defaultModel": "claude-sonnet-5-medium"
     },
     {
+      "id": "p2b.synthesize",
+      "app": "ai-blog-writer",
+      "call": "text",
+      "summary": "Fold raw source blobs into one overview before anything is classified.",
+      "site": "features/prompt2blog/api/generation.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
       "id": "p2b.classify",
       "app": "ai-blog-writer",
       "call": "json",
@@ -124,7 +132,7 @@
       "defaultModel": "gemini-2.5-flash"
     },
     {
-      "id": "listicle.grill_research",
+      "id": "listicle.grill_lookup",
       "app": "ai-blog-writer",
       "call": "grounded_text",
       "summary": "Look the subject up mid-interview, as the article grill does.",
@@ -140,7 +148,7 @@
       "defaultModel": "gemini-2.5-flash"
     },
     {
-      "id": "listicle.identity",
+      "id": "listicle.resolve_place",
       "app": "ai-blog-writer",
       "call": "places",
       "summary": "Resolve a written name to the place Google actually holds.",

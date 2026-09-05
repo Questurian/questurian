@@ -522,10 +522,6 @@ ONE_QUESTION_MAX_TOKENS = 8_192
 # costs a third of the questions instead of all of them.
 STRUCTURE_BATCH_SIZE = 4
 
-# What the live grounding path runs on. Not a 3.x model: `editor_assist` has
-# grounded on this in production since ADR 0003, and the REST grounding
-# endpoint is not the place to discover a version does not work.
-GATHER_MODEL = "gemini-2.5-flash"
 
 
 EVIDENCE_SCHEMA = require_non_empty({
@@ -928,7 +924,9 @@ def gather_one_requirement(
     """
     prompt = build_gather_prompt(brief, requirement)
     try:
-        text, urls, tokens = dependencies.gather(prompt, GATHER_MODEL)
+        # None, not a model: the gather job names itself and the gateway
+        # answers. The argument stays so the callable's shape is unchanged.
+        text, urls, tokens = dependencies.gather(prompt, None)
     except Exception as exc:  # pragma: no cover -- network dependent
         logger.warning("Gather failed for %s: %s", requirement.requirement_id, exc)
         text, urls, tokens = "", [], None
@@ -1273,6 +1271,7 @@ def _structure_batch(
     ids = [item.requirement_id for item in requirements]
     try:
         parsed, _raw = dependencies.structure_llm.invoke_json(
+            job_id="p2b.research_structure",
             prompt=build_batch_prompt(work_order, requirements, notes),
             model_name=dependencies.structure_model,
             schema=BATCH_SCHEMA,
@@ -1319,6 +1318,7 @@ def _settle_premise(
         return {"premise_findings": [], "conflicts": []}
     try:
         parsed, _raw = dependencies.structure_llm.invoke_json(
+            job_id="p2b.research_structure",
             prompt=build_premise_prompt(work_order, claims),
             model_name=dependencies.structure_model,
             schema=PREMISE_SCHEMA,

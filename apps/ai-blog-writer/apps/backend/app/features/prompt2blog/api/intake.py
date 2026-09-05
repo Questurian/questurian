@@ -37,12 +37,10 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.core.staff_auth import require_staff, staff_user_id
 
-from ..config import P2B_V4_RESEARCH_STRUCTURE_MODEL
 from ..brief_v4 import BriefIncomplete, BriefUnusable
 from ..dependencies import PipelineDependencies, dependencies_for_run
 from ..grill_v4 import (
     GRILL_RESEARCH_MAX_TOKENS,
-    GRILL_RESEARCH_MODEL,
     GrillDependencies,
     GrillUnusableResponse,
 )
@@ -98,7 +96,8 @@ class CutRequest(BaseModel):
 def _grounded_call(
     prompt: str,
     *,
-    model_name: str,
+    job_id: str,
+    model_name: str | None = None,
     max_tokens: int,
     usage_recorder: Any | None,
 ) -> tuple[str, list[str], int | None]:
@@ -115,10 +114,13 @@ def _grounded_call(
     measurement rather than a call that cost nothing: `record` files a `None`
     usage as unmetered, and both real runs had exactly one search like that.
     """
-    from utils import invoke_google_grounded_text
+    from app.shared.model_calls import grounded_text
 
-    result = invoke_google_grounded_text(
-        prompt, model_name=model_name, max_tokens=max_tokens
+    # Reported here for the first time. These two searches are the most
+    # token-hungry step in a run and neither has ever reached the dashboard,
+    # because reporting was wired per call site and these sites were missed.
+    result = grounded_text(
+        job_id, prompt, model=model_name, max_tokens=max_tokens, endpoint="grounded"
     )
     if result is None:
         # The call failed rather than returned nothing. There is no successful
@@ -168,16 +170,16 @@ def _services(run_id: str | None = None) -> IntakeServices:
         return _grounded_call(
             f"Brief a travel editor on this in a few dense paragraphs. "
             f"Facts, reputation, neighbourhoods, what it is known for.\n\n{prompt}",
-            model_name=GRILL_RESEARCH_MODEL,
+            job_id="p2b.grill_research",
             max_tokens=GRILL_RESEARCH_MAX_TOKENS,
             usage_recorder=record_usage,
         )
 
-    def _gather(prompt: str, model_name: str) -> tuple[str, list[str], int | None]:
+    def _gather(prompt: str, model_name: str | None = None) -> tuple[str, list[str], int | None]:
         """One grounded pass, for research rather than for the grill."""
         return _grounded_call(
             prompt,
-            model_name=model_name,
+            job_id="p2b.research_gather",
             max_tokens=GATHER_MAX_TOKENS,
             usage_recorder=record_usage,
         )
@@ -188,7 +190,9 @@ def _services(run_id: str | None = None) -> IntakeServices:
         research=ResearchDependencies(
             gather=_gather,
             structure_llm=pipeline.llm,
-            structure_model=P2B_V4_RESEARCH_STRUCTURE_MODEL,
+            # The gateway answers for `p2b.research_structure`; the stage no
+            # longer carries a model of its own.
+            structure_model=None,
         ),
     )
 

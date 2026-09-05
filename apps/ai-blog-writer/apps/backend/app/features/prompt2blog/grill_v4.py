@@ -32,7 +32,6 @@ from typing import Any, Callable, Protocol
 
 from .config import (
     P2B_V4_GRILL_MAX_LOOKUPS,
-    P2B_V4_GRILL_MODEL,
     P2B_V4_GRILL_TEMPERATURE,
 )
 from .contracts_v4 import (
@@ -65,7 +64,6 @@ GRILL_RESEARCH_MAX_TOKENS = 4_096
 # on this model in production since ADR 0003; the 3.x models are not known to
 # work through the REST grounding endpoint, and this is not the place to find
 # out.
-GRILL_RESEARCH_MODEL = "gemini-2.5-flash"
 
 
 # `question` and `consensus` are both required, and the prompt says to leave
@@ -134,7 +132,13 @@ class GrillDependencies:
     # Returns (digest, source_urls, total_tokens). Separate from `llm` because
     # this one reaches the web and the other does not.
     research: Callable[[str], tuple[str, list[str], int | None]]
-    model_name: str = P2B_V4_GRILL_MODEL
+    # Which grill this is. The listicle pipeline runs this same engine and is
+    # its own job, so it stops reporting itself as `prompt2blog` -- which it
+    # has done since it borrowed this code.
+    job_id: str = "p2b.grill"
+    # An operator's explicit choice. None means the gateway answers for the
+    # job above, which is what makes the model changeable from the dashboard.
+    model_name: str | None = None
     # What the grill is told before it decides its next move. The five rules in
     # this module are about how an interview behaves and hold whatever is being
     # commissioned; the wording of the questions is not, and belongs to the
@@ -606,6 +610,7 @@ def _advance_once(
     # turn where the grill finally asks its question.
     while True:
         parsed, raw = dependencies.llm.invoke_json(
+            job_id=dependencies.job_id,
             prompt=(dependencies.build_prompt or build_next_turn_prompt)(state),
             model_name=dependencies.model_name,
             schema=NEXT_TURN_SCHEMA,

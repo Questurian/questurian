@@ -113,7 +113,8 @@ def test_a_vertex_call_is_priced_from_the_rate_table(monkeypatch):
     monkeypatch.setattr(p2b_llm, "get_vertex_llm", lambda **_: VertexAI())
 
     p2b_llm._invoke_text_llm(
-        prompt="write", max_tokens=100, temperature=0.2, model_name=None
+        prompt="write", max_tokens=100, temperature=0.2, model_name=None,
+            job_id="p2b.compose"
     )
 
     event = collector.events[0]
@@ -131,7 +132,8 @@ def test_a_failed_call_is_reported_as_an_error_and_still_raises(monkeypatch):
 
     with pytest.raises(RuntimeError):
         p2b_llm._invoke_text_llm(
-            prompt="write", max_tokens=100, temperature=0.2, model_name=None
+            prompt="write", max_tokens=100, temperature=0.2, model_name=None,
+            job_id="p2b.compose"
         )
 
     event = collector.events[0]
@@ -152,7 +154,8 @@ def test_an_unreachable_collector_does_not_change_the_call(monkeypatch):
 
     assert (
         p2b_llm._invoke_text_llm(
-            prompt="write", max_tokens=100, temperature=0.2, model_name=None
+            prompt="write", max_tokens=100, temperature=0.2, model_name=None,
+            job_id="p2b.compose"
         )
         == "some prose"
     )
@@ -169,6 +172,7 @@ def test_with_no_monitor_configured_nothing_is_reported(monkeypatch):
         max_tokens=100,
         temperature=0.2,
         model_name=None,
+        job_id="p2b.compose",
         usage_recorder=lambda model, usage: recorded.append((model, usage)),
     )
 
@@ -192,6 +196,7 @@ def test_a_schema_validated_call_is_reported_too(monkeypatch):
         max_tokens=100,
         temperature=0.2,
         model_name=None,
+        job_id="p2b.compose",
         schema={"type": "object"},
     )
 
@@ -217,7 +222,8 @@ def test_each_json_retry_is_reported_as_its_own_call(monkeypatch):
 
     with pytest.raises(RuntimeError):
         p2b_llm._invoke_json_llm(
-            prompt="write", max_tokens=100, temperature=0.2, model_name=None
+            prompt="write", max_tokens=100, temperature=0.2, model_name=None,
+            job_id="p2b.compose"
         )
 
     assert len(collector.events) == 3

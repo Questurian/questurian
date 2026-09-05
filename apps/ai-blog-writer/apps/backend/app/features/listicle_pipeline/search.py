@@ -47,7 +47,6 @@ MIN_PER_ANGLE = 6
 SEARCH_TIMEOUT_SECONDS = 180
 SEARCH_MAX_TOKENS = 4_096
 SEARCH_ATTEMPTS = 3
-SEARCH_MODEL = "gemini-2.5-flash"
 
 # Rows that name a container of places rather than one place. The searches
 # return these in good faith -- "Surquillo Market (stalls)" is a fair answer to

@@ -4,7 +4,6 @@ from typing import Any
 
 from app.core import get_article_type_by_name
 
-from .config import DEFAULT_MODEL
 from .llm import _invoke_json_llm
 from .models import ClassificationResult
 from .prompts.preparation import CLASSIFY_PROMPT
@@ -39,10 +38,11 @@ def _classify_cleaned_material(
         writing_brief_json=_json(writing_brief),
     )
     parsed, raw_response = _invoke_json_llm(
+        job_id="p2b.classify",
         prompt=prompt,
         max_tokens=1024,
         temperature=0.1,
-        model_name=model_name or DEFAULT_MODEL,
+        model_name=model_name,
     )
 
     selected_name = _safe_str(parsed.get("classification"))

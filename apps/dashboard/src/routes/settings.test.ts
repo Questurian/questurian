@@ -51,7 +51,7 @@ describe("the table the gateway fetches", () => {
   it("carries no model for a job that reaches an API without one", async () => {
     const call = routes();
     const { body } = await call("/v1/models");
-    expect(body.jobs["listicle.identity"].model).toBeNull();
+    expect(body.jobs["listicle.resolve_place"].model).toBeNull();
   });
 });
 
@@ -68,7 +68,7 @@ describe("changing a job's model", () => {
     // Offering a picker for a Places lookup would be offering a choice that
     // does nothing.
     const call = routes();
-    const { status } = await call("/v1/models/listicle.identity", put("gemini-2.5-flash"));
+    const { status } = await call("/v1/models/listicle.resolve_place", put("gemini-2.5-flash"));
     expect(status).toBe(400);
   });
 
@@ -136,7 +136,7 @@ describe("what the settings screen is given", () => {
   it("marks the two jobs that cannot be configured", async () => {
     const call = routes();
     const { body } = await call("/v1/configurable");
-    expect(body.jobs).not.toContain("listicle.identity");
+    expect(body.jobs).not.toContain("listicle.resolve_place");
     expect(body.jobs).not.toContain("listicle.place_details");
     expect(body.jobs).toContain("lm.alt_text");
   });

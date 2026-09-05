@@ -51,7 +51,7 @@ class JobRegistry(unittest.TestCase):
         self.assertIn("lm.alt_text", str(caught.exception))
 
     def test_places_jobs_are_marked_as_having_no_model(self):
-        self.assertFalse(jobs.job("listicle.identity").is_model_call)
+        self.assertFalse(jobs.job("listicle.resolve_place").is_model_call)
         self.assertFalse(jobs.job("listicle.place_details").is_model_call)
         self.assertTrue(jobs.job("lm.alt_text").is_model_call)
 

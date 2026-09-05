@@ -112,7 +112,7 @@ class ResolvingBeforeCalling(unittest.TestCase):
         # The Places lookups resolve to no model at all. Calling Vertex for
         # one would be a bug that only shows up as a confusing provider error.
         with self.assertRaises(ValueError):
-            vertex._resolve("listicle.identity", None)
+            vertex._resolve("listicle.resolve_place", None)
 
     def test_surrounding_quotes_are_stripped_from_an_answer(self):
         self.assertEqual(vertex._clean('  "a plated dish"  '), "a plated dish")

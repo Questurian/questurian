@@ -11,7 +11,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.staff_auth import require_staff
 
 from ..classification import _classify_cleaned_material
-from ..config import DEFAULT_MODEL
 from ..llm import _invoke_text_llm
 from ..models import (
     ClassifyRequest,
@@ -41,7 +40,8 @@ def synthesize_sources(req: SynthesizeRequest) -> SynthesizeResponse:
             prompt=SYNTHESIZE_PROMPT + combined,
             max_tokens=4096,
             temperature=0.3,
-            model_name=DEFAULT_MODEL,
+            model_name=None,
+            job_id="p2b.synthesize",
         )
         return SynthesizeResponse(synthesized=result.strip())
     except Exception as exc:  # noqa: BLE001
@@ -70,7 +70,7 @@ def classify_article_type(req: ClassifyRequest) -> ClassifyResponse:
             cleaned_data=cleaned_data,
             article_types=article_types,
             writing_brief=req.writing_brief or {},
-            model_name=DEFAULT_MODEL,
+            model_name=None,
         )
         return ClassifyResponse(result=result_text, classification=classification)
     except HTTPException:
