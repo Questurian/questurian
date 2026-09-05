@@ -12,7 +12,7 @@ from typing import Any
 
 from utils import parse_json_response
 
-from app.shared.writer_invocation import invoke_writer_model
+from app.shared.model_calls import writer_text
 
 from .schemas import (
     Candidate,
@@ -25,13 +25,27 @@ from .schemas import (
 logger = logging.getLogger(__name__)
 
 
-def _complete(*, prompt: str, model_name: str, temperature: float, max_tokens: int) -> str:
-    """Run one completion, routing ``claude*`` models to Anthropic and the rest to Vertex."""
-    return invoke_writer_model(
+def _complete(
+    *,
+    job_id: str,
+    prompt: str,
+    temperature: float,
+    max_tokens: int,
+    model_name: str | None = None,
+) -> str:
+    """Run one completion under its job.
+
+    ``model_name`` is an operator's explicit choice from the itinerary UI, not
+    a default. Left as None -- the usual case -- the gateway decides, which is
+    what makes the model changeable from the dashboard.
+    """
+    return writer_text(
+        job_id,
         prompt=prompt,
-        model_name=model_name,
+        model=model_name,
         temperature=temperature,
         max_tokens=max_tokens,
+        endpoint=job_id.split(".", 1)[-1],
     ).text
 
 
@@ -59,13 +73,19 @@ def extract_intent(
     title: str,
     brief: str,
     location: str,
-    model_name: str,
+    model_name: str | None = None,
     trace: dict[str, str] | None = None,
 ) -> IntentSpec:
     prompt = INTENT_PROMPT.format(title=title, location=location, brief=brief)
     # Tiny structured output (a few small arrays), but give it real headroom so a
     # verbose keyword list never truncates. Flash-Lite tops out at 65,536.
-    raw = _complete(prompt=prompt, model_name=model_name, temperature=0.2, max_tokens=8192)
+    raw = _complete(
+        job_id="itinerary.intent",
+        prompt=prompt,
+        model_name=model_name,
+        temperature=0.2,
+        max_tokens=8192,
+    )
     if trace is not None:
         trace["prompt"] = prompt
         trace["output"] = raw
@@ -129,7 +149,7 @@ def score_candidates(
     slot: ShellSlot,
     candidates: list[Candidate],
     brief: str,
-    model_name: str,
+    model_name: str | None = None,
     trace: dict[str, str] | None = None,
 ) -> list[ScoredCandidate]:
     if not candidates:
@@ -150,7 +170,13 @@ def score_candidates(
     # One JSON object per candidate (~40-50 tokens each), scored over the WHOLE
     # category pool — a dense city can be hundreds of venues. 32,768 covers ~600+
     # candidates and still sits well under Gemini Flash's 65,536 output ceiling.
-    raw = _complete(prompt=prompt, model_name=model_name, temperature=0.1, max_tokens=32768)
+    raw = _complete(
+        job_id="itinerary.scoring",
+        prompt=prompt,
+        model_name=model_name,
+        temperature=0.1,
+        max_tokens=32768,
+    )
     if trace is not None:
         trace["prompt"] = prompt
         trace["output"] = raw
@@ -202,7 +228,7 @@ def write_reasons(
     brief: str,
     lodging: ScoredCandidate | None,
     days: list[list[PlanStop]],
-    model_name: str,
+    model_name: str | None = None,
     trace: dict[str, str] | None = None,
 ) -> tuple[dict[str, str], str]:
     """Returns ({collection:item_id: reason}, plan_overview). Falls back to fit notes."""
@@ -222,7 +248,13 @@ def write_reasons(
     # One reason per stop (+lodging) plus an overview, on the premium writer. Even
     # a packed multi-day plan is well under this; 32,000 leaves Opus all the room
     # it needs without a 400 on the output cap.
-    raw = _complete(prompt=prompt, model_name=model_name, temperature=0.4, max_tokens=32000)
+    raw = _complete(
+        job_id="itinerary.reasons",
+        prompt=prompt,
+        model_name=model_name,
+        temperature=0.4,
+        max_tokens=32000,
+    )
     if trace is not None:
         trace["prompt"] = prompt
         trace["output"] = raw

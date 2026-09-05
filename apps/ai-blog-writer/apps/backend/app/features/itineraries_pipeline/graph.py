@@ -12,8 +12,6 @@ from .retrieval_stage import retrieve_candidates
 from .schemas import GenerateItineraryRequest, GenerateItineraryResponse
 from .selection_stage import score_and_select_slots
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
-
 
 def _build_graph():
     from langgraph.graph import END, START, StateGraph
@@ -36,7 +34,10 @@ def _build_graph():
 async def run_itinerary_pipeline(
     request: GenerateItineraryRequest,
 ) -> GenerateItineraryResponse:
-    model_name = (request.model_name or DEFAULT_MODEL).strip() or DEFAULT_MODEL
+    # An operator's explicit choice, or None to let the gateway decide per
+    # job. Stages ask for their own job's model, so a single pipeline-wide
+    # default would have flattened three separately-tuned decisions.
+    model_name = (request.model_name or "").strip() or None
     graph = _build_graph()
     final_state: dict[str, Any] = await graph.ainvoke(
         {"request": request, "model_name": model_name}

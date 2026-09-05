@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from model_gateway import model_for
+
 import time
 
 from .llm_stages import extract_intent
@@ -10,7 +12,10 @@ from .reporting import elapsed_ms
 from .schemas import AutobuildStepEvent
 
 # Intent is a small structured extraction with no reader-facing prose.
-INTENT_MODEL = "gemini-2.5-flash-lite"
+# What the trace shows the operator, resolved rather than recited: the
+# dashboard can change this job's model, and a step event naming a stale
+# constant would be a confident lie about what just ran.
+JOB = "itinerary.intent"
 
 
 async def extract_request_intent(state: ItineraryState) -> ItineraryState:
@@ -21,7 +26,6 @@ async def extract_request_intent(state: ItineraryState) -> ItineraryState:
         title=request.title,
         brief=request.brief,
         location=request.location,
-        model_name=INTENT_MODEL,
         trace=trace,
     )
     state["intent"] = intent
@@ -37,7 +41,7 @@ async def extract_request_intent(state: ItineraryState) -> ItineraryState:
             label="Intent extracted",
             status="ok" if extracted_anything else "warning",
             duration_ms=elapsed_ms(started),
-            model=INTENT_MODEL,
+            model=model_for(JOB),
             prompt=trace.get("prompt"),
             output=trace.get("output"),
             details={

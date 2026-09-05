@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import time
 
-from .candidate_scoring import SCORING_MODEL, score_for_slot
+from model_gateway import model_for
+
+from .candidate_scoring import JOB as SCORING_JOB, score_for_slot
 from .lodging_selection import select_lodging
 from .pipeline_state import ItineraryState
 from .reporting import elapsed_ms
@@ -118,7 +120,7 @@ def _select_slot(
             duration_ms=elapsed_ms(started),
             day_index=day_index,
             slot_id=slot.id,
-            model=SCORING_MODEL,
+            model=model_for(SCORING_JOB),
             prompt=scores.prompt,
             output=scores.output,
             details={

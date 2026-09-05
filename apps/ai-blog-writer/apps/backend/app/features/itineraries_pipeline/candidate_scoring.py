@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from model_gateway import model_for
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -11,7 +13,10 @@ from .schemas import Candidate, IntentSpec, ScoredCandidate, ShellSlot
 
 # Fit scoring fans out across full category pools, so structured judgment stays
 # on cheaper Gemini Flash instead of the premium reason-writing model.
-SCORING_MODEL = "gemini-2.5-flash"
+# What the trace shows the operator, resolved rather than recited: the
+# dashboard can change this job's model, and a step event naming a stale
+# constant would be a confident lie about what just ran.
+JOB = "itinerary.scoring"
 
 
 @dataclass(frozen=True)
@@ -69,7 +74,6 @@ def score_for_slot(
         slot=slot,
         candidates=candidates,
         brief=brief,
-        model_name=SCORING_MODEL,
         trace=trace,
     )
     return CandidateScores(

@@ -103,7 +103,10 @@ def test_candidate_scoring_owns_trace_ranking_and_best_candidate(monkeypatch):
         brief="Culture and dinner",
     )
 
-    assert recorded["model_name"] == candidate_scoring.SCORING_MODEL
+    # The scoring boundary no longer pins a model at all: it names its job
+    # inside `llm_stages`, and which model that job runs on is the gateway's
+    # answer, changeable from the dashboard.
+    assert "model_name" not in recorded
     assert result.best().candidate.id == 2
     assert [entry["id"] for entry in result.top()] == [2, 1]
     assert (result.prompt, result.output) == ("score prompt", "score output")
@@ -254,8 +257,15 @@ def test_graph_preserves_linear_stage_topology():
     ]
 
 
-def test_graph_runner_preserves_response_api_and_default_model(monkeypatch):
-    expected = GenerateItineraryResponse(days=[], model_used=graph_module.DEFAULT_MODEL)
+def test_graph_runner_leaves_the_model_to_the_gateway(monkeypatch):
+    """No pipeline-wide default any more.
+
+    The three stages are separately tuned -- intent and reasons on Flash Lite,
+    scoring on Flash -- and one shared default would have flattened three
+    decisions into one. So the state carries only an operator's explicit
+    choice, and None means "each job asks the gateway for its own".
+    """
+    expected = GenerateItineraryResponse(days=[], model_used="gemini-2.5-flash")
     invoked = {}
 
     class FakeGraph:
@@ -267,4 +277,4 @@ def test_graph_runner_preserves_response_api_and_default_model(monkeypatch):
     response = asyncio.run(graph_module.run_itinerary_pipeline(_request()))
 
     assert response is expected
-    assert invoked["model_name"] == graph_module.DEFAULT_MODEL
+    assert invoked["model_name"] is None

@@ -12,14 +12,17 @@ def _build_client() -> TestClient:
 
 
 def test_generate_titles_returns_model_output(monkeypatch):
-    monkeypatch.setattr(
-        itineraries_pipeline_routes,
-        "invoke_writer_model",
-        lambda **_kwargs: WriterResult(
+    captured = {}
+
+    def fake_writer(job_id, **kwargs):
+        captured["job_id"] = job_id
+        captured["model"] = kwargs.get("model")
+        return WriterResult(
             text="1. First title\n2. Second title\n",
-            model_name=itineraries_pipeline_routes.DEFAULT_MODEL,
-        ),
-    )
+            model_name="gemini-2.5-flash",
+        )
+
+    monkeypatch.setattr(itineraries_pipeline_routes, "writer_text", fake_writer)
 
     client = _build_client()
     response = client.post(
@@ -27,10 +30,16 @@ def test_generate_titles_returns_model_output(monkeypatch):
         json={"prompt": "x" * 25},
     )
 
+    # The route names a job and pins no model: which model titles run on is
+    # the gateway's answer, changeable from the dashboard.
+    assert captured["job_id"] == "itinerary.title"
+    assert captured["model"] is None
+
     assert response.status_code == 200
     payload = response.json()
     assert payload["text"] == "1. First title\n2. Second title"
-    assert payload["model_used"] == itineraries_pipeline_routes.DEFAULT_MODEL
+    # Whatever answered, reported back. Not a constant this module owns.
+    assert payload["model_used"] == "gemini-2.5-flash"
 
 
 def test_generate_titles_rejects_short_prompt():

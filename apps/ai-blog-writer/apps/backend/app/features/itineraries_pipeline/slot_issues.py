@@ -5,7 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .candidate_scoring import SCORING_MODEL
+from model_gateway import model_for
+
+from .candidate_scoring import JOB as SCORING_JOB
 from .reporting import elapsed_ms
 from .schemas import (
     AutobuildStepEvent,
@@ -66,7 +68,7 @@ def unfilled_slot(
             duration_ms=elapsed_ms(started),
             day_index=day_index,
             slot_id=slot.id,
-            model=SCORING_MODEL if trace is not None else None,
+            model=model_for(SCORING_JOB) if trace is not None else None,
             prompt=trace.get("prompt") if trace is not None else None,
             output=trace.get("output") if trace is not None else None,
             details=details,

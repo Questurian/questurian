@@ -247,13 +247,65 @@ def invoke_structured_tool(
     )
 
 
+class VertexTextLLM:
+    """LangChain's ``VertexAI``, with the token counts it throws away.
+
+    ``VertexAI.invoke()`` returns a bare string. The usage is real and Vertex
+    reports it, but LangChain drops it on that path, so every caller reading
+    ``last_usage_metadata`` off the returned object got ``None`` -- and
+    recorded a duration with no tokens and no cost. Four stored Prompt2Blog
+    rows show exactly that: `gemini-2.5-flash`, a real duration, every token
+    field null.
+
+    ``generate()`` keeps what ``invoke()`` discards:
+    ``generations[0][0].generation_info["usage_metadata"]`` is already a dict
+    in the spellings ``normalize_token_usage`` reads, thinking tokens and
+    cached tokens included.
+
+    Deliberately narrow. It exposes ``invoke`` and ``model_name`` because that
+    is the entire surface every caller in this repo uses -- nothing chains
+    this as a Runnable -- and it deliberately does *not* expose ``invoke_json``,
+    so the schema-validated path keeps falling through to asking in prose for
+    providers that cannot enforce a schema.
+    """
+
+    def __init__(self, llm: Any, model_name: str) -> None:
+        self._llm = llm
+        self.model_name = model_name
+        self.last_usage_metadata: Optional[dict[str, Any]] = None
+
+    def invoke(self, prompt: str) -> str:
+        result = self._llm.generate([prompt])
+        self.last_usage_metadata = _usage_from_generation(result)
+        generations = result.generations[0] if result.generations else []
+        return str(generations[0].text if generations else '') or ''
+
+
+def _usage_from_generation(result: Any) -> Optional[dict[str, Any]]:
+    """The usage dict LangChain files under the generation, if it is there."""
+    try:
+        info = result.generations[0][0].generation_info or {}
+    except (AttributeError, IndexError, TypeError):
+        return None
+    usage = info.get('usage_metadata')
+    if isinstance(usage, dict) and usage:
+        return usage
+    # Older versions put it on the result instead.
+    llm_output = getattr(result, 'llm_output', None)
+    if isinstance(llm_output, dict):
+        candidate = llm_output.get('usage_metadata') or llm_output.get('token_usage')
+        if isinstance(candidate, dict) and candidate:
+            return candidate
+    return None
+
+
 def get_vertex_llm(
     temperature: float = 0.1,
     max_tokens: int = 2048,
     model_name: Optional[str] = None,
     project: Optional[str] = None,
     location: Optional[str] = None,
-) -> 'VertexAI | ClaudeTextLLM | ClaudeCliTextLLM | Gemini3ChatTextLLM':
+) -> 'VertexTextLLM | ClaudeTextLLM | ClaudeCliTextLLM | Gemini3ChatTextLLM':
     """
     Create a configured LLM instance (Vertex AI, or Anthropic for claude-* models).
 
@@ -304,10 +356,13 @@ def get_vertex_llm(
     logger.debug(
         f'Creating VertexAI LLM: model={resolved_model}, temperature={temperature}, max_tokens={effective_max_tokens}, project={resolved_project}, location={resolved_location}'
     )
-    return VertexAI(
-        model_name=resolved_model,
-        temperature=temperature,
-        max_tokens=effective_max_tokens,
-        project=resolved_project,
-        location=resolved_location,
+    return VertexTextLLM(
+        VertexAI(
+            model_name=resolved_model,
+            temperature=temperature,
+            max_tokens=effective_max_tokens,
+            project=resolved_project,
+            location=resolved_location,
+        ),
+        resolved_model,
     )

@@ -321,22 +321,22 @@ def test_claude_writer_reserves_budget_for_text_and_reports_empty_metadata(
 
 
 @pytest.mark.parametrize(
-    ("module", "call", "expected_model"),
+    ("module", "call", "expected_job"),
     [
         (
             alt_text_generator,
             lambda: alt_text_generator._generate_sync(b"image", "image/png", "focus"),
-            "gemini-2.5-flash-lite",
+            "images.alt_text",
         ),
         (
             scene_describer,
             lambda: scene_describer._describe_sync(b"image", "image/png"),
-            "gemini-2.5-flash",
+            "images.scene_description",
         ),
         (
             subject_describer,
             lambda: subject_describer._describe_sync(b"image", "image/png"),
-            "gemini-2.5-flash",
+            "images.subject_description",
         ),
         (
             edit_prompt_builder,
@@ -346,52 +346,62 @@ def test_claude_writer_reserves_budget_for_text_and_reports_empty_metadata(
                 "scene",
                 "make it brighter",
             ),
-            "gemini-2.5-flash",
+            "images.edit_prompt",
         ),
     ],
 )
-def test_image_text_helpers_use_shared_multimodal_invoker(
+def test_image_text_helpers_name_a_job_not_a_model(
     monkeypatch,
     module,
     call,
-    expected_model,
+    expected_job,
 ):
+    """The seam moved, and what it carries changed with it.
+
+    These used to assert the model each helper passed. They now assert the
+    job it names and that it names *no* model: which model an image job runs
+    on is the gateway's answer, taken from the dashboard's table, and a call
+    site that pins one is the bug this seam exists to prevent.
+    """
     captured = {}
 
     def fake_part_from_data(*, data: bytes, mime_type: str):
         return {"data": data, "mime_type": mime_type}
 
-    def fake_invoke(parts, *, model_name: str):
+    def fake_multimodal(job_id, parts, *, model=None, endpoint=None):
+        captured["job_id"] = job_id
         captured["parts"] = parts
-        captured["model_name"] = model_name
+        captured["model"] = model
+        captured["endpoint"] = endpoint
         return '"generated text"'
 
     monkeypatch.setattr(module, "vertex_part_from_data", fake_part_from_data)
-    monkeypatch.setattr(module, "invoke_vertex_multimodal_text", fake_invoke)
+    monkeypatch.setattr(module, "multimodal_text", fake_multimodal)
 
     assert call() == "generated text"
-    assert captured["model_name"] == expected_model
+    assert captured["job_id"] == expected_job
+    assert captured["model"] is None
+    assert captured["endpoint"]
     assert captured["parts"][0] == {"data": b"image", "mime_type": "image/png"}
     assert isinstance(captured["parts"][-1], str)
 
 
-def test_insert_prompt_uses_shared_multimodal_invoker(monkeypatch):
+def test_insert_prompt_names_a_job_not_a_model(monkeypatch):
     captured = {}
 
     def fake_part_from_data(*, data: bytes, mime_type: str):
         return {"data": data, "mime_type": mime_type}
 
-    def fake_invoke(parts, *, model_name: str):
+    def fake_multimodal(job_id, parts, *, model=None, endpoint=None):
+        captured["job_id"] = job_id
         captured["parts"] = parts
-        captured["model_name"] = model_name
+        captured["model"] = model
         return "'insert prompt'"
 
     monkeypatch.setattr(
         insert_prompt_builder, "vertex_part_from_data", fake_part_from_data
     )
-    monkeypatch.setattr(
-        insert_prompt_builder, "invoke_vertex_multimodal_text", fake_invoke
-    )
+    monkeypatch.setattr(insert_prompt_builder, "multimodal_text", fake_multimodal)
 
     result = insert_prompt_builder._build_sync(
         b"main",
@@ -408,7 +418,8 @@ def test_insert_prompt_uses_shared_multimodal_invoker(monkeypatch):
     )
 
     assert result == "insert prompt"
-    assert captured["model_name"] == "gemini-2.5-flash"
+    assert captured["job_id"] == "images.insert_prompt"
+    assert captured["model"] is None
     assert captured["parts"][0] == {"data": b"main", "mime_type": "image/jpeg"}
     assert captured["parts"][1] == {"data": b"insert", "mime_type": "image/png"}
     assert isinstance(captured["parts"][-1], str)
