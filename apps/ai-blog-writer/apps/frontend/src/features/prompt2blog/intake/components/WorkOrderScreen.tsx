@@ -41,6 +41,14 @@ export function WorkOrderScreen({
     item => item.kind === 'load_bearing' && !struck.includes(item.requirement_id),
   ).length
 
+  // A plan with no colour question left cannot answer one, and the gate
+  // refuses a dossier with nothing anybody would enjoy reading. That verdict
+  // offers nothing to settle, so the run would buy its whole research and then
+  // stop dead. Said here, where a question is one text box away.
+  const remainingTexture = workOrder.requirements.filter(
+    item => item.kind === 'texture' && !struck.includes(item.requirement_id),
+  ).length
+
   // The projection describes the plan as recorded, not the boxes ticked since.
   // That is not stale: while anything is struck the primary action is Apply
   // changes, which re-records it. It only gates the research button, and by
@@ -137,6 +145,15 @@ export function WorkOrderScreen({
         <p className="p2b-cost">{projection.editorial_note}</p>
       )}
 
+      {remainingTexture === 0 && remainingLoadBearing > 0 && (
+        <p className="p2b-blocked">
+          Nothing here would be a pleasure to read &mdash; every question proves
+          something and none of them puts a reader anywhere. The research would be
+          bought and the run would stop before writing. Add a question about what
+          somewhere is like.
+        </p>
+      )}
+
       {remainingLoadBearing === 0 && (
         <p className="p2b-blocked">
           Keep at least one of the questions the piece rests on &mdash; without any of
@@ -161,7 +178,11 @@ export function WorkOrderScreen({
           // A plan that cannot reach the writer has no research worth buying.
           // The server refuses it too; this is so the refusal is not a
           // surprise arriving after the button was pressed.
-          <button type="button" disabled={busy || tooLarge} onClick={onResearch}>
+          <button
+            type="button"
+            disabled={busy || tooLarge || remainingTexture === 0}
+            onClick={onResearch}
+          >
             Go and find this out
           </button>
         )}

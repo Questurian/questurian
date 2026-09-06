@@ -106,6 +106,7 @@ from .work_order_v4 import (
     build_work_order,
     cut_work_order,
     enforce_plan_fits,
+    enforce_plan_has_texture,
     work_order_stage_record,
 )
 
@@ -440,6 +441,11 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     # that can still be changed. Counted over the questions still without a
     # note, so a resume is not charged again for notes it already paid for.
     enforce_plan_fits(len(outstanding), tokens_spent, _run_billed_cost(run_id))
+    # Asked of the whole plan rather than of what is outstanding, so a resume
+    # that has already paid for its notes is judged on the same plan it started
+    # with. A run with no texture question stops at the gate either way; this
+    # says so while it still costs nothing.
+    enforce_plan_has_texture(work_order)
 
     if outstanding:
         _open(services, run_id, NOTES_STAGE)

@@ -461,6 +461,52 @@ describe('the work order screen', () => {
     ).not.toBeDisabled()
   })
 
+  it('will not buy research for a plan with nothing worth reading', () => {
+    // The gate refuses a dossier with no colour in it, and offers nothing to
+    // settle when it does, so the run would spend its whole research budget
+    // and stop dead. The length constraint makes this reachable by accident:
+    // told the article has room for eighteen facts, the planner cuts colour
+    // first.
+    const onResearch = vi.fn()
+    render(
+      <WorkOrderScreen
+        workOrder={{
+          ...WORK_ORDER,
+          requirements: WORK_ORDER.requirements.filter(item => item.kind !== 'texture'),
+        }}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={onResearch}
+      />,
+    )
+
+    expect(screen.getByText(/nothing here would be a pleasure to read/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /go and find this out/i })).toBeDisabled()
+    expect(onResearch).not.toHaveBeenCalled()
+  })
+
+  it('says so as soon as the last colour question is struck', () => {
+    // Before the cut is applied, not after the research is bought.
+    render(
+      <WorkOrderScreen
+        workOrder={WORK_ORDER}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText(/pleasure to read/i)).not.toBeInTheDocument()
+    // r2 is the texture question in this fixture.
+    fireEvent.click(screen.getAllByRole('checkbox')[1])
+
+    expect(screen.getByText(/nothing here would be a pleasure to read/i)).toBeInTheDocument()
+  })
+
   it('will not let every load-bearing question be struck', () => {
     render(
       <WorkOrderScreen

@@ -898,6 +898,49 @@ class PlanTooLargeToFinish(RuntimeError):
         self.projection = projection
 
 
+class PlanHasNothingWorthReading(RuntimeError):
+    """This plan asks for nothing a reader would enjoy, so research must not start.
+
+    `assess_coverage` refuses a dossier with no texture answered. A work order
+    with no texture question cannot answer one, so a plan like this is a run
+    that spends its whole research budget and then stops at a gate offering
+    nothing to settle: `blocking_questions` enumerates unanswered load-bearing
+    questions and refuted premises, and a `nothing_worth_reading` verdict has
+    neither. The operator gets a blocked run and an empty list.
+
+    New with the length constraint, and predicted by the handoff that asked for
+    it: told the article has room for eighteen facts, the planner cuts colour
+    first, because colour is the least necessary-looking thing on the list. One
+    of four samples on run e23257c0 came back with 31 questions and no texture
+    at all.
+
+    Refused here rather than warned about, for the same reason
+    `PlanTooLargeToFinish` is: this is not a worse article, it is no article.
+    And it is refused on the screen where the operator can add a question in
+    one text box, rather than after the research has been bought.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "This plan asks for nothing a reader would enjoy -- every question "
+            "proves something and none of them puts a reader anywhere. The run "
+            "would spend its research and then stop at a gate with nothing to "
+            "settle. Add a question about what somewhere is like before "
+            "starting research."
+        )
+
+
+def enforce_plan_has_texture(work_order: Prompt2BlogWorkOrder) -> None:
+    """Stop before research when nothing in the plan is worth reading.
+
+    Deliberately not part of `enforce_plan_fits`: that one answers a question
+    about money and tokens and is silent on an unmetered run. This one is about
+    the plan itself, and is just as true when nobody is counting.
+    """
+    if not any(item.kind == "texture" for item in work_order.requirements):
+        raise PlanHasNothingWorthReading()
+
+
 def enforce_plan_fits(
     question_count: int,
     tokens_spent: int | None,
