@@ -41,6 +41,7 @@ them for the v2 fallback. Do not delete or renumber them.
 | `models.py`, `contracts_v3.py` | Versioned HTTP requests, editorial contracts, and runtime pipeline input |
 | `config.py`, `options.py`, `editorial_catalog.py` | Feature constants plus legacy and v3 Markdown-backed catalogs |
 | `evidence_v3.py`, `instructions_v3.py` | V3 evidence normalization, canonical instruction layers, and stage-specific contexts |
+| `selection_v4.py`, `packet_v4.py` | Which facts this article is written from, and the deterministic view of them the writing stages read |
 | `research_readiness_v3.py`, `intake_v3.py` | The v3 research gate, its `needs_research` result, and v3 run input |
 | `stages/v3/`, `prompts/editorial_v3.py`, `content/outline_v3.py` | V3 writing stages, their prompts, and pure section-plan scope guards |
 | `orchestrator_v3.py`, `graph/topology_v3.py` | The v3 run entrypoints and its shorter generation topology |
@@ -77,7 +78,8 @@ API → orchestrator → graph → stages → content / quality
   shape, and option-file semantics are unchanged. Instruction schema v4
   replaced v3 debug `instruction_text` with a compact `stage_contexts`
   manifest. Schema v5 adds the canonical evidence-disposition policy; saved
-  snapshot versions 1-2 must restart.
+  snapshot versions 1-4 must restart -- a version-4 snapshot carries no
+  writing packet, and resuming one would write from the whole dossier.
 - No new canonical top-level `Stage[N]Output` was introduced.
 - Quality Gate repair still performs a second audit before finalization.
 - The `reported-people-scenes-quotations` source gate is implemented twice on
@@ -98,6 +100,58 @@ API → orchestrator → graph → stages → content / quality
   dates checked, and a package with no `supported` requirement at all is still
   `needs_research` (`nothing_answered`), because an article with no findable
   facts has nothing to write from.
+
+## The dossier, the choice, and the writer's desk
+
+Three records, and the distinction between them is the point.
+
+The **dossier** (`EvidencePackage`) records what research learned. It is never
+narrowed. Groundedness and the readiness follow-up check a draft against every
+claim in it, so a fact leaving the writer's desk never leaves the record and a
+question it answered stays answered.
+
+The **selection** (`selection_v4`) records which of it belongs in this article.
+A model merges the repeats and ranks the survivors against the brief; a person
+moves the line and rescues or drops individual facts. It stores the
+fingerprints of the brief, the work order and the dossier it was made from, so
+a choice can be told to be stale rather than silently applied to evidence that
+has moved since.
+
+The **writing packet** (`packet_v4`) is the view the writing stages read. Pure
+code assembles it: chosen claims verbatim, plus the caveats that make them true
+-- source notes on their own sources, an operator's note on a venue, any
+conflict naming them -- and nothing else. No model call and no paraphrase; a
+fact rewritten by a model is prose asserting something, and a drifted date
+inside one would pass groundedness, because groundedness checks the draft
+against the claim and the claim is the thing that moved.
+
+Rules worth not re-litigating:
+
+- **A missing selection is not permission to use everything.** That was the old
+  behaviour, and it made the case where the ranking fell over indistinguishable
+  from the case where a person kept everything. `writing_request` refuses; a run
+  that wants every fact says so with `selection_from_flags`.
+- **One path.** `prepare_v3_runtime_request` requires a selection and
+  `assemble_v3_instructions` requires a packet. An argument you can leave out to
+  get the whole dossier is the silent widening this exists to prevent.
+- **The packet is frozen at the write boundary and never rebuilt.** A resumed
+  run reads what it was written from, not what the selection says today.
+- **A caveat is not spare length.** Relevance is computed from links, so a long
+  qualification is kept precisely because it is long enough to change a
+  sentence. A packet that got smaller by dropping one is not smaller, it is
+  wrong.
+- **No stage after the writer may undo the cut.** The audit is told how many
+  facts a person chose and that material outside the draft is not a hole, never
+  the research checklist. Repair carries the qualifications. The punch list
+  names reserve facts as a change of scope. Polish may drop a crowded detail and
+  never a qualification.
+- **What is measured, not enforced.** `crowded_sections` records any section
+  planned above four facts per hundred words. How many facts a paragraph can
+  carry depends on what they are, and a plan thrown away over an estimate helps
+  nobody.
+
+Measured before and after on stored runs in
+`docs/audits/2026-09-06-research-redesign/`.
 
 ## Internal graphs
 
