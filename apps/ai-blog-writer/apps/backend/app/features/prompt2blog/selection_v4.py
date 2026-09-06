@@ -152,6 +152,17 @@ DEDUPE_SCHEMA = require_non_empty({
     "required": ["groups"],
 })
 
+# What a fact is for in the finished piece. Editorial roles, and deliberately
+# not the work order's question kinds: a load-bearing question can produce a
+# fact whose job in the article is colour, and a texture question can produce
+# the one price the reader needs.
+#
+# They travel to the outline, which groups its sections on them, and to the
+# picker, which shows the operator what each fact is doing. Nothing gates on
+# them: a role is a description, and a wrong one costs a fact its heading, not
+# its place in the article.
+PACKET_ROLES = ("backbone", "practical", "texture")
+
 RANK_SCHEMA = require_non_empty({
     "type": "object",
     "properties": {
@@ -162,6 +173,12 @@ RANK_SCHEMA = require_non_empty({
                 "properties": {
                     "claim_id": {"type": "string"},
                     "why": {"type": "string"},
+                    # Not required. A model that skips it leaves the fact
+                    # unlabelled and the run carries on: this is a description
+                    # for a person and a heading for the outline, and failing a
+                    # whole ranking over a missing adjective would cost the
+                    # article every fact to save a word.
+                    "role": {"type": "string", "enum": list(PACKET_ROLES)},
                 },
                 "required": ["claim_id"],
             },
@@ -259,11 +276,23 @@ THE FACTS
 {listed}
 
 Return strict JSON only:
-{{"ranked": [{{"claim_id": "f1", "why": "string"}}]}}
+{{"ranked": [{{"claim_id": "f1", "why": "string", "role": "backbone"}}]}}
 
 Rules:
 - Most needed first. The fact the article cannot be written without goes at the
   top; the one it loses nothing by omitting goes at the bottom.
+- `role` says what this fact is FOR in the finished piece. Exactly one of:
+    backbone  — the piece argues from it. Take it away and the spine does not
+                stand up: the thing that makes the case, establishes the
+                claim, or explains why any of this is so.
+    practical — the reader acts on it. A price, an opening hour, an address, a
+                journey time, a booking rule; anything that changes what they
+                do next.
+    texture   — it makes the place real. A named thing, an odd detail,
+                something a person did. It proves nothing and the piece is
+                worse without it.
+  A fact can look like two of these. Ask what the article would lose by cutting
+  it: the argument, the reader's next step, or the sense of the place.
 - Rank against THIS brief, not against general interest. A fact can be true,
   well sourced, and irrelevant here. Relevance is decided by the reader
   question, the promise, and what the piece fails if it does not do.
@@ -561,8 +590,8 @@ def _rank(
     work_order: Prompt2BlogWorkOrder,
     survivors: list[Any],
     dependencies: SelectionDependencies,
-) -> tuple[list[str], dict[str, str], bool]:
-    """Survivor ids most-needed-first, and one line each on why.
+) -> tuple[list[str], dict[str, str], dict[str, str], bool]:
+    """Survivor ids most-needed-first, one line each on why, and what each is for.
 
     Never raises, and never loses a claim. A claim the ranker forgot is
     appended in dossier order rather than dropped: an omission from a model is
@@ -582,11 +611,12 @@ def _rank(
         )
     except Exception as exc:  # noqa: BLE001 -- an unranked list is still a list
         logger.warning("Prompt2Blog evidence ranking failed: %s", exc)
-        return order, {}, False
+        return order, {}, {}, False
 
     remaining = set(order)
     ranked: list[str] = []
     reasons: dict[str, str] = {}
+    roles: dict[str, str] = {}
     for row in _rows(parsed, "ranked"):
         claim_id = from_handle.get(_safe_str(row.get("claim_id")), "")
         if claim_id in remaining:
@@ -594,6 +624,10 @@ def _rank(
             ranked.append(claim_id)
             if why := _safe_str(row.get("why")):
                 reasons[claim_id] = why
+            # A role the schema does not know is no role. Unlabelled is an
+            # honest state and the outline handles it; a made-up heading is not.
+            if (role := _safe_str(row.get("role"))) in PACKET_ROLES:
+                roles[claim_id] = role
     if remaining:
         logger.warning(
             "Prompt2Blog ranking omitted %d of %d claims; keeping them at the "
@@ -606,7 +640,7 @@ def _rank(
     # came back with 102 rows and matched none of them, and this reported
     # itself as ranked -- so a line was drawn at 18 through a list in the order
     # research happened to return, which is not a decision anyone made.
-    return ranked, reasons, bool(ranked and not remaining == set(order))
+    return ranked, reasons, roles, bool(ranked and not remaining == set(order))
 
 
 def _rank_texture(
@@ -870,7 +904,7 @@ def select_evidence(
     """Deduplicate, rank, and draw the line the operator will move."""
     merged, deduped = _deduplicate(evidence, dependencies)
     survivors = [claim for claim in evidence.claims if claim.claim_id not in merged]
-    order, reasons, ranked = _rank(brief, work_order, survivors, dependencies)
+    order, reasons, roles, ranked = _rank(brief, work_order, survivors, dependencies)
 
     keep_count = target_claim_count(target_word_count, len(order))
 
@@ -887,6 +921,13 @@ def select_evidence(
     texture_reserve = min(
         len(texture_order), int(round(keep_count * TEXTURE_SHARE))
     )
+    # Colour the work order already knows about is colour, whatever the ranking
+    # pass called it. The two agree almost always; where they do not, the work
+    # order asked a texture question and got a texture answer, and the reserve
+    # is already spending a slot on that basis. A row shown to the operator as
+    # backbone while it is held as colour would be the screen and the machinery
+    # saying different things about the same fact.
+    roles = {**roles, **{claim_id: "texture" for claim_id in colour_ids}}
 
     notes = []
     if not deduped:
@@ -909,6 +950,11 @@ def select_evidence(
         merged=merged,
         keep_count=keep_count,
         reasons=reasons,
+        roles={
+            claim_id: role
+            for claim_id, role in roles.items()
+            if claim_id not in merged
+        },
         texture_order=texture_order,
         texture_reserve=texture_reserve,
         target_word_count=target_word_count,

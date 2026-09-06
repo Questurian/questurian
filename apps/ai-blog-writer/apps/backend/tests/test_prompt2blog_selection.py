@@ -129,10 +129,12 @@ class _LLM:
         groups: list[dict] | None = None,
         ranked: list[str] | None = None,
         texture: list[str] | None = None,
+        roles: dict[str, str] | None = None,
     ):
         self.groups = groups
         self.ranked = ranked
         self.texture = texture
+        self.roles = roles or {}
         self.jobs: list[str] = []
         self.prompts: list[str] = []
 
@@ -150,7 +152,16 @@ class _LLM:
             return {"ranked": [{"claim_id": i, "why": "vivid"} for i in rows]}, "{}"
         if self.ranked is None:
             raise RuntimeError("the ranking model is having a day")
-        return {"ranked": [{"claim_id": item, "why": "because"} for item in self.ranked]}, "{}"
+        return {
+            "ranked": [
+                {
+                    "claim_id": item,
+                    "why": "because",
+                    **({"role": self.roles[item]} if item in self.roles else {}),
+                }
+                for item in self.ranked
+            ]
+        }, "{}"
 
 
 def _select(evidence: EvidencePackage, llm: _LLM, *, words: int = 900) -> Selection:
@@ -826,3 +837,96 @@ def test_a_colour_row_shows_why_it_is_vivid_not_why_it_is_useless():
 
     assert selection.reasons[colour[0]] == "vivid"
     assert selection.reasons["c1"] == "because"
+
+
+# --- what each fact is for ---------------------------------------------------
+#
+# Roles are a description, not a gate. They group the outline's sections, they
+# tell the operator what a row is doing, and a wrong one costs a fact its
+# heading rather than its place in the article.
+
+
+def test_the_ranker_is_asked_what_each_fact_is_for():
+    evidence = _package(3)
+    llm = _LLM(groups=[], ranked=["f1", "f2", "f3"])
+
+    _select(evidence, llm)
+
+    prompt = llm.prompts[-1]
+    assert "`role` says what this fact is FOR" in prompt
+    for role in ("backbone", "practical", "texture"):
+        assert role in prompt
+    # Named by what the article loses, not by what the fact is about. A model
+    # sorting on subject would put every price under practical and every date
+    # under backbone.
+    assert "Ask what the article would lose by cutting" in prompt
+
+
+def test_the_role_the_ranker_gave_reaches_the_selection():
+    evidence = _package(3)
+    llm = _LLM(
+        groups=[],
+        ranked=["f1", "f2", "f3"],
+        roles={"f1": "backbone", "f2": "practical"},
+    )
+
+    selection = _select(evidence, llm)
+
+    assert selection.roles["c1"] == "backbone"
+    assert selection.roles["c2"] == "practical"
+    # Unlabelled is an honest state. The outline reads it as "chosen for this
+    # article" and groups the rest around it.
+    assert "c3" not in selection.roles
+
+
+def test_a_role_the_contract_does_not_know_is_no_role():
+    """A made-up heading is worse than none: the outline would organize a
+    section around a word nothing in this system means."""
+    evidence = _package(3)
+    llm = _LLM(groups=[], ranked=["f1", "f2", "f3"], roles={"f1": "vibes"})
+
+    selection = _select(evidence, llm)
+
+    assert "c1" not in selection.roles
+
+
+def test_colour_the_work_order_already_knows_about_stays_colour():
+    """The reserve is already spending a slot on that basis. A row shown to the
+    operator as backbone while it is held as colour would be the screen and the
+    machinery saying different things about the same fact."""
+    evidence, work_order, colour = _mixed(load_bearing=4, texture=2)
+    # The utility pass calls one of the colour claims backbone. The work order
+    # asked a texture question and got this answer; it is colour.
+    llm = _LLM(
+        groups=[],
+        ranked=[f"f{index}" for index in range(1, 7)],
+        texture=["f1", "f2"],
+        roles={"f5": "backbone", "f1": "practical"},
+    )
+
+    selection = select_evidence(
+        _brief(),
+        work_order,
+        evidence,
+        SelectionDependencies(llm=llm),
+        target_word_count=900,
+    )
+
+    assert all(selection.roles[claim_id] == "texture" for claim_id in colour)
+    # And a fact outside the colour set keeps what the ranker called it.
+    assert selection.roles["c1"] == "practical"
+
+
+def test_a_merged_claim_carries_no_role_into_the_record():
+    """It is off the desk. A role on it would show in the picker as a fact with
+    a job, next to the survivor that actually has one."""
+    evidence = _package(3)
+    llm = _LLM(
+        groups=[{"keep": "f1", "same_as": ["f2"]}],
+        ranked=["f1", "f3"],
+        roles={"f1": "backbone"},
+    )
+
+    selection = _select(evidence, llm)
+
+    assert "c2" not in selection.roles
