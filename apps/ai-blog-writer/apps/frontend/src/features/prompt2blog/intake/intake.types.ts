@@ -83,6 +83,30 @@ export interface IntakeRequirement {
   bundled_note: string
 }
 
+/**
+ * What this plan is about to cost, beside the decision that changes it.
+ *
+ * Null when the run has no token accounting. An unmetered run is not a free
+ * one, but a cost nobody can measure is not one to state as fact.
+ */
+export interface IntakeBudgetProjection {
+  question_count: number
+  spent: number
+  projected_research: number
+  projected_writing: number
+  projected_total: number
+  repair_reserve: number
+  budget: number
+  /** False means the run publishes but cannot pay for a repair pass. */
+  repair_affordable: boolean
+  questions_that_fit: number
+  ceiling: number
+  /** False means the run dies part-way through research. There is no article. */
+  can_finish: boolean
+  questions_that_finish: number
+  note: string
+}
+
 export interface IntakeWorkOrder {
   work_order_fingerprint: string
   brief_fingerprint: string
@@ -91,6 +115,7 @@ export interface IntakeWorkOrder {
   load_bearing_count: number
   texture_count: number
   cut_warnings: string[]
+  budget_projection: IntakeBudgetProjection | null
 }
 
 export interface IntakeCoverage {

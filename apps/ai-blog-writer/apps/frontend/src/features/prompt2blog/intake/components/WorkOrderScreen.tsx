@@ -41,6 +41,14 @@ export function WorkOrderScreen({
     item => item.kind === 'load_bearing' && !struck.includes(item.requirement_id),
   ).length
 
+  // The projection describes the plan as recorded, not the boxes ticked since.
+  // That is not stale: while anything is struck the primary action is Apply
+  // changes, which re-records it. It only gates the research button, and by
+  // then it is current.
+  const projection = workOrder.budget_projection
+  const pending = struck.length > 0 || added.trim().length > 0
+  const tooLarge = projection ? !projection.can_finish : false
+
   return (
     <section className="p2b-intake" aria-label="The research plan">
       <p className="p2b-eyebrow">What we&rsquo;ll go and find out</p>
@@ -101,6 +109,13 @@ export function WorkOrderScreen({
         </ul>
       )}
 
+      {projection && (
+        /* The number was always computed and written to the run. It was never
+           put in front of the person doing the cutting, so a plan that could
+           not finish was approved and then died in research. */
+        <p className={tooLarge ? 'p2b-blocked' : 'p2b-cost'}>{projection.note}</p>
+      )}
+
       {remainingLoadBearing === 0 && (
         <p className="p2b-blocked">
           Keep at least one of the questions the piece rests on &mdash; without any of
@@ -109,7 +124,7 @@ export function WorkOrderScreen({
       )}
 
       <div className="p2b-intake-actions">
-        {struck.length || added.trim() ? (
+        {pending ? (
           <button
             type="button"
             disabled={busy || remainingLoadBearing === 0}
@@ -122,7 +137,10 @@ export function WorkOrderScreen({
             Apply changes
           </button>
         ) : (
-          <button type="button" disabled={busy} onClick={onResearch}>
+          // A plan that cannot reach the writer has no research worth buying.
+          // The server refuses it too; this is so the refusal is not a
+          // surprise arriving after the button was pressed.
+          <button type="button" disabled={busy || tooLarge} onClick={onResearch}>
             Go and find this out
           </button>
         )}

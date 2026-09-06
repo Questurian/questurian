@@ -92,6 +92,7 @@ from .work_order_v4 import (
     WorkOrderUnusable,
     build_work_order,
     cut_work_order,
+    enforce_plan_fits,
     work_order_stage_record,
 )
 
@@ -371,7 +372,8 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     """
     if services.research is None:
         raise ValueError("Research is not configured for this run.")
-    enforce_run_budget(_run_tokens_spent(run_id), stage=RESEARCH_STAGE)
+    tokens_spent = _run_tokens_spent(run_id)
+    enforce_run_budget(tokens_spent, stage=RESEARCH_STAGE)
 
     brief = load_brief(run_id)
     work_order = load_work_order(run_id)
@@ -386,7 +388,18 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
         services.recorder.record_stage(run_id, NOTES_STAGE, notes_stage_record(work_order, notes))
 
     notes = notes_from_record(_stage_data(run_id, NOTES_STAGE), work_order) or {}
-    if len(notes) < len(work_order.requirements) or any(not note.text.strip() for note in notes.values()):
+    outstanding = [
+        item
+        for item in work_order.requirements
+        if not (item.requirement_id in notes and notes[item.requirement_id].text.strip())
+    ]
+    # The ceiling asks what this run has already spent. This asks what the
+    # gathering it is about to do will cost, which is the only part of the sum
+    # that can still be changed. Counted over the questions still without a
+    # note, so a resume is not charged again for notes it already paid for.
+    enforce_plan_fits(len(outstanding), tokens_spent)
+
+    if outstanding:
         _open(services, run_id, NOTES_STAGE)
         notes = gather_research(
             brief, work_order, services.research, record_progress,

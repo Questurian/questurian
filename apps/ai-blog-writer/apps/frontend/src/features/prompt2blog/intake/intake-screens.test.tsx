@@ -16,6 +16,7 @@ import { RunList } from './components/RunList'
 import { WorkOrderScreen } from './components/WorkOrderScreen'
 import type {
   IntakeBrief,
+  IntakeBudgetProjection,
   IntakeRunSummary,
   IntakeGrill,
   IntakeWorkOrder,
@@ -284,6 +285,24 @@ const WORK_ORDER: IntakeWorkOrder = {
   load_bearing_count: 1,
   texture_count: 1,
   cut_warnings: [],
+  budget_projection: null,
+}
+
+/** A plan that projects past the hard ceiling: it never reaches the writer. */
+const CANNOT_FINISH: IntakeBudgetProjection = {
+  question_count: 44,
+  spent: 40_000,
+  projected_research: 651_200,
+  projected_writing: 134_000,
+  projected_total: 825_200,
+  repair_reserve: 90_000,
+  budget: 425_000,
+  repair_affordable: false,
+  questions_that_fit: 0,
+  ceiling: 650_000,
+  can_finish: false,
+  questions_that_finish: 31,
+  note: '44 questions projects to about 825,200 tokens, past the 650,000 hard ceiling. This plan stops part-way through research and never reaches the writer, so there is no article at the end of it. About 31 questions would finish. Cut the plan before starting research.',
 }
 
 describe('the work order screen', () => {
@@ -305,6 +324,67 @@ describe('the work order screen', () => {
     fireEvent.click(screen.getByRole('button', { name: /apply changes/i }))
 
     expect(onCut).toHaveBeenCalledWith(['r2'], [])
+  })
+
+  it('shows what the plan will cost, because nobody ever saw the number', () => {
+    // It was computed and written to the run from the start, and never
+    // rendered. A plan that could not finish was approved and died in
+    // research, 707,468 tokens in, with no draft.
+    render(
+      <WorkOrderScreen
+        workOrder={{ ...WORK_ORDER, budget_projection: CANNOT_FINISH }}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/never reaches the writer/i)).toBeInTheDocument()
+  })
+
+  it('will not start research on a plan that cannot reach the writer', () => {
+    const onResearch = vi.fn()
+    render(
+      <WorkOrderScreen
+        workOrder={{ ...WORK_ORDER, budget_projection: CANNOT_FINISH }}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={onResearch}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: /go and find this out/i })).toBeDisabled()
+    expect(onResearch).not.toHaveBeenCalled()
+  })
+
+  it('leaves a plan that merely cannot repair itself alone', () => {
+    // It publishes. That makes it the operator's call, not the system's.
+    render(
+      <WorkOrderScreen
+        workOrder={{
+          ...WORK_ORDER,
+          budget_projection: {
+            ...CANNOT_FINISH,
+            can_finish: true,
+            note: 'will not be able to repair itself',
+          },
+        }}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/repair itself/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /go and find this out/i }),
+    ).not.toBeDisabled()
   })
 
   it('will not let every load-bearing question be struck', () => {

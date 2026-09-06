@@ -755,3 +755,59 @@ def test_the_projection_travels_on_the_stage_record():
     )
     assert record["budget_projection"]["budget"] == P2B_RUN_TOKEN_BUDGET
     assert work_order_stage_record(work_order)["budget_projection"] is None
+
+
+def test_a_plan_that_cannot_reach_the_writer_is_refused_before_research():
+    """Run 03c6702f: 44 questions, 707,468 spent gathering, dead before the
+    writer with no draft. Its own stage record already said it would not fit.
+
+    The soft budget only asks whether one more repair is affordable, and a run
+    that fails that still publishes. This asks whether there is an article at
+    the end of it at all, so it refuses rather than warns.
+    """
+    from app.features.prompt2blog.work_order_v4 import (
+        PlanTooLargeToFinish,
+        budget_projection,
+        enforce_plan_fits,
+    )
+
+    projection = budget_projection(44, 40_000)
+
+    assert projection.can_finish is False
+    assert projection.repair_affordable is False
+    assert "never reaches the writer" in projection.note
+    assert 0 < projection.questions_that_finish < 44
+    with pytest.raises(PlanTooLargeToFinish) as raised:
+        enforce_plan_fits(44, 40_000)
+    assert raised.value.projection.questions_that_finish == projection.questions_that_finish
+
+
+def test_a_plan_that_finishes_but_cannot_repair_is_allowed_through():
+    """The operator's call, not the system's. It produces an article."""
+    from app.features.prompt2blog.work_order_v4 import (
+        budget_projection,
+        enforce_plan_fits,
+    )
+
+    projection = budget_projection(14, 38_308)
+
+    assert projection.repair_affordable is False
+    assert projection.can_finish is True
+    enforce_plan_fits(14, 38_308)
+
+
+def test_an_unmetered_run_is_never_refused():
+    """A ceiling nobody can measure is not one that can be enforced, and
+    guessing zero would make it silently unenforceable -- the same discipline
+    `check_run_budget` and `budget_projection` already keep."""
+    from app.features.prompt2blog.work_order_v4 import (
+        budget_projection,
+        enforce_plan_fits,
+    )
+
+    assert budget_projection(44, None) is None
+    enforce_plan_fits(44, None)
+    # And nothing left to gather is nothing to refuse, so a resume whose notes
+    # are already paid for is not charged for them a second time.
+    enforce_plan_fits(0, 600_000)
+

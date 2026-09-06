@@ -37,7 +37,11 @@ from .contracts_v4 import (
 )
 from pydantic import ValidationError
 
-from .config import P2B_REPAIR_ESTIMATED_TOKENS, P2B_RUN_TOKEN_BUDGET
+from .config import (
+    P2B_REPAIR_ESTIMATED_TOKENS,
+    P2B_RUN_TOKEN_BUDGET,
+    P2B_RUN_TOKEN_CEILING,
+)
 from .grill_v4 import GrillDependencies
 from .schema_guards import require_non_empty
 from .support import _safe_dict, _safe_str, _safe_str_list
@@ -741,7 +745,53 @@ class BudgetProjection:
     budget: int
     repair_affordable: bool
     questions_that_fit: int
+    # The hard ceiling, and whether this plan can reach an article at all.
+    # Distinct from `repair_affordable` above, which asks a smaller question: a
+    # run that cannot afford its repair still finishes and still publishes.
+    # A run that cannot finish stops mid-research with nothing to show, which
+    # is what run 03c6702f did -- 44 questions, 707,468 tokens spent gathering,
+    # dead before the writer.
+    ceiling: int
+    can_finish: bool
+    questions_that_finish: int
     note: str
+
+
+class PlanTooLargeToFinish(RuntimeError):
+    """This plan cannot reach an article, so research must not start.
+
+    `budget_projection` has always been able to say this. Nothing acted on it:
+    the number was written to the work order's stage record and never rendered,
+    and research started regardless. Run 03c6702f asked 44 questions, spent
+    707,468 tokens gathering answers to them, and died against the ceiling with
+    no draft -- after the operator had approved a plan whose own record already
+    said it would not fit.
+
+    Refusing here is cheap and reversible. The operator strikes questions with
+    the cut they already have, and the number of questions that would finish is
+    on the refusal.
+    """
+
+    def __init__(self, projection: "BudgetProjection") -> None:
+        super().__init__(projection.note)
+        self.projection = projection
+
+
+def enforce_plan_fits(question_count: int, tokens_spent: int | None) -> None:
+    """Stop before research when the plan projects past the hard ceiling.
+
+    Silent when the run has no token accounting, the same way
+    `budget_projection` and `check_run_budget` are: an unmetered run is not a
+    free one, but a ceiling nobody can measure is not one that can be enforced
+    either, and guessing zero would make it silently unenforceable.
+
+    Only the ceiling refuses. A plan that will finish but cannot afford its
+    repair is still the operator's to run -- it produces an article -- and it
+    stays a warning on the screen.
+    """
+    projection = budget_projection(question_count, tokens_spent)
+    if projection and not projection.can_finish:
+        raise PlanTooLargeToFinish(projection)
 
 
 def budget_projection(
@@ -766,8 +816,22 @@ def budget_projection(
         - tokens_spent
     )
     fits = max(0, room // RESEARCH_TOKENS_PER_QUESTION)
+    can_finish = total <= P2B_RUN_TOKEN_CEILING
+    finish_room = P2B_RUN_TOKEN_CEILING - WRITING_TOKENS_TYPICAL - tokens_spent
+    finishes = max(0, finish_room // RESEARCH_TOKENS_PER_QUESTION)
 
-    if affordable:
+    if not can_finish:
+        # Said first because it outranks everything below it. The others
+        # describe a run that publishes; this one describes a run that does
+        # not exist yet and cannot.
+        note = (
+            f"{question_count} questions projects to about {total:,} tokens, "
+            f"past the {P2B_RUN_TOKEN_CEILING:,} hard ceiling. This plan stops "
+            f"part-way through research and never reaches the writer, so there "
+            f"is no article at the end of it. About {finishes} questions would "
+            f"finish. Cut the plan before starting research."
+        )
+    elif affordable:
         note = (
             f"{question_count} questions projects to about {total:,} tokens "
             f"against a {P2B_RUN_TOKEN_BUDGET:,} ceiling, leaving room for "
@@ -803,6 +867,9 @@ def budget_projection(
         budget=P2B_RUN_TOKEN_BUDGET,
         repair_affordable=affordable,
         questions_that_fit=fits,
+        ceiling=P2B_RUN_TOKEN_CEILING,
+        can_finish=can_finish,
+        questions_that_finish=finishes,
         note=note,
     )
 

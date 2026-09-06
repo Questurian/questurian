@@ -29,6 +29,7 @@ Every route is staff-guarded because every one of them spends money.
 from __future__ import annotations
 
 import logging
+from dataclasses import asdict
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -75,6 +76,7 @@ from .runs import (
     _run_pipeline_v3_background as _run_pipeline_v4_background,
 )
 from ..run_budget import RunTokenCeilingReached
+from ..work_order_v4 import PlanTooLargeToFinish
 
 logger = logging.getLogger(__name__)
 
@@ -293,6 +295,18 @@ def _handle(action, *args, **kwargs) -> Any:
         # Not a server fault and not a retry: the run is over its ceiling and
         # says what it spent.
         raise HTTPException(status_code=409, detail=error.status.as_record()) from error
+    except PlanTooLargeToFinish as error:
+        # The same 409 shape, and for the same reason: not a fault, not a
+        # retry. The difference is that this one is answerable -- the plan is
+        # still on the screen and the cut is one click away.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "plan_too_large_to_finish",
+                "message": error.projection.note,
+                "budget_projection": asdict(error.projection),
+            },
+        ) from error
     except ValidationError as error:
         # Anything a stage builds and the contracts refuse. Pydantic's own
         # message is addressed to a developer and it subclasses ValueError, so
