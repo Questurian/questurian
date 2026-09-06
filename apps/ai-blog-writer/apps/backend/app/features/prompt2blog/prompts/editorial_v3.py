@@ -330,7 +330,7 @@ Rules:
   asked to be lengthened.
 - Repair prose and structure only. You may not create a fact, and you may not
   change the brief: not the form, the primary subject, the scope mode, the
-  reference roles, the requirements, or the exclusions.
+  reference roles, the approved scope, or the exclusions.
 - Never add factual material. Work only with facts already present in the
   previous draft. Apply the EVIDENCE DISPOSITION POLICY in the repair lock
   exactly, including deletion of every assertion under UNSUPPORTED CLAIMS.

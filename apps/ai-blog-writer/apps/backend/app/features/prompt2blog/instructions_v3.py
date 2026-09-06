@@ -85,12 +85,29 @@ class V3InstructionSet(InstructionModel):
     instruction_meta: dict[str, Any]
 
 
-def _brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> str:
+def _brief_body(
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
+    *,
+    include_requirements: bool = True,
+) -> str:
     """The brief and its work order, rendered for a prompt.
 
     The order here is still the v3 order. Leading with the brief, and reframing
     evidence as the facts you may use rather than the article's reason for
     existing, is A5 and lands with the compose rework.
+
+    `include_requirements` exists because the research questions are only ever
+    useful to one stage. They used to arrive everywhere under a bare
+    `Requirements:` heading with nothing saying what they were, and a plan can
+    now carry forty-four of them. A judge handed forty-four items called
+    requirements marks a draft down for each one missing; a repair pass handed
+    the same list adds them back, one paragraph each, and the article becomes a
+    coverage checklist. That is the mechanism behind #506, and the word is
+    ambiguous in both prompts: the audit uses "requirement" for a section's
+    job, and repair is told it may not change "the requirements" meaning the
+    approved scope. Only the outline needs the ids, because it must name the
+    `requirement_ids` each section serves.
     """
     references = "\n".join(
         f"- {reference.name} — {reference.role}"
@@ -122,8 +139,16 @@ def _brief_body(brief: ArticleBrief, work_order: Prompt2BlogWorkOrder) -> str:
         must_name,
         "Material the writer has:",
         material,
-        "Requirements:",
-        requirements,
+    ]
+    if include_requirements:
+        lines += [
+            "Questions research was sent to answer. These are provenance and "
+            "the ids you cite, not a checklist the article owes an answer to. "
+            "A question whose answer earned no place in the piece is not a "
+            "hole; what the article may say is the evidence, not this list.",
+            requirements,
+        ]
+    lines += [
         f"This piece fails if: {brief.fails_if}",
         "Context-only references may calibrate a fact or explain significance. "
         "They may never become co-subjects, recurring sections, rankings, or "
@@ -327,12 +352,16 @@ def _repair_lock_body(
     *,
     form_label: str,
 ) -> str:
+    """The scope this repair may not move, and nothing else.
+
+    The research questions used to be pasted here under `Requirements:`. They
+    are not scope -- the outcome, spine, reader question, form and `fails_if`
+    are -- and repair is separately forbidden to add facts, so the list could
+    only ever be read as a checklist to satisfy. See `_brief_body`.
+    """
     references = "\n".join(
         f"- {reference.name} — {reference.role}"
         for reference in work_order.scope.references
-    )
-    requirements = "\n".join(
-        f"- {item.requirement_id} — {item.question}" for item in work_order.requirements
     )
     must_name = "\n".join(f"- {item}" for item in brief.must_name)
     return "\n".join(
@@ -345,8 +374,6 @@ def _repair_lock_body(
             f"Core reader question: {brief.reader_question}",
             "Reference roles:",
             references,
-            "Requirements:",
-            requirements,
             "Must name:",
             must_name or "- None recorded.",
             f"It fails if: {brief.fails_if}",
@@ -477,7 +504,10 @@ def assemble_v3_instructions(
     ]
 
     form_structure = _form_structure(form.instructions)
-    brief_body = _brief_body(brief, work_order)
+    # The outline names the `requirement_ids` each section serves, so it is the
+    # one stage that needs them. Everywhere else the list is noise at best.
+    outline_brief_body = _brief_body(brief, work_order)
+    brief_body = _brief_body(brief, work_order, include_requirements=False)
     audience_body = _audience_body(brief, catalog)
     topic_modules_body = (
         "\n\n".join(module.instructions for module in active_modules)
@@ -497,7 +527,7 @@ def assemble_v3_instructions(
                 # give it a good plan and it writes well, give it an audit and
                 # it writes an excellent audit. This stage decides which.
                 ("voice", f"THE VOICE YOU ARE WRITING IN\n{catalog.voice.instructions}"),
-                ("brief", f"APPROVED BRIEF\n{brief_body}"),
+                ("brief", f"APPROVED BRIEF\n{outline_brief_body}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
                 (
                     "form_structure",

@@ -442,3 +442,64 @@ def test_a_fact_answering_no_grouped_question_still_appears():
     assert len([line for line in block.splitlines() if line.startswith("- ")]) == len(
         normalize_evidence(stripped.work_order, stripped.evidence_package).claims
     )
+
+
+def test_only_the_outline_is_handed_the_bare_question_list():
+    """The list is provenance for one stage, and a checklist everywhere else.
+
+    A plan now runs to forty-four questions. Under a bare `Requirements:`
+    heading with nothing saying what they were, they reached compose, the audit
+    and the repair lock as well -- and both of those prompts already use the
+    word for something else: the audit calls a section's job its requirement,
+    and repair is told it may not change "the requirements" meaning the
+    approved scope. A judge marks a draft down for each of forty-four items it
+    cannot find; repair puts them back a paragraph at a time. That is #506.
+
+    Only the outline needs them, because it names the `requirement_ids` each
+    section serves.
+
+    This is about the bare list only. Compose still receives REQUIREMENT
+    COVERAGE from the evidence projection, which carries the same questions
+    with their status and says what it is -- it is how the writer knows to
+    write around an `unpublished` question rather than narrate the hole.
+    """
+    fixture = _fixture()
+    contexts = assemble_v3_instructions(_request()).stage_contexts
+    entries = [
+        f"- {item['requirement_id']} [{item['kind']}] — {item['question']}"
+        for item in fixture["work_order"]["requirements"]
+    ]
+    assert entries, "fixture must declare questions for this test to mean anything"
+
+    for entry in entries:
+        assert entry in contexts.outline.text
+    # And it is labelled, so the outline cannot read it as a coverage list.
+    assert "not a checklist" in _flat(contexts.outline.text)
+
+    for stage in (contexts.compose, contexts.audit, contexts.repair_lock):
+        assert "Requirements:" not in stage.text
+        for entry in entries:
+            assert entry not in stage.text
+    # The repair lock rendered them in its own shorter form. That is gone too.
+    for item in fixture["work_order"]["requirements"]:
+        assert (
+            f"- {item['requirement_id']} — {item['question']}"
+            not in contexts.repair_lock.text
+        )
+    # The audit is not left guessing: it still gets status per question.
+    assert "SUPPORT AND OMISSION" in contexts.audit.text
+
+
+def test_the_stages_without_the_questions_keep_the_rest_of_the_brief():
+    """Dropping the list must not take the scope lock with it."""
+    fixture = _fixture()
+    contexts = assemble_v3_instructions(_request()).stage_contexts
+
+    for stage in (contexts.compose, contexts.audit):
+        assert fixture["brief"]["fails_if"] in stage.text
+        assert "Primary subject: Lima" in stage.text
+        assert "- Medellín — context_only" in stage.text
+    lock = contexts.repair_lock.text
+    assert fixture["brief"]["outcome"] in lock
+    assert "Primary subject: Lima" in lock
+    assert "Do not add factual material." in lock
