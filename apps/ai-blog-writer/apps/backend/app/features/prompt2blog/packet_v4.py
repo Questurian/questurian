@@ -227,6 +227,50 @@ def _role_of(selection: Selection, claim_id: str) -> PacketRole:
     return "texture" if claim_id in set(selection.texture_order) else ""
 
 
+def stale_reason(
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
+    evidence: EvidencePackage,
+    selection: Selection,
+) -> str:
+    """Why this choice no longer describes what it was made from, or "".
+
+    One sentence, in the operator's terms, and one definition: the selection
+    screen shows exactly what the write boundary would refuse with, so nobody
+    discovers at the hand-off that the choice they were looking at was already
+    out of date.
+
+    An empty fingerprint is not a match. Every selection stored before bindings
+    existed carries one, and those cannot be checked -- which is a thing to
+    say, not a thing to assume is fine.
+    """
+    if (
+        selection.evidence_fingerprint
+        and selection.evidence_fingerprint != evidence.content_fingerprint()
+    ):
+        return (
+            "The research has changed since these facts were chosen. Look at "
+            "the list again before writing."
+        )
+    if (
+        selection.brief_fingerprint
+        and selection.brief_fingerprint != brief.brief_fingerprint
+    ):
+        return (
+            "These facts were chosen against a different brief. Look at the "
+            "list again before writing."
+        )
+    if (
+        selection.work_order_fingerprint
+        and selection.work_order_fingerprint != work_order.work_order_fingerprint
+    ):
+        return (
+            "These facts were chosen against a different set of research "
+            "questions. Look at the list again before writing."
+        )
+    return ""
+
+
 def build_packet(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
@@ -240,28 +284,8 @@ def build_packet(
     runs, and re-deciding anything here would put a second chooser beside the
     one the operator can see.
     """
-    if selection.evidence_fingerprint and selection.evidence_fingerprint != (
-        current := evidence.content_fingerprint()
-    ):
-        raise PacketRefused(
-            "The research has changed since these facts were chosen "
-            f"({selection.evidence_fingerprint} → {current}). Review the "
-            "selection before writing."
-        )
-    if selection.brief_fingerprint and selection.brief_fingerprint != (
-        brief.brief_fingerprint
-    ):
-        raise PacketRefused(
-            "These facts were chosen against a different brief. Review the "
-            "selection before writing."
-        )
-    if selection.work_order_fingerprint and selection.work_order_fingerprint != (
-        work_order.work_order_fingerprint
-    ):
-        raise PacketRefused(
-            "These facts were chosen against a different work order. Review "
-            "the selection before writing."
-        )
+    if reason := stale_reason(brief, work_order, evidence, selection):
+        raise PacketRefused(reason)
 
     by_id = {claim.claim_id: claim for claim in evidence.claims}
     chosen_ids = selection.selected_claim_ids()

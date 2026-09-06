@@ -343,7 +343,7 @@ def test_a_selection_made_against_another_work_order_refuses():
     evidence = _evidence()
     selection = _selection(evidence, work_order_fingerprint="wo-2")
 
-    with pytest.raises(PacketRefused, match="different work order"):
+    with pytest.raises(PacketRefused, match="different set of research"):
         build_packet(_brief(), _work_order(), evidence, selection)
 
 

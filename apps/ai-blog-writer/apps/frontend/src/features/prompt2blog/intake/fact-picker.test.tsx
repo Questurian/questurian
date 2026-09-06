@@ -75,9 +75,15 @@ describe('the fact picker', () => {
     await screen.findByText(/1 of 2 findings/i)
 
     expect(screen.queryByTestId('fact-c2')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /show the 1 being left out/i }))
+    fireEvent.click(screen.getByRole('button', { name: /show the 1 in reserve/i }))
 
     expect(screen.getByTestId('fact-c2')).toBeInTheDocument()
+    // Named, and named as reserve rather than as a hole. Every stage after
+    // the writer now draws that distinction; the screen has to draw it too.
+    expect(screen.getByText('In reserve')).toBeInTheDocument()
+    expect(
+      screen.getByText(/still answer whatever question they answered/i),
+    ).toBeInTheDocument()
   })
 
   it('moves the line', async () => {
@@ -104,7 +110,7 @@ describe('the fact picker', () => {
 
     render(<FactPicker runId="run-1" onChanged={vi.fn()} />)
     await screen.findByText(/1 of 2 findings/i)
-    fireEvent.click(screen.getByRole('button', { name: /show the 1 being left out/i }))
+    fireEvent.click(screen.getByRole('button', { name: /show the 1 in reserve/i }))
     fireEvent.click(screen.getByRole('button', { name: /keep it anyway/i }))
 
     await waitFor(() =>
@@ -150,7 +156,12 @@ describe('the fact picker', () => {
     expect(await screen.findByText('Ranking did not run.')).toBeInTheDocument()
   })
 
-  it('renders nothing on a run that never selected', async () => {
+  it('says a run that never selected cannot be written, rather than nothing', async () => {
+    // This used to render nothing, because a run with no selection wrote from
+    // every fact research found. Writing refuses now — a ranking that fell
+    // over and a person keeping everything looked identical from here — so an
+    // empty screen would be the operator waiting for a hand-off that is never
+    // coming.
     readSelection.mockResolvedValue({
       available: false,
       claims: [],
@@ -158,9 +169,65 @@ describe('the fact picker', () => {
       note: '',
     })
 
-    const { container } = render(<FactPicker runId="run-1" onChanged={vi.fn()} />)
+    render(<FactPicker runId="run-1" onChanged={vi.fn()} />)
 
-    await waitFor(() => expect(container).toBeEmptyDOMElement())
+    expect(
+      await screen.findByText(/cannot be written/i),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/The research is safe/i)).toBeInTheDocument()
+  })
+
+  it('warns when the choice no longer matches the research it was made from', async () => {
+    // Somebody answered a question at the gate, or re-asked one. The facts on
+    // screen were chosen against a dossier that has moved, and the hand-off
+    // will refuse — so it is said here, while it can still be acted on.
+    readSelection.mockResolvedValue(
+      review({
+        stale_reason:
+          'The research has changed since these facts were chosen. Look at the list again before writing.',
+      }),
+    )
+
+    render(<FactPicker runId="run-1" onChanged={vi.fn()} />)
+
+    expect(
+      await screen.findByText(/research has changed since these facts were chosen/i),
+    ).toBeInTheDocument()
+  })
+
+  it('groups the kept facts by what each one is for', async () => {
+    readSelection.mockResolvedValue(
+      review({
+        keep_count: 2,
+        claims: [
+          claim({ role: 'practical' }),
+          claim({
+            claim_id: 'c2',
+            rank: 2,
+            selected: true,
+            role: 'backbone',
+            text: 'Chifa is Lima’s second cuisine by number of restaurants.',
+          }),
+        ],
+      }),
+    )
+
+    render(<FactPicker runId="run-1" onChanged={vi.fn()} />)
+
+    expect(await screen.findByText('For this article')).toBeInTheDocument()
+    expect(screen.getByText('What the piece argues from')).toBeInTheDocument()
+    expect(screen.getByText('What the reader acts on')).toBeInTheDocument()
+  })
+
+  it('does not invent a grouping when nothing said what the facts are for', async () => {
+    // Every selection made before roles existed carries none, and one
+    // unlabelled group heading is not a grouping — it is the same words twice.
+    readSelection.mockResolvedValue(review({ keep_count: 1 }))
+
+    render(<FactPicker runId="run-1" onChanged={vi.fn()} />)
+
+    expect(await screen.findByText('For this article')).toBeInTheDocument()
+    expect(screen.queryByText('What the piece argues from')).not.toBeInTheDocument()
   })
 
   it('marks the rows that are there for colour', async () => {

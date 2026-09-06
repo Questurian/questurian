@@ -82,6 +82,7 @@ from .research_v4 import (
     research_stage_record,
     structure_research,
 )
+from .packet_v4 import stale_reason
 from .polish_v4 import build_polish_prompt
 from .run_budget import enforce_run_budget
 from .run_recorder import RunRecorder
@@ -508,19 +509,36 @@ def _select_evidence(
 
 
 def review_selection(run_id: str) -> dict[str, Any]:
-    """The ranked shortlist and where the line sits, for the picker."""
+    """The ranked shortlist, where the line sits, and whether it still holds.
+
+    `available: False` used to mean the run would write from every fact it
+    found. It no longer does -- the hand-off refuses without a selection --
+    so the screen has to say that rather than show nothing.
+    """
     selection = load_selection(run_id)
     if selection is None:
-        return {"available": False, "claims": [], "keep_count": 0, "note": ""}
+        return {
+            "available": False,
+            "claims": [],
+            "keep_count": 0,
+            "note": "",
+            "stale_reason": "",
+        }
+    brief = load_brief(run_id)
+    work_order = load_work_order(run_id)
     evidence = load_evidence(run_id)
     return {
         "available": True,
-        "claims": shortlist(evidence, load_work_order(run_id), selection),
+        "claims": shortlist(evidence, work_order, selection),
         "keep_count": selection.keep_count,
         "target_word_count": selection.target_word_count,
         "deduped": selection.deduped,
         "ranked": selection.ranked,
         "note": selection.note,
+        # The same sentence the write boundary would refuse with, shown while
+        # the operator can still do something about it. Empty when the choice
+        # still describes what it was made from.
+        "stale_reason": stale_reason(brief, work_order, evidence, selection),
     }
 
 

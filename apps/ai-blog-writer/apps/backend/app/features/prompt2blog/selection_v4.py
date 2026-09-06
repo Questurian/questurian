@@ -876,6 +876,7 @@ def shortlist(
     question_of = {
         item.requirement_id: item.question for item in work_order.requirements
     }
+    colour = set(selection.texture_order)
     absorbed: dict[str, list[str]] = {}
     for loser, survivor in selection.merged.items():
         if loser in by_id:
@@ -899,7 +900,14 @@ def shortlist(
                 "why": selection.reasons.get(claim_id, ""),
                 # So the operator can see which rows are here as colour, and
                 # that cutting one costs the piece something other than a fact.
-                "texture": claim_id in set(selection.texture_order),
+                "texture": claim_id in colour,
+                # What this fact is for in the finished piece. Empty until one
+                # balanced selection call sets roles; `texture_order` is the
+                # older, narrower version of the same idea, so a colour row
+                # already knows what it is.
+                "role": selection.roles.get(
+                    claim_id, "texture" if claim_id in colour else ""
+                ),
                 "questions": [
                     question_of[item]
                     for item in claim.requirement_ids

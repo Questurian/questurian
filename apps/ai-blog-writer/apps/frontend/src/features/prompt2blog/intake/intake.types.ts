@@ -341,11 +341,23 @@ export interface SelectableClaim {
    * replace.
    */
   texture?: boolean
+  /**
+   * What this fact is for in the finished piece: the backbone of the argument,
+   * something the reader acts on, or the detail that makes a place real.
+   * Empty on every selection made before roles existed, and on any fact one
+   * balanced selection call did not label.
+   */
+  role?: '' | 'backbone' | 'practical' | 'texture'
   confidence: string
 }
 
 export interface SelectionReview {
-  /** False on a run that never selected. It writes from every fact it found. */
+  /**
+   * False on a run that never selected. That used to mean the article would be
+   * written from every fact research found; it now means writing refuses,
+   * because a selection that fell over and a person keeping everything looked
+   * identical and only one of them should produce a hundred-fact article.
+   */
   available: boolean
   claims: SelectableClaim[]
   keep_count: number
@@ -354,5 +366,11 @@ export interface SelectionReview {
   ranked?: boolean
   /** Says which pass fell over, when one did. Empty on a clean selection. */
   note: string
+  /**
+   * Why this choice no longer describes what it was made from — the research
+   * changed, or the brief did. Empty when it still holds. The same sentence
+   * the hand-off would refuse with, shown while it can still be acted on.
+   */
+  stale_reason?: string
 }
 

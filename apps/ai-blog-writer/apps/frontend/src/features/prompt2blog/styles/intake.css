@@ -1389,6 +1389,23 @@
   flex-shrink: 0;
 }
 
+/* The two lists, named. What is left out is in reserve, not missing, and the
+   screen says so in the same words every stage after the writer uses. */
+.p2b-facts-heading {
+  margin: var(--space-5) 0 0;
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+
+/* What a fact is for. A quieter line than the list heading above it: it sorts
+   rows, it does not introduce a section. */
+.p2b-facts-role {
+  margin: var(--space-4) 0 calc(var(--space-2) * -1);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
 /* A detail kept for colour rather than proof. Quiet: it labels a row, it does
    not decorate one. */
 .p2b-fact-colour {
