@@ -34,7 +34,9 @@ from app.features.prompt2blog.intake_v4 import (
     reopen_intake,
     settle_gate,
     settle_venue,
+    writers_evidence,
 )
+from app.features.prompt2blog.notes_v4 import unused_claims
 from app.features.prompt2blog.research_v4 import (
     RESEARCH_STAGE,
     ResearchDependencies,
@@ -429,6 +431,52 @@ def test_the_writing_request_is_assembled_from_what_intake_settled(isolated_db):
     assert handoff.selection.evidence_fingerprint == (
         load_evidence(run_id).content_fingerprint()
     )
+
+
+def test_the_punch_list_reads_the_cut_the_writer_was_actually_given(isolated_db):
+    """The last editing aid must not argue to refill the article.
+
+    The cut is written into the request the graph runs from and never back into
+    storage, so every claim on the stored dossier is still flagged selected.
+    Anything reading those rows sees a hundred facts the writer supposedly had
+    -- which is how the punch list came to offer facts a person had deliberately
+    removed as ordinary omissions, on the first real run of this code.
+
+    The frozen packet is the honest source, and not the current selection: it
+    is what actually reached the writer, so a selection edited after the
+    article was written cannot make the notes disagree with the piece they are
+    describing.
+    """
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+
+    stored = load_evidence(run_id)
+    assert all(claim.selected for claim in stored.claims), (
+        "the stored dossier is what research returned; the cut lives elsewhere"
+    )
+    reached = stored.claims[0].claim_id
+    services.recorder.record_stage(
+        run_id,
+        "pipeline_v3",
+        {"packet_receipt": {"claim_ids": [reached]}},
+    )
+
+    evidence = writers_evidence(run_id)
+
+    chosen = [claim.claim_id for claim in evidence.claims if claim.selected]
+    assert chosen == [reached]
+    # And the split the punch list rests on now falls the right way round: a
+    # fact the writer never had is in reserve, not missing from the article.
+    article = "## H\n\nProse that mentions none of it."
+    assert unused_claims(evidence, article) == [] or all(
+        row["claim_id"] == reached for row in unused_claims(evidence, article)
+    )
+    assert reached not in {
+        row["claim_id"] for row in unused_claims(evidence, article, reserve=True)
+    }
 
 
 def test_a_venue_note_does_not_stop_the_article_being_written(isolated_db):

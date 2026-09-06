@@ -1305,6 +1305,45 @@ def polish_prompt(run_id: str) -> dict[str, Any]:
     }
 
 
+def writers_evidence(run_id: str) -> EvidencePackage:
+    """The dossier with the writer's own cut marked on it.
+
+    The stored dossier is what research returned, and every claim on it is
+    flagged selected: the cut is written into the request the graph runs from
+    and never back into storage. Anything reading the stored rows therefore
+    sees a hundred facts the writer supposedly had, which is how the punch list
+    came to offer facts a person deliberately removed as ordinary omissions --
+    the last editing aid arguing to refill the article the earlier stages had
+    carefully reduced.
+
+    The frozen packet is the honest source and not the current selection: it is
+    what actually reached the writer, so a selection edited after the article
+    was written cannot make this disagree with the piece it is describing. The
+    selection is the fallback for a run written before packets were recorded,
+    and the bare dossier the fallback for one with no selection at all.
+    """
+    evidence = load_evidence(run_id)
+    receipt = _safe_dict(
+        _stage_data(run_id, "pipeline_v3").get("packet_receipt")
+    )
+    reached = [
+        _safe_str(item) for item in (receipt.get("claim_ids") or []) if _safe_str(item)
+    ]
+    if reached:
+        chosen = set(reached)
+        return evidence.model_copy(
+            update={
+                "claims": [
+                    claim.model_copy(update={"selected": claim.claim_id in chosen})
+                    for claim in evidence.claims
+                ]
+            }
+        )
+    if selection := load_selection(run_id):
+        return apply_selection(evidence, selection)
+    return evidence
+
+
 def punch_list(run_id: str, services: IntakeServices) -> dict[str, Any]:
     """What a person should fix by hand, computed once and kept.
 
@@ -1331,7 +1370,7 @@ def punch_list(run_id: str, services: IntakeServices) -> dict[str, Any]:
         brief=load_brief(run_id),
         title=article["title"],
         article_markdown=article["markdown"],
-        evidence=load_evidence(run_id),
+        evidence=writers_evidence(run_id),
         llm=services.dependencies.llm,
         model_name=services.dependencies.model_name,
     )
