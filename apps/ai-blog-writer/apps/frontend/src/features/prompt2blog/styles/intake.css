@@ -1291,3 +1291,100 @@
 .p2b-run-live .p2b-run-meta {
   color: var(--accent);
 }
+
+/* Which facts the article is written from (#534). Deliberately quieter than
+   the venue check beside it: that one asks a question, this one shows a
+   decision already made and offers to change it. */
+.p2b-facts {
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.p2b-facts-summary {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+
+.p2b-facts-note {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent-softer);
+  border-radius: var(--radius-md);
+  color: var(--ink-light);
+  font-size: 0.875rem;
+}
+
+.p2b-facts-line {
+  margin-top: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.p2b-facts-line input[type='range'] {
+  flex: 1;
+}
+
+.p2b-facts-count {
+  min-width: 2.5ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.p2b-fact-list {
+  margin: var(--space-4) 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.p2b-fact {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted, var(--accent-softer));
+}
+
+/* Shown, not hidden. A fact being left out is a decision the operator should
+   be able to see and reverse, not something that quietly disappears. */
+.p2b-fact-cut {
+  background: transparent;
+  border: 1px dashed var(--border);
+  opacity: 0.65;
+}
+
+.p2b-fact-rank {
+  min-width: 2.5ch;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.875rem;
+}
+
+.p2b-fact-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.p2b-fact-text {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+
+.p2b-fact-why,
+.p2b-fact-merged {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.p2b-fact-actions {
+  flex-shrink: 0;
+}

@@ -1,4 +1,5 @@
 import type { IntakeResearch } from '../intake.types'
+import { FactPicker } from './FactPicker'
 import { VenueCheck } from './VenueCheck'
 
 /**
@@ -131,6 +132,13 @@ export function ResearchScreen({
 
       {/* Liveness, not a gate. Skippable in one click. */}
       {canWrite && <VenueCheck runId={runId} onChanged={onChanged} />}
+
+      {/* Which of the findings the article is actually written from (#534).
+          Here rather than on a screen of its own: the run already stops on
+          this page before Write it, so this is more of the one stop rather
+          than a second one. Also not a gate — doing nothing accepts the cut
+          the ranking proposed. */
+      canWrite && <FactPicker runId={runId} onChanged={onChanged} />}
 
       <div className="p2b-intake-actions">
         {canWrite ? (

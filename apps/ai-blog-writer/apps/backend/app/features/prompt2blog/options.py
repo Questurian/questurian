@@ -15,6 +15,7 @@ from .config import (
 from .support import (
     _normalize_article_type_name,
     _safe_bool,
+    _safe_dict,
     _safe_int,
     _safe_str,
 )
@@ -193,6 +194,19 @@ def _find_option_or_raise(
         if _normalize_article_type_name(_safe_str(option.get("id"))) == normalized:
             return option
     raise RuntimeError(f"Unsupported {field_name}: '{option_id}'")
+
+
+def default_target_word_count() -> int:
+    """How long the article the pipeline is about to write is meant to be.
+
+    Nothing chooses a length: `writing_request` takes the default, so this is
+    the number compose will actually write to. Evidence selection needs it
+    before the writing request exists, to know how many facts a piece this size
+    can carry, and reading it from the same catalog entry is what stops the two
+    numbers drifting apart.
+    """
+    length = _default_option(_load_prompt2blog_option_catalog().get("lengths", []))
+    return _safe_int(_safe_dict(length).get("target_word_count"), default=0)
 
 
 def _default_option(options: list[dict[str, Any]]) -> dict[str, Any] | None:

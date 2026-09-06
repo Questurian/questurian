@@ -50,6 +50,7 @@ from ..gate_v4 import GateAnswerRefused
 from ..intake_v4 import (
     IntakeServices,
     blocking_questions,
+    review_selection,
     review_venues,
     answer_intake,
     apply_cut,
@@ -65,6 +66,7 @@ from ..intake_v4 import (
     recent_runs,
     reopen_intake,
     settle_gate,
+    settle_selection,
     settle_venue,
     writing_request,
 )
@@ -76,6 +78,7 @@ from .runs import (
     _run_pipeline_v3_background as _run_pipeline_v4_background,
 )
 from ..run_budget import RunTokenCeilingReached
+from ..selection_v4 import SelectionRefused
 from ..work_order_v4 import PlanTooLargeToFinish
 
 logger = logging.getLogger(__name__)
@@ -290,6 +293,13 @@ def _handle(action, *args, **kwargs) -> Any:
                 ),
                 "raw": error.raw[:2000],
             },
+        ) from error
+    except SelectionRefused as error:
+        # The operator asked the picker for something it cannot mean. Their
+        # move, their sentence back, and nothing was changed.
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "selection_refused", "message": str(error)},
         ) from error
     except RunTokenCeilingReached as error:
         # Not a server fault and not a retry: the run is over its ceiling and
@@ -530,6 +540,41 @@ class VenueMarkRequest(BaseModel):
     drop: bool = False
     dismiss: bool = False
     note: str | None = None
+
+
+class SelectionRequest(BaseModel):
+    """One move. Moving the line and marking one fact are separate decisions:
+    an override is about that fact and outlives the line moving past it."""
+
+    keep_count: int | None = None
+    rescue: str | None = None
+    drop: str | None = None
+    clear: str | None = None
+
+
+@router.get("/{run_id}/selection")
+def read_selection(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The facts this article would be written from, ranked, with the line."""
+    return JSONResponse(_handle(review_selection, run_id))
+
+
+@router.post("/{run_id}/selection")
+@exclusive_run
+def settle_the_selection(
+    run_id: str, request: SelectionRequest, _staff=Depends(require_staff)
+) -> JSONResponse:
+    """Move the line, or mark one fact. No model call: the operator decides."""
+    return JSONResponse(
+        _handle(
+            settle_selection,
+            run_id,
+            _services(run_id),
+            keep_count=request.keep_count,
+            rescue=request.rescue,
+            drop=request.drop,
+            clear=request.clear,
+        )
+    )
 
 
 @router.get("/{run_id}/venues")
