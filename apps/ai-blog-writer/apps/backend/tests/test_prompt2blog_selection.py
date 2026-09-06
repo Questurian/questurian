@@ -144,7 +144,7 @@ class _LLM:
             return {"groups": self.groups}, "{}"
         # The colour pass runs under the same job id and is told apart by its
         # prompt, exactly as the real one is.
-        if "make a place feel like a real place" in prompt:
+        if "THE DETAILS" in prompt:
             rows = self.texture or []
             return {"ranked": [{"claim_id": i, "why": "vivid"} for i in rows]}, "{}"
         if self.ranked is None:
@@ -638,3 +638,21 @@ def test_a_claim_that_also_proves_something_is_not_colour():
     )
 
     assert texture_claim_ids(work_order, evidence) == {"c5"}
+
+
+def test_a_colour_row_shows_why_it_is_vivid_not_why_it_is_useless():
+    """Both passes rank a colour claim, and the utility pass says what it is
+    not. Run 4a56545b put "folklore the piece can live without" beside a row
+    kept precisely because it was the most vivid thing in the dossier."""
+    evidence, work_order, colour = _mixed(load_bearing=4, texture=2)
+    llm = _LLM(
+        groups=[], ranked=[f"f{i}" for i in range(1, 7)], texture=["f1", "f2"]
+    )
+
+    selection = select_evidence(
+        _brief(), work_order, evidence, SelectionDependencies(llm=llm),
+        target_word_count=900,
+    )
+
+    assert selection.reasons[colour[0]] == "vivid"
+    assert selection.reasons["c1"] == "because"
