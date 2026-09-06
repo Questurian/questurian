@@ -58,8 +58,10 @@ PACKET_POLICY_VERSION = 1
 # What a fact is here for. Editorial roles, and deliberately not the work
 # order's question kinds: a `load_bearing` question can produce a fact whose
 # job in the finished piece is colour, and a `texture` question can produce the
-# one price the reader needs. Empty means the selection did not say, which is
-# every selection made before roles existed.
+# one price the reader needs. Empty means the selection did not say -- a
+# ranking pass that skipped the field, or a selection made before roles
+# existed. The outline reads that as "chosen for this article" and groups the
+# labelled facts around it.
 PacketRole = Literal["", "backbone", "practical", "texture"]
 
 
@@ -217,9 +219,11 @@ def _is_limitation(note: str) -> bool:
 def _role_of(selection: Selection, claim_id: str) -> PacketRole:
     """What the selection said this fact is for.
 
-    `texture_order` is the older, narrower version of the same idea: colour was
-    ranked separately before roles existed, so a claim in it is a claim the
-    system already called colour. Read second, so an explicit role always wins.
+    `texture_order` is the older, narrower version of the same idea: colour is
+    ranked separately, on how much of the place it carries, so a claim in it is
+    one the system has already called colour. Read second, so an explicit role
+    wins -- and `select_evidence` writes `texture` over anything the ranking
+    pass called a colour claim, so the two cannot disagree in practice.
     """
     role = selection.roles.get(claim_id, "")
     if role in {"backbone", "practical", "texture"}:

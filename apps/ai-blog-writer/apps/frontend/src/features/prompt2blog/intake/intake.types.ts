@@ -344,8 +344,9 @@ export interface SelectableClaim {
   /**
    * What this fact is for in the finished piece: the backbone of the argument,
    * something the reader acts on, or the detail that makes a place real.
-   * Empty on every selection made before roles existed, and on any fact one
-   * balanced selection call did not label.
+   * Empty on a fact the ranking pass did not label, and on every selection
+   * made before roles existed. The picker shows one plain list rather than a
+   * heading that repeats the one above it.
    */
   role?: '' | 'backbone' | 'practical' | 'texture'
   confidence: string

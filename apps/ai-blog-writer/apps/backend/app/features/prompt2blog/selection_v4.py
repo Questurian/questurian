@@ -406,8 +406,10 @@ class Selection:
     # What each chosen fact is here to do: backbone, practical or texture.
     # Editorial roles, deliberately not the work order's question kinds -- a
     # load-bearing question can produce a fact whose job in the finished piece
-    # is colour. Empty until one balanced selection call sets them; the packet
-    # reads `texture_order` as the older, narrower version of the same idea.
+    # is colour. Set by the ranking pass, which is asked for one per fact, and
+    # missing for a fact it did not label or a selection made before roles
+    # existed. The packet reads `texture_order` as the older, narrower version
+    # of the same idea, so a colour row is never unlabelled.
     roles: dict[str, str] = field(default_factory=dict)
     # What this choice was made against. Nothing recorded which dossier
     # revision was on screen when the operator picked, so an answer supplied at
@@ -1104,10 +1106,10 @@ def shortlist(
                 # So the operator can see which rows are here as colour, and
                 # that cutting one costs the piece something other than a fact.
                 "texture": claim_id in colour,
-                # What this fact is for in the finished piece. Empty until one
-                # balanced selection call sets roles; `texture_order` is the
-                # older, narrower version of the same idea, so a colour row
-                # already knows what it is.
+                # What this fact is for in the finished piece. Empty when the
+                # ranking pass did not label it; `texture_order` is the older,
+                # narrower version of the same idea, so a colour row already
+                # knows what it is.
                 "role": selection.roles.get(
                     claim_id, "texture" if claim_id in colour else ""
                 ),
