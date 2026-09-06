@@ -388,6 +388,46 @@ def test_a_fact_that_leaves_the_research_takes_its_decisions_with_it():
     assert "no longer in the research" in changed
 
 
+def test_deduplications_losers_are_not_mistaken_for_new_facts():
+    """The merge lives on the selection, not on the stored dossier.
+
+    `apply_selection` writes `merged_into` into the request it builds and never
+    back into storage, so a rebind reading only the claim's own flag sees every
+    loser as a fact that has just arrived. On run 3750891f that was 24 of them,
+    reported to the operator as new findings; two were sourced first-hand, so
+    they were kept as answers the operator had typed, and the packet then
+    refused the whole hand-off for naming claims merged into others.
+    """
+    evidence = _package(12)
+    llm = _LLM(
+        groups=[{"keep": "f1", "same_as": ["f2", "f3"]}],
+        ranked=[f"f{index}" for index in (1, *range(4, 13))],
+    )
+    selection = _select(evidence, llm)
+    assert selection.merged, "the fixture must actually merge something"
+
+    rebound, changed = rebind(selection, _brief(), _work_order(), evidence)
+
+    assert changed == ""
+    assert not set(selection.merged) & set(rebound.order)
+    assert not set(selection.merged) & rebound.selected_claim_ids()
+
+
+def test_an_old_selection_with_no_bindings_is_not_reported_as_changed():
+    """Every selection stored before bindings existed carries no fingerprint.
+    Calling that a change tells the operator their research moved, which is not
+    a fact about their research -- it is a fact about when the code shipped."""
+    evidence = _package(12)
+    llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 13)])
+    selection = _select(evidence, llm)
+    selection.evidence_fingerprint = ""
+
+    rebound, changed = rebind(selection, _brief(), _work_order(), evidence)
+
+    assert changed == ""
+    assert rebound.evidence_fingerprint == evidence.content_fingerprint()
+
+
 def test_a_rebind_that_changes_nothing_says_nothing():
     evidence = _package(12)
     llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 13)])

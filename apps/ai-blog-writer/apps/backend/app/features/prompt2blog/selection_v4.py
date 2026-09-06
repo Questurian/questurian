@@ -691,7 +691,20 @@ def rebind(
     Returns the rebound selection and one sentence on what moved, empty when
     nothing did.
     """
-    live = [claim for claim in evidence.claims if not claim.merged_into]
+    # Deduplication's losers are not new facts and never were. The merge lives
+    # on the selection, not on the stored dossier -- `apply_selection` writes
+    # `merged_into` into the request it builds and never back into storage --
+    # so a rebind reading only the claim's own flag sees every loser as a fact
+    # that has just arrived. On run 3750891f that was 24 of them, reported to
+    # the operator as new findings, and two were sourced first-hand: kept as
+    # answers the operator typed, then refused by the packet for being merged
+    # into something else.
+    stood_down = set(selection.merged)
+    live = [
+        claim
+        for claim in evidence.claims
+        if not claim.merged_into and claim.claim_id not in stood_down
+    ]
     known = {claim.claim_id for claim in live}
     seen = set(selection.order)
     operator_sources = {
@@ -774,11 +787,21 @@ def rebind(
             + ("are" if lost > 1 else "is")
             + " no longer in the research."
         )
+    # A note or a status change moves no claim and still changes what a fact
+    # means. Worth one line, because the packet's notes changed too.
+    #
+    # Only when there is something to compare. A selection stored before
+    # bindings existed carries no fingerprint, and reporting that as a change
+    # would tell the operator the research moved on every run made before this
+    # existed -- which is not a fact about their research, it is a fact about
+    # when the code shipped.
+    quietly_changed = bool(
+        selection.evidence_fingerprint
+        and selection.evidence_fingerprint != rebound.evidence_fingerprint
+    )
     changed = " ".join(moved) or (
-        # A note or a status change moves no claim and still changes what a
-        # fact means. Worth one line, because the packet's notes changed too.
         "The research changed under this choice; the same facts are kept."
-        if selection.evidence_fingerprint != rebound.evidence_fingerprint
+        if quietly_changed
         else ""
     )
     return rebound, changed
