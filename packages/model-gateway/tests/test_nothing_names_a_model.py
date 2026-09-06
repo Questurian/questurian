@@ -111,8 +111,6 @@ ALLOWED: dict[str, str] = {
         "dropdown is the one case where naming one is the point, and that "
         "choice still wins over the gateway's default.",
         "apps/ai-blog-writer/apps/frontend/src/shared/api/ai/models.ts",
-        "apps/ai-blog-writer/apps/frontend/src/features/prompt2blog/constants/prompt2blog.constants.ts",
-        "apps/ai-blog-writer/apps/frontend/src/features/prompt2blog/constants/prompt2blog-pricing.ts",
         "apps/ai-blog-writer/apps/frontend/src/features/prompt2blog/types/pipeline.types.ts",
         "apps/ai-blog-writer/apps/frontend/src/features/itinerariesPipeline/constants/titleModel.constants.ts",
         "apps/ai-blog-writer/apps/frontend/src/features/staging/features/editorial-stage-article/constants.ts",

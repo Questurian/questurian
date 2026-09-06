@@ -174,15 +174,19 @@ describe("the Claude substitution", () => {
     const call = routes();
     const { body } = await call("/v1/jobs");
     const outline = body.jobs.find((job: { id: string }) => job.id === "p2b.outline");
-    expect(outline.model).toBe("claude-sonnet-5-medium");
+    expect(outline.model).toMatch(/^claude-/);
     expect(outline.servedBy).toBe("gemini-2.5-flash");
   });
 
   it("says nothing for a job that gets the model it asks for", async () => {
+    // A Gemini job, deliberately. This used to read p2b.compose, which stopped
+    // being an example of "asks for what it gets" the day compose moved back
+    // onto Opus.
     const call = routes();
     const { body } = await call("/v1/jobs");
-    const compose = body.jobs.find((job: { id: string }) => job.id === "p2b.compose");
-    expect(compose.servedBy).toBeNull();
+    const audit = body.jobs.find((job: { id: string }) => job.id === "p2b.audit");
+    expect(audit.model).toBe("gemini-2.5-flash");
+    expect(audit.servedBy).toBeNull();
   });
 });
 

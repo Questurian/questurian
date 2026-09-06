@@ -46,6 +46,14 @@ function readCatalogue(): JobRecord[] {
   return parsed.jobs;
 }
 
+// Read once per process. The registry is checked into the repo, so within one
+// run of this server it cannot change -- but it very much changes while the
+// server is running, because editing jobs.json is how a model gets moved. This
+// dashboard then keeps serving the table it read at boot, the apps keep asking
+// it, and a jobs.json edit looks like it did nothing. `bun --watch` reloads on
+// a TypeScript change, not a JSON one, so restart the dashboard after editing
+// the registry and check GET /api/settings/v1/models before believing a move
+// took effect.
 let cached: JobRecord[] | undefined;
 
 export function allJobs(): JobRecord[] {

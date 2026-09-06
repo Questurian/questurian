@@ -110,6 +110,18 @@ repair, quality settle, title, finalize.
   a missing hyphen is a visible signal that no human has read the piece yet. It
   depends on every article being read before it goes anywhere, so this decision
   and the advisory stamp hold each other up.
+
+  **Reversed 2026-09-05.** The ban is a budget now: about one compound per 200
+  words. Two things decided it. The forcing function worked in one direction
+  only — across all 26 stored articles the ban scored a perfect zero, while the
+  compounds it was aimed at were never seen at all, because its pattern
+  required a letter first and so "19th-century" and "10-kilometer" ran straight
+  past it, and "Chinese-Peruvian" was exempted as a proper noun. And the cost
+  landed on the wrong words: the Lima chifa article could not say "stir-fried"
+  and wrote "a beef dish prepared by cooking ingredients quickly in a wok". A
+  budget keeps what the ban was for, since a stack of modifiers still fails it,
+  and stops charging the article for the one compound that is the word. Dates
+  and measures now count; proper names remain free.
 - The anti-AI block runs once, at compose, and the separate enforcement pass is
   dropped for Prompt2Blog only (ADR 0032). Prevention beats surgery: a model
   that understands the sentence avoids the pattern while writing it.

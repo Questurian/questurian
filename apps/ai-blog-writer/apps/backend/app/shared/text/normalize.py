@@ -52,14 +52,31 @@ _NON_PROSE_SPANS = (
 
 # Hyphenated compounds. A run of them is a strong AI tell -- "one-bedroom",
 # "long-stay", "well-known", "cost-of-living" stacked through an article read
-# as generated even though each word is correct English. House style is none:
-# rephrase, and a human adds one back if the sentence really needs it.
-_HYPHENATED_COMPOUND = re.compile(r"\b[A-Za-z]+(?:-[A-Za-z]+)+\b")
+# as generated even though each word is correct English.
+#
+# House style used to be none at all, and that rule was both too strict and
+# too weak. Too strict, because a compound is sometimes the word: the Lima
+# chifa article could not say "stir-fried" and wrote "a beef dish prepared by
+# cooking ingredients quickly in a wok" instead. Too weak, because the tell it
+# was aimed at walked straight past it -- across all 26 stored articles the
+# ban scored a perfect zero while "Chinese-Peruvian" and "19th-century" ran
+# through them untouched, the first exempted as a proper noun and the second
+# never matched at all.
+#
+# So it is a budget now, not a ban: roughly one compound per 200 words, which
+# leaves room for the one that carries the sentence and none for a page of
+# them. The leading part may be numeric, because "19th-century", "six-month"
+# and "10-kilometer" are the tell in its most recognisable form and the old
+# pattern could not see any of them.
+HYPHEN_BUDGET_WORDS = 200
+_HYPHENATED_COMPOUND = re.compile(r"\b[A-Za-z0-9]+(?:-[A-Za-z]+)+\b")
 
 # ...except proper nouns, where the hyphen is part of the name and rewriting it
-# corrupts a fact. "Aix-en-Provence" and "Colombia-Peru" keep theirs;
-# "Two-bedroom" at the start of a sentence does not, because only its first
-# letter is capitalised.
+# corrupts a fact. "Aix-en-Provence", "Baden-Baden" and "Colombia-Peru" are
+# exempt outright rather than merely charged to the budget: a travel article
+# about a hyphenated town would otherwise spend its whole allowance on the
+# town's name. "Two-bedroom" at the start of a sentence is not exempt, because
+# only its first letter is capitalised.
 
 
 def _is_proper_noun_compound(word: str) -> bool:
@@ -333,6 +350,34 @@ def _has_non_numeric_en_dash(line: str) -> bool:
     return False
 
 
+def hyphen_budget(word_count: int) -> int:
+    """How many hyphenated compounds an article of this length may spend.
+
+    One per 200 words, and never fewer than one: a 300-word piece that needs
+    to say "stir-fried" once should not be told it cannot.
+    """
+    return max(1, word_count // HYPHEN_BUDGET_WORDS)
+
+
+def _compound_budget_error(compounds: list[str], word_count: int) -> str | None:
+    """The one error the compound budget can raise, or nothing.
+
+    Names every compound in the article rather than the excess ones, because
+    which to keep is the writer's judgement and the checker has none: it knows
+    that eight is too many for 900 words, not which of the eight is carrying
+    its sentence.
+    """
+    allowed = hyphen_budget(word_count)
+    if len(compounds) <= allowed:
+        return None
+    listed = ", ".join(dict.fromkeys(compounds))
+    return (
+        f"{len(compounds)} hyphenated compounds in {word_count} words; this "
+        f"article allows {allowed}. Rephrase at least {len(compounds) - allowed} "
+        f"of them: {listed}"
+    )
+
+
 def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
     """Validate anti-AI output without rewriting cadence.
 
@@ -340,6 +385,11 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
     rules, table delimiter rows, and numeric en-dash ranges.
     """
     errors: list[str] = []
+    # Counted over the whole document rather than per line, because one
+    # compound in a sentence is a word choice and eight of them in an article
+    # is the tell. A per-line check could not tell those apart.
+    compounds: list[str] = []
+    prose_words = 0
     for line_number, line in _iter_markdown_prose_lines(text):
         if _PROMPT_DELIMITER_LINE.match(line):
             errors.append(
@@ -357,12 +407,8 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
             errors.append(
                 f"Line {line_number}: spaced hyphen used as a dash is not allowed."
             )
-        compounds = _hyphenated_compounds(line)
-        if compounds:
-            listed = ", ".join(sorted(set(compounds))[:8])
-            errors.append(
-                f"Line {line_number}: hyphenated compounds are not allowed: {listed}"
-            )
+        prose_words += len(line.split())
+        compounds.extend(_hyphenated_compounds(line))
         if _has_non_numeric_en_dash(line):
             errors.append(f"Line {line_number}: non-numeric en dash is not allowed.")
         attributions = _source_attributions(line)
@@ -385,6 +431,10 @@ def validate_anti_ai_tells_markdown(text: str) -> AntiAiValidationResult:
                     f"{match.group(0).strip()}"
                 )
                 break
+
+    over_budget = _compound_budget_error(compounds, prose_words)
+    if over_budget:
+        errors.append(over_budget)
     return AntiAiValidationResult(valid=not errors, errors=errors)
 
 
@@ -394,9 +444,11 @@ def build_anti_ai_repair_prompt(content: str, errors: list[str]) -> str:
         "Your previous output violated the anti-AI voice rules.\n"
         "Repair only the listed issues. Preserve markdown, facts, headings, tables, "
         "and source meaning. Do not replace dashes with comma-bracketed asides; "
-        "rewrite affected sentences into clean prose. Fix a hyphenated compound "
-        "by rephrasing the sentence, never by deleting the hyphen or splitting "
-        "the word in place. Fix sourcing language by stating the fact as a "
+        "rewrite affected sentences into clean prose. Hyphenated compounds are "
+        "rationed rather than banned: when the count is over budget, keep the "
+        "ones where the hyphen is the word and rephrase the rest, never by "
+        "deleting a hyphen or splitting a word in place. Fix sourcing language "
+        "by stating the fact as a "
         "plain sentence and deleting the publication, not by swapping in "
         "another attribution verb; if the fact cannot stand without a source "
         "named in the sentence, delete the sentence.\n"

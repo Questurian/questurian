@@ -127,7 +127,7 @@ def test_hyphens_that_are_not_dashes_are_left_alone():
         assert validate_anti_ai_tells_markdown(line).valid is True, line
 
 
-def test_hyphenated_compounds_are_rejected():
+def test_stacked_hyphenated_compounds_are_rejected():
     """Each is correct English on its own, but a run of them through an
     article is one of the clearest signals the text was generated."""
     result = validate_anti_ai_tells_markdown(
@@ -138,6 +138,54 @@ def test_hyphenated_compounds_are_rejected():
     assert any("hyphenated compounds" in error for error in result.errors)
     assert "Two-bedroom" in result.errors[0]
     assert "long-stay" in result.errors[0]
+
+
+def test_one_compound_inside_the_budget_is_allowed():
+    """The ban cost the Lima chifa article the word "stir-fried".
+
+    It wrote "a beef dish prepared by cooking ingredients quickly in a wok"
+    instead, which is nine words spent dodging a rule. A compound is sometimes
+    the word, and the budget exists so the writer can spend it.
+    """
+    article = "Lomo Saltado is stir-fried. " + "Words to pad the count. " * 20
+
+    assert validate_anti_ai_tells_markdown(article).valid is True
+
+
+def test_the_budget_is_one_per_two_hundred_words():
+    from app.shared.text.normalize import hyphen_budget
+
+    assert hyphen_budget(0) == 1
+    assert hyphen_budget(199) == 1
+    assert hyphen_budget(400) == 2
+    assert hyphen_budget(1000) == 5
+
+
+def test_dates_and_measures_are_charged_to_the_budget():
+    """The blanket ban never saw these.
+
+    Its pattern required a letter first, so "19th-century" and "10-kilometer"
+    ran through all 26 stored articles untouched while the rule scored a
+    perfect zero on the compounds it could see.
+    """
+    result = validate_anti_ai_tells_markdown(
+        "The 19th-century arrivals signed a six-month contract "
+        "after a 10-kilometer walk."
+    )
+
+    assert result.valid is False
+    assert "19th-century" in result.errors[0]
+    assert "six-month" in result.errors[0]
+    assert "10-kilometer" in result.errors[0]
+
+
+def test_the_error_says_how_many_have_to_go():
+    result = validate_anti_ai_tells_markdown(
+        "Two-bedroom flats, long-stay visas, well-known spots, family-run bars."
+    )
+
+    assert "this article allows 1" in result.errors[0]
+    assert "Rephrase at least 3 of them" in result.errors[0]
 
 
 def test_proper_names_keep_their_hyphens():
@@ -165,14 +213,17 @@ def test_hyphens_that_are_syntax_are_not_compounds():
 
 
 def test_the_repair_prompt_says_how_to_fix_a_compound():
-    # Deleting the hyphen in place would produce "Twobedroom".
+    # Deleting the hyphen in place would produce "Twobedroom". And the fix is
+    # now a choice between compounds rather than the removal of all of them,
+    # so the prompt has to say which ones survive.
     prompt = build_anti_ai_repair_prompt(
-        "Two-bedroom apartments.",
-        ["Line 1: hyphenated compounds are not allowed: Two-bedroom"],
+        "Two-bedroom apartments near a long-stay visa office.",
+        ["3 hyphenated compounds in 8 words; this article allows 1."],
     )
 
-    assert "rephrasing the sentence" in prompt
-    assert "never by deleting the hyphen" in prompt
+    assert "rationed rather than banned" in prompt
+    assert "keep the ones where the hyphen is the word" in prompt
+    assert "never by " in prompt and "deleting a hyphen" in prompt
 
 
 class TestSourceAttributionIsNotProse:

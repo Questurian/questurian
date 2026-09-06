@@ -96,7 +96,7 @@ def test_the_bans_a_chatbot_would_break_by_accident_are_stated():
     prompt = _prompt()
 
     assert "No em dashes" in prompt
-    assert "No hyphenated compounds" in prompt
+    assert "Ration hyphenated compounds" in prompt
     assert "em dashes now read as a sign of AI writing" in prompt
 
 

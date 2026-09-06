@@ -193,8 +193,11 @@ RULES YOU MUST NOT BREAK
   is what makes the terrace worth booking" keeps the thought whole and needs no
   dash. Long sentences are wanted, and commas joining clauses are correct. What
   is banned is a comma standing in for a dash around an aside.
-- No hyphenated compounds. "A visa for long stays", never "a long stay visa".
-  Proper names keep their hyphens; nothing else does.
+- Ration hyphenated compounds: about one per 200 words. Keep the one that is
+  the word itself, "stir-fried" over "cooked quickly in a wok". Rephrase the
+  stacked modifiers around it: "a visa for long stays", never "a long-stay
+  visa". Dates and measures count too, "19th-century" and "six-month" with the
+  rest. Proper names are free.
 - Invent nothing. No new places, prices, dates, dishes, names or numbers, and
   no adjective that implies a fact the article does not already carry. If a
   sentence cannot be improved without a fact you do not have, leave it alone.

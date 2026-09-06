@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable
-from typing import Any
+from typing import Any, Protocol
 
 from app.shared.api_usage import observe_external_call, provider_for_llm
 from app.shared.model_calls import resolve
@@ -15,7 +14,20 @@ from .support import _safe_str
 logger = logging.getLogger(__name__)
 
 
-UsageRecorder = Callable[[str, Any], None]
+class UsageRecorder(Protocol):
+    """Where a finished call's tokens go.
+
+    ``requested_model`` is keyword-only and optional so that a caller which
+    does not know what was asked for -- a test double, mostly -- stays valid.
+    """
+
+    def __call__(
+        self,
+        model_name: str,
+        raw_usage: Any,
+        *,
+        requested_model: str | None = None,
+    ) -> None: ...
 
 # What the dashboard's API-usage monitor called this work before jobs existed:
 # one feature for all thirteen Prompt2Blog stages, and for the listicle grill
@@ -45,6 +57,26 @@ def _resolved_model(job_id: str | None, model_name: str | None) -> str:
     )
 
 
+def _warn_on_substitution(
+    job_id: str | None, resolved_model: str, reported_model: str
+) -> None:
+    """Say out loud that the job did not get the model it named.
+
+    The Claude paths substitute a Gemini model when neither is switched on, and
+    that rewrite used to leave no trace anywhere a person looks: the ledger
+    recorded the model that answered, so a run configured to write on Claude
+    read back as a run that was always meant to be Gemini.
+    """
+    if resolved_model == reported_model:
+        return
+    logger.warning(
+        "%s asked for '%s' and was served by '%s'.",
+        job_id or USAGE_FEATURE,
+        resolved_model,
+        reported_model,
+    )
+
+
 def _invoke_text_llm(
     *,
     prompt: str,
@@ -63,6 +95,7 @@ def _invoke_text_llm(
         model_name=resolved_model,
     )
     reported_model = str(getattr(llm, "model_name", resolved_model))
+    _warn_on_substitution(job_id, resolved_model, reported_model)
     # The observation wraps the provider call and nothing else, so the duration
     # is the call's and a raised exception is recorded as a failed call before
     # it reaches the stage that catches it.
@@ -81,7 +114,7 @@ def _invoke_text_llm(
         usage = _usage_with_measured_cost(llm)
         observed.record_usage(usage)
     if usage_recorder is not None:
-        usage_recorder(reported_model, usage)
+        usage_recorder(reported_model, usage, requested_model=resolved_model)
     text = _safe_str(result)
     if not text:
         raise RuntimeError("LLM returned empty response")
@@ -171,6 +204,7 @@ def _invoke_schema_json_llm(
         return None
 
     reported_model = str(getattr(llm, "model_name", resolved_model))
+    _warn_on_substitution(job_id, resolved_model, reported_model)
     with observe_external_call(
         provider=provider_for_llm(llm, reported_model),
         feature=job_id or USAGE_FEATURE,
@@ -187,7 +221,9 @@ def _invoke_schema_json_llm(
             usage = _usage_with_measured_cost(llm)
             observed.record_usage(usage)
             if usage_recorder is not None and usage is not None:
-                usage_recorder(reported_model, usage)
+                usage_recorder(
+                    reported_model, usage, requested_model=resolved_model
+                )
     if not isinstance(parsed, dict):
         raise RuntimeError("Schema-validated LLM response was not an object")
     # The trace wants the raw response the stage saw. There was no prose reply
