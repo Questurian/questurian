@@ -404,3 +404,22 @@ def test_a_question_that_stands_on_its_own_is_kept():
     assert _answerable_alone("What does a plate of lomo saltado cost in Lima in 2026?")
     # A bracketed aside is not a placeholder.
     assert _answerable_alone("What are the hours of Chifa Titi [San Isidro]?")
+
+
+# --- a description is not worth an article's worth of facts -----------------
+
+
+def test_an_odd_role_does_not_throw_away_the_whole_ranking():
+    """`validate_json_shape` runs over the whole response after generation and
+    raises on the first value outside an enum. A ranking that raises degrades
+    to no ranking, and a run with no ranking keeps every fact -- so declaring
+    `role` as an enum would have let one row labelled `vibes` restore the
+    hundred-fact article. The allowed values live in the prompt, and `_rank`
+    discards anything it does not know.
+    """
+    from app.features.prompt2blog.selection_v4 import RANK_SCHEMA
+
+    validate_json_shape(
+        {"ranked": [{"claim_id": "f1", "why": "because", "role": "vibes"}]},
+        RANK_SCHEMA,
+    )

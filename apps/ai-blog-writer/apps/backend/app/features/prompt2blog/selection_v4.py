@@ -173,12 +173,16 @@ RANK_SCHEMA = require_non_empty({
                 "properties": {
                     "claim_id": {"type": "string"},
                     "why": {"type": "string"},
-                    # Not required. A model that skips it leaves the fact
-                    # unlabelled and the run carries on: this is a description
-                    # for a person and a heading for the outline, and failing a
-                    # whole ranking over a missing adjective would cost the
-                    # article every fact to save a word.
-                    "role": {"type": "string", "enum": list(PACKET_ROLES)},
+                    # Not required, and deliberately not an enum. The shape
+                    # check runs over the whole response after generation and
+                    # raises on the first value outside an enum, so one row
+                    # labelled `vibes` would throw away the entire ranking --
+                    # and an unranked list keeps every fact, which is the
+                    # failure this module exists to prevent. The allowed values
+                    # are in the prompt, and `_rank` discards anything else.
+                    # A description for a person and a heading for the outline
+                    # is not worth an article's worth of facts.
+                    "role": {"type": "string"},
                 },
                 "required": ["claim_id"],
             },
