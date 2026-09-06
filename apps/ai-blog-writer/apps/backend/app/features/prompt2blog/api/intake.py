@@ -676,7 +676,9 @@ def start_writing(
     # together above, and the packet built from them is frozen into the runtime
     # request here. A resume reads that frozen packet rather than rebuilding
     # one from a selection the operator may have edited since.
-    runtime = prepare_v3_runtime_request(handoff.request, handoff.selection)
+    runtime = _handle(
+        prepare_v3_runtime_request, handoff.request, handoff.selection
+    )
 
     # The run already exists -- it was opened by the seed -- so this records
     # what the graph is about to run rather than queueing a new one. That is

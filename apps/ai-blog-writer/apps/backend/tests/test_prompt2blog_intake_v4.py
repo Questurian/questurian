@@ -28,9 +28,12 @@ from app.features.prompt2blog.intake_v4 import (
     intake_state,
     load_brief,
     load_evidence,
+    load_selection,
     load_work_order,
     plan_research,
     reopen_intake,
+    settle_gate,
+    settle_venue,
 )
 from app.features.prompt2blog.research_v4 import (
     RESEARCH_STAGE,
@@ -426,6 +429,81 @@ def test_the_writing_request_is_assembled_from_what_intake_settled(isolated_db):
     assert handoff.selection.evidence_fingerprint == (
         load_evidence(run_id).content_fingerprint()
     )
+
+
+def test_a_venue_note_does_not_stop_the_article_being_written(isolated_db):
+    """The most ordinary thing an operator can do on that screen.
+
+    The venue check sits directly above the fact picker. A note changes what a
+    fact means, so it changes the dossier the choice was made against -- and
+    the packet refuses a choice made against a dossier that has moved. Without
+    reconciliation, one note between selecting and pressing Write it would have
+    blocked the run, and the person who made the note would have no idea why.
+    """
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+    before = load_selection(run_id)
+    assert before is not None and before.selected_claim_ids()
+
+    # Ids are namespaced by the question that produced them, so ask the
+    # dossier rather than assuming the shape.
+    noted = load_evidence(run_id).claims[0].claim_id
+    settle_venue(run_id, services, claim_id=noted, note="Booking page is down.")
+
+    after = load_selection(run_id)
+    assert after is not None
+    # Every choice carried, and the choice now points at the dossier it will
+    # be applied to.
+    assert after.selected_claim_ids() == before.selected_claim_ids()
+    assert after.evidence_fingerprint == load_evidence(run_id).content_fingerprint()
+    handoff = writing_request(run_id)
+    assert handoff.request.evidence_package.claims
+
+
+def test_an_answer_typed_at_the_gate_reaches_the_writer(isolated_db):
+    """A person supplying a fact to unblock the article, and then finding it
+    silently cut from the article, is the worst failure this could have."""
+    thin = {
+        **EVIDENCE,
+        "requirements": [
+            {"requirement_id": "r1", "status": "supported", "claim_ids": ["c1"]},
+            {"requirement_id": "r2", "status": "supported", "claim_ids": ["c3"]},
+            {"requirement_id": "r3", "status": "missing", "gap": "Not looked for."},
+        ],
+        "claims": [EVIDENCE["claims"][0], EVIDENCE["claims"][2]],
+    }
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD]),
+        thin,
+    )
+    run_id = _to_work_order(services)
+    do_research(run_id, services)
+
+    settle_gate(
+        run_id,
+        services,
+        requirement_id="r3",
+        answer="The site is floodlit until nine.",
+        source_url=None,
+    )
+
+    selection = load_selection(run_id)
+    assert selection is not None
+    answered = next(
+        claim_id
+        for claim_id in selection.order
+        if claim_id.endswith("r3")
+    )
+    assert answered in selection.selected_claim_ids()
+    handoff = writing_request(run_id)
+    assert answered in {
+        claim.claim_id
+        for claim in handoff.request.evidence_package.claims
+        if claim.selected
+    }
 
 
 def test_a_blocked_run_cannot_be_handed_to_the_writer(isolated_db):

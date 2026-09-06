@@ -94,6 +94,7 @@ from .selection_v4 import (
     Selection,
     SelectionDependencies,
     apply_selection,
+    rebind,
     revise,
     select_evidence,
     shortlist,
@@ -476,11 +477,11 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
-    # Only for a run that can actually be written. Ranking the evidence of a
-    # blocked article is two model calls spent on a decision nobody will get to
-    # make, and the gate may still change what the dossier contains.
-    if verdict.can_write:
-        _select_evidence(run_id, services, brief, work_order, evidence)
+    # One definition of what happens to the choice when the dossier moves, and
+    # this is the first time it moves. A blocked run selects nothing: ranking
+    # the evidence of an article nobody reaches is two model calls spent on a
+    # decision that may not survive the gate.
+    _resettle_selection(run_id, services, work_order, evidence, verdict)
     return verdict
 
 
@@ -508,6 +509,49 @@ def _select_evidence(
     return selection
 
 
+def _resettle_selection(
+    run_id: str,
+    services: IntakeServices,
+    work_order: Prompt2BlogWorkOrder,
+    evidence: EvidencePackage,
+    verdict: CoverageVerdict,
+) -> None:
+    """Keep the editorial choice pointing at the dossier it is applied to.
+
+    The gate is not the end of research. Answering a question mints a claim,
+    re-asking one replaces a batch, dropping a venue removes one, and noting a
+    venue changes what a fact means. Every one of those happens after selection
+    has run, and every one used to leave the choice describing a dossier that
+    no longer existed -- which the packet then refused to write from. The venue
+    check sits directly above the picker on the same screen, so the most
+    ordinary thing an operator can do would have blocked the article.
+
+    Three cases, and only one of them costs anything:
+
+    A run that still cannot be written is left alone. Ranking the evidence of a
+    blocked article buys two model calls for a decision nobody reaches, and the
+    gate may change the dossier again before they do.
+
+    A run that can be written and has never selected gets a real selection. A
+    run that was ever blocked used to reach the writer with none, and write
+    from every claim it found -- which is the behaviour #534 exists to end.
+
+    A run that can be written and already has one is rebound: choices carried
+    by stable id, no model call. A note on a venue says nothing about which
+    facts this article needs.
+    """
+    if not verdict.can_write:
+        return
+    brief = load_brief(run_id)
+    selection = load_selection(run_id)
+    if selection is None:
+        _select_evidence(run_id, services, brief, work_order, evidence)
+        return
+    rebound, changed = rebind(selection, brief, work_order, evidence)
+    if changed or rebound.as_record() != selection.as_record():
+        _record(services, run_id, SELECTION_STAGE, rebound.as_record())
+
+
 def review_selection(run_id: str) -> dict[str, Any]:
     """The ranked shortlist, where the line sits, and whether it still holds.
 
@@ -527,6 +571,11 @@ def review_selection(run_id: str) -> dict[str, Any]:
     brief = load_brief(run_id)
     work_order = load_work_order(run_id)
     evidence = load_evidence(run_id)
+    # Shown as the writer would receive it. The gate persists a rebind at every
+    # point it changes the dossier; doing it again here means a read cannot
+    # show a list the hand-off would then quietly reconcile behind the
+    # operator's back.
+    selection, changed = rebind(selection, brief, work_order, evidence)
     return {
         "available": True,
         "claims": shortlist(evidence, work_order, selection),
@@ -534,7 +583,7 @@ def review_selection(run_id: str) -> dict[str, Any]:
         "target_word_count": selection.target_word_count,
         "deduped": selection.deduped,
         "ranked": selection.ranked,
-        "note": selection.note,
+        "note": " ".join(part for part in (selection.note, changed) if part),
         # The same sentence the write boundary would refuse with, shown while
         # the operator can still do something about it. Empty when the choice
         # still describes what it was made from.
@@ -701,14 +750,7 @@ def settle_gate(
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
-    # A run that arrives here was blocked when research finished, so selection
-    # never ran -- `do_research` only selects on a dossier that can be written.
-    # Without this a run that was ever blocked writes from every claim it
-    # found, silently, which is the behaviour #534 exists to end. Found by the
-    # first real run: no test could catch it, because the gate is where a
-    # blocked run and a clean one stop being the same code path.
-    if verdict.can_write and load_selection(run_id) is None:
-        _select_evidence(run_id, services, load_brief(run_id), work_order, evidence)
+    _resettle_selection(run_id, services, work_order, evidence, verdict)
     return verdict
 
 
@@ -814,6 +856,7 @@ def reask_question(
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
+    _resettle_selection(run_id, services, work_order, evidence, verdict)
     return verdict
 
 
@@ -892,6 +935,7 @@ def settle_premise(
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
+    _resettle_selection(run_id, services, work_order, evidence, verdict)
     return verdict
 
 
@@ -945,6 +989,7 @@ def settle_venue(
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
+    _resettle_selection(run_id, services, work_order, evidence, verdict)
     return verdict
 
 
@@ -1055,6 +1100,13 @@ def writing_request(run_id: str, *, length_id: str = "medium") -> WritingHandoff
             "to write from. Run selection again, or keep every fact "
             "deliberately."
         )
+    # Belt and braces. The gate rebinds at every point it changes the dossier,
+    # and if a path is ever added that does not, the cost of missing it should
+    # be a fact carried across by id rather than a run that cannot be written.
+    # The refusals that matter -- a different brief, a different work order,
+    # nothing selected -- are unaffected, because rebinding by id cannot invent
+    # a choice.
+    selection, _changed = rebind(selection, brief, work_order, evidence)
 
     # The one place the editorial cut is applied (#534). Coverage is decided
     # above it, on the whole dossier, so a deselected claim can never turn a

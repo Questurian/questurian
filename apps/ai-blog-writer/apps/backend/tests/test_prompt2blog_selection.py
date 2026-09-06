@@ -36,6 +36,7 @@ from app.features.prompt2blog.selection_v4 import (
     SelectionDependencies,
     SelectionRefused,
     apply_selection,
+    rebind,
     revise,
     select_evidence,
     shortlist,
@@ -252,21 +253,150 @@ def test_a_deselected_claim_leaves_the_desk_and_never_the_record():
     assert applied.requirements[0].claim_ids == [f"c{i}" for i in range(1, 41)]
 
 
-def test_a_fact_added_after_the_ranking_still_reaches_the_writer():
+def _added(evidence, *, claim_id: str, firsthand: bool):
+    """The dossier with one more claim, sourced the way the gate sources it."""
+    source = evidence.sources[0].model_copy(
+        update={
+            "source_id": f"src-{claim_id}",
+            "source_type": "firsthand" if firsthand else "official",
+            "material_type": "first-person-notes" if firsthand else "web",
+            "url": None if firsthand else evidence.sources[0].url,
+            "publisher": None if firsthand else evidence.sources[0].publisher,
+        }
+    )
+    claim = evidence.claims[0].model_copy(
+        update={
+            "claim_id": claim_id,
+            "text": f"Something else about chifa, filed as {claim_id}.",
+            "source_ids": [source.source_id],
+        }
+    )
+    requirements = [
+        item.model_copy(update={"claim_ids": [*item.claim_ids, claim_id]})
+        if item.requirement_id == "r1"
+        else item
+        for item in evidence.requirements
+    ]
+    return evidence.model_copy(
+        update={
+            "sources": [*evidence.sources, source],
+            "claims": [*evidence.claims, claim],
+            "requirements": requirements,
+        }
+    )
+
+
+def test_an_answer_the_operator_typed_in_joins_the_article():
     """The gate can mint a claim after selection has run -- an operator
     answering a question themselves. A fact somebody typed in to unblock the
-    article being silently cut from it is the worst failure this could have."""
+    article being silently cut from it is the worst failure this could have.
+
+    It used to be kept by `apply_selection` flagging anything the ranking never
+    saw. That left the dossier's flag and the packet disagreeing, because the
+    packet reads the selection rather than the flag. The claim now joins the
+    selection itself, where the picker can show it and the operator can drop
+    it."""
     evidence = _package(40)
     llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 41)])
     selection = _select(evidence, llm)
 
-    late = evidence.claims[0].model_copy(
-        update={"claim_id": "opc-1", "text": "What the operator found themselves."}
-    )
-    evidence = evidence.model_copy(update={"claims": [*evidence.claims, late]})
-    applied = apply_selection(evidence, selection)
+    grown = _added(evidence, claim_id="opc-1", firsthand=True)
+    rebound, changed = rebind(selection, _brief(), _work_order(), grown)
 
+    assert "opc-1" in rebound.selected_claim_ids()
+    assert "1 answer you supplied joined the article." in changed
+    applied = apply_selection(grown, rebound)
     assert next(c for c in applied.claims if c.claim_id == "opc-1").selected is True
+
+
+def test_findings_that_arrive_later_are_visible_but_not_kept_by_default():
+    """A re-ask can return twenty claims. Passing all of them to the writer
+    because nothing ranked them is the density selection exists to prevent, and
+    a fact nobody can see in the picker is worse than one behind the line."""
+    evidence = _package(40)
+    llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 41)])
+    selection = _select(evidence, llm)
+
+    grown = _added(evidence, claim_id="late-1", firsthand=False)
+    rebound, changed = rebind(selection, _brief(), _work_order(), grown)
+
+    assert "late-1" in rebound.order
+    assert "late-1" not in rebound.selected_claim_ids()
+    assert "in reserve" in changed
+
+
+def test_a_venue_note_keeps_every_choice_and_costs_no_model_call():
+    """The failure this exists for. The venue check sits directly above the
+    picker on the same screen, so a note is the most ordinary thing an operator
+    can do -- and it used to leave the choice describing a dossier that no
+    longer existed, which the packet then refused to write from."""
+    evidence = _package(40)
+    llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 41)])
+    selection = _select(evidence, llm)
+    calls = len(llm.prompts)
+
+    noted = evidence.model_copy(
+        update={
+            "claims": [
+                evidence.claims[0].model_copy(
+                    update={
+                        "venue": "Titi",
+                        "venue_note": "Booking page has been down since June.",
+                    }
+                ),
+                *evidence.claims[1:],
+            ]
+        }
+    )
+    rebound, changed = rebind(selection, _brief(), _work_order(), noted)
+
+    assert rebound.selected_claim_ids() == selection.selected_claim_ids()
+    assert rebound.evidence_fingerprint == noted.content_fingerprint()
+    assert changed == (
+        "The research changed under this choice; the same facts are kept."
+    )
+    assert len(llm.prompts) == calls
+
+
+def test_a_fact_that_leaves_the_research_takes_its_decisions_with_it():
+    evidence = _package(40)
+    llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 41)])
+    selection = _select(evidence, llm)
+
+    kept = [claim for claim in evidence.claims if claim.claim_id != "c1"]
+    smaller = evidence.model_copy(
+        update={
+            "claims": kept,
+            "requirements": [
+                item.model_copy(
+                    update={
+                        "claim_ids": [
+                            claim_id
+                            for claim_id in item.claim_ids
+                            if claim_id != "c1"
+                        ]
+                    }
+                )
+                for item in evidence.requirements
+            ],
+        }
+    )
+    rebound, changed = rebind(selection, _brief(), _work_order(), smaller)
+
+    assert "c1" not in rebound.order
+    assert "c1" not in rebound.rescued and "c1" not in rebound.dropped
+    assert "no longer in the research" in changed
+
+
+def test_a_rebind_that_changes_nothing_says_nothing():
+    evidence = _package(12)
+    llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 13)])
+    selection = _select(evidence, llm)
+
+    rebound, changed = rebind(selection, _brief(), _work_order(), evidence)
+
+    assert changed == ""
+    assert rebound.as_record() == selection.as_record()
 
 
 def test_the_ranker_is_told_what_the_piece_fails_if_it_does_not_do():

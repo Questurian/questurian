@@ -181,7 +181,12 @@ def start_pipeline_v3(
         )
 
     credential = _prompt2blog_credential_for_run()
-    runtime = prepare_v3_runtime_request(request, selection)
+    try:
+        runtime = prepare_v3_runtime_request(request, selection)
+    except (RuntimeError, ValueError) as exc:
+        # `PacketRefused` is a ValueError and its message is written for a
+        # person. Without this it left the route as a traceback.
+        raise HTTPException(status_code=400, detail=str(exc))
     run_id = str(uuid4())
     recorder = RunRecorder()
     recorder.queue(run_id, staff_user_id(staff_user))

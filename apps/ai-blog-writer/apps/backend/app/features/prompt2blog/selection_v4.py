@@ -653,6 +653,137 @@ def _rank_texture(
     return ranked, reasons
 
 
+# Sources whose claims a person wrote themselves. A gate answer is minted
+# against one of these: the operator typed the fact to unblock the article, so
+# a rebind keeps it rather than filing it behind a line drawn before it existed.
+OPERATOR_SOURCE_TYPES = {"firsthand"}
+
+
+def rebind(
+    selection: Selection,
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
+    evidence: EvidencePackage,
+) -> tuple[Selection, str]:
+    """Carry an operator's choices onto a dossier that moved under them.
+
+    The gate is not the end of research. Answering a question mints a claim,
+    re-asking one replaces a batch of them, dropping a venue removes one, and
+    noting a venue changes what a fact means. Every one of those happens after
+    selection has run, on the same screen, and every one of them used to leave
+    the choice describing a dossier that no longer existed -- which the packet
+    then refused to write from. A venue note and a refusal to write are not the
+    same size of event.
+
+    Reconciliation by stable id, and nothing else. No model call, no re-rank: a
+    note on a venue says nothing about which facts this article needs, and
+    buying a ranking to answer a question nobody asked is how a cheap edit
+    turns expensive. A fact whose id survived keeps every decision made about
+    it; one whose id is gone takes its decisions with it.
+
+    New facts are not all the same. One the operator typed themselves is kept,
+    because a person supplying an answer to unblock the article and then
+    finding it silently cut is the worst failure this could have. Ones that
+    arrived from research go in behind the line, visible in the picker as
+    reserve: a re-ask can return twenty claims, and quietly passing all of them
+    to the writer is the density this exists to prevent.
+
+    Returns the rebound selection and one sentence on what moved, empty when
+    nothing did.
+    """
+    live = [claim for claim in evidence.claims if not claim.merged_into]
+    known = {claim.claim_id for claim in live}
+    seen = set(selection.order)
+    operator_sources = {
+        source.source_id
+        for source in evidence.sources
+        if source.source_type in OPERATOR_SOURCE_TYPES
+    }
+
+    order = [claim_id for claim_id in selection.order if claim_id in known]
+    lost = len(selection.order) - len(order)
+
+    typed_in = [
+        claim.claim_id
+        for claim in live
+        if claim.claim_id not in seen
+        and set(claim.source_ids) & operator_sources
+    ]
+    researched = [
+        claim.claim_id
+        for claim in live
+        if claim.claim_id not in seen and claim.claim_id not in set(typed_in)
+    ]
+    # The operator's own answers go above the line, the rest behind it. Both
+    # join `order`, because a fact the selection cannot name is a fact the
+    # picker cannot show and the packet would refuse.
+    order = [*order, *typed_in, *researched]
+
+    rebound = Selection(
+        order=order,
+        merged={
+            loser: survivor
+            for loser, survivor in selection.merged.items()
+            if survivor in known
+        },
+        # The line is a position in `order`, so it moves when the list shrinks.
+        keep_count=min(selection.keep_count, len(order)),
+        rescued=[
+            *(item for item in selection.rescued if item in known),
+            *typed_in,
+        ],
+        dropped=[item for item in selection.dropped if item in known],
+        reasons={
+            claim_id: why
+            for claim_id, why in selection.reasons.items()
+            if claim_id in known
+        },
+        texture_order=[item for item in selection.texture_order if item in known],
+        texture_reserve=selection.texture_reserve,
+        target_word_count=selection.target_word_count,
+        roles={
+            claim_id: role
+            for claim_id, role in selection.roles.items()
+            if claim_id in known
+        },
+        brief_fingerprint=brief.brief_fingerprint,
+        work_order_fingerprint=work_order.work_order_fingerprint,
+        evidence_fingerprint=evidence.content_fingerprint(),
+        deduped=selection.deduped,
+        ranked=selection.ranked,
+        note=selection.note,
+    )
+
+    moved = []
+    if typed_in:
+        moved.append(
+            f"{len(typed_in)} answer{'s' if len(typed_in) > 1 else ''} you "
+            "supplied joined the article."
+        )
+    if researched:
+        moved.append(
+            f"{len(researched)} new finding{'s' if len(researched) > 1 else ''} "
+            "arrived and " + ("are" if len(researched) > 1 else "is")
+            + " in reserve; nothing ranked "
+            + ("them" if len(researched) > 1 else "it")
+            + " against this brief."
+        )
+    if lost:
+        moved.append(
+            f"{lost} finding{'s' if lost > 1 else ''} the choice named "
+            + ("are" if lost > 1 else "is")
+            + " no longer in the research."
+        )
+    changed = " ".join(moved) or (
+        # A note or a status change moves no claim and still changes what a
+        # fact means. Worth one line, because the packet's notes changed too.
+        "The research changed under this choice; the same facts are kept."
+        if selection.evidence_fingerprint != rebound.evidence_fingerprint
+        else ""
+    )
+    return rebound, changed
+
+
 def selection_from_flags(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
@@ -785,14 +916,21 @@ def apply_selection(
     supported by, so coverage after selection is never weaker than before it.
     An editorial cut must not be able to become a research failure.
 
-    A claim the ranking never saw is kept. The gate can add one after selection
-    has run -- an operator answering a question themselves mints a claim
-    against a `firsthand` source -- and a fact somebody typed in to unblock the
-    article being silently cut from it, because a model that ran before they
-    typed it did not rank it, is the worst failure this could have.
+    A claim the selection does not name is not selected. That promise used to
+    be kept here, by treating anything the ranking never saw as kept -- the
+    gate can add a claim after selection has run, and a fact somebody typed in
+    to unblock the article being silently cut from it is the worst failure this
+    could have.
+
+    `rebind` keeps it now, and keeps it better: the claim joins the selection's
+    own list, so the picker can show it, the operator can drop it, and the
+    packet can name it. Doing it here instead left the two disagreeing -- the
+    dossier flagged a claim selected while the packet, which reads the
+    selection and not the flag, left it out. The punch list reads these flags
+    to tell a fact the writer missed from one a person cut, and a claim that
+    was neither would have been reported as the first.
     """
     survivor_of = dict(selection.merged)
-    ranked = set(selection.order)
     chosen = selection.selected_claim_ids()
 
     extra_sources: dict[str, list[str]] = {}
@@ -812,11 +950,7 @@ def apply_selection(
     claims = []
     for claim in evidence.claims:
         merged_into = survivor_of.get(claim.claim_id, "")
-        selected = (
-            False
-            if merged_into
-            else claim.claim_id in chosen or claim.claim_id not in ranked
-        )
+        selected = False if merged_into else claim.claim_id in chosen
         claims.append(
             claim.model_copy(
                 update={
