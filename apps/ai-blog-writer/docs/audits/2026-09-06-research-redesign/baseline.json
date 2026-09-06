@@ -1,0 +1,3706 @@
+[
+  {
+    "run_id": "4a56545b-5b04-40c3-81f4-a57090310cb7",
+    "length_id": "medium",
+    "article_words": 889,
+    "claims_in_dossier": 292,
+    "claims_selected": 25,
+    "sources": 101,
+    "requirements": 28,
+    "context_chars": {
+      "outline": 23029,
+      "compose": 29878,
+      "audit": 8759,
+      "repair_lock": 2894
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 2902,
+      "evidence": 19014,
+      "form": 1337,
+      "topic_modules": 55,
+      "audience": 406,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 9502,
+      "audience": 406,
+      "form_structure": 1347,
+      "facts": 9055,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 17596,
+      "facts_chars": 7225,
+      "research_bookkeeping_chars": 10371,
+      "bookkeeping_share": 0.589
+    },
+    "outline_allocations": [
+      {
+        "heading": "The airport run and the pre-dawn pickup: where the twenty minutes actually lands",
+        "claims": 12,
+        "word_budget": 195,
+        "claims_per_hundred_words": 6.2
+      },
+      {
+        "heading": "Central is in Barranco, Ma\u00eddo is in Miraflores",
+        "claims": 5,
+        "word_budget": 150,
+        "claims_per_hundred_words": 3.3
+      },
+      {
+        "heading": "Casa Rep\u00fablica at $128 against El Patio at $65",
+        "claims": 4,
+        "word_budget": 150,
+        "claims_per_hundred_words": 2.7
+      },
+      {
+        "heading": "The walk home after 11 in Barranco",
+        "claims": 3,
+        "word_budget": 130,
+        "claims_per_hundred_words": 2.3
+      },
+      {
+        "heading": "What the extra fare buys: the bridge, the plaza and Monday jazz",
+        "claims": 4,
+        "word_budget": 110,
+        "claims_per_hundred_words": 3.6
+      }
+    ],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": "gemini-2.5-flash",
+        "writer": "claude-sonnet-5-medium",
+        "judge": "gemini-2.5-flash"
+      },
+      "input_tokens": 616687,
+      "output_tokens": 238644,
+      "reasoning_tokens": 75375,
+      "cached_input_tokens": 148557,
+      "total_tokens": 866456,
+      "successful_calls": 38,
+      "measured_calls": 38,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 866456,
+      "ledger_version": 1,
+      "estimated_cost_usd": 2.725845,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "claude-opus-5-high",
+          "input_tokens": 145561,
+          "output_tokens": 4990,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 88150,
+          "total_tokens": 150551,
+          "calls": 6,
+          "estimated_cost_usd": 0.742875,
+          "cost_basis": "measured"
+        },
+        {
+          "model": "claude-sonnet-5-medium",
+          "input_tokens": 239940,
+          "output_tokens": 79906,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 60407,
+          "total_tokens": 319846,
+          "calls": 7,
+          "estimated_cost_usd": 1.529241,
+          "cost_basis": "measured"
+        },
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 231186,
+          "output_tokens": 153748,
+          "reasoning_tokens": 75375,
+          "cached_input_tokens": 0,
+          "total_tokens": 396059,
+          "calls": 25,
+          "estimated_cost_usd": 0.453729,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 158221,
+          "output_tokens": 118326,
+          "reasoning_tokens": 23213,
+          "cached_input_tokens": 42957,
+          "total_tokens": 276547,
+          "calls": 11,
+          "attempts": 1,
+          "cost_usd": 0.839264
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 141400,
+          "output_tokens": 11561,
+          "reasoning_tokens": 10493,
+          "cached_input_tokens": 0,
+          "total_tokens": 152961,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.071323
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 145608,
+          "output_tokens": 5759,
+          "reasoning_tokens": 426,
+          "cached_input_tokens": 88150,
+          "total_tokens": 151438,
+          "calls": 7,
+          "attempts": 6,
+          "cost_usd": 0.744812
+        },
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 62475,
+          "output_tokens": 17136,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 79611,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.421252
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 11732,
+          "output_tokens": 46592,
+          "reasoning_tokens": 28679,
+          "cached_input_tokens": 0,
+          "total_tokens": 69378,
+          "calls": 10,
+          "attempts": 1,
+          "cost_usd": 0.120002
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 30346,
+          "output_tokens": 11122,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 41468,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.2326
+        },
+        {
+          "stage": "stage_v3_repair",
+          "input_tokens": 26566,
+          "output_tokens": 8266,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17450,
+          "total_tokens": 34832,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.12261
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 25312,
+          "output_tokens": 2470,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 27782,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.125944
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 12592,
+          "output_tokens": 9143,
+          "reasoning_tokens": 7829,
+          "cached_input_tokens": 0,
+          "total_tokens": 21735,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.026635
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 2435,
+          "output_tokens": 8269,
+          "reasoning_tokens": 4735,
+          "cached_input_tokens": 0,
+          "total_tokens": 10704,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.021403
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 23805,
+          "output_tokens": 1100,
+          "reasoning_tokens": 426,
+          "cached_input_tokens": 0,
+          "total_tokens": 24976,
+          "calls": 2,
+          "cost_usd": 0.247782
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 23691,
+          "output_tokens": 651,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 24342,
+          "calls": 1,
+          "cost_usd": 0.08569
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 23911,
+          "output_tokens": 757,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 24668,
+          "calls": 1,
+          "cost_usd": 0.09054
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 24171,
+          "output_tokens": 1002,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 25173,
+          "calls": 1,
+          "cost_usd": 0.099265
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 24774,
+          "output_tokens": 880,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 25654,
+          "calls": 1,
+          "cost_usd": 0.102245
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 6,
+          "input_tokens": 25256,
+          "output_tokens": 1369,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 26625,
+          "calls": 1,
+          "cost_usd": 0.11929
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 25312,
+          "output_tokens": 2470,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 27782,
+          "calls": 1,
+          "cost_usd": 0.125944
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 2435,
+          "output_tokens": 8269,
+          "reasoning_tokens": 4735,
+          "cached_input_tokens": 0,
+          "total_tokens": 10704,
+          "calls": 1,
+          "cost_usd": 0.021403
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 11732,
+          "output_tokens": 46592,
+          "reasoning_tokens": 28679,
+          "cached_input_tokens": 0,
+          "total_tokens": 69378,
+          "calls": 10,
+          "cost_usd": 0.120002
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 158221,
+          "output_tokens": 118326,
+          "reasoning_tokens": 23213,
+          "cached_input_tokens": 42957,
+          "total_tokens": 276547,
+          "calls": 11,
+          "cost_usd": 0.839264
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 30346,
+          "output_tokens": 11122,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 41468,
+          "calls": 1,
+          "cost_usd": 0.2326
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 62475,
+          "output_tokens": 17136,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 79611,
+          "calls": 2,
+          "cost_usd": 0.421252
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 70696,
+          "output_tokens": 4916,
+          "reasoning_tokens": 4369,
+          "cached_input_tokens": 0,
+          "total_tokens": 75612,
+          "calls": 1,
+          "cost_usd": 0.033499
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 6305,
+          "output_tokens": 5229,
+          "reasoning_tokens": 4595,
+          "cached_input_tokens": 0,
+          "total_tokens": 11534,
+          "calls": 1,
+          "cost_usd": 0.014964
+        },
+        {
+          "stage": "stage_v3_repair",
+          "attempt": 1,
+          "input_tokens": 26566,
+          "output_tokens": 8266,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17450,
+          "total_tokens": 34832,
+          "calls": 1,
+          "cost_usd": 0.12261
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 2,
+          "input_tokens": 70704,
+          "output_tokens": 6645,
+          "reasoning_tokens": 6124,
+          "cached_input_tokens": 0,
+          "total_tokens": 77349,
+          "calls": 1,
+          "cost_usd": 0.037824
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 2,
+          "input_tokens": 6287,
+          "output_tokens": 3914,
+          "reasoning_tokens": 3234,
+          "cached_input_tokens": 0,
+          "total_tokens": 10201,
+          "calls": 1,
+          "cost_usd": 0.011671
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31. Claude figures are the per-call price the Claude Code CLI reported. Those calls draw your subscription's allowance rather than billing per token, so the amount is a comparable estimate of what the same work would cost at API rates -- not a charge."
+    }
+  },
+  {
+    "run_id": "8a7e9aa4-416f-431b-90df-6046daffffb3",
+    "length_id": "medium",
+    "article_words": 1007,
+    "claims_in_dossier": 228,
+    "claims_selected": 30,
+    "sources": 154,
+    "requirements": 20,
+    "context_chars": {
+      "outline": 20719,
+      "compose": 27483,
+      "audit": 8283,
+      "repair_lock": 2700
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 2757,
+      "evidence": 16633,
+      "form": 1362,
+      "topic_modules": 55,
+      "audience": 512,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 6284,
+      "audience": 512,
+      "form_structure": 1372,
+      "facts": 9832,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 15215,
+      "facts_chars": 8417,
+      "research_bookkeeping_chars": 6798,
+      "bookkeeping_share": 0.447
+    },
+    "outline_allocations": [
+      {
+        "heading": "The door test: a full room and a short menu at 1pm",
+        "claims": 5,
+        "word_budget": 140,
+        "claims_per_hundred_words": 3.6
+      },
+      {
+        "heading": "Why 1pm and not 8pm",
+        "claims": 4,
+        "word_budget": 110,
+        "claims_per_hundred_words": 3.6
+      },
+      {
+        "heading": "Order the plain classic: what is in a cebiche cl\u00e1sico",
+        "claims": 5,
+        "word_budget": 140,
+        "claims_per_hundred_words": 3.6
+      },
+      {
+        "heading": "Minutes, not hours: what leche de tigre does to the fish",
+        "claims": 4,
+        "word_budget": 120,
+        "claims_per_hundred_words": 3.3
+      },
+      {
+        "heading": "Chalky, opaque, sour: spotting fish that sat too long",
+        "claims": 6,
+        "word_budget": 130,
+        "claims_per_hundred_words": 4.6
+      },
+      {
+        "heading": "What one plate costs, from market counter to white tablecloth",
+        "claims": 8,
+        "word_budget": 95,
+        "claims_per_hundred_words": 8.4
+      }
+    ],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": "gemini-2.5-flash",
+        "writer": "claude-sonnet-5-medium",
+        "judge": "gemini-2.5-flash"
+      },
+      "input_tokens": 490511,
+      "output_tokens": 192365,
+      "reasoning_tokens": 54541,
+      "cached_input_tokens": 117916,
+      "total_tokens": 692544,
+      "successful_calls": 36,
+      "measured_calls": 36,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 692544,
+      "ledger_version": 1,
+      "estimated_cost_usd": 2.346218,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "claude-opus-5-high",
+          "input_tokens": 148126,
+          "output_tokens": 5037,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 88150,
+          "total_tokens": 153163,
+          "calls": 6,
+          "estimated_cost_usd": 0.7697,
+          "cost_basis": "measured"
+        },
+        {
+          "model": "claude-sonnet-5-medium",
+          "input_tokens": 194033,
+          "output_tokens": 53426,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 29766,
+          "total_tokens": 247459,
+          "calls": 5,
+          "estimated_cost_usd": 1.197257,
+          "cost_basis": "measured"
+        },
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 148352,
+          "output_tokens": 133902,
+          "reasoning_tokens": 54541,
+          "cached_input_tokens": 0,
+          "total_tokens": 291922,
+          "calls": 25,
+          "estimated_cost_usd": 0.379261,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 143955,
+          "output_tokens": 98630,
+          "reasoning_tokens": 14953,
+          "cached_input_tokens": 29766,
+          "total_tokens": 242585,
+          "calls": 10,
+          "attempts": 3,
+          "cost_usd": 0.647953
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 148173,
+          "output_tokens": 7177,
+          "reasoning_tokens": 1576,
+          "cached_input_tokens": 88150,
+          "total_tokens": 155612,
+          "calls": 7,
+          "attempts": 6,
+          "cost_usd": 0.775064
+        },
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 61433,
+          "output_tokens": 16067,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 77500,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.406394
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 65655,
+          "output_tokens": 5656,
+          "reasoning_tokens": 5419,
+          "cached_input_tokens": 0,
+          "total_tokens": 71311,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.033836
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 8178,
+          "output_tokens": 37371,
+          "reasoning_tokens": 22421,
+          "cached_input_tokens": 0,
+          "total_tokens": 54955,
+          "calls": 12,
+          "attempts": 2,
+          "cost_usd": 0.095881
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 29553,
+          "output_tokens": 9460,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 39013,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.212808
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 25251,
+          "output_tokens": 3437,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 28688,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.13537
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 2414,
+          "output_tokens": 10143,
+          "reasoning_tokens": 6324,
+          "cached_input_tokens": 0,
+          "total_tokens": 12557,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.026082
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 5899,
+          "output_tokens": 4424,
+          "reasoning_tokens": 3848,
+          "cached_input_tokens": 0,
+          "total_tokens": 10323,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.01283
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 24229,
+          "output_tokens": 2625,
+          "reasoning_tokens": 1576,
+          "cached_input_tokens": 0,
+          "total_tokens": 27116,
+          "calls": 2,
+          "cost_usd": 0.259299
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 24122,
+          "output_tokens": 724,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 24846,
+          "calls": 1,
+          "cost_usd": 0.091825
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 24352,
+          "output_tokens": 843,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 25195,
+          "calls": 1,
+          "cost_usd": 0.0971
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 24819,
+          "output_tokens": 696,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 25515,
+          "calls": 1,
+          "cost_usd": 0.098095
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 25029,
+          "output_tokens": 755,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 25784,
+          "calls": 1,
+          "cost_usd": 0.10167
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 6,
+          "input_tokens": 25622,
+          "output_tokens": 1534,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 27156,
+          "calls": 1,
+          "cost_usd": 0.127075
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 25251,
+          "output_tokens": 3437,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 28688,
+          "calls": 1,
+          "cost_usd": 0.13537
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 2414,
+          "output_tokens": 10143,
+          "reasoning_tokens": 6324,
+          "cached_input_tokens": 0,
+          "total_tokens": 12557,
+          "calls": 1,
+          "cost_usd": 0.026082
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 7824,
+          "output_tokens": 34392,
+          "reasoning_tokens": 20814,
+          "cached_input_tokens": 0,
+          "total_tokens": 51160,
+          "calls": 11,
+          "cost_usd": 0.088327
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 37869,
+          "output_tokens": 39989,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 77858,
+          "calls": 6,
+          "cost_usd": 0.111333
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 2,
+          "input_tokens": 354,
+          "output_tokens": 2979,
+          "reasoning_tokens": 1607,
+          "cached_input_tokens": 0,
+          "total_tokens": 3795,
+          "calls": 1,
+          "cost_usd": 0.007554
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 2,
+          "input_tokens": 19825,
+          "output_tokens": 16067,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 35892,
+          "calls": 2,
+          "cost_usd": 0.046115
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 3,
+          "input_tokens": 86261,
+          "output_tokens": 42574,
+          "reasoning_tokens": 14953,
+          "cached_input_tokens": 29766,
+          "total_tokens": 128835,
+          "calls": 2,
+          "cost_usd": 0.490505
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 29553,
+          "output_tokens": 9460,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 39013,
+          "calls": 1,
+          "cost_usd": 0.212808
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 61433,
+          "output_tokens": 16067,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 77500,
+          "calls": 2,
+          "cost_usd": 0.406394
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 65655,
+          "output_tokens": 5656,
+          "reasoning_tokens": 5419,
+          "cached_input_tokens": 0,
+          "total_tokens": 71311,
+          "calls": 1,
+          "cost_usd": 0.033836
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 5899,
+          "output_tokens": 4424,
+          "reasoning_tokens": 3848,
+          "cached_input_tokens": 0,
+          "total_tokens": 10323,
+          "calls": 1,
+          "cost_usd": 0.01283
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31. Claude figures are the per-call price the Claude Code CLI reported. Those calls draw your subscription's allowance rather than billing per token, so the amount is a comparable estimate of what the same work would cost at API rates -- not a charge."
+    }
+  },
+  {
+    "run_id": "3750891f-c4d0-4899-9c9e-6a7b5ef88a88",
+    "length_id": "medium",
+    "article_words": 977,
+    "claims_in_dossier": 137,
+    "claims_selected": 27,
+    "sources": 43,
+    "requirements": 11,
+    "context_chars": {
+      "outline": 17015,
+      "compose": 30933,
+      "audit": 6879,
+      "repair_lock": 2011
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 1888,
+      "evidence": 21194,
+      "form": 1362,
+      "topic_modules": 55,
+      "audience": 270,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 4998,
+      "audience": 270,
+      "form_structure": 1372,
+      "facts": 7656,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 19776,
+      "facts_chars": 9496,
+      "research_bookkeeping_chars": 10280,
+      "bookkeeping_share": 0.52
+    },
+    "outline_allocations": [
+      {
+        "heading": "The call: Chifa Titi in San Isidro, not a Barrio Chino table",
+        "claims": 6,
+        "word_budget": 120,
+        "claims_per_hundred_words": 5.0
+      },
+      {
+        "heading": "Why Barrio Chino's reputation outruns its plates",
+        "claims": 6,
+        "word_budget": 140,
+        "claims_per_hundred_words": 4.3
+      },
+      {
+        "heading": "What a night at Wa Lok actually gets you",
+        "claims": 7,
+        "word_budget": 150,
+        "claims_per_hundred_words": 4.7
+      },
+      {
+        "heading": "Ordering at Titi: roasted duck, tallar\u00edn saltado, kru yoc",
+        "claims": 5,
+        "word_budget": 150,
+        "claims_per_hundred_words": 3.3
+      },
+      {
+        "heading": "The dish tourists chase and don't need to avoid",
+        "claims": 3,
+        "word_budget": 90,
+        "claims_per_hundred_words": 3.3
+      },
+      {
+        "heading": "Tells for judging a chifa this piece never names",
+        "claims": 5,
+        "word_budget": 85,
+        "claims_per_hundred_words": 5.9
+      }
+    ],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": "gemini-2.5-flash",
+        "writer": "claude-sonnet-5-medium",
+        "judge": "gemini-2.5-flash"
+      },
+      "input_tokens": 576586,
+      "output_tokens": 221399,
+      "reasoning_tokens": 80986,
+      "cached_input_tokens": 175295,
+      "total_tokens": 802018,
+      "successful_calls": 34,
+      "measured_calls": 34,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 802018,
+      "ledger_version": 1,
+      "estimated_cost_usd": 2.644601,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "claude-opus-5-high",
+          "input_tokens": 122622,
+          "output_tokens": 5026,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 88150,
+          "total_tokens": 127648,
+          "calls": 5,
+          "estimated_cost_usd": 0.514395,
+          "cost_basis": "measured"
+        },
+        {
+          "model": "claude-sonnet-5-medium",
+          "input_tokens": 292726,
+          "output_tokens": 93492,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 87145,
+          "total_tokens": 386218,
+          "calls": 10,
+          "estimated_cost_usd": 1.774633,
+          "cost_basis": "measured"
+        },
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 161238,
+          "output_tokens": 122881,
+          "reasoning_tokens": 80986,
+          "cached_input_tokens": 0,
+          "total_tokens": 288152,
+          "calls": 19,
+          "estimated_cost_usd": 0.355573,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 103635,
+          "output_tokens": 26785,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17450,
+          "total_tokens": 130420,
+          "calls": 3,
+          "attempts": 2,
+          "cost_usd": 0.616068
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 122667,
+          "output_tokens": 6463,
+          "reasoning_tokens": 839,
+          "cached_input_tokens": 88150,
+          "total_tokens": 129312,
+          "calls": 6,
+          "attempts": 5,
+          "cost_usd": 0.518001
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 101551,
+          "output_tokens": 17210,
+          "reasoning_tokens": 16196,
+          "cached_input_tokens": 0,
+          "total_tokens": 118761,
+          "calls": 3,
+          "attempts": 3,
+          "cost_usd": 0.073491
+        },
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 60138,
+          "output_tokens": 56456,
+          "reasoning_tokens": 13087,
+          "cached_input_tokens": 0,
+          "total_tokens": 116594,
+          "calls": 7,
+          "attempts": 2,
+          "cost_usd": 0.39611
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 56716,
+          "output_tokens": 17165,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17600,
+          "total_tokens": 73881,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.331626
+        },
+        {
+          "stage": "stage_v3_repair",
+          "input_tokens": 49705,
+          "output_tokens": 14989,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 34684,
+          "total_tokens": 64694,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.216903
+        },
+        {
+          "stage": "unattributed",
+          "input_tokens": 34197,
+          "output_tokens": 29602,
+          "reasoning_tokens": 13621,
+          "cached_input_tokens": 17411,
+          "total_tokens": 63799,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.235009
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 16911,
+          "output_tokens": 14003,
+          "reasoning_tokens": 12345,
+          "cached_input_tokens": 0,
+          "total_tokens": 30914,
+          "calls": 3,
+          "attempts": 3,
+          "cost_usd": 0.040081
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 24639,
+          "output_tokens": 2669,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 27308,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.125242
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 4171,
+          "output_tokens": 18040,
+          "reasoning_tokens": 10031,
+          "cached_input_tokens": 0,
+          "total_tokens": 26062,
+          "calls": 4,
+          "attempts": 1,
+          "cost_usd": 0.046351
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 2256,
+          "output_tokens": 18017,
+          "reasoning_tokens": 14867,
+          "cached_input_tokens": 0,
+          "total_tokens": 20273,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.045719
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 23904,
+          "output_tokens": 2081,
+          "reasoning_tokens": 839,
+          "cached_input_tokens": 17630,
+          "total_tokens": 26167,
+          "calls": 2,
+          "cost_usd": 0.090801
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 24139,
+          "output_tokens": 1190,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 25329,
+          "calls": 1,
+          "cost_usd": 0.103645
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 24522,
+          "output_tokens": 1105,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 25627,
+          "calls": 1,
+          "cost_usd": 0.10535
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 24858,
+          "output_tokens": 1177,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 26035,
+          "calls": 1,
+          "cost_usd": 0.11051
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 25244,
+          "output_tokens": 910,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17630,
+          "total_tokens": 26154,
+          "calls": 1,
+          "cost_usd": 0.107695
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 24639,
+          "output_tokens": 2669,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 27308,
+          "calls": 1,
+          "cost_usd": 0.125242
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 2256,
+          "output_tokens": 18017,
+          "reasoning_tokens": 14867,
+          "cached_input_tokens": 0,
+          "total_tokens": 20273,
+          "calls": 1,
+          "cost_usd": 0.045719
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 4171,
+          "output_tokens": 18040,
+          "reasoning_tokens": 10031,
+          "cached_input_tokens": 0,
+          "total_tokens": 26062,
+          "calls": 4,
+          "cost_usd": 0.046351
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 23837,
+          "output_tokens": 24370,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 48207,
+          "calls": 5,
+          "cost_usd": 0.068075
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 2,
+          "input_tokens": 36301,
+          "output_tokens": 32086,
+          "reasoning_tokens": 13087,
+          "cached_input_tokens": 0,
+          "total_tokens": 68387,
+          "calls": 2,
+          "cost_usd": 0.328035
+        },
+        {
+          "stage": "unattributed",
+          "attempt": 1,
+          "input_tokens": 34197,
+          "output_tokens": 29602,
+          "reasoning_tokens": 13621,
+          "cached_input_tokens": 17411,
+          "total_tokens": 63799,
+          "calls": 2,
+          "cost_usd": 0.235009
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 28563,
+          "output_tokens": 10108,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 38671,
+          "calls": 1,
+          "cost_usd": 0.215328
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 63309,
+          "output_tokens": 11239,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 74548,
+          "calls": 2,
+          "cost_usd": 0.365618
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 33832,
+          "output_tokens": 5308,
+          "reasoning_tokens": 5087,
+          "cached_input_tokens": 0,
+          "total_tokens": 39140,
+          "calls": 1,
+          "cost_usd": 0.02342
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 5503,
+          "output_tokens": 3912,
+          "reasoning_tokens": 3430,
+          "cached_input_tokens": 0,
+          "total_tokens": 9415,
+          "calls": 1,
+          "cost_usd": 0.011431
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 2,
+          "input_tokens": 28153,
+          "output_tokens": 7057,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17600,
+          "total_tokens": 35210,
+          "calls": 1,
+          "cost_usd": 0.116298
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 2,
+          "input_tokens": 40326,
+          "output_tokens": 15546,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 17450,
+          "total_tokens": 55872,
+          "calls": 1,
+          "cost_usd": 0.25045
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 2,
+          "input_tokens": 33869,
+          "output_tokens": 6308,
+          "reasoning_tokens": 5656,
+          "cached_input_tokens": 0,
+          "total_tokens": 40177,
+          "calls": 1,
+          "cost_usd": 0.025931
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 2,
+          "input_tokens": 5967,
+          "output_tokens": 5993,
+          "reasoning_tokens": 5245,
+          "cached_input_tokens": 0,
+          "total_tokens": 11960,
+          "calls": 1,
+          "cost_usd": 0.016773
+        },
+        {
+          "stage": "stage_v3_repair",
+          "attempt": 1,
+          "input_tokens": 49705,
+          "output_tokens": 14989,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 34684,
+          "total_tokens": 64694,
+          "calls": 2,
+          "cost_usd": 0.216903
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 3,
+          "input_tokens": 33850,
+          "output_tokens": 5594,
+          "reasoning_tokens": 5453,
+          "cached_input_tokens": 0,
+          "total_tokens": 39444,
+          "calls": 1,
+          "cost_usd": 0.02414
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 3,
+          "input_tokens": 5441,
+          "output_tokens": 4098,
+          "reasoning_tokens": 3670,
+          "cached_input_tokens": 0,
+          "total_tokens": 9539,
+          "calls": 1,
+          "cost_usd": 0.011877
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31. Claude figures are the per-call price the Claude Code CLI reported. Those calls draw your subscription's allowance rather than billing per token, so the amount is a comparable estimate of what the same work would cost at API rates -- not a charge."
+    }
+  },
+  {
+    "run_id": "9e66bf84-cbb1-446b-9eba-b1a9812482b7",
+    "length_id": "medium",
+    "article_words": 1155,
+    "claims_in_dossier": 105,
+    "claims_selected": 105,
+    "sources": 110,
+    "requirements": 13,
+    "context_chars": {
+      "outline": 34664,
+      "compose": 45244,
+      "audit": 6941,
+      "repair_lock": 1610
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 1941,
+      "evidence": 35433,
+      "form": 1317,
+      "topic_modules": 55,
+      "audience": 334,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 4140,
+      "audience": 334,
+      "form_structure": 1327,
+      "facts": 26144,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 34015,
+      "facts_chars": 26592,
+      "research_bookkeeping_chars": 7423,
+      "bookkeeping_share": 0.218
+    },
+    "outline_allocations": [
+      {
+        "heading": "Chifa: Lima's Distinct Chinese-Peruvian Cuisine",
+        "claims": 56,
+        "word_budget": 200,
+        "claims_per_hundred_words": 28.0
+      },
+      {
+        "heading": "Barrio Chino: The Historical Heart of Chifa",
+        "claims": 15,
+        "word_budget": 120,
+        "claims_per_hundred_words": 12.5
+      },
+      {
+        "heading": "Essential Chifa Dishes and Their Flavors",
+        "claims": 10,
+        "word_budget": 150,
+        "claims_per_hundred_words": 6.7
+      },
+      {
+        "heading": "Where to Eat Chifa in Barrio Chino",
+        "claims": 5,
+        "word_budget": 80,
+        "claims_per_hundred_words": 6.2
+      },
+      {
+        "heading": "Where to Eat Chifa in Miraflores",
+        "claims": 6,
+        "word_budget": 80,
+        "claims_per_hundred_words": 7.5
+      },
+      {
+        "heading": "Planning Your Chifa Experience: Reservations and Timing",
+        "claims": 10,
+        "word_budget": 105,
+        "claims_per_hundred_words": 9.5
+      }
+    ],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": null,
+        "writer": null,
+        "judge": null
+      },
+      "input_tokens": 170998,
+      "output_tokens": 166103,
+      "reasoning_tokens": 95865,
+      "cached_input_tokens": 0,
+      "total_tokens": 347367,
+      "successful_calls": 39,
+      "measured_calls": 39,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 347367,
+      "ledger_version": 1,
+      "estimated_cost_usd": 0.466557,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 170998,
+          "output_tokens": 166103,
+          "reasoning_tokens": 95865,
+          "cached_input_tokens": 0,
+          "total_tokens": 347367,
+          "calls": 39,
+          "estimated_cost_usd": 0.466557,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 56668,
+          "output_tokens": 15099,
+          "reasoning_tokens": 13870,
+          "cached_input_tokens": 0,
+          "total_tokens": 71767,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.054748
+        },
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 34104,
+          "output_tokens": 32227,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 66331,
+          "calls": 5,
+          "attempts": 1,
+          "cost_usd": 0.090799
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 4431,
+          "output_tokens": 49976,
+          "reasoning_tokens": 30226,
+          "cached_input_tokens": 0,
+          "total_tokens": 64490,
+          "calls": 13,
+          "attempts": 1,
+          "cost_usd": 0.126269
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 21224,
+          "output_tokens": 12910,
+          "reasoning_tokens": 11096,
+          "cached_input_tokens": 0,
+          "total_tokens": 34317,
+          "calls": 10,
+          "attempts": 9,
+          "cost_usd": 0.038642
+        },
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 19948,
+          "output_tokens": 9594,
+          "reasoning_tokens": 6168,
+          "cached_input_tokens": 0,
+          "total_tokens": 29542,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.029969
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 13616,
+          "output_tokens": 12235,
+          "reasoning_tokens": 10464,
+          "cached_input_tokens": 0,
+          "total_tokens": 25851,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.034672
+        },
+        {
+          "stage": "stage_v3_repair",
+          "input_tokens": 6398,
+          "output_tokens": 14377,
+          "reasoning_tokens": 10864,
+          "cached_input_tokens": 0,
+          "total_tokens": 20775,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.037862
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 10096,
+          "output_tokens": 7682,
+          "reasoning_tokens": 4861,
+          "cached_input_tokens": 0,
+          "total_tokens": 17778,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.022234
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 2284,
+          "output_tokens": 8183,
+          "reasoning_tokens": 5303,
+          "cached_input_tokens": 0,
+          "total_tokens": 10467,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.021143
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 2229,
+          "output_tokens": 3820,
+          "reasoning_tokens": 3013,
+          "cached_input_tokens": 0,
+          "total_tokens": 6049,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.010219
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 2019,
+          "output_tokens": 2241,
+          "reasoning_tokens": 1651,
+          "cached_input_tokens": 0,
+          "total_tokens": 4443,
+          "calls": 2,
+          "cost_usd": 0.006208
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 2058,
+          "output_tokens": 1508,
+          "reasoning_tokens": 1416,
+          "cached_input_tokens": 0,
+          "total_tokens": 3566,
+          "calls": 1,
+          "cost_usd": 0.004387
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 2155,
+          "output_tokens": 426,
+          "reasoning_tokens": 314,
+          "cached_input_tokens": 0,
+          "total_tokens": 2581,
+          "calls": 1,
+          "cost_usd": 0.001711
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 2227,
+          "output_tokens": 657,
+          "reasoning_tokens": 511,
+          "cached_input_tokens": 0,
+          "total_tokens": 2884,
+          "calls": 1,
+          "cost_usd": 0.002311
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 2340,
+          "output_tokens": 606,
+          "reasoning_tokens": 470,
+          "cached_input_tokens": 0,
+          "total_tokens": 2946,
+          "calls": 1,
+          "cost_usd": 0.002217
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 6,
+          "input_tokens": 2463,
+          "output_tokens": 1084,
+          "reasoning_tokens": 957,
+          "cached_input_tokens": 0,
+          "total_tokens": 3547,
+          "calls": 1,
+          "cost_usd": 0.003449
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 7,
+          "input_tokens": 2551,
+          "output_tokens": 2879,
+          "reasoning_tokens": 2726,
+          "cached_input_tokens": 0,
+          "total_tokens": 5430,
+          "calls": 1,
+          "cost_usd": 0.007963
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 8,
+          "input_tokens": 2661,
+          "output_tokens": 1103,
+          "reasoning_tokens": 984,
+          "cached_input_tokens": 0,
+          "total_tokens": 3764,
+          "calls": 1,
+          "cost_usd": 0.003556
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 9,
+          "input_tokens": 2750,
+          "output_tokens": 2406,
+          "reasoning_tokens": 2067,
+          "cached_input_tokens": 0,
+          "total_tokens": 5156,
+          "calls": 1,
+          "cost_usd": 0.00684
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 2229,
+          "output_tokens": 3820,
+          "reasoning_tokens": 3013,
+          "cached_input_tokens": 0,
+          "total_tokens": 6049,
+          "calls": 1,
+          "cost_usd": 0.010219
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 2284,
+          "output_tokens": 8183,
+          "reasoning_tokens": 5303,
+          "cached_input_tokens": 0,
+          "total_tokens": 10467,
+          "calls": 1,
+          "cost_usd": 0.021143
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 4431,
+          "output_tokens": 49976,
+          "reasoning_tokens": 30226,
+          "cached_input_tokens": 0,
+          "total_tokens": 64490,
+          "calls": 13,
+          "cost_usd": 0.126269
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 34104,
+          "output_tokens": 32227,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 66331,
+          "calls": 5,
+          "cost_usd": 0.090799
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 10096,
+          "output_tokens": 7682,
+          "reasoning_tokens": 4861,
+          "cached_input_tokens": 0,
+          "total_tokens": 17778,
+          "calls": 1,
+          "cost_usd": 0.022234
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 19948,
+          "output_tokens": 9594,
+          "reasoning_tokens": 6168,
+          "cached_input_tokens": 0,
+          "total_tokens": 29542,
+          "calls": 2,
+          "cost_usd": 0.029969
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 28386,
+          "output_tokens": 6185,
+          "reasoning_tokens": 6142,
+          "cached_input_tokens": 0,
+          "total_tokens": 34571,
+          "calls": 1,
+          "cost_usd": 0.023978
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 6289,
+          "output_tokens": 5791,
+          "reasoning_tokens": 4899,
+          "cached_input_tokens": 0,
+          "total_tokens": 12080,
+          "calls": 1,
+          "cost_usd": 0.016364
+        },
+        {
+          "stage": "stage_v3_repair",
+          "attempt": 1,
+          "input_tokens": 6398,
+          "output_tokens": 14377,
+          "reasoning_tokens": 10864,
+          "cached_input_tokens": 0,
+          "total_tokens": 20775,
+          "calls": 2,
+          "cost_usd": 0.037862
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 2,
+          "input_tokens": 28282,
+          "output_tokens": 8914,
+          "reasoning_tokens": 7728,
+          "cached_input_tokens": 0,
+          "total_tokens": 37196,
+          "calls": 1,
+          "cost_usd": 0.03077
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 2,
+          "input_tokens": 7327,
+          "output_tokens": 6444,
+          "reasoning_tokens": 5565,
+          "cached_input_tokens": 0,
+          "total_tokens": 13771,
+          "calls": 1,
+          "cost_usd": 0.018308
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31."
+    }
+  },
+  {
+    "run_id": "90f348df-9238-4da5-ab73-393c2df7c931",
+    "length_id": "medium",
+    "article_words": 844,
+    "claims_in_dossier": 54,
+    "claims_selected": 54,
+    "sources": 45,
+    "requirements": 8,
+    "context_chars": {
+      "outline": 22121,
+      "compose": 30397,
+      "audit": 6813,
+      "repair_lock": 1651
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 1954,
+      "evidence": 20553,
+      "form": 1317,
+      "topic_modules": 55,
+      "audience": 354,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 3938,
+      "audience": 354,
+      "form_structure": 1327,
+      "facts": 13783,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 19135,
+      "facts_chars": 13973,
+      "research_bookkeeping_chars": 5162,
+      "bookkeeping_share": 0.27
+    },
+    "outline_allocations": [
+      {
+        "heading": "The Fusion Roots of Chifa Cuisine",
+        "claims": 11,
+        "word_budget": 259,
+        "claims_per_hundred_words": 4.2
+      },
+      {
+        "heading": "Madam Tusan: A Recommended Chifa Experience",
+        "claims": 2,
+        "word_budget": 218,
+        "claims_per_hundred_words": 0.9
+      },
+      {
+        "heading": "Planning Your Visit to Madam Tusan Miraflores (Santa Cruz)",
+        "claims": 9,
+        "word_budget": 258,
+        "claims_per_hundred_words": 3.5
+      }
+    ],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": null,
+        "writer": null,
+        "judge": null
+      },
+      "input_tokens": 95777,
+      "output_tokens": 84952,
+      "reasoning_tokens": 56329,
+      "cached_input_tokens": 0,
+      "total_tokens": 182712,
+      "successful_calls": 25,
+      "measured_calls": 25,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 182712,
+      "ledger_version": 1,
+      "estimated_cost_usd": 0.241112,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 95777,
+          "output_tokens": 84952,
+          "reasoning_tokens": 56329,
+          "cached_input_tokens": 0,
+          "total_tokens": 182712,
+          "calls": 25,
+          "estimated_cost_usd": 0.241112,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 25129,
+          "output_tokens": 12081,
+          "reasoning_tokens": 11607,
+          "cached_input_tokens": 0,
+          "total_tokens": 37210,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.037741
+        },
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 12099,
+          "output_tokens": 13025,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 25124,
+          "calls": 3,
+          "attempts": 1,
+          "cost_usd": 0.036192
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 16176,
+          "output_tokens": 8367,
+          "reasoning_tokens": 6906,
+          "cached_input_tokens": 0,
+          "total_tokens": 24698,
+          "calls": 8,
+          "attempts": 7,
+          "cost_usd": 0.02577
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 11564,
+          "output_tokens": 12190,
+          "reasoning_tokens": 11062,
+          "cached_input_tokens": 0,
+          "total_tokens": 23754,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.033944
+        },
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 13405,
+          "output_tokens": 7076,
+          "reasoning_tokens": 4372,
+          "cached_input_tokens": 0,
+          "total_tokens": 20481,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.021711
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 3243,
+          "output_tokens": 11861,
+          "reasoning_tokens": 7007,
+          "cached_input_tokens": 0,
+          "total_tokens": 16932,
+          "calls": 4,
+          "attempts": 1,
+          "cost_usd": 0.030625
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 6357,
+          "output_tokens": 5597,
+          "reasoning_tokens": 3815,
+          "cached_input_tokens": 0,
+          "total_tokens": 11954,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.0159
+        },
+        {
+          "stage": "stage_v3_repair",
+          "input_tokens": 3691,
+          "output_tokens": 5540,
+          "reasoning_tokens": 4110,
+          "cached_input_tokens": 0,
+          "total_tokens": 9231,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.014957
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 2076,
+          "output_tokens": 5215,
+          "reasoning_tokens": 4152,
+          "cached_input_tokens": 0,
+          "total_tokens": 7291,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.01366
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 2037,
+          "output_tokens": 4000,
+          "reasoning_tokens": 3298,
+          "cached_input_tokens": 0,
+          "total_tokens": 6037,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.010611
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 2039,
+          "output_tokens": 1969,
+          "reasoning_tokens": 1333,
+          "cached_input_tokens": 0,
+          "total_tokens": 4163,
+          "calls": 2,
+          "cost_usd": 0.005534
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 2102,
+          "output_tokens": 1409,
+          "reasoning_tokens": 1301,
+          "cached_input_tokens": 0,
+          "total_tokens": 3511,
+          "calls": 1,
+          "cost_usd": 0.004153
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 2201,
+          "output_tokens": 598,
+          "reasoning_tokens": 486,
+          "cached_input_tokens": 0,
+          "total_tokens": 2799,
+          "calls": 1,
+          "cost_usd": 0.002155
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 2293,
+          "output_tokens": 444,
+          "reasoning_tokens": 345,
+          "cached_input_tokens": 0,
+          "total_tokens": 2737,
+          "calls": 1,
+          "cost_usd": 0.001798
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 2389,
+          "output_tokens": 1345,
+          "reasoning_tokens": 1222,
+          "cached_input_tokens": 0,
+          "total_tokens": 3734,
+          "calls": 1,
+          "cost_usd": 0.004079
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 6,
+          "input_tokens": 2525,
+          "output_tokens": 906,
+          "reasoning_tokens": 784,
+          "cached_input_tokens": 0,
+          "total_tokens": 3431,
+          "calls": 1,
+          "cost_usd": 0.003023
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 7,
+          "input_tokens": 2627,
+          "output_tokens": 1696,
+          "reasoning_tokens": 1435,
+          "cached_input_tokens": 0,
+          "total_tokens": 4323,
+          "calls": 1,
+          "cost_usd": 0.005028
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 2037,
+          "output_tokens": 4000,
+          "reasoning_tokens": 3298,
+          "cached_input_tokens": 0,
+          "total_tokens": 6037,
+          "calls": 1,
+          "cost_usd": 0.010611
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 2076,
+          "output_tokens": 5215,
+          "reasoning_tokens": 4152,
+          "cached_input_tokens": 0,
+          "total_tokens": 7291,
+          "calls": 1,
+          "cost_usd": 0.01366
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 3243,
+          "output_tokens": 11861,
+          "reasoning_tokens": 7007,
+          "cached_input_tokens": 0,
+          "total_tokens": 16932,
+          "calls": 4,
+          "cost_usd": 0.030625
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 12099,
+          "output_tokens": 13025,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 25124,
+          "calls": 3,
+          "cost_usd": 0.036192
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 6357,
+          "output_tokens": 5597,
+          "reasoning_tokens": 3815,
+          "cached_input_tokens": 0,
+          "total_tokens": 11954,
+          "calls": 1,
+          "cost_usd": 0.0159
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 13405,
+          "output_tokens": 7076,
+          "reasoning_tokens": 4372,
+          "cached_input_tokens": 0,
+          "total_tokens": 20481,
+          "calls": 2,
+          "cost_usd": 0.021711
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 12582,
+          "output_tokens": 5697,
+          "reasoning_tokens": 5467,
+          "cached_input_tokens": 0,
+          "total_tokens": 18279,
+          "calls": 1,
+          "cost_usd": 0.018017
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 5792,
+          "output_tokens": 6255,
+          "reasoning_tokens": 5679,
+          "cached_input_tokens": 0,
+          "total_tokens": 12047,
+          "calls": 1,
+          "cost_usd": 0.017375
+        },
+        {
+          "stage": "stage_v3_repair",
+          "attempt": 1,
+          "input_tokens": 3691,
+          "output_tokens": 5540,
+          "reasoning_tokens": 4110,
+          "cached_input_tokens": 0,
+          "total_tokens": 9231,
+          "calls": 1,
+          "cost_usd": 0.014957
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 2,
+          "input_tokens": 12547,
+          "output_tokens": 6384,
+          "reasoning_tokens": 6140,
+          "cached_input_tokens": 0,
+          "total_tokens": 18931,
+          "calls": 1,
+          "cost_usd": 0.019724
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 2,
+          "input_tokens": 5772,
+          "output_tokens": 5935,
+          "reasoning_tokens": 5383,
+          "cached_input_tokens": 0,
+          "total_tokens": 11707,
+          "calls": 1,
+          "cost_usd": 0.016569
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31."
+    }
+  },
+  {
+    "run_id": "1cd644b5-6d44-442f-8879-2719c8ed3901",
+    "length_id": "medium",
+    "article_words": 874,
+    "claims_in_dossier": 58,
+    "claims_selected": 58,
+    "sources": 62,
+    "requirements": 14,
+    "context_chars": {
+      "outline": 24029,
+      "compose": 33545,
+      "audit": 7623,
+      "repair_lock": 1734
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 1841,
+      "evidence": 23818,
+      "form": 1327,
+      "topic_modules": 55,
+      "audience": 340,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 5285,
+      "audience": 340,
+      "form_structure": 1337,
+      "facts": 14348,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 22400,
+      "facts_chars": 14722,
+      "research_bookkeeping_chars": 7678,
+      "bookkeeping_share": 0.343
+    },
+    "outline_allocations": [
+      {
+        "heading": "Starting Your Malec\u00f3n Walk: Manuel Bonilla Sports Complex",
+        "claims": 9,
+        "word_budget": 115,
+        "claims_per_hundred_words": 7.8
+      },
+      {
+        "heading": "Miraflores: Faro La Marina and Parque Antonio Raimondi",
+        "claims": 8,
+        "word_budget": 105,
+        "claims_per_hundred_words": 7.6
+      },
+      {
+        "heading": "Miraflores: Parque del Amor and Villena Rey Bridge",
+        "claims": 11,
+        "word_budget": 105,
+        "claims_per_hundred_words": 10.5
+      },
+      {
+        "heading": "Miraflores: Intihuatana Sculpture and Larcomar",
+        "claims": 12,
+        "word_budget": 105,
+        "claims_per_hundred_words": 11.4
+      },
+      {
+        "heading": "The Walk's Southern End: Puente de la Paz",
+        "claims": 6,
+        "word_budget": 90,
+        "claims_per_hundred_words": 6.7
+      },
+      {
+        "heading": "Access Points Along the Malec\u00f3n",
+        "claims": 1,
+        "word_budget": 75,
+        "claims_per_hundred_words": 1.3
+      },
+      {
+        "heading": "Total Walking Time and The Coastal Contrast",
+        "claims": 3,
+        "word_budget": 140,
+        "claims_per_hundred_words": 2.1
+      }
+    ],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": null,
+        "writer": null,
+        "judge": null
+      },
+      "input_tokens": 126015,
+      "output_tokens": 132305,
+      "reasoning_tokens": 79342,
+      "cached_input_tokens": 4090,
+      "total_tokens": 265653,
+      "successful_calls": 33,
+      "measured_calls": 33,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 265653,
+      "ledger_version": 1,
+      "estimated_cost_usd": 0.367463,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 126015,
+          "output_tokens": 132305,
+          "reasoning_tokens": 79342,
+          "cached_input_tokens": 4090,
+          "total_tokens": 265653,
+          "calls": 33,
+          "estimated_cost_usd": 0.367463,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 24681,
+          "output_tokens": 28076,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 52757,
+          "calls": 5,
+          "attempts": 1,
+          "cost_usd": 0.077595
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 4060,
+          "output_tokens": 40231,
+          "reasoning_tokens": 28062,
+          "cached_input_tokens": 0,
+          "total_tokens": 50339,
+          "calls": 9,
+          "attempts": 1,
+          "cost_usd": 0.101796
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 36044,
+          "output_tokens": 10956,
+          "reasoning_tokens": 10455,
+          "cached_input_tokens": 4090,
+          "total_tokens": 47000,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.037099
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 17578,
+          "output_tokens": 8486,
+          "reasoning_tokens": 7095,
+          "cached_input_tokens": 0,
+          "total_tokens": 27349,
+          "calls": 9,
+          "attempts": 8,
+          "cost_usd": 0.026488
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 12934,
+          "output_tokens": 12782,
+          "reasoning_tokens": 11316,
+          "cached_input_tokens": 0,
+          "total_tokens": 25716,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.035836
+        },
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 15733,
+          "output_tokens": 5832,
+          "reasoning_tokens": 2610,
+          "cached_input_tokens": 0,
+          "total_tokens": 21565,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.019299
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 6880,
+          "output_tokens": 13814,
+          "reasoning_tokens": 11737,
+          "cached_input_tokens": 0,
+          "total_tokens": 20694,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.036599
+        },
+        {
+          "stage": "stage_v3_repair",
+          "input_tokens": 4058,
+          "output_tokens": 5073,
+          "reasoning_tokens": 3368,
+          "cached_input_tokens": 0,
+          "total_tokens": 9131,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.0139
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 2023,
+          "output_tokens": 5157,
+          "reasoning_tokens": 3500,
+          "cached_input_tokens": 0,
+          "total_tokens": 7180,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.013499
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 2024,
+          "output_tokens": 1898,
+          "reasoning_tokens": 1199,
+          "cached_input_tokens": 0,
+          "total_tokens": 3922,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.005352
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 1910,
+          "output_tokens": 2021,
+          "reasoning_tokens": 1537,
+          "cached_input_tokens": 0,
+          "total_tokens": 5216,
+          "calls": 2,
+          "cost_usd": 0.005626
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 1934,
+          "output_tokens": 769,
+          "reasoning_tokens": 661,
+          "cached_input_tokens": 0,
+          "total_tokens": 2703,
+          "calls": 1,
+          "cost_usd": 0.002503
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 2028,
+          "output_tokens": 1150,
+          "reasoning_tokens": 1052,
+          "cached_input_tokens": 0,
+          "total_tokens": 3178,
+          "calls": 1,
+          "cost_usd": 0.003483
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 2123,
+          "output_tokens": 843,
+          "reasoning_tokens": 704,
+          "cached_input_tokens": 0,
+          "total_tokens": 2966,
+          "calls": 1,
+          "cost_usd": 0.002744
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 2238,
+          "output_tokens": 710,
+          "reasoning_tokens": 595,
+          "cached_input_tokens": 0,
+          "total_tokens": 2948,
+          "calls": 1,
+          "cost_usd": 0.002446
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 6,
+          "input_tokens": 2333,
+          "output_tokens": 723,
+          "reasoning_tokens": 609,
+          "cached_input_tokens": 0,
+          "total_tokens": 3056,
+          "calls": 1,
+          "cost_usd": 0.002507
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 7,
+          "input_tokens": 2454,
+          "output_tokens": 959,
+          "reasoning_tokens": 831,
+          "cached_input_tokens": 0,
+          "total_tokens": 3413,
+          "calls": 1,
+          "cost_usd": 0.003134
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 8,
+          "input_tokens": 2558,
+          "output_tokens": 1311,
+          "reasoning_tokens": 1106,
+          "cached_input_tokens": 0,
+          "total_tokens": 3869,
+          "calls": 1,
+          "cost_usd": 0.004045
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 2024,
+          "output_tokens": 1898,
+          "reasoning_tokens": 1199,
+          "cached_input_tokens": 0,
+          "total_tokens": 3922,
+          "calls": 1,
+          "cost_usd": 0.005352
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 2023,
+          "output_tokens": 5157,
+          "reasoning_tokens": 3500,
+          "cached_input_tokens": 0,
+          "total_tokens": 7180,
+          "calls": 1,
+          "cost_usd": 0.013499
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 4060,
+          "output_tokens": 40231,
+          "reasoning_tokens": 28062,
+          "cached_input_tokens": 0,
+          "total_tokens": 50339,
+          "calls": 9,
+          "cost_usd": 0.101796
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 24681,
+          "output_tokens": 28076,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 52757,
+          "calls": 5,
+          "cost_usd": 0.077595
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 6880,
+          "output_tokens": 13814,
+          "reasoning_tokens": 11737,
+          "cached_input_tokens": 0,
+          "total_tokens": 20694,
+          "calls": 1,
+          "cost_usd": 0.036599
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 15733,
+          "output_tokens": 5832,
+          "reasoning_tokens": 2610,
+          "cached_input_tokens": 0,
+          "total_tokens": 21565,
+          "calls": 2,
+          "cost_usd": 0.019299
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 18030,
+          "output_tokens": 4826,
+          "reasoning_tokens": 4781,
+          "cached_input_tokens": 0,
+          "total_tokens": 22856,
+          "calls": 1,
+          "cost_usd": 0.017474
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 6267,
+          "output_tokens": 6989,
+          "reasoning_tokens": 6236,
+          "cached_input_tokens": 0,
+          "total_tokens": 13256,
+          "calls": 1,
+          "cost_usd": 0.019353
+        },
+        {
+          "stage": "stage_v3_repair",
+          "attempt": 1,
+          "input_tokens": 4058,
+          "output_tokens": 5073,
+          "reasoning_tokens": 3368,
+          "cached_input_tokens": 0,
+          "total_tokens": 9131,
+          "calls": 1,
+          "cost_usd": 0.0139
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 2,
+          "input_tokens": 18014,
+          "output_tokens": 6130,
+          "reasoning_tokens": 5674,
+          "cached_input_tokens": 4090,
+          "total_tokens": 24144,
+          "calls": 1,
+          "cost_usd": 0.019625
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 2,
+          "input_tokens": 6667,
+          "output_tokens": 5793,
+          "reasoning_tokens": 5080,
+          "cached_input_tokens": 0,
+          "total_tokens": 12460,
+          "calls": 1,
+          "cost_usd": 0.016483
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31."
+    }
+  },
+  {
+    "run_id": "a3c20e41-0358-471d-8801-8c2b43959f32",
+    "length_id": "medium",
+    "article_words": 669,
+    "claims_in_dossier": 51,
+    "claims_selected": 51,
+    "sources": 79,
+    "requirements": 14,
+    "context_chars": {
+      "outline": 20235,
+      "compose": 30604,
+      "audit": 6697,
+      "repair_lock": 1830
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 1778,
+      "evidence": 21041,
+      "form": 1377,
+      "topic_modules": 55,
+      "audience": 189,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 4488,
+      "audience": 189,
+      "form_structure": 1387,
+      "facts": 11452,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 19623,
+      "facts_chars": 12141,
+      "research_bookkeeping_chars": 7482,
+      "bookkeeping_share": 0.381
+    },
+    "outline_allocations": [],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": null,
+        "writer": null,
+        "judge": null
+      },
+      "input_tokens": 114315,
+      "output_tokens": 174787,
+      "reasoning_tokens": 73547,
+      "cached_input_tokens": 0,
+      "total_tokens": 292974,
+      "successful_calls": 31,
+      "measured_calls": 31,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 292974,
+      "ledger_version": 1,
+      "estimated_cost_usd": 0.471263,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 114315,
+          "output_tokens": 174787,
+          "reasoning_tokens": 73547,
+          "cached_input_tokens": 0,
+          "total_tokens": 292974,
+          "calls": 31,
+          "estimated_cost_usd": 0.471263,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 25826,
+          "output_tokens": 78053,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 103879,
+          "calls": 5,
+          "attempts": 1,
+          "cost_usd": 0.20288
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 4458,
+          "output_tokens": 35627,
+          "reasoning_tokens": 22396,
+          "cached_input_tokens": 0,
+          "total_tokens": 43859,
+          "calls": 9,
+          "attempts": 1,
+          "cost_usd": 0.090406
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 34913,
+          "output_tokens": 8111,
+          "reasoning_tokens": 8010,
+          "cached_input_tokens": 0,
+          "total_tokens": 43024,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.030751
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 10937,
+          "output_tokens": 14208,
+          "reasoning_tokens": 12751,
+          "cached_input_tokens": 0,
+          "total_tokens": 25145,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.038802
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 12460,
+          "output_tokens": 9349,
+          "reasoning_tokens": 8149,
+          "cached_input_tokens": 0,
+          "total_tokens": 21907,
+          "calls": 7,
+          "attempts": 6,
+          "cost_usd": 0.027111
+        },
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 11593,
+          "output_tokens": 6609,
+          "reasoning_tokens": 5358,
+          "cached_input_tokens": 0,
+          "total_tokens": 18202,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.02
+        },
+        {
+          "stage": "stage_v3_repair",
+          "input_tokens": 4722,
+          "output_tokens": 7731,
+          "reasoning_tokens": 5454,
+          "cached_input_tokens": 0,
+          "total_tokens": 12453,
+          "calls": 2,
+          "attempts": 1,
+          "cost_usd": 0.020744
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 5714,
+          "output_tokens": 5364,
+          "reasoning_tokens": 4063,
+          "cached_input_tokens": 0,
+          "total_tokens": 11078,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.015124
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 1727,
+          "output_tokens": 7062,
+          "reasoning_tokens": 5374,
+          "cached_input_tokens": 0,
+          "total_tokens": 8789,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.018173
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 1965,
+          "output_tokens": 2673,
+          "reasoning_tokens": 1992,
+          "cached_input_tokens": 0,
+          "total_tokens": 4638,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.007272
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 1893,
+          "output_tokens": 1171,
+          "reasoning_tokens": 699,
+          "cached_input_tokens": 0,
+          "total_tokens": 3162,
+          "calls": 2,
+          "cost_usd": 0.003495
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 1922,
+          "output_tokens": 1124,
+          "reasoning_tokens": 1026,
+          "cached_input_tokens": 0,
+          "total_tokens": 3046,
+          "calls": 1,
+          "cost_usd": 0.003387
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 2017,
+          "output_tokens": 1871,
+          "reasoning_tokens": 1777,
+          "cached_input_tokens": 0,
+          "total_tokens": 3888,
+          "calls": 1,
+          "cost_usd": 0.005283
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 2101,
+          "output_tokens": 919,
+          "reasoning_tokens": 788,
+          "cached_input_tokens": 0,
+          "total_tokens": 3020,
+          "calls": 1,
+          "cost_usd": 0.002928
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 2214,
+          "output_tokens": 2482,
+          "reasoning_tokens": 2348,
+          "cached_input_tokens": 0,
+          "total_tokens": 4696,
+          "calls": 1,
+          "cost_usd": 0.006869
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 6,
+          "input_tokens": 2313,
+          "output_tokens": 1782,
+          "reasoning_tokens": 1511,
+          "cached_input_tokens": 0,
+          "total_tokens": 4095,
+          "calls": 1,
+          "cost_usd": 0.005149
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 1965,
+          "output_tokens": 2673,
+          "reasoning_tokens": 1992,
+          "cached_input_tokens": 0,
+          "total_tokens": 4638,
+          "calls": 1,
+          "cost_usd": 0.007272
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 1727,
+          "output_tokens": 7062,
+          "reasoning_tokens": 5374,
+          "cached_input_tokens": 0,
+          "total_tokens": 8789,
+          "calls": 1,
+          "cost_usd": 0.018173
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 4458,
+          "output_tokens": 35627,
+          "reasoning_tokens": 22396,
+          "cached_input_tokens": 0,
+          "total_tokens": 43859,
+          "calls": 9,
+          "cost_usd": 0.090406
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 25826,
+          "output_tokens": 78053,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 103879,
+          "calls": 5,
+          "cost_usd": 0.20288
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 5714,
+          "output_tokens": 5364,
+          "reasoning_tokens": 4063,
+          "cached_input_tokens": 0,
+          "total_tokens": 11078,
+          "calls": 1,
+          "cost_usd": 0.015124
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 11593,
+          "output_tokens": 6609,
+          "reasoning_tokens": 5358,
+          "cached_input_tokens": 0,
+          "total_tokens": 18202,
+          "calls": 1,
+          "cost_usd": 0.02
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 17397,
+          "output_tokens": 3246,
+          "reasoning_tokens": 3214,
+          "cached_input_tokens": 0,
+          "total_tokens": 20643,
+          "calls": 1,
+          "cost_usd": 0.013334
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 5397,
+          "output_tokens": 6559,
+          "reasoning_tokens": 5771,
+          "cached_input_tokens": 0,
+          "total_tokens": 11956,
+          "calls": 1,
+          "cost_usd": 0.018017
+        },
+        {
+          "stage": "stage_v3_repair",
+          "attempt": 1,
+          "input_tokens": 4722,
+          "output_tokens": 7731,
+          "reasoning_tokens": 5454,
+          "cached_input_tokens": 0,
+          "total_tokens": 12453,
+          "calls": 2,
+          "cost_usd": 0.020744
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 2,
+          "input_tokens": 17516,
+          "output_tokens": 4865,
+          "reasoning_tokens": 4796,
+          "cached_input_tokens": 0,
+          "total_tokens": 22381,
+          "calls": 1,
+          "cost_usd": 0.017417
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 2,
+          "input_tokens": 5540,
+          "output_tokens": 7649,
+          "reasoning_tokens": 6980,
+          "cached_input_tokens": 0,
+          "total_tokens": 13189,
+          "calls": 1,
+          "cost_usd": 0.020785
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31."
+    }
+  },
+  {
+    "run_id": "b88081a0-29b2-42ed-9eff-ec28bf000ac9",
+    "length_id": "medium",
+    "article_words": 686,
+    "claims_in_dossier": 100,
+    "claims_selected": 100,
+    "sources": 128,
+    "requirements": 18,
+    "context_chars": {
+      "outline": 34372,
+      "compose": 46649,
+      "audit": 6823,
+      "repair_lock": 1855
+    },
+    "compose_sections": {
+      "compose_authority": 200,
+      "voice": 2095,
+      "brief": 1791,
+      "evidence": 37015,
+      "form": 1327,
+      "topic_modules": 55,
+      "audience": 297,
+      "writing_conventions": 1428,
+      "house_style": 2425
+    },
+    "outline_sections": {
+      "outline_authority": 178,
+      "voice": 2095,
+      "brief": 5700,
+      "audience": 297,
+      "form_structure": 1337,
+      "facts": 24319,
+      "outline_rules": 434
+    },
+    "evidence_part": {
+      "total_chars": 35597,
+      "facts_chars": 24111,
+      "research_bookkeeping_chars": 11486,
+      "bookkeeping_share": 0.323
+    },
+    "outline_allocations": [
+      {
+        "heading": "The Lima Cliffside Walk: Distance, Duration, and Access",
+        "claims": 8,
+        "word_budget": 100,
+        "claims_per_hundred_words": 8.0
+      },
+      {
+        "heading": "Miraflores: From Stadium to Larcomar",
+        "claims": 32,
+        "word_budget": 300,
+        "claims_per_hundred_words": 10.7
+      },
+      {
+        "heading": "Barranco: Bridges, Art, and Quieter Views",
+        "claims": 16,
+        "word_budget": 250,
+        "claims_per_hundred_words": 6.4
+      },
+      {
+        "heading": "The Costa Verde Motorway: A Constant Below",
+        "claims": 16,
+        "word_budget": 85,
+        "claims_per_hundred_words": 18.8
+      }
+    ],
+    "run_cost": {
+      "stack_id": "custom",
+      "models": {
+        "worker": null,
+        "writer": null,
+        "judge": null
+      },
+      "input_tokens": 235154,
+      "output_tokens": 205391,
+      "reasoning_tokens": 102971,
+      "cached_input_tokens": 5015,
+      "total_tokens": 451675,
+      "successful_calls": 57,
+      "measured_calls": 57,
+      "unmetered_calls": 0,
+      "measurement_status": "complete",
+      "attributed_total_tokens": 451675,
+      "ledger_version": 1,
+      "estimated_cost_usd": 0.582669,
+      "currency": "USD",
+      "by_model": [
+        {
+          "model": "gemini-2.5-flash",
+          "input_tokens": 235154,
+          "output_tokens": 205391,
+          "reasoning_tokens": 102971,
+          "cached_input_tokens": 5015,
+          "total_tokens": 451675,
+          "calls": 57,
+          "estimated_cost_usd": 0.582669,
+          "cost_basis": "rate-table"
+        }
+      ],
+      "by_stage": [
+        {
+          "stage": "stage_v4_research",
+          "input_tokens": 65803,
+          "output_tokens": 60187,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 5015,
+          "total_tokens": 125990,
+          "calls": 12,
+          "attempts": 2,
+          "cost_usd": 0.168853
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "input_tokens": 13292,
+          "output_tokens": 73216,
+          "reasoning_tokens": 45663,
+          "cached_input_tokens": 0,
+          "total_tokens": 97385,
+          "calls": 20,
+          "attempts": 2,
+          "cost_usd": 0.187028
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "input_tokens": 51947,
+          "output_tokens": 9420,
+          "reasoning_tokens": 9301,
+          "cached_input_tokens": 0,
+          "total_tokens": 61367,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.039134
+        },
+        {
+          "stage": "stage_v4_grill",
+          "input_tokens": 30044,
+          "output_tokens": 22250,
+          "reasoning_tokens": 20149,
+          "cached_input_tokens": 0,
+          "total_tokens": 52547,
+          "calls": 13,
+          "attempts": 12,
+          "cost_usd": 0.064639
+        },
+        {
+          "stage": "stage_v3_compose",
+          "input_tokens": 37533,
+          "output_tokens": 11423,
+          "reasoning_tokens": 5542,
+          "cached_input_tokens": 0,
+          "total_tokens": 48956,
+          "calls": 4,
+          "attempts": 2,
+          "cost_usd": 0.039818
+        },
+        {
+          "stage": "stage_v3_outline",
+          "input_tokens": 19821,
+          "output_tokens": 11785,
+          "reasoning_tokens": 8831,
+          "cached_input_tokens": 0,
+          "total_tokens": 31606,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.035409
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "input_tokens": 12685,
+          "output_tokens": 8264,
+          "reasoning_tokens": 7251,
+          "cached_input_tokens": 0,
+          "total_tokens": 20949,
+          "calls": 2,
+          "attempts": 2,
+          "cost_usd": 0.024465
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "input_tokens": 1535,
+          "output_tokens": 6702,
+          "reasoning_tokens": 4428,
+          "cached_input_tokens": 0,
+          "total_tokens": 8237,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.017216
+        },
+        {
+          "stage": "stage_v4_brief",
+          "input_tokens": 2494,
+          "output_tokens": 2144,
+          "reasoning_tokens": 1806,
+          "cached_input_tokens": 0,
+          "total_tokens": 4638,
+          "calls": 1,
+          "attempts": 1,
+          "cost_usd": 0.006108
+        },
+        {
+          "stage": "stage_v3_finalize",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        },
+        {
+          "stage": "stage_v3_quality_settle",
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 0,
+          "calls": 0,
+          "attempts": 1,
+          "cost_usd": 0.0
+        }
+      ],
+      "by_attempt": [
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 1,
+          "input_tokens": 1939,
+          "output_tokens": 2062,
+          "reasoning_tokens": 1531,
+          "cached_input_tokens": 0,
+          "total_tokens": 4254,
+          "calls": 2,
+          "cost_usd": 0.005737
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 2,
+          "input_tokens": 1987,
+          "output_tokens": 1098,
+          "reasoning_tokens": 1024,
+          "cached_input_tokens": 0,
+          "total_tokens": 3085,
+          "calls": 1,
+          "cost_usd": 0.003341
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 3,
+          "input_tokens": 2095,
+          "output_tokens": 963,
+          "reasoning_tokens": 861,
+          "cached_input_tokens": 0,
+          "total_tokens": 3058,
+          "calls": 1,
+          "cost_usd": 0.003036
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 4,
+          "input_tokens": 2200,
+          "output_tokens": 674,
+          "reasoning_tokens": 566,
+          "cached_input_tokens": 0,
+          "total_tokens": 2874,
+          "calls": 1,
+          "cost_usd": 0.002345
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 5,
+          "input_tokens": 2297,
+          "output_tokens": 1611,
+          "reasoning_tokens": 1510,
+          "cached_input_tokens": 0,
+          "total_tokens": 3908,
+          "calls": 1,
+          "cost_usd": 0.004717
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 6,
+          "input_tokens": 2406,
+          "output_tokens": 1148,
+          "reasoning_tokens": 1052,
+          "cached_input_tokens": 0,
+          "total_tokens": 3554,
+          "calls": 1,
+          "cost_usd": 0.003592
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 7,
+          "input_tokens": 2530,
+          "output_tokens": 1685,
+          "reasoning_tokens": 1490,
+          "cached_input_tokens": 0,
+          "total_tokens": 4215,
+          "calls": 1,
+          "cost_usd": 0.004972
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 8,
+          "input_tokens": 2663,
+          "output_tokens": 1883,
+          "reasoning_tokens": 1743,
+          "cached_input_tokens": 0,
+          "total_tokens": 4546,
+          "calls": 1,
+          "cost_usd": 0.005506
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 9,
+          "input_tokens": 2792,
+          "output_tokens": 853,
+          "reasoning_tokens": 716,
+          "cached_input_tokens": 0,
+          "total_tokens": 3645,
+          "calls": 1,
+          "cost_usd": 0.00297
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 10,
+          "input_tokens": 2918,
+          "output_tokens": 3071,
+          "reasoning_tokens": 2954,
+          "cached_input_tokens": 0,
+          "total_tokens": 5989,
+          "calls": 1,
+          "cost_usd": 0.008553
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 11,
+          "input_tokens": 3056,
+          "output_tokens": 4476,
+          "reasoning_tokens": 4327,
+          "cached_input_tokens": 0,
+          "total_tokens": 7532,
+          "calls": 1,
+          "cost_usd": 0.012107
+        },
+        {
+          "stage": "stage_v4_grill",
+          "attempt": 12,
+          "input_tokens": 3161,
+          "output_tokens": 2726,
+          "reasoning_tokens": 2375,
+          "cached_input_tokens": 0,
+          "total_tokens": 5887,
+          "calls": 1,
+          "cost_usd": 0.007763
+        },
+        {
+          "stage": "stage_v4_brief",
+          "attempt": 1,
+          "input_tokens": 2494,
+          "output_tokens": 2144,
+          "reasoning_tokens": 1806,
+          "cached_input_tokens": 0,
+          "total_tokens": 4638,
+          "calls": 1,
+          "cost_usd": 0.006108
+        },
+        {
+          "stage": "stage_v4_work_order",
+          "attempt": 1,
+          "input_tokens": 1535,
+          "output_tokens": 6702,
+          "reasoning_tokens": 4428,
+          "cached_input_tokens": 0,
+          "total_tokens": 8237,
+          "calls": 1,
+          "cost_usd": 0.017216
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 1,
+          "input_tokens": 6646,
+          "output_tokens": 35822,
+          "reasoning_tokens": 22203,
+          "cached_input_tokens": 0,
+          "total_tokens": 49495,
+          "calls": 10,
+          "cost_usd": 0.091549
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 1,
+          "input_tokens": 32463,
+          "output_tokens": 31479,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 5015,
+          "total_tokens": 63942,
+          "calls": 6,
+          "cost_usd": 0.087082
+        },
+        {
+          "stage": "stage_v4_research_notes",
+          "attempt": 2,
+          "input_tokens": 6646,
+          "output_tokens": 37394,
+          "reasoning_tokens": 23460,
+          "cached_input_tokens": 0,
+          "total_tokens": 47890,
+          "calls": 10,
+          "cost_usd": 0.095479
+        },
+        {
+          "stage": "stage_v4_research",
+          "attempt": 2,
+          "input_tokens": 33340,
+          "output_tokens": 28708,
+          "reasoning_tokens": 0,
+          "cached_input_tokens": 0,
+          "total_tokens": 62048,
+          "calls": 6,
+          "cost_usd": 0.081771
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 1,
+          "input_tokens": 9645,
+          "output_tokens": 4185,
+          "reasoning_tokens": 3194,
+          "cached_input_tokens": 0,
+          "total_tokens": 13830,
+          "calls": 1,
+          "cost_usd": 0.013356
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 1,
+          "input_tokens": 18353,
+          "output_tokens": 7386,
+          "reasoning_tokens": 3951,
+          "cached_input_tokens": 0,
+          "total_tokens": 25739,
+          "calls": 2,
+          "cost_usd": 0.023971
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 1,
+          "input_tokens": 26210,
+          "output_tokens": 5849,
+          "reasoning_tokens": 5792,
+          "cached_input_tokens": 0,
+          "total_tokens": 32059,
+          "calls": 1,
+          "cost_usd": 0.022485
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 1,
+          "input_tokens": 6299,
+          "output_tokens": 3921,
+          "reasoning_tokens": 3409,
+          "cached_input_tokens": 0,
+          "total_tokens": 10220,
+          "calls": 1,
+          "cost_usd": 0.011692
+        },
+        {
+          "stage": "stage_v3_outline",
+          "attempt": 2,
+          "input_tokens": 10176,
+          "output_tokens": 7600,
+          "reasoning_tokens": 5637,
+          "cached_input_tokens": 0,
+          "total_tokens": 17776,
+          "calls": 1,
+          "cost_usd": 0.022053
+        },
+        {
+          "stage": "stage_v3_compose",
+          "attempt": 2,
+          "input_tokens": 19180,
+          "output_tokens": 4037,
+          "reasoning_tokens": 1591,
+          "cached_input_tokens": 0,
+          "total_tokens": 23217,
+          "calls": 2,
+          "cost_usd": 0.015847
+        },
+        {
+          "stage": "stage_v3_groundedness",
+          "attempt": 2,
+          "input_tokens": 25737,
+          "output_tokens": 3571,
+          "reasoning_tokens": 3509,
+          "cached_input_tokens": 0,
+          "total_tokens": 29308,
+          "calls": 1,
+          "cost_usd": 0.016649
+        },
+        {
+          "stage": "stage_v3_quality_audit",
+          "attempt": 2,
+          "input_tokens": 6386,
+          "output_tokens": 4343,
+          "reasoning_tokens": 3842,
+          "cached_input_tokens": 0,
+          "total_tokens": 10729,
+          "calls": 1,
+          "cost_usd": 0.012773
+        }
+      ],
+      "pricing_note": "Standard global Vertex rates checked 2026-08-24; Gemini 3.7 Flash introductory pricing ends 2026-12-31."
+    }
+  }
+]
