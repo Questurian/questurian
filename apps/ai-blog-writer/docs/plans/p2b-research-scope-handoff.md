@@ -158,9 +158,68 @@ the numbers do not show, and it endangers something the numbers do show works.
 
 ---
 
-## How to verify it worked — not yet done
+## What the re-plan measured — done 2026-09-06
 
-**This is the outstanding work.** Nothing below has been run. Both briefs are
+The planning half is measured. **The research half is not**: nothing below was
+re-researched, so facts found, conflicts retained and texture claims are still
+open, and those are where the real risk sits.
+
+Both stored briefs were re-planned off a copy of `pipeline.db`, four to five
+plans each, on `p2b.work_order` as it now ships. About $0.35 of Gemini.
+
+| run | plan | questions | texture | share |
+|---|---|---:|---:|---:|
+| 2197ccc4 | stored (before both changes) | 15 | 4 | 27% |
+| 2197ccc4 | purpose only, no length | 20 | 3 | 15% |
+| 2197ccc4 | shipped, 900 words | 18 / 15 / 13 | 3 / 4 / 6 | 17–46% |
+| e23257c0 | stored (before both changes) | **57** | 8 | 14% |
+| e23257c0 | purpose only, no length | 44 | 2 | 5% |
+| e23257c0 | shipped, 900 words | **25 / 31 / 36** | 4 / 0 / 5 | 0–16% |
+
+**Change 1 is doing the work, not change 2.** Asking each question to name its
+job took run 2 from 57 to 44. Naming the length took it to the twenties and
+thirties. If only one of these survives, it is the length.
+
+**The named fault is gone.** Questions asking for travel time *per taxi
+company* — the five no source could answer, struck by hand before run 2 could
+be written — went 6 → 3 → **0** as the constraint was added.
+
+**Compliance is not the problem the risks section feared.** 107 of 107
+questions across every plan came back with a stated purpose, on
+`gemini-2.5-flash`. `p2b.work_order` does not need moving up a tier for this.
+
+**Run 1 did not shrink, and was not meant to.** 15 stored against 13, 15 and 18
+— the constraint does not crush a plan that was already the right size, which
+was the thing most worth checking.
+
+### The one regression, and it is the one that was predicted
+
+**A plan can now come back with zero texture questions.** e23257c0 sample B
+did: 31 questions, none of them texture. That is not a duller article, it is a
+blocked run — `assess_coverage` sets `can_write=False` and
+`nothing_worth_reading` when no texture question is answered, and no texture
+questions means none can be. "Texture is the first thing to die" was right.
+
+Nothing in the contract requires a texture question and nothing should: the
+prompt asks for texture and the operator can add one. What is missing is that
+**nobody is told before the money is spent.** `texture_count` is already on the
+work order stage record; the gate says "nothing here would be a pleasure to
+read" only after research has been bought. That sentence belongs on the cut
+screen, next to the budget note, for exactly the reason the budget note is
+there: run 03c6702f died against a ceiling its own stage record had already
+predicted. Not built.
+
+### Read the counts as a spread, not a number
+
+Four samples of the identical shipped configuration on run 2 gave 18, 25, 31
+and 36. One plan is an anecdote. Anything claiming "the change saves N
+questions" from a single run is reading noise.
+
+---
+
+## How to verify the rest of it
+
+**Still outstanding: nothing has been re-researched.** Both briefs are
 stored, so this is a before/after on identical input, not a new topic. Re-plan and re-research runs `2197ccc4` and `e23257c0` and compare:
 
 - **question count** — expect run 2 to fall substantially, run 1 barely at all
