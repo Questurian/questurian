@@ -59,16 +59,24 @@ def test_long_sentences_are_explicitly_not_banned():
     assert "commas joining clauses are correct and wanted" in rules
 
 
-def test_the_em_dash_and_hyphen_bans_are_untouched():
+def test_the_em_dash_ban_and_the_hyphen_budget_are_untouched():
     """Deliberate, and not the cause of the flatness.
 
-    They are a defence against reading as AI generated, which is a correct call
-    about how readers judge text in 2026. A future session reading "we fixed
-    the rhythm" must not helpfully unban them.
+    The em dash ban is a defence against reading as AI generated, which is a
+    correct call about how readers judge text in 2026. A future session reading
+    "we fixed the rhythm" must not helpfully unban it.
+
+    The compound rule is a budget rather than a ban, and that is also
+    deliberate: the blanket version scored a perfect zero across 26 stored
+    articles while the compounds it was aimed at walked past it, and it cost
+    the Lima chifa article the word "stir-fried". Do not restore the ban, and
+    do not remove the ration either.
     """
     for rules in (_flat(ANTI_AI_TELLS_FULL), _flat(ANTI_AI_TELLS_BLURB)):
         assert "No em dashes, and no substitutes for them" in rules
-        assert "Do not use hyphenated compounds at all" in rules
+        assert "Ration hyphenated compounds" in rules
+        assert "one per 200 words" in rules
+        assert "It is a budget and not a ban" in rules
 
 
 def test_the_aside_fix_reaches_the_blurb_pipeline_too():

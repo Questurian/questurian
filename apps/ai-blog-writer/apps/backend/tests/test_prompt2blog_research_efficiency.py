@@ -109,7 +109,7 @@ def test_schema_failure_is_metered_once_and_correlated(monkeypatch):
     with pytest.raises(ValueError, match="bad object"):
         model_calls._invoke_json_llm(prompt="notes", max_tokens=8192, temperature=0,
             model_name="gemini-2.5-flash", job_id="p2b.research_structure", schema={"type": "object"},
-            correlation_id="run-499", usage_recorder=lambda model, usage: records.append(usage))
+            correlation_id="run-499", usage_recorder=lambda model, usage, **_: records.append(usage))
     assert len(records) == len(observations) == 1
     assert observations[0]["correlation_id"] == "run-499"
 

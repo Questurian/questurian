@@ -82,7 +82,7 @@ def test_a_text_call_is_reported_and_still_reaches_the_run_ledger(monkeypatch):
         max_tokens=100,
         temperature=0.2,
         model_name="claude-opus-5",
-        usage_recorder=lambda model, usage: recorded.append((model, usage)),
+        usage_recorder=lambda model, usage, **_: recorded.append((model, usage)),
     )
 
     assert result == "an article"
@@ -173,7 +173,7 @@ def test_with_no_monitor_configured_nothing_is_reported(monkeypatch):
         temperature=0.2,
         model_name=None,
         job_id="p2b.compose",
-        usage_recorder=lambda model, usage: recorded.append((model, usage)),
+        usage_recorder=lambda model, usage, **_: recorded.append((model, usage)),
     )
 
     assert result == "some prose"

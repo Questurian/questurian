@@ -156,12 +156,17 @@ joining clauses are correct and wanted, and what is banned is a comma standing \
 in for a dash around an aside. A spaced hyphen is the same dash in another hat \
 and reads as a typewriter artefact.
 
-Do not use hyphenated compounds at all. "Two-bedroom apartments", "a long-stay \
-visa", "a well-known, family-run spot" — each is correct English on its own, \
-but a run of them through an article is one of the clearest signals the text \
-was generated. Rephrase: "apartments with two bedrooms", "a visa for long \
-stays", "a spot the family runs, and people know it". Proper names keep their \
-hyphens; nothing else does."""
+Ration hyphenated compounds: roughly one per 200 words, so about four or five \
+in a full article. It is a budget and not a ban. Spend it where the hyphen is \
+the word rather than a shortcut — "stir-fried" is what the dish is, and \
+"cooked quickly in a wok" is a worse sentence written to dodge a rule. What \
+the budget exists to stop is the stack: "a well-known, family-run spot near \
+two-bedroom apartments on a long-stay visa" is one of the clearest signals the \
+text was generated, and every one of those is a modifier that could have been \
+a phrase. Rephrase those: "apartments with two bedrooms", "a visa for long \
+stays", "a spot the family runs, and people know it". Dates and measures are \
+the usual offenders and count the same — "19th-century", "six-month", \
+"10-kilometer". Proper names are free: "Aix-en-Provence" costs nothing."""
 
 _VOICE = """\
 Voice rules. Write from a single point of view with an opinion. If the writing \

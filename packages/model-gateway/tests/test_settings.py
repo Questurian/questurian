@@ -58,8 +58,17 @@ class WithADashboard(unittest.TestCase):
     def test_a_job_the_dashboard_has_not_heard_of_falls_back(self):
         # The dashboard is allowed to be older than the code. A job added this
         # morning must not break because the table has not caught up.
+        #
+        # The expected value is read from the registry rather than written out,
+        # because what is under test is "the fallback is the checked-in
+        # default" and not "the default is any particular model". Spelling the
+        # model out here made this test fail the day compose moved to Opus,
+        # which is a change of policy and not a regression.
         settings = connected(dashboard_payload(**{"lm.alt_text": "gemini-2.5-flash"}))
-        self.assertEqual(settings.model_for("p2b.compose"), "gemini-2.5-flash")
+        self.assertEqual(
+            settings.model_for("p2b.compose"),
+            jobs.job("p2b.compose").default_model,
+        )
 
     def test_a_job_the_code_has_not_heard_of_is_ignored(self):
         payload = {"version": 1, "jobs": {"lm.invented": {"model": "gemini-2.5-pro"}}}

@@ -1,3 +1,13 @@
+// There were three copies of the token-rate table: the Python that prices a
+// call, the card this file publishes, and a third labelling a button in the
+// Prompt2Blog routing panel. The 3.x-to-2.5 sweep left one holding 3.x prices
+// under 2.5 names and nothing caught it, because nothing compared them.
+// `rates.drift.test.ts` existed to compare this one against that third copy.
+// The routing panel was deleted on 2026-09-05 along with the model stacks it
+// priced -- v4 has no model picker -- so the third copy is gone and the drift
+// test with it. Two remain, and they are the same file: the gateway's
+// rates.json, read by the Python and by this card. If a rate table is ever
+// written out in a browser bundle again, it needs a test like that one back.
 /**
  * What each model costs, and the evidence that it costs that.
  *

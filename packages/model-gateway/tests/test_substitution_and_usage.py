@@ -225,9 +225,14 @@ class ResolvingThroughThePackage(unittest.TestCase):
         model_gateway.set_settings(settings)
         try:
             with mock.patch.dict(os.environ, BOTH_OFF):
+                # Read from the registry rather than written out. What is under
+                # test is that one call reports the name asked for and the
+                # other reports what serves it -- not which Claude model
+                # outline happens to be on this month.
+                asked = jobs.job("p2b.outline").default_model
+                self.assertTrue(asked.startswith("claude-"), asked)
                 self.assertEqual(
-                    model_gateway.requested_model_for("p2b.outline"),
-                    "claude-sonnet-5-medium",
+                    model_gateway.requested_model_for("p2b.outline"), asked
                 )
                 self.assertEqual(
                     model_gateway.model_for("p2b.outline"), "gemini-2.5-flash"

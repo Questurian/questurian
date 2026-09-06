@@ -229,10 +229,13 @@ export type Prompt2BlogGroundedness = {
 
 export type Prompt2BlogRunCost = {
   stack_id: string
+  // Named from the run's requested routing when it named one, and otherwise
+  // from the model the ledger saw answer that stage. A v4 run requests no
+  // routing, so before that fallback existed all three of these were null.
   models: {
-    worker: string
-    writer: string
-    judge: string
+    worker: string | null
+    writer: string | null
+    judge: string | null
   }
   input_tokens: number
   output_tokens: number

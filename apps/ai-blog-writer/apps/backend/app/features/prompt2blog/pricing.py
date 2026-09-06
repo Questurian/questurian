@@ -238,8 +238,20 @@ class Prompt2BlogTokenUsageTracker:
             "unmetered_calls": self.successful_calls - self.measured_calls,
         }
 
-    def record(self, model_name: str, raw_usage: Any) -> None:
+    def record(
+        self,
+        model_name: str,
+        raw_usage: Any,
+        *,
+        requested_model: str | None = None,
+    ) -> None:
         """Append one successful call. Safe to call from several threads.
+
+        ``model_name`` is the model that answered; ``requested_model`` is the
+        one the job asked for. They differ whenever a Claude name is served by
+        a Gemini substitute, and until now only the answering model was kept --
+        so a run whose whole point was "write this on Claude" recorded itself
+        as an ordinary Gemini run and nothing in the receipt disagreed.
 
         Research runs its grounded searches concurrently, and each of them
         records here from a worker thread. Every mutation below is a
@@ -249,9 +261,27 @@ class Prompt2BlogTokenUsageTracker:
         sequence number.
         """
         with self._lock:
-            self._record_call(model_name, raw_usage)
+            self._record_call(model_name, raw_usage, requested_model)
 
-    def _record_call(self, model_name: str, raw_usage: Any) -> None:
+    @staticmethod
+    def _substitution_fields(
+        model_name: str, requested_model: str | None
+    ) -> dict[str, str]:
+        """``asked_for``, but only on a call that did not get what it asked for.
+
+        Absent on the ordinary call, so its presence in a ledger is the whole
+        signal: something rewrote the model between the job and the provider.
+        """
+        if not requested_model or requested_model == model_name:
+            return {}
+        return {"asked_for": requested_model}
+
+    def _record_call(
+        self,
+        model_name: str,
+        raw_usage: Any,
+        requested_model: str | None = None,
+    ) -> None:
         self.successful_calls += 1
         usage = normalize_token_usage(raw_usage)
         stage = self.current_stage or UNATTRIBUTED_STAGE
@@ -266,6 +296,7 @@ class Prompt2BlogTokenUsageTracker:
                     "stage": stage,
                     "attempt": attempt,
                     "model": model_name,
+                    **self._substitution_fields(model_name, requested_model),
                     **_empty_usage(),
                     "calls": 1,
                     "metered": False,
@@ -321,6 +352,7 @@ class Prompt2BlogTokenUsageTracker:
                 "stage": stage,
                 "attempt": attempt,
                 "model": model_name,
+                **self._substitution_fields(model_name, requested_model),
                 **{key: usage[key] for key in TOKEN_KEYS},
                 "calls": 1,
                 "metered": True,
@@ -438,13 +470,41 @@ class Prompt2BlogTokenUsageTracker:
             )
         ]
 
+    def _model_that_answered(self, stage: str) -> str | None:
+        """The model that served this stage's last call, from the ledger.
+
+        The three role names in the receipt were read off the run's requested
+        routing, and v4 requests no routing at all -- so a finished run
+        reported ``{"worker": null, "writer": null, "judge": null}`` and the
+        only place the real models existed was the per-call rows nobody reads.
+        """
+        for entry in reversed(self.calls):
+            if entry["stage"] == stage:
+                return str(entry["model"])
+        return None
+
+    def _busiest_model(self) -> str | None:
+        """The model that answered most of this run, by call count.
+
+        Counted over ``calls`` rather than ``by_model``, because a call the
+        provider reported no usage for is still a call this run made and
+        ``by_model`` only holds the measured ones.
+        """
+        counts: dict[str, int] = {}
+        for entry in self.calls:
+            model = str(entry["model"])
+            counts[model] = counts.get(model, 0) + 1
+        if not counts:
+            return None
+        return max(counts.items(), key=lambda item: item[1])[0]
+
     def summary(
         self,
         *,
         stack_id: str | None,
-        worker_model: str,
-        writing_model: str,
-        audit_model: str,
+        worker_model: str | None,
+        writing_model: str | None,
+        audit_model: str | None,
     ) -> dict[str, Any]:
         measured_models = 0
         input_tokens = sum(item["input_tokens"] for item in self.by_model.values())
@@ -499,10 +559,17 @@ class Prompt2BlogTokenUsageTracker:
             measurement_status = "complete"
         return {
             "stack_id": stack_id or "custom",
+            # Named from the run's routing when it named one, and otherwise
+            # from what the ledger saw answer. A v4 run names nothing.
             "models": {
-                "worker": worker_model,
-                "writer": writing_model,
-                "judge": audit_model,
+                "worker": worker_model or self._busiest_model(),
+                "writer": (
+                    writing_model or self._model_that_answered("stage_v3_compose")
+                ),
+                "judge": (
+                    audit_model
+                    or self._model_that_answered("stage_v3_quality_audit")
+                ),
             },
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,

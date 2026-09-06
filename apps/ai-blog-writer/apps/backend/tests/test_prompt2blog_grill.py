@@ -711,7 +711,18 @@ def test_the_grill_runs_on_its_own_named_job():
     from app.features.prompt2blog.pricing import VERTEX_TOKEN_RATES
 
     served = model_gateway.model_for("p2b.grill")
-    assert served in VERTEX_TOKEN_RATES, "an unpriced model hides its cost"
+    # Either a metered model with a published rate, or a Claude name served by
+    # the subscription CLI. This used to demand a rate outright, on the
+    # reasoning that an unpriced model hides its cost. That held while every
+    # job was Gemini. A subscription call has no per-token price to hide -- the
+    # gateway's rate table declares the `claude-cli` provider unpriceable on
+    # purpose -- and the run ledger reports those calls as `unmetered` rather
+    # than as zero, so the absence is stated rather than concealed. What must
+    # not happen is a model that is neither: metered by some provider and
+    # missing from the table.
+    assert served in VERTEX_TOKEN_RATES or served.startswith("claude-"), (
+        f"{served} is neither priced nor a subscription model, so its cost is hidden"
+    )
     # Judgement, not extraction. A low temperature proposes the safe question
     # rather than the useful one. Temperature stayed in config because it is a
     # property of the call, not of the model.

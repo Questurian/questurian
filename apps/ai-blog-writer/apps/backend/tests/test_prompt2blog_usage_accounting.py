@@ -239,14 +239,14 @@ def test_recording_is_mutually_exclusive():
     seen = threading.Lock()
     real = tracker._record_call
 
-    def _watched(model_name, raw_usage):
+    def _watched(model_name, raw_usage, requested_model=None):
         nonlocal inside, peak
         with seen:
             inside += 1
             peak = max(peak, inside)
         # Wide enough that an unserialised caller is certain to overlap.
         time.sleep(0.001)
-        real(model_name, raw_usage)
+        real(model_name, raw_usage, requested_model)
         with seen:
             inside -= 1
 
@@ -282,3 +282,88 @@ def test_grounded_thinking_is_billed_at_output_rate(monkeypatch):
     assert totals["reasoning_tokens"] == 200
     assert totals["cached_input_tokens"] == 20
     assert totals["total_tokens"] == 350
+
+
+class _Usage:
+    """The token counts a provider hands back, in the shape `normalize_token_usage` reads."""
+
+    def __init__(self, input_tokens: int, output_tokens: int) -> None:
+        self.input_tokens = input_tokens
+        self.output_tokens = output_tokens
+
+
+def test_a_substituted_call_says_what_it_asked_for() -> None:
+    """The chifa run recorded 39 Gemini calls and no sign three asked for Claude.
+
+    Every Claude name is rewritten to a Gemini one when neither Claude path is
+    switched on, and the ledger only ever kept the model that answered. So a
+    run whose outline, groundedness and research structuring were configured
+    for Claude read back as an ordinary all-Gemini run, and nothing in the
+    receipt disagreed with that reading.
+    """
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.begin_stage("stage_v3_outline")
+    tracker.record(
+        "gemini-2.5-flash",
+        _Usage(10, 20),
+        requested_model="claude-sonnet-5-medium",
+    )
+
+    (call,) = tracker.ledger()["calls"]
+    assert call["model"] == "gemini-2.5-flash"
+    assert call["asked_for"] == "claude-sonnet-5-medium"
+
+
+def test_an_honest_call_carries_no_substitution_field() -> None:
+    """Absence is the signal, so an ordinary call must not carry the field."""
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.begin_stage("stage_v3_compose")
+    tracker.record(
+        "gemini-2.5-flash",
+        _Usage(10, 20),
+        requested_model="gemini-2.5-flash",
+    )
+    tracker.record("gemini-2.5-flash", _Usage(10, 20))
+
+    for call in tracker.ledger()["calls"]:
+        assert "asked_for" not in call
+
+
+def test_the_receipt_names_the_models_a_v4_run_actually_used() -> None:
+    """A v4 run requests no routing, so the three role names were all null.
+
+    `writing_request` builds the run's request and never sets `model_routing`,
+    which left the receipt reporting `{"worker": null, "writer": null, "judge":
+    null}` on every finished v4 article. The models were in the ledger the
+    whole time.
+    """
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.begin_stage("stage_v4_research")
+    tracker.record("gemini-2.5-flash", _Usage(10, 20))
+    tracker.record("gemini-2.5-flash", _Usage(10, 20))
+    tracker.begin_stage("stage_v3_compose")
+    tracker.record("claude-opus-5-high", _Usage(10, 20))
+    tracker.begin_stage("stage_v3_quality_audit")
+    tracker.record("gemini-2.5-flash", _Usage(10, 20))
+
+    models = tracker.summary(
+        stack_id=None, worker_model=None, writing_model=None, audit_model=None
+    )["models"]
+    assert models["writer"] == "claude-opus-5-high"
+    assert models["judge"] == "gemini-2.5-flash"
+    assert models["worker"] == "gemini-2.5-flash"
+
+
+def test_a_run_that_named_its_routing_keeps_what_it_named() -> None:
+    """The ledger is the fallback, not an override of an explicit choice."""
+    tracker = Prompt2BlogTokenUsageTracker()
+    tracker.begin_stage("stage_v3_compose")
+    tracker.record("gemini-2.5-flash", _Usage(10, 20))
+
+    models = tracker.summary(
+        stack_id="opus-led-high",
+        worker_model="gemini-2.5-flash-lite",
+        writing_model="claude-opus-5-high",
+        audit_model="gemini-2.5-flash",
+    )["models"]
+    assert models["writer"] == "claude-opus-5-high"

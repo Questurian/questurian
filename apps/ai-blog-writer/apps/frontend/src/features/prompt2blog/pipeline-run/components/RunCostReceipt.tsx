@@ -1,4 +1,3 @@
-import { PROMPT2BLOG_MODEL_STACKS } from '../../constants/prompt2blog.constants'
 import type {
   Prompt2BlogPipelinePayload,
   Prompt2BlogPipelineStage,
@@ -8,7 +7,6 @@ import { PIPELINE_STAGE_LABELS } from '../pipeline-status'
 type RunCost = NonNullable<Prompt2BlogPipelinePayload['run_cost']>
 
 export function RunCostReceipt({ cost }: { cost: RunCost }) {
-  const stack = PROMPT2BLOG_MODEL_STACKS.find(option => option.id === cost.stack_id)
   const coverageLabel = cost.measurement_status === 'complete'
     ? `Measured from all ${cost.measured_calls} successful model calls.`
     : cost.measurement_status === 'partial'
@@ -25,7 +23,10 @@ export function RunCostReceipt({ cost }: { cost: RunCost }) {
     <div className="p2b-run-cost__header">
       <div>
         <span className="p2b-run-cost__eyebrow">Run receipt</span>
-        <h4>{stack?.label || 'Custom stack'}</h4>
+        {/* The model that wrote the article, read off the ledger. This used
+            to be a stack label looked up from a routing id, and v4 requests no
+            routing -- so every receipt said "Custom stack" and named nothing. */}
+        <h4>{cost.models.writer || 'Model not recorded'}</h4>
       </div>
       <div className="p2b-run-cost__total">
         <span>Estimated run cost</span>
