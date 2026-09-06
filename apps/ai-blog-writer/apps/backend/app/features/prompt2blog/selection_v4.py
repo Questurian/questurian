@@ -132,10 +132,29 @@ RANK_SCHEMA = require_non_empty({
 })
 
 
+def handles(claims: list[Any]) -> tuple[dict[str, str], dict[str, str]]:
+    """Short names for the prompt, and the map back to real claim ids.
+
+    Claim ids are namespaced by the question that produced them, so they run to
+    76 characters -- `req_neighbourhood_chifa_characteristics:ncc_18`. Asked to
+    copy a hundred of those, a model shortens them: the first real ranking came
+    back correctly ordered, with good reasoning, and every id rewritten to
+    `ncc_18` or invented outright as `clm_titi_name`. Not one of 102 matched,
+    and the ranking was thrown away.
+
+    This is #499 again -- a model copies a short handle and the application
+    restores the real value -- and the same answer works. The handle carries no
+    meaning, so there is nothing in it to abbreviate.
+    """
+    to_handle = {claim.claim_id: f"f{index}" for index, claim in enumerate(claims, 1)}
+    return to_handle, {handle: real for real, handle in to_handle.items()}
+
+
 def build_dedupe_prompt(evidence: EvidencePackage) -> str:
     """Group the claims that are the same fact. Nothing else."""
+    to_handle, _ = handles(list(evidence.claims))
     claims = "\n".join(
-        f"- {claim.claim_id} | {claim.text}" for claim in evidence.claims
+        f"- {to_handle[claim.claim_id]} | {claim.text}" for claim in evidence.claims
     )
     return f"""\
 You are grouping research findings that say the same thing.
@@ -148,7 +167,7 @@ CLAIMS
 {claims}
 
 Return strict JSON only:
-{{"groups": [{{"keep": "claim_id", "same_as": ["claim_id"], "why": "string"}}]}}
+{{"groups": [{{"keep": "f1", "same_as": ["f7"], "why": "string"}}]}}
 
 Rules:
 - Only group claims asserting THE SAME FACT. Different wording, different
@@ -166,8 +185,10 @@ Rules:
   fact, however similar the sentence.
 - Return only groups that actually contain a duplicate. A claim with no
   duplicate does not need a group of its own.
-- Every id you return must be one of the ids above, and no id may appear twice
-  anywhere in your answer.
+- Use the labels above exactly as written (f1, f2, ...). Never invent a
+  label, never shorten one, and never use any other name for a claim.
+- Every label you return must be one of the labels above, and no label may
+  appear twice anywhere in your answer.
 """
 
 
@@ -177,7 +198,8 @@ def build_rank_prompt(
     claims: list[Any],
 ) -> str:
     """Order what survived by how much this particular article needs it."""
-    listed = "\n".join(f"- {claim.claim_id} | {claim.text}" for claim in claims)
+    to_handle, _ = handles(claims)
+    listed = "\n".join(f"- {to_handle[claim.claim_id]} | {claim.text}" for claim in claims)
     return f"""\
 You are deciding which facts an article actually needs.
 
@@ -197,7 +219,7 @@ THE FACTS
 {listed}
 
 Return strict JSON only:
-{{"ranked": [{{"claim_id": "string", "why": "string"}}]}}
+{{"ranked": [{{"claim_id": "f1", "why": "string"}}]}}
 
 Rules:
 - Most needed first. The fact the article cannot be written without goes at the
@@ -214,7 +236,9 @@ Rules:
   generally outranks a general characterisation.
 - `why` is one short sentence saying what the article uses this for. It is read
   by a person choosing where to draw the line.
-- EVERY claim id above must appear exactly once. Ranking is ordering, not
+- Use the labels above exactly as written (f1, f2, ...). Never invent a
+  label, never shorten one, and never use any other name for a claim.
+- EVERY label above must appear exactly once. Ranking is ordering, not
   selecting -- the cut is made by somebody else, after you.
 """
 
@@ -318,6 +342,7 @@ def _deduplicate(
     Never raises. A dedupe that fails leaves every claim standing, which is
     exactly how the pipeline behaved before this existed.
     """
+    _, from_handle = handles(list(evidence.claims))
     known = {claim.claim_id for claim in evidence.claims}
     try:
         parsed, _raw = dependencies.llm.invoke_json(
@@ -334,11 +359,11 @@ def _deduplicate(
 
     merged: dict[str, str] = {}
     for group in _rows(parsed, "groups"):
-        survivor = _safe_str(group.get("keep"))
+        survivor = from_handle.get(_safe_str(group.get("keep")), "")
         if survivor not in known or survivor in merged:
             continue
         for loser in group.get("same_as") or []:
-            loser = _safe_str(loser)
+            loser = from_handle.get(_safe_str(loser), "")
             # Every guard here is the same guard: a claim is in exactly one
             # group, is never merged into itself, and is never merged into
             # something that was itself merged away. A cycle or a chain would
@@ -366,6 +391,7 @@ def _rank(
     chose to cut.
     """
     order = [claim.claim_id for claim in survivors]
+    _, from_handle = handles(survivors)
     try:
         parsed, _raw = dependencies.llm.invoke_json(
             job_id=dependencies.rank_job_id,
@@ -383,7 +409,7 @@ def _rank(
     ranked: list[str] = []
     reasons: dict[str, str] = {}
     for row in _rows(parsed, "ranked"):
-        claim_id = _safe_str(row.get("claim_id"))
+        claim_id = from_handle.get(_safe_str(row.get("claim_id")), "")
         if claim_id in remaining:
             remaining.discard(claim_id)
             ranked.append(claim_id)
@@ -397,7 +423,11 @@ def _rank(
             len(order),
         )
     ranked.extend(item for item in order if item in remaining)
-    return ranked, reasons, True
+    # A call that returned is not a ranking that happened. The first real run
+    # came back with 102 rows and matched none of them, and this reported
+    # itself as ranked -- so a line was drawn at 18 through a list in the order
+    # research happened to return, which is not a decision anyone made.
+    return ranked, reasons, bool(ranked and not remaining == set(order))
 
 
 def select_evidence(
@@ -422,11 +452,13 @@ def select_evidence(
             "Ranking did not run, so this order is the dossier's own and says "
             "nothing about what the article needs."
         )
-    if not deduped and not ranked:
-        # Neither pass ran. Drawing a line through an unranked list would cut
-        # facts by the order they were gathered in, which is not a decision.
+    if not ranked:
+        # Drawing a line through an unranked list cuts facts by the order they
+        # were gathered in, which is not a decision anybody made. Deduplication
+        # succeeding does not rescue that: merging repeats says nothing about
+        # which of the survivors this article needs.
         keep_count = len(order)
-        notes.append("Every fact is kept, because nothing looked at them.")
+        notes.append("Every fact is kept, because nothing ordered them.")
 
     return Selection(
         order=order,
@@ -449,10 +481,14 @@ def apply_selection(
     stands down, so deduplication cannot cost a claim its provenance and cannot
     take a question's only answer away from it.
 
-    Requirement `claim_ids` are left exactly as research recorded them. They
-    are what the coverage verdict reads, and rewriting them here would turn an
-    editorial cut into a research failure -- the one thing selection must never
-    be able to do.
+    The requirement side of that link is mirrored, and only ever added to. The
+    contract requires the two directions to agree, so handing a survivor the
+    questions its merged claims answered without also naming it on those
+    questions produces a dossier that will not validate -- which is how the
+    first real run died at the hand-off. Nothing is ever removed from a
+    requirement here: a question can only gain a claim it is genuinely
+    supported by, so coverage after selection is never weaker than before it.
+    An editorial cut must not be able to become a research failure.
 
     A claim the ranking never saw is kept. The gate can add one after selection
     has run -- an operator answering a question themselves mints a claim
@@ -472,6 +508,11 @@ def apply_selection(
             continue
         extra_sources.setdefault(survivor, []).extend(by_id[loser].source_ids)
         extra_requirements.setdefault(survivor, []).extend(by_id[loser].requirement_ids)
+
+    gained: dict[str, set[str]] = {}
+    for survivor, requirement_ids in extra_requirements.items():
+        for requirement_id in requirement_ids:
+            gained.setdefault(requirement_id, set()).add(survivor)
 
     claims = []
     for claim in evidence.claims:
@@ -495,7 +536,20 @@ def apply_selection(
                 }
             )
         )
-    return evidence.model_copy(update={"claims": claims})
+    requirements = [
+        requirement.model_copy(
+            update={
+                "claim_ids": _extended(
+                    requirement.claim_ids,
+                    sorted(gained.get(requirement.requirement_id, ())),
+                )
+            }
+        )
+        if requirement.requirement_id in gained
+        else requirement
+        for requirement in evidence.requirements
+    ]
+    return evidence.model_copy(update={"claims": claims, "requirements": requirements})
 
 
 def _extended(existing: list[str], added: list[str] | None) -> list[str]:

@@ -163,7 +163,7 @@ def test_the_same_fact_twice_becomes_one_and_keeps_both_its_sources():
     """Deduplication must not lose provenance. A merged claim hands the
     survivor its sources and its questions before it stands down."""
     evidence = _package(3)
-    llm = _LLM(groups=[{"keep": "c1", "same_as": ["c2"]}], ranked=["c1", "c3"])
+    llm = _LLM(groups=[{"keep": "f1", "same_as": ["f2"]}], ranked=["f1", "f3"])
 
     selection = _select(evidence, llm)
     applied = apply_selection(evidence, selection)
@@ -183,11 +183,11 @@ def test_dedupe_never_leaves_a_claim_pointing_at_a_claim_nobody_can_see():
     evidence = _package(3)
     llm = _LLM(
         groups=[
-            {"keep": "c1", "same_as": ["c2"]},
-            # c1 merged away here. Following both would leave c2 orphaned.
-            {"keep": "c3", "same_as": ["c1"]},
+            {"keep": "f1", "same_as": ["f2"]},
+            # f1 merged away here. Following both would leave f2 orphaned.
+            {"keep": "f3", "same_as": ["f1"]},
         ],
-        ranked=["c1", "c2", "c3"],
+        ranked=["f1", "f2", "f3"],
     )
 
     selection = _select(evidence, llm)
@@ -200,7 +200,7 @@ def test_a_claim_the_ranker_forgot_is_kept_not_cut():
     """An omission from a model is not an editorial decision. Treating one as
     a cut would drop a fact nobody chose to drop."""
     evidence = _package(12)
-    llm = _LLM(groups=[], ranked=["c5", "c3"])
+    llm = _LLM(groups=[], ranked=["f5", "f3"])
 
     selection = _select(evidence, llm)
 
@@ -216,9 +216,9 @@ def test_a_failed_pass_keeps_every_fact_and_says_which_one_fell_over():
     both_down = _select(evidence, _LLM(groups=None, ranked=None))
     assert both_down.deduped is False and both_down.ranked is False
     assert both_down.keep_count == 40, "an unranked order is not a ranking to cut"
-    assert "nothing looked at them" in both_down.note
+    assert "nothing ordered them" in both_down.note
 
-    rank_only = _select(evidence, _LLM(groups=None, ranked=[f"c{i}" for i in range(1, 41)]))
+    rank_only = _select(evidence, _LLM(groups=None, ranked=[f"f{i}" for i in range(1, 41)]))
     assert rank_only.deduped is False and rank_only.ranked is True
     assert rank_only.keep_count == 18
     assert "Deduplication did not run" in rank_only.note
@@ -228,7 +228,7 @@ def test_a_deselected_claim_leaves_the_desk_and_never_the_record():
     """The rule that makes the cut safe, and the one it must never break: a
     question its claim supported is still supported."""
     evidence = _package(40)
-    llm = _LLM(groups=[], ranked=[f"c{index}" for index in range(1, 41)])
+    llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 41)])
 
     applied = apply_selection(evidence, _select(evidence, llm))
     selected = [claim for claim in applied.claims if claim.selected]
@@ -243,7 +243,7 @@ def test_a_fact_added_after_the_ranking_still_reaches_the_writer():
     answering a question themselves. A fact somebody typed in to unblock the
     article being silently cut from it is the worst failure this could have."""
     evidence = _package(40)
-    llm = _LLM(groups=[], ranked=[f"c{index}" for index in range(1, 41)])
+    llm = _LLM(groups=[], ranked=[f"f{index}" for index in range(1, 41)])
     selection = _select(evidence, llm)
 
     late = evidence.claims[0].model_copy(
@@ -258,7 +258,7 @@ def test_a_fact_added_after_the_ranking_still_reaches_the_writer():
 def test_the_ranker_is_told_what_the_piece_fails_if_it_does_not_do():
     """Ranking is against this brief, not against general interest."""
     evidence = _package(3)
-    llm = _LLM(groups=[], ranked=["c1", "c2", "c3"])
+    llm = _LLM(groups=[], ranked=["f1", "f2", "f3"])
 
     _select(evidence, llm)
 
@@ -274,7 +274,7 @@ def test_dedupe_is_told_a_summary_and_its_details_are_not_duplicates():
     listing seven dishes and four describing four of them are two levels of
     zoom, not a duplicate."""
     evidence = _package(2)
-    llm = _LLM(groups=[], ranked=["c1", "c2"])
+    llm = _LLM(groups=[], ranked=["f1", "f2"])
 
     _select(evidence, llm)
 
@@ -368,3 +368,97 @@ def test_the_shortlist_says_when_the_line_was_not_what_decided_it():
 
     assert rows["c3"]["rescued"] is True and rows["c3"]["selected"] is True
     assert rows["c2"]["rescued"] is False and rows["c2"]["selected"] is False
+
+
+def test_the_models_are_given_short_labels_not_long_claim_ids():
+    """Claim ids are namespaced by their question and run to 76 characters.
+    Asked to copy a hundred of those, the first real run's ranker came back
+    correctly ordered, with good reasoning, and every id rewritten from
+    `req_neighbourhood_chifa_characteristics:ncc_18` to `ncc_18`. None of 102
+    matched. This is #499 again and takes the same answer."""
+    evidence = _package(3)
+    long_ids = [
+        claim.model_copy(update={"claim_id": f"req_a_very_long_question_name:{claim.claim_id}"})
+        for claim in evidence.claims
+    ]
+    evidence = evidence.model_copy(
+        update={
+            "claims": long_ids,
+            "requirements": [
+                evidence.requirements[0].model_copy(
+                    update={"claim_ids": [claim.claim_id for claim in long_ids]}
+                )
+            ],
+        }
+    )
+    llm = _LLM(groups=[{"keep": "f1", "same_as": ["f2"]}], ranked=["f2", "f1"])
+
+    selection = _select(evidence, llm)
+
+    for prompt in llm.prompts:
+        assert "req_a_very_long_question_name" not in prompt
+        assert "- f1 |" in prompt
+    # And the handles come back as the real ids, not as themselves.
+    assert selection.merged == {
+        "req_a_very_long_question_name:c2": "req_a_very_long_question_name:c1"
+    }
+    # Ranking's labels are numbered over the SURVIVORS, so f2 is the second
+    # claim still standing (c3) rather than the second claim in the dossier
+    # (c2, which was merged away). Sharing one numbering across both calls
+    # would silently point the ranking at the wrong facts.
+    assert selection.order == [
+        "req_a_very_long_question_name:c3",
+        "req_a_very_long_question_name:c1",
+    ]
+
+
+def test_a_ranking_that_matched_nothing_is_not_a_ranking():
+    """The exact shape of the first real run's failure: 102 rows returned, none
+    of them a claim. Reporting that as ranked drew a line at 18 through a list
+    in the order research happened to return it, which is not a decision."""
+    evidence = _package(40)
+    llm = _LLM(groups=[], ranked=["nonsense_1", "nonsense_2"])
+
+    selection = _select(evidence, llm)
+
+    assert selection.ranked is False
+    assert selection.keep_count == 40, "an unranked order is not a ranking to cut"
+    assert "Ranking did not run" in selection.note
+
+
+def test_a_merge_leaves_the_dossier_still_valid():
+    """The contract requires claim->requirement and requirement->claim to
+    agree. Handing a survivor the questions its merged claims answered without
+    naming it on those questions produces a package that will not validate --
+    which is how the first real run died, at the hand-off, after research was
+    already paid for."""
+    evidence = _package(3)
+    # c2 answers a different question from c1, and is merged into it.
+    claims = [
+        evidence.claims[0],
+        evidence.claims[1].model_copy(update={"requirement_ids": ["r2"]}),
+        evidence.claims[2],
+    ]
+    evidence = evidence.model_copy(
+        update={
+            "claims": claims,
+            "requirements": [
+                evidence.requirements[0].model_copy(update={"claim_ids": ["c1", "c3"]}),
+                EvidenceRequirement(
+                    requirement_id="r2", status="supported", claim_ids=["c2"]
+                ),
+            ],
+        }
+    )
+    llm = _LLM(groups=[{"keep": "f1", "same_as": ["f2"]}], ranked=["f1", "f2"])
+
+    applied = apply_selection(evidence, _select(evidence, llm))
+
+    # Revalidating is the whole test: this is what the hand-off does.
+    EvidencePackage.model_validate(applied.model_dump(mode="json"))
+    survivor = next(c for c in applied.claims if c.claim_id == "c1")
+    assert set(survivor.requirement_ids) == {"r1", "r2"}
+    r2 = next(r for r in applied.requirements if r.requirement_id == "r2")
+    # Added to, never taken from: r2 keeps c2 and gains the claim that absorbed
+    # it, so coverage after selection is never weaker than before it.
+    assert set(r2.claim_ids) == {"c1", "c2"}

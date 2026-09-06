@@ -662,6 +662,14 @@ def settle_gate(
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
+    # A run that arrives here was blocked when research finished, so selection
+    # never ran -- `do_research` only selects on a dossier that can be written.
+    # Without this a run that was ever blocked writes from every claim it
+    # found, silently, which is the behaviour #534 exists to end. Found by the
+    # first real run: no test could catch it, because the gate is where a
+    # blocked run and a clean one stop being the same code path.
+    if verdict.can_write and load_selection(run_id) is None:
+        _select_evidence(run_id, services, load_brief(run_id), work_order, evidence)
     return verdict
 
 
