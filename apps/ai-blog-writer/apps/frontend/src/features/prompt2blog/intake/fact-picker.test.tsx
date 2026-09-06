@@ -162,4 +162,28 @@ describe('the fact picker', () => {
 
     await waitFor(() => expect(container).toBeEmptyDOMElement())
   })
+
+  it('marks the rows that are there for colour', async () => {
+    // Cutting one of these costs the piece something a price band cannot
+    // replace, so the operator has to be able to see which they are.
+    readSelection.mockResolvedValue(
+      review({
+        keep_count: 2,
+        claims: [
+          claim(),
+          claim({
+            claim_id: 'c2',
+            rank: 2,
+            selected: true,
+            texture: true,
+            text: 'The walls are covered in football flags; the owner is Argentine.',
+          }),
+        ],
+      }),
+    )
+
+    render(<FactPicker runId="run-1" onChanged={vi.fn()} />)
+
+    expect(await screen.findByText('colour')).toBeInTheDocument()
+  })
 })

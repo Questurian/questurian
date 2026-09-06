@@ -49,6 +49,12 @@ function Fact({
       <span className="p2b-fact-rank">{claim.rank}</span>
       <div className="p2b-fact-body">
         <p className="p2b-fact-text">{claim.text}</p>
+        {claim.texture && (
+          /* Named, because the reserve is the only reason it is here. An
+             operator cutting it should know they are cutting the colour, not
+             trimming a duplicate. */
+          <span className="p2b-fact-colour">colour</span>
+        )}
         {claim.why && <p className="p2b-fact-why">{claim.why}</p>}
         {claim.merged_in.length > 0 && (
           /* Said rather than hidden: the operator should be able to see that

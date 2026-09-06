@@ -1388,3 +1388,17 @@
 .p2b-fact-actions {
   flex-shrink: 0;
 }
+
+/* A detail kept for colour rather than proof. Quiet: it labels a row, it does
+   not decorate one. */
+.p2b-fact-colour {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
