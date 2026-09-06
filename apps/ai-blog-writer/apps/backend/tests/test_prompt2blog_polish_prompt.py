@@ -104,7 +104,22 @@ def test_it_forbids_inventing_anything_to_fix_the_prose():
     prompt = _prompt()
 
     assert "Invent nothing" in prompt
-    assert "Keep every fact, figure and proper noun exactly as it is" in prompt
+    assert "Every fact you keep stays exactly as it is" in prompt
+
+
+def test_it_may_drop_a_detail_but_never_a_qualification():
+    """"Keep every fact" preserved the density this pass exists to relieve.
+
+    A paragraph holding six facts in forty words is a list, and the fix is to
+    let one of them go. The one thing that may never go is the caveat that
+    makes a fact true -- that is not spare length, it is the sentence being
+    correct.
+    """
+    prompt = " ".join(_prompt().split())
+
+    assert "You may drop a nonessential detail" in prompt
+    assert "never the thing you cut to make room" in prompt
+    assert "never a figure the article's argument rests on" in prompt
 
 
 def test_readiness_blockers_and_audit_problems_join_the_list():

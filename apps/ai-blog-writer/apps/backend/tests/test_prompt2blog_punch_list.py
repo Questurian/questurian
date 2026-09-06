@@ -217,6 +217,7 @@ def test_the_prompt_forbids_stating_the_value_and_says_why():
         article_markdown=ARTICLE,
         evidence=_evidence(),
         unused=[],
+        reserved=[],
     )
     flat = " ".join(prompt.split())
 
@@ -377,6 +378,7 @@ def test_the_prompt_finally_reads_the_line_that_defines_failure():
         article_markdown=ARTICLE,
         evidence=_evidence(),
         unused=[],
+        reserved=[],
     )
 
     assert "IT FAILS IF: reads like a tourist board" in prompt
@@ -390,6 +392,7 @@ def test_the_prompt_says_it_is_not_a_rewrite_and_not_a_score():
         article_markdown=ARTICLE,
         evidence=_evidence(),
         unused=[],
+        reserved=[],
     )
 
     assert "Not a rewrite. Not a score." in prompt
@@ -402,6 +405,7 @@ def test_the_read_is_given_the_headline_as_a_promise_to_the_reader():
         article_markdown=ARTICLE,
         evidence=_evidence(),
         unused=[],
+        reserved=[],
     )
     flat = " ".join(prompt.split())
 
@@ -449,6 +453,7 @@ def test_the_punch_list_may_not_ask_for_a_research_absence_to_be_stated():
         article_markdown=ARTICLE,
         evidence=_evidence(),
         unused=[],
+        reserved=[],
     )
     flat = " ".join(prompt.split())
 
@@ -466,7 +471,86 @@ def test_an_article_that_leaves_an_absence_out_has_done_the_right_thing():
             article_markdown=ARTICLE,
             evidence=_evidence(),
             unused=[],
+            reserved=[],
         ).split()
     )
 
     assert "has done the right thing rather than missed something" in prompt
+
+# --- the last editing aid may not undo the editorial cut --------------------
+#
+# Every stage before this one narrows what the article is written from. The
+# punch list runs after the article is finished and sees the whole dossier, so
+# it is the one place that could hand back everything the cut removed, labelled
+# as work the article forgot.
+
+
+def _cut_evidence() -> EvidencePackage:
+    """The fixture, with the second fact deliberately not chosen."""
+    package = _evidence()
+    return package.model_copy(
+        update={
+            "claims": [
+                package.claims[0],
+                package.claims[1].model_copy(update={"selected": False}),
+            ]
+        }
+    )
+
+
+def test_a_fact_a_person_cut_is_not_reported_as_one_the_article_missed():
+    """Both are unused. Only one of them is a defect."""
+    evidence = _cut_evidence()
+
+    missed = unused_claims(evidence, "## H\n\nNothing from either fact.")
+    reserved = unused_claims(evidence, "## H\n\nNothing from either fact.", reserve=True)
+
+    assert [item["claim_id"] for item in missed] == ["c1"]
+    assert [item["claim_id"] for item in reserved] == ["c2"]
+
+
+def test_the_reserve_reaches_the_read_labelled_as_a_change_of_scope():
+    evidence = _cut_evidence()
+    prompt = build_punch_list_prompt(
+        brief=_brief(),
+        title="t",
+        article_markdown=ARTICLE,
+        evidence=evidence,
+        unused=[],
+        reserved=[{"claim_id": "c2", "text": evidence.claims[1].text}],
+    )
+    flat = " ".join(prompt.split())
+
+    assert "IN RESERVE" in prompt
+    assert "Raising one is a change of scope, not a missed fact" in flat
+    # And the reserve is not in the block describing what the writer had, or
+    # the read would treat it as material the article simply skipped.
+    desk = prompt.split("WHAT THE WRITER HAD", 1)[1].split("CHOSEN AND NEVER USED", 1)[0]
+    assert "c1" in desk
+    assert "c2" not in desk
+
+
+def test_an_item_resting_on_a_reserve_fact_is_marked_as_a_scope_change():
+    """Not dropped. The operator may well want it -- they are entitled to know
+    they are reversing their own decision rather than filling a hole."""
+    result = _run(
+        {
+            "items": [
+                {
+                    "kind": "add_sentence",
+                    "heading": "The dig",
+                    "where": "the adobe",
+                    "note": "The bookshelf rows are worth a line here.",
+                    "needs": "have_it",
+                    "claim_ids": ["c2"],
+                }
+            ]
+        },
+        evidence=_cut_evidence(),
+    )
+
+    item = result["items"][0]
+    assert item["scope_change"] is True
+    # The fact is still quoted from the dossier, so the note cannot misstate
+    # what it is asking for.
+    assert [entry["claim_id"] for entry in item["have"]] == ["c2"]

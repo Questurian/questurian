@@ -99,6 +99,8 @@ def article_headings(markdown: str) -> list[str]:
 def unused_claims(
     evidence: EvidencePackage,
     article_markdown: str,
+    *,
+    reserve: bool = False,
 ) -> list[dict[str, str]]:
     """Claims the run researched, graded and then did not use.
 
@@ -110,11 +112,20 @@ def unused_claims(
     article. Deliberately generous -- one match is enough -- because telling an
     operator they left something out when they did not is worse than staying
     quiet about one they did.
+
+    `reserve` splits the two kinds of unused. A fact the writer had and did not
+    place is an ordinary miss and the safest item on the list. A fact a person
+    deliberately cut before the writing started is not a miss at all: raising
+    it as one asks the operator to undo their own decision at the last step,
+    which is the editing aid refilling the article the earlier stages carefully
+    reduced.
     """
     article_numbers = _numbers(article_markdown)
     article_names = _proper_nouns(article_markdown)
     missed: list[dict[str, str]] = []
     for claim in evidence.claims:
+        if claim.merged_into or claim.selected == reserve:
+            continue
         figures = _numbers(claim.text)
         names = _proper_nouns(claim.text)
         if not figures and not names:
@@ -179,16 +190,25 @@ def build_punch_list_prompt(
     article_markdown: str,
     evidence: EvidencePackage,
     unused: list[dict[str, str]],
+    reserved: list[dict[str, str]],
 ) -> str:
     """Ask for the read a person would give it, with the run's own material."""
     headings = "\n".join(f"- {heading}" for heading in article_headings(article_markdown))
     dossier = (
-        "\n".join(f"- [{claim.claim_id}] {claim.text}" for claim in evidence.claims)
+        "\n".join(
+            f"- [{claim.claim_id}] {claim.text}"
+            for claim in evidence.claims
+            if claim.selected and not claim.merged_into
+        )
         or "- Nothing. Every item you raise is the second kind."
     )
     never_used = (
         "\n".join(f"- [{item['claim_id']}] {item['text']}" for item in unused)
-        or "- None. Everything researched reached the piece in some form."
+        or "- None. Everything the writer had reached the piece in some form."
+    )
+    in_reserve = (
+        "\n".join(f"- [{item['claim_id']}] {item['text']}" for item in reserved)
+        or "- None. Nothing was held back."
     )
     return f"""Read this finished article the way an editor would, and list what one
 person should fix by hand in twenty minutes.
@@ -220,13 +240,23 @@ which kind it is.
 THE HEADINGS YOU MAY POINT AT
 {headings or "- The article has no headings."}
 
-WHAT THE RESEARCH ESTABLISHED
+WHAT THE WRITER HAD
+A person chose these facts for this article before it was written. Research
+found more; the rest is below, and it is not work the article forgot.
 {dossier}
 
-RESEARCHED AND NEVER USED
-These were checked and graded before the writing started, and did not make the
-article. They are the safest items on the list: the article can use them today.
+CHOSEN AND NEVER USED
+These were on the writer's desk and did not make the article. They are the
+safest items on the list: the article can use them today.
 {never_used}
+
+IN RESERVE
+Research found these and a person decided this article does not need them.
+Raising one is a change of scope, not a missed fact. Only do it when leaving it
+out actually costs the reader something -- and say so in those terms, so
+whoever reads your note is making the same decision again rather than
+discovering it was made for them.
+{in_reserve}
 
 THE ARTICLE
 {article_markdown}
@@ -318,6 +348,13 @@ def _valid_items(
     headings = article_headings(article_markdown)
     by_heading = {heading.casefold(): heading for heading in headings}
     claims = {claim.claim_id: claim.text for claim in evidence.claims}
+    # Facts a person cut before the writing started. An item resting on one is
+    # a scope change and is labelled as such rather than dropped: the operator
+    # may well want it, and they are entitled to know they are reversing their
+    # own decision rather than filling a hole.
+    reserve = {
+        claim.claim_id for claim in evidence.claims if not claim.selected
+    }
 
     items: list[dict[str, Any]] = []
     dropped: list[str] = []
@@ -374,6 +411,7 @@ def _valid_items(
                 # Quoted from the dossier, never from the model, so an item
                 # cannot misstate the fact it is pointing at.
                 "have": [{"claim_id": claim_id, "text": claims[claim_id]} for claim_id in cited],
+                "scope_change": any(claim_id in reserve for claim_id in cited),
             }
         )
         if len(items) == MAX_ITEMS:
@@ -392,6 +430,7 @@ def build_punch_list(
 ) -> dict[str, Any]:
     """One model call over a finished article, plus the checks that are free."""
     unused = unused_claims(evidence, article_markdown)
+    reserved = unused_claims(evidence, article_markdown, reserve=True)
     parsed, _raw = llm.invoke_json(
             job_id="p2b.notes",
         prompt=build_punch_list_prompt(
@@ -400,6 +439,7 @@ def build_punch_list(
             article_markdown=article_markdown,
             evidence=evidence,
             unused=unused,
+            reserved=reserved,
         ),
         model_name=model_name,
         schema=PUNCH_LIST_SCHEMA,
@@ -417,5 +457,9 @@ def build_punch_list(
         # stands on its own: these were researched, graded, and never used,
         # whatever the model did or did not say about them.
         "researched_and_unused": unused,
+        # Named apart, and never merged into the list above. An operator
+        # scanning one list cannot tell a fact the writer missed from a fact
+        # they themselves cut, and the second one is not a defect.
+        "in_reserve": reserved,
         "dropped": dropped,
     }

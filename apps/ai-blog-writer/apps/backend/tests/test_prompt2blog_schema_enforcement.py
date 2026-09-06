@@ -113,49 +113,60 @@ def test_the_compose_prompt_carries_the_target_word_count():
     assert "{section_budget}" not in P2B_V3_COMPOSE_PROMPT
 
 
-# --- the outline's facts arrive grouped, and the grouping is a real field ---
+# --- the outline's facts arrive grouped by what each one is for -------------
 
 
-def test_facts_reach_the_outline_under_more_than_one_heading():
-    """`getattr(claim, "subject", "")` read a field that has never existed.
+def test_the_outline_groups_on_a_field_that_exists():
+    """`getattr(claim, "subject", "")` read a field that has never existed, so
+    every fact in every run landed under "General" and the grouping that
+    function existed for never once happened. Its replacement grouped on the
+    work order's search groups, which inherited the research plan's shape.
 
-    `NormalizedClaim` carries claim_id, text, source_ids, requirement_ids,
-    as_of and confidence. The default swallowed the miss, so every fact in
-    every run landed under "General" and the grouping this function exists for
-    never once happened.
+    Facts now arrive grouped by their packet role, which is a declared field on
+    a declared model -- there is nothing left for a default to swallow.
     """
-    from app.features.prompt2blog.evidence_v3 import NormalizedClaim
+    from app.features.prompt2blog.packet_v4 import PacketFact
 
-    assert not hasattr(NormalizedClaim, "subject")
-    assert "subject" not in NormalizedClaim.model_fields, (
-        "if a real subject field is added, group on it directly rather than "
-        "through the work order's search groups"
-    )
+    assert "role" in PacketFact.model_fields
 
 
 # --- Phase 2: the pipeline stops arguing with itself -----------------------
 
 
-def test_the_audit_is_told_which_questions_the_evidence_answered():
-    """It asked repair to add water-fountain information that research had
-    already filed unsupported, and repair is forbidden to invent facts."""
-    from app.features.prompt2blog.instructions_v3 import _support_status
+def test_the_audit_is_told_it_may_not_ask_for_what_was_not_chosen():
+    """It once asked repair to add water-fountain information that research had
+    already filed unsupported, and repair is forbidden to invent facts.
 
-    class _Requirement:
-        def __init__(self, rid, status, gap=""):
-            self.requirement_id, self.status, self.gap = rid, status, gap
+    The old answer was to hand the audit every research question with its
+    status. That is a checklist, and an auditor holding one asks for the facts
+    a person deliberately cut -- undoing the editorial cut through the two
+    stages downstream of it. It is now told the shape of what happened rather
+    than its contents.
+    """
+    from app.features.prompt2blog.instructions_v3 import _packet_support_body
+    from app.features.prompt2blog.packet_v4 import PacketFact, WritingPacket
 
-    class _Evidence:
-        requirements = [
-            _Requirement("r1", "supported"),
-            _Requirement("water_refill_points", "unpublished", "No public fountains found."),
-        ]
+    packet = WritingPacket(
+        brief_fingerprint="bf",
+        work_order_fingerprint="wo",
+        evidence_fingerprint="ev",
+        selection_fingerprint="sel",
+        target_word_count=900,
+        facts=[
+            PacketFact(claim_id="c1", text="A fact.", confidence="high"),
+        ],
+        notes=[],
+        supplied_material=[],
+    )
 
-    text = _support_status(_Evidence())
+    text = _packet_support_body(packet)
 
-    assert "r1: supported" in text
-    assert "water_refill_points: unpublished — No public fountains found." in text
+    assert "1 facts, chosen for this article by a person" in text
+    assert "Neither is a hole." in text
     assert "forbidden to invent" in text
+    # And nothing that could be read as a list of work still owing.
+    assert "unpublished" not in text
+    assert "water_refill_points" not in text
 
 
 def test_a_skipped_repair_says_why_rather_than_only_needs_revision():

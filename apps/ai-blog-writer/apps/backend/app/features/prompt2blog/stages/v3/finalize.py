@@ -8,6 +8,7 @@ from ...content.markdown import _build_markdown
 from ...dependencies import PipelineDependencies
 from ...graph.state import Prompt2BlogV3GraphState
 from ...instructions_v3 import stage_context_manifest
+from ...packet_v4 import WritingPacket
 from ...policies import evaluate_readiness
 from ...pricing import Prompt2BlogTokenUsageTracker
 from ...quality import CONSTRAINT_MEASUREMENT_KEYS, _build_constraint_checks
@@ -140,6 +141,11 @@ def run_v3_finalize_stage(
         },
         "instruction_meta": instruction_meta,
         "evidence_receipt": instruction_meta.get("evidence_receipt", {}),
+        # What the writer actually had, as against what was researched. The
+        # first question anybody asks about a thin article is whether the fact
+        # was missing or cut, and without this the finished run cannot answer
+        # it -- the dossier alone shows only what was found.
+        "packet_receipt": WritingPacket.model_validate(state["packet"]).receipt(),
         "improved_article": {"title": final_title, "content": final_content},
         "final_markdown": final_markdown,
         "run_cost": run_cost,

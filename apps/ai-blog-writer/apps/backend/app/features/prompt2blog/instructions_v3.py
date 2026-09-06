@@ -350,37 +350,53 @@ def _form_structure(form_instructions: str) -> str:
     )
 
 
-def _support_status(evidence: NormalizedEvidence) -> str:
-    """Which questions the evidence actually answered.
+def _packet_support_body(packet: WritingPacket) -> str:
+    """What the writer had, so the audit does not ask for what it did not.
 
-    The audit sees the work order's questions and a single grounding verdict,
-    and cannot tell a draft that forgot available material from one that
-    correctly omitted a question nothing supports. On run 95a74dce it read
-    `water_refill_points` in the requirements, did not know research had
-    filed it unsupported, and told repair to add water-fountain information --
-    which repair is forbidden to invent. The revision could not be satisfied
-    by the stage it was addressed to, in any run.
+    The audit used to receive every research question with its status. That
+    block existed for a real reason -- on run 95a74dce it read
+    `water_refill_points` in the requirements, did not know research had filed
+    it unsupported, and told repair to add water-fountain information, which
+    repair is forbidden to invent -- and it solved that problem by handing the
+    judge a checklist.
 
-    A status line answers that. The evidence ledger itself is 66,000
-    characters and is not the way to tell the audit this.
+    A checklist is what the redesign is removing. An auditor that can see the
+    facts a person cut will ask for them back, repair will oblige as far as it
+    can, and the editorial cut is undone by the two stages downstream of it.
+    So the audit is told the shape of what happened and not its contents: a
+    person chose, material outside the draft is not a hole, and the only
+    limitations named are the ones that constrain the facts actually used.
     """
-    lines = ["SUPPORT AND OMISSION"]
-    for requirement in evidence.requirements:
-        gap = f" — {requirement.gap}" if requirement.gap else ""
-        lines.append(f"- {requirement.requirement_id}: {requirement.status}{gap}")
-    lines.append(
-        "\nA question whose status is not `supported` has no evidence behind it. "
-        "A draft that omits it is correct, and asking for it in "
-        "required_revisions asks repair for a fact it is forbidden to invent. "
-        "If the omission matters, say the article needs more research rather "
-        "than more writing."
-    )
+    lines = [
+        "WHAT THE WRITER HAD",
+        f"- {len(packet.facts)} facts, chosen for this article by a person out "
+        "of a larger dossier.",
+        "- Material that is not in the draft was either never found or "
+        "deliberately not chosen. Neither is a hole. Asking for it in "
+        "required_revisions asks repair for a fact it is forbidden to invent, "
+        "and a revision the stage it is addressed to cannot satisfy is a "
+        "revision that fails in every run.",
+        "- If something the brief itself promises is genuinely unsupported, "
+        "say the article needs more research rather than more writing.",
+    ]
+    if notes := _packet_notes(packet):
+        lines.extend(
+            (
+                "",
+                notes,
+                "",
+                "A draft that states one of those facts within its limitation "
+                "is correct. Do not ask for a flatter, more confident sentence "
+                "than the evidence allows.",
+            )
+        )
     return "\n".join(lines)
 
 
 def _repair_lock_body(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
+    packet: WritingPacket,
     *,
     form_label: str,
 ) -> str:
@@ -396,6 +412,11 @@ def _repair_lock_body(
         for reference in work_order.scope.references
     )
     must_name = "\n".join(f"- {item}" for item in brief.must_name)
+    # Repair rewrites the whole article. A caveat that reached compose and not
+    # this pass is a caveat the rewrite can drop without noticing, which turns
+    # a correctly hedged sentence into a confident wrong one -- and repair is
+    # separately forbidden to add anything, so it could never put it back.
+    limitations = _packet_notes(packet)
     return "\n".join(
         (
             f"The piece promises: {brief.outcome}",
@@ -409,8 +430,10 @@ def _repair_lock_body(
             "Must name:",
             must_name or "- None recorded.",
             f"It fails if: {brief.fails_if}",
+            *((limitations,) if limitations else ()),
             "Keep direct, specific prose for the named reader. Preserve the "
-            "approved form and scope. Do not add factual material.",
+            "approved form and scope. Do not add factual material, and do not "
+            "remove a limitation from a fact you keep.",
         )
     )
 
@@ -633,7 +656,7 @@ def assemble_v3_instructions(
                     "on support.",
                 ),
                 ("brief", f"APPROVED BRIEF\n{brief_body}"),
-                ("support", _support_status(evidence)),
+                ("support", _packet_support_body(packet)),
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
                 ("house_style", f"HOUSE STYLE\n{catalog.house_rules.instructions}"),
@@ -650,7 +673,9 @@ def assemble_v3_instructions(
                 (
                     "scope_style_lock",
                     "COMPACT SCOPE AND STYLE LOCK\n"
-                    + _repair_lock_body(brief, work_order, form_label=form.label),
+                    + _repair_lock_body(
+                        brief, work_order, packet, form_label=form.label
+                    ),
                 ),
             ]
         ),

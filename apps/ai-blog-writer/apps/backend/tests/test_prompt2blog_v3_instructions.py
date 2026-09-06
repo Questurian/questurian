@@ -491,7 +491,10 @@ def test_the_stages_without_the_questions_keep_the_rest_of_the_brief():
     lock = contexts.repair_lock.text
     assert fixture["brief"]["outcome"] in lock
     assert "Primary subject: Lima" in lock
-    assert "Do not add factual material." in lock
+    assert "Do not add factual material" in _flat(lock)
+    # And repair may not quietly straighten a hedged sentence while rewriting:
+    # it is forbidden to add anything, so it could never put the caveat back.
+    assert "do not remove a limitation from a fact you keep" in _flat(lock)
 
 
 def _two_claim_request(*, second_selected: bool):

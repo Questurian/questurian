@@ -201,7 +201,15 @@ RULES YOU MUST NOT BREAK
 - Invent nothing. No new places, prices, dates, dishes, names or numbers, and
   no adjective that implies a fact the article does not already carry. If a
   sentence cannot be improved without a fact you do not have, leave it alone.
-- Keep every fact, figure and proper noun exactly as it is.
+- Every fact you keep stays exactly as it is: the figure, the date, the unit,
+  the proper noun, and any qualification attached to it. A caveat is what makes
+  a sentence true, so it is never the thing you cut to make room.
+- You may drop a nonessential detail when a sentence is carrying more than it
+  can say well. "Keep every fact" is what produced the density this pass exists
+  to relieve: a paragraph holding six facts in forty words is a list, and the
+  fix is to let one of them go, not to smooth the joins between them. Drop the
+  one the reader loses least by, and never a figure the article's argument
+  rests on.
 - Keep the headings and the section order.
 - Do not add a conclusion, a summary, or a line telling the reader what they
   just read.
