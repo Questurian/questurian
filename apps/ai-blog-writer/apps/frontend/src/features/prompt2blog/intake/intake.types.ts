@@ -310,3 +310,35 @@ export interface IntakeRunSummary {
   stage_label: string
   updated_at: string
 }
+
+/** One fact on the shortlist, and where the line leaves it (#534). */
+export interface SelectableClaim {
+  claim_id: string
+  text: string
+  /** 1 is the fact the article most needs. */
+  rank: number
+  selected: boolean
+  /** True when this fact is kept despite sitting below the line. */
+  rescued: boolean
+  /** True when it is cut despite sitting above it. */
+  dropped: boolean
+  /** One line from the ranker on what the article uses this for. */
+  why: string
+  questions: string[]
+  /** Facts that said the same thing and stood down in favour of this one. */
+  merged_in: string[]
+  confidence: string
+}
+
+export interface SelectionReview {
+  /** False on a run that never selected. It writes from every fact it found. */
+  available: boolean
+  claims: SelectableClaim[]
+  keep_count: number
+  target_word_count?: number
+  deduped?: boolean
+  ranked?: boolean
+  /** Says which pass fell over, when one did. Empty on a clean selection. */
+  note: string
+}
+

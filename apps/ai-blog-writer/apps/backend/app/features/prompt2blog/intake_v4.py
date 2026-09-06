@@ -86,6 +86,17 @@ from .polish_v4 import build_polish_prompt
 from .run_budget import enforce_run_budget
 from .run_recorder import RunRecorder
 from .support import _safe_dict, _safe_str
+from .options import default_target_word_count
+from .selection_v4 import (
+    SELECTION_STAGE,
+    SelectionRefused,
+    Selection,
+    SelectionDependencies,
+    apply_selection,
+    revise,
+    select_evidence,
+    shortlist,
+)
 from .work_order_v4 import (
     WORK_ORDER_STAGE,
     CutOutcome,
@@ -443,7 +454,83 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
+    # Only for a run that can actually be written. Ranking the evidence of a
+    # blocked article is two model calls spent on a decision nobody will get to
+    # make, and the gate may still change what the dossier contains.
+    if verdict.can_write:
+        _select_evidence(run_id, services, brief, work_order, evidence)
     return verdict
+
+
+def _select_evidence(
+    run_id: str,
+    services: IntakeServices,
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
+    evidence: EvidencePackage,
+) -> Selection:
+    """Deduplicate and rank, and record where the line starts (#534).
+
+    Recorded apart from the dossier. The evidence stays exactly what research
+    returned, and which facts the article is written from stays a separate,
+    reversible editorial record that `writing_request` applies at the hand-off.
+    """
+    selection = select_evidence(
+        brief,
+        work_order,
+        evidence,
+        SelectionDependencies(llm=services.dependencies.llm),
+        target_word_count=default_target_word_count(),
+    )
+    _record(services, run_id, SELECTION_STAGE, selection.as_record())
+    return selection
+
+
+def review_selection(run_id: str) -> dict[str, Any]:
+    """The ranked shortlist and where the line sits, for the picker."""
+    selection = load_selection(run_id)
+    if selection is None:
+        return {"available": False, "claims": [], "keep_count": 0, "note": ""}
+    evidence = load_evidence(run_id)
+    return {
+        "available": True,
+        "claims": shortlist(evidence, load_work_order(run_id), selection),
+        "keep_count": selection.keep_count,
+        "target_word_count": selection.target_word_count,
+        "deduped": selection.deduped,
+        "ranked": selection.ranked,
+        "note": selection.note,
+    }
+
+
+def settle_selection(
+    run_id: str,
+    services: IntakeServices,
+    *,
+    keep_count: int | None = None,
+    rescue: str | None = None,
+    drop: str | None = None,
+    clear: str | None = None,
+) -> dict[str, Any]:
+    """Apply one of the operator's moves and hand the list back."""
+    selection = load_selection(run_id)
+    if selection is None:
+        raise SelectionRefused("Nothing has been selected for this run yet.")
+    revised = revise(
+        selection, keep_count=keep_count, rescue=rescue, drop=drop, clear=clear
+    )
+    _record(services, run_id, SELECTION_STAGE, revised.as_record())
+    return review_selection(run_id)
+
+
+def load_selection(run_id: str) -> Selection | None:
+    """The operator's editorial record, or None when nothing has selected.
+
+    None is not an empty selection. A run whose selection never ran writes from
+    every fact it found, exactly as it did before this existed.
+    """
+    record = _stage_data(run_id, SELECTION_STAGE)
+    return Selection.from_record(record) if record.get("order") else None
 
 
 def _strike_must_name(
@@ -575,6 +662,14 @@ def settle_gate(
             STATE_KEY: json.loads(evidence.model_dump_json()),
         },
     )
+    # A run that arrives here was blocked when research finished, so selection
+    # never ran -- `do_research` only selects on a dossier that can be written.
+    # Without this a run that was ever blocked writes from every claim it
+    # found, silently, which is the behaviour #534 exists to end. Found by the
+    # first real run: no test could catch it, because the gate is where a
+    # blocked run and a clean one stop being the same code path.
+    if verdict.can_write and load_selection(run_id) is None:
+        _select_evidence(run_id, services, load_brief(run_id), work_order, evidence)
     return verdict
 
 
@@ -892,6 +987,13 @@ def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4R
             f"This run cannot be written yet: {verdict.reason}. "
             + " ".join(verdict.findings)
         )
+
+    # The one place the editorial cut is applied (#534). Coverage is decided
+    # above it, on the whole dossier, so a deselected claim can never turn a
+    # supported question into a gate. A run with no selection writes from every
+    # fact it found, exactly as it did before this existed.
+    if selection := load_selection(run_id):
+        evidence = apply_selection(evidence, selection)
 
     return Prompt2BlogV4Request(
         brief=brief,

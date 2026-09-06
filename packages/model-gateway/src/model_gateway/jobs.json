@@ -1,7 +1,7 @@
 {
   "version": 1,
   "note": "Every model call this monorepo makes, and what each one runs on when nothing overrides it. This file is the registry AND the checked-in fallback, in one place, because two files would need a test to keep them in step and would still drift between the moment one changed and the moment anyone ran it. Read by model_gateway/jobs.py in Python and by the dashboard in TypeScript -- one source, two runtimes. defaultModel null means the job reaches an API with no model behind it.",
-  "writerNote": "Prompt2Blog's reasoning runs on Claude, its bulk work on Gemini. Every one of these jobs sat on gemini-2.5-flash from 2026-07-25, the day the Anthropic credit ran out, and stayed there after the subscription path was switched on because nothing revisited the default -- so every v4 article was interviewed, planned and drafted by the cheapest model in the table. The split now: p2b.grill gets Opus because the interview decides what the article is and every later stage inherits it, and it is seven calls. Brief, outline, compose and repair get Sonnet at medium -- prose and judgement, but not worth an Opus tier each. Everything else is Gemini, and each has a reason. p2b.audit is the independent judge: a Claude draft graded by a Claude judge is marked by a model that shares its blind spots. p2b.grill_research and p2b.research_gather are grounded_text calls that need Google search grounding, which the Claude CLI path does not have. p2b.research_structure, p2b.work_order and p2b.groundedness are mechanical shaping and checking: structuring on Claude spent 437k tokens of a 650k run ceiling on one run and the run died in research without reaching the writer.",
+  "writerNote": "Prompt2Blog's reasoning runs on Claude, its bulk work on Gemini. Every one of these jobs sat on gemini-2.5-flash from 2026-07-25, the day the Anthropic credit ran out, and stayed there after the subscription path was switched on because nothing revisited the default -- so every v4 article was interviewed, planned and drafted by the cheapest model in the table. The split now: p2b.grill gets Opus because the interview decides what the article is and every later stage inherits it, and it is seven calls. Brief, outline, compose and repair get Sonnet at medium -- prose and judgement, but not worth an Opus tier each. Everything else is Gemini, and each has a reason. p2b.audit is the independent judge: a Claude draft graded by a Claude judge is marked by a model that shares its blind spots. p2b.grill_research and p2b.research_gather are grounded_text calls that need Google search grounding, which the Claude CLI path does not have. p2b.research_structure, p2b.work_order and p2b.groundedness are mechanical shaping and checking: structuring on Claude spent 437k tokens of a 650k run ceiling on one run and the run died in research without reaching the writer. p2b.evidence_dedupe and p2b.evidence_rank are the two passes that decide which facts reach the writer (#534). Dedupe is Gemini for the same reason research_structure is: it compares sentences and groups the ones asserting the same fact, which is shape rather than judgement, and it reads every claim in the dossier so it is the more expensive input of the two. Rank is Sonnet at medium, the tier the brief and the outline already sit on, because ordering a hundred facts against a reader question and a fails_if is the same kind of judgement the outline makes -- and it is not Opus because a person reads the result and moves the line, so a ranking that is merely good is corrected in one click rather than paid for twice.",
   "capturedOn": "2026-09-04",
   "jobs": [
     {
@@ -115,6 +115,22 @@
       "summary": "Shape gathered prose into sources and claims. Shape, not judgement.",
       "site": "features/prompt2blog/research_v4.py",
       "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.evidence_dedupe",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Group the research findings that say the same fact. Grouping, not judgement.",
+      "site": "features/prompt2blog/selection_v4.py",
+      "defaultModel": "gemini-2.5-flash"
+    },
+    {
+      "id": "p2b.evidence_rank",
+      "app": "ai-blog-writer",
+      "call": "json",
+      "summary": "Order the surviving facts by how much this brief needs them.",
+      "site": "features/prompt2blog/selection_v4.py",
+      "defaultModel": "claude-sonnet-5-medium"
     },
     {
       "id": "listicle.search",

@@ -6,6 +6,7 @@ import type {
   IntakeRunSummary,
   IntakeState,
   PunchList,
+  SelectionReview,
   VenueToCheck,
 } from './intake.types'
 
@@ -245,3 +246,33 @@ export function markVenue(
 ): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/venues`, body)
 }
+
+/** The facts this article would be written from, ranked, with the line. */
+export async function readSelection(runId: string): Promise<SelectionReview> {
+  const response = await apiFetch(`${INTAKE}/${runId}/selection`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the facts for this article.')
+  }
+  return (await response.json()) as SelectionReview
+}
+
+/**
+ * Move the line, or mark one fact. Exactly one per call — an override is about
+ * that fact and outlives the line moving past it, so the two are separate
+ * decisions rather than one combined write.
+ */
+export async function reviseSelection(
+  runId: string,
+  body: { keep_count?: number; rescue?: string; drop?: string; clear?: string },
+): Promise<SelectionReview> {
+  const response = await apiFetch(`${INTAKE}/${runId}/selection`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!response.ok) {
+    throw await readError(response, 'Could not change which facts are kept.')
+  }
+  return (await response.json()) as SelectionReview
+}
+
