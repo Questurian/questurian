@@ -582,11 +582,43 @@ class EvidenceClaim(V4ContractModel):
     # the only way to clear an irrelevant entry meant the obvious move and the
     # safe move were different, which is the wrong way round.
     venue_dismissed: bool = False
+    # Whether this fact reaches the writer's desk (#534).
+    #
+    # Nothing used to decide. Run 9e66bf84 found 105 claims, the outline placed
+    # 102 of them, compose received all 105, and one 200-word section was
+    # handed 56 -- three and a half words per claim, at which density there is
+    # no sentence you can write except a list. The writer was not lazy; it was
+    # given an impossible instruction and did the only thing that satisfies it.
+    #
+    # Deselecting is an editorial decision, not a coverage one, so it must not
+    # be able to turn into one. This is a flag and never a deletion: the claim
+    # stays in the dossier, groundedness and the readiness follow-up keep
+    # reading every claim there is, and a requirement it supports stays
+    # supported. Only the two prompt projections the writer sees filter on it.
+    #
+    # Repair may not add a fact the previous draft did not have, so a claim cut
+    # here is a fact the article loses. That is the accepted cost, and the
+    # reason a person makes the cut rather than a model.
+    selected: bool = True
+    # This claim says the same thing as `merged_into`, which was kept instead.
+    #
+    # Deduplication chooses a survivor; it never writes new claim text. A
+    # merged claim composed by a model is prose asserting a fact, and a drifted
+    # date or price inside one would pass groundedness -- groundedness checks
+    # the draft against the claim, and the claim is the thing that moved. Every
+    # surviving claim is still verbatim what research returned.
+    merged_into: str = ""
 
     @model_validator(mode="after")
     def validate_unique_links(self) -> "EvidenceClaim":
         _require_unique(self.source_ids, "claim source reference")
         _require_unique(self.requirement_ids, "claim requirement reference")
+        if self.merged_into == self.claim_id:
+            raise ValueError("a claim cannot be merged into itself")
+        if self.merged_into and self.selected:
+            raise ValueError(
+                "a claim merged into another cannot also be selected"
+            )
         return self
 
 

@@ -284,7 +284,11 @@ def _facts_by_subject(
     }
 
     by_subject: dict[str, list[str]] = {}
-    for claim in evidence.claims:
+    # The outline plans from what the writer will have, not from the dossier.
+    # Run 9e66bf84's outline placed 102 of 105 claims across six sections and
+    # gave one of them 56 against a 200-word budget -- it did not select, it
+    # distributed, and called that a plan (#534).
+    for claim in (item for item in evidence.claims if item.selected):
         subject = next(
             (
                 group_of_requirement[requirement_id]
@@ -312,8 +316,15 @@ def _facts_by_subject(
             "section plan)",
         )
     )
+    visible = {claim.claim_id for claim in evidence.claims if claim.selected}
     for requirement in evidence.requirements:
-        claims = ", ".join(requirement.claim_ids) or "none"
+        kept = [item for item in requirement.claim_ids if item in visible]
+        # Never a bare "none" where the question does have answers: the outline
+        # would read that as a hole to plan around rather than as facts that
+        # were not chosen.
+        claims = ", ".join(kept) or (
+            "none kept for this article" if requirement.claim_ids else "none"
+        )
         gap = f" | gap: {requirement.gap}" if requirement.gap else ""
         lines.append(
             f"- {requirement.requirement_id} [{requirement.status}] "

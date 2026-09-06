@@ -225,3 +225,47 @@ def test_the_seed_is_kept_but_is_not_a_title():
     brief = _brief()
     assert brief.seed.startswith("Lima is no longer")
     assert not hasattr(brief, "original_title")
+
+
+def test_a_claim_merged_into_another_cannot_also_be_selected():
+    """Deduplication chooses a survivor. Keeping both on the writer's desk is
+    the duplication it exists to remove, so the contract refuses it (#534)."""
+    with pytest.raises(ValidationError):
+        EvidenceClaim(
+            claim_id="c2",
+            text="The same fact, differently worded.",
+            source_ids=["s1"],
+            requirement_ids=["r1"],
+            confidence="high",
+            merged_into="c1",
+            selected=True,
+        )
+
+
+def test_a_claim_cannot_be_merged_into_itself():
+    with pytest.raises(ValidationError):
+        EvidenceClaim(
+            claim_id="c1",
+            text="A fact.",
+            source_ids=["s1"],
+            requirement_ids=["r1"],
+            confidence="high",
+            merged_into="c1",
+            selected=False,
+        )
+
+
+def test_a_claim_is_selected_until_something_says_otherwise():
+    """Nothing selects yet. Until the picker exists, every claim reaches the
+    writer exactly as it always did."""
+    claim = EvidenceClaim(
+        claim_id="c1",
+        text="A fact.",
+        source_ids=["s1"],
+        requirement_ids=["r1"],
+        confidence="high",
+    )
+
+    assert claim.selected is True
+    assert claim.merged_into == ""
+
