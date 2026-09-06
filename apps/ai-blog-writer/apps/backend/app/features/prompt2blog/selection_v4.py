@@ -181,8 +181,9 @@ Rules:
   decision. Leave them alone.
 - A general statement and a specific one are not duplicates. "Prices are low"
   and "a plate costs 15 soles" are different facts.
-- Two claims about different places, dates, prices or people are never the same
-  fact, however similar the sentence.
+- Two claims about different places, dates, times, prices, hours or people are
+  never the same fact, however similar the sentence. Two opening times that
+  differ by fifteen minutes are a disagreement, not a repetition.
 - Return only groups that actually contain a duplicate. A claim with no
   duplicate does not need a group of its own.
 - Use the labels above exactly as written (f1, f2, ...). Never invent a
@@ -334,6 +335,26 @@ def _rows(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:
     return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
+def _disputed_pairs(evidence: EvidencePackage) -> set[frozenset[str]]:
+    """Every pair of claims the dossier itself says disagree.
+
+    `record_detected_conflicts` already finds these and nothing downstream used
+    them. A conflict is the strongest possible evidence that two claims are not
+    the same fact -- it is the dossier saying so in as many words.
+    """
+    pairs: set[frozenset[str]] = set()
+    for conflict in evidence.conflicts:
+        ids = [
+            _safe_str(item)
+            for item in (getattr(conflict, "claim_ids", None) or [])
+            if _safe_str(item)
+        ]
+        for index, first in enumerate(ids):
+            for second in ids[index + 1 :]:
+                pairs.add(frozenset((first, second)))
+    return pairs
+
+
 def _deduplicate(
     evidence: EvidencePackage, dependencies: SelectionDependencies
 ) -> tuple[dict[str, str], bool]:
@@ -344,6 +365,10 @@ def _deduplicate(
     """
     _, from_handle = handles(list(evidence.claims))
     known = {claim.claim_id for claim in evidence.claims}
+    # Claims the dossier has already recorded as disagreeing with each other.
+    # Merging across one of these picks a winner in a factual dispute and
+    # deletes the loser from the writer's desk, silently.
+    disputed = _disputed_pairs(evidence)
     try:
         parsed, _raw = dependencies.llm.invoke_json(
             job_id=dependencies.dedupe_job_id,
@@ -369,6 +394,19 @@ def _deduplicate(
             # something that was itself merged away. A cycle or a chain would
             # leave a claim pointing at a claim nobody can see.
             if loser in known and loser != survivor and loser not in merged:
+                if frozenset((loser, survivor)) in disputed:
+                    # Run 3750891f: the dossier held Titi's Sunday opening as
+                    # both 12:30 and 12:45 and recorded the conflict. Dedupe
+                    # merged the correct claim into the wrong one, so the
+                    # writer only ever saw 12:45 while groundedness read the
+                    # whole dossier and failed the draft for it.
+                    logger.warning(
+                        "Prompt2Blog dedupe refused to merge %s into %s: the "
+                        "dossier records them as conflicting",
+                        loser,
+                        survivor,
+                    )
+                    continue
                 merged[loser] = survivor
     return {
         loser: survivor

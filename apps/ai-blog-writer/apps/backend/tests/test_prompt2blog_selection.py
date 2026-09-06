@@ -21,6 +21,7 @@ from app.features.prompt2blog.contracts_v4 import (
     ArticleBrief,
     BriefReader,
     EvidenceClaim,
+    EvidenceConflict,
     EvidencePackage,
     EvidenceRequirement,
     EvidenceSource,
@@ -462,3 +463,38 @@ def test_a_merge_leaves_the_dossier_still_valid():
     # Added to, never taken from: r2 keeps c2 and gains the claim that absorbed
     # it, so coverage after selection is never weaker than before it.
     assert set(r2.claim_ids) == {"c1", "c2"}
+
+
+def test_dedupe_will_not_merge_two_claims_the_dossier_says_disagree():
+    """Run 3750891f held Chifa Titi's Sunday opening as both 12:30 and 12:45,
+    and recorded the conflict. Dedupe merged the correct claim into the wrong
+    one -- the sentences are nearly identical -- so the writer only ever saw
+    12:45, while groundedness reads the whole dossier and failed the draft for
+    a claim the writer had no way to check.
+
+    A recorded conflict is the dossier saying in as many words that two claims
+    are not the same fact. Merging across one picks a winner in a factual
+    dispute and deletes the loser from the writer's desk, silently.
+    """
+    evidence = _package(3)
+    evidence = evidence.model_copy(
+        update={
+            "conflicts": [
+                EvidenceConflict(
+                    conflict_id="conflict_1",
+                    claim_ids=["c1", "c2"],
+                    summary="Two different opening times for the same restaurant.",
+                )
+            ]
+        }
+    )
+    llm = _LLM(
+        # The model tries to merge the disputed pair and an undisputed one.
+        groups=[{"keep": "f1", "same_as": ["f2", "f3"]}],
+        ranked=["f1", "f2", "f3"],
+    )
+
+    selection = _select(evidence, llm)
+
+    assert "c2" not in selection.merged, "a disputed claim must keep its own voice"
+    assert selection.merged == {"c3": "c1"}, "an undisputed merge still happens"
