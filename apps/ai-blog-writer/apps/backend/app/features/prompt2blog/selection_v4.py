@@ -646,7 +646,11 @@ def select_evidence(
     colour_ids = texture_claim_ids(work_order, evidence)
     colour = [claim for claim in survivors if claim.claim_id in colour_ids]
     texture_order, texture_reasons = _rank_texture(brief, work_order, colour, dependencies)
-    reasons = {**texture_reasons, **reasons}
+    # Colour's own reason wins for a colour claim. Both passes rank it, and the
+    # utility pass says what it is not -- run 4a56545b showed the operator "the
+    # hold-your-breath wish legend, folklore the piece can live without" beside
+    # a row kept precisely because it was the most vivid thing in the dossier.
+    reasons = {**reasons, **texture_reasons}
     texture_reserve = min(
         len(texture_order), int(round(keep_count * TEXTURE_SHARE))
     )
