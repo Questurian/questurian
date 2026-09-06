@@ -503,3 +503,82 @@ def test_the_stages_without_the_questions_keep_the_rest_of_the_brief():
     assert fixture["brief"]["outcome"] in lock
     assert "Primary subject: Lima" in lock
     assert "Do not add factual material." in lock
+
+def _two_claim_request(*, second_selected: bool):
+    """The fixture plus a second claim on the same question, one of them cut."""
+    fixture = _fixture()
+    package = fixture["evidence_package"]
+    first = package["claims"][0]
+    second = {
+        **first,
+        "claim_id": "c2",
+        "text": "A second fact about the same question, differently useful.",
+        "selected": second_selected,
+    }
+    package = {
+        **package,
+        "claims": [first, second],
+        "requirements": [
+            {**item, "claim_ids": ["c1", "c2"]}
+            if item["requirement_id"] == "r1"
+            else item
+            for item in package["requirements"]
+        ],
+    }
+    return _request(evidence_package=package), second
+
+
+def test_a_deselected_claim_never_reaches_the_writer():
+    """Run 9e66bf84 handed compose 105 of 105 claims and one 200-word section
+    56 of them -- three and a half words per claim, at which density there is
+    no sentence you can write except a list (#534)."""
+    request, cut = _two_claim_request(second_selected=False)
+    contexts = assemble_v3_instructions(request).stage_contexts
+
+    assert cut["text"] not in contexts.compose.text
+    assert cut["text"] not in contexts.outline.text
+    # The claim it was cut beside is still there, so this is a selection and
+    # not an empty dossier.
+    assert "c1" in contexts.compose.text
+
+
+def test_a_deselected_claim_is_still_in_the_dossier_for_checking():
+    """The rule that makes the cut safe. Groundedness and the readiness
+    follow-up read `records_text`, so deselecting removes a fact from the
+    writer's desk and never from the record -- nothing becomes unverifiable,
+    and a supported question stays supported."""
+    request, cut = _two_claim_request(second_selected=False)
+
+    evidence = normalize_evidence(request.work_order, request.evidence_package)
+
+    assert [claim.claim_id for claim in evidence.claims] == ["c1", "c2"]
+    assert cut["text"] in evidence.records_text
+    assert cut["text"] not in evidence.compose_records_text
+    assert evidence.receipt()["requirement_status"]["r1"] == "supported"
+
+
+def test_coverage_never_tells_the_writer_a_question_has_no_answers():
+    """A `supported` question whose claims were all cut must not render as
+    "claims: none". The writer would read that as a hole to fill, ask for the
+    fact, and be refused it -- the checklist behaviour arriving by a different
+    door."""
+    fixture = _fixture()
+    package = {
+        **fixture["evidence_package"],
+        "claims": [{**fixture["evidence_package"]["claims"][0], "selected": False}],
+    }
+    request = _request(evidence_package=package)
+
+    evidence = normalize_evidence(request.work_order, request.evidence_package)
+
+    assert "none kept for this article" in evidence.compose_records_text
+    # And the canonical projection is untouched: it still names the claim.
+    assert "claims: c1" in evidence.records_text
+
+
+def test_the_outline_plans_from_what_the_writer_will_have():
+    request, cut = _two_claim_request(second_selected=True)
+    outline = assemble_v3_instructions(request).stage_contexts.outline.text
+
+    assert cut["text"] in outline
+

@@ -44,6 +44,12 @@ class NormalizedClaim(NormalizedModel):
     requirement_ids: list[str]
     as_of: str | None
     confidence: str
+    # Whether this fact reaches the writer (#534). `claims` here always holds
+    # every claim, because groundedness and the readiness follow-up check the
+    # draft against the whole dossier. Only the two projections the writer
+    # reads -- `compose_records_text` and the outline's facts-by-subject --
+    # filter on it.
+    selected: bool = True
 
 
 class NormalizedRequirement(NormalizedModel):
@@ -189,6 +195,7 @@ def _normalize_claim(claim: EvidenceClaim) -> NormalizedClaim:
         requirement_ids=list(claim.requirement_ids),
         as_of=claim.as_of.isoformat() if claim.as_of else None,
         confidence=claim.confidence,
+        selected=claim.selected,
     )
 
 
@@ -227,14 +234,19 @@ def _compose_records_text(
     every one of those fields. This is a second projection of one dossier, not
     a second dossier.
 
-    What survives here is what a writer may actually use: every claim, exactly
-    as written, with its date, confidence and questions; every requirement
-    status and gap; every premise verdict; every conflict, resolved or not.
+    What survives here is what a writer may actually use: every selected claim,
+    exactly as written, with its date, confidence and questions; every
+    requirement status and gap; every premise verdict; every conflict, resolved
+    or not.
     Sources survive only where they carry a note somebody wrote -- an operator
     settlement, a caveat, a limitation -- because that note changes how a fact
     reads, and the claims that rest on them keep their link.
     """
     kept = {source.source_id for source in sources if _has_substantive_note(source)}
+    # The one place the selection is applied. A deselected claim is still in
+    # the dossier, still checked, and still supports whatever it supported --
+    # it is simply not on the writer's desk (#534).
+    claims = [claim for claim in claims if claim.selected]
 
     lines: list[str] = ["SOURCE NOTES"]
     if kept:
@@ -274,7 +286,15 @@ def _compose_records_text(
     # writer and spliced in unchanged, so the two projections cannot drift on
     # the parts they share. Sources and claims are passed empty because this
     # function has already written its own.
-    tail = _records_text([], [], requirements, premise_findings, conflicts, gaps)
+    tail = _records_text(
+        [],
+        [],
+        requirements,
+        premise_findings,
+        conflicts,
+        gaps,
+        visible_claim_ids={claim.claim_id for claim in claims},
+    )
     heading = "REQUIREMENT COVERAGE"
     lines.append("")
     lines.append(heading + tail.split(heading, 1)[1])
@@ -288,7 +308,21 @@ def _records_text(
     premise_findings: list[NormalizedPremiseFinding],
     conflicts: list[dict[str, Any]],
     gaps: list[dict[str, Any]],
+    *,
+    visible_claim_ids: set[str] | None = None,
 ) -> str:
+    """The dossier, rendered.
+
+    `visible_claim_ids` narrows the coverage bookkeeping to the claims the
+    reader of this projection can actually see, and is only ever passed by the
+    compose projection. Without it, coverage would name claim ids that are not
+    in the CLAIMS block above it, and a writer told a question is closed by
+    facts it cannot find is a writer being asked for a fact it does not have --
+    the checklist behaviour, arriving by a different door.
+
+    Left None everywhere else, so the canonical projection that groundedness
+    and the readiness follow-up read is byte-identical to what it always was.
+    """
     lines: list[str] = ["SOURCES"]
     if sources:
         for source in sources:
@@ -317,7 +351,19 @@ def _records_text(
     lines.append("")
     lines.append("REQUIREMENT COVERAGE")
     for requirement in requirements:
-        claim_ids = ", ".join(requirement.claim_ids) or "none"
+        visible = (
+            [item for item in requirement.claim_ids if item in visible_claim_ids]
+            if visible_claim_ids is not None
+            else list(requirement.claim_ids)
+        )
+        # Said in words rather than as "none", which on a `supported` question
+        # would read as a contradiction. Nothing is missing: the answer exists
+        # and was not chosen for this article.
+        claim_ids = ", ".join(visible) or (
+            "none kept for this article"
+            if visible_claim_ids is not None and requirement.claim_ids
+            else "none"
+        )
         gap = f" | gap: {requirement.gap}" if requirement.gap else ""
         # The status word alone left the writer to guess what `unpublished`
         # means for the draft. Spelled out here, because the one thing it must
