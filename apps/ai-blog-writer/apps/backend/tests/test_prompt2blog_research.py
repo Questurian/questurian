@@ -11,6 +11,7 @@ re-run. Do not read a green run here as "research works".
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from datetime import date
@@ -962,6 +963,38 @@ def test_questions_are_structured_a_few_at_a_time():
 
     # Three batches over nine questions, plus the premise pass.
     assert len(llm.prompts) == 4
+
+
+def test_the_premise_guard_speaks_once_a_run_not_once_a_batch(caplog):
+    """The warning means "nobody checked your premises". It has to stay rare.
+
+    Run 03c6702f logged it four times in a row, once per structuring batch,
+    naming all eight declared assumptions each time -- on a run where the
+    premise pass had simply not happened yet. A batch cannot carry a premise
+    verdict, so judging one against the declared premises is a false alarm on
+    every healthy run, and it made the one real case (95a74dce, a genuinely
+    unanswered premise) indistinguishable from noise.
+    """
+    count = STRUCTURE_BATCH_SIZE * 2 + 1
+    deps, _llm = _per_question_deps(
+        {
+            f"r{index}": _one_question_payload(f"r{index}", f"https://example.pe/{index}")
+            for index in range(1, count + 1)
+        }
+    )
+    notes = {f"r{index}": GatheredNotes("Notes.") for index in range(1, count + 1)}
+
+    with caplog.at_level(logging.WARNING):
+        evidence = structure_research(_wide_work_order(count), notes, deps)
+
+    warnings = [
+        record for record in caplog.records
+        if "returned no premise verdict" in record.getMessage()
+    ]
+    # Three batches, and the fake premise pass answers nothing: still one.
+    assert len(warnings) == 1
+    # And the guard still did its job -- the declared premise has a verdict.
+    assert [finding.verdict for finding in evidence.premise_findings] == ["unverified"]
 
 
 def test_every_question_reaches_a_batch():
