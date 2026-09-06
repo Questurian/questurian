@@ -13,7 +13,7 @@ from typing import Any
 
 from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
-from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
+from tests.prompt2blog_packet_support import runtime_for
 from app.features.prompt2blog.quality_v3 import (
     v3_brief_summary,
     v3_constraint_brief,
@@ -70,7 +70,7 @@ def _supported_evidence() -> dict:
 
 
 def _runtime():
-    return prepare_v3_runtime_request(
+    return runtime_for(
         Prompt2BlogV4Request.model_validate(
             {
                 "schema_version": 4,
@@ -102,6 +102,7 @@ def _state(**overrides) -> dict[str, Any]:
         "brief": runtime.brief,
         "work_order": runtime.work_order,
         "evidence": runtime.evidence,
+        "packet": runtime.packet,
         "instructions": runtime.instructions,
         "stage_contexts": runtime.instructions["stage_contexts"],
         "option_context": runtime.option_context,

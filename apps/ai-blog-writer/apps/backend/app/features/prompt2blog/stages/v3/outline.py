@@ -46,7 +46,11 @@ def run_v3_outline_stage(
     run_id = state["run_id"]
     dependencies.recorder.start_stage(run_id, stage)
 
-    evidence = state["evidence"]
+    # The packet, not the dossier. A plan may only be built from the facts the
+    # writer will actually receive (#534, and the research redesign).
+    allowed_claim_ids = {
+        fact["claim_id"] for fact in (state["packet"].get("facts") or [])
+    }
     target_word_count = _target_word_count(_safe_dict(state["option_context"]))
     outline = dict(EMPTY_OUTLINE)
     diagnostics: dict[str, Any] = {}
@@ -76,11 +80,7 @@ def run_v3_outline_stage(
         accepted, diagnostics = validate_v3_outline(
             candidate,
             work_order=state["work_order"],
-            claim_ids={claim["claim_id"] for claim in evidence["claims"]},
-            requirement_ids={
-                requirement["requirement_id"]
-                for requirement in evidence["requirements"]
-            },
+            claim_ids=allowed_claim_ids,
             target_word_count=target_word_count,
         )
         if accepted:
@@ -96,11 +96,7 @@ def run_v3_outline_stage(
                 repaired_accepted, repaired_diagnostics = validate_v3_outline(
                     repaired_candidate,
                     work_order=state["work_order"],
-                    claim_ids={claim["claim_id"] for claim in evidence["claims"]},
-                    requirement_ids={
-                        requirement["requirement_id"]
-                        for requirement in evidence["requirements"]
-                    },
+                    claim_ids=allowed_claim_ids,
                     target_word_count=target_word_count,
                 )
                 if repaired_accepted:

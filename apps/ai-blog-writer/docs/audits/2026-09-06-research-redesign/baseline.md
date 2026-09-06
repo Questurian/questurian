@@ -59,3 +59,24 @@ stage adds its own template and the outline plan around it. This measures the
 assembled context, which is the part the redesign changes. It says nothing
 about whether the articles are good — no draft was read for this table, and no
 run was generated to produce it.
+
+## After the packet boundary was wired in
+
+Same three runs, same stored dossiers and selections, replayed through the new
+assembly. No model call was bought for this table either.
+
+| run | compose context | its evidence part | outline context | its facts part |
+|---|---|---|---|---|
+| `4a56545b` | 29,878 → **17,566** | 19,014 → **6,702** | 23,029 → **15,873** | 9,055 → 8,503 |
+| `8a7e9aa4` | 27,483 → **18,158** | 16,633 → **7,308** | 20,719 → **16,832** | 9,832 → 9,476 |
+| `3750891f` | 30,933 → **19,333** | 21,194 → **9,594** | 17,015 → **17,517** | 7,656 → 11,272 |
+
+The compose evidence part falls by roughly two thirds while every chosen fact
+survives verbatim. What left is the research bookkeeping: the question list,
+the statuses, the gaps and the claims nobody chose.
+
+`3750891f` is the useful counter-example. Its outline context grew, and both of
+its facts parts grew, because it is the run with seven real source caveats —
+they now travel with the facts they qualify instead of sitting in a
+bibliography the writer was told not to cite. A packet that got smaller there
+would have got smaller by dropping the thing that makes a fact true.

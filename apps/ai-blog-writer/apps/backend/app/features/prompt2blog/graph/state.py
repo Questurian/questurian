@@ -23,6 +23,7 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     brief: dict[str, Any]
     work_order: dict[str, Any]
     evidence: dict[str, Any]
+    packet: dict[str, Any]
     instructions: dict[str, Any]
     stage_contexts: dict[str, Any]
     option_context: dict[str, Any]

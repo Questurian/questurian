@@ -16,6 +16,8 @@ from .editorial_catalog import EditorialCatalog
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
 from .instructions_v3 import INSTRUCTION_SCHEMA_VERSION, assemble_v3_instructions
 from .models import PipelineV4RuntimeRequest
+from .packet_v4 import WritingPacket, build_packet
+from .selection_v4 import Selection
 from .research_readiness_v3 import (
     ResearchReadiness,
     assess_research_readiness,
@@ -71,18 +73,35 @@ def resolve_v3_option_context(request: Prompt2BlogV4Request) -> dict[str, Any]:
 
 def prepare_v3_runtime_request(
     request: Prompt2BlogV4Request,
+    selection: Selection,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> PipelineV4RuntimeRequest:
-    """Assembles one v3 runtime request without running or recording anything."""
+    """Assembles one v3 runtime request without running or recording anything.
+
+    This is the write boundary. One coherent snapshot is taken here -- the
+    brief, the work order, the dossier and the selection are read together,
+    their bindings are checked, and the packet built from them is frozen into
+    the runtime request. Every writing stage then reads that frozen packet.
+    Nothing downstream re-reads an editable selection, so an operator changing
+    their mind while a run is in flight changes the next run, not this one.
+
+    `selection` is required. A run that genuinely wants every fact says so with
+    `select_everything`, which records that a person asked for it; there is no
+    argument you can leave out to get the whole dossier by accident.
+    """
     option_context = resolve_v3_option_context(request)
-    instructions = assemble_v3_instructions(request, catalog=catalog)
+    packet = build_packet(
+        request.brief, request.work_order, request.evidence_package, selection
+    )
+    instructions = assemble_v3_instructions(request, packet, catalog=catalog)
     evidence = normalize_evidence(request.work_order, request.evidence_package)
 
     return PipelineV4RuntimeRequest(
         brief=request.brief.model_dump(mode="json"),
         work_order=request.work_order.model_dump(mode="json"),
         evidence=evidence.model_dump(mode="json"),
+        packet=packet.model_dump(mode="json"),
         instructions=instructions.model_dump(mode="json"),
         option_context=option_context,
         include_debug=request.include_debug,
@@ -123,6 +142,10 @@ def v3_run_input_artifact(runtime: PipelineV4RuntimeRequest) -> dict[str, Any]:
         "precedence": list(instructions.get("precedence", [])),
         "instruction_meta": instruction_meta,
         "evidence_receipt": instruction_meta.get("evidence_receipt", {}),
+        # What actually reached the writer, as opposed to what was researched.
+        # Without it a finished run could not answer the first question anybody
+        # asks about a thin article: was the fact missing, or was it cut?
+        "packet_receipt": WritingPacket.model_validate(runtime.packet).receipt(),
         "source_ids": [source["source_id"] for source in evidence["sources"]],
         "profiles": {
             "length_id": runtime.option_context["length"]["id"],
@@ -156,6 +179,7 @@ def v3_readiness(
 
 def v3_intake_result(
     request: Prompt2BlogV4Request,
+    selection: Selection,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> dict[str, Any]:
@@ -171,7 +195,7 @@ def v3_intake_result(
             request.brief, request.work_order, evidence, readiness, catalog=catalog
         )
 
-    runtime = prepare_v3_runtime_request(request, catalog=catalog)
+    runtime = prepare_v3_runtime_request(request, selection, catalog=catalog)
     return {
         "status": "ready",
         "run_input": v3_run_input_artifact(runtime),

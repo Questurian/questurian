@@ -21,7 +21,7 @@ import app.features.prompt2blog.routes as prompt2blog_routes
 from app.core import read_stage_result, read_status, write_stage_result
 from app.features.prompt2blog.config import P2B_RESUME_MAX_ATTEMPTS
 from app.features.prompt2blog.dependencies import PipelineDependencies
-from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
+from tests.prompt2blog_packet_support import runtime_for
 from app.features.prompt2blog.orchestrator_v3 import (
     Prompt2BlogResumeRefused,
     resume_pipeline_v3,
@@ -81,7 +81,7 @@ def _start(run_id: str, llm: ScriptedLLM) -> None:
     """Start a real run against the test database and let it fail."""
     recorder = RunRecorder()
     recorder.queue(run_id)
-    runtime = prepare_v3_runtime_request(_request())
+    runtime = runtime_for(_request())
     with pytest.raises(ClaudeCliUnavailable):
         run_pipeline_v3(
             run_id,
@@ -165,7 +165,7 @@ def test_a_finished_run_keeps_no_resumable_state():
     recorder.queue(run_id)
     run_pipeline_v3(
         run_id,
-        prepare_v3_runtime_request(_request()),
+        runtime_for(_request()),
         PipelineDependencies(llm=ScriptedLLM(quality_scores=[9]), recorder=recorder),
     )
 

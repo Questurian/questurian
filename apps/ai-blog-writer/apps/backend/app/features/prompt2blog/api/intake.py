@@ -650,8 +650,8 @@ def read_writing_request(
     Refuses when research said no -- the same gate, enforced at the hand-off
     rather than re-decided here.
     """
-    request = _handle(writing_request, run_id)
-    return JSONResponse(request.model_dump(mode="json"))
+    handoff = _handle(writing_request, run_id)
+    return JSONResponse(handoff.request.model_dump(mode="json"))
 
 
 @router.post("/{run_id}/write", status_code=202)
@@ -670,9 +670,13 @@ def start_writing(
     Refuses when research said no. That is the same gate decided once, not a
     second opinion.
     """
-    request = _handle(writing_request, run_id)
+    handoff = _handle(writing_request, run_id)
     credential = _prompt2blog_credential_for_run()
-    runtime = prepare_v3_runtime_request(request)
+    # One coherent snapshot: the brief, the dossier and the selection were read
+    # together above, and the packet built from them is frozen into the runtime
+    # request here. A resume reads that frozen packet rather than rebuilding
+    # one from a selection the operator may have edited since.
+    runtime = prepare_v3_runtime_request(handoff.request, handoff.selection)
 
     # The run already exists -- it was opened by the seed -- so this records
     # what the graph is about to run rather than queueing a new one. That is

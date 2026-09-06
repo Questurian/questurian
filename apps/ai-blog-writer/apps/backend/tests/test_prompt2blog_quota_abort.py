@@ -18,7 +18,7 @@ from typing import Any
 import pytest
 
 from app.features.prompt2blog.dependencies import PipelineDependencies
-from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
+from tests.prompt2blog_packet_support import runtime_for
 from app.features.prompt2blog.orchestrator_v3 import run_pipeline_v3
 from app.shared.provider_faults import provider_fault_kind
 from tests.test_prompt2blog_v3_pipeline import ScriptedLLM, _request
@@ -84,7 +84,7 @@ def _run_with(fault: Exception, *, stage_marker: str = "fact-grounding checker")
         quality_scores=[9],
     )
     recorder = FailureRecordingRecorder()
-    runtime = prepare_v3_runtime_request(_request())
+    runtime = runtime_for(_request())
     return llm, recorder, runtime
 
 

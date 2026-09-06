@@ -17,6 +17,7 @@ from app.features.prompt2blog.instructions_v3 import (
     assemble_v3_instructions,
     stage_context_manifest,
 )
+from tests.prompt2blog_packet_support import packet_for
 
 
 FIXTURE_PATH = (
@@ -48,8 +49,18 @@ def _request(**overrides) -> Prompt2BlogV4Request:
     return Prompt2BlogV4Request.model_validate(payload)
 
 
+def _instructions(request: Prompt2BlogV4Request):
+    """Assemble against a packet that kept every fact.
+
+    These tests are about how the instruction layers are built, not about the
+    editorial cut, so they hand the assembler the whole dossier as a packet --
+    deliberately, which is the only way to get one.
+    """
+    return assemble_v3_instructions(request, packet_for(request))
+
+
 def test_instruction_layers_follow_the_fixed_authority_order():
-    instructions = assemble_v3_instructions(_request())
+    instructions = _instructions(_request())
 
     assert [layer.layer for layer in instructions.layers] == [
         "evidence",
@@ -80,12 +91,13 @@ def test_instruction_layers_follow_the_fixed_authority_order():
 def test_stage_contexts_are_deterministic_and_keep_only_job_specific_material():
     fixture = _fixture()
 
-    first = assemble_v3_instructions(_request()).stage_contexts
-    second = assemble_v3_instructions(_request()).stage_contexts
+    first = _instructions(_request()).stage_contexts
+    second = _instructions(_request()).stage_contexts
 
     assert first == second
-    # Facts by subject, not indexed by the question that produced them.
-    assert "FACTS AVAILABLE, BY SUBJECT" in first.outline.text
+    # The chosen facts, grouped by what each one is for. Not indexed by the
+    # question that produced it, and not followed by the ones nobody chose.
+    assert "THE FACTS THIS ARTICLE IS BEING WRITTEN FROM" in first.outline.text
     assert "## Allowed structures" in first.outline.text
     assert fixture["evidence_package"]["sources"][0]["url"].rstrip("/") not in (
         first.outline.text
@@ -106,7 +118,7 @@ def test_stage_contexts_are_deterministic_and_keep_only_job_specific_material():
 
 def test_brief_layer_locks_form_subject_and_scope():
     fixture = _fixture()
-    instructions = assemble_v3_instructions(_request())
+    instructions = _instructions(_request())
     brief_layer = next(
         layer for layer in instructions.layers if layer.layer == "brief"
     )
@@ -125,7 +137,7 @@ def test_brief_layer_locks_form_subject_and_scope():
 
 
 def test_only_the_commissioned_modules_and_tags_reach_the_stack():
-    instructions = assemble_v3_instructions(_request())
+    instructions = _instructions(_request())
     modules_layer = next(
         layer for layer in instructions.layers if layer.layer == "topic_modules"
     )
@@ -144,7 +156,7 @@ def test_only_the_commissioned_modules_and_tags_reach_the_stack():
 def test_evidence_layer_preserves_publisher_url_dates_and_exact_notes():
     fixture = _fixture()
     source = fixture["evidence_package"]["sources"][0]
-    instructions = assemble_v3_instructions(_request())
+    instructions = _instructions(_request())
     evidence_layer = next(
         layer for layer in instructions.layers if layer.layer == "evidence"
     )
@@ -180,7 +192,7 @@ def test_there_is_no_headline_context_because_nothing_writes_a_headline():
     assembling material for a reader that no longer exists -- and it would
     still show up in the debug manifest as though something used it.
     """
-    contexts = assemble_v3_instructions(_request()).stage_contexts
+    contexts = _instructions(_request()).stage_contexts
 
     assert not hasattr(contexts, "title")
     assert set(stage_context_manifest(contexts)) == {
@@ -198,7 +210,7 @@ def test_unknown_catalog_ids_fail_instead_of_silently_dropping():
     broken.brief.topic_module_ids = ["not-a-module"]
 
     with pytest.raises(ValueError, match="Unknown topic modules"):
-        assemble_v3_instructions(broken)
+        _instructions(broken)
 
 
 def test_supported_requirement_cannot_also_declare_a_gap():
@@ -236,7 +248,7 @@ def test_the_writer_is_told_not_to_narrate_the_premise_check():
     "the 2025 ranking, which is the most recent published edition" into a
     travel piece.
     """
-    instructions = assemble_v3_instructions(_request())
+    instructions = _instructions(_request())
     evidence_layer = next(
         layer for layer in instructions.layers if layer.layer == "evidence"
     )
@@ -256,7 +268,7 @@ def test_the_writer_is_told_not_to_narrate_a_resolved_conflict():
     the disagreement itself. The reader wants the settled figure, not the
     argument that produced it.
     """
-    instructions = assemble_v3_instructions(_request())
+    instructions = _instructions(_request())
     evidence_layer = next(
         layer for layer in instructions.layers if layer.layer == "evidence"
     )
@@ -279,30 +291,31 @@ def test_the_outline_is_told_which_publication_it_works_for():
     audit and it writes an excellent audit. The outline decides which, and it
     has never been told what kind of piece Questurian makes.
     """
-    outline = assemble_v3_instructions(_request()).stage_contexts.outline.text
+    outline = _instructions(_request()).stage_contexts.outline.text
 
     assert "THE VOICE YOU ARE WRITING IN" in outline
     assert "It treats you as an adult with a decision to make." in outline
     assert "AUDIENCE GUIDANCE" in outline
 
 
-def test_the_outline_gets_facts_by_subject_not_by_question():
+def test_the_outline_gets_the_chosen_facts_and_no_research_ledger():
     """One section per research question is a research plan, not an article.
 
     That is exactly what the Lima outline produced, because the ledger it was
-    handed was indexed by requirement id.
+    handed was indexed by requirement id. The coverage bookkeeping that used to
+    follow the facts is gone: a plan shown which questions are still open plans
+    around the holes.
     """
-    outline = assemble_v3_instructions(_request()).stage_contexts.outline.text
+    outline = _instructions(_request()).stage_contexts.outline.text
 
-    assert "FACTS AVAILABLE, BY SUBJECT" in outline
-    # Coverage still has to be checkable, but it is labelled as bookkeeping so
-    # it cannot be mistaken for a section plan.
-    assert "not a section plan" in outline
+    assert "THE FACTS THIS ARTICLE IS BEING WRITTEN FROM" in outline
+    assert "COVERAGE BOOKKEEPING" not in outline
+    assert "This is the whole desk." in outline
 
 
 def test_the_outline_may_not_write_about_the_research():
     # "Do not claim a transformation" became a section called Scope limits.
-    outline = _flat(assemble_v3_instructions(_request()).stage_contexts.outline.text)
+    outline = _flat(_instructions(_request()).stage_contexts.outline.text)
 
     assert "No section may take scope, limits, method, evidence or the state of our research as its subject." in outline
 
@@ -324,7 +337,7 @@ def test_the_outline_budget_leaves_room_for_what_compose_adds():
     assert _section_budget({"length": {"target_word_count": 0}}) == 0
     assert _section_budget({}) == 0
 
-    outline = _flat(assemble_v3_instructions(_request()).stage_contexts.outline.text)
+    outline = _flat(_instructions(_request()).stage_contexts.outline.text)
 
     # The model is given the reserved number, never the subtraction.
     assert "do not subtract anything further" in outline.lower()
@@ -334,7 +347,7 @@ def test_the_outline_budget_leaves_room_for_what_compose_adds():
 def test_compose_leads_with_the_brief_and_treats_evidence_as_material():
     """Evidence still constrains every fact; it stops being the reason the
     article exists, which is what produced a piece about its own research."""
-    compose = assemble_v3_instructions(_request()).stage_contexts.compose.text
+    compose = _instructions(_request()).stage_contexts.compose.text
 
     assert "WHAT WE ARE MAKING" in compose
     assert "THE FACTS YOU MAY USE" in compose
@@ -343,7 +356,7 @@ def test_compose_leads_with_the_brief_and_treats_evidence_as_material():
 
 
 def test_compose_is_given_the_voice_and_the_conventions():
-    compose = assemble_v3_instructions(_request()).stage_contexts.compose.text
+    compose = _instructions(_request()).stage_contexts.compose.text
 
     assert "THE VOICE YOU ARE WRITING IN" in compose
     assert "WRITING CONVENTIONS" in compose
@@ -358,7 +371,7 @@ def test_compose_is_given_the_voice_and_the_conventions():
 
 def test_the_audit_is_shown_the_line_that_defines_failure():
     fixture = _fixture()
-    audit = assemble_v3_instructions(_request()).stage_contexts.audit.text
+    audit = _instructions(_request()).stage_contexts.audit.text
 
     assert f"This piece fails if: {fixture['brief']['fails_if']}" in audit
 
@@ -380,103 +393,81 @@ def test_the_audit_prompt_asks_whether_the_draft_walks_into_it():
     assert "it is not a gate" in prompt
 
 
-def test_the_outline_gets_its_facts_under_more_than_one_heading():
-    """The grouping existed and never ran.
-
-    `_facts_by_subject` read `claim.subject` through a getattr default, and
-    `NormalizedClaim` has no such field, so every fact in every run landed
-    under "General" -- the exact shape the function was written to prevent.
-    It now groups on the work order's own search groups, which say which
-    questions share sources rather than which question was asked.
-    """
-    fixture = _fixture()
-    package = json.loads(json.dumps(fixture["evidence_package"]))
-    # The shared fixture has one claim against one question, so it cannot show
-    # a split. Give it a second fact against a second question rather than
-    # editing a file the other tests in here read.
-    first = package["claims"][0]
-    second = dict(first, claim_id="c2", requirement_ids=["r2"])
-    package["claims"].append(second)
-    for requirement in package["requirements"]:
-        if requirement["requirement_id"] == "r2":
-            requirement.update(status="supported", claim_ids=["c2"], gap="")
-
-    work_order = json.loads(json.dumps(fixture["work_order"]))
-    for requirement in work_order["requirements"]:
-        requirement["search_group"] = (
-            "getting around" if requirement["requirement_id"] == "r1" else "prices"
-        )
-
-    request = _request(work_order=work_order, evidence_package=package)
-    facts = assemble_v3_instructions(request).stage_contexts.outline.text
-    block = facts[facts.index("FACTS AVAILABLE, BY SUBJECT"):]
-    block = block[: block.index("COVERAGE BOOKKEEPING")]
-
-    headings = [
-        line
-        for line in block.splitlines()
-        if line and not line.startswith("- ") and line != "FACTS AVAILABLE, BY SUBJECT"
-    ]
-
-    assert headings == ["getting around", "prices"]
-    assert "General" not in headings
-
-
-def test_a_fact_answering_no_grouped_question_still_appears():
-    """Grouping must never be a filter.
-
-    A work order planned before #500 carries no search groups at all, so this
-    is also the honest description of what those runs still get: one bucket,
-    every fact present.
-    """
+def test_the_outline_gets_its_facts_grouped_by_what_they_are_for():
+    """Grouping by search group inherited the research plan's shape: a section
+    per subject researched is a section per question wearing a different hat.
+    A role says what a fact does in the finished piece, which is the thing a
+    section is actually organized around."""
     request = _request()
-    stripped = request.model_copy(deep=True)
-    for requirement in stripped.work_order.requirements:
-        requirement.search_group = ""
-
-    facts = assemble_v3_instructions(stripped).stage_contexts.outline.text
-    block = facts[facts.index("FACTS AVAILABLE, BY SUBJECT"):]
-    block = block[: block.index("COVERAGE BOOKKEEPING")]
-
-    assert "General" in block
-    assert len([line for line in block.splitlines() if line.startswith("- ")]) == len(
-        normalize_evidence(stripped.work_order, stripped.evidence_package).claims
+    packet = packet_for(request)
+    # The shared fixture carries one claim, which cannot show a grouping.
+    # Three copies of it under three roles can, and the packet is a view the
+    # test is allowed to build directly -- no dossier is being faked.
+    original = packet.facts[0]
+    marked = packet.model_copy(
+        update={
+            "facts": [
+                original.model_copy(update={"claim_id": f"{original.claim_id}-{role}", "role": role})
+                for role in ("practical", "backbone", "texture")
+            ]
+        }
     )
 
+    outline = assemble_v3_instructions(request, marked).stage_contexts.outline.text
+    headings = [
+        line.split(" ", 1)[0]
+        for line in outline.splitlines()
+        if line.startswith(("BACKBONE", "PRACTICAL", "TEXTURE", "CHOSEN FOR"))
+    ]
 
-def test_only_the_outline_is_handed_the_bare_question_list():
-    """The list is provenance for one stage, and a checklist everywhere else.
+    # Backbone first, then what the reader acts on, then the seasoning. Label
+    # order rather than whatever order the facts arrived in, so two runs of the
+    # same packet assemble byte-identically.
+    assert headings == ["BACKBONE", "PRACTICAL", "TEXTURE"][: len(headings)]
+    assert "CHOSEN FOR" not in headings
+
+
+def test_a_fact_with_no_role_still_reaches_the_outline():
+    """Grouping must never be a filter. Every selection made before roles
+    existed carries none, and those runs must still see all their facts."""
+    request = _request()
+    packet = packet_for(request)
+    outline = assemble_v3_instructions(request, packet).stage_contexts.outline.text
+    block = outline[outline.index("THE FACTS THIS ARTICLE IS BEING WRITTEN FROM"):]
+
+    assert "CHOSEN FOR THIS ARTICLE" in block
+    assert all(fact.claim_id in block for fact in packet.facts)
+
+
+def test_no_stage_is_handed_the_bare_question_list():
+    """The list is provenance, and a checklist everywhere it is read.
 
     A plan now runs to forty-four questions. Under a bare `Requirements:`
     heading with nothing saying what they were, they reached compose, the audit
-    and the repair lock as well -- and both of those prompts already use the
-    word for something else: the audit calls a section's job its requirement,
-    and repair is told it may not change "the requirements" meaning the
-    approved scope. A judge marks a draft down for each of forty-four items it
-    cannot find; repair puts them back a paragraph at a time. That is #506.
+    and the repair lock -- and both of those prompts already use the word for
+    something else: the audit calls a section's job its requirement, and repair
+    is told it may not change "the requirements" meaning the approved scope. A
+    judge marks a draft down for each of forty-four items it cannot find;
+    repair puts them back a paragraph at a time. That is #506.
 
-    Only the outline needs them, because it names the `requirement_ids` each
-    section serves.
-
-    This is about the bare list only. Compose still receives REQUIREMENT
-    COVERAGE from the evidence projection, which carries the same questions
-    with their status and says what it is -- it is how the writer knows to
-    write around an `unpublished` question rather than narrate the hole.
+    The outline was the last stage that kept them, because it named the
+    `requirement_ids` each section served. It no longer does, so nothing reads
+    the list and nothing is shown it.
     """
     fixture = _fixture()
-    contexts = assemble_v3_instructions(_request()).stage_contexts
+    contexts = _instructions(_request()).stage_contexts
     entries = [
         f"- {item['requirement_id']} [{item['kind']}] — {item['question']}"
         for item in fixture["work_order"]["requirements"]
     ]
     assert entries, "fixture must declare questions for this test to mean anything"
 
-    for entry in entries:
-        assert entry in contexts.outline.text
-    # And it is labelled, so the outline cannot read it as a coverage list.
-    assert "not a checklist" in _flat(contexts.outline.text)
-
-    for stage in (contexts.compose, contexts.audit, contexts.repair_lock):
+    for stage in (
+        contexts.outline,
+        contexts.compose,
+        contexts.audit,
+        contexts.repair_lock,
+    ):
         assert "Requirements:" not in stage.text
         for entry in entries:
             assert entry not in stage.text
@@ -486,14 +477,12 @@ def test_only_the_outline_is_handed_the_bare_question_list():
             f"- {item['requirement_id']} — {item['question']}"
             not in contexts.repair_lock.text
         )
-    # The audit is not left guessing: it still gets status per question.
-    assert "SUPPORT AND OMISSION" in contexts.audit.text
 
 
 def test_the_stages_without_the_questions_keep_the_rest_of_the_brief():
     """Dropping the list must not take the scope lock with it."""
     fixture = _fixture()
-    contexts = assemble_v3_instructions(_request()).stage_contexts
+    contexts = _instructions(_request()).stage_contexts
 
     for stage in (contexts.compose, contexts.audit):
         assert fixture["brief"]["fails_if"] in stage.text
@@ -503,6 +492,7 @@ def test_the_stages_without_the_questions_keep_the_rest_of_the_brief():
     assert fixture["brief"]["outcome"] in lock
     assert "Primary subject: Lima" in lock
     assert "Do not add factual material." in lock
+
 
 def _two_claim_request(*, second_selected: bool):
     """The fixture plus a second claim on the same question, one of them cut."""
@@ -533,7 +523,7 @@ def test_a_deselected_claim_never_reaches_the_writer():
     56 of them -- three and a half words per claim, at which density there is
     no sentence you can write except a list (#534)."""
     request, cut = _two_claim_request(second_selected=False)
-    contexts = assemble_v3_instructions(request).stage_contexts
+    contexts = _instructions(request).stage_contexts
 
     assert cut["text"] not in contexts.compose.text
     assert cut["text"] not in contexts.outline.text
@@ -578,7 +568,6 @@ def test_coverage_never_tells_the_writer_a_question_has_no_answers():
 
 def test_the_outline_plans_from_what_the_writer_will_have():
     request, cut = _two_claim_request(second_selected=True)
-    outline = assemble_v3_instructions(request).stage_contexts.outline.text
+    outline = _instructions(request).stage_contexts.outline.text
 
     assert cut["text"] in outline
-

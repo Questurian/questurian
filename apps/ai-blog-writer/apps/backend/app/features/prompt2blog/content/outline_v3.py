@@ -32,7 +32,6 @@ def _sanitize_section(raw: Any) -> dict[str, Any] | None:
         "heading": heading,
         "purpose": _safe_str(record.get("purpose")) or "Purpose not stated.",
         "claim_ids": _string_list(record.get("claim_ids")),
-        "requirement_ids": _string_list(record.get("requirement_ids")),
         "target_words": max(0, _safe_int(record.get("target_words"), default=0)),
     }
 
@@ -106,19 +105,34 @@ def _names_subject(heading: str, primary_subject: str) -> bool:
     return bool(words) and _mentions(heading, words[0])
 
 
+# Facts per hundred words above which a section stops being prose.
+#
+# Run 9e66bf84 gave one 200-word section 56 claims -- three and a half words
+# each, at which density there is no sentence you can write except a list.
+# Reported, never enforced: how many facts a paragraph can carry depends on
+# what they are, and a plan rejected for this would be a plan thrown away over
+# an estimate. The operator and the run record see it; the run continues.
+CROWDED_CLAIMS_PER_HUNDRED_WORDS = 4.0
+
+
 def validate_v3_outline(
     outline: dict[str, Any],
     *,
     work_order: dict[str, Any],
     claim_ids: set[str],
-    requirement_ids: set[str],
     target_word_count: int,
 ) -> tuple[bool, dict[str, Any]]:
-    """Check a plan against the work order's scope and the real evidence.
+    """Check a plan against the work order's scope and the writer's packet.
 
     A plan that drifts is discarded rather than fed to compose: an outline that
     organizes the article around a context-only place, or that cites a claim
-    the evidence does not contain, would put the drift into the prose.
+    the writer will never see, would put the drift into the prose.
+
+    `claim_ids` is the packet, not the dossier. A plan that cites a fact a
+    person deliberately cut is structurally valid against the research and
+    wrong against this article -- and it would hand compose a section built on
+    a claim that is not in its context, which is how a writer ends up
+    inventing one.
     """
     sections = outline.get("sections") or []
     planned_words = sum(_safe_int(s.get("target_words"), default=0) for s in sections)
@@ -136,14 +150,20 @@ def validate_v3_outline(
             if claim_id not in claim_ids
         }
     )
-    unknown_requirement_ids = sorted(
+    crowded_sections = [
         {
-            requirement_id
-            for section in sections
-            for requirement_id in section["requirement_ids"]
-            if requirement_id not in requirement_ids
+            "heading": section["heading"],
+            "claims": len(section["claim_ids"]),
+            "target_words": words,
+            "claims_per_hundred_words": round(
+                len(section["claim_ids"]) * 100 / words, 1
+            ),
         }
-    )
+        for section in sections
+        if (words := _safe_int(section.get("target_words"), default=0)) > 0
+        and len(section["claim_ids"]) * 100 / words
+        > CROWDED_CLAIMS_PER_HUNDRED_WORDS
+    ]
 
     scope = _safe_dict(work_order.get("scope"))
     references = scope.get("references") or []
@@ -198,7 +218,6 @@ def validate_v3_outline(
         == len(sections),
         "within_word_budget": within_budget,
         "claims_resolve": not unknown_claim_ids,
-        "requirements_resolve": not unknown_requirement_ids,
         # A context-only place may be discussed inside a section; it may never
         # be what a section is about.
         "no_context_only_sections": not context_only_headings,
@@ -210,7 +229,10 @@ def validate_v3_outline(
         "planned_word_count": planned_words,
         "target_word_count": target_word_count,
         "unknown_claim_ids": unknown_claim_ids,
-        "unknown_requirement_ids": unknown_requirement_ids,
+        # Read, not enforced. A section at this density is the failure mode
+        # this redesign exists for, and seeing it in the run record is how we
+        # find out whether narrowing the packet actually fixed it.
+        "crowded_sections": crowded_sections,
         "context_only_headings": context_only_headings,
     }
     return all(checks.values()), diagnostics
@@ -309,11 +331,9 @@ def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
         target = section.get("target_words") or 0
         budget = f" (~{target} words)" if target else ""
         claims = ", ".join(section["claim_ids"]) or "none"
-        requirements = ", ".join(section["requirement_ids"]) or "none"
         lines.append(f"{index}. {section['heading']}{budget}")
         lines.append(f"   Purpose: {section['purpose']}")
         lines.append(f"   Evidence claims: {claims}")
-        lines.append(f"   Requirements served: {requirements}")
 
     takeaway = _safe_str(outline.get("takeaway_focus"))
     if takeaway:

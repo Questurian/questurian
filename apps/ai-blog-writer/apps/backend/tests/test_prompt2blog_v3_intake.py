@@ -14,10 +14,10 @@ from pydantic import ValidationError
 import app.features.prompt2blog.routes as prompt2blog_routes
 from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.intake_v3 import (
-    prepare_v3_runtime_request,
     v3_intake_result,
     v3_run_input_artifact,
 )
+from tests.prompt2blog_packet_support import keep_everything, runtime_for
 
 FIXTURE_PATH = (
     Path(__file__).parents[3]
@@ -91,7 +91,8 @@ def _request(**overrides) -> Prompt2BlogV4Request:
 
 def _intake(payload: dict) -> dict:
     """Runs the gate-and-assemble step `/pipeline-v3` runs before queueing."""
-    return v3_intake_result(Prompt2BlogV4Request.model_validate(payload))
+    request = Prompt2BlogV4Request.model_validate(payload)
+    return v3_intake_result(request, keep_everything(request))
 
 
 def test_intake_returns_a_versioned_run_input_for_the_approved_brief():
@@ -135,7 +136,7 @@ def test_run_input_records_the_evidence_receipt_and_resolved_profiles():
 def test_runtime_request_keeps_the_commission_and_evidence_whole():
     fixture = _fixture()
 
-    runtime = prepare_v3_runtime_request(_request(evidence_package=_ready_evidence()))
+    runtime = runtime_for(_request(evidence_package=_ready_evidence()))
 
     # A commission written before the direction step declared its premise still
     # runs. The empty premise, the empty assumption_ids and the `exact`
@@ -218,7 +219,7 @@ def test_intake_cannot_be_used_to_change_the_work_order():
 
 
 def test_v3_run_input_does_not_reintroduce_v2_shapes():
-    runtime = prepare_v3_runtime_request(_request(evidence_package=_ready_evidence()))
+    runtime = runtime_for(_request(evidence_package=_ready_evidence()))
 
     artifact = v3_run_input_artifact(runtime)
 

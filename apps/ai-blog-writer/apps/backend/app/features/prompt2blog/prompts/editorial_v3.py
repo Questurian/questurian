@@ -16,7 +16,6 @@ Return strict JSON only:
       "heading": "string",
       "purpose": "string",
       "claim_ids": ["string"],
-      "requirement_ids": ["string"],
       "target_words": 0
     }}
   ],
@@ -29,10 +28,13 @@ Rules:
 - Plan at least 3 and at most 12 sections.
 - Headings must be specific and distinct. No generic "Introduction" or
   "Conclusion" headings.
-- Every section must name the claim_ids it rests on, using IDs that exist in
-  the evidence records. Never cite a claim the records do not contain.
-- Every section must name the requirement_ids it serves, using the locked
-  work order's requirement IDs.
+- Every section must name the claim_ids it rests on, using IDs from the facts
+  below. Never cite a claim that is not there: what you are shown is the whole
+  desk, and a fact outside it is one a person decided this article does not
+  need.
+- You are not obliged to place every fact. A section carrying more facts than
+  it has words for is a list, not a section. Leave out what the piece is
+  better without.
 - The primary subject controls the article. A context-only reference may
   calibrate a fact inside a section; it may never be what a section is about,
   and it may never appear as a heading subject.

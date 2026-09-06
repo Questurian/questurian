@@ -71,7 +71,13 @@ RESUME_HISTORY_STAGE = "pipeline_resume_v3"
 # `title` as its next node, and that node no longer exists. Refused by version
 # here, so the operator is told the snapshot is from older code rather than
 # being handed a vaguer complaint about an unrunnable stage from further in.
-RESUME_SNAPSHOT_VERSION = 4
+#
+# 5: the writing packet. A version-4 snapshot carries no `packet`, and the
+# stages that read one would either fall over or, worse, resume writing from
+# the whole dossier -- the exact silent widening the packet exists to prevent.
+# Refused, and a refusal costs nothing: starting again is what happened before
+# resume existed at all.
+RESUME_SNAPSHOT_VERSION = 5
 
 # State entries rebuilt on the way back in rather than stored. `request` is a
 # pydantic model and is written out under its own key; `completed` belongs to

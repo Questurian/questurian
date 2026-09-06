@@ -992,11 +992,32 @@ def blocking_questions(run_id: str) -> list[dict[str, Any]]:
     return blocking
 
 
-def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4Request:
+@dataclass(frozen=True)
+class WritingHandoff:
+    """Everything the write boundary needs, read in one pass.
+
+    The request and the selection travel together because they are only
+    meaningful together: the request says what the article is and what was
+    found, the selection says which of it belongs in this article, and the
+    packet built from the pair is what the writer sees. Separating them is how
+    a run ends up writing from a dossier nobody chose.
+    """
+
+    request: Prompt2BlogV4Request
+    selection: Selection
+
+
+def writing_request(run_id: str, *, length_id: str = "medium") -> WritingHandoff:
     """Assemble what the graph runs from, out of what intake settled.
 
     Refuses if research said no. The gate is decided once, in one place; this
     is not a second opinion, it is the same one enforced at the hand-off.
+
+    Refuses again if nothing has selected. Falling back to every fact was the
+    old behaviour and it is the wrong failure: the case where the ranking model
+    fell over looks exactly like the case where a person decided to keep
+    everything, and only one of those should produce a hundred-fact article. A
+    run whose selection is missing is a run for a person to look at.
     """
     brief = load_brief(run_id)
     work_order = load_work_order(run_id)
@@ -1009,18 +1030,25 @@ def writing_request(run_id: str, *, length_id: str = "medium") -> Prompt2BlogV4R
             + " ".join(verdict.findings)
         )
 
+    selection = load_selection(run_id)
+    if selection is None:
+        raise ValueError(
+            "No facts have been chosen for this run yet, so there is nothing "
+            "to write from. Run selection again, or keep every fact "
+            "deliberately."
+        )
+
     # The one place the editorial cut is applied (#534). Coverage is decided
     # above it, on the whole dossier, so a deselected claim can never turn a
-    # supported question into a gate. A run with no selection writes from every
-    # fact it found, exactly as it did before this existed.
-    if selection := load_selection(run_id):
-        evidence = apply_selection(evidence, selection)
-
-    return Prompt2BlogV4Request(
-        brief=brief,
-        work_order=work_order,
-        evidence_package=evidence,
-        profiles=Prompt2BlogWritingProfiles(length_id=length_id),
+    # supported question into a gate.
+    return WritingHandoff(
+        request=Prompt2BlogV4Request(
+            brief=brief,
+            work_order=work_order,
+            evidence_package=apply_selection(evidence, selection),
+            profiles=Prompt2BlogWritingProfiles(length_id=length_id),
+        ),
+        selection=selection,
     )
 
 

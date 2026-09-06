@@ -27,6 +27,7 @@ from app.features.prompt2blog.intake_v4 import (
     begin_intake,
     intake_state,
     load_brief,
+    load_evidence,
     load_work_order,
     plan_research,
     reopen_intake,
@@ -410,13 +411,20 @@ def test_the_writing_request_is_assembled_from_what_intake_settled(isolated_db):
     run_id = _to_work_order(services)
     do_research(run_id, services)
 
-    request = writing_request(run_id)
+    handoff = writing_request(run_id)
+    request = handoff.request
 
     assert request.schema_version == 4
     assert request.brief.brief_fingerprint == request.work_order.brief_fingerprint
     assert (
         request.evidence_package.work_order_fingerprint
         == request.work_order.work_order_fingerprint
+    )
+    # The selection travels with it. The two are only meaningful together, and
+    # a hand-off that carried the dossier without the choice is a run written
+    # from facts nobody picked.
+    assert handoff.selection.evidence_fingerprint == (
+        load_evidence(run_id).content_fingerprint()
     )
 
 

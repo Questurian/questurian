@@ -14,6 +14,7 @@ from typing import Any
 
 from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.instructions_v3 import assemble_v3_instructions
+from tests.prompt2blog_packet_support import packet_for
 
 FIXTURE = (
     Path(__file__).parents[3]
@@ -35,7 +36,7 @@ def _contexts():
             "profiles": {"length_id": "medium", "creativity_level": "medium"},
         }
     )
-    return assemble_v3_instructions(request).stage_contexts
+    return assemble_v3_instructions(request, packet_for(request)).stage_contexts
 
 
 def test_every_stage_context_reports_its_own_size():

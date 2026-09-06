@@ -16,7 +16,7 @@ from app.features.prompt2blog.content.outline_v3 import (
 )
 from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
-from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
+from tests.prompt2blog_packet_support import runtime_for
 from app.features.prompt2blog.stages.v3.compose import run_v3_compose_stage
 from app.features.prompt2blog.stages.v3.outline import run_v3_outline_stage
 
@@ -77,7 +77,7 @@ def _runtime():
             },
         }
     )
-    return prepare_v3_runtime_request(request)
+    return runtime_for(request)
 
 
 def _state(**overrides) -> dict[str, Any]:
@@ -87,6 +87,7 @@ def _state(**overrides) -> dict[str, Any]:
         "brief": runtime.brief,
         "work_order": runtime.work_order,
         "evidence": runtime.evidence,
+        "packet": runtime.packet,
         "instructions": runtime.instructions,
         "stage_contexts": runtime.instructions["stage_contexts"],
         "option_context": runtime.option_context,
@@ -175,10 +176,7 @@ def _validate(payload: dict[str, Any], target_word_count: int = 900):
     return validate_v3_outline(
         sanitize_v3_outline(payload),
         work_order=runtime.work_order,
-        claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
-        requirement_ids={
-            item["requirement_id"] for item in runtime.evidence["requirements"]
-        },
+        claim_ids={fact["claim_id"] for fact in runtime.packet["facts"]},
         target_word_count=target_word_count,
     )
 
@@ -200,10 +198,7 @@ def test_city_only_outline_wording_covers_city_country_primary_subject(
     accepted, diagnostics = validate_v3_outline(
         sanitize_v3_outline(payload),
         work_order=work_order,
-        claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
-        requirement_ids={
-            item["requirement_id"] for item in runtime.evidence["requirements"]
-        },
+        claim_ids={fact["claim_id"] for fact in runtime.packet["facts"]},
         target_word_count=900,
     )
 
@@ -220,10 +215,7 @@ def test_unrelated_city_does_not_cover_city_country_primary_subject():
     accepted, diagnostics = validate_v3_outline(
         sanitize_v3_outline(_outline_payload()),
         work_order=work_order,
-        claim_ids={claim["claim_id"] for claim in runtime.evidence["claims"]},
-        requirement_ids={
-            item["requirement_id"] for item in runtime.evidence["requirements"]
-        },
+        claim_ids={fact["claim_id"] for fact in runtime.packet["facts"]},
         target_word_count=900,
     )
 
@@ -282,11 +274,14 @@ def test_a_brief_aligned_plan_is_accepted_and_rendered_for_compose():
     accepted, diagnostics = _validate(_outline_payload())
 
     assert accepted is True
-    assert diagnostics["unknown_requirement_ids"] == []
+    assert diagnostics["unknown_claim_ids"] == []
 
     rendered = format_v3_outline_for_prompt(sanitize_v3_outline(_outline_payload()))
     assert "Evidence claims: c1" in rendered
-    assert "Requirements served: r1" in rendered
+    # The plan no longer names the research questions each section serves. It
+    # was the last reader of that list, and a section is organized around what
+    # a fact is for, not around which query found it.
+    assert "Requirements served" not in rendered
 
 
 def test_the_outline_stage_keeps_a_drifted_plan_out_of_compose():
@@ -335,7 +330,7 @@ def test_the_outline_prompt_gets_planning_context_not_the_whole_stack():
 
     prompt = llm.prompts[0]
     assert "OUTLINE AUTHORITY" in prompt
-    assert "FACTS AVAILABLE, BY SUBJECT" in prompt
+    assert "THE FACTS THIS ARTICLE IS BEING WRITTEN FROM" in prompt
     # The outline knows which publication it works for now (#432, A1).
     assert "THE VOICE YOU ARE WRITING IN" in prompt
     assert "APPROVED BRIEF" in prompt
@@ -391,7 +386,7 @@ def test_compose_writes_from_evidence_records_and_never_from_source_prose():
     assert "HOUSE STYLE" in prompt
     section_plan = prompt.split("SECTION PLAN:", 1)[1].split("COMPOSE AUTHORITY", 1)[0]
     assert "Evidence claims: c1" in section_plan
-    assert "Requirements served: r1" in section_plan
+    assert "Requirements served" not in section_plan
     assert section_plan.index("What Lima costs now") < section_plan.index(
         "The tradeoffs behind the price"
     )

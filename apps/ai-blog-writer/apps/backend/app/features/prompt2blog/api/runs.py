@@ -45,9 +45,11 @@ from ..intake_v3 import (
 )
 from ..observability import _read_langgraph_trace
 from ..models import PipelineV4RuntimeRequest
+from ..options import default_target_word_count
 from ..orchestrator_v3 import resume_pipeline_v3, run_pipeline_v3
 from ..resume_v3 import plan_resume
 from ..run_recorder import RunRecorder
+from ..selection_v4 import selection_from_flags
 from ..support import _clean_string_list, _safe_str
 
 router = APIRouter()
@@ -144,8 +146,23 @@ def start_pipeline_v3(
     `needs_research` is returned synchronously and queues nothing: a commission
     whose evidence cannot support it has no run to make.
     """
+    # This route receives a whole request and no run, so there is no operator
+    # selection to read. Keeping every fact is a legitimate answer to that and
+    # a terrible default, so it is stated rather than assumed: the run's record
+    # says a person did not choose here, and the intake path -- which is what
+    # the interface uses -- carries a real one.
+    selection = selection_from_flags(
+        request.brief,
+        request.work_order,
+        request.evidence_package,
+        target_word_count=default_target_word_count(),
+        note=(
+            "Submitted directly to /pipeline-v3, which carries no editorial "
+            "record. The claims this request marked as selected were kept."
+        ),
+    )
     try:
-        readiness_result = v3_intake_result(request)
+        readiness_result = v3_intake_result(request, selection)
     except (RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
@@ -164,7 +181,7 @@ def start_pipeline_v3(
         )
 
     credential = _prompt2blog_credential_for_run()
-    runtime = prepare_v3_runtime_request(request)
+    runtime = prepare_v3_runtime_request(request, selection)
     run_id = str(uuid4())
     recorder = RunRecorder()
     recorder.queue(run_id, staff_user_id(staff_user))

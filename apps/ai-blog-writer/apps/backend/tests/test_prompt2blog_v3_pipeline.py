@@ -21,7 +21,7 @@ from app.features.prompt2blog.config import (
 )
 from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
-from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
+from tests.prompt2blog_packet_support import runtime_for
 from app.features.prompt2blog.orchestrator_v3 import run_pipeline_v3
 from app.features.prompt2blog.run_recorder import RunRecorder
 from tests.prompt2blog_test_support import response_payload
@@ -284,7 +284,7 @@ class ScriptedLLM:
 def _run(**llm_kwargs) -> tuple[dict[str, Any], RecordingRecorder, ScriptedLLM]:
     llm = ScriptedLLM(**llm_kwargs)
     recorder = RecordingRecorder()
-    runtime = prepare_v3_runtime_request(_request())
+    runtime = runtime_for(_request())
     state = run_pipeline_v3(
         "lima-v3-run",
         runtime,
@@ -338,7 +338,7 @@ def test_balanced_route_reserves_opus_for_drafting_and_repair():
 
     run_pipeline_v3(
         "balanced-routing-run",
-        prepare_v3_runtime_request(request),
+        runtime_for(request),
         PipelineDependencies(llm=llm, recorder=recorder),
     )
 
@@ -386,7 +386,7 @@ def test_a_route_can_move_the_checking_stages_off_claude():
 
     run_pipeline_v3(
         "gemini-checked-run",
-        prepare_v3_runtime_request(request),
+        runtime_for(request),
         PipelineDependencies(llm=llm, recorder=recorder),
     )
 
@@ -423,7 +423,7 @@ def test_a_route_can_repair_at_a_different_effort_than_it_drafts():
 
     run_pipeline_v3(
         "max-repair-run",
-        prepare_v3_runtime_request(request),
+        runtime_for(request),
         PipelineDependencies(llm=llm, recorder=recorder),
     )
 
@@ -451,7 +451,7 @@ def test_repair_follows_the_writer_when_a_route_does_not_name_it():
 
     run_pipeline_v3(
         "inherited-repair-run",
-        prepare_v3_runtime_request(request),
+        runtime_for(request),
         PipelineDependencies(llm=llm, recorder=RecordingRecorder()),
     )
 
@@ -472,7 +472,7 @@ def test_a_request_that_names_no_checking_models_keeps_the_pinned_defaults():
 
     run_pipeline_v3(
         "legacy-routing-run",
-        prepare_v3_runtime_request(request),
+        runtime_for(request),
         PipelineDependencies(llm=llm, recorder=RecordingRecorder()),
     )
 
@@ -503,7 +503,7 @@ def test_a_claude_written_draft_says_the_creativity_dial_did_not_reach_it(monkey
 
     run_pipeline_v3(
         "creativity-honesty-run",
-        prepare_v3_runtime_request(request),
+        runtime_for(request),
         PipelineDependencies(llm=ScriptedLLM(quality_scores=[9]), recorder=recorder),
     )
 
@@ -576,7 +576,7 @@ def test_an_expensive_run_stops_before_buying_a_repair():
 
     state = run_pipeline_v3(
         "expensive-v3-run",
-        prepare_v3_runtime_request(_request()),
+        runtime_for(_request()),
         PipelineDependencies(llm=llm, recorder=recorder),
     )
 
@@ -679,7 +679,7 @@ def test_the_background_run_keeps_the_bound_credential_for_its_whole_run(monkeyp
 
     runs_api._run_pipeline_v3_background(
         "run-id",
-        prepare_v3_runtime_request(_request()),
+        runtime_for(_request()),
         credential,
     )
 
@@ -738,7 +738,7 @@ def test_no_stage_writes_a_headline():
     llm = TextIsForbidden(quality_scores=[9])
     state = run_pipeline_v3(
         "lima-no-headline",
-        prepare_v3_runtime_request(_request()),
+        runtime_for(_request()),
         PipelineDependencies(llm=llm, recorder=RecordingRecorder()),
     )
 

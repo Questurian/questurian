@@ -75,7 +75,6 @@ V3_OUTLINE_SCHEMA: dict[str, Any] = {
                     "heading": {"type": "string"},
                     "purpose": {"type": "string"},
                     "claim_ids": {"type": "array", "items": {"type": "string"}},
-                    "requirement_ids": {"type": "array", "items": {"type": "string"}},
                     "target_words": {"type": "integer", "minimum": 0},
                 },
             },

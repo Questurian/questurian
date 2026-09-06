@@ -653,6 +653,58 @@ def _rank_texture(
     return ranked, reasons
 
 
+def selection_from_flags(
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
+    evidence: EvidencePackage,
+    *,
+    target_word_count: int,
+    note: str,
+) -> Selection:
+    """The choice a dossier already carries, written down as a decision.
+
+    Every claim has a `selected` flag, and until now a run with no selection
+    record simply used them -- which meant the case where the ranking model
+    fell over and the case where somebody decided to keep everything produced
+    the same hundred-fact article, and nothing could tell them apart. This is
+    the difference: a real record, bound to this dossier, carrying the reason
+    a person gave, that the packet can be built from and refuse against.
+
+    Flagged claims come first and the line is drawn under them, so the same
+    set survives an operator moving it. `ranked` stays false: nothing ordered
+    these, and a receipt claiming a judgement nobody made is worse than one
+    admitting there was none.
+    """
+    kept = [
+        claim.claim_id
+        for claim in evidence.claims
+        if claim.selected and not claim.merged_into
+    ]
+    rest = [
+        claim.claim_id
+        for claim in evidence.claims
+        if not claim.selected and not claim.merged_into
+    ]
+    return Selection(
+        order=[*kept, *rest],
+        merged={
+            claim.claim_id: claim.merged_into
+            for claim in evidence.claims
+            if claim.merged_into
+        },
+        keep_count=len(kept),
+        texture_order=[],
+        texture_reserve=0,
+        target_word_count=target_word_count,
+        brief_fingerprint=brief.brief_fingerprint,
+        work_order_fingerprint=work_order.work_order_fingerprint,
+        evidence_fingerprint=evidence.content_fingerprint(),
+        deduped=False,
+        ranked=False,
+        note=note,
+    )
+
+
 def select_evidence(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,

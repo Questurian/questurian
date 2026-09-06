@@ -101,6 +101,7 @@ def _initial_v3_state(
         "brief": request.brief,
         "work_order": request.work_order,
         "evidence": request.evidence,
+        "packet": request.packet,
         "instructions": instructions,
         "stage_contexts": _safe_dict(instructions.get("stage_contexts")),
         "option_context": _safe_dict(request.option_context),

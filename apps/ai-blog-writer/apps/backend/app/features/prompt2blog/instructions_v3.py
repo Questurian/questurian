@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from .contracts_v4 import ArticleBrief, Prompt2BlogV4Request, Prompt2BlogWorkOrder
 from .editorial_catalog import EditorialCatalog, load_editorial_catalog
 from .evidence_v3 import NormalizedEvidence, normalize_evidence
-from .support import _safe_str
+from .packet_v4 import WritingPacket
 
 INSTRUCTION_SCHEMA_VERSION = 5
 
@@ -29,6 +29,21 @@ _OUTLINE_FORM_HEADINGS = (
     "## Required evidence",
     "## Allowed structures",
     "## Failure modes",
+)
+
+# What each editorial role is called where a model reads it. The role names in
+# the packet are short because they are data; these say what the job is.
+_ROLE_LABELS = {
+    "backbone": "BACKBONE — what the piece argues from",
+    "practical": "PRACTICAL — what the reader acts on",
+    "texture": "TEXTURE — what makes the place real",
+    "": "CHOSEN FOR THIS ARTICLE",
+}
+_ROLE_ORDER = (
+    _ROLE_LABELS["backbone"],
+    _ROLE_LABELS["practical"],
+    _ROLE_LABELS["texture"],
+    _ROLE_LABELS[""],
 )
 
 EVIDENCE_DISPOSITION_POLICY = """EVIDENCE DISPOSITION POLICY (IMMUTABLE)
@@ -88,8 +103,6 @@ class V3InstructionSet(InstructionModel):
 def _brief_body(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
-    *,
-    include_requirements: bool = True,
 ) -> str:
     """The brief and its work order, rendered for a prompt.
 
@@ -97,25 +110,21 @@ def _brief_body(
     evidence as the facts you may use rather than the article's reason for
     existing, is A5 and lands with the compose rework.
 
-    `include_requirements` exists because the research questions are only ever
-    useful to one stage. They used to arrive everywhere under a bare
-    `Requirements:` heading with nothing saying what they were, and a plan can
-    now carry forty-four of them. A judge handed forty-four items called
-    requirements marks a draft down for each one missing; a repair pass handed
-    the same list adds them back, one paragraph each, and the article becomes a
-    coverage checklist. That is the mechanism behind #506, and the word is
-    ambiguous in both prompts: the audit uses "requirement" for a section's
-    job, and repair is told it may not change "the requirements" meaning the
-    approved scope. Only the outline needs the ids, because it must name the
-    `requirement_ids` each section serves.
+    The research questions used to be pasted in here. They arrived everywhere
+    under a bare `Requirements:` heading with nothing saying what they were,
+    and a plan can carry forty-four of them: a judge handed forty-four items
+    called requirements marks a draft down for each one missing, and a repair
+    pass handed the same list adds them back, one paragraph each, until the
+    article is a coverage checklist. That is the mechanism behind #506.
+
+    The outline was the last stage that needed the ids, because it named the
+    `requirement_ids` each section served. It no longer does -- the packet says
+    what a fact is for, which is the thing a section is actually organized
+    around -- so the list has no reader left anywhere.
     """
     references = "\n".join(
         f"- {reference.name} — {reference.role}"
         for reference in work_order.scope.references
-    )
-    requirements = "\n".join(
-        f"- {requirement.requirement_id} [{requirement.kind}] — {requirement.question}"
-        for requirement in work_order.requirements
     )
     must_name = "\n".join(f"- {item}" for item in brief.must_name) or "- None recorded."
     material = (
@@ -140,14 +149,6 @@ def _brief_body(
         "Material the writer has:",
         material,
     ]
-    if include_requirements:
-        lines += [
-            "Questions research was sent to answer. These are provenance and "
-            "the ids you cite, not a checklist the article owes an answer to. "
-            "A question whose answer earned no place in the piece is not a "
-            "hole; what the article may say is the evidence, not this list.",
-            requirements,
-        ]
     lines += [
         f"This piece fails if: {brief.fails_if}",
         "Context-only references may calibrate a fact or explain significance. "
@@ -184,6 +185,133 @@ def _evidence_body(evidence: NormalizedEvidence, *, for_compose: bool = False) -
         "that two records disagreed, which one was chosen, or why.\n\n"
         f"{evidence.compose_records_text if for_compose else evidence.records_text}"
     )
+
+
+def _packet_facts_body(packet: WritingPacket) -> str:
+    """The chosen facts, for the stage that decides where they go.
+
+    Grouped by editorial role rather than by the question that found them.
+    Grouping by search group was the previous answer and it inherited the
+    research plan's shape: a section per subject researched, which is a
+    section per question wearing a different hat. What the outline needs to
+    know about a fact is what it is for -- the backbone of the argument, a
+    decision the reader has to make, or the detail that makes a place real.
+
+    The reason line travels with each fact. It is the selection saying what
+    the article uses this for, which is the only thing that lets a plan put
+    two facts in the same section because they do the same job.
+    """
+    by_role: dict[str, list[str]] = {}
+    for fact in packet.facts:
+        as_of = f" (as of {fact.as_of})" if fact.as_of else ""
+        reason = f"\n    Why it is here: {fact.reason}" if fact.reason else ""
+        note = (
+            f"\n    The operator looked at this: {fact.operator_note}"
+            if fact.operator_note
+            else ""
+        )
+        by_role.setdefault(_ROLE_LABELS.get(fact.role, _ROLE_LABELS[""]), []).append(
+            f"- {fact.claim_id} — {fact.text}{as_of} [{fact.confidence}]"
+            f"{reason}{note}"
+        )
+
+    lines = ["THE FACTS THIS ARTICLE IS BEING WRITTEN FROM"]
+    # Label order, not dictionary order, so two runs of the same packet
+    # assemble byte-identically and the backbone is read first.
+    for label in _ROLE_ORDER:
+        if label in by_role:
+            lines.extend(("", label, *by_role[label]))
+    if not by_role:
+        lines.append("- None supplied.")
+
+    notes = _packet_notes(packet)
+    if notes:
+        lines.extend(("", notes))
+    lines.extend(
+        (
+            "",
+            "This is the whole desk. Research found more and a person chose "
+            "these; the rest is not a hole to plan around and not work left "
+            "undone. Do not plan a section whose subject is what is missing.",
+        )
+    )
+    return "\n".join(lines)
+
+
+def _packet_notes(packet: WritingPacket) -> str:
+    """The limitations attached to those facts, and nothing else.
+
+    Long by design where it needs to be. A caveat is what makes a fact true;
+    a packet that dropped it to save characters would be smaller and wrong.
+    """
+    if not packet.notes:
+        return ""
+    lines = ["HOW THESE FACTS MAY BE STATED"]
+    lines.extend(
+        f"- {', '.join(note.claim_ids)}: {note.text}" for note in packet.notes
+    )
+    return "\n".join(lines)
+
+
+def _packet_material(packet: WritingPacket) -> str:
+    if not packet.supplied_material:
+        return ""
+    lines = ["MATERIAL THE WRITER ALREADY HAS"]
+    lines.extend(
+        f"- [{item.kind}] {item.statement}"
+        + (f" ({item.note})" if item.note else "")
+        for item in packet.supplied_material
+    )
+    return "\n".join(lines)
+
+
+def _packet_evidence_body(packet: WritingPacket) -> str:
+    """The facts the writer may use, and the rules for using them.
+
+    What is deliberately absent: the research questions, their statuses, their
+    gaps, and the claims that were not chosen. Compose used to receive all of
+    them under the same heading as the facts -- on run 4a56545b, 10,371
+    characters of coverage bookkeeping against 7,225 characters of chosen
+    facts, eleven rows of it reading `none kept for this article`. A writer
+    handed a list of questions answers questions; the article that comes back
+    is shaped like a research plan because it was given one.
+
+    Grounding is unaffected and still reads the whole dossier. This is the
+    writer's desk, not the record.
+    """
+    facts = [
+        f"- {fact.claim_id} — {fact.text}"
+        + (f" (as of {fact.as_of})" if fact.as_of else "")
+        + f" [{fact.confidence}]"
+        + (
+            f"\n    The operator looked at this: {fact.operator_note}"
+            if fact.operator_note
+            else ""
+        )
+        for fact in packet.facts
+    ]
+    blocks = [
+        EVIDENCE_DISPOSITION_POLICY,
+        "These records are the only permitted source of fact. Use them exactly: "
+        "preserve dates, units, geography, and stated uncertainty. Attribution "
+        "is internal to these records. Never carry it into the prose: no "
+        "\"sources report\", no \"outlets say\", no \"according to\", no "
+        "\"the publication noted\", no naming the outlet, site, or report a "
+        "fact came from. Never invent a bridge fact to close a gap. First-hand "
+        "material is the writer's own knowledge: state it directly, as fact, "
+        "with no attribution, no sourcing language, and no note about how it "
+        "was obtained.\n\n"
+        "These facts were chosen for this article by a person. They are "
+        "available material, not a checklist: a fact you do not need is a fact "
+        "you leave out, and using fewer of them well is better than using all "
+        "of them badly. Nothing here is owed a sentence except what the brief "
+        "itself asks for.",
+        "THE FACTS\n" + ("\n".join(facts) if facts else "- None supplied."),
+    ]
+    blocks.extend(
+        block for block in (_packet_notes(packet), _packet_material(packet)) if block
+    )
+    return "\n\n".join(blocks)
 
 
 def _audience_body(
@@ -247,113 +375,6 @@ def _support_status(evidence: NormalizedEvidence) -> str:
         "If the omission matters, say the article needs more research rather "
         "than more writing."
     )
-    return "\n".join(lines)
-
-
-def _facts_by_subject(
-    evidence: NormalizedEvidence, work_order: Prompt2BlogWorkOrder
-) -> str:
-    """The facts, grouped by what they are about.
-
-    The outline used to be handed this ledger indexed by requirement id, and it
-    did the obvious thing: one section per question. That is why the Lima
-    article's spine was its own research plan. Grouping by source subject
-    removes the shape the plan was inheriting -- the outline has to decide what
-    the piece is about instead of transcribing what was asked.
-
-    The requirement index still follows, because coverage has to stay
-    checkable. It is second, and it is labelled as bookkeeping.
-    """
-    # The work order's own search groups. They were written to say which
-    # questions can be answered from the same sources -- one route's stations,
-    # fare and duration; one museum's hours and admission -- so they already
-    # name subjects rather than questions, and no model call is needed to sort.
-    #
-    # This replaces `getattr(claim, "subject", "")`, which read a field
-    # `NormalizedClaim` has never had. The default swallowed it, every fact in
-    # every run landed under "General", and the grouping this function exists
-    # for has never once happened.
-    #
-    # It is not a perfect subject index: a group is still derived from what was
-    # researched together, so a plan with one group per section would come back
-    # coarser rather than differently shaped. It is the only real signal
-    # available without a classification call, and it beats one bucket.
-    group_of_requirement = {
-        item.requirement_id: _safe_str(item.search_group).replace("_", " ").strip()
-        for item in work_order.requirements
-    }
-
-    by_subject: dict[str, list[str]] = {}
-    # The outline plans from what the writer will have, not from the dossier.
-    # Run 9e66bf84's outline placed 102 of 105 claims across six sections and
-    # gave one of them 56 against a 200-word budget -- it did not select, it
-    # distributed, and called that a plan (#534).
-    for claim in (item for item in evidence.claims if item.selected):
-        subject = next(
-            (
-                group_of_requirement[requirement_id]
-                for requirement_id in claim.requirement_ids
-                if group_of_requirement.get(requirement_id)
-            ),
-            "",
-        ) or "General"
-        as_of = f" (as of {claim.as_of})" if claim.as_of else ""
-        by_subject.setdefault(subject, []).append(
-            f"- {claim.claim_id} — {claim.text}{as_of} [{claim.confidence}]"
-        )
-
-    lines = ["FACTS AVAILABLE, BY SUBJECT"]
-    if by_subject:
-        for subject in sorted(by_subject):
-            lines.extend(("", subject, *by_subject[subject]))
-    else:
-        lines.append("- None supplied.")
-
-    lines.extend(
-        (
-            "",
-            "COVERAGE BOOKKEEPING (which question each fact closes — not a "
-            "section plan)",
-        )
-    )
-    visible = {claim.claim_id for claim in evidence.claims if claim.selected}
-    for requirement in evidence.requirements:
-        kept = [item for item in requirement.claim_ids if item in visible]
-        # Never a bare "none" where the question does have answers: the outline
-        # would read that as a hole to plan around rather than as facts that
-        # were not chosen.
-        claims = ", ".join(kept) or (
-            "none kept for this article" if requirement.claim_ids else "none"
-        )
-        gap = f" | gap: {requirement.gap}" if requirement.gap else ""
-        lines.append(
-            f"- {requirement.requirement_id} [{requirement.status}] "
-            f"claims: {claims}{gap}"
-        )
-    return "\n".join(lines)
-
-
-def _claim_requirement_index(evidence: NormalizedEvidence) -> str:
-    lines = ["CLAIM INDEX"]
-    if evidence.claims:
-        for claim in evidence.claims:
-            requirements = ", ".join(claim.requirement_ids) or "none"
-            as_of = f" | as of: {claim.as_of}" if claim.as_of else ""
-            lines.append(
-                f"- {claim.claim_id} — {claim.text} | requirements: "
-                f"{requirements}{as_of} | confidence: {claim.confidence}"
-            )
-    else:
-        lines.append("- None supplied.")
-
-    lines.extend(("", "REQUIREMENT INDEX"))
-    for requirement in evidence.requirements:
-        claims = ", ".join(requirement.claim_ids) or "none"
-        gap = f" | gap: {requirement.gap}" if requirement.gap else ""
-        lines.append(
-            f"- {requirement.requirement_id} — {requirement.question} "
-            f"| status: {requirement.status} | claims: {claims}{gap}"
-        )
     return "\n".join(lines)
 
 
@@ -443,10 +464,18 @@ def stage_context_manifest(
 
 def assemble_v3_instructions(
     request: Prompt2BlogV4Request,
+    packet: WritingPacket,
     *,
     catalog: EditorialCatalog | None = None,
 ) -> V3InstructionSet:
-    """Build canonical layers and job-specific contexts for one brief."""
+    """Build canonical layers and job-specific contexts for one brief.
+
+    The packet is required rather than optional. Two ways to reach the writer
+    -- one narrow, one from the whole dossier -- is the arrangement where a
+    failure in the narrow one silently restores the old behaviour, which is
+    the failure this redesign exists to prevent. A run that wants every fact
+    says so with `select_everything`, and gets a packet either way.
+    """
     catalog = catalog or load_editorial_catalog()
     brief = request.brief
     work_order = request.work_order
@@ -515,10 +544,7 @@ def assemble_v3_instructions(
     ]
 
     form_structure = _form_structure(form.instructions)
-    # The outline names the `requirement_ids` each section serves, so it is the
-    # one stage that needs them. Everywhere else the list is noise at best.
-    outline_brief_body = _brief_body(brief, work_order)
-    brief_body = _brief_body(brief, work_order, include_requirements=False)
+    brief_body = _brief_body(brief, work_order)
     audience_body = _audience_body(brief, catalog)
     topic_modules_body = (
         "\n\n".join(module.instructions for module in active_modules)
@@ -538,13 +564,13 @@ def assemble_v3_instructions(
                 # give it a good plan and it writes well, give it an audit and
                 # it writes an excellent audit. This stage decides which.
                 ("voice", f"THE VOICE YOU ARE WRITING IN\n{catalog.voice.instructions}"),
-                ("brief", f"APPROVED BRIEF\n{outline_brief_body}"),
+                ("brief", f"APPROVED BRIEF\n{brief_body}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
                 (
                     "form_structure",
                     f"ARTICLE FORM STRUCTURE — {form.label}\n{form_structure}",
                 ),
-                ("facts", _facts_by_subject(evidence, work_order)),
+                ("facts", _packet_facts_body(packet)),
                 (
                     "outline_rules",
                     "PLANNING RULES\n"
@@ -586,7 +612,7 @@ def assemble_v3_instructions(
                 ("brief", f"WHAT WE ARE MAKING\n{brief_body}"),
                 (
                     "evidence",
-                    f"THE FACTS YOU MAY USE\n{_evidence_body(evidence, for_compose=True)}",
+                    f"THE FACTS YOU MAY USE\n{_packet_evidence_body(packet)}",
                 ),
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("topic_modules", f"TOPIC MODULES\n{topic_modules_body}"),
@@ -623,10 +649,8 @@ def assemble_v3_instructions(
                 ("evidence_disposition_policy", EVIDENCE_DISPOSITION_POLICY),
                 (
                     "scope_style_lock",
-                    f"COMPACT SCOPE AND STYLE LOCK\n"
-                    f"{_repair_lock_body(
-        brief,
-        work_order, form_label=form.label)}",
+                    "COMPACT SCOPE AND STYLE LOCK\n"
+                    + _repair_lock_body(brief, work_order, form_label=form.label),
                 ),
             ]
         ),

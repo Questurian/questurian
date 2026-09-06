@@ -11,6 +11,7 @@ from app.features.prompt2blog.graph.state import Prompt2BlogV3GraphState
 from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.evidence_v3 import normalize_evidence
 from app.features.prompt2blog.intake_v3 import v3_intake_result
+from tests.prompt2blog_packet_support import keep_everything
 from app.features.prompt2blog.research_readiness_v3 import (
     assess_research_readiness,
     build_follow_up_research_prompt,
@@ -194,7 +195,8 @@ def test_intake_terminates_as_needs_research_without_calling_a_model(monkeypatch
                 prompt2blog_llm, attribute, fail_on_model_call, raising=False
             )
 
-    payload = v3_intake_result(_request())
+    request = _request()
+    payload = v3_intake_result(request, keep_everything(request))
 
     assert payload["status"] == "needs_research"
     assert "run_input" not in payload
@@ -210,7 +212,8 @@ def test_intake_terminates_as_needs_research_without_calling_a_model(monkeypatch
 
 
 def test_ready_research_reaches_run_input_instead_of_the_gate():
-    payload = v3_intake_result(_request(evidence=_supported_evidence()))
+    request = _request(evidence=_supported_evidence())
+    payload = v3_intake_result(request, keep_everything(request))
 
     assert payload["status"] == "ready"
     assert payload["run_input"]["form_id"] == "analysis"

@@ -49,7 +49,14 @@ class PipelineV4RuntimeRequest(BaseModel):
     schema_version: int = 4
     brief: dict[str, Any]
     work_order: dict[str, Any]
+    # The whole dossier. Groundedness and the readiness follow-up check a draft
+    # against every claim there is, so this stays complete.
     evidence: dict[str, Any]
+    # What the writer's stages actually receive: the facts a person chose, and
+    # the limitations attached to them. Frozen here at the write boundary, so a
+    # resumed run reads the packet it was written from rather than rebuilding
+    # one from a selection somebody has edited since.
+    packet: dict[str, Any]
     instructions: dict[str, Any]
     option_context: dict[str, Any] = Field(default_factory=dict)
     include_debug: bool = True
