@@ -79,7 +79,7 @@ from .runs import (
 )
 from ..run_budget import RunTokenCeilingReached
 from ..selection_v4 import SelectionRefused
-from ..work_order_v4 import PlanTooLargeToFinish
+from ..work_order_v4 import PlanHasNothingWorthReading, PlanTooLargeToFinish
 
 logger = logging.getLogger(__name__)
 
@@ -316,6 +316,15 @@ def _handle(action, *args, **kwargs) -> Any:
                 "message": error.projection.note,
                 "budget_projection": asdict(error.projection),
             },
+        ) from error
+    except PlanHasNothingWorthReading as error:
+        # Same 409, same reason, and answerable the same way: the plan is on
+        # the screen and the box for adding a question is under it. A run with
+        # no texture question stops at a gate that offers nothing to settle, so
+        # this is refused before the research rather than discovered after it.
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "plan_has_nothing_worth_reading", "message": str(error)},
         ) from error
     except ValidationError as error:
         # Anything a stage builds and the contracts refuse. Pydantic's own

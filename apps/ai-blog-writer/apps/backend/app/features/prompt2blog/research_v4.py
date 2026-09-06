@@ -1483,8 +1483,45 @@ def _structure_batch(
             )
         part = _namespaced(parsed, ids[0])
         package = assemble_evidence(work_order, part, reconcile_premises=False)
-        if {item.requirement_id for item in package.requirements} != set(ids):
-            raise ResearchUnusable("Structuring did not return exactly the requested questions", _raw)
+        answered = {item.requirement_id for item in package.requirements}
+        unanswered = set(ids) - answered
+        if unanswered:
+            raise ResearchUnusable(
+                "Structuring did not answer "
+                + ", ".join(sorted(unanswered)),
+                _raw,
+            )
+        # An extra answer is not a failure. Notes are gathered per search
+        # group and a batch is a slice of one, so the notes in front of the
+        # model routinely cover questions this batch did not ask about, and it
+        # answers what it was given -- correctly.
+        #
+        # This was set equality. Run bogota-replan-0906 asked about four
+        # rideshare questions, got all four right plus `req_rideshare_time_usaquen`
+        # from the same group, and had the whole batch recorded `missing` /
+        # `nothing_found`; the TransMilenio batch went the same way on
+        # `req_transmilenio_time_chapinero`. Eight correct, paid-for answers
+        # thrown away, the gate blocked, and the operator told to answer
+        # questions by hand whose answers were sitting in the notes. Retrying
+        # reproduced it exactly, because nothing about it was random.
+        #
+        # Extras are dropped rather than kept: every requirement is in exactly
+        # one batch, so the one this answered early is recorded by its own
+        # batch, and keeping it here would file the same requirement twice.
+        extra = answered - set(ids)
+        if extra:
+            logger.info(
+                "Structuring answered %s beyond the batch it was asked about; "
+                "kept the %s requested and left those to their own batch",
+                ", ".join(sorted(extra)),
+                len(ids),
+            )
+            record = package.model_dump(mode="json")
+            record["requirements"] = [
+                item for item in record["requirements"]
+                if item["requirement_id"] in set(ids)
+            ]
+            return record
         return package.model_dump(mode="json")
     except Exception as exc:  # noqa: BLE001 -- one hole beats the whole plan
         logger.warning("Structuring failed for %s: %s", ", ".join(ids), exc)

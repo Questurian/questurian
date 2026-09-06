@@ -235,6 +235,13 @@ class WorkOrderRequirement(V4ContractModel):
     requirement_id: str = Field(min_length=1)
     question: str = Field(min_length=1)
     kind: RequirementKind
+    # The question's job in this article, in one line: the sentence, comparison
+    # or decision the answer makes possible. Empty is allowed and is a finding
+    # -- a question whose purpose nobody could state is usually one the article
+    # has no room for, and often one no source can answer either. Not enforced
+    # here, because a model omitting a field is a compliance problem and
+    # refusing the plan over it would throw away good questions.
+    purpose: str = ""
     # What the article needs, which is not always what the question's wording
     # demands. Research is judged against this rather than against the phrasing.
     precision: RequirementPrecision = "exact"

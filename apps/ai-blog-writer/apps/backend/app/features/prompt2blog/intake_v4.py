@@ -106,6 +106,7 @@ from .work_order_v4 import (
     build_work_order,
     cut_work_order,
     enforce_plan_fits,
+    enforce_plan_has_texture,
     work_order_stage_record,
 )
 
@@ -327,7 +328,13 @@ def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder
     enforce_run_budget(_run_tokens_spent(run_id), stage=WORK_ORDER_STAGE)
     try:
         _open(services, run_id, WORK_ORDER_STAGE)
-        work_order = build_work_order(load_brief(run_id), services.dependencies)
+        work_order = build_work_order(
+            load_brief(run_id),
+            services.dependencies,
+            # The same number selection cuts the dossier down to, read from the
+            # same catalog entry, so the planner and the cut cannot drift.
+            target_word_count=default_target_word_count(),
+        )
     except WorkOrderUnusable as error:
         _record(
             services,
@@ -349,6 +356,7 @@ def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder
                 work_order,
                 tokens_spent=_run_tokens_spent(run_id),
                 cost_spent=_run_billed_cost(run_id),
+                target_word_count=default_target_word_count(),
             ),
             STATE_KEY: json.loads(work_order.model_dump_json()),
         },
@@ -384,6 +392,7 @@ def apply_cut(
                 outcome.warnings,
                 tokens_spent=_run_tokens_spent(run_id),
                 cost_spent=_run_billed_cost(run_id),
+                target_word_count=default_target_word_count(),
             ),
             STATE_KEY: json.loads(outcome.work_order.model_dump_json()),
         },
@@ -432,6 +441,11 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     # that can still be changed. Counted over the questions still without a
     # note, so a resume is not charged again for notes it already paid for.
     enforce_plan_fits(len(outstanding), tokens_spent, _run_billed_cost(run_id))
+    # Asked of the whole plan rather than of what is outstanding, so a resume
+    # that has already paid for its notes is judged on the same plan it started
+    # with. A run with no texture question stops at the gate either way; this
+    # says so while it still costs nothing.
+    enforce_plan_has_texture(work_order)
 
     if outstanding:
         _open(services, run_id, NOTES_STAGE)
@@ -709,7 +723,10 @@ def settle_gate(
             WORK_ORDER_STAGE,
             {
                 **work_order_stage_record(
-                    work_order, [cost], tokens_spent=_run_tokens_spent(run_id)
+                    work_order,
+                    [cost],
+                    tokens_spent=_run_tokens_spent(run_id),
+                    target_word_count=default_target_word_count(),
                 ),
                 STATE_KEY: json.loads(work_order.model_dump_json()),
             },
@@ -801,7 +818,10 @@ def reask_question(
         WORK_ORDER_STAGE,
         {
             **work_order_stage_record(
-                work_order, [note], tokens_spent=_run_tokens_spent(run_id)
+                work_order,
+                [note],
+                tokens_spent=_run_tokens_spent(run_id),
+                target_word_count=default_target_word_count(),
             ),
             STATE_KEY: json.loads(work_order.model_dump_json()),
         },
@@ -898,7 +918,10 @@ def settle_premise(
         WORK_ORDER_STAGE,
         {
             **work_order_stage_record(
-                work_order, [], tokens_spent=_run_tokens_spent(run_id)
+                work_order,
+                [],
+                tokens_spent=_run_tokens_spent(run_id),
+                target_word_count=default_target_word_count(),
             ),
             STATE_KEY: json.loads(work_order.model_dump_json()),
         },

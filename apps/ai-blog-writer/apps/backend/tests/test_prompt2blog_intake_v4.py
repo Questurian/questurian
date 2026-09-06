@@ -42,7 +42,10 @@ from app.features.prompt2blog.research_v4 import (
     ResearchDependencies,
 )
 from app.features.prompt2blog.run_recorder import RunRecorder
-from app.features.prompt2blog.work_order_v4 import WORK_ORDER_STAGE
+from app.features.prompt2blog.work_order_v4 import (
+    WORK_ORDER_STAGE,
+    PlanHasNothingWorthReading,
+)
 
 SEED = "Lima is no longer simply the stopover before Machu Picchu"
 FIRSTHAND = "I was there 4 days last year. mostly ate."
@@ -356,7 +359,12 @@ def test_the_gathered_notes_are_kept_so_a_retry_does_not_re_buy_them(isolated_db
 
 
 def test_recutting_the_plan_keeps_unchanged_notes(isolated_db):
-    """Removing a question does not change the answers to the others."""
+    """Removing a question does not change the answers to the others.
+
+    Strikes `r2` rather than the texture question: a plan with no texture
+    question left is refused before research, so cutting `r3` would test the
+    refusal rather than the notes.
+    """
     calls: list[str] = []
     services = _with_research(
         _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
@@ -367,10 +375,34 @@ def test_recutting_the_plan_keeps_unchanged_notes(isolated_db):
     run_id = _to_work_order(services)
     do_research(run_id, services)
 
-    apply_cut(run_id, services, struck_ids=["r3"])
+    apply_cut(run_id, services, struck_ids=["r2"])
     do_research(run_id, services)
 
     assert len(calls) == 3, "unchanged questions must not buy another search"
+
+
+def test_a_plan_with_nothing_worth_reading_is_refused_before_research(isolated_db):
+    """The gate already refuses a dossier with no texture answered, and a plan
+    with no texture question cannot answer one. What made that a trap is that
+    `blocking_questions` offers nothing to settle for that verdict, so the
+    operator reached a blocked run, an empty list, and the whole research bill.
+
+    The length constraint makes this reachable by accident: told the article
+    has room for eighteen facts, the planner cuts colour first. One of four
+    samples on run e23257c0 came back with 31 questions and no texture at all.
+    """
+    services = _with_research(
+        _services([{"done": False, "question": _question()}, AGREED, BRIEF_PAYLOAD, WORK_ORDER_PAYLOAD])
+    )
+    run_id = _to_work_order(services)
+
+    apply_cut(run_id, services, struck_ids=["r3"])
+
+    with pytest.raises(PlanHasNothingWorthReading) as raised:
+        do_research(run_id, services)
+    # Says what to do about it, on the screen that can still do it.
+    assert "nothing a reader would enjoy" in str(raised.value)
+    assert "before starting research" in str(raised.value)
 
 
 def test_research_runs_and_says_whether_the_piece_can_be_written(isolated_db):

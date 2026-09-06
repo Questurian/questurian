@@ -841,3 +841,159 @@ def test_an_unmetered_run_is_never_refused():
     # are already paid for is not charged for them a second time.
     enforce_plan_fits(0, 600_000)
 
+
+# --- the length the article is, and the room that leaves --------------------
+#
+# Runs 2197ccc4 and e23257c0, on this branch, ended the same way and cost very
+# differently:
+#
+#     2197ccc4: 15 questions,  98 facts found, 18 reached the writer, ~$0.245
+#     e23257c0: 57 questions, 431 facts found, 18 reached the writer,  $0.67
+#
+# Per question they behaved identically -- about 10,000 characters of notes
+# each. Run 2 did not dig deeper; it asked 3.8x as many questions, because
+# nothing told the planner the article had room for eighteen facts.
+
+
+def test_the_planner_is_told_how_long_the_article_is_and_what_that_holds():
+    flat = " ".join(build_work_order_prompt(_brief(), target_word_count=900).split())
+
+    assert "About 900 words" in flat
+    # 2 facts per hundred words, the same constant selection cuts the dossier
+    # down with.
+    assert "room for roughly 18 facts" in flat
+
+
+def test_the_length_is_a_constraint_and_never_a_ratio():
+    """The owner refused a fixed "900 words -> N questions" rule and was right.
+    A comparison needs both sides evidenced, a service guide needs the options
+    a reader chooses between, a piece about one place needs far less. The form
+    decides the count; the length decides how much of it can be printed."""
+    flat = " ".join(build_work_order_prompt(_brief(), target_word_count=900).split())
+
+    assert "not a number you divide by" in flat
+    assert "no cap on how many you may ask" in flat
+
+
+def test_a_run_with_no_resolved_length_tells_the_planner_nothing():
+    """The silence the planner has always run under. A made-up number would be
+    worse than none, because it would be weighed."""
+    flat = " ".join(build_work_order_prompt(_brief()).split())
+
+    assert "HOW LONG THE ARTICLE IS" not in flat
+    assert "room for roughly" not in flat
+
+
+def test_the_planner_reads_the_same_fact_budget_selection_cuts_to():
+    """Two definitions of "how many facts fit" would drift, and the one the
+    planner reads is the one nobody would check."""
+    from app.features.prompt2blog.selection_v4 import (
+        article_fact_budget,
+        target_claim_count,
+    )
+
+    assert article_fact_budget(900) == 18
+    assert article_fact_budget(2_500) == 50
+    # The same number, against a dossier big enough not to bind it.
+    assert target_claim_count(900, available=100) == article_fact_budget(900)
+
+
+def test_the_projection_reports_editorial_room_beside_the_money():
+    """`budget_projection` said run e23257c0's 57 questions "fit". True about
+    money, and silent about the article having room for eighteen of the 431
+    facts they bought."""
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    projection = budget_projection(57, 38_308, 0.1, 900)
+
+    assert projection.fact_budget == 18
+    assert "57 questions" in projection.editorial_note
+    assert "room for about 18 facts" in projection.editorial_note
+    # The money sentence is untouched. A plan can be affordable and still buy
+    # research nobody will read, and the operator is owed both sentences.
+    assert "inside the" in projection.note
+
+
+def test_no_resolved_length_means_no_editorial_note():
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    projection = budget_projection(57, 38_308)
+
+    assert projection.fact_budget == 0
+    assert projection.editorial_note == ""
+
+
+def test_the_editorial_room_never_refuses_a_plan():
+    """Change 1 is a constraint the planner weighs and a number the operator
+    reads. It is not a cap, and a plan that asks for more than the article can
+    print is still the operator's to run."""
+    from app.features.prompt2blog.work_order_v4 import enforce_plan_fits
+
+    enforce_plan_fits(57, 38_308, 0.1)
+
+
+# --- every question says what it is for -------------------------------------
+
+
+def test_the_planner_is_told_to_name_each_question_s_job():
+    flat = " ".join(build_work_order_prompt(_brief()).split())
+
+    assert "Every question says what it is for." in flat
+    assert "drop the question if you cannot write one" in flat
+
+
+def test_the_purpose_survives_to_the_screen():
+    payload = _payload()
+    payload["requirements"][0]["purpose"] = (
+        "Fixes the price the reader compares the tasting menus against."
+    )
+    work_order = build_work_order(_brief(), _deps(payload))
+
+    record = work_order_stage_record(work_order)
+    purposes = {item["requirement_id"]: item["purpose"] for item in record["requirements"]}
+
+    assert purposes["r1"] == (
+        "Fixes the price the reader compares the tasting menus against."
+    )
+    assert purposes["r2"] == ""
+
+
+def test_a_question_with_no_stated_purpose_is_kept_not_dropped():
+    """A model omitting a field is a compliance problem, not evidence the
+    question is bad. This parser exists because `p2b.work_order` renames and
+    drops fields constantly -- run b78a9fe8 lost six specific, checkable
+    questions to the word `query`. Refusing one for a blank `purpose` would be
+    the same mistake in a new field.
+    """
+    work_order = build_work_order(_brief(), _deps(_payload()))
+
+    assert len(work_order.requirements) == 3
+    assert all(item.purpose == "" for item in work_order.requirements)
+
+
+def test_the_purpose_is_read_under_whichever_name_the_model_used():
+    payload = _payload()
+    payload["requirements"][0].pop("purpose", None)
+    payload["requirements"][0]["why"] = "Anchors the cheap-beats-famous comparison."
+    work_order = build_work_order(_brief(), _deps(payload))
+
+    assert work_order.requirements[0].purpose == (
+        "Anchors the cheap-beats-famous comparison."
+    )
+
+
+def test_an_operator_s_own_question_carries_its_own_purpose():
+    """A blank reads on the screen as the planner failing to state a job. The
+    operator adding a question is a different thing, and the only thing a blank
+    is supposed to mean."""
+    outcome = cut_work_order(
+        build_work_order(_brief(), _deps(_payload())),
+        _brief(),
+        struck_ids=[],
+        added_questions=["Which market days are busiest?"],
+    )
+
+    added = outcome.work_order.requirements[-1]
+
+    assert added.question == "Which market days are busiest?"
+    assert added.purpose == "Asked for by the operator."
