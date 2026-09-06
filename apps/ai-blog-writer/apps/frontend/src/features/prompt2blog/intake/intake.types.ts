@@ -327,6 +327,13 @@ export interface SelectableClaim {
   questions: string[]
   /** Facts that said the same thing and stood down in favour of this one. */
   merged_in: string[]
+  /**
+   * A detail whose only job is colour. Ranked on how much of the place it
+   * carries rather than on what it proves, and holding one of the reserved
+   * slots — so cutting it costs the piece something a price band cannot
+   * replace.
+   */
+  texture?: boolean
   confidence: string
 }
 

@@ -76,10 +76,49 @@ CLAIMS_PER_HUNDRED_WORDS = 2.0
 # A short piece with a big dossier should still keep enough to write from.
 MIN_KEPT_CLAIMS = 8
 
+# How much of the keep-set is held for colour rather than proof.
+#
+# Ranking against the brief means ranking against the reader question, the
+# outcome and `fails_if`. Every one of those is a question about usefulness, so
+# a fact whose only job is to make a place feel like a place loses to a price
+# band every time. It is not that the ranker is wrong; it is that it was asked
+# one question and answered it.
+#
+# Measured on the ceviche run 8a7e9aa4: 23 texture claims in the dossier, two
+# selected. The best line in the whole run -- Canta Rana's dining room is
+# bare-bones and covered in football flags because the owner is Argentine --
+# ranked 59th of 151 and was cut. The article that came out was accurate,
+# useful and had nothing in it anybody would repeat to a friend.
+#
+# A fifth, because texture is seasoning. A piece that is one-fifth colour reads
+# as written by a person; one that is half colour has stopped answering the
+# question it was commissioned to answer.
+TEXTURE_SHARE = 0.2
+
 # One call each, and they read the same claim texts the writer would have. The
 # ceiling is generous because the input scales with the dossier.
 DEDUPE_MAX_TOKENS = 8_000
 RANK_MAX_TOKENS = 8_000
+
+
+def texture_claim_ids(
+    work_order: Prompt2BlogWorkOrder, evidence: EvidencePackage
+) -> set[str]:
+    """Claims whose only job is colour.
+
+    A claim that also answers a load-bearing question is doing load-bearing
+    work, whatever else it does, so only claims serving texture questions
+    exclusively are counted here. The work order already draws this line and
+    coverage already refuses a run with no texture answered; selection was the
+    one stage that could not see it.
+    """
+    kinds = {item.requirement_id: item.kind for item in work_order.requirements}
+    return {
+        claim.claim_id
+        for claim in evidence.claims
+        if claim.requirement_ids
+        and all(kinds.get(item) == "texture" for item in claim.requirement_ids)
+    }
 
 
 def target_claim_count(target_word_count: int, available: int) -> int:
@@ -244,6 +283,57 @@ Rules:
 """
 
 
+def build_texture_prompt(
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
+    claims: list[Any],
+) -> str:
+    """Order the colour by how much of the place it carries.
+
+    A separate question from the main ranking, deliberately. Asked which facts
+    the article needs, a model correctly answers with prices and opening hours.
+    Colour has to be judged on what it is for, or it is judged on what it is
+    not.
+    """
+    to_handle, _ = handles(claims)
+    listed = "\n".join(f"- {to_handle[claim.claim_id]} | {claim.text}" for claim in claims)
+    return f"""\
+You are choosing the details that make a piece of writing worth reading.
+
+Below are facts about {work_order.primary_subject} that carry no practical
+information -- no prices, no addresses, no opening hours. They are the colour.
+Order them by how much each one makes a place feel like a real place a person
+could walk into.
+
+THE ARTICLE
+Primary subject: {work_order.primary_subject}
+Core reader question: {brief.reader_question}
+Primary reader: {brief.reader.primary_reader}
+
+THE DETAILS
+{listed}
+
+Return strict JSON only:
+{{"ranked": [{{"claim_id": "f1", "why": "string"}}]}}
+
+Rules:
+- Most vivid and most specific first. A detail somebody would repeat to a
+  friend goes at the top.
+- SPECIFIC BEATS EVALUATIVE, ALWAYS. "The walls are covered in football flags
+  because the owner is Argentine" is worth ten of "the atmosphere is lively and
+  authentic". A sentence that could describe a hundred places describes none.
+- A named thing, an odd fact, a number nobody expected, something a person did:
+  these are what a reader remembers. Adjectives are not.
+- Rank low anything that is a definition, a category, or a general truth about
+  the cuisine or the city. That is reference material wearing colour's clothes.
+- Rank low anything that reads as marketing: "beloved", "hidden gem",
+  "must-visit", "world-renowned".
+- Use the labels above exactly as written (f1, f2, ...). Never invent a label,
+  never shorten one, and never use any other name for a claim.
+- EVERY label above must appear exactly once. This is ordering, not selecting.
+"""
+
+
 @dataclass
 class SelectionDependencies:
     """The one model this needs, and which jobs it runs as."""
@@ -277,6 +367,12 @@ class Selection:
     dropped: list[str] = field(default_factory=list)
     # One line per claim on why the ranker put it there, for the person picking.
     reasons: dict[str, str] = field(default_factory=dict)
+    # Claims whose only job is colour, best first, judged on how much of the
+    # place they carry rather than on what they prove.
+    texture_order: list[str] = field(default_factory=list)
+    # How many of `keep_count` are held for them. Held, not added: the operator
+    # asked for this many facts and gets this many.
+    texture_reserve: int = 0
     target_word_count: int = 0
     # Which passes actually ran. A selection whose ranking fell over keeps
     # every claim, and this is how the receipt says so rather than implying a
@@ -286,8 +382,20 @@ class Selection:
     note: str = ""
 
     def selected_claim_ids(self) -> set[str]:
-        """The claims that reach the writer."""
-        kept = set(self.order[: max(0, self.keep_count)])
+        """The claims that reach the writer, colour included.
+
+        Filling straight down the ranked list is what starved the article: the
+        ranking answers "what does this piece need", so the top of it is prices
+        and hours all the way down. The reserve takes the best colour first and
+        fills the rest from the top of the list, which keeps the total at the
+        number the operator asked for and stops the cut being decided by one
+        criterion answering for two.
+        """
+        keep = max(0, self.keep_count)
+        reserve = min(self.texture_reserve, keep, len(self.texture_order))
+        colour = self.texture_order[:reserve]
+        rest = [item for item in self.order if item not in set(colour)]
+        kept = set(colour) | set(rest[: max(0, keep - len(colour))])
         kept |= {item for item in self.rescued if item in self.order}
         kept -= set(self.dropped)
         return kept
@@ -300,6 +408,8 @@ class Selection:
             "rescued": list(self.rescued),
             "dropped": list(self.dropped),
             "reasons": dict(self.reasons),
+            "texture_order": list(self.texture_order),
+            "texture_reserve": self.texture_reserve,
             "target_word_count": self.target_word_count,
             "deduped": self.deduped,
             "ranked": self.ranked,
@@ -323,6 +433,10 @@ class Selection:
                 _safe_str(key): _safe_str(value)
                 for key, value in _safe_dict(record.get("reasons")).items()
             },
+            texture_order=[
+                _safe_str(item) for item in record.get("texture_order") or [] if _safe_str(item)
+            ],
+            texture_reserve=_safe_int(record.get("texture_reserve"), default=0),
             target_word_count=_safe_int(record.get("target_word_count"), default=0),
             deduped=bool(record.get("deduped")),
             ranked=bool(record.get("ranked")),
@@ -468,6 +582,50 @@ def _rank(
     return ranked, reasons, bool(ranked and not remaining == set(order))
 
 
+def _rank_texture(
+    brief: ArticleBrief,
+    work_order: Prompt2BlogWorkOrder,
+    claims: list[Any],
+    dependencies: SelectionDependencies,
+) -> tuple[list[str], dict[str, str]]:
+    """Colour, best first. Never raises; an empty order simply reserves nothing.
+
+    Runs as `p2b.evidence_rank` rather than a job of its own. It is the same
+    work -- ordering evidence against a brief -- over a subset with a different
+    question, and two jobs that would always route to the same model are noise
+    in a registry whose point is that each entry is a decision.
+    """
+    if not claims:
+        return [], {}
+    order = [claim.claim_id for claim in claims]
+    _, from_handle = handles(claims)
+    try:
+        parsed, _raw = dependencies.llm.invoke_json(
+            job_id=dependencies.rank_job_id,
+            prompt=build_texture_prompt(brief, work_order, claims),
+            model_name=dependencies.model_name,
+            schema=RANK_SCHEMA,
+            max_tokens=RANK_MAX_TOKENS,
+            temperature=0.0,
+        )
+    except Exception as exc:  # noqa: BLE001 -- colour is the cheapest thing to lose
+        logger.warning("Prompt2Blog texture ranking failed: %s", exc)
+        return order, {}
+
+    remaining = set(order)
+    ranked: list[str] = []
+    reasons: dict[str, str] = {}
+    for row in _rows(parsed, "ranked"):
+        claim_id = from_handle.get(_safe_str(row.get("claim_id")), "")
+        if claim_id in remaining:
+            remaining.discard(claim_id)
+            ranked.append(claim_id)
+            if why := _safe_str(row.get("why")):
+                reasons[claim_id] = why
+    ranked.extend(item for item in order if item in remaining)
+    return ranked, reasons
+
+
 def select_evidence(
     brief: ArticleBrief,
     work_order: Prompt2BlogWorkOrder,
@@ -482,6 +640,17 @@ def select_evidence(
     order, reasons, ranked = _rank(brief, work_order, survivors, dependencies)
 
     keep_count = target_claim_count(target_word_count, len(order))
+
+    # Colour is ranked separately because it is judged on a different question.
+    # Only survivors: a merged claim is off the desk however vivid it was.
+    colour_ids = texture_claim_ids(work_order, evidence)
+    colour = [claim for claim in survivors if claim.claim_id in colour_ids]
+    texture_order, texture_reasons = _rank_texture(brief, work_order, colour, dependencies)
+    reasons = {**texture_reasons, **reasons}
+    texture_reserve = min(
+        len(texture_order), int(round(keep_count * TEXTURE_SHARE))
+    )
+
     notes = []
     if not deduped:
         notes.append("Deduplication did not run, so nothing was merged.")
@@ -503,6 +672,8 @@ def select_evidence(
         merged=merged,
         keep_count=keep_count,
         reasons=reasons,
+        texture_order=texture_order,
+        texture_reserve=texture_reserve,
         target_word_count=target_word_count,
         deduped=deduped,
         ranked=ranked,
@@ -640,6 +811,9 @@ def shortlist(
                 "rescued": claim_id in selection.rescued,
                 "dropped": claim_id in selection.dropped,
                 "why": selection.reasons.get(claim_id, ""),
+                # So the operator can see which rows are here as colour, and
+                # that cutting one costs the piece something other than a fact.
+                "texture": claim_id in set(selection.texture_order),
                 "questions": [
                     question_of[item]
                     for item in claim.requirement_ids
@@ -699,6 +873,10 @@ def revise(
         rescued=rescued,
         dropped=dropped,
         reasons=dict(selection.reasons),
+        # Carried, or the operator's first click would quietly delete the
+        # reserve and starve the article of colour again.
+        texture_order=list(selection.texture_order),
+        texture_reserve=selection.texture_reserve,
         target_word_count=selection.target_word_count,
         deduped=selection.deduped,
         ranked=selection.ranked,

@@ -40,6 +40,7 @@ from app.features.prompt2blog.selection_v4 import (
     select_evidence,
     shortlist,
     target_claim_count,
+    texture_claim_ids,
 )
 
 
@@ -121,9 +122,16 @@ def _package(count: int) -> EvidencePackage:
 class _LLM:
     """Answers the two calls by which schema it was handed."""
 
-    def __init__(self, *, groups: list[dict] | None = None, ranked: list[str] | None = None):
+    def __init__(
+        self,
+        *,
+        groups: list[dict] | None = None,
+        ranked: list[str] | None = None,
+        texture: list[str] | None = None,
+    ):
         self.groups = groups
         self.ranked = ranked
+        self.texture = texture
         self.jobs: list[str] = []
         self.prompts: list[str] = []
 
@@ -134,6 +142,11 @@ class _LLM:
             if self.groups is None:
                 raise RuntimeError("the dedupe model is having a day")
             return {"groups": self.groups}, "{}"
+        # The colour pass runs under the same job id and is told apart by its
+        # prompt, exactly as the real one is.
+        if "make a place feel like a real place" in prompt:
+            rows = self.texture or []
+            return {"ranked": [{"claim_id": i, "why": "vivid"} for i in rows]}, "{}"
         if self.ranked is None:
             raise RuntimeError("the ranking model is having a day")
         return {"ranked": [{"claim_id": item, "why": "because"} for item in self.ranked]}, "{}"
@@ -498,3 +511,130 @@ def test_dedupe_will_not_merge_two_claims_the_dossier_says_disagree():
 
     assert "c2" not in selection.merged, "a disputed claim must keep its own voice"
     assert selection.merged == {"c3": "c1"}, "an undisputed merge still happens"
+
+
+def _mixed(load_bearing: int, texture: int):
+    """A dossier with both kinds, and a work order that says which is which."""
+    total = load_bearing + texture
+    evidence = _package(total)
+    colour = [f"c{index}" for index in range(load_bearing + 1, total + 1)]
+    evidence = evidence.model_copy(
+        update={
+            "claims": [
+                claim.model_copy(update={"requirement_ids": ["r_colour"]})
+                if claim.claim_id in colour
+                else claim
+                for claim in evidence.claims
+            ],
+            "requirements": [
+                evidence.requirements[0].model_copy(
+                    update={"claim_ids": [f"c{i}" for i in range(1, load_bearing + 1)]}
+                ),
+                EvidenceRequirement(
+                    requirement_id="r_colour", status="supported", claim_ids=colour
+                ),
+            ],
+        }
+    )
+    work_order = _work_order().model_copy(
+        update={
+            "requirements": [
+                *_work_order().requirements,
+                WorkOrderRequirement(
+                    requirement_id="r_colour",
+                    question="What is the room like?",
+                    kind="texture",
+                ),
+            ]
+        }
+    )
+    return evidence, work_order, colour
+
+
+def test_colour_keeps_a_share_of_the_desk_instead_of_losing_every_time():
+    """Ranking against the brief means ranking against the reader question, the
+    outcome and fails_if -- three questions about usefulness. A fact whose only
+    job is to make a place feel like a place loses to a price band every time.
+
+    Measured on run 8a7e9aa4: 23 texture claims in the dossier, 2 selected. The
+    best line in it -- Canta Rana's dining room covered in football flags
+    because the owner is Argentine -- ranked 59th of 151 and was cut.
+    """
+    evidence, work_order, colour = _mixed(load_bearing=40, texture=10)
+    # The utility ranker does what it did in the wild: all the colour last.
+    llm = _LLM(
+        groups=[],
+        ranked=[f"f{i}" for i in range(1, 51)],
+        texture=[f"f{i}" for i in range(1, 11)],
+    )
+
+    selection = select_evidence(
+        _brief(), work_order, evidence, SelectionDependencies(llm=llm),
+        target_word_count=900,
+    )
+    kept = selection.selected_claim_ids()
+
+    assert selection.keep_count == 18
+    assert len(kept) == 18, "the reserve holds slots, it does not add them"
+    assert len(kept & set(colour)) == 4, "a fifth of 18, rounded"
+    # And without the reserve every one of them would have been cut.
+    assert all(claim not in selection.order[:18] for claim in colour)
+
+
+def test_the_operators_moves_do_not_quietly_delete_the_reserve():
+    """The first click used to rebuild the selection without it."""
+    evidence, work_order, colour = _mixed(load_bearing=40, texture=10)
+    llm = _LLM(
+        groups=[],
+        ranked=[f"f{i}" for i in range(1, 51)],
+        texture=[f"f{i}" for i in range(1, 11)],
+    )
+    selection = select_evidence(
+        _brief(), work_order, evidence, SelectionDependencies(llm=llm),
+        target_word_count=900,
+    )
+
+    widened = revise(selection, keep_count=30)
+
+    assert widened.texture_reserve == selection.texture_reserve
+    assert len(widened.selected_claim_ids() & set(colour)) >= 4
+
+
+def test_the_colour_pass_is_asked_a_different_question_from_the_ranking():
+    """Judged on usefulness, colour is correctly judged useless. It has to be
+    judged on what it is for."""
+    evidence, work_order, _colour = _mixed(load_bearing=6, texture=4)
+    llm = _LLM(groups=[], ranked=[f"f{i}" for i in range(1, 11)], texture=["f1"])
+
+    select_evidence(
+        _brief(), work_order, evidence, SelectionDependencies(llm=llm),
+        target_word_count=900,
+    )
+
+    colour_prompt = next(p for p in llm.prompts if "real place" in p)
+    assert "SPECIFIC BEATS EVALUATIVE" in colour_prompt
+    assert "football flags" in colour_prompt
+    assert "beloved" in colour_prompt, "marketing language is named and demoted"
+    # And the practical claims are not in it: this pass only sees colour.
+    assert "- f5 |" not in colour_prompt
+
+
+def test_a_claim_that_also_proves_something_is_not_colour():
+    """A claim answering a load-bearing question is doing load-bearing work,
+    whatever else it does. Counting it as colour would spend the reserve on
+    facts that were never at risk."""
+    evidence, work_order, _colour = _mixed(load_bearing=3, texture=2)
+    both = evidence.claims[3].model_copy(update={"requirement_ids": ["r1", "r_colour"]})
+    evidence = evidence.model_copy(
+        update={
+            "claims": [*evidence.claims[:3], both, evidence.claims[4]],
+            "requirements": [
+                evidence.requirements[0].model_copy(
+                    update={"claim_ids": ["c1", "c2", "c3", "c4"]}
+                ),
+                evidence.requirements[1],
+            ],
+        }
+    )
+
+    assert texture_claim_ids(work_order, evidence) == {"c5"}
