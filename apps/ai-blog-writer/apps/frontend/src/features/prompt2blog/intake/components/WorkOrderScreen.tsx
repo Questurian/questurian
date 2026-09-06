@@ -80,6 +80,20 @@ export function WorkOrderScreen({
                    the run for want of a figure nobody publishes. */
                 <span className="p2b-kind">roughly is enough</span>
               )}
+              {item.purpose ? (
+                /* What the answer is for, beside the question it pays for.
+                   The operator is striking questions here, and "does this
+                   article need this?" is unanswerable from the question
+                   alone. */
+                <p className="p2b-question-purpose">{item.purpose}</p>
+              ) : (
+                !isStruck && (
+                  <p className="p2b-question-note">
+                    No stated job in the article. Worth a second look before
+                    buying it.
+                  </p>
+                )
+              )}
               {item.bundled_note && !isStruck && (
                 <p className="p2b-question-note">{item.bundled_note}</p>
               )}
@@ -114,6 +128,13 @@ export function WorkOrderScreen({
            put in front of the person doing the cutting, so a plan that could
            not finish was approved and then died in research. */
         <p className={tooLarge ? 'p2b-blocked' : 'p2b-cost'}>{projection.note}</p>
+      )}
+
+      {projection?.editorial_note && (
+        /* The other budget. The money projection said run e23257c0's 57
+           questions "fit", which was true and silent about the article having
+           room for eighteen of the 431 facts they bought. */
+        <p className="p2b-cost">{projection.editorial_note}</p>
       )}
 
       {remainingLoadBearing === 0 && (

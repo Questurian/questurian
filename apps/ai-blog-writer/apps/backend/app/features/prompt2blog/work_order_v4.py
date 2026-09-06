@@ -46,6 +46,7 @@ from .config import (
 )
 from .grill_v4 import GrillDependencies
 from .schema_guards import require_non_empty
+from .selection_v4 import article_fact_budget
 from .support import _safe_dict, _safe_str, _safe_str_list
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,7 @@ WORK_ORDER_SCHEMA = require_non_empty({
                 "properties": {
                     "requirement_id": {"type": "string"},
                     "question": {"type": "string"},
+                    "purpose": {"type": "string"},
                     "search_group": {"type": "string"},
                     "kind": {"type": "string"},
                     "precision": {
@@ -111,7 +113,7 @@ WORK_ORDER_SCHEMA = require_non_empty({
                     },
                     "assumption_ids": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["requirement_id", "question", "kind"],
+                "required": ["requirement_id", "question", "purpose", "kind"],
             },
         },
     },
@@ -131,7 +133,50 @@ class CutOutcome:
     warnings: list[str]
 
 
-def build_work_order_prompt(brief: ArticleBrief) -> str:
+def _length_block(target_word_count: int) -> str:
+    """How long the article is, and how many facts that leaves room for.
+
+    Empty when nothing resolved a length, which is the same silence the planner
+    ran under before this existed: a made-up number here would be worse than no
+    number, because the planner would weigh it.
+
+    Deliberately not a ratio. The owner pushed back on "900 words -> N
+    questions" and was right: a head-to-head needs evidence for both sides, a
+    service guide needs every option ranked, a piece about one place needs far
+    less, and the form decides which of those this is. What the planner was
+    missing is not a divisor -- it is the fact that the article throws almost
+    everything away. Run e23257c0 asked 57 questions, found 431 facts and
+    delivered the same eighteen that run 2197ccc4 delivered off fifteen
+    questions. Roughly 39 of its 57 questions bought research no reader could
+    ever have seen.
+    """
+    if target_word_count <= 0:
+        return ""
+    facts = article_fact_budget(target_word_count)
+    return f"""
+HOW LONG THE ARTICLE IS, AND HOW MUCH IT CAN HOLD
+About {target_word_count:,} words, which has room for roughly {facts} facts.
+
+Everything research finds is cut down to about that many before the writer
+sees it. A question whose answer could not be one of those {facts} facts buys
+research nobody reads. Four transport modes x three zones x (fare, time) is
+twenty-four questions written in one line, and an article this length cannot
+print twelve fare-and-time pairs.
+
+This is a constraint you weigh, not a number you divide by. There is no ratio
+of words to questions, and no cap on how many you may ask. The form decides
+how many it takes -- a comparison has two sides to evidence, a service guide
+has options a reader chooses between, a piece about one place needs far less
+than either. The length decides how much of what you find can be printed. Plan
+questions the article has room to use.
+"""
+
+
+def build_work_order_prompt(
+    brief: ArticleBrief,
+    *,
+    target_word_count: int = 0,
+) -> str:
     must_name = "\n".join(f"- {item}" for item in brief.must_name) or "- Nothing named."
     material = (
         "\n".join(f"- [{item.kind}] {item.statement}" for item in brief.material)
@@ -161,7 +206,7 @@ Must name:
 What the writer already has:
 {material}
 It fails if: {brief.fails_if}
-
+{_length_block(target_word_count)}
 Write the questions that have to be answered before this can be written.
 
 Rules:
@@ -170,6 +215,18 @@ Rules:
   one museum's hours and admission; one restaurant shortlist's prices and hours.
   These share retrieval, but remain separate questions and coverage decisions.
   Do not group unrelated places or subjects. Leave it empty for a standalone question.
+- **Every question says what it is for.** `purpose` is one line naming the
+  question's job in this article: the sentence, the comparison or the decision
+  the answer makes possible. "Fixes the fare the reader counts out at the taxi
+  rank" is a job. "Useful transport background" is not, and neither is
+  restating the question.
+  Write the purpose first, and drop the question if you cannot write one. A
+  question with no nameable job is a question the article has no room for, and
+  it is usually also a question no source can answer: five of run e23257c0's
+  fifty-seven asked for per-company figures on something that is not
+  per-company -- the travel time from an airport, quoted per taxi firm. Nobody
+  publishes that, nobody could have said what it was for, and all five blocked
+  the run and had to be struck by hand before it could be written.
 - Research only facts the brief needs. Do not expand a two-day guide into an
   exhaustive directory of alternatives. Prefer a focused shortlist.
 - Each question must be separately checkable by someone with a search engine.
@@ -414,6 +471,7 @@ def _requirements_from(
     """
     requirements: list[WorkOrderRequirement] = []
     dropped = 0
+    unstated = 0
     for raw in _listed(payload, "requirements", "questions"):
         record = _safe_dict(raw)
         question = _safe_str(_first(record, "question", "query", "text", "ask"))
@@ -439,6 +497,16 @@ def _requirements_from(
         precision = _safe_str(_first(record, "precision", "exactness"))
         if precision not in set(get_args(RequirementPrecision)):
             precision = "exact"
+        # Kept, never dropped. A question with no stated job is a signal worth
+        # having in front of the operator, but a model omitting a field is a
+        # compliance problem and not evidence the question is bad -- this
+        # parser exists because `p2b.work_order` renames and drops fields
+        # constantly, and refusing a specific, checkable question over a blank
+        # would be the same mistake as refusing one for arriving under the name
+        # `questions`.
+        purpose = _safe_str(_first(record, "purpose", "why", "job", "rationale"))
+        if not purpose:
+            unstated += 1
         requirements.append(
             WorkOrderRequirement(
                 requirement_id=_safe_str(
@@ -446,6 +514,7 @@ def _requirements_from(
                 )
                 or f"r{len(requirements) + 1}",
                 question=question,
+                purpose=purpose,
                 kind=kind,
                 precision=precision,
                 search_group=_safe_str(record.get("search_group")),
@@ -466,6 +535,17 @@ def _requirements_from(
         logger.warning(
             "Dropped %s research question(s) the parser could not read; kept %s",
             dropped,
+            len(requirements),
+        )
+    if unstated:
+        # Worth a line of its own. The planner is asked to write the purpose
+        # before deciding the question is worth asking, so questions arriving
+        # without one mean either the model skipped the field or it skipped the
+        # thinking, and the second is the case where the operator should read
+        # the plan more carefully than usual.
+        logger.warning(
+            "%s of %s research question(s) came back with no stated purpose",
+            unstated,
             len(requirements),
         )
     return requirements
@@ -504,11 +584,18 @@ def _assemble(
 def build_work_order(
     brief: ArticleBrief,
     dependencies: GrillDependencies,
+    *,
+    target_word_count: int = 0,
 ) -> Prompt2BlogWorkOrder:
-    """Turn the brief into checkable questions. One structured call, no browsing."""
+    """Turn the brief into checkable questions. One structured call, no browsing.
+
+    `target_word_count` is how long the article will be. Zero means nothing
+    resolved a length and the planner is told nothing, which is how it has
+    always run.
+    """
     parsed, _raw = dependencies.llm.invoke_json(
             job_id="p2b.work_order",
-        prompt=build_work_order_prompt(brief),
+        prompt=build_work_order_prompt(brief, target_word_count=target_word_count),
         model_name=dependencies.model_name,
         schema=WORK_ORDER_SCHEMA,
         max_tokens=2_048,
@@ -613,9 +700,15 @@ def cut_work_order(
         existing.add(new_id)
         kept.append(
             # An operator's own question is load-bearing: they would not have
-            # added it to be decorative.
+            # added it to be decorative. Its purpose is that they asked for it,
+            # said in those words rather than left blank -- a blank here reads
+            # on the screen as the planner failing to state a job, which is a
+            # different thing and the only thing a blank is supposed to mean.
             WorkOrderRequirement(
-                requirement_id=new_id, question=cleaned, kind="load_bearing"
+                requirement_id=new_id,
+                question=cleaned,
+                purpose="Asked for by the operator.",
+                kind="load_bearing",
             )
         )
 
@@ -773,6 +866,16 @@ class BudgetProjection:
     can_finish: bool
     questions_that_finish: int
     note: str
+    # Editorial room, which is a different budget from money and tokens and was
+    # the one nothing reported. Run e23257c0's projection said its 57 questions
+    # "fit" -- true about money, silent about the fact that the article had
+    # room for eighteen of the 431 facts they found.
+    #
+    # Zero and empty when no length was resolved. Said beside the money note
+    # rather than folded into it: a plan can be affordable and still buy
+    # research nobody will read, and the operator is owed both sentences.
+    fact_budget: int
+    editorial_note: str
 
 
 class PlanTooLargeToFinish(RuntimeError):
@@ -820,6 +923,7 @@ def budget_projection(
     question_count: int,
     tokens_spent: int | None,
     cost_spent: float | None = None,
+    target_word_count: int = 0,
 ) -> BudgetProjection | None:
     """Say what this plan will cost before it is paid for.
 
@@ -891,6 +995,19 @@ def budget_projection(
             f"This is the budget being too low for the pipeline as it now "
             f"bills, not the plan being too large."
         )
+    facts = article_fact_budget(target_word_count) if target_word_count > 0 else 0
+    editorial_note = (
+        (
+            f"{question_count} questions, against an article with room for "
+            f"about {facts} facts. Research returns several facts per question, "
+            f"so those are not the same count -- but everything past the {facts} "
+            f"is cut before the writer sees it. Run e23257c0 asked 57 questions, "
+            f"found 431 facts and delivered the same eighteen as a 15-question "
+            f"run."
+        )
+        if facts
+        else ""
+    )
     return BudgetProjection(
         question_count=question_count,
         spent=tokens_spent,
@@ -907,6 +1024,8 @@ def budget_projection(
         can_finish=can_finish,
         questions_that_finish=finishes,
         note=note,
+        fact_budget=facts,
+        editorial_note=editorial_note,
     )
 
 
@@ -915,10 +1034,11 @@ def work_order_stage_record(
     warnings: list[str] | None = None,
     tokens_spent: int | None = None,
     cost_spent: float | None = None,
+    target_word_count: int = 0,
 ) -> dict[str, Any]:
     """What the run keeps about the plan the operator approved."""
     projection = budget_projection(
-        len(work_order.requirements), tokens_spent, cost_spent
+        len(work_order.requirements), tokens_spent, cost_spent, target_word_count
     )
     return {
         # What this plan is about to cost, next to the decision that changes
@@ -933,6 +1053,11 @@ def work_order_stage_record(
             {
                 "requirement_id": item.requirement_id,
                 "question": item.question,
+                # Empty when the planner did not say. Shown rather than
+                # counted: a question that cannot name its job in the article
+                # is the one the operator should be striking, and they are
+                # already reading this screen line by line.
+                "purpose": item.purpose,
                 "kind": item.kind,
                 "precision": item.precision,
                 # Empty for a question that reads as one. Shown beside the

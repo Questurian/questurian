@@ -440,6 +440,18 @@
   padding-left: var(--space-3);
 }
 
+/*
+ * What a question is for. Quieter than `.p2b-question-note`, which flags a
+ * problem: this is ordinary information the operator needs on every line, and
+ * a rule down the side of all of them would be a page of stripes.
+ */
+.p2b-question-purpose {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-light);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
 .p2b-cut-warnings {
   margin: var(--space-4) 0 0;
   padding: var(--space-4) var(--space-5);

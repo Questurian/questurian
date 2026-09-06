@@ -121,6 +121,25 @@ def texture_claim_ids(
     }
 
 
+def article_fact_budget(target_word_count: int) -> int:
+    """How many facts an article this long has room for, before any dossier.
+
+    Split out of `target_claim_count` because the number is needed twice, at
+    opposite ends of the run. Selection needs it against a dossier it can
+    count. The research planner needs it before a single question has been
+    asked, and there is nothing to count yet -- which is exactly the gap that
+    let run e23257c0 buy 57 questions, find 431 facts, and hand the writer the
+    same eighteen a 15-question run handed it.
+
+    Two definitions of "how many facts fit" would drift, and the one the
+    planner reads would be the one nobody checked.
+    """
+    return max(
+        MIN_KEPT_CLAIMS,
+        int(round(max(0, target_word_count) * CLAIMS_PER_HUNDRED_WORDS / 100)),
+    )
+
+
 def target_claim_count(target_word_count: int, available: int) -> int:
     """Where the cut line starts, from the length the article is aiming at.
 
@@ -129,8 +148,7 @@ def target_claim_count(target_word_count: int, available: int) -> int:
     """
     if available <= MIN_KEPT_CLAIMS:
         return available
-    wanted = int(round(max(0, target_word_count) * CLAIMS_PER_HUNDRED_WORDS / 100))
-    return max(MIN_KEPT_CLAIMS, min(available, wanted))
+    return min(available, article_fact_budget(target_word_count))
 
 
 DEDUPE_SCHEMA = require_non_empty({

@@ -69,6 +69,13 @@ export interface IntakeBrief {
 export interface IntakeRequirement {
   requirement_id: string
   question: string
+  /**
+   * What this question is for: the sentence, comparison or decision its answer
+   * makes possible. Empty when the planner did not say, which is worth reading
+   * as a signal — a question that cannot name its job in the article is
+   * usually one the article has no room for.
+   */
+  purpose: string
   kind: 'load_bearing' | 'texture'
   /**
    * How exact the article needs this. `exact` for a figure a reader acts on,
@@ -112,6 +119,15 @@ export interface IntakeBudgetProjection {
   can_finish: boolean
   questions_that_finish: number
   note: string
+  /**
+   * How many facts an article this long has room for. Zero when no length was
+   * resolved. This is the budget nothing used to report: a plan can be well
+   * inside its money budget and still buy research the article has no room to
+   * print.
+   */
+  fact_budget: number
+  /** Empty when `fact_budget` is zero. */
+  editorial_note: string
 }
 
 export interface IntakeWorkOrder {

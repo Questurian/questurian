@@ -270,6 +270,7 @@ const WORK_ORDER: IntakeWorkOrder = {
     {
       requirement_id: 'r1',
       question: 'What do stalls charge?',
+      purpose: 'Fixes the price the tasting menus are compared against.',
       kind: 'load_bearing',
       precision: 'exact',
       bundled_note: '',
@@ -277,6 +278,7 @@ const WORK_ORDER: IntakeWorkOrder = {
     {
       requirement_id: 'r2',
       question: 'What is it like at night?',
+      purpose: '',
       kind: 'texture',
       precision: 'approximate',
       bundled_note: '',
@@ -304,6 +306,8 @@ const CANNOT_FINISH: IntakeBudgetProjection = {
   ceiling: 650_000,
   can_finish: false,
   questions_that_finish: 31,
+  fact_budget: 0,
+  editorial_note: '',
   note: '44 questions projects to about 825,200 tokens, past the 650,000 hard ceiling. This plan stops part-way through research and never reaches the writer, so there is no article at the end of it. About 31 questions would finish. Cut the plan before starting research.',
 }
 
@@ -384,6 +388,74 @@ describe('the work order screen', () => {
     )
 
     expect(screen.getByText(/repair itself/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /go and find this out/i }),
+    ).not.toBeDisabled()
+  })
+
+  it('says what each question is for, beside the question', () => {
+    // "Does this article need this?" is unanswerable from the question alone,
+    // and the operator is being asked exactly that on this screen.
+    render(
+      <WorkOrderScreen
+        workOrder={WORK_ORDER}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText(/fixes the price the tasting menus are compared against/i),
+    ).toBeInTheDocument()
+  })
+
+  it('flags a question that never named its job', () => {
+    // Kept, not hidden and not dropped: a question with no nameable job is
+    // usually one the article has no room for, and often one no source can
+    // answer. Five such questions blocked run e23257c0 and were struck by hand.
+    render(
+      <WorkOrderScreen
+        workOrder={WORK_ORDER}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/no stated job in the article/i)).toBeInTheDocument()
+  })
+
+  it('says how much editorial room the article has, not just how much money', () => {
+    // The money projection said run e23257c0's 57 questions "fit". True, and
+    // silent about the article having room for eighteen of the 431 facts.
+    render(
+      <WorkOrderScreen
+        workOrder={{
+          ...WORK_ORDER,
+          budget_projection: {
+            ...CANNOT_FINISH,
+            can_finish: true,
+            note: 'inside the budget',
+            fact_budget: 18,
+            editorial_note: '57 questions, against an article with room for about 18 facts.',
+          },
+        }}
+        warnings={[]}
+        busy={false}
+        onCut={vi.fn()}
+        onReopen={vi.fn()}
+        onResearch={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText(/room for about 18 facts/i)).toBeInTheDocument()
+    // It reports. It never refuses: there is no cap on how many questions a
+    // plan may ask, and the form decides how many it takes.
     expect(
       screen.getByRole('button', { name: /go and find this out/i }),
     ).not.toBeDisabled()
