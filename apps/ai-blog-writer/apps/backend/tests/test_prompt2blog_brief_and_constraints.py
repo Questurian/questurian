@@ -123,3 +123,62 @@ def test_every_generation_prompt_renders_the_style_directive():
         assert "STYLE DIRECTIVE (REQUIRED):" in prompt
         assert "{style_directive}" in prompt
 
+
+# --- a place name is one word whichever way it is spelled --------------------
+#
+# The word pattern is ASCII-only, so over a raw string every accented letter
+# acted as a word boundary. Run e23257c0 was commissioned on a brief carrying
+# the plain spellings, written correctly with the accents, and failed its own
+# must-name check on Bogotá and Usaquén: 0.8 coverage against a 0.9 threshold,
+# and a clean article came back `needs_revision`. For a publication about Latin
+# American cities that is most place names.
+
+
+def test_an_accent_does_not_hide_a_name_the_brief_asked_for():
+    brief = _brief(must_include=["Bogota", "Usaquen and the north"])
+
+    checks = _build_constraint_checks(
+        "Sort your ride from Bogota's airport",
+        "## Zones\n\nMatch the address to La Candelaria, Chapinero, "
+        "or Usaquén and the north before you land in Bogotá.",
+        brief,
+    )
+
+    assert checks["must_include_coverage"] == 1.0
+    assert checks["must_include_covered"] is True
+
+
+def test_it_folds_in_both_directions():
+    """The brief is as likely to carry the accent as the article is."""
+    brief = _brief(must_include=["Medellín", "Getsemaní"])
+
+    checks = _build_constraint_checks(
+        "Where to stay",
+        "## Two cities\n\nMedellin has a metro; Getsemani does not.",
+        brief,
+    )
+
+    assert checks["must_include_coverage"] == 1.0
+
+
+def test_an_accented_word_counts_as_one_word():
+    """Every word count in this feature reads the same tokenizer, so each has
+    been running long on any article with Spanish place names in it."""
+    from app.features.prompt2blog.support import _tokenize_words
+
+    assert _tokenize_words("Bogotá") == ["bogota"]
+    assert _tokenize_words("Medellín and Usaquén") == ["medellin", "and", "usaquen"]
+
+
+def test_a_name_the_article_genuinely_omits_still_fails():
+    """Folding must not turn the check into one that always passes."""
+    brief = _brief(must_include=["Bogota", "Barranquilla"])
+
+    checks = _build_constraint_checks(
+        "Sort your ride",
+        "## Zones\n\nEverything here is about Bogotá and nowhere else.",
+        brief,
+    )
+
+    assert checks["must_include_coverage"] == 0.5
+    assert checks["must_include_covered"] is False

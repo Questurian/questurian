@@ -50,7 +50,28 @@ def _json(value: Any) -> str:
 
 
 def _tokenize_words(value: str) -> list[str]:
-    return re.findall(r"[a-z0-9']+", value.lower())
+    r"""Words, with accents folded so two spellings of one name are one word.
+
+    The pattern is ASCII-only, so over a raw string every accented letter acts
+    as a word boundary: "Bogota" is the single token `bogota` while "Bogotá" is
+    `bogot` and `a`, and the two can never match. Run e23257c0 was commissioned
+    on a brief carrying the plain spellings, written correctly with the
+    accents, and failed its own must-name check on Bogotá and Usaquén -- 0.8
+    coverage against a 0.9 threshold, and a clean article came back
+    `needs_revision`. For a publication about Latin American cities that is
+    most place names.
+
+    Folded rather than widened to `\w`: the point is that the two spellings
+    become the SAME token, and `bogota` != `bogotá` would leave the bug exactly
+    where it was while looking fixed.
+
+    It also stops an accented word counting as two. Every word count in this
+    feature reads this function, so each has been running long on any article
+    with Spanish place names in it.
+    """
+    folded = unicodedata.normalize("NFKD", value or "")
+    unaccented = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    return re.findall(r"[a-z0-9']+", unaccented.lower())
 
 
 def _normalize_text(value: str) -> str:
