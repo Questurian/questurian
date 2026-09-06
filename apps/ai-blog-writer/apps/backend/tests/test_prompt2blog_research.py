@@ -1092,3 +1092,126 @@ def test_the_premise_pass_sees_the_claims_and_nothing_else():
     assert "WHAT RESEARCH ESTABLISHED" in premise_prompt
     assert "Something established for r1." in premise_prompt
     assert "Notes one." not in premise_prompt
+
+
+# --- an extra answer is not a failed batch (run bogota-replan-0906) ---------
+
+
+class OverAnsweringLLM:
+    """Answers the batch it was asked about, and one question from elsewhere.
+
+    Exactly what the real model does. Notes are gathered per search group and
+    a batch is a slice of one, so the notes in front of the model cover
+    questions this batch did not ask about, and it answers them too.
+    """
+
+    def __init__(self, extra_id: str):
+        self.extra_id = extra_id
+        self.prompts: list[str] = []
+
+    def invoke_json(self, *, prompt: str, **_kwargs):
+        self.prompts.append(prompt)
+        asked = [
+            requirement_id
+            for requirement_id in (f"r{index}" for index in range(1, 20))
+            if f"- {requirement_id} [" in prompt
+        ]
+        if not asked:
+            return {"premise_findings": [], "conflicts": []}, "{}"
+        merged: dict[str, Any] = {"sources": [], "claims": [], "requirements": []}
+        for requirement_id in [*asked, self.extra_id]:
+            payload = _one_question_payload(
+                requirement_id, f"https://example.pe/{requirement_id}"
+            )
+            merged["sources"].append(
+                {**payload["sources"][0], "source_id": f"s-{requirement_id}"}
+            )
+            merged["claims"].append(
+                {
+                    **payload["claims"][0],
+                    "claim_id": f"c-{requirement_id}",
+                    "source_ids": [f"s-{requirement_id}"],
+                }
+            )
+            merged["requirements"].append(
+                {**payload["requirements"][0], "claim_ids": [f"c-{requirement_id}"]}
+            )
+        return merged, "{}"
+
+
+def test_one_extra_answer_does_not_bin_the_whole_batch():
+    """Run bogota-replan-0906 died on this, twice in one run.
+
+    The check was set equality. A batch asked about four rideshare questions,
+    got all four right plus `req_rideshare_time_usaquen` from the same search
+    group, and had all four recorded `missing` / `nothing_found`. Eight
+    correct, already-paid-for answers thrown away, the gate blocked on them,
+    and `suggested_move` told the operator "nothing relevant came back --
+    answer it yourself, or drop it" about answers sitting in the notes.
+
+    Retrying reproduced it exactly. Nothing about it was random, so nothing
+    about it would ever have cleared on its own.
+    """
+    count = STRUCTURE_BATCH_SIZE + 1
+    work_order = _wide_work_order(count)
+    # The extra is a real question in the work order, from another batch.
+    llm = OverAnsweringLLM(extra_id=f"r{count}")
+    deps = ResearchDependencies(gather=RecordingGather(), structure_llm=llm)
+    notes = {f"r{index}": GatheredNotes("Notes.") for index in range(1, count + 1)}
+
+    evidence = structure_research(work_order, notes, deps)
+
+    answered = {
+        item.requirement_id: item.status for item in evidence.requirements
+    }
+    assert all(
+        answered[f"r{index}"] == "supported" for index in range(1, count + 1)
+    ), f"a correct batch was discarded over an extra answer: {answered}"
+
+
+def test_a_batch_that_leaves_a_question_out_still_fails():
+    """The check that matters is that everything asked for came back. Loosening
+    set equality must not loosen that -- a question the model silently skipped
+    is a real hole, and the operator meets it at the gate."""
+    count = STRUCTURE_BATCH_SIZE
+    work_order = _wide_work_order(count)
+
+    class SkippingLLM:
+        prompts: list[str] = []
+
+        def invoke_json(self, *, prompt: str, **_kwargs):
+            asked = [
+                requirement_id
+                for requirement_id in (f"r{index}" for index in range(1, count + 1))
+                if f"- {requirement_id} [" in prompt
+            ]
+            if not asked:
+                return {"premise_findings": [], "conflicts": []}, "{}"
+            merged: dict[str, Any] = {"sources": [], "claims": [], "requirements": []}
+            # Answers all but the last question it was asked about.
+            for requirement_id in asked[:-1]:
+                payload = _one_question_payload(
+                    requirement_id, f"https://example.pe/{requirement_id}"
+                )
+                merged["sources"].append(
+                    {**payload["sources"][0], "source_id": f"s-{requirement_id}"}
+                )
+                merged["claims"].append(
+                    {
+                        **payload["claims"][0],
+                        "claim_id": f"c-{requirement_id}",
+                        "source_ids": [f"s-{requirement_id}"],
+                    }
+                )
+                merged["requirements"].append(
+                    {**payload["requirements"][0], "claim_ids": [f"c-{requirement_id}"]}
+                )
+            return merged, "{}"
+
+    deps = ResearchDependencies(gather=RecordingGather(), structure_llm=SkippingLLM())
+    notes = {f"r{index}": GatheredNotes("Notes.") for index in range(1, count + 1)}
+
+    evidence = structure_research(work_order, notes, deps)
+
+    answered = {item.requirement_id: item.status for item in evidence.requirements}
+    assert answered[f"r{count}"] == "missing"
