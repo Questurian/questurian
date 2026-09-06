@@ -603,6 +603,37 @@ class Prompt2BlogTokenUsageTracker:
         }
 
 
+def run_billed_cost_usd(llm: Any) -> float | None:
+    """Money this run has actually spent, or None when nothing is counting.
+
+    Only `rate-table` calls. A `measured` price comes from the Claude Code CLI
+    and is what the same work would have cost at API rates -- the calls draw the
+    plan holder's allowance rather than billing per token, so counting them here
+    would refuse a run its repair over money nobody was charged.
+
+    Measured on two full runs: chifa 3750891f spent $0.36 billed beside $2.29
+    notional, and ceviche 8a7e9aa4 $0.38 beside $1.97. Both were refused their
+    repair by a budget denominated in tokens, in which the free two thirds of
+    the run counted the same as the paid third.
+
+    None rather than 0.0 for a caller with no tracker, for the same reason
+    `run_tokens_spent` returns None: nothing counting is not nothing spent.
+    """
+    tracker = getattr(llm, "usage_tracker", None)
+    ledger = getattr(tracker, "ledger", None)
+    if not callable(ledger):
+        return None
+    try:
+        return sum(
+            float(call.get("cost_usd") or 0.0)
+            for call in ledger().get("calls", [])
+            if call.get("cost_basis") == COST_BASIS_RATE_TABLE
+        )
+    except Exception as exc:  # pragma: no cover -- telemetry only
+        logger.warning("Prompt2Blog cost read failed: %s", exc)
+        return None
+
+
 def run_tokens_spent(llm: Any) -> int | None:
     """Tokens this run has spent so far, or None when nothing is counting.
 

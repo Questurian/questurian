@@ -690,14 +690,30 @@ def test_the_projection_lands_on_the_run_that_produced_it():
 
 
 def test_a_plan_that_cannot_repair_itself_says_so():
+    """Driven by money spent, not tokens. Run b29d66b4 was refused its repair
+    on 379,508 tokens; in money that same plan bills about $0.27 and can afford
+    one easily. What cannot afford a repair is a run that has actually spent."""
+    from app.features.prompt2blog.config import P2B_RUN_COST_BUDGET_USD
     from app.features.prompt2blog.work_order_v4 import budget_projection
 
-    projection = budget_projection(14, 38_308)
+    projection = budget_projection(14, 38_308, cost_spent=P2B_RUN_COST_BUDGET_USD - 0.20)
 
     assert projection.repair_affordable is False
     assert "will not be able to repair itself" in projection.note or (
         "past the" in projection.note
     )
+
+
+def test_the_run_that_was_refused_its_repair_would_now_get_one():
+    """The failure this replaces, in its own numbers. Both finished runs billed
+    about $0.37 across roughly 700,000 tokens, because two thirds of those
+    tokens were subscription Claude billing nothing. Both were refused."""
+    from app.features.prompt2blog.work_order_v4 import budget_projection
+
+    projection = budget_projection(20, 692_544, cost_spent=0.38)
+
+    assert projection.repair_affordable is True
+    assert projection.can_finish is True
 
 
 def test_a_small_plan_on_a_fresh_run_can_afford_its_repair():
@@ -706,7 +722,7 @@ def test_a_small_plan_on_a_fresh_run_can_afford_its_repair():
     projection = budget_projection(3, 5_000)
 
     assert projection.repair_affordable is True
-    assert "leaving room for the one repair attempt" in projection.note
+    assert "room for the one repair attempt" in projection.note
 
 
 def test_the_note_blames_the_ceiling_when_no_workable_plan_fits():
@@ -719,11 +735,13 @@ def test_the_note_blames_the_ceiling_when_no_workable_plan_fits():
     from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
     from app.features.prompt2blog.work_order_v4 import budget_projection
 
-    projection = budget_projection(9, P2B_RUN_TOKEN_BUDGET - 150_000)
+    from app.features.prompt2blog.config import P2B_RUN_COST_BUDGET_USD
+
+    projection = budget_projection(9, 275_000, cost_spent=P2B_RUN_COST_BUDGET_USD - 0.18)
 
     assert projection.repair_affordable is False
     assert projection.questions_that_fit < 5
-    assert "ceiling being too low" in projection.note
+    assert "budget being too low" in projection.note
 
 
 def test_a_normal_plan_can_afford_its_repair_at_the_current_ceiling():
@@ -771,14 +789,24 @@ def test_a_plan_that_cannot_reach_the_writer_is_refused_before_research():
         enforce_plan_fits,
     )
 
-    projection = budget_projection(44, 40_000)
+    # 44 questions no longer fails this: with the ceiling set against what a
+    # working run costs rather than against another budget, that plan finishes
+    # -- which is what the two runs it refused would have done. The refusal is
+    # now a guard for a plan that genuinely cannot terminate.
+    assert budget_projection(44, 40_000).can_finish is True
+
+    projection = budget_projection(130, 40_000)
 
     assert projection.can_finish is False
-    assert projection.repair_affordable is False
+    # Affordable and unfinishable at the same time, which is now a coherent
+    # state rather than a contradiction: $1.55 of Gemini is cheap, and a plan
+    # that cannot terminate is still a plan that cannot terminate. The two
+    # guards answer different questions and that is the point.
+    assert projection.repair_affordable is True
     assert "never reaches the writer" in projection.note
-    assert 0 < projection.questions_that_finish < 44
+    assert 0 < projection.questions_that_finish < 130
     with pytest.raises(PlanTooLargeToFinish) as raised:
-        enforce_plan_fits(44, 40_000)
+        enforce_plan_fits(130, 40_000)
     assert raised.value.projection.questions_that_finish == projection.questions_that_finish
 
 
@@ -789,11 +817,13 @@ def test_a_plan_that_finishes_but_cannot_repair_is_allowed_through():
         enforce_plan_fits,
     )
 
-    projection = budget_projection(14, 38_308)
+    from app.features.prompt2blog.config import P2B_RUN_COST_BUDGET_USD
+
+    projection = budget_projection(14, 38_308, cost_spent=P2B_RUN_COST_BUDGET_USD - 0.20)
 
     assert projection.repair_affordable is False
     assert projection.can_finish is True
-    enforce_plan_fits(14, 38_308)
+    enforce_plan_fits(14, 38_308, cost_spent=P2B_RUN_COST_BUDGET_USD - 0.20)
 
 
 def test_an_unmetered_run_is_never_refused():

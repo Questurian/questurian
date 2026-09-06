@@ -52,6 +52,9 @@ class Prompt2BlogV3GraphState(TypedDict, total=False):
     # moment. Written by the audit stage, read by finalize and the operator UI.
     repair_decision: dict[str, Any]
     tokens_spent: int | None
+    # Money billed so far, Claude's subscription calls excluded because they
+    # bill nothing. The repair gate reads this rather than the tokens above.
+    billed_cost_usd: float | None
     best_rewrite: dict[str, Any]
     best_quality: dict[str, Any]
     best_quality_checks: dict[str, Any]

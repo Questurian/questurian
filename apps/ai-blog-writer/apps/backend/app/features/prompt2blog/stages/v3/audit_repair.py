@@ -7,7 +7,7 @@ from ...graph.state import Prompt2BlogV3GraphState
 from ...instructions_v3 import stage_context_text
 from ...observability import _append_stage_trace
 from ...policies import decide_repair, is_better_quality
-from ...pricing import run_tokens_spent
+from ...pricing import run_billed_cost_usd, run_tokens_spent
 from ...prompts.editorial_v3 import (
     P2B_V3_QUALITY_AUDIT_PROMPT,
     P2B_V3_REPAIR_PROMPT,
@@ -170,6 +170,9 @@ def run_v3_quality_audit_stage(
         # Read after the audit call, so the gate below judges the spend the run
         # has actually reached rather than the one it had before this stage.
         "tokens_spent": run_tokens_spent(dependencies.llm),
+        # What the run has actually billed. The repair decision reads this;
+        # tokens stay for the runaway ceiling and the receipt.
+        "billed_cost_usd": run_billed_cost_usd(dependencies.llm),
     }
     if is_better_quality(quality, state.get("best_quality")):
         updates["best_rewrite"] = rewrite

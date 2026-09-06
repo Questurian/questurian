@@ -97,6 +97,13 @@ export interface IntakeBudgetProjection {
   projected_total: number
   repair_reserve: number
   budget: number
+  /**
+   * What this plan is projected to bill, and the budget it is judged against.
+   * Money, not tokens: two thirds of a run's tokens are subscription Claude,
+   * which bills nothing.
+   */
+  projected_cost_usd: number
+  cost_budget_usd: number
   /** False means the run publishes but cannot pay for a repair pass. */
   repair_affordable: boolean
   questions_that_fit: number
