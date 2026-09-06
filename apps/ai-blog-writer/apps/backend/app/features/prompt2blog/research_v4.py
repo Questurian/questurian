@@ -1396,21 +1396,31 @@ def _merge_sources(parts: list[dict[str, Any]]) -> tuple[list[dict], dict[str, s
 
 
 def assemble_evidence(
-    work_order: Prompt2BlogWorkOrder, payload: dict[str, Any]
+    work_order: Prompt2BlogWorkOrder,
+    payload: dict[str, Any],
+    *,
+    reconcile_premises: bool = True,
 ) -> EvidencePackage:
     """Normalise what the model sent, then hold it to the contract.
 
     Separate from the calls that produce it, because what arrives is repaired
     the same way whether it came back in one piece or eleven.
+
+    `reconcile_premises=False` is for a single batch. A premise verdict is
+    about the whole dossier and a batch sees four questions, so `BATCH_SCHEMA`
+    has no `premise_findings` and `build_batch_prompt` asks for none. Judging a
+    batch against the declared premises therefore finds every one of them
+    missing, every time, on runs where nothing is wrong -- and the warning that
+    says "nobody checked your premises" is the same warning either way. The
+    reconciliation belongs where the whole dossier exists, after
+    `_settle_premise` has run.
     """
     payload = _normalised_evidence(_safe_dict(payload))
     payload["schema_version"] = 4
     payload["work_order_fingerprint"] = work_order.work_order_fingerprint
     try:
-        return _reconcile_premise_findings(
-            record_detected_conflicts(EvidencePackage.model_validate(payload)),
-            work_order,
-        )
+        package = record_detected_conflicts(EvidencePackage.model_validate(payload))
+        return _reconcile_premise_findings(package, work_order) if reconcile_premises else package
     except ValidationError as error:
         raise ResearchUnusable(
             "; ".join(
@@ -1472,7 +1482,7 @@ def _structure_batch(
                 _raw,
             )
         part = _namespaced(parsed, ids[0])
-        package = assemble_evidence(work_order, part)
+        package = assemble_evidence(work_order, part, reconcile_premises=False)
         if {item.requirement_id for item in package.requirements} != set(ids):
             raise ResearchUnusable("Structuring did not return exactly the requested questions", _raw)
         return package.model_dump(mode="json")
