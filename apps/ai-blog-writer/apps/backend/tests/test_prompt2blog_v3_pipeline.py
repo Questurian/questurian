@@ -15,7 +15,10 @@ from fastapi import BackgroundTasks, HTTPException
 
 import app.features.prompt2blog.api.runs as runs_api
 import app.features.prompt2blog.routes as prompt2blog_routes
-from app.features.prompt2blog.config import P2B_RUN_TOKEN_BUDGET
+from app.features.prompt2blog.config import (
+    P2B_RUN_COST_BUDGET_USD,
+    P2B_RUN_TOKEN_BUDGET,
+)
 from app.features.prompt2blog.contracts_v4 import Prompt2BlogV4Request
 from app.features.prompt2blog.dependencies import PipelineDependencies
 from app.features.prompt2blog.intake_v3 import prepare_v3_runtime_request
@@ -189,12 +192,23 @@ class SpentTokens:
     Deliberately not a whole `UsageLedger`: a full one would make
     `PipelineDependencies` try to wire this run's recorder for per-stage
     attribution, which the recording fake here does not support.
+
+    `billed_usd` is what the repair gate actually reads. It is separate from
+    the tokens because two thirds of a real run's tokens are subscription
+    Claude, which bills nothing -- the pair here is what let a $0.37 run be
+    refused its repair for being 700,000 tokens long.
     """
 
     total_tokens: int
+    billed_usd: float = 0.0
 
     def totals(self) -> dict[str, int]:
         return {"total_tokens": self.total_tokens}
+
+    def ledger(self) -> dict[str, Any]:
+        return {
+            "calls": [{"cost_usd": self.billed_usd, "cost_basis": "rate-table"}]
+        }
 
 
 @dataclass
@@ -554,7 +568,9 @@ def test_a_weak_draft_buys_one_repair_and_then_asks_for_a_human():
 def test_an_expensive_run_stops_before_buying_a_repair():
     llm = ScriptedLLM(
         quality_scores=[4],
-        usage_tracker=SpentTokens(total_tokens=P2B_RUN_TOKEN_BUDGET),
+        usage_tracker=SpentTokens(
+            total_tokens=P2B_RUN_TOKEN_BUDGET, billed_usd=P2B_RUN_COST_BUDGET_USD
+        ),
     )
     recorder = RecordingRecorder()
 
@@ -567,8 +583,8 @@ def test_an_expensive_run_stops_before_buying_a_repair():
     assert "stage_v3_repair" not in recorder.order
     assert recorder.order.count("stage_v3_quality_audit") == 1
     decision = state["response_payload"]["quality_review"]["repair_decision"]
-    assert decision["reason"] == "token_budget_reached"
-    assert decision["tokens_spent"] == P2B_RUN_TOKEN_BUDGET
+    assert decision["reason"] == "cost_budget_reached"
+    assert decision["billed_cost_usd"] == P2B_RUN_COST_BUDGET_USD
     # The article still comes back -- as the operator's problem, not as a
     # failure and not as something worth another 90,000 tokens.
     assert state["response_payload"]["pipeline_status"] == "needs_revision"

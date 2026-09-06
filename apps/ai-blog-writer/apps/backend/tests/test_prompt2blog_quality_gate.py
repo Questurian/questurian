@@ -6,6 +6,8 @@ from app.features.prompt2blog.config import (
     P2B_AUGMENTATION_MIN_RETENTION_RATIO,
     P2B_REPAIR_ESTIMATED_TOKENS,
     P2B_REPAIR_MAX_ATTEMPTS,
+    P2B_REPAIR_ESTIMATED_COST_USD,
+    P2B_RUN_COST_BUDGET_USD,
     P2B_RUN_TOKEN_BUDGET,
 )
 from app.features.prompt2blog.graph.topology_v3 import (
@@ -83,18 +85,46 @@ def test_only_one_repair_attempt_is_automatic():
     assert decision.reason == "attempt_limit_reached"
 
 
-def test_gate_refuses_a_repair_that_would_break_the_token_budget():
+def test_gate_refuses_a_repair_that_would_break_the_cost_budget():
     state = {
         "quality": {"audit_complete": True, "overall_score": 3},
         "quality_checks": PASSING_CHECKS,
         "repair_attempts": 0,
-        "tokens_spent": P2B_RUN_TOKEN_BUDGET - P2B_REPAIR_ESTIMATED_TOKENS + 1,
+        "billed_cost_usd": P2B_RUN_COST_BUDGET_USD - P2B_REPAIR_ESTIMATED_COST_USD + 0.01,
     }
 
     decision = decide_repair(state)
     assert decision.route == "settle"
-    assert decision.reason == "token_budget_reached"
+    assert decision.reason == "cost_budget_reached"
     assert route_quality_gate(state) == "settle"
+
+
+def test_a_run_that_spent_tokens_but_no_money_still_gets_its_repair():
+    """The failure this replaces. Both finished runs spent ~700,000 tokens and
+    billed $0.37, because two thirds of the tokens were subscription Claude
+    drawing plan allowance. Both were refused their repair; one shipped a wrong
+    opening time, the other six words over its word cap."""
+    state = {
+        "quality": {"audit_complete": True, "overall_score": 3},
+        "quality_checks": PASSING_CHECKS,
+        "repair_attempts": 0,
+        "tokens_spent": 692_544,
+        "billed_cost_usd": 0.38,
+    }
+
+    assert decide_repair(state).route == "repair"
+
+
+def test_a_run_with_no_cost_tracker_is_not_refused_on_money_it_cannot_measure():
+    """Every test double, and the same discipline the token gate kept: nothing
+    counting is not nothing spent, but it is not a refusal either."""
+    state = {
+        "quality": {"audit_complete": True, "overall_score": 3},
+        "quality_checks": PASSING_CHECKS,
+        "repair_attempts": 0,
+    }
+
+    assert decide_repair(state).route == "repair"
 
 
 def test_gate_still_buys_the_first_repair_inside_the_budget():
@@ -102,7 +132,7 @@ def test_gate_still_buys_the_first_repair_inside_the_budget():
         "quality": {"audit_complete": True, "overall_score": 3},
         "quality_checks": PASSING_CHECKS,
         "repair_attempts": 0,
-        "tokens_spent": P2B_RUN_TOKEN_BUDGET - P2B_REPAIR_ESTIMATED_TOKENS,
+        "billed_cost_usd": P2B_RUN_COST_BUDGET_USD - P2B_REPAIR_ESTIMATED_COST_USD,
     }
 
     assert decide_repair(state).route == "repair"

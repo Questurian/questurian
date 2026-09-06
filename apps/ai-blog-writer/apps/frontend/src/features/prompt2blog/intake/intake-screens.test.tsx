@@ -297,6 +297,8 @@ const CANNOT_FINISH: IntakeBudgetProjection = {
   projected_total: 825_200,
   repair_reserve: 90_000,
   budget: 425_000,
+  projected_cost_usd: 1.05,
+  cost_budget_usd: 2.0,
   repair_affordable: false,
   questions_that_fit: 0,
   ceiling: 650_000,

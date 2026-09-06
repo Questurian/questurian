@@ -110,6 +110,30 @@ P2B_REPAIR_ESTIMATED_TOKENS = 90_000
 # nobody has watched. Re-derive it the first time one actually runs.
 P2B_RUN_TOKEN_BUDGET = 425_000
 
+# What one more repair attempt may cost, and what the run may spend before it
+# stops being worth one. In money, because a token is not a unit of cost.
+#
+# The token budget above treated a Gemini Flash token and a subscription Claude
+# token as the same currency. On the two runs that finished, two thirds of the
+# tokens were Claude drawing plan allowance -- free -- and both runs were
+# refused their repair. Chifa 3750891f shipped with a wrong opening time; the
+# ceviche run shipped six words over its word cap and scored 6 for it. Each
+# would have been a single repair call away, and each run had billed $0.37.
+#
+#   chifa   3750891f: $0.36 billed, $2.29 notional, 802,018 tokens
+#   ceviche 8a7e9aa4: $0.38 billed, $1.97 notional, 692,544 tokens
+#
+# So $2.00 is five times what a whole run bills, and a repair is a rounding
+# error against it. Set from measurement rather than from a round number, and
+# it is deliberately generous: the failure this replaces was a budget too tight
+# to fix a typo.
+P2B_RUN_COST_BUDGET_USD = 2.00
+
+# What a repair attempt bills. Both stored repairs were Claude, so they billed
+# nothing at all; this is the Gemini groundedness and audit re-run that follows
+# one. Re-derive it the first time a repair runs on a paid model.
+P2B_REPAIR_ESTIMATED_COST_USD = 0.10
+
 # The hard ceiling. Distinct from P2B_RUN_TOKEN_BUDGET above, which only asks
 # whether one more *rescue* is affordable: this asks whether the run may
 # continue at all, and refuses when it may not.
@@ -121,10 +145,25 @@ P2B_RUN_TOKEN_BUDGET = 425_000
 # question count (ADR 0030), and research is grounded web search. A bug that
 # asks forty questions should cost a known amount and then stop.
 #
-# Set at roughly twice the budget above so it never fires on a run that is
-# merely expensive; it exists for runaway, not for costly. The number is here,
-# in one place, so a ceiling set wrong is obvious rather than mysterious.
-P2B_RUN_TOKEN_CEILING = 650_000
+# It exists for runaway, not for costly, and it was set at twice the token
+# budget back when affordability was also measured in tokens. That basis is
+# gone -- affordability is `P2B_RUN_COST_BUDGET_USD` now -- and the old number
+# was firing on runs that were working:
+#
+#   chifa   3750891f: 802,018 tokens, $0.36 billed, finished
+#   ceviche 8a7e9aa4: 692,544 tokens, $0.38 billed, died at `quality_settle`
+#     -- the last node, after the article was written and audited, on the step
+#     that only picks which draft to keep.
+#
+# So the number is now set against what a working run actually costs rather
+# than against another budget: roughly two and a half times the longest one
+# observed. A bug that asks forty questions still stops. A run that merely has
+# a lot to say does not.
+#
+# It stays denominated in tokens on purpose. Money answers whether a run is
+# worth continuing; tokens answer whether it has stopped terminating, and a
+# loop on a cheap model is still a loop.
+P2B_RUN_TOKEN_CEILING = 2_000_000
 
 # How many times the grill may look something up *during* the interview, on
 # top of the one lookup it always makes on the seed.

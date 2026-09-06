@@ -38,7 +38,9 @@ from .contracts_v4 import (
 from pydantic import ValidationError
 
 from .config import (
+    P2B_REPAIR_ESTIMATED_COST_USD,
     P2B_REPAIR_ESTIMATED_TOKENS,
+    P2B_RUN_COST_BUDGET_USD,
     P2B_RUN_TOKEN_BUDGET,
     P2B_RUN_TOKEN_CEILING,
 )
@@ -723,6 +725,18 @@ MIN_WORKABLE_QUESTIONS = 5
 # 173,801. Writing was counted correctly even on the runs whose intake was not.
 WRITING_TOKENS_TYPICAL = 134_000
 
+# What one research question bills, and what the writing leg bills, in money.
+# Billed only: the Claude stages draw subscription allowance and charge
+# nothing, so counting them would price a plan the operator will never pay for.
+#
+#   chifa   3750891f: 15 questions, $0.108 research ($0.0072 each), $0.114 writing
+#   ceviche 8a7e9aa4: 20 questions, $0.205 research ($0.0103 each), $0.047 writing
+#
+# Two points again, and rounded up to the dearer of them, because a projection
+# that flatters the plan is the one that lets a run start it cannot finish.
+RESEARCH_COST_PER_QUESTION_USD = 0.011
+WRITING_COST_TYPICAL_USD = 0.12
+
 
 @dataclass(frozen=True)
 class BudgetProjection:
@@ -743,6 +757,10 @@ class BudgetProjection:
     projected_total: int
     repair_reserve: int
     budget: int
+    # What this plan is projected to bill, and whether a repair still fits
+    # inside the money budget. `questions_that_fit` is derived from money too.
+    projected_cost_usd: float
+    cost_budget_usd: float
     repair_affordable: bool
     questions_that_fit: int
     # The hard ceiling, and whether this plan can reach an article at all.
@@ -777,7 +795,11 @@ class PlanTooLargeToFinish(RuntimeError):
         self.projection = projection
 
 
-def enforce_plan_fits(question_count: int, tokens_spent: int | None) -> None:
+def enforce_plan_fits(
+    question_count: int,
+    tokens_spent: int | None,
+    cost_spent: float | None = None,
+) -> None:
     """Stop before research when the plan projects past the hard ceiling.
 
     Silent when the run has no token accounting, the same way
@@ -789,13 +811,15 @@ def enforce_plan_fits(question_count: int, tokens_spent: int | None) -> None:
     repair is still the operator's to run -- it produces an article -- and it
     stays a warning on the screen.
     """
-    projection = budget_projection(question_count, tokens_spent)
+    projection = budget_projection(question_count, tokens_spent, cost_spent)
     if projection and not projection.can_finish:
         raise PlanTooLargeToFinish(projection)
 
 
 def budget_projection(
-    question_count: int, tokens_spent: int | None
+    question_count: int,
+    tokens_spent: int | None,
+    cost_spent: float | None = None,
 ) -> BudgetProjection | None:
     """Say what this plan will cost before it is paid for.
 
@@ -808,14 +832,24 @@ def budget_projection(
 
     research = question_count * RESEARCH_TOKENS_PER_QUESTION
     total = tokens_spent + research + WRITING_TOKENS_TYPICAL
-    affordable = total + P2B_REPAIR_ESTIMATED_TOKENS <= P2B_RUN_TOKEN_BUDGET
-    room = (
-        P2B_RUN_TOKEN_BUDGET
-        - P2B_REPAIR_ESTIMATED_TOKENS
-        - WRITING_TOKENS_TYPICAL
-        - tokens_spent
+    # Affordability is a question about money. Tokens answer the different
+    # question below -- whether this plan terminates -- and conflating the two
+    # is what refused two $0.37 runs their repair.
+    projected_cost = (
+        (cost_spent or 0.0)
+        + question_count * RESEARCH_COST_PER_QUESTION_USD
+        + WRITING_COST_TYPICAL_USD
     )
-    fits = max(0, room // RESEARCH_TOKENS_PER_QUESTION)
+    affordable = (
+        projected_cost + P2B_REPAIR_ESTIMATED_COST_USD <= P2B_RUN_COST_BUDGET_USD
+    )
+    cost_room = (
+        P2B_RUN_COST_BUDGET_USD
+        - P2B_REPAIR_ESTIMATED_COST_USD
+        - WRITING_COST_TYPICAL_USD
+        - (cost_spent or 0.0)
+    )
+    fits = max(0, int(cost_room // RESEARCH_COST_PER_QUESTION_USD))
     can_finish = total <= P2B_RUN_TOKEN_CEILING
     finish_room = P2B_RUN_TOKEN_CEILING - WRITING_TOKENS_TYPICAL - tokens_spent
     finishes = max(0, finish_room // RESEARCH_TOKENS_PER_QUESTION)
@@ -833,15 +867,15 @@ def budget_projection(
         )
     elif affordable:
         note = (
-            f"{question_count} questions projects to about {total:,} tokens "
-            f"against a {P2B_RUN_TOKEN_BUDGET:,} ceiling, leaving room for "
-            f"the one repair attempt."
+            f"{question_count} questions projects to about ${projected_cost:.2f} "
+            f"and {total:,} tokens, inside the ${P2B_RUN_COST_BUDGET_USD:.2f} "
+            f"budget with room for the one repair attempt."
         )
     elif fits >= MIN_WORKABLE_QUESTIONS:
         note = (
-            f"{question_count} questions projects to about {total:,} tokens. "
-            f"With the {P2B_REPAIR_ESTIMATED_TOKENS:,} a repair costs, that "
-            f"passes the {P2B_RUN_TOKEN_BUDGET:,} ceiling, so this article "
+            f"{question_count} questions projects to about ${projected_cost:.2f}. "
+            f"With the ${P2B_REPAIR_ESTIMATED_COST_USD:.2f} a repair costs, that "
+            f"passes the ${P2B_RUN_COST_BUDGET_USD:.2f} budget, so this article "
             f"will not be able to repair itself. About {fits} questions would "
             f"leave room."
         )
@@ -850,12 +884,12 @@ def budget_projection(
         # 370,114. No plan worth writing fits, which makes this a question
         # about the ceiling rather than about the plan.
         note = (
-            f"{question_count} questions projects to about {total:,} tokens, "
-            f"past the {P2B_RUN_TOKEN_BUDGET:,} ceiling once the "
-            f"{P2B_REPAIR_ESTIMATED_TOKENS:,} a repair costs is counted. Only "
-            f"about {fits} questions would fit, which is not an article. This "
-            f"is the ceiling being too low for the pipeline as it now bills, "
-            f"not the plan being too large."
+            f"{question_count} questions projects to about ${projected_cost:.2f}, "
+            f"past the ${P2B_RUN_COST_BUDGET_USD:.2f} budget once the "
+            f"${P2B_REPAIR_ESTIMATED_COST_USD:.2f} a repair costs is counted. "
+            f"Only about {fits} questions would fit, which is not an article. "
+            f"This is the budget being too low for the pipeline as it now "
+            f"bills, not the plan being too large."
         )
     return BudgetProjection(
         question_count=question_count,
@@ -865,6 +899,8 @@ def budget_projection(
         projected_total=total,
         repair_reserve=P2B_REPAIR_ESTIMATED_TOKENS,
         budget=P2B_RUN_TOKEN_BUDGET,
+        projected_cost_usd=round(projected_cost, 4),
+        cost_budget_usd=P2B_RUN_COST_BUDGET_USD,
         repair_affordable=affordable,
         questions_that_fit=fits,
         ceiling=P2B_RUN_TOKEN_CEILING,
@@ -878,9 +914,12 @@ def work_order_stage_record(
     work_order: Prompt2BlogWorkOrder,
     warnings: list[str] | None = None,
     tokens_spent: int | None = None,
+    cost_spent: float | None = None,
 ) -> dict[str, Any]:
     """What the run keeps about the plan the operator approved."""
-    projection = budget_projection(len(work_order.requirements), tokens_spent)
+    projection = budget_projection(
+        len(work_order.requirements), tokens_spent, cost_spent
+    )
     return {
         # What this plan is about to cost, next to the decision that changes
         # it. The cut step had no price on it, so the difference between a run

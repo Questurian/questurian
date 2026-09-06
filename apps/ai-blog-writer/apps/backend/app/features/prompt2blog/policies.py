@@ -15,6 +15,8 @@ from .config import (
     P2B_AUGMENTATION_MIN_RETENTION_RATIO,
     P2B_REPAIR_ESTIMATED_TOKENS,
     P2B_REPAIR_MAX_ATTEMPTS,
+    P2B_REPAIR_ESTIMATED_COST_USD,
+    P2B_RUN_COST_BUDGET_USD,
     P2B_RUN_TOKEN_BUDGET,
 )
 from .quality import (
@@ -172,6 +174,12 @@ class RepairDecision:
     tokens_spent: int | None
     tokens_per_attempt: int
     token_budget: int
+    # What the run actually billed, and what one more attempt bills. Kept
+    # beside the token figures rather than replacing them: tokens still say
+    # whether a run is running away, money says whether it is worth continuing.
+    billed_cost_usd: float | None = None
+    cost_per_attempt: float = 0.0
+    cost_budget_usd: float = 0.0
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -181,6 +189,9 @@ class RepairDecision:
             "attempts_used": self.attempts_used,
             "attempts_allowed": self.attempts_allowed,
             "tokens_spent": self.tokens_spent,
+            "billed_cost_usd": self.billed_cost_usd,
+            "cost_per_attempt": self.cost_per_attempt,
+            "cost_budget_usd": self.cost_budget_usd,
             "tokens_per_attempt": self.tokens_per_attempt,
             "token_budget": self.token_budget,
         }
@@ -195,11 +206,19 @@ def decide_repair(state: dict[str, Any]) -> RepairDecision:
     2. The attempt allowance is used up. One automatic attempt, not two: the
        second was buying score points at a whole extra repair chain's price.
     3. The run has spent so much already that the next attempt would carry it
-       past `P2B_RUN_TOKEN_BUDGET`. Refusing here is what makes a bad run's
+       past `P2B_RUN_COST_BUDGET_USD`. Refusing here is what makes a bad run's
        cost predictable instead of open-ended.
 
-    A run with no token tracker (every test double) skips only the third
-    check; it behaves exactly as it did before the budget existed.
+    That third check is in money, and only money that was billed. It used to be
+    in tokens, which treated a Gemini Flash token and a subscription Claude
+    token as the same currency -- and on both runs that finished, two thirds of
+    the tokens were Claude drawing plan allowance rather than billing anything.
+    Both were refused their repair while having spent $0.37. One shipped a
+    wrong opening time and the other shipped six words over its word cap and
+    was scored 6 for it; each was one repair call from being right.
+
+    A run with no cost tracker (every test double) skips only the third check;
+    it behaves exactly as it did before the budget existed.
     """
     quality = _safe_dict(state.get("quality"))
     checks = _safe_dict(state.get("quality_checks"))
@@ -208,6 +227,8 @@ def decide_repair(state: dict[str, Any]) -> RepairDecision:
     tokens_spent = (
         _safe_int(tokens_spent, default=0) if isinstance(tokens_spent, int) else None
     )
+    cost_spent = state.get("billed_cost_usd")
+    cost_spent = float(cost_spent) if isinstance(cost_spent, (int, float)) else None
     problems = evaluate_readiness(
         quality=quality,
         checks=checks,
@@ -224,6 +245,9 @@ def decide_repair(state: dict[str, Any]) -> RepairDecision:
             tokens_spent=tokens_spent,
             tokens_per_attempt=P2B_REPAIR_ESTIMATED_TOKENS,
             token_budget=P2B_RUN_TOKEN_BUDGET,
+            billed_cost_usd=cost_spent,
+            cost_per_attempt=P2B_REPAIR_ESTIMATED_COST_USD,
+            cost_budget_usd=P2B_RUN_COST_BUDGET_USD,
         )
 
     if not _should_run_repair(quality, checks):
@@ -231,10 +255,10 @@ def decide_repair(state: dict[str, Any]) -> RepairDecision:
     if attempts >= P2B_REPAIR_MAX_ATTEMPTS:
         return verdict("settle", "attempt_limit_reached")
     if (
-        tokens_spent is not None
-        and tokens_spent + P2B_REPAIR_ESTIMATED_TOKENS > P2B_RUN_TOKEN_BUDGET
+        cost_spent is not None
+        and cost_spent + P2B_REPAIR_ESTIMATED_COST_USD > P2B_RUN_COST_BUDGET_USD
     ):
-        return verdict("settle", "token_budget_reached")
+        return verdict("settle", "cost_budget_reached")
     return verdict("repair", "repairable_problems_found")
 
 

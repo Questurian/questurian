@@ -135,6 +135,24 @@ def _stage_data(run_id: str, stage: str) -> dict[str, Any]:
     return _safe_dict(_safe_dict(read_stage_result(run_id, stage)).get("data"))
 
 
+def _run_billed_cost(run_id: str) -> float | None:
+    """Money this run has billed, or None when nothing is counting.
+
+    Only `rate-table` calls. A `measured` price is what the Claude Code CLI
+    says the same work would cost at API rates; those calls draw the plan
+    holder's allowance and bill nothing, so counting them would price a plan
+    against money nobody will be charged.
+    """
+    calls = _stage_data(run_id, "usage_ledger").get("calls")
+    if not isinstance(calls, list):
+        return None
+    return sum(
+        float(call.get("cost_usd") or 0.0)
+        for call in calls
+        if isinstance(call, dict) and call.get("cost_basis") == "rate-table"
+    )
+
+
 def _run_tokens_spent(run_id: str) -> int | None:
     """What this run has spent so far, or None when nothing is counting.
 
@@ -326,7 +344,9 @@ def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder
         WORK_ORDER_STAGE,
         {
             **work_order_stage_record(
-                work_order, tokens_spent=_run_tokens_spent(run_id)
+                work_order,
+                tokens_spent=_run_tokens_spent(run_id),
+                cost_spent=_run_billed_cost(run_id),
             ),
             STATE_KEY: json.loads(work_order.model_dump_json()),
         },
@@ -361,6 +381,7 @@ def apply_cut(
                 outcome.work_order,
                 outcome.warnings,
                 tokens_spent=_run_tokens_spent(run_id),
+                cost_spent=_run_billed_cost(run_id),
             ),
             STATE_KEY: json.loads(outcome.work_order.model_dump_json()),
         },
@@ -408,7 +429,7 @@ def do_research(run_id: str, services: IntakeServices) -> CoverageVerdict:
     # gathering it is about to do will cost, which is the only part of the sum
     # that can still be changed. Counted over the questions still without a
     # note, so a resume is not charged again for notes it already paid for.
-    enforce_plan_fits(len(outstanding), tokens_spent)
+    enforce_plan_fits(len(outstanding), tokens_spent, _run_billed_cost(run_id))
 
     if outstanding:
         _open(services, run_id, NOTES_STAGE)
