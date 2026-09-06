@@ -16,6 +16,8 @@ There is no v3 compatibility. Stored v3 runs do not load, which is deliberate
 
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import date
 from typing import Literal
 
@@ -771,6 +773,59 @@ class EvidencePackage(V4ContractModel):
             if not set(gap.requirement_ids) <= known_requirements:
                 raise ValueError("gap references an unknown requirement")
         return self
+
+    def content_fingerprint(self) -> str:
+        """What this dossier says, independent of what was chosen from it.
+
+        `work_order_fingerprint` answers "which questions was this researched
+        for". Nothing answered "and did the answers change afterwards", so an
+        editorial choice made against one revision of the evidence could be
+        applied to another without anybody noticing -- an operator re-asks a
+        question, three claims are replaced, and the selection made before that
+        is still handed to the writer as if it had chosen them.
+
+        Deliberately blind to `selected`, `merged_into`, and the link lists
+        that applying a selection extends: those are the selection's own
+        writing, and a fingerprint that moved every time a fact was picked
+        could never tell an operator's choice from a researcher's correction.
+
+        Sensitive to everything that changes what a fact means -- its text, its
+        date, its confidence, an operator's note on it, a requirement's status
+        or gap, a source note, a conflict or its settlement.
+        """
+        payload = {
+            "claims": sorted(
+                [
+                    claim.claim_id,
+                    claim.text,
+                    claim.as_of.isoformat() if claim.as_of else "",
+                    claim.confidence,
+                    claim.venue,
+                    claim.venue_note,
+                    str(claim.venue_dismissed),
+                ]
+                for claim in self.claims
+            ),
+            "requirements": sorted(
+                [item.requirement_id, item.status, item.gap, item.cause]
+                for item in self.requirements
+            ),
+            "sources": sorted(
+                [source.source_id, *source.notes] for source in self.sources
+            ),
+            "conflicts": sorted(
+                [
+                    conflict.conflict_id,
+                    conflict.summary,
+                    conflict.resolution or "",
+                    *sorted(conflict.claim_ids),
+                ]
+                for conflict in self.conflicts
+            ),
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True, ensure_ascii=False).encode("utf-8")
+        ).hexdigest()[:32]
 
 
 class Prompt2BlogWritingProfiles(V4ContractModel):

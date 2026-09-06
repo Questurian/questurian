@@ -374,6 +374,20 @@ class Selection:
     # asked for this many facts and gets this many.
     texture_reserve: int = 0
     target_word_count: int = 0
+    # What each chosen fact is here to do: backbone, practical or texture.
+    # Editorial roles, deliberately not the work order's question kinds -- a
+    # load-bearing question can produce a fact whose job in the finished piece
+    # is colour. Empty until one balanced selection call sets them; the packet
+    # reads `texture_order` as the older, narrower version of the same idea.
+    roles: dict[str, str] = field(default_factory=dict)
+    # What this choice was made against. Nothing recorded which dossier
+    # revision was on screen when the operator picked, so an answer supplied at
+    # the gate, a re-asked question or a corrected claim could move the
+    # evidence underneath a selection and the writer would still be handed it
+    # as if it had chosen what it now contains.
+    brief_fingerprint: str = ""
+    work_order_fingerprint: str = ""
+    evidence_fingerprint: str = ""
     # Which passes actually ran. A selection whose ranking fell over keeps
     # every claim, and this is how the receipt says so rather than implying a
     # judgement nobody made.
@@ -411,6 +425,10 @@ class Selection:
             "texture_order": list(self.texture_order),
             "texture_reserve": self.texture_reserve,
             "target_word_count": self.target_word_count,
+            "roles": dict(self.roles),
+            "brief_fingerprint": self.brief_fingerprint,
+            "work_order_fingerprint": self.work_order_fingerprint,
+            "evidence_fingerprint": self.evidence_fingerprint,
             "deduped": self.deduped,
             "ranked": self.ranked,
             "note": self.note,
@@ -438,6 +456,15 @@ class Selection:
             ],
             texture_reserve=_safe_int(record.get("texture_reserve"), default=0),
             target_word_count=_safe_int(record.get("target_word_count"), default=0),
+            roles={
+                _safe_str(key): _safe_str(value)
+                for key, value in _safe_dict(record.get("roles")).items()
+            },
+            # Empty on every selection stored before bindings existed. Read as
+            # "this one cannot be checked", not as "this one matches".
+            brief_fingerprint=_safe_str(record.get("brief_fingerprint")),
+            work_order_fingerprint=_safe_str(record.get("work_order_fingerprint")),
+            evidence_fingerprint=_safe_str(record.get("evidence_fingerprint")),
             deduped=bool(record.get("deduped")),
             ranked=bool(record.get("ranked")),
             note=_safe_str(record.get("note")),
@@ -679,6 +706,9 @@ def select_evidence(
         texture_order=texture_order,
         texture_reserve=texture_reserve,
         target_word_count=target_word_count,
+        brief_fingerprint=brief.brief_fingerprint,
+        work_order_fingerprint=work_order.work_order_fingerprint,
+        evidence_fingerprint=evidence.content_fingerprint(),
         deduped=deduped,
         ranked=ranked,
         note=" ".join(notes),
@@ -882,6 +912,13 @@ def revise(
         texture_order=list(selection.texture_order),
         texture_reserve=selection.texture_reserve,
         target_word_count=selection.target_word_count,
+        roles=dict(selection.roles),
+        # An operator's move is a decision about this dossier, not a new
+        # binding to today's one. Carrying the fingerprints unchanged is what
+        # makes a revision of a stale selection still stale.
+        brief_fingerprint=selection.brief_fingerprint,
+        work_order_fingerprint=selection.work_order_fingerprint,
+        evidence_fingerprint=selection.evidence_fingerprint,
         deduped=selection.deduped,
         ranked=selection.ranked,
         note=selection.note,
