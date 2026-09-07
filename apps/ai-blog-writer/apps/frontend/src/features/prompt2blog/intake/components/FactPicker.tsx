@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { readSelection, reviseSelection } from '../intake.api'
-import type { SelectableClaim, SelectionReview } from '../intake.types'
+import type { EvidenceHealth, SelectableClaim, SelectionReview } from '../intake.types'
 
 /**
  * Which facts the article is written from.
@@ -130,6 +130,51 @@ function FactList({
   )
 }
 
+
+/**
+ * What is weak about the facts that are about to reach the writer.
+ *
+ * This is the last screen before prose exists, which is the only place any of
+ * it is cheap to act on: once an article is written, an undated price has
+ * already been stated in the present tense and the fix is an edit rather than
+ * a decision.
+ *
+ * Deliberately not styled as a failure. Every finding here is worth reading and
+ * worth ignoring — an article about what a neighbourhood was like in 2019
+ * *should* rest on 2019 facts, and an operator who knows a price has not moved
+ * is right to leave it. The one exception is a piece that promised the reader
+ * how things are now and cannot keep that promise, which reads louder because
+ * the article is the thing making a claim it cannot support.
+ *
+ * The closing sentence is not decoration. A list of dated facts under a heading
+ * about evidence problems is read as a list of *wrong* facts by the second
+ * person who sees it, and nothing here has been re-checked.
+ */
+function EvidenceHealthNotice({ health }: { health?: EvidenceHealth }) {
+  if (!health || health.findings.length === 0) return null
+
+  return (
+    <section className="p2b-health" aria-label="What is weak about these facts">
+      <p className="p2b-label">Before this is written</p>
+      <ul className="p2b-health-findings">
+        {health.findings.map(finding => (
+          <li
+            key={finding.kind}
+            className={
+              finding.blocks_currency_promise
+                ? 'p2b-health-finding p2b-health-promise'
+                : 'p2b-health-finding'
+            }
+          >
+            {finding.detail}
+          </li>
+        ))}
+      </ul>
+      <p className="p2b-health-means">{health.means}</p>
+    </section>
+  )
+}
+
 export function FactPicker({ runId, onChanged }: FactPickerProps) {
   const [review, setReview] = useState<SelectionReview | null>(null)
   const [busy, setBusy] = useState(false)
@@ -225,6 +270,8 @@ export function FactPicker({ runId, onChanged }: FactPickerProps) {
            research happened to return, and cutting by it is not a decision. */
         <p className="p2b-facts-note">{review.note}</p>
       )}
+
+      <EvidenceHealthNotice health={review.evidence_health} />
 
       <label className="p2b-field p2b-facts-line">
         <span className="p2b-label">How many to keep</span>
