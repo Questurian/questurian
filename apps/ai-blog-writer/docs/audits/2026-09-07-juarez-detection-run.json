@@ -1,0 +1,80 @@
+{
+  "run_id": "8a8c681b-cfb3-4f5f-9cc0-04f021269388",
+  "review_id": "e1d62271-1a16-4e35-ba07-0d6f485eade0",
+  "state": "succeeded",
+  "draft_version": "dv-4157a7755455f68534ac1174e0a0bfcf",
+  "attempt_id": "a1c4dff0-7d1f-412b-8d86-4f091dea7a45",
+  "started_at": "2026-09-07T23:06:46+00:00",
+  "finished_at": "2026-09-07T23:10:53+00:00",
+  "previous_status": {
+    "state": "completed",
+    "stage": "complete",
+    "error": null,
+    "failure_kind": null
+  },
+  "verdict": "The bones are right: six stops in a plausible order, real addresses, real hours, a route that genuinely walks, and an honest instinct about where the reader's nerve will fail. It also handles the El Moro hours conflict well — flagging the contradiction and giving an instruction that works under either listing is exactly the right move. But the piece has a bigger problem than any single line. Its two load-bearing claims — that Juárez beats Roma Norte on compression, and that only Wednesday to Saturday works — are the two it hasn't actually established, and the opening fact about Handshake is wrong in a way anyone checking the 50 Best announcement will catch within a minute. Underneath that, the writing has drifted from a walk into a schedule: hours and deposit policies are fully reported, rooms and orders are not, and the traveller's language anxiety that the brief put at the centre is dropped after the third stop. Fix the ranking, either earn the Roma comparison or cut it, rebuild the day rule from the actual hours, and then give the evening stops the space the morning ones got.",
+  "parse_issue": "",
+  "raw": "### FINDING\nLABEL: Ranking claim outruns research\nSEVERITY: serious\nQUOTE: Handshake Speakeasy, on Amberes, was voted the world's best bar in 2024 and has been in the top two of North America's list since.\nPROBLEM: The research note says the 2025 and 2026 standings could not be read and that only the 2024 world ranking should be used — yet the article makes a \"since\" claim anyway, and it is wrong. The World's 50 Best organisation announced Handshake as the *best* bar in North America in both 2024 and 2025 (No. 1, second year running), and No. 2 in the world in 2025; \"top two of North America's list\" appears to be a misreading of the Wikipedia stub, which is itself out of date. The piece's opening credibility anchor is a fact it got wrong while simultaneously underselling the bar.\n\n### FINDING\nLABEL: Thesis not matched by evidence\nSEVERITY: serious\nQUOTE: Juárez isn't holding back anything Roma has. It just puts it closer together and makes you stand in line less.\nPROBLEM: The stated differentiator is compression — Juárez packs the day into fewer blocks — but the only concrete comparison offered is that Café Nin gives you a table and long hours where the two Roma Rosetta bakeries make you queue on the pavement. That is an argument about seating and queues, not proximity, and it never touches the thing a reader would immediately object to: Roma Norte is itself famously compact and walkable. The brief's central risk was asserting Juárez beats Roma without doing the work, and the work here is done for a different claim than the one being made.\n\n### FINDING\nLABEL: The day rule is wrong\nSEVERITY: notable\nQUOTE: Havre 77 is closed Mondays and stops serving at 6pm on Sundays, and the backup bar at the end only opens Wednesday to Saturday. Every other day breaks the route.\nPROBLEM: This is the single instruction the whole plan hangs on, and it does not survive the article's own listings: on Tuesday, Café Nin, El Pescadito, Cicatriz, Havre 77 and El Moro are all open by the hours printed here, and Handshake is open too (Sun–Thu 6pm–1am per its own listings). Nothing breaks except an optional fallback bar the reader may never need — the piece lets a contingency dictate the date. Compounding it, Handshake's opening days and hours are the one set never given, though the reader is told to arrive there at 10pm.\n\n### FINDING\nLABEL: Arguing with the brief on the page\nSEVERITY: notable\nQUOTE: The concrete case, since it should be earned rather than asserted:\nPROBLEM: This is the writer answering an editor inside the article; the reader neither knows nor cares that the claim was supposed to be earned, and the aside announces the argument instead of just making it. The same habit shows in \"The hours are the one thing I couldn't pin down cleanly\" — a line that is also untrue against the research note, which flags El Pescadito's hours as unconfirmed by the operator and \"worth a check on the day,\" a caveat the article drops in favour of the flat \"It closes at six every day.\"\n\n### FINDING\nLABEL: Rooms starved by logistics\nSEVERITY: notable\nQUOTE: Unmarked door, Art Deco room, cocktails that justify the ranking.\nPROBLEM: The brief asks for each stop to be given enough space to say what it is like to sit there and what to order, and the two evening destinations get neither. Handshake gets twelve words of description followed by a full paragraph on deposits and grace periods; Cicatriz gets a room sketch but not one dish or glass, leaving a reader who has followed the plan sitting down at 3:30pm with no idea whether they are meant to eat. Across the piece the hours and booking mechanics crowd out the sense of place that was supposed to be the point.\n\n### FINDING\nLABEL: Language thread abandoned halfway\nSEVERITY: notable\nQUOTE: Language: staff and half the room speak English. If you've had a morning of pointing, this is where you get to ask a question and be answered.\nPROBLEM: That is the last language note in the article, and it arrives at 3:30pm. The reader's question was which places work when their Spanish runs out, and the second half of the day — a French dining room, a churro counter, a cocktail bar with a ninety-minute slot and a booking policy — gets nothing beyond advice on how to reserve Havre 77 online. The research note is candid that Havre 77's English is unverifiable; saying so would still serve the reader better than silence, which reads as though the problem stopped existing at dusk.\n\n### FINDING\nLABEL: Muddled opening sentence\nSEVERITY: minor\nQUOTE: you can do the whole thing on foot without once opening a map for a fifteen-minute walk between courses\nPROBLEM: The sentence has to be read twice to work out what it means, and it is doing the hardest job in the piece — selling the premise in the first paragraph. The fifteen-minute figure is also orphaned: the closing paragraph settles on ten minutes as the true maximum, so the opening promises less than the article can deliver.\n\n### VERDICT\nThe bones are right: six stops in a plausible order, real addresses, real hours, a route that genuinely walks, and an honest instinct about where the reader's nerve will fail. It also handles the El Moro hours conflict well — flagging the contradiction and giving an instruction that works under either listing is exactly the right move. But the piece has a bigger problem than any single line. Its two load-bearing claims — that Juárez beats Roma Norte on compression, and that only Wednesday to Saturday works — are the two it hasn't actually established, and the opening fact about Handshake is wrong in a way anyone checking the 50 Best announcement will catch within a minute. Underneath that, the writing has drifted from a walk into a schedule: hours and deposit policies are fully reported, rooms and orders are not, and the traveller's language anxiety that the brief put at the centre is dropped after the third stop. Fix the ranking, either earn the Roma comparison or cut it, rebuild the day rule from the actual hours, and then give the evening stops the space the morning ones got.",
+  "served_model": "claude-opus-5",
+  "turns": 14,
+  "elapsed_seconds": 246.8,
+  "cost_usd": 0.9230259999999999,
+  "findings": [
+    {
+      "finding_id": "f1",
+      "label": "Ranking claim outruns research",
+      "severity": "serious",
+      "quote": "Handshake Speakeasy, on Amberes, was voted the world's best bar in 2024 and has been in the top two of North America's list since.",
+      "problem": "The research note says the 2025 and 2026 standings could not be read and that only the 2024 world ranking should be used — yet the article makes a \"since\" claim anyway, and it is wrong. The World's 50 Best organisation announced Handshake as the *best* bar in North America in both 2024 and 2025 (No. 1, second year running), and No. 2 in the world in 2025; \"top two of North America's list\" appears to be a misreading of the Wikipedia stub, which is itself out of date. The piece's opening credibility anchor is a fact it got wrong while simultaneously underselling the bar.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f2",
+      "label": "Thesis not matched by evidence",
+      "severity": "serious",
+      "quote": "Juárez isn't holding back anything Roma has. It just puts it closer together and makes you stand in line less.",
+      "problem": "The stated differentiator is compression — Juárez packs the day into fewer blocks — but the only concrete comparison offered is that Café Nin gives you a table and long hours where the two Roma Rosetta bakeries make you queue on the pavement. That is an argument about seating and queues, not proximity, and it never touches the thing a reader would immediately object to: Roma Norte is itself famously compact and walkable. The brief's central risk was asserting Juárez beats Roma without doing the work, and the work here is done for a different claim than the one being made.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f3",
+      "label": "The day rule is wrong",
+      "severity": "notable",
+      "quote": "Havre 77 is closed Mondays and stops serving at 6pm on Sundays, and the backup bar at the end only opens Wednesday to Saturday. Every other day breaks the route.",
+      "problem": "This is the single instruction the whole plan hangs on, and it does not survive the article's own listings: on Tuesday, Café Nin, El Pescadito, Cicatriz, Havre 77 and El Moro are all open by the hours printed here, and Handshake is open too (Sun–Thu 6pm–1am per its own listings). Nothing breaks except an optional fallback bar the reader may never need — the piece lets a contingency dictate the date. Compounding it, Handshake's opening days and hours are the one set never given, though the reader is told to arrive there at 10pm.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f4",
+      "label": "Arguing with the brief on the page",
+      "severity": "notable",
+      "quote": "The concrete case, since it should be earned rather than asserted:",
+      "problem": "This is the writer answering an editor inside the article; the reader neither knows nor cares that the claim was supposed to be earned, and the aside announces the argument instead of just making it. The same habit shows in \"The hours are the one thing I couldn't pin down cleanly\" — a line that is also untrue against the research note, which flags El Pescadito's hours as unconfirmed by the operator and \"worth a check on the day,\" a caveat the article drops in favour of the flat \"It closes at six every day.\"",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f5",
+      "label": "Rooms starved by logistics",
+      "severity": "notable",
+      "quote": "Unmarked door, Art Deco room, cocktails that justify the ranking.",
+      "problem": "The brief asks for each stop to be given enough space to say what it is like to sit there and what to order, and the two evening destinations get neither. Handshake gets twelve words of description followed by a full paragraph on deposits and grace periods; Cicatriz gets a room sketch but not one dish or glass, leaving a reader who has followed the plan sitting down at 3:30pm with no idea whether they are meant to eat. Across the piece the hours and booking mechanics crowd out the sense of place that was supposed to be the point.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f6",
+      "label": "Language thread abandoned halfway",
+      "severity": "notable",
+      "quote": "Language: staff and half the room speak English. If you've had a morning of pointing, this is where you get to ask a question and be answered.",
+      "problem": "That is the last language note in the article, and it arrives at 3:30pm. The reader's question was which places work when their Spanish runs out, and the second half of the day — a French dining room, a churro counter, a cocktail bar with a ninety-minute slot and a booking policy — gets nothing beyond advice on how to reserve Havre 77 online. The research note is candid that Havre 77's English is unverifiable; saying so would still serve the reader better than silence, which reads as though the problem stopped existing at dusk.",
+      "whole_article": false
+    },
+    {
+      "finding_id": "f7",
+      "label": "Muddled opening sentence",
+      "severity": "minor",
+      "quote": "you can do the whole thing on foot without once opening a map for a fifteen-minute walk between courses",
+      "problem": "The sentence has to be read twice to work out what it means, and it is doing the hardest job in the piece — selling the premise in the first paragraph. The fifteen-minute figure is also orphaned: the closing paragraph settles on ten minutes as the true maximum, so the opening promises less than the article can deliver.",
+      "whole_article": false
+    }
+  ]
+}
