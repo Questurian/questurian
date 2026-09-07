@@ -334,6 +334,18 @@ def propose_section_edit(
         # considered cut, and this pass may not delete a section in any case.
         revised = original
         could_not_do = could_not_do or "The edit came back empty, so nothing changed."
+    if could_not_do:
+        # A refusal and a replacement are different answers, and a response
+        # that gives both has not answered. The prompt asks for the original
+        # back verbatim alongside `could_not_do`; what came back on the probe
+        # was "Cannot support this" beside prose carrying a $999 nobody had
+        # ever seen, and the screen offered it as an ordinary proposal because
+        # the text differed from the original.
+        #
+        # Normalised here rather than shown with a warning. An advisory
+        # finding is something a person may knowingly accept; there is nothing
+        # to accept in a change the model has just said it could not make.
+        revised = original
 
     introduced = sorted(
         _figures(revised) - _figures(original) - _packet_figures(packet)
@@ -420,8 +432,46 @@ def apply_proposal(
     applied over the top of it. `apply_section_replacements` already enforces
     that, along with the rules that an edit may not empty a section and may not
     give the opening block a heading.
+
+    The refusal invariant is checked here too, not only where the proposal was
+    made. `propose_section_edit` normalises a refused answer back to the
+    original, but a proposal reaches this function as a request body: the
+    server that decided what a refusal means has to be the server that holds
+    the meaning, or a client can hand the same object back with the prose put
+    in again and have it accepted as an ordinary edit.
     """
     from .content.sections import apply_section_replacements
+
+    if proposal.could_not_do and proposal.changed:
+        return ApplyResult(
+            markdown=content,
+            history=history,
+            rejected=[
+                {
+                    "section_id": proposal.section_id,
+                    "reason": (
+                        "this proposal says it could not make the change and "
+                        "changes the text as well"
+                    ),
+                }
+            ],
+        )
+    if not proposal.changed:
+        # Not an error, and not history either. An accepted edit is a record
+        # of prose a person chose over other prose, and pattern learning reads
+        # that record: a no-op filed into it is a correction that never
+        # happened, counting towards the threshold that decides whether the
+        # voice file should change.
+        return ApplyResult(
+            markdown=content,
+            history=history,
+            rejected=[
+                {
+                    "section_id": proposal.section_id,
+                    "reason": "this proposal does not change the section",
+                }
+            ],
+        )
 
     result = apply_section_replacements(
         content,

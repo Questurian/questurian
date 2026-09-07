@@ -472,6 +472,23 @@ def _edit_history(run_id: str) -> EditHistory:
     return EditHistory.model_validate(stored) if stored else EditHistory()
 
 
+# What each refusal means to the person who pressed the button. Keyed on the
+# reason the apply returned, so a refusal nobody wrote a sentence for still
+# falls through to the staleness message rather than to a blank one.
+_APPLY_REFUSALS = {
+    "this proposal says it could not make the change and changes the text as "
+    "well": (
+        "This proposal says it could not make the change, and offers changed "
+        "text anyway. That is not an edit anyone asked for. Ask again, or ask "
+        "for something the evidence supports."
+    ),
+    "this proposal does not change the section": (
+        "This proposal leaves the section exactly as it is, so there is "
+        "nothing to apply."
+    ),
+}
+
+
 def _save_article(run_id: str, output: dict[str, Any], markdown: str) -> None:
     """Rewrite the article, leaving the pipeline's own record of it alone.
 
@@ -561,11 +578,19 @@ def apply_edit(
         form_id=_safe_str(_safe_dict(artifact.get("brief")).get("form_id")),
     )
     if not result.applied:
+        # The reason, not a guess at it. Staleness was the only refusal this
+        # route knew about, so a proposal refused for saying it could not make
+        # the change was reported as a draft that had moved -- which sends an
+        # editor to re-read a section nothing has touched.
+        reason = result.rejected[0]["reason"] if result.rejected else ""
         raise HTTPException(
             status_code=409,
             detail=(
-                "That section has changed since this edit was proposed. "
-                "Read it again and ask for the change from where it is now."
+                _APPLY_REFUSALS.get(reason)
+                or (
+                    "That section has changed since this edit was proposed. "
+                    "Read it again and ask for the change from where it is now."
+                )
             ),
         )
     _save_article(run_id, output, result.markdown)

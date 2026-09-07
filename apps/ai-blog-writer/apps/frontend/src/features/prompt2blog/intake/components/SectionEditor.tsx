@@ -130,7 +130,15 @@ export function SectionEditor({
           {proposal.could_not_do && (
             /* A refusal is an answer. Rendered where a revision would have been,
                because an editor who asked for something the evidence cannot
-               support needs to read that rather than hunt for it. */
+               support needs to read that rather than hunt for it.
+
+               It is also the end of this proposal. The server normalises a
+               refused answer back to the original text, so there is nothing
+               below to apply, and "Use this" is not offered. That is different
+               from an introduced-figure warning, which is advisory: a person
+               may look at a flagged number, decide they know where it came
+               from, and keep the edit. Nobody can knowingly accept a change
+               the model has just said it did not make. */
             <p className="p2b-editor-refused">{proposal.could_not_do}</p>
           )}
 
@@ -149,6 +157,7 @@ export function SectionEditor({
             </section>
           </div>
 
+          {!proposal.could_not_do && (
           <label className="p2b-field">
             <span className="p2b-label">Why you wanted this (optional)</span>
             <input
@@ -159,23 +168,28 @@ export function SectionEditor({
               onChange={event => setReason(event.target.value)}
             />
           </label>
+          )}
 
           <div className="p2b-intake-actions">
-            <button
-              type="button"
-              className="p2b-primary"
-              disabled={busy || proposal.revised.trim() === proposal.original.trim()}
-              onClick={keep}
-            >
-              Use this
-            </button>
+            {!proposal.could_not_do && (
+              <button
+                type="button"
+                className="p2b-primary"
+                disabled={
+                  busy || proposal.revised.trim() === proposal.original.trim()
+                }
+                onClick={keep}
+              >
+                Use this
+              </button>
+            )}
             <button
               type="button"
               className="p2b-secondary"
               disabled={busy}
               onClick={() => setProposal(null)}
             >
-              Keep what I had
+              {proposal.could_not_do ? 'Ask for something else' : 'Keep what I had'}
             </button>
           </div>
         </div>

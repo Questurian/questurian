@@ -148,6 +148,30 @@ describe('what it refuses to hide', () => {
     ).toBeInTheDocument()
   })
 
+  it('does not offer to apply a refusal', async () => {
+    // The server normalises a refused answer back to the original, so there is
+    // nothing to apply. Offering "Use this" beside a refusal was how a model
+    // saying "cannot support this" still got its changed text accepted.
+    proposeSectionEdit.mockResolvedValue(
+      proposal({
+        revised: '## Where to eat\n\nBoth are good.',
+        could_not_do: 'Nothing on the desk says which suits whom.',
+      }),
+    )
+    open()
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Make the recommendation clearer' }),
+    )
+
+    await screen.findByText('Nothing on the desk says which suits whom.')
+    expect(screen.queryByRole('button', { name: 'Use this' })).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Ask for something else' }),
+    ).toBeInTheDocument()
+    expect(applySectionEdit).not.toHaveBeenCalled()
+  })
+
   it('calls out a figure that came from nowhere', async () => {
     proposeSectionEdit.mockResolvedValue(
       proposal({ introduced_figures: ['12 minutes'] }),
