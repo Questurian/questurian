@@ -1676,3 +1676,17 @@
 .p2b-editor-factual li + li {
   margin-top: var(--space-1);
 }
+
+/*
+ * The notional half of a run's cost, under the money that actually moved.
+ * Quieter than the headline on purpose: it is a real token count and a
+ * hypothetical price, and reading it as spend is the bug this line exists to
+ * prevent.
+ */
+.p2b-run-cost__subscription {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--ink-light);
+  font-size: 0.85em;
+  font-weight: 400;
+}

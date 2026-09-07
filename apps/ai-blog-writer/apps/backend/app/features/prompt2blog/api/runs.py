@@ -713,19 +713,34 @@ def read_edit_spend(run_id: str) -> JSONResponse:
     ledger = _safe_dict(
         _safe_dict(read_stage_result(run_id, USAGE_LEDGER_STAGE)).get("data")
     )
-    pipeline_cost = _safe_dict(ledger.get("totals")).get("estimated_cost_usd")
+    # The ledger's own split: money that left an account, and the notional
+    # API-equivalent price of the calls that drew a flat subscription. Adding
+    # the two produces a number true of nothing, so they are added only to
+    # their own kind.
+    pipeline_cost = _safe_dict(ledger.get("cost"))
     editor_totals = spend.totals()
+    billed = pipeline_cost.get("billed_cost_usd")
+    subscription = pipeline_cost.get("subscription_cost_usd")
     return JSONResponse(
         {
             "run_id": run_id,
             "pipeline": ledger.get("totals") or {},
+            "pipeline_cost": pipeline_cost,
             "editor": editor_totals,
             "attempts": [item.model_dump(mode="json") for item in spend.attempts],
-            # Only when both halves are numbers. A combined total that quietly
-            # treats an unknown as zero is worse than no combined total.
-            "combined_cost_usd": (
-                round(float(pipeline_cost) + editor_totals["estimated_cost_usd"], 6)
-                if isinstance(pipeline_cost, (int, float))
+            # What this article has actually cost, pipeline plus editing.
+            "combined_billed_cost_usd": (
+                round(float(billed) + editor_totals["billed_cost_usd"], 6)
+                if isinstance(billed, (int, float))
+                else None
+            ),
+            # What the subscription calls would have cost on the API. Real
+            # tokens, notional money, never added to the line above.
+            "combined_subscription_cost_usd": (
+                round(
+                    float(subscription) + editor_totals["subscription_cost_usd"], 6
+                )
+                if isinstance(subscription, (int, float))
                 else None
             ),
         }

@@ -32,7 +32,7 @@ from pydantic import BaseModel, Field
 from app.core.database import transaction
 
 from .observability import _now_iso
-from .pricing import TOKEN_KEYS
+from .pricing import COST_BASIS_MEASURED, COST_BASIS_RATE_TABLE, TOKEN_KEYS
 from .support import _safe_dict
 
 EDITOR_SPEND_STAGE = "stage_v4_editor_spend"
@@ -76,16 +76,28 @@ class EditorSpend(BaseModel):
     attempts: list[EditorAttempt] = Field(default_factory=list)
 
     def totals(self) -> dict[str, Any]:
-        """The sums, with the unmeasured calls counted rather than costed."""
+        """The sums, with the unmeasured calls counted rather than costed.
+
+        Money that left an account and money that did not are separate lines.
+        The section edit runs on Claude and the review on Gemini, so a single
+        cost here would add a real per-token charge to the notional price of a
+        call that drew a flat subscription -- the same mistake the run receipt
+        was making, on a smaller number.
+        """
         tokens = {key: 0 for key in TOKEN_KEYS}
-        cost = 0.0
+        billed = 0.0
+        subscription = 0.0
         priced = 0
         for attempt in self.attempts:
             for key in TOKEN_KEYS:
                 tokens[key] += int(attempt.usage.get(key) or 0)
-            if attempt.cost_usd is not None:
-                cost += float(attempt.cost_usd)
-                priced += 1
+            if attempt.cost_usd is None:
+                continue
+            priced += 1
+            if attempt.cost_basis == COST_BASIS_MEASURED:
+                subscription += float(attempt.cost_usd)
+            elif attempt.cost_basis == COST_BASIS_RATE_TABLE:
+                billed += float(attempt.cost_usd)
         return {
             **tokens,
             "attempts": len(self.attempts),
@@ -94,7 +106,8 @@ class EditorSpend(BaseModel):
             # reported no usage is not the same number as a total over four
             # that all did, and the difference has to be readable.
             "unmeasured_attempts": len(self.attempts) - priced,
-            "estimated_cost_usd": round(cost, 6),
+            "billed_cost_usd": round(billed, 6),
+            "subscription_cost_usd": round(subscription, 6),
         }
 
 
