@@ -31,6 +31,7 @@ person still has to press apply.
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -240,6 +241,17 @@ class EditProposal(BaseModel):
 
     schema_version: int = SECTION_EDIT_SCHEMA_VERSION
     run_id: str
+    # This proposal, once, forever. A double-click and a retried request send
+    # the same object twice; the second arrives against a revision the first
+    # advanced past, and without an id that reads as a conflict and sends an
+    # editor to re-read prose that already says what they wanted.
+    edit_id: str = ""
+    # Which version of the whole article this was read from. The section hash
+    # says the paragraph has not moved; this says the document has not, which
+    # is the difference between refusing an edit to prose that changed and
+    # refusing a write that would discard someone else's accepted edit
+    # elsewhere in the same draft.
+    base_revision: int = -1
     section_id: str
     heading: str = ""
     action_id: str
@@ -288,6 +300,7 @@ def propose_section_edit(
     brief: dict[str, Any],
     packet: dict[str, Any],
     dependencies: PipelineDependencies,
+    base_revision: int = -1,
     model_name: str | None = None,
     outline: dict[str, Any] | None = None,
 ) -> EditProposal:
@@ -352,6 +365,8 @@ def propose_section_edit(
     )
     return EditProposal(
         run_id=run_id,
+        edit_id=uuid.uuid4().hex,
+        base_revision=base_revision,
         section_id=section_id,
         heading=section.heading,
         action_id=action_id,
@@ -372,6 +387,9 @@ def propose_section_edit(
 class AppliedEdit(BaseModel):
     """One applied edit, and the whole draft as it was before it."""
 
+    # The proposal this came from, so a repeat of it can be recognised as the
+    # same edit rather than applied a second time.
+    edit_id: str = ""
     section_id: str
     action_id: str
     applied_at: str = ""
@@ -494,6 +512,7 @@ def apply_proposal(
         edits=[
             *history.edits,
             AppliedEdit(
+                edit_id=proposal.edit_id,
                 section_id=proposal.section_id,
                 action_id=proposal.action_id,
                 applied_at=now,

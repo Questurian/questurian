@@ -54,6 +54,11 @@ export function SectionEditor({
   // one accepted edit is a correction, and only the person making it knows
   // whether they meant "this one was wrong" or "we always want this".
   const [reason, setReason] = useState('')
+  // Which version of the article this screen has seen. Read off each
+  // proposal and each accepted write, and sent back with the next one, so a
+  // write from this tab is refused rather than applied over a version it
+  // never read. -1 until a proposal has said.
+  const [revision, setRevision] = useState(-1)
 
   useEffect(() => {
     let live = true
@@ -69,7 +74,10 @@ export function SectionEditor({
     setBusy(true)
     setError('')
     proposeSectionEdit(runId, { section_id: sectionId, action_id: actionId })
-      .then(setProposal)
+      .then(next => {
+        setProposal(next)
+        setRevision(next.base_revision)
+      })
       .catch((failure: Error) => setError(failure.message))
       .finally(() => setBusy(false))
   }
@@ -81,6 +89,7 @@ export function SectionEditor({
       .then(result => {
         setProposal(null)
         setReason('')
+        setRevision(result.revision)
         onApplied(result.markdown)
       })
       .catch((failure: Error) => setError(failure.message))
@@ -202,8 +211,14 @@ export function SectionEditor({
           disabled={busy}
           onClick={() => {
             setBusy(true)
-            undoSectionEdit(runId)
-              .then(result => result.undone && onApplied(result.markdown))
+            // The revision this screen is looking at, which is the one the
+            // last apply returned. An undo without it can take back somebody
+            // else's edit as a side effect of taking back your own.
+            undoSectionEdit(runId, revision)
+              .then(result => {
+                setRevision(result.revision)
+                if (result.undone) onApplied(result.markdown)
+              })
               .catch((failure: Error) => setError(failure.message))
               .finally(() => setBusy(false))
           }}

@@ -295,7 +295,12 @@ export async function applySectionEdit(
   runId: string,
   proposal: SectionEditProposal,
   reason = '',
-): Promise<{ markdown: string; edits: number }> {
+): Promise<{
+  markdown: string
+  edits: number
+  revision: number
+  already_applied: boolean
+}> {
   const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/${runId}/apply`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -304,15 +309,35 @@ export async function applySectionEdit(
   if (!response.ok) {
     throw await readError(response, 'Could not apply that change.')
   }
-  return (await response.json()) as { markdown: string; edits: number }
+  return (await response.json()) as {
+    markdown: string
+    edits: number
+    revision: number
+    already_applied: boolean
+  }
 }
 
-/** Put the draft back to what it was before the last applied edit. */
+/**
+ * Put the draft back to what it was before the last applied edit.
+ *
+ * `baseRevision` is which version of the article this screen is looking at.
+ * Undo is a write like any other: pressed on a stale screen, an unguarded one
+ * restores the markdown from before *this tab's* last edit and erases whatever
+ * somebody else saved in between.
+ */
 export async function undoSectionEdit(
   runId: string,
-): Promise<{ markdown: string; edits: number; undone: boolean }> {
+  baseRevision = -1,
+): Promise<{
+  markdown: string
+  edits: number
+  undone: boolean
+  revision: number
+}> {
   const response = await apiFetch(`${FEATURE_PREFIX}/section-edit/${runId}/undo`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base_revision: baseRevision }),
   })
   if (!response.ok) {
     throw await readError(response, 'Could not undo the last change.')
@@ -321,6 +346,7 @@ export async function undoSectionEdit(
     markdown: string
     edits: number
     undone: boolean
+    revision: number
   }
 }
 

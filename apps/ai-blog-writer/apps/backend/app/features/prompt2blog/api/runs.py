@@ -37,6 +37,13 @@ from utils.llm_model_policy import (
     claude_provider,
 )
 
+from ..article_edits import (
+    ArticleMissing,
+    EditRefused,
+    RevisionConflict,
+    commit_article_edit,
+    read_article,
+)
 from ..config import FEATURE_NAME
 from ..contracts_v4 import Prompt2BlogV4Request
 from ..drafts_view import build_drafts_report, render_drafts_page
@@ -445,6 +452,18 @@ class ApplyEditRequest(BaseModel):
     reason: str = ""
 
 
+class UndoEditRequest(BaseModel):
+    """Which version of the article the undo was pressed against.
+
+    Undo is a write like any other. Pressed on a screen showing revision 10
+    while a colleague saved revision 11, an unguarded undo restores the
+    markdown from before *this tab's* last edit -- erasing their work as a
+    side effect of taking back one's own.
+    """
+
+    base_revision: int = -1
+
+
 class PatternDecisionRequest(BaseModel):
     pattern_id: str = Field(min_length=1)
     # `adopted` means a person changed the voice file. `declined` means they
@@ -465,13 +484,6 @@ def _finished_run(run_id: str) -> dict[str, Any]:
     return output
 
 
-def _edit_history(run_id: str) -> EditHistory:
-    stored = _safe_dict(
-        _safe_dict(read_stage_result(run_id, SECTION_EDIT_STAGE)).get("data")
-    )
-    return EditHistory.model_validate(stored) if stored else EditHistory()
-
-
 # What each refusal means to the person who pressed the button. Keyed on the
 # reason the apply returned, so a refusal nobody wrote a sentence for still
 # falls through to the staleness message rather than to a blank one.
@@ -489,15 +501,12 @@ _APPLY_REFUSALS = {
 }
 
 
-def _save_article(run_id: str, output: dict[str, Any], markdown: str) -> None:
-    """Rewrite the article, leaving the pipeline's own record of it alone.
-
-    `write_artifact` takes the markdown out of the payload and stores it in its
-    own column, so the artifact -- what the pipeline produced and scored -- is
-    passed back unchanged. A hand edit changes the article; it does not change
-    the run's account of how the article was made.
-    """
-    RunRecorder().record_artifact(run_id, {**output["artifact"], "markdown": markdown})
+# Article markdown is written in exactly one place now: `commit_article_edit`,
+# which holds the write lock, checks the revision, and writes the article and
+# its history together. The two helpers that used to live here -- one reading
+# the history on its own, one saving the article on its own -- were the two
+# halves of the lost update, and a route that reaches for either of them again
+# has left the transaction.
 
 
 @router.get("/section-edit/actions", dependencies=[Depends(require_staff)])
@@ -536,6 +545,9 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
         proposal = propose_section_edit(
             run_id=run_id,
             content=output["markdown"],
+            # Stamped on the proposal so the apply can refuse a write against
+            # a document that has moved, not just against a section that has.
+            base_revision=int(output.get("article_revision") or 0),
             section_id=request.section_id,
             action_id=request.action_id,
             brief=_safe_dict(_safe_dict(artifact).get("brief")),
@@ -559,65 +571,151 @@ def apply_edit(
     request: ApplyEditRequest,
     staff_id: str = Depends(staff_user_id),
 ) -> JSONResponse:
-    """Write an accepted proposal into the draft.
+    """Write an accepted proposal into the draft, in one transaction.
 
-    A proposal read on one screen while another edit landed on the same section
-    is refused rather than applied over the top of it.
+    Everything that decides whether this edit may land happens inside that
+    transaction, against the markdown and history as they actually are: the
+    document revision, the section hash, the refusal invariant, and the write
+    of both the article and its history. The route used to read, check, write
+    the article and then write the history -- four steps with no lock, so two
+    tabs editing different sections of the same draft each passed their own
+    section's hash and the second write discarded the first edit.
     """
+    proposal = request.proposal
+    if proposal.run_id and proposal.run_id != run_id:
+        # A proposal names the run it was written for. Applying it to another
+        # one would land prose written against a different article's evidence
+        # on whatever section happens to share its id.
+        raise HTTPException(
+            status_code=400,
+            detail="This proposal was written for a different run.",
+        )
     output = _finished_run(run_id)
     artifact = _safe_dict(_safe_dict(output["artifact"]).get("pipeline_v3"))
-    result = apply_proposal(
-        content=output["markdown"],
-        proposal=request.proposal,
-        history=_edit_history(run_id),
-        editor=staff_id or "",
-        now=_now_iso(),
-        reason=request.reason,
-        # So a correction that only ever happens on one kind of piece cannot
-        # later be read as a rule about all of them (improvement 05).
-        form_id=_safe_str(_safe_dict(artifact.get("brief")).get("form_id")),
-    )
-    if not result.applied:
-        # The reason, not a guess at it. Staleness was the only refusal this
-        # route knew about, so a proposal refused for saying it could not make
-        # the change was reported as a draft that had moved -- which sends an
-        # editor to re-read a section nothing has touched.
-        reason = result.rejected[0]["reason"] if result.rejected else ""
-        raise HTTPException(
-            status_code=409,
-            detail=(
+    form_id = _safe_str(_safe_dict(artifact.get("brief")).get("form_id"))
+
+    def edit(markdown: str, history: EditHistory) -> tuple[str, EditHistory]:
+        result = apply_proposal(
+            content=markdown,
+            proposal=proposal,
+            history=history,
+            editor=staff_id or "",
+            now=_now_iso(),
+            reason=request.reason,
+            # So a correction that only ever happens on one kind of piece
+            # cannot later be read as a rule about all of them (improvement
+            # 05).
+            form_id=form_id,
+        )
+        if not result.applied:
+            # The reason, not a guess at it. Staleness was the only refusal
+            # this route knew about, so a proposal refused for saying it could
+            # not make the change was reported as a draft that had moved --
+            # which sends an editor to re-read a section nothing has touched.
+            reason = result.rejected[0]["reason"] if result.rejected else ""
+            raise EditRefused(
                 _APPLY_REFUSALS.get(reason)
                 or (
                     "That section has changed since this edit was proposed. "
                     "Read it again and ask for the change from where it is now."
                 )
+            )
+        return result.markdown, result.history
+
+    try:
+        committed = commit_article_edit(
+            run_id=run_id,
+            expected_revision=(
+                proposal.base_revision if proposal.base_revision >= 0 else None
             ),
+            edit=edit,
+            edit_id=proposal.edit_id,
         )
-    _save_article(run_id, output, result.markdown)
-    RunRecorder().record_stage(
-        run_id, SECTION_EDIT_STAGE, result.history.model_dump(mode="json")
+    except ArticleMissing as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RevisionConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The article has changed since this edit was proposed -- "
+                "another edit landed, or the run was re-finalised. Re-read it "
+                "and ask again from where it is now."
+            ),
+        ) from exc
+    except EditRefused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return JSONResponse(
+        {
+            "markdown": committed.markdown,
+            "edits": len(committed.history.edits),
+            "revision": committed.revision,
+            # So a repeated click is reported as the edit it already is,
+            # rather than as a second one.
+            "already_applied": committed.already_applied,
+        }
     )
-    return JSONResponse({"markdown": result.markdown, "edits": len(result.history.edits)})
 
 
 @router.post("/section-edit/{run_id}/undo", dependencies=[Depends(require_staff)])
-def undo_edit(run_id: str) -> JSONResponse:
-    """Put the draft back to what it was before the last applied edit."""
-    output = _finished_run(run_id)
-    undone = undo_last(_edit_history(run_id))
-    if undone is None:
-        # Not an error. Pressing undo on an unedited draft is a question with
-        # a plain answer.
-        return JSONResponse(
-            {"markdown": output["markdown"], "edits": 0, "undone": False}
+def undo_edit(
+    run_id: str, request: UndoEditRequest | None = None
+) -> JSONResponse:
+    """Put the draft back to what it was before the last applied edit.
+
+    Guarded by the same revision check as an apply, because it is the same
+    kind of write. Pressed on a screen showing revision 10 while a colleague
+    saved revision 11, an unguarded undo restores the markdown from before
+    *this tab's* last edit and erases theirs on the way past.
+
+    The restore is a new revision, not a return to an old one. Nothing is
+    rewound; the article moves forward to prose it held before.
+    """
+    base_revision = request.base_revision if request else -1
+
+    def edit(_markdown: str, history: EditHistory) -> tuple[str, EditHistory]:
+        undone = undo_last(history)
+        if undone is None:
+            # Not an error. Pressing undo on an unedited draft is a question
+            # with a plain answer.
+            raise EditRefused("")
+        return undone
+
+    try:
+        committed = commit_article_edit(
+            run_id=run_id,
+            expected_revision=base_revision if base_revision >= 0 else None,
+            edit=edit,
         )
-    markdown, history = undone
-    _save_article(run_id, output, markdown)
-    RunRecorder().record_stage(
-        run_id, SECTION_EDIT_STAGE, history.model_dump(mode="json")
-    )
+    except ArticleMissing as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RevisionConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The article has changed since this screen read it. Re-read "
+                "it before undoing, so an undo does not take back somebody "
+                "else's edit."
+            ),
+        ) from exc
+    except EditRefused:
+        state = read_article(run_id)
+        return JSONResponse(
+            {
+                "markdown": state.markdown,
+                "edits": 0,
+                "undone": False,
+                "revision": state.revision,
+            }
+        )
+
     return JSONResponse(
-        {"markdown": markdown, "edits": len(history.edits), "undone": True}
+        {
+            "markdown": committed.markdown,
+            "edits": len(committed.history.edits),
+            "undone": True,
+            "revision": committed.revision,
+        }
     )
 
 

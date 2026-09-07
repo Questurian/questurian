@@ -344,6 +344,10 @@ export interface SectionEditAction {
  */
 export interface SectionEditProposal {
   run_id: string
+  /** This proposal, once. A repeated apply of it is the same edit, not a second one. */
+  edit_id: string
+  /** Which version of the whole article this was read from. */
+  base_revision: number
   section_id: string
   heading: string
   action_id: string

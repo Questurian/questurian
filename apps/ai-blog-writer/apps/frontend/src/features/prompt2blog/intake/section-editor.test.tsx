@@ -32,6 +32,8 @@ const ACTIONS = [
 function proposal(overrides: Partial<SectionEditProposal> = {}): SectionEditProposal {
   return {
     run_id: 'run-1',
+    edit_id: 'edit-1',
+    base_revision: 4,
     section_id: 's1',
     heading: 'Where to eat',
     action_id: 'clarify_recommendation',
@@ -84,7 +86,12 @@ describe('nothing lands unread', () => {
 
   it('applies only when the editor says to', async () => {
     proposeSectionEdit.mockResolvedValue(proposal())
-    applySectionEdit.mockResolvedValue({ markdown: '# edited', edits: 1 })
+    applySectionEdit.mockResolvedValue({
+      markdown: '# edited',
+      edits: 1,
+      revision: 5,
+      already_applied: false,
+    })
     open()
 
     await userEvent.click(
@@ -212,6 +219,7 @@ describe('taking it back', () => {
       markdown: '# original',
       edits: 0,
       undone: true,
+      revision: 6,
     })
     render(
       <SectionEditor
@@ -236,6 +244,7 @@ describe('taking it back', () => {
       markdown: '# original',
       edits: 0,
       undone: false,
+      revision: 4,
     })
     render(
       <SectionEditor
