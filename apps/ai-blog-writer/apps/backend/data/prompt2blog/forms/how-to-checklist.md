@@ -5,6 +5,7 @@ summary: Guides readers through a bounded task with verified steps and checkpoin
 order: 14
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 ---
 

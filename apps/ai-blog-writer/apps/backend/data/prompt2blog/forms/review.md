@@ -5,6 +5,7 @@ summary: Evaluates a specific experience, service, place, or product against dec
 order: 13
 opening: direct-answer
 sections: 3-12
+payoff: decision
 closing: takeaways
 source_gate: documented-evaluation
 ---

@@ -849,6 +849,17 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
         "tone_match": _safe_bool(checks_raw.get("tone_match"), default=True),
     }
 
+    # Promises the plan made that the draft did not keep (improvement 01).
+    # Each needs a heading and a reason: an entry naming neither is an
+    # accusation nobody can act on, and repair would spend a call on it.
+    unresolved_payoffs = []
+    for item in parsed.get("unresolved_payoffs") or []:
+        record = _safe_dict(item)
+        heading = _safe_str(record.get("heading"))
+        why = _safe_str(record.get("why"))
+        if heading and why:
+            unresolved_payoffs.append({"heading": heading, "why": why})
+
     # A missing or unparseable score used to default to 6, which sits below the
     # repair threshold -- so a malformed audit response silently bought a full
     # article rewrite. Absent scores now default to neutral and are reported as
@@ -882,6 +893,11 @@ def _sanitize_quality(parsed: dict[str, Any]) -> dict[str, Any]:
         # an inventory (run b29d66b4).
         "fails_if_quote": _safe_str(parsed.get("fails_if_quote")),
         "fails_if_why": _safe_str(parsed.get("fails_if_why")),
+        # Kept as its own list as well as folded into the revisions. "How many
+        # promises did this draft leave open" is the measure improvement 01
+        # asks to track, and it is not recoverable from a flat list of
+        # revision sentences.
+        "unresolved_payoffs": unresolved_payoffs,
         "required_revisions": required_revisions,
         "quality_summary": _safe_str(parsed.get("quality_summary"))
         or "Quality summary not provided.",

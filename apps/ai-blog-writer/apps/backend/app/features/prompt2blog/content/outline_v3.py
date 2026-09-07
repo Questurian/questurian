@@ -34,7 +34,12 @@ def _sanitize_section(raw: Any) -> dict[str, Any] | None:
         return None
     return {
         "heading": heading,
-        "purpose": _safe_str(record.get("purpose")) or "Purpose not stated.",
+        # Empty when the planner did not say, and left empty on purpose. The
+        # old field filled itself in with "Purpose not stated.", which is a
+        # sentence, so every downstream check saw a section that had stated
+        # its purpose. `validate_v3_outline` can only catch a missing payoff
+        # if a missing payoff still looks missing here.
+        "reader_payoff": _safe_str(record.get("reader_payoff")),
         "claim_ids": _string_list(record.get("claim_ids")),
         "target_words": max(0, _safe_int(record.get("target_words"), default=0)),
     }
@@ -162,6 +167,46 @@ def _names_subject(heading: str, primary_subject: str) -> bool:
     return bool(words) and _mentions(heading, words[0])
 
 
+# Words that carry no promise on their own. A payoff built only out of these
+# and the heading's own words has restated the heading, which is the exact
+# thing improvement 01 is about: the plan says a section exists and never says
+# what a reader leaves it with.
+_PAYOFF_FILLER = frozenset(
+    {
+        "a", "an", "and", "the", "this", "that", "these", "those", "of", "for",
+        "to", "in", "on", "at", "by", "with", "about", "from", "it", "its",
+        "is", "are", "be", "will", "can", "reader", "readers", "section",
+        "article", "piece", "explains", "explain", "covers", "cover", "covered",
+        "describes", "describe", "outlines", "outline", "gives", "give",
+        "provides", "provide", "shows", "show", "details", "detail",
+        "discusses", "discuss", "introduces", "introduce", "presents",
+        "present", "what", "which", "how", "why", "where", "when", "who",
+    }
+)
+
+
+def _payoff_words(text: str) -> set[str]:
+    return {
+        word
+        for word in re.findall(r"[\w']+", text.casefold())
+        if word not in _PAYOFF_FILLER
+    }
+
+
+def _restates_heading(heading: str, payoff: str) -> bool:
+    """Whether a payoff says only what its heading already said.
+
+    Deliberately generous to the planner. A payoff is only called a
+    restatement when, after filler and the heading's own words are removed,
+    it has nothing of its own left. "Covers the transport options" under
+    "Transport options" is caught; "Which transfer to book before 6am, and
+    what it costs" is not, and neither is a payoff that merely happens to
+    reuse the heading's nouns while going on to say something.
+    """
+    remaining = _payoff_words(payoff) - _payoff_words(heading)
+    return not remaining
+
+
 # Facts per hundred words above which a section stops being prose.
 #
 # Run 9e66bf84 gave one 200-word section 56 claims -- three and a half words
@@ -263,11 +308,36 @@ def validate_v3_outline(
         *(
             value
             for section in sections
-            for value in (section["heading"], section["purpose"])
+            for value in (section["heading"], section["reader_payoff"])
         ),
     ]
     covers_primary_subject = not primary_subject or any(
         _covers_subject(value, primary_subject) for value in subject_fields
+    )
+
+    # What each section promises the reader, and whether it promised anything
+    # (improvement 01). A section with no payoff is a heading with facts under
+    # it, and two sections promising the same thing is one section.
+    missing_payoffs = sorted(
+        section["heading"] for section in sections if not section["reader_payoff"]
+    )
+    payoff_keys = [
+        " ".join(sorted(_payoff_words(section["reader_payoff"])))
+        for section in sections
+        if section["reader_payoff"]
+    ]
+    duplicate_payoffs = sorted(
+        {key for key in payoff_keys if payoff_keys.count(key) > 1 and key}
+    )
+    # Read, not enforced -- the same treatment `crowded_sections` gets, and for
+    # the same reason. Whether a sentence adds something to its heading is a
+    # judgement, and a plan thrown away over this one would cost an article its
+    # whole structure to fix a line of prose.
+    restated_payoffs = sorted(
+        section["heading"]
+        for section in sections
+        if section["reader_payoff"]
+        and _restates_heading(section["heading"], section["reader_payoff"])
     )
 
     checks = {
@@ -275,6 +345,8 @@ def validate_v3_outline(
         # divides into two sections is that form working, and failing the plan
         # for it sent compose in with no plan at all.
         "enough_sections": len(sections) >= min_sections,
+        "payoffs_stated": not missing_payoffs,
+        "payoffs_distinct": not duplicate_payoffs,
         "headings_unique": len({s["heading"].casefold() for s in sections})
         == len(sections),
         "within_word_budget": within_budget,
@@ -296,6 +368,9 @@ def validate_v3_outline(
         # find out whether narrowing the packet actually fixed it.
         "crowded_sections": crowded_sections,
         "context_only_headings": context_only_headings,
+        "missing_payoffs": missing_payoffs,
+        "duplicate_payoffs": duplicate_payoffs,
+        "restated_payoffs": restated_payoffs,
     }
     return all(checks.values()), diagnostics
 
@@ -394,7 +469,7 @@ def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
         budget = f" (~{target} words)" if target else ""
         claims = ", ".join(section["claim_ids"]) or "none"
         lines.append(f"{index}. {section['heading']}{budget}")
-        lines.append(f"   Purpose: {section['purpose']}")
+        lines.append(f"   What the reader gets: {section['reader_payoff']}")
         lines.append(f"   Evidence claims: {claims}")
 
     takeaway = _safe_str(outline.get("takeaway_focus"))
@@ -412,3 +487,26 @@ def format_v3_outline_for_prompt(outline: dict[str, Any]) -> str:
         lines.extend(f"- {item}" for item in unsupported)
 
     return "\n".join(lines)
+
+
+def format_payoff_promises(outline: dict[str, Any]) -> str:
+    """The promises the plan made, for the stage that checks they were kept.
+
+    The auditor used to be asked to work out for itself what each section
+    should have done for the reader, which is a second opinion about the plan
+    rather than a check on the draft. The plan already said. Handing it over
+    turns "does this section do its job" from a judgement about what the job
+    might have been into a comparison against a written promise.
+    """
+    sections = outline.get("sections") or []
+    promises = [
+        f"{index}. {section['heading']} -> {section['reader_payoff']}"
+        for index, section in enumerate(sections, start=1)
+        if section.get("reader_payoff")
+    ]
+    if not promises:
+        # An honest absence. A run whose plan was rejected has no promises to
+        # check, and inventing some here would put the auditor back to guessing
+        # with an air of authority.
+        return "No section promises were recorded for this run."
+    return "\n".join(promises)

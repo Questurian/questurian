@@ -5,6 +5,7 @@ summary: Makes a complex system, rule, event, or travel concept understandable.
 order: 3
 opening: direct-answer
 sections: 3-12
+payoff: answer
 closing: takeaways
 ---
 
