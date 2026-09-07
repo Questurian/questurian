@@ -7,7 +7,7 @@ is what made a research pass look like an outage.
 """
 
 from contextlib import nullcontext
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from app.core import (
+    get_all_runs,
     read_all_stage_results,
     read_output,
     read_stage_result,
@@ -60,6 +61,13 @@ from ..provenance import (
     stored_confirmations,
 )
 from ..resume_v3 import plan_resume
+from ..edit_patterns import (
+    EDIT_PATTERN_RUN,
+    EDIT_PATTERN_STAGE,
+    PatternDecision,
+    outstanding,
+    review,
+)
 from ..section_edit_v4 import (
     EDIT_ACTIONS,
     SECTION_EDIT_STAGE,
@@ -425,6 +433,26 @@ class SectionEditRequest(BaseModel):
     action_id: str = Field(min_length=1)
 
 
+class ApplyEditRequest(BaseModel):
+    """An accepted proposal, and optionally why the editor wanted it.
+
+    The reason is optional and nothing is inferred from its absence. It is the
+    difference between "this one was wrong" and "we always want this", and only
+    a person knows which they meant.
+    """
+
+    proposal: EditProposal
+    reason: str = ""
+
+
+class PatternDecisionRequest(BaseModel):
+    pattern_id: str = Field(min_length=1)
+    # `adopted` means a person changed the voice file. `declined` means they
+    # read it and disagreed.
+    verdict: Literal["adopted", "declined"]
+    note: str = ""
+
+
 def _finished_run(run_id: str) -> dict[str, Any]:
     status = read_status(run_id)
     if not status or status.get("feature") != FEATURE_NAME:
@@ -511,7 +539,7 @@ def propose_edit(run_id: str, request: SectionEditRequest) -> JSONResponse:
 @router.post("/section-edit/{run_id}/apply", dependencies=[Depends(require_staff)])
 def apply_edit(
     run_id: str,
-    proposal: EditProposal,
+    request: ApplyEditRequest,
     staff_id: str = Depends(staff_user_id),
 ) -> JSONResponse:
     """Write an accepted proposal into the draft.
@@ -520,12 +548,17 @@ def apply_edit(
     is refused rather than applied over the top of it.
     """
     output = _finished_run(run_id)
+    artifact = _safe_dict(_safe_dict(output["artifact"]).get("pipeline_v3"))
     result = apply_proposal(
         content=output["markdown"],
-        proposal=proposal,
+        proposal=request.proposal,
         history=_edit_history(run_id),
         editor=staff_id or "",
         now=_now_iso(),
+        reason=request.reason,
+        # So a correction that only ever happens on one kind of piece cannot
+        # later be read as a rule about all of them (improvement 05).
+        form_id=_safe_str(_safe_dict(artifact.get("brief")).get("form_id")),
     )
     if not result.applied:
         raise HTTPException(
@@ -561,6 +594,79 @@ def undo_edit(run_id: str) -> JSONResponse:
     return JSONResponse(
         {"markdown": markdown, "edits": len(history.edits), "undone": True}
     )
+
+
+@router.get("/edit-patterns", dependencies=[Depends(require_staff)])
+def read_edit_patterns() -> JSONResponse:
+    """What the accepted edits keep saying, across every article.
+
+    Not hung off a run. A pattern is about the writer across articles, and
+    attaching it to whichever run happened to be open when it was noticed would
+    lose it.
+
+    Reads and counts; changes nothing. The Questurian Voice file is edited by a
+    person, and silently learning a new instruction is the failure this feature
+    is one wrong turn away from.
+    """
+    histories: dict[str, Any] = {}
+    for row in get_all_runs(feature=FEATURE_NAME):
+        run_id = _safe_str(row.get("run_id"))
+        stored = _safe_dict(
+            _safe_dict(read_stage_result(run_id, SECTION_EDIT_STAGE)).get("data")
+        )
+        if stored.get("edits"):
+            histories[run_id] = stored
+
+    reviewed = review(histories)
+    decisions = [
+        PatternDecision(**_safe_dict(item))
+        for item in _safe_dict(
+            _safe_dict(
+                read_stage_result(EDIT_PATTERN_RUN, EDIT_PATTERN_STAGE)
+            ).get("data")
+        ).get("decisions")
+        or []
+    ]
+    reviewed["outstanding"] = outstanding(reviewed, decisions)
+    reviewed["decided"] = [
+        {"pattern_id": item.pattern_id, "verdict": item.verdict, "note": item.note}
+        for item in decisions
+    ]
+    return JSONResponse(reviewed)
+
+
+@router.post("/edit-patterns/decide", dependencies=[Depends(require_staff)])
+def decide_edit_pattern(
+    request: PatternDecisionRequest,
+    staff_id: str = Depends(staff_user_id),
+) -> JSONResponse:
+    """Record that a person answered a pattern, so it stops being offered.
+
+    `adopted` means they changed the voice file themselves. Nothing here writes
+    to it: this route records a decision and never a rule.
+    """
+    stored = _safe_dict(
+        _safe_dict(read_stage_result(EDIT_PATTERN_RUN, EDIT_PATTERN_STAGE)).get("data")
+    )
+    kept = [
+        item
+        for item in stored.get("decisions") or []
+        if _safe_dict(item).get("pattern_id") != request.pattern_id
+    ]
+    decisions = [
+        *kept,
+        {
+            "pattern_id": request.pattern_id,
+            "verdict": request.verdict,
+            "decided_at": _now_iso(),
+            "decided_by": staff_id or "",
+            "note": request.note,
+        },
+    ]
+    RunRecorder().record_stage(
+        EDIT_PATTERN_RUN, EDIT_PATTERN_STAGE, {"decisions": decisions}
+    )
+    return JSONResponse({"decisions": decisions})
 
 
 @router.get("/drafts/{run_id}", response_class=HTMLResponse)

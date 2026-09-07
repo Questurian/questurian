@@ -50,6 +50,10 @@ export function SectionEditor({
   const [proposal, setProposal] = useState<SectionEditProposal | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  // Why the editor wanted this, in their words. Optional, and never inferred:
+  // one accepted edit is a correction, and only the person making it knows
+  // whether they meant "this one was wrong" or "we always want this".
+  const [reason, setReason] = useState('')
 
   useEffect(() => {
     let live = true
@@ -73,9 +77,10 @@ export function SectionEditor({
   const keep = () => {
     if (!proposal) return
     setBusy(true)
-    applySectionEdit(runId, proposal)
+    applySectionEdit(runId, proposal, reason)
       .then(result => {
         setProposal(null)
+        setReason('')
         onApplied(result.markdown)
       })
       .catch((failure: Error) => setError(failure.message))
@@ -143,6 +148,17 @@ export function SectionEditor({
               <pre>{proposal.revised}</pre>
             </section>
           </div>
+
+          <label className="p2b-field">
+            <span className="p2b-label">Why you wanted this (optional)</span>
+            <input
+              type="text"
+              value={reason}
+              disabled={busy}
+              placeholder="e.g. it kept hedging instead of choosing"
+              onChange={event => setReason(event.target.value)}
+            />
+          </label>
 
           <div className="p2b-intake-actions">
             <button

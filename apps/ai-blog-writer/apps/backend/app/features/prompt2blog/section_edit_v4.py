@@ -368,6 +368,19 @@ class AppliedEdit(BaseModel):
     # The entire previous markdown, not a patch. Undo has to be exact, and a
     # patch that no longer applies is an undo that silently does not.
     previous_markdown: str = ""
+    # The one section, before and after, and why the operator wanted it
+    # (improvement 05). The whole-draft copy above is for undo and is the wrong
+    # shape for reading a pattern out of: what recurs is a kind of sentence
+    # being replaced by another kind, and that is only visible at this size.
+    before: str = ""
+    after: str = ""
+    # Typed by the operator, and optional. A reason is the difference between
+    # "this one was wrong" and "we always want this", and nothing should be
+    # inferred from its absence.
+    reason: str = ""
+    # Which form the article was, so a correction that only ever happens on one
+    # kind of piece cannot be read as a rule about all of them.
+    form_id: str = ""
 
 
 class EditHistory(BaseModel):
@@ -397,6 +410,8 @@ def apply_proposal(
     history: EditHistory,
     editor: str,
     now: str,
+    reason: str = "",
+    form_id: str = "",
 ) -> ApplyResult:
     """Write one accepted proposal into the draft, keeping what it replaced.
 
@@ -435,6 +450,10 @@ def apply_proposal(
                 editor=editor,
                 what_changed=proposal.what_changed,
                 previous_markdown=content,
+                before=proposal.original,
+                after=proposal.revised,
+                reason=reason,
+                form_id=form_id,
             ),
         ],
     )
