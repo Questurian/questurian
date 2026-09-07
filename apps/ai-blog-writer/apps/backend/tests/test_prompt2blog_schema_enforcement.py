@@ -67,14 +67,29 @@ from pathlib import Path
 
 import pytest
 
-V3_STAGES = Path(__file__).resolve().parents[1] / "app/features/prompt2blog/stages/v3"
+# The whole package, not only `stages/v3`. The style cleanup call moved out of
+# the stage files when it stopped being a whole-article rewrite (finding 05),
+# and a guard that only looked at stages would have stopped covering it on the
+# way -- which is the same shape of miss it was written for.
+P2B_PACKAGE = Path(__file__).resolve().parents[1] / "app/features/prompt2blog"
+P2B_MODULES = [
+    path
+    for path in sorted(P2B_PACKAGE.rglob("*.py"))
+    if "dependencies.llm." in path.read_text()
+]
 
 
-@pytest.mark.parametrize("path", sorted(V3_STAGES.glob("*.py")), ids=lambda p: p.name)
+def test_the_job_id_guard_actually_finds_the_call_sites():
+    """A glob that matches nothing passes every assertion under it."""
+    names = {path.name for path in P2B_MODULES}
+    assert {"compose.py", "audit_repair.py", "style_cleanup.py"} <= names
+
+
+@pytest.mark.parametrize("path", P2B_MODULES, ids=lambda p: p.name)
 def test_every_model_call_in_the_writing_graph_names_a_job(path):
     source = path.read_text()
     for call in re.finditer(
-        r"dependencies\.llm\.(invoke_json|invoke_text|enforce_anti_ai)\((.*?)\n    \)",
+        r"dependencies\.llm\.(invoke_json|invoke_text)\((.*?)\n    \)",
         source,
         re.S,
     ):

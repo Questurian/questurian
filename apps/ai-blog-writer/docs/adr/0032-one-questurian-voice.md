@@ -42,6 +42,22 @@ once, at compose. Every other consumer keeps the enforcement pass, because they
 do not receive the compose-prompt rework that replaces it and would otherwise
 lose a backstop and gain nothing. Edits to the rule text itself are shared.
 
+> **Amended (writer audit, finding 05).** This was never carried out. The
+> whole-article enforcement pass stayed wired in after compose and after
+> repair, and a test recorded the discrepancy rather than resolving it. It is
+> now replaced rather than dropped, because the backstop turned out to be
+> worth keeping and the rewrite was not.
+>
+> Prompt2Blog runs `content/style_cleanup.py`. The deterministic validator is
+> unchanged and still free. What changed is the expensive half: the errors
+> carry line numbers, so only the sections containing them are sent, only
+> those may be returned, and the rest of the article is untouched bytes. The
+> pass is also given the repair lock -- the brief's scope and the limitations
+> on the facts this article used -- which the old one never saw, so it can
+> tell a qualification from a stylistic tic. One attempt; a result that is not
+> cleaner than what it was given is discarded, and the draft is re-grounded
+> either way. Other consumers still call `enforce_anti_ai_tells_markdown`.
+
 **URL2Blog and YouTube2Blog are deleted, not left to break.** Removing the
 shared tone list and changing the shared voice rules leaves them looking
 completely usable while failing mid-run or, worse, quietly producing worse
@@ -59,6 +75,10 @@ response.
 - The house rules are no longer uniform across pipelines. This reverses an
   earlier deliberate choice to keep them in one shared place, and is scoped to
   the enforcement pass rather than the rule text to keep the divergence small.
+- Prompt2Blog's cleanup can now leave a style error unresolved. That is the
+  trade the amendment above makes deliberately: an unresolved em dash is
+  visible in the run record and costs a reader nothing, where a stripped
+  as-of date is invisible and costs them the fact.
 - The tone dropdown disappears from the composer. Any stored run referencing a
   `tone_id` is unreadable, which is already true under ADR 0031.
 - Voice quality becomes editable by a person in one file, in English, without

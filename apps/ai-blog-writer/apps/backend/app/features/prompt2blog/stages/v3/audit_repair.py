@@ -25,6 +25,7 @@ from ...quality import (
 )
 from ...quality_v3 import v3_constraint_brief
 from ...content.markdown import sections_changed
+from ...content.style_cleanup import clean_up_style
 from ...content.sections import (
     apply_section_replacements,
     locate_claims,
@@ -363,14 +364,18 @@ def run_v3_repair_stage(
     # A pass that changed nothing is now a visible outcome instead of a draft
     # that looks repaired.
     touched = sections_changed(previous_content, repaired["improved_content"])
-    # The same model that just wrote this text: the enforcement pass is another
-    # rewrite of it, not a separate judgement.
-    repaired["improved_content"] = dependencies.llm.enforce_anti_ai(
+    # And the style cleanup edits sections too (finding 05), on the same model
+    # that just wrote the text: this is another pass over it, not a separate
+    # judgement. It is given the repair lock, so the caveats a repaired
+    # sentence is carrying are visible to the pass tidying it.
+    repaired["improved_content"], style_report = clean_up_style(
         repaired["improved_content"],
+        dependencies=dependencies,
         job_id="p2b.repair",
         model_name=repair_model,
-        max_tokens=6144,
+        max_tokens=4096,
         context="prompt2blog v3 repair",
+        guard=stage_context_text(state["stage_contexts"], "repair_lock"),
     )
     _append_stage_trace(
         state["trace"],
@@ -381,6 +386,7 @@ def run_v3_repair_stage(
             "attempt": attempt,
             "sections_touched": touched,
             "section_edits": edit_report,
+            "style_cleanup": style_report,
         },
         prompt=prompt,
         raw_response=raw_response,
@@ -397,6 +403,7 @@ def run_v3_repair_stage(
             "required_revisions": required_revisions,
             "unsupported_claims": unsupported_claims,
             "section_edits": edit_report,
+            "style_cleanup": style_report,
             "raw_response": raw_response,
         },
     )

@@ -10,6 +10,7 @@ from ...instructions_v3 import resolve_structure_policy, stage_context_text
 from ...observability import _append_stage_trace
 from ...prompts.editorial_v3 import P2B_V3_COMPOSE_PROMPT
 from ...prompts.generation import SEO_SAFE_CONTENT_GENERATION_GUIDELINES
+from ...content.style_cleanup import clean_up_style
 from ...quality import _sanitize_rewrite
 from ...schemas import REWRITE_SCHEMA
 from ...support import _format_style_directive, _safe_dict, _target_word_count
@@ -85,18 +86,28 @@ def run_v3_compose_stage(
         fallback_title=state["brief"]["seed"],
         fallback_content="",
     )
-    rewrite["improved_content"] = dependencies.llm.enforce_anti_ai(
+    # Style cleanup, scoped to the sections that actually failed (finding 05).
+    # It used to hand the whole article back to a model with the error list
+    # and nothing else -- no brief, no facts, no caveats -- which is how a
+    # pass sent to remove an em dash could flatten a carefully dated sentence.
+    rewrite["improved_content"], style_report = clean_up_style(
         rewrite["improved_content"],
+        dependencies=dependencies,
         job_id="p2b.compose",
         model_name=state["writing_model"],
-        max_tokens=6144,
+        max_tokens=4096,
         context="prompt2blog v3 compose",
+        guard=stage_context_text(state["stage_contexts"], "repair_lock"),
     )
 
     dependencies.recorder.record_stage(
         run_id,
         stage,
-        {"rewrite": rewrite, "raw_response": raw_response},
+        {
+            "rewrite": rewrite,
+            "style_cleanup": style_report,
+            "raw_response": raw_response,
+        },
     )
     _append_stage_trace(
         state["trace"],
@@ -110,6 +121,7 @@ def run_v3_compose_stage(
             "structure_policy": structure.model_dump(),
             "style_directive": style_directive,
             "prompt_sizes": prompt_sizes,
+            "style_cleanup": style_report,
         },
         prompt=prompt,
         raw_response=raw_response,

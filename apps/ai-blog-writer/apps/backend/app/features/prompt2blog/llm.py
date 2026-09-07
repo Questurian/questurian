@@ -6,7 +6,6 @@ from typing import Any, Protocol
 
 from app.shared.api_usage import observe_external_call, provider_for_llm
 from app.shared.model_calls import resolve
-from app.shared.text import enforce_anti_ai_tells_markdown
 from utils import get_vertex_llm, parse_json_response
 from .pricing import MEASURED_COST_KEY
 from .support import _safe_str
@@ -135,31 +134,6 @@ def _usage_with_measured_cost(llm: Any) -> Any:
     if cost is None or not isinstance(usage, dict):
         return usage
     return {**usage, MEASURED_COST_KEY: cost}
-
-
-def _enforce_anti_ai_markdown_with_model(
-    text: str,
-    *,
-    model_name: str | None,
-    max_tokens: int,
-    context: str,
-    usage_recorder: UsageRecorder | None = None,
-    job_id: str | None = None,
-    correlation_id: str | None = None,
-) -> str:
-    return enforce_anti_ai_tells_markdown(
-        text,
-        repair=lambda repair_prompt: _invoke_text_llm(
-            prompt=repair_prompt,
-            max_tokens=max_tokens,
-            temperature=0.1,
-            model_name=model_name,
-            usage_recorder=usage_recorder,
-            job_id=job_id,
-            correlation_id=correlation_id,
-        ),
-        context=context,
-    )
 
 
 # The parse error names what went wrong, so the excerpt only has to show the
