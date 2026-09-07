@@ -337,3 +337,30 @@ def test_the_draft_the_pipeline_produced_survives_every_later_edit():
 
 def test_undoing_an_unedited_draft_is_a_question_with_a_plain_answer():
     assert undo_last(EditHistory()) is None
+
+
+def test_a_date_the_model_was_shown_is_not_an_invented_figure():
+    """The prompt shows each fact's as-of date, the operator's note on it and
+    the limit notes. The figure guard read none of them, so a model that
+    correctly dated a fare had the year reported as an invention.
+
+    Found on the first live call this code made -- against a brief whose
+    `fails_if` was a fare quoted without saying when it was true."""
+    from app.features.prompt2blog.section_edit_v4 import _packet_figures
+
+    packet = {
+        "facts": [
+            {
+                "text": "Official taxis charge $25 to Miraflores.",
+                "as_of": "March 2026",
+                "operator_note": "Confirmed at the rank on the 14th.",
+            }
+        ],
+        "notes": [{"text": "Fares were checked against a 2025 baseline."}],
+        "supplied_material": [{"statement": "I waited 40 minutes at 6am."}],
+    }
+
+    figures = _packet_figures(packet)
+    assert "2026" in figures, "an as-of date is shown to the model"
+    assert "2025" in figures, "a limit note is shown too"
+    assert "40 minutes" in figures and "$25" in figures

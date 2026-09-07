@@ -283,14 +283,35 @@ class EditProposal(BaseModel):
 
 
 def _packet_figures(packet: dict[str, Any]) -> set[str]:
-    text = " ".join(
-        _safe_str(_safe_dict(fact).get("text")) for fact in packet.get("facts") or []
-    )
-    material = " ".join(
-        _safe_str(_safe_dict(item).get("statement"))
-        for item in packet.get("supplied_material") or []
-    )
-    return _figures(f"{text} {material}")
+    """Every figure the model was shown, which is not the same as every fact.
+
+    This has to cover exactly what `_facts_block` puts in the prompt. It used
+    to read `text` and `statement` only, while the prompt also carries each
+    fact's as-of date, the operator's note on it, and the limit notes -- so a
+    model that correctly wrote "as of March 2026" had 2026 reported as a figure
+    it invented.
+
+    Found on the first live call this code ever made, against a brief whose
+    `fails_if` was "quotes a fare without saying when it was true". The model
+    did the right thing and the guard called it an invention. A warning that
+    fires on correct work is worse than no warning: it is the one an editor
+    learns to click past.
+    """
+    parts: list[str] = []
+    for fact in packet.get("facts") or []:
+        record = _safe_dict(fact)
+        parts.extend(
+            (
+                _safe_str(record.get("text")),
+                _safe_str(record.get("as_of")),
+                _safe_str(record.get("operator_note")),
+            )
+        )
+    for note in packet.get("notes") or []:
+        parts.append(_safe_str(_safe_dict(note).get("text")))
+    for item in packet.get("supplied_material") or []:
+        parts.append(_safe_str(_safe_dict(item).get("statement")))
+    return _figures(" ".join(part for part in parts if part))
 
 
 def find_section(content: str, section_id: str) -> ArticleSection | None:
