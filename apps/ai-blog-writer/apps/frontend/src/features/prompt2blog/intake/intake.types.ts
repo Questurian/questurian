@@ -288,6 +288,46 @@ export interface PunchList {
   dropped: string[]
 }
 
+/**
+ * Where one passage of the finished article came from.
+ *
+ * A link means the passage and a chosen fact share a figure or a distinctive
+ * phrase. It is not a check that the sentence means what the fact means, which
+ * is why `status` exists and why every automatic link arrives as `provisional`.
+ */
+export interface ProvenanceLink {
+  passage_id: string
+  passage_hash: string
+  source_kind: 'claim' | 'material'
+  source_id: string
+  basis: 'figure' | 'phrase'
+  /** The figure or wording they share, so the operator sees why, not just that. */
+  shared: string[]
+  status: 'provisional' | 'confirmed'
+  text: string
+  as_of: string
+  confidence: string
+  operator_note: string
+  caveats: string[]
+}
+
+export interface PassageProvenance {
+  passage_id: string
+  section_id: string
+  heading: string
+  text: string
+  text_hash: string
+  links: ProvenanceLink[]
+  /** A figure in the prose that matches nothing on the desk. */
+  unmatched_figures: string[]
+}
+
+export interface ProvenanceReport {
+  run_id: string
+  passages: PassageProvenance[]
+  summary: Record<string, unknown> & { means: string }
+}
+
 /** The finished article. Its own call: the state is polled, this is not. */
 export interface IntakeArticle {
   run_id: string

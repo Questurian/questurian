@@ -146,6 +146,14 @@ def v3_run_input_artifact(runtime: PipelineV4RuntimeRequest) -> dict[str, Any]:
         # Without it a finished run could not answer the first question anybody
         # asks about a thin article: was the fact missing, or was it cut?
         "packet_receipt": WritingPacket.model_validate(runtime.packet).receipt(),
+        # And the packet itself, not only its sizes. The receipt answers "how
+        # much reached the writer"; asking where one sentence came from needs
+        # "which" (improvement 02), and the packet was otherwise nowhere
+        # durable -- the resume snapshot holds one and is discarded the moment
+        # a run succeeds. Rebuilding it from the selection afterwards would be
+        # a different packet whenever the operator has since changed their
+        # mind, which is exactly the case where the question gets asked.
+        "packet": runtime.packet,
         "source_ids": [source["source_id"] for source in evidence["sources"]],
         "profiles": {
             "length_id": runtime.option_context["length"]["id"],

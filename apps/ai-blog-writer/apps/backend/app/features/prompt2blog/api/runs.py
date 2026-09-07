@@ -43,10 +43,21 @@ from ..intake_v3 import (
     v3_intake_result,
     v3_run_input_artifact,
 )
-from ..observability import _read_langgraph_trace
+from ..observability import _now_iso, _read_langgraph_trace
 from ..models import PipelineV4RuntimeRequest
 from ..options import default_target_word_count
 from ..orchestrator_v3 import resume_pipeline_v3, run_pipeline_v3
+from ..provenance import (
+    Confirmation,
+    ConfirmationRecord,
+    PacketNotStored,
+    PROVENANCE_STAGE,
+    build_provenance,
+    frozen_packet,
+    prune_confirmations,
+    segment_passages,
+    stored_confirmations,
+)
 from ..resume_v3 import plan_resume
 from ..run_recorder import RunRecorder
 from ..selection_v4 import selection_from_flags
@@ -296,6 +307,104 @@ def get_result(run_id: str) -> JSONResponse:
     }
     response_payload.update(trace_payload)
     return JSONResponse(response_payload)
+
+
+@router.get("/provenance/{run_id}", dependencies=[Depends(require_staff)])
+def get_provenance(run_id: str) -> JSONResponse:
+    """Where each passage of the finished article came from.
+
+    Internal, and staff-only for the same reason it is internal: it is the
+    working material behind the prose, and the article itself carries no
+    attribution on purpose.
+
+    Derived on every request rather than stored, so it can never describe prose
+    that has since changed.
+    """
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Run not found.")
+
+    output = read_output(run_id)
+    if not output:
+        raise HTTPException(
+            status_code=404, detail="This run has not produced an article yet."
+        )
+
+    try:
+        packet = frozen_packet(run_id)
+    except PacketNotStored as exc:
+        # 409 rather than 404: the run exists and the article exists, and what
+        # is missing is a record older runs never kept. A 404 would read as
+        # "no such run" and send somebody looking for the wrong problem.
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    markdown = output["markdown"]
+    # Confirmations against passages that have since been edited are dropped
+    # here rather than shown as stale. A confirmation beside changed prose is
+    # worse than none: it is the one thing on the screen that says a person
+    # checked.
+    live = prune_confirmations(stored_confirmations(run_id), markdown)
+    report = build_provenance(
+        run_id, markdown, packet, live.model_dump(mode="json")
+    )
+    return JSONResponse(report.model_dump(mode="json"))
+
+
+@router.post("/provenance/{run_id}/confirm", dependencies=[Depends(require_staff)])
+def confirm_provenance(
+    run_id: str,
+    confirmation: Confirmation,
+    staff_id: str = Depends(staff_user_id),
+) -> JSONResponse:
+    """Record that a person read this passage against this material and agreed.
+
+    The only thing that can make a link anything other than provisional. An
+    automatic match says two pieces of text share a figure; whether the
+    sentence means what the fact means is a judgement, and this is where a
+    person makes it.
+    """
+    status = read_status(run_id)
+    if not status or status.get("feature") != FEATURE_NAME:
+        raise HTTPException(status_code=404, detail="Run not found.")
+
+    output = read_output(run_id)
+    if not output:
+        raise HTTPException(
+            status_code=404, detail="This run has not produced an article yet."
+        )
+
+    markdown = output["markdown"]
+    existing = prune_confirmations(stored_confirmations(run_id), markdown)
+    if confirmation.passage_hash not in {
+        passage.text_hash for passage in segment_passages(markdown)
+    }:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "That passage is not in the current article. It has been "
+                "edited since you read it, so re-read it before confirming."
+            ),
+        )
+
+    recorded = Confirmation(
+        passage_hash=confirmation.passage_hash,
+        source_kind=confirmation.source_kind,
+        source_id=confirmation.source_id,
+        reviewer=staff_id or confirmation.reviewer,
+        confirmed_at=_now_iso(),
+        note=confirmation.note,
+    )
+    kept = [
+        item
+        for item in existing.confirmations
+        if (item.passage_hash, item.source_kind, item.source_id)
+        != (recorded.passage_hash, recorded.source_kind, recorded.source_id)
+    ]
+    updated = ConfirmationRecord(confirmations=[*kept, recorded])
+    RunRecorder().record_stage(
+        run_id, PROVENANCE_STAGE, updated.model_dump(mode="json")
+    )
+    return JSONResponse(updated.model_dump(mode="json"))
 
 
 @router.get("/drafts/{run_id}", response_class=HTMLResponse)

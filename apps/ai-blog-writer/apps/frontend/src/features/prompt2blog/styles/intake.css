@@ -1431,3 +1431,107 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/*
+ * Where a passage came from.
+ *
+ * The affordance is deliberately quiet. The article body is what an editor is
+ * reading, and a source marker on every paragraph competing with the prose
+ * would make the piece harder to judge -- which is the thing they are actually
+ * here to do. It surfaces on hover and on focus, and is always reachable by
+ * keyboard.
+ */
+.p2b-passage {
+  position: relative;
+}
+
+.p2b-passage-source {
+  margin-left: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.p2b-passage:hover .p2b-passage-source,
+.p2b-passage-source:focus-visible,
+.p2b-passage-asking .p2b-passage-source {
+  opacity: 1;
+}
+
+.p2b-passage-asking {
+  background: var(--accent-softer);
+}
+
+.p2b-provenance {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--panel-soft, var(--accent-softer));
+  border-left: 2px solid var(--accent);
+}
+
+.p2b-provenance-links {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.p2b-provenance-link {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border);
+}
+
+.p2b-provenance-text {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.p2b-provenance-meta {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-light);
+  font-size: 0.8125rem;
+}
+
+.p2b-provenance-shared {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.p2b-provenance-caveat {
+  margin: var(--space-2) 0 0;
+  font-size: 0.875rem;
+  font-style: italic;
+}
+
+.p2b-provenance-status {
+  margin: var(--space-2) 0 0;
+  font-size: 0.8125rem;
+  color: var(--ink-light);
+}
+
+/* A figure with nothing behind it is the one thing here worth interrupting for. */
+.p2b-provenance-unmatched {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 2px solid var(--accent);
+  font-size: 0.875rem;
+}
+
+/*
+ * Never let the list of facts be the last word. A sentence beside the facts it
+ * shares a figure with reads as a checked sentence unless something on the
+ * screen says it is not, and a badge colour cannot carry that.
+ */
+.p2b-provenance-means {
+  margin: var(--space-4) 0 var(--space-3);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
