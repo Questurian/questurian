@@ -1431,3 +1431,45 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+
+/*
+ * What is weak about the facts about to reach the writer.
+ *
+ * Not styled as a failure. Every finding is worth reading and worth ignoring:
+ * an article about 2019 should rest on 2019 facts, and an operator who knows a
+ * price has not moved is right to leave it. Only a promise the evidence cannot
+ * keep gets the accent rule, because there the article is the thing making a
+ * claim it cannot support.
+ */
+.p2b-health {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--accent-softer);
+}
+
+.p2b-health-findings {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+}
+
+.p2b-health-finding {
+  margin: var(--space-2) 0 0;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.p2b-health-promise {
+  padding-left: var(--space-3);
+  margin-left: calc(-1 * var(--space-3));
+  border-left: 2px solid var(--accent);
+  font-weight: 500;
+  list-style: none;
+}
+
+/* Never the last word. Nothing here has been re-checked. */
+.p2b-health-means {
+  margin: var(--space-3) 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
