@@ -236,11 +236,19 @@ def test_the_edit_sees_the_frozen_facts_and_their_limits():
     assert "YOUR OWN NOTE, verbatim: I waited 45 minutes" in prompt
 
 
-def test_the_edit_sees_only_its_own_section():
+def test_the_edit_is_given_only_its_own_section_to_edit():
+    """The rest of the article reaches it as navigation, never as prose to edit.
+
+    Improvement 03 added the memory; what it must not do is make the other
+    sections look editable. They arrive under a heading that says they are not
+    evidence and not the thing being changed, and only the section under
+    ORIGINAL SECTION is offered for replacement.
+    """
     _proposal, prompt = _ask({"revised": "x"})
-    assert "Where to eat" in prompt
-    # It is not editing the rest of the article and is not shown it.
-    assert "The transfer takes 40 minutes." not in prompt
+    original = prompt.split("ORIGINAL SECTION:")[1]
+
+    assert "Where to eat" in original
+    assert "The transfer takes 40 minutes." not in original
 
 
 def test_the_edit_is_told_a_refusal_is_a_correct_answer():
