@@ -47,6 +47,7 @@ them for the v2 fallback. Do not delete or renumber them.
 | `stages/v3/`, `prompts/editorial_v3.py`, `content/outline_v3.py` | V3 writing stages, their prompts, and pure section-plan scope guards |
 | `orchestrator_v3.py`, `graph/topology_v3.py` | The v3 run entrypoints and its shorter generation topology |
 | `resume_v3.py` | The state snapshot a failed v3 run is picked back up from |
+| `provenance.py` | Which chosen fact each passage of the finished article shares a figure or phrase with |
 | `evaluation.py` | Frozen writing inputs, blind draft comparison, and per-criterion scoring |
 | `content/` | Pure source-text, Markdown, and editorial-block transformations |
 | `quality.py` | Deterministic checks, sanitizers, and repair gating |

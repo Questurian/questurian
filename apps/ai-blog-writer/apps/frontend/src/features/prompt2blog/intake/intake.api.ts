@@ -5,6 +5,7 @@ import type {
   IntakeArticle,
   IntakeRunSummary,
   IntakeState,
+  ProvenanceReport,
   PunchList,
   SelectionReview,
   VenueToCheck,
@@ -225,6 +226,35 @@ export async function readPunchList(runId: string): Promise<PunchList> {
     throw await readError(response, 'Could not read the notes on this article.')
   }
   return (await response.json()) as PunchList
+}
+
+/**
+ * Where each passage of the finished article came from.
+ *
+ * Answers 409 for a run that never recorded the packet its writer was given,
+ * which is every run from before this existed. That is not an error to retry.
+ */
+export async function readProvenance(runId: string): Promise<ProvenanceReport> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/provenance/${runId}`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read where this article came from.')
+  }
+  return (await response.json()) as ProvenanceReport
+}
+
+/** Record that a person read this passage against this material and agreed. */
+export async function confirmProvenance(
+  runId: string,
+  link: { passage_hash: string; source_kind: 'claim' | 'material'; source_id: string },
+): Promise<void> {
+  const response = await apiFetch(`${FEATURE_PREFIX}/provenance/${runId}/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(link),
+  })
+  if (!response.ok) {
+    throw await readError(response, 'Could not record that check.')
+  }
 }
 
 /** The places this run would send a reader, for a person to look at. */

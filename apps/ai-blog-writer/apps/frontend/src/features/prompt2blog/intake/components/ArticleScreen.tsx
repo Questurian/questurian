@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import payloadLogoUrl from '../../../../assets/payload-logo.svg?url'
 import { buildStageArticleUrl } from '../../../blogArticles'
 import type { IntakeArticle, IntakeWriting } from '../intake.types'
 import { PolishPrompt } from './PolishPrompt'
+import { ProvenancePanel } from './ProvenancePanel'
 import { PunchList } from './PunchList'
 
 /**
@@ -69,6 +71,10 @@ function Measured({ checks }: { checks: Record<string, unknown> }) {
 }
 
 export function ArticleScreen({ runId, writing, article, onReopen, busy }: ArticleScreenProps) {
+  // Which paragraph the operator asked about. Null until they ask: the map is
+  // a finding aid and nothing about the article changes because it exists.
+  const [asking, setAsking] = useState<string | null>(null)
+
   if (writing.state === 'failed') {
     return (
       <section className="p2b-intake" aria-label="The writing failed">
@@ -116,12 +122,34 @@ export function ArticleScreen({ runId, writing, article, onReopen, busy }: Artic
             block.startsWith('#') ? (
               <h3 key={index}>{block.replace(/^#+\s*/, '')}</h3>
             ) : (
-              <p key={index}>{block}</p>
+              // A button rather than a click handler on the paragraph: this is
+              // an action, and an editor reading with a keyboard has the same
+              // right to ask where a price came from as one with a mouse.
+              <p
+                key={index}
+                className={
+                  asking === block ? 'p2b-passage p2b-passage-asking' : 'p2b-passage'
+                }
+              >
+                {block}
+                <button
+                  type="button"
+                  className="p2b-passage-source"
+                  aria-label="Where did this passage come from?"
+                  onClick={() => setAsking(current => (current === block ? null : block))}
+                >
+                  source
+                </button>
+              </p>
             ),
           )}
         </article>
       ) : (
         <p className="p2b-note">Loading the article…</p>
+      )}
+
+      {asking && (
+        <ProvenancePanel runId={runId} selected={asking} onClose={() => setAsking(null)} />
       )}
 
       <PunchList runId={runId} />
