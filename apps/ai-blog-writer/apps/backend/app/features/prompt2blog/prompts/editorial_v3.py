@@ -105,6 +105,17 @@ Hard rules:
 {structure_rules}
 - Follow the STYLE DIRECTIVE exactly. Tone, length, and brand voice are
   requirements, not suggestions.
+- You are not obliged to use every fact you were given. A section that names
+  ten things and judges none of them is a directory; three details you explain
+  are worth more than ten you list, and the reader can only act on the ones you
+  explained. Where the plan marks a fact as colour and droppable, dropping it
+  is a decision you are allowed to make. What you may never drop is an
+  obligation under must_name, or a limit that changes what the reader should
+  do.
+- The "Room to work" line under a section is advice and never a maximum. One
+  complicated fact can need more explaining than five simple ones, so the count
+  cannot decide anything for you; it is there because you cannot otherwise see
+  how much room the plan left you.
 - Follow the SECTION PLAN when one is provided: use its headings, in order, and
   hold each section to roughly its word budget. Depart from it only where the
   evidence makes a planned section unsupportable. Record that departure in

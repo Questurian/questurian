@@ -51,6 +51,14 @@ def run_v3_outline_stage(
     allowed_claim_ids = {
         fact["claim_id"] for fact in (state["packet"].get("facts") or [])
     }
+    # What each chosen fact is here to do, which is what turns a crowded
+    # section from a number into advice the writer can act on (improvement 04).
+    # Empty for a selection made before roles existed; the density reporting
+    # then still counts, it simply has nothing to call droppable.
+    fact_roles = {
+        fact["claim_id"]: fact.get("role") or ""
+        for fact in (state["packet"].get("facts") or [])
+    }
     target_word_count = _target_word_count(_safe_dict(state["option_context"]))
     # The approved form decides how many sections this article divides into,
     # and whether it plans a direct answer and takeaways at all. Frozen with
@@ -94,6 +102,7 @@ def run_v3_outline_stage(
             claim_ids=allowed_claim_ids,
             target_word_count=target_word_count,
             min_sections=structure.min_sections,
+            fact_roles=fact_roles,
         )
         if accepted:
             outline = candidate
@@ -111,6 +120,7 @@ def run_v3_outline_stage(
                     claim_ids=allowed_claim_ids,
                     target_word_count=target_word_count,
                     min_sections=structure.min_sections,
+                    fact_roles=fact_roles,
                 )
                 if repaired_accepted:
                     logger.warning(
@@ -182,5 +192,7 @@ def run_v3_outline_stage(
         "current_stage": stage,
         "outline": outline,
         "outline_accepted": accepted,
-        "outline_text": format_v3_outline_for_prompt(outline),
+        "outline_text": format_v3_outline_for_prompt(
+            outline, fact_roles=fact_roles
+        ),
     }
