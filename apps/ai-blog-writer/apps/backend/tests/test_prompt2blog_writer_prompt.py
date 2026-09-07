@@ -147,6 +147,59 @@ def test_the_old_instruction_stack_is_not_appended():
         assert banned not in text, banned
 
 
+def test_the_reader_is_told_they_cannot_see_the_brief_or_the_note():
+    """Repeat fault, found in two consecutive real runs.
+
+    Valparaiso `e001d48c` closed with a paragraph reporting what had been
+    verified on which date. Juarez `8a8c681b` opened a paragraph with "The
+    concrete case, since it should be earned rather than asserted" -- the
+    brief's own wording, answered on the page.
+
+    A rule against this already existed in the style brief ("commentary about
+    your writing") and did not stop either one, because the writer did not
+    classify those sentences as commentary: the assignment separately asks it
+    to state limitations, and nothing said whose limitations. So this pins the
+    idea that fixed it rather than another prohibition -- the reader cannot see
+    either document, and a sentence that only makes sense to someone who has
+    read them does not belong in the article.
+    """
+    text = _assemble().text
+    assert "has never seen this brief" in text
+    assert "will never see your research note" in text
+    assert "do not quote it, answer it or acknowledge it on the page" in text
+
+
+def test_a_limitation_is_stated_about_the_subject_not_about_the_research():
+    """The distinction the writer had no way to draw.
+
+    "State a limitation in the article" is a real requirement and stays. What
+    was missing is that a limitation of the world is useful to a reader and a
+    limitation of the afternoon's research is not, and the assignment now says
+    which is which with one example of each.
+    """
+    text = _assemble().text
+    assert "as a fact about the subject rather than about your research" in text
+    assert "is a report on your afternoon" in text
+
+
+def test_the_research_note_decides_when_it_disagrees_with_the_article():
+    """Repeat fault, serious in both real runs.
+
+    Valparaiso asserted a fare two paragraphs after saying its source did not
+    resolve it. Juarez asserted a ranking its own note had recorded as
+    unreadable, and got it wrong.
+
+    "Resolve contradictions between them" was already in the assignment and
+    failed both times, because resolving a contradiction by deleting the hedge
+    satisfies it exactly as well as deleting the claim. The instruction is now
+    asymmetric: the note wins, and the claim is what gives way.
+    """
+    text = _assemble().text
+    assert "the note decides" in text
+    assert "may not appear anywhere in the article as a settled fact" in text
+    assert "rather than to drop the doubt" in text
+
+
 def test_the_research_note_heading_is_stated_exactly_once():
     """The parser matches this heading, so the prompt and the parser share a constant."""
     text = _assemble().text
