@@ -136,6 +136,11 @@ class WriterPrompt(BaseModel):
     style_version: str = Field(min_length=1)
     target_word_count: int = Field(gt=0)
     research_date: date
+    # The readable form name, carried alongside the text as well as inside it.
+    # Staging labels a draft with it, and re-deriving it by reading the prompt
+    # back would be parsing our own output. Defaulted so a prompt stored before
+    # this field existed still loads.
+    form_label: str = ""
     text: str = Field(min_length=1)
 
 
@@ -241,6 +246,7 @@ def assemble_writer_prompt(
         style_version=STYLE_VERSION,
         target_word_count=target_word_count,
         research_date=research_date,
+        form_label=form_label.strip(),
         text=text,
     )
 
@@ -260,6 +266,7 @@ def prompt_stage_record(prompt: WriterPrompt) -> dict[str, Any]:
         "style_version": prompt.style_version,
         "target_word_count": prompt.target_word_count,
         "research_date": prompt.research_date.isoformat(),
+        "form_label": prompt.form_label,
         "characters": len(prompt.text),
         "text": prompt.text,
     }

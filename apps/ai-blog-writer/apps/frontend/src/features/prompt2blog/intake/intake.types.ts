@@ -71,6 +71,56 @@ export interface IntakeBrief {
 }
 
 /**
+ * Where the writing stands, or how it stopped.
+ *
+ * Deliberately without a stage name or a percentage. The writer researches and
+ * writes inside one call, and the transport reports how many turns that took
+ * only after it finishes, so any progress number here would be invented.
+ */
+export interface IntakeGeneration {
+  state: 'running' | 'succeeded' | 'failed'
+  attempt_id: string
+  /** How many times this run has been written. A retry never deletes a draft. */
+  attempts: number
+  started_at: string
+  finished_at: string | null
+  /** quota_exhausted, not_connected, provider_unavailable, unusable_response. */
+  failure: string | null
+  message: string | null
+  /** What Claude sent back when it was not an article. Paid for, so kept. */
+  raw: string | null
+  requested_model: string | null
+  /** What actually answered. A substitution shows up as a difference. */
+  served_model: string | null
+  effort: string | null
+  /** Provider round trips. "One writer" is not "one billable call". */
+  turns: number | null
+  elapsed_seconds: number | null
+  cost_usd: number | null
+  tool_denials: string[]
+  /** True while an earlier good draft survives a later failed attempt. */
+  has_draft: boolean
+  headline: string | null
+  word_count: number | null
+  /** What could not be read cleanly out of the reply. */
+  parse_issue: string | null
+}
+
+/** The article itself. Fetched once, when there is one to read. */
+export interface IntakeDraft {
+  run_id: string
+  attempt_id: string
+  headline: string
+  article_markdown: string
+  research_note: string
+  parse_issue: string
+  content_hash: string
+  word_count: number
+  /** The whole reply. Nothing derived is authoritative over it. */
+  raw: string
+}
+
+/**
  * The frozen writing assignment, exactly as the writer will receive it.
  *
  * `text` is the whole prompt rather than a summary. Approving a summary of an
@@ -442,6 +492,8 @@ export interface IntakeState {
   brief: IntakeBrief | null
   /** Null until Generate prompt is pressed, and again if the brief changes. */
   writer_prompt: IntakeWriterPrompt | null
+  /** The ADR 0036 writer. Null on every run that never used it. */
+  generation: IntakeGeneration | null
   work_order: IntakeWorkOrder | null
   research: IntakeResearch | null
   /** Present only on the response to a cut: what that decision costs. */

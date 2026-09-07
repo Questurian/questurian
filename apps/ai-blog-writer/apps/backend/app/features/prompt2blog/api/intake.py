@@ -29,6 +29,7 @@ Every route is staff-guarded because every one of them spends money.
 from __future__ import annotations
 
 import logging
+from contextlib import nullcontext
 from dataclasses import asdict
 from typing import Any
 
@@ -37,6 +38,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ValidationError
 
 from app.core.staff_auth import require_staff, staff_user_id
+from app.features.claude_connection.cli_writer import (
+    prompt2blog_credential_scope,
+    quota_breaker_scope,
+)
 
 from ..intake_lock import exclusive_run
 from ..brief_v4 import BriefIncomplete, BriefUnusable
@@ -63,6 +68,7 @@ from ..intake_v4 import (
     intake_state,
     generate_prompt,
     plan_research,
+    start_generation,
     reask_question,
     recent_runs,
     reopen_intake,
@@ -75,6 +81,13 @@ from ..intake_v3 import RUN_INPUT_STAGE, prepare_v3_runtime_request, v3_run_inpu
 from ..research_v4 import GATHER_MAX_TOKENS, ResearchDependencies, ResearchUnusable
 from ..work_order_v4 import WorkOrderUnusable
 from ..writer_prompt import PromptCannotBeAssembled
+from ..writer_v5 import research_writer
+from ..generation_v5 import (
+    GenerationAlreadyRunning,
+    NothingToWriteFrom,
+    finished_draft,
+    run_attempt,
+)
 from .runs import (
     _prompt2blog_credential_for_run,
     _run_pipeline_v3_background as _run_pipeline_v4_background,
@@ -250,6 +263,19 @@ def _handle(action, *args, **kwargs) -> Any:
                 ),
                 "raw": error.reason,
             },
+        ) from error
+    except GenerationAlreadyRunning as error:
+        # 409, not 500. Nothing went wrong and nothing was spent: a second
+        # request arrived while the first was still in the model, and the
+        # honest answer is that the article is already being written.
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "already_writing", "message": str(error)},
+        ) from error
+    except NothingToWriteFrom as error:
+        raise HTTPException(
+            status_code=409,
+            detail={"error": "no_current_prompt", "message": str(error)},
         ) from error
     except PromptCannotBeAssembled as error:
         # 400 and the field name. This is the one failure here the operator can
@@ -688,6 +714,75 @@ def read_writing_request(
     """
     handoff = _handle(writing_request, run_id)
     return JSONResponse(handoff.request.model_dump(mode="json"))
+
+
+def _write_the_article_background(
+    run_id: str,
+    attempt_id: str,
+    prompt,
+    services,
+    credential,
+) -> None:
+    """The writing itself, off the request.
+
+    Failures are contained here because `run_attempt` has already recorded
+    them. An exception escaping a background task writes nothing anybody can
+    read and leaves the run reporting "writing" forever.
+    """
+    try:
+        scope = (
+            prompt2blog_credential_scope(credential.token)
+            if credential is not None
+            else nullcontext()
+        )
+        with quota_breaker_scope(), scope:
+            run_attempt(
+                run_id,
+                attempt_id,
+                prompt,
+                research_writer(),
+                services.recorder,
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception("Prompt2Blog writing attempt crashed", extra={"run_id": run_id})
+
+
+@router.post("/{run_id}/generate", status_code=202)
+@exclusive_run
+def generate_the_article(
+    run_id: str,
+    background_tasks: BackgroundTasks,
+    _staff=Depends(require_staff),
+) -> JSONResponse:
+    """Send the frozen prompt to the researching writer.
+
+    The claim on the run is written synchronously, before this returns, so a
+    double click or a resubmitted POST finds it already there. The writing
+    itself is minutes of work and runs in the background; the page polls
+    `GET /intake/{run_id}`, which starts nothing.
+    """
+    attempt_id, prompt = _handle(start_generation, run_id, _services(run_id))
+    credential = _prompt2blog_credential_for_run()
+    background_tasks.add_task(
+        _write_the_article_background,
+        run_id,
+        attempt_id,
+        prompt,
+        _services(run_id),
+        credential,
+    )
+    return JSONResponse(intake_state(run_id), status_code=202)
+
+
+@router.get("/{run_id}/draft")
+def read_draft(run_id: str, _staff=Depends(require_staff)) -> JSONResponse:
+    """The article this run produced, for reading.
+
+    Its own call rather than part of the polled state: the state is asked for
+    every few seconds while an article is being written, and this is the whole
+    article plus the reply it was parsed out of.
+    """
+    return JSONResponse(_handle(finished_draft, run_id))
 
 
 @router.post("/{run_id}/write", status_code=202)

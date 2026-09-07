@@ -5,6 +5,14 @@
   "capturedOn": "2026-09-04",
   "jobs": [
     {
+      "id": "p2b.write",
+      "app": "ai-blog-writer",
+      "call": "research",
+      "summary": "Research and write the whole article from the approved brief. The one call ADR 0036 replaced the graph with.",
+      "site": "features/prompt2blog/writer_v5.py",
+      "defaultModel": "claude-opus-5-high"
+    },
+    {
       "id": "p2b.compose",
       "app": "ai-blog-writer",
       "call": "json",

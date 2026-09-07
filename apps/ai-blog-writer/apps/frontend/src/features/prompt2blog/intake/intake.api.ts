@@ -3,6 +3,7 @@ import { FEATURE_PREFIX } from '../constants/prompt2blog.constants'
 import type {
   GateQuestion,
   IntakeArticle,
+  IntakeDraft,
   IntakeRunSummary,
   IntakeState,
   ProvenanceReport,
@@ -119,6 +120,26 @@ export function approveBrief(runId: string): Promise<IntakeState> {
  */
 export function generatePrompt(runId: string): Promise<IntakeState> {
   return post(`${INTAKE}/${runId}/prompt`)
+}
+
+/**
+ * Send the frozen prompt to the researching writer.
+ *
+ * Returns as soon as the run is claimed, not when the article is done. The
+ * claim is written server-side before this responds, so a double click finds
+ * it already there rather than buying a second article.
+ */
+export function generateArticle(runId: string): Promise<IntakeState> {
+  return post(`${INTAKE}/${runId}/generate`)
+}
+
+/** The article, once there is one. Its own call: this is the whole text. */
+export async function readDraft(runId: string): Promise<IntakeDraft> {
+  const response = await apiFetch(`${INTAKE}/${runId}/draft`)
+  if (!response.ok) {
+    throw await readError(response, 'Could not read the article.')
+  }
+  return (await response.json()) as IntakeDraft
 }
 
 export function planResearch(runId: string): Promise<IntakeState> {

@@ -23,6 +23,8 @@ interface WorkingScreenProps {
   research?: IntakeResearchProgress | null
   /** Set while the graph is writing. */
   writing?: IntakeWriting | null
+  /** Set while the ADR 0036 writer is researching and writing. */
+  generating?: boolean
 }
 
 function Elapsed() {
@@ -39,9 +41,15 @@ function Elapsed() {
   )
 }
 
-export function WorkingScreen({ research, writing }: WorkingScreenProps) {
+export function WorkingScreen({ research, writing, generating }: WorkingScreenProps) {
   const gathering = research?.phase === 'gathering'
-  const heading = writing
+  // The one screen with no progress bar and no stage name, on purpose. The
+  // writer researches and writes inside one call and the transport reports how
+  // many turns it took only afterwards, so any number here would be invented --
+  // and an invented percentage is worse than an honest clock.
+  const heading = generating
+    ? 'Researching and writing'
+    : writing
     ? writing.stage_label
     : gathering
       ? research!.done === 0
@@ -49,7 +57,9 @@ export function WorkingScreen({ research, writing }: WorkingScreenProps) {
         : `Searching the web: ${research!.done} of ${research!.total} back`
       : 'Turning the research into records'
 
-  const detail = writing
+  const detail = generating
+    ? 'Claude is looking things up and writing the article. This is one long call and there is no honest progress bar for it.'
+    : writing
     ? 'The whole article, then a check of every claim against the research. This usually takes five to ten minutes.'
     : gathering
       ? research!.done === 0
@@ -57,8 +67,8 @@ export function WorkingScreen({ research, writing }: WorkingScreenProps) {
         : `Last back: ${research!.last_question_back}`
       : 'One long call. This is the slowest single step in the run.'
 
-  const done = research && !writing ? research.done : 0
-  const total = research && !writing ? research.total : 0
+  const done = research && !writing && !generating ? research.done : 0
+  const total = research && !writing && !generating ? research.total : 0
 
   return (
     <section className="p2b-working" aria-live="polite" aria-busy="true">

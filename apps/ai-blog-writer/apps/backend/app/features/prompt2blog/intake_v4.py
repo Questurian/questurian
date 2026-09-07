@@ -85,6 +85,12 @@ from .research_v4 import (
     structure_research,
 )
 from .packet_v4 import stale_reason
+from .generation_v5 import (
+    NothingToWriteFrom,
+    begin_attempt,
+    generation_state,
+    latest_attempt,
+)
 from .writer_prompt import (
     PROMPT_STAGE,
     WriterPrompt,
@@ -409,6 +415,44 @@ def generate_prompt(run_id: str, services: IntakeServices) -> WriterPrompt:
         },
     )
     return prompt
+
+
+def current_writer_prompt(run_id: str) -> WriterPrompt:
+    """The assignment this run is actually holding.
+
+    Refuses a prompt whose brief has since been replaced rather than writing
+    from it. The stale prompt is a real assignment somebody read and approved;
+    it is simply not the one this run agreed to any more, and quietly using it
+    would produce an article that matches no brief on the run.
+    """
+    prompt = load_writer_prompt(run_id)
+    if prompt is None:
+        raise NothingToWriteFrom(
+            "There is no prompt on this run yet. Generate one from the brief first."
+        )
+    if prompt.brief_fingerprint != load_brief(run_id).brief_fingerprint:
+        raise NothingToWriteFrom(
+            "The brief changed after this prompt was made, so it no longer "
+            "describes this article. Generate the prompt again."
+        )
+    return prompt
+
+
+def start_generation(run_id: str, services: IntakeServices) -> tuple[str, WriterPrompt]:
+    """Claim the run for one writing attempt, and hand back what to run.
+
+    The claim is written to storage here, synchronously, before the caller
+    schedules any background work. A second request arriving while the first is
+    still in the model has to find the claim already there, and an attempt that
+    exists only in the background task's memory cannot refuse anything.
+    """
+    prompt = current_writer_prompt(run_id)
+    attempt_id = begin_attempt(run_id, prompt, services.recorder)
+    logger.info(
+        "Prompt2Blog writing attempt opened",
+        extra={"run_id": run_id, "feature": FEATURE_NAME},
+    )
+    return attempt_id, prompt
 
 
 def plan_research(run_id: str, services: IntakeServices) -> Prompt2BlogWorkOrder:
@@ -1364,6 +1408,13 @@ def writing_state(run_id: str) -> dict[str, Any] | None:
     status = _safe_dict(read_status(run_id))
     if not status:
         return None
+    # A run written by the ADR 0036 writer is not a graph run, and the two share
+    # a "complete" status stage. Without this, a finished v5 run would satisfy
+    # the whitelist below and be reported as a graph run with an empty finalize
+    # row -- an article that had just been written, described as having no
+    # title and no word count.
+    if latest_attempt(run_id) is not None:
+        return None
     state = _safe_str(status.get("state"))
     stage = _safe_str(status.get("stage"))
     # A run is only writing once the graph owns it, and the test has to be a
@@ -1628,5 +1679,8 @@ def intake_state(run_id: str) -> dict[str, Any]:
         # Written as the searches go, so five to ten silent minutes can say
         # which question it is on.
         "research_progress": _stage_data(run_id, PROGRESS_STAGE) or None,
+        # The ADR 0036 writer. Null on every run that never used it, so an old
+        # run still reports through `writing` below.
+        "generation": generation_state(run_id),
         "writing": writing_state(run_id),
     }

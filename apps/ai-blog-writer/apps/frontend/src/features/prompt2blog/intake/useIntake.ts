@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from './intake.api'
-import type { IntakeArticle, IntakeState } from './intake.types'
+import type { IntakeArticle, IntakeDraft, IntakeState } from './intake.types'
 
 /**
  * One article's intake, from a typed line to a cut research plan.
@@ -56,6 +56,10 @@ export interface UseIntake {
   approveBrief: () => Promise<void>
   /** Freeze the approved brief into the writer's assignment. Costs nothing. */
   generatePrompt: () => Promise<void>
+  /** Send that assignment to the researching writer. This one spends. */
+  generateArticle: () => Promise<void>
+  /** The article the writer produced, once there is one. */
+  draft: IntakeDraft | null
   planResearch: () => Promise<void>
   research: () => Promise<void>
   cut: (struckIds: string[], added: string[]) => Promise<void>
@@ -76,6 +80,7 @@ export function useIntake(): UseIntake {
   const [error, setError] = useState<string | null>(null)
   const [cutWarnings, setCutWarnings] = useState<string[]>([])
   const [article, setArticle] = useState<IntakeArticle | null>(null)
+  const [draft, setDraft] = useState<IntakeDraft | null>(null)
   // Held in a ref as well as state so the poll below reads the current run
   // without restarting its own interval every time the state changes.
   const runIdRef = useRef<string | null>(null)
@@ -131,7 +136,11 @@ export function useIntake(): UseIntake {
   // exactly where it is; this asks.
   const writingRun = state?.writing?.state === 'running'
   const researching = busy && state?.step === 'work_order'
-  const shouldPoll = writingRun || researching
+  // The writer takes minutes and reports nothing while it works, so the only
+  // way to notice it finished is to ask. Polling reads state; it never starts
+  // anything, which is the property that makes it safe to do every 3 seconds.
+  const generating = state?.generation?.state === 'running'
+  const shouldPoll = writingRun || researching || generating
 
   useEffect(() => {
     if (!shouldPoll) return
@@ -147,6 +156,20 @@ export function useIntake(): UseIntake {
     }, 3_000)
     return () => window.clearInterval(timer)
   }, [shouldPoll])
+
+  // Fetched once per finished attempt, not per poll: this is the whole article
+  // plus the reply it was parsed out of, and the state above is asked for every
+  // three seconds. Keyed on the attempt so a retry replaces what is on screen.
+  const finishedAttempt = state?.generation?.has_draft
+    ? `${state.run_id}:${state.generation.attempt_id}`
+    : null
+  useEffect(() => {
+    if (!finishedAttempt) return
+    void api
+      .readDraft(finishedAttempt.split(':')[0])
+      .then(setDraft)
+      .catch(() => undefined)
+  }, [finishedAttempt])
 
   // Fetched once, when there is something to read.
   const finishedRunId = state?.writing?.state === 'completed' ? state.run_id : null
@@ -182,6 +205,11 @@ export function useIntake(): UseIntake {
       () => run(() => api.generatePrompt(requireRun())),
       [run, requireRun],
     ),
+    generateArticle: useCallback(
+      () => run(() => api.generateArticle(requireRun())),
+      [run, requireRun],
+    ),
+    draft,
     planResearch: useCallback(
       () => run(() => api.planResearch(requireRun())),
       [run, requireRun],
@@ -207,6 +235,7 @@ export function useIntake(): UseIntake {
       rememberRun(restored.run_id)
       runIdRef.current = restored.run_id
       setArticle(null)
+      setDraft(null)
       setCutWarnings([])
       setError(null)
       setState(restored)
@@ -216,6 +245,7 @@ export function useIntake(): UseIntake {
       runIdRef.current = null
       setState(null)
       setArticle(null)
+      setDraft(null)
       setCutWarnings([])
       setError(null)
     }, []),

@@ -41,7 +41,17 @@ def get_all_completed_articles() -> List[Dict[str, Any]]:
             # ever wrote `pipeline_v2`. Reading one key meant every run since
             # the v3 cutover listed with a null title and no type, which is
             # what Saved Articles shows and what the staging link carries.
-            payload = artifact.get("pipeline_v3") or artifact.get("pipeline_v2")
+            # ADR 0036 runs write `prompt2blog_v5`; v3 and v4 runs store the
+            # payload under `pipeline_v3`; only v2 ever wrote `pipeline_v2`.
+            # Read first-listed-wins rather than one key, because reading one
+            # key is how every run since the v3 cutover came to list with a
+            # null title and no type -- which is what Saved Articles shows and
+            # what the staging link carries.
+            payload = (
+                artifact.get("prompt2blog_v5")
+                or artifact.get("pipeline_v3")
+                or artifact.get("pipeline_v2")
+            )
             payload = payload if isinstance(payload, dict) else {}
 
             improved_article = payload.get("improved_article")

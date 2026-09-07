@@ -56,6 +56,13 @@ CALL_MULTIMODAL = "multimodal"
 CALL_PLACES = "places"
 """Google Places. No model, no tokens, priced per request rather than per token."""
 
+CALL_RESEARCH = "research"
+"""Prompt in, prose out, with the model searching and reading pages as it goes.
+
+The only kind whose one job is many provider round trips. The usage reported
+back covers the whole assignment rather than a single exchange, because that is
+what the transport measures and splitting it would be a guess."""
+
 CALL_KINDS = frozenset(
     {
         CALL_TEXT,
@@ -65,6 +72,7 @@ CALL_KINDS = frozenset(
         CALL_STRUCTURED,
         CALL_MULTIMODAL,
         CALL_PLACES,
+        CALL_RESEARCH,
     }
 )
 

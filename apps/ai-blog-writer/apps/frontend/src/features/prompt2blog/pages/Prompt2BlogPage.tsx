@@ -3,6 +3,7 @@ import { BriefScreen } from '../intake/components/BriefScreen'
 import { GateScreen } from '../intake/components/GateScreen'
 import { GrillScreen } from '../intake/components/GrillScreen'
 import { PromptScreen } from '../intake/components/PromptScreen'
+import { DraftScreen } from '../intake/components/DraftScreen'
 import { ArticleScreen } from '../intake/components/ArticleScreen'
 import { ResearchScreen } from '../intake/components/ResearchScreen'
 import { RunList } from '../intake/components/RunList'
@@ -27,6 +28,7 @@ const STEP_LABELS: Record<string, string> = {
   grill: 'A few questions',
   brief: 'The brief',
   prompt: 'The prompt',
+  draft: 'The draft',
   work_order: 'The research plan',
   research: 'What we found',
 }
@@ -36,6 +38,11 @@ export function Prompt2BlogPage() {
   const state = intake.state
   const step = state?.step ?? 'seed'
   const writing = state?.writing ?? null
+  // The ADR 0036 writer. It owns the screen for as long as it has run, which
+  // includes after it failed: a run that spent allowance and got nothing has to
+  // say so somewhere, and dropping back to the prompt screen would look like
+  // nothing happened.
+  const generation = state?.generation ?? null
   // Once the graph owns the run there is nothing left to decide here, so the
   // intake screens step aside rather than offering buttons that would queue a
   // second article on the same run.
@@ -87,7 +94,20 @@ export function Prompt2BlogPage() {
           </div>
         )}
 
-        {handedToTheWriter ? (
+        {generation ? (
+          generation.state === 'running' ? (
+            <WorkingScreen generating />
+          ) : (
+            <DraftScreen
+              runId={state!.run_id}
+              generation={generation}
+              draft={intake.draft}
+              busy={intake.busy}
+              onRetry={intake.generateArticle}
+              onReopen={intake.reopen}
+            />
+          )
+        ) : handedToTheWriter ? (
           writing.state === 'running' ? (
             <WorkingScreen writing={writing} />
           ) : (
@@ -137,6 +157,7 @@ export function Prompt2BlogPage() {
           <PromptScreen
             prompt={state.writer_prompt}
             busy={intake.busy}
+            onGenerate={intake.generateArticle}
             onReopen={intake.reopen}
           />
         )}

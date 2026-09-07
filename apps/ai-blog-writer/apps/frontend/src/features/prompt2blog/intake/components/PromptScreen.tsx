@@ -17,10 +17,11 @@ import type { IntakeWriterPrompt } from '../intake.types'
 interface PromptScreenProps {
   prompt: IntakeWriterPrompt
   busy: boolean
+  onGenerate: () => void
   onReopen: () => void
 }
 
-export function PromptScreen({ prompt, busy, onReopen }: PromptScreenProps) {
+export function PromptScreen({ prompt, busy, onGenerate, onReopen }: PromptScreenProps) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {
@@ -68,7 +69,10 @@ export function PromptScreen({ prompt, busy, onReopen }: PromptScreenProps) {
       </pre>
 
       <div className="p2b-intake-actions">
-        <button type="button" onClick={copy}>
+        <button type="button" onClick={onGenerate} disabled={busy}>
+          Generate article
+        </button>
+        <button type="button" className="p2b-secondary" onClick={copy}>
           {copied ? 'Copied' : 'Copy'}
         </button>
         <button type="button" className="p2b-secondary" onClick={onReopen} disabled={busy}>
@@ -77,10 +81,10 @@ export function PromptScreen({ prompt, busy, onReopen }: PromptScreenProps) {
       </div>
 
       <p className="p2b-muted">
-        {/* Phase 3 of ADR 0036 replaces this line with the button. Saying so is
-            better than showing a disabled control with no explanation. */}
-        Generating the article inside the app is not switched on yet. Copy this into
-        a Claude Opus chat with research enabled in the meantime.
+        {/* The one button on this screen that spends. Said before it is pressed,
+            not after. */}
+        Generating spends Claude allowance and takes several minutes. You can leave
+        the page while it runs.
       </p>
       <p className="p2b-muted">
         To change what the article is, go back to the grill. Editing this text by

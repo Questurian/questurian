@@ -150,6 +150,36 @@ def _cli_writer():
     return cli_writer
 
 
+def invoke_research_writer(
+    *,
+    prompt: str,
+    model_name: str,
+) -> dict:
+    """A research-and-writing call, on the one transport that can research.
+
+    Refuses rather than degrades. Every other writer call in this backend
+    substitutes silently when Claude is off -- a Claude name with no Claude
+    path served by Gemini -- and that is right for prose, because a Gemini
+    paragraph is still a paragraph. It is wrong here: the assignment tells the
+    writer to verify fares and opening hours, so a model that cannot open a
+    page would answer it by inventing them.
+
+    A refusal is recoverable. A confidently sourced article with invented
+    sources is not.
+    """
+    if not _claude_cli_writer_enabled():
+        raise WriterModelError(
+            "This article is written by a researching writer, which only the "
+            "Claude subscription path can do. Switch WRITER_PROVIDER to "
+            "claude-cli, or nothing will be able to look anything up."
+        )
+    cli_writer = _cli_writer()
+    try:
+        return cli_writer.invoke_research_text(prompt=prompt, model_name=model_name)
+    except cli_writer.ClaudeCliWriterError as exc:
+        raise WriterModelError(f"Research writer call failed: {exc}") from exc
+
+
 def _claude_cli_writer_enabled() -> bool:
     try:
         return _cli_writer().claude_cli_writer_enabled()

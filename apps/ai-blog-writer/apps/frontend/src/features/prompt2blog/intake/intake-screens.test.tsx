@@ -17,6 +17,7 @@ vi.mock('./intake.api', async importOriginal => ({
 }))
 import { BriefScreen } from './components/BriefScreen'
 import { PromptScreen } from './components/PromptScreen'
+import { DraftScreen } from './components/DraftScreen'
 import { ArticleScreen } from './components/ArticleScreen'
 import { GrillScreen } from './components/GrillScreen'
 import { WorkingScreen } from './components/WorkingScreen'
@@ -29,6 +30,8 @@ import type {
   IntakeRunSummary,
   IntakeGrill,
   IntakeWorkOrder,
+  IntakeDraft,
+  IntakeGeneration,
   IntakeWriterPrompt,
   IntakeWriting,
 } from './intake.types'
@@ -323,7 +326,12 @@ describe('the prompt screen', () => {
     // The old pipeline assembled its instruction from a form rulebook, a work
     // order, a packet, an SEO block and forty-one prohibitions, and no operator
     // ever saw a line of it.
-    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={vi.fn()} />)
+    render(<PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+      />)
 
     expect(screen.getByText(WRITER_PROMPT.text)).toBeInTheDocument()
   })
@@ -331,25 +339,198 @@ describe('the prompt screen', () => {
   it('cannot be edited in place', () => {
     // A textarea invites an edit that would be silently discarded: the stored
     // assignment is the one that gets sent.
-    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={vi.fn()} />)
+    render(<PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+      />)
 
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 
   it('says which writer and which length', () => {
-    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={vi.fn()} />)
+    render(<PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+      />)
 
     expect(screen.getByText(/about 900 words/)).toBeInTheDocument()
     expect(screen.getByText(/Claude Opus, high effort/)).toBeInTheDocument()
   })
 
+  it('says that generating spends, before it is pressed', () => {
+    // The button before this one bought nothing. This one buys an article, and
+    // saying so afterwards is not saying it.
+    render(
+      <PromptScreen
+        prompt={WRITER_PROMPT}
+        busy={false}
+        onGenerate={vi.fn()}
+        onReopen={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('button', { name: 'Generate article' })).toBeInTheDocument()
+    expect(screen.getByText(/spends Claude allowance/)).toBeInTheDocument()
+  })
+
   it('leads back to the grill rather than offering a text box', () => {
     const onReopen = vi.fn()
-    render(<PromptScreen prompt={WRITER_PROMPT} busy={false} onReopen={onReopen} />)
+    render(<PromptScreen
+      prompt={WRITER_PROMPT}
+      busy={false}
+      onGenerate={vi.fn()}
+      onReopen={onReopen}
+    />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Change something' }))
 
     expect(onReopen).toHaveBeenCalled()
+  })
+})
+
+const GENERATION: IntakeGeneration = {
+  state: 'succeeded',
+  attempt_id: 'a-1',
+  attempts: 1,
+  started_at: '2026-09-07T10:00:00Z',
+  finished_at: '2026-09-07T10:08:32Z',
+  failure: null,
+  message: null,
+  raw: null,
+  requested_model: 'claude-opus-5-high',
+  served_model: 'claude-opus-5-20260101',
+  effort: 'high',
+  turns: 14,
+  elapsed_seconds: 512.4,
+  cost_usd: 0.42,
+  tool_denials: [],
+  has_draft: true,
+  headline: 'Two nights in Lima',
+  word_count: 912,
+  parse_issue: null,
+}
+
+const DRAFT: IntakeDraft = {
+  run_id: 'r-1',
+  attempt_id: 'a-1',
+  headline: 'Two nights in Lima',
+  article_markdown: 'Surquillo market opens at six.',
+  research_note: '- https://example.pe -- stall prices, checked 7 September 2026',
+  parse_issue: '',
+  content_hash: 'dv-1',
+  word_count: 912,
+  raw: 'everything that came back',
+}
+
+function renderDraft(
+  generation: Partial<IntakeGeneration> = {},
+  draft: IntakeDraft | null = DRAFT,
+) {
+  return render(
+    <MemoryRouter>
+      <DraftScreen
+        runId="r-1"
+        generation={{ ...GENERATION, ...generation }}
+        draft={draft}
+        busy={false}
+        onRetry={vi.fn()}
+        onReopen={vi.fn()}
+      />
+    </MemoryRouter>,
+  )
+}
+
+describe('the draft screen', () => {
+  it('shows the article', () => {
+    renderDraft()
+
+    expect(screen.getByText('Two nights in Lima')).toBeInTheDocument()
+    expect(screen.getByText('Surquillo market opens at six.')).toBeInTheDocument()
+  })
+
+  it('keeps the research note beside the article, not inside it', () => {
+    // Published as body text the note is a list of URLs and admissions, and it
+    // reads as prose to anything that only counts words.
+    renderDraft()
+
+    expect(screen.getByText('Research note')).toBeInTheDocument()
+    expect(screen.getByText(/example\.pe/)).toBeInTheDocument()
+  })
+
+  it('says plainly when nothing was sourced', () => {
+    renderDraft({}, { ...DRAFT, research_note: '' })
+
+    expect(screen.getByText(/Nothing here has been checked/)).toBeInTheDocument()
+  })
+
+  it('names the model that actually answered', () => {
+    // Every v4 receipt said Opus while Flash wrote the article.
+    renderDraft()
+
+    expect(screen.getByText(/claude-opus-5-20260101/)).toBeInTheDocument()
+  })
+
+  it('shows a substitution as a difference between two names', () => {
+    renderDraft({ served_model: 'gemini-2.5-flash' })
+
+    expect(screen.getByText(/you asked for claude-opus-5-high/)).toBeInTheDocument()
+  })
+
+  it('does not claim the article was one call', () => {
+    renderDraft()
+
+    expect(screen.getByText(/14 exchanges with the model/)).toBeInTheDocument()
+  })
+
+  it('offers staging without any check having passed', () => {
+    // ADR 0036 removed the readiness verdict. A draft is savable because it
+    // exists, not because a score allowed it.
+    renderDraft()
+
+    expect(
+      screen.getByRole('link', { name: /Stage in Payload Editor/ }),
+    ).toBeInTheDocument()
+  })
+
+  it('carries no score, badge or readiness verdict', () => {
+    renderDraft()
+
+    expect(screen.queryByText(/verified/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/needs_revision/i)).not.toBeInTheDocument()
+  })
+
+  it('shows what came back when it was not an article', () => {
+    // Those words were paid for.
+    renderDraft(
+      {
+        state: 'failed',
+        failure: 'unusable_response',
+        message: 'Claude answered, but the answer was not an article.',
+        raw: 'I cannot help with that.',
+        has_draft: false,
+      },
+      null,
+    )
+
+    expect(screen.getByText('I cannot help with that.')).toBeInTheDocument()
+  })
+
+  it('keeps an earlier draft readable after a failed retry', () => {
+    // The reason attempts accumulate instead of overwriting.
+    renderDraft({ state: 'failed', message: 'Claude did not finish.', attempts: 2 })
+
+    expect(screen.getByText('Surquillo market opens at six.')).toBeInTheDocument()
+    expect(screen.getByText('Claude did not finish.')).toBeInTheDocument()
+  })
+
+  it('names what could not be read out of the reply', () => {
+    renderDraft({ parse_issue: 'The writer returned no headline.' })
+
+    expect(screen.getByText('The writer returned no headline.')).toBeInTheDocument()
   })
 })
 
