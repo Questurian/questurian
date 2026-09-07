@@ -394,8 +394,7 @@ def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
 
     prompt = llm.prompts[0]
     normalized_prompt = " ".join(prompt.split())
-    assert "Repair prose and structure only" in prompt
-    assert "you may not change the brief" in normalized_prompt
+    assert "Do not change the brief" in prompt
     assert "Never promote a context-only reference" in prompt
     assert "UNSUPPORTED CLAIMS" in prompt
     assert "Rent averages 900 dollars." in prompt
@@ -412,6 +411,167 @@ def test_repair_is_told_it_may_not_create_facts_or_change_the_commission():
     assert recorder.recorded[0][1]["unsupported_claims"][0]["severity"] == "high"
     assert len(prompt) < 20_000
     assert updates["repair_attempts"] == 1
+
+
+def _repair_state(**overrides):
+    state = _state(
+        rewrite={
+            "improved_title": "What Lima costs now",
+            "improved_content": (
+                "The short answer is that rent decides it.\n\n"
+                "## What Lima costs now\n\nBody about Lima costs.\n\n"
+                "## What decides the answer\n\nBody about the tradeoffs."
+            ),
+            "improvements_applied": [],
+            "remaining_gaps": [],
+        },
+        quality={"required_revisions": ["Tighten the opening."]},
+        groundedness={
+            "checked": True,
+            "grounded": True,
+            "high_severity_count": 0,
+            "unsupported_claims": [],
+        },
+    )
+    state.update(overrides)
+    return state
+
+
+def _section_of(state, section_id: str):
+    from app.features.prompt2blog.content.sections import segment_article
+
+    return next(
+        item
+        for item in segment_article(state["rewrite"]["improved_content"])
+        if item.section_id == section_id
+    )
+
+
+def test_repair_replaces_one_section_and_leaves_the_others_byte_for_byte():
+    """Finding 06. The boundary is the code, not the sentence asking for it."""
+    state = _repair_state()
+    target = _section_of(state, "s1")
+    llm = FakeLLM(
+        json_response={
+            "improved_title": "What Lima costs now",
+            "sections": [
+                {
+                    "section_id": "s1",
+                    "text_hash": target.text_hash,
+                    "content": "A tighter body about Lima costs.",
+                }
+            ],
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    content = updates["rewrite"]["improved_content"]
+    assert "A tighter body about Lima costs." in content
+    assert "The short answer is that rent decides it." in content
+    assert "Body about the tradeoffs." in content
+    assert "Body about Lima costs." not in content
+    assert recorder.recorded[0][1]["section_edits"]["applied_section_ids"] == ["s1"]
+
+
+def test_a_repair_that_names_a_section_it_was_not_given_changes_nothing():
+    state = _repair_state()
+    llm = FakeLLM(
+        json_response={
+            "sections": [
+                {
+                    "section_id": "s9",
+                    "text_hash": "whatever",
+                    "content": "A section this draft does not have.",
+                }
+            ]
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    # The existing draft survives intact and is still saveable; the receipt
+    # does not claim a repair that did not happen.
+    assert (
+        updates["rewrite"]["improved_content"]
+        == state["rewrite"]["improved_content"]
+    )
+    assert updates["repair_applied"] is False
+
+
+def test_repair_is_shown_the_chosen_facts_it_may_recover():
+    """Finding 03. The packet reaches repair, so an omitted fact is available."""
+    state = _repair_state()
+    llm = FakeLLM(json_response={"sections": []})
+    dependencies, _recorder = _dependencies(llm)
+
+    run_v3_repair_stage(state, dependencies)
+
+    prompt = llm.prompts[0]
+    assert "THE FACTS AVAILABLE TO THIS REPAIR" in prompt
+    assert "SECTION MAP:" in prompt
+    # The claim text itself, verbatim from the frozen packet.
+    for fact in state["packet"]["facts"]:
+        assert fact["text"] in prompt
+
+
+def test_an_edit_citing_a_fact_outside_the_packet_is_refused():
+    """The permission is the packet, and only the packet.
+
+    An id from the wider dossier names a fact a person deliberately cut; an id
+    that names nothing is a fact the model supplied itself. Both undo the
+    editorial decision the packet exists to hold.
+    """
+    state = _repair_state()
+    target = _section_of(state, "s1")
+    llm = FakeLLM(
+        json_response={
+            "sections": [
+                {
+                    "section_id": "s1",
+                    "text_hash": target.text_hash,
+                    "content": "A body citing a fact nobody chose.",
+                    "claim_ids": ["c-not-in-the-packet"],
+                }
+            ]
+        }
+    )
+    dependencies, recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    assert "A body citing a fact nobody chose." not in (
+        updates["rewrite"]["improved_content"]
+    )
+    rejected = recorder.recorded[0][1]["section_edits"]["rejected"]
+    assert "outside the packet" in rejected[0]["reason"]
+
+
+def test_an_edit_citing_a_chosen_fact_is_applied():
+    state = _repair_state()
+    target = _section_of(state, "s1")
+    chosen = state["packet"]["facts"][0]["claim_id"]
+    llm = FakeLLM(
+        json_response={
+            "sections": [
+                {
+                    "section_id": "s1",
+                    "text_hash": target.text_hash,
+                    "content": "A body that finally uses the omitted comparison.",
+                    "claim_ids": [chosen],
+                }
+            ]
+        }
+    )
+    dependencies, _recorder = _dependencies(llm)
+
+    updates = run_v3_repair_stage(state, dependencies)
+
+    assert "finally uses the omitted comparison" in (
+        updates["rewrite"]["improved_content"]
+    )
 
 
 def test_settling_restores_the_best_draft_and_its_own_grounding_verdict():

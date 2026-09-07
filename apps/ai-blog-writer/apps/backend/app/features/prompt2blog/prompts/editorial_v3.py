@@ -334,40 +334,73 @@ DRAFT CONTENT:
 P2B_V3_REPAIR_PROMPT = """You are running a repair pass on a commissioned article.
 
 Goal:
-Fix the prose and structure the auditor flagged, without changing what the
-article is or what it claims.
+Fix what the auditor flagged, by replacing only the sections that need it.
 
 Return strict JSON only:
 {{
   "improved_title": "string",
-  "improved_content": "string",
+  "sections": [
+    {{
+      "section_id": "string",
+      "text_hash": "string",
+      "heading": "string",
+      "content": "string",
+      "claim_ids": ["string"]
+    }}
+  ],
   "brief_alignment_summary": "string",
   "improvements_applied": ["string"],
   "remaining_gaps": ["string"]
 }}
 
+How editing works here:
+- The article is listed below as a SECTION MAP. Return an entry only for a
+  section you are actually changing. Every section you do not return is kept
+  exactly as it is; you do not need to repeat it, and repeating it unchanged
+  only risks damaging it.
+- Copy `section_id` and `text_hash` from the map exactly. An entry whose id is
+  unknown, whose hash does not match, or which names the same section twice is
+  discarded, and the section keeps its current text.
+- `content` is the full replacement body for that section, without its `##`
+  heading line. `heading` changes the heading; omit it to keep the current one.
+  The opening block has no heading — leave `heading` empty for it.
+- You cannot add a section, delete one, or reorder them. That is a planning
+  decision and this pass does not hold the plan. Change length inside the
+  sections that exist.
+- A revision that needs several sections moved together must return all of
+  them. Do not fix half of a structural problem.
+
+Facts:
+- THE FACTS AVAILABLE below are the facts a person chose for this article.
+  You may use any of them, including ones the first draft left out — that is
+  the point of this list. Using a fact the draft omitted is not inventing one.
+- For every entry, `claim_ids` names the facts you added to that section which
+  were not already in it. An id that is not on the list is rejected with the
+  section.
+- You may not use anything else. No fact from anywhere but that list, and no
+  detail you are filling in from your own knowledge.
+- Preserve every limitation attached to a fact you use. A caveat is what makes
+  the fact true; dropping it turns a correct sentence into a confident wrong
+  one, and nothing downstream can put it back.
+- Naming a claim id does not license a sentence that says more than the claim
+  does. The draft is checked against the evidence again after this pass.
+
 Rules:
 - Resolve each required revision directly.
-- Change only the sections a revision is about. Return every other section
-  exactly as it was, word for word. A section nobody complained about is
-  working prose, and rewriting it to improve it is how a repair makes an
-  article worse.
 - A revision that states a length change gives the direction and the number of
   words. Move that way. Never lengthen a draft asked to be cut, or cut one
   asked to be lengthened.
-- Repair prose and structure only. You may not create a fact, and you may not
-  change the brief: not the form, the primary subject, the scope mode, the
-  reference roles, the approved scope, or the exclusions.
-- Never add factual material. Work only with facts already present in the
-  previous draft. Apply the EVIDENCE DISPOSITION POLICY in the repair lock
-  exactly, including deletion of every assertion under UNSUPPORTED CLAIMS.
+- Do not change the brief: not the form, the primary subject, the scope mode,
+  the reference roles, the approved scope, or the exclusions.
+- Apply the EVIDENCE DISPOSITION POLICY in the repair lock exactly, including
+  deletion of every assertion under UNSUPPORTED CLAIMS. Delete them; never
+  hedge, attribute, or label them.
 - Never promote a context-only reference, add a comparator, or broaden scope to
   satisfy a revision.
 - Never cite evidence records in the prose: no claim IDs, no source IDs, no
   numbered references, and no naming the outlet or publication a fact came
   from. An actor or institution in the story may be named; the reporter of it
   may not.
-- Keep complete article prose with clear `##` / `###` structure.
 
 REQUIRED REVISIONS:
 {required_revisions}
@@ -375,11 +408,19 @@ REQUIRED REVISIONS:
 UNSUPPORTED CLAIMS:
 {unsupported_claims}
 
+SECTIONS CONTAINING A FLAGGED CLAIM:
+{flagged_sections}
+
+SECTION MAP:
+{section_map}
+
 PREVIOUS TITLE:
 {previous_title}
 
 PREVIOUS CONTENT:
 {previous_content}
+
+{facts}
 
 {instructions}
 

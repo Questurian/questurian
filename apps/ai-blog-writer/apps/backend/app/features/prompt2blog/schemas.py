@@ -115,6 +115,39 @@ REWRITE_SCHEMA: dict[str, Any] = {
     },
 }
 
+# Repair no longer returns a whole article. It returns replacements for the
+# sections it is changing, and `apply_section_replacements` writes them into
+# the original document -- which is what makes "change only what was flagged"
+# a property of the code rather than a request in a prompt (finding 06).
+#
+# `improved_content` is deliberately absent: a model that can still return one
+# will, and the whole point is that it cannot hand back prose for sections
+# nobody asked about.
+REPAIR_SECTIONS_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "required": ["sections"],
+    "properties": {
+        "improved_title": {"type": "string"},
+        "sections": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["section_id", "text_hash", "content"],
+                "properties": {
+                    "section_id": {"type": "string"},
+                    "text_hash": {"type": "string"},
+                    "heading": {"type": "string"},
+                    "content": {"type": "string"},
+                    "claim_ids": {"type": "array", "items": {"type": "string"}},
+                },
+            },
+        },
+        "brief_alignment_summary": {"type": "string"},
+        "improvements_applied": {"type": "array", "items": {"type": "string"}},
+        "remaining_gaps": {"type": "array", "items": {"type": "string"}},
+    },
+}
+
 EDITORIAL_COMPONENT_NAMES = (
     "pull_quote",
     "in_the_know_box",

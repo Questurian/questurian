@@ -133,9 +133,21 @@ class V3StageContexts(InstructionModel):
     compose: StageContext
     audit: StageContext
     repair_lock: StageContext
+    # The facts repair may work from. Separate from `repair_lock`, which is
+    # the scope it may not move, because they answer different questions and
+    # the lock is quoted at the model as immutable.
+    #
+    # Defaulted rather than required so a run snapshotted before this existed
+    # still restores. Such a run repairs the way it always did: without the
+    # facts, which is finding 03.
+    repair_facts: StageContext = StageContext(
+        text="", included_sections=[], fingerprint=""
+    )
 
 
-StageContextName = Literal["outline", "compose", "audit", "repair_lock"]
+StageContextName = Literal[
+    "outline", "compose", "audit", "repair_lock", "repair_facts"
+]
 
 
 class V3InstructionSet(InstructionModel):
@@ -478,7 +490,8 @@ def _repair_lock_body(
             f"It fails if: {brief.fails_if}",
             *((limitations,) if limitations else ()),
             "Keep direct, specific prose for the named reader. Preserve the "
-            "approved form and scope. Do not add factual material, and do not "
+            "approved form and scope. The only facts you may use are the ones "
+            "listed under THE FACTS AVAILABLE TO THIS REPAIR, and you may not "
             "remove a limitation from a fact you keep.",
         )
     )
@@ -527,6 +540,7 @@ def stage_context_manifest(
             ("compose", contexts.compose),
             ("audit", contexts.audit),
             ("repair_lock", contexts.repair_lock),
+            ("repair_facts", contexts.repair_facts),
         )
     }
 
@@ -708,6 +722,26 @@ def assemble_v3_instructions(
                 ("form", f"ARTICLE FORM — {form.label}\n{form_structure}"),
                 ("audience", f"AUDIENCE GUIDANCE\n{audience_body}"),
                 ("house_style", f"HOUSE STYLE\n{catalog.house_rules.instructions}"),
+            ]
+        ),
+        # Finding 03. Repair used to receive the previous draft, a list of
+        # revisions, and a scope lock -- and was told never to add factual
+        # material, including researched material. So a revision like "compare
+        # these restaurants on price" was unsatisfiable whenever the first
+        # draft happened to leave the price out: the fact was chosen, frozen,
+        # and sitting in the packet the repair pass could not see. What came
+        # back was repetition, vague judgement, or an unresolved revision.
+        #
+        # It is the same list compose was given, from the same frozen packet.
+        # The editorial cut still holds: a fact nobody chose is still not
+        # available, and repair still cannot invent one.
+        repair_facts=_stage_context(
+            parts=[
+                (
+                    "facts",
+                    "THE FACTS AVAILABLE TO THIS REPAIR\n"
+                    + _packet_evidence_body(packet),
+                ),
             ]
         ),
         repair_lock=_stage_context(

@@ -200,6 +200,9 @@ def test_there_is_no_headline_context_because_nothing_writes_a_headline():
         "compose",
         "audit",
         "repair_lock",
+        # The facts repair may work from, kept separate from the scope it may
+        # not move. Finding 03: repair could not reach the chosen facts at all.
+        "repair_facts",
     }
 
 
@@ -494,10 +497,13 @@ def test_the_stages_without_the_questions_keep_the_rest_of_the_brief():
     lock = contexts.repair_lock.text
     assert fixture["brief"]["outcome"] in lock
     assert "Primary subject: Lima" in lock
-    assert "Do not add factual material" in _flat(lock)
+    # It used to say "do not add factual material" full stop, which made a
+    # revision like "support the comparison" unanswerable whenever the first
+    # draft dropped the fact. The boundary is now the packet, not silence.
+    assert "listed under THE FACTS AVAILABLE TO THIS REPAIR" in _flat(lock)
+    assert "may not remove a limitation from a fact you keep" in _flat(lock)
     # And repair may not quietly straighten a hedged sentence while rewriting:
-    # it is forbidden to add anything, so it could never put the caveat back.
-    assert "do not remove a limitation from a fact you keep" in _flat(lock)
+    # a caveat it dropped is one nothing downstream can put back.
 
 
 def _two_claim_request(*, second_selected: bool):
